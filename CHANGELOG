@@ -189,6 +189,8 @@ Build system
 - increased minimal required cmake version to 3.11
 - removed automatic download and build of Bliss during cmake configuration when -DSYM=(s)bliss;
   please build and install from https://github.com/scipopt/bliss before and specify -DBLISS_DIR
+- replaced `SANITIZE_XYZ=(on|off)` options by `SANITIZE=(on|off|thread|address|memory)`;
+  undefined behavior sanitizer is always enabled if not `SANITIZE=off`
 
 Fixed bugs
 ----------

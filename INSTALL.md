@@ -199,7 +199,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `NOBLKBUFMEM`          | `on`, `off`                        | `NOBLKBUFMEM=[true,false]` |                                                                    |
 | `MT`                   | `on`, `off`                        |                            | use static runtime libraries for Visual Studio compiler on Windows |
 | `THREADSAFE`           | `on`, `off`                        | `THREADSAFE=[true,false]`  | thread safe compilation                                            |
-| `SANITIZE_...`         | `on`, `off`                        | --                         | enable sanitizer in debug mode if available                        |
+| `SANITIZE`             | `on`, `off`, `thread`, `address`, `memory` | `SANITIZE=...`     | sanitizers to enable if available and debug mode; if not `off`, then enables undefined-behavior sanitizer, `thread` enables thread sanitizer, `address` enables address sanitizer, `memory` enables memory sanitizer |
 | `TPI`                  | `tny`, `omp`, `none`               | `TPI=[tny,omp,none]`       | enable task processing interface required for concurrent solver    |
 
 Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing configuration.

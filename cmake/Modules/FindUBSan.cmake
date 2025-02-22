@@ -22,25 +22,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-option(SANITIZE_UNDEFINED
-    "Enable UndefinedBehaviorSanitizer for sanitized targets." Off)
-
 set(FLAG_CANDIDATES
     "-g -fsanitize=undefined"
 )
 
-
 include(sanitize-helpers)
 
-if (SANITIZE_UNDEFINED)
-    sanitizer_check_compiler_flags("${FLAG_CANDIDATES}"
-        "UndefinedBehaviorSanitizer" "UBSan")
-endif ()
+sanitizer_check_compiler_flags("${FLAG_CANDIDATES}" "UndefinedBehaviorSanitizer" "UBSan")
 
 function (add_sanitize_undefined TARGET)
-    if (NOT SANITIZE_UNDEFINED)
-        return()
-    endif ()
     sanitizer_add_flags(${TARGET} "UndefinedBehaviorSanitizer" "UBSan")
 endfunction ()
 

@@ -22,34 +22,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-option(SANITIZE_THREAD "Enable ThreadSanitizer for sanitized targets." Off)
-
 set(FLAG_CANDIDATES
     "-g -fsanitize=thread"
 )
 
-
-# ThreadSanitizer is not compatible with MemorySanitizer.
-if (SANITIZE_THREAD AND SANITIZE_MEMORY)
-    message(FATAL_ERROR "ThreadSanitizer is not compatible with "
-        "MemorySanitizer.")
-endif ()
-
-
 include(sanitize-helpers)
 
-if (SANITIZE_THREAD)
+if(${SANITIZE} STREQUAL "thread")
   if (NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" AND
       NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
         message(WARNING "ThreadSanitizer disabled for target ${TARGET} because "
-          "ThreadSanitizer is supported for Linux systems and macOS only.")
-        set(SANITIZE_THREAD Off CACHE BOOL
-            "Enable ThreadSanitizer for sanitized targets." FORCE)
+          "ThreadSanitizer is supported for Linux and macOS systems only.")
+        set(SANITIZE Off CACHE BOOL
+            "should sanitizers be enabled in debug mode if available" FORCE)
     elseif (NOT ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
         message(WARNING "ThreadSanitizer disabled for target ${TARGET} because "
             "ThreadSanitizer is supported for 64bit systems only.")
-        set(SANITIZE_THREAD Off CACHE BOOL
-            "Enable ThreadSanitizer for sanitized targets." FORCE)
+        set(SANITIZE Off CACHE BOOL
+            "should sanitizers be enabled in debug mode if available" FORCE)
     else ()
         sanitizer_check_compiler_flags("${FLAG_CANDIDATES}" "ThreadSanitizer"
             "TSan")
@@ -57,10 +47,6 @@ if (SANITIZE_THREAD)
 endif ()
 
 function (add_sanitize_thread TARGET)
-    if (NOT SANITIZE_THREAD)
-        return()
-    endif ()
-
     sanitizer_add_flags(${TARGET} "ThreadSanitizer" "TSan")
 endfunction ()
 
