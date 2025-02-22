@@ -232,41 +232,15 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs,                /**< right hand side of row */
-   SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
+   SCIP_Bool             isfprelaxable       /**< is it possible to create an fp relaxation of this row? */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowConsExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwExactCreate(rowexact, fprow, fprowrhs, scip->mem->probmem, scip->set,
-                                 scip->stat, scip->lpexact, 0, NULL, NULL, lhs, rhs,
-                                 SCIP_ROWORIGINTYPE_CONS, isfprelaxable, SCIProwGetOriginCons(fprow)) );
+   assert(SCIProwGetOrigintype(fprow) == SCIP_ROWORIGINTYPE_CONS);
+   assert(SCIProwGetOriginCons(fprow) == SCIProwGetOriginCons(fprowrhs));
 
-   return SCIP_OKAY;
-}
-
-/** creates and captures an exact LP row without any coefficients from a separator
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEXACT**       rowexact,           /**< pointer to exact row */
-   SCIP_ROW*             fprow,              /**< corresponding fp approximation/relaxation */
-   SCIP_SEPA*            sepa,               /**< separator that creates the row */
-   SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs,                /**< right hand side of row */
-   SCIP_Bool             hasfprelaxation     /**< the the fprow a relaxation or only an approximation of the exact row? */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowExactSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIProwExactCreate(rowexact, fprow, NULL, scip->mem->probmem, scip->set, scip->stat,
-         scip->lpexact, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, hasfprelaxation, (void*) sepa) );
+   SCIP_CALL( SCIProwExactCreate(rowexact, fprow, fprowrhs, scip->mem->probmem, scip->set, scip->stat, scip->lpexact, 0, NULL, NULL, lhs, rhs, isfprelaxable) );
 
    return SCIP_OKAY;
 }
@@ -278,28 +252,23 @@ SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
- *
- *  @deprecated Please use SCIPcreateRowConshdlr() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
- *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateRowUnspec().
  */
 SCIP_RETCODE SCIPcreateRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT**       row,                /**< pointer to row */
    SCIP_ROW*             fprow,              /**< corresponding fp approximation/relaxation */
-   const char*           name,               /**< name of row */
    int                   len,                /**< number of nonzeros in the row */
    SCIP_COLEXACT**       cols,               /**< array with columns of row entries */
    SCIP_Rational**       vals,               /**< array with coefficients of row entries */
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs,                /**< right hand side of row */
-   SCIP_Bool             local,              /**< is row only valid locally? */
    SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    )
 {
    /* Note: Rows can only be created in the solving stage, since otherwise the LP does not exist and, e.g., the norms cannot be computed correctly. */
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwExactCreate(row, fprow, NULL, scip->mem->probmem, scip->set, scip->stat, scip->lpexact, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_UNSPEC, isfprelaxable, NULL) );
+   SCIP_CALL( SCIProwExactCreate(row, fprow, NULL, scip->mem->probmem, scip->set, scip->stat, scip->lpexact, len, cols, vals, lhs, rhs, isfprelaxable) );
 
    return SCIP_OKAY;
 }
@@ -322,6 +291,7 @@ SCIP_RETCODE SCIPcreateRowExactFromRow(
    assert(fprow->rowexact == NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowExactFromRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    SCIP_CALL( SCIProwExactCreateFromRow(fprow, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->transprob, scip->lpexact) );
 
    return SCIP_OKAY;

@@ -367,10 +367,14 @@ SCIP_RETCODE addCut(
                }
 
                ++(*naddedcuts);
-               if( SCIPisCertificateActive(scip) )
+               if( SCIPisExactSolve(scip) )
                {
-                  SCIP_CALL( SCIPstoreCertificateActiveAggregationInfo(scip, cut) );
-                  SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
+                  if( SCIPisCertificateActive(scip) )
+                  {
+                     SCIP_CALL( SCIPstoreCertificateActiveAggregationInfo(scip, cut) );
+                     SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
+                  }
+
                   /* certify local cuts immediately or the bonds might be wrong in the certificate */
                   if( SCIProwGetRowExact(cut) == NULL )
                   {
@@ -386,7 +390,10 @@ SCIP_RETCODE addCut(
                      }
                   }
 
-                  SCIP_CALL( SCIPprintCertificateMirCut(scip, cut) );
+                  if( SCIPisCertificateActive(scip) )
+                  {
+                     SCIP_CALL( SCIPprintCertificateMirCut(scip, cut) );
+                  }
                }
             }
          }

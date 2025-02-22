@@ -1616,7 +1616,7 @@ SCIP_RETCODE getObjectiveRow(
    {
       SCIP_CALL( SCIPcreateRowUnspec(scip, row, "objective", nvals, cols, vals, -SCIPinfinity(scip), rhs,
          FALSE, FALSE, TRUE) );
-      SCIP_CALL( SCIPcreateRowExact(scip, &rowexact, *row, NULL , nvals, colsexact, valsexact, lhsexact, rhsexact, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateRowExact(scip, &rowexact, *row , nvals, colsexact, valsexact, lhsexact, rhsexact, TRUE) );
       SCIPdebugMessage("%d == %d", SCIPgetNLPCols(scip), SCIProwGetNNonz(*row));
    }
 

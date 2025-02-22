@@ -3144,12 +3144,12 @@ SCIP_RETCODE SCIProwExactCreate(
    SCIP_Rational**       vals,               /**< array with coefficients of row entries */
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs,                /**< right hand side of row */
-   SCIP_ROWORIGINTYPE    origintype,         /**< type of origin of row */
-   SCIP_Bool             isfprelaxable,      /**< is it possible to make fp-relaxation of this row */
-   void*                 origin              /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
+   SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    )
 {
    assert(row != NULL);
+   assert(fprow != NULL);
+   assert(fprowrhs != NULL);
    assert(blkmem != NULL);
    assert(stat != NULL);
    assert(len >= 0);
@@ -3376,7 +3376,6 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
 {
    SCIP_ROWEXACT** row;
    SCIP_ROWEXACT* workrow;
-   void* origin;
    int i;
    int nlocks;
    SCIP_Rational* tmpval;
@@ -3393,24 +3392,6 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    assert(blkmem != NULL);
    assert(stat != NULL);
 
-   switch(SCIProwGetOrigintype(fprow))
-   {
-   case SCIP_ROWORIGINTYPE_SEPA:
-      origin = SCIProwGetOriginSepa(fprow);
-      break;
-   case SCIP_ROWORIGINTYPE_CONS:
-      origin = SCIProwGetOriginCons(fprow);
-      break;
-   case SCIP_ROWORIGINTYPE_CONSHDLR:
-      origin = SCIProwGetOriginConshdlr(fprow);
-      break;
-   case SCIP_ROWORIGINTYPE_REOPT:
-   case SCIP_ROWORIGINTYPE_UNSPEC:
-   default:
-      origin = NULL;
-      break;
-   }
-
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmplhs) );
 
@@ -3424,7 +3405,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    else
       RatSetString(tmplhs, "-inf");
 
-   SCIP_CALL( SCIProwExactCreate(row, fprow, NULL, blkmem, set, stat, lp, 0, NULL, NULL, tmplhs, tmpval, SCIProwGetOrigintype(fprow), TRUE, origin) );
+   SCIP_CALL( SCIProwExactCreate(row, fprow, NULL, blkmem, set, stat, lp, 0, NULL, NULL, tmplhs, tmpval, TRUE) );
 
    workrow = *row;
    rowvals = SCIProwGetVals(fprow);

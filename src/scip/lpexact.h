@@ -236,9 +236,7 @@ SCIP_RETCODE SCIProwExactCreate(
    SCIP_Rational**       vals,               /**< array with coefficients of row entries */
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs,                /**< right hand side of row */
-   SCIP_ROWORIGINTYPE    origintype,         /**< type of origin of row */
-   SCIP_Bool             isfprelaxable,      /**< is it possible to make fp-relaxation of this row */
-   void*                 origin              /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
+   SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    );
 
 /** creates and captures an exact LP row from a fp row */
