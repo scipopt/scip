@@ -1509,7 +1509,7 @@ ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
 		@$(MAKE) $(SCIPCONFIGHFILE)
 endif
 ifneq ($(SANITIZE),$(LAST_SANITIZE))
-		# touch all files if SANITIZE is changed; this is necessary since some files (e.g., dijkstra, ...) do not depend on the buildflags
+# touch all files if SANITIZE is changed; this is necessary since some files (e.g., dijkstra, ...) do not depend on the buildflags
 		@-touch -c $(ALLSRC)
 endif
 		@-rm -f $(LASTSETTINGS)
