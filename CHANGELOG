@@ -19,6 +19,7 @@ Build system
 
 -  allow to set HIGHS_DIR via -D flag as well
 - reenable building and testing of SCFLP example
+- fixed that compiler flags for sanitizers were not used for compiling objects of SCIP library
 
 ### Makefile
 
