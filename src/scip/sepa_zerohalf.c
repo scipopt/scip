@@ -376,7 +376,7 @@ SCIP_RETCODE transformNonIntegralRow(
    {
       int probindex;
 
-      if( !SCIPcolIsIntegral(rowcols[i]) )  /*lint !e613*/
+      if( !SCIPcolIsIntegral(rowcols[i]) || SCIPcolIsImpliedIntegral(rowcols[i]) )  /*lint !e613*/
          continue;
 
       probindex = SCIPcolGetVarProbindex(rowcols[i]);
@@ -400,7 +400,7 @@ SCIP_RETCODE transformNonIntegralRow(
       SCIP_Real closestvbd;
       SCIP_Bool localbound;
 
-      if( SCIPcolIsIntegral(rowcols[i]) ) /*lint !e613*/
+      if( SCIPcolIsIntegral(rowcols[i]) && !SCIPcolIsImpliedIntegral(rowcols[i]) ) /*lint !e613*/
          continue;
 
       localbound = FALSE;
@@ -659,7 +659,7 @@ SCIP_RETCODE mod2MatrixTransformContRows(
       SCIP_COL** rowcols;
 
       /* skip integral rows and rows not suitable for generating cuts */
-      if( SCIProwIsModifiable(rows[i]) || SCIProwIsIntegral(rows[i]) || (SCIProwIsLocal(rows[i]) && !allowlocal) || SCIProwGetNNonz(rows[i]) > maxnonzeros )
+      if( SCIProwIsModifiable(rows[i]) || (SCIProwIsIntegral(rows[i]) && (SCIPgetRowNumImpliedIntCols(scip, rows[i]) == 0) ) || (SCIProwIsLocal(rows[i]) && !allowlocal) || SCIProwGetNNonz(rows[i]) > maxnonzeros )
          continue;
 
       lhs = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
@@ -1127,6 +1127,7 @@ SCIP_RETCODE buildMod2Matrix(
 
       /* skip non-integral rows and rows not suitable for generating cuts */
       if( SCIProwIsModifiable(rows[i]) || !SCIProwIsIntegral(rows[i]) ||
+            (SCIPgetRowNumImpliedIntCols(scip, rows[i]) > 0) ||
             (SCIProwIsLocal(rows[i]) && !allowlocal) || SCIProwGetNNonz(rows[i]) > maxnonzeros )
          continue;
 
