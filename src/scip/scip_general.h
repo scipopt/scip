@@ -232,6 +232,12 @@ SCIP_STATUS SCIPgetStatus(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets name for a solution status */
+SCIP_EXPORT
+const char* SCIPstatusName(
+   SCIP_STATUS           status              /**< SCIP status code */
+   );
+
 /** outputs solution status
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

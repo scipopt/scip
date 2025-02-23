@@ -61,6 +61,7 @@
 #include "scip/type_branch.h"
 #include "scip/type_conflict.h"
 #include "scip/type_cons.h"
+#include "scip/type_datatree.h"
 #include "scip/type_dialog.h"
 #include "scip/type_disp.h"
 #include "scip/type_expr.h"
@@ -124,6 +125,7 @@
 #include "scip/pub_table.h"
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
+#include "scip/pub_datatree.h"
 #include "lpi/lpi.h"
 
 /* include global presolving, cuts, and heuristics methods */
@@ -134,6 +136,7 @@
 #include "scip/scip_bandit.h"
 #include "scip/scip_benders.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_datatree.h"
 #include "scip/scip_compr.h"
 #include "scip/scip_concurrent.h"
 #include "scip/scip_conflict.h"

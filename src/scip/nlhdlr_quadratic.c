@@ -217,6 +217,59 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
    return SCIP_OKAY;
 }
 
+/** collects quadratic nonlinear handler statistics into a SCIP_DATATREE object */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectQuadratic)
+{
+   SCIP_NLHDLR* nlhdlr;
+   SCIP_NLHDLRDATA* nlhdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(scip != NULL);
+   assert(table != NULL);
+   assert(datatree != NULL);
+
+   /* Find the nonlinear constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   assert(conshdlr != NULL);
+
+   /* Find the quadratic nonlinear handler */
+   nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, NLHDLR_NAME);
+   assert(nlhdlr != NULL);
+
+   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   /* Insert statistics into the data tree */
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "ngeneratedcuts", nlhdlrdata->ncutsgenerated) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "naddedcuts", nlhdlrdata->ncutsadded) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "couldimprovecoef", nlhdlrdata->ncouldimprovedcoef) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "nlargerejections", nlhdlrdata->nhighre) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "nabortbadray", nlhdlrdata->nbadrayrestriction) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "nabortposphi", nlhdlrdata->nphinonneg) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "nabortnonbasic", nlhdlrdata->nbadnonbasic) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "nstrengthenings", nlhdlrdata->nstrengthenings) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "nmonoidal", nlhdlrdata->nmonoidal) );
+
+   /* Insert calculated averages */
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "averagecutcoefficient",
+                                     nlhdlrdata->ncutsgenerated > 0 ? nlhdlrdata->cutcoefsum / nlhdlrdata->ncutsgenerated : 0.0) );
+
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "averagemonoidalimprovement",
+                                     (nlhdlrdata->nmonoidal > 0 && nlhdlrdata->trackmore) ? nlhdlrdata->monoidalimprovementsum / nlhdlrdata->nmonoidal : -1.0) );
+
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "averagedensity",
+                                     nlhdlrdata->ncutsgenerated > 0 ? nlhdlrdata->densitysum / nlhdlrdata->ncutsgenerated : 0.0) );
+
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "averageefficacy",
+                                     nlhdlrdata->ncutsgenerated > 0 ? nlhdlrdata->efficacysum / nlhdlrdata->ncutsgenerated : 0.0) );
+
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "averagebcutsfraction",
+                                     nlhdlrdata->ncalls > 0 ? nlhdlrdata->nboundcuts / nlhdlrdata->ncalls : 0.0) );
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * static methods
@@ -5134,7 +5187,7 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_QUADRATIC) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_QUADRATIC, TABLE_DESC_QUADRATIC, FALSE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputQuadratic,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputQuadratic, tableCollectQuadratic,
          NULL, TABLE_POSITION_QUADRATIC, TABLE_EARLIEST_STAGE_QUADRATIC) );
    return SCIP_OKAY;
 }

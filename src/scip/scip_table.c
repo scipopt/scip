@@ -36,15 +36,16 @@
  * @author Marc Pfetsch
  * @author Michael Winkler
  * @author Kati Wolter
+ * @author Mohammed Ghannam
  *
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/scip_table.h"
 #include "scip/debug.h"
 #include "scip/pub_message.h"
-#include "scip/scip_table.h"
 #include "scip/set.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
@@ -65,6 +66,7 @@ SCIP_RETCODE SCIPincludeTable(
    SCIP_DECL_TABLEINITSOL ((*tableinitsol)), /**< solving process initialization method of statistics table */
    SCIP_DECL_TABLEEXITSOL ((*tableexitsol)), /**< solving process deinitialization method of statistics table */
    SCIP_DECL_TABLEOUTPUT ((*tableoutput)),   /**< output method */
+   SCIP_DECL_TABLECOLLECT((*tablecollect)),  /**< data collection method */
    SCIP_TABLEDATA*       tabledata,          /**< statistics table data */
    int                   position,           /**< position of statistics table */
    SCIP_STAGE            earlieststage       /**< output of the statistics table is only printed from this stage onwards */
@@ -83,7 +85,7 @@ SCIP_RETCODE SCIPincludeTable(
 
    SCIP_CALL( SCIPtableCreate(&table, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, active, tablecopy,
-         tablefree, tableinit, tableexit, tableinitsol, tableexitsol, tableoutput, tabledata,
+         tablefree, tableinit, tableexit, tableinitsol, tableexitsol, tableoutput, tablecollect, tabledata,
          position, earlieststage) );
    SCIP_CALL( SCIPsetIncludeTable(scip->set, table) );
 

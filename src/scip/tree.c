@@ -4513,7 +4513,7 @@ SCIP_RETCODE focusnodeToLeaf(
    SCIPsetDebugMsg(set, "focusnode #%" SCIP_LONGINT_FORMAT " to leaf at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
-   SCIP_CALL( nodeToLeaf(&tree->focusnode, blkmem, set, stat, eventfilter, eventqueue, tree, reopt, lp, lpstatefork, cutoffbound));
+   SCIP_CALL( nodeToLeaf(&tree->focusnode, blkmem, set, stat, eventfilter, eventqueue, tree, reopt, lp, lpstatefork, cutoffbound) );
 
    return SCIP_OKAY;
 }

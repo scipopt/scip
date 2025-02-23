@@ -8471,7 +8471,7 @@ SCIP_RETCODE createCapacityRestriction(
       }
 
       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-      SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
       if( consdata->demandrowssize == 0 )
       {
@@ -8955,7 +8955,7 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    }
 
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-   SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
+   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
    SCIP_CALL( SCIPaddRow(scip, row, TRUE, cutoff) );
 

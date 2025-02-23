@@ -736,6 +736,67 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
 }
 
 
+static
+SCIP_DECL_TABLECOLLECT(tableCollectSymmetry)
+{
+   SCIP_TABLEDATA* tabledata;
+   int nred;
+   int ncutoff;
+
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   tabledata = SCIPtableGetData(table);
+   assert(tabledata != NULL);
+   assert(datatree != NULL);
+
+   /* Create a subtree for symmetry statistics */
+   SCIP_DATATREE* symmetry_stats;
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &symmetry_stats, "plugins", -1) );
+
+   /* Collect orbitopal reduction statistics */
+   if( tabledata->propdata->orbitopalreddata )
+   {
+      SCIP_DATATREE* orbitopal_red;
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, symmetry_stats, &orbitopal_red, "orbitopalreduction", 2) );
+
+      SCIP_CALL( SCIPorbitopalReductionGetStatistics(scip, tabledata->propdata->orbitopalreddata, &nred, &ncutoff) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, orbitopal_red, "nreductionsapplied", nred) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, orbitopal_red, "ncutoffs", ncutoff) );
+   }
+
+   /* Collect orbital reduction statistics */
+   if( tabledata->propdata->orbitalreddata )
+   {
+      SCIP_DATATREE* orbital_red;
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, symmetry_stats, &orbital_red, "orbital_reduction", 2) );
+
+      SCIP_CALL( SCIPorbitalReductionGetStatistics(scip, tabledata->propdata->orbitalreddata, &nred, &ncutoff) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, orbital_red, "nreductionsapplied", nred) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, orbital_red, "ncutoffs", ncutoff) );
+   }
+
+   /* Collect lexicographic reduction statistics */
+   if( tabledata->propdata->lexreddata )
+   {
+      SCIP_DATATREE* lex_red;
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, symmetry_stats, &lex_red, "lexicographicreduction", 2) );
+
+      SCIP_CALL( SCIPlexicographicReductionGetStatistics(scip, tabledata->propdata->lexreddata, &nred, &ncutoff) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, lex_red, "nreductionsapplied", nred) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, lex_red, "ncutoffs", ncutoff) );
+   }
+
+   /* Collect shadow tree event handler execution time */
+   if( tabledata->propdata->shadowtreeeventhdlr )
+   {
+      SCIP_Real time = SCIPgetShadowTreeEventHandlerExecutionTime(scip, tabledata->propdata->shadowtreeeventhdlr);
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "shadowtreeexecutiontime", time) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of statistics table to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_TABLEFREE(tableFreeSymmetry)
@@ -2959,7 +3020,6 @@ SCIP_RETCODE addOrbitopeSubgroup(
    int**                 lexorder,           /**< pointer to array storing lexicographic order defined by sub orbitopes */
    int*                  nvarslexorder,      /**< number of variables in lexicographic order */
    int*                  maxnvarslexorder,   /**< maximum number of variables in lexicographic order */
-   SCIP_Bool             mayinteract,        /**< whether orbitope's symmetries might interact with other symmetries */
    SCIP_Bool*            success             /**< whether the orbitope could be added */
    )
 {  /*lint --e{571}*/
@@ -3137,8 +3197,8 @@ SCIP_RETCODE addOrbitopeSubgroup(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "suborbitope_%d_%d", graphcoloridx, propdata->norbitopes);
 
    SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopevarmatrix,
-         SCIP_ORBITOPETYPE_FULL, nrows, ngencols, FALSE, mayinteract, FALSE, FALSE, propdata->conssaddlp,
-         TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_ORBITOPETYPE_FULL, nrows, ngencols, FALSE, FALSE, TRUE,
+         propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    *success = TRUE;
@@ -3705,7 +3765,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
    int nvarslexorder = 0;
    int maxnvarslexorder = 0;
    SCIP_Shortbool* permused;
-   SCIP_Bool allpermsused = FALSE;
    SCIP_Bool handlednonbinarysymmetry = FALSE;
    int norbitopesincomp;
 
@@ -3822,9 +3881,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
    SCIPdebugMsg(scip, "  created subgroup detection graph using %d of the permutations\n", nusedperms);
 
-   if ( nusedperms == npermsincomp )
-      allpermsused = TRUE;
-
    assert( graphcomponents != NULL );
    assert( graphcompbegins != NULL );
    assert( compcolorbegins != NULL );
@@ -3887,7 +3943,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
                propdata->perms[propdata->components[propdata->componentbegins[cidx] + k]],
                propdata->permvars, propdata->npermvars, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         SCIP_CALL( SCIPaddCons(scip, cons));
+         SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
          SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
@@ -4009,7 +4065,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
           */
          SCIP_CALL( addOrbitopeSubgroup(scip, propdata, usedperms, nusedperms, compcolorbegins,
                graphcompbegins, graphcomponents, j, nbinarycomps, largestcompsize, &firstvaridx, &chosencomp,
-               &lexorder, &nvarslexorder, &maxnvarslexorder, allpermsused, &orbitopeadded) );
+               &lexorder, &nvarslexorder, &maxnvarslexorder, &orbitopeadded) );
 
          if ( orbitopeadded )
          {
@@ -4149,7 +4205,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name,
                symresackperm, modifiedpermvars, propdata->npermvars, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         SCIP_CALL( SCIPaddCons(scip, cons));
+         SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
          SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
@@ -5519,7 +5575,7 @@ SCIP_RETCODE addOrbitopesDynamic(
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_pp", partialname);
       SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, ppvarsarrayonlypprows, SCIP_ORBITOPETYPE_PACKING,
-            npprows, ncols, FALSE, FALSE, FALSE, FALSE, propdata->conssaddlp,
+            npprows, ncols, FALSE, FALSE, FALSE, propdata->conssaddlp,
             TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -5791,8 +5847,8 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
          /* create constraint, use same parameterization as in orbitope packing partitioning checker */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_pp_upgrade_lexred%d", p);
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, ppvarsmatrix, SCIP_ORBITOPETYPE_PACKING, nrows, 2,
-            FALSE, FALSE, FALSE, FALSE,
-            propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+               FALSE, FALSE, FALSE,
+               propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
             &propdata->genlinconsssize, propdata->ngenlinconss + 1) );
@@ -5954,7 +6010,6 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
 
       if ( propdata->dispsyminfo )
          SCIPinfoMessage(scip, NULL, "  use lexicographic reduction for %d permutations\n", componentsize);
-
    }
    else if ( propdata->usesimplesgncomp && ! propdata->componentblocked[cidx] )
    {
@@ -6362,7 +6417,7 @@ SCIP_RETCODE handleOrbitope(
                SCIPinfoMessage(scip, NULL, "  use full orbitope on %d x %d matrix\n", nbinrows, ncols);
             }
             SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, partialname, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
-                  nbinrows, ncols, propdata->usedynamicprop /* @todo disable */, FALSE, FALSE, FALSE,
+                  nbinrows, ncols, FALSE, FALSE, TRUE,
                   propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -6592,7 +6647,6 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
                   SCIP_ROWORDERING_NONE, SCIP_COLUMNORDERING_NONE,
                   orbitopevarmatrix, ncols, nactiverows, success) );
-
          }
          assert( propdata->ngenlinconss <= propdata->genlinconsssize );
       }
@@ -6670,7 +6724,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             }
 
             SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, partialname, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
-                  nbinrows, ncols, propdata->usedynamicprop /* @todo disable */, FALSE, FALSE, FALSE,
+                  nbinrows, ncols, FALSE, FALSE, TRUE,
                   propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -7374,7 +7428,6 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
       SCIP_CALL( printSyminfoFooter(scip) );
    }
 
-
 #ifdef SYMMETRY_STATISTICS
    SCIP_CALL( SCIPdisplaySymmetryStatistics(scip, propdata) );
 #endif
@@ -7854,7 +7907,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_CALL( SCIPallocBlockMemory(scip, &tabledata) );
    tabledata->propdata = propdata;
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SYMMETRY, TABLE_DESC_SYMMETRY, TRUE,
-         NULL, tableFreeSymmetry, NULL, NULL, NULL, NULL, tableOutputSymmetry,
+         NULL, tableFreeSymmetry, NULL, NULL, NULL, NULL, tableOutputSymmetry, tableCollectSymmetry,
          tabledata, TABLE_POSITION_SYMMETRY, TABLE_EARLIEST_SYMMETRY) );
 
    /* add parameters for computing symmetry */

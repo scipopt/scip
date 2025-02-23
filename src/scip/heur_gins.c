@@ -2204,7 +2204,7 @@ SCIP_RETCODE setupSubScip(
          cutoff = (1 + heurdata->minimprove) * SCIPgetUpperbound(scip);
    }
    cutoff = MIN(upperbound, cutoff);
-   SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
+   SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
    /* set solve limits for sub-SCIP */
    SCIP_CALL( setLimits(scip, subscip, solvelimits) );

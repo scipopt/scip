@@ -170,7 +170,16 @@ public:
     *
     *  @see SCIP_DECL_TABLEOUTPUT(x) in @ref type_table.h
     */
-   virtual SCIP_DECL_TABLEOUTPUT(scip_output) = 0;
+   virtual SCIP_DECL_TABLEOUTPUT(scip_output);
+
+   /** data collection method
+    *
+    *  @see SCIP_DECL_TABLECOLLECT(x) in @ref type_table.h
+    */
+   virtual SCIP_DECL_TABLECOLLECT(scip_collect)
+   {  /*lint --e{715}*/
+      return SCIP_OKAY;
+   }
 };
 
 } /* namespace scip */

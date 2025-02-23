@@ -959,7 +959,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayExprhdlrs)
    int nexprhdlrs;
    int i;
 
-   SCIP_CALL(SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE));
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    exprhdlrs = SCIPgetExprhdlrs(scip);
    nexprhdlrs = SCIPgetNExprhdlrs(scip);
@@ -4013,9 +4013,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
       }
       else
       {
-         SCIP_CALL_FINALLY( SCIPprintStatistics(scip, file), fclose(file) );
+         SCIP_Bool is_json = (SCIPstrcasecmp(filename + strlen(filename) - strlen(".json"), ".json") == 0);
 
-         SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
+         if( is_json )
+         {
+            SCIP_CALL_FINALLY( SCIPprintStatisticsJson(scip, file), fclose(file) );
+            SCIPdialogMessage(scip, NULL, "written statistics to file <%s> in JSON format\n", filename);
+         }
+         else
+         {
+            SCIP_CALL_FINALLY( SCIPprintStatistics(scip, file), fclose(file) );
+            SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
+         }
+
          fclose(file);
       }
    } /*lint !e593*/
@@ -4393,7 +4403,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
 
    /* display cut selectors */
    if( !SCIPdialogHasEntry(submenu, "cutselectors") ) {
-      SCIP_CALL(SCIPincludeDialog(scip, &dialog,
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecDisplayCutselectors, NULL, NULL,
             "cutselectors", "display cut selectors", FALSE, NULL));

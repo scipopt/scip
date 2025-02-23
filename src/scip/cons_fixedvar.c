@@ -162,7 +162,6 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyFixedvar)
 static
 SCIP_DECL_CONSFREE(consFreeFixedvar)
 {  /*lint --e{715}*/
-
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);

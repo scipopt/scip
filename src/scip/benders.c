@@ -146,7 +146,7 @@ SCIP_RETCODE initsolEventhandler(
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
-   SCIP_CALL(SCIPcatchEvent(scip, eventtype, eventhdlr, NULL, &eventhdlrdata->filterpos));
+   SCIP_CALL( SCIPcatchEvent(scip, eventtype, eventhdlr, NULL, &eventhdlrdata->filterpos) );
 
    return SCIP_OKAY;
 }
@@ -168,7 +168,7 @@ SCIP_RETCODE exitsolEventhandler(
 
    if( eventhdlrdata->filterpos >= 0 )
    {
-      SCIP_CALL(SCIPdropEvent(scip, eventtype, eventhdlr, NULL, eventhdlrdata->filterpos));
+      SCIP_CALL( SCIPdropEvent(scip, eventtype, eventhdlr, NULL, eventhdlrdata->filterpos) );
       eventhdlrdata->filterpos = -1;
    }
 
@@ -237,7 +237,7 @@ SCIP_DECL_EVENTEXEC(eventExecBendersNodefocus)
     * This will ensure the SCIP stage is SCIP_STAGE_SOLVING, allowing the use of probing mode. */
    SCIP_CALL( SCIPinterruptSolve(scip) );
 
-   SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, eventhdlrdata->filterpos));
+   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, eventhdlrdata->filterpos) );
    eventhdlrdata->filterpos = -1;
 
    return SCIP_OKAY;
@@ -316,7 +316,7 @@ SCIP_DECL_EVENTEXEC(eventExecBendersMipnodefocus)
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
-   SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, eventhdlrdata->filterpos));
+   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, eventhdlrdata->filterpos) );
    eventhdlrdata->filterpos = -1;
 
    eventhdlrdata->numruns++;

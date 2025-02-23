@@ -34,6 +34,7 @@
 #include "scip/certificate.h"
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
+#include "scip/datatree.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/lpexact.h"
@@ -2483,6 +2484,42 @@ void SCIPprobPrintStatistics(
    SCIPmessageFPrintInfo(messagehdlr, file, "  Objective        : %s, %d non-zeros (abs.min = %g, abs.max = %g)\n",
          !prob->transformed ? (prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize") : "minimize",
          SCIPprobGetNObjVars(prob, set), SCIPprobGetAbsMinObjCoef(prob, set), SCIPprobGetAbsMaxObjCoef(prob, set));
+}
+
+
+/** collects problem statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPprobCollectStatistics(
+   SCIP_PROB*            prob,               /**< problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   )
+{
+   assert(prob != NULL);
+   assert(datatree != NULL);
+
+   /* Collect problem name */
+   SCIP_CALL( SCIPdatatreeInsertString(datatree, set, blkmem, "problem_name", prob->name) );
+
+   /* Collect variables information */
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_variables", (SCIP_Longint)prob->nvars) );
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_binary_variables", (SCIP_Longint)prob->nbinvars) );
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_integer_variables", (SCIP_Longint)prob->nintvars) );
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_implicit_integer_variables", (SCIP_Longint)prob->nimplvars) );
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_continuous_variables", (SCIP_Longint)prob->ncontvars) );
+
+   /* Collect constraints information */
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_initial_constraints", (SCIP_Longint)prob->startnconss) );
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_maximal_constraints", (SCIP_Longint)prob->maxnconss) );
+
+   /* Collect objective information */
+   SCIP_CALL( SCIPdatatreeInsertString(datatree, set, blkmem, "objective_sense",
+      !prob->transformed ? (prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize") : "minimize") );
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "objective_non_zeros", (SCIP_Longint)SCIPprobGetNObjVars(prob, set)) );
+   SCIP_CALL( SCIPdatatreeInsertReal(datatree, set, blkmem,  "objective_abs_min", SCIPprobGetAbsMinObjCoef(prob, set)) );
+   SCIP_CALL( SCIPdatatreeInsertReal(datatree, set, blkmem,  "objective_abs_max", SCIPprobGetAbsMaxObjCoef(prob, set)) );
+
+   return SCIP_OKAY;
 }
 
 

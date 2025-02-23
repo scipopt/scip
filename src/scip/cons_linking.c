@@ -2862,7 +2862,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
          }
          cutoff = infeasible;
 
-         SCIP_CALL(SCIPdelCons(scip, cons));
+         SCIP_CALL( SCIPdelCons(scip, cons) );
          ++(*ndelconss);
       }
 

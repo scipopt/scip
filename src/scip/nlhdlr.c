@@ -37,6 +37,7 @@
 #include "scip/pub_nlhdlr.h"
 #include "scip/nlhdlr.h"
 #include "scip/struct_nlhdlr.h"
+#include "scip/scip_datatree.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_param.h"
@@ -790,4 +791,49 @@ void SCIPnlhdlrPrintStatistics(
 
       SCIPinfoMessage(scip, file, "\n");
    }
+}
+
+/** collect statistics for nonlinear handlers */
+SCIP_RETCODE SCIPnlhdlrCollectStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLR**         nlhdlrs,            /**< nonlinear handlers */
+   int                   nnlhdlrs,           /**< number of nonlinear handlers */
+   SCIP_DATATREE*        datatree            /**< datatree where to add statistics */
+   )
+{
+   SCIP_DATATREE* nlhdlrstree;
+   int i;
+
+   /* create a subtree for Nldhlr statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &nlhdlrstree, "plugins", nnlhdlrs) );
+
+   for( i = 0; i < nnlhdlrs; ++i )
+   {
+      SCIP_DATATREE* nlhdlrstat;
+
+      /* skip disabled nlhdlr */
+      if( !nlhdlrs[i]->enabled )
+         continue;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, nlhdlrstree, &nlhdlrstat, nlhdlrs[i]->name, 14) );
+      SCIP_CALL( SCIPinsertDatatreeString(scip, nlhdlrstat, "description", nlhdlrs[i]->desc) );
+
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, nlhdlrstat, "ndetects", nlhdlrs[i]->ndetectionslast) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, nlhdlrstat, "ndetectsall", nlhdlrs[i]->ndetections) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, nlhdlrstat, "detecttime", SCIPgetClockTime(scip, nlhdlrs[i]->detecttime)) );
+
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, nlhdlrstat, "ninteval", nlhdlrs[i]->nintevalcalls) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, nlhdlrstat, "intevaltime", SCIPgetClockTime(scip, nlhdlrs[i]->intevaltime)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, nlhdlrstat, "nrevprop", nlhdlrs[i]->npropcalls) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, nlhdlrstat, "revproptime", SCIPgetClockTime(scip, nlhdlrs[i]->proptime)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, nlhdlrstat, "ndomreds", nlhdlrs[i]->ndomreds) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, nlhdlrstat, "ncutoffs", nlhdlrs[i]->ncutoffs) );
+
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, nlhdlrstat, "nenforce", nlhdlrs[i]->nenfocalls) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, nlhdlrstat, "enfotime", SCIPgetClockTime(scip, nlhdlrs[i]->enfotime)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, nlhdlrstat, "ncuts", nlhdlrs[i]->nseparated) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, nlhdlrstat, "nbranchscores", nlhdlrs[i]->nbranchscores) );
+   }
+
+   return SCIP_OKAY;
 }

@@ -18335,8 +18335,8 @@ SCIP_RETCODE SCIPaddCoefLinear(
       }
 
       /* update left and right hand sides */
-      SCIP_CALL( chgLhs(scip, cons, lhs));
-      SCIP_CALL( chgRhs(scip, cons, rhs));
+      SCIP_CALL( chgLhs(scip, cons, lhs) );
+      SCIP_CALL( chgRhs(scip, cons, rhs) );
 
       SCIPfreeBufferArray(scip, &consvals);
       SCIPfreeBufferArray(scip, &consvars);

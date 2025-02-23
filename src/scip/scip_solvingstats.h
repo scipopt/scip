@@ -46,6 +46,7 @@
 #include "scip/type_message.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
+#include "scip/type_datatree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1608,8 +1609,8 @@ SCIP_Real SCIPgetAvgPseudocostScore(
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetAvgDPseudocostScore(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_Real             discountfac          /**< discount factor for discounted pseudocost */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             discountfac         /**< discount factor for discounted pseudocost */
    );
 
 /** returns the variance of pseudo costs for all variables in the requested direction
@@ -1905,7 +1906,7 @@ SCIP_RETCODE SCIPprintTransProblem(
 /** outputs status statistics
  *
  *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
- *        thus may to correspond to the original status.
+ *        thus may correspond to the original status.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
@@ -1922,6 +1923,32 @@ SCIP_EXPORT
 void SCIPprintStatusStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
+   );
+
+/** collects status statistics in a SCIP_DATATREE object
+ *
+ *  This function sets:
+ *   - status: the current status of the solver
+ *   - info: info about the keys and values stored in the datatree
+ *
+ *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
+ *        thus may correspond to the original status.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectStatusStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs timing statistics
@@ -1942,6 +1969,31 @@ void SCIPprintTimingStatistics(
    FILE*                 file                /**< output file */
    );
 
+/** collects timing statistics in SCIP_DATATREE
+ *
+ *  The following keys are set:
+ *  - "total_time": Total time spent in SCIP.
+ *  - "solving_time": Time spent solving the problem.
+ *  - "presolving_time": Time spent in presolving.
+ *  - "reading_time": Time spent reading the problem.
+ *  - "copy_time": Time spent copying the problem (if applicable).
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectTimingStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   );
+
 /** outputs statistics for original problem
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -1958,6 +2010,24 @@ SCIP_EXPORT
 void SCIPprintOrigProblemStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** collects statistics for original problem in a SCIP_DATATREE object
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectOrigProblemStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs statistics for transformed problem
@@ -1978,6 +2048,24 @@ void SCIPprintTransProblemStatistics(
    FILE*                 file                /**< output file */
    );
 
+/** collects statistics for transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectTransProblemStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   );
+
 /** outputs presolver statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -1993,6 +2081,23 @@ SCIP_EXPORT
 void SCIPprintPresolverStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
+   );
+
+/** collects presolver statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectPresolverStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs constraint statistics
@@ -2012,6 +2117,23 @@ void SCIPprintConstraintStatistics(
    FILE*                 file                /**< output file */
    );
 
+/** collects constraint statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectConstraintStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   );
+
 /** outputs constraint timing statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -2027,6 +2149,23 @@ SCIP_EXPORT
 void SCIPprintConstraintTimingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
+   );
+
+/** collects constraint timing statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectConstraintTimingStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs propagator statistics
@@ -2046,6 +2185,23 @@ void SCIPprintPropagatorStatistics(
    FILE*                 file                /**< output file */
    );
 
+/** collects propagator statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectPropagatorStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   );
+
 /** outputs conflict statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -2061,6 +2217,23 @@ SCIP_EXPORT
 void SCIPprintConflictStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
+   );
+
+/** collects conflict statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectConflictStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs separator statistics
@@ -2092,6 +2265,18 @@ void SCIPprintSeparatorStatistics(
    FILE*                 file                /**< output file */
    );
 
+/** collects separator statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectSeparatorStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   );
+
 /** outputs cutselector statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -2102,6 +2287,18 @@ SCIP_EXPORT
 void SCIPprintCutselectorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
+   );
+
+/** collects cutselector statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectCutselectorStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs pricer statistics
@@ -2116,6 +2313,18 @@ void SCIPprintPricerStatistics(
    FILE*                 file                /**< output file */
    );
 
+/** collects pricer statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectPricerStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   );
+
 /** outputs branching rule statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -2126,6 +2335,14 @@ SCIP_EXPORT
 void SCIPprintBranchruleStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
+   );
+
+
+/** collects branching rule statistics in a SCIP_DATATREE object */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectBranchruleStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs heuristics statistics
@@ -2143,6 +2360,21 @@ void SCIPprintHeuristicStatistics(
    FILE*                 file                /**< output file */
    );
 
+/** collects heuristics statistics into SCIP_DATATREE
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectHeuristicStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   );
+
 /** outputs compression statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -2158,6 +2390,21 @@ void SCIPprintCompressionStatistics(
    FILE*                 file                /**< output file */
    );
 
+/** collects compression statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectCompressionStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   );
+
 /** outputs LP statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -2168,6 +2415,18 @@ SCIP_EXPORT
 void SCIPprintLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
+   );
+
+/** collects LP statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectLPStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs NLP statistics
@@ -2182,6 +2441,18 @@ void SCIPprintNLPStatistics(
    FILE*                 file                /**< output file */
    );
 
+/** collects NLP statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectNLPStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   );
+
 /** outputs relaxator statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -2192,6 +2463,18 @@ SCIP_EXPORT
 void SCIPprintRelaxatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
+   );
+
+/** collects relaxator statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectRelaxatorStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs tree statistics
@@ -2206,6 +2489,18 @@ void SCIPprintTreeStatistics(
    FILE*                 file                /**< output file */
    );
 
+/** collects tree statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectTreeStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   );
+
 /** outputs root statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -2216,6 +2511,18 @@ SCIP_EXPORT
 void SCIPprintRootStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
+   );
+
+/** collects root statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectRootStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs solution statistics
@@ -2231,6 +2538,21 @@ SCIP_EXPORT
 void SCIPprintSolutionStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
+   );
+
+/** collects solution statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectSolutionStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs concurrent solver statistics
@@ -2250,6 +2572,23 @@ void SCIPprintConcsolverStatistics(
    FILE*                 file                /**< output file */
    );
 
+/** collects concurrent solver statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectConcsolverStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+);
+
 /** outputs Benders' decomposition statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -2260,6 +2599,18 @@ SCIP_EXPORT
 void SCIPprintBendersStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
+   );
+
+/** collects Benders' decomposition statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectBendersStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs expression handler statistics
@@ -2280,6 +2631,24 @@ void SCIPprintExpressionHandlerStatistics(
    FILE*                 file                /**< output file */
    );
 
+/** collects expression handler statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectExpressionHandlerStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   );
+
 /** outputs NLPI statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -2296,6 +2665,24 @@ SCIP_EXPORT
 void SCIPprintNLPIStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file */
+   );
+
+/** collects NLPI statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectNLPIStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs solving statistics
@@ -2319,6 +2706,31 @@ void SCIPprintNLPIStatistics(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPprintStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** outputs solving statistics in JSON format
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
+ *        thus may correspond to the original status.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPprintStatisticsJson(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
@@ -2365,6 +2777,61 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPprintBranchingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** collects branching statistics about variables in a SCIP_DATATREE
+ *
+ * This function collects detailed branching statistics for all variables in the SCIP instance and organizes them into
+ * a hierarchical structure in the provided `SCIP_DATATREE`. The statistics include locks, branchings, inferences,
+ * cutoffs, pseudocosts, and strong branching information.
+ *
+ * The `datatree` will contain the following keys:
+ * - `variables`: A nested table keyed by variable names, containing:
+ *   - `name`: Name of the variable.
+ *   - `priority`: Branching priority of the variable.
+ *   - `factor`: Branching factor of the variable.
+ *   - `locks_down`: Number of locks in the down direction.
+ *   - `locks_up`: Number of locks in the up direction.
+ *   - `avg_depth`: Average branching depth for the variable.
+ *   - `branchings_down`: Number of branchings in the down direction.
+ *   - `branchings_up`: Number of branchings in the up direction.
+ *   - `strong_branchings`: Number of strong branchings performed on the variable.
+ *   - `avg_inferences_down`: Average number of inferences per branching in the down direction.
+ *   - `avg_inferences_up`: Average number of inferences per branching in the up direction.
+ *   - `cutoff_rate_down`: Percentage of branchings in the down direction that led to cutoffs.
+ *   - `cutoff_rate_up`: Percentage of branchings in the up direction that led to cutoffs.
+ *   - `pseudocost_down`: Pseudocost in the down direction.
+ *   - `pseudocost_up`: Pseudocost in the up direction.
+ *   - `pseudocost_count_down`: Number of pseudocost updates in the down direction.
+ *   - `pseudocost_count_up`: Number of pseudocost updates in the up direction.
+ *   - `pseudocost_variance_down`: Variance of pseudocost in the down direction.
+ *   - `pseudocost_variance_up`: Variance of pseudocost in the up direction.
+ * - `total_branchings_down`: Total number of branchings in the down direction across all variables.
+ * - `total_branchings_up`: Total number of branchings in the up direction across all variables.
+ * - `total_strong_branchings`: Total number of strong branchings across all variables.
+ * - `avg_inferences_down`: Average inferences per branching in the down direction across all variables.
+ * - `avg_inferences_up`: Average inferences per branching in the up direction across all variables.
+ * - `avg_cutoff_rate_down`: Average cutoff rate for branchings in the down direction across all variables.
+ * - `avg_cutoff_rate_up`: Average cutoff rate for branchings in the up direction across all variables.
+ * - `status`: If the problem is not solved, a string indicating that statistics are not available.
+ *
+ * @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ * @return \ref SCIP_OKAY if everything worked. Otherwise, a suitable error code is returned.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcollectBranchingStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
    );
 
 /** outputs node information display line

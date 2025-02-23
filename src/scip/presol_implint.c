@@ -111,7 +111,6 @@ struct MatrixStatistics
    int* rowncontinuous;                      /**< The number of those nonzeros that are in continuous columns */
    int* rowncontinuouspmone;                 /**< The number of +-1 entries in continuous columns */
    SCIP_Bool* colintegralbounds;             /**< Does the column have integral bounds? */
-
 };
 typedef struct MatrixStatistics MATRIX_STATISTICS;
 
@@ -291,7 +290,7 @@ SCIP_RETCODE computeContinuousComponents(
       }
    }
 
-   /** Now, fill in the relevant data. */
+   /* Now, fill in the relevant data. */
    int* representativecomponent;
    SCIP_CALL( SCIPallocBufferArray(scip, &representativecomponent, comp->nmatrixcols + comp->nmatrixrows) );
 
@@ -406,7 +405,7 @@ SCIP_RETCODE computeMatrixStatistics(
    MATRIX_COMPONENTS*    comp,               /**< Datastructure that contains the components of the matrix */
    MATRIX_STATISTICS**   pstats,             /**< Pointer to allocate the statistics data structure at */
    SCIP_Real             numericslimit       /**< The limit beyond which we consider integrality of coefficients
-                                                * to be unreliable */
+                                              *   to be unreliable */
    )
 {
    SCIP_CALL( SCIPallocBuffer(scip, pstats) );
@@ -471,7 +470,6 @@ SCIP_RETCODE computeMatrixStatistics(
 
    for( int i = 0; i < ncols; ++i )
    {
-
       SCIP_Real lb = SCIPmatrixGetColLb(matrix, i);
       SCIP_Real ub = SCIPmatrixGetColUb(matrix, i);
       stats->colintegralbounds[i] = ( SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip, lb) )
@@ -489,7 +487,7 @@ static
 void freeMatrixStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    MATRIX_STATISTICS**   pstats              /**< Pointer to the statistics data structure to be freed */
-)
+   )
 {
    MATRIX_STATISTICS* stats= *pstats;
 
@@ -541,8 +539,8 @@ SCIP_RETCODE findImpliedIntegers(
     */
    SCIP_Real* tempValArray;
    int* tempIdxArray;
-   SCIP_CALL(SCIPallocBufferArray(scip, &tempValArray, comp->nmatrixcols));
-   SCIP_CALL(SCIPallocBufferArray(scip, &tempIdxArray, comp->nmatrixcols));
+   SCIP_CALL( SCIPallocBufferArray(scip, &tempValArray, comp->nmatrixcols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tempIdxArray, comp->nmatrixcols) );
 
    for( int component = 0; component < comp->ncomponents; ++component )
    {
@@ -695,7 +693,7 @@ SCIP_RETCODE findImpliedIntegers(
          int col = comp->componentcols[i];
          SCIP_VAR* var = SCIPmatrixGetVar(matrix, col);
          SCIP_Bool infeasible = FALSE;
-         SCIP_CALL(SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible));
+         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
          (*nchgvartypes)++;
          assert(!infeasible);
       }

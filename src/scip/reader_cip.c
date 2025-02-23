@@ -837,7 +837,7 @@ SCIP_DECL_READERREAD(readerReadCip)
             cipinput.haserror = TRUE;
             goto TERMINATE;
          }
-         SCIP_CALL(retcode);
+         SCIP_CALL( retcode );
 
          break;
       case CIP_FIXEDVARS:
@@ -848,7 +848,7 @@ SCIP_DECL_READERREAD(readerReadCip)
             cipinput.haserror = TRUE;
             goto TERMINATE;
          }
-         SCIP_CALL(retcode);
+         SCIP_CALL( retcode );
 
          break;
       case CIP_CONSTRAINTS:
@@ -859,7 +859,7 @@ SCIP_DECL_READERREAD(readerReadCip)
             cipinput.haserror = TRUE;
             goto TERMINATE;
          }
-         SCIP_CALL(retcode);
+         SCIP_CALL( retcode );
 
          break;
       default:

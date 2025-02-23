@@ -497,10 +497,12 @@ Test(more_vars, test1)
    int basinds[3];
    int basicvarpos;
 
+#ifdef SCIP_DEBUG
    SCIP* scip;
    SCIP_CALL( SCIPcreate(&scip) );
    SCIPprintVersion(scip, 0);
    SCIP_CALL( SCIPfree(&scip) );
+#endif
 
    /* ------------------------------------- */
    /* first solve problem */
@@ -570,4 +572,238 @@ Test(more_vars, test1)
    cr_expect_float_eq(binvarow[1], -3.0, EPS, "BInvARow[%d] = %g != %g\n", 1, binvarow[1], -3.0);
    cr_expect_float_eq(binvarow[2], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 2, binvarow[2], 0.0);
    cr_expect_float_eq(binvarow[3], -6.0, EPS, "BInvARow[%d] = %g != %g\n", 3, binvarow[3], -6.0);
+}
+
+
+
+/*** TEST SUITE: Check slack variables ***/
+Test(slack_var, test1)
+{
+   int ncols;
+   int beg = 0;
+   int inds[3];
+   int nrows;
+   SCIP_Real vals[3];
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real obj;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+
+   SCIP_Real M[18] = {2, 1, 1, 1, 0, 0, 4, 1, 2, 0, 1, 0, 3, 4, 2, 0, 0, 1};
+   SCIP_Real B[9];
+   SCIP_Real binvarow[3];
+   SCIP_Real binvacol[3];
+   SCIP_Real objval;
+   int cstats[3];
+   int rstats[3];
+   int basinds[3];
+   int c;
+   int r;
+   int i;
+   int j;
+
+   /* create LPI */
+   SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "prob", SCIP_OBJSEN_MAXIMIZE) );
+
+   /* use the following LP:
+    * max 5 x1 + 4 x2 + 3 x3
+    *     2 x1 +   x2 +   x3 <= 5
+    *     4 x1 +   x2 + 2 x3 <= 11
+    *     3 x1 + 4 x2 + 2 x3 <= 8
+    *       x1,    x2,    x3 >= 0
+    */
+
+   /* add columns */
+   lb = 0.0;
+   ub = SCIPlpiInfinity(lpi);
+
+   obj = 5.0;
+   SCIP_CALL( SCIPlpiAddCols(lpi, 1, &obj, &lb, &ub, NULL, 0, NULL, NULL, NULL) );
+   obj = 4.0;
+   SCIP_CALL( SCIPlpiAddCols(lpi, 1, &obj, &lb, &ub, NULL, 0, NULL, NULL, NULL) );
+   obj = 3.0;
+   SCIP_CALL( SCIPlpiAddCols(lpi, 1, &obj, &lb, &ub, NULL, 0, NULL, NULL, NULL) );
+
+   /* add rows */
+   lhs = -SCIPlpiInfinity(lpi);
+   inds[0] = 0;
+   inds[1] = 1;
+   inds[2] = 2;
+
+   rhs = 5;
+   vals[0] = 2.0;
+   vals[1] = 1.0;
+   vals[2] = 1.0;
+   SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &rhs, NULL, 3, &beg, inds, vals) );
+
+   rhs = 11;
+   vals[0] = 4.0;
+   vals[1] = 1.0;
+   vals[2] = 2.0;
+   SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &rhs, NULL, 3, &beg, inds, vals) );
+
+   rhs = 8;
+   vals[0] = 3.0;
+   vals[1] = 4.0;
+   vals[2] = 2.0;
+   SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &rhs, NULL, 3, &beg, inds, vals) );
+
+   /* check size */
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+   cr_assert_eq(nrows, 3);
+   cr_assert_eq(ncols, 3);
+
+#ifdef SCIP_DEBUG
+   /* turn on output */
+   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPINFO, 1) );
+#endif
+
+   /* ------------------------------------- */
+   /* first solve problem */
+   SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
+
+   SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+   cr_assert_float_eq(objval, 13.0, EPS);
+
+   /* get basis indices */
+   SCIP_CALL( SCIPlpiGetBasisInd(lpi, basinds) );
+
+   /* find positions of basis index for slack variable of the second constraint (x5) */
+   for (j = 0; j < 3; ++j)
+   {
+      if( basinds[j] == -2 )
+         break;
+   }
+   cr_assert(j < 3); /* assert that we found the variable */
+
+   /* find positions of basis index for x0 */
+   for (j = 0; j < 3; ++j)
+   {
+      if( basinds[j] == 0 )
+         break;
+   }
+   cr_assert(j < 3); /* assert that we found the variable */
+
+   /* find positions of basis index for x2 */
+   for (j = 0; j < 3; ++j)
+   {
+      if( basinds[j] == 0 )
+         break;
+   }
+   cr_assert(j < 3); /* assert that we found the variable */
+
+   /* the optimal basis should be: {x5 = slack for second row, x0, x2 */
+   SCIP_CALL( SCIPlpiGetBase(lpi, cstats, rstats) );
+
+   /* check column status */
+   cr_assert(cstats[0] == SCIP_BASESTAT_BASIC);
+   cr_assert(cstats[1] == SCIP_BASESTAT_LOWER);
+   cr_assert(cstats[2] == SCIP_BASESTAT_BASIC);
+
+   /* check row status */
+   cr_assert(rstats[0] == SCIP_BASESTAT_UPPER);
+   cr_assert(rstats[1] == SCIP_BASESTAT_BASIC);
+   cr_assert(rstats[2] == SCIP_BASESTAT_UPPER);
+
+   /* set up basis matrix */
+   for (i = 0; i < 3; ++i)
+   {
+      for (j = 0; j < 3; ++j)
+      {
+         if ( basinds[j] >= 0 )
+         {
+            assert( basinds[j] < 3 );
+            B[3 * i + j] = M[6 * i + basinds[j]];
+         }
+         else
+         {
+            int rowidx;
+            rowidx = - (basinds[j] + 1);
+            assert( 0 <= rowidx && rowidx < 3 );
+            if ( i == rowidx )
+               B[3 * i + j] = 1.0;
+            else
+               B[3 * i + j] = 0.0;
+         }
+      }
+   }
+
+#ifdef SCIP_DEBUG
+   printf("Basis matrix:\n");
+   for (i = 0; i < 3; ++i)
+   {
+      for (j = 0; j < 3; ++j)
+         printf("%f ", B[3 * i + j]);
+      printf("\n");
+   }
+   printf("\n");
+
+   printf("Inverse of basis matrix:\n");
+   for (i = 0; i < 3; ++i)
+   {
+      SCIP_CALL( SCIPlpiGetBInvRow(lpi, i, binvarow, NULL, NULL) );
+      for (j = 0; j < 3; ++j)
+         printf("%f ", binvarow[j]);
+      printf("\n");
+   }
+   printf("\n");
+
+   printf("Product of inverse and basis matrix:\n");
+   for (r = 0; r < 3; ++r)
+   {
+      SCIP_CALL( SCIPlpiGetBInvRow(lpi, r, binvarow, NULL, NULL) );
+
+      for (j = 0; j < 3; ++j)
+      {
+         SCIP_Real sum = 0.0;
+         for (i = 0; i < 3; ++i)
+            sum += binvarow[i] * B[3 * i + j];
+
+         printf("%f ", sum);
+      }
+      printf("\n");
+   }
+#endif
+
+   /* check product of the inverse basis matrix with the basis matrix */
+   for (r = 0; r < 3; ++r)
+   {
+      /* get row of basis inverse matrix */
+      SCIP_CALL( SCIPlpiGetBInvRow(lpi, r, binvarow, NULL, NULL) );
+
+      /* check product */
+      for (j = 0; j < 3; ++j)
+      {
+         SCIP_Real sum = 0.0;
+         for (i = 0; i < 3; ++i)
+            sum += binvarow[i] * B[3 * i + j];
+
+         if ( j == r )
+            cr_assert_float_eq(sum, 1.0, EPS);
+         else
+            cr_assert_float_eq(sum, 0.0, EPS);
+      }
+   }
+
+   /* do the same for the columns */
+   for (c = 0; c < 3; ++c)
+   {
+      /* get column of basis inverse matrix */
+      SCIP_CALL( SCIPlpiGetBInvCol(lpi, c, binvacol, NULL, NULL) );
+
+      /* check product */
+      for (i = 0; i < 3; ++i)
+      {
+         SCIP_Real sum = 0.0;
+         for (j = 0; j < 3; ++j)
+            sum +=  B[3 * i + j] * binvacol[j];
+
+         if ( i == c )
+            cr_assert_float_eq(sum, 1.0, EPS);
+         else
+            cr_assert_float_eq(sum, 0.0, EPS);
+      }
+   }
 }

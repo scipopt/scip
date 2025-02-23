@@ -655,6 +655,8 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_or.o \
 			scip/cons_orbisack.o \
 			scip/cons_orbitope.o \
+			scip/cons_orbitope_full.o \
+			scip/cons_orbitope_pp.o \
 			scip/cons_pseudoboolean.o \
 			scip/cons_quadratic.o \
 			scip/cons_setppc.o \
@@ -902,6 +904,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/cutpool.o \
 			scip/cuts.o \
 			scip/cutsel.o \
+			scip/datatree.o \
 			scip/debug.o \
 			scip/dcmp.o \
 			scip/dialog.o \
@@ -955,6 +958,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_cut.o \
 			scip/scip_cutsel.o \
 			scip/scip_datastructures.o\
+			scip/scip_datatree.o\
 			scip/scip_debug.o \
 			scip/scip_dcmp.o \
 			scip/scip_dialog.o \

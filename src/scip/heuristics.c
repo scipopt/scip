@@ -226,8 +226,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Bool             nodeinfeasible,     /**< is the current node known to be infeasible? */
    SCIP_Longint          iterlim,            /**< nonnegative iteration limit for the LP solves, or -1 for dynamic setting */
    int                   nodelimit,          /**< nonnegative probing node limit or -1 if no limit should be used */
-   SCIP_Real             lpresolvedomchgquot, /**< percentage of immediate domain changes during probing to trigger LP resolve or -1
-                                               *   if diveset specific default should be used */
+   SCIP_Real             lpresolvedomchgquot,/**< percentage of immediate domain changes during probing to trigger LP resolve or -1
+                                              *   if diveset specific default should be used */
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {

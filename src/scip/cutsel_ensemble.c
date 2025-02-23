@@ -142,12 +142,12 @@ SCIP_RETCODE scoring(
    ncols = SCIPgetNLPCols(scip);
 
    /* Initialise all array information that we're going to use for scoring */
-   SCIP_CALL(SCIPallocBufferArray(scip, &effs, ncuts));
-   SCIP_CALL(SCIPallocBufferArray(scip, &dcds, ncuts));
-   SCIP_CALL(SCIPallocBufferArray(scip, &exps, ncuts));
-   SCIP_CALL(SCIPallocBufferArray(scip, &cutdensities, ncuts));
-   SCIP_CALL(SCIPallocBufferArray(scip, &cutlocks, ncuts));
-   SCIP_CALL(SCIPallocBufferArray(scip, &pscosts, ncuts));
+   SCIP_CALL( SCIPallocBufferArray(scip, &effs, ncuts) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &dcds, ncuts) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &exps, ncuts) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutdensities, ncuts) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutlocks, ncuts) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pscosts, ncuts) );
 
    /* Populate the number of cut locks, the pseudo-cost scores, and the cut densities */
    for (int i = 0; i < ncuts; ++i )

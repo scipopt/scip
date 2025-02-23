@@ -460,8 +460,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    }
 
    /* Get the Column and Row data */
-   SCIP_CALL(SCIPgetLPColsData(scip, &cols, &ncols));
-   SCIP_CALL(SCIPgetLPRowsData(scip, &rows, &nrows));
+   SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
 
    /* Allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, ncols) );
@@ -500,10 +500,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
       assert(lppos != -1);
 
       /* get the row of B^-1 for this basic integer variable with fractional solution value */
-      SCIP_CALL(SCIPgetLPBInvRow(scip, basicvarpos2tableaurow[lppos], binvrow, inds, &ninds));
+      SCIP_CALL( SCIPgetLPBInvRow(scip, basicvarpos2tableaurow[lppos], binvrow, inds, &ninds) );
 
       /* Get the Tableau row for this basic integer variable with fractional solution value */
-      SCIP_CALL(SCIPgetLPBInvARow(scip, basicvarpos2tableaurow[lppos], binvrow, binvarow, inds, &ninds));
+      SCIP_CALL( SCIPgetLPBInvARow(scip, basicvarpos2tableaurow[lppos], binvrow, binvarow, inds, &ninds) );
 
       /* Compute the GMI cut */
       success = getGMIFromRow(scip, ncols, nrows, cols, rows, binvrow, binvarow, &lpcandssol[i], cutcoefs,
