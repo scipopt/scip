@@ -108,7 +108,7 @@
 /* fixed parameters */
 #define BOUNDSWITCH                         0.5
 #define POSTPROCESS                        TRUE
-#define USEVBDS                             4
+#define USEVBDS                             2
 #define MINFRAC                            0.05
 #define MAXFRAC                           0.999
 

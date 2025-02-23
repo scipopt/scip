@@ -270,7 +270,7 @@ SCIP_RETCODE separateCuts(
    else
    {
       /* only generate cuts based on continuous variables */
-      firstvar = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+      firstvar = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNBinImplVars(scip) + SCIPgetNIntImplVars(scip);
    }
    nvars = SCIPgetNVars(scip);
    if( firstvar == nvars )
