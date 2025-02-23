@@ -1710,6 +1710,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeMILP) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitMILP) );
 
+   /* mark as exact */
    SCIPpresolSetExact(presol);
 
    /* add MILP presolver parameters */

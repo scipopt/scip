@@ -331,9 +331,9 @@ SCIP_Longint SCIPgetNLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of calls to exact lp solver
+/** gets number of calls to the exact LP solver
  *
- *  @return the number of branch and bound runs performed, including the current run
+ *  @return the number of calls to the exact LP solver
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -354,9 +354,9 @@ SCIP_Longint SCIPgetNExactLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of calls to exact repair heuristic
+/** gets number of calls to the exact repair heuristic
  *
- *  @return the number of branch and bound runs performed, including the current run
+ *  @return the number of calls to the exact repair heuristic
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM

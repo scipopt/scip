@@ -434,9 +434,9 @@ SCIP_Longint SCIPgetNLPs(
    return scip->stat->nlps;
 }
 
-/** gets number of calls to exact lp solver
+/** gets number of calls to the exact LP solver
  *
- *  @return the number of branch and bound runs performed, including the current run
+ *  @return the number of calls to the exact LP solver
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -461,9 +461,9 @@ SCIP_Longint SCIPgetNExactLP(
    return scip->stat->nexlpinf + scip->stat->nexlp;
 }
 
-/** gets number of calls to exact repair heuristic
+/** gets number of calls to the exact repair heuristic
  *
- *  @return the number of branch and bound runs performed, including the current run
+ *  @return the number of calls to the exact repair heuristic
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -3709,8 +3709,6 @@ void SCIPprintLPStatistics(
    if( scip->set->exact_enabled )
    {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Exact LP           :       Time      Calls Iterations  Iter/call   Iter/sec     Nfails   AvgError   NObjlim  NObjlimF \n");
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact propagat.  : %10.2f \n",
-         SCIPclockGetTime(scip->stat->exactproptime));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp feas    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
          SCIPclockGetTime(scip->stat->provedfeaslptime),
          scip->stat->nexlp,
@@ -3758,7 +3756,7 @@ void SCIPprintLPStatistics(
          SCIPclockGetTime(scip->stat->provedfeaspstime),
          scip->stat->nprojshift,
          scip->stat->nfailprojshift,
-         scip->stat->boundingerrorps/scip->stat->nprojshift,
+         scip->stat->nprojshift > 0 ? scip->stat->boundingerrorps/scip->stat->nprojshift : 0,
          scip->stat->nprojshiftobjlim,
          scip->stat->nprojshiftobjlimfail);
 
@@ -3766,30 +3764,6 @@ void SCIPprintLPStatistics(
          SCIPclockGetTime(scip->stat->provedinfeaspstime),
          scip->stat->nprojshiftinf,
          scip->stat->nfailprojshiftinf);
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "ExactLP reasons    :   Interleavedepth %10" SCIP_LONGINT_FORMAT " FP-LP Integer Feasible %10" SCIP_LONGINT_FORMAT "  Close to cutoff %10" SCIP_LONGINT_FORMAT "  \n",
-         scip->stat->nexlpinter, scip->stat->nexlpintfeas, scip->stat->nexlpboundexc);
-
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Meta heuristic     :   Time Success (%.2f) TimeFail (%.2f) Calls (%lld) Found (%lld) \n",
-         scip->stat->timesuccessexactsol, scip->stat->timefailexactsol, scip->stat->ncallsexactsol, scip->stat->nfoundexactsol);
-      {
-         SCIP_Longint ncalls;
-         SCIP_Longint nsuccess;
-         SCIP_Longint naborts;
-
-         SCIPgetRunningErrorStatsExactLinear(scip, &ncalls, &nsuccess, &naborts);
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "Running error ana  :   Ncalls %10" SCIP_LONGINT_FORMAT " Nsuccess %10" SCIP_LONGINT_FORMAT "  Naborts %10" SCIP_LONGINT_FORMAT "  \n",
-            ncalls, nsuccess, naborts);
-      }
-      {
-         SCIP_Longint npropagationsinitial;
-         SCIP_Longint npropagationsconflict;
-         SCIP_Real avgnonzerospropinitial;
-         SCIP_Real avgnonzerospropconflict;
-
-         SCIPgetPropStatsExactLinear(scip, &npropagationsinitial, &npropagationsconflict, &avgnonzerospropinitial, &avgnonzerospropconflict);
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "Prop exact linear  :   Nprop init (%lld) Nprop conf (%lld) Avg Nonzeros init (%.2f) Avg Nonzeros conf (%.2f) \n",
-            npropagationsinitial, npropagationsconflict, avgnonzerospropinitial, avgnonzerospropconflict);
-      }
    }
 }
 

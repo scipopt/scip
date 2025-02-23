@@ -54,6 +54,7 @@ struct SCIP_Rational
 /** rational array struct, essentially a std vector with all indices offset by firstidx*/
 struct SCIP_RationalArray
 {
+   /* MP@LE Is this a good idea to have an STL vector here instead of an array? */
    std::vector<SCIP_Rational> vals;          /**< values of the array */
    int firstidx;                             /**< first used index */
 };

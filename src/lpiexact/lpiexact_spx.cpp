@@ -124,6 +124,7 @@
 /*----------------------------- C++ --------------------------------*/
 /********************************************************************/
 
+/* MP@LE I suggest to remove the following and replace 0/NULL by nullptr */
 /* in C++ we have to use "0" instead of "(void*)0" */
 #undef NULL
 #define NULL 0
@@ -201,7 +202,7 @@ using namespace soplex;
 static void RsetSpxR(
    SCIP_LPIEXACT*        lpi,                /**< exact lpi*/
    SCIP_Rational*        r,                  /**< scip rational */
-   const soplex::Rational&       spxr                /**< soplex rational */
+   const soplex::Rational& spxr              /**< soplex rational */
    )
 {
    if( SCIPlpiExactIsInfinity(lpi, double(spxr)) )
@@ -245,7 +246,7 @@ static void SpxRSetRat(
    SCIP_LPIEXACT*        lpi,                /**< exact LPI */
    soplex::Rational&     spxr,               /**< SoPlex Rational*/
    SCIP_Rational*        src                 /**< SCIP_Rational */
-)
+   )
 {
    if( RatIsAbsInfinity(src) )
    {
@@ -272,9 +273,9 @@ class SPxexSCIP : public SoPlex
    bool                  _lpinfo;
    bool                  _fromscratch;
    char*                 _probname;
-   DataArray<SPxSolver::VarStatus> _colStat;  /**< column basis status used for strong branching */
-   DataArray<SPxSolver::VarStatus> _rowStat;  /**< row basis status used for strong branching */
-   SCIP_MESSAGEHDLR*     _messagehdlr;      /**< messagehdlr handler for printing messages, or NULL */
+   DataArray<SPxSolver::VarStatus> _colStat; /**< column basis status used for strong branching */
+   DataArray<SPxSolver::VarStatus> _rowStat; /**< row basis status used for strong branching */
+   SCIP_MESSAGEHDLR*     _messagehdlr;       /**< messagehdlr handler for printing messages, or NULL */
 
 public:
    SPxexSCIP(
@@ -294,7 +295,6 @@ public:
 #if SOPLEX_APIVERSION >= 2
       setBoolParam(SoPlex::ENSURERAY, true);
 #endif
-
    }
 
    virtual ~SPxexSCIP()
@@ -303,7 +303,6 @@ public:
          spx_free(_probname); /*lint !e1551*/
 
       freePreStrongbranchingBasis(); /*lint !e1551*/
-
    }/*lint -e1579*/
 
    /** get objective limit according to objective sense */
@@ -794,7 +793,7 @@ const char* SCIPlpiExactGetSolverDesc(
    void
    )
 {
-   snprintf(spxdesc, 200, "%s [GitHash: %s]", "exact Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)", getGitHash());
+   snprintf(spxdesc, 200, "%s [GitHash: %s]", "Exact Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)", getGitHash());
 
    return spxdesc;
 }
@@ -986,7 +985,6 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
       LPRowSetRational rows(nrows);
       DSVectorRational emptyVector(0);
       int i;
-
 
       spx->clearLPRational();
 
@@ -1805,9 +1803,9 @@ SCIP_RETCODE SCIPlpiExactGetColNames(
 
    SCIPdebugMessage("getting column names %d to %d\n", firstcol, lastcol);
 
-//    lpi->spx->getColNames(firstcol, lastcol, colnames, namestorage, namestoragesize, storageleft);
+   SCIPerrorMessage("SCIPlpiExactGetColNames() not implemented\n");
 
-   return SCIP_OKAY;
+   return SCIP_NOTIMPLEMENTED;
 }
 
 /** gets row names */
@@ -1831,9 +1829,9 @@ SCIP_RETCODE SCIPlpiExactGetRowNames(
 
    SCIPdebugMessage("getting row names %d to %d\n", firstrow, lastrow);
 
-//    lpi->spx->getRowNames(firstrow, lastrow, rownames, namestorage, namestoragesize, storageleft);
+   SCIPerrorMessage("SCIPlpiExactGetRowNames() not implemented\n");
 
-   return SCIP_OKAY;
+   return SCIP_NOTIMPLEMENTED;
 }
 
 /** gets objective sense of the LP */
@@ -2658,7 +2656,6 @@ SCIP_RETCODE SCIPlpiExactGetBase(
    {
       for( i = 0; i < lpi->spx->numColsRational(); ++i )
       {
-//         SCIP_Real val = 0.0;
          switch( lpi->spx->basisColStatus(i) )
          {
          case SPxSolver::BASIC:
@@ -2956,7 +2953,6 @@ SCIP_RETCODE SCIPlpiExactSetState(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(lpistate != NULL);
-   /* assert(blkmem != NULL); */
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 

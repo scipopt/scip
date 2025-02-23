@@ -36,10 +36,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include "scip/def.h"
-#include "scip/intervalarith.h"
-#include "scip/mem.h"
-#include "scip/type_misc.h"
-#include "scip/set.h"
+#include "scip/type_set.h"
+#include "blockmemshell/memory.h"
 #ifdef SCIP_WITH_GMP
 #include <gmp.h>
 #endif
@@ -56,6 +54,26 @@ extern "C" {
  * Creation methods
  */
 
+/** creates a rational using standard memory allocation */
+SCIP_EXPORT
+SCIP_RETCODE RatCreate(
+   SCIP_Rational**       rational            /**< pointer to the rational to create */
+   );
+
+/** creates a rational using buffer memory */
+SCIP_EXPORT
+SCIP_RETCODE RatCreateBuffer(
+   BMS_BUFMEM*           buf,                /**< buffer memory */
+   SCIP_Rational**       rational            /**< pointer to the rational to create */
+   );
+
+/** creates a rational using block memory */
+SCIP_EXPORT
+SCIP_RETCODE RatCreateBlock(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Rational**       rational            /**< pointer to the rational to create */
+   );
+
 /** allocates and creates a rational from a string in the format, e.g. "12/35" */
 SCIP_EXPORT
 SCIP_RETCODE RatCreateString(
@@ -64,14 +82,37 @@ SCIP_RETCODE RatCreateString(
    const char*           desc                /**< the string describing the rational */
    );
 
-/** creates an array of rationals */
+/** creates a copy of a rational using ordinary memory */
+SCIP_EXPORT
+SCIP_RETCODE RatCopy(
+   SCIP_Rational**       result,             /**< pointer to the rational to create */
+   SCIP_Rational*        src                 /**< rational to copy */
+   );
+
+/** creates a copy of a rational using block memory */
+SCIP_EXPORT
+SCIP_RETCODE RatCopyBlock(
+   BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational**       result,             /**< pointer to the rational to create */
+   SCIP_Rational*        src                 /**< rational to copy */
+   );
+
+/** creates a copy of a rational */
+SCIP_EXPORT
+SCIP_RETCODE RatCopyBuffer(
+   BMS_BUFMEM*           mem,                /**< buffer memory */
+   SCIP_Rational**       rational,           /**< pointer to the rational to create */
+   SCIP_Rational*        src                 /**< rational to copy */
+   );
+
+/** creates an array of rationals using ordinary memory */
 SCIP_EXPORT
 SCIP_RETCODE RatCreateArray(
    SCIP_Rational***      rational,           /**< pointer to the array to create */
    int                   size                /**< the size of the array */
    );
 
-/** creates an array of rationals */
+/** creates an array of rationals using block memory */
 SCIP_EXPORT
 SCIP_RETCODE RatCreateBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -79,15 +120,23 @@ SCIP_RETCODE RatCreateBlockArray(
    int                   size                /**< the size of the array */
    );
 
-/** creates an array of rationals */
+/** creates an array of rationals using buffer memory */
 SCIP_EXPORT
 SCIP_RETCODE RatCreateBufferArray(
-   BMS_BUFMEM*           mem,                /**< block memory */
+   BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational***      rational,           /**< pointer to the array to create */
-   int                   size                /** the size of the array */
+   int                   size                /**< the size of the array */
    );
 
-/** copies an array of rationals */
+/** copies an array of rationals using ordinary memory */
+SCIP_EXPORT
+SCIP_RETCODE RatCopyArray(
+   SCIP_Rational***      target,             /**< address to copy to */
+   SCIP_Rational**       src,                /**< src array */
+   int                   len                 /**< size of src array */
+   );
+
+/** copies an array of rationals using block memory */
 SCIP_EXPORT
 SCIP_RETCODE RatCopyBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -96,13 +145,21 @@ SCIP_RETCODE RatCopyBlockArray(
    int                   len                 /**< size of src array */
    );
 
-/** copy an array of rationals */
+/** copy an array of rationals using buffer memory */
 SCIP_EXPORT
 SCIP_RETCODE RatCopyBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational***      result,             /**< address to copy to */
    SCIP_Rational**       src,                /**< src array */
    int                   len                 /**< size of src array */
+   );
+
+/** realloc a rational ordinary array */
+SCIP_EXPORT
+SCIP_RETCODE RatReallocArray(
+   SCIP_Rational***      result,             /**< address to copy to */
+   int                   oldlen,             /**< size of src array */
+   int                   newlen              /**< size of src array */
    );
 
 /** realloc a rational buffer arrray */
@@ -123,46 +180,10 @@ SCIP_RETCODE RatReallocBlockArray(
    int                   newlen              /**< size of src array */
    );
 
-/** creates a copy of a rational */
-SCIP_EXPORT
-SCIP_RETCODE RatCopy(
-   BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational**       rational,           /**< pointer to the rational to create */
-   SCIP_Rational*        src                 /**< rational to copy */
-   );
-
-/** creates a copy of a rational */
-SCIP_EXPORT
-SCIP_RETCODE RatCopyBuffer(
-   BMS_BUFMEM*           mem,                /**< block memory */
-   SCIP_Rational**       rational,           /**< pointer to the rational to create */
-   SCIP_Rational*        src                 /**< rational to copy */
-   );
-
-/** creates a rational using buffer memory */
-SCIP_EXPORT
-SCIP_RETCODE RatCreateBuffer(
-   BMS_BUFMEM*           buf,                /**< buffer memory */
-   SCIP_Rational**       rational            /**< pointer to the rational to create */
-   );
-
-/** creates a rational using standard memory allocation */
-SCIP_EXPORT
-SCIP_RETCODE RatCreate(
-   SCIP_Rational**       rational            /**< pointer to the rational to create */
-   );
-
-/** creates a rational using block memory */
-SCIP_EXPORT
-SCIP_RETCODE RatCreateBlock(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_Rational**       rational            /**< pointer to the rational to create */
-   );
-
 #ifdef SCIP_WITH_GMP
 /** creates a rational from an mpq_t */
 SCIP_EXPORT
-SCIP_RETCODE RatCreateGMP(
+SCIP_RETCODE RatCreateBlockGMP(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
    mpq_t                 numb                /**< the mpq_rational */
@@ -190,6 +211,7 @@ void RatSetGMPArray(
    );
 
 /** sets a rational array to the values of an mpq_t array */
+SCIP_EXPORT
 void RatSetArrayGMP(
    SCIP_Rational**       res,                /**< the rational array */
    mpq_t*                src,                /**< the mpq-t array */
@@ -204,34 +226,34 @@ void RatClearGMPArray(
    );
 #endif
 
-/** deletess a rational and frees the allocated memory */
+/** deletes a rational and frees the allocated ordinary memory */
 SCIP_EXPORT
 void RatFree(
    SCIP_Rational**       r                   /**< adress of the rational */
    );
 
-/** deletes a rational and frees the allocated memory */
+/** deletes a rational and frees the allocated block memory */
 SCIP_EXPORT
 void RatFreeBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       r                   /**< adress of the rational */
    );
 
-/** deletes a rational and frees the allocated memory */
+/** deletes a rational and frees the allocated buffer memory */
 SCIP_EXPORT
 void RatFreeBuffer(
    BMS_BUFMEM*           buf,                /**< buffer memory */
    SCIP_Rational**       r                   /**< adress of the rational */
    );
 
-/** deletes an array of rationals and frees the allocated memory */
+/** deletes an array of rationals and frees the allocated ordinary memory */
 SCIP_EXPORT
 void RatFreeArray(
    SCIP_Rational***      array,              /**< address of rational array */
    int                   size                /**< size of the array */
    );
 
-/** deletes an array of rationals and frees the allocated memory */
+/** deletes an array of rationals and frees the allocated block memory */
 SCIP_EXPORT
 void RatFreeBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -239,10 +261,10 @@ void RatFreeBlockArray(
    int                   size                /**< size of the array */
    );
 
-/** frees an array of rationals */
+/** deletes an array of rationals and frees the allocated buffer memory */
 SCIP_EXPORT
 void RatFreeBufferArray(
-   BMS_BUFMEM*           mem,                /**< block memory */
+   BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational***      array,              /**< pointer to the array */
    int                   size                /**< size of the array */
    );
@@ -267,7 +289,6 @@ SCIP_EXPORT
 SCIP_Bool SCIPisRationalString(
    const char*           desc                /**< string to check */
    );
-
 
 /** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p str
  *
@@ -701,9 +722,10 @@ void RatComputeApproximation(
    int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
    );
 
+/** round a rational to the nearest integer and save it as a rational */
 SCIP_EXPORT
 void RatRound(
-   SCIP_Rational*        retval,             /**< the resulting rounded integer */
+   SCIP_Rational*        res,                /**< the resulting rounded integer */
    SCIP_Rational*        src,                /**< the rational to round */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    );

@@ -943,8 +943,10 @@ SCIP_RETCODE nodeReleaseParent(
       {
          SCIP_CALL( SCIPnodeFree(&node->parent, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
       }
-      /* update the effective root depth if not in reoptimization and active parent has children */
-      else if( !set->reopt_enable && freeParent == !parent->active && !set->exact_enabled )
+      /* update the effective root depth if active parent has children and neither reoptimization nor certificate
+       * printing is enabled
+       */
+      else if( freeParent == !parent->active && !set->reopt_enable && !SCIPcertificateIsEnabled(stat->certificate) )
       {
          SCIP_Bool singleChild = FALSE;
          int focusdepth = SCIPtreeGetFocusDepth(tree);
@@ -2247,7 +2249,6 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
 
    SCIP_CALL( SCIPvarGetProbvarBoundExact(&var, newbound, &boundtype) );
    newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
-
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
@@ -7595,10 +7596,10 @@ SCIP_RETCODE SCIPtreeEndProbing(
             lp->resolvelperror = TRUE;
             tree->focusnodehaslp = FALSE;
          }
-         else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp) )
+         else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp)
+            && (!set->exact_enabled || lp->hasprovedbound) )
          {
-            if( !set->exact_enabled || lp->hasprovedbound )
-               SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, transprob, origprob, lp) );
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, transprob, origprob, lp) );
          }
       }
    }
@@ -8626,8 +8627,8 @@ void SCIPnodeGetPropsAfterDual(
    SCIP_Real*            varbounds,          /**< array where to store changed bounds */
    SCIP_BOUNDTYPE*       varboundtypes,      /**< array where to store type of changed bound*/
    int*                  nvars,              /**< buffer to store number of bound changes;
-                                               *   if this is larger than varssize, arrays should be reallocated and method
-                                               *   should be called again */
+                                              *   if this is larger than varssize, arrays should be reallocated and method
+                                              *   should be called again */
    int                   varssize            /**< available slots in provided arrays */
    )
 {  /*lint --e{641}*/

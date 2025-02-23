@@ -34,6 +34,7 @@
 #define __SCIP_CONS_EXACTLP_H__
 
 #include "scip/def.h"
+#include "scip/intervalarith.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
 #include "scip/type_lpexact.h"
@@ -189,7 +190,7 @@ SCIP_RETCODE SCIPcreateConsBasicExactLinear(
    SCIP_Rational*        rhs                 /**< right hand side of constraint */
    );
 
-/** creates by copying and captures a linear constraint */
+/** creates a linear constraint from an exact linear constraint by rounding values to floating-point and captures it */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcopyConsExactLinear(
    SCIP*                 scip,               /**< target SCIP data structure */
@@ -321,7 +322,7 @@ SCIP_Rational** SCIPgetValsExactLinear(
  *        comprises positive and negative infinity contributions
  */
 SCIP_EXPORT
-void SCIPgetActivityExactLinear(
+SCIP_RETCODE SCIPgetActivityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
@@ -330,7 +331,7 @@ void SCIPgetActivityExactLinear(
 
 /** gets the feasibility of the linear constraint in the given solution */
 SCIP_EXPORT
-void SCIPgetFeasibilityExactLinear(
+SCIP_RETCODE SCIPgetFeasibilityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
@@ -409,12 +410,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPclassifyConstraintTypesExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint type classification */
-   );
-
-SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
-   SCIP*                 scip,
-   SCIP_CONSHDLR*        conshdlr,
-   SCIP_CONS*            cons
    );
 
 SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(

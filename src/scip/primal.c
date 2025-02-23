@@ -1307,8 +1307,7 @@ SCIP_Bool primalExistsSol(
       /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
        * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
        */
-      /* TODO: we shouldn't need to be better if we are not interested in improving solutions. Does that makes sense? */
-      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)) || ! set->misc_improvingsols);
+      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)));
 
       if( SCIPsetIsLT(set, solobj, obj) )
          break;
@@ -1334,8 +1333,7 @@ SCIP_Bool primalExistsSol(
       /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
        * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
        */
-      /* TODO: we shouldn't need to be better if we are not interested in improving solutions. Does that makes sense? */
-      assert( SCIPsetIsGE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasGE(set, solobj, obj)) || ! set->misc_improvingsols);
+      assert(SCIPsetIsGE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasGE(set, solobj, obj)));
 
       if( SCIPsetIsGT(set, solobj, obj) )
          break;
@@ -1426,7 +1424,10 @@ SCIP_Bool solOfInterest(
    obj = SCIPsolGetObj(sol, set, transprob, origprob);
    solisbetterexact = FALSE;
 
-   if( set->exact_enabled && SCIPsolIsExact(sol) )
+   /* in exact solving mode, we need to compare the exact objective value with the exact cutoff bound in order to
+    * determine whether a solution is improving
+    */
+   if( set->exact_enabled && set->exact_improvingsols && SCIPsolIsExact(sol) )
    {
       SCIP_Rational* tmpobj;
 
@@ -1439,7 +1440,8 @@ SCIP_Bool solOfInterest(
    /* check if we are willing to check worse solutions; a solution is better if the objective is smaller than the
     * current cutoff bound; solutions with infinite objective value are never accepted
     */
-   if( (!set->misc_improvingsols || obj < primal->cutoffbound || solisbetterexact) && !SCIPsetIsInfinity(set, obj) )
+   if( !SCIPsetIsInfinity(set, obj) && (!set->exact_enabled || !set->exact_improvingsols || solisbetterexact)
+      && (set->exact_enabled || !set->misc_improvingsols || obj < primal->cutoffbound) )
    {
       /* find insert position for the solution */
       (*insertpos) = primalSearchSolPos(primal, set, transprob, origprob, sol);
@@ -2319,9 +2321,6 @@ SCIP_RETCODE primalAddSolExact(
    SCIP_CALL( SCIPsolUnlinkExact(sol, set, transprob) );
 
    SCIP_CALL( SCIPsolOverwriteFPSolWithExact(sol, set, stat, origprob, transprob, tree) );
-
-   RatMIN(primal->cutoffboundexact, primal->cutoffboundexact, obj);
-   RatMIN(primal->upperboundexact, primal->upperboundexact, obj);
 
    /* note: we copy the solution so to not destroy the double-link between sol and fpsol */
    SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat,

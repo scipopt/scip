@@ -131,7 +131,7 @@ void SCIPcertificatePrintProofMessage(
    );
 
 /** prints a rational number to the problem section of the certificate file */
-void SCIPcertificatePrintProblemRational(
+SCIP_RETCODE SCIPcertificatePrintProblemRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    SCIP_Rational*        val,                /**< Rational to print to the problem*/
@@ -139,7 +139,7 @@ void SCIPcertificatePrintProblemRational(
    );
 
 /** prints a rational number to the proof section of the certificate file */
-void SCIPcertificatePrintProofRational(
+SCIP_RETCODE SCIPcertificatePrintProofRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Rational*        val,                /**< Rational to print to the problem*/
    int                   base                /**< The base representation*/
@@ -195,7 +195,7 @@ void SCIPcertificatePrintDerHeader(
    );
 
 /** prints constraint */
-void SCIPcertificatePrintCons(
+SCIP_RETCODE SCIPcertificatePrintCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    const char*           consname,           /**< name of the constraint */
@@ -247,7 +247,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_Real*            weights,            /**< array of weights */
    int                   naggrrows,          /**< length of the arrays */
    SCIP_Bool             local,              /**< true if local bound information can be used */
-   unsigned long*        certificateline     /**< pointer to store the certificate line index or NULL */
+   SCIP_Longint*         certificateline     /**< pointer to store the certificate line index or NULL */
    );
 
 /** prints a variable bound to the problem section of the certificate file and returns line index */
@@ -363,7 +363,7 @@ SCIP_RETCODE SCIPcertificateFreeMirInfo(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate structure */
    SCIP_LP*              lp,                 /**< SCIP lp data structure */
-   SCIP_MIRINFO*         mirinfo,           /**< SCIP mir info */
+   SCIP_MIRINFO*         mirinfo,            /**< SCIP mir info */
    SCIP_ROW*             row                 /**< row that should be freed, or NULL if not needed */
    );
 
@@ -387,7 +387,7 @@ SCIP_RETCODE SCIPcertificatePrintUnsplitting(
    );
 
 /** prints RTP section with lowerbound and upperbound range */
-void SCIPcertificatePrintRtpRange(
+SCIP_RETCODE SCIPcertificatePrintRtpRange(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective */
@@ -475,6 +475,73 @@ SCIP_RETCODE SCIPcertificatePrintGlobalBound(
 SCIP_Bool SCIPcertificateShouldTrackBounds(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/** prints activity bound to proof section */
+SCIP_RETCODE SCIPcertificatePrintActivityVarBoundEx(
+   SCIP*                 scip,
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   const char*           linename,           /**< name of the unsplitting line */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound (upper/lower) */
+   SCIP_Rational*        newbound,           /**< pointer to lower bound on the objective, NULL indicating infeasibility */
+   SCIP_Bool             ismaxactivity,      /**< TRUE for maxactivity, FALSE for minactivity */
+   SCIP_CONS*            constraint,         /**< the constraint */
+   SCIP_VAR*             variable,           /**< the variable */
+   SCIP_ROWEXACT* row,
+   SCIP_Rational** vals,
+   SCIP_Rational* lhs,
+   SCIP_Rational* rhs,
+   SCIP_VAR** vars,
+   int nvars
+   );
+
+/** prints activity bound to proof section */
+SCIP_RETCODE SCIPcertificatePrintActivityVarBound(
+   SCIP*                 scip,
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   const char*           linename,           /**< name of the unsplitting line */
+   SCIP_BOUNDTYPE        boundtype,
+   SCIP_Real             newbound,           /**< pointer to lower bound on the objective, NULL indicating infeasibility */
+   SCIP_Bool             ismaxactivity,
+   SCIP_CONS*            constraint,
+   SCIP_VAR*             variable,
+   SCIP_ROWEXACT* row,
+   SCIP_Rational** vals,
+   SCIP_Rational* lhs,
+   SCIP_Rational* rhs,
+   SCIP_VAR** vars,
+   int nvars
+   );
+
+SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
+   SCIP*                 scip,
+   SCIP_CONSHDLR*        conshdlr,
+   SCIP_CONS*            cons
+   );
+
+
+/** prints activity conflict to  certificate file */
+SCIP_RETCODE SCIPcertificatePrintActivityConflict(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_ROWEXACT*        row,                /**< row */
+   SCIP_Rational*        lhs,                /**< lhs of the constraint */
+   SCIP_Rational*        rhs,                /**< rhs of the constraint */
+   int                   nvals,              /**< number of values */
+   SCIP_Rational**       vals,               /**< values */
+   SCIP_VAR**            vars,               /**< variables */
+   SCIP_Rational*        diff,               /**< difference */
+   SCIP_Bool userhs                          /**< is rhs */
+   );
+
+/** returns the index of the given constraint in the certificate */
+SCIP_Longint SCIPcertificateGetConsIndex(
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Rational*        lhs,                /**< lhs of the constraint */
+   SCIP_Rational*        rhs,                /**< rhs of the constraint */
+   SCIP_Bool             useRhs              /**< whether to return the index of the rhs or lhs */
+   );
+
 
 #ifdef __cplusplus
 }

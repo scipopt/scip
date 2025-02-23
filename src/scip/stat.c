@@ -66,7 +66,6 @@ SCIP_RETCODE SCIPstatCreate(
    assert(set != NULL);
 
    SCIP_ALLOC( BMSallocMemory(stat) );
-   SCIP_CALL( SCIPclockCreate(&(*stat)->exactproptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->solvingtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->solvingtimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -127,7 +126,6 @@ SCIP_RETCODE SCIPstatFree(
    assert(stat != NULL);
    assert(*stat != NULL);
 
-   SCIPclockFree(&(*stat)->exactproptime);
    SCIPclockFree(&(*stat)->solvingtime);
    SCIPclockFree(&(*stat)->solvingtimeoverall);
    SCIPclockFree(&(*stat)->presolvingtime);

@@ -817,8 +817,8 @@ SCIP_RETCODE SCIPeventAddExactBdChg(
    assert(!RatIsEqual(oldbound, newbound));
    assert((event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED));
 
-   SCIP_CALL( RatCopy(blkmem, &(event->data.eventbdchg.oldboundexact), oldbound) );
-   SCIP_CALL( RatCopy(blkmem, &(event->data.eventbdchg.newboundexact), newbound) );
+   SCIP_CALL( RatCopyBlock(blkmem, &(event->data.eventbdchg.oldboundexact), oldbound) );
+   SCIP_CALL( RatCopyBlock(blkmem, &(event->data.eventbdchg.newboundexact), newbound) );
 
    return SCIP_OKAY;
 }
@@ -835,8 +835,8 @@ SCIP_RETCODE SCIPeventAddExactObjChg(
    assert(blkmem != NULL);
    assert(!RatIsEqual(oldobj, newobj));
 
-   SCIP_CALL( RatCopy(blkmem, &(event->data.eventobjchg.oldobjexact), oldobj) );
-   SCIP_CALL( RatCopy(blkmem, &(event->data.eventobjchg.newobjexact), newobj) );
+   SCIP_CALL( RatCopyBlock(blkmem, &(event->data.eventobjchg.oldobjexact), oldobj) );
+   SCIP_CALL( RatCopyBlock(blkmem, &(event->data.eventobjchg.newobjexact), newobj) );
 
    return SCIP_OKAY;
 }

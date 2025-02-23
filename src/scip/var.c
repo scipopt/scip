@@ -727,7 +727,6 @@ SCIP_RETCODE boundchgApplyExact(
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the lbchginfos array of the variable! */
          }
-
       }
       else
       {
@@ -802,7 +801,6 @@ SCIP_RETCODE boundchgApplyExact(
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the ubchginfos array of the variable! */
          }
-
       }
       else
       {
@@ -945,7 +943,6 @@ SCIP_RETCODE SCIPboundchgApply(
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the lbchginfos array of the variable! */
          }
-
       }
       else
       {
@@ -1021,7 +1018,6 @@ SCIP_RETCODE SCIPboundchgApply(
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the ubchginfos array of the variable! */
          }
-
       }
       else
       {
@@ -1127,7 +1123,6 @@ SCIP_RETCODE SCIPboundchgUndo(
 
       /* in case all bound changes are removed the local bound should match the global bound */
       assert(var->nlbchginfos > 0 || SCIPsetIsFeasEQ(set, var->locdom.lb, var->glbdom.lb));
-
 
       break;
 
@@ -1823,7 +1818,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    if( newboundexact != NULL )
    {
       if( boundchg->newboundexact == NULL )
-         SCIP_CALL( RatCopy(blkmem, &boundchg->newboundexact, newboundexact) );
+         SCIP_CALL( RatCopyBlock(blkmem, &boundchg->newboundexact, newboundexact) );
       else
          RatSet(boundchg->newboundexact, newboundexact);
    }
@@ -2579,9 +2574,9 @@ SCIP_RETCODE SCIPvarAddExactData(
 
    if( lb != NULL )
    {
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->glbdom.lb, lb) );
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->locdom.lb, lb) );
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.lb, lb) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->glbdom.lb, lb) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->locdom.lb, lb) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->origdom.lb, lb) );
    }
    else
    {
@@ -2596,9 +2591,9 @@ SCIP_RETCODE SCIPvarAddExactData(
 
    if( ub != NULL )
    {
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->glbdom.ub, ub) );
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->locdom.ub, ub) );
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.ub, ub) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->glbdom.ub, ub) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->locdom.ub, ub) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->origdom.ub, ub) );
    }
    else
    {
@@ -2613,7 +2608,7 @@ SCIP_RETCODE SCIPvarAddExactData(
 
    if( obj != NULL )
    {
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->obj, obj) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->obj, obj) );
       SCIPintervalSetRational(&var->exactdata->objinterval, obj);
    }
    else
@@ -2639,7 +2634,8 @@ SCIP_RETCODE SCIPvarAddExactData(
 }
 
 /** copies exact variable data from one variable to another;
- * can't be integrated into varCopy because it is needed, e.g., when transforming vars
+ *
+ *  Cannot be integrated into varCopy because it is needed, e.g., when transforming vars.
  */
 SCIP_RETCODE SCIPvarCopyExactData(
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2660,17 +2656,17 @@ SCIP_RETCODE SCIPvarCopyExactData(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(targetvar->exactdata)) );
    targetvar->exactdata->glbdom = sourcevar->exactdata->glbdom;
    targetvar->exactdata->locdom = sourcevar->exactdata->locdom;
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->glbdom.lb, sourcevar->exactdata->glbdom.lb) );
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->glbdom.ub, sourcevar->exactdata->glbdom.ub) );
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->locdom.lb, sourcevar->exactdata->locdom.lb) );
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->locdom.ub, sourcevar->exactdata->locdom.ub) );
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->origdom.lb, sourcevar->exactdata->origdom.lb) );
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->origdom.ub, sourcevar->exactdata->origdom.ub) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->glbdom.lb, sourcevar->exactdata->glbdom.lb) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->glbdom.ub, sourcevar->exactdata->glbdom.ub) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->locdom.lb, sourcevar->exactdata->locdom.lb) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->locdom.ub, sourcevar->exactdata->locdom.ub) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->origdom.lb, sourcevar->exactdata->origdom.lb) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->origdom.ub, sourcevar->exactdata->origdom.ub) );
 
    if( sourcevar->exactdata->aggregate.scalar != NULL )
    {
-      SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->aggregate.scalar, sourcevar->exactdata->aggregate.scalar) );
-      SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->aggregate.constant) );
+      SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->aggregate.scalar, sourcevar->exactdata->aggregate.scalar) );
+      SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->aggregate.constant) );
    }
    else
    {
@@ -2680,7 +2676,7 @@ SCIP_RETCODE SCIPvarCopyExactData(
 
    if( sourcevar->exactdata->multaggr.scalars != NULL )
    {
-      SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->multaggr.constant) );
+      SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->multaggr.constant) );
       SCIP_CALL( RatCopyBlockArray(blkmem, &targetvar->exactdata->multaggr.scalars, sourcevar->exactdata->multaggr.scalars, sourcevar->data.multaggr.nvars) );
    }
    else
@@ -2689,8 +2685,7 @@ SCIP_RETCODE SCIPvarCopyExactData(
       targetvar->exactdata->multaggr.scalars = NULL;
    }
 
-
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
    if( negateobj )
    {
       RatNegate(targetvar->exactdata->obj, targetvar->exactdata->obj);
@@ -4594,6 +4589,9 @@ SCIP_RETCODE SCIPvarFixExact(
    assert(var->scip == set->scip);
    assert(set->exact_enabled);
 
+   *infeasible = FALSE;
+   *fixed = FALSE;
+
    if( !set->exact_enabled )
       return SCIP_OKAY;
 
@@ -4607,9 +4605,6 @@ SCIP_RETCODE SCIPvarFixExact(
    SCIP_CALL( RatCreateBuffer(set->buffer, &obj) );
    SCIP_CALL( RatCreateBuffer(set->buffer, &childfixedval) );
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
-
-   *infeasible = FALSE;
-   *fixed = FALSE;
 
    assert(SCIPvarGetStatusExact(var) ==  SCIPvarGetStatus(var));
 
@@ -5082,6 +5077,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
  *
  * The reason for this approach is that we cannot reallocate memory, since we do not know how the
  * memory has been allocated (e.g., by a C++ 'new' or SCIP functions).
+ *
+ * @todo Reimplement this method as was done with SCIPvarGetActiveRepresentatives() using a clean buffer array for rationals.
  */
 SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -5651,7 +5648,6 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
       var->data.multaggr.varssize = multvarssize;
       overwriteMultAggrWithExactData(set, var);
 
-
       if( multrequiredsize > multvarssize )
       {
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.vars), multvarssize, multrequiredsize) );
@@ -5947,10 +5943,10 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
    assert(infeasible != NULL);
    assert(fixed != NULL);
 
-   SCIP_CALL(RatCreateBuffer(set->buffer, &varlb) );
-   SCIP_CALL(RatCreateBuffer(set->buffer, &varub) );
-   SCIP_CALL(RatCreateBuffer(set->buffer, &aggvarlb) );
-   SCIP_CALL(RatCreateBuffer(set->buffer, &aggvarub) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &varlb) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &varub) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &aggvarlb) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &aggvarub) );
 
    *infeasible = FALSE;
    *fixed = FALSE;
@@ -6016,6 +6012,7 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
          /* the aggregated variable is fixed -> fix both variables */
          SCIP_CALL( SCIPvarFixExact(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
                eventfilter, eventqueue, cliquetable, varlb, infeasible, fixed) );
+
          if( !(*infeasible) )
          {
             SCIP_Bool aggfixed;
@@ -6096,6 +6093,7 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
          /* the aggregation variable is fixed -> fix both variables */
          SCIP_CALL( SCIPvarFixExact(aggvar, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
                eventfilter, eventqueue, cliquetable, aggvarlb, infeasible, fixed) );
+
          if( !(*infeasible) )
          {
             SCIP_Bool varfixed;
@@ -6117,6 +6115,7 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
             SCIP_CALL( SCIPvarChgLbGlobalExact(aggvar, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, cliquetable, aggvarlb) );
             aggvarbdschanged = !RatIsEqual(varlb, aggvar->exactdata->glbdom.lb);
          }
+
          if( RatIsLT(aggvarub, aggvar->exactdata->glbdom.ub) )
          {
             RatSet(varub, aggvar->exactdata->glbdom.ub);
@@ -7078,6 +7077,7 @@ SCIP_RETCODE tryAggregateIntVarsExact(
       assert(*aggregated);
       goto FREE;
    }
+
    if( (b == 1 || b == -1) && SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER )
    {
       /* aggregate y = - a/b*x + c/b */
@@ -7363,8 +7363,9 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    return SCIP_OKAY;
 }
 
-/** performs second step of SCIPaggregateVarsExact():
- *  the variable to be aggregated is chosen among active problem variables x' and y', preferring a less strict variable
+/** performs second step of SCIPaggregateVarsExact()
+ *
+ *  The variable to be aggregated is chosen among active problem variables x' and y', preferring a less strict variable
  *  type as aggregation variable (i.e. continuous variables are preferred over implicit integers, implicit integers
  *  or integers over binaries). If none of the variables is continuous, it is tried to find an integer
  *  aggregation (i.e. integral coefficients a'' and b'', such that a''*x' + b''*y' == c''). This can lead to
@@ -7444,7 +7445,7 @@ SCIP_RETCODE SCIPvarTryAggregateVarsExact(
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
    if( SCIPvarGetType(vary) > SCIPvarGetType(varx) ||
-         (SCIPvarGetType(vary) == SCIPvarGetType(varx) && !SCIPvarIsBinary(vary) && SCIPvarIsBinary(varx))  )
+      (SCIPvarGetType(vary) == SCIPvarGetType(varx) && !SCIPvarIsBinary(vary) && SCIPvarIsBinary(varx))  )
    {
       SCIP_VAR* var;
       SCIP_Rational* scalar;
@@ -8068,8 +8069,8 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
             goto TERMINATE;
          }
          else
-            /* @todo: it is possible to multi-aggregate another variable, does it make sense?,
-             *        rest looks like 0 = a_1*y_1 + ... + a_n*y_n + c and has at least three variables
+            /** @todo: it is possible to multi-aggregate another variable, does it make sense?,
+             *         rest looks like 0 = a_1*y_1 + ... + a_n*y_n + c and has at least three variables
              */
             goto TERMINATE;
       }
@@ -8160,7 +8161,7 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &var->data.multaggr.scalars, ntmpvars) );
       for( i = 0; i < ntmpvars; ++i )
          var->data.multaggr.scalars[i] = RatApproxReal(tmpscalars[i]);
-      SCIP_CALL( RatCopy(blkmem, &(var->exactdata->multaggr.constant), tmpconstant) );
+      SCIP_CALL( RatCopyBlock(blkmem, &(var->exactdata->multaggr.constant), tmpconstant) );
       var->data.multaggr.constant = RatApproxReal(tmpconstant);
       var->data.multaggr.nvars = ntmpvars;
       var->data.multaggr.varssize = ntmpvars;
@@ -9197,7 +9198,7 @@ SCIP_RETCODE SCIPvarAddObjExact(
           * since the objective of inactive variables cannot be changed, this corresponds to probindex != -1
           */
          if( SCIPvarIsActive(var) )
-	         SCIPprobUpdateNObjVars(transprob, set, oldobjreal, var->obj);
+            SCIPprobUpdateNObjVars(transprob, set, oldobjreal, var->obj);
 
          SCIP_CALL( varEventObjChangedExact(var, blkmem, set, primal, lp, eventqueue, oldobj, var->exactdata->obj) );
          break;
@@ -10078,7 +10079,6 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
             if( parentvar->data.aggregate.scalar > 0 )
             {
-
                /* a > 0 -> change lower bound of y */
                assert(SCIPsetIsInfinity(set, -parentvar->glbdom.lb) || SCIPsetIsInfinity(set, -oldbound)
                   || SCIPsetIsFeasEQ(set, parentvar->glbdom.lb, oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant)
@@ -10092,7 +10092,6 @@ SCIP_RETCODE varProcessChgLbGlobal(
             }
             else
             {
-
                /* a < 0 -> change upper bound of y */
                assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
                assert(SCIPsetIsInfinity(set, parentvar->glbdom.ub) || SCIPsetIsInfinity(set, -oldbound)
@@ -10107,6 +10106,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
             }
             break;
          }
+
       case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
@@ -10259,7 +10259,6 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
             if( parentvar->data.aggregate.scalar > 0 )
             {
-
                /* a > 0 -> change upper bound of y */
                assert(SCIPsetIsInfinity(set, parentvar->glbdom.ub) || SCIPsetIsInfinity(set, oldbound)
                   || SCIPsetIsFeasEQ(set, parentvar->glbdom.ub,
@@ -10272,7 +10271,6 @@ SCIP_RETCODE varProcessChgUbGlobal(
             }
             else
             {
-
                /* a < 0 -> change lower bound of y */
                assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
                assert(SCIPsetIsInfinity(set, -parentvar->glbdom.lb) || SCIPsetIsInfinity(set, oldbound)
@@ -10286,6 +10284,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
             }
             break;
          }
+
       case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
@@ -10712,7 +10711,6 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
 
          if( var->data.aggregate.scalar > 0 )
          {
-
             /* a > 0 -> change lower bound of y */
             assert((SCIPsetIsInfinity(set, -var->glbdom.lb) && SCIPsetIsInfinity(set, -var->data.aggregate.var->glbdom.lb))
                || SCIPsetIsFeasEQ(set, var->glbdom.lb,
@@ -10726,7 +10724,6 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
          }
          else
          {
-
             /* a < 0 -> change upper bound of y */
             assert((SCIPsetIsInfinity(set, -var->glbdom.lb) && SCIPsetIsInfinity(set, var->data.aggregate.var->glbdom.ub))
                || SCIPsetIsFeasEQ(set, var->glbdom.lb,
@@ -10740,6 +10737,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
          }
          break;
       }
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
@@ -10857,6 +10855,7 @@ SCIP_RETCODE SCIPvarChgLbGlobalExact(
          }
          else
             RatSet(childnewbound, newbound);
+
          SCIP_CALL( SCIPvarChgLbGlobalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable,
                childnewbound) );
 
@@ -10874,6 +10873,7 @@ SCIP_RETCODE SCIPvarChgLbGlobalExact(
          }
          else
             RatSet(childnewbound, newbound);
+
          SCIP_CALL( SCIPvarChgUbGlobalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable,
                childnewbound) );
 
@@ -11002,7 +11002,6 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
 
       if( var->data.aggregate.scalar > 0 )
       {
-
          /* a > 0 -> change lower bound of y */
          assert((SCIPsetIsInfinity(set, var->glbdom.ub) && SCIPsetIsInfinity(set, var->data.aggregate.var->glbdom.ub))
             || SCIPsetIsFeasEQ(set, var->glbdom.ub,
@@ -11016,7 +11015,6 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
       }
       else
       {
-
          /* a < 0 -> change upper bound of y */
          assert((SCIPsetIsInfinity(set, var->glbdom.ub) && SCIPsetIsInfinity(set, -var->data.aggregate.var->glbdom.lb))
             || SCIPsetIsFeasEQ(set, var->glbdom.ub,
@@ -11030,6 +11028,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
       }
       break;
    }
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
@@ -11148,6 +11147,7 @@ SCIP_RETCODE SCIPvarChgUbGlobalExact(
          }
          else
             RatSet(childnewbound, newbound);
+
          SCIP_CALL( SCIPvarChgUbGlobalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable,
                childnewbound) );
 
@@ -11165,6 +11165,7 @@ SCIP_RETCODE SCIPvarChgUbGlobalExact(
          }
          else
             RatSet(childnewbound, newbound);
+
          SCIP_CALL( SCIPvarChgLbGlobalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable,
                childnewbound) );
 
@@ -11248,7 +11249,6 @@ SCIP_RETCODE SCIPvarChgUbLazy(
    return SCIP_OKAY;
 }
 
-
 /** changes global bound of variable; if possible, adjusts bound to integral value;
  *  updates local bound if the global bound is tighter
  */
@@ -11306,7 +11306,6 @@ SCIP_RETCODE SCIPvarChgBdGlobalExact(
       return SCIP_INVALIDDATA;
    }
 }
-
 
 /** appends LBTIGHTENED or LBRELAXED event to the event queue */
 static
@@ -11594,6 +11593,7 @@ SCIP_RETCODE varProcessChgLbLocal(
                SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.constant);
                parentnewbound = parentvar->data.aggregate.scalar > 0 ? parentboundinterval.inf : parentboundinterval.sup;
             }
+
             if( parentvar->data.aggregate.scalar > 0 )
             {
                /* a > 0 -> change lower bound of y */
@@ -11620,7 +11620,6 @@ SCIP_RETCODE varProcessChgLbLocal(
             }
             else
             {
-
                /* a < 0 -> change upper bound of y */
                assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
                assert(SCIPsetIsInfinity(set, parentvar->locdom.ub) || SCIPsetIsInfinity(set, -oldbound)
@@ -11722,7 +11721,6 @@ SCIP_RETCODE varProcessChgUbLocal(
       RatMIN(var->exactdata->locdom.ub, var->exactdata->locdom.ub, var->exactdata->glbdom.ub);
    }
 
-
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
     */
@@ -11785,7 +11783,6 @@ SCIP_RETCODE varProcessChgUbLocal(
             }
             if( parentvar->data.aggregate.scalar > 0 )
             {
-
                /* a > 0 -> change upper bound of x */
                assert(SCIPsetIsInfinity(set, parentvar->locdom.ub) || SCIPsetIsInfinity(set, oldbound)
                   || SCIPsetIsFeasEQ(set, parentvar->locdom.ub,
@@ -11809,7 +11806,6 @@ SCIP_RETCODE varProcessChgUbLocal(
             }
             else
             {
-
                /* a < 0 -> change lower bound of x */
                assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
                assert(SCIPsetIsInfinity(set, -parentvar->locdom.lb) || SCIPsetIsInfinity(set, oldbound)
@@ -11982,6 +11978,7 @@ SCIP_RETCODE varProcessChgLbLocalExact(
             }
             else
                RatNegate(parentnewbound, newbound);
+
             SCIP_CALL( varProcessChgUbLocalExact(parentvar, blkmem, set, NULL, lpexact, branchcand, eventqueue, parentnewbound) );
          }
          RatFreeBuffer(set->buffer, &parentnewbound);
@@ -12125,6 +12122,7 @@ SCIP_RETCODE varProcessChgUbLocalExact(
             }
             else
                RatNegate(parentnewbound, newbound);
+
             SCIP_CALL( varProcessChgLbLocalExact(parentvar, blkmem, set, NULL, lpexact, branchcand, eventqueue, parentnewbound) );
          }
          RatFreeBuffer(set->buffer, &parentnewbound);
@@ -12366,6 +12364,7 @@ SCIP_RETCODE SCIPvarChgLbLocalExact(
          }
          else
             RatSet(childnewbound, newbound);
+
          SCIP_CALL( SCIPvarChgLbLocalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue,
                childnewbound) );
 
@@ -12385,6 +12384,7 @@ SCIP_RETCODE SCIPvarChgLbLocalExact(
          }
          else
             RatNegate(childnewbound, newbound);
+
          SCIP_CALL( SCIPvarChgUbLocalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue,
                childnewbound) );
 
@@ -12509,7 +12509,6 @@ SCIP_RETCODE SCIPvarChgUbLocal(
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
-
          /* a < 0 -> change lower bound of y */
          assert((SCIPsetIsInfinity(set, var->locdom.ub) && SCIPsetIsInfinity(set, -var->data.aggregate.var->locdom.lb))
             || SCIPsetIsFeasEQ(set, var->locdom.ub,
@@ -12591,7 +12590,6 @@ SCIP_RETCODE SCIPvarChgUbLocalExact(
    if( SCIPcertificateShouldTrackBounds(set->scip) )
       SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
 
-
    /* change bounds of attached variables */
    switch( SCIPvarGetStatusExact(var) )
    {
@@ -12652,6 +12650,7 @@ SCIP_RETCODE SCIPvarChgUbLocalExact(
          }
          else
             RatNegate(childnewbound, newbound);
+
          SCIP_CALL( SCIPvarChgLbLocalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue,
                childnewbound) );
 
@@ -13075,10 +13074,10 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
 }
 
 /** for a multi-aggregated variable, gives the exact local lower bound computed by adding the local bounds from all aggregation variables
- * this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable is not allowed
+ *  this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable is not allowed
  */
-void SCIPvarGetMultaggrLbLocalExact(
+SCIP_RETCODE SCIPvarGetMultaggrLbLocalExact(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Rational*        result              /**< the resulting bound */
@@ -13096,8 +13095,8 @@ void SCIPvarGetMultaggrLbLocalExact(
    assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
-   (void) RatCreateBuffer(set->buffer, &lb);
-   (void) RatCreateBuffer(set->buffer, &bnd);
+   SCIP_CALL( RatCreateBuffer(set->buffer, &lb) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &bnd) );
 
    posinf = FALSE;
    neginf = FALSE;
@@ -13108,7 +13107,7 @@ void SCIPvarGetMultaggrLbLocalExact(
       if( RatIsPositive(var->exactdata->multaggr.scalars[i]) )
       {
          if( SCIPvarGetStatusExact(aggrvar) == SCIP_VARSTATUS_MULTAGGR )
-            SCIPvarGetMultaggrLbLocalExact(aggrvar, set, bnd);
+            SCIP_CALL( SCIPvarGetMultaggrLbLocalExact(aggrvar, set, bnd) );
          else
             RatSet(bnd, SCIPvarGetLbLocalExact(aggrvar));
 
@@ -13122,7 +13121,7 @@ void SCIPvarGetMultaggrLbLocalExact(
       else
       {
          if( SCIPvarGetStatusExact(aggrvar) == SCIP_VARSTATUS_MULTAGGR )
-            SCIPvarGetMultaggrUbLocalExact(aggrvar, set, bnd);
+            SCIP_CALL( SCIPvarGetMultaggrUbLocalExact(aggrvar, set, bnd) );
          else
             RatSet(bnd, SCIPvarGetUbLocalExact(aggrvar));
 
@@ -13152,6 +13151,8 @@ void SCIPvarGetMultaggrLbLocalExact(
 
    RatFreeBuffer(set->buffer, &bnd);
    RatFreeBuffer(set->buffer, &lb);
+
+   return SCIP_OKAY;
 }
 
 /** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all
@@ -13221,10 +13222,10 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
 }
 
 /** for a multi-aggregated variable, gives the exact local upper bound computed by adding the local bounds from all aggregation variables
- * this upper bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable is not allowed
+ *  this upper bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable is not allowed
  */
-void SCIPvarGetMultaggrUbLocalExact(
+SCIP_RETCODE SCIPvarGetMultaggrUbLocalExact(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Rational*        result              /**< the resulting bound */
@@ -13242,8 +13243,8 @@ void SCIPvarGetMultaggrUbLocalExact(
    assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
-   (void) RatCreateBuffer(set->buffer, &ub);
-   (void) RatCreateBuffer(set->buffer, &bnd);
+   SCIP_CALL( RatCreateBuffer(set->buffer, &ub) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &bnd) );
 
    posinf = FALSE;
    neginf = FALSE;
@@ -13254,7 +13255,7 @@ void SCIPvarGetMultaggrUbLocalExact(
       if( RatIsPositive(var->exactdata->multaggr.scalars[i]) )
       {
          if( SCIPvarGetStatusExact(aggrvar) == SCIP_VARSTATUS_MULTAGGR )
-            SCIPvarGetMultaggrUbLocalExact(aggrvar, set, bnd);
+            SCIP_CALL( SCIPvarGetMultaggrUbLocalExact(aggrvar, set, bnd) );
          else
             RatSet(bnd, SCIPvarGetUbLocalExact(aggrvar));
 
@@ -13268,7 +13269,7 @@ void SCIPvarGetMultaggrUbLocalExact(
       else
       {
          if( SCIPvarGetStatusExact(aggrvar) == SCIP_VARSTATUS_MULTAGGR )
-            SCIPvarGetMultaggrLbLocalExact(aggrvar, set, bnd);
+            SCIP_CALL( SCIPvarGetMultaggrLbLocalExact(aggrvar, set, bnd) );
          else
             RatSet(bnd, SCIPvarGetLbLocalExact(aggrvar));
 
@@ -13298,6 +13299,8 @@ void SCIPvarGetMultaggrUbLocalExact(
 
    RatFreeBuffer(set->buffer, &bnd);
    RatFreeBuffer(set->buffer, &ub);
+
+   return SCIP_OKAY;
 }
 
 /** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all
@@ -18244,13 +18247,12 @@ void SCIPvarGetLPSolExact_rec(
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
-   {
       assert(var->data.aggregate.var != NULL);
       SCIPvarGetLPSolExact(var->data.aggregate.var, res);
       RatMult(res, res, var->exactdata->aggregate.scalar);
       RatAdd(res, res, var->exactdata->aggregate.constant);
       break;
-   }
+
    case SCIP_VARSTATUS_MULTAGGR:
    {
       SCIP_Rational* tmp;
@@ -18273,6 +18275,7 @@ void SCIPvarGetLPSolExact_rec(
       RatFree(&tmp);
       break;
    }
+
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
@@ -19656,9 +19659,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       assert(var->data.multaggr.scalars != NULL);
 
       SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
-      /* Due to method SCIPvarFlattenAggregationGraph(), this assert is no longer correct
-       * assert(var->data.multaggr.nvars >= 2);
-       */
+
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
          RatMult(tmp, var->exactdata->multaggr.scalars[i], val);
@@ -24377,8 +24378,7 @@ SCIP_Rational* SCIPvarGetPseudoSolExact(
 {
    assert(var != NULL);
 
-   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE
-         || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
+   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
       return SCIPvarGetBestBoundLocalExact(var);
    else
       return SCIPvarGetPseudoSolExact_rec(var);
@@ -24704,7 +24704,7 @@ int SCIPvarGetCertificateIndex(
 /** sets index of variable in vipr-certificate */
 void SCIPvarSetCertificateIndex(
    SCIP_VAR*             var,                /**< variable to set index for */
-   int                   certidx               /**< the index */
+   int                   certidx             /**< the index */
    )
 {
    assert(var != NULL);
@@ -24717,7 +24717,7 @@ void SCIPvarSetCertificateIndex(
 /** sets index of variable in vipr-certificate */
 void SCIPvarSetUbCertificateIndexGlobal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   int                   certidx               /**< the index */
+   int                   certidx             /**< the index */
    )
 {
    assert(var != NULL);
@@ -24731,7 +24731,7 @@ void SCIPvarSetUbCertificateIndexGlobal(
 /** sets index of variable in vipr-certificate */
 void SCIPvarSetUbCertificateIndexLocal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   SCIP_Longint          certidx               /**< the index */
+   SCIP_Longint          certidx             /**< the index */
    )
 {
    assert(var != NULL);
@@ -24744,7 +24744,7 @@ void SCIPvarSetUbCertificateIndexLocal(
 /** sets index of variable in vipr-certificate */
 void SCIPvarSetLbCertificateIndexLocal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   SCIP_Longint          certidx               /**< the index */
+   SCIP_Longint          certidx             /**< the index */
    )
 {
    assert(var != NULL);
@@ -24757,7 +24757,7 @@ void SCIPvarSetLbCertificateIndexLocal(
 /** sets index of variable in vipr-certificate */
 void SCIPvarSetLbCertificateIndexGlobal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   int                   certidx               /**< the index */
+   int                   certidx             /**< the index */
    )
 {
    assert(var != NULL);
@@ -24768,7 +24768,7 @@ void SCIPvarSetLbCertificateIndexGlobal(
    var->exactdata->locdom.lbcertificateidx = certidx;
 }
 
-/**< returns index of variable bound in vipr certificate */
+/** returns index of variable bound in vipr certificate */
 SCIP_Longint SCIPvarGetLbCertificateIndexLocal(
    SCIP_VAR*             var                 /**< variable to get index for */
    )
@@ -24780,7 +24780,7 @@ SCIP_Longint SCIPvarGetLbCertificateIndexLocal(
    return var->exactdata->locdom.lbcertificateidx;
 }
 
-/**< returns index of variable bound in vipr certificate */
+/** returns index of variable bound in vipr certificate */
 SCIP_Longint SCIPvarGetUbCertificateIndexLocal(
    SCIP_VAR*             var                 /**< variable to get index for */
    )
@@ -24792,7 +24792,7 @@ SCIP_Longint SCIPvarGetUbCertificateIndexLocal(
    return var->exactdata->locdom.ubcertificateidx;
 }
 
-/**< returns index of variable bound in vipr certificate */
+/** returns index of variable bound in vipr certificate */
 SCIP_Longint SCIPvarGetLbCertificateIndexGlobal(
    SCIP_VAR*             var                 /**< variable to get index for */
    )
@@ -24804,7 +24804,7 @@ SCIP_Longint SCIPvarGetLbCertificateIndexGlobal(
    return var->exactdata->glbdom.lbcertificateidx;
 }
 
-/**< returns index of variable bound in vipr certificate */
+/** returns index of variable bound in vipr certificate */
 SCIP_Longint SCIPvarGetUbCertificateIndexGlobal(
    SCIP_VAR*             var                 /**< variable to get index for */
    )

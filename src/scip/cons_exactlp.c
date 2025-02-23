@@ -26,7 +26,6 @@
  * @brief Constraint handler for exact linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.
  * @author Leon Eifler
  * @author Sander Borst
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -77,13 +76,10 @@
 #include "scip/scip_var.h"
 #include "scip/var.h"
 #include "scip/sepastoreexact.h"
-#include "scip/struct_scip.h"
-#include "scip/struct_certificate.h"
+/* AG@LE we should not include struct files */
+/* LE@AG true, I will need to add some clean helper methods to avoid it*/
 #include <ctype.h>
 #include <string.h>
-#ifdef SCIP_WITH_MPFR
-#include <mpfr.h>
-#endif
 #if defined(_WIN32) || defined(_WIN64)
 #else
 #include <strings.h> /*lint --e{766}*/
@@ -818,8 +814,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->rowlhs = NULL;
    (*consdata)->rowrhs = NULL;
    (*consdata)->rowexact = NULL;
-   SCIP_CALL( RatCopy(SCIPblkmem(scip), &(*consdata)->lhs, lhs) );
-   SCIP_CALL( RatCopy(SCIPblkmem(scip), &(*consdata)->rhs, rhs) );
+   SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &(*consdata)->lhs, lhs) );
+   SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &(*consdata)->rhs, rhs) );
    (*consdata)->lhsreal = lhsrel;
    (*consdata)->rhsreal = rhsrel;
    SCIP_CALL( RatCreateString(SCIPblkmem(scip), &(*consdata)->maxabsvalEx, "inf") );
@@ -967,7 +963,7 @@ SCIP_RETCODE consdataPrint(
       && !RatIsInfinity(consdata->rhs)
       && !RatIsEqual(consdata->lhs, consdata->rhs) )
    {
-      RatMessage(scip->messagehdlr, file, consdata->lhs);
+      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
       SCIPinfoMessage(scip, file, " <= ");
    }
 
@@ -984,17 +980,17 @@ SCIP_RETCODE consdataPrint(
    if( RatIsEqual(consdata->lhs, consdata->rhs) )
    {
       SCIPinfoMessage(scip, file, " == ");
-      RatMessage(scip->messagehdlr, file, consdata->lhs);
+      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
    }
    else if( !RatIsInfinity(consdata->rhs) )
    {
       SCIPinfoMessage(scip, file, " <= ");
-      RatMessage(scip->messagehdlr, file, consdata->rhs);
+      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->rhs);
    }
    else if( !RatIsNegInfinity(consdata->lhs) )
    {
       SCIPinfoMessage(scip, file, " >= ");
-      RatMessage(scip->messagehdlr, file, consdata->lhs);
+      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
    }
    else
       SCIPinfoMessage(scip, file, " [free]");
@@ -1028,7 +1024,7 @@ SCIP_RETCODE consPrintConsSol(
       && !RatIsInfinity(consdata->rhs)
       && !RatIsEqual(consdata->lhs, consdata->rhs) )
    {
-      RatMessage(scip->messagehdlr, file, consdata->lhs);
+      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
       SCIPinfoMessage(scip, file, " <= ");
    }
 
@@ -1053,7 +1049,7 @@ SCIP_RETCODE consPrintConsSol(
                SCIPinfoMessage(scip, file, " -");
             else
             {
-               RatMessage(scip->messagehdlr, file, consdata->vals[v]);
+               RatMessage(SCIPgetMessagehdlr(scip), file, consdata->vals[v]);
             }
          }
          else if( consdata->nvars > 0 )
@@ -1071,7 +1067,7 @@ SCIP_RETCODE consPrintConsSol(
                SCIP_Rational* tmp;
                SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
                SCIPgetSolValExact(scip, sol, consdata->vars[v], tmp);
-               RatMessage(scip->messagehdlr, file, tmp);
+               RatMessage(SCIPgetMessagehdlr(scip), file, tmp);
                RatFreeBuffer(SCIPbuffer(scip), &tmp);
             }
          }
@@ -1082,17 +1078,17 @@ SCIP_RETCODE consPrintConsSol(
    if( RatIsEqual(consdata->lhs, consdata->rhs) )
    {
       SCIPinfoMessage(scip, file, " == ");
-      RatMessage(scip->messagehdlr, file, consdata->lhs);
+      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
    }
    else if( !RatIsInfinity(consdata->rhs) )
    {
       SCIPinfoMessage(scip, file, " <= ");
-      RatMessage(scip->messagehdlr, file, consdata->rhs);
+      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->rhs);
    }
    else if( !RatIsNegInfinity(consdata->lhs) )
    {
       SCIPinfoMessage(scip, file, " >= ");
-      RatMessage(scip->messagehdlr, file, consdata->lhs);
+      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
    }
    else
       SCIPinfoMessage(scip, file, " [free]");
@@ -1205,7 +1201,6 @@ void consdataComputePseudoActivity(
       RatSetString(pseudoactivity, "-inf");
    else if( pseudoactivityposinf > 0 )
       RatSetString(pseudoactivity, "inf");
-
 }
 
 /** recompute the minactivity of a constraint */
@@ -2422,7 +2417,7 @@ SCIP_Bool consdataComputeSolActivityWithErrorbound(
    }
    else
    {
-      success = SCIProwExactGetSolActivityWithErrorbound(consdata->rowexact, scip->set, scip->stat, sol, &sum, &mu);
+      success = SCIPgetRowSolActivityWithErrorboundExact(scip, consdata->rowexact, sol, &sum, &mu);
 
       if( !success )
          return FALSE;
@@ -3055,317 +3050,6 @@ SCIP_RETCODE createRows(
    SCIP_CONS*            cons                /**< linear constraint */
    );
 
-SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
-   SCIP*                 scip,
-   SCIP_CONSHDLR*        conshdlr,
-   SCIP_CONS*            cons
-   )
-{
-   SCIP_CERTIFICATE* certificate;
-   SCIP_CONSDATA* consdata;
-   SCIP_ROWEXACT* row;
-   SCIP_Rational* correctedside;
-   int* varsindex;
-   int i;
-   SCIP_Longint image;
-
-   /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(cons != NULL);
-
-   /* print constraint into certificate output */
-   if( !SCIPisCertificateActive(scip) )
-      return SCIP_OKAY;
-   certificate = SCIPgetCertificate(scip);
-   consdata = SCIPconsGetData(cons);
-   row = SCIPgetRowexExactLinear(scip, cons);
-
-   assert(row != NULL);
-
-   image = SCIPhashmapGetImageLong(certificate->rowdatahash, row);
-   /* add row to hashmap */
-   if( image != LONG_MAX )
-   {
-      SCIPmessageFPrintWarning(scip->messagehdlr, "%ld \n", (size_t) SCIPhashmapGetImage(certificate->rowdatahash, row));
-      SCIPerrorMessage("Duplicate row in certificate row hashmap\n");
-      SCIPABORT();
-      return SCIP_ERROR;
-   }
-   else
-   {
-      SCIP_CALL( SCIPhashmapInsertLong(certificate->rowdatahash, row, certificate->indexcounter) );
-      SCIP_CALL( SCIPhashmapInsertLong(certificate->rowdatahash, cons, certificate->indexcounter) );
-      assert(SCIPhashmapExists(certificate->rowdatahash, row));
-      assert(SCIPhashmapExists(certificate->rowdatahash, cons));
-   }
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &varsindex, consdata->nvars) );
-   for( i = 0; i < SCIProwExactGetNNonz(row); ++i )
-      varsindex[i] = SCIPvarGetCertificateIndex(SCIPcolExactGetVar(SCIProwExactGetCols(row)[i]));
-
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &correctedside) );
-
-   /* print constraint */
-   if( RatIsEqual(consdata->lhs, consdata->rhs) )
-   {
-      assert(!RatIsAbsInfinity(consdata->lhs));
-      RatDiff(correctedside, SCIProwExactGetLhs(row), SCIProwExactGetConstant(row));
-      SCIPcertificatePrintCons(certificate, FALSE, NULL, 'E', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
-   }
-   else
-   {
-      if( !RatIsNegInfinity(consdata->lhs) )
-      {
-         RatDiff(correctedside, SCIProwExactGetLhs(row), SCIProwExactGetConstant(row));
-         SCIPcertificatePrintCons(certificate, FALSE, NULL, 'G', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
-      }
-      if( !RatIsInfinity(consdata->rhs) )
-      {
-         RatDiff(correctedside, SCIProwExactGetRhs(row), SCIProwExactGetConstant(row));
-         SCIPcertificatePrintCons(certificate, FALSE, NULL, 'L', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
-      }
-   }
-
-   RatFreeBuffer(SCIPbuffer(scip), &correctedside);
-   SCIPfreeBufferArray(scip, &varsindex);
-
-   return SCIP_OKAY;
-}
-
-/** returns the sense of an inequality */
-static char getInequalitySense(
-   SCIP_Bool             isgreaterthan       /**< is the inequality a greater than inequality? */
-   )
-{
-   return isgreaterthan ? 'G' : 'L';
-}
-
-/** returns the index of the given constraint in the certificate */
-static
-SCIP_Longint certificateGetConsIndex(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Bool             rhs                 /**< whether to return the index of the rhs or lhs */
-   )
-{
-   SCIP_Longint ret;
-   SCIP_CONSDATA* consdata;
-
-   consdata = SCIPconsGetData(cons);
-   if (consdata->rowexact != NULL)
-      return SCIPcertificateGetRowIndex(certificate, consdata->rowexact, rhs);
-
-   ret = SCIPhashmapGetImageLong(certificate->rowdatahash, cons);
-
-   assert( ret != LONG_MAX );
-   if( !RatIsAbsInfinity(consdata->rhs) && !RatIsAbsInfinity(consdata->lhs) && !RatIsEqual(consdata->lhs, consdata->rhs) && rhs)
-      ret += 1;
-
-   assert(ret >= 0);
-
-   return ret;
-}
-
-/** prints activity bound to proof section */
-static
-SCIP_Longint SCIPcertificatePrintActivityVarBoundEx(
-   SCIP*                 scip,
-   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
-   const char*           linename,           /**< name of the unsplitting line */
-   SCIP_BOUNDTYPE        boundtype,          /**< type of bound (upper/lower) */
-   SCIP_Rational*        newbound,           /**< pointer to lower bound on the objective, NULL indicating infeasibility */
-   SCIP_Bool             ismaxactivity,      /**< TRUE for maxactivity, FALSE for minactivity */
-   SCIP_CONS*            constraint,         /**< the constraint */
-   SCIP_VAR*             variable            /**< the variable */
-   )
-{
-   SCIP_Longint res;
-   SCIP_Rational* val;
-   SCIP_Bool upperboundcontribution;
-   SCIP_CONSDATA* consdata;
-
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(constraint)), "exactlinear") == 0 );
-
-   switch (variable->varstatus)
-   {
-      case SCIP_VARSTATUS_FIXED:
-      case SCIP_VARSTATUS_LOOSE:
-      case SCIP_VARSTATUS_ORIGINAL:
-         SCIPABORT();
-         return -1;
-      case SCIP_VARSTATUS_NEGATED:
-
-         RatMultReal(newbound, newbound, -1.0);
-         assert( SCIPvarGetNegationConstant(variable) == 1 );
-         RatAddReal(newbound, newbound, 1.0);
-         res = SCIPcertificatePrintActivityVarBoundEx(scip, certificate, linename,
-               boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER,
-               newbound, ismaxactivity, constraint, variable->negatedvar);
-         RatAddReal(newbound, newbound, -1.0);
-         RatMultReal(newbound, newbound, -1.0);
-         return res;
-         break;
-      case SCIP_VARSTATUS_AGGREGATED:
-         RatAddProdReal(newbound, variable->exactdata->aggregate.constant, -1.0);
-         RatDiv(newbound, newbound, variable->exactdata->aggregate.scalar);
-         res = SCIPcertificatePrintActivityVarBoundEx(scip, certificate, linename,
-               (boundtype == SCIP_BOUNDTYPE_UPPER) == RatIsPositive(variable->exactdata->aggregate.scalar) ? SCIP_BOUNDTYPE_UPPER: SCIP_BOUNDTYPE_LOWER,
-               newbound,  ismaxactivity, constraint, variable->data.aggregate.var);
-         RatMult(newbound, newbound, variable->exactdata->aggregate.scalar);
-         return res;
-         break;
-      case SCIP_VARSTATUS_COLUMN:
-         break;
-      default:
-         assert(false);
-         SCIPABORT();
-         return 0;
-
-   }
-
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
-      return 0;
-
-   certificate->indexcounter++;
-
-   if( linename == NULL )
-   {
-      SCIPcertificatePrintProofMessage(certificate, "ACT_L%d ", certificate->indexcounter - 1);
-   }
-   else
-   {
-      SCIPcertificatePrintProofMessage(certificate, "%s ", linename);
-   }
-
-   consdata = SCIPconsGetData(constraint);
-
-   // find he correct value in the constraint
-   val = NULL;
-   for( int i = 0; i < consdata->nvars; i++ )
-   {
-      if( consdata->vars[i] == variable )
-      {
-         val = consdata->vals[i];
-         break;
-      }
-   }
-
-   assert(val != NULL);
-
-   // Do we need an upper bound on the contribution val[i]*x_i (otherwise a lowerbound)
-   upperboundcontribution = (boundtype == SCIP_BOUNDTYPE_UPPER) == RatIsPositive(val);
-   SCIPcertificatePrintProofMessage(certificate, "%c ", getInequalitySense(upperboundcontribution));
-
-   // new bound = -newbound * val for now, we print a second line where we scale with 1/val
-   RatMult(newbound, newbound, val);
-   RatNegate(newbound, newbound);
-   SCIPcertificatePrintProofRational(certificate, newbound, 10); // update
-
-   // print coeffictent of variable -> val
-   RatNegate(newbound, newbound);
-   RatDiv(newbound, newbound, val);
-   SCIPcertificatePrintProofMessage(certificate, " 1 %d ", SCIPvarGetCertificateIndex(variable));
-
-   // negate val, print it and reset it again
-   RatNegate(val, val);
-   SCIPcertificatePrintProofRational(certificate, val, 10);
-   RatNegate(val, val);
-
-   SCIPcertificatePrintProofMessage(certificate, " { lin %d %d -1", consdata->nvars, certificateGetConsIndex(scip, certificate, constraint, !ismaxactivity));
-
-   // print all other variables with their correct bounds
-   for( int i = 0; i < consdata->nvars; i++ )
-   {
-      SCIP_VAR* ivar;
-      bool is_upper_bound;
-      SCIP_Longint certificateindex;
-
-      assert(!RatIsAbsInfinity(consdata->vals[i]));
-
-      ivar = consdata->vars[i];
-      if( ivar == variable )
-         continue;
-
-      is_upper_bound = upperboundcontribution != RatIsPositive(consdata->vals[i]);
-
-      assert(upperboundcontribution != ismaxactivity);
-
-      certificateindex = is_upper_bound ? SCIPvarGetUbCertificateIndexLocal(ivar) :  SCIPvarGetLbCertificateIndexLocal(ivar);
-      SCIPcertificatePrintProofMessage(certificate, " %d ", certificateindex);
-      SCIPcertificatePrintProofRational(certificate, consdata->vals[i], 10);
-   }
-   SCIPcertificatePrintProofMessage(certificate, " } -1\n");
-
-   // now scale with 1/val
-   certificate->indexcounter++;
-   SCIPcertificatePrintProofMessage(certificate, "ACT_L%d %c ", certificate->indexcounter - 1, getInequalitySense(boundtype == SCIP_BOUNDTYPE_LOWER));
-   SCIPcertificatePrintProofRational(certificate, newbound, 10);
-   SCIPcertificatePrintProofMessage(certificate, " 1 %d 1 { lin 1 %d ", SCIPvarGetCertificateIndex(variable), certificate->indexcounter - 2);
-   RatInvert(val, val);
-   RatNegate(val, val);
-   SCIPcertificatePrintProofRational(certificate, val, 10);
-
-   // Return val to its original state:
-   RatNegate(val, val);
-   RatInvert(val, val);
-   SCIPcertificatePrintProofMessage(certificate, " } -1\n", SCIPvarGetCertificateIndex(variable), certificate->indexcounter - 2);
-
-   // if variable is integer, round the new bound
-   if( !RatIsAbsInfinity(newbound) && SCIPvarGetType(variable) != SCIP_VARTYPE_CONTINUOUS && !RatIsIntegral(newbound) )
-   {
-      certificate->indexcounter++;
-
-      SCIPcertificatePrintProofMessage(certificate, "ACT_R%d %c ", certificate->indexcounter - 1, getInequalitySense(boundtype == SCIP_BOUNDTYPE_LOWER));
-      RatRound(newbound, newbound, boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_R_ROUND_DOWNWARDS : SCIP_R_ROUND_UPWARDS);
-
-      SCIPcertificatePrintProofRational(certificate, newbound, 10);
-
-      SCIPcertificatePrintProofMessage(certificate, " 1 %d 1", SCIPvarGetCertificateIndex(variable));
-      SCIPcertificatePrintProofMessage(certificate, " { rnd 1 %d 1 } -1\n", certificate->indexcounter - 2);
-   }
-
-#ifndef NDEBUG
-   certificate->lastinfo->isbound = TRUE;
-   certificate->lastinfo->boundtype = boundtype;
-   certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(variable);
-   certificate->lastinfo->isglobal = FALSE;
-   certificate->lastinfo->certificateindex = certificate->indexcounter - 1;
-   RatSet(certificate->lastinfo->boundval, newbound);
-#endif
-   (void) SCIPcertificateSetLastBoundIndex(scip, certificate, certificate->indexcounter - 1);
-
-   return (certificate->indexcounter - 1);
-}
-
-/** prints activity bound to proof section */
-static
-SCIP_RETCODE SCIPcertificatePrintActivityVarBound(
-   SCIP*                 scip,
-   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
-   const char*           linename,           /**< name of the unsplitting line */
-   SCIP_BOUNDTYPE        boundtype,
-   SCIP_Real             newbound,           /**< pointer to lower bound on the objective, NULL indicating infeasibility */
-   SCIP_Bool             ismaxactivity,
-   SCIP_CONS*            constraint,
-   SCIP_VAR*             variable
-   )
-{
-   // It would be more efficient if we could do this all in fp artihmetic. However,
-   // this is not trivial because the translations between aggregate variables need to be done exactly..
-   SCIP_Rational* newboundex;
-
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &newboundex) );
-   RatSetReal(newboundex, newbound);
-   (void) SCIPcertificatePrintActivityVarBoundEx(scip, certificate, linename, boundtype,
-      newboundex, ismaxactivity, constraint, variable);
-   RatFreeBuffer(SCIPbuffer(scip), &newboundex);
-
-   return SCIP_OKAY;
-}
-
 /** prints the certificate for a given original exact linear constraint */
 SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3397,17 +3081,17 @@ SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(
       if( RatIsEqual(consdata->lhs, consdata->rhs) )
       {
          assert(!RatIsAbsInfinity(consdata->lhs));
-         SCIPcertificatePrintCons(certificate, TRUE, NULL, 'E', consdata->lhs, consdata->nvars, varsindex, consdata->vals);
+         SCIP_CALL( SCIPcertificatePrintCons(certificate, TRUE, NULL, 'E', consdata->lhs, consdata->nvars, varsindex, consdata->vals) );
       }
       else
       {
          if( !RatIsNegInfinity(consdata->lhs) )
          {
-            SCIPcertificatePrintCons(certificate, TRUE, NULL, 'G', consdata->lhs, consdata->nvars, varsindex, consdata->vals);
+            SCIP_CALL( SCIPcertificatePrintCons(certificate, TRUE, NULL, 'G', consdata->lhs, consdata->nvars, varsindex, consdata->vals) );
          }
          if( !RatIsInfinity(consdata->rhs) )
          {
-            SCIPcertificatePrintCons(certificate, TRUE, NULL, 'L', consdata->rhs, consdata->nvars, varsindex, consdata->vals);
+            SCIP_CALL( SCIPcertificatePrintCons(certificate, TRUE, NULL, 'L', consdata->rhs, consdata->nvars, varsindex, consdata->vals) );
          }
       }
 
@@ -3453,7 +3137,6 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
    /* both variables are binary */
    else if( SCIPvarIsBinary(var1) )
    {
-
       if( RatIsAbsEqual(consdata->vals[ind1], consdata->vals[ind2]) ) {
          return (SCIPvarGetProbindex(var1) - SCIPvarGetProbindex(var2));
       }
@@ -3980,7 +3663,6 @@ SCIP_RETCODE addCoef(
 
       /* update minimum and maximum activities */
       consdataUpdateAddCoef(scip, consdata, var, consdata->vals[consdata->nvars - 1], consdata->valsreal[consdata->nvars - 1]);
-
    }
 
    /* install rounding locks for new variable */
@@ -4621,16 +4303,12 @@ SCIP_RETCODE certificatePrintActivityConflict(
    SCIP_Real side;
    SCIP_Real activity;
    SCIP_Rational* diff;
-   SCIP_CERTIFICATE* certificate;
-   SCIP_Longint conscertificateindex;
-   SCIP_ROWEXACT* row;
    int nvals;
    SCIP_Rational** vals;
 
    if (!SCIPisCertificateActive(scip))
       return SCIP_OKAY;
    SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &diff));
-   certificate = SCIPgetCertificate(scip);
 
    if ( rhs )
    {
@@ -4647,11 +4325,10 @@ SCIP_RETCODE certificatePrintActivityConflict(
       assert( activity < side );
    }
 
-   row = consdata->rowexact;
-   if ( row != NULL )
+   if ( consdata->rowexact != NULL )
    {
-      nvals = row->len;
-      vals = row->vals;
+      nvals = consdata->rowexact->len;
+      vals = consdata->rowexact->vals;
    }
    else
    {
@@ -4660,31 +4337,12 @@ SCIP_RETCODE certificatePrintActivityConflict(
    }
    RatSetReal(diff, activity);
    RatDiffReal(diff, diff, side);
-   conscertificateindex = certificateGetConsIndex(scip, certificate, cons, rhs);
-   assert(conscertificateindex != LONG_MAX);
 
-   SCIPcertificatePrintProofMessage(certificate, "ActivityConflict%d ", certificate->indexcounter);
-   SCIPcertificatePrintProofMessage(certificate, rhs ? "G " : "L ");
-
-   SCIPcertificatePrintProofRational(certificate, diff, 10);
-   SCIPcertificatePrintProofMessage(certificate, " 0 { lin %d %d -1", nvals + 1, conscertificateindex);
-   for( int i = 0; i < nvals; i++ )
-   {
-      SCIP_VAR* var;
-      bool is_upper_bound;
-      SCIP_Longint certificateindex;
-      var = row == NULL ? consdata->vars[i] : row->cols[i]->var;
-      is_upper_bound = rhs != RatIsPositive(vals[i]);
-      certificateindex = is_upper_bound ? SCIPvarGetUbCertificateIndexLocal(var) :  SCIPvarGetLbCertificateIndexLocal(var);
-      SCIPcertificatePrintProofMessage(certificate, " %d ", certificateindex);
-      SCIPcertificatePrintProofRational(certificate, vals[i], 10);
-   }
-   SCIPcertificatePrintProofMessage(certificate, " } -1\n");
+   SCIP_CALL( SCIPcertificatePrintActivityConflict(scip, cons, consdata->rowexact, consdata->lhs, consdata->rhs,
+      nvals, vals, consdata->vars, diff, rhs) );
 
    RatFreeBuffer(SCIPbuffer(scip), &diff);
 
-   SCIP_CALL( SCIPcertificateUpdateParentData(certificate, SCIPgetCurrentNode(scip), certificate->indexcounter, NULL) );
-   certificate->indexcounter++;
    return SCIP_OKAY;
 }
 
@@ -4815,8 +4473,8 @@ SCIP_RETCODE tightenVarBounds(
                }
 
                if( SCIPcertificateShouldTrackBounds(scip) )
-                  (void) SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
-                     SCIP_BOUNDTYPE_UPPER, tmpbound, false, cons, var);
+                  SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
+                     SCIP_BOUNDTYPE_UPPER, tmpbound, false, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars,  consdata->nvars) );
 
                SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos),
                      &infeasible, &tightened) );
@@ -4826,9 +4484,9 @@ SCIP_RETCODE tightenVarBounds(
             {
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL,
-                     SCIP_BOUNDTYPE_UPPER, newub, false, cons, var) );
+                     SCIP_BOUNDTYPE_UPPER, newub, false, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
-               SCIPvarAdjustUbExactFloat(var, scip->set, &newub);
+               newub = SCIPadjustedVarUbExactFloat(scip, var, newub);
                SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_RHS, pos), force,
                      &infeasible, &tightened) );
             }
@@ -4888,8 +4546,8 @@ SCIP_RETCODE tightenVarBounds(
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
                }
                if( SCIPcertificateShouldTrackBounds(scip) )
-                  (void) SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
-                     SCIP_BOUNDTYPE_LOWER, tmpbound, true, cons, var);
+                  SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
+                     SCIP_BOUNDTYPE_LOWER, tmpbound, true, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
                SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos),
                      &infeasible, &tightened) );
@@ -4899,9 +4557,9 @@ SCIP_RETCODE tightenVarBounds(
             {
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL,
-                     SCIP_BOUNDTYPE_LOWER, newlb, true, cons, var) );
+                     SCIP_BOUNDTYPE_LOWER, newlb, true, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
-               SCIPvarAdjustLbExactFloat(var, scip->set, &newlb);
+               newlb = SCIPadjustedVarLbExactFloat(scip, var, newlb);
                SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_LHS, pos), force,
                      &infeasible, &tightened) );
             }
@@ -4965,8 +4623,8 @@ SCIP_RETCODE tightenVarBounds(
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
                }
                if( SCIPcertificateShouldTrackBounds(scip) )
-                  (void) SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
-                     SCIP_BOUNDTYPE_LOWER, tmpbound, false, cons, var);
+                  SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
+                     SCIP_BOUNDTYPE_LOWER, tmpbound, false, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
                SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos),
                      &infeasible, &tightened) );
@@ -4976,9 +4634,9 @@ SCIP_RETCODE tightenVarBounds(
             {
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL,
-                     SCIP_BOUNDTYPE_LOWER, newlb, false, cons, var) );
+                     SCIP_BOUNDTYPE_LOWER, newlb, false, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
-               SCIPvarAdjustLbExactFloat(var, scip->set, &newlb);
+               newlb = SCIPadjustedVarLbExactFloat(scip, var, newlb);
                SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_RHS, pos), force,
                      &infeasible, &tightened) );
             }
@@ -5039,8 +4697,8 @@ SCIP_RETCODE tightenVarBounds(
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
                }
                if( SCIPcertificateShouldTrackBounds(scip) )
-                  (void) SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
-                     SCIP_BOUNDTYPE_UPPER, tmpbound, true, cons, var);
+                  SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
+                     SCIP_BOUNDTYPE_UPPER, tmpbound, true, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
                SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos),
                      &infeasible, &tightened) );
@@ -5050,9 +4708,9 @@ SCIP_RETCODE tightenVarBounds(
             {
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL,
-                     SCIP_BOUNDTYPE_UPPER, newub, true, cons, var) );
+                     SCIP_BOUNDTYPE_UPPER, newub, true, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
-               SCIPvarAdjustUbExactFloat(var, scip->set, &newub);
+               newub = SCIPadjustedVarUbExactFloat(scip, var, newub);
                SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_LHS, pos), force,
                      &infeasible, &tightened) );
             }
@@ -5326,7 +4984,9 @@ SCIP_RETCODE checkCons(
       else if( sol == NULL && !SCIPhasCurrentNodeLP(scip) )
          consdataComputePseudoActivity(scip, consdata, activity);
       else
-         SCIPgetRowSolActivityExact(scip, consdata->rowexact, sol, useexactsol, activity);
+      {
+         SCIP_CALL( SCIPgetRowSolActivityExact(scip, consdata->rowexact, sol, useexactsol, activity) );
+      }
    }
    else
       consdataGetActivity(scip, consdata, sol, useexactsol, activity);
@@ -5997,11 +5657,6 @@ SCIP_DECL_CONSDELETE(consDeleteExactLinear)
       SCIP_CALL( consDropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
       assert((*consdata)->eventdata == NULL);
    }
-   if( SCIPisCertificateActive(scip) )
-   {
-      SCIP_CERTIFICATE* certificate = SCIPgetCertificate(scip);
-      SCIP_CALL( SCIPhashmapRemove(certificate->rowdatahash, cons) );
-   }
    /* free linear constraint */
    SCIP_CALL( consdataFree(scip, consdata) );
 
@@ -6344,7 +5999,6 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
    int nchgbds;
    int i;
 
-   SCIPclockStart(scip->stat->exactproptime, scip->set);
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -6352,8 +6006,6 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
-   /*debugMsg(scip, "Prop method of linear constraints\n");*/
 
    /* check, if we want to tighten variable's bounds (in probing, we always want to tighten the bounds) */
    if( SCIPinProbing(scip) )
@@ -6390,9 +6042,7 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
    else
       *result = SCIP_DIDNOTFIND;
 
-   SCIPclockStop(scip->stat->exactproptime, scip->set);
    return SCIP_OKAY;
-
 }
 
 
@@ -7340,7 +6990,6 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
 
-
    cons = eventdata->cons;
    assert(cons != NULL);
    consdata = SCIPconsGetData(cons);
@@ -7693,15 +7342,6 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
          "constraints/" CONSHDLR_NAME "/maxdenom",
          "maximal denominator on continuous variables after propagation (if limitdenom = TRUE)?",
          &conshdlrdata->maxdenom, TRUE, 256L, 1L, SCIP_LONGINT_MAX, NULL, NULL) );
-#ifdef SCIP_WITH_MPFR
-   {
-      char version[20];
-      /* add info about using MPFR to external codes information */
-      (void) SCIPsnprintf(version, sizeof(version), "MPFR %s", MPFR_VERSION_STRING);
-      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, version,
-            "GNU Multiple Precision Floating-Point Reliable Library (mpfr.org)") );
-   }
-#endif /*lint --e{529}*/
 
    return SCIP_OKAY;
 }
@@ -7894,8 +7534,7 @@ SCIP_RETCODE SCIPcreateConsBasicExactLinear(
    return SCIP_OKAY;
 }
 
-/** @todo exip: since this is only used for subscips, it currently always creates linear constraints, needs to be extended in the future*/
-/** creates by copying and captures a linear constraint */
+/** creates a linear constraint from an exact linear constraint by rounding values to floating-point and captures it */
 SCIP_RETCODE SCIPcopyConsExactLinear(
    SCIP*                 scip,               /**< target SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
@@ -7933,13 +7572,18 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
    int v;
    SCIP_Bool success;
 
+   /**@todo This method is currently only used for subSCIPs in floating-point heuristics, but should be extended to be
+    *       able to perform an exact copy in the future.  This would allow application of the cons_components presolver,
+    *       for example.  In this case, whether an exact or an fp copy is created, could probably decided by looking at
+    *       the parameter value of exact/enabled in the target SCIP.
+    */
+   assert(!SCIPisExactSolve(scip));
+   (*valid) = FALSE;
+
    if( SCIPisGT(scip, lhs, rhs) )
    {
-      *valid = FALSE;
       return SCIP_OKAY;
    }
-
-   (*valid) = TRUE;
 
    if( nvars == 0 )
    {
@@ -8019,8 +7663,6 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
       SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
-   else
-      *valid = FALSE;
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &coefs);
@@ -8070,7 +7712,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
       consvars[0] = var;
-      SCIP_CALL( RatCopy(SCIPblkmem(scip), &consvals[0], val) );
+      SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &consvals[0], val) );
       SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
 
       /* get active variables for new constraint */
@@ -8089,8 +7731,8 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      SCIP_CALL( RatCopy(SCIPblkmem(scip), &lhs, consdata->lhs) );
-      SCIP_CALL( RatCopy(SCIPblkmem(scip), &rhs, consdata->rhs) );
+      SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &lhs, consdata->lhs) );
+      SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &rhs, consdata->rhs) );
 
       /* adjust sides and check that we do not subtract infinity values */
       /* constant is infinite */
@@ -8167,7 +7809,6 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       /* update left and right hand sides */
       SCIP_CALL( chgLhs(scip, cons, lhs));
       SCIP_CALL( chgRhs(scip, cons, rhs));
-
 
       RatFreeBuffer(SCIPbuffer(scip), &constant);
       SCIPfreeBufferArray(scip, &consvals);
@@ -8459,7 +8100,7 @@ SCIP_Rational** SCIPgetValsExactLinear(
  *  @note if the solution contains values at infinity, this method will return SCIP_INVALID in case the activity
  *        comprises positive and negative infinity contributions
  */
-void SCIPgetActivityExactLinear(
+SCIP_RETCODE SCIPgetActivityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
@@ -8481,13 +8122,17 @@ void SCIPgetActivityExactLinear(
    assert(consdata != NULL);
 
    if( consdata->rowexact != NULL )
-      SCIPgetRowSolActivityExact(scip, consdata->rowexact, sol, FALSE, ret);
+   {
+      SCIP_CALL( SCIPgetRowSolActivityExact(scip, consdata->rowexact, sol, FALSE, ret) );
+   }
    else
       consdataGetActivity(scip, consdata, sol, TRUE, ret);
+
+   return SCIP_OKAY;
 }
 
 /** gets the feasibility of the linear constraint in the given solution */
-void SCIPgetFeasibilityExactLinear(
+SCIP_RETCODE SCIPgetFeasibilityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
@@ -8508,9 +8153,11 @@ void SCIPgetFeasibilityExactLinear(
    assert(consdata != NULL);
 
    if( consdata->rowexact != NULL )
-      SCIPgetRowSolFeasibilityExact(scip, consdata->rowexact, sol, ret);
+      SCIP_CALL( SCIPgetRowSolFeasibilityExact(scip, consdata->rowexact, sol, ret) );
    else
       consdataGetFeasibility(scip, consdata, sol, ret);
+
+   return SCIP_OKAY;
 }
 
 /** @todo: exip -> these might be needed currently wip only return fp duals */

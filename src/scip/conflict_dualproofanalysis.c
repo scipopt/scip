@@ -127,7 +127,7 @@ void proofsetClear(
    proofset->rhs = 0.0;
    proofset->validdepth = 0;
    proofset->conflicttype = SCIP_CONFTYPE_UNKNOWN;
-   proofset->certificateline = LONG_MAX;
+   proofset->certificateline = SCIP_LONGINT_MAX;
 }
 
 /** creates a proofset */
@@ -147,7 +147,7 @@ SCIP_RETCODE proofsetCreate(
    (*proofset)->size = 0;
    (*proofset)->validdepth = 0;
    (*proofset)->conflicttype = SCIP_CONFTYPE_UNKNOWN;
-   (*proofset)->certificateline = LONG_MAX;
+   (*proofset)->certificateline = SCIP_LONGINT_MAX;
 
    return SCIP_OKAY;
 }
@@ -312,8 +312,8 @@ SCIP_RETCODE proofsetAddAggrrow(
 
    if( set->exact_enabled && SCIPisCertificateActive(set->scip) )
    {
-      assert(aggrrow->certificateline != LONG_MAX);
-      assert(proofset->certificateline == LONG_MAX); //@todo
+      assert(aggrrow->certificateline != SCIP_LONGINT_MAX);
+      assert(proofset->certificateline == SCIP_LONGINT_MAX);
       proofset->certificateline = (SCIP_Longint)aggrrow->certificateline;
    }
 

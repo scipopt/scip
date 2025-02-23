@@ -1863,7 +1863,7 @@ char chooseInitialBoundingMethod(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_PROB*            prob                /**< problem data */
-)
+   )
 {
    char dualboundmethod;
    SCIP_Bool interleavedepth;
@@ -2227,7 +2227,6 @@ SCIP_RETCODE boundShift(
    SCIPintervalAddVectors(SCIPsetInfinity(set), productcoldualval, lp->ncols, productcoldualval, obj);
    SCIPintervalScalprod(SCIPsetInfinity(set), &safeboundinterval, lp->ncols, productcoldualval, ublbcol);
 
-
    /* add dualsol * rhs/lhs (or farkas * rhs/lhs) */
    SCIPintervalAdd(SCIPsetInfinity(set), &safeboundinterval, safeboundinterval, productsidedualval);
 
@@ -2300,9 +2299,9 @@ SCIP_RETCODE boundShift(
          that a constraint cTx>=b dominates some other constraint c'Tx>=b' if c==c'
          we need to recompute the exact coefficients here. */
          if( usefarkas )
-            SCIPcolExactCalcFarkasRedcostCoef(colexact, set, colexact->farkascoef, NULL, usefarkas);
+            SCIP_CALL( SCIPcolExactCalcFarkasRedcostCoef(colexact, set, colexact->farkascoef, NULL, usefarkas) );
          else
-            SCIPcolExactCalcFarkasRedcostCoef(colexact, set, colexact->redcost, NULL, usefarkas);
+            SCIP_CALL( SCIPcolExactCalcFarkasRedcostCoef(colexact, set, colexact->redcost, NULL, usefarkas) );
       }
    }
 

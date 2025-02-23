@@ -1212,7 +1212,8 @@ SCIP_RETCODE presolve(
       }
    }
 
-   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
+   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving%s:\n",
+      SCIPisExactSolve(scip) ? " (in exact solving mode)" : "");
 
    *infeasible = FALSE;
    *unbounded = (*unbounded) || (SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip))));
@@ -1734,7 +1735,7 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
    /* possibly close CERTIFICATE output file */
-   SCIPcertificateExit(scip);
+   SCIP_CALL( SCIPcertificateExit(scip) );
 
    /* possibly close visualization output file */
    SCIPvisualExit(scip->stat->visual, scip->set, scip->messagehdlr);
@@ -2171,11 +2172,15 @@ SCIP_RETCODE displayRelevantStats(
       {
          SCIP_Rational* objval;
          SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &objval) );
-         SCIPmessagePrintInfo(scip->messagehdlr, "Best exact objval  : ");
+         SCIPmessagePrintInfo(scip->messagehdlr, "Exact Primal Bound : ");
          SCIPgetPrimalboundExact(scip, objval);
          RatMessage(scip->messagehdlr, NULL, objval);
-         RatFreeBuffer(SCIPbuffer(scip), &objval);
          SCIPmessagePrintInfo(scip->messagehdlr, "\n");
+         SCIPmessagePrintInfo(scip->messagehdlr, "Exact Dual Bound   : ");
+         SCIPgetDualboundExact(scip, objval);
+         RatMessage(scip->messagehdlr, NULL, objval);
+         SCIPmessagePrintInfo(scip->messagehdlr, "\n");
+         RatFreeBuffer(SCIPbuffer(scip), &objval);
       }
 
       /* check solution for feasibility in original problem */
@@ -2366,6 +2371,33 @@ SCIP_RETCODE prepareReoptimization(
    return SCIP_OKAY;
 }
 
+/** checks whether presolving changed the problem at all */
+static
+SCIP_Bool hasPresolveModifiedProblem(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+
+   if( scip->stat->npresolfixedvars + scip->stat->npresolaggrvars > 0 )
+      return TRUE;
+   else if( scip->stat->npresoldelconss > 0 )
+      return TRUE;
+   else if( scip->stat->npresoladdconss > 0 )
+      return TRUE;
+   else if( scip->stat->npresolchgbds > 0 )
+      return TRUE;
+   else if( scip->stat->npresoladdholes > 0 )
+      return TRUE;
+   else if( scip->stat->npresolchgsides > 0 )
+      return TRUE;
+   else if( scip->stat->npresolchgcoefs > 0 )
+      return TRUE;
+
+   return FALSE;
+}
+
 /** transforms and presolves problem
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -2529,6 +2561,13 @@ SCIP_RETCODE SCIPpresolve(
    {
       /* display most relevant statistics */
       SCIP_CALL( displayRelevantStats(scip) );
+   }
+
+   if( scip->set->exact_enabled && !(scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0') && hasPresolveModifiedProblem(scip) )
+   {
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_DIALOG, "\n");
+      SCIPwarningMessage(scip, "Certificate is printed for presolved problem. "
+         "Disable presolving for rigorous certificate of the original problem.\n");
    }
 
    return SCIP_OKAY;
@@ -2714,6 +2753,9 @@ SCIP_RETCODE SCIPsolve(
          }
 
          /* continue solution process */
+         if( SCIPisExactSolve(scip) )
+            SCIPinfoMessage(scip, NULL, "solving problem in exact solving mode\n\n");
+
          SCIP_CALL( SCIPsolveCIP(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->mem, scip->origprob, scip->transprob,
                scip->primal, scip->tree, scip->reopt, scip->lp, scip->relaxation, scip->pricestore, scip->sepastore,
                scip->cutpool, scip->delayedcutpool, scip->branchcand, scip->conflict, scip->conflictstore,
@@ -2936,6 +2978,13 @@ SCIP_RETCODE SCIPsolveConcurrent(
    {
       SCIPerrorMessage("SCIP was compiled without task processing interface. Concurrent solve not possible\n");
       return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* as long as no exact copy functionality is available, concurrent solving is not possible */
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("Concurrent solve not implemented for exact solving mode.\n");
+      return SCIP_NOTIMPLEMENTED;
    }
 
    SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", (int)SCIP_CLOCKTYPE_WALL) );
@@ -3309,7 +3358,7 @@ SCIP_RETCODE SCIPfreeSolve(
       /* switch stage to TRANSFORMED */
       scip->set->stage = SCIP_STAGE_TRANSFORMED;
       /* possibly close CERTIFICATE output file */
-      SCIPcertificateExit(scip);
+      SCIP_CALL( SCIPcertificateExit(scip) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:

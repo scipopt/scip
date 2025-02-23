@@ -241,7 +241,7 @@ struct SCIP_VarDataExact
    SCIP_DOMEXACT         glbdom;             /**< exact global bound */
    SCIP_DOMEXACT         origdom;            /**< original domain */
    SCIP_AGGREGATEEXACT   aggregate;          /**< exact aggregation data */
-   SCIP_MULTAGGREXACT    multaggr;          /**< exact aggregation data */
+   SCIP_MULTAGGREXACT    multaggr;           /**< exact aggregation data */
    SCIP_COLEXACT*        colexact;           /**< column in exact lp */
    SCIP_VARSTATUS        varstatusexact;     /**< status in exact lp */
    int                   certificateindex;   /**< original probindex (needed for certificate), or -1 */

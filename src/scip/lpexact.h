@@ -214,7 +214,7 @@ SCIP_COLEXACT* SCIPcolGetColExact(
    );
 
 /** calculates the Farkas coefficient or reduced cost of a column i using the given dual Farkas vector y */
-void SCIPcolExactCalcFarkasRedcostCoef(
+SCIP_RETCODE SCIPcolExactCalcFarkasRedcostCoef(
    SCIP_COLEXACT*        col,                /**< LP column */
    SCIP_SET*             set,                /**< SCIP settings pointer */
    SCIP_Rational*        result,             /**< rational to store the result */
@@ -236,9 +236,7 @@ SCIP_RETCODE SCIProwExactCreate(
    SCIP_Rational**       vals,               /**< array with coefficients of row entries */
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs,                /**< right hand side of row */
-   SCIP_ROWORIGINTYPE    origintype,         /**< type of origin of row */
-   SCIP_Bool             isfprelaxable,      /**< is it possible to make fp-relaxation of this row */
-   void*                 origin              /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
+   SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    );
 
 /** creates and captures an exact LP row from a fp row */
@@ -337,7 +335,7 @@ SCIP_RETCODE SCIPlpExactAddRow(
    );
 
 /** returns the feasibility of a row for the given solution */
-void SCIProwExactGetSolFeasibility(
+SCIP_RETCODE SCIProwExactGetSolFeasibility(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -356,7 +354,7 @@ SCIP_Bool SCIProwExactGetSolActivityWithErrorbound(
    );
 
 /** returns the activity of a row for a given solution */
-void SCIProwExactGetSolActivity(
+SCIP_RETCODE SCIProwExactGetSolActivity(
    SCIP_ROWEXACT*        rowexact,           /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -448,7 +446,7 @@ SCIP_RETCODE SCIProwExactChgConstant(
    );
 
 /** returns the feasibility of a row in the current LP solution: negative value means infeasibility */
-void SCIProwExactGetLPFeasibility(
+SCIP_RETCODE SCIProwExactGetLPFeasibility(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -457,7 +455,7 @@ void SCIProwExactGetLPFeasibility(
    );
 
 /** returns the pseudo feasibility of a row in the current pseudo solution: negative value means infeasibility */
-void SCIProwExactGetPseudoFeasibility(
+SCIP_RETCODE SCIProwExactGetPseudoFeasibility(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -649,10 +647,9 @@ SCIP_RETCODE SCIPlpExactGetPrimalRay(
                                               *   (all entries have to be initialized to 0 before) */
    );
 
-/** stores the dual Farkas multipliers for infeasibility proof in rows. besides, the proof is checked for validity if
- *  lp/checkfarkas = TRUE.
+/** stores the dual Farkas multipliers for infeasibility proof in rows. besides
  *
- *  @note the check will not be performed if @p valid is NULL.
+ *  @note The Farkas proof is checked for validity if lp/checkfarkas = TRUE and @p valid is not NULL.
  */
 SCIP_RETCODE SCIPlpExactGetDualfarkas(
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
@@ -761,7 +758,7 @@ void SCIPlpExactAllowExactSolve(
 
 /** gets solution status of current exact LP */
 SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
-   SCIP_LPEXACT*         lpexact              /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    );
 
 /** sets the upper objective limit of the exact LP solver */
@@ -815,22 +812,22 @@ SCIP_RETCODE SCIPlpExactFreeState(
 
 /** starts exact LP diving and saves bounds and objective values of columns to the current nodes's values */
 SCIP_RETCODE SCIPlpExactStartDive(
-    SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
-    BMS_BLKMEM*           blkmem,             /**< block memory */
-    SCIP_SET*             set,                /**< global SCIP settings */
-    SCIP_STAT*            stat                /**< problem statistics */
-    );
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
 
 /** quits exact LP diving and resets bounds and objective values of columns to the current node's values */
 SCIP_RETCODE SCIPlpExactEndDive(
-    SCIP_LPEXACT*         lpexact,            /**< current LP data */
-    BMS_BLKMEM*           blkmem,             /**< block memory */
-    SCIP_SET*             set,                /**< global SCIP settings */
-    SCIP_STAT*            stat,               /**< problem statistics */
-    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-    SCIP_VAR**            vars,               /**< array with all active variables */
-    int                   nvars               /**< number of active variables */
-    );
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR**            vars,               /**< array with all active variables */
+   int                   nvars               /**< number of active variables */
+   );
 
 /** returns whether the exact LP is in diving mode */
 SCIP_EXPORT

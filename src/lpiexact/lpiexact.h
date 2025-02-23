@@ -228,8 +228,8 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
    int*                  ind,                /**< column indices */
-   SCIP_Rational**        lb,                 /**< values for the new lower bounds, or NULL */
-   SCIP_Rational**        ub                  /**< values for the new upper bounds, or NULL */
+   SCIP_Rational**       lb,                 /**< values for the new lower bounds, or NULL */
+   SCIP_Rational**       ub                  /**< values for the new upper bounds, or NULL */
    );
 
 /** changes left and right hand sides of rows */
@@ -448,8 +448,8 @@ SCIP_RETCODE SCIPlpiExactSolveDual(
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactSolveBarrier(
-   SCIP_LPIEXACT*        lpi,                 /**< LP interface structure */
-   SCIP_Bool             crossover            /**< perform crossover */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   SCIP_Bool             crossover           /**< perform crossover */
    );
 
 /** start strong branching - call before any strong branching */
@@ -461,7 +461,7 @@ SCIP_RETCODE SCIPlpiExactStartStrongbranch(
 /** end strong branching - call after any strong branching */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactEndStrongbranch(
-   SCIP_LPIEXACT*          lpi                 /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    );
 
 /** performs strong branching iterations on all candidates */
@@ -782,7 +782,7 @@ SCIP_RETCODE SCIPlpiExactSetState(
 /** clears current LPi state (like basis information) of the solver */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactClearState(
-   SCIP_LPIEXACT*          lpi               /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    );
 
 /** frees LPi state information */
@@ -923,29 +923,29 @@ SCIP_RETCODE SCIPlpiExactSetRealpar(
 /** returns value treated as positive infinity in the LP solver */
 SCIP_EXPORT
 void SCIPlpiExactPosInfinity(
-   SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   SCIP_Rational*        infval          /**< pointer to store positive infinity value of LP solver */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   SCIP_Rational*        infval              /**< pointer to store positive infinity value of LP solver */
    );
 
 /** checks if given value is treated as positive infinity in the LP solver */
 SCIP_EXPORT
 SCIP_Bool SCIPlpiExactIsPosInfinity(
-   SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   SCIP_Rational*        val             /**< given value */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   SCIP_Rational*        val                 /**< given value */
    );
 
 /** returns value treated as negative infinity in the LP solver */
 SCIP_EXPORT
 void SCIPlpiExactNegInfinity(
-   SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   SCIP_Rational*        infval          /**< pointer to store negative infinity value of LP solver */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   SCIP_Rational*        infval              /**< pointer to store negative infinity value of LP solver */
    );
 
 /** checks if given value is treated as negative infinity in the LP solver */
 SCIP_EXPORT
 SCIP_Bool SCIPlpiExactIsNegInfinity(
-   SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   SCIP_Rational*        val             /**< given value */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   SCIP_Rational*        val                 /**< given value */
    );
 
 /** returns value treated as infinity in the LP solver */
@@ -958,7 +958,7 @@ SCIP_Real SCIPlpiExactInfinity(
 SCIP_EXPORT
 SCIP_Bool SCIPlpiExactIsInfinity(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_Real             val
+   SCIP_Real             val                 /**< value to test */
    );
 
 /**@} */
@@ -1011,22 +1011,22 @@ void SCIPlpiExactPrintInfo(
 /** computes and stores matrix factorization within the LPIEXACT structure */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactCreateFactor(
-   SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   int                   dim,            /**< dimension of matrix */
-   int*                  cbeg,           /**< column indices of matrix */
-   int*                  clen,           /**< column lengths of matrix */
-   int*                  cindx,          /**< row index of entries */
-   SCIP_Rational*        ccoef           /**< coef values of matrix */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   int                   dim,                /**< dimension of matrix */
+   int*                  cbeg,               /**< column indices of matrix */
+   int*                  clen,               /**< column lengths of matrix */
+   int*                  cindx,              /**< row index of entries */
+   SCIP_Rational*        ccoef               /**< coef values of matrix */
     );
 
 
 /** solves a system using the stored factorization */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactFactorSolve(
-   SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   int                   dim,            /**< dimension of matrix */
-   SCIP_Rational*        sol,            /**< solution to system */
-   SCIP_Rational*        rhs             /**< rhs of system */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   int                   dim,                /**< dimension of matrix */
+   SCIP_Rational*        sol,                /**< solution to system */
+   SCIP_Rational*        rhs                 /**< rhs of system */
    );
 /**@} */
 

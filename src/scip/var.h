@@ -1161,7 +1161,7 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
  * this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
  * calling this function for a non-multi-aggregated variable is not allowed
  */
-void SCIPvarGetMultaggrLbLocalExact(
+SCIP_RETCODE SCIPvarGetMultaggrLbLocalExact(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Rational*        result              /**< the resulting bound */
@@ -1180,7 +1180,7 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
  * this lower bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
  * calling this function for a non-multi-aggregated variable is not allowed
  */
-void SCIPvarGetMultaggrUbLocalExact(
+SCIP_RETCODE SCIPvarGetMultaggrUbLocalExact(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Rational*        result              /**< the resulting bound */

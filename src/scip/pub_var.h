@@ -601,25 +601,25 @@ void SCIPvarSetLbCertificateIndexGlobal(
    int                   index               /**< the index */
    );
 
-/**< returns index of variable bound in vipr certificate */
+/** returns index of variable bound in vipr certificate */
 SCIP_EXPORT
 SCIP_Longint SCIPvarGetLbCertificateIndexLocal(
    SCIP_VAR*             var                 /**< variable to get index for */
    );
 
-/**< returns index of variable bound in vipr certificate */
+/** returns index of variable bound in vipr certificate */
 SCIP_EXPORT
 SCIP_Longint SCIPvarGetUbCertificateIndexLocal(
    SCIP_VAR*             var                 /**< variable to get index for */
    );
 
-/**< returns index of variable bound in vipr certificate */
+/** returns index of variable bound in vipr certificate */
 SCIP_EXPORT
 SCIP_Longint SCIPvarGetLbCertificateIndexGlobal(
    SCIP_VAR*             var                 /**< variable to get index for */
    );
 
-/**< returns index of variable bound in vipr certificate */
+/** returns index of variable bound in vipr certificate */
 SCIP_EXPORT
 SCIP_Longint SCIPvarGetUbCertificateIndexGlobal(
    SCIP_VAR*             var                 /**< variable to get index for */

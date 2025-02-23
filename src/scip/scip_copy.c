@@ -1669,9 +1669,6 @@ SCIP_RETCODE SCIPgetConsCopy(
       SCIP_CALL( SCIPconsCopy(targetcons, targetscip->set, name, sourcescip, sourceconshdlr, sourcecons, localvarmap, localconsmap,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
 
-      /* it is possible for the constraint handler to declare the copy valid although no target constraint was created */
-      assert(*targetcons == NULL || *valid);
-
       /* if a target constraint was created */
       if( *targetcons != NULL && !uselocalconsmap )
       {
@@ -1849,9 +1846,6 @@ SCIP_RETCODE SCIPcopyConss(
                SCIPconsIsEnforced(sourceconss[c]), SCIPconsIsChecked(sourceconss[c]),
                SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsModifiable(sourceconss[c]),
                SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &singlevalid) );
-
-         /* it is possible for a constraint handler to declare the copy valid, although no target constraint was created */
-         assert(targetcons == NULL || singlevalid);
 
          /* add the copied constraint to target SCIP if the copying process created a constraint */
          if( targetcons != NULL )

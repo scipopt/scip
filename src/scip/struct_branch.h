@@ -107,7 +107,7 @@ struct SCIP_Branchrule
    int                   maxdepth;           /**< maximal depth level, up to which this branching rule should be used (or -1) */
    SCIP_Bool             initialized;        /**< is branching rule initialized? */
    SCIP_Bool             isobjbranchrule;    /**< is branching rule an obj branching rule? */
-   SCIP_Bool             isexact;            /**< is the safe to use in exact solving mode */
+   SCIP_Bool             isexact;            /**< is branching rule safe to use in exact solving mode? */
 };
 
 #ifdef __cplusplus

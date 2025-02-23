@@ -299,7 +299,6 @@ void setProbHasEquations(
 static
 SCIP_DECL_CONSENFOLP(consEnfolpExactSol)
 {  /*lint --e{715}*/
-
    /* returning feasible since we can't enforce anything */
    *result = SCIP_FEASIBLE;
 
@@ -310,7 +309,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactSol)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxExactSol)
 {  /*lint --e{715}*/
-
    /* returning feasible since we can't enforce anything */
    *result = SCIP_FEASIBLE;
 
@@ -321,7 +319,6 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxExactSol)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsExactSol)
 {  /*lint --e{715}*/
-
    /* returning feasible since we can't enforce anything */
    *result = SCIP_FEASIBLE;
 
@@ -332,7 +329,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactSol)
 static
 SCIP_DECL_CONSCHECK(consCheckExactSol)
 {  /*lint --e{715}*/
-
    SCIP_VAR** vars;
    SCIP_CONS** consprob;
    SCIP_SOL* exactsol;
@@ -405,7 +401,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( SCIPisExactSol(scip, sol) )
       return SCIP_OKAY;
 
-   /** if we are at a point where we can't dive exactly, buffer the solution and return */
+   /* if we are at a point where we can't dive exactly, buffer the solution and return */
    if( !SCIPtreeHasCurrentNodeLP(scip->tree) || SCIPnodeGetType(SCIPgetCurrentNode(scip)) != SCIP_NODETYPE_FOCUSNODE )
    {
       SCIP_CALL( bufferSolution(scip, sol, conshdlrdata) );
@@ -421,7 +417,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       SCIP_CALL( SCIPflushLP(scip) );
    }
 
-   /** no point trying to repair solutions that are already exact */
+   /* no point trying to repair solutions that are already exact */
    if( SCIPisExactSol(scip, sol) )
       return SCIP_OKAY;
 
@@ -651,7 +647,6 @@ SCIP_DECL_CONSLOCK(consLockExactSol)
 }
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-/**! [SnippetConsFreeKnapsack] */
 static
 SCIP_DECL_CONSFREE(consFreeExactSol)
 {  /*lint --e{715}*/

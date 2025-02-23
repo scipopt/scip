@@ -159,12 +159,12 @@ struct SCIP_Stat
    SCIP_Real             minefficacyfac;     /**< factor of best efficacy to use as min efficacy */
    SCIP_Real             detertimecnt;       /**< internal counter for deterministic time */
    SCIP_Real             boundingerrorbs;    /**< aggregated error of all bound shift calls */
-   SCIP_Real             boundingerrorps;    /**< aggregated error of all project and shift calls */
+   SCIP_Real             boundingerrorps;    /**< aggregated error of all project-and-shift calls */
    SCIP_Real             boundingerrorexlp;  /**< aggregated error of all exact lp calls */
    SCIP_Real             timesuccessexactsol;/**< time spent in exactsol constraint handler that led to a found solution */
    SCIP_Real             timefailexactsol;   /**< time spent in exactsol constraint handler that did not lead to a solution */
-   SCIP_Real             timefailexlpinf;
-   SCIP_Real             timefailexlp;
+   SCIP_Real             timefailexlpinf;    /**< time spent in exact lp that failed to prove infeasibility */
+   SCIP_Real             timefailexlp;       /**< time spent in exact lp that failed to prove bounds */
    SCIP_Longint          ncallsexactsol;     /**< number of runs of exactsol constraint handler */
    SCIP_Longint          nfoundexactsol;     /**< number of sols found by exactsol constraint handler */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
@@ -183,8 +183,8 @@ struct SCIP_Stat
    SCIP_CLOCK*           provedinfeaslptime; /**< time spent proving safe infeasibility using exact lp */
    SCIP_CLOCK*           provedfeasbstime;   /**< time spent proving safe bounds using bound shift*/
    SCIP_CLOCK*           provedinfeasbstime; /**< time spent proving safe infeasibility using bound shift*/
-   SCIP_CLOCK*           provedfeaspstime;   /**< time spent proving safe bounds using bound project and shift*/
-   SCIP_CLOCK*           provedinfeaspstime; /**< time spent proving safe infeasibility using project and shift*/
+   SCIP_CLOCK*           provedfeaspstime;   /**< time spent proving safe bounds using bound project-and-shift*/
+   SCIP_CLOCK*           provedinfeaspstime; /**< time spent proving safe infeasibility using project-and-shift*/
    SCIP_CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    SCIP_CLOCK*           relaxsoltime;       /**< time needed for storing feasible relaxation solutions */
    SCIP_CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
@@ -235,20 +235,19 @@ struct SCIP_Stat
    SCIP_Longint          nexlpintfeas;       /**< number of LPs proved feasible */
    SCIP_Longint          nexlpboundexc;      /**< number of LPs proved feasible */
    SCIP_Longint          nfailexlp;          /**< number of LPs failed to prove feasible */
-   SCIP_CLOCK*           exactproptime;      /**< time spent in exact propagation */
    SCIP_Longint          nboundshift;        /**< number of boundshift calls for feasible lp*/
    SCIP_Longint          nfailboundshift;    /**< number of failed boundshift calls for feasible lp */
    SCIP_Longint          nboundshiftinf;     /**< number of boundshift calls for infeasible lp */
    SCIP_Longint          nfailboundshiftinf; /**< number of failed boundshift calls for feasible lp */
-   SCIP_Longint          nboundshiftobjlim;
-   SCIP_Longint          nboundshiftobjlimfail;
-   SCIP_Longint          nprojshift;         /**< number of project and shift calls for feasible lp */
-   SCIP_Longint          nfailprojshift;     /**< number of failed project and shift calls for feasible lp */
-   SCIP_Longint          nprojshiftinf;      /**< number of project and shift calls for infeasible lp */
-   SCIP_Longint          nfailprojshiftinf;  /**< number of failed project and shift calls for infeasible lp */
-   SCIP_Longint          nprojshiftobjlim;
-   SCIP_Longint          nprojshiftobjlimfail;
-   SCIP_Longint          niterationsexlp;    /**< number of exact lp iterations attempting feasible dual bound */ 
+   SCIP_Longint          nboundshiftobjlim;  /**< number of boundshift calls for objlim */
+   SCIP_Longint          nboundshiftobjlimfail; /**< number of failed boundshift calls for objlim */
+   SCIP_Longint          nprojshift;         /**< number of project-and-shift calls for feasible lp */
+   SCIP_Longint          nfailprojshift;     /**< number of failed project-and-shift calls for feasible lp */
+   SCIP_Longint          nprojshiftinf;      /**< number of project-and-shift calls for infeasible lp */
+   SCIP_Longint          nfailprojshiftinf;  /**< number of failed project-and-shift calls for infeasible lp */
+   SCIP_Longint          nprojshiftobjlim;   /**< number of project-and-shift calls for objlim */
+   SCIP_Longint          nprojshiftobjlimfail; /**< number of failed project-and-shift calls for objlim */
+   SCIP_Longint          niterationsexlp;    /**< number of exact lp iterations attempting feasible dual bound */
    SCIP_Longint          niterationsexlpinf; /**< number of exact lp iterations attempting infeasibility proof */
    SCIP_Longint          nnlps;              /**< number of NLPs solved */
    SCIP_Longint          nisstoppedcalls;    /**< number of calls to SCIPsolveIsStopped() */

@@ -107,7 +107,7 @@ SCIP_Bool SCIPisCertificateActive(
 
 /** returns whether the certificate output is activated? */
 SCIP_EXPORT
-void SCIPcertificateExit(
+SCIP_RETCODE SCIPcertificateExit(
    SCIP*                 scip                /**< certificate information */
    );
 

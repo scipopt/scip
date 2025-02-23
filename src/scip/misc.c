@@ -3232,7 +3232,7 @@ SCIP_RETCODE SCIPhashmapInsertInt(
 SCIP_RETCODE SCIPhashmapInsertLong(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
-   long                  image               /**< new image for origin */
+   SCIP_Longint          image               /**< new image for origin */
    )
 {
    uint32_t hashval;
@@ -3255,7 +3255,7 @@ SCIP_RETCODE SCIPhashmapInsertLong(
    hashval = hashvalue((size_t)origin);
 
    /* append origin->image pair to hash map */
-   img.long_val = image;
+   img.longint = image;
    SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, FALSE) );
 
    return SCIP_OKAY;
@@ -3337,7 +3337,7 @@ int SCIPhashmapGetImageInt(
    return INT_MAX;
 }
 
-/** retrieves image of given origin from the hash map, or LONG_MAX if no image exists */
+/** retrieves image of given origin from the hash map, or SCIP_LONGINT_MAX if no image exists */
 long SCIPhashmapGetImageLong(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
@@ -3352,9 +3352,9 @@ long SCIPhashmapGetImageLong(
    assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_LONG);
 
    if( hashmapLookup(hashmap, origin, &pos) )
-      return hashmap->slots[pos].image.long_val;
+      return hashmap->slots[pos].image.longint;
 
-   return LONG_MAX;
+   return SCIP_LONGINT_MAX;
 }
 
 /** retrieves image of given origin from the hash map, or SCIP_INVALID if no image exists */
@@ -4856,8 +4856,8 @@ SCIP_RETCODE SCIPboolarrayCopy(
    SCIP_CALL( SCIPboolarrayCreate(boolarray, blkmem) );
    if( sourceboolarray->valssize > 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals, \
-                     sourceboolarray->valssize) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals,
+            sourceboolarray->valssize) );
    }
    (*boolarray)->valssize = sourceboolarray->valssize;
    (*boolarray)->firstidx = sourceboolarray->firstidx;
