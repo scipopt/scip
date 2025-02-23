@@ -686,6 +686,7 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
    char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
    char consname[SCIP_MAXSTRLEN];   /* the name of the auxiliary variable constraint */
    SCIP_Bool shareauxvars;
+   SCIP_Bool allsubprobintegralobj;
    int i;
 
    /* this is a workaround for GCG. GCG expects that the variable has vardata when added. So a dummy vardata is created */
@@ -747,6 +748,8 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       }
    }
 
+   allsubprobintegralobj = TRUE;
+
    for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
    {
       /* if the auxiliary variables are shared, then a pointer to the variable is retrieved from topbenders,
@@ -778,7 +781,10 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
             && SCIPisObjIntegral(SCIPbendersSubproblem(benders, i)) )
             impltype = SCIP_IMPLINTTYPE_WEAK;
          else
+         {
             impltype = SCIP_IMPLINTTYPE_NONE;
+            allsubprobintegralobj = FALSE;
+         }
 
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
          SCIP_CALL( SCIPcreateVarImpl(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip), 0.0,
@@ -816,6 +822,13 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       }
 
       benders->auxiliaryvars[i] = auxiliaryvar;
+   }
+
+   if( !shareauxvars && allsubprobintegralobj )
+   {
+      SCIP_Bool infeasible;
+      SCIP_CALL( SCIPchgVarImplType(scip, benders->masterauxvar, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
+      assert(!infeasible);
    }
 
    SCIPfreeBlockMemory(scip, &vardata);

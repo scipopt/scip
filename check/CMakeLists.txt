@@ -504,6 +504,7 @@ set(pairs_Issue
     "instances/Issue/3746.cip\;0\;seed_1"
     "instances/Issue/3752.cip\;28066\;default"
     "instances/Issue/3787.lp\;1\;default"
+    "instances/Issue/3832.cip\;0\;default"
 )
 
 #
@@ -871,7 +872,6 @@ if(NOT ${TPI} STREQUAL "none")
         # configure the batch file for this test by substituting placeholders in the in.file
         #
         configure_file(interactiveshell/concurrentsolve.bat.in interactiveshell/concurrentsolve-${basename}.bat)
-        if(NOT ((${basename} STREQUAL "egout.mps") AND (${TPI} STREQUAL "tny")))
         add_test(NAME MIP-concurrentsolve-${basename}
                 COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${basename}.bat
                 )
@@ -881,7 +881,6 @@ if(NOT ${TPI} STREQUAL "none")
                                 FAIL_REGULAR_EXPRESSION "ERROR"
                                 DEPENDS scip-build
                             )
-        endif() # Timeout (deadlock?), #3724 (MIP-concurrentsolve-egout.mps, LPS=spx bugfix)
     endforeach(instance)
 endif()
 

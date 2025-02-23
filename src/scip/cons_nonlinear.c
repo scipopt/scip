@@ -6949,7 +6949,7 @@ void scoreBranchingCandidates(
          maxscore.auxviol = MAX(maxscore.auxviol, cands[c].auxviol);
       }
 
-      if( conshdlrdata->branchfracweight > 0.0 && SCIPvarIsIntegral(cands[c].var) && !SCIPvarIsImpliedIntegral(cands[c].var) )
+      if( conshdlrdata->branchfracweight > 0.0 && SCIPvarIsNonimpliedIntegral(cands[c].var) )
       {
          /* when collecting for branching on fractionality (cands[c].expr == NULL), only fractional integer variables
           * should appear as candidates here and their fractionality should have been recorded in branchingIntegralOrNonlinear
@@ -8102,7 +8102,7 @@ SCIP_RETCODE branchingIntegralOrNonlinear(
    for( c = 0; c < nlpcands; ++c )
    {
       assert(ncands < SCIPgetNVars(scip) + SCIPgetNLPBranchCands(scip));
-      assert(SCIPvarIsIntegral(lpcands[c]) && !SCIPvarIsImpliedIntegral(lpcands[c]));
+      assert(SCIPvarIsNonimpliedIntegral(lpcands[c]));
       cands[ncands].expr = NULL;
       cands[ncands].var = lpcands[c];
       cands[ncands].auxviol = 0.0;

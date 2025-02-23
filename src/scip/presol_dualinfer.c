@@ -1294,7 +1294,7 @@ SCIP_RETCODE determineBestBounds(
    for(i = 0; i < ncols; i++)
    {
       var = SCIPmatrixGetVar(matrix, i);
-      if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
+      if( !SCIPvarIsNonimpliedIntegral(var) )
       {
          colmap[i] = numberconvars; /* start numbering with 0 */
          numberconvars++;
@@ -1357,7 +1357,7 @@ SCIP_RETCODE determineBestBounds(
    for(i = 0; i < ncols; i++)
    {
       var = SCIPmatrixGetVar(matrix, i);
-      if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
+      if( !SCIPvarIsNonimpliedIntegral(var) )
       {
          SCIP_Real objval = SCIPvarGetObj(var);
          int cidx = colmap[i];
@@ -1642,7 +1642,7 @@ SCIP_RETCODE dualBoundStrengthening(
       var = SCIPmatrixGetVar(matrix, i);
 
       if( SCIPmatrixUplockConflict(matrix, i) || SCIPmatrixDownlockConflict(matrix, i)
-         || ( SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var) ) )
+         || SCIPvarIsNonimpliedIntegral(var) )
       {
          /* we don't care about integral variables or variables that have conflicting locks */
          isubimplied[i] = FALSE;
@@ -2308,7 +2308,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
          /* keep a small statistic which types of variables are fixed */
          if( fixed )
          {
-            if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
+            if( !SCIPvarIsNonimpliedIntegral(var) )
                nconvarsfixed++;
             else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
                nbinvarsfixed++;

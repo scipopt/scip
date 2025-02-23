@@ -112,6 +112,7 @@ Interface changes
 - SCIPbenderGetMasterAuxiliaryVar() returns the master auxiliary variable
 - added SCIPcreateVarImpl() and SCIPcreateObjVarImpl(), which behave identically to SCIPcreateVar() and SCIPcreateObjVar(), respectively, but have an additional argument for the new implied integral type flag (8th position)
 - added SCIPchgVarImplType(), SCIPvarGetImplType(), SCIPvarIsImpliedIntegral() to control and query implied integrality
+- added SCIPvarIsNonimpliedIntegral() to query if a variable is integral but not implied integral
 - added SCIPgetNBinImplVars(), SCIPgetNIntImplVars(), SCIPgetNContImplVars() to query the number of implied integral variables of every type; note that SCIPgetNBinVars(), SCIPgetNIntVars(), and SCIPgetNContVars() no longer include the implied integral variables in their counts
 - added SCIPcolIsImpliedIntegral()
 - added SCIPvarsCountTypes() to determine the variable type count distribution for an array of variables
@@ -124,7 +125,7 @@ Interface changes
   use SCIPstr(n)casecmp() (scip/pub_misc.h) instead
 - SCIPincludeConshdlrOrbitopePP(), SCIPcreateConsOrbitopePP(), SCIPcreateConsBasicOrbitopePP(), SCIPincludeConshdlrOrbitopeFull(), SCIPcreateConsOrbitopeFull(), SCIPcreateConsBasicOrbitopeFull()
 - SCIP_VERSION_SUB and SCIP_SUBVERSION are deprecated
-- moved the defines SCIP_VARTYPE_BINARY_CHAR, SCIP_VARTYPE_INTEGER_CHAR, and SCIP_VARTYPE_CONTINUOUS_CHAR to scip/type_var.h and removed SCIP_VARTYPE_IMPLINT_CHAR
+- removed SCIP_VARTYPE_IMPLINT_CHAR
 
 ### Command line interface
 
@@ -155,6 +156,11 @@ Interface changes
 - iis/minimal, iis/nodes, iis/removedbounds, iis/removeunusedvars, iis/silent, iis/stopafterone, iis/time, iis/greedy/additive, iis/greedy/conservative, iis/greedy/delafteradd, iis/greedy/dynamicreordering, iis/greedy/maxbatchsize, iis/greedy/maxrelbatchsize, iis/greedy/nodelimperiter, iis/greedy/priority, iis/greedy/timelimperiter
 - new parameters "constraints/orbitope_full/forceconscopy" and "constraints/orbitope_pp/forceconscopy" to control whether non-model constraints of type full orbitope and packing/partitioning orbitope are copied to sub-SCIPs, respectively
 - new parameter "write/implintlevel" to control if integrality constraints should be written for implied integral variables (regarded by cip, mps, lp, rlp, pip, fzn, and gms writers)
+- new parameter "presolving/milp/enablecliquemerging" to enable clique merging in PaPILO
+- new parameter "presolving/milp/maxedgesparallel" defines the maximal amount of edges in the parallel clique merging graph
+- new parameter "presolving/milp/maxedgessequential" defines the maximal amount of edges in the sequential clique merging graph
+- new parameter "presolving/milp/maxcliquesize" defines the maximal size of cliques considered for clique merging
+- new parameter "presolving/milp/maxgreedycalls" defines the maximal number of greedy max clique calls in a single thread
 
 ### Data structures
 
@@ -248,11 +254,17 @@ Fixed bugs
 
 - fixed definition of slack variables of >= constraints and ranged rows in LP interface to Gurobi (lpi_grb.c)
 - free memory leaking singleton arrays for ignored variables in SCIPapplyHeurDualval()
+- use epsilon tolerance for bound implications of dual substitutions in dualPresolve() of cons_linear.c
+- fixed timeouts due to race conditions when using TPI=omp
+- respect fixing if variable is declared binary in bounds section of mps file
 
 Build system
 ------------
 
 ### Cmake
+
+-  allow to set HIGHS_DIR via -D flag as well
+- reenable building and testing of SCFLP example
 
 ### Makefile
 

@@ -124,7 +124,7 @@ SCIP_RETCODE applyBoundChanges(
       if( tightened )
       {
          ++(*ntightened);
-         if( SCIPvarIsIntegral(data->bndvar[i]) && !SCIPvarIsImpliedIntegral(data->bndvar[i]) )
+         if( SCIPvarIsNonimpliedIntegral(data->bndvar[i]) )
             ++(*ntightenedint);
       }
       if( infeas )

@@ -204,12 +204,12 @@ SCIP_RETCODE SCIPtpiWaitCondition(
 {
    int waitnum;
 
-   SCIP_CALL( SCIPtpiReleaseLock(lock) );
-
    SCIP_CALL( SCIPompAcquireLock(&condition->_lock) );
    waitnum = ++condition->_waitnum;
 
    ++condition->_waiters;
+
+   SCIP_CALL( SCIPtpiReleaseLock(lock) );
 
    do
    {
@@ -243,12 +243,12 @@ SCIP_RETCODE SCIPompWaitCondition(
 {
    int waitnum;
 
-   SCIP_CALL( SCIPompReleaseLock(lock) );
-
    SCIP_CALL( SCIPompAcquireLock(&condition->_lock) );
    waitnum = ++condition->_waitnum;
 
    ++condition->_waiters;
+
+   SCIP_CALL( SCIPompReleaseLock(lock) );
 
    do
    {

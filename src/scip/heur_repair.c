@@ -888,7 +888,7 @@ SCIP_RETCODE applyRepair(
 
          SCIP_CALL( tryFixVar(scip, subscip, sol, potential, slacks, vars[permutation[i]], subvars[permutation[i]], inftycounter, heurdata, &fixed) );
 
-         if( fixed && SCIPvarIsIntegral(subvars[permutation[i]]) && !SCIPvarIsImpliedIntegral(subvars[permutation[i]]) )
+         if( fixed && SCIPvarIsNonimpliedIntegral(subvars[permutation[i]]) )
          {
             nfixeddiscvars++;
          }

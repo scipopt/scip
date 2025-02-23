@@ -487,6 +487,12 @@ SCIP_Bool SCIPvarIsImpliedIntegral(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** returns TRUE if the variable is integral, but not implied integral. */
+SCIP_EXPORT
+SCIP_Bool SCIPvarIsNonimpliedIntegral(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** returns whether variable's column should be present in the initial root LP */
 SCIP_EXPORT
 SCIP_Bool SCIPvarIsInitial(
@@ -983,6 +989,7 @@ void SCIPvarMarkRelaxationOnly(
       && (var)->glbdom.lb >= 0.0 && (var)->glbdom.ub <= 1.0))
 #define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS || (var)->varimpltype != SCIP_IMPLINTTYPE_NONE)
 #define SCIPvarIsImpliedIntegral(var)   ((var)->varimpltype != SCIP_IMPLINTTYPE_NONE)
+#define SCIPvarIsNonimpliedIntegral(var) ((var)->vartype != SCIP_VARTYPE_CONTINUOUS && (var)->varimpltype == SCIP_IMPLINTTYPE_NONE)
 #define SCIPvarIsInitial(var)           (var)->initial
 #define SCIPvarIsRemovable(var)         (var)->removable
 #define SCIPvarIsDeleted(var)           (var)->deleted
