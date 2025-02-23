@@ -16,13 +16,18 @@ ifeq ($(SANITIZE),thread)
   SANITIZERFLAGS = -fsanitize=thread
 endif
 
+# enable AddressSanitizer (http://clang.llvm.org/docs/AddressSanitizer.html)
 ifeq ($(SANITIZE),address)
-  # enable AddressSanitizer (http://clang.llvm.org/docs/AddressSanitizer.html)
   SANITIZERFLAGS = -fsanitize=address
 endif
 
-# UndefinedBehaviorSanitizer if SANITIZE is true (default), thread, or address
-ifneq ($(filter $(SANITIZE),true thread address),)
+# enable MemorySanitizer (http://clang.llvm.org/docs/MemorySanitizer.html)
+ifeq ($(SANITIZE),memory)
+  SANITIZERFLAGS = -fsanitize=memory
+endif
+
+# UndefinedBehaviorSanitizer if SANITIZE is true (default), thread, address, or memory
+ifneq ($(filter $(SANITIZE),true thread address memory),)
   SANITIZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
 endif
 

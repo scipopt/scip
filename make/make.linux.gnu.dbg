@@ -23,8 +23,12 @@ ifeq ($(SANITIZE),address)
   SANITIZERFLAGS = -fsanitize=address
 endif
 
-# UndefinedBehaviorSanitizer if SANITIZE is true (default), thread, or address
-ifneq ($(filter $(SANITIZE),true thread address),)
+ifeq ($(SANITIZE),memory)
+  $(warning Memory Sanitizer not available with GCC)
+endif
+
+# UndefinedBehaviorSanitizer if SANITIZE is true (default), thread, address, or memory
+ifneq ($(filter $(SANITIZE),true thread address memory),)
   SANITIZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
 endif
 
