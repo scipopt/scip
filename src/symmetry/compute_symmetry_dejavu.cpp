@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -22,8 +22,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   compute_symmetry_sassy_bliss.cpp
- * @brief  interface for symmetry computations to sassy as a preprocessor to bliss
+/**@file   compute_symmetry_dejavu.cpp
+ * @brief  interface for symmetry computations to dejavu
  * @author Marc Pfetsch
  */
 
@@ -31,13 +31,13 @@
 
 #include "compute_symmetry.h"
 
-/* include bliss */
-#include <bliss/defs.hh>
-#include <bliss/graph.hh>
+/* possibly turn on the dejavu debug mode */
+#ifdef SCIP_DEBUG
+#define DEJDEBUG
+#endif
 
-/* include sassy (as part of dejavu) */
-#include "build_dejavu_graph.h"
-#include <dejavu/tools/bliss_converter.h>
+#include <string>                 /* for dejvu */
+#include "build_dejavu_graph.h"   /* also includes dejavu */
 
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
@@ -65,10 +65,10 @@ struct SYMMETRY_Data
 
 /* ------------------- hook functions ------------------- */
 
-/** callback function for sassy */  /*lint -e{715}*/
+/** callback function for dejavu */  /*lint -e{715}*/
 static
-void sassyhook(
-   void*                 user_param,         /**< parameter supplied at call to sassy */
+void dejavuhook(
+   void*                 user_param,         /**< parameter supplied at call to dejavu */
    int                   n,                  /**< dimension of permutations */
    const int*            aut,                /**< permutation */
    int                   nsupp,              /**< support size */
@@ -156,35 +156,31 @@ SCIP_Bool SYMcanComputeSymmetry(void)
    return TRUE;
 }
 
+#define STR(x) #x
+#define XSTR(x) STR(x)
+
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
 {
-#ifdef BLISS_PATCH_PRESENT
-   return "bliss " BLISS_VERSION "p";
-#else
-   return "bliss " BLISS_VERSION;
-#endif
+   return "dejavu " XSTR(DEJAVU_VERSION_MAJOR) "." XSTR(DEJAVU_VERSION_MINOR);
 }
 
 /** return description of external program used to compute generators */
 const char* SYMsymmetryGetDesc(void)
 {
-   return "Computing Graph Automorphisms by T. Junttila and P. Kaski (users.aalto.fi/~tjunttil/bliss)";
+   return "Monte Carlo symmetry computation library by M. Anders (github.com/markusa4/dejavu)";
 }
-
-#define STR(x) #x
-#define XSTR(x) STR(x)
 
 /** return name of additional external program used for computing symmetries */
 const char* SYMsymmetryGetAddName(void)
 {
-   return "sassy " XSTR(SASSY_VERSION_MAJOR) "." XSTR(SASSY_VERSION_MINOR);
+   return NULL;
 }
 
 /** return description of additional external program used to compute symmetries */
 const char* SYMsymmetryGetAddDesc(void)
 {
-   return "Symmetry preprocessor by Markus Anders (github.com/markusa4/sassy)";
+   return NULL;
 }
 
 /** computes autormorphisms of a graph */
@@ -235,79 +231,23 @@ SCIP_RETCODE computeAutomorphisms(
 
    oldtime = SCIPgetSolvingTime(scip);
 
-   /* set up sassy preprocessor */
-   dejavu::preprocessor sassy;
+   /* set up dejavu */
+   dejavu::solver dejavu;
 
-   /* lambda function to have access to data and pass it to sassyhook above */
-   dejavu_hook sassyglue = [&](int n, const int* p, int nsupp, const int* suppa) {
-      sassyhook((void*)&data, n, p, nsupp, suppa);
+   dejavu.set_prefer_dfs(true);
+
+#ifndef SCIP_DEBUG
+   dejavu.set_print(false);
+#endif
+
+   /* lambda function to have access to data and pass it to dejavuhook above */
+   dejavu_hook dejavuhookglue = [&](int n, const int* p, int nsupp, const int* suppa) {
+      dejavuhook((void*)&data, n, p, nsupp, suppa);
    };
 
-   /* call sassy to reduce graph */
-   sassy.reduce(G, &sassyglue);
-
-   /* create bliss graph */
-   bliss::Graph blissgraph(0);
-
-   /* convert sassy to bliss graph */
-   convert_dejavu_to_bliss(G, &blissgraph);
-
-#ifdef SCIP_OUTPUT
-   blissgraph.write_dot("debug.dot");
-#endif
-
-#ifdef SCIP_DISABLED_CODE
-   char filename[SCIP_MAXSTRLEN];
-   (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s.dimacs", SCIPgetProbName(scip));
-   FILE* fp = fopen(filename, "w");
-   if ( fp )
-   {
-      blissgraph.write_dimacs(fp);
-      fclose(fp);
-   }
-#endif
-
-
-   /* compute automorphisms */
-   bliss::Stats stats;
-
-   /* Prefer splitting partition cells corresponding to variables over those corresponding
-    * to inequalities. This is because we are only interested in the action
-    * of the automorphism group on the variables, and we need a base for this action */
-   blissgraph.set_splitting_heuristic(bliss::Graph::shs_f);
-   /* disable component recursion as advised by Tommi Junttila from bliss */
-   blissgraph.set_component_recursion(false);
-
-#if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
-   /* lambda function to have access to data and terminate the search if maxgenerators are reached */
-   auto term = [&]() {
-      return (maxgenerators != 0 && data.nperms >= maxgenerators); /* check the number of generators that we have created so far */
-   };
-
-   auto hook = [&](unsigned int n, const unsigned int* aut) {
-      sassy.bliss_hook(n, aut);
-   };
-
-   /* start search */
-   blissgraph.find_automorphisms(stats, hook, term);
-#else
-
-   /* Older bliss versions do not allow to terminate with a limit on the number of generators unless patched. */
-#ifdef BLISS_PATCH_PRESENT
-   /* If patch is present, do not use a node limit, but set generator limit. This approach is not very accurate, since
-    * it limits the generators considered in bliss and not the ones that we generate (the ones that work on the variable
-    * set). */
-   G->set_search_limits(0, (unsigned) maxgenerators);
-#endif
-
-   /* start search */
-   blissgraph.find_automorphisms(stats, dejavu::preprocessor::bliss_hook, (void*) &sassy);
-#endif
+   /* call dejavu */
+   dejavu.automorphisms(G, &dejavuhookglue);
    *symcodetime = SCIPgetSolvingTime(scip) - oldtime;
-
-#ifdef SCIP_OUTPUT
-   (void) stats.print(stdout);
-#endif
 
    /* prepare return values */
    if ( data.nperms > 0 )
@@ -327,7 +267,8 @@ SCIP_RETCODE computeAutomorphisms(
    }
 
    /* determine log10 of symmetry group size */
-   *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx());
+   dejavu::big_number size = dejavu.get_automorphism_group_size();
+   *log10groupsize = (SCIP_Real) size.exponent + log10(size.mantissa);
 
    return SCIP_OKAY;
 }
@@ -362,18 +303,18 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    *log10groupsize = 0;
    *symcodetime = 0.0;
 
-   /* create sassy graph */
-   dejavu::static_graph sassygraph;
+   /* create dejavu graph */
+   dejavu::static_graph dejavugraph;
 
-   SCIP_CALL( SYMbuildDejavuGraph(scip, &sassygraph, graph, &success) );
+   SCIP_CALL( SYMbuildDejavuGraph(scip, &dejavugraph, graph, &success) );
 
 #ifdef WRITE_GRAPH
    std::string filename = std::string(SCIPgetProbName(scip)) + std::string(".dimacs");
-   sassygraph.dump_dimacs(filename);
+   dejavugraph.dump_dimacs(filename);
 #endif
 
    /* compute symmetries */
-   SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(graph), &sassygraph, SCIPgetSymgraphNVars(graph),
+   SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(graph), &dejavugraph, SCIPgetSymgraphNVars(graph),
          maxgenerators, perms, nperms, nmaxperms, log10groupsize, TRUE, symcodetime) );
 
    return SCIP_OKAY;
@@ -396,16 +337,16 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    SCIP_Real log10groupsize;
    SCIP_Bool success;
 
-   /* create sassy graph */
-   dejavu::static_graph sassygraph;
+   /* create dejavu graph */
+   dejavu::static_graph dejavugraph;
 
-   SCIP_CALL( SYMbuildDejavuGraphCheck(scip, &sassygraph, G1, G2, &nnodes, &nnodesfromG1, &success) );
+   SCIP_CALL( SYMbuildDejavuGraphCheck(scip, &dejavugraph, G1, G2, &nnodes, &nnodesfromG1, &success) );
 
    if ( ! success )
       return FALSE;
 
    /* compute symmetries */
-   SCIP_CALL_ABORT( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(G1), &sassygraph, nnodes, 0,
+   SCIP_CALL_ABORT( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(G1), &dejavugraph, nnodes, 0,
          &perms, &nperms, &nmaxperms, &log10groupsize, FALSE, &symcodetime) );
 
    /* since G1 and G2 are connected and disjoint, they are isomorphic iff there is a permutation

@@ -5855,6 +5855,9 @@ SCIP_RETCODE SCIPcollectNLPIStatistics(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectNLPIStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   if( scip->set->nnlpis == 0 )
+      return SCIP_OKAY;
+
    /* Create a subtree for NLPI statistics */
    SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &nlpistree, "nlp_solvers", scip->set->nnlpis) );
 

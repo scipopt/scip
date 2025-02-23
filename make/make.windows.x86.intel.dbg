@@ -14,7 +14,7 @@ LINK_shared		=	/dll
 FLAGS		+=	/DSCIP_NO_SIGACTION /DNO_RAND_R /DSCIP_NO_STRTOK_R /DNO_STRERROR_R /DSCIP_ROUNDING_MS
 OFLAGS		+=	/fp:precise
 CFLAGS		+=	/Zi
-CXXFLAGS	+=	/Zi /EHsc /GR
+CXXFLAGS	+=	/Zi /EHsc /GR /Zc:__cplusplus
 CXX11FLAG	=	/Qstd=c++0x
 CXX14FLAG	=	/Qstd=c++14
 CXX17FLAG	=	/Qstd=c++17

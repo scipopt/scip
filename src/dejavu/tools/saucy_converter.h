@@ -1,5 +1,5 @@
-#ifndef SASSY_SAUCY_CONVERTER_H
-#define SASSY_SAUCY_CONVERTER_H
+#ifndef DEJAVU_SAUCY_CONVERTER_H
+#define DEJAVU_SAUCY_CONVERTER_H
 
 #include <algorithm>
 
@@ -32,7 +32,7 @@ static void make_saucy_colmap(int* lab, int* smallcolmap, int* colmap, int colma
     }
 }
 
-static void convert_sassy_to_saucy(sassy::sgraph *g, int* colmap, saucy_graph* _saucy_graph, int** colors) {
+static void convert_dejavu_to_saucy(dejavu::sgraph *g, int* colmap, saucy_graph* _saucy_graph, int** colors) {
     *colors  = new int[g->v_size];
     int* lab = new int[g->v_size];
     const bool create_colmap = (colmap == nullptr);
@@ -68,9 +68,9 @@ static void convert_sassy_to_saucy(sassy::sgraph *g, int* colmap, saucy_graph* _
     }
 }
 
-static void convert_sassy_to_saucy(sassy::static_graph *sassy_graph, saucy_graph* _saucy_graph, int** colors){
-    convert_sassy_to_saucy(sassy_graph->get_sgraph(), sassy_graph->get_coloring(), _saucy_graph, colors);
+static void convert_dejavu_to_saucy(dejavu::static_graph *dejavu_graph, saucy_graph* _saucy_graph, int** colors){
+    convert_dejavu_to_saucy(dejavu_graph->get_sgraph(), dejavu_graph->get_coloring(), _saucy_graph, colors);
 }
 
 
-#endif //SASSY_SAUCY_CONVERTER_H
+#endif //DEJAVU_SAUCY_CONVERTER_H
