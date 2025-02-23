@@ -3,7 +3,7 @@
 # run with bash -e makeall.sh to stop on errors
 #
 
-APPLICATIONS=(Coloring CycleClustering MinIISC Ringpacking Scheduler)
+APPLICATIONS=(Coloring CycleClustering MinIISC PBSolver Ringpacking Scheduler)
 LPSOLVERS=(clp cpx none spx spx2)
 OPTS=(opt dbg)
 LIBTYPE=(static shared)
