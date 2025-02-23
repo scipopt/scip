@@ -76,8 +76,6 @@
 #include "scip/scip_var.h"
 #include "scip/var.h"
 #include "scip/sepastoreexact.h"
-/* AG@LE we should not include struct files */
-/* LE@AG true, I will need to add some clean helper methods to avoid it*/
 #include <ctype.h>
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
@@ -8265,57 +8263,4 @@ SCIP_ROWEXACT* SCIPgetRowexExactLinear(
    assert(consdata != NULL);
 
    return consdata->rowexact;
-}
-
-/** returns statistics of running error analysis feasibility checks */
-void SCIPgetRunningErrorStatsExactLinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Longint*         ncalls,             /**< stores number of times running error analysis was called */
-   SCIP_Longint*         nsuccess,           /**< stores number of times running error analysis successfully determined feasibility */
-   SCIP_Longint*         naborts             /**< stores number of times running error analysis had to abort */
-   )
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   assert(scip != NULL);
-
-   conshdlr = SCIPfindConshdlr(scip, "exactlinear");
-
-   assert(conshdlr != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
-   assert(conshdlrdata != NULL);
-
-   *ncalls = conshdlrdata->ncheckserrorbound;
-   *nsuccess = conshdlrdata->nsuccesserrorbound;
-   *naborts = conshdlrdata->nabotserrorbound;
-}
-
-void SCIPgetPropStatsExactLinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Longint*         npropagations,      /**< stores number of propagations of initial constraints */
-   SCIP_Longint*         npropagationsconflict, /**< stores number of conflict constraint propagations */
-   SCIP_Real*            avgnonzerosprop,    /**< stores average number of nonzeros in the propagated rows */
-   SCIP_Real*            avgnonzerospropconflict /**< stores maximum number of nonzeros in the propagated rows */
-   )
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   assert(scip != NULL);
-
-   conshdlr = SCIPfindConshdlr(scip, "exactlinear");
-
-   assert(conshdlr != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
-   assert(conshdlrdata != NULL);
-
-   *npropagations = conshdlrdata->nconsprop;
-   *npropagationsconflict = conshdlrdata->nconspropnoninit;
-   *avgnonzerosprop = (SCIP_Real) conshdlrdata->propnonzeros / conshdlrdata->nconsprop;
-   *avgnonzerospropconflict = (SCIP_Real) conshdlrdata->propnonzerosnoninit / conshdlrdata->nconspropnoninit;
 }

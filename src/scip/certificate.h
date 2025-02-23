@@ -486,12 +486,12 @@ SCIP_RETCODE SCIPcertificatePrintActivityVarBoundEx(
    SCIP_Bool             ismaxactivity,      /**< TRUE for maxactivity, FALSE for minactivity */
    SCIP_CONS*            constraint,         /**< the constraint */
    SCIP_VAR*             variable,           /**< the variable */
-   SCIP_ROWEXACT* row,
-   SCIP_Rational** vals,
-   SCIP_Rational* lhs,
-   SCIP_Rational* rhs,
-   SCIP_VAR** vars,
-   int nvars
+   SCIP_ROWEXACT*        row,                /**< the  corresponding row, or NULL if constraint has no row representation */
+   SCIP_Rational**       vals,               /**< value array */
+   SCIP_Rational*        lhs,                /**< lhs of the constraint */
+   SCIP_Rational*        rhs,                /**< rhs of the constraint */
+   SCIP_VAR**            vars,               /**< variable array */
+   int                   nvars               /**< number of values */
    );
 
 /** prints activity bound to proof section */
@@ -499,25 +499,24 @@ SCIP_RETCODE SCIPcertificatePrintActivityVarBound(
    SCIP*                 scip,
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    const char*           linename,           /**< name of the unsplitting line */
-   SCIP_BOUNDTYPE        boundtype,
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound (upper/lower) */
    SCIP_Real             newbound,           /**< pointer to lower bound on the objective, NULL indicating infeasibility */
-   SCIP_Bool             ismaxactivity,
-   SCIP_CONS*            constraint,
-   SCIP_VAR*             variable,
-   SCIP_ROWEXACT* row,
-   SCIP_Rational** vals,
-   SCIP_Rational* lhs,
-   SCIP_Rational* rhs,
-   SCIP_VAR** vars,
-   int nvars
+   SCIP_Bool             ismaxactivity,      /**< TRUE for maxactivity, FALSE for minactivity */
+   SCIP_CONS*            constraint,         /**< the constraint */
+   SCIP_VAR*             variable,           /**< the variable */
+   SCIP_ROWEXACT*        row,                /**< the  corresponding row, or NULL if constraint has no row representation */
+   SCIP_Rational**       vals,               /**< value array */
+   SCIP_Rational*        lhs,                /**< lhs of the constraint */
+   SCIP_Rational*        rhs,                /**< rhs of the constraint */
+   SCIP_VAR**            vars,               /**< variable array */
+   int                   nvars               /**< number of values */
    );
 
+/* prints information for constraint to certificate file */
 SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
-   SCIP*                 scip,
-   SCIP_CONSHDLR*        conshdlr,
-   SCIP_CONS*            cons
+   SCIP*                 scip,              /**< SCIP data structure */
+   SCIP_CONS*            cons               /**< constraint */
    );
-
 
 /** prints activity conflict to  certificate file */
 SCIP_RETCODE SCIPcertificatePrintActivityConflict(

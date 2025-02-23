@@ -720,7 +720,6 @@ void RatSetString(
 
    if( SCIPstrncasecmp(desc, "inf", 3) == 0 )
    {
-      /* MP@LE I recommend to add specific functions for setting a rational to +/- infinity. */
       res->val = negative ? -1 : 1;
       res->isinf = TRUE;
       res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
@@ -2584,7 +2583,6 @@ SCIP_RETCODE SCIPrationalarrayCopy(
    assert(sourcerationalarray != nullptr);
 
    SCIP_CALL( SCIPrationalarrayCreate(rationalarray, blkmem) );
-   /* MP@LE This does not look like a copy, it just copies the pointer. Is this correct? */
    (*rationalarray)->vals = sourcerationalarray->vals;
    (*rationalarray)->firstidx = sourcerationalarray->firstidx;
 

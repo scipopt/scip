@@ -660,7 +660,7 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
    {
       SCIP_CONS* cons;
       cons = conss[j];
-      SCIP_CALL( SCIPconsPrintCertificateExactLinear(scip, SCIPconsGetHdlr(cons), cons) );
+      SCIP_CALL( SCIPconsPrintCertificateExactLinear(scip, cons) );
    }
 
    for( j = 0; j < nvars; j++ )
@@ -3595,13 +3595,13 @@ SCIP_RETCODE SCIPcertificatePrintActivityVarBoundEx(
    SCIP_Rational*        newbound,           /**< pointer to lower bound on the objective, NULL indicating infeasibility */
    SCIP_Bool             ismaxactivity,      /**< TRUE for maxactivity, FALSE for minactivity */
    SCIP_CONS*            constraint,         /**< the constraint */
-   SCIP_VAR*             variable,            /**< the variable */
-   SCIP_ROWEXACT* row,
-   SCIP_Rational** vals,
-   SCIP_Rational* lhs,
-   SCIP_Rational* rhs,
-   SCIP_VAR** vars,
-   int nvars
+   SCIP_VAR*             variable,           /**< the variable */
+   SCIP_ROWEXACT*        row,                /**< the  corresponding row, or NULL if constraint has no row representation */
+   SCIP_Rational**       vals,               /**< value array */
+   SCIP_Rational*        lhs,                /**< lhs of the constraint */
+   SCIP_Rational*        rhs,                /**< rhs of the constraint */
+   SCIP_VAR**            vars,               /**< variable array */
+   int                   nvars               /**< number of values */
    )
 {
    SCIP_Longint res;
@@ -3767,20 +3767,20 @@ SCIP_RETCODE SCIPcertificatePrintActivityVarBoundEx(
 
 /** prints activity bound to proof section */
 SCIP_RETCODE SCIPcertificatePrintActivityVarBound(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    const char*           linename,           /**< name of the unsplitting line */
-   SCIP_BOUNDTYPE        boundtype,
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound (upper/lower) */
    SCIP_Real             newbound,           /**< pointer to lower bound on the objective, NULL indicating infeasibility */
-   SCIP_Bool             ismaxactivity,
-   SCIP_CONS*            constraint,
-   SCIP_VAR*             variable,
-   SCIP_ROWEXACT* row,
-   SCIP_Rational** vals,
-   SCIP_Rational* lhs,
-   SCIP_Rational* rhs,
-   SCIP_VAR** vars,
-   int nvars
+   SCIP_Bool             ismaxactivity,      /**< TRUE for maxactivity, FALSE for minactivity */
+   SCIP_CONS*            constraint,         /**< the constraint */
+   SCIP_VAR*             variable,           /**< the variable */
+   SCIP_ROWEXACT*        row,                /**< the  corresponding row, or NULL if constraint has no row representation */
+   SCIP_Rational**       vals,               /**< value array */
+   SCIP_Rational*        lhs,                /**< lhs of the constraint */
+   SCIP_Rational*        rhs,                /**< rhs of the constraint */
+   SCIP_VAR**            vars,               /**< variable array */
+   int                   nvars               /**< number of values */
    )
 {
    // It would be more efficient if we could do this all in fp artihmetic. However,
@@ -3796,10 +3796,10 @@ SCIP_RETCODE SCIPcertificatePrintActivityVarBound(
    return SCIP_OKAY;
 }
 
+/* prints information for constraint to certificate file */
 SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
-   SCIP*                 scip,
-   SCIP_CONSHDLR*        conshdlr,
-   SCIP_CONS*            cons
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    SCIP_CERTIFICATE* certificate;
@@ -3813,7 +3813,6 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
 
    /*lint --e{715}*/
    assert(scip != NULL);
-   assert(conshdlr != NULL);
    assert(cons != NULL);
 
    /* print constraint into certificate output */
@@ -3877,18 +3876,18 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    return SCIP_OKAY;
 }
 
-/** prints activity conflict to  certificate file */
+/** prints activity conflict to certificate file */
 SCIP_RETCODE SCIPcertificatePrintActivityConflict(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_ROWEXACT*        row,                /**< row */
+   SCIP_ROWEXACT*        row,                /**< corresponding row, or NULL if constraint does not have representation as row */
    SCIP_Rational*        lhs,                /**< lhs of the constraint */
    SCIP_Rational*        rhs,                /**< rhs of the constraint */
    int                   nvals,              /**< number of values */
-   SCIP_Rational**       vals,               /**< values */
-   SCIP_VAR**            vars,               /**< variables */
-   SCIP_Rational*        diff,               /**< difference */
-   SCIP_Bool userhs                             /**< is rhs */
+   SCIP_Rational**       vals,               /**< value array */
+   SCIP_VAR**            vars,               /**< variable array */
+   SCIP_Rational*        diff,               /**< difference between min/max activity as lhs/rhs */
+   SCIP_Bool userhs                          /**< is rhs or lhs used */
    )
 {
    SCIP_CERTIFICATE* certificate;
