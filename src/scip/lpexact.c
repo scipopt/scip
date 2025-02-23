@@ -3149,7 +3149,6 @@ SCIP_RETCODE SCIProwExactCreate(
 {
    assert(row != NULL);
    assert(fprow != NULL);
-   assert(fprowrhs != NULL);
    assert(blkmem != NULL);
    assert(stat != NULL);
    assert(len >= 0);

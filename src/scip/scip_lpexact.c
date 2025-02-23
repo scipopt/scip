@@ -238,7 +238,7 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowConsExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(SCIProwGetOrigintype(fprow) == SCIP_ROWORIGINTYPE_CONS);
-   assert(SCIProwGetOriginCons(fprow) == SCIProwGetOriginCons(fprowrhs));
+   assert(fprowrhs == NULL || SCIProwGetOriginCons(fprow) == SCIProwGetOriginCons(fprowrhs));
 
    SCIP_CALL( SCIProwExactCreate(rowexact, fprow, fprowrhs, scip->mem->probmem, scip->set, scip->stat, scip->lpexact, 0, NULL, NULL, lhs, rhs, isfprelaxable) );
 
