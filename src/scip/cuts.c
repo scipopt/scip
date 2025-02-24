@@ -3595,7 +3595,7 @@ void doBoundSubstitution(
 }
 
 static
-SCIP_RETCODE cutsTransformMIR2(
+SCIP_RETCODE cutsTransformMIR(
    SCIP * scip,
    MIR_DATA * data,
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
@@ -3913,7 +3913,7 @@ SCIP_RETCODE cutsTransformMIR2(
  * \f]
  */
 static
-SCIP_RETCODE cutsRoundMIR2(
+SCIP_RETCODE cutsRoundMIR(
    SCIP*                 scip,               /**< SCIP data structure */
    MIR_DATA*             data,
    int*RESTRICT          varsign,            /**< stores the sign of the transformed variable in summation */
@@ -4204,7 +4204,7 @@ SCIP_RETCODE SCIPcalcMIR(
     */
    if( data->totalnnz > 0 )
    {
-      SCIP_CALL( cutsTransformMIR2(scip, data, sol, boundswitch, allowlocal, fixintegralrhs, FALSE,
+      SCIP_CALL( cutsTransformMIR(scip, data, sol, boundswitch, allowlocal, fixintegralrhs, FALSE,
                                    boundsfortrans, boundtypesfortrans, minfrac, maxfrac,
                                    varsign, boundtype, &freevariable, &localbdsused) );
       assert(allowlocal || !localbdsused);
@@ -4265,7 +4265,7 @@ SCIP_RETCODE SCIPcalcMIR(
 
    if( data->totalnnz > 0 )
    {
-      SCIP_CALL( cutsRoundMIR2(scip, data, varsign, boundtype, QUAD(f0)) );
+      SCIP_CALL( cutsRoundMIR(scip, data, varsign, boundtype, QUAD(f0)) );
 
       SCIPdebugMsg(scip, "After MIR rounding:\n");
       SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE));
@@ -4553,7 +4553,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
     *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
     *   a_{zu_j} := a_{zu_j} + a_j * bu_j
     */
-   SCIP_CALL( cutsTransformMIR2(scip, data, sol, boundswitch, allowlocal, FALSE, FALSE,
+   SCIP_CALL( cutsTransformMIR(scip, data, sol, boundswitch, allowlocal, FALSE, FALSE,
          boundsfortrans, boundtypesfortrans, minfrac, maxfrac, varsign, boundtype, &freevariable, &localbdsused) );
    assert(allowlocal || !localbdsused);
 
@@ -5034,7 +5034,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
       QUAD_ASSIGN_Q(data->cutrhs, mksetrhs);
 
-      SCIP_CALL( cutsRoundMIR2(scip, data, varsign, boundtype, QUAD(f0)) );
+      SCIP_CALL( cutsRoundMIR(scip, data, varsign, boundtype, QUAD(f0)) );
 
       SCIPdebugMsg(scip, "rounded MIR cut:\n");
       SCIPdebug(printCutQuad(scip, sol, mksetcoefs, QUAD(data->cutrhs), mksetinds, data->ncutinds, FALSE, FALSE));
