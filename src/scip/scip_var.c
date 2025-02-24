@@ -4820,11 +4820,11 @@ SCIP_RETCODE SCIPchgVarLb(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgLbOriginal(var, scip->set, newbound) );
       SCIP_CALL( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
       SCIP_CALL( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      SCIP_CALL( SCIPvarChgLbOriginal(var, scip->set, newbound) );
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -4910,11 +4910,11 @@ SCIP_RETCODE SCIPchgVarUb(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgUbOriginal(var, scip->set, newbound) );
       SCIP_CALL( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
       SCIP_CALL( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      SCIP_CALL( SCIPvarChgUbOriginal(var, scip->set, newbound) );
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -8416,16 +8416,16 @@ SCIP_RETCODE SCIPfixVar(
    /* in the problem creation stage, modify the bounds as requested, independently from the current bounds */
    if( scip->set->stage != SCIP_STAGE_PROBLEM )
    {
-      if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(scip->set, fixedval))
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+      {
+         *infeasible = !SCIPsetIsFeasEQ(scip->set, fixedval, SCIPvarGetLbLocal(var));
+         return SCIP_OKAY;
+      }
+      else if( ( SCIPvarIsIntegral(var) && !SCIPsetIsFeasIntegral(scip->set, fixedval) )
          || SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetLbLocal(var))
          || SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
       {
          *infeasible = TRUE;
-         return SCIP_OKAY;
-      }
-      else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
-      {
-         *infeasible = !SCIPsetIsFeasEQ(scip->set, fixedval, SCIPvarGetLbLocal(var));
          return SCIP_OKAY;
       }
    }
@@ -8435,22 +8435,10 @@ SCIP_RETCODE SCIPfixVar(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      /* in the problem creation stage, modify the bounds as requested, independently from the current bounds;
-       * we have to make sure, that the order of the bound changes does not intermediately produce an invalid
-       * interval lb > ub
-       */
-      if( fixedval <= SCIPvarGetLbLocal(var) )
-      {
-         SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
-         SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
-         *fixed = TRUE;
-      }
-      else
-      {
-         SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
-         SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
-         *fixed = TRUE;
-      }
+      /* in the problem creation stage, modify the bounds as requested, independently from the current bounds */
+      SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
+      SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
+      *fixed = TRUE;
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
