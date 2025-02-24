@@ -2493,13 +2493,13 @@ SCIP_RETCODE varParse(
    {
       if ( SCIPsetIsLT(set, *lb, 0.0) || SCIPsetIsGT(set, *ub, 1.0) )
       {
-         SCIPerrorMessage("Parsed invalid bounds for binary variable <%s>: [%f, %f].", name, *lb, *ub);
+         SCIPerrorMessage("Parsed invalid bounds for binary variable <%s>: [%f, %f].\n", name, *lb, *ub);
          return SCIP_READERROR;
       }
       if ( !SCIPsetIsInfinity(set, -(*lazylb)) && !SCIPsetIsInfinity(set, *lazyub) && 
            ( SCIPsetIsLT(set, *lazylb, 0.0) || SCIPsetIsGT(set, *lazyub, 1.0) ) )
       {
-         SCIPerrorMessage("Parsed invalid lazy bounds for binary variable <%s>: [%f, %f].", name, *lazylb, *lazyub);
+         SCIPerrorMessage("Parsed invalid lazy bounds for binary variable <%s>: [%f, %f].\n", name, *lazylb, *lazyub);
          return SCIP_READERROR;
       }
    }
