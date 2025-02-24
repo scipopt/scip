@@ -71,17 +71,6 @@ struct SCIP_PresolData
    SCIP_Real             numericslimit;      /**< A row that contains variables with coefficients that are greater in
                                                 * absolute value than this limit is not considered for
                                                 * implied integrality detection. */
-
-   int nfixedvars;
-   int naggrvars;
-   int nchgvartypes;
-   int nchgbds;
-   int naddholes;
-   int ndelconss;
-   int naddconss;
-   int nupgdconss;
-   int nchgcoefs;
-   int nchgsides;
 };
 
 
