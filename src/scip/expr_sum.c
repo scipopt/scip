@@ -1053,7 +1053,6 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicitySum)
    return SCIP_OKAY;
 }
 
-
 /** expression integrality detection callback */
 static
 SCIP_DECL_EXPRINTEGRALITY(integralitySum)

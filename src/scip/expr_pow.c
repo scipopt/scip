@@ -2087,7 +2087,6 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    SCIP_Real childub;
    SCIP_Real exponent;
    SCIP_Bool isinteger;
-   SCIP_Bool childintegral;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -2147,9 +2146,8 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    }
    assert(isinteger || childlb >= 0.0);
 
-   childintegral = SCIPexprIsIntegral(child);
    SCIP_CALL( buildPowEstimator(scip, exprdata, overestimate, childlb, childub, globalbounds[0].inf,
-         globalbounds[0].sup, childintegral, MAX(childlb, *refpoint), exponent, coefs,
+         globalbounds[0].sup, SCIPexprIsIntegral(child), MAX(childlb, *refpoint), exponent, coefs,
          constant, success, islocal, branchcand) );
 
    return SCIP_OKAY;
@@ -2307,7 +2305,6 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
    for( i = 0; i < 6 && *nreturned < SCIP_EXPR_MAXINITESTIMATES; ++i )
    {
       SCIP_Real refpoint;
-      SCIP_Bool childintegral;
 
       if( (overest[i] && !overestimate) || (!overest[i] && overestimate) )
          continue;
@@ -2321,9 +2318,8 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
 
       branchcand = TRUE;
-      childintegral = SCIPexprIsIntegral(child);
-      SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childlb, childub, childlb, childub, childintegral,
-            refpoint, exponent, coefs[*nreturned], &constant[*nreturned],
+      SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childlb, childub, childlb, childub,
+            SCIPexprIsIntegral(child), refpoint, exponent, coefs[*nreturned], &constant[*nreturned],
             &success, &islocal, &branchcand) );
 
       if( success )

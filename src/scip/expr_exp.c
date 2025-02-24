@@ -395,8 +395,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesExp)
       {
          assert(i < 3);
          /* coverity[overrun] */
-         addExpLinearization(scip, refpointsunder[i], SCIPexprIsIntegral(child),
-                             coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
+         addExpLinearization(scip, refpointsunder[i], SCIPexprIsIntegral(child), coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
       }
       else
          addExpSecant(scip, lb, ub, coefs[*nreturned], &constant[*nreturned], &success);

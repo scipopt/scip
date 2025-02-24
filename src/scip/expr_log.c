@@ -473,8 +473,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesLog)
       {
          assert(i < 3);
          /* coverity[overrun] */
-         addLogLinearization(scip, refpointsover[i], SCIPexprIsIntegral(child),
-                             coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
+         addLogLinearization(scip, refpointsover[i], SCIPexprIsIntegral(child), coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
          if( success )
          {
             SCIPdebugMsg(scip, "init overestimate log(x) at x=%g -> %g*x+%g\n", refpointsover[i], coefs[*nreturned][0], constant[*nreturned]);

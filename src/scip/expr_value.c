@@ -33,7 +33,6 @@
 
 #include <string.h>
 
-#include "scip/pub_expr.h"
 #include "scip/expr_value.h"
 
 #define EXPRHDLR_NAME            "val"
