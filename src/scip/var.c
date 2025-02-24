@@ -3919,28 +3919,25 @@ SCIP_RETCODE SCIPvarFix(
        */
       SCIPlpDecNLoosevars(lp);
 
-      /* change variable's bounds to fixed value (thereby removing redundant implications and variable bounds) */
+      /* free hole lists */
       holelistFree(&var->glbdom.holelist, blkmem);
       holelistFree(&var->locdom.holelist, blkmem);
+
+      /* adjust fixed value */
+      if( SCIPvarIsIntegral(var) )
+         fixedval = SCIPsetRound(set, fixedval);
+
+      /* change variable bounds to fixed value */
       SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, fixedval) );
       SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, fixedval) );
 
-      if( var->glbdom.lb != var->glbdom.ub )  /*lint !e777*/
-      {
-         /* explicitly set variable's bounds if the fixed value was in epsilon range of the old bound (so above call didn't set bound) */
-         if( SCIPvarIsIntegral(var) )
-         {
-            /* if not continuous variable, then make sure variable is fixed to integer value */
-            assert(SCIPsetIsIntegral(set, fixedval));
-            fixedval = SCIPsetRound(set, fixedval);
-         }
-         var->glbdom.lb = fixedval;
-         var->glbdom.ub = fixedval;
-      }
+      /* explicitly set variable's bounds if the fixed value was in epsilon range of the old bound (so above call didn't set bound) */
+      var->glbdom.lb = fixedval;
+      var->glbdom.ub = fixedval;
 
       /* ensure local domain is fixed to same value as global domain */
-      var->locdom.lb = var->glbdom.lb;
-      var->locdom.ub = var->glbdom.ub;
+      var->locdom.lb = fixedval;
+      var->locdom.ub = fixedval;
 
       /* delete implications and variable bounds information */
       SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, TRUE) );
@@ -7251,6 +7248,11 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    case SCIP_VARSTATUS_LOOSE:
       if( newbound > SCIPvarGetLbLocal(var) )
       {
+         /* ensure that the local bound change is not blocked */
+         if( newbound > SCIPvarGetUbLocal(var) )
+         {
+            SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
+         }
          SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
       SCIP_CALL( varProcessChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, newbound) );
@@ -7394,6 +7396,11 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    case SCIP_VARSTATUS_LOOSE:
       if( newbound < SCIPvarGetUbLocal(var) )
       {
+         /* ensure that the local bound change is not blocked */
+         if( newbound < SCIPvarGetLbLocal(var) )
+         {
+            SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
+         }
          SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
       SCIP_CALL( varProcessChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, newbound) );
