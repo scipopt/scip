@@ -504,6 +504,8 @@ set(pairs_Issue
     "instances/Issue/3752.cip\;28066\;default"
     "instances/Issue/3787.lp\;1\;default"
     "instances/Issue/3832.cip\;0\;default"
+    # Test currently not working since problems with the relative check for presolved problems appear: https://git.zib.de/integer/scip/-/issues/3819
+    # "instances/Issue/3842.cip\;-16812.7692740365\;default"
 )
 
 #
