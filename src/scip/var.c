@@ -7371,7 +7371,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    if( SCIPsetIsZero(set, scalarx / scalary) || SCIPsetIsZero(set, scalary / scalarx) )
       return SCIP_OKAY;
 
-   /* TODO: A bit strange, but this was introduced to stay compatible with legacy code */
+   /**@todo simplify the following code once SCIP_DEPRECATED_VARTYPE_IMPLINT is removed */
    typex = SCIPvarIsImpliedIntegral(varx) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(varx);
    typey = SCIPvarIsImpliedIntegral(vary) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(vary);
 
@@ -7561,7 +7561,7 @@ SCIP_RETCODE SCIPvarTryAggregateVarsExact(
    RatDiv(quotxy, scalarx, scalary);
    RatInvert(quotyx, quotxy);
 
-   /* TODO: A bit strange, but this was introduced to stay compatible with legacy code */
+   /**@todo simplify the following code once SCIP_DEPRECATED_VARTYPE_IMPLINT is removed */
    typex = SCIPvarIsImpliedIntegral(varx) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(varx);
    typey = SCIPvarIsImpliedIntegral(vary) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(vary);
 
