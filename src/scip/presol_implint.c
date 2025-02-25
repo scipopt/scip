@@ -85,7 +85,7 @@ struct MatrixComponents
    int nmatrixrows;                          /**< Number of rows in the matrix for the linear part of the problem */
    int nmatrixcols;                          /**< Number of columns in the matrix for the linear part of the problem */
 
-   SCIP_VARTYPE* coltype;                    /**< SCIP_VARTYPE of the associated column */
+   SCIP_Bool* isintegral;                    /**< Whether associated column is integral */
 
    int* rowcomponent;                        /**< Maps a row to the index of the component it belongs to */
    int* colcomponent;                        /**< Maps a column to the index of the component it belongs to */
@@ -131,11 +131,11 @@ SCIP_RETCODE createMatrixComponents(
    comp->nmatrixrows = nrows;
    comp->nmatrixcols = ncols;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &comp->coltype, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &comp->isintegral, ncols) );
    for( int i = 0; i < ncols; ++i )
    {
       SCIP_VAR* var = SCIPmatrixGetVar(matrix,i);
-      comp->coltype[i] = SCIPvarGetType(var);
+      comp->isintegral[i] = SCIPvarIsIntegral(var);
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &comp->rowcomponent, nrows) );
@@ -176,7 +176,7 @@ void freeMatrixComponents(
    SCIPfreeBufferArray(scip, &comp->componentrows);
    SCIPfreeBufferArray(scip, &comp->colcomponent);
    SCIPfreeBufferArray(scip, &comp->rowcomponent);
-   SCIPfreeBufferArray(scip, &comp->coltype);
+   SCIPfreeBufferArray(scip, &comp->isintegral);
 
    SCIPfreeBuffer(scip, pmatrixcomponents);
 }
@@ -270,7 +270,7 @@ SCIP_RETCODE computeContinuousComponents(
 
    for( int col = 0; col < comp->nmatrixcols; ++col )
    {
-      if( comp->coltype[col] != SCIP_VARTYPE_CONTINUOUS )
+      if( comp->isintegral[col] )
       {
          continue;
       }
@@ -301,7 +301,7 @@ SCIP_RETCODE computeContinuousComponents(
    comp->ncomponents = 0;
    for( int col = 0; col < comp->nmatrixcols; ++col )
    {
-      if( comp->coltype[col] != SCIP_VARTYPE_CONTINUOUS )
+      if( comp->isintegral[col] )
       {
          continue;
       }
@@ -442,7 +442,7 @@ SCIP_RETCODE computeMatrixStatistics(
       int ncontinuouspmone = 0;
       for( int j = 0; j < nnonz; ++j )
       {
-         SCIP_Bool continuous = comp->coltype[cols[j]] == SCIP_VARTYPE_CONTINUOUS;
+         SCIP_Bool continuous = !comp->isintegral[cols[j]];
          SCIP_Real value = vals[j];
          if( continuous )
          {
@@ -476,7 +476,7 @@ SCIP_RETCODE computeMatrixStatistics(
                                  && ( SCIPisInfinity(scip, ub) || SCIPisIntegral(scip, ub) );
 
       /* Check that integer variables have integer bounds, as expected. */
-      assert(comp->coltype[i] == SCIP_VARTYPE_CONTINUOUS || stats->colintegralbounds[i]);
+      assert(!comp->isintegral[i] || stats->colintegralbounds[i]);
    }
 
    return SCIP_OKAY;
@@ -601,7 +601,7 @@ SCIP_RETCODE findImpliedIntegers(
             for( int j = 0; j < nrownnoz; ++j )
             {
                int col = rowcols[j];
-               if( comp->coltype[col] == SCIP_VARTYPE_CONTINUOUS )
+               if( !comp->isintegral[col] )
                {
                   tempIdxArray[ncontnonz] = col;
                   tempValArray[ncontnonz] = rowvals[j];
@@ -649,7 +649,7 @@ SCIP_RETCODE findImpliedIntegers(
                for( int j = 0; j < nrownnoz; ++j )
                {
                   int col = rowcols[j];
-                  if( comp->coltype[col] == SCIP_VARTYPE_CONTINUOUS )
+                  if( !comp->isintegral[col] )
                   {
                      tempIdxArray[ncontnonz] = col;
                      tempValArray[ncontnonz] = rowvals[j];
