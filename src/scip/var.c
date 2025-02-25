@@ -22950,6 +22950,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarIsBinary
 #undef SCIPvarIsIntegral
 #undef SCIPvarIsImpliedIntegral
+#undef SCIPvarIsNonimpliedIntegral
 #undef SCIPvarIsInitial
 #undef SCIPvarIsRemovable
 #undef SCIPvarIsDeleted
@@ -23393,6 +23394,15 @@ SCIP_Bool SCIPvarIsImpliedIntegral(
    )
 {
    return (SCIPvarGetImplType(var) != SCIP_IMPLINTTYPE_NONE);
+}
+
+/** returns TRUE if the variable is integral, but not implied integral. */
+SCIP_EXPORT
+SCIP_Bool SCIPvarIsNonimpliedIntegral(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   return SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetImplType(var) == SCIP_IMPLINTTYPE_NONE;
 }
 
 /** returns whether variable's column should be present in the initial root LP */

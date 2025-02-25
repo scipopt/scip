@@ -2083,14 +2083,14 @@ SCIP_RETCODE readBounds(
          oldvartype = SCIPvarGetType(var);
          assert(!SCIPvarIsImpliedIntegral(var));
 
-         /* If a bound of a binary variable is given, the variable is converted into an integer variable
-          * with default bounds 0 <= x <= infinity before applying the bound. Note that integer variables
-          * are by default assumed to be binary, but an explicit lower bound of 0 turns them into integer variables.
-          * Only if the upper bound is explicitly set to 1, we leave the variable as a binary one.
+         /* convert into an integer variable with default bounds 0 <= x <= infinity if binary variable is not declared
+          * binary and not equipped with binary bounds, note that the default integer type is binary
           */
-         if( oldvartype == SCIP_VARTYPE_BINARY && !((mpsinputField1(mpsi)[0] == 'U' ||
-                  (mpsinputField1(mpsi)[0] == 'F' && mpsinputField1(mpsi)[1] == 'X')) && SCIPisFeasEQ(scip, val, 1.0))
-            && !(mpsinputField1(mpsi)[0] == 'F' && mpsinputField1(mpsi)[1] == 'X'&& SCIPisFeasEQ(scip, val, 0.0)) )
+         if( oldvartype == SCIP_VARTYPE_BINARY
+            && ( mpsinputField1(mpsi)[0] != 'B' || mpsinputField1(mpsi)[1] != 'V' )
+            && ( mpsinputField1(mpsi)[0] != 'U' || SCIPisFeasGT(scip, val, 1.0) )
+            && ( mpsinputField1(mpsi)[0] != 'F' || mpsinputField1(mpsi)[1] != 'X'
+            || SCIPisFeasNegative(scip, val) || SCIPisFeasGT(scip, val, 1.0) ) )
          {
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
             assert(!infeasible);
@@ -2216,11 +2216,14 @@ SCIP_RETCODE readBounds(
          case 'P':
             SCIP_CALL( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
             break;
-         case 'B' : /* CPLEX extension (Binary) */
-            SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
-            SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
-            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
-            /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+         case 'B':
+            if( oldvartype != SCIP_VARTYPE_BINARY )
+            {
+               SCIP_CALL( SCIPtightenVarLb(scip, var, 0.0, TRUE, &infeasible, NULL) );
+               SCIP_CALL( SCIPtightenVarUb(scip, var, 1.0, TRUE, &infeasible, NULL) );
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
+               /* presolving detects infeasibility */
+            }
             break;
          default:
             mpsinputSyntaxerror(mpsi);
@@ -2460,14 +2463,14 @@ SCIP_RETCODE readBoundsExact(
          oldvartype = SCIPvarGetType(var);
          assert(!SCIPvarIsImpliedIntegral(var));
 
-         /* If a bound of a binary variable is given, the variable is converted into an integer variable
-          * with default bounds 0 <= x <= infinity before applying the bound. Note that integer variables
-          * are by default assumed to be binary, but an explicit lower bound of 0 turns them into integer variables.
-          * Only if the upper bound is explicitly set to 1, we leave the variable as a binary one.
+         /* convert into an integer variable with default bounds 0 <= x <= infinity if binary variable is not declared
+          * binary and not equipped with binary bounds, note that the default integer type is binary
           */
-         if( oldvartype == SCIP_VARTYPE_BINARY && !((mpsinputField1(mpsi)[0] == 'U' ||
-                  (mpsinputField1(mpsi)[0] == 'F' && mpsinputField1(mpsi)[1] == 'X')) && RatIsEqualReal(val, 1.0))
-            && !(mpsinputField1(mpsi)[0] == 'F' && mpsinputField1(mpsi)[1] == 'X'&& RatIsEqualReal(val, 0.0)) )
+         if( oldvartype == SCIP_VARTYPE_BINARY
+            && ( mpsinputField1(mpsi)[0] != 'B' || mpsinputField1(mpsi)[1] != 'V' )
+            && ( mpsinputField1(mpsi)[0] != 'U' || RatIsGTReal(val, 1.0) )
+            && ( mpsinputField1(mpsi)[0] != 'F' || mpsinputField1(mpsi)[1] != 'X'
+            || RatIsNegative(val) || RatIsGTReal(val, 1.0) ) )
          {
             SCIP_Rational* tmp;
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
@@ -2603,13 +2606,16 @@ SCIP_RETCODE readBoundsExact(
             RatSetString(val, "inf");
             SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
             break;
-         case 'B' : /* CPLEX extension (Binary) */
-            RatSetReal(val, 0.0);
-            SCIP_CALL( SCIPchgVarLbExact(scip, var, val) );
-            RatSetReal(val, 1.0);
-            SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
-            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
-            /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+         case 'B':
+            if( oldvartype != SCIP_VARTYPE_BINARY )
+            {
+               RatSetReal(val, 0.0);
+               SCIP_CALL( SCIPtightenVarLbExact(scip, var, val, &infeasible, NULL) );
+               RatSetReal(val, 1.0);
+               SCIP_CALL( SCIPtightenVarUbExact(scip, var, val, &infeasible, NULL) );
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
+               /* presolving detects infeasibility */
+            }
             break;
          default:
             mpsinputSyntaxerror(mpsi);

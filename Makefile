@@ -387,9 +387,9 @@ SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 endif
-LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/include/bliss\".\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.a\"\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.so\""
+LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/src\".\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/build/libbliss_static.a\"\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/build/libbliss.so\""
 endif
 
 SYMOPTIONS	+=	sbliss
@@ -408,9 +408,9 @@ SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 endif
-LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/include/bliss\".\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.a\"\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.so\""
+LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/src\".\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/build/libbliss_static.a\"\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/build/libbliss.so\""
 endif
 
 SYMOPTIONS	+=	nauty
@@ -1076,6 +1076,7 @@ SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
 SCIPBUILDFLAGSFILE = 	$(OBJDIR)/include/scip/buildflags.h
 SCIPCONFIGHFILE	= 	$(OBJDIR)/include/scip/config.h
 SCIPEXPORTHFILE	= 	$(OBJDIR)/include/scip/scip_export.h
+SCIPCONFIGINCLUDE =	$(LIBDIR)/$(LIBTYPE)/include
 
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
@@ -1342,6 +1343,13 @@ $(MAINLINK) $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(MAINFILE)) $(notdir $@)
 
+# update link to config files; (the cd $(@D) is for windows, where LN_s is cp)
+.PHONY: $(SCIPCONFIGINCLUDE)
+$(SCIPCONFIGINCLUDE): $(SCIPCONFIGHFILE)
+		@rm -rf $@
+		@mkdir -p $(@D)
+		cd $(@D) && $(LN_s) ../../$(OBJDIR)/include $(@F)
+
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
 
@@ -1399,6 +1407,8 @@ cleanlibs:      | $(LIBDIR)/$(LIBTYPE)
 		@-rm -f $(TPILIBFILE) $(TPILIBLINK) $(TPILIBSHORTLINK)
 		@echo "-> remove library $(SCIPLIBFILE)"
 		@-rm -f $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(SCIPLIBSOLVERLINK) $(SCIPLIBSOLVERSHORTLINK)
+		@echo "-> remove headers directory $(SCIPCONFIGINCLUDE)"
+		@-rm -rf $(SCIPCONFIGINCLUDE)
 
 .PHONY: cleanbin
 cleanbin:       | $(BINDIR)
@@ -1435,7 +1445,7 @@ endif
 
 .PHONY: libscipbase
 libscipbase:	preprocess
-		@$(MAKE) $(SCIPLIBBASEFILE) $(SCIPLIBBASELINK) $(SCIPLIBBASESHORTLINK)
+		@$(MAKE) $(SCIPLIBBASEFILE) $(SCIPLIBBASELINK) $(SCIPLIBBASESHORTLINK) $(SCIPCONFIGINCLUDE)
 
 $(SCIPLIBBASEFILE):	$(SCIPLIBBASEOBJFILES) $(SYMOBJFILES) | $(LIBDIR)/$(LIBTYPE) $(LIBOBJSUBDIRS)
 		@echo "-> generating library $@"

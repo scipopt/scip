@@ -21,7 +21,7 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 set(SCIP_VERSION_MAJOR 10)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
-set(SCIP_VERSION_API 134)
+set(SCIP_VERSION_API 135)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}
@@ -534,7 +534,7 @@ elseif(LPS STREQUAL "msk")
         message(FATAL_ERROR "Requested LP solver MOSEK not found.")
     endif()
 elseif(LPS STREQUAL "highs")
-    find_package(HIGHS REQUIRED CONFIG)
+    find_package(HIGHS REQUIRED CONFIG HINTS ${HIGHS_DIR})
     if(NOT HIGHS_FOUND)
         message(FATAL_ERROR "Requested LP solver HiGHS not found.")
     endif()

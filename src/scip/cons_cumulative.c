@@ -2009,7 +2009,7 @@ SCIP_RETCODE consdataCreate(
        * for fractional variable values, the constraint cannot be checked
        */
       for( v = 0; v < (*consdata)->nvars; ++v )
-         assert(SCIPvarIsIntegral((*consdata)->vars[v]) && !SCIPvarIsImpliedIntegral((*consdata)->vars[v]));
+         assert(SCIPvarIsNonimpliedIntegral((*consdata)->vars[v]));
 #endif
    }
    else
