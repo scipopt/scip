@@ -59,8 +59,9 @@ endif()
 # path to e.g. findGMP module
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
-option(SHARED "build shared libraries" ON)
+option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})
+message(STATUS "Build shared libraries: " ${SHARED})
 
 # make 'Release' the default build type
 if(NOT CMAKE_BUILD_TYPE)
