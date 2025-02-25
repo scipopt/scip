@@ -5272,7 +5272,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    if( SCIPsetIsZero(set, scalarx / scalary) || SCIPsetIsZero(set, scalary / scalarx) )
       return SCIP_OKAY;
 
-   /* TODO: A bit strange, but this was introduced to stay compatible with legacy code */
+   /* @todo: remove legacy usage of SCIP_DEPRECATED_VARTYPE_IMPLINT here */
    typex = SCIPvarIsImpliedIntegral(varx) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(varx);
    typey = SCIPvarIsImpliedIntegral(vary) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(vary);
 
