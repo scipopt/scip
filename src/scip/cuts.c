@@ -2597,8 +2597,8 @@ SCIP_Real SCIPaggrRowGetRhs(
  * The only requirement we place on these sections is that section i can only have variable bounds variables whose section
  * is strictly greater than i. This way, we can process the variable array in a 'linear' manner. */
 
-/* TODO: maintain a DAG for used varbounds and use topological ordering instead, this would also allow
- * variable bounds on variables of the same type to be used*/
+/* @todo: maintain a DAG for used varbounds and use topological ordering instead, this would also allow
+ * variable bounds on variables of the same section to be used */
 
 #define NSECTIONS 6
 
@@ -2631,30 +2631,34 @@ typedef struct MIR_Data
    int ncutinds;
 } MIR_DATA;
 
+/** Returns the section of a variable.
+ *  For now, this is equal to the variable type section of the variable in the problem. */
 static
 int varSection(
-   MIR_DATA* data,
-   int v
+   MIR_DATA*             data,               /*< The MIR separation data */
+   int                   probindex           /*< Problem index of a variable */
    )
 {
+   assert(data);
+
    int limit = data->nvars - data->ncontvars;
-   if( v >= limit )
+   if( probindex >= limit )
       return 0;
 
    limit -= data->ncontimplvars;
-   if( v >= limit )
+   if( probindex >= limit )
       return 1;
 
    limit -= data->nintimplvars;
-   if( v >= limit )
+   if( probindex >= limit )
       return 2;
 
    limit -= data->nbinimplvars;
-   if( v >= limit )
+   if( probindex >= limit )
       return 3;
 
    limit -= data->nintvars;
-   if( v >= limit )
+   if( probindex >= limit )
       return 4;
 
    assert(limit == data->nbinvars);
@@ -2708,8 +2712,7 @@ SCIP_RETCODE findBestLb(
          vlbvars = SCIPvarGetVlbVars(var);
          assert(vlbvars != NULL);
          if( ( usevbds == 2 || ( SCIPvarGetType(vlbvars[bestvlbidx]) == SCIP_VARTYPE_BINARY
-            && !SCIPvarIsImpliedIntegral(vlbvars[bestvlbidx]) ) )
-            )
+            && !SCIPvarIsImpliedIntegral(vlbvars[bestvlbidx]) ) ) )
          {
             assert(SCIPvarGetProbindex(vlbvars[bestvlbidx]) < SCIPvarGetProbindex(var));
             *bestlb = bestvlb;
@@ -2768,7 +2771,7 @@ SCIP_RETCODE findBestUb(
          vubvars = SCIPvarGetVubVars(var);
          assert(vubvars != NULL);
          if( ( usevbds == 2 || ( SCIPvarGetType(vubvars[bestvubidx]) == SCIP_VARTYPE_BINARY
-            && !SCIPvarIsImpliedIntegral(vubvars[bestvubidx]) ) ))
+            && !SCIPvarIsImpliedIntegral(vubvars[bestvubidx]) ) ) )
          {
             assert( SCIPvarGetProbindex(vubvars[bestvubidx]) < SCIPvarGetProbindex(var) );
             *bestub = bestvub;
@@ -2780,13 +2783,14 @@ SCIP_RETCODE findBestUb(
    return SCIP_OKAY;
 }
 
-/** finds the best lower bound of the variable to use for MIR transformation */
+/** finds the best lower bound of the variable to use for MIR transformation.
+ *  Differs from findBestLB() in that it allows more variable bound substitutions based on the variable sections. */
 static
 SCIP_RETCODE findMIRBestLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
-   MIR_DATA*             data,
+   MIR_DATA*             data,               /**< the MIR data that specifies the variable sections */
    int                   usevbds,            /**< should variable bounds be used in bound transformation? (0: no, 1: only binary, 2: all) */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real*            bestlb,             /**< pointer to store best bound value */
@@ -2836,8 +2840,9 @@ SCIP_RETCODE findMIRBestLb(
          /* search best VLB */
          for( i = 0; i < nvlbs; i++ )
          {
-            /* For now, we only allow variable bounds from sections that are strictly greater to prevent cyclic usage.
-             * TODO: This is also why we don't use the caching mechanism of SCIPvarGetClosestVLB(), which is not ideal. */
+            /* For now, we only allow variable bounds from sections that are strictly greater to prevent cyclic usage.*/
+            /** @todo: We don't use the caching mechanism of SCIPvarGetClosestVLB() anymore because the cached
+             *  variable bound may be illegal. We could still cache something useful here. */
             if( SCIPvarIsActive(vlbvars[i]) && boundedsection < varSection(data, SCIPvarGetProbindex(vlbvars[i])) )
             {
                SCIP_Real vlbsol;
@@ -2862,13 +2867,14 @@ SCIP_RETCODE findMIRBestLb(
    return SCIP_OKAY;
 }
 
-/** finds the best upper bound of the variable to use for MIR transformation */
+/** finds the best upper bound of the variable to use for MIR transformation.
+ *  Differs from findBestUB() in that it allows more variable bound substitutions based on the variable sections. */
 static
 SCIP_RETCODE findMIRBestUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
-   MIR_DATA*             data,
+   MIR_DATA*             data,               /**< the MIR data that specifies the variable sections */
    int                   usevbds,            /**< should variable bounds be used in bound transformation? (0: no, 1: only binary, 2: all) */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real*            bestub,             /**< pointer to store best bound value */
@@ -2918,8 +2924,9 @@ SCIP_RETCODE findMIRBestUb(
          /* search best VUB */
          for( i = 0; i < nvubs; i++ )
          {
-            /* For now, we only allow variable bounds from sections that are strictly greater to prevent cyclic usage.
-             * TODO: This is also why we don't use the caching mechanism of SCIPvarGetClosestVUB(), which is not ideal. */
+            /* For now, we only allow variable bounds from sections that are strictly greater to prevent cyclic usage.*/
+            /** @todo: We don't use the caching mechanism of SCIPvarGetClosestVUB() anymore because the cached
+             *  variable bound may be illegal. We could still cache something useful here. */
             if( SCIPvarIsActive(vubvars[i]) && boundedsection < varSection(data, SCIPvarGetProbindex(vubvars[i])) )
             {
                SCIP_Real vubsol;
@@ -2950,7 +2957,7 @@ SCIP_RETCODE determineBestBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to determine best bound for */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
-   MIR_DATA*             data,
+   MIR_DATA*             data,               /**< the MIR data that specifies the variable sections*/
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    int                   usevbds,            /**< should variable bounds be used in bound transformation? (0: no, 1: only binary, 2: all) */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
@@ -3413,28 +3420,37 @@ SCIP_RETCODE cutsSubstituteMIR(
    return SCIP_OKAY;
 }
 
+/**< Creates the MIR data structure that contains the settings and keeps the cut data for a single aggregated row. */
 static
 SCIP_RETCODE createMIRData(
-   SCIP * scip,
-   MIR_DATA ** pdata,
-   SCIP_AGGRROW * aggrrow,
-   SCIP_Real scale,
-   int usevbds
+   SCIP*                 scip,               /**< SCIP data structure */
+   MIR_DATA**            pdata,              /**< buffer to store the MIR data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the row aggregation to initialize the cut with */
+   SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
+   int                   sectionusevbds      /**< Parameter that indicates until what section variable bound substitution
+                                               * should be done. */
 )
 {
+   int i;
+   int nnz;
+
    assert(pdata != NULL);
    SCIP_CALL( SCIPallocBuffer(scip, pdata) );
    MIR_DATA* data = *pdata;
-   int nnz = aggrrow->nnz;
+
+   nnz = aggrrow->nnz;
    data->totalnnz = nnz;
-   for( int i = 0; i < NSECTIONS; ++i )
+
+   /* initialize sections */
+   for( i = 0; i < NSECTIONS; ++i )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &data->indices[i], nnz) );
       data->nnz[i] = 0;
-      //TODO: tune and/or rename
+      /* Cont. | cont impl. | int impl. | bin impl. | int | bin */
       data->isenfint[i] = i >= 2 ? TRUE : FALSE;
       data->isimplint[i] = i >= 1 && i <= 3 ? TRUE : FALSE;
-      data->usevbds[i] = i < usevbds ? 2 : 0;
+      /* Use variable bounds for the sections specified by the user */
+      data->usevbds[i] = i < sectionusevbds ? 2 : 0;
    }
 
    /* Problem data needs to be initialized before cut data as it is used to partition the variables into the sections */
@@ -3457,7 +3473,7 @@ SCIP_RETCODE createMIRData(
       /* Initalize cut with the aggregation */
       BMScopyMemoryArray(data->cutinds, aggrrow->inds, nnz);
 
-      for( int i = 0; i < nnz; ++i )
+      for( i = 0; i < nnz; ++i )
       {
          SCIP_Real QUAD(coef);
          int k = aggrrow->inds[i];
@@ -3473,7 +3489,7 @@ SCIP_RETCODE createMIRData(
 
       /* Sort the array by problem index and add the variables to their sections */
       SCIPsortDownInt(data->cutinds, nnz);
-      for( int i = 0; i < nnz; ++i )
+      for( i = 0; i < nnz; ++i )
       {
          int section = varSection(data, data->cutinds[i]);
          data->indices[section][data->nnz[section]] = data->cutinds[i];
@@ -3486,10 +3502,11 @@ SCIP_RETCODE createMIRData(
    return SCIP_OKAY;
 }
 
+/** frees the MIR data structure */
 static
 void freeMIRData(
-   SCIP * scip,
-   MIR_DATA ** pdata
+   SCIP*                 scip,               /**< SCIP data structure */
+   MIR_DATA**            pdata               /**< buffer where the MIR data structure is stored. */
 )
 {
    assert(pdata != NULL);
@@ -3509,10 +3526,11 @@ void freeMIRData(
    SCIPfreeBuffer(scip, pdata);
 }
 
+/**< Performs bound substitution for a MIR cut */
 static
-void doBoundSubstitution(
+void doMIRBoundSubstitution(
    SCIP*                 scip,               /**< SCIP datastructure */
-   MIR_DATA*             data,
+   MIR_DATA*             data,               /**< the MIR data structure for this cut */
    int                   varsign,            /**< stores the sign of the transformed variable in summation */
    int                   boundtype,          /**< stores the bound used for transformed variable:
                                                  *   vlb/vub_idx, or -1 for global lb/ub, or -2 for local lb/ub */
@@ -3594,10 +3612,25 @@ void doBoundSubstitution(
    }
 }
 
+/** Transform equation  a*x == b, lb <= x <= ub  into standard form
+ *   a'*x' == b, 0 <= x' <= ub'.
+ *
+ * Transform variables (lb or ub):
+ *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   if lb is used in transformation
+ *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   if ub is used in transformation
+ * and move the constant terms "a_j * lb_j" or "a_j * ub_j" to the rhs.
+ *
+ * Transform variables (vlb or vub):
+ *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   if vlb is used in transf.
+ *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   if vub is used in transf.
+ * move the constant terms "a_j * dl_j" or "a_j * du_j" to the rhs, and update the coefficient of the VLB variable:
+ *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
+ *   a_{zu_j} := a_{zu_j} + a_j * bu_j
+ */
 static
 SCIP_RETCODE cutsTransformMIR(
-   SCIP * scip,
-   MIR_DATA * data,
+   SCIP*                 scip,               /**< SCIP datastructure */
+   MIR_DATA*             data,               /**< the MIR data structure for this cut */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
@@ -3623,14 +3656,17 @@ SCIP_RETCODE cutsTransformMIR(
    int* bestubtypes;
    SCIP_BOUNDTYPE* selectedbounds;
    SCIP_Real QUAD(coef);
-
-   int totalnnz = data->totalnnz;
+   int totalnnz;
+   int s;
+   int i;
 
    assert(data != NULL);
    assert(varsign != NULL);
    assert(boundtype != NULL);
    assert(freevariable != NULL);
    assert(localbdsused != NULL);
+
+   totalnnz = data->totalnnz;
 
    *freevariable = FALSE;
    *localbdsused = FALSE;
@@ -3643,14 +3679,14 @@ SCIP_RETCODE cutsTransformMIR(
    SCIP_CALL( SCIPallocBufferArray(scip, &selectedbounds, 2*totalnnz) );
 
    /* Transform the cut one variable section at a time */
-   for( int s = 0; s < NSECTIONS; ++s )
+   for( s = 0; s < NSECTIONS; ++s )
    {
       int* indices = data->indices[s];
 
       int cutindsstart = data->ncutinds;
       int usevbds = data->usevbds[s];
 
-      int i = 0;
+      i = 0;
       while( i < data->nnz[s] )
       {
          int index = data->ncutinds;
@@ -3681,12 +3717,14 @@ SCIP_RETCODE cutsTransformMIR(
 
          if( *freevariable )
          {
+            int j;
+            int k;
             data->ncutinds = 0;
             /* If we terminate early, we need to make sure all the zeros in the cut coefficient array are cancelled */
-            for( int j = 0; j < NSECTIONS; ++j )
+            for( j = 0; j < NSECTIONS; ++j )
             {
                int* indexlist = data->indices[j];
-               for( int k = 0; k < data->nnz[j]; ++k )
+               for( k = 0; k < data->nnz[j]; ++k )
                {
                   data->cutinds[data->ncutinds] = indexlist[k];
                   ++data->ncutinds;
@@ -3709,7 +3747,7 @@ SCIP_RETCODE cutsTransformMIR(
             boundtype[i] = bestlbtypes[i];
             varsign[i] = +1;
 
-            doBoundSubstitution(scip, data, varsign[i], boundtype[i], bestlbs[i], v, localbdsused);
+            doMIRBoundSubstitution(scip, data, varsign[i], boundtype[i], bestlbs[i], v, localbdsused);
          }
          else
          {
@@ -3719,7 +3757,7 @@ SCIP_RETCODE cutsTransformMIR(
             boundtype[i] = bestubtypes[i];
             varsign[i] = -1;
 
-            doBoundSubstitution(scip, data, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
+            doMIRBoundSubstitution(scip, data, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
          }
       }
    }
@@ -3739,10 +3777,9 @@ SCIP_RETCODE cutsTransformMIR(
          besti = -1;
          bestviolgain = -1e+100;
          bestnewf0 = 1.0;
-         for(int i = 0; i < data->ncutinds; i++ )
+         for( i = 0; i < data->ncutinds; i++ )
          {
             int v;
-            SCIP_Real QUAD(coef);
 
             v = data->cutinds[i];
             assert(0 <= v && v < data->nvars);
@@ -3776,7 +3813,7 @@ SCIP_RETCODE cutsTransformMIR(
 
                if( newf0 < minfrac || newf0 > maxfrac )
                   continue;
-               if( v >= data->nvars - data->ncontvars ) //TODO what condition to use here?
+               if( v >= data->nvars - data->ncontvars )
                {
                   fj = REALABS(QUAD_TO_DBL(coef));
                   newfj = fj;
@@ -3815,7 +3852,6 @@ SCIP_RETCODE cutsTransformMIR(
 
          if( besti >= 0 )
          {
-            SCIP_Real QUAD(coef);
             SCIP_Real QUAD(tmp);
 
             assert(besti < data->ncutinds);
@@ -3915,7 +3951,7 @@ SCIP_RETCODE cutsTransformMIR(
 static
 SCIP_RETCODE cutsRoundMIR(
    SCIP*                 scip,               /**< SCIP data structure */
-   MIR_DATA*             data,
+   MIR_DATA*             data,               /**< the MIR data structure for this cut */
    int*RESTRICT          varsign,            /**< stores the sign of the transformed variable in summation */
    int*RESTRICT          boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub) */
    QUAD(SCIP_Real        f0)                 /**< fractional value of rhs */
@@ -3923,6 +3959,9 @@ SCIP_RETCODE cutsRoundMIR(
 {
    SCIP_Real QUAD(tmp);
    SCIP_Real QUAD(onedivoneminusf0);
+   int s;
+   int cutindex;
+   int i;
 
    assert(data != NULL);
    assert(boundtype != NULL);
@@ -3935,8 +3974,8 @@ SCIP_RETCODE cutsRoundMIR(
    /* Loop backwards through the sections, so that the reversing of varbound substitutions does not prematurely effect
     * the coefficients of variables in other sections, because the section index of a variable bound must always be
     * higher than that of the bounded variable. */
-   int cutindex = data->ncutinds - 1;
-   for( int s = NSECTIONS - 1; s >= 0; --s )
+   cutindex = data->ncutinds - 1;
+   for( s = NSECTIONS - 1; s >= 0; --s )
    {
       int* indices = data->indices[s];
       int nnz = data->nnz[s];
@@ -3944,24 +3983,27 @@ SCIP_RETCODE cutsRoundMIR(
       SCIP_Bool enfintegral = data->isenfint[s];
       SCIP_Bool implintegral = data->isimplint[s];
       /* iterate backwards over indices in section, so we can easily shrink the section if we find zeros */
-      for( int i = nnz - 1; i >= 0 ; --i )
+      for( i = nnz - 1; i >= 0 ; --i )
       {
-         int v = indices[i];
+         int v;
+         int sign;
+         int type;
+         SCIP_Real QUAD(cutaj);
+         SCIP_Real QUAD(aj);
+
+         v = indices[i];
          assert(0 <= v && v < data->nvars);
          assert(data->cutinds[cutindex] == v);
-         int sign = varsign[cutindex];
+
+         sign = varsign[cutindex];
          assert(sign == +1 || sign == -1);
-         int type = boundtype[cutindex];
+         type = boundtype[cutindex];
 
          --cutindex;
 
          SCIP_VAR* var = data->vars[v];
          assert(var != NULL);
          assert(SCIPvarGetProbindex(var) == v );
-
-
-         SCIP_Real QUAD(cutaj);
-         SCIP_Real QUAD(aj);
 
          QUAD_ARRAY_LOAD(aj, data->cutcoefs, v);
 
@@ -4103,21 +4145,19 @@ SCIP_RETCODE cutsRoundMIR(
             QUAD_HI(zcoef) = NONZERO(QUAD_HI(zcoef));
             QUAD_ARRAY_STORE(data->cutcoefs, zidx, zcoef);
             assert(QUAD_HI(zcoef) != 0.0);
-            /* TODO: Do we not need to check if the nonzero can be removed here? Why does original code not do this? */
          }
       }
    }
 
    /* Finally, store the relevant data in cutinds which is the array used by the other functions */
    data->ncutinds = 0;
-   for( int s = 0; s < NSECTIONS; ++s )
+   for( s = 0; s < NSECTIONS; ++s )
    {
       int* indices = data->indices[s];
       int nnz = data->nnz[s];
-      for( int i = 0; i < nnz; ++i )
+      for( i = 0; i < nnz; ++i )
       {
-         int probindex = indices[i];
-         data->cutinds[data->ncutinds] = probindex;
+         data->cutinds[data->ncutinds] = indices[i];
          ++data->ncutinds;
       }
    }
@@ -8805,7 +8845,7 @@ SCIP_RETCODE cutsTransformStrongCG(
             boundtype[i] = bestlbtypes[i];
             varsign[i] = +1;
 
-            doBoundSubstitution(scip, data, varsign[i], boundtype[i], bestlbs[i], v, localbdsused);
+            doMIRBoundSubstitution(scip, data, varsign[i], boundtype[i], bestlbs[i], v, localbdsused);
          }
          else
          {
@@ -8815,7 +8855,7 @@ SCIP_RETCODE cutsTransformStrongCG(
             boundtype[i] = bestubtypes[i];
             varsign[i] = -1;
 
-            doBoundSubstitution(scip, data, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
+            doMIRBoundSubstitution(scip, data, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
          }
       }
    }
