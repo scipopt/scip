@@ -1354,7 +1354,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
    assert(cutoff != NULL);
 
    /* @todo the asserts below could be relaxed by taking domain holes into account */
-   if( SCIPvarGetType(probingvar) != SCIP_VARTYPE_CONTINUOUS )
+   if( SCIPvarIsIntegral(probingvar) )
    {
       /* adjust bounds to actually used ones */
       leftub  = SCIPfloor(scip, leftub);
@@ -1402,7 +1402,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
       /* new bounds of the variable is the union of the propagated bounds of the left and right case */
       newlb = MIN(leftproplbs[j], rightproplbs[j]);
       newub = MAX(leftpropubs[j], rightpropubs[j]);
-      varisinteger = (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS);
+      varisinteger = SCIPvarIsIntegral(var);
 
       /* check for fixed variables */
       if( SCIPisEQ(scip, newlb, newub) )
@@ -1698,7 +1698,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                   SCIPvarGetName(probingvar), SCIPvarGetName(probingvar), SCIPvarGetName(var), rightproplbs[j]);
             }
          }
-         else if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+         else if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
          {
             /* check for implications for lower or upper bounds (only store implications with bounds tightened at least by 0.5)
              * in case of binary variables, this should have been handled in the previous cases, since every boundchange also fixes the variable

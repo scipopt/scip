@@ -236,6 +236,7 @@ SCIP_RETCODE branchcandCalcLPCands(
       SCIP_Real primsol;
       SCIP_Real frac;
       SCIP_VARTYPE vartype;
+      SCIP_IMPLINTTYPE impltype;
       int branchpriority;
       int ncols;
       int c;
@@ -279,7 +280,8 @@ SCIP_RETCODE branchcandCalcLPCands(
           * of the candidates array for some rounding heuristics
           */
          vartype = SCIPvarGetType(var);
-         if( vartype == SCIP_VARTYPE_CONTINUOUS )
+         impltype = SCIPvarGetImplType(var);
+         if( vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_IMPLINTTYPE_NONE )
             continue;
 
          /* ignore fixed variables (due to numerics, it is possible, that the LP solution of a fixed integer variable
@@ -306,15 +308,15 @@ SCIP_RETCODE branchcandCalcLPCands(
          insertpos = branchcand->nlpcands + branchcand->nimpllpfracs;
          assert(insertpos < branchcand->lpcandssize);
 
-         if( vartype == SCIP_VARTYPE_IMPLINT )
+         if( impltype != SCIP_IMPLINTTYPE_NONE )
             branchpriority = INT_MIN;
 
-         assert(vartype == SCIP_VARTYPE_IMPLINT || branchpriority >= INT_MIN/2);
+         assert(impltype != SCIP_IMPLINTTYPE_NONE || branchpriority >= INT_MIN/2);
          /* ensure that implicit variables are stored at the end of the array */
-         if( vartype != SCIP_VARTYPE_IMPLINT && branchcand->nimpllpfracs > 0 )
+         if( impltype == SCIP_IMPLINTTYPE_NONE && branchcand->nimpllpfracs > 0 )
          {
             assert(branchcand->lpcands[branchcand->nlpcands] != NULL
-                  && SCIPvarGetType(branchcand->lpcands[branchcand->nlpcands]) == SCIP_VARTYPE_IMPLINT );
+                  && SCIPvarIsImpliedIntegral(branchcand->lpcands[branchcand->nlpcands]));
 
             branchcand->lpcands[insertpos] = branchcand->lpcands[branchcand->nlpcands];
             branchcand->lpcandssol[insertpos] = branchcand->lpcandssol[branchcand->nlpcands];
@@ -336,6 +338,7 @@ SCIP_RETCODE branchcandCalcLPCands(
                insertpos = 0;
             }
             branchcand->npriolpcands = 1;
+            assert(!SCIPvarIsImpliedIntegral(var));
             branchcand->npriolpbins = (vartype == SCIP_VARTYPE_BINARY ? 1 : 0);
             branchcand->lpmaxpriority = branchpriority;
          }
@@ -353,6 +356,8 @@ SCIP_RETCODE branchcandCalcLPCands(
                insertpos = branchcand->npriolpcands;
             }
             branchcand->npriolpcands++;
+
+            assert(!SCIPvarIsImpliedIntegral(var));
             if( vartype == SCIP_VARTYPE_BINARY )
             {
                if( insertpos != branchcand->npriolpbins )
@@ -371,7 +376,7 @@ SCIP_RETCODE branchcandCalcLPCands(
          branchcand->lpcandsfrac[insertpos] = frac;
 
          /* increase the counter depending on the variable type */
-         if( vartype != SCIP_VARTYPE_IMPLINT )
+         if( impltype == SCIP_IMPLINTTYPE_NONE )
             branchcand->nlpcands++;
          else
             branchcand->nimpllpfracs++;
@@ -387,8 +392,7 @@ SCIP_RETCODE branchcandCalcLPCands(
        */
       for( c = 0; c < branchcand->nlpcands + branchcand->nimpllpfracs; ++c )
       {
-         assert(c >= branchcand->nlpcands || SCIPvarGetType(branchcand->lpcands[c]) != SCIP_VARTYPE_IMPLINT);
-         assert(c < branchcand->nlpcands || SCIPvarGetType(branchcand->lpcands[c]) == SCIP_VARTYPE_IMPLINT);
+         assert(SCIPvarIsImpliedIntegral(branchcand->lpcands[c]) == (c >= branchcand->nlpcands));
       }
 #endif
 
@@ -574,20 +578,18 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
    SCIP_Real             solval              /**< value of the variable in the current solution */
    )
 {
-   SCIP_VARTYPE vartype;
-   int branchpriority;
+   SCIP_VARTYPE vartype = SCIPvarGetType(var);
+   SCIP_IMPLINTTYPE impltype = SCIPvarGetImplType(var);
+   int branchpriority = SCIPvarGetBranchPriority(var);
    int insertpos;
 
    assert(branchcand != NULL);
-   assert(var != NULL);
    assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))); /* the variable should not be fixed yet */
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || !SCIPsetIsEQ(set, SCIPsetCeil(set, SCIPvarGetLbLocal(var)), SCIPsetFloor(set, SCIPvarGetUbLocal(var)))); /* a discrete variable should also not be fixed, even after rounding bounds to integral values */
+   assert((vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_IMPLINTTYPE_NONE) || !SCIPsetIsEQ(set, SCIPsetCeil(set, SCIPvarGetLbLocal(var)), SCIPsetFloor(set, SCIPvarGetUbLocal(var)))); /* a discrete variable should also not be fixed, even after rounding bounds to integral values */
    assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR || !SCIPsetIsEQ(set, SCIPvarGetMultaggrLbLocal(var, set), SCIPvarGetMultaggrUbLocal(var, set))); /* also the current bounds of a multi-aggregated variable should not be fixed yet */
    assert(branchcand->nprioexterncands <= branchcand->nexterncands);
    assert(branchcand->nexterncands <= branchcand->externcandssize);
 
-   vartype = SCIPvarGetType(var);
-   branchpriority = SCIPvarGetBranchPriority(var);
    insertpos = branchcand->nexterncands;
 
    SCIP_CALL( ensureExterncandsSize(branchcand, set, branchcand->nexterncands+1) );
@@ -610,9 +612,15 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
       insertpos = 0;
 
       branchcand->nprioexterncands = 1;
-      branchcand->nprioexternbins = (vartype == SCIP_VARTYPE_BINARY ? 1 : 0);
-      branchcand->nprioexternints = (vartype == SCIP_VARTYPE_INTEGER ? 1 : 0);
-      branchcand->nprioexternimpls = (vartype == SCIP_VARTYPE_IMPLINT ? 1 : 0);
+      branchcand->nprioexternbins = 0;
+      branchcand->nprioexternints = 0;
+      branchcand->nprioexternimpls = 0;
+      if( impltype != SCIP_IMPLINTTYPE_NONE )
+         branchcand->nprioexternimpls = 1;
+      else if( vartype == SCIP_VARTYPE_BINARY )
+         branchcand->nprioexternbins = 1;
+      else if( vartype == SCIP_VARTYPE_INTEGER )
+         branchcand->nprioexternints = 1;
       branchcand->externmaxpriority = branchpriority;
    }
    else if( branchpriority == branchcand->externmaxpriority )
@@ -631,7 +639,7 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
          insertpos = branchcand->nprioexterncands;
       }
       branchcand->nprioexterncands++;
-      if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER || vartype == SCIP_VARTYPE_IMPLINT )
+      if( vartype != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_IMPLINTTYPE_NONE )
       {
          if( insertpos != branchcand->nprioexternbins + branchcand->nprioexternints + branchcand->nprioexternimpls )
          {
@@ -646,8 +654,9 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
          }
          branchcand->nprioexternimpls++;
 
-         if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
+         if( impltype == SCIP_IMPLINTTYPE_NONE )
          {
+            assert(vartype != SCIP_VARTYPE_CONTINUOUS);
             if( insertpos != branchcand->nprioexternbins + branchcand->nprioexternints )
             {
                branchcand->externcands[insertpos] = 
@@ -742,6 +751,14 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
       /* variable has equal priority as the current maximum:
        * look for it in the correct slot (binaries first, integers next, implicit integers next, continuous last)
        */
+      if( SCIPvarIsImpliedIntegral(var) )
+      {
+         /* the variable is implicit integer, look at the slots containing implicit integers */
+         for( i = 0; i < branchcand->nprioexternimpls; i++ )
+            if( branchcand->externcands[branchcand->nprioexternbins + branchcand->nprioexternints + i] == var )
+               return TRUE;
+         return FALSE;
+      }
       if( vartype == SCIP_VARTYPE_BINARY )
       {
          /* the variable is binary, look at the first branchcand->nprioexternbins slots */
@@ -755,14 +772,6 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
          /* the variable is integer, look at the slots containing integers */
          for( i = 0; i < branchcand->nprioexternints; i++ )
             if( branchcand->externcands[branchcand->nprioexternbins + i] == var )
-               return TRUE;
-         return FALSE;
-      }
-      if( vartype == SCIP_VARTYPE_IMPLINT )
-      {
-         /* the variable is implicit integer, look at the slots containing implicit integers */
-         for( i = 0; i < branchcand->nprioexternimpls; i++ )
-            if( branchcand->externcands[branchcand->nprioexternbins + branchcand->nprioexternints + i] == var )
                return TRUE;
          return FALSE;
       }
@@ -812,9 +821,7 @@ SCIP_RETCODE SCIPbranchcandGetPseudoCands(
          var = SCIPprobGetVars(prob)[v];
          assert(var != NULL);
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
-            || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER
-            || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+         assert(SCIPvarIsIntegral(var));
          assert(SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
          assert(SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
          assert(SCIPsetIsLE(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
@@ -909,6 +916,7 @@ void branchcandInsertPseudoCand(
    )
 {
    SCIP_VARTYPE vartype;
+   SCIP_IMPLINTTYPE impltype;
    int branchpriority;
 
    assert(branchcand != NULL);
@@ -917,6 +925,7 @@ void branchcandInsertPseudoCand(
    assert(branchcand->npseudocands <= branchcand->pseudocandssize);
 
    vartype = SCIPvarGetType(var);
+   impltype = SCIPvarGetImplType(var);
    branchpriority = SCIPvarGetBranchPriority(var);
 
    SCIPdebugMessage("inserting pseudo candidate <%s> of type %d and priority %d into candidate set at position %d (maxprio: %d)\n",
@@ -937,8 +946,16 @@ void branchcandInsertPseudoCand(
          insertpos = 0;
       }
       branchcand->npriopseudocands = 1;
-      branchcand->npriopseudobins = (vartype == SCIP_VARTYPE_BINARY ? 1 : 0);
-      branchcand->npriopseudoints = (vartype == SCIP_VARTYPE_INTEGER ? 1 : 0);
+      if( impltype != SCIP_IMPLINTTYPE_NONE )
+      {
+         branchcand->npriopseudobins = 0;
+         branchcand->npriopseudoints = 0;
+      }
+      else
+      {
+         branchcand->npriopseudobins = (vartype == SCIP_VARTYPE_BINARY ? 1 : 0);
+         branchcand->npriopseudoints = (vartype == SCIP_VARTYPE_INTEGER ? 1 : 0);
+      }
       branchcand->pseudomaxpriority = branchpriority;
    }
    else if( branchpriority == branchcand->pseudomaxpriority )
@@ -954,7 +971,7 @@ void branchcandInsertPseudoCand(
          insertpos = branchcand->npriopseudocands;
       }
       branchcand->npriopseudocands++;
-      if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
+      if( vartype != SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_IMPLINTTYPE_NONE )
       {
          if( insertpos != branchcand->npriopseudobins + branchcand->npriopseudoints )
          {
@@ -1061,7 +1078,7 @@ void branchcandRemovePseudoCand(
    if( freepos < branchcand->npriopseudobins )
    {
       /* a binary candidate of maximal priority was removed */
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var));
       if( freepos != branchcand->npriopseudobins - 1 )
       {
          branchcand->pseudocands[freepos] = branchcand->pseudocands[branchcand->npriopseudobins - 1];
@@ -1075,7 +1092,7 @@ void branchcandRemovePseudoCand(
    if( freepos < branchcand->npriopseudobins + branchcand->npriopseudoints )
    {
       /* a binary or integer candidate of maximal priority was removed */
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(var));
       if( freepos != branchcand->npriopseudobins + branchcand->npriopseudoints - 1 )
       {
          branchcand->pseudocands[freepos] =
@@ -1143,7 +1160,7 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
    assert(var != NULL);
 
    if( (SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN)
-      && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS
+      && SCIPvarIsIntegral(var)
       && SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
    {
       /* variable is neither continuous nor fixed and has non-empty domain: make sure it is member of the pseudo branching candidate list */
@@ -1162,7 +1179,7 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED
-         || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+         || !SCIPvarIsIntegral(var)
          || SCIPsetIsGE(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
       /* variable is continuous or fixed or has empty domain: make sure it is not member of the pseudo branching candidate list */
@@ -2327,7 +2344,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
       /* first, project it onto the current domain */
       branchpoint = MAX(lb, MIN(suggestion, ub));
 
-      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(var) )
       {
          /* if it is a discrete variable, then try to round it down and up and accept this choice */
          if( SCIPsetIsEQ(set, branchpoint, ub) )
@@ -2428,7 +2445,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    assert(SCIPsetIsInfinity(set,  ub) || SCIPsetIsLE(set, branchpoint, ub));
    assert(SCIPsetIsInfinity(set, -lb) || SCIPsetIsGE(set, branchpoint, lb));
 
-   if( SCIPvarGetType(var) >= SCIP_VARTYPE_IMPLINT )
+   if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
    {
       if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
       {
@@ -2489,7 +2506,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
       }
 
       /* ensure fractional branching point for implicit integer variables */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT && SCIPsetIsIntegral(set, branchpoint) )
+      if( SCIPvarIsImpliedIntegral(var) && SCIPsetIsIntegral(set, branchpoint) )
       {
          /* if branchpoint is integral but not on bounds, then it should be one of the value {lb+1, ..., ub-1} */
          assert(SCIPsetIsGE(set, SCIPsetRound(set, branchpoint), lb + 1.0));
@@ -2635,8 +2652,8 @@ SCIP_RETCODE SCIPbranchExecLP(
       assert(0 <= bestcand && bestcand < nalllpcands);
 
       var = branchcand->lpcands[bestcand];
-      assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
-      assert(branchcand->nlpcands == 0 || SCIPvarGetType(var) != SCIP_VARTYPE_IMPLINT);
+      assert(SCIPvarIsIntegral(var));
+      assert(branchcand->nlpcands == 0 || !SCIPvarIsImpliedIntegral(var));
 
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
@@ -2848,7 +2865,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
       assert(0 <= bestcand && bestcand < branchcand->npseudocands);
 
       var = branchcand->pseudocands[bestcand];
-      assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+      assert(SCIPvarIsIntegral(var));
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
       SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, SCIP_INVALID,

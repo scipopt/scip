@@ -631,7 +631,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       {
          assert(c < ncols);
          var = SCIPcolGetVar(cols[c]);
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
          {
             frac = SCIPfeasFrac(scip, SCIPcolGetPrimsol(cols[c]));
             frac = MIN(frac, 1.0 - frac);

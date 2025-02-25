@@ -620,6 +620,7 @@ SCIP_RETCODE applyRepair(
       SCIP_Real objval;
       SCIP_Real value;
       SCIP_VARTYPE vartype;
+      SCIP_Bool varimplint;
       char varname[SCIP_MAXSTRLEN];
       char slackvarname[SCIP_MAXSTRLEN];
       char consvarname[SCIP_MAXSTRLEN];
@@ -633,6 +634,7 @@ SCIP_RETCODE applyRepair(
       uborig = SCIPvarGetUbGlobal(vars[i]);
       value = SCIPgetSolVal(scip, sol, vars[i]);
       vartype = SCIPvarGetType(vars[i]);
+      varimplint = SCIPvarIsImpliedIntegral(vars[i]);
 
       nviolatedrows[i] = 0;
 
@@ -673,7 +675,7 @@ SCIP_RETCODE applyRepair(
       }
 
       /* if a binary variable is out of bound, generalize it to an integer variable */
-      if( !SCIPisFeasZero(scip, varslack) && SCIP_VARTYPE_BINARY == vartype )
+      if( !SCIPisFeasZero(scip, varslack) && vartype == SCIP_VARTYPE_BINARY && !varimplint )
       {
          vartype = SCIP_VARTYPE_INTEGER;
       }
@@ -734,7 +736,7 @@ SCIP_RETCODE applyRepair(
          heurdata->nviolatedvars++;
       }
 #endif
-      if( SCIP_VARTYPE_BINARY == vartype || SCIP_VARTYPE_INTEGER == vartype )
+      if( vartype != SCIP_VARTYPE_CONTINUOUS && !varimplint )
       {
          ndiscvars++;
       }
@@ -893,8 +895,7 @@ SCIP_RETCODE applyRepair(
 
          SCIP_CALL( tryFixVar(scip, subscip, sol, potential, slacks, vars[permutation[i]], subvars[permutation[i]], inftycounter, heurdata, &fixed) );
 
-         if( fixed && (SCIP_VARTYPE_BINARY == SCIPvarGetType(subvars[permutation[i]])
-            || SCIP_VARTYPE_INTEGER == SCIPvarGetType(subvars[permutation[i]])) )
+         if( fixed && SCIPvarIsIntegral(subvars[permutation[i]]) && !SCIPvarIsImpliedIntegral(subvars[permutation[i]]) )
          {
             nfixeddiscvars++;
          }

@@ -280,6 +280,7 @@ set(instances_MIP
     "instances/MIP/Negated.cip\;1"
     "instances/MIP/p0033.osil\;3089"
     "instances/MIP/p0548.mps\;8691"
+    "instances/MIP/piperout-impl.cip\;0"
     "instances/MIP/rgn.mps\;82.19999924"
     "instances/MIP/stein27.fzn\;18"
     "instances/MIP/stein27_inf.lp\;+infinity"

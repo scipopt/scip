@@ -84,37 +84,39 @@ extern "C" {
 #define SCIP_EVENTTYPE_LHOLEREMOVED     UINT64_C(0x000004000)  /**< a local hole has been removed from the hole list of a variable's domain */
 #define SCIP_EVENTTYPE_IMPLADDED        UINT64_C(0x000008000)  /**< the variable's implication list, variable bound or clique information was extended */
 #define SCIP_EVENTTYPE_TYPECHANGED      UINT64_C(0x000010000)  /**< the type of a variable has changed */
+#define SCIP_EVENTTYPE_IMPLTYPECHANGED  UINT64_C(0x000020000)  /**< the type of a variable has changed */
 
 /* presolving events */
-#define SCIP_EVENTTYPE_PRESOLVEROUND    UINT64_C(0x000020000)  /**< a presolving round has been finished */
+#define SCIP_EVENTTYPE_PRESOLVEROUND    UINT64_C(0x000040000)  /**< a presolving round has been finished */
 
 /* node events */
-#define SCIP_EVENTTYPE_NODEFOCUSED      UINT64_C(0x000040000)  /**< a node has been focused and is now the focus node */
-#define SCIP_EVENTTYPE_NODEFEASIBLE     UINT64_C(0x000080000)  /**< the LP/pseudo solution of the node was feasible */
-#define SCIP_EVENTTYPE_NODEINFEASIBLE   UINT64_C(0x000100000)  /**< the focus node has been proven to be infeasible or was bounded */
-#define SCIP_EVENTTYPE_NODEBRANCHED     UINT64_C(0x000200000)  /**< the focus node has been solved by branching */
-#define SCIP_EVENTTYPE_NODEDELETE       UINT64_C(0x000400000)  /**< a node is about to be deleted from the tree */
+#define SCIP_EVENTTYPE_NODEFOCUSED      UINT64_C(0x000080000)  /**< a node has been focused and is now the focus node */
+#define SCIP_EVENTTYPE_NODEFEASIBLE     UINT64_C(0x000100000)  /**< the LP/pseudo solution of the node was feasible */
+#define SCIP_EVENTTYPE_NODEINFEASIBLE   UINT64_C(0x000200000)  /**< the focus node has been proven to be infeasible or was bounded */
+#define SCIP_EVENTTYPE_NODEBRANCHED     UINT64_C(0x000400000)  /**< the focus node has been solved by branching */
+#define SCIP_EVENTTYPE_NODEDELETE       UINT64_C(0x000800000)  /**< a node is about to be deleted from the tree */
 
 
 /* LP events */
-#define SCIP_EVENTTYPE_FIRSTLPSOLVED    UINT64_C(0x000800000)  /**< the node's initial LP was solved */
-#define SCIP_EVENTTYPE_LPSOLVED         UINT64_C(0x001000000)  /**< the node's LP was completely solved with cut & price */
+#define SCIP_EVENTTYPE_FIRSTLPSOLVED    UINT64_C(0x001000000)  /**< the node's initial LP was solved */
+#define SCIP_EVENTTYPE_LPSOLVED         UINT64_C(0x002000000)  /**< the node's LP was completely solved with cut & price */
 
 /* primal solution events */
-#define SCIP_EVENTTYPE_POORSOLFOUND     UINT64_C(0x002000000)  /**< a good enough primal feasible (but not new best) solution was found */
-#define SCIP_EVENTTYPE_BESTSOLFOUND     UINT64_C(0x004000000)  /**< a new best primal feasible solution was found */
+#define SCIP_EVENTTYPE_POORSOLFOUND     UINT64_C(0x004000000)  /**< a good enough primal feasible (but not new best) solution was found */
+#define SCIP_EVENTTYPE_BESTSOLFOUND     UINT64_C(0x008000000)  /**< a new best primal feasible solution was found */
 
 /* linear row events */
-#define SCIP_EVENTTYPE_ROWADDEDSEPA     UINT64_C(0x008000000)  /**< a row has been added to SCIP's separation storage */
-#define SCIP_EVENTTYPE_ROWDELETEDSEPA   UINT64_C(0x010000000)  /**< a row has been removed from SCIP's separation storage */
-#define SCIP_EVENTTYPE_ROWADDEDLP       UINT64_C(0x020000000)  /**< a row has been added to the LP */
-#define SCIP_EVENTTYPE_ROWDELETEDLP     UINT64_C(0x040000000)  /**< a row has been removed from the LP */
-#define SCIP_EVENTTYPE_ROWCOEFCHANGED   UINT64_C(0x080000000)  /**< a coefficient of a row has been changed (row specific event) */
-#define SCIP_EVENTTYPE_ROWCONSTCHANGED  UINT64_C(0x100000000)  /**< the constant of a row has been changed (row specific event) */
-#define SCIP_EVENTTYPE_ROWSIDECHANGED   UINT64_C(0x200000000)  /**< a side of a row has been changed (row specific event) */
+#define SCIP_EVENTTYPE_ROWADDEDSEPA     UINT64_C(0x010000000)  /**< a row has been added to SCIP's separation storage */
+#define SCIP_EVENTTYPE_ROWDELETEDSEPA   UINT64_C(0x020000000)  /**< a row has been removed from SCIP's separation storage */
+#define SCIP_EVENTTYPE_ROWADDEDLP       UINT64_C(0x040000000)  /**< a row has been added to the LP */
+#define SCIP_EVENTTYPE_ROWDELETEDLP     UINT64_C(0x080000000)  /**< a row has been removed from the LP */
+#define SCIP_EVENTTYPE_ROWCOEFCHANGED   UINT64_C(0x100000000)  /**< a coefficient of a row has been changed (row specific event) */
+#define SCIP_EVENTTYPE_ROWCONSTCHANGED  UINT64_C(0x200000000)  /**< the constant of a row has been changed (row specific event) */
+#define SCIP_EVENTTYPE_ROWSIDECHANGED   UINT64_C(0x400000000)  /**< a side of a row has been changed (row specific event) */
 
 /* sync event */
-#define SCIP_EVENTTYPE_SYNC             UINT64_C(0x400000000) /**< synchronization event */
+#define SCIP_EVENTTYPE_SYNC             UINT64_C(0x800000000) /**< synchronization event */
+
 
 /* event masks for variable events */
 #define SCIP_EVENTTYPE_GBDCHANGED     (SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED)
@@ -129,8 +131,8 @@ extern "C" {
 #define SCIP_EVENTTYPE_DOMCHANGED     (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_HOLECHANGED)
 #define SCIP_EVENTTYPE_VARCHANGED     (SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_OBJCHANGED \
                                        | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_DOMCHANGED | SCIP_EVENTTYPE_IMPLADDED \
-                                       | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_TYPECHANGED)
-#define SCIP_EVENTTYPE_VAREVENT       (SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARCHANGED | SCIP_EVENTTYPE_TYPECHANGED)
+                                       | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_TYPECHANGED | SCIP_EVENTTYPE_IMPLTYPECHANGED)
+#define SCIP_EVENTTYPE_VAREVENT       (SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARCHANGED | SCIP_EVENTTYPE_TYPECHANGED | SCIP_EVENTTYPE_IMPLTYPECHANGED)
 
 /* event masks for node events */
 #define SCIP_EVENTTYPE_NODESOLVED     (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE \
@@ -163,6 +165,7 @@ typedef struct SCIP_EventBdChg SCIP_EVENTBDCHG;   /**< data for bound change eve
 typedef struct SCIP_EventHole SCIP_EVENTHOLE;     /**< data for domain hole events */
 typedef struct SCIP_EventImplAdd SCIP_EVENTIMPLADD; /**< data for implication added events */
 typedef struct SCIP_EventTypeChg SCIP_EVENTTYPECHG; /**< data for variable type change events */
+typedef struct SCIP_EventImplTypeChg SCIP_EVENTTYPEIMPLCHG; /**< data for variable implied type change events */
 typedef struct SCIP_EventRowAddedSepa SCIP_EVENTROWADDEDSEPA; /**< data for row addition to sepastorage events */
 typedef struct SCIP_EventRowDeletedSepa SCIP_EVENTROWDELETEDSEPA; /**< data for row deletion from sepastorage events */
 typedef struct SCIP_EventRowAddedLP SCIP_EVENTROWADDEDLP; /**< data for row addition to LP events */

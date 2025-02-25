@@ -5969,7 +5969,7 @@ SCIP_Real SCIPtreeCalcChildEstimate(
    varsol = SCIPvarGetSol(var, SCIPtreeHasFocusNodeLP(tree));
 
    /* compute increase above parent node's (i.e., focus node's) estimate value */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   if( !SCIPvarIsIntegral(var) )
       estimateinc = SCIPvarGetPseudocost(var, stat, targetvalue - varsol);
    else
    {
@@ -6085,8 +6085,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
-   /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
+   /* ensure that branching on continuous variables will only be performed when a branching point is given */
+   if( !SCIPvarIsIntegral(var) && !validval )
    {
       SCIPerrorMessage("Cannot branch on continuous variable <%s> without a given branching value.", SCIPvarGetName(var));
       SCIPABORT();
@@ -6096,8 +6096,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetProbindex(var) >= 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
    /* update the information for the focus node before creating children */
@@ -6129,16 +6129,16 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
    /* see comment in SCIPbranchVarVal */
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
-      SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set) ||
-      SCIPsetIsInfinity(set, -2.1*SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, 2.1*SCIPvarGetUbLocal(var)) ||
-      (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))) );
+   assert(SCIPvarIsIntegral(var)
+         || SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set)
+         || SCIPsetIsInfinity(set, -2.1*SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, 2.1*SCIPvarGetUbLocal(var))
+         || (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))));
 
    downub = SCIP_INVALID;
    fixval = SCIP_INVALID;
    uplb = SCIP_INVALID;
 
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   if( !SCIPvarIsIntegral(var) )
    {
       if( SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
       {
@@ -6423,8 +6423,8 @@ SCIP_RETCODE SCIPtreeBranchVarHole(
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetProbindex(var) >= 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
    assert(SCIPsetIsFeasGE(set, left, SCIPvarGetLbLocal(var)));
@@ -6603,8 +6603,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
-   /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
+   /* ensure that branching on continuous variables will only be performed when a branching point is given */
+   if( !SCIPvarIsIntegral(var) && !validval )
    {
       SCIPerrorMessage("Cannot branch on continuous variable <%s> without a given branching value.", SCIPvarGetName(var));
       SCIPABORT();
@@ -6614,8 +6614,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetProbindex(var) >= 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
    /* get value of variable in current LP or pseudo solution */
@@ -6643,9 +6643,10 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
 
    assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
-      SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) ||
-      (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))) );  /* see comment in SCIPbranchVarVal */
+   /* see comment in SCIPbranchVarVal */
+   assert(SCIPvarIsIntegral(var)
+         || SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))
+         || (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))));
 
    /* calculate minimal distance of val from bounds */
    width = SCIP_REAL_MAX;
@@ -6689,7 +6690,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
       else
          width /= 0.5 + widthfactor * (pow(widthfactor, (SCIP_Real)(n/2)) - 1.0) / (widthfactor - 1.0); /*lint !e653*/
    }
-   if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+   if( SCIPvarIsIntegral(var) )
       minwidth = MAX(1.0, minwidth);
    if( width < minwidth )
       width = minwidth;
@@ -6739,7 +6740,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
       }
       --n;
 
-      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(var) )
       {
          /* if it's a discrete variable, we can use left-1 and right+1 as upper and lower bounds for following nodes on the left and right, resp. */
          left  -= 1.0;
@@ -6750,7 +6751,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    }
    else
    {
-      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(var) )
       {
          left  = SCIPsetFloor(set, val);
          right = SCIPsetCeil(set, val);
@@ -6773,8 +6774,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    n /= 2;
    for( i = 0; i < n; ++i )
    {
-      /* create child node left - width <= x <= left, if left > lb(x) or x is discrete */
-      if( SCIPsetIsRelLT(set, SCIPvarGetLbLocal(var), left) || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      /* create child node left - width <= x <= left, if x is discrete or left > lb(x) */
+      if( SCIPvarIsIntegral(var) || SCIPsetIsRelLT(set, SCIPvarGetLbLocal(var), left) )
       {
          /* new lower bound should be variables lower bound, if we are in the last round or left - width is very close to lower bound
           * otherwise we take left - width
@@ -6820,12 +6821,12 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
             ++*nchildren;
 
          left = bnd;
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
             left -= 1.0;
       }
 
-      /* create child node right <= x <= right + width, if right < ub(x) */
-      if( SCIPsetIsRelGT(set, SCIPvarGetUbLocal(var), right) || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      /* create child node right <= x <= right + width, if x is discrete or right < ub(x) */
+      if( SCIPvarIsIntegral(var) || SCIPsetIsRelGT(set, SCIPvarGetUbLocal(var), right) )
       {
          /* new upper bound should be variables upper bound, if we are in the last round or right + width is very close to upper bound
           * otherwise we take right + width
@@ -6871,7 +6872,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
             ++*nchildren;
 
          right = bnd;
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
             right += 1.0;
       }
 
@@ -8290,15 +8291,11 @@ int SCIPnodeGetNDualBndchgs(
     */
    for( i = nboundchgs-1; i >= 0; i--)
    {
-      SCIP_Bool isint;
-
-      isint = boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
-           || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT;
-
-      if( isint && ((boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-            && boundchgs[i].data.inferencedata.reason.cons == NULL)
-        || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-            && boundchgs[i].data.inferencedata.reason.prop == NULL)) )
+      if( SCIPvarIsIntegral(boundchgs[i].var)
+         && ( ( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+         && boundchgs[i].data.inferencedata.reason.cons == NULL )
+         || ( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+         && boundchgs[i].data.inferencedata.reason.prop == NULL ) ) )
          npseudobranchvars++;
       else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
          break;
@@ -8346,8 +8343,7 @@ void SCIPnodeGetDualBoundchgs(
     */
    for( i = nboundchgs-1; i >= 0; i--)
    {
-      if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
-       || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT )
+      if( SCIPvarIsIntegral(boundchgs[i].var) )
       {
          if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
                && boundchgs[i].data.inferencedata.reason.cons == NULL)
@@ -8366,8 +8362,7 @@ void SCIPnodeGetDualBoundchgs(
       j = 0;
       for( i = i+1; i < nboundchgs; i++)
       {
-         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
-          || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT )
+         if( SCIPvarIsIntegral(boundchgs[i].var) )
          {
             assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING );
             if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
@@ -8594,7 +8589,7 @@ void SCIPnodeGetPropsBeforeDual(
          if( boundchgs[i].data.inferencedata.reason.prop == NULL )
             break;
       }
-      if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(boundchgs[i].var) )
          (*npropvars)++;
    }
 
@@ -8605,7 +8600,7 @@ void SCIPnodeGetPropsBeforeDual(
    for( i = nbranchings, pos = 0; pos < *npropvars; ++i ) /*lint !e440*/
    {
       assert(i < nboundchgs);
-      if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(boundchgs[i].var) )
       {
          vars[pos] = boundchgs[i].var;
          varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
@@ -8688,7 +8683,7 @@ void SCIPnodeGetPropsAfterDual(
          if( boundchgs[i].data.inferencedata.reason.prop == NULL )
             continue;
       }
-      if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(boundchgs[i].var) )
          ++(*nvars);
    }
 
@@ -8711,7 +8706,7 @@ void SCIPnodeGetPropsAfterDual(
          if( boundchgs[i].data.inferencedata.reason.prop == NULL )
             continue;
       }
-      if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(boundchgs[i].var) )
       {
          vars[pos] = boundchgs[i].var;
          varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;

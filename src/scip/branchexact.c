@@ -91,6 +91,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
    SCIP_Real primsol;
    SCIP_Real frac;
    SCIP_VARTYPE vartype;
+   SCIP_IMPLINTTYPE impltype;
    int branchpriority;
    int ncols;
    int c;
@@ -160,7 +161,8 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
       * of the candidates array for some rounding heuristics
       */
       vartype = SCIPvarGetType(var);
-      if( vartype == SCIP_VARTYPE_CONTINUOUS )
+      impltype = SCIPvarGetImplType(var);
+      if( vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_IMPLINTTYPE_NONE )
          continue;
 
       /* ignore fixed variables (due to numerics, it is possible, that the LP solution of a fixed integer variable
@@ -184,15 +186,15 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
       insertpos = branchcand->nlpcands + branchcand->nimpllpfracs;
       assert(insertpos < branchcand->lpcandssize);
 
-      if( vartype == SCIP_VARTYPE_IMPLINT )
+      if( impltype != SCIP_IMPLINTTYPE_NONE )
          branchpriority = INT_MIN;
 
-      assert(vartype == SCIP_VARTYPE_IMPLINT || branchpriority >= INT_MIN/2);
+      assert(impltype != SCIP_IMPLINTTYPE_NONE || branchpriority >= INT_MIN/2);
       /* ensure that implicit variables are stored at the end of the array */
-      if( vartype != SCIP_VARTYPE_IMPLINT && branchcand->nimpllpfracs > 0 )
+      if( impltype == SCIP_IMPLINTTYPE_NONE && branchcand->nimpllpfracs > 0 )
       {
          assert(branchcand->lpcands[branchcand->nlpcands] != NULL
-               && SCIPvarGetType(branchcand->lpcands[branchcand->nlpcands]) == SCIP_VARTYPE_IMPLINT );
+               && SCIPvarIsImpliedIntegral(branchcand->lpcands[branchcand->nlpcands]));
 
          branchcand->lpcands[insertpos] = branchcand->lpcands[branchcand->nlpcands];
          branchcand->lpcandssol[insertpos] = branchcand->lpcandssol[branchcand->nlpcands];
@@ -214,6 +216,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
             insertpos = 0;
          }
          branchcand->npriolpcands = 1;
+         assert(!SCIPvarIsImpliedIntegral(var));
          branchcand->npriolpbins = (vartype == SCIP_VARTYPE_BINARY ? 1 : 0);
          branchcand->lpmaxpriority = branchpriority;
       }
@@ -231,6 +234,8 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
             insertpos = branchcand->npriolpcands;
          }
          branchcand->npriolpcands++;
+
+         assert(!SCIPvarIsImpliedIntegral(var));
          if( vartype == SCIP_VARTYPE_BINARY )
          {
             if( insertpos != branchcand->npriolpbins )
@@ -249,7 +254,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
       branchcand->lpcandsfrac[insertpos] = frac;
 
       /* increase the counter depending on the variable type */
-      if( vartype != SCIP_VARTYPE_IMPLINT )
+      if( impltype == SCIP_IMPLINTTYPE_NONE )
          branchcand->nlpcands++;
       else
          branchcand->nimpllpfracs++;
@@ -265,8 +270,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
    */
    for( c = 0; c < branchcand->nlpcands + branchcand->nimpllpfracs; ++c )
    {
-      assert(c >= branchcand->nlpcands || SCIPvarGetType(branchcand->lpcands[c]) != SCIP_VARTYPE_IMPLINT);
-      assert(c < branchcand->nlpcands || SCIPvarGetType(branchcand->lpcands[c]) == SCIP_VARTYPE_IMPLINT);
+      assert(SCIPvarIsImpliedIntegral(branchcand->lpcands[c]) == (c >= branchcand->nlpcands));
    }
 #endif
 
@@ -440,7 +444,7 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
  *  if the branch priority of an unfixed variable is larger than the maximal branch priority of the fractional
  *  variables, pseudo solution branching is applied on the unfixed variables with maximal branch priority
  */
-SCIP_RETCODE SCIPbranchExecLPexact(
+SCIP_RETCODE SCIPbranchExecLPExact(
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -488,8 +492,9 @@ SCIP_RETCODE SCIPbranchExecLPexact(
       return SCIP_OKAY;
    }
 
-   /* it does not  make sense to call the normal branching rules, due to assumed very small fractionalities,
-      SCIP is not designed to branch on such values. So we simply branch on the first possible variable */
+   /* it does not make sense to call the normal branching rules, due to assumed very small fractionalities,
+    * SCIP is not designed to branch on such values. So we simply branch on the first possible variable
+    */
    for( i = 0; i < branchcand->nlpcands && *result != SCIP_BRANCHED; i++ )
    {
       SCIP_VAR* branchvar;

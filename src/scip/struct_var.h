@@ -322,7 +322,8 @@ struct SCIP_Var
    unsigned int          deleted:1;          /**< TRUE iff variable was marked for deletion from the problem */
    unsigned int          donotaggr:1;        /**< TRUE iff variable is not allowed to be aggregated */
    unsigned int          donotmultaggr:1;    /**< TRUE iff variable is not allowed to be multi-aggregated */
-   unsigned int          vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
+   unsigned int          vartype:2;          /**< type of variable: binary, integer, continuous */
+   unsigned int          varimpltype:2;      /**< implied integral type of variable: none, weak or strong */
    unsigned int          varstatus:3;        /**< status of variable: original, loose, column, fixed, aggregated, multiaggregated, negated */
    unsigned int          pseudocostflag:2;   /**< temporary flag used in pseudo cost update */
    unsigned int          branchdirection:2;  /**< preferred branching direction of the variable (downwards, upwards, auto) */

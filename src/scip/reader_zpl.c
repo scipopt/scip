@@ -1073,6 +1073,7 @@ SCIP_RETCODE addVar(
    SCIP_Rational* lbrat = NULL;
    SCIP_Rational* ubrat = NULL;
    SCIP_VARTYPE vartype;
+   SCIP_IMPLINTTYPE varimpltype;
    SCIP_Bool initial;
    SCIP_Bool removable;
    int branchpriority;
@@ -1166,14 +1167,17 @@ SCIP_RETCODE addVar(
 
    switch( usevarclass )
    {
-   case VAR_CON:
-      vartype = SCIP_VARTYPE_CONTINUOUS;
-      break;
    case VAR_INT:
       vartype = SCIP_VARTYPE_INTEGER;
+      varimpltype = SCIP_IMPLINTTYPE_NONE;
       break;
    case VAR_IMP:
-      vartype = SCIP_VARTYPE_IMPLINT;
+      vartype = SCIP_VARTYPE_CONTINUOUS;
+      varimpltype = SCIP_IMPLINTTYPE_WEAK;
+      break;
+   case VAR_CON:
+      vartype = SCIP_VARTYPE_CONTINUOUS;
+      varimpltype = SCIP_IMPLINTTYPE_NONE;
       break;
    default:
       SCIPwarningMessage(scip, "invalid variable class <%d> in ZIMPL callback xlp_addvar()\n", usevarclass);
@@ -1185,21 +1189,21 @@ SCIP_RETCODE addVar(
    removable = readerdata->dynamiccols;
 
    /* create variable */
+   SCIPdebugMessage("zimpl reader: added new variable");
+   SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, lb, ub, 0.0, vartype, varimpltype, initial, removable,
+         NULL, NULL, NULL, NULL, NULL) );
+
    if( SCIPisExactSolve(scip) )
    {
-      SCIPdebugMessage("zimpl reader: added new variable");
-      SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVarExactData(scip, var, lbrat, ubrat, NULL) );
-      /* SCIPdebug(SCIPprintVar(scip, var, NULL));
+#ifdef SCIP_MORE_DEBUG
+      SCIPdebug(SCIPprintVar(scip, var, NULL));
       RatToString(lbrat, strlb);
       RatToString(ubrat, strub);
-      SCIPdebugMessage("exact bounds are [%s,%s]\n", strlb, strub); */
+      SCIPdebugMessage("exact bounds are [%s,%s]\n", strlb, strub);
+#endif
       RatFreeBlock(SCIPblkmem(scip), &lbrat);
       RatFreeBlock(SCIPblkmem(scip), &ubrat);
-   }
-   else
-   {
-      SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL, NULL) );
    }
 
    /* add variable to the problem; we are releasing the variable later */
@@ -1421,22 +1425,25 @@ VarClass xlp_getclass(
    const Var*            var                 /**< variable */
    )
 {
-   SCIP_READERDATA* readerdata;
-   SCIP_VAR* scipvar;
+   SCIP_READERDATA* readerdata = (SCIP_READERDATA*)data;
+   SCIP_VAR* scipvar = (SCIP_VAR*)var;
+   int implintlevel;
 
-   readerdata = (SCIP_READERDATA*)data;
+   /* adjust border between int and imp based on the implied integral level */
    assert(readerdata != NULL);
+   SCIPgetIntParam(readerdata->scip, "write/implintlevel", &implintlevel);
+   assert(implintlevel >= -2);
+   assert(implintlevel <= 2);
 
-   scipvar = (SCIP_VAR*)var;
    switch( SCIPvarGetType(scipvar) )
    {
    case SCIP_VARTYPE_BINARY:
    case SCIP_VARTYPE_INTEGER:
-      return VAR_INT;
-   case SCIP_VARTYPE_IMPLINT:
-      return VAR_IMP;
+      return (int)SCIPvarGetImplType(scipvar) <= 2 + implintlevel ? VAR_INT : VAR_IMP;
    case SCIP_VARTYPE_CONTINUOUS:
-      return VAR_CON;
+      if( SCIPvarIsImpliedIntegral(scipvar) )
+         return (int)SCIPvarGetImplType(scipvar) > 2 - implintlevel ? VAR_INT : VAR_IMP;
+      break;
    default:
       SCIPerrorMessage("invalid SCIP variable type <%d> in ZIMPL callback xlp_getclass()\n", SCIPvarGetType(scipvar));
       readerdata->readerror = TRUE;

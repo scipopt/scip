@@ -2010,7 +2010,7 @@ SCIP_RETCODE SCIPcomputeExprCurvature(
 
 /** computes integrality information of a given expression and all its subexpressions
  *
- * The integrality information can be accessed via SCIPexprIsIntegral().
+ * The integrality information can be accessed via SCIPexprGetIntegrality() and SCIPexprIsIntegral()
  */
 SCIP_RETCODE SCIPcomputeExprIntegrality(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2018,7 +2018,7 @@ SCIP_RETCODE SCIPcomputeExprIntegrality(
    )
 {
    SCIP_EXPRITER* it;
-   SCIP_Bool isintegral;
+   SCIP_IMPLINTTYPE integrality;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -2028,8 +2028,8 @@ SCIP_RETCODE SCIPcomputeExprIntegrality(
    if( SCIPexprGetNChildren(expr) == 0 )
    {
       /* compute integrality information */
-      SCIP_CALL( SCIPexprhdlrIntegralityExpr(SCIPexprGetHdlr(expr), scip->set, expr, &isintegral) );
-      SCIPexprSetIntegrality(expr, isintegral);
+      SCIP_CALL( SCIPexprhdlrIntegralityExpr(SCIPexprGetHdlr(expr), scip->set, expr, &integrality) );
+      SCIPexprSetIntegrality(expr, integrality);
 
       return SCIP_OKAY;
    }
@@ -2041,8 +2041,8 @@ SCIP_RETCODE SCIPcomputeExprIntegrality(
    for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
    {
       /* compute integrality information */
-      SCIP_CALL( SCIPexprhdlrIntegralityExpr(SCIPexprGetHdlr(expr), scip->set, expr, &isintegral) );
-      SCIPexprSetIntegrality(expr, isintegral);
+      SCIP_CALL( SCIPexprhdlrIntegralityExpr(SCIPexprGetHdlr(expr), scip->set, expr, &integrality) );
+      SCIPexprSetIntegrality(expr, integrality);
    }
 
    SCIPexpriterFree(&it);

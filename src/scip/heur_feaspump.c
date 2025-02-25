@@ -530,7 +530,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
       if( consvars[nconsvars] == NULL )
          continue;
       SCIP_CALL( SCIPchgVarObj(probingscip, consvars[nconsvars], consvals[nconsvars]) );
-      assert( SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY );
+      assert( SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(consvars[nconsvars]) );
       ++nconsvars;
    }
 
@@ -1008,7 +1008,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          {
             frac = SCIPfeasFrac(scip, SCIPvarGetLPSol(pseudocands[i]));
             pseudocandsfrac[i] = MIN(frac, 1.0-frac); /* always a number between 0 and 0.5 */
-            if( SCIPvarGetType(pseudocands[i]) == SCIP_VARTYPE_BINARY )
+            if( SCIPvarGetType(pseudocands[i]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(pseudocands[i]) )
                pseudocandsfrac[i] -= 10.0; /* binaries always come first */
          }
          SCIPsortRealPtr(pseudocandsfrac, (void**)pseudocands, npseudocands);

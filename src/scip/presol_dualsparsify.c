@@ -569,6 +569,7 @@ SCIP_RETCODE aggregation(
    SCIP_VAR* aggregatedvar;
    SCIP_VAR* newvar;
    SCIP_VARTYPE newvartype;
+   SCIP_IMPLINTTYPE newvarimpltype;
    SCIP_Real constant;
    SCIP_Real newlb;
    SCIP_Real newub;
@@ -637,16 +638,13 @@ SCIP_RETCODE aggregation(
          newub = weight1 * SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
    }
 
-   if( SCIPvarIsIntegral(aggregatedvar) )
-      newvartype = (SCIPvarGetType(aggregatedvar) == SCIP_VARTYPE_IMPLINT) ?
-         SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_INTEGER;
-   else
-      newvartype = SCIP_VARTYPE_CONTINUOUS;
+   newvartype = SCIPvarIsIntegral(aggregatedvar) ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_CONTINUOUS;
+   newvarimpltype = SCIPvarIsImpliedIntegral(aggregatedvar) ? SCIP_IMPLINTTYPE_WEAK : SCIP_IMPLINTTYPE_NONE;
 
    lhs = SCIPvarGetLbGlobal(vars[colidx2]);
    rhs = SCIPvarGetUbGlobal(vars[colidx2]);
 
-   SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, newlb, newub, 0.0, newvartype,
+   SCIP_CALL( SCIPcreateVarImpl(scip, &newvar, newvarname, newlb, newub, 0.0, newvartype, newvarimpltype,
          SCIPvarIsInitial(aggregatedvar), SCIPvarIsRemovable(aggregatedvar), NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, newvar) );
 
@@ -803,8 +801,6 @@ SCIP_RETCODE cancelCol(
             SCIP_VAR* hashingcolvar;
             SCIP_Real* hashingcolvals;
             int* hashingcolinds;
-            SCIP_Real hashingcollb;
-            SCIP_Real hashingcolub;
             SCIP_Real cancelrate;
             SCIP_Real rowlhs;
             SCIP_Real rowrhs;
@@ -856,11 +852,7 @@ SCIP_RETCODE cancelCol(
             hashingcolvals = SCIPmatrixGetColValPtr(matrix, hashingcolconspair->colindex);
             hashingcolinds = SCIPmatrixGetColIdxPtr(matrix, hashingcolconspair->colindex);
             hashingcolvar = vars[hashingcolconspair->colindex];
-            hashingcollb = SCIPvarGetLbGlobal(hashingcolvar);
-            hashingcolub = SCIPvarGetUbGlobal(hashingcolvar);
-            hashingcolisbin = (SCIPvarGetType(hashingcolvar) == SCIP_VARTYPE_BINARY) ||
-               (SCIPvarIsIntegral(hashingcolvar) && SCIPisZero(scip, hashingcollb) &&
-                  SCIPisEQ(scip, hashingcolub, 1.0));
+            hashingcolisbin = SCIPvarIsBinary(hashingcolvar);
             scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1;
 
             if( SCIPisZero(scip, scale) )
@@ -881,8 +873,7 @@ SCIP_RETCODE cancelCol(
                   /* skip if the hashing variable is an integer variable and
                    * the canceled variable is an implicit integer variable
                    */
-                  if( (SCIPvarGetType(hashingcolvar) != SCIP_VARTYPE_IMPLINT) &&
-                     (SCIPvarGetType(cancelvar) == SCIP_VARTYPE_IMPLINT) )
+                  if( !SCIPvarIsImpliedIntegral(hashingcolvar) && SCIPvarIsImpliedIntegral(cancelvar) )
                      continue;
 
                   /* skip if the scale is non-integral */

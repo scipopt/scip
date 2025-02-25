@@ -8698,7 +8698,7 @@ SCIP_RETCODE determineBoundForSNF(
       bestlb[varposinrow] = bestslb[varposinrow];
       bestlbtype[varposinrow] = bestslbtype[varposinrow];
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      if( !SCIPvarIsIntegral(var) )
       {
          SCIP_Real bestvlb;
          int bestvlbidx;
@@ -8720,7 +8720,7 @@ SCIP_RETCODE determineBoundForSNF(
       bestub[varposinrow] = bestsub[varposinrow];
       bestubtype[varposinrow] = bestsubtype[varposinrow];
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      if( !SCIPvarIsIntegral(var) )
       {
          SCIP_Real bestvub;
          int bestvubidx;
@@ -11060,7 +11060,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
       SCIP_Bool setzero;
       int v = cutinds[i];
 
-      assert( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY );
+      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vars[v]));
 
       assert(v < firstnonbinvar);
       QUAD_ARRAY_LOAD(coef, cutcoefs, v);
@@ -12038,13 +12038,13 @@ SCIP_RETCODE cutsRoundStrongCG(
    i = 0;
    while( i < *nnz && cutinds[i] >= firstcontvar )
    {
-      assert(SCIPvarGetType(vars[cutinds[i]]) == SCIP_VARTYPE_CONTINUOUS);
+      assert(!SCIPvarIsIntegral(vars[cutinds[i]]));
       ++i;
    }
    while( i < *nnz )
    {
       assert(cutinds[i] < firstcontvar);
-      assert(SCIPvarGetType(vars[cutinds[i]]) != SCIP_VARTYPE_CONTINUOUS);
+      assert(SCIPvarIsIntegral(vars[cutinds[i]]));
       ++i;
    }
 #endif

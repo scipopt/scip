@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
  *  if the branch priority of an unfixed variable is larger than the maximal branch priority of the fractional
  *  variables, pseudo solution branching is applied on the unfixed variables with maximal branch priority
  */
-SCIP_RETCODE SCIPbranchExecLPexact(
+SCIP_RETCODE SCIPbranchExecLPExact(
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */

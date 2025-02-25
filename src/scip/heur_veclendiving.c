@@ -210,7 +210,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreVeclendiving)
    *score = (colveclen + 1.0) / (objdelta + SCIPsumepsilon(scip));
 
    /* prefer decisions on binary variables */
-   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
+   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(cand) )
       *score *= 0.001;
 
    return SCIP_OKAY;

@@ -164,6 +164,18 @@ SCIP_VARTYPE SCIPeventGetNewtype(
    SCIP_EVENT*           event               /**< event */
    );
 
+/** gets old implied integral type for an implied integral type change event */
+SCIP_EXPORT
+SCIP_IMPLINTTYPE SCIPeventGetOldImpltype(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets new implied integral type for an implied integral type change event */
+SCIP_EXPORT
+SCIP_IMPLINTTYPE SCIPeventGetNewImpltype(
+   SCIP_EVENT*           event               /**< event */
+   );
+
 /** gets node for a node or LP event */
 SCIP_EXPORT
 SCIP_NODE* SCIPeventGetNode(

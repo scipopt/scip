@@ -948,11 +948,11 @@ SCIP_RETCODE SCIPeventCreateImplAdded(
    return SCIP_OKAY;
 }
 
-/** creates an event for a changeing the type of a variable */
+/** creates an event for changing the type of a variable */
 SCIP_RETCODE SCIPeventCreateTypeChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR*             var,                /**< variable whose objective value changed */
+   SCIP_VAR*             var,                /**< variable whose type changed */
    SCIP_VARTYPE          oldtype,            /**< old variable type */
    SCIP_VARTYPE          newtype             /**< new variable type */
    )
@@ -967,6 +967,29 @@ SCIP_RETCODE SCIPeventCreateTypeChanged(
    (*event)->data.eventtypechg.var = var;
    (*event)->data.eventtypechg.oldtype = oldtype;
    (*event)->data.eventtypechg.newtype = newtype;
+
+   return SCIP_OKAY;
+}
+
+/** creates an event for changing the implied integral type of a variable */
+SCIP_RETCODE SCIPeventCreateImplTypeChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose implied type changed */
+   SCIP_IMPLINTTYPE      oldtype,            /**< old variable implied type */
+   SCIP_IMPLINTTYPE      newtype             /**< new variable implied type */
+   )
+{
+   assert(event != NULL);
+   assert(blkmem != NULL);
+   assert(oldtype != newtype);
+
+   /* create event data */
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
+   (*event)->eventtype = SCIP_EVENTTYPE_IMPLTYPECHANGED;
+   (*event)->data.eventimpltypechg.var = var;
+   (*event)->data.eventimpltypechg.oldtype = oldtype;
+   (*event)->data.eventimpltypechg.newtype = newtype;
 
    return SCIP_OKAY;
 }
@@ -1243,6 +1266,10 @@ SCIP_VAR* SCIPeventGetVar(
       assert(event->data.eventtypechg.var != NULL);
       return event->data.eventtypechg.var;
 
+   case SCIP_EVENTTYPE_IMPLTYPECHANGED:
+      assert(event->data.eventimpltypechg.var != NULL);
+      return event->data.eventimpltypechg.var;
+
    default:
       SCIPerrorMessage("event does not belong to a variable\n");
       SCIPABORT();
@@ -1311,6 +1338,11 @@ SCIP_RETCODE SCIPeventChgVar(
    case SCIP_EVENTTYPE_TYPECHANGED:
       assert(event->data.eventtypechg.var != NULL);
       event->data.eventtypechg.var = var;
+      break;
+
+   case SCIP_EVENTTYPE_IMPLTYPECHANGED:
+      assert(event->data.eventimpltypechg.var != NULL);
+      event->data.eventimpltypechg.var = var;
       break;
 
    default:
@@ -1460,6 +1492,40 @@ SCIP_VARTYPE SCIPeventGetNewtype(
    return event->data.eventtypechg.newtype;
 }
 
+/** gets old implied integral type for an implied integral type change event */
+SCIP_IMPLINTTYPE SCIPeventGetOldImpltype(
+   SCIP_EVENT*           event               /**< event */
+   )
+{
+   assert(event != NULL);
+
+   if( event->eventtype != SCIP_EVENTTYPE_IMPLTYPECHANGED )
+   {
+      SCIPerrorMessage("event is not an implied integral type change event\n");
+      SCIPABORT();
+      return SCIP_IMPLINTTYPE_NONE;  /*lint !e527*/
+   }
+
+   return event->data.eventimpltypechg.oldtype;
+}
+
+/** gets new implied integral type for an implied integral type change event */
+SCIP_IMPLINTTYPE SCIPeventGetNewImpltype(
+   SCIP_EVENT*           event               /**< event */
+   )
+{
+   assert(event != NULL);
+
+   if( event->eventtype != SCIP_EVENTTYPE_IMPLTYPECHANGED )
+   {
+      SCIPerrorMessage("event is not an implied integral type change event\n");
+      SCIPABORT();
+      return SCIP_IMPLINTTYPE_NONE;  /*lint !e527*/
+   }
+
+   return event->data.eventimpltypechg.newtype;
+}
+
 /** gets node for a node or LP event */
 SCIP_NODE* SCIPeventGetNode(
    SCIP_EVENT*           event               /**< event */
@@ -1585,7 +1651,7 @@ SCIP_ROW* SCIPeventGetRow(
          return event->data.eventrowaddedlp.row;
       case SCIP_EVENTTYPE_ROWDELETEDLP:
          return event->data.eventrowdeletedlp.row;
-      case SCIP_EVENTTYPE_ROWCOEFCHANGED:
+      case SCIP_EVENTTYPE_ROWCOEFCHANGED: /*lint !e30 !e142*/
          return event->data.eventrowcoefchanged.row;
       case SCIP_EVENTTYPE_ROWCONSTCHANGED: /*lint !e30 !e142*/
          return event->data.eventrowconstchanged.row;
@@ -1605,7 +1671,7 @@ SCIP_COL* SCIPeventGetRowCol(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & SCIP_EVENTTYPE_ROWCOEFCHANGED) == 0 )
+   if( (event->eventtype & SCIP_EVENTTYPE_ROWCOEFCHANGED) == 0 ) /*lint !e587*/
    {
       SCIPerrorMessage("event is not a row coefficient changed event\n");
       SCIPABORT();
@@ -1622,7 +1688,7 @@ SCIP_Real SCIPeventGetRowOldCoefVal(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & SCIP_EVENTTYPE_ROWCOEFCHANGED) == 0 )
+   if( (event->eventtype & SCIP_EVENTTYPE_ROWCOEFCHANGED) == 0 ) /*lint !e587*/
    {
       SCIPerrorMessage("event is not a row coefficient changed event\n");
       SCIPABORT();
@@ -1639,7 +1705,7 @@ SCIP_Real SCIPeventGetRowNewCoefVal(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & SCIP_EVENTTYPE_ROWCOEFCHANGED) == 0 )
+   if( (event->eventtype & SCIP_EVENTTYPE_ROWCOEFCHANGED) == 0 ) /*lint !e587*/
    {
       SCIPerrorMessage("event is not a row coefficient changed event\n");
       SCIPABORT();
@@ -1773,7 +1839,7 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_ROWDELETEDSEPA:
    case SCIP_EVENTTYPE_ROWADDEDLP:
    case SCIP_EVENTTYPE_ROWDELETEDLP:
-   case SCIP_EVENTTYPE_ROWCOEFCHANGED:
+   case SCIP_EVENTTYPE_ROWCOEFCHANGED: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_ROWCONSTCHANGED: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_ROWSIDECHANGED: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/
@@ -2014,6 +2080,14 @@ SCIP_RETCODE SCIPeventProcess(
 
    case SCIP_EVENTTYPE_TYPECHANGED:
       var = event->data.eventtypechg.var;
+      assert(var != NULL);
+
+      /* process variable's event filter */
+      SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
+      break;
+
+   case SCIP_EVENTTYPE_IMPLTYPECHANGED:
+      var = event->data.eventimpltypechg.var;
       assert(var != NULL);
 
       /* process variable's event filter */
@@ -2550,7 +2624,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_ROWDELETEDSEPA: /* @todo remove previous ADDEDSEPA event */
       case SCIP_EVENTTYPE_ROWADDEDLP: /* @todo remove previous DELETEDLP event */
       case SCIP_EVENTTYPE_ROWDELETEDLP: /* @todo remove previous ADDEDLP event */
-      case SCIP_EVENTTYPE_ROWCOEFCHANGED: /* @todo merge? */
+      case SCIP_EVENTTYPE_ROWCOEFCHANGED: /* @todo merge? */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_ROWCONSTCHANGED: /* @todo merge with previous constchanged event */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_ROWSIDECHANGED: /* @todo merge with previous sidechanged event */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/

@@ -218,7 +218,7 @@ struct FznOutput
    char*                 consbuffer;         /* buffer for all problem constraints */
    int                   consbufferlen;      /* current length of the above buffer */
    int                   consbufferpos;      /* current filling position in the above buffer */
-   int                   ndiscretevars;      /* number of discrete variables in the problem */
+   SCIP_Bool*            vardiscrete;        /* array that indicates if a variable is discrete */
    SCIP_Bool*            varhasfloat;        /* array which indicates, whether a discrete variable already has a float representative */
 };
 typedef struct FznOutput FZNOUTPUT;
@@ -1973,7 +1973,8 @@ SCIP_RETCODE createVariable(
    }
 
    /* create variable */
-   SCIP_CALL( SCIPcreateVar(scip, &varcopy, name, lb, ub, 0.0, vartype, !(fzninput->dynamiccols), fzninput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(scip, &varcopy, name, lb, ub, 0.0, vartype, !fzninput->dynamiccols, fzninput->dynamiccols,
+         NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, varcopy) );
 
    SCIPdebugMsg(scip, "created variable\n");
@@ -4058,7 +4059,7 @@ SCIP_RETCODE printRow(
       assert( var != NULL );
 
       if( hasfloats )
-         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s, ", SCIPvarGetName(var), SCIPvarGetProbindex(var) < fznoutput->ndiscretevars ? "_float" : "");
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s, ", SCIPvarGetName(var), fznoutput->vardiscrete[SCIPvarGetProbindex(var)] ? "_float" : "");
       else
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s, ", SCIPvarGetName(var) );
       SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), buffer) );
@@ -4070,7 +4071,7 @@ SCIP_RETCODE printRow(
       assert(vars != NULL); /* for lint */
       if( hasfloats )
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s",SCIPvarGetName(vars[nvars-1]),
-            SCIPvarGetProbindex(vars[nvars-1]) < fznoutput->ndiscretevars ? "_float" : "");  /*lint !e613*/
+            fznoutput->vardiscrete[SCIPvarGetProbindex(vars[nvars-1])] ? "_float" : "");  /*lint !e613*/
       else
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s", SCIPvarGetName(vars[nvars-1]));  /*lint !e613*/
 
@@ -4105,8 +4106,7 @@ SCIP_RETCODE printLinearCons(
    int                   nvars,              /**< number of variables */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
-   SCIP_Bool             transformed,        /**< transformed constraint? */
-   SCIP_Bool             mayhavefloats       /**< may there be continuous variables in the constraint? */
+   SCIP_Bool             transformed         /**< transformed constraint? */
    )
 {
    SCIP_VAR** activevars = NULL;              /* active problem variables of a constraint */
@@ -4152,52 +4152,48 @@ SCIP_RETCODE printLinearCons(
 
    /* If there may be continuous variables or coefficients in the constraint, scan for them */
    hasfloats = FALSE;
-   if( mayhavefloats )
-   {
-      /* fractional sides trigger a constraint to be of float type */
-      if( !SCIPisInfinity(scip, -lhs) )
-         hasfloats = hasfloats || !SCIPisIntegral(scip, lhs-activeconstant);
-      if( !SCIPisInfinity(scip, rhs) )
-         hasfloats = hasfloats || !SCIPisIntegral(scip, rhs-activeconstant);
+   /* fractional sides trigger a constraint to be of float type */
+   if( !SCIPisInfinity(scip, -lhs) )
+      hasfloats = hasfloats || !SCIPisIntegral(scip, lhs-activeconstant);
+   if( !SCIPisInfinity(scip, rhs) )
+      hasfloats = hasfloats || !SCIPisIntegral(scip, rhs-activeconstant);
 
-      /* any continuous variable or fractional variable coefficient triggers a constraint to be of float type */
-      for( v = 0; v < nactivevars && !hasfloats; v++ )
+   /* any continuous variable or fractional variable coefficient triggers a constraint to be of float type */
+   for( v = 0; v < nactivevars && !hasfloats; v++ )
+   {
+      SCIP_VAR* var;
+
+      assert(activevars != 0);
+      var = activevars[v];
+
+      hasfloats = hasfloats || !fznoutput->vardiscrete[SCIPvarGetProbindex(var)] || !SCIPisIntegral(scip, activevals[v]);
+   }
+
+   /* If the constraint has to be written as float type, all discrete variables need to have a float counterpart */
+   if( hasfloats )
+   {
+      for( v = 0; v < nactivevars; v++ )
       {
          SCIP_VAR* var;
+         int idx;
 
          assert(activevars != 0);
          var = activevars[v];
+         idx = SCIPvarGetProbindex(var);
+         assert( idx >= 0);
 
-         hasfloats = hasfloats || (SCIPvarGetType(var) != SCIP_VARTYPE_BINARY &&  SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER);
-         hasfloats = hasfloats || !SCIPisIntegral(scip, activevals[v]);
-      }
-
-      /* If the constraint has to be written as float type, all discrete variables need to have a float counterpart */
-      if( hasfloats )
-      {
-         for( v = 0; v < nactivevars; v++ )
+         /* If there was no float representation of the variable before, add an auxiliary variable and a conversion constraint */
+         if( fznoutput->vardiscrete[idx] && !fznoutput->varhasfloat[idx] )
          {
-            SCIP_VAR* var;
-            int idx;
+            assert(SCIPvarIsIntegral(var));
 
-            assert(activevars != 0);
-            var = activevars[v];
-            idx = SCIPvarGetProbindex(var);
-            assert( idx >= 0);
+            (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "var float: %s_float;\n", SCIPvarGetName(var));
+            SCIP_CALL( appendBuffer(scip, &(fznoutput->varbuffer), &(fznoutput->varbufferlen), &(fznoutput->varbufferpos),buffer) );
 
-            /* If there was no float representation of the variable before, add an auxiliary variable and a conversion constraint */
-            if( idx < fznoutput->ndiscretevars && !fznoutput->varhasfloat[idx] )
-            {
-               assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+            (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "constraint int2float(%s, %s_float);\n", SCIPvarGetName(var), SCIPvarGetName(var));
+            SCIP_CALL( appendBuffer(scip, &(fznoutput->castbuffer), &(fznoutput->castbufferlen), &(fznoutput->castbufferpos),buffer) );
 
-               (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "var float: %s_float;\n", SCIPvarGetName(var));
-               SCIP_CALL( appendBuffer(scip, &(fznoutput->varbuffer), &(fznoutput->varbufferlen), &(fznoutput->varbufferpos),buffer) );
-
-               (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "constraint int2float(%s, %s_float);\n", SCIPvarGetName(var), SCIPvarGetName(var));
-               SCIP_CALL( appendBuffer(scip, &(fznoutput->castbuffer), &(fznoutput->castbufferlen), &(fznoutput->castbufferpos),buffer) );
-
-               fznoutput->varhasfloat[idx] = TRUE;
-            }
+            fznoutput->varhasfloat[idx] = TRUE;
          }
       }
    }
@@ -4270,19 +4266,22 @@ SCIP_RETCODE writeFzn(
    SCIP_Real lb;                          /* lower bound of some variable */
    SCIP_Real ub;                          /* upper bound of some variable */
 
+   int implintlevel;                      /* implied integral level */
+   int ndiscretevars;                     /* number of discrete variables */
    int nboundedvars;                      /* number of variables which are bounded to exactly one side */
    int nconsvars;                         /* number of variables appearing in a specific constraint */
    int nfloatobjvars;                     /* number of discrete variables which have a fractional objective coefficient */
    int nintobjvars;                       /* number of discrete variables which have an integral objective coefficient */
    int c;                                 /* counter for the constraints */
    int v;                                 /* counter for the variables */
-   const int ndiscretevars = nbinvars+nintvars;  /* number of discrete variables */
 
    char varname[SCIP_MAXSTRLEN];          /* buffer for storing variable names */
    char buffer[FZN_BUFFERLEN];            /* buffer for storing auxiliary variables and constraints */
    char buffy[FZN_BUFFERLEN];
 
-   assert( scip != NULL );
+   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
+   assert(implintlevel >= -2);
+   assert(implintlevel <= 2);
 
    /* print problem statistics as comment to file */
    SCIPinfoMessage(scip, file, "%% SCIP STATISTICS\n");
@@ -4294,6 +4293,9 @@ SCIP_RETCODE writeFzn(
    SCIP_CALL( SCIPallocBufferArray(scip, &boundedvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, nvars) );
    nboundedvars = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &fznoutput.vardiscrete, nvars) );
+   ndiscretevars = 0;
 
    if( nvars > 0 )
       SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Problem variables %%%%%%%%%%%%\n");
@@ -4317,7 +4319,16 @@ SCIP_RETCODE writeFzn(
          ub = SCIPvarGetUbOriginal(var);
       }
 
-      /* If a variable is bounded to both sides, the bounds are added to the declaration,
+      /* save whether variable is written as integer */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         fznoutput.vardiscrete[v] = (int)SCIPvarGetImplType(var) > 2 - implintlevel;
+      else
+         fznoutput.vardiscrete[v] = (int)SCIPvarGetImplType(var) <= 2 + implintlevel;
+
+      if( fznoutput.vardiscrete[v] )
+         ++ndiscretevars;
+
+      /* if a variable is bounded to both sides, the bounds are added to the declaration,
        * for variables bounded to exactly one side, an auxiliary constraint will be added later-on.
        */
       if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
@@ -4328,7 +4339,7 @@ SCIP_RETCODE writeFzn(
          if( SCIPisEQ(scip, lb, ub) )
             fixed = TRUE;
 
-         if( v < ndiscretevars )
+         if( fznoutput.vardiscrete[v] )
          {
             assert( SCIPisFeasIntegral(scip, lb) && SCIPisFeasIntegral(scip, ub) );
 
@@ -4358,10 +4369,10 @@ SCIP_RETCODE writeFzn(
       else
       {
          assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
-         assert( v >= nbinvars );
+         assert(v >= nbinvars);
 
          /* declare the variable without any bound */
-         if( v < ndiscretevars )
+         if( fznoutput.vardiscrete[v] )
             SCIPinfoMessage(scip, file, "var int: %s;\n", varname);
          else
             SCIPinfoMessage(scip, file, "var float: %s;\n", varname);
@@ -4383,12 +4394,11 @@ SCIP_RETCODE writeFzn(
    }
 
    /* set up the datastructures for the auxiliary int2float variables, the casting constraints and the problem constraints */
-   fznoutput.ndiscretevars = ndiscretevars;
    fznoutput.varbufferpos = 0;
    fznoutput.consbufferpos = 0;
    fznoutput.castbufferpos = 0;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &fznoutput.varhasfloat, ndiscretevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fznoutput.varhasfloat, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fznoutput.varbuffer, FZN_BUFFERLEN) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fznoutput.castbuffer, FZN_BUFFERLEN) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fznoutput.consbuffer, FZN_BUFFERLEN) );
@@ -4396,7 +4406,7 @@ SCIP_RETCODE writeFzn(
    fznoutput.varbufferlen = FZN_BUFFERLEN;
    fznoutput.castbufferlen = FZN_BUFFERLEN;
 
-   for( v = 0; v < ndiscretevars; v++ )
+   for( v = 0; v < nvars; v++ )
       fznoutput.varhasfloat[v] = FALSE;
    fznoutput.varbuffer[0] = '\0';
    fznoutput.consbuffer[0] = '\0';
@@ -4424,7 +4434,7 @@ SCIP_RETCODE writeFzn(
       {
          SCIP_CALL( printLinearCons(scip, &fznoutput,
                SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
-               SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), transformed, TRUE) );
+               SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), transformed) );
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
@@ -4436,15 +4446,15 @@ SCIP_RETCODE writeFzn(
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
             SCIP_CALL( printLinearCons(scip, &fznoutput,
-                  consvars, NULL, nconsvars, 1.0, 1.0, transformed, FALSE) );
+                  consvars, NULL, nconsvars, 1.0, 1.0, transformed) );
             break;
          case SCIP_SETPPCTYPE_PACKING :
             SCIP_CALL( printLinearCons(scip, &fznoutput,
-                  consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, transformed, FALSE) );
+                  consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, transformed) );
             break;
          case SCIP_SETPPCTYPE_COVERING :
             SCIP_CALL( printLinearCons(scip, &fznoutput,
-                  consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), transformed, FALSE) );
+                  consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), transformed) );
             break;
          }
       }
@@ -4452,7 +4462,7 @@ SCIP_RETCODE writeFzn(
       {
          SCIP_CALL( printLinearCons(scip, &fznoutput,
                SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
-               1.0, SCIPinfinity(scip), transformed, FALSE) );
+               1.0, SCIPinfinity(scip), transformed) );
       }
       else if( strcmp(conshdlrname, "knapsack") == 0 )
       {
@@ -4468,7 +4478,7 @@ SCIP_RETCODE writeFzn(
             consvals[v] = (SCIP_Real)weights[v];
 
          SCIP_CALL( printLinearCons(scip, &fznoutput, consvars, consvals, nconsvars, -SCIPinfinity(scip),
-               (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed, FALSE) );
+               (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
 
          SCIPfreeBufferArray(scip, &consvals);
       }
@@ -4486,7 +4496,7 @@ SCIP_RETCODE writeFzn(
          /* Varbound constraints always consist of exactly two variables */
          SCIP_CALL( printLinearCons(scip, &fznoutput,
                consvars, consvals, 2,
-               SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons), transformed, TRUE) );
+               SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons), transformed) );
 
          SCIPfreeBufferArray(scip, &consvars);
          SCIPfreeBufferArray(scip, &consvals);
@@ -4547,8 +4557,8 @@ SCIP_RETCODE writeFzn(
       }
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip,&intobjvars,ndiscretevars) );
-   SCIP_CALL( SCIPallocBufferArray(scip,&floatobjvars,nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &intobjvars, ndiscretevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &floatobjvars, nvars) );
    nintobjvars = 0;
    nfloatobjvars = 0;
 
@@ -4563,8 +4573,10 @@ SCIP_RETCODE writeFzn(
       if( !SCIPisZero(scip,obj) )
       {
          /* only discrete variables with integral objective coefficient will be put to the int part of the objective */
-         if( v < ndiscretevars && SCIPisIntegral(scip, objscale*obj) )
+         if( fznoutput.vardiscrete[v] && SCIPisIntegral(scip, objscale*obj) )
          {
+            assert(SCIPvarIsIntegral(var));
+
             intobjvars[nintobjvars] = v;
             SCIPdebugMsg(scip, "variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n",
                SCIPvarGetName(var), nintobjvars, v, obj, objscale, SCIPvarGetObj(var));
@@ -4573,9 +4585,9 @@ SCIP_RETCODE writeFzn(
          else
          {
             /* if not happened yet, introduce an auxiliary variable for discrete variables with fractional coefficients */
-            if( v < ndiscretevars && !fznoutput.varhasfloat[v] )
+            if( fznoutput.vardiscrete[v] && !fznoutput.varhasfloat[v] )
             {
-               assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+               assert(SCIPvarIsIntegral(var));
 
                (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "var float: %s_float;\n", SCIPvarGetName(var));
                SCIP_CALL( appendBuffer(scip, &(fznoutput.varbuffer), &(fznoutput.varbufferlen), &(fznoutput.varbufferpos),buffer) );
@@ -4614,8 +4626,10 @@ SCIP_RETCODE writeFzn(
    {
       var = vars[boundedvars[v]];
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+      if( fznoutput.vardiscrete[boundedvars[v]] )
       {
+         assert(SCIPvarIsIntegral(var));
+
          if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
             SCIPinfoMessage(scip, file,"constraint int_ge(%s, %.f);\n",SCIPvarGetName(var),
                transformed ? SCIPvarGetLbLocal(var) : SCIPvarGetLbOriginal(var));
@@ -4628,8 +4642,6 @@ SCIP_RETCODE writeFzn(
       }
       else
       {
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
-
          if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
          {
             flattenFloat(scip, transformed ? SCIPvarGetLbLocal(var) : SCIPvarGetLbOriginal(var), buffy);
@@ -4678,8 +4690,7 @@ SCIP_RETCODE writeFzn(
          SCIP_Real obj;
          obj = objscale * SCIPvarGetObj(vars[floatobjvars[v]]);
          flattenFloat(scip, obj, buffy);
-         assert( !SCIPisIntegral(scip, obj) || SCIPvarGetType(vars[floatobjvars[v]]) == SCIP_VARTYPE_CONTINUOUS
-            || SCIPvarGetType(vars[floatobjvars[v]]) == SCIP_VARTYPE_IMPLINT);
+         assert(SCIPvarGetType(vars[floatobjvars[v]]) == SCIP_VARTYPE_CONTINUOUS || !SCIPisIntegral(scip, obj));
          SCIPinfoMessage(scip, file, "%s%s", buffy, v < nfloatobjvars-1 ? ", " : "" );
       }
 
@@ -4698,7 +4709,7 @@ SCIP_RETCODE writeFzn(
       /* fourth array: all other variables with nonzero objective coefficient */
       SCIPinfoMessage(scip, file, "], [");
       for( v = 0; v < nfloatobjvars; v++ )
-         SCIPinfoMessage(scip, file, "%s%s%s", SCIPvarGetName(vars[floatobjvars[v]]), floatobjvars[v] < ndiscretevars ? "_float" : "", v < nfloatobjvars-1 ? ", " : "" );
+         SCIPinfoMessage(scip, file, "%s%s%s", SCIPvarGetName(vars[floatobjvars[v]]), fznoutput.vardiscrete[floatobjvars[v]] ? "_float" : "", v < nfloatobjvars-1 ? ", " : "" );
 
       /* potentially add a 1.0 for the objective offset */
       if( !SCIPisZero(scip, objoffset) )
@@ -4718,6 +4729,7 @@ SCIP_RETCODE writeFzn(
    SCIPfreeBufferArray(scip, &floatobjvars);
    SCIPfreeBufferArray(scip, &intobjvars);
    SCIPfreeBufferArray(scip, &fznoutput.varhasfloat);
+   SCIPfreeBufferArray(scip, &fznoutput.vardiscrete);
 
    *result = SCIP_SUCCESS;
    return  SCIP_OKAY;

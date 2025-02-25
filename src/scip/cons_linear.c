@@ -92,7 +92,6 @@
 #include "symmetry/struct_symmetry.h"
 #include "scip/dbldblarith.h"
 
-
 #define CONSHDLR_NAME          "linear"
 #define CONSHDLR_DESC          "linear constraints of the form  lhs <= a^T x <= rhs"
 #define CONSHDLR_SEPAPRIORITY   +100000 /**< priority of the constraint handler for separation */
@@ -743,7 +742,8 @@ SCIP_RETCODE consCatchEvent(
 
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[pos],
          SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED
-         | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_TYPECHANGED,
+         | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_TYPECHANGED
+         | SCIP_EVENTTYPE_IMPLTYPECHANGED,
          eventhdlr, consdata->eventdata[pos], &consdata->eventdata[pos]->filterpos) );
 
    consdata->removedfixings = consdata->removedfixings && SCIPvarIsActive(consdata->vars[pos]);
@@ -778,7 +778,8 @@ SCIP_RETCODE consDropEvent(
 
    SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos],
          SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED
-         | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_TYPECHANGED,
+         | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_TYPECHANGED
+         | SCIP_EVENTTYPE_IMPLTYPECHANGED,
          eventhdlr, consdata->eventdata[pos], consdata->eventdata[pos]->filterpos) );
 
    SCIPfreeBlockMemory(scip, &consdata->eventdata[pos]); /*lint !e866*/
@@ -929,18 +930,12 @@ SCIP_RETCODE consdataCreate(
                valsbuffer[nvars] = val;
                ++nvars;
 
-               /* update hascontvar and hasnonbinvar flags */
-               if( !(*consdata)->hascontvar )
+               if( !(*consdata)->hascontvar && !SCIPvarIsBinary(var) )
                {
-                  SCIP_VARTYPE vartype = SCIPvarGetType(var);
+                  (*consdata)->hasnonbinvar = TRUE;
 
-                  if( vartype != SCIP_VARTYPE_BINARY )
-                  {
-                     (*consdata)->hasnonbinvar = TRUE;
-
-                     if( vartype == SCIP_VARTYPE_CONTINUOUS )
-                        (*consdata)->hascontvar = TRUE;
-                  }
+                  if( !SCIPvarIsIntegral(var) )
+                     (*consdata)->hascontvar = TRUE;
                }
             }
          }
@@ -1481,13 +1476,11 @@ void consdataCheckNonbinvar(
 
    for( v = consdata->nvars - 1; v >= 0; --v )
    {
-      SCIP_VARTYPE vartype = SCIPvarGetType(consdata->vars[v]);
-
-      if( vartype != SCIP_VARTYPE_BINARY )
+      if( !SCIPvarIsBinary(consdata->vars[v]) )
       {
          consdata->hasnonbinvar = TRUE;
 
-         if( vartype == SCIP_VARTYPE_CONTINUOUS )
+         if( !SCIPvarIsIntegral(consdata->vars[v]) )
          {
             consdata->hascontvar = TRUE;
             break;
@@ -3182,8 +3175,8 @@ SCIP_DECL_SORTINDCOMP(consdataCompVar)
    }
    else
    {
-      SCIP_VARTYPE vartype1 = SCIPvarGetType(var1);
-      SCIP_VARTYPE vartype2 = SCIPvarGetType(var2);
+      SCIP_VARTYPE vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var1);
+      SCIP_VARTYPE vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var2);
 
       if( vartype1 < vartype2 )
          return -1;
@@ -3229,8 +3222,8 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
    }
    else
    {
-      SCIP_VARTYPE vartype1 = SCIPvarGetType(var1);
-      SCIP_VARTYPE vartype2 = SCIPvarGetType(var2);
+      SCIP_VARTYPE vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var1);
+      SCIP_VARTYPE vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var2);
 
       if( vartype1 < vartype2 )
       {
@@ -3331,11 +3324,11 @@ void permSortConsdata(
 
 /** sorts linear constraint's variables depending on the stage of the solving process:
  * - during PRESOLVING
- *       sorts variables by binaries, integers, implicit integers, and continuous variables,
+ *       sorts variables by binary, integer, implied integral, and continuous variables,
  *       and the variables of the same type by non-decreasing variable index
  *
  * - during SOLVING
- *       sorts variables of the remaining problem by binaries, integers, implicit integers, and continuous variables,
+ *       sorts variables of the remaining problem by binary, integer, implied integral, and continuous variables,
  *       and binary and integer variables by their global max activity delta (within each group),
  *       ties within a group are broken by problem index of the variable.
  *
@@ -3780,13 +3773,11 @@ SCIP_RETCODE addCoef(
    /* update hascontvar and hasnonbinvar flags */
    if( consdata->hasnonbinvalid && !consdata->hascontvar )
    {
-      SCIP_VARTYPE vartype = SCIPvarGetType(var);
-
-      if( vartype != SCIP_VARTYPE_BINARY )
+      if( !SCIPvarIsBinary(var) )
       {
          consdata->hasnonbinvar = TRUE;
 
-         if( vartype == SCIP_VARTYPE_CONTINUOUS )
+         if( !SCIPvarIsIntegral(var) )
             consdata->hascontvar = TRUE;
       }
    }
@@ -3896,7 +3887,7 @@ SCIP_RETCODE delCoefPos(
    consdata->rangedrowpropagated = 0;
 
    /* check if hasnonbinvar flag might be incorrect now */
-   if( consdata->hasnonbinvar && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+   if( consdata->hasnonbinvar && !SCIPvarIsBinary(var) )
    {
       consdata->hasnonbinvalid = FALSE;
    }
@@ -5279,13 +5270,12 @@ SCIP_RETCODE tightenVarUb(
 
    if( force || SCIPisUbBetter(scip, newub, lb, oldub) )
    {
-      SCIP_VARTYPE vartype;
+      SCIP_VARTYPE vartype = SCIPvarGetType(var);
+      SCIP_IMPLINTTYPE impltype = SCIPvarGetImplType(var);
 
       SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
          SCIPconsGetName(cons), SCIPvarGetName(var), lb, oldub, consdata->vals[pos],
          QUAD_TO_DBL(consdata->minactivity), QUAD_TO_DBL(consdata->maxactivity), consdata->lhs, consdata->rhs, newub);
-
-      vartype = SCIPvarGetType(var);
 
       /* tighten upper bound */
       SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(proprule, pos), force, &infeasible, &tightened) );
@@ -5309,7 +5299,7 @@ SCIP_RETCODE tightenVarUb(
          (*nchgbds)++;
 
          /* if variable type was changed we might be able to upgrade the constraint */
-         if( vartype != SCIPvarGetType(var) )
+         if( SCIPvarGetType(var) != vartype || SCIPvarGetImplType(var) != impltype )
             consdata->upgradetried = FALSE;
       }
    }
@@ -5349,13 +5339,12 @@ SCIP_RETCODE tightenVarLb(
 
    if( force || SCIPisLbBetter(scip, newlb, oldlb, ub) )
    {
-      SCIP_VARTYPE vartype;
+      SCIP_VARTYPE vartype = SCIPvarGetType(var);
+      SCIP_IMPLINTTYPE impltype = SCIPvarGetImplType(var);
 
       SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
          SCIPconsGetName(cons), SCIPvarGetName(var), oldlb, ub, consdata->vals[pos],
          QUAD_TO_DBL(consdata->minactivity), QUAD_TO_DBL(consdata->maxactivity), consdata->lhs, consdata->rhs, newlb);
-
-      vartype = SCIPvarGetType(var);
 
       /* tighten lower bound */
       SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(proprule, pos), force, &infeasible, &tightened) );
@@ -5379,7 +5368,7 @@ SCIP_RETCODE tightenVarLb(
          (*nchgbds)++;
 
          /* if variable type was changed we might be able to upgrade the constraint */
-         if( vartype != SCIPvarGetType(var) )
+         if( SCIPvarGetType(var) != vartype || SCIPvarGetImplType(var) != impltype )
             consdata->upgradetried = FALSE;
       }
    }
@@ -5863,15 +5852,13 @@ SCIP_RETCODE rangedRowPropagation(
       ++v;
 
       /* partition the variables, do not change the order of collection, because it might be used later on */
-      while( v < consdata->nvars && (SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS ||
-            !SCIPisIntegral(scip, consdata->vals[v]) || SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0)) )
+      while( v < consdata->nvars && ( !SCIPvarIsIntegral(consdata->vars[v])
+         || !SCIPisIntegral(scip, consdata->vals[v]) || SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0) ) )
       {
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])) )
          {
-            if( SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
-            {
+            if( !SCIPvarIsIntegral(consdata->vars[v]) )
                ++ncontvars;
-            }
             else if( SCIPvarIsBinary(consdata->vars[v]) )
             {
                SCIP_Real absval;
@@ -5909,7 +5896,7 @@ SCIP_RETCODE rangedRowPropagation(
       goto TERMINATE;
 
    assert(!SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])));
-   assert(SCIPisIntegral(scip, consdata->vals[v]) && SCIPvarGetType(consdata->vars[v]) != SCIP_VARTYPE_CONTINUOUS && REALABS(consdata->vals[v]) > 1.5);
+   assert(SCIPvarIsIntegral(consdata->vars[v]) && SCIPisIntegral(scip, consdata->vals[v]) && REALABS(consdata->vals[v]) > 1.5);
 
    feastol = SCIPfeastol(scip);
 
@@ -5933,10 +5920,10 @@ SCIP_RETCODE rangedRowPropagation(
             absminbincoef = absval;
       }
 
-      if( !SCIPisIntegral(scip, consdata->vals[v]) || SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS ||
-         SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0) )
+      if( !SCIPvarIsIntegral(consdata->vars[v]) || !SCIPisIntegral(scip, consdata->vals[v])
+         || SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0) )
       {
-         if( SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+         if( !SCIPvarIsIntegral(consdata->vars[v]) )
             ++ncontvars;
 
          gcdisone = gcdisone && SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0);
@@ -8108,7 +8095,7 @@ SCIP_RETCODE extractCliques(
                      }
                   }
                   /* stop when reaching a 'real' binary variable because the variables are sorted after their type */
-                  else if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY )
+                  else if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vars[v]) )
                      break;
                }
             }
@@ -8253,7 +8240,7 @@ SCIP_RETCODE extractCliques(
             assert(nposbinvars + nnegbinvars <= nvars);
          }
          /* stop searching for binary variables, because the constraint data is sorted */
-         else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS )
+         else if( !SCIPvarIsIntegral(vars[i]) )
             break;
       }
       assert(nposbinvars + nnegbinvars <= nvars);
@@ -8423,7 +8410,7 @@ SCIP_RETCODE extractCliques(
                            assert(nposbinvars + nnegbinvars <= nvars);
                         }
                         /* stop searching for binary variables, because the constraint data is sorted */
-                        else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS )
+                        else if( !SCIPvarIsIntegral(vars[i]) )
                            break;
                      }
                      assert(nposbinvars + nnegbinvars <= nvars);
@@ -8577,7 +8564,7 @@ SCIP_RETCODE extractCliques(
                            assert(nposbinvars + nnegbinvars <= nvars);
                         }
                         /* stop searching for binary variables, because the constraint data is sorted */
-                        else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS )
+                        else if( !SCIPvarIsIntegral(vars[i]) )
                            break;
                      }
                      assert(nposbinvars + nnegbinvars <= nvars);
@@ -8740,7 +8727,7 @@ SCIP_RETCODE extractCliques(
                            assert(nposbinvars + nnegbinvars <= nvars);
                         }
                         /* stop searching for binary variables, because the constraint data is sorted */
-                        else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS )
+                        else if( !SCIPvarIsIntegral(vars[i]) )
                            break;
                      }
                      assert(nposbinvars + nnegbinvars <= nvars);
@@ -8929,10 +8916,7 @@ SCIP_RETCODE tightenSides(
    {
       integral = TRUE;
       for( i = 0; i < consdata->nvars && integral; ++i )
-      {
-         integral = SCIPisIntegral(scip, consdata->vals[i])
-            && (SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINUOUS);
-      }
+         integral = SCIPvarIsIntegral(consdata->vars[i]) && SCIPisIntegral(scip, consdata->vals[i]);
       if( integral )
       {
          if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisIntegral(scip, consdata->lhs) )
@@ -8983,7 +8967,7 @@ SCIP_RETCODE tightenSides(
    return SCIP_OKAY;
 }
 
-/** tightens coefficients of binary, integer, and implicit integer variables due to activity bounds in presolving:
+/** tightens coefficients of binary, integer, and implied integral variables due to activity bounds in presolving:
  *  given an inequality  lhs <= a*x + ai*xi <= rhs, with a non-continuous variable  li <= xi <= ui
  *  let minact := min{a*x + ai*xi}, maxact := max{a*x + ai*xi}
  *  (i) ai >= 0:
@@ -9095,7 +9079,7 @@ SCIP_RETCODE consdataTightenCoefs(
       if( val >= 0.0 )
       {
          /* check, if a deviation from lower/upper bound would make lhs/rhs redundant */
-         isvarrelevant[i] = SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS
+         isvarrelevant[i] = SCIPvarIsIntegral(var)
                && SCIPisGE(scip, minactivity + val, consdata->lhs) && SCIPisLE(scip, maxactivity - val, consdata->rhs);
 
          if( isvarrelevant[i] )
@@ -9206,7 +9190,7 @@ SCIP_RETCODE consdataTightenCoefs(
       else
       {
          /* check, if a deviation from lower/upper bound would make lhs/rhs redundant */
-         isvarrelevant[i] = SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS
+         isvarrelevant[i] = SCIPvarIsIntegral(var)
                && SCIPisGE(scip, minactivity - val, consdata->lhs) && SCIPisLE(scip, maxactivity + val, consdata->rhs);
 
          if( isvarrelevant[i] )
@@ -9599,9 +9583,9 @@ void getNewSidesAfterAggregation(
 
 /** processes equality with more than two variables by multi-aggregating one of the variables and converting the equality
  *  into an inequality; if multi-aggregation is not possible, tries to identify one continuous or integer variable that
- *  is implicitly integral by this constraint
+ *  is implied integral by this constraint
  *
- *  @todo Check whether a more clever way of avoiding aggregation of variables containing implicitly integer variables
+ *  @todo Check whether a more clever way of avoiding aggregation of variables containing implied integral variables
  *       can help.
  */
 static
@@ -9620,6 +9604,7 @@ SCIP_RETCODE convertLongEquality(
    SCIP_Real* vals;
    SCIP_VARTYPE bestslacktype;
    SCIP_VARTYPE slacktype;
+   SCIP_IMPLINTTYPE impltype;
    SCIP_Real lhs;
    SCIP_Real rhs;
    SCIP_Real bestslackdomrng;
@@ -9644,6 +9629,7 @@ SCIP_RETCODE convertLongEquality(
    int ncontvars;
    int contvarpos;
    int nintvars;
+   int nweakimplvars;
    int nimplvars;
    int intvarpos;
    int v;
@@ -9717,6 +9703,7 @@ SCIP_RETCODE convertLongEquality(
    ncontvars = 0;
    contvarpos = -1;
    nintvars = 0;
+   nweakimplvars = 0;
    nimplvars = 0;
    intvarpos = -1;
    minabsval = SCIPinfinity(scip);
@@ -9755,11 +9742,12 @@ SCIP_RETCODE convertLongEquality(
       if( maxabsval / minabsval > conshdlrdata->maxmultaggrquot )
          return SCIP_OKAY;
 
-      slacktype = SCIPvarGetType(var);
+      impltype = SCIPvarGetImplType(var);
+      slacktype = impltype != SCIP_IMPLINTTYPE_NONE ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var);
       coefszeroone = coefszeroone && SCIPisEQ(scip, absval, 1.0);
       coefsintegral = coefsintegral && SCIPisIntegral(scip, val);
       varsintegral = varsintegral && (slacktype != SCIP_VARTYPE_CONTINUOUS);
-      iscont = (slacktype == SCIP_VARTYPE_CONTINUOUS || slacktype == SCIP_VARTYPE_IMPLINT);
+      iscont = (slacktype == SCIP_VARTYPE_CONTINUOUS || slacktype == SCIP_DEPRECATED_VARTYPE_IMPLINT);
 
       /* update candidates for continuous -> implint and integer -> implint conversion */
       if( slacktype == SCIP_VARTYPE_CONTINUOUS )
@@ -9767,9 +9755,12 @@ SCIP_RETCODE convertLongEquality(
          ncontvars++;
          contvarpos = v;
       }
-      else if( slacktype == SCIP_VARTYPE_IMPLINT )
+      else if( slacktype == SCIP_DEPRECATED_VARTYPE_IMPLINT )
       {
          ++nimplvars;
+         assert(impltype != SCIP_IMPLINTTYPE_NONE);
+         if( impltype == SCIP_IMPLINTTYPE_WEAK )
+            ++nweakimplvars;
       }
       else if( slacktype == SCIP_VARTYPE_INTEGER )
       {
@@ -9806,6 +9797,8 @@ SCIP_RETCODE convertLongEquality(
             assert(!SCIPisInfinity(scip, slackdomrng));
          }
          equal = FALSE;
+
+         /* continuous > implied > integer > binary */
          better = (slacktype > bestslacktype) || (bestslackpos == -1);
          if( !better && slacktype == bestslacktype )
          {
@@ -9932,7 +9925,7 @@ SCIP_RETCODE convertLongEquality(
    }
    assert(!samevar || (supinf > 0 && infinf > 0));
 
-   /*TODO: implint detection again terminates early here*/
+   /* @TODO: implint detection again terminates early here */
    /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
     * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */
    if( (samevar && (supinf > 1 || infinf > 1)) || (!samevar && supinf > 0 && infinf > 0) )
@@ -9943,11 +9936,11 @@ SCIP_RETCODE convertLongEquality(
 
    /* if the slack variable is of integer type, and the constraint itself may take fractional values,
     * we cannot aggregate the variable, because the integrality condition would get lost
-    * Similarly, if there are implicitly integral variables we cannot aggregate, since we might
+    * Similarly, if there are implied integral variables, we cannot aggregate since we might
     * loose the integrality condition for this variable.
     */
    if( bestslackpos >= 0
-      && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_VARTYPE_IMPLINT
+      && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_DEPRECATED_VARTYPE_IMPLINT
          || (coefsintegral && varsintegral && nimplvars == 0)) )
    {
       SCIP_VAR* slackvar;
@@ -10029,17 +10022,19 @@ SCIP_RETCODE convertLongEquality(
 
       assert(0 <= contvarpos && contvarpos < consdata->nvars);
       var = vars[contvarpos];
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+      assert(!SCIPvarIsIntegral(var));
 
       if( coefsintegral && SCIPisFeasIntegral(scip, consdata->rhs) )
       {
-         /* upgrade continuous variable to an implicit one, if the absolute value of the coefficient is one */
+         /* upgrade continuous variable to an implied integral one, if the absolute value of the coefficient is one */
          if( SCIPisEQ(scip, REALABS(vals[contvarpos]), 1.0) )
          {
-            /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
-            SCIPdebugMsg(scip, "linear constraint <%s>: converting continuous variable <%s> to implicit integer variable\n",
+            /* convert the continuous variable with coefficient 1.0 into an implied integral variable */
+            SCIPdebugMsg(scip, "linear constraint <%s>: converting continuous variable <%s> to implied integral variable\n",
                SCIPconsGetName(cons), SCIPvarGetName(var));
-            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
+            /* if the integrality does not depend on weak implied integrality, the variable becomes strongly implied integral */
+            impltype = nweakimplvars == 0 ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_WEAK;
+            SCIP_CALL( SCIPchgVarImplType(scip, var, impltype, &infeasible) );
             (*nchgvartypes)++;
             if( infeasible )
             {
@@ -10049,7 +10044,7 @@ SCIP_RETCODE convertLongEquality(
                return SCIP_OKAY;
             }
          }
-         /* aggregate continuous variable to an implicit one, if the absolute value of the coefficient is unequal to one */
+         /* aggregate continuous variable to an implied integral one if the absolute coefficient is unequal to one */
          /* @todo check if the aggregation coefficient should be in some range(, which is not too big) */
          else if( !SCIPdoNotAggr(scip) )
          {
@@ -10063,9 +10058,10 @@ SCIP_RETCODE convertLongEquality(
 
             (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "%s_impl", SCIPvarGetName(var));
 
-            /* create new implicit variable for aggregation */
-            SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
-                  SCIP_VARTYPE_IMPLINT, SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL, NULL) );
+            /* create new implied integral variable for aggregation */
+            SCIP_CALL( SCIPcreateVarImpl(scip, &newvar, newvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+                  SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK,
+                  SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL, NULL) );
 
             /* add new variable to problem */
             SCIP_CALL( SCIPaddVar(scip, newvar) );
@@ -10079,26 +10075,26 @@ SCIP_RETCODE convertLongEquality(
             }
 #endif
 
-            /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
-            SCIPdebugMsg(scip, "linear constraint <%s>: aggregating continuous variable <%s> to newly created implicit integer variable <%s>, aggregation factor = %g\n",
+            /* convert the continuous variable with coefficient 1.0 into an implied integral variable */
+            SCIPdebugMsg(scip, "linear constraint <%s>: aggregating continuous variable <%s> to newly created implied integral variable <%s>, aggregation factor = %g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetName(newvar), absval);
 
-            /* aggregate continuous and implicit variable */
+            /* aggregate continuous and implied integral variable */
             SCIP_CALL( SCIPaggregateVars(scip, var, newvar, absval, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
 
             if( infeasible )
             {
-               SCIPdebugMsg(scip, "infeasible aggregation of variable <%s> to implicit variable <%s>, domain is empty\n",
+               SCIPdebugMsg(scip, "infeasible aggregation of variable <%s> to implied integral variable <%s>, domain is empty\n",
                   SCIPvarGetName(var), SCIPvarGetName(newvar));
                *cutoff = TRUE;
 
-               /* release implicit variable */
+               /* release implied integral variable */
                SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
 
                return SCIP_OKAY;
             }
 
-            /* release implicit variable */
+            /* release implied integral variable */
             SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
 
             if( aggregated )
@@ -10131,10 +10127,10 @@ SCIP_RETCODE convertLongEquality(
          && SCIPisEQ(scip, REALABS(vals[intvarpos]), 1.0)
          && SCIPisFeasIntegral(scip, consdata->rhs) )
       {
-         /* convert the integer variable with coefficient 1.0 into an implicit integer variable */
-         SCIPdebugMsg(scip, "linear constraint <%s>: converting integer variable <%s> to implicit integer variable\n",
+         /* convert the integer variable with coefficient 1.0 into an implied integral variable */
+         SCIPdebugMsg(scip, "linear constraint <%s>: converting integer variable <%s> to implied integral variable\n",
             SCIPconsGetName(cons), SCIPvarGetName(var));
-         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
+         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_STRONG, &infeasible) );
          (*nchgvartypes)++;
          if( infeasible )
          {
@@ -10701,7 +10697,7 @@ SCIP_RETCODE dualPresolve(
          return SCIP_OKAY;
 
       var = consdata->vars[i];
-      isint = (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+      isint = SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var);
 
       /* if we already found a candidate, skip integers */
       if( bestpos >= 0 && isint )
@@ -10916,8 +10912,7 @@ SCIP_RETCODE dualPresolve(
 
       bestvar = consdata->vars[bestpos];
       bestval = consdata->vals[bestpos];
-      assert(bestisint ==
-         (SCIPvarGetType(bestvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(bestvar) == SCIP_VARTYPE_INTEGER));
+      assert(bestisint == (SCIPvarIsIntegral(bestvar) && !SCIPvarIsImpliedIntegral(bestvar)));
 
       /* allocate temporary memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &aggrvars, consdata->nvars-1) );
@@ -11020,23 +11015,29 @@ SCIP_RETCODE dualPresolve(
           */
          SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
 
-         /* if the multi-aggregate bestvar is integer, we need to convert implicit integers to integers because
-          *  the implicitness might rely on the constraint and the integrality of bestvar
+         /* @TODO: handle this case properly with extended implied integrality */
+         /* if the multi-aggregated bestvar is enforced but not strongly implied integral, we need to convert implied
+          * integral to integer variables because integrality of the multi-aggregated variable must hold
           */
-         if( !infeasible && aggregated && SCIPvarGetType(bestvar) == SCIP_VARTYPE_INTEGER )
+         if( !infeasible && aggregated && SCIPvarGetType(bestvar) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetImplType(bestvar) != SCIP_IMPLINTTYPE_STRONG )
          {
-            SCIP_Bool infeasiblevartypechg;
+            SCIP_Bool infeasiblevartypechg = FALSE;
 
             for( j = 0; j < naggrs; ++j)
             {
-               /* If the multi-aggregation was not infeasible, then setting implicit integers to integers should not
-                *  lead to infeasibility
+               /* if the multi-aggregation was not infeasible, then setting implied integral to integer should not
+                * lead to infeasibility
                 */
-               if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_IMPLINT )
+               if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(aggrvars[j]) != SCIP_IMPLINTTYPE_NONE )
                {
-                  SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasiblevartypechg) );
-                  (*nchgvartypes)++;
+                  if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_CONTINUOUS )
+                  {
+                     SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasiblevartypechg) );
+                     assert(!infeasiblevartypechg);
+                  }
+                  SCIP_CALL( SCIPchgVarImplType(scip, aggrvars[j], SCIP_IMPLINTTYPE_NONE, &infeasiblevartypechg) );
                   assert(!infeasiblevartypechg);
+                  (*nchgvartypes)++;
                }
             }
          }
@@ -11087,20 +11088,22 @@ int getVarWeight(
    SCIP_VAR*             var                 /**< variable to get weight for */
    )
 {
+   if( SCIPvarIsImpliedIntegral(var) )
+      return INTWEIGHT;
+
    switch( SCIPvarGetType(var) )
    {
-   case SCIP_VARTYPE_BINARY:
-      return BINWEIGHT;
-   case SCIP_VARTYPE_INTEGER:
-   case SCIP_VARTYPE_IMPLINT:
-      return INTWEIGHT;
-   case SCIP_VARTYPE_CONTINUOUS:
-      return CONTWEIGHT;
-   default:
-      SCIPerrorMessage("invalid variable type\n");
-      SCIPABORT();
-      return 0; /*lint !e527*/
-   }
+      case SCIP_VARTYPE_BINARY:
+         return BINWEIGHT;
+      case SCIP_VARTYPE_INTEGER:
+         return INTWEIGHT;
+      case SCIP_VARTYPE_CONTINUOUS:
+         return CONTWEIGHT;
+      default:
+         SCIPerrorMessage("unknown variable type\n");
+         SCIPABORT();
+         return 0; /*lint !e527*/
+   } /*lint !e788*/
 }
 
 /** tries to aggregate variables in equations a^Tx = lhs
@@ -11175,7 +11178,7 @@ SCIP_RETCODE aggregateVariables(
          SCIP_Longint val;
 
          /* all coefficients and variables have to be integral */
-         if( !SCIPisIntegral(scip, vals[v]) || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+         if( !SCIPvarIsIntegral(vars[v]) || !SCIPisIntegral(scip, vals[v]) )
             return SCIP_OKAY;
 
          val = (SCIP_Longint)SCIPfeasFloor(scip, vals[v]);
@@ -11290,28 +11293,26 @@ static
 SCIP_DECL_SORTINDCOMP(consdataCompSim)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata = (SCIP_CONSDATA*)dataptr;
-   SCIP_VARTYPE vartype1;
-   SCIP_VARTYPE vartype2;
    SCIP_Real value;
 
    assert(consdata != NULL);
    assert(0 <= ind1 && ind1 < consdata->nvars);
    assert(0 <= ind2 && ind2 < consdata->nvars);
 
-   vartype1 = SCIPvarGetType(consdata->vars[ind1]);
-   vartype2 = SCIPvarGetType(consdata->vars[ind2]);
+   SCIP_Bool varcont1 = !SCIPvarIsIntegral(consdata->vars[ind1]);
+   SCIP_Bool varcont2 = !SCIPvarIsIntegral(consdata->vars[ind2]);
 
-   if( vartype1 == SCIP_VARTYPE_CONTINUOUS )
+   if( varcont1 )
    {
-      /* continuous varibles will be sorted to the back */
-      if( vartype2 != vartype1 )
+      /* continuous variables will be sorted to the back */
+      if( varcont1 != varcont2 )
          return +1;
       /* both variables are continuous */
       else
          return 0;
    }
    /* continuous variables will be sorted to the back */
-   else if( vartype2 == SCIP_VARTYPE_CONTINUOUS )
+   else if( varcont2 )
       return -1;
 
    value = REALABS(consdata->vals[ind2]) - REALABS(consdata->vals[ind1]);
@@ -11585,13 +11586,13 @@ SCIP_RETCODE simplifyInequalities(
    vals = consdata->vals;
    assert(vars != NULL);
    assert(vals != NULL);
-   assert(consdata->validmaxabsval ? (SCIPisFeasEQ(scip, consdata->maxabsval, REALABS(vals[0])) || SCIPvarGetType(vars[nvars - 1]) == SCIP_VARTYPE_CONTINUOUS) : TRUE);
+   assert(!consdata->validmaxabsval || SCIPisFeasEQ(scip, consdata->maxabsval, REALABS(vals[0])) || !SCIPvarIsIntegral(vars[nvars - 1]));
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &perm);
 
    /* only check constraints with at least two non continuous variables */
-   if( SCIPvarGetType(vars[1]) == SCIP_VARTYPE_CONTINUOUS )
+   if( !SCIPvarIsIntegral(vars[1]) )
       return SCIP_OKAY;
 
    /* do not process constraints when all coefficients are 1.0 */
@@ -11671,7 +11672,7 @@ SCIP_RETCODE simplifyInequalities(
          return SCIP_OKAY;
 
       /* cannot work with continuous variables which have a big coefficient */
-      if( v > 0 && SCIPvarGetType(vars[v - 1]) == SCIP_VARTYPE_CONTINUOUS )
+      if( v > 0 && !SCIPvarIsIntegral(vars[v - 1]) )
          return SCIP_OKAY;
 
       /* big negative coefficient, do not try to use the extra coefficient reduction step */
@@ -11681,7 +11682,7 @@ SCIP_RETCODE simplifyInequalities(
       /* all but one variable are processed or the next variable is continuous we cannot perform the extra coefficient
        * reduction
        */
-      if( v == nvars - 1 || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+      if( v == nvars - 1 || !SCIPvarIsIntegral(vars[v]) )
          v = 0;
 
       if( v > 0 )
@@ -11749,7 +11750,7 @@ SCIP_RETCODE simplifyInequalities(
       /* check if some variables always fit into the given constraint */
       for( ; v < nvars - 1; ++v )
       {
-         if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+         if( !SCIPvarIsIntegral(vars[v]) )
             break;
 
          if( !SCIPisIntegral(scip, vals[v]) )
@@ -11968,7 +11969,7 @@ SCIP_RETCODE simplifyInequalities(
             for( v = nvars - 1; v > offsetv; --v )
             {
                assert(!SCIPisZero(scip, vals[v]));
-               if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+               if( !SCIPvarIsIntegral(vars[v]) )
                   break;
 
                if( !SCIPisIntegral(scip, vals[v]) )
@@ -12030,7 +12031,7 @@ SCIP_RETCODE simplifyInequalities(
          assert(offsetv + 1 < nvars);
          assert(0 <= candpos && candpos < nvars);
 
-         if( SCIPvarGetType(vars[candpos]) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(vars[candpos]) )
          {
             SCIP_Bool notchangable = FALSE;
 
@@ -12158,7 +12159,7 @@ SCIP_RETCODE simplifyInequalities(
 
    /* @todo we still can remove continuous variables if they are redundant due to the non-integrality argument */
    /* no continuous variables are left over */
-   if( SCIPvarGetType(vars[nvars - 1]) == SCIP_VARTYPE_CONTINUOUS )
+   if( !SCIPvarIsIntegral(vars[nvars - 1]) )
       return SCIP_OKAY;
 
    onlybin = TRUE;
@@ -12447,7 +12448,7 @@ SCIP_RETCODE simplifyInequalities(
          for( v = nvars - 1; v >= 0; --v )
          {
             assert(!SCIPisZero(scip, vals[v]));
-            assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS);
+            assert(SCIPvarIsIntegral(vars[v]));
 
             if( SCIPvarIsBinary(vars[v]) )
             {
@@ -12671,7 +12672,7 @@ SCIP_RETCODE simplifyInequalities(
  *  where a = val1[v] and b = -val0[v] for common variable v which removes most variable weight;
  *  for numerical stability, we will only accept integral a and b;
  *  the variable weight is a weighted sum over all included variables, where each binary variable weighs BINWEIGHT,
- *  each integer or implicit integer variable weighs INTWEIGHT and each continuous variable weighs CONTWEIGHT
+ *  each integer or implied integral variable weighs INTWEIGHT and each continuous variable weighs CONTWEIGHT
  */
 static
 SCIP_RETCODE aggregateConstraints(
@@ -14086,8 +14087,8 @@ SCIP_RETCODE presolStuffing(
       {
          var = vars[v];
 
-         if( (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL)) == 1
-            && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         if( !SCIPvarIsIntegral(var)
+            && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 1 )
             break;
       }
    }
@@ -14120,8 +14121,8 @@ SCIP_RETCODE presolStuffing(
          assert(!SCIPisZero(scip, val));
 
          /* the variable is a singleton and continuous */
-         if( (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL)) == 1
-            && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         if( !SCIPvarIsIntegral(var)
+            && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 1 )
          {
             if( SCIPisNegative(scip, obj) && val > 0 )
             {
@@ -14247,7 +14248,7 @@ SCIP_RETCODE presolStuffing(
 
             assert((SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL)
                + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL)) == 1);
-            assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+            assert(!SCIPvarIsIntegral(var));
 
             /* calculate the change in the row activities if this variable changes
              * its value from its worst to its best bound
@@ -14397,9 +14398,8 @@ SCIP_RETCODE presolStuffing(
           * @todo use some tolerance
           * @todo check size of domain and updated ratio for integer variables already?
           */
-         if( ratio > bestratio || ((ratio == bestratio) && downlocks == 0 && (bestdownlocks > 0 /*lint !e777*/
-                  || (SCIPvarGetType(vars[bestindex]) != SCIP_VARTYPE_CONTINUOUS
-                     && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS))) )
+         if( ratio > bestratio || ( downlocks == 0 && ratio == bestratio && ( bestdownlocks > 0 /*lint !e777*/
+            || ( !SCIPvarIsIntegral(var) && SCIPvarIsIntegral(vars[bestindex]) ) ) ) )
          {
             /* best index becomes second-best*/
             if( bestindex != -1 )
@@ -14463,7 +14463,7 @@ SCIP_RETCODE presolStuffing(
             assert(!SCIPisNegative(scip, obj));
 
             /* the best variable is integer, and we need to overfulfill the constraint when using just the variable */
-            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisIntegral(scip, (maxactivity - rhs)/-val) )
+            if( SCIPvarIsIntegral(var) && !SCIPisIntegral(scip, (maxactivity - rhs) / val) )
             {
                SCIP_Real bestvarfloor = SCIPfloor(scip, (maxactivity - rhs)/-val);
                SCIP_Real activitydelta = (maxactivity - rhs) - (bestvarfloor * -val);
@@ -14500,7 +14500,7 @@ SCIP_RETCODE presolStuffing(
             assert(!SCIPisPositive(scip, obj));
 
             /* the best variable is integer, and we need to overfulfill the constraint when using just the variable */
-            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS  && !SCIPisIntegral(scip, (maxactivity - rhs)/val))
+            if( SCIPvarIsIntegral(var) && !SCIPisIntegral(scip, (maxactivity - rhs) / val) )
             {
                SCIP_Real bestvarfloor = SCIPfloor(scip, (maxactivity - rhs)/val);
                SCIP_Real activitydelta = (maxactivity - rhs) - (bestvarfloor * val);
@@ -14549,7 +14549,7 @@ SCIP_RETCODE presolStuffing(
                   SCIPvarGetLbGlobal(vars[v]), SCIPvarGetUbGlobal(vars[v]), SCIPvarGetObj(vars[v]),
                   SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL),
                   SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL),
-                  SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS ? "C" : "I");
+                  SCIPvarIsIntegral(vars[v]) ? "I" : "C");
             }
             SCIPdebugMsg(scip, "<= %g\n", factor > 0 ? consdata->rhs : -consdata->lhs);
 
@@ -14620,8 +14620,8 @@ SCIP_RETCODE fullDualPresolve(
     *   c_v <= 0 : x_v >= redub[v] is feasible due to optimality
     */
 
-   /* Additionally, we detect continuous variables that are implicitly integral.
-    * A continuous variable j is implicit integral if it only has only +/-1 coefficients,
+   /* Additionally, we detect continuous variables that are implied integral.
+    * A continuous variable j is implied integral if it only has only +/-1 coefficients,
     * and all constraints (including the bounds as trivial constraints) in which:
     *   c_j > 0: the variable is down-locked,
     *   c_j < 0: the variable is up-locked,
@@ -14664,15 +14664,15 @@ SCIP_RETCODE fullDualPresolve(
    /* initialize redundancy bounds */
    for( v = 0; v < nvars; ++v )
    {
-      assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(vars[v]));
       redlb[v] = SCIPvarGetLbGlobal(vars[v]);
       redub[v] = SCIPvarGetUbGlobal(vars[v]);
    }
    BMSclearMemoryArray(nlocksdown, nvars);
    BMSclearMemoryArray(nlocksup, nvars);
 
-   /* Initialize isimplint array: variable may be implicit integer if rounded to their best bound they are integral.
-    * We better not use SCIPisFeasIntegral() in these checks.
+   /* Initialize isimplint array: variable may be implied integral if rounded to their best bound they are integral
+    * we better not use SCIPisFeasIntegral() in these checks.
     */
    for( v = 0; v < ncontvars; v++ )
    {
@@ -14682,6 +14682,8 @@ SCIP_RETCODE fullDualPresolve(
       SCIP_Real ub;
 
       var = vars[v + nintvars - nbinvars];
+      assert(!SCIPvarIsIntegral(var));
+
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
 
@@ -14727,13 +14729,13 @@ SCIP_RETCODE fullDualPresolve(
          /* we do not want to include constraints with locked negation (this would be too weird) */
          if( SCIPconsGetNLocksNeg(conss[c]) > 0 )
          {
-            /* mark all continuous variables as not being implicit integral */
+            /* mark all non-implied continuous variables */
             for( i = 0; i < consdata->nvars; ++i )
             {
                SCIP_VAR* var;
 
                var = consdata->vars[i];
-               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               if( !SCIPvarIsIntegral(var) )
                {
                   int contv;
                   contv = SCIPvarGetProbindex(var) - nintvars;
@@ -14860,7 +14862,7 @@ SCIP_RETCODE fullDualPresolve(
             redub[arrayindex] = MIN(redub[arrayindex], newredub);
 
             /* collect the continuous variables of the constraint */
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+            if( !SCIPvarIsIntegral(var) )
             {
                int contv;
 
@@ -14875,13 +14877,13 @@ SCIP_RETCODE fullDualPresolve(
             }
          }
 
-         /* update implicit integer status of continuous variables */
+         /* update implied integrality status of continuous variables */
          if( hasimpliedpotential )
          {
             if( nconscontvars > 1 || !integralcoefs )
             {
                /* there is more than one continuous variable or the integer variables have fractional coefficients:
-                * none of the continuous variables is implicit integer
+                * none of the continuous variables is implied integral
                 */
                for( i = 0; i < nconscontvars; i++ )
                {
@@ -14942,7 +14944,7 @@ SCIP_RETCODE fullDualPresolve(
       SCIP_Bool infeasible;
       SCIP_Bool tightened;
 
-      assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(vars[v]));
       assert(SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL) >= nlocksdown[v]);
       assert(SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL) >= nlocksup[v]);
 
@@ -15008,7 +15010,8 @@ SCIP_RETCODE fullDualPresolve(
       }
    }
 
-   /* upgrade continuous variables to implicit integers */
+   /* @TODO: improve range names */
+   /* declare continuous variables implied integral */
    for( v = nintvars - nbinvars; v < nvars; ++v )
    {
       SCIP_VAR* var;
@@ -15017,18 +15020,20 @@ SCIP_RETCODE fullDualPresolve(
       var = vars[v];
       assert(var != NULL);
 
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+      assert(!SCIPvarIsIntegral(var));
       assert(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) >= nlocksdown[v]);
       assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) >= nlocksup[v]);
       assert(0 <= v - nintvars + nbinvars && v - nintvars + nbinvars < ncontvars);
 
-      /* we can only conclude implicit integrality if the variable appears in no other constraint */
+      /* @TODO: relax lock conditions */
+      /* we can only conclude implied integrality if the variable appears in no other constraint */
       if( isimplint[v - nintvars + nbinvars]
          && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlocksdown[v]
          && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v] )
       {
          /* since we locally copied the variable array we can change the variable type immediately */
-         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
+         assert(!SCIPvarIsIntegral(var));
+         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
          (*nchgvartypes)++;
          if( infeasible )
          {
@@ -15038,7 +15043,7 @@ SCIP_RETCODE fullDualPresolve(
             break;
          }
 
-         SCIPdebugMsg(scip, "dual presolve: converting continuous variable <%s>[%g,%g] to implicit integer\n",
+         SCIPdebugMsg(scip, "dual presolve: declare continuous variable <%s>[%g,%g] implied integral\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
       }
    }
@@ -15439,7 +15444,8 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
 
          /* precedence constraints have the same coefficient, but with opposite sign for the same variable type */
          if( SCIPisEQ(scip, consdata->vals[0], -consdata->vals[1])
-               && SCIPvarGetType(consdata->vars[0]) == SCIPvarGetType(consdata->vars[1]))
+            && SCIPvarIsImpliedIntegral(consdata->vars[0]) == SCIPvarIsImpliedIntegral(consdata->vars[1])
+            && ( SCIPvarIsImpliedIntegral(consdata->vars[0]) || SCIPvarGetType(consdata->vars[0]) == SCIPvarGetType(consdata->vars[1]) ) )
          {
             constype = SCIP_LINCONSTYPE_PRECEDENCE;
             SCIPdebugMsg(scip, "classified as PRECEDENCE: ");
@@ -15562,7 +15568,7 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
          unmatched = FALSE;
          for( i = 0; i < consdata->nvars && !unmatched; i++ )
          {
-            unmatched = unmatched || SCIPvarGetType(consdata->vars[i]) == SCIP_VARTYPE_CONTINUOUS;
+            unmatched = unmatched || !SCIPvarIsIntegral(consdata->vars[i]);
             unmatched = unmatched || SCIPisLE(scip, SCIPvarGetLbGlobal(consdata->vars[i]), -1.0);
             unmatched = unmatched || SCIPisGE(scip, SCIPvarGetUbGlobal(consdata->vars[i]), 2.0);
             unmatched = unmatched || !SCIPisIntegral(scip, consdata->vals[i]);
@@ -15618,7 +15624,7 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
 
          for( i = 0; i < consdata->nvars && !unmatched; i++ )
          {
-            unmatched = unmatched || SCIPvarGetType(consdata->vars[i]) == SCIP_VARTYPE_CONTINUOUS;
+            unmatched = unmatched || !SCIPvarIsIntegral(consdata->vars[i]);
             unmatched = unmatched || SCIPisNegative(scip, SCIPvarGetLbGlobal(consdata->vars[i]));
             unmatched = unmatched || !SCIPisIntegral(scip, consdata->vals[i]);
             unmatched = unmatched || SCIPisNegative(scip, consdata->vals[i]);
@@ -15645,9 +15651,9 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
          unmatched = FALSE;
          for( i = 0; i < consdata->nvars && !unmatched; i++ )
          {
-            if( SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINUOUS
-               && (SCIPisLE(scip, SCIPvarGetLbGlobal(consdata->vars[i]), -1.0)
-                  || SCIPisGE(scip, SCIPvarGetUbGlobal(consdata->vars[i]), 2.0)) )
+            if( SCIPvarIsIntegral(consdata->vars[i])
+               && ( SCIPisLE(scip, SCIPvarGetLbGlobal(consdata->vars[i]), -1.0)
+               || SCIPisGE(scip, SCIPvarGetUbGlobal(consdata->vars[i]), 2.0) ) )
                unmatched = TRUE;
          }
 
@@ -17275,7 +17281,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
    eventtype = SCIPeventGetType(event);
    var = SCIPeventGetVar(event);
 
-   if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0 )
+   if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != SCIP_EVENTTYPE_DISABLED )
    {
       SCIP_Real oldbound;
       SCIP_Real newbound;
@@ -17296,11 +17302,11 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       if( SCIPconsIsActive(cons) )
       {
          /* update the activity values */
-         if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
+         if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != SCIP_EVENTTYPE_DISABLED )
             consdataUpdateActivitiesLb(scip, consdata, var, oldbound, newbound, val, TRUE);
          else
          {
-            assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
+            assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != SCIP_EVENTTYPE_DISABLED);
             consdataUpdateActivitiesUb(scip, consdata, var, oldbound, newbound, val, TRUE);
          }
       }
@@ -17311,7 +17317,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       consdata->rangedrowpropagated = 0;
 
       /* bound change can turn the constraint infeasible or redundant only if it was a tightening */
-      if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
+      if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != SCIP_EVENTTYPE_DISABLED )
       {
          SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
@@ -17349,7 +17355,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          SCIP_Real domain;
          SCIP_Real delta;
 
-         assert((eventtype & SCIP_EVENTTYPE_BOUNDRELAXED) != 0);
+         assert((eventtype & SCIP_EVENTTYPE_BOUNDRELAXED) != SCIP_EVENTTYPE_DISABLED);
 
          lb = SCIPvarGetLbLocal(var);
          ub = SCIPvarGetUbLocal(var);
@@ -17364,7 +17370,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          }
       }
    }
-   else if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0 )
+   else if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != SCIP_EVENTTYPE_DISABLED )
    {
       /* we want to remove the fixed variable */
       consdata->presolved = FALSE;
@@ -17378,14 +17384,14 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          consdata->maxactdeltavar = NULL;
       }
    }
-   else if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != 0 )
+   else if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != SCIP_EVENTTYPE_DISABLED )
    {
       /* there is only one lock left: we may multi-aggregate the variable as slack of an equation */
       assert(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) <= 1);
       assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) <= 1);
       consdata->presolved = FALSE;
    }
-   else if( (eventtype & SCIP_EVENTTYPE_GBDCHANGED) != 0 )
+   else if( (eventtype & SCIP_EVENTTYPE_GBDCHANGED) != SCIP_EVENTTYPE_DISABLED )
    {
       SCIP_Real oldbound;
       SCIP_Real newbound;
@@ -17403,11 +17409,11 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       consdata->rangedrowpropagated = 0;
 
       /* update the activity values */
-      if( (eventtype & SCIP_EVENTTYPE_GLBCHANGED) != 0 )
+      if( (eventtype & SCIP_EVENTTYPE_GLBCHANGED) != SCIP_EVENTTYPE_DISABLED )
          consdataUpdateActivitiesGlbLb(scip, consdata, oldbound, newbound, val, TRUE);
       else
       {
-         assert((eventtype & SCIP_EVENTTYPE_GUBCHANGED) != 0);
+         assert((eventtype & SCIP_EVENTTYPE_GUBCHANGED) != SCIP_EVENTTYPE_DISABLED);
          consdataUpdateActivitiesGlbUb(scip, consdata, oldbound, newbound, val, TRUE);
       }
 
@@ -17420,19 +17426,29 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
             consdata->coefsorted = FALSE;
       }
    }
-   else if( (eventtype & SCIP_EVENTTYPE_TYPECHANGED) != 0 )
+   else if( (eventtype & SCIP_EVENTTYPE_TYPECHANGED) != SCIP_EVENTTYPE_DISABLED )
    {
       assert(SCIPgetStage(scip) < SCIP_STAGE_PRESOLVED);
 
-      /* for presolving it only matters if a variable type changed from continuous to some kind of integer */
-      consdata->presolved = (consdata->presolved && SCIPeventGetOldtype(event) < SCIP_VARTYPE_CONTINUOUS);
+      /* for presolving it only matters if a variable becomes integral */
+      consdata->presolved = (consdata->presolved && (SCIPeventGetOldtype(event) != SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(var)));
 
-      /* the ordering is preserved if the type changes from something different to binary to binary but SCIPvarIsBinary() is true */
-      consdata->indexsorted = (consdata->indexsorted && SCIPeventGetNewtype(event) == SCIP_VARTYPE_BINARY && SCIPvarIsBinary(var));
+      /* the ordering is preserved if the variable remains binary */
+      consdata->indexsorted = (consdata->indexsorted && SCIPvarIsBinary(var) && (SCIPeventGetOldtype(event) != SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(var)));
+   }
+   else if( (eventtype & SCIP_EVENTTYPE_IMPLTYPECHANGED) != SCIP_EVENTTYPE_DISABLED )
+   {
+      assert(SCIPgetStage(scip) < SCIP_STAGE_PRESOLVED);
+
+      /* for presolving it only matters if a variable becomes integral */
+      consdata->presolved = (consdata->presolved && (SCIPeventGetOldImpltype(event) != SCIP_IMPLINTTYPE_NONE || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS));
+
+      /* the ordering is preserved if the variable remains binary */
+      consdata->indexsorted = (consdata->indexsorted && SCIPvarIsBinary(var) && (SCIPeventGetOldImpltype(event) != SCIP_IMPLINTTYPE_NONE || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS));
    }
    else
    {
-      assert((eventtype & SCIP_EVENTTYPE_VARDELETED) != 0);
+      assert((eventtype & SCIP_EVENTTYPE_VARDELETED) != SCIP_EVENTTYPE_DISABLED);
       consdata->varsdeleted = TRUE;
    }
 
@@ -18874,50 +18890,55 @@ SCIP_RETCODE SCIPupgradeConsLinear(
       ub = SCIPvarGetUbLocal(var);
       assert(!SCIPisZero(scip, val));
 
-      switch( SCIPvarGetType(var) )
+      if( SCIPvarIsImpliedIntegral(var) )
       {
-      case SCIP_VARTYPE_BINARY:
-         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
-            integral = integral && SCIPisIntegral(scip, val);
-         if( val >= 0.0 )
-            nposbin++;
-         else
-            nnegbin++;
-         break;
-      case SCIP_VARTYPE_INTEGER:
-         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
-            integral = integral && SCIPisIntegral(scip, val);
-         if( val >= 0.0 )
-            nposint++;
-         else
-            nnegint++;
-         break;
-      case SCIP_VARTYPE_IMPLINT:
          if( SCIPvarIsBinary(var) )
          {
             if( val >= 0.0 )
-               nposimplbin++;
+               ++nposimplbin;
             else
-               nnegimplbin++;
+               ++nnegimplbin;
          }
          if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
             integral = integral && SCIPisIntegral(scip, val);
          if( val >= 0.0 )
-            nposimpl++;
+            ++nposimpl;
          else
-            nnegimpl++;
-         break;
-      case SCIP_VARTYPE_CONTINUOUS:
-         integral = integral && SCIPisEQ(scip, lb, ub) && SCIPisIntegral(scip, val * lb);
-         if( val >= 0.0 )
-            nposcont++;
-         else
-            nnegcont++;
-         break;
-      default:
-         SCIPerrorMessage("unknown variable type\n");
-         return SCIP_INVALIDDATA;
+            ++nnegimpl;
       }
+      else
+      {
+         switch( SCIPvarGetType(var) )
+         {
+            case SCIP_VARTYPE_BINARY:
+               if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
+                  integral = integral && SCIPisIntegral(scip, val);
+               if( val >= 0.0 )
+                  ++nposbin;
+               else
+                  ++nnegbin;
+               break;
+            case SCIP_VARTYPE_INTEGER:
+               if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
+                  integral = integral && SCIPisIntegral(scip, val);
+               if( val >= 0.0 )
+                  ++nposint;
+               else
+                  ++nnegint;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               integral = integral && SCIPisEQ(scip, lb, ub) && SCIPisIntegral(scip, val * lb);
+               if( val >= 0.0 )
+                  ++nposcont;
+               else
+                  ++nnegcont;
+               break;
+            default:
+               SCIPerrorMessage("unknown variable type\n");
+               return SCIP_INVALIDDATA;
+         } /*lint !e788*/
+      }
+
       if( SCIPisEQ(scip, val, 1.0) )
          ncoeffspone++;
       else if( SCIPisEQ(scip, val, -1.0) )

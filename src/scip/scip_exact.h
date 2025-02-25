@@ -205,7 +205,7 @@ SCIP_RETCODE SCIPforceExactSolve(
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPbranchLPexact(
+SCIP_RETCODE SCIPbranchLPExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );

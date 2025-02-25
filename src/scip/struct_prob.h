@@ -72,7 +72,9 @@ struct SCIP_Prob
    int                   nvars;              /**< number of active variables in the problem (used slots in vars array) */
    int                   nbinvars;           /**< number of binary variables */
    int                   nintvars;           /**< number of general integer variables */
-   int                   nimplvars;          /**< number of implicit integer variables */
+   int                   nbinimplvars;       /**< number of binary implicit integer variables */
+   int                   nintimplvars;       /**< number of integer implicit integer variables */
+   int                   ncontimplvars;      /**< number of continuous implicit integer variables */
    int                   ncontvars;          /**< number of continuous variables */
    int                   ncolvars;           /**< number of variables with attached column information */
    int                   fixedvarssize;      /**< available slots in fixedvars array */

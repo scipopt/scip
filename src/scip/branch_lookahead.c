@@ -897,7 +897,8 @@ SCIP_RETCODE level2dataGetResult(
    /* we branched twice on the same variable; the result cannot be stored already */
    if( data->branchvar1 == data->branchvar2 )
    {
-      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY
+            || SCIPvarIsImpliedIntegral(SCIPgetVars(scip)[data->branchvar1]));
       return SCIP_OKAY;
    }
 
@@ -941,7 +942,8 @@ SCIP_RETCODE level2dataStoreResult(
    /* we branched twice on the same variable; the result cannot be re-used lated */
    if( data->branchvar1 == data->branchvar2 )
    {
-      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY
+            || SCIPvarIsImpliedIntegral(SCIPgetVars(scip)[data->branchvar1]));
       return SCIP_OKAY;
    }
 
@@ -3188,7 +3190,7 @@ SCIP_Bool areBoundsChanged(
    assert(SCIPisFeasIntegral(scip, lowerbound));
    assert(SCIPisFeasIntegral(scip, upperbound));
    assert(!SCIPisEQ(scip, lowerbound, upperbound));
-   assert(SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(var));
 
    /* due to roundings the value might have changed slightly without an actual influence on the integral value */
    return SCIPvarGetLbLocal(var) > lowerbound + 0.5 || SCIPvarGetUbLocal(var) < upperbound - 0.5;
