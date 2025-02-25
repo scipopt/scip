@@ -9737,7 +9737,7 @@ SCIP_RETCODE convertLongEquality(
       if( absval > maxabsval )
          maxabsval = absval;
 
-      /* @todo why exit here when implied integrality can still be derived?!*/
+      /** @todo Do not exit here, but continue if we may still detect implied integrality. */
       /* do not try to multi aggregate, when numerical bad */
       if( maxabsval / minabsval > conshdlrdata->maxmultaggrquot )
          return SCIP_OKAY;
@@ -9925,7 +9925,7 @@ SCIP_RETCODE convertLongEquality(
    }
    assert(!samevar || (supinf > 0 && infinf > 0));
 
-   /* @todo implint detection again terminates early here */
+   /** @todo Do not exit here, but continue if we may still detect implied integrality. */
    /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
     * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */
    if( (samevar && (supinf > 1 || infinf > 1)) || (!samevar && supinf > 0 && infinf > 0) )
@@ -11007,7 +11007,7 @@ SCIP_RETCODE dualPresolve(
       {
          SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
 
-         /* @todo handle this case properly with extended implied integrality */
+         /** @todo handle this case properly with weak and strong implied integrality */
          /* if the multi-aggregated bestvar is enforced but not strongly implied integral, we need to convert implied
           * integral to integer variables because integrality of the multi-aggregated variable must hold
           */
