@@ -3850,7 +3850,7 @@ SCIP_RETCODE nodeToLeaf(
    else
    {
       /* delete node due to bound cut off */
-      SCIP_CALL( SCIPnodeCutoff(*node, set, stat, tree, set->scip->transprob, set->scip->origprob, reopt, lp, blkmem, eventfilter ));
+      SCIP_CALL( SCIPnodeCutoff(*node, set, stat, tree, set->scip->transprob, set->scip->origprob, reopt, lp, blkmem, eventfilter) );
       if( SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD && lpstatefork != NULL )
       {
          SCIP_CALL( SCIPnodeReleaseLPIState(lpstatefork, blkmem, lp) );

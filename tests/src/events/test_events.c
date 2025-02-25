@@ -41,7 +41,9 @@ static SCIP* scip_test;
 
 /** TEST SUITES **/
 static
-void setup(void)
+void setup(
+   void
+   )
 {
    scip_test = NULL;
 
@@ -51,7 +53,9 @@ void setup(void)
 }
 
 static
-void teardown(void)
+void teardown(
+   void
+   )
 {
    SCIP_CALL( SCIPfree(&scip_test) );
 
@@ -125,7 +129,9 @@ SCIP_DECL_EVENTEXEC(eventExecDualBoundImproved)
 
 /** includes event handler for best solution found */
 static
-SCIP_RETCODE SCIPincludeEventHdlrDualBoundImproved(void)
+SCIP_RETCODE SCIPincludeEventHdlrDualBoundImproved(
+   void
+   )
 {
    assert(scip_test != NULL);
    SCIP_EVENTHDLRDATA* eventhdlrdata;
@@ -148,9 +154,16 @@ SCIP_RETCODE SCIPincludeEventHdlrDualBoundImproved(void)
 /* test that we correctly catch the following events:
  *  SCIP_EVENTTYPE_DUALBOUNDIMPROVED
  */
-TestSuite(events, .init = setup, .fini = teardown);
+TestSuite(
+   events,
+   .init = setup,
+   .fini = teardown
+   );
 
-Test(events, dualboundimproved)
+Test(
+   events,
+   dualboundimproved
+   )
 {
    char testfile[SCIP_MAXSTRLEN];
    strcpy(testfile, __FILE__);

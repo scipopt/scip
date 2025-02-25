@@ -281,11 +281,11 @@ SCIP_RETCODE SCIPtransformProb(
     * cutoff bound if primal solution is already known
     */
    SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
-	 scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter) );
+      scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter) );
 
    /* if possible, scale objective function such that it becomes integral with gcd 1 */
    SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
-	 scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter) );
+      scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter) );
 
    /* check solution of solution candidate storage */
    nfeassols = 0;
@@ -487,7 +487,7 @@ SCIP_RETCODE initPresolve(
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
       
-      if( scip->transprob->dualbound > scip->stat->lastlowerbound )
+      if( scip->stat->lastlowerbound < scip->tree->root->lowerbound )
       {
          /* update primal-dual integrals */
          if( scip->set->misc_calcintegral )
@@ -571,8 +571,8 @@ SCIP_RETCODE exitPresolve(
 
 	 if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
 	 {
-	    /* flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
-	    SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
+	   /* flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
+	   SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
 
 #ifndef NDEBUG
 	    multvars = SCIPvarGetMultaggrVars(var);
@@ -627,7 +627,7 @@ SCIP_RETCODE exitPresolve(
        * cutoff bound if primal solution is already known
        */
       SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
-	    scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter) );
+         scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter) );
 
       /* if possible, scale objective function such that it becomes integral with gcd 1 */
       SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
@@ -1566,11 +1566,12 @@ SCIP_RETCODE initSolve(
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
 
-      if( scip->set->misc_calcintegral )
-         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
-      
-      if( scip->transprob->dualbound > scip->stat->lastlowerbound )
+      if( scip->stat->lastlowerbound < scip->tree->root->lowerbound )
       {
+         
+         if( scip->set->misc_calcintegral )
+            SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
+      
          SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
          SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
          scip->stat->lastlowerbound = scip->tree->root->lowerbound;
