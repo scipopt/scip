@@ -1577,6 +1577,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
@@ -1708,7 +1709,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIPsetFreeBufferArray(set, &curvarlbs);
 
    /* flush conflict set storage */
-   SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable) );
+   SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable) );
 
    /* stop timing */
    SCIPclockStop(conflict->pseudoanalyzetime, set);
@@ -1801,6 +1802,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    SCIP_Bool*            dualproofsuccess,   /**< pointer to store success result of dual proof analysis */
@@ -2018,8 +2020,8 @@ SCIP_RETCODE conflictAnalyzeLP(
       || ((set->conf_useboundlp == 'b' || set->conf_useboundlp == 'd') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING) )
    {
       /* start dual proof analysis */
-      SCIP_CALL( SCIPconflictAnalyzeDualProof(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, farkasrow, \
-         validdepth, curvarlbs, curvarubs, TRUE, &globalinfeasible, dualproofsuccess) );
+      SCIP_CALL( SCIPconflictAnalyzeDualProof(conflict, set, stat, eventfilter, blkmem, origprob, transprob, tree, reopt, lp, \
+         farkasrow, validdepth, curvarlbs, curvarubs, TRUE, &globalinfeasible, dualproofsuccess) );
    }
 
    assert(valid);
@@ -2063,9 +2065,9 @@ SCIP_RETCODE conflictAnalyzeLP(
          farkascoefs[i] = -SCIPaggrRowGetProbvarValue(farkasrow, i);
       }
 
-      SCIP_CALL( SCIPrunBoundHeuristic(conflict, set, stat, origprob, transprob, tree, reopt, lp, lpi, blkmem, farkascoefs,
-            &farkaslhs, &farkasactivity, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, iterations, marklpunsolved,
-            dualproofsuccess, &valid) );
+      SCIP_CALL( SCIPrunBoundHeuristic(conflict, set, stat, origprob, transprob, tree, reopt, lp, lpi, eventfilter, 
+            blkmem, farkascoefs, &farkaslhs, &farkasactivity, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, iterations, 
+            marklpunsolved, dualproofsuccess, &valid) );
 
       SCIPsetFreeBufferArray(set, &farkascoefs);
 
@@ -2078,7 +2080,7 @@ SCIP_RETCODE conflictAnalyzeLP(
 
       /* flush conflict set storage */
       SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
-            eventqueue, cliquetable) );
+            eventqueue, eventfilter, cliquetable) );
    }
 
   FLUSHPROOFSETS:
@@ -2086,7 +2088,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    if( SCIPproofsetGetNVars(conflict->proofset) > 0 || conflict->nproofsets > 0 )
    {
       SCIP_CALL( SCIPconflictFlushProofset(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, \
-            branchcand, eventqueue, cliquetable) );
+            branchcand, eventqueue, eventfilter, cliquetable) );
    }
 
   TERMINATE:
@@ -2118,6 +2120,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_COL*             col,                /**< LP column with at least one infeasible strong branching subproblem */
    SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict constraint was created for an
@@ -2228,8 +2231,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
             /* perform conflict analysis on infeasible LP; last parameter guarantees status 'solved' on return */
             SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, \
-                  lp, branchcand, eventqueue, cliquetable, TRUE, &dualraysuccess, &iter, &nconss, &nliterals, \
-                  &nreconvconss, &nreconvliterals, FALSE) );
+                  lp, branchcand, eventqueue, eventfilter, cliquetable, TRUE, &dualraysuccess, &iter, &nconss,  \
+                  &nliterals, &nreconvconss, &nreconvliterals, FALSE) );
             conflict->nsbsuccess += ((nconss > 0 || dualraysuccess) ? 1 : 0);
             conflict->nsbiterations += iter;
             conflict->nsbconfconss += nconss;
@@ -2295,8 +2298,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
             /* perform conflict analysis on infeasible LP; last parameter guarantees status 'solved' on return */
             SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, \
-                  lp, branchcand, eventqueue, cliquetable, TRUE, &dualraysuccess, &iter, &nconss, &nliterals, \
-                  &nreconvconss, &nreconvliterals, FALSE) );
+                  lp, branchcand, eventqueue, eventfilter, cliquetable, TRUE, &dualraysuccess, &iter, &nconss, \
+                  &nliterals, &nreconvconss, &nreconvliterals, FALSE) );
             conflict->nsbsuccess += ((nconss > 0 || dualraysuccess) ? 1 : 0);
             conflict->nsbiterations += iter;
             conflict->nsbconfconss += nconss;
@@ -2366,6 +2369,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
@@ -2406,7 +2410,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
 
    /* perform conflict analysis */
    SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, \
-         cliquetable, SCIPlpDiving(lp), &dualraysuccess, &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
+         eventfilter, cliquetable, SCIPlpDiving(lp), &dualraysuccess, &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
    conflict->ninflpsuccess += ((nconss > 0 || conflict->ndualproofsinfsuccess > olddualproofsuccess) ? 1 : 0);
    conflict->ninflpiterations += iterations;
    conflict->ninflpconfconss += nconss;
@@ -2442,6 +2446,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
@@ -2485,7 +2490,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
 
    /* perform conflict analysis */
    SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, \
-         cliquetable, SCIPlpDiving(lp), &dualraysuccess, &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
+         eventfilter, cliquetable, SCIPlpDiving(lp), &dualraysuccess, &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
    conflict->nboundlpsuccess += ((nconss > 0 || conflict->ndualproofsbndsuccess + conflict->ndualproofsinfsuccess > oldnsuccess) ? 1 : 0);
    conflict->nboundlpiterations += iterations;
    conflict->nboundlpconfconss += nconss;
@@ -2521,6 +2526,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
@@ -2599,12 +2605,12 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    if( SCIPlpiIsPrimalInfeasible(SCIPlpGetLPI(lp)) )
    {
       SCIP_CALL( conflictAnalyzeInfeasibleLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, \
-            reopt, lp, branchcand, eventqueue, cliquetable, success) );
+            reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, success) );
    }
    else
    {
       SCIP_CALL( conflictAnalyzeBoundexceedingLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, \
-            reopt, lp, branchcand, eventqueue, cliquetable, success) );
+            reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, success) );
    }
 
    /* possibly restore solution values */

@@ -87,8 +87,8 @@ struct Scip
    SCIP_REOPT*           reopt;              /**< reoptimization data */
 
    /* TRANSFORMED */
-   SCIP_EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
+   SCIP_EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
    SCIP_BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    SCIP_LP*              lp;                 /**< LP data */
    SCIP_NLP*             nlp;                /**< NLP data */

@@ -2562,6 +2562,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Real             cutoffbound,        /**< global upper cutoff bound */
    SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
@@ -2593,8 +2594,8 @@ SCIP_RETCODE SCIPbranchExecLP(
     */
    if( branchcand->pseudomaxpriority > branchcand->lpmaxpriority )
    {
-      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cutoffbound,
-            allowaddcons, result) );
+      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, eventfilter,
+         cutoffbound, allowaddcons, result) );
       assert(*result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND);
       return SCIP_OKAY;
    }
@@ -2642,7 +2643,7 @@ SCIP_RETCODE SCIPbranchExecLP(
 
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, SCIP_INVALID,
+      SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, eventfilter, var, SCIP_INVALID,
             NULL, NULL, NULL) );
 
       *result = SCIP_BRANCHED;
@@ -2664,6 +2665,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Real             cutoffbound,        /**< global upper cutoff bound */
    SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
@@ -2693,8 +2695,8 @@ SCIP_RETCODE SCIPbranchExecExtern(
       /* @todo: adjust this, that also LP branching might be called, if lpmaxpriority != externmaxpriority.
        * Therefor, it has to be clear which of both has the higher priority
        */
-      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cutoffbound,
-            allowaddcons, result) );
+      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, eventfilter,
+         cutoffbound, allowaddcons, result) );
       assert(*result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND);
       return SCIP_OKAY;
    }
@@ -2766,7 +2768,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
       SCIPsetDebugMsg(set, "no branching method succeeded; fallback selected to branch on variable <%s> with bounds [%g, %g] on value %g\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val);
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, val,
+      SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, eventfilter, var, val,
             NULL, NULL, NULL) );
 
       if( tree->nchildren >= 1 )
@@ -2794,6 +2796,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Real             cutoffbound,        /**< global upper cutoff bound */
    SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
@@ -2853,7 +2856,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
       assert(SCIPvarIsIntegral(var));
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, SCIP_INVALID,
+      SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, eventfilter, var, SCIP_INVALID,
             NULL, NULL, NULL) );
 
       *result = SCIP_BRANCHED;

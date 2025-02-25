@@ -271,7 +271,7 @@ SCIP_RETCODE SCIPtransformProb(
 
    /* copy problem in solve memory */
    SCIP_CALL( SCIPprobTransform(scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree,
-         scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue, scip->conflictstore,
+         scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, scip->conflictstore,
          &scip->transprob) );
 
    /* switch stage to TRANSFORMED */
@@ -281,11 +281,11 @@ SCIP_RETCODE SCIPtransformProb(
     * cutoff bound if primal solution is already known
     */
    SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
-	 scip->tree, scip->reopt, scip->lp, scip->eventfilter, scip->eventqueue) );
+	 scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter) );
 
    /* if possible, scale objective function such that it becomes integral with gcd 1 */
    SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
-	 scip->tree, scip->reopt, scip->lp, scip->eventfilter, scip->eventqueue) );
+	 scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter) );
 
    /* check solution of solution candidate storage */
    nfeassols = 0;
@@ -293,8 +293,8 @@ SCIP_RETCODE SCIPtransformProb(
    oldnsolsfound = 0;
 
    /* update upper bound and cutoff bound due to objective limit in primal data */
-   SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-         scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+   SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+         scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
 
    /* do not consider original solutions of a benders decomposition because their cost information is incomplete */
    if( !scip->set->reopt_enable && scip->set->nactivebenders == 0 )
@@ -455,6 +455,7 @@ SCIP_RETCODE initPresolve(
    assert(scip->stat != NULL);
    assert(scip->transprob != NULL);
    assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
+   SCIP_EVENT event;
 
    /* reset statistics for presolving and current branch and bound run */
    SCIPstatResetPresolving(scip->stat, scip->set, scip->transprob, scip->origprob);
@@ -471,13 +472,13 @@ SCIP_RETCODE initPresolve(
    /* create temporary presolving root node */
    SCIP_CALL( SCIPtreeCreatePresolvingRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->messagehdlr,
          scip->stat, scip->transprob, scip->origprob, scip->primal, scip->lp, scip->branchcand, scip->conflict,
-         scip->conflictstore, scip->eventfilter, scip->eventqueue, scip->cliquetable) );
+         scip->conflictstore, scip->eventqueue, scip->eventfilter, scip->cliquetable) );
 
    /* retransform all existing solutions to original problem space, because the transformed problem space may
     * get modified in presolving and the solutions may become invalid for the transformed problem
     */
-   SCIP_CALL( SCIPprimalRetransformSolutions(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-         scip->eventqueue, scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp) );
+   SCIP_CALL( SCIPprimalRetransformSolutions(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+         scip->eventfilter, scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp) );
 
    /* initialize lower bound of the presolving root node if a valid dual bound is at hand */
    if( scip->transprob->dualbound != SCIP_INVALID ) /*lint !e777*/
@@ -485,9 +486,17 @@ SCIP_RETCODE initPresolve(
       scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
-
-      if( scip->set->misc_calcintegral )
-         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
+      
+      if( scip->transprob->dualbound > scip->stat->lastlowerbound )
+      {
+         /* update primal-dual integrals */
+         if( scip->set->misc_calcintegral )
+            SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPsetInfinity(scip->set), scip->tree->root->lowerbound);
+         
+         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
+         SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
+         scip->stat->lastlowerbound = scip->tree->root->lowerbound;
+      }
    }
 
    /* GCG wants to perform presolving during the reading process of a file reader;
@@ -600,8 +609,8 @@ SCIP_RETCODE exitPresolve(
             scip->cliquetable, scip->lp, scip->branchcand) );
 
       SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, &nlocalbdchgs,
-            infeasible) );
+            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+            &nlocalbdchgs, infeasible) );
 
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "clique table cleanup detected %d bound changes%s\n", nlocalbdchgs, *infeasible ? " and infeasibility" : "");
@@ -618,17 +627,17 @@ SCIP_RETCODE exitPresolve(
        * cutoff bound if primal solution is already known
        */
       SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
-	    scip->tree, scip->reopt, scip->lp, scip->eventfilter, scip->eventqueue) );
+	    scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter) );
 
       /* if possible, scale objective function such that it becomes integral with gcd 1 */
       SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
-            scip->tree, scip->reopt, scip->lp, scip->eventfilter, scip->eventqueue) );
+            scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter) );
    }
 
    /* free temporary presolving root node */
    SCIP_CALL( SCIPtreeFreePresolvingRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->messagehdlr,
          scip->stat, scip->transprob, scip->origprob, scip->primal, scip->lp, scip->branchcand, scip->conflict,
-         scip->conflictstore, scip->eventfilter, scip->eventqueue, scip->cliquetable) );
+         scip->conflictstore, scip->eventqueue, scip->eventfilter, scip->cliquetable) );
 
    /* switch stage to PRESOLVED */
    scip->set->stage = SCIP_STAGE_PRESOLVED;
@@ -1018,8 +1027,8 @@ SCIP_RETCODE presolveRound(
       int nlocalbdchgs = 0;
 
       SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, &nlocalbdchgs,
-            infeasible) );
+            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+            &nlocalbdchgs, infeasible) );
 
       if( nlocalbdchgs > 0 || *infeasible )
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -1163,8 +1172,8 @@ SCIP_RETCODE presolve(
    scip->stat->status = SCIP_STATUS_UNKNOWN;
 
    /* update upper bound and cutoff bound due to objective limit in primal data */
-   SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-         scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+   SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+         scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
 
    /* start presolving timer */
    SCIPclockStart(scip->stat->presolvingtime, scip->set);
@@ -1485,6 +1494,8 @@ SCIP_RETCODE initSolve(
    SCIP_Bool             solved              /**< is problem already solved? */
    )
 {
+   SCIP_EVENT event;
+
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
@@ -1504,8 +1515,8 @@ SCIP_RETCODE initSolve(
       SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->transprob, scip->stat, scip->eventqueue, scip->eventfilter) );
 
       /* update upper bound and cutoff bound due to objective limit in primal data */
-      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-       scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+       scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
    }
 
    /* switch stage to INITSOLVE */
@@ -1539,7 +1550,7 @@ SCIP_RETCODE initSolve(
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastoreprobing, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, FALSE) );
-   SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter, scip->eventqueue,
+   SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter,
          scip->lp) );
 
    /* try to transform original solutions to the transformed problem space */
@@ -1557,6 +1568,13 @@ SCIP_RETCODE initSolve(
 
       if( scip->set->misc_calcintegral )
          SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
+      
+      if( scip->transprob->dualbound > scip->stat->lastlowerbound )
+      {
+         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
+         SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
+         scip->stat->lastlowerbound = scip->tree->root->lowerbound;
+      }
    }
 
    /* inform the transformed problem that the branch and bound process starts now */
@@ -1608,8 +1626,8 @@ SCIP_RETCODE initSolve(
       if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound, scip->primal->cutoffbound) )
       {
          /* adjust cutoff bound */
-         SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-               scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, objbound, FALSE) );
+         SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+               scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, objbound, FALSE) );
       }
    }
 
@@ -1651,7 +1669,7 @@ SCIP_RETCODE freeSolve(
 
       SCIP_CALL( SCIPnodeFocus(&node, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->transprob,
             scip->origprob, scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->conflict,
-            scip->conflictstore, scip->eventfilter, scip->eventqueue, scip->cliquetable, &cutoff, FALSE, TRUE) );
+            scip->conflictstore, scip->eventqueue, scip->eventfilter, scip->cliquetable, &cutoff, FALSE, TRUE) );
       assert(!cutoff);
    }
 
@@ -1685,7 +1703,7 @@ SCIP_RETCODE freeSolve(
    /* we have to clear the tree prior to the problem deinitialization, because the rows stored in the forks and
     * subroots have to be released
     */
-   SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter, scip->eventqueue, scip->lp) );
+   SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter, scip->lp) );
 
    SCIPexitSolveDecompstore(scip);
 
@@ -1742,7 +1760,7 @@ SCIP_RETCODE freeReoptSolve(
 
       SCIP_CALL( SCIPnodeFocus(&node, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->transprob,
             scip->origprob, scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->conflict,
-            scip->conflictstore, scip->eventfilter, scip->eventqueue, scip->cliquetable, &cutoff, FALSE, TRUE) );
+            scip->conflictstore, scip->eventqueue, scip->eventfilter, scip->cliquetable, &cutoff, FALSE, TRUE) );
       assert(!cutoff);
    }
 
@@ -1785,7 +1803,7 @@ SCIP_RETCODE freeReoptSolve(
    /* we have to clear the tree prior to the problem deinitialization, because the rows stored in the forks and
     * subroots have to be released
     */
-   SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter, scip->eventqueue, scip->lp) );
+   SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter, scip->lp) );
 
    /* deinitialize transformed problem */
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, FALSE) );
@@ -1971,7 +1989,7 @@ SCIP_RETCODE freeTransform(
    {
       SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
    }
-   SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter, scip->eventqueue, scip->lp) );
+   SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter, scip->lp) );
 
    /* free the debug solution which might live in transformed primal data structure */
    SCIP_CALL( SCIPdebugFreeSol(scip->set) ); /*lint !e506 !e774*/
@@ -2024,7 +2042,7 @@ SCIP_RETCODE freeTransforming(
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );
    SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
-   SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter, scip->eventqueue, scip->lp) );
+   SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter, scip->lp) );
 
    /* free the debug solution which might live in transformed primal data structure */
    SCIP_CALL( SCIPdebugFreeSol(scip->set) ); /*lint !e506 !e774*/
@@ -2299,11 +2317,11 @@ SCIP_RETCODE prepareReoptimization(
        * cutoff bound if primal solution is already known
        */
       SCIP_CALL( SCIPprobCheckObjIntegral(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->eventfilter, scip->eventqueue) );
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter) );
 
       /* if possible, scale objective function such that it becomes integral with gcd 1 */
       SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
-            scip->tree, scip->reopt, scip->lp, scip->eventfilter, scip->eventqueue) );
+            scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter) );
 
       SCIPlpRecomputeLocalAndGlobalPseudoObjval(scip->lp, scip->set, scip->transprob);
    }
@@ -2395,7 +2413,7 @@ SCIP_RETCODE SCIPpresolve(
          {
          case SCIP_STATUS_OPTIMAL:
             /* remove the root node from the tree, s.t. the lower bound is set to +infinity ???????????? (see initSolve())*/
-            SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter, scip->eventqueue, scip->lp) );
+            SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter, scip->lp) );
             break;
 
          case SCIP_STATUS_INFEASIBLE:
@@ -2674,7 +2692,7 @@ SCIP_RETCODE SCIPsolve(
          SCIP_CALL( SCIPsolveCIP(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->mem, scip->origprob, scip->transprob,
                scip->primal, scip->tree, scip->reopt, scip->lp, scip->relaxation, scip->pricestore, scip->sepastore,
                scip->cutpool, scip->delayedcutpool, scip->branchcand, scip->conflict, scip->conflictstore,
-               scip->eventfilter, scip->eventqueue, scip->cliquetable, &restart) );
+               scip->eventqueue, scip->eventfilter, scip->cliquetable, &restart) );
 
          /* detect, whether problem is solved */
          if( SCIPtreeGetNNodes(scip->tree) == 0 && SCIPtreeGetCurrentNode(scip->tree) == NULL )

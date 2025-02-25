@@ -326,8 +326,8 @@ SCIP_RETCODE SCIPchgVarLbProbing(
    }
 
    SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-         var, newbound, SCIP_BOUNDTYPE_LOWER, TRUE) );
+         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, 
+         scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -370,8 +370,8 @@ SCIP_RETCODE SCIPchgVarUbProbing(
    }
 
    SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-         var, newbound, SCIP_BOUNDTYPE_UPPER, TRUE) );
+         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, 
+         scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -448,13 +448,13 @@ SCIP_RETCODE SCIPfixVarProbing(
    {
       SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, fixlb, SCIP_BOUNDTYPE_LOWER, TRUE) );
+            scip->eventfilter, scip->cliquetable, var, fixlb, SCIP_BOUNDTYPE_LOWER, TRUE) );
    }
    if( SCIPsetIsLT(scip->set, fixub, SCIPvarGetUbLocal(var)) )
    {
       SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-            var, fixub, SCIP_BOUNDTYPE_UPPER, TRUE) );
+            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, 
+            scip->eventfilter, scip->cliquetable, var, fixub, SCIP_BOUNDTYPE_UPPER, TRUE) );
    }
 
    return SCIP_OKAY;
@@ -639,8 +639,8 @@ SCIP_RETCODE SCIPpropagateProbing(
       *ndomredsfound = -(scip->stat->nprobboundchgs + scip->stat->nprobholechgs);
 
    SCIP_CALL( SCIPpropagateDomains(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->conflict, scip->cliquetable,
-         SCIPgetDepth(scip), maxproprounds, SCIP_PROPTIMING_ALWAYS, cutoff) );
+         scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, 
+         scip->conflict, scip->cliquetable, SCIPgetDepth(scip), maxproprounds, SCIP_PROPTIMING_ALWAYS, cutoff) );
 
    if( ndomredsfound != NULL )
       *ndomredsfound += scip->stat->nprobboundchgs + scip->stat->nprobholechgs;
@@ -697,7 +697,8 @@ SCIP_RETCODE SCIPpropagateProbingImplications(
    }
 
    SCIP_CALL( SCIPnodePropagateImplics(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, cutoff) );
+         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+         scip->eventfilter, scip->cliquetable, cutoff) );
 
    return SCIP_OKAY;
 }
@@ -793,7 +794,7 @@ SCIP_RETCODE solveProbingLP(
       if( !scip->set->misc_exactsolve && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->tree->probingobjchanged )
       {
          SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, NULL) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable, NULL) );
       }
 
       if( cutoff != NULL )

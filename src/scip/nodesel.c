@@ -47,7 +47,9 @@
 #include "scip/nodesel.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/event.h"
 
+#include "scip/struct_event.h"
 #include "scip/struct_nodesel.h"
 #include "scip/struct_scip.h"
 
@@ -143,8 +145,8 @@ SCIP_RETCODE SCIPnodepqFree(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -153,7 +155,7 @@ SCIP_RETCODE SCIPnodepqFree(
    assert(*nodepq != NULL);
 
    /* free the nodes of the queue */
-   SCIP_CALL( SCIPnodepqClear(*nodepq, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
+   SCIP_CALL( SCIPnodepqClear(*nodepq, blkmem, set, stat, eventqueue, eventfilter, tree, lp) );
 
    /* free the queue data structure */
    SCIPnodepqDestroy(nodepq);
@@ -167,8 +169,8 @@ SCIP_RETCODE SCIPnodepqClear(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -191,7 +193,7 @@ SCIP_RETCODE SCIPnodepqClear(
          assert(nodepq->slots[i] != NULL);
          assert(SCIPnodeGetType(nodepq->slots[i]) == SCIP_NODETYPE_LEAF);
 
-         SCIP_CALL( SCIPnodeFree(&nodepq->slots[i], blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
+         SCIP_CALL( SCIPnodeFree(&nodepq->slots[i], blkmem, set, stat, eventqueue, eventfilter, tree, lp) );
       }
    }
 
@@ -641,8 +643,8 @@ SCIP_RETCODE SCIPnodepqBound(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -650,6 +652,8 @@ SCIP_RETCODE SCIPnodepqBound(
    )
 {
    SCIP_NODE* node;
+   SCIP_EVENT event;
+
    int pos;
 
    assert(nodepq != NULL);
@@ -704,22 +708,24 @@ SCIP_RETCODE SCIPnodepqBound(
          if( node->depth == 0 )
             stat->rootlowerbound = SCIPsetInfinity(set);
 
-         /* update primal-dual integrals */
-         if( set->misc_calcintegral )
+         /* update lowerbound */
+         SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
+         assert(lowerbound <= SCIPsetInfinity(set));
+         
+         if( lowerbound > stat->lastlowerbound )
          {
-            SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
-
-            assert(lowerbound <= SCIPsetInfinity(set));
-
-            /* updating the primal integral is only necessary if lower bound has increased since last evaluation */
-            if( lowerbound > stat->lastlowerbound )
+            if( set->misc_calcintegral )
                SCIPstatUpdatePrimalDualIntegrals(stat, set, set->scip->transprob, set->scip->origprob, SCIPsetInfinity(set), lowerbound);
+            
+            SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
+            SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+            stat->lastlowerbound = lowerbound;
          }
 
          SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
 
          /* free node memory */
-         SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
+         SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, eventfilter, tree, lp) );
       }
       else
          --pos;

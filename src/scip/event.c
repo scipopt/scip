@@ -624,6 +624,22 @@ SCIP_RETCODE SCIPeventCreateObjChanged(
    return SCIP_OKAY;
 }
 
+/** creates an event for an improvement of the dual bound */
+SCIP_RETCODE SCIPeventCreateDualBoundImproved(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+)
+{
+   assert(event != NULL);
+   assert(blkmem != NULL);
+
+   /* create event data */
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
+   (*event)->eventtype = SCIP_EVENTTYPE_DUALBOUNDIMPROVED;
+
+   return SCIP_OKAY;
+}
+
 /** creates an event for a change in the global lower bound of a variable */
 SCIP_RETCODE SCIPeventCreateGlbChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
@@ -1485,7 +1501,7 @@ SCIP_ROW* SCIPeventGetRow(
          return event->data.eventrowdeletedsepa.row;
       case SCIP_EVENTTYPE_ROWADDEDLP:
          return event->data.eventrowaddedlp.row;
-      case SCIP_EVENTTYPE_ROWDELETEDLP:
+      case SCIP_EVENTTYPE_ROWDELETEDLP: /*lint !e30 !e142*/
          return event->data.eventrowdeletedlp.row;
       case SCIP_EVENTTYPE_ROWCOEFCHANGED: /*lint !e30 !e142*/
          return event->data.eventrowcoefchanged.row;
@@ -1667,6 +1683,7 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_NODEINFEASIBLE:
    case SCIP_EVENTTYPE_NODEBRANCHED:
    case SCIP_EVENTTYPE_NODEDELETE:
+   case SCIP_EVENTTYPE_DUALBOUNDIMPROVED:  
    case SCIP_EVENTTYPE_FIRSTLPSOLVED:
    case SCIP_EVENTTYPE_LPSOLVED:
    case SCIP_EVENTTYPE_POORSOLFOUND:
@@ -1674,7 +1691,7 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_ROWADDEDSEPA:
    case SCIP_EVENTTYPE_ROWDELETEDSEPA:
    case SCIP_EVENTTYPE_ROWADDEDLP:
-   case SCIP_EVENTTYPE_ROWDELETEDLP:
+   case SCIP_EVENTTYPE_ROWDELETEDLP: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_ROWCOEFCHANGED: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_ROWCONSTCHANGED: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_ROWSIDECHANGED: /*lint !e30 !e142*/
@@ -2174,7 +2191,7 @@ SCIP_RETCODE SCIPeventfilterProcess(
 
    eventtype = event->eventtype;
 
-   /* check, if there may be any event handler for specific event */
+   /* check if there may be any event handler for specific event */
    if( (eventtype & eventfilter->eventmask) == 0 )
       return SCIP_OKAY;
 
@@ -2366,6 +2383,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_NODEINFEASIBLE:
       case SCIP_EVENTTYPE_NODEBRANCHED:
       case SCIP_EVENTTYPE_NODEDELETE:
+      case SCIP_EVENTTYPE_DUALBOUNDIMPROVED:
       case SCIP_EVENTTYPE_FIRSTLPSOLVED:
       case SCIP_EVENTTYPE_LPSOLVED:
       case SCIP_EVENTTYPE_POORSOLFOUND:
@@ -2377,7 +2395,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_ROWADDEDSEPA: /* @todo remove previous DELETEDSEPA event */
       case SCIP_EVENTTYPE_ROWDELETEDSEPA: /* @todo remove previous ADDEDSEPA event */
       case SCIP_EVENTTYPE_ROWADDEDLP: /* @todo remove previous DELETEDLP event */
-      case SCIP_EVENTTYPE_ROWDELETEDLP: /* @todo remove previous ADDEDLP event */
+      case SCIP_EVENTTYPE_ROWDELETEDLP: /* @todo remove previous ADDEDLP event */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_ROWCOEFCHANGED: /* @todo merge? */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_ROWCONSTCHANGED: /* @todo merge with previous constchanged event */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_ROWSIDECHANGED: /* @todo merge with previous sidechanged event */ /*lint !e30 !e142*/

@@ -434,6 +434,7 @@ SCIP_RETCODE SCIPrunBoundHeuristic(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPI*             lpi,                /**< LPI data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Real*            proofcoefs,         /**< coefficients in the proof constraint */
    SCIP_Real*            prooflhs,           /**< lhs of the proof constraint */

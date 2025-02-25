@@ -1305,7 +1305,8 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
                         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand,
-                        scip->eventqueue, scip->cliquetable, var, 1.0, SCIP_BOUNDTYPE_LOWER, FALSE) );
+                        scip->eventqueue, scip->eventfilter, scip->cliquetable, var, 1.0, SCIP_BOUNDTYPE_LOWER,
+                        FALSE) );
 
                   assert(SCIPvarGetLbGlobal(var) > 0.5 || scip->tree->npendingbdchgs > 0);
 
@@ -1333,7 +1334,8 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
                         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand,
-                        scip->eventqueue, scip->cliquetable, var, newbounds[v], SCIP_BOUNDTYPE_LOWER, FALSE) );
+                        scip->eventqueue, scip->eventfilter, scip->cliquetable, var, newbounds[v], 
+                        SCIP_BOUNDTYPE_LOWER, FALSE) );
 
                   ++(*nglobalred);
 
@@ -1353,7 +1355,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
                         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-                        scip->cliquetable, var, 0.0, SCIP_BOUNDTYPE_UPPER, FALSE) );
+                        scip->eventfilter, scip->cliquetable, var, 0.0, SCIP_BOUNDTYPE_UPPER, FALSE) );
 
                   assert(SCIPvarGetUbGlobal(var) < 0.5 || scip->tree->npendingbdchgs > 0);
 
@@ -1383,7 +1385,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
                         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-                        scip->cliquetable, var, newbounds[idx], SCIP_BOUNDTYPE_UPPER, FALSE) );
+                        scip->eventfilter, scip->cliquetable, var, newbounds[idx], SCIP_BOUNDTYPE_UPPER, FALSE) );
 
                   ++(*nglobalred);
 
