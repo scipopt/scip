@@ -884,6 +884,24 @@ if(NOT ${TPI} STREQUAL "none")
                                 DEPENDS scip-build
                             )
     endforeach(instance)
+    #
+    # repeat the test with egout several times, because when it used to fail, it wasn't doing this deterministically
+    #
+    set(path "instances/MIP/egout.mps")
+    set(optval "568.1007")
+    get_filename_component(basename ${path} NAME)
+    foreach(runid RANGE 9)
+       configure_file(interactiveshell/concurrentsolve.bat.in interactiveshell/concurrentsolve-egout-repeat${runid}.bat)
+       add_test(NAME MIP-concurrentsolve-egout-repeat${runid}
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-egout-repeat${runid}.bat
+               )
+       set_tests_properties(MIP-concurrentsolve-egout-repeat${runid}
+                            PROPERTIES
+                               PASS_REGULAR_EXPRESSION "Validation         : Success"
+                               FAIL_REGULAR_EXPRESSION "ERROR"
+                               DEPENDS scip-build
+                           )
+    endforeach()
 endif()
 
 #
