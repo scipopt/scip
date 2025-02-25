@@ -10,6 +10,7 @@ Fixed bugs
 - free memory leaking singleton arrays for ignored variables in SCIPapplyHeurDualval()
 - use epsilon tolerance for bound implications of dual substitutions in dualPresolve() of cons_linear.c
 - fixed timeouts due to race conditions when using TPI=omp
+- fixed issues with indexing of concurrent solvers when a solver finishes (because SCIP is too fast) before others have been created when using TPI=tny
 - respect fixing if variable is declared binary in bounds section of mps file
 - force local bounds to adjusted value when fixing variable
 
