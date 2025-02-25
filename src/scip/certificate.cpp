@@ -3805,7 +3805,7 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    SCIP_CERTIFICATE* certificate;
    SCIP_ROWEXACT* row;
    SCIP_Rational* correctedside;
-   int* varsindex;
+   int* varsindex = NULL;
    int i;
    SCIP_Longint image;
    SCIP_Rational* lhs;

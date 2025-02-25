@@ -338,7 +338,7 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    }
 
    /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   if( !SCIPvarIsIntegral(var) )
    {
       SCIPerrorMessage("Cannot branch exactly on continuous variable %s.\n", SCIPvarGetName(var));
       SCIPABORT();
@@ -375,7 +375,7 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
    /* see comment in SCIPbranchVarVal */
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(var));
 
    /* create child nodes with x <= floor(x'), and x >= ceil(x') */
    downub = floor(val);
