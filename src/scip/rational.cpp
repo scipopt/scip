@@ -838,7 +838,7 @@ void RatAdd(
 
 /** add a rational and a real and save the result in res */
 void RatAddReal(
-   SCIP_Rational*        res,                /**< The result */
+   SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        rat,                /**< rational number */
    SCIP_Real             real                /**< real number */
    )
@@ -886,7 +886,7 @@ void RatDiff(
 
 /** subtract a rational and a real and save the result in res */
 void RatDiffReal(
-   SCIP_Rational*        res,                /**< The result */
+   SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        rat,                /**< rational number */
    SCIP_Real             real                /**< real number */
    )
@@ -1336,10 +1336,10 @@ SCIP_Bool RatIsApproxEqualReal(
    }
 }
 
-/** check if the first rational is greater than the second*/
+/** check if the first rational is greater than the second */
 SCIP_Bool RatIsGT(
-   SCIP_Rational*        rat1,               /**< The first rational */
-   SCIP_Rational*        rat2                /**< The second rational */
+   SCIP_Rational*        rat1,               /**< the first rational */
+   SCIP_Rational*        rat2                /**< the second rational */
    )
 {
    assert(rat1 != nullptr && rat2 != nullptr);
@@ -1366,10 +1366,10 @@ SCIP_Bool RatIsGT(
    }
 }
 
-/** check if the first rational is greater than the second*/
+/** check if the first rational is greater than the second */
 SCIP_Bool RatIsAbsGT(
-   SCIP_Rational*        rat1,               /**< The first rational */
-   SCIP_Rational*        rat2                /**< The second rational */
+   SCIP_Rational*        rat1,               /**< the first rational */
+   SCIP_Rational*        rat2                /**< the second rational */
    )
 {
    assert(rat1 != nullptr && rat2 != nullptr);
@@ -1382,10 +1382,10 @@ SCIP_Bool RatIsAbsGT(
       return abs(rat1->val) > abs(rat2->val);
 }
 
-/** check if the first rational is smaller than the second*/
+/** check if the first rational is smaller than the second */
 SCIP_Bool RatIsLT(
-   SCIP_Rational*        rat1,               /**< The first rational */
-   SCIP_Rational*        rat2                /**< The second rational */
+   SCIP_Rational*        rat1,               /**< the first rational */
+   SCIP_Rational*        rat2                /**< the second rational */
    )
 {
    assert(rat1 != nullptr && rat2 != nullptr);
@@ -1393,10 +1393,10 @@ SCIP_Bool RatIsLT(
    return RatIsGT(rat2, rat1);
 }
 
-/** check if the first rational is greater or equal than the second*/
+/** check if the first rational is greater or equal than the second */
 SCIP_Bool RatIsGE(
-   SCIP_Rational*        rat1,               /**< The first rational */
-   SCIP_Rational*        rat2                /**< The second rational */
+   SCIP_Rational*        rat1,               /**< the first rational */
+   SCIP_Rational*        rat2                /**< the second rational */
    )
 {
    assert(rat1 != nullptr && rat2 != nullptr);
@@ -1409,8 +1409,8 @@ SCIP_Bool RatIsGE(
 
 /** check if the first rational is less or equal than the second*/
 SCIP_Bool RatIsLE(
-   SCIP_Rational*        rat1,               /**< The first rational */
-   SCIP_Rational*        rat2                /**< The second rational */
+   SCIP_Rational*        rat1,               /**< the first rational */
+   SCIP_Rational*        rat2                /**< the second rational */
    )
 {
    assert(rat1 != nullptr && rat2 != nullptr);
@@ -1418,10 +1418,10 @@ SCIP_Bool RatIsLE(
    return RatIsGE(rat2, rat1);
 }
 
-/** check if the rational is greater than than the double */
+/** check if the rational is greater than the double */
 SCIP_Bool RatIsGTReal(
-   SCIP_Rational*        rat,                /**< The rational */
-   SCIP_Real             real                /**< The real */
+   SCIP_Rational*        rat,                /**< the rational */
+   SCIP_Real             real                /**< the real */
    )
 {
    assert(rat != nullptr);
@@ -1436,10 +1436,10 @@ SCIP_Bool RatIsGTReal(
    }
 }
 
-/** check if the rational is greater or equal than than the double */
+/** check if the rational is greater or equal than the double */
 SCIP_Bool RatIsGEReal(
-   SCIP_Rational*        rat,                /**< The rational */
-   SCIP_Real             real                /**< The real */
+   SCIP_Rational*        rat,                /**< the rational */
+   SCIP_Real             real                /**< the real */
    )
 {
    assert(rat != nullptr);
@@ -1454,10 +1454,10 @@ SCIP_Bool RatIsGEReal(
    }
 }
 
-/** check if the rational is less than than the double */
+/** check if the rational is less than the double */
 SCIP_Bool RatIsLTReal(
-   SCIP_Rational*        rat,                /**< The rational */
-   SCIP_Real             real                /**< The real */
+   SCIP_Rational*        rat,                /**< the rational */
+   SCIP_Real             real                /**< the real */
    )
 {
    assert(rat != nullptr);
@@ -1472,10 +1472,10 @@ SCIP_Bool RatIsLTReal(
    }
 }
 
-/** check if the rational is less or equal than than the double */
+/** check if the rational is less or equal than the double */
 SCIP_Bool RatIsLEReal(
-   SCIP_Rational*        rat,                /**< The rational */
-   SCIP_Real             real                /**< The real */
+   SCIP_Rational*        rat,                /**< the rational */
+   SCIP_Real             real                /**< the real */
    )
 {
    assert(rat != nullptr);
