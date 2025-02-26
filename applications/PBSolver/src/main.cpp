@@ -622,14 +622,14 @@ SCIP_RETCODE processShellArguments(
    {
       SCIPinfoMessage(scip, NULL, "syntax: %s [-q] [-l <logfile>] [-s <settings>] [-f <problem>] [-d <dispfreq>] [-t <timelimit>] [-m <memlimit>]\n", argv[0]);
 
-      SCIPinfoMessage(scip, NULL, "  -q             : suppress screen messages\n");
-      SCIPinfoMessage(scip, NULL, "  -l <logfile>   : copy output into log file\n");
-      SCIPinfoMessage(scip, NULL, "  -s <settings>  : load parameter settings (.set) file\n");
-      SCIPinfoMessage(scip, NULL, "  -f <problem>   : solve problem (.opb or .wbo) file\n");
-      SCIPinfoMessage(scip, NULL, "  -d <dispfreq>  : log display frequency\n");
-      SCIPinfoMessage(scip, NULL, "  -t <timelimit> : enforce time limit\n");
-      SCIPinfoMessage(scip, NULL, "  -m <memlimit>  : enforce memory limit\n");
-      SCIPinfoMessage(scip, NULL, "  -c <command>   : execute command line\n");
+      SCIPinfoMessage(scip, NULL, "   -q             : suppress screen messages\n");
+      SCIPinfoMessage(scip, NULL, "   -l <logfile>   : copy output into log file\n");
+      SCIPinfoMessage(scip, NULL, "   -s <settings>  : load settings (.set) file\n");
+      SCIPinfoMessage(scip, NULL, "   -f <problem>   : solve problem (.opb or .wbo) file\n");
+      SCIPinfoMessage(scip, NULL, "   -d <dispfreq>  : log display frequency\n");
+      SCIPinfoMessage(scip, NULL, "   -t <timelimit> : enforce time limit\n");
+      SCIPinfoMessage(scip, NULL, "   -m <memlimit>  : enforce memory limit\n");
+      SCIPinfoMessage(scip, NULL, "   -c <command>   : execute command line\n");
    }
 
    return SCIP_OKAY;
