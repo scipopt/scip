@@ -50,17 +50,17 @@
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "exactsol"
-#define CONSHDLR_DESC          "constraint to ensure that primal solutions report back exact solutions"
+#define CONSHDLR_DESC          "constraint handler for repairing floating-point primal solutions to satisfy exact feasibility"
 #define CONSHDLR_ENFOPRIORITY  -9999999 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY  -999999 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
-#define CONSHDLR_MAXSTALLS         1000 /**< disable after this many unsuccessful calls in a row */
-#define DEFAULT_SOLBUFSIZE           10 /**< how many heuristic solutions should be buffered before we start checking */
-#define DEFAULT_CHECKFPFEASIBILITY TRUE /**< should a solution be checked in floating-point arithmetic prior to being processed? */
 
-static int ncurrentstalls = 0; /* number of times the exact lp was solved unsuccessfully in a row */
+#define DEFAULT_CHECKFPFEASIBILITY TRUE /**< should a solution be checked in floating-point arithmetic prior to being processed? */
+#define DEFAULT_MAXSTALLS          1000 /**< maximal number of consecutive repair calls without success */
+#define DEFAULT_SOLBUFSIZE           10 /**< size of solution buffer */
+#define DEFAULT_MINIMPROVE          0.2 /**< minimal percentage of primal improvement to trigger solution processing */
 
 /** constraint handler data */
 struct SolIntAssignment
@@ -80,8 +80,12 @@ struct SCIP_ConshdlrData
    int                   lenhash;            /**< length of the hashedassignments array */
    int                   nbufferedsols;      /**< number of solutions currently in the solubuffer */
    int                   lensolubuffer;      /**< length of the solubuffer */
+   int                   probhasconteqs;     /**< does the problem have equations with continuous variables? (-1 unknown, 0 no, 1 yes) */
+   int                   ncurrentstalls;     /**< number of times the exact lp was solved unsuccessfully in a row */
    SCIP_Bool             checkfpfeasibility; /**< should a solution be checked in floating-point arithmetic prior to being processed? */
-   int                   probhasequations;   /**< does the problem have equations? (-1 unknown, 0 no, 1 yes) */
+   int                   maxstalls;          /**< maximal number of consecutive repair calls without success */
+   int                   solbufsize;         /**< size of solution buffer */
+   SCIP_Real             minimprove;         /**< minimal percentage of primal improvement to trigger solution processing */
 };
 
 /** gets the key of the given element */
@@ -96,9 +100,9 @@ SCIP_DECL_HASHGETKEY(hashGetKeyAssignment)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqAssignment)
 { /*lint --e{715}*/
-   int i;
    SOLINTASSIGNMENT* sol1;
    SOLINTASSIGNMENT* sol2;
+   int i;
 
    assert(key1 != NULL);
    assert(key2 != NULL);
@@ -183,42 +187,41 @@ void clearSoluBuffer(
 
 /** creates assignment from integer variable-values in solution */
 static
-void solCreateSolAssignment(
+SCIP_RETCODE solCreateSolAssignment(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution to create assignment for */
    SOLINTASSIGNMENT**    assignment          /**< address of assignment */
    )
 { /*lint --e{522, 776}*/
-   int nvars;
-   int i;
-   int solsize;
    SCIP_VAR** vars;
+   int nvars;
+   int ncontvars;
+   int nintegers;
+   int i;
 
    assert(sol != NULL);
    assert(scip != NULL);
 
-   SCIPallocBlockMemory(scip, assignment);
-   if( *assignment == NULL )
-      return;
-   SCIPallocClearBlockMemoryArray(scip, &(*assignment)->vals, SCIPgetNIntVars(scip) + SCIPgetNBinVars(scip));
-   SCIPallocClearBlockMemoryArray(scip, &(*assignment)->idx, SCIPgetNIntVars(scip) + SCIPgetNBinVars(scip));
+   /* get all problem variables and integer region in vars array */
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nvars, NULL, NULL, NULL, NULL, NULL, &ncontvars) );
+   nintegers = nvars - ncontvars;
+   assert(nintegers >= 0);
 
-   nvars = SCIPgetNVars(scip);
-   vars = SCIPgetVars(scip);
-   solsize = 0;
+   SCIP_CALL( SCIPallocBlockMemory(scip, assignment) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*assignment)->vals, nintegers) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*assignment)->idx, nintegers) );
 
-   for( i = 0; i < nvars; i++ )
+   for( i = 0; i < nintegers; i++ )
    {
-      if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_INTEGER && SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
-         continue;
+      assert(SCIPvarIsIntegral(vars[i]));
 
-      (*assignment)->vals[solsize] = (SCIP_Longint) SCIPround(scip, SCIPgetSolVal(scip, sol, vars[i]));
-      (*assignment)->idx[solsize] = SCIPvarGetIndex(vars[i]);
-      solsize++;
+      (*assignment)->vals[i] = (SCIP_Longint) SCIPround(scip, SCIPgetSolVal(scip, sol, vars[i]));
+      (*assignment)->idx[i] = SCIPvarGetIndex(vars[i]);
    }
 
-   (*assignment)->len = solsize;
-   assert(solsize == SCIPgetNIntVars(scip) + SCIPgetNBinVars(scip));
+   (*assignment)->len = nintegers;
+
+   return SCIP_OKAY;
 }
 
 /** creates assignment from integer variable-values in solution */
@@ -236,8 +239,9 @@ void solFreeAssignment(
    SCIPfreeBlockMemory(scip, assignment);
 }
 
+/** checks whether equation constraints with non-integral variables are present */
 static
-void setProbHasEquations(
+void checkProbHasContEqs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< exactsol constraint handler data */
    )
@@ -250,40 +254,41 @@ void setProbHasEquations(
    assert(scip != NULL);
    assert(conshdlrdata != NULL);
 
-   if( conshdlrdata->probhasequations != -1 )
+   if( conshdlrdata->probhasconteqs != -1 )
       return;
 
    conss = SCIPgetConss(scip);
    nconss = SCIPgetNConss(scip);
    success = TRUE;
 
-   conshdlrdata->probhasequations = 0;
+   conshdlrdata->probhasconteqs = 0;
 
    for( c = 0; c < nconss; ++c )
    {
       if( SCIPconsGetHdlr(conss[c]) == SCIPfindConshdlr(scip, "exactlinear") )
       {
-         // constraint is an equality constraint
+         /* constraint is an equality constraint */
          if( RatIsEqual(SCIPconsGetRhsExact(scip, conss[c], &success), SCIPconsGetLhsExact(scip, conss[c], &success)) ) /*lint !e864*/
          {
-            // check if there are non-integer variables
+            /* check if there are continuous variables involved */
             SCIP_VAR** vars = SCIPgetVarsExactLinear(scip, conss[c]);
+            int nvars = SCIPgetNVarsExactLinear(scip, conss[c]);
 
-            for( int i = 0; i < SCIPgetNVarsExactLinear(scip, conss[c]); ++i )
+            for( int i = 0; i < nvars; ++i )
             {
-               if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_INTEGER && SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
+               if( !SCIPvarIsIntegral(vars[i]) )
                {
-                  conshdlrdata->probhasequations = 1;
+                  conshdlrdata->probhasconteqs = 1;
                   break;
                }
             }
          }
-         conshdlrdata->probhasequations = 1;
+         conshdlrdata->probhasconteqs = 1;
          break;
       }
       else
       {
-         // unsupported constraint type -> throw error
+         /* unsupported constraint type -> throw error */
          SCIPerrorMessage("Unsupported constraint type in exactsol constraint handler: %s\n", SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])));
          SCIPABORT();
       }
@@ -336,8 +341,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    SCIP_SOL* worksol;
    SCIP_Bool foundsol;
    SCIP_Bool lperror;
-   SCIP_Bool checkfpfeasibility;
-   int nintvars;
+   int nintegers;
    int nconsprob;
    int i;
    int c;
@@ -362,14 +366,15 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( !SCIPisExactSolve(scip) )
       return SCIP_OKAY;
 
-   if( conshdlrdata->probhasequations == -1 )
-      setProbHasEquations(scip, conshdlrdata);
+   /**@todo add event handler to check again if constraints were added/modified or a variable (impl) type changed */
+   if( conshdlrdata->probhasconteqs == -1 )
+      checkProbHasContEqs(scip, conshdlrdata);
 
-   if( conshdlrdata->probhasequations == 1 )
+   if( conshdlrdata->probhasconteqs == 1 )
       return SCIP_OKAY;
 
    /* disable exact sol if we stalled too often in a row */
-   if( ncurrentstalls >= CONSHDLR_MAXSTALLS )
+   if( conshdlrdata->ncurrentstalls >= conshdlrdata->maxstalls )
       return SCIP_OKAY;
 
    /* if the solution doesn't come from a heuristic, ignore it */
@@ -385,7 +390,8 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       return SCIP_OKAY;
 
    /* if we're already in exact diving mode, we already computed an exact solution
-    * with this constraint handler and are checking if it's actually feasible */
+    * with this constraint handler and are checking if it's actually feasible
+    */
    if( SCIPlpExactDiving(scip->lpexact) )
       return SCIP_OKAY;
 
@@ -417,44 +423,41 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       SCIP_CALL( SCIPflushLP(scip) );
    }
 
-   /* no point trying to repair solutions that are already exact */
-   if( SCIPisExactSol(scip, sol) )
-      return SCIP_OKAY;
-
    starttime = SCIPgetSolvingTime(scip);
    nconsprob = SCIPgetNConss(scip);
    consprob = SCIPgetConss(scip);
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkfpfeasibility", &checkfpfeasibility) );
-
-   /* check if solution is floating point feasible */
-   for( c = 0; c < nconsprob && *result == SCIP_FEASIBLE && checkfpfeasibility; ++c )
+   /* check if solution is floating-point feasible */
+   if( conshdlrdata->checkfpfeasibility )
    {
-      SCIP_Real activity;
-      SCIP_ROW* row;
+      for( c = 0; c < nconsprob && *result == SCIP_FEASIBLE ; ++c )
+      {
+         SCIP_Real activity;
+         SCIP_ROW* row;
 
-      /* get row corresponding to constraint */
-      row = SCIPconsGetRow(scip, consprob[c]);
-      if( row == NULL )
-         continue;
+         /* get row corresponding to constraint */
+         row = SCIPconsGetRow(scip, consprob[c]);
+         if( row == NULL )
+            continue;
 
-      /* get row activity */
-      activity = SCIPgetRowSolActivity(scip, row, sol);
+         /* get row activity */
+         activity = SCIPgetRowSolActivity(scip, row, sol);
 
-      /* check if the constraint is violated */
-      if( SCIPisFeasLT(scip, activity, SCIProwGetLhs(row)) || SCIPisFeasGT(scip, activity, SCIProwGetRhs(row)) )
-         *result = SCIP_INFEASIBLE;
+         /* check if the constraint is violated */
+         if( SCIPisFeasLT(scip, activity, SCIProwGetLhs(row)) || SCIPisFeasGT(scip, activity, SCIProwGetRhs(row)) )
+            *result = SCIP_INFEASIBLE;
+      }
+
+      /* do not continue for floating-point infeasible solutions */
+      if( *result == SCIP_INFEASIBLE )
+         return SCIP_OKAY;
    }
 
-   /* do not check infeasible solutions */
-   if( *result == SCIP_INFEASIBLE )
-      return SCIP_OKAY;
-
    /* first, check if we already tried a solution with this integer assignment */
-   solCreateSolAssignment(scip, sol, &assignment);
+   SCIP_CALL( solCreateSolAssignment(scip, sol, &assignment) );
    if( assignment != NULL && SCIPhashtableExists(conshdlrdata->solhash, (void*) assignment) )
    {
-      SCIPdebugMessage("rejecting solution that was already checked \n");
+      SCIPdebugMessage("rejecting solution that was already checked\n");
       SCIPdebug(SCIPprintSol(scip, sol, NULL, 0));
 
       solFreeAssignment(scip, &assignment);
@@ -466,6 +469,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    {
       SCIPdebugMessage("checking solution for the first time: \n");
       SCIPdebug(SCIPprintSol(scip, sol, NULL, 0));
+
       /* add assignment to the hashtable, extend assignment array, if necessary */
       if( conshdlrdata->lenhash == conshdlrdata->nhashedassignments )
       {
@@ -479,18 +483,27 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       SCIP_CALL( SCIPhashtableInsert(conshdlrdata->solhash, assignment) );
    }
 
-   /* next, check if we should buffer the solution instead of checking it right now, done in one of the following cases
-      - buffer is not full and solution not more than 20% improving
-      - exact diving not possible at this point in time (mostly if lp state is not clean) */
-   if( conshdlrdata->nbufferedsols < DEFAULT_SOLBUFSIZE || !SCIPisExactDivePossible(scip) )
+   /* add solution to buffer */
+   SCIP_CALL( bufferSolution(scip, sol, conshdlrdata) );
+
+   /* stop if exact diving is not possible at this point in time (mostly if lp state is not clean) */
+   if( !SCIPisExactDivePossible(scip) )
+   {
+      *result = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
+   }
+
+   /* stop if the new solution does not improve the current upperbound sufficiently and the buffer is not full;
+    * otherwise we continue by processing the buffer
+    */
+   if( conshdlrdata->nbufferedsols < DEFAULT_SOLBUFSIZE )
    {
       SCIP_Real multiplier;
 
       SCIP_CALL( bufferSolution(scip, sol, conshdlrdata) );
 
-      multiplier = SCIPgetSolTransObj(scip, sol) > 0 ? 1.2 : 0.8;
-      /* if the new solution is at least 20% better than the current upperbound, we stop buffering and repair immediately */
-      if( !SCIPisLT(scip, multiplier * SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip)) || !SCIPisExactDivePossible(scip) )
+      multiplier = SCIPgetSolTransObj(scip, sol) > 0 ? 1 + conshdlrdata->minimprove : 1 - conshdlrdata->minimprove;
+      if( !SCIPisLT(scip, multiplier * SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip)) )
       {
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
@@ -523,11 +536,11 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       SCIPdebugMessage("attempting to repair solution from heuristic %s with floating point objval %g \n",
          SCIPheurGetName(SCIPsolGetHeur(worksol)), SCIPgetSolTransObj(scip, worksol));
 
-      /* set the bounds of the variables: fixed for integers, global bounds for continuous */
+      /* set the bounds of the variables: fixed for integral variables, global bounds for continuous ones */
       vars = SCIPgetVars(scip);
-      nintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+      nintegers = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
-      for( i = 0; i < nintvars; ++i )
+      for( i = 0; i < nintegers; ++i )
       {
          if( SCIPvarGetStatusExact(vars[i]) == SCIP_VARSTATUS_COLUMN )
          {
@@ -572,9 +585,9 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       /* solve LP */
 
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a constraint
-      * handler. Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP
-      * will stop.
-      */
+       * handler. Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP
+       * will stop.
+       */
 #ifdef NDEBUG
       retstat = SCIPsolveExactDiveLP(scip, -1, &lperror, NULL);
       if( retstat != SCIP_OKAY )
@@ -622,7 +635,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    {
       SCIPdebugMessage("successfully found feasible improving solution, objval %g, upperbound %g\n",
          SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip));
-      ncurrentstalls = 0;
+      conshdlrdata->ncurrentstalls = 0;
       scip->stat->nfoundexactsol++;
       scip->stat->timesuccessexactsol += (endtime - starttime);
    }
@@ -630,7 +643,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    {
       SCIPdebugMessage("repaired solution not feasible or not improving, objval %g, upperbound %g \n",
          SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip));
-      ncurrentstalls++;
+      conshdlrdata->ncurrentstalls++;
       scip->stat->timefailexactsol += (endtime - starttime);
    }
 
@@ -676,7 +689,7 @@ SCIP_DECL_CONSINIT(consInitExactSol)
    assert(conshdlrdata != NULL);
 
    /* create hashdata for integer assignments */
-   SCIPallocBlockMemoryArray(scip, &conshdlrdata->hashedassignments, DEFAULT_SOLBUFSIZE);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->hashedassignments, DEFAULT_SOLBUFSIZE) );
    SCIP_CALL( SCIPhashtableCreate(&(conshdlrdata->solhash), SCIPblkmem(scip), DEFAULT_SOLBUFSIZE, hashGetKeyAssignment, hashKeyEqAssignment, hashKeyValAssignment, NULL) );
 
    conshdlrdata->nhashedassignments = 0;
@@ -686,7 +699,9 @@ SCIP_DECL_CONSINIT(consInitExactSol)
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->solubuffer, DEFAULT_SOLBUFSIZE) );
    conshdlrdata->lensolubuffer = DEFAULT_SOLBUFSIZE;
    conshdlrdata->nbufferedsols = 0;
-   conshdlrdata->probhasequations = -1;
+
+   conshdlrdata->ncurrentstalls = 0;
+   conshdlrdata->probhasconteqs = -1;
 
    return SCIP_OKAY;
 }
@@ -772,6 +787,18 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
          "constraints/" CONSHDLR_NAME "/checkfpfeasibility",
          "should a solution be checked in floating-point arithmetic prior to being processed?",
          &conshdlrdata->checkfpfeasibility, TRUE, DEFAULT_CHECKFPFEASIBILITY, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/" CONSHDLR_NAME "/maxstalls",
+         "maximal number of consecutive repair calls without success",
+         &conshdlrdata->maxstalls, TRUE, DEFAULT_MAXSTALLS, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/" CONSHDLR_NAME "/solbufsize",
+         "size of solution buffer",
+         &conshdlrdata->solbufsize, TRUE, DEFAULT_SOLBUFSIZE, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/" CONSHDLR_NAME "/minimprove",
+         "minimal percentage of primal improvement to trigger solution processing",
+         &conshdlrdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIPconshdlrSetInit(conshdlr, consInitExactSol);
    SCIPconshdlrSetExit(conshdlr, consExitExactSol);
