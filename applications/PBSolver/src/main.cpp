@@ -67,7 +67,36 @@ SCIP_RETCODE loadSettingsMaxSAT(
    return SCIP_OKAY;
 }
 
+/** prints that the problem instance is unsupported */
+static
+SCIP_RETCODE printUnsupported(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_MESSAGEHDLR* messagehdlr = SCIPgetMessagehdlr(scip);
+   assert(messagehdlr != NULL);
+   SCIP_MESSAGEHDLRDATA* messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
+   assert(messagehdlrdata != NULL);
+   SCIP_Bool quiet = SCIPmessagehdlrIsQuiet(messagehdlr);
 
+   /* competition console log */
+   if( messagehdlrdata->comment )
+   {
+      /* turn on message handler and remove comment declaration */
+      SCIPmessagehdlrSetQuiet(messagehdlr, FALSE);
+      messagehdlrdata->comment = FALSE;
+
+      SCIPinfoMessage(scip, NULL, "s UNSUPPORTED\n");
+
+      /* reset old values of message handler data */
+      SCIPmessagehdlrSetQuiet(messagehdlr, quiet);
+      messagehdlrdata->comment = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** prints the best primal solution */
 static
 SCIP_RETCODE printSolution(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -187,35 +216,6 @@ SCIP_RETCODE printSolution(
 
    /* reset message handler */
    SCIPmessagehdlrSetQuiet(messagehdlr, quiet);
-
-   return SCIP_OKAY;
-}
-
-/** prints that the problem instance is unsupported */
-static
-SCIP_RETCODE printUnsupported(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_MESSAGEHDLR* messagehdlr = SCIPgetMessagehdlr(scip);
-   assert(messagehdlr != NULL);
-   SCIP_MESSAGEHDLRDATA* messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
-   assert(messagehdlrdata != NULL);
-   SCIP_Bool quiet = SCIPmessagehdlrIsQuiet(messagehdlr);
-
-   /* competition console log */
-   if( messagehdlrdata->comment )
-   {
-      /* turn on message handler and remove comment declaration */
-      SCIPmessagehdlrSetQuiet(messagehdlr, FALSE);
-      messagehdlrdata->comment = FALSE;
-
-      SCIPinfoMessage(scip, NULL, "s UNSUPPORTED\n");
-
-      /* reset old values of message handler data */
-      SCIPmessagehdlrSetQuiet(messagehdlr, quiet);
-      messagehdlrdata->comment = TRUE;
-   }
 
    return SCIP_OKAY;
 }
