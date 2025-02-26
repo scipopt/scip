@@ -68,7 +68,6 @@ SCIP_RETCODE loadSettingsMaxSAT(
 }
 
 
-#ifdef PBSOLVER
 static
 SCIP_RETCODE printSolution(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -77,115 +76,120 @@ SCIP_RETCODE printSolution(
    SCIP_Bool             hasobj              /**< does the problem have an objective function? */
    )
 {
-   SCIP_MESSAGEHDLR* messagehdlr;
-   SCIP_MESSAGEHDLRDATA* messagehdlrdata;
+   SCIP_MESSAGEHDLR* messagehdlr = SCIPgetMessagehdlr(scip);
+   assert(messagehdlr != NULL);
+   SCIP_MESSAGEHDLRDATA* messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
+   assert(messagehdlrdata != NULL);
    SCIP_SOL* bestsol;
    SCIP_STATUS status;
-   SCIP_Bool quiet;
-   SCIP_Bool comment;
+   SCIP_Bool quiet = SCIPmessagehdlrIsQuiet(messagehdlr);
    SCIP_Bool feasible;
    char* solutiontext;
-   int printlength = SCIP_MAXSTRLEN / 8;
    int strlength;
+   int printlength;
    int n;
    int v;
 
-   messagehdlr = SCIPgetMessagehdlr(scip);
-   assert(messagehdlr != NULL);
-   messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
-   assert(messagehdlrdata != NULL);
-
-   /* store old quiet and comment values of message handler */
-   quiet = SCIPmessagehdlrIsQuiet(messagehdlr);
-   comment = messagehdlrdata->comment;
-
-   /* turn on message handler and remove comment declaration */
+   /* enable message handler */
    SCIPmessagehdlrSetQuiet(messagehdlr, FALSE);
-   messagehdlrdata->comment = FALSE;
 
-   status = SCIPgetStatus(scip);
-   if( status == SCIP_STATUS_INFEASIBLE )
-      SCIPinfoMessage(scip, NULL, "s UNSATISFIABLE\n");
-   else
+   /* competition console log */
+   if( messagehdlrdata->comment )
    {
-      feasible = FALSE;
-      bestsol = SCIPgetBestSol(scip);
+      /* disable comment prefix */
+      messagehdlrdata->comment = FALSE;
 
-      if( bestsol != NULL )
+      status = SCIPgetStatus(scip);
+      if( status == SCIP_STATUS_INFEASIBLE )
+         SCIPinfoMessage(scip, NULL, "s UNSATISFIABLE\n");
+      else
       {
-         /* check if solution is feasible in original problem */
-         SCIP_CALL( SCIPcheckSolOrig(scip, bestsol, &feasible, FALSE, FALSE) );
+         feasible = FALSE;
+         bestsol = SCIPgetBestSol(scip);
 
-         /* if solution is not feasible in original problem; post UNKNOWN */
-         if( !feasible )
+         if( bestsol != NULL )
          {
-            SCIPinfoMessage(scip, NULL, "c internal error\n");
-            SCIPinfoMessage(scip, NULL, "s UNKNOWN\n");
+            /* check if solution is feasible in original problem */
+            SCIP_CALL( SCIPcheckSolOrig(scip, bestsol, &feasible, FALSE, FALSE) );
+
+            /* if solution is not feasible in original problem; post UNKNOWN */
+            if( !feasible )
+            {
+               SCIPinfoMessage(scip, NULL, "c internal error\n");
+               SCIPinfoMessage(scip, NULL, "s UNKNOWN\n");
+            }
+            else
+            {
+               if( !hasobj || status != SCIP_STATUS_OPTIMAL )
+                  SCIPinfoMessage(scip, NULL, "s SATISFIABLE\n");
+               else
+                  SCIPinfoMessage(scip, NULL, "s OPTIMUM FOUND\n");
+
+               strlength = 2 * SCIP_MAXSTRLEN;
+               printlength = SCIP_MAXSTRLEN / 8;
+               n = 0;
+               v = 0;
+               SCIP_CALL( SCIPallocBufferArray(scip, &solutiontext, strlength) );
+
+               while( v < nvars )
+               {
+                  int printed = 0;
+
+                  assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_ORIGINAL);
+
+                  if( strstr(SCIPvarGetName(vars[v]), "andresultant_") == NULL
+                     && strstr(SCIPvarGetName(vars[v]), "indslack_") == NULL
+                     && strstr(SCIPvarGetName(vars[v]), "indicatorvar_") == NULL )
+                  {
+                     printed = SCIPsnprintf(solutiontext + n, strlength,
+                           SCIPgetSolVal(scip, bestsol, vars[v]) > 0.5 ? " %s" : " -%s", SCIPvarGetName(vars[v]));
+                     n += printed;
+                     strlength -= printed;
+                  }
+
+                  if( n >= printlength || ( n >= 1 && v + 1 >= nvars ) )
+                  {
+                     if( strlength >= 1 )
+                     {
+                        strlength += n;
+                        n = 0;
+                        SCIPinfoMessage(scip, NULL, "v%s\n", solutiontext);
+                     }
+                     else
+                     {
+                        strlength += printed + SCIP_MAXSTRLEN;
+                        n -= printed;
+                        SCIP_CALL( SCIPreallocBufferArray(scip, &solutiontext, n + strlength) );
+
+                        continue;
+                     }
+                  }
+                  assert(strlength >= 1);
+
+                  ++v;
+               }
+
+               SCIPfreeBufferArray(scip, &solutiontext);
+            }
          }
          else
-         {
-            if( !hasobj || status != SCIP_STATUS_OPTIMAL )
-               SCIPinfoMessage(scip, NULL, "s SATISFIABLE\n");
-            else
-               SCIPinfoMessage(scip, NULL, "s OPTIMUM FOUND\n");
-
-            v = 0;
-            n = 0;
-            strlength = 2 * SCIP_MAXSTRLEN;
-            SCIP_CALL( SCIPallocBufferArray(scip, &solutiontext, strlength) );
-
-            while( v < nvars )
-            {
-               int printed = 0;
-
-               assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_ORIGINAL);
-
-               if( strstr(SCIPvarGetName(vars[v]), "andresultant_") == NULL
-                  && strstr(SCIPvarGetName(vars[v]), "indslack_") == NULL
-                  && strstr(SCIPvarGetName(vars[v]), "indicatorvar_") == NULL )
-               {
-                  printed = SCIPsnprintf(solutiontext + n, strlength,
-                        SCIPgetSolVal(scip, bestsol, vars[v]) > 0.5 ? " %s" : " -%s", SCIPvarGetName(vars[v]));
-                  n += printed;
-                  strlength -= printed;
-               }
-
-               if( n >= printlength || ( n >= 1 && v + 1 >= nvars ) )
-               {
-                  if( strlength >= 1 )
-                  {
-                     strlength += n;
-                     n = 0;
-                     SCIPinfoMessage(scip, NULL, "v%s\n", solutiontext);
-                  }
-                  else
-                  {
-                     strlength += printed + SCIP_MAXSTRLEN;
-                     n -= printed;
-                     SCIP_CALL( SCIPreallocBufferArray(scip, &solutiontext, n + strlength) );
-
-                     continue;
-                  }
-               }
-               assert(strlength >= 1);
-
-               ++v;
-            }
-
-            SCIPfreeBufferArray(scip, &solutiontext);
-         }
+            SCIPinfoMessage(scip, NULL, "s UNKNOWN\n");
       }
-      else
-         SCIPinfoMessage(scip, NULL, "s UNKNOWN\n");
+
+      /* enable comment prefix */
+      messagehdlrdata->comment = TRUE;
+   }
+   /* default console log */
+   else
+   {
+      SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
    }
 
-   /* reset old values of message handler data */
+   /* reset message handler */
    SCIPmessagehdlrSetQuiet(messagehdlr, quiet);
-   messagehdlrdata->comment = comment;
 
    return SCIP_OKAY;
 }
-#endif
 
 /** prints that the problem instance is unsupported */
 static
@@ -446,12 +450,9 @@ SCIP_RETCODE fromCommandLine(
    SCIP_CALL( SCIPsolve(scip) );
 
    /* print resulting solution */
-#ifdef PBSOLVER
    SCIP_CALL( printSolution(scip, vars, nvars, hasobj) );
-#else
-   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
-#endif
 
+   /* print solving statistics */
    SCIP_CALL( SCIPprintStatistics(scip, NULL) );
 
    return SCIP_OKAY;
