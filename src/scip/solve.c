@@ -1452,7 +1452,7 @@ SCIP_RETCODE SCIPconstructCurrentLP(
 
          /* apply cuts */
          SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
-                                           eventqueue, eventfilter, cliquetable, (SCIPtreeGetCurrentDepth(tree) == 0), SCIP_EFFICIACYCHOICE_LP, cutoff) );
+               eventqueue, eventfilter, cliquetable, (SCIPtreeGetCurrentDepth(tree) == 0), SCIP_EFFICIACYCHOICE_LP, cutoff) );
       }
       else
       {
@@ -1467,7 +1467,7 @@ SCIP_RETCODE SCIPconstructCurrentLP(
       {
          /* setup initial LP relaxation of node */
          SCIP_CALL( initLP(blkmem, set, stat, transprob, origprob, tree, reopt, lp, pricestore, sepastore, cutpool, branchcand,
-                           eventqueue, eventfilter, cliquetable, initroot, cutoff) );
+               eventqueue, eventfilter, cliquetable, initroot, cutoff) );
       }
    }
    else if( newinitconss )
@@ -2191,8 +2191,8 @@ SCIP_RETCODE SCIPseparationRound(
       mustsepa = FALSE;
       mustprice = FALSE;
       SCIP_CALL( separationRoundLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, primal, tree, lp, sepastore, \
-                                   actdepth, 0.0, allowlocal, onlydelayed, delayed, &enoughcuts, cutoff, \
-                                   &lperror, &mustsepa, &mustprice) );
+            actdepth, 0.0, allowlocal, onlydelayed, delayed, &enoughcuts, cutoff, \
+            &lperror, &mustsepa, &mustprice) );
    }
    else
    {
@@ -4189,7 +4189,7 @@ SCIP_RETCODE propAndSolve(
 
       /* update lower bound with the pseudo objective value, and cut off node by bounding */
       SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, eventfilter,
-         conflict, cliquetable, cutoff) );
+            conflict, cliquetable, cutoff) );
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
    assert(*cutoff || !SCIPtreeHasFocusNodeLP(tree) || (lp->flushed && lp->solved));

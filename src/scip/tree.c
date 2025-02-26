@@ -1292,6 +1292,7 @@ SCIP_RETCODE SCIPnodeCutoff(
          if( set->misc_calcintegral )
             SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
          
+         /* throw improvement event */
          SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
          SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
          stat->lastlowerbound = lowerbound;
@@ -2431,6 +2432,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
             if( set->misc_calcintegral )
                SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
    
+            /* throw improvement event */
             SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
             SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
             stat->lastlowerbound = lowerbound;       
@@ -4543,6 +4545,7 @@ SCIP_RETCODE SCIPnodeFocus(
             if( set->misc_calcintegral )
                SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
 
+            /* throw improvement event */
             SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
             SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
             stat->lastlowerbound = lowerbound;
@@ -4654,7 +4657,7 @@ SCIP_RETCODE SCIPnodeFocus(
 
          /* convert old focus node into dead-end */
          SCIP_CALL( focusnodeToDeadend(blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp, 
-            branchcand, cliquetable) );
+               branchcand, cliquetable) );
       }
       else
       {
@@ -4720,7 +4723,7 @@ SCIP_RETCODE SCIPnodeFocus(
       {
          /* convert old focus node into pseudofork */
          SCIP_CALL( focusnodeToPseudofork(blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, 
-            reopt, lp, branchcand, cliquetable) );
+               reopt, lp, branchcand, cliquetable) );
          assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_PSEUDOFORK);
 
          /* update the path's LP size */
@@ -6051,7 +6054,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
       SCIP_NODE* upchild;
 
       SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, eventfilter,
-         var, val, &downchild, &fixchild, &upchild) );
+            var, val, &downchild, &fixchild, &upchild) );
 
       if( nchildren != NULL )
          *nchildren = (downchild != NULL ? 1 : 0) + (fixchild != NULL ? 1 : 0) + (upchild != NULL ? 1 : 0);

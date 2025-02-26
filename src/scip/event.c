@@ -624,22 +624,6 @@ SCIP_RETCODE SCIPeventCreateObjChanged(
    return SCIP_OKAY;
 }
 
-/** creates an event for an improvement of the dual bound */
-SCIP_RETCODE SCIPeventCreateDualBoundImproved(
-   SCIP_EVENT**          event,              /**< pointer to store the event */
-   BMS_BLKMEM*           blkmem              /**< block memory */
-)
-{
-   assert(event != NULL);
-   assert(blkmem != NULL);
-
-   /* create event data */
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
-   (*event)->eventtype = SCIP_EVENTTYPE_DUALBOUNDIMPROVED;
-
-   return SCIP_OKAY;
-}
-
 /** creates an event for a change in the global lower bound of a variable */
 SCIP_RETCODE SCIPeventCreateGlbChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */

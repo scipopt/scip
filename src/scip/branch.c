@@ -2595,7 +2595,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    if( branchcand->pseudomaxpriority > branchcand->lpmaxpriority )
    {
       SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, eventfilter,
-         cutoffbound, allowaddcons, result) );
+            cutoffbound, allowaddcons, result) );
       assert(*result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND);
       return SCIP_OKAY;
    }
@@ -2696,7 +2696,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
        * Therefor, it has to be clear which of both has the higher priority
        */
       SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, eventfilter,
-         cutoffbound, allowaddcons, result) );
+            cutoffbound, allowaddcons, result) );
       assert(*result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND);
       return SCIP_OKAY;
    }

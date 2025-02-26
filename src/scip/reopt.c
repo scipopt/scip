@@ -7408,7 +7408,7 @@ SCIP_RETCODE SCIPreoptApply(
                /* fix all bound changes based on dual information and convert them into branchings */
                assert(reopt->reopttree->reoptnodes[id]->dualredscur != NULL);
                SCIP_CALL( fixBounds(reopt, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, eventfilter,
-                  cliquetable, blkmem, childnodes[c], id, TRUE) );
+                     cliquetable, blkmem, childnodes[c], id, TRUE) );
 
                /* set the unique id the id of the original node */
                SCIPnodeSetReoptID(childnodes[c], id);
@@ -7500,7 +7500,7 @@ SCIP_RETCODE SCIPreoptApply(
             {
                /* fix bound changes based on dual information and convert all these bound changes to normal bound changes */
                SCIP_CALL( fixBounds(reopt, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, eventfilter, 
-                  cliquetable, blkmem, childnodes[c], id, TRUE) );
+                     cliquetable, blkmem, childnodes[c], id, TRUE) );
 
                /* set the reopttype of the node */
                SCIPnodeSetReopttype(childnodes[c], SCIP_REOPTTYPE_TRANSIT);
@@ -7512,7 +7512,7 @@ SCIP_RETCODE SCIPreoptApply(
             {
                /* fix the first c bound changes and negate the (c+1)th */
                SCIP_CALL( fixInterdiction(reopt, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, eventfilter,
-                  cliquetable, blkmem, childnodes[c], id, perm, vars, bounds, boundtypes, nvars, c) );
+                     cliquetable, blkmem, childnodes[c], id, perm, vars, bounds, boundtypes, nvars, c) );
             }
 
             /* add all local constraints */

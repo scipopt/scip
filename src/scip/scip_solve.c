@@ -491,6 +491,7 @@ SCIP_RETCODE initPresolve(
       if( scip->set->misc_calcintegral )
          SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
 
+      /* throw improvement event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
       SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
       scip->stat->lastlowerbound = scip->tree->root->lowerbound;
@@ -1567,6 +1568,7 @@ SCIP_RETCODE initSolve(
       if( scip->set->misc_calcintegral )
          SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
 
+      /* throw improvement event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
       SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
       scip->stat->lastlowerbound = scip->tree->root->lowerbound;

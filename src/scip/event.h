@@ -219,12 +219,6 @@ SCIP_RETCODE SCIPeventCreateObjChanged(
    SCIP_Real             newobj              /**< new objective value after value changed */
    );
 
-/** creates an event for an improvement of the dual bound */
-SCIP_RETCODE SCIPeventCreateDualBoundImproved(
-   SCIP_EVENT**          event,              /**< pointer to store the event */
-   BMS_BLKMEM*           blkmem              /**< block memory */
-   );
-
 /** creates an event for a change in the global lower bound of a variable */
 SCIP_RETCODE SCIPeventCreateGlbChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */

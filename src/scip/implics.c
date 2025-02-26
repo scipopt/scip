@@ -3043,8 +3043,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
          /* aggregate the variable */
          SCIP_CALL( SCIPvarTryAggregateVars(set, blkmem, stat, transprob, origprob, primal,
-            tree, lp, cliquetable, branchcand, eventqueue, eventfilter,
-            var0, var1, scalarx, scalary, rhs, infeasible, &aggregated) );
+               tree, lp, cliquetable, branchcand, eventqueue, eventfilter,
+               var0, var1, scalarx, scalary, rhs, infeasible, &aggregated) );
 
          assert(aggregated || *infeasible);
       }
