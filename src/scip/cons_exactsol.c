@@ -555,9 +555,12 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
             /* check if solution value is integral and abort if not, except if integrality is weakly implied: then the
              * solution value could be fractional in a floating-point feasible solution and we know that an optimal
-             * solution with integral value exist; in this case we round and fix its value
+             * solution with integral value exist; in this case we currently round and fix its value
              */
-            if( SCIPisIntegral(scip, solval) || SCIPvarIsImpliedIntegral(vars[i]) )
+            /**@todo once implied integrality detection is made exact, test whether it improves performance to leave
+             *       weakly implied variables unfixed or fix them only if they take a nearly integral value
+             */
+            if( SCIPisIntegral(scip, solval) || SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK )
             {
                SCIP_Rational* newbound;
 
