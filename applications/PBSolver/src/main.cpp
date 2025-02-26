@@ -336,15 +336,12 @@ SCIP_RETCODE fromCommandLine(
       }
    }
 
-#ifdef PBSOLVER
    /* create event handler for best solution found if an objective exists */
    if( hasobj )
    {
       SCIP_CALL( SCIPcreateEventHdlrBestsol(scip) );
    }
-#endif
-
-   if( !hasobj )
+   else
    {
       SCIPinfoMessage(scip, NULL, "problem without objective\n");
 #if SETOBJ
