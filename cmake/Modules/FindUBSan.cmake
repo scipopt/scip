@@ -23,6 +23,7 @@
 # SOFTWARE.
 
 set(FLAG_CANDIDATES
+    "-g -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero"
     "-g -fsanitize=undefined"
 )
 
