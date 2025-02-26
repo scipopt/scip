@@ -4447,7 +4447,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    *success = FALSE;
    nvars = SCIPgetNVars(scip);
-   firstcontvar = nvars - SCIPgetNContVars(scip) - SCIPgetNImplVars(scip);
+   firstcontvar = nvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
    vars = SCIPgetVars(scip);
 
    /* allocate temporary memory */
