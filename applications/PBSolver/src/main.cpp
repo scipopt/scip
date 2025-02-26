@@ -488,11 +488,11 @@ SCIP_RETCODE processShellArguments(
          switch( argv[i][1] )
          {
             /* set quiet flag */
-            case 'q': 
+            case 'q':
                quiet = TRUE;
                break;
             /* get log filename */
-            case 'l': 
+            case 'l':
                if( ++i < argc )
                   logname = argv[i];
                else
@@ -522,7 +522,7 @@ SCIP_RETCODE processShellArguments(
                }
                break;
             /* set display frequency */
-            case 'd': 
+            case 'd':
                if( ++i < argc )
                {
                   SCIP_CALL( SCIPsetIntParam(scip, "display/freq", atoi(argv[i])) );
@@ -544,7 +544,7 @@ SCIP_RETCODE processShellArguments(
                }
                break;
             /* set memory limit */
-            case 'm': 
+            case 'm':
                if( ++i < argc )
                {
                   SCIP_CALL( SCIPsetRealParam(scip, "limits/memory", atof(argv[i]) * MAXMEMUSAGE) );
@@ -556,7 +556,7 @@ SCIP_RETCODE processShellArguments(
                }
                break;
             /* command line input */
-            case 'c': 
+            case 'c':
                if( ++i < argc )
                {
                   SCIP_CALL( SCIPaddDialogInputLine(scip, argv[i]) );
