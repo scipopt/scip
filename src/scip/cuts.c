@@ -4447,7 +4447,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    *success = FALSE;
    nvars = SCIPgetNVars(scip);
-   firstcontvar = nvars - SCIPgetNContVars(scip) - SCIPgetNImplVars(scip);
+   firstcontvar = nvars - SCIPgetNContVars(scip);
    vars = SCIPgetVars(scip);
 
    /* allocate temporary memory */
@@ -4533,13 +4533,9 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    /* Check that the continuous and implied integer variables and integer variables are partitioned */
 #ifndef NDEBUG
-   for( int j = 0; j < intstart; ++j )
-   {
-      assert(!SCIPvarIsIntegral(vars[mksetinds[j]]) || SCIPvarIsImpliedIntegral(vars[mksetinds[j]]));
-   }
    for( int j = intstart; j < data->ncutinds; ++j )
    {
-      assert(SCIPvarIsIntegral(vars[mksetinds[j]]) && !SCIPvarIsImpliedIntegral(vars[mksetinds[j]]));
+      assert(SCIPvarIsIntegral(vars[mksetinds[j]]));
    }
 #endif
 
@@ -4645,27 +4641,59 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       SCIP_VAR* var;
       SCIP_Real solval;
       SCIP_Real QUAD(coef);
+      int type;
+      int sign;
 
       var = vars[mksetinds[i]];
 
-      /* get the soltion value of the continuous variable */
+      /* get the solution value of the integer variable */
       solval = SCIPgetSolVal(scip, sol, var);
+      type = boundtype[i];
+      sign = varsign[i];
 
       /* now compute the solution value in the transform space considering complementation */
-      if( boundtype[i] == -1 )
+      if(type >= 0)
+      {
+         /* variable was complemented with a variable bound */
+         if( sign == -1 )
+         {
+            SCIP_Real coef;
+            SCIP_Real constant;
+            SCIP_Real vbdsolval;
+
+            coef = SCIPvarGetVubCoefs(var)[type];
+            constant = SCIPvarGetVubConstants(var)[type];
+            vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVubVars(var)[type]);
+
+            solval = (coef * vbdsolval + constant) - solval;
+         }
+         else
+         {
+            SCIP_Real coef;
+            SCIP_Real constant;
+            SCIP_Real vbdsolval;
+
+            coef = SCIPvarGetVlbCoefs(var)[type];
+            constant = SCIPvarGetVlbConstants(var)[type];
+            vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVlbVars(var)[type]);
+
+            solval = solval - (coef * vbdsolval + constant);
+         }
+      }
+      else if( type == -1 )
       {
          /* variable was complemented with global (simple) bound */
-         if( varsign[i] == -1 )
+         if( sign == -1 )
             solval = SCIPvarGetUbGlobal(var) - solval;
          else
             solval = solval - SCIPvarGetLbGlobal(var);
       }
       else
       {
-         assert(boundtype[i] == -2);
+         assert(type == -2);
 
          /* variable was complemented with local (simple) bound */
-         if( varsign[i] == -1 )
+         if( sign == -1 )
             solval = SCIPvarGetUbLocal(var) - solval;
          else
             solval = solval - SCIPvarGetLbLocal(var);
@@ -4673,7 +4701,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
       tmpvalues[ntmpcoefs] = solval;
       QUAD_ARRAY_LOAD(coef, mksetcoefs, mksetinds[i]);
-      tmpcoefs[ntmpcoefs] = varsign[i] * QUAD_TO_DBL(coef);
+      tmpcoefs[ntmpcoefs] = sign * QUAD_TO_DBL(coef);
       ++ntmpcoefs;
    }
 
@@ -4685,43 +4713,50 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    {
       SCIP_Real solval;
       SCIP_Real QUAD(mksetcoef);
+      int type;
+      int sign;
+      SCIP_VAR* var;
 
       QUAD_ARRAY_LOAD(mksetcoef, mksetcoefs, mksetinds[i]);
 
-      if( varsign[i] * QUAD_TO_DBL(mksetcoef) >= 0.0 )
+      sign = varsign[i];
+
+      if( sign * QUAD_TO_DBL(mksetcoef) >= 0.0 )
          continue;
 
+      var = vars[mksetinds[i]];
       /* get the soltion value of the continuous variable */
-      solval = SCIPgetSolVal(scip, sol, vars[mksetinds[i]]);
+      solval = SCIPgetSolVal(scip, sol, var);
 
+      type = boundtype[i];
       /* now compute the solution value in the transform space considering complementation */
-      switch( boundtype[i] )
+      switch( type )
       {
       case -1:
          /* variable was complemented with global (simple) bound */
-         if( varsign[i] == -1 )
-            solval = SCIPvarGetUbGlobal(vars[mksetinds[i]]) - solval;
+         if( sign == -1 )
+            solval = SCIPvarGetUbGlobal(var) - solval;
          else
-            solval = solval - SCIPvarGetLbGlobal(vars[mksetinds[i]]);
+            solval = solval - SCIPvarGetLbGlobal(var);
          break;
       case -2:
          /* variable was complemented with local (simple) bound */
-         if( varsign[i] == -1 )
-            solval = SCIPvarGetUbLocal(vars[mksetinds[i]]) - solval;
+         if( sign == -1 )
+            solval = SCIPvarGetUbLocal(var) - solval;
          else
-            solval = solval - SCIPvarGetLbLocal(vars[mksetinds[i]]);
+            solval = solval - SCIPvarGetLbLocal(var);
          break;
       default:
          /* variable was complemented with a variable bound */
-         if( varsign[i] == -1 )
+         if( sign == -1 )
          {
             SCIP_Real coef;
             SCIP_Real constant;
             SCIP_Real vbdsolval;
 
-            coef = SCIPvarGetVubCoefs(vars[mksetinds[i]])[boundtype[i]];
-            constant = SCIPvarGetVubConstants(vars[mksetinds[i]])[boundtype[i]];
-            vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVubVars(vars[mksetinds[i]])[boundtype[i]]);
+            coef = SCIPvarGetVubCoefs(var)[type];
+            constant = SCIPvarGetVubConstants(var)[type];
+            vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVubVars(var)[type]);
 
             solval = (coef * vbdsolval + constant) - solval;
          }
@@ -4731,15 +4766,15 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
             SCIP_Real constant;
             SCIP_Real vbdsolval;
 
-            coef = SCIPvarGetVlbCoefs(vars[mksetinds[i]])[boundtype[i]];
-            constant = SCIPvarGetVlbConstants(vars[mksetinds[i]])[boundtype[i]];
-            vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVlbVars(vars[mksetinds[i]])[boundtype[i]]);
+            coef = SCIPvarGetVlbCoefs(var)[type];
+            constant = SCIPvarGetVlbConstants(var)[type];
+            vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVlbVars(var)[type]);
 
             solval = solval - (coef * vbdsolval + constant);
          }
       }
 
-      contactivity += solval * (QUAD_TO_DBL(mksetcoef) * varsign[i]);
+      contactivity += solval * (QUAD_TO_DBL(mksetcoef) * sign);
       contsqrnorm += QUAD_TO_DBL(mksetcoef) * QUAD_TO_DBL(mksetcoef);
    }
 
@@ -4871,6 +4906,11 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       int bestubtype;
 
       k = bounddistpos[i];
+
+      /* We don't complement variables that used variable bounds at all. */
+      /** @todo test if doing variable complementation for variable bounds is worthwhile  */
+      if( boundtype[k] >= 0 )
+         continue;
 
       SCIP_CALL( findBestLb(scip, vars[mksetinds[k]], sol, 0, allowlocal, &bestlb, &bestlbtype) );
 
