@@ -626,7 +626,7 @@ SCIP_RETCODE processShellArguments(
       SCIPinfoMessage(scip, NULL, "  -q             : suppress screen messages\n");
       SCIPinfoMessage(scip, NULL, "  -l <logfile>   : copy output into log file\n");
       SCIPinfoMessage(scip, NULL, "  -s <settings>  : load parameter settings (.set) file\n");
-      SCIPinfoMessage(scip, NULL, "  -f <problem>   : load and solve problem file\n");
+      SCIPinfoMessage(scip, NULL, "  -f <problem>   : solve problem (.opb or .wbo) file\n");
       SCIPinfoMessage(scip, NULL, "  -d <dispfreq>  : log display frequency\n");
       SCIPinfoMessage(scip, NULL, "  -t <timelimit> : enforce time limit\n");
       SCIPinfoMessage(scip, NULL, "  -m <memlimit>  : enforce memory limit\n");
