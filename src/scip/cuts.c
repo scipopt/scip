@@ -4535,11 +4535,11 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 #ifndef NDEBUG
    for( int j = 0; j < intstart; ++j )
    {
-      assert(!SCIPvarIsIntegral(vars[mksetinds[j]]) || SCIPvarIsImpliedIntegral(vars[mksetinds[j]]));
+      assert(SCIPvarGetType(vars[mksetinds[j]]) == SCIP_VARTYPE_CONTINUOUS);
    }
    for( int j = intstart; j < data->ncutinds; ++j )
    {
-      assert(SCIPvarIsIntegral(vars[mksetinds[j]]) && !SCIPvarIsImpliedIntegral(vars[mksetinds[j]]));
+      assert(SCIPvarIsIntegral(vars[mksetinds[j]]));
    }
 #endif
 
