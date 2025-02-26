@@ -197,29 +197,25 @@ SCIP_RETCODE printUnsupported(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_MESSAGEHDLR* messagehdlr;
-   SCIP_MESSAGEHDLRDATA* messagehdlrdata;
-   SCIP_Bool quiet;
-   SCIP_Bool comment;
-
-   messagehdlr = SCIPgetMessagehdlr(scip);
+   SCIP_MESSAGEHDLR* messagehdlr = SCIPgetMessagehdlr(scip);
    assert(messagehdlr != NULL);
-   messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
+   SCIP_MESSAGEHDLRDATA* messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
    assert(messagehdlrdata != NULL);
+   SCIP_Bool quiet = SCIPmessagehdlrIsQuiet(messagehdlr);
 
-   /* store old quiet and comment values of message handler */
-   quiet = SCIPmessagehdlrIsQuiet(messagehdlr);
-   comment = messagehdlrdata->comment;
+   /* competition console log */
+   if( messagehdlrdata->comment )
+   {
+      /* turn on message handler and remove comment declaration */
+      SCIPmessagehdlrSetQuiet(messagehdlr, FALSE);
+      messagehdlrdata->comment = FALSE;
 
-   /* turn on message handler and remove comment declaration */
-   SCIPmessagehdlrSetQuiet(messagehdlr, FALSE);
-   messagehdlrdata->comment = FALSE;
+      SCIPinfoMessage(scip, NULL, "s UNSUPPORTED\n");
 
-   SCIPinfoMessage(scip, NULL, "s UNSUPPORTED\n");
-
-   /* reset old values of message handler data */
-   SCIPmessagehdlrSetQuiet(messagehdlr, quiet);
-   messagehdlrdata->comment = comment;
+      /* reset old values of message handler data */
+      SCIPmessagehdlrSetQuiet(messagehdlr, quiet);
+      messagehdlrdata->comment = TRUE;
+   }
 
    return SCIP_OKAY;
 }
