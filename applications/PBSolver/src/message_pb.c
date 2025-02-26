@@ -47,12 +47,10 @@ void printMessage(
 {
    if( msg != NULL && msg[0] != '\0' )
    {
-#ifdef PBSOLVER
       SCIP_MESSAGEHDLRDATA* messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
 
       if( messagehdlrdata == NULL || messagehdlrdata->comment )
          fputs("c ", file);
-#endif
 
       if( initial != NULL )
          fputs(initial, file);
@@ -115,11 +113,7 @@ SCIP_RETCODE SCIPcreateMessagehdlrPbSolver(
 
    SCIP_ALLOC( BMSallocMemory(&messagehdlrdata) );
 
-#ifdef PBSOLVER
    messagehdlrdata->comment = TRUE;
-#else
-   messagehdlrdata->comment = FALSE;
-#endif
 
    SCIP_CALL( SCIPmessagehdlrCreate(messagehdlr, buffered, filename, quiet, messageWarningPbSolver,
          messageDialogPbSolver, messageInfoPbSolver, messagehdlrFreePbSolver, messagehdlrdata) );
