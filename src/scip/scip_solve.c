@@ -487,16 +487,13 @@ SCIP_RETCODE initPresolve(
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
       
-      if( scip->stat->lastlowerbound < scip->tree->root->lowerbound )
-      {
-         /* update primal-dual integrals */
-         if( scip->set->misc_calcintegral )
-            SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPsetInfinity(scip->set), scip->tree->root->lowerbound);
-         
-         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
-         SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
-         scip->stat->lastlowerbound = scip->tree->root->lowerbound;
-      }
+      /* update primal-dual integrals */
+      if( scip->set->misc_calcintegral )
+         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
+
+      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
+      SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
+      scip->stat->lastlowerbound = scip->tree->root->lowerbound;
    }
 
    /* GCG wants to perform presolving during the reading process of a file reader;
@@ -1566,16 +1563,13 @@ SCIP_RETCODE initSolve(
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
 
-      if( scip->stat->lastlowerbound < scip->tree->root->lowerbound )
-      {
-         
-         if( scip->set->misc_calcintegral )
-            SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
-      
-         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
-         SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
-         scip->stat->lastlowerbound = scip->tree->root->lowerbound;
-      }
+      /* update primal-dual integrals */
+      if( scip->set->misc_calcintegral )
+         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
+
+      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
+      SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
+      scip->stat->lastlowerbound = scip->tree->root->lowerbound;
    }
 
    /* inform the transformed problem that the branch and bound process starts now */
