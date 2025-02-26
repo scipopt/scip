@@ -487,6 +487,10 @@ SCIP_RETCODE processShellArguments(
       {
          switch( argv[i][1] )
          {
+            /* set quiet flag */
+            case 'q': 
+               quiet = TRUE;
+               break;
             /* get log filename */
             case 'l': 
                if( ++i < argc )
@@ -496,10 +500,6 @@ SCIP_RETCODE processShellArguments(
                   SCIPerrorMessage("missing log filename after parameter '-l'\n");
                   paramerror = TRUE;
                }
-               break;
-            /* set quiet flag */
-            case 'q': 
-               quiet = TRUE;
                break;
             /* get settings filename */
             case 's':
@@ -511,12 +511,25 @@ SCIP_RETCODE processShellArguments(
                   paramerror = TRUE;
                }
                break;
-            case 'f': /* get problem filename */
+            /* get problem filename */
+            case 'f':
                if( ++i < argc )
                   problemname = argv[i];
                else
                {
                   SCIPerrorMessage("missing problem filename after parameter '-f'\n");
+                  paramerror = TRUE;
+               }
+               break;
+            /* set display frequency */
+            case 'd': 
+               if( ++i < argc )
+               {
+                  SCIP_CALL( SCIPsetIntParam(scip, "display/freq", atoi(argv[i])) );
+               }
+               else
+               {
+                  SCIPerrorMessage("missing display frequency after parameter '-d'\n");
                   paramerror = TRUE;
                }
                break;
@@ -539,18 +552,6 @@ SCIP_RETCODE processShellArguments(
                else
                {
                   SCIPerrorMessage("missing memory limit after parameter '-m'\n");
-                  paramerror = TRUE;
-               }
-               break;
-            /* set display frequency */
-            case 'd': 
-               if( ++i < argc )
-               {
-                  SCIP_CALL( SCIPsetIntParam(scip, "display/freq", atoi(argv[i])) );
-               }
-               else
-               {
-                  SCIPerrorMessage("missing display frequency after parameter '-d'\n");
                   paramerror = TRUE;
                }
                break;
