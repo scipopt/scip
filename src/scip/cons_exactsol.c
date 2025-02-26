@@ -370,6 +370,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( conshdlrdata->probhasconteqs == -1 )
       checkProbHasContEqs(scip, conshdlrdata);
 
+   /**@todo conduct a performance test if removing this restriction helps */
    if( conshdlrdata->probhasconteqs == 1 )
       return SCIP_OKAY;
 
@@ -379,6 +380,13 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
    /* if the solution doesn't come from a heuristic, ignore it */
    if( SCIPsolGetType(sol) != SCIP_SOLTYPE_HEUR )
+      return SCIP_OKAY;
+
+   /* do not run if the solution comes from the trivial heuristic for the following reason: it typically creates the
+    * first solution, which would be processed immediately, because it improves the primal bound by an infinite amount;
+    * however, its quality is usually bad and superseeded quickly by solutions from other heuristics
+    */
+   if( strcmp(SCIPheurGetName(SCIPsolGetHeur(sol)), "trivial") == 0 )
       return SCIP_OKAY;
 
    /* do not run for problems that contain mostly continuous variables */
@@ -397,10 +405,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
    /* we also don't want to execute the handler, if we are in "normal" diving mode */
    if( SCIPlpDiving(scip->lp) )
-      return SCIP_OKAY;
-
-   /* do not run for trivial since it would only be buffered and never used */
-   if( strcmp(SCIPheurGetName(SCIPsolGetHeur(sol)), "trivial") == 0 )
       return SCIP_OKAY;
 
    /* do not run for solutions that are already exact */
@@ -549,8 +553,11 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
             assert(RatIsLE(SCIPvarGetLbLocalExact(vars[i]), SCIPvarGetUbLocalExact(vars[i])));
 
-            /* check if solution value is supposed to be integral */
-            if( SCIPisIntegral(scip, solval) )
+            /* check if solution value is integral and abort if not, except if integrality is weakly implied: then the
+             * solution value could be fractional in a floating-point feasible solution and we know that an optimal
+             * solution with integral value exist; in this case we round and fix its value
+             */
+            if( SCIPisIntegral(scip, solval) || SCIPvarIsImpliedIntegral(vars[i]) )
             {
                SCIP_Rational* newbound;
 
@@ -598,8 +605,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       SCIP_CALL( SCIPsolveExactDiveLP(scip, -1, &lperror, NULL) );
 #endif
 
-      /** @todo exip handle the ray case to be included */
-
       /* check if this is a feasible solution */
       if( !lperror && SCIPgetLPExactSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
       {
@@ -620,6 +625,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
             conshdlrdata->nbufferedsols--;
          }
       }
+      /**@todo handle the unbounded case */
       else
       {
          SCIP_CALL( SCIPfreeSol(scip, &worksol) );
