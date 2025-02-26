@@ -555,7 +555,6 @@ SCIP_RETCODE processShellArguments(
                   paramerror = TRUE;
                }
                break;
-#ifndef PBSOLVER
             /* command line input */
             case 'c': 
                if( ++i < argc )
@@ -569,7 +568,6 @@ SCIP_RETCODE processShellArguments(
                   paramerror = TRUE;
                }
                break;
-#endif
             default:
                SCIPerrorMessage("invalid parameter '%s'\n", argv[i]);
                paramerror = TRUE;
@@ -631,9 +629,7 @@ SCIP_RETCODE processShellArguments(
       SCIPinfoMessage(scip, NULL, "  -d <dispfreq>  : log display frequency\n");
       SCIPinfoMessage(scip, NULL, "  -t <timelimit> : enforce time limit\n");
       SCIPinfoMessage(scip, NULL, "  -m <memlimit>  : enforce memory limit\n");
-#ifndef PBSOLVER
       SCIPinfoMessage(scip, NULL, "  -c <command>   : execute command line\n");
-#endif
    }
 
    return SCIP_OKAY;
