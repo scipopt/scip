@@ -1367,10 +1367,6 @@ SCIP_RETCODE SCIPgetFarkasProof(
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, nrows) );
-#ifdef SCIP_DEBUG
-   if( set->exact_enabled )
-      SCIP_CALL( SCIPaggrRowCreate(set->scip, &farkasrow_fpdebug) );
-#endif
    BMSclearMemoryArray(dualfarkas, nrows);
    localrowinds = NULL;
    localrowdepth = NULL;
@@ -1546,10 +1542,6 @@ SCIP_RETCODE SCIPgetFarkasProof(
    }
 
   TERMINATE:
-#ifdef SCIP_DEBUG
-   if( set->exact_enabled )
-      SCIPaggrRowFree(set->scip, &farkasrow_fpdebug);
-#endif
    SCIPfreeBufferArrayNull(set->scip, &localrowdepth);
    SCIPfreeBufferArrayNull(set->scip, &localrowinds);
    SCIPsetFreeBufferArray(set, &dualfarkas);
@@ -1901,7 +1893,7 @@ SCIP_RETCODE SCIPgetDualProof(
          }
          else
          {
-            assert(certificate_index != LONG_MAX);
+            assert(certificate_index != SCIP_LONGINT_MAX);
          }
       }
       SCIP_CALL( SCIPcertificatePrintAggrrow(set, lp, transprob, SCIPgetCertificate(set->scip), farkasrow, usedrows,
