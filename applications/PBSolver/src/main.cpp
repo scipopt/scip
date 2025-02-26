@@ -467,13 +467,16 @@ SCIP_RETCODE processShellArguments(
    const char*           defaultsetname      /**< name of default settings file */
    )
 {
+   SCIP_MESSAGEHDLR* messagehdlr;
+   SCIP_MESSAGEHDLRDATA* messagehdlrdata;
+   SCIP_Real timelimit = -1.0;
+   SCIP_Bool quiet = FALSE;
+   SCIP_Bool print = FALSE;
+   SCIP_Bool paramerror = FALSE;
+   SCIP_Bool interactive = FALSE;
    char* logname = NULL;
    char* settingsname = NULL;
    char* problemname = NULL;
-   SCIP_Real timelimit = -1.0;
-   SCIP_Bool quiet = FALSE;
-   SCIP_Bool paramerror = FALSE;
-   SCIP_Bool interactive = FALSE;
    int i;
 
    /********************
@@ -490,6 +493,10 @@ SCIP_RETCODE processShellArguments(
             /* set quiet flag */
             case 'q':
                quiet = TRUE;
+               break;
+            /* set print flag */
+            case 'p':
+               print = TRUE;
                break;
             /* get log filename */
             case 'l':
@@ -586,9 +593,14 @@ SCIP_RETCODE processShellArguments(
        * Version information *
        ***********************/
 
-      /* set quite flag and log file of message handler */
+      /* set attributes of message handler */
+      messagehdlr = SCIPgetMessagehdlr(scip);
+      assert(messagehdlr != NULL);
+      messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
+      assert(messagehdlrdata != NULL);
       SCIPsetMessagehdlrQuiet(scip, quiet);
       SCIPsetMessagehdlrLogfile(scip, logname);
+      messagehdlrdata->comment = !print;
 
       /* print version information */
       SCIPprintVersion(scip, NULL);
@@ -620,9 +632,10 @@ SCIP_RETCODE processShellArguments(
    }
    else
    {
-      SCIPinfoMessage(scip, NULL, "syntax: %s [-q] [-l <logfile>] [-s <settings>] [-f <problem>] [-d <dispfreq>] [-t <timelimit>] [-m <memlimit>]\n", argv[0]);
+      SCIPinfoMessage(scip, NULL, "syntax: %s [-q] [-p] [-l <logfile>] [-s <settings>] [-f <problem>] [-d <dispfreq>] [-t <timelimit>] [-m <memlimit>]\n", argv[0]);
 
       SCIPinfoMessage(scip, NULL, "   -q             : suppress screen messages\n");
+      SCIPinfoMessage(scip, NULL, "   -p             : print default messages\n");
       SCIPinfoMessage(scip, NULL, "   -l <logfile>   : copy output into log file\n");
       SCIPinfoMessage(scip, NULL, "   -s <settings>  : load settings (.set) file\n");
       SCIPinfoMessage(scip, NULL, "   -f <problem>   : solve problem (.opb or .wbo) file\n");
