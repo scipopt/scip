@@ -1140,7 +1140,7 @@ SCIP_RETCODE SCIPconflictFlushProofset(
          rhs = proofsetGetRhs(conflict->proofset);
 
          SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, \
-               branchcand, eventqueue, eventfilter, cliquetable, vars[inds[0]], coefs[0], rhs, \
+               branchcand, eventqueue, eventfilter, cliquetable, vars[inds[0]], coefs[0], rhs,
                conflict->proofset->conflicttype, conflict->proofset->validdepth) );
       }
       else

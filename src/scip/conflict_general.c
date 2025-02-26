@@ -2020,7 +2020,7 @@ SCIP_RETCODE conflictAnalyzeLP(
       || ((set->conf_useboundlp == 'b' || set->conf_useboundlp == 'd') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING) )
    {
       /* start dual proof analysis */
-      SCIP_CALL( SCIPconflictAnalyzeDualProof(conflict, set, stat, eventfilter, blkmem, origprob, transprob, tree, reopt, lp, \
+      SCIP_CALL( SCIPconflictAnalyzeDualProof(conflict, set, stat, eventfilter, blkmem, origprob, transprob, tree, reopt, lp,
          farkasrow, validdepth, curvarlbs, curvarubs, TRUE, &globalinfeasible, dualproofsuccess) );
    }
 
@@ -2231,7 +2231,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
             /* perform conflict analysis on infeasible LP; last parameter guarantees status 'solved' on return */
             SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, \
-                  lp, branchcand, eventqueue, eventfilter, cliquetable, TRUE, &dualraysuccess, &iter, &nconss,  \
+                  lp, branchcand, eventqueue, eventfilter, cliquetable, TRUE, &dualraysuccess, &iter, &nconss,
                   &nliterals, &nreconvconss, &nreconvliterals, FALSE) );
             conflict->nsbsuccess += ((nconss > 0 || dualraysuccess) ? 1 : 0);
             conflict->nsbiterations += iter;
