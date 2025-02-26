@@ -57,9 +57,9 @@ SCIP_RETCODE loadSettingsPureSat(
    return SCIP_OKAY;
 }
 
-/** sets parameters for wbo instances */
+/** sets parameters for maximum satisfiability instances */
 static
-SCIP_RETCODE loadSettingsWBO(
+SCIP_RETCODE loadSettingsMaxSAT(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -358,8 +358,8 @@ SCIP_RETCODE fromCommandLine(
 
    if( hasindicator && settingsfilename == NULL )
    {
-      /* load settings for WBO instances */
-      SCIP_CALL( loadSettingsWBO(scip) );
+      /* load settings for maximum SAT */
+      SCIP_CALL( loadSettingsMaxSAT(scip) );
    }
 
    /* start presolving */
