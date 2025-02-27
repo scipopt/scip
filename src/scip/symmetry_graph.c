@@ -817,6 +817,22 @@ SCIP_RETCODE SCIPaddSymgraphEdge(
  * methods to compute colors
  */
 
+/** returns inferred type of variable */
+static
+SCIP_VARTYPE getInferredVarType(
+   SCIP_VAR*             var                 /**< variable whose inferred type has to be returned */
+   )
+{
+   assert(var != NULL);
+
+   if( SCIPvarIsBinary(var) )
+      return SCIP_VARTYPE_BINARY;
+   if( SCIPvarIsIntegral(var) )
+      return SCIP_VARTYPE_INTEGER;
+
+   return SCIP_VARTYPE_CONTINUOUS;
+}
+
 /** compares two variables for permutation symmetry detection
  *
  *  Variables are sorted first by their type, then by their objective coefficient,
@@ -834,11 +850,15 @@ int compareVars(
    SCIP_VAR*             var2                /**< second variable for comparison */
    )
 {
+   SCIP_VARTYPE type1;
+   SCIP_VARTYPE type2;
+
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   SCIP_VARTYPE type1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var1);
-   SCIP_VARTYPE type2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var2);
+   type1 = getInferredVarType(var1);
+   type2 = getInferredVarType(var2);
+
    if( type1 < type2 )
       return -1;
    if( type1 > type2 )
@@ -971,12 +991,15 @@ int compareVarsSignedPerm(
    SCIP_Real obj1;
    SCIP_Real obj2;
    SCIP_Real mid;
+   SCIP_VARTYPE type1;
+   SCIP_VARTYPE type2;
 
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   SCIP_VARTYPE type1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var1);
-   SCIP_VARTYPE type2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var2);
+   type1 = getInferredVarType(var1);
+   type2 = getInferredVarType(var2);
+
    if( type1 < type2 )
       return -1;
    if( type1 > type2 )
