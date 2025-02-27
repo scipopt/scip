@@ -896,7 +896,7 @@ SCIP_RETCODE detectImpliedBounds(
       {
          SCIPsetDebugMsg(set, "conflict set (%p) led to global infeasibility\n", (void*) conflictset);
 
-         SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, eventfilter, stat, tree, prob, origprob, reopt, lp, blkmem) );
+         SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, eventfilter, tree, prob, origprob, reopt, lp, blkmem) );
 
          /* clear the memory array before freeing it */
          BMSclearMemoryArray(redundants, nbdchginfos);
@@ -2003,7 +2003,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
             SCIPsetDebugMsg(set, " -> empty conflict set in depth %d cuts off sub tree at depth %d\n",
                focusdepth, conflictset->validdepth);
 
-            SCIP_CALL( SCIPnodeCutoff(tree->path[conflictset->validdepth], set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+            SCIP_CALL( SCIPnodeCutoff(tree->path[conflictset->validdepth], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
             cutoffdepth = conflictset->validdepth;
             continue;
          }
@@ -2036,7 +2036,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
                SCIPsetDebugMsg(set, " -> empty conflict set in depth %d cuts off sub tree at depth %d\n",
                   focusdepth, conflictset->validdepth);
 
-               SCIP_CALL( SCIPnodeCutoff(tree->path[conflictset->validdepth], set, eventfilter, stat, tree, transprob, 
+               SCIP_CALL( SCIPnodeCutoff(tree->path[conflictset->validdepth], set, stat, eventfilter, tree, transprob, 
                      origprob, reopt, lp, blkmem) );
                cutoffdepth = conflictset->validdepth;
                continue;
@@ -2087,7 +2087,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
                SCIPsetDebugMsg(set, " -> empty reprop conflict set in depth %d cuts off sub tree at depth %d\n",
                   focusdepth, repropconflictset->validdepth);
 
-               SCIP_CALL( SCIPnodeCutoff(tree->path[repropconflictset->validdepth], set, eventfilter, stat, tree, 
+               SCIP_CALL( SCIPnodeCutoff(tree->path[repropconflictset->validdepth], set, stat, eventfilter, tree, 
                      transprob, origprob, reopt, lp, blkmem) );
             }
 

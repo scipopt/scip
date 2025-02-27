@@ -463,7 +463,7 @@ SCIP_RETCODE tightenSingleVar(
             SCIPvarGetName(var), SCIPvarGetLbLocal(var),
             SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
             (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"), newbound);
-      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
    }
    else
    {
@@ -884,7 +884,7 @@ SCIP_RETCODE createAndAddProofcons(
       {
          SCIPsetDebugMsg(set, "detect global infeasibility: minactivity=%g, rhs=%g\n", globalminactivity, rhs);
 
-         SCIP_CALL( SCIPnodeCutoff(tree->path[proofset->validdepth], set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+         SCIP_CALL( SCIPnodeCutoff(tree->path[proofset->validdepth], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
 
          goto UPDATESTATISTICS;
       }
@@ -1658,7 +1658,7 @@ SCIP_RETCODE SCIPconflictAnalyzeDualProof(
    {
       SCIPsetDebugMsg(set, " -> empty farkas-proof in depth %d cuts off sub tree at depth %d\n", SCIPtreeGetFocusDepth(tree), validdepth);
 
-      SCIP_CALL( SCIPnodeCutoff(tree->path[validdepth], set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[validdepth], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
 
       *globalinfeasible = TRUE;
       *success = TRUE;
@@ -1675,7 +1675,7 @@ SCIP_RETCODE SCIPconflictAnalyzeDualProof(
    if( *globalinfeasible )
    {
       SCIPsetDebugMsg(set, "detect global: cutoff root node\n");
-      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
       *success = TRUE;
 
       ++conflict->ndualproofsinfsuccess;

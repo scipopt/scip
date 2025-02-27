@@ -3049,7 +3049,7 @@ SCIP_RETCODE priceAndCutLoop(
    /* check for cutoff */
    if( *cutoff )
    {
-      SCIP_CALL( SCIPnodeCutoff(focusnode, set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
    }
 
    SCIPsetDebugMsg(set, " -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
@@ -4877,7 +4877,7 @@ SCIP_RETCODE solveNode(
    /* check for cutoff */
    if( *cutoff )
    {
-      SCIP_CALL( SCIPnodeCutoff(focusnode, set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
 
       /* the LP might have been unbounded but not enforced, because the node is cut off anyway */
       *unbounded = FALSE;
