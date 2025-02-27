@@ -53,7 +53,7 @@
 #include "scip/struct_nodesel.h"
 #include "scip/struct_event.h"
 
-/* 
+/*
  * node priority queue methods
  */
 
@@ -709,13 +709,13 @@ SCIP_RETCODE SCIPnodepqBound(
 
          SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
          assert(lowerbound <= SCIPsetInfinity(set));
-         
+
          if( lowerbound > stat->lastlowerbound )
          {
             /* update primal-dual integrals */
             if( set->misc_calcintegral )
                SCIPstatUpdatePrimalDualIntegrals(stat, set, set->scip->transprob, set->scip->origprob, SCIPsetInfinity(set), lowerbound);
-            
+
             /* throw improvement event */
             SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
             SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
@@ -738,7 +738,7 @@ SCIP_RETCODE SCIPnodepqBound(
 
 
 /*
- * node selector methods 
+ * node selector methods
  */
 
 /** method to call, when the standard mode priority of a node selector was changed */

@@ -7499,7 +7499,7 @@ SCIP_RETCODE SCIPreoptApply(
             if( c == 0 )
             {
                /* fix bound changes based on dual information and convert all these bound changes to normal bound changes */
-               SCIP_CALL( fixBounds(reopt, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, eventfilter, 
+               SCIP_CALL( fixBounds(reopt, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, eventfilter,
                      cliquetable, blkmem, childnodes[c], id, TRUE) );
 
                /* set the reopttype of the node */

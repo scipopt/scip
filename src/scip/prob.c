@@ -619,7 +619,7 @@ SCIP_RETCODE SCIPprobTransform(
    (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
 
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
-    * cutoff bound if primal solution is already known 
+    * cutoff bound if primal solution is already known
     */
    SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventqueue, eventfilter) );
 

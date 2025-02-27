@@ -4104,7 +4104,7 @@ SCIP_RETCODE propAndSolve(
             solvelpagain, solverelaxagain) );
 
       /* update lower bound with the pseudo objective value, and cut off node by bounding */
-      SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, 
+      SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue,
          eventfilter, conflict, cliquetable, cutoff) );
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
@@ -4215,7 +4215,7 @@ SCIP_RETCODE propAndSolve(
             solvelpagain, solverelaxagain) );
 
       /* update lower bound with the pseudo objective value, and cut off node by bounding */
-      SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, 
+      SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue,
          eventfilter, conflict, cliquetable, cutoff) );
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
@@ -4455,7 +4455,7 @@ SCIP_RETCODE solveNode(
          assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
          /* heuristics might have found a solution or set the cutoff bound such that the current node is cut off */
-         SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, 
+         SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue,
             eventfilter, conflict, cliquetable, cutoff) );
       }
 
@@ -4547,7 +4547,7 @@ SCIP_RETCODE solveNode(
                &solvelpagain, &solverelaxagain) );
 
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
-         SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, 
+         SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue,
             eventfilter, conflict, cliquetable, cutoff) );
 
          /* update the cutoff, propagateagain, and solverelaxagain status of current solving loop */
@@ -5208,7 +5208,7 @@ SCIP_RETCODE SCIPsolveCIP(
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFOCUSED) );
       SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
       SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-      
+
       /* solve focus node */
       SCIP_CALL( solveNode(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp, relaxation,
             pricestore, sepastore, branchcand, cutpool, delayedcutpool, conflict, conflictstore, eventqueue, eventfilter,
@@ -5276,7 +5276,7 @@ SCIP_RETCODE SCIPsolveCIP(
                SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
                /* update the cutoff pointer if the new solution made the cutoff bound equal to the lower bound */
-               SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, 
+               SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue,
                      eventfilter, conflict, cliquetable, &cutoff) );
 
                /* increment number of feasible leaf nodes */

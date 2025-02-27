@@ -1261,7 +1261,7 @@ SCIP_RETCODE SCIPbranchExtern(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPbranchExtern", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbranchExecExtern(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->tree, scip->reopt, scip->lp, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter, 
+         scip->tree, scip->reopt, scip->lp, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter,
          scip->primal->cutoffbound, TRUE, result) );
 
    return SCIP_OKAY;

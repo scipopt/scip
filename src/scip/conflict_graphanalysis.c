@@ -2036,7 +2036,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
                SCIPsetDebugMsg(set, " -> empty conflict set in depth %d cuts off sub tree at depth %d\n",
                   focusdepth, conflictset->validdepth);
 
-               SCIP_CALL( SCIPnodeCutoff(tree->path[conflictset->validdepth], set, stat, eventfilter, tree, transprob, 
+               SCIP_CALL( SCIPnodeCutoff(tree->path[conflictset->validdepth], set, stat, eventfilter, tree, transprob,
                      origprob, reopt, lp, blkmem) );
                cutoffdepth = conflictset->validdepth;
                continue;
@@ -2087,7 +2087,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
                SCIPsetDebugMsg(set, " -> empty reprop conflict set in depth %d cuts off sub tree at depth %d\n",
                   focusdepth, repropconflictset->validdepth);
 
-               SCIP_CALL( SCIPnodeCutoff(tree->path[repropconflictset->validdepth], set, stat, eventfilter, tree, 
+               SCIP_CALL( SCIPnodeCutoff(tree->path[repropconflictset->validdepth], set, stat, eventfilter, tree,
                      transprob, origprob, reopt, lp, blkmem) );
             }
 

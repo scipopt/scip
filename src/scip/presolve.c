@@ -1334,7 +1334,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
                         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand,
-                        scip->eventqueue, scip->eventfilter, scip->cliquetable, var, newbounds[v], 
+                        scip->eventqueue, scip->eventfilter, scip->cliquetable, var, newbounds[v],
                         SCIP_BOUNDTYPE_LOWER, FALSE) );
 
                   ++(*nglobalred);

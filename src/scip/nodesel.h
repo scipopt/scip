@@ -50,7 +50,7 @@
 extern "C" {
 #endif
 
-/* 
+/*
  * node priority queue methods
  */
 
