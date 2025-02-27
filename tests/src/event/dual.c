@@ -167,7 +167,9 @@ Test(events, dualboundimproved, .description = "tests SCIP_EVENTTYPE_DUALBOUNDIM
    SCIP_CALL( SCIPsolve(scip_test) );
 
    eventhdlr = SCIPfindEventhdlr(scip_test, EVENTHDLR_NAME);
+   cr_assert(eventhdlr != NULL);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   cr_assert(eventhdlrdata != NULL);
 
    cr_expect(eventhdlrdata->ndualboundimprovements >= 1, "No dual bound improvements detected");
 }
