@@ -94,6 +94,15 @@ enum SYM_Consoptype
 };
 typedef enum SYM_Consoptype SYM_CONSOPTYPE;
 
+/** define types of symmetry groups that can be derived from symmetry detection graphs */
+enum SYM_Grouptype
+{
+   SYM_GROUPTYPE_VAR     = 0,                /**< group of variable symmetries */
+   SYM_GROUPTYPE_SDG     = 1,                /**< group of symmetries of nodes of symmetry detection graph */
+   SYM_GROUPTYPE_FULL    = 2                 /**< group of symmetries of full symmetry detection graph (incl. edges) */
+};
+typedef enum SYM_Grouptype SYM_GROUPTYPE;
+
 /* type of symmetry handling codes */
 #define SYM_HANDLETYPE_NONE             UINT32_C(0x00000000)  /**< no symmetry handling */
 #define SYM_HANDLETYPE_SYMBREAK         UINT32_C(0x00000001)  /**< symmetry breaking inequalities (orbitopes/

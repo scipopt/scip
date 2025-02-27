@@ -59,7 +59,8 @@ struct SYMMETRY_Data
    int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
    int                   nmaxperms;          /**< maximal number of permutations */
    int                   maxgenerators;      /**< maximal number of generators constructed (= 0 if unlimited) */
-   SCIP_Bool             restricttovars;     /**< whether permutations shall be restricted to variables */
+   int                   nnodessdg;          /**< number of non-variable nodes in symmetry detection graph */
+   SYM_GROUPTYPE         symgrouptype;       /**< type of symmetry group for which generators are computed */
 };
 
 
@@ -89,21 +90,30 @@ void dejavuhook(
    /* copy first part of automorphism */
    bool isIdentity = true;
    int* p = 0;
-   int permlen;
-   if ( data->restricttovars )
+   int nsymvars;
+   switch ( data->symtype )
    {
-      switch ( data->symtype )
-      {
-      case SYM_SYMTYPE_PERM:
-         permlen = data->npermvars;
-         break;
-      default:
-         assert( data->symtype == SYM_SYMTYPE_SIGNPERM );
-         permlen = 2 * data->npermvars;
-      }
+   case SYM_SYMTYPE_PERM:
+      nsymvars = data->npermvars;
+      break;
+   default:
+      assert( data->symtype == SYM_SYMTYPE_SIGNPERM );
+      nsymvars = 2 * data->npermvars;
    }
-   else
+
+   int permlen;
+   switch( data->symgrouptype )
+   {
+   case SYM_GROUPTYPE_VAR:
+      permlen = nsymvars;
+      break;
+   case SYM_GROUPTYPE_SDG:
+      permlen = nsymvars + data->nnodessdg;
+      break;
+   default:
+      assert( data->symgrouptype == SYM_GROUPTYPE_FULL );
       permlen = n;
+   }
 
    /* check whether permutation is identity */
    for (int j = 0; j < permlen; ++j)
@@ -189,6 +199,7 @@ SCIP_RETCODE computeAutomorphisms(
    SCIP*                 scip,               /**< SCIP pointer */
    SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be computed */
    dejavu::static_graph* G,                  /**< pointer to graph for that automorphisms are computed */
+   int                   nnodessdg,          /**< number of non-variable nodes in symmetry detection graph */
    int                   nsymvars,           /**< number of variables encoded in graph */
    int                   maxgenerators,      /**< maximum number of generators to be constructed (=0 if unlimited) */
    int***                perms,              /**< pointer to store generators as (nperms x npermvars) matrix */
@@ -196,7 +207,7 @@ SCIP_RETCODE computeAutomorphisms(
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations
                                               *   (needed for freeing storage) */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
-   SCIP_Bool             restricttovars,     /**< whether permutations shall be restricted to variables */
+   SYM_GROUPTYPE         symgrouptype,       /**< type of symmetry group for which generators are computed */
    SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
    )
 {
@@ -227,7 +238,8 @@ SCIP_RETCODE computeAutomorphisms(
    data.nmaxperms = 0;
    data.maxgenerators = maxgenerators;
    data.perms = NULL;
-   data.restricttovars = restricttovars;
+   data.nnodessdg = nnodessdg;
+   data.symgrouptype = symgrouptype;
 
    oldtime = SCIPgetSolvingTime(scip);
 
@@ -273,7 +285,7 @@ SCIP_RETCODE computeAutomorphisms(
    return SCIP_OKAY;
 }
 
-/** compute generators of symmetry group */
+/** compute generators of variable symmetry group */
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
@@ -314,8 +326,57 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 #endif
 
    /* compute symmetries */
-   SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(graph), &dejavugraph, SCIPgetSymgraphNVars(graph),
-         maxgenerators, perms, nperms, nmaxperms, log10groupsize, TRUE, symcodetime) );
+   SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(graph), &dejavugraph,
+         SCIPgetSymgraphNNodes(graph), SCIPgetSymgraphNVars(graph), maxgenerators,
+         perms, nperms, nmaxperms, log10groupsize, SYM_GROUPTYPE_VAR, symcodetime) );
+
+   return SCIP_OKAY;
+}
+
+/** compute generators of symmetry group of symmetry detection graph */
+SCIP_RETCODE SYMcomputeSymmetryGeneratorsSDG(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
+   )
+{
+   SCIP_Bool success = FALSE;
+
+   assert( scip != NULL );
+   assert( maxgenerators >= 0 );
+   assert( graph != NULL );
+   assert( nperms != NULL );
+   assert( nmaxperms != NULL );
+   assert( perms != NULL );
+   assert( log10groupsize != NULL );
+   assert( symcodetime != NULL );
+
+   /* init */
+   *nperms = 0;
+   *nmaxperms = 0;
+   *perms = NULL;
+   *log10groupsize = 0;
+   *symcodetime = 0.0;
+
+   /* create dejavu graph */
+   dejavu::static_graph dejavugraph;
+
+   SCIP_CALL( SYMbuildDejavuGraph(scip, &dejavugraph, graph, &success) );
+
+#ifdef WRITE_GRAPH
+   std::string filename = std::string(SCIPgetProbName(scip)) + std::string(".dimacs");
+   dejavugraph.dump_dimacs(filename);
+#endif
+
+   /* compute symmetries */
+   SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(graph), &dejavugraph,
+         SCIPgetSymgraphNNodes(graph), SCIPgetSymgraphNVars(graph), maxgenerators,
+         perms, nperms, nmaxperms, log10groupsize, SYM_GROUPTYPE_SDG, symcodetime) );
 
    return SCIP_OKAY;
 }
@@ -346,8 +407,8 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
       return FALSE;
 
    /* compute symmetries */
-   SCIP_CALL_ABORT( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(G1), &dejavugraph, nnodes, 0,
-         &perms, &nperms, &nmaxperms, &log10groupsize, FALSE, &symcodetime) );
+   SCIP_CALL_ABORT( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(G1), &dejavugraph, -1, -1, 0,
+         &perms, &nperms, &nmaxperms, &log10groupsize, SYM_GROUPTYPE_FULL, &symcodetime) );
 
    /* since G1 and G2 are connected and disjoint, they are isomorphic iff there is a permutation
     * mapping a node from G1 to a node of G2

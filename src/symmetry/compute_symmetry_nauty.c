@@ -71,7 +71,8 @@ struct NAUTY_Data
    int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
    int                   nmaxperms;          /**< maximal number of permutations */
    int                   maxgenerators;      /**< maximal number of generators to be constructed (= 0 if unlimited) */
-   SCIP_Bool             restricttovars;     /**< whether permutations shall be restricted to variables */
+   int                   nnodessdg;          /**< number of non-variable nodes in symmetry detection graph */
+   SYM_GROUPTYPE         symgrouptype;       /**< type of symmetry group for which generators are computed */
    int                   ntreenodes;         /**< number of nodes visited in nauty's search tree */
    int                   maxncells;          /**< maximum number of cells in nauty's search tree */
    int                   maxnnodes;          /**< maximum number of nodes in nauty's search tree */
@@ -96,6 +97,7 @@ void nautyhook(
    )
 {  /* lint --e{715} */
    SCIP_Bool isidentity = TRUE;
+   int nsymvars;
    int permlen;
    int* pp;
 
@@ -109,16 +111,29 @@ void nautyhook(
       return;
    }
 
-   /* copy first part of automorphism */
-   if ( data_.restricttovars )
+   switch ( data_.symtype )
    {
-      if ( data_.symtype == SYM_SYMTYPE_PERM )
-         permlen = data_.npermvars;
-      else
-         permlen = 2 * data_.npermvars;
+   case SYM_SYMTYPE_PERM:
+      nsymvars = data_.npermvars;
+      break;
+   default:
+      assert( data_.symtype == SYM_SYMTYPE_SIGNPERM );
+      nsymvars = 2 * data_.npermvars;
    }
-   else
+
+   /* only copy the variables needed for generators */
+   switch( data_.symgrouptype )
+   {
+   case SYM_GROUPTYPE_VAR:
+      permlen = nsymvars;
+      break;
+   case SYM_GROUPTYPE_SDG:
+      permlen = nsymvars + data_.nnodessdg;
+      break;
+   default:
+      assert( data_.symgrouptype == SYM_GROUPTYPE_FULL );
       permlen = n;
+   }
 
    /* check whether permutation is identity */
    for (int j = 0; j < permlen; ++j)
@@ -218,6 +233,7 @@ void traceshook(
    )
 {
    SCIP_Bool isidentity = TRUE;
+   int nsymvars;
    int permlen;
    int* pp;
    int j;
@@ -232,16 +248,29 @@ void traceshook(
       return;
    }
 
-   /* copy first part of automorphism */
-   if ( data_.restricttovars )
+   switch ( data_.symtype )
    {
-      if ( data_.symtype == SYM_SYMTYPE_PERM )
-         permlen = data_.npermvars;
-      else
-         permlen = 2 * data_.npermvars;
+   case SYM_SYMTYPE_PERM:
+      nsymvars = data_.npermvars;
+      break;
+   default:
+      assert( data_.symtype == SYM_SYMTYPE_SIGNPERM );
+      nsymvars = 2 * data_.npermvars;
    }
-   else
+
+   /* only copy the variables needed for generators */
+   switch( data_.symgrouptype )
+   {
+   case SYM_GROUPTYPE_VAR:
+      permlen = nsymvars;
+      break;
+   case SYM_GROUPTYPE_SDG:
+      permlen = nsymvars + data_.nnodessdg;
+      break;
+   default:
+      assert( data_.symgrouptype == SYM_GROUPTYPE_FULL );
       permlen = n;
+   }
 
    /* check whether permutation is identity */
    for (j = 0; j < permlen; ++j)
@@ -1233,7 +1262,8 @@ const char* SYMsymmetryGetAddDesc(void)
 }
 
 /** compute generators of symmetry group */
-SCIP_RETCODE SYMcomputeSymmetryGenerators(
+static
+SCIP_RETCODE computeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
@@ -1241,7 +1271,8 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    SCIP_Real*            log10groupsize,     /**< pointer to store size of group */
-   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
+   SCIP_Real*            symcodetime,        /**< pointer to store the time for symmetry code */
+   SYM_GROUPTYPE         symgrouptype        /**< type of symmetry group for which generators shall be computed */
    )
 {
    SCIP_Real oldtime;
@@ -1346,7 +1377,8 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    data_.maxgenerators = maxgenerators;
    data_.perms = NULL;
    data_.symtype = SCIPgetSymgraphSymtype(symgraph);
-   data_.restricttovars = TRUE;
+   data_.nnodessdg = SCIPgetSymgraphNNodes(symgraph);
+   data_.symgrouptype = symgrouptype;
    data_.ntreenodes = 0;
    SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxncells", &data_.maxncells) );
    SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxnnodes", &data_.maxnnodes) );
@@ -1386,6 +1418,42 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 
    /* determine log10 of symmetry group size */
    *log10groupsize = (SCIP_Real) stats.grpsize2;
+
+   return SCIP_OKAY;
+}
+
+/** compute generators of variable symmetry group */
+SCIP_RETCODE SYMcomputeSymmetryGenerators(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
+   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SCIP_Real*            log10groupsize,     /**< pointer to store size of group */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
+   )
+{
+   SCIP_CALL( computeSymmetryGenerators(scip, maxgenerators, symgraph, nperms, nmaxperms,
+         perms, log10groupsize, symcodetime, SYM_GROUPTYPE_VAR) );
+
+   return SCIP_OKAY;
+}
+
+/** compute generators of symmetry group of symmetry detection graph */
+SCIP_RETCODE SYMcomputeSymmetryGeneratorsSDG(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
+   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SCIP_Real*            log10groupsize,     /**< pointer to store size of group */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
+   )
+{
+   SCIP_CALL( computeSymmetryGenerators(scip, maxgenerators, symgraph, nperms, nmaxperms,
+         perms, log10groupsize, symcodetime, SYM_GROUPTYPE_SDG) );
 
    return SCIP_OKAY;
 }
@@ -1533,7 +1601,8 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    data_.maxgenerators = 0;
    data_.perms = NULL;
    data_.symtype = symtype;
-   data_.restricttovars = FALSE;
+   data_.symgrouptype = SYM_GROUPTYPE_FULL;
+   data_.nnodessdg = SCIPgetSymgraphNNodes(G1);
    data_.ntreenodes = 0;
    SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxncells", &data_.maxncells) ); /*lint !e641*//*lint !e732*/
    SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxnnodes", &data_.maxnnodes) ); /*lint !e641*//*lint !e732*/
