@@ -4535,7 +4535,6 @@ SCIP_RETCODE SCIPnodeFocus(
          
          SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
 
-         assert(lowerbound <= SCIPsetInfinity(set));
          if( lowerbound > stat->lastlowerbound )
          {                        
             /* update primal-dual integrals */
