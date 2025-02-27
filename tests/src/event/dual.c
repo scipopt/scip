@@ -133,20 +133,20 @@ SCIP_DECL_EVENTEXEC(eventExecDualBoundImproved)
 static
 SCIP_RETCODE SCIPincludeEventHdlrDualBoundImproved(SCIP* scip)
 {
-   assert(scip_test != NULL);
+   assert(scip != NULL);
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    
-   SCIP_CALL( SCIPallocBlockMemory(scip_test, &eventhdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    eventhdlrdata->ndualboundimprovements = 0;
    
    /* create event handler for dual bound improved */
    eventhdlr = NULL;
-   SCIP_CALL( SCIPincludeEventhdlrBasic(scip_test, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDualBoundImproved, eventhdlrdata) );
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDualBoundImproved, eventhdlrdata) );
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPsetEventhdlrInit(scip_test, eventhdlr, eventInitDualBoundImproved) );
-   SCIP_CALL( SCIPsetEventhdlrExit(scip_test, eventhdlr, eventExitDualBoundImproved) );
+   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitDualBoundImproved) );
+   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitDualBoundImproved) );
 
    return SCIP_OKAY;
 }
@@ -157,14 +157,17 @@ TestSuite(events, .init = setup, .fini = teardown);
 
 Test(events, dualboundimproved, .description = "tests SCIP_EVENTTYPE_DUALBOUNDIMPROVED generation")
 {
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
    SCIP_CALL( SCIPincludeEventHdlrDualBoundImproved(scip_test) );
    
    SCIP_CALL( SCIPreadProb(scip_test, "../check/instances/MIP/bell5.mps", NULL) );
 
    SCIP_CALL( SCIPsolve(scip_test) );
 
-   SCIP_EVENTHDLR* eventhdlr = SCIPfindEventhdlr(scip_test, EVENTHDLR_NAME);
-   SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   eventhdlr = SCIPfindEventhdlr(scip_test, EVENTHDLR_NAME);
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
    cr_expect(eventhdlrdata->ndualboundimprovements >= 1, "No dual bound improvements detected");
 }
