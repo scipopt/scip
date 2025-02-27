@@ -308,9 +308,9 @@ void adjustStorageSize(
    return;
 }
 
-/* removes exact conflict constraints from certificate hashmap */
+/* removes an exact conflict constraint from the certificate hashmap */
 static
-SCIP_RETCODE removeExactConflictsFromCertificate(
+SCIP_RETCODE removeExactConflictFromCertificateHashmap(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CONS*            cons                /**< conflict constraint */
    )
@@ -321,14 +321,15 @@ SCIP_RETCODE removeExactConflictsFromCertificate(
    assert(set->scip != NULL);
    assert(cons != NULL);
 
-   if( !SCIPisExactSolve(set->scip) || !SCIPisCertificateActive(set->scip) || strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "exactlinear") != 0 )
+   if( !SCIPisExactSolve(set->scip) || !SCIPisCertificateActive(set->scip)
+      || strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "exactlinear") != 0 )
       return SCIP_OKAY;
 
    certificate = SCIPgetCertificate(set->scip);
    assert(certificate != NULL);
    assert(certificate->rowdatahash != NULL);
 
-   /* only do something if row does not already exist*/
+   /* only do something if constraint does not already exist */
    if( SCIPhashmapExists(certificate->rowdatahash, (void*) cons) )
    {
       SCIP_CALL( SCIPhashmapRemove(certificate->rowdatahash, (void*) cons) );
@@ -375,7 +376,7 @@ SCIP_RETCODE delPosConflict(
    {
       assert(transprob != NULL);
       SCIP_CALL( SCIPconsDelete(conflictstore->conflicts[pos], blkmem, set, stat, transprob, reopt) );
-      SCIP_CALL( removeExactConflictsFromCertificate(set, conflictstore->conflicts[pos]) );
+      SCIP_CALL( removeExactConflictFromCertificateHashmap(set, conflictstore->conflicts[pos]) );
    }
    SCIP_CALL( SCIPconsRelease(&conflictstore->conflicts[pos], blkmem, set) );
 
@@ -438,7 +439,7 @@ SCIP_RETCODE delPosDualray(
    {
       assert(transprob != NULL);
       SCIP_CALL( SCIPconsDelete(dualproof, blkmem, set, stat, transprob, reopt) );
-      SCIP_CALL( removeExactConflictsFromCertificate(set, dualproof) );
+      SCIP_CALL( removeExactConflictFromCertificateHashmap(set, dualproof) );
    }
    SCIP_CALL( SCIPconsRelease(&dualproof, blkmem, set) );
 
@@ -502,7 +503,7 @@ SCIP_RETCODE delPosDualsol(
    {
       assert(transprob != NULL);
       SCIP_CALL( SCIPconsDelete(dualproof, blkmem, set, stat, transprob, reopt) );
-      SCIP_CALL( removeExactConflictsFromCertificate(set, dualproof) );
+      SCIP_CALL( removeExactConflictFromCertificateHashmap(set, dualproof) );
    }
    SCIP_CALL( SCIPconsRelease(&dualproof, blkmem, set) );
 
@@ -1051,7 +1052,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
          if( pos >= conflictstore->ndualrayconfs )
          {
             SCIP_CALL( SCIPconsDelete(dualproof, blkmem, set, stat, transprob, reopt) );
-            SCIP_CALL( removeExactConflictsFromCertificate(set, dualproof) );
+            SCIP_CALL( removeExactConflictFromCertificateHashmap(set, dualproof) );
             return SCIP_OKAY;
          }
 
@@ -1145,7 +1146,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
          if( pos >= conflictstore->ndualsolconfs )
          {
             SCIP_CALL( SCIPconsDelete(dualproof, blkmem, set, stat, transprob, reopt) );
-            SCIP_CALL( removeExactConflictsFromCertificate(set, dualproof) );
+            SCIP_CALL( removeExactConflictFromCertificateHashmap(set, dualproof) );
             return SCIP_OKAY;
          }
 
