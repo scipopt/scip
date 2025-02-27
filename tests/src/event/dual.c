@@ -33,15 +33,15 @@
 #include "scip/scipdefplugins.h"
 #include "scip/scip_event.h"
 
-/** Structure to store event handler specific information */
+#define EVENTHDLR_NAME         "dualboundimproved"
+#define EVENTHDLR_DESC         "event handler for catching dual bound improvements"
+
+
+/** structure to store event handler specific information */
 struct SCIP_EventhdlrData
 {
    int ndualboundimprovements;     /**< counter for the number of dual bound improvements */
 };
-// typedef struct SCIP_EventhdlrData SCIP_EVENTHDLRDATA;
-
-#define EVENTHDLR_NAME         "dualboundimproved"
-#define EVENTHDLR_DESC         "event handler for catching dual bound improvements"
 
 /** GLOBAL VARIABLES **/
 static SCIP* scip_test = NULL;
@@ -50,7 +50,7 @@ static SCIP* scip_test = NULL;
 static
 void setup(void)
 {
-   assert(scip_test == NULL);
+   cr_assert(scip_test == NULL);
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip_test) );
@@ -60,23 +60,17 @@ void setup(void)
 static
 void teardown(void)
 {
-   SCIP_EVENTHDLR* eventhdlr;
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLR* eventhdlr = SCIPfindEventhdlr(scip_test, EVENTHDLR_NAME);
+   cr_assert(eventhdlr != NULL);
+   SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   cr_assert(eventhdlrdata != NULL);
 
    /* free event handler data */
-   eventhdlr = SCIPfindEventhdlr(scip_test, EVENTHDLR_NAME);
-   if( eventhdlr != NULL )
-   {
-      eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-      if( eventhdlrdata != NULL )
-      {
-         SCIPfreeBlockMemory(scip_test, &eventhdlrdata);
-      }
-   }
+   SCIPfreeBlockMemory(scip_test, &eventhdlrdata);
    
    SCIP_CALL( SCIPfree(&scip_test) );
 
-   cr_assert_null(scip_test);
+   cr_assert(scip_test == NULL);
    cr_assert(BMSgetMemoryUsed() == 0, "There is a memory leak!");
 }
 
@@ -112,8 +106,8 @@ SCIP_DECL_EVENTEXIT(eventExitDualBoundImproved)
 static
 SCIP_DECL_EVENTEXEC(eventExecDualBoundImproved)
 {  /*lint --e{715}*/
-   SCIP_Real dualvalue;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_Real dualvalue;
 
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
@@ -130,7 +124,7 @@ SCIP_DECL_EVENTEXEC(eventExecDualBoundImproved)
       dualvalue, SCIPgetProbName(scip) );
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   eventhdlrdata->ndualboundimprovements++;
+   ++eventhdlrdata->ndualboundimprovements;
 
    return SCIP_OKAY;
 }
@@ -146,9 +140,8 @@ SCIP_RETCODE SCIPincludeEventHdlrDualBoundImproved(SCIP* scip)
    SCIP_CALL( SCIPallocBlockMemory(scip_test, &eventhdlrdata) );
    eventhdlrdata->ndualboundimprovements = 0;
    
-   eventhdlr = NULL;
-
    /* create event handler for dual bound improved */
+   eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip_test, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDualBoundImproved, eventhdlrdata) );
    assert(eventhdlr != NULL);
 
@@ -158,13 +151,11 @@ SCIP_RETCODE SCIPincludeEventHdlrDualBoundImproved(SCIP* scip)
    return SCIP_OKAY;
 }
 
-
-/* test that we correctly catch the following events:
- *  SCIP_EVENTTYPE_DUALBOUNDIMPROVED
- */
 TestSuite(events, .init = setup, .fini = teardown);
 
-Test(events, dualboundimproved)
+/* TESTS */
+
+Test(events, dualboundimproved, .description = "tests SCIP_EVENTTYPE_DUALBOUNDIMPROVED generation")
 {
    SCIP_CALL( SCIPincludeEventHdlrDualBoundImproved(scip_test) );
    

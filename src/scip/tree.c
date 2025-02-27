@@ -4534,6 +4534,7 @@ SCIP_RETCODE SCIPnodeFocus(
             stat->rootlowerbound = SCIPsetInfinity(set);
          
          SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
+         assert(lowerbound <= SCIPsetInfinity(set));
 
          if( lowerbound > stat->lastlowerbound )
          {                        
