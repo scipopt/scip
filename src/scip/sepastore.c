@@ -655,7 +655,7 @@ SCIP_RETCODE sepastoreApplyLb(
          else
          {
             /* we are done with solving since a global bound change is infeasible */
-            SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, transprob, origprob, reopt, lp, blkmem, eventfilter) );
+            SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
             *cutoff = TRUE;
          }
 
@@ -747,7 +747,7 @@ SCIP_RETCODE sepastoreApplyUb(
          else
          {
             /* we are done with solving since a global bound change is infeasible */
-            SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, transprob, origprob, reopt, lp, blkmem, eventfilter) );
+            SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
             *cutoff = TRUE;
          }
 

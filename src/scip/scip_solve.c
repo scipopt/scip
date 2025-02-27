@@ -434,7 +434,7 @@ SCIP_RETCODE SCIPtransformProb(
       scip->stat->externmemestim = (SCIP_Longint) (MAX(1, 8.5e-04 * SCIPgetNConss(scip) + 7.6e-04 * SCIPgetNVars(scip) + 3.5e-05 * scip->stat->nnz) * 1048576.0); /*lint !e666*/
       SCIPdebugMsg(scip, "external memory usage estimated to %" SCIP_LONGINT_FORMAT " byte\n", scip->stat->externmemestim);
    }
-
+   
    return SCIP_OKAY;
 }
 
@@ -442,8 +442,9 @@ SCIP_RETCODE SCIPtransformProb(
 static
 SCIP_RETCODE initPresolve(
    SCIP*                 scip                /**< SCIP data structure */
-   )
+)
 {
+   SCIP_EVENT event;
 #ifndef NDEBUG
    size_t nusedbuffers;
    size_t nusedcleanbuffers;
@@ -455,7 +456,6 @@ SCIP_RETCODE initPresolve(
    assert(scip->stat != NULL);
    assert(scip->transprob != NULL);
    assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
-   SCIP_EVENT event;
 
    /* reset statistics for presolving and current branch and bound run */
    SCIPstatResetPresolving(scip->stat, scip->set, scip->transprob, scip->origprob);

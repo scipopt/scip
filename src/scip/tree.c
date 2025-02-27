@@ -1238,15 +1238,15 @@ SCIP_RETCODE SCIPnodeFree(
 SCIP_RETCODE SCIPnodeCutoff(
    SCIP_NODE*            node,               /**< node that should be cut off */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
-   )
+   BMS_BLKMEM*           blkmem              /**< block memory */
+)
 {
    SCIP_NODETYPE nodetype = SCIPnodeGetType(node);
    SCIP_EVENT event;
@@ -1516,7 +1516,7 @@ SCIP_RETCODE nodeRepropagate(
    /* mark the node to be cut off if a cutoff was detected */
    if( *cutoff )
    {
-      SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, transprob, origprob, reopt, lp, blkmem, eventfilter) );
+      SCIP_CALL( SCIPnodeCutoff(node, set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
    }
 
    return SCIP_OKAY;
@@ -1575,7 +1575,7 @@ SCIP_RETCODE nodeActivate(
       node->reprop = set->conf_enable && set->conf_useprop;
 
       /* mark the node to be cut off */
-      SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, transprob, origprob, reopt, lp, blkmem, eventfilter) );
+      SCIP_CALL( SCIPnodeCutoff(node, set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
    }
 
    /* propagate node again, if the reprop flag is set; in the new focus node, no repropagation is necessary, because
@@ -1999,7 +1999,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
                probingchange) );
 
          /* mark the node with the conflicting bound change to be cut off */
-         SCIP_CALL( SCIPnodeCutoff(tree->path[conflictingdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem, eventfilter) );
+         SCIP_CALL( SCIPnodeCutoff(tree->path[conflictingdepth], set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
          return SCIP_OKAY;
       }
@@ -2325,7 +2325,7 @@ SCIP_RETCODE treeApplyPendingBdchgs(
        */
       if( conflictdepth == 0 )
       {
-         SCIP_CALL( SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, tree, transprob, origprob, reopt, lp, blkmem, eventfilter) );
+         SCIP_CALL( SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
          if( ((int) tree->pendingbdchgs[i].node->depth) <= tree->effectiverootdepth )
             break; /* break here to clear all pending bound changes */
@@ -2469,7 +2469,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    /* check for cutoff */
    if( lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT )
    {
-      SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, transprob, origprob, set->scip->reopt, lp, set->scip->mem->probmem, eventfilter) );
+      SCIP_CALL( SCIPnodeCutoff(node, set, eventfilter, stat, tree, transprob, origprob, set->scip->reopt, lp, set->scip->mem->probmem) );
    }
    else
    {
@@ -3321,7 +3321,7 @@ SCIP_RETCODE treeSwitchPath(
    /* mark new focus node to be cut off, if a cutoff was found */
    if( *cutoff )
    {
-      SCIP_CALL( SCIPnodeCutoff(tree->focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem, eventfilter) );
+      SCIP_CALL( SCIPnodeCutoff(tree->focusnode, set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
    }
 
    /* count the new LP sizes of the path */
@@ -3852,7 +3852,7 @@ SCIP_RETCODE nodeToLeaf(
    else
    {
       /* delete node due to bound cut off */
-      SCIP_CALL( SCIPnodeCutoff(*node, set, stat, tree, set->scip->transprob, set->scip->origprob, reopt, lp, blkmem, eventfilter) );
+      SCIP_CALL( SCIPnodeCutoff(*node, set, eventfilter, stat, tree, set->scip->transprob, set->scip->origprob, reopt, lp, blkmem) );
       if( SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD && lpstatefork != NULL )
       {
          SCIP_CALL( SCIPnodeReleaseLPIState(lpstatefork, blkmem, lp) );
@@ -4555,7 +4555,7 @@ SCIP_RETCODE SCIPnodeFocus(
       }
       else
       {
-         SCIP_CALL( SCIPnodeCutoff(*node, set, stat, tree, transprob, origprob, reopt, lp, blkmem, eventfilter) );
+         SCIP_CALL( SCIPnodeCutoff(*node, set, eventfilter, stat, tree, transprob, origprob, reopt, lp, blkmem) );
       }
 
       /* free node memory */
@@ -5299,7 +5299,7 @@ SCIP_RETCODE SCIPtreeCutoff(
       if( SCIPsetIsInfinity(set, node->lowerbound) || SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
          /* delete sibling due to bound cut off */
-         SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, set->scip->transprob, set->scip->origprob, reopt, lp, blkmem, eventfilter) );
+         SCIP_CALL( SCIPnodeCutoff(node, set, eventfilter, stat, tree, set->scip->transprob, set->scip->origprob, reopt, lp, blkmem) );
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, eventfilter, tree, lp) );
       }
    }
@@ -5311,7 +5311,7 @@ SCIP_RETCODE SCIPtreeCutoff(
       if( SCIPsetIsInfinity(set, node->lowerbound) || SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
          /* delete child due to bound cut off */
-         SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, set->scip->transprob, set->scip->origprob, reopt, lp, blkmem, eventfilter) );
+         SCIP_CALL( SCIPnodeCutoff(node, set, eventfilter, stat, tree, set->scip->transprob, set->scip->origprob, reopt, lp, blkmem) );
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, eventfilter, tree, lp) );
       }
    }
