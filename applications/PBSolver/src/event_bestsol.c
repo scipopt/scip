@@ -38,14 +38,6 @@
 #define EVENTHDLR_NAME         "bestsol"
 #define EVENTHDLR_DESC         "event handler for best solutions found"
 
-/** destructor of event handler to free user data (called when SCIP is exiting) */
-#define eventFreeBestsol NULL
-
-/** solving process initialization method of event handler (called when branch and bound process is about to begin) */
-#define eventInitsolBestsol NULL
-
-/** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
-#define eventExitsolBestsol NULL
 
 /** initialization method of event handler (called after problem was transformed) */
 static
@@ -69,6 +61,7 @@ SCIP_DECL_EVENTEXIT(eventExitBestsol)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
    SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
+
    return SCIP_OKAY;
 }
 
@@ -142,9 +135,7 @@ SCIP_RETCODE SCIPcreateEventHdlrBestsol(
 {
    /* create event handler for events on best solutions */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL,
-         eventFreeBestsol, eventInitBestsol, eventExitBestsol,
-         eventInitsolBestsol, eventExitsolBestsol, eventDeleteBestsol, eventExecBestsol, NULL) );
+         NULL, NULL, eventInitBestsol, eventExitBestsol, NULL, NULL, eventDeleteBestsol, eventExecBestsol, NULL) );
 
    return SCIP_OKAY;
 }
