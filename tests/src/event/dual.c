@@ -22,8 +22,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   test_events.c
- * @brief  unit test for checking events
+/**@file   dual.c
+ * @brief  unit tests for checking dual events
  * @author João Dionísio
  */
 
