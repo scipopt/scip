@@ -1758,7 +1758,10 @@ SCIP_RETCODE findImpliedIntegers(
                break;
             case SCIP_VARTYPE_CONTINUOUS:
                break;
-         }
+            default:
+               SCIPerrorMessage("unknown variable type\n");
+               return SCIP_INVALIDDATA;
+         } /*lint !e788*/
          score += nnonzs * 0.1;
          candidateScores[i] = -score;
       }
