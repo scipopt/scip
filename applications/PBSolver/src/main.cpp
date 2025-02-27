@@ -335,7 +335,10 @@ SCIP_RETCODE fromCommandLine(
    /* create event handler for best solution found if an objective exists */
    if( hasobj )
    {
-      SCIP_CALL( SCIPcreateEventHdlrBestsol(scip) );
+      if( (SCIPmessagehdlrGetData(SCIPgetMessagehdlr(scip)))->comment )
+      {
+         SCIP_CALL( SCIPcreateEventHdlrBestsol(scip) );
+      }
    }
    else
    {
