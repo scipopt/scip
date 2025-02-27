@@ -67,7 +67,7 @@ void teardown(void)
 
    /* free event handler data */
    SCIPfreeBlockMemory(scip_test, &eventhdlrdata);
-   
+
    SCIP_CALL( SCIPfree(&scip_test) );
 
    cr_assert(scip_test == NULL);
@@ -131,15 +131,17 @@ SCIP_DECL_EVENTEXEC(eventExecDualBoundImproved)
 
 /** includes event handler for best solution found */
 static
-SCIP_RETCODE SCIPincludeEventHdlrDualBoundImproved(SCIP* scip)
+SCIP_RETCODE SCIPincludeEventHdlrDualBoundImproved(
+   SCIP*                 scip                /* SCIP data structure */
+   )
 {
    assert(scip != NULL);
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
-   
+
    SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    eventhdlrdata->ndualboundimprovements = 0;
-   
+
    /* create event handler for dual bound improved */
    eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDualBoundImproved, eventhdlrdata) );
@@ -161,7 +163,7 @@ Test(events, dualboundimproved, .description = "tests SCIP_EVENTTYPE_DUALBOUNDIM
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    SCIP_CALL( SCIPincludeEventHdlrDualBoundImproved(scip_test) );
-   
+
    SCIP_CALL( SCIPreadProb(scip_test, "../check/instances/MIP/bell5.mps", NULL) );
 
    SCIP_CALL( SCIPsolve(scip_test) );
