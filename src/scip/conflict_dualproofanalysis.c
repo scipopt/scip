@@ -517,7 +517,7 @@ SCIP_RETCODE tightenSingleVar(
                (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var)),
                newbound);
 
-         SCIP_CALL( SCIPnodeAddBoundchg(tree->path[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
+         SCIP_CALL( SCIPnodeAddBoundchg(tree->path[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
                eventqueue, eventfilter, cliquetable, var, newbound, boundtype, FALSE) );
 
          /* mark the node in the validdepth to be propagated again */
@@ -777,7 +777,7 @@ SCIP_RETCODE propagateLongProof(
          if( SCIPsetIsGE(set, newub, ub) )
             continue;
 
-         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand, \
+         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand,
                eventqueue, eventfilter, cliquetable, var, val, rhs-resminact, conflicttype, validdepth) );
       }
       /* we got a potential new lower bound */
@@ -795,7 +795,7 @@ SCIP_RETCODE propagateLongProof(
          if( SCIPsetIsLE(set, newlb, lb) )
             continue;
 
-         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand, \
+         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand,
                eventqueue, eventfilter, cliquetable, var, val, rhs-resminact, conflicttype, validdepth) );
       }
 
@@ -1139,7 +1139,7 @@ SCIP_RETCODE SCIPconflictFlushProofset(
          inds = proofsetGetInds(conflict->proofset);
          rhs = proofsetGetRhs(conflict->proofset);
 
-         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, \
+         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
                branchcand, eventqueue, eventfilter, cliquetable, vars[inds[0]], coefs[0], rhs,
                conflict->proofset->conflicttype, conflict->proofset->validdepth) );
       }
@@ -1168,7 +1168,7 @@ SCIP_RETCODE SCIPconflictFlushProofset(
          if( !skipinitialproof )
          {
             /* create and add the original proof */
-            SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofset, set, stat, origprob, transprob, \
+            SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofset, set, stat, origprob, transprob,
                   tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, blkmem) );
          }
       }
@@ -1207,7 +1207,7 @@ SCIP_RETCODE SCIPconflictFlushProofset(
          else
          {
             /* create and add proof constraint */
-            SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofsets[i], set, stat, origprob, \
+            SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofsets[i], set, stat, origprob,
                   transprob, tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, blkmem) );
          }
       }
