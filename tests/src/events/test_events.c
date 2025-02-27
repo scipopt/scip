@@ -169,12 +169,12 @@ Test(
    strcpy(testfile, __FILE__);
    testfile[strlen(testfile) - 13] = '\0';  /* cutoff "test_events.c" */
    strcat(testfile, "../../../check/instances/MIP/bell5.mps");
-   SCIP_CALL( SCIPreadProb(scip_test, testfile, NULL) );
 
    SCIP_CALL( SCIPincludeEventHdlrDualBoundImproved() );
-   SCIP_CALL( SCIPsetEventhdlrExit(scip_test, SCIPfindEventhdlr(scip_test, EVENTHDLR_NAME), eventExitDualBoundImproved) );
+
+   SCIP_CALL( SCIPreadProb(scip_test, testfile, NULL) );
 
    SCIP_CALL( SCIPsolve(scip_test) );
 
-   cr_expect_neq(ndualboundimprovements, 0, "No dual bound improvements were caught");
+   cr_expect(ndualboundimprovements >= 1, "No dual bound improvements detected");
 }
