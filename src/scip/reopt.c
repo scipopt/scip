@@ -3736,7 +3736,7 @@ SCIP_RETCODE addSplitcons(
    SCIP_LP*              lp,                 /**< current LP */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidates */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_NODE*            node,               /**< node corresponding to the pruned part */
    unsigned int          id                  /**< id of stored node */

@@ -88,7 +88,7 @@ struct Scip
 
    /* TRANSFORMED */
    SCIP_EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
-   SCIP_EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter;        /**< global event filter */
    SCIP_BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    SCIP_LP*              lp;                 /**< LP data */
    SCIP_NLP*             nlp;                /**< NLP data */
