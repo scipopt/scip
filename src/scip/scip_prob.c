@@ -3968,7 +3968,9 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
     * function instead of in SCIPnodeUpdateLowerbound().
     */
    if( SCIPisLT(scip, newbound, scip->primal->cutoffbound) )
+   {
       SCIP_CALL( SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->eventfilter, scip->tree, scip->transprob, scip->origprob, newbound) );
+   }
    else
    {
       SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->eventfilter, scip->tree, scip->transprob, scip->origprob, scip->reopt, scip->lp, scip->mem->probmem) );

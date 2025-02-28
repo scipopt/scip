@@ -444,7 +444,6 @@ SCIP_RETCODE initPresolve(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   SCIP_EVENT event;
 #ifndef NDEBUG
    size_t nusedbuffers;
    size_t nusedcleanbuffers;
@@ -483,6 +482,8 @@ SCIP_RETCODE initPresolve(
    /* initialize lower bound of the presolving root node if a valid dual bound is at hand */
    if( scip->transprob->dualbound != SCIP_INVALID ) /*lint !e777*/
    {
+      SCIP_EVENT event;
+
       scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
@@ -569,8 +570,8 @@ SCIP_RETCODE exitPresolve(
 
 	 if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
 	 {
-	   /* flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
-	   SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
+	    /* flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
+	    SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
 
 #ifndef NDEBUG
 	    multvars = SCIPvarGetMultaggrVars(var);
@@ -1492,8 +1493,6 @@ SCIP_RETCODE initSolve(
    SCIP_Bool             solved              /**< is problem already solved? */
    )
 {
-   SCIP_EVENT event;
-
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
@@ -1560,6 +1559,8 @@ SCIP_RETCODE initSolve(
    /* restore lower bound of the root node if a valid dual bound is at hand */
    if( scip->transprob->dualbound != SCIP_INVALID ) /*lint !e777*/
    {
+      SCIP_EVENT event;
+
       scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;

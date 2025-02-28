@@ -1248,7 +1248,6 @@ SCIP_RETCODE SCIPnodeCutoff(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_EVENT event;
    SCIP_NODETYPE nodetype = SCIPnodeGetType(node);
 
    assert(set != NULL);
@@ -1288,6 +1287,8 @@ SCIP_RETCODE SCIPnodeCutoff(
 
       if( lowerbound > stat->lastlowerbound )
       {
+         SCIP_EVENT event;
+
          /* update primal-dual integrals */
          if( set->misc_calcintegral )
             SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
@@ -1555,7 +1556,9 @@ SCIP_RETCODE nodeActivate(
 
    /* apply lower bound, variable domain, and constraint set changes */
    if( node->parent != NULL )
+   {
       SCIP_CALL( SCIPnodeUpdateLowerbound(node, stat, set, eventfilter, tree, transprob, origprob, node->parent->lowerbound) );
+   }
    SCIP_CALL( SCIPconssetchgApply(node->conssetchg, blkmem, set, stat, (int) node->depth,
          (SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE)) );
    SCIP_CALL( SCIPdomchgApply(node->domchg, blkmem, set, stat, lp, branchcand, eventqueue, (int) node->depth, cutoff) );
@@ -2397,8 +2400,6 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    )
 {
-   SCIP_EVENT event;
-
    assert(stat != NULL);
    assert(set != NULL);
    assert(!SCIPsetIsInfinity(set, newbound));
@@ -2427,6 +2428,8 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
 
          if( lowerbound > stat->lastlowerbound )
          {
+            SCIP_EVENT event;
+
             /* update primal-dual integrals */
             if( set->misc_calcintegral )
                SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
@@ -4458,7 +4461,6 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_Bool             exitsolve           /**< are we in exitsolve stage, so we only need to loose the children */
    )
 {  /*lint --e{715}*/
-   SCIP_EVENT event;
    SCIP_NODE* fork;
    SCIP_NODE* lpfork;
    SCIP_NODE* lpstatefork;
@@ -4510,6 +4512,8 @@ SCIP_RETCODE SCIPnodeFocus(
       /* cut off node */
       if( SCIPnodeGetType(*node) == SCIP_NODETYPE_LEAF )
       {
+         SCIP_Real lowerbound;
+
          assert(!(*node)->active);
          assert((*node)->depth != 0 || tree->focusnode == NULL);
 
@@ -4533,11 +4537,13 @@ SCIP_RETCODE SCIPnodeFocus(
          if( (*node)->depth == 0 )
             stat->rootlowerbound = SCIPsetInfinity(set);
 
-         SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
+         lowerbound = SCIPtreeGetLowerbound(tree, set);
          assert(lowerbound <= SCIPsetInfinity(set));
 
          if( lowerbound > stat->lastlowerbound )
          {
+            SCIP_EVENT event;
+
             /* update primal-dual integrals */
             if( set->misc_calcintegral )
                SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
