@@ -130,8 +130,19 @@ void dejavuhook(
       return;
 
    /* store symmetry */
-   for (int j = 0; j < permlen; ++j)
-      p[j] = (int) aut[j];
+   if ( data->symgrouptype != SYM_GROUPTYPE_SDG )
+   {
+      for (int j = 0; j < permlen; ++j)
+         p[j] = (int) aut[j];
+   }
+   else
+   {
+      int cnt = 0;
+      for (int j = nsymvars; j < permlen; ++j, ++cnt)
+         p[cnt] = (int) aut[j];
+      for (int j = 0; j < nsymvars; ++j, ++cnt)
+         p[cnt] = (int) aut[j];
+   }
 
    /* check whether we should allocate space for perms */
    if ( data->nmaxperms <= 0 )
@@ -333,7 +344,11 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    return SCIP_OKAY;
 }
 
-/** compute generators of symmetry group of symmetry detection graph */
+/** compute generators of symmetry group of symmetry detection graph
+ *
+ *  If the symmetry detection graph (SDG) has k nodes, the first k entries of a generator correspond to the nodes
+ *  of the SDG. The remaining entries of the generator correspond to the variables (and possibly their negation).
+ */
 SCIP_RETCODE SYMcomputeSymmetryGeneratorsSDG(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */

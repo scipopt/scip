@@ -171,8 +171,26 @@ void nautyhook(
       data_.nmaxperms = newsize;
    }
 
-   if ( SCIPduplicateBlockMemoryArray(data_.scip, &pp, p, permlen) != SCIP_OKAY )
-      return;
+   /* store permutation */
+   if ( data_.symgrouptype != SYM_GROUPTYPE_SDG )
+   {
+      if ( SCIPduplicateBlockMemoryArray(data_.scip, &pp, p, permlen) != SCIP_OKAY )
+         return;
+   }
+   else
+   {
+      int cnt = 0;
+      int j;
+
+      if ( SCIPallocBlockMemoryArray(data_.scip, &pp, permlen) != SCIP_OKAY )
+         return;
+
+      for (j = nsymvars; j < permlen; ++j, ++cnt)
+         pp[cnt] = p[j];
+      for (j = 0; j < nsymvars; ++j, ++cnt)
+         pp[cnt] = p[j];
+   }
+
    data_.perms[data_.nperms++] = pp;
 }
 
@@ -1440,7 +1458,11 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    return SCIP_OKAY;
 }
 
-/** compute generators of symmetry group of symmetry detection graph */
+/** compute generators of symmetry group of symmetry detection graph
+ *
+ *  If the symmetry detection graph (SDG) has k nodes, the first k entries of a generator correspond to the nodes
+ *  of the SDG. The remaining entries of the generator correspond to the variables (and possibly their negation).
+ */
 SCIP_RETCODE SYMcomputeSymmetryGeneratorsSDG(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
