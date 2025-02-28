@@ -709,7 +709,7 @@ SCIP_RETCODE matrixCreate(
                if( nxorvars == 3 )
                {
                   nmatrixrows += 4;
-                  nnonzstmp += 6;
+                  nnonzstmp += 12;
                }
                else
                   nmatrixrows += 1;
