@@ -503,6 +503,38 @@ SCIP_RETCODE addXorLinearization(
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, noperands + 1) );
    if( noperands == 3)
    {
+      assert(SCIPgetIntVarXor(scip, cons) == NULL);
+      /** in the special case of 3 variables and c = 0, the following linear system is created:
+       *    + x - y - z <= 0
+       *    - x + y - z <= 0
+       *    - x - y + z <= 0
+       *    + x + y + z <= 2
+       *  in the special case of 3 variables and c = 1, the following linear system is created:
+       *    - x + y + z <= 1
+       *    + x - y + z <= 1
+       *    + x + y - z <= 1
+       *    - x - y - z <= -1
+       */
+      SCIP_Bool rhs = SCIPgetRhsXor(scip, cons);
+      SCIP_Real scale = rhs == 0 ? -1.0 : 1.0;
+      SCIP_Real rhsVal = rhs;
+
+      for( int i = 0; i < 3; ++i )
+      {
+         for( int j = 0; j < 3; ++j )
+         {
+            vals[j] = (i == j ) ? -scale : scale;
+         }
+
+         SCIP_CALL( addLinearConstraint(scip, matrix, operands, vals, 3, -SCIPinfinity(scip), rhsVal, cons) );
+      }
+      for( int j = 0; j < 3; ++j )
+      {
+         vals[j] = -scale;
+      }
+
+      rhsVal = 2.0 - 3 * rhs;
+      SCIP_CALL( addLinearConstraint(scip, matrix, operands, vals, 3, -SCIPinfinity(scip), rhsVal, cons) );
    }
    else
    {
