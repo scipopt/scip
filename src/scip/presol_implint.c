@@ -34,13 +34,24 @@
 
 #include <assert.h>
 
+#include "scip/cons_and.h"
+#include "scip/cons_linear.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_knapsack.h"
+#include "scip/cons_or.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_varbound.h"
+#include "scip/cons_xor.h"
+
 #include "scip/presol_implint.h"
-#include "scip/pub_matrix.h"
+#include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_network.h"
 #include "scip/pub_presol.h"
 #include "scip/pub_var.h"
+
+#include "scip/scip_cons.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_mem.h"
@@ -73,7 +84,946 @@ struct SCIP_PresolData
                                                 * implied integrality detection. */
 };
 
+/** constraint matrix data structure in column and row major format.
+ *  Contains only the linear terms, and marks the presence of non-linear terms */
+struct ImplintMatrix
+{
+   SCIP_Real*            colmatval;          /**< coefficients in column major format */
+   int*                  colmatind;          /**< row indexes in column major format */
+   int*                  colmatbeg;          /**< column storage offset */
+   int*                  colmatcnt;          /**< number of row entries per column */
+   int                   ncols;              /**< complete number of columns */
+   SCIP_Real*            lb;                 /**< lower bound per variable */
+   SCIP_Real*            ub;                 /**< upper bound per variable */
+   SCIP_Bool*            colintegral;
+   // integrality constraint? implied integral? bounds integral? number of +-1 nonzeros?
+   // contained in nonlinear term? ntimes operand / resultant in logical constraints?
+   // nconstraints (different from nnonz because of multiple row constraints)
+   // npmonenonzeros in integral equality rows
+   SCIP_VAR**            vars;
 
+   SCIP_Real*            rowmatval;          /**< coefficients in row major format */
+   int*                  rowmatind;          /**< column indexed in row major format */
+   int*                  rowmatbeg;          /**< row storage offset */
+   int*                  rowmatcnt;          /**< number of column entries per row */
+   // boundsintegral, rowequality, rowbadnumerics, rowncontinuous, rowncontinuouspmone, rownintegralpmone
+
+   int                   nrows;              /**< complete number of rows */
+   SCIP_Real*            lhs;                /**< left hand side per row */
+   SCIP_Real*            rhs;                /**< right hand side per row */
+
+   SCIP_CONS**           rowcons;            /**< Constraint where the row originated from */
+
+   int                   nnonzs;             /**< sparsity counter */
+};
+typedef struct ImplintMatrix IMPLINT_MATRIX;
+
+static
+SCIP_Real* matrixGetColumnValues(
+   IMPLINT_MATRIX* matrix,
+   int column
+   )
+{
+   assert(matrix);
+   return matrix->colmatval + matrix->colmatbeg[column];
+}
+
+static
+int* matrixGetColumnIndices(
+   IMPLINT_MATRIX* matrix,
+   int column
+   )
+{
+   assert(matrix);
+   return matrix->colmatind + matrix->colmatbeg[column];
+}
+
+static
+int matrixGetColumnNNonz(
+   IMPLINT_MATRIX* matrix,
+   int column
+   )
+{
+   assert(matrix);
+   return matrix->colmatcnt[column];
+}
+
+static
+SCIP_Real* matrixGetRowValues(
+   IMPLINT_MATRIX* matrix,
+   int row
+)
+{
+   assert(matrix);
+   return matrix->rowmatval + matrix->rowmatbeg[row];
+}
+
+static
+int* matrixGetRowIndices(
+   IMPLINT_MATRIX* matrix,
+   int row
+)
+{
+   assert(matrix);
+   return matrix->rowmatind + matrix->rowmatbeg[row];
+}
+
+static
+int matrixGetRowNNonz(
+   IMPLINT_MATRIX* matrix,
+   int row
+)
+{
+   assert(matrix);
+   return matrix->rowmatcnt[row];
+}
+
+static
+int matrixGetNRows(
+   IMPLINT_MATRIX* matrix
+   )
+{
+   assert(matrix);
+   return matrix->nrows;
+}
+
+static
+int matrixGetNCols(
+   IMPLINT_MATRIX* matrix
+   )
+{
+   assert(matrix);
+   return matrix->ncols;
+}
+
+static
+SCIP_VAR* matrixGetVar(
+   IMPLINT_MATRIX* matrix,
+   int column
+   )
+{
+   assert(matrix);
+   assert(column >= 0 && column < matrix->ncols);
+   return matrix->vars[column];
+}
+
+static
+SCIP_Bool matrixColIsIntegral(
+   IMPLINT_MATRIX* matrix,
+   int column
+   )
+{
+   assert(matrix);
+   assert(column >= 0 && column < matrix->ncols);
+   return matrix->colintegral[column];
+}
+
+static
+SCIP_Real matrixGetColLb(
+   IMPLINT_MATRIX* matrix,
+   int column
+   )
+{
+   assert(matrix);
+   assert(column >= 0 && column < matrix->ncols);
+   return matrix->lb[column];
+}
+
+static
+SCIP_Real matrixGetColUb(
+   IMPLINT_MATRIX* matrix,
+   int column
+   )
+{
+   assert(matrix);
+   assert(column >= 0 && column < matrix->ncols);
+   return matrix->ub[column];
+}
+
+static
+SCIP_Real matrixGetRowLhs(
+   IMPLINT_MATRIX* matrix,
+   int row
+   )
+{
+   assert(matrix);
+   assert(row >= 0 && row < matrix->nrows);
+   return matrix->lhs[row];
+}
+
+static
+SCIP_Real matrixGetRowRhs(
+   IMPLINT_MATRIX* matrix,
+   int row
+   )
+{
+   assert(matrix);
+   assert(row >= 0 && row < matrix->nrows);
+   return matrix->rhs[row];
+}
+
+/** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant */
+static
+SCIP_RETCODE getActiveVariables(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_VAR***           vars,               /**< vars array to get active variables for */
+   SCIP_Real**           scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   SCIP_Real*            constant            /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c */
+)
+{
+   int requiredsize;
+
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(scalars != NULL);
+   assert(*vars != NULL);
+   assert(*scalars != NULL);
+   assert(nvars != NULL);
+   assert(constant != NULL);
+
+   SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize) );
+
+   if( requiredsize > *nvars )
+   {
+      SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
+
+      /* call function a second time with enough memory */
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize) );
+   }
+   assert(requiredsize == *nvars);
+
+   return SCIP_OKAY;
+}
+
+/** add one row to the constraint matrix */
+static
+SCIP_RETCODE matrixAddRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   IMPLINT_MATRIX*       matrix,             /**< constraint matrix */
+   SCIP_VAR**            vars,               /**< variables of this row */
+   SCIP_Real*            vals,               /**< coefficients of this row */
+   int                   nvars,              /**< number of variables of this row */
+   SCIP_Real             lhs,                /**< left hand side */
+   SCIP_Real             rhs,                /**< right hand side */
+   SCIP_CONS*            cons                /**< constraint where the row originated from */
+)
+{
+   int j;
+   int probindex;
+   int rowidx;
+
+   assert(vars != NULL);
+   assert(vals != NULL);
+
+   rowidx = matrix->nrows;
+
+   matrix->lhs[rowidx] = lhs;
+   matrix->rhs[rowidx] = rhs;
+   matrix->rowmatbeg[rowidx] = matrix->nnonzs;
+
+   for( j = 0; j < nvars; j++ )
+   {
+      /* ignore variables with very small coefficients */
+      if( SCIPisZero(scip, vals[j]) )
+         continue;
+
+      matrix->rowmatval[matrix->nnonzs] = vals[j];
+      probindex = SCIPvarGetProbindex(vars[j]);
+      assert(0 <= probindex && probindex < matrix->ncols);
+      matrix->rowmatind[matrix->nnonzs] = probindex;
+      (matrix->nnonzs)++;
+   }
+
+   matrix->rowmatcnt[rowidx] = matrix->nnonzs - matrix->rowmatbeg[rowidx];
+   matrix->rowcons[rowidx] = cons;
+
+   ++(matrix->nrows);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE addLinearConstraint(
+   SCIP*                 scip,               /**< current scip instance */
+   IMPLINT_MATRIX*       matrix,             /**< constraint matrix */
+   SCIP_VAR**            vars,               /**< variables of this constraint */
+   SCIP_Real*            vals,               /**< variable coefficients of this constraint.
+                                              **< If set to NULL, all values are assumed to be equal to 1.0. */
+   int                   nvars,              /**< number of variables */
+   SCIP_Real             lhs,                /**< left hand side */
+   SCIP_Real             rhs,                /**< right hand side */
+   SCIP_CONS*            cons                /**< constraint belonging to the row */
+   )
+{
+   SCIP_VAR** activevars;
+   SCIP_Real* activevals;
+   SCIP_Real activeconstant;
+   int nactivevars;
+   int v;
+
+   assert(scip != NULL);
+   assert(matrix != NULL);
+   assert(vars != NULL || nvars == 0);
+   assert(SCIPisLE(scip, lhs, rhs));
+
+   /* constraint is redundant */
+   if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
+      return SCIP_OKAY;
+
+   /* we do not add empty constraints to the matrix */
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   activevars = NULL;
+   activevals = NULL;
+   nactivevars = nvars;
+   activeconstant = 0.0;
+
+   /* duplicate variable and value array */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
+   if( vals != NULL )
+   {
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
+
+      for( v = 0; v < nactivevars; v++ )
+         activevals[v] = 1.0;
+   }
+
+   /* retransform given variables to active variables */
+   SCIP_CALL( getActiveVariables(scip, &activevars, &activevals, &nactivevars, &activeconstant) );
+
+   /* adapt left and right hand side */
+   if( !SCIPisInfinity(scip, -lhs) )
+      lhs -= activeconstant;
+   if( !SCIPisInfinity(scip, rhs) )
+      rhs -= activeconstant;
+
+   /* add single row to matrix */
+   if( nactivevars > 0 )
+   {
+      SCIP_CALL( matrixAddRow(scip, matrix, activevars, activevals, nactivevars, lhs, rhs, cons) );
+   }
+
+   /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &activevals);
+   SCIPfreeBufferArray(scip, &activevars);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE addAndOrLinearization(
+   SCIP*                 scip,               /**< current scip instance */
+   IMPLINT_MATRIX*       matrix,             /**< constraint matrix */
+   SCIP_CONS*            cons,               /**< The constraint that is linearized */
+   SCIP_VAR**            operands,           /**< variables of this constraint */
+   int                   noperands,          /**< number of operands */
+   SCIP_VAR*             resultant,          /**< Resultant variable */
+   SCIP_Bool             isAndCons           /**< Indicates if the constraint is an AND or OR linearization */
+)
+{
+   SCIP_Real* vals;
+   SCIP_VAR** vars;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int i;
+   assert(noperands > 0);
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, noperands + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, noperands + 1) );
+   /* First, add all the constraints of the form resultant <= operand */
+
+   if( isAndCons )
+   {
+      lhs = -SCIPinfinity(scip);
+      rhs = 0.0;
+   }
+   else
+   {
+      lhs = 0.0;
+      rhs = SCIPinfinity(scip);
+   }
+   vals[0] = 1.0;
+   vals[1] = -1.0;
+   vars[0] = resultant;
+   for( i = 0; i < noperands ; ++i )
+   {
+      vars[1] = operands[i];
+
+      SCIP_CALL( addLinearConstraint(scip, matrix, vars, vals, 2, lhs, rhs, cons) );
+   }
+   for( i = 0; i < noperands ; ++i )
+   {
+      vars[i+1] = operands[i];
+      vals[i+1] = -1.0;
+   }
+
+   if( isAndCons )
+   {
+      lhs = 1 - noperands;
+      rhs = SCIPinfinity(scip);
+   }
+   else
+   {
+      lhs = -SCIPinfinity(scip);
+      rhs = 0.0;
+   }
+   SCIP_CALL( addLinearConstraint(scip, matrix, vars, vals, noperands + 1, lhs, rhs, cons) );
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &vals);
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE addXorLinearization(
+   SCIP*                 scip,               /**< current scip instance */
+   IMPLINT_MATRIX*       matrix,             /**< constraint matrix */
+   SCIP_CONS*            cons                /**< The constraint that is linearized */
+)
+{
+   SCIP_Real* vals;
+   SCIP_VAR** vars;
+   SCIP_VAR** operands = SCIPgetVarsXor(scip, cons);
+   int noperands = SCIPgetNVarsXor(scip, cons);
+   assert(noperands > 0);
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, noperands + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, noperands + 1) );
+   if( noperands == 3)
+   {
+
+   }
+   else
+   {
+      /* First, add all the constraints of the form resultant <= operand */
+      for( int i = 0; i < noperands; ++i )
+      {
+         vars[i] = operands[i];
+         vals[i] = 1.0;
+      }
+      vars[noperands] = SCIPgetIntVarXor(scip, cons);
+      vals[noperands] = -2.0;
+      assert(vars[noperands] != NULL);
+
+      SCIP_Bool rhs = SCIPgetRhsXor(scip, cons);
+
+      SCIP_CALL( addLinearConstraint(scip, matrix, vars, vals, noperands + 1, rhs, rhs, cons) );
+   }
+
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &vals);
+   return SCIP_OKAY;
+}
+
+/** transform row major format into column major format */
+static
+SCIP_RETCODE matrixSetColumnMajor(
+   SCIP*                 scip,               /**< current scip instance */
+   IMPLINT_MATRIX*       matrix              /**< constraint matrix */
+)
+{
+   int colidx;
+   int i;
+   int* rowpnt;
+   int* rowend;
+   SCIP_Real* valpnt;
+   int* fillidx;
+
+   assert(scip != NULL);
+   assert(matrix != NULL);
+   assert(matrix->colmatval != NULL);
+   assert(matrix->colmatind != NULL);
+   assert(matrix->colmatbeg != NULL);
+   assert(matrix->colmatcnt != NULL);
+   assert(matrix->rowmatval != NULL);
+   assert(matrix->rowmatind != NULL);
+   assert(matrix->rowmatbeg != NULL);
+   assert(matrix->rowmatcnt != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &fillidx, matrix->ncols) );
+   BMSclearMemoryArray(fillidx, matrix->ncols);
+   BMSclearMemoryArray(matrix->colmatcnt, matrix->ncols);
+
+   for( i = 0; i < matrix->nrows; i++ )
+   {
+      rowpnt = matrix->rowmatind + matrix->rowmatbeg[i];
+      rowend = rowpnt + matrix->rowmatcnt[i];
+      for( ; rowpnt < rowend; rowpnt++ )
+      {
+         colidx = *rowpnt;
+         (matrix->colmatcnt[colidx])++;
+      }
+   }
+
+   matrix->colmatbeg[0] = 0;
+   for( i = 0; i < matrix->ncols-1; i++ )
+   {
+      matrix->colmatbeg[i+1] = matrix->colmatbeg[i] + matrix->colmatcnt[i];
+   }
+
+   for( i = 0; i < matrix->nrows; i++ )
+   {
+      rowpnt = matrix->rowmatind + matrix->rowmatbeg[i];
+      rowend = rowpnt + matrix->rowmatcnt[i];
+      valpnt = matrix->rowmatval + matrix->rowmatbeg[i];
+
+      for( ; rowpnt < rowend; rowpnt++, valpnt++ )
+      {
+         assert(*rowpnt < matrix->ncols);
+         colidx = *rowpnt;
+         matrix->colmatval[matrix->colmatbeg[colidx] + fillidx[colidx]] = *valpnt;
+         matrix->colmatind[matrix->colmatbeg[colidx] + fillidx[colidx]] = i;
+         fillidx[colidx]++;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &fillidx);
+
+   return SCIP_OKAY;
+}
+
+/* @todo; use symmetry constraints to guide variable ordering for integral columns.
+ * Symmetric variables should always all be either network or non-network */
+/* @todo optionally skip construction of integral constraints if we do not run detection on integer variables */
+static
+SCIP_RETCODE matrixCreate(
+   SCIP* scip,
+   IMPLINT_MATRIX** pmatrix,
+   SCIP_Bool* success
+   )
+{
+   int nconshdlrs;
+   SCIP_CONSHDLR** conshdlrs;
+   int nmatrixrows;
+   int i;
+   int nconshdlrconss;
+   const char* conshdlrname;
+   int j;
+   IMPLINT_MATRIX* matrix;
+   SCIP_VAR** vars;
+   int nvars;
+   int nnonzstmp;
+
+   *success = FALSE;
+
+   /* return if no variables or constraints are present */
+   if( SCIPgetNVars(scip) == 0 || SCIPgetNConss(scip) == 0 )
+      return SCIP_OKAY;
+
+   assert(SCIPgetNActivePricers(scip) == 0);
+
+   /* loop over all constraint handlers and collect the number of checked constraints that contribute rows
+    * to the matrix. */
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+   conshdlrs = SCIPgetConshdlrs(scip);
+   nmatrixrows = 0;
+
+   for( i = 0; i < nconshdlrs; ++i )
+   {
+      nconshdlrconss = SCIPconshdlrGetNCheckConss(conshdlrs[i]);
+
+      if( nconshdlrconss > 0 )
+      {
+         conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
+
+         /* constraint handlers which can always be represented by a single row */
+         if( strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "knapsack") == 0
+               || strcmp(conshdlrname, "setppc") == 0 || strcmp(conshdlrname, "logicor") == 0
+               || strcmp(conshdlrname, "varbound") == 0 )
+         {
+            nmatrixrows += nconshdlrconss;
+         }
+         else if( strcmp(conshdlrname, "and") == 0 )
+         {
+            /* The linearization of AND constraints is modelled using n+1 inequalities on n variables. */
+            SCIP_CONS** checked = SCIPconshdlrGetCheckConss(conshdlrs[i]);
+            for( j = 0; j < nconshdlrconss; ++j )
+            {
+               nmatrixrows = nmatrixrows + SCIPgetNVarsAnd(scip, checked[j]) + 1;
+            }
+         }
+         else if( strcmp(conshdlrname, "or") == 0 )
+         {
+            /* The linearization of OR constraints is modelled using n+1 inequalities on n variables. */
+            SCIP_CONS** checked = SCIPconshdlrGetCheckConss(conshdlrs[i]);
+            for( j = 0; j < nconshdlrconss; ++j )
+            {
+               nmatrixrows = nmatrixrows + SCIPgetNVarsOr(scip, checked[j]) + 1;
+            }
+         }
+         else if( strcmp(conshdlrname, "xor") == 0 )
+         {
+            /* The relaxation of XOR constraints is handled differently depending on their size
+             * For 3 variables, the integer hull of the constraint is added as it is only 4 rows.
+             * For more variables, the LP only has a single row. */
+            SCIP_CONS** checked = SCIPconshdlrGetCheckConss(conshdlrs[i]);
+            for( j = 0; j < nconshdlrconss; ++j )
+            {
+               int nxorvars = SCIPgetNVarsXor(scip, checked[j]);
+               if( nxorvars == 3 )
+                  nmatrixrows += 4;
+               else
+                  nmatrixrows += 1;
+            }
+         }
+         else if( strcmp(conshdlrname, "orbitope_pp") == 0 || strcmp(conshdlrname, "orbitope_full") == 0
+               || strcmp(conshdlrname, "orbisack") == 0 || strcmp(conshdlrname, "symresack") == 0 )
+         {
+
+         }
+         else
+         {
+            /* TODO: support indicator, nonlinear, superindicator, sos1, sos2, bounddisjunction, linking conshdlrs */
+            return SCIP_OKAY;
+         }
+      }
+   }
+
+   if( nmatrixrows == 0 )
+      return SCIP_OKAY;
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   /*@todo; is this sufficient for AND, OR, XOR constraints? Probably better count in the loop above */
+   /* approximate number of nonzeros by taking for each variable the number of up- and downlocks;
+    * this counts nonzeros in equalities twice, but can be at most two times as high as the exact number
+    */
+   nnonzstmp = 0;
+   for( i = 0; i < nvars; ++i )
+   {
+      nnonzstmp += SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL);
+      nnonzstmp += SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL);
+   }
+
+   if( nnonzstmp == 0 )
+      return SCIP_OKAY;
+
+   *success = TRUE;
+
+   /* build the matrix structure */
+   SCIP_CALL( SCIPallocBuffer(scip, pmatrix) );
+   matrix = *pmatrix;
+
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &matrix->vars, vars, nvars) );
+   matrix->ncols = nvars;
+
+   matrix->nnonzs = 0;
+   matrix->nrows = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatval, nnonzstmp) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatind, nnonzstmp) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatbeg, matrix->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colmatcnt, matrix->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->lb, matrix->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->ub, matrix->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colintegral, matrix->ncols) );
+
+   /* init bounds */
+   for( i = 0; i < matrix->ncols; ++i )
+   {
+      matrix->lb[i] = SCIPvarGetLbGlobal(vars[i]);
+      matrix->ub[i] = SCIPvarGetUbGlobal(vars[i]);
+      matrix->colintegral[i] = SCIPvarIsIntegral(vars[i]);
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatval, nnonzstmp) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatind, nnonzstmp) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatbeg, nmatrixrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatcnt, nmatrixrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->lhs, nmatrixrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rhs, nmatrixrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowcons, nmatrixrows) );
+
+
+   /* loop a second time over constraints handlers and add supported constraints to the matrix */
+   for( i = 0; i < nconshdlrs && *success; ++i)
+   {
+      SCIP_CONS** conshdlrconss;
+      int c;
+
+      conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
+      conshdlrconss = SCIPconshdlrGetCheckConss(conshdlrs[i]);
+      nconshdlrconss = SCIPconshdlrGetNCheckConss(conshdlrs[i]);
+
+      if( strcmp(conshdlrname, "linear") == 0 )
+      {
+         for( c = 0; c < nconshdlrconss; ++c )
+         {
+            SCIP_CONS* cons = conshdlrconss[c];
+            assert(SCIPconsIsTransformed(cons));
+
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *success = FALSE;
+               break;
+            }
+
+            SCIP_CALL( addLinearConstraint(scip, matrix, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
+                  SCIPgetNVarsLinear(scip, cons), SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons), cons) );
+         }
+      }
+      else if( strcmp(conshdlrname, "knapsack") == 0 )
+      {
+         if( nconshdlrconss > 0 )
+         {
+            SCIP_Real* consvals;
+            int nrowvars;
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nvars) );
+
+            for( c = 0; c < nconshdlrconss; ++c )
+            {
+               SCIP_Longint* weights;
+               SCIP_Real rhs;
+               SCIP_CONS* cons = conshdlrconss[c];
+               assert(SCIPconsIsTransformed(cons));
+
+               if( SCIPconsIsModifiable(cons) )
+               {
+                  *success = FALSE;
+                  break;
+               }
+               weights = SCIPgetWeightsKnapsack(scip, cons);
+               nrowvars = SCIPgetNVarsKnapsack(scip, cons);
+               for( int v = 0; v < nrowvars; ++v )
+                  consvals[v] = (SCIP_Real)weights[v];
+
+               rhs = (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons);
+               SCIP_CALL( addLinearConstraint(scip, matrix, SCIPgetVarsKnapsack(scip, cons), consvals, nrowvars,
+                     -SCIPinfinity(scip), rhs, cons) );
+            }
+
+            SCIPfreeBufferArray(scip, &consvals);
+         }
+      }
+      else if( strcmp(conshdlrname, "setppc") == 0 )
+      {
+         for( c = 0; c < nconshdlrconss; ++c )
+         {
+            SCIP_Real lhs;
+            SCIP_Real rhs;
+
+            SCIP_CONS* cons = conshdlrconss[c];
+            assert(SCIPconsIsTransformed(cons));
+
+            /* do not include constraints that can be altered due to column generation */
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *success = FALSE;
+               break;
+            }
+
+            switch( SCIPgetTypeSetppc(scip, cons) )
+            {
+               case SCIP_SETPPCTYPE_PARTITIONING :
+                  lhs = 1.0;
+                  rhs = 1.0;
+                  break;
+               case SCIP_SETPPCTYPE_PACKING :
+                  lhs = -SCIPinfinity(scip);
+                  rhs = 1.0;
+                  break;
+               case SCIP_SETPPCTYPE_COVERING :
+                  lhs = 1.0;
+                  rhs = SCIPinfinity(scip);
+                  break;
+               default:
+                  SCIPABORT();
+            }
+
+            SCIP_CALL( addLinearConstraint(scip, matrix, SCIPgetVarsSetppc(scip, cons), NULL,
+                                           SCIPgetNVarsSetppc(scip, cons), lhs, rhs, cons) );
+         }
+      }
+      else if( strcmp(conshdlrname, "logicor") == 0 )
+      {
+         for( c = 0; c < nconshdlrconss; ++c )
+         {
+            SCIP_CONS* cons = conshdlrconss[c];
+            assert(SCIPconsIsTransformed(cons));
+
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *success = FALSE;
+               break;
+            }
+
+            SCIP_CALL( addLinearConstraint(scip, matrix, SCIPgetVarsLogicor(scip, cons), NULL,
+                  SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip), cons) );
+         }
+      }
+      else if( strcmp(conshdlrname, "varbound") == 0 )
+      {
+         if( nconshdlrconss > 0 )
+         {
+            SCIP_VAR** consvars;
+            SCIP_Real* consvals;
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
+
+            for( c = 0; c < nconshdlrconss; ++c )
+            {
+               SCIP_CONS* cons = conshdlrconss[c];
+               assert(SCIPconsIsTransformed(cons));
+
+               if( SCIPconsIsModifiable(cons) )
+               {
+                  *success = FALSE;
+                  break;
+               }
+
+               consvars[0] = SCIPgetVarVarbound(scip, cons);
+               consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
+               consvals[0] = 1.0;
+               consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
+
+               SCIP_CALL( addLinearConstraint(scip, matrix, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
+                     SCIPgetRhsVarbound(scip, cons), cons) );
+            }
+            SCIPfreeBufferArray(scip, &consvals);
+            SCIPfreeBufferArray(scip, &consvars);
+         }
+      }
+      else if( strcmp(conshdlrname, "and") == 0 )
+      {
+         for( c = 0; c < nconshdlrconss; ++c )
+         {
+            SCIP_CONS* cons = conshdlrconss[c];
+            assert(SCIPconsIsTransformed(cons));
+
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *success = FALSE;
+               break;
+            }
+
+            SCIP_CALL( addAndOrLinearization(scip, matrix, cons, SCIPgetVarsAnd(scip, cons),
+                  SCIPgetNVarsAnd(scip, cons), SCIPgetResultantAnd(scip, cons), TRUE) );
+         }
+      }
+      else if( strcmp(conshdlrname, "or") == 0 )
+      {
+         for( c = 0; c < nconshdlrconss; ++c )
+         {
+            SCIP_CONS* cons = conshdlrconss[c];
+            assert(SCIPconsIsTransformed(cons));
+
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *success = FALSE;
+               break;
+            }
+
+            SCIP_CALL( addAndOrLinearization(scip, matrix, cons, SCIPgetVarsOr(scip, cons),
+                                             SCIPgetNVarsOr(scip, cons), SCIPgetResultantOr(scip, cons), FALSE) );
+         }
+      }
+      else if( strcmp(conshdlrname, "xor") == 0 )
+      {
+         for( c = 0; c < nconshdlrconss; ++c )
+         {
+            SCIP_CONS* cons = conshdlrconss[c];
+            assert(SCIPconsIsTransformed(cons));
+
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *success = FALSE;
+               break;
+            }
+
+            SCIP_CALL( addXorLinearization(scip, matrix, cons) );
+         }
+      }
+   }
+
+   if( *success )
+   {
+      SCIP_CALL( matrixSetColumnMajor(scip, matrix) );
+   }
+   else
+   {
+
+      SCIPfreeBufferArray(scip, &matrix->rowcons);
+
+      SCIPfreeBufferArray(scip, &matrix->rhs);
+      SCIPfreeBufferArray(scip, &matrix->lhs);
+      SCIPfreeBufferArray(scip, &matrix->rowmatcnt);
+      SCIPfreeBufferArray(scip, &matrix->rowmatbeg);
+      SCIPfreeBufferArray(scip, &matrix->rowmatind);
+      SCIPfreeBufferArray(scip, &matrix->rowmatval);
+
+      SCIPfreeBufferArray(scip, &matrix->colintegral);
+      SCIPfreeBufferArray(scip, &matrix->ub);
+      SCIPfreeBufferArray(scip, &matrix->lb);
+      SCIPfreeBufferArray(scip, &matrix->colmatcnt);
+      SCIPfreeBufferArray(scip, &matrix->colmatbeg);
+      SCIPfreeBufferArray(scip, &matrix->colmatind);
+      SCIPfreeBufferArray(scip, &matrix->colmatval);
+      SCIPfreeBufferArrayNull(scip, &matrix->vars);
+
+      SCIPfreeBuffer(scip, pmatrix);
+   }
+   return SCIP_OKAY;
+}
+
+static
+void matrixFree(
+   SCIP* scip,
+   IMPLINT_MATRIX** pmatrix
+   )
+{
+   assert(scip != NULL);
+   assert(pmatrix != NULL);
+   IMPLINT_MATRIX* matrix = *pmatrix;
+   if( matrix != NULL )
+   {
+      assert(matrix->colmatval != NULL);
+      assert(matrix->colmatind != NULL);
+      assert(matrix->colmatbeg != NULL);
+      assert(matrix->colmatcnt != NULL);
+      assert(matrix->lb != NULL);
+      assert(matrix->ub != NULL);
+      assert(matrix->colintegral != NULL);
+
+      assert(matrix->rowmatval != NULL);
+      assert(matrix->rowmatind != NULL);
+      assert(matrix->rowmatbeg != NULL);
+      assert(matrix->rowmatcnt != NULL);
+      assert(matrix->lhs != NULL);
+      assert(matrix->rhs != NULL);
+
+      SCIPfreeBufferArray(scip, &(matrix->rowcons));
+
+      SCIPfreeBufferArray(scip, &(matrix->rhs));
+      SCIPfreeBufferArray(scip, &(matrix->lhs));
+      SCIPfreeBufferArray(scip, &(matrix->rowmatcnt));
+      SCIPfreeBufferArray(scip, &(matrix->rowmatbeg));
+      SCIPfreeBufferArray(scip, &(matrix->rowmatind));
+      SCIPfreeBufferArray(scip, &(matrix->rowmatval));
+
+      SCIPfreeBufferArray(scip, &(matrix->colintegral));
+      SCIPfreeBufferArray(scip, &(matrix->ub));
+      SCIPfreeBufferArray(scip, &(matrix->lb));
+      SCIPfreeBufferArray(scip, &(matrix->colmatcnt));
+      SCIPfreeBufferArray(scip, &(matrix->colmatbeg));
+      SCIPfreeBufferArray(scip, &(matrix->colmatind));
+      SCIPfreeBufferArray(scip, &(matrix->colmatval));
+
+      matrix->nrows = 0;
+      matrix->ncols = 0;
+      matrix->nnonzs = 0;
+
+      SCIPfreeBufferArrayNull(scip, &(matrix->vars));
+
+      SCIPfreeBuffer(scip, &matrix);
+   }
+}
 /** Struct that contains information about the blocks/components of the submatrix given by the continuous columns.
  *
  * Note that currently, the matrix represents exactly the SCIP_MATRIX created by SCIPmatrixCreate(), but this may change
@@ -84,8 +1034,6 @@ struct MatrixComponents
 {
    int nmatrixrows;                          /**< Number of rows in the matrix for the linear part of the problem */
    int nmatrixcols;                          /**< Number of columns in the matrix for the linear part of the problem */
-
-   SCIP_Bool* isintegral;                    /**< Whether associated column is integral */
 
    int* rowcomponent;                        /**< Maps a row to the index of the component it belongs to */
    int* colcomponent;                        /**< Maps a column to the index of the component it belongs to */
@@ -118,25 +1066,18 @@ typedef struct MatrixStatistics MATRIX_STATISTICS;
 static
 SCIP_RETCODE createMatrixComponents(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_MATRIX*          matrix,             /**< The constraint matrix */
+   IMPLINT_MATRIX *      matrix,             /**< The constraint matrix */
    MATRIX_COMPONENTS**   pmatrixcomponents   /**< Pointer to create the matrix components data structure */
    )
 {
    SCIP_CALL( SCIPallocBuffer(scip, pmatrixcomponents) );
    MATRIX_COMPONENTS* comp = *pmatrixcomponents;
 
-   int nrows = SCIPmatrixGetNRows(matrix);
-   int ncols = SCIPmatrixGetNColumns(matrix);
+   int nrows = matrixGetNRows(matrix);
+   int ncols = matrixGetNCols(matrix);
 
    comp->nmatrixrows = nrows;
    comp->nmatrixcols = ncols;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &comp->isintegral, ncols) );
-   for( int i = 0; i < ncols; ++i )
-   {
-      SCIP_VAR* var = SCIPmatrixGetVar(matrix,i);
-      comp->isintegral[i] = SCIPvarIsIntegral(var);
-   }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &comp->rowcomponent, nrows) );
    for( int i = 0; i < nrows; ++i )
@@ -176,7 +1117,6 @@ void freeMatrixComponents(
    SCIPfreeBufferArray(scip, &comp->componentrows);
    SCIPfreeBufferArray(scip, &comp->colcomponent);
    SCIPfreeBufferArray(scip, &comp->rowcomponent);
-   SCIPfreeBufferArray(scip, &comp->isintegral);
 
    SCIPfreeBuffer(scip, pmatrixcomponents);
 }
@@ -255,7 +1195,7 @@ int disjointSetMerge(
 static
 SCIP_RETCODE computeContinuousComponents(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_MATRIX*          matrix,             /**< The constraint matrix to compute the components for */
+   IMPLINT_MATRIX*       matrix,             /**< The constraint matrix to compute the components for */
    MATRIX_COMPONENTS*    comp                /**< The connected components data structure to store the components in */
    )
 {
@@ -270,12 +1210,12 @@ SCIP_RETCODE computeContinuousComponents(
 
    for( int col = 0; col < comp->nmatrixcols; ++col )
    {
-      if( comp->isintegral[col] )
+      if( matrixColIsIntegral(matrix,col) )
       {
          continue;
       }
-      int colnnonzs = SCIPmatrixGetColNNonzs(matrix, col);
-      int* colrows = SCIPmatrixGetColIdxPtr(matrix, col);
+      int colnnonzs = matrixGetColumnNNonz(matrix, col);
+      int* colrows = matrixGetColumnIndices(matrix, col);
 
       int colrep = disjointSetFind(disjointset, col);
       for( int i = 0; i < colnnonzs; ++i )
@@ -301,7 +1241,7 @@ SCIP_RETCODE computeContinuousComponents(
    comp->ncomponents = 0;
    for( int col = 0; col < comp->nmatrixcols; ++col )
    {
-      if( comp->isintegral[col] )
+      if( matrixColIsIntegral(matrix,col) )
       {
          continue;
       }
@@ -401,7 +1341,7 @@ SCIP_RETCODE computeContinuousComponents(
 static
 SCIP_RETCODE computeMatrixStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_MATRIX*          matrix,             /**< The constraint matrix to compute the statistics for */
+   IMPLINT_MATRIX*       matrix,             /**< The constraint matrix to compute the statistics for */
    MATRIX_COMPONENTS*    comp,               /**< Datastructure that contains the components of the matrix */
    MATRIX_STATISTICS**   pstats,             /**< Pointer to allocate the statistics data structure at */
    SCIP_Real             numericslimit       /**< The limit beyond which we consider integrality of coefficients
@@ -411,8 +1351,8 @@ SCIP_RETCODE computeMatrixStatistics(
    SCIP_CALL( SCIPallocBuffer(scip, pstats) );
    MATRIX_STATISTICS* stats = *pstats;
 
-   int nrows = SCIPmatrixGetNRows(matrix);
-   int ncols = SCIPmatrixGetNColumns(matrix);
+   int nrows = matrixGetNRows(matrix);
+   int ncols = matrixGetNCols(matrix);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &stats->rowintegral, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &stats->rowequality, nrows) );
@@ -426,11 +1366,11 @@ SCIP_RETCODE computeMatrixStatistics(
 
    for( int i = 0; i < nrows; ++i )
    {
-      SCIP_Real lhs = SCIPmatrixGetRowLhs(matrix, i);
-      SCIP_Real rhs = SCIPmatrixGetRowRhs(matrix, i);
-      int* cols = SCIPmatrixGetRowIdxPtr(matrix, i);
-      SCIP_Real* vals = SCIPmatrixGetRowValPtr(matrix, i);
-      int nnonz = SCIPmatrixGetRowNNonzs(matrix, i);
+      SCIP_Real lhs = matrixGetRowLhs(matrix, i);
+      SCIP_Real rhs = matrixGetRowRhs(matrix, i);
+      int* cols = matrixGetRowIndices(matrix, i);
+      SCIP_Real* vals = matrixGetRowValues(matrix, i);
+      int nnonz = matrixGetRowNNonz(matrix, i);
       stats->rownnonz[i] = nnonz;
       stats->rowequality[i] = !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && SCIPisEQ(scip, lhs, rhs);
 
@@ -442,7 +1382,7 @@ SCIP_RETCODE computeMatrixStatistics(
       int ncontinuouspmone = 0;
       for( int j = 0; j < nnonz; ++j )
       {
-         SCIP_Bool continuous = !comp->isintegral[cols[j]];
+         SCIP_Bool continuous = !matrixColIsIntegral(matrix,cols[j]);
          SCIP_Real value = vals[j];
          if( continuous )
          {
@@ -470,13 +1410,13 @@ SCIP_RETCODE computeMatrixStatistics(
 
    for( int i = 0; i < ncols; ++i )
    {
-      SCIP_Real lb = SCIPmatrixGetColLb(matrix, i);
-      SCIP_Real ub = SCIPmatrixGetColUb(matrix, i);
+      SCIP_Real lb = matrixGetColLb(matrix, i);
+      SCIP_Real ub = matrixGetColUb(matrix, i);
       stats->colintegralbounds[i] = ( SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip, lb) )
                                  && ( SCIPisInfinity(scip, ub) || SCIPisIntegral(scip, ub) );
 
       /* Check that integer variables have integer bounds, as expected. */
-      assert(!comp->isintegral[i] || stats->colintegralbounds[i]);
+      assert(!matrixColIsIntegral(matrix,i) || stats->colintegralbounds[i]);
    }
 
    return SCIP_OKAY;
@@ -516,7 +1456,7 @@ static
 SCIP_RETCODE findImpliedIntegers(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOLDATA*      presoldata,         /**< The data belonging to the presolver */
-   SCIP_MATRIX*          matrix,             /**< The constraint matrix to compute implied integral variables for */
+   IMPLINT_MATRIX*       matrix,             /**< The constraint matrix to compute implied integral variables for */
    MATRIX_COMPONENTS*    comp,               /**< The continuous connected components of the matrix */
    MATRIX_STATISTICS*    stats,              /**< Statistics of the matrix */
    int*                  nchgvartypes        /**< Pointer to count the number of changed variable types */
@@ -594,14 +1534,14 @@ SCIP_RETCODE findImpliedIntegers(
          for( int i = startrow; i < startrow + nrows && componentnetwork; ++i )
          {
             int row = comp->componentrows[i];
-            int nrownnoz = SCIPmatrixGetRowNNonzs(matrix, row);
-            int* rowcols = SCIPmatrixGetRowIdxPtr(matrix, row);
-            SCIP_Real* rowvals = SCIPmatrixGetRowValPtr(matrix, row);
+            int nrownnoz = matrixGetRowNNonz(matrix, row);
+            int* rowcols = matrixGetRowIndices(matrix, row);
+            SCIP_Real* rowvals = matrixGetRowValues(matrix, row);
             int ncontnonz = 0;
             for( int j = 0; j < nrownnoz; ++j )
             {
                int col = rowcols[j];
-               if( !comp->isintegral[col] )
+               if( !matrixColIsIntegral(matrix,col) )
                {
                   tempIdxArray[ncontnonz] = col;
                   tempValArray[ncontnonz] = rowvals[j];
@@ -618,9 +1558,9 @@ SCIP_RETCODE findImpliedIntegers(
          for( int i = startcol; i < startcol + ncols && componentnetwork; ++i )
          {
             int col = comp->componentcols[i];
-            int ncolnnonz = SCIPmatrixGetColNNonzs(matrix, col);
-            int* colrows = SCIPmatrixGetColIdxPtr(matrix, col);
-            SCIP_Real* colvals = SCIPmatrixGetColValPtr(matrix, col);
+            int ncolnnonz = matrixGetColumnNNonz(matrix, col);
+            int* colrows = matrixGetColumnIndices(matrix, col);
+            SCIP_Real* colvals = matrixGetColumnValues(matrix, col);
             SCIP_CALL( SCIPnetmatdecTryAddCol(dec, col, colrows, colvals, ncolnnonz, &componentnetwork) );
          }
       }
@@ -642,14 +1582,14 @@ SCIP_RETCODE findImpliedIntegers(
             for( int i = startrow; i < startrow + nrows && componenttransnetwork; ++i )
             {
                int row = comp->componentrows[i];
-               int nrownnoz = SCIPmatrixGetRowNNonzs(matrix, row);
-               int* rowcols = SCIPmatrixGetRowIdxPtr(matrix, row);
-               SCIP_Real* rowvals = SCIPmatrixGetRowValPtr(matrix, row);
+               int nrownnoz = matrixGetRowNNonz(matrix, row);
+               int* rowcols = matrixGetRowIndices(matrix, row);
+               SCIP_Real* rowvals = matrixGetRowValues(matrix, row);
                int ncontnonz = 0;
                for( int j = 0; j < nrownnoz; ++j )
                {
                   int col = rowcols[j];
-                  if( !comp->isintegral[col] )
+                  if( !matrixColIsIntegral(matrix,col) )
                   {
                      tempIdxArray[ncontnonz] = col;
                      tempValArray[ncontnonz] = rowvals[j];
@@ -667,9 +1607,9 @@ SCIP_RETCODE findImpliedIntegers(
             for( int i = startcol; i < startcol + ncols && componenttransnetwork; ++i )
             {
                int col = comp->componentcols[i];
-               int ncolnnonz = SCIPmatrixGetColNNonzs(matrix, col);
-               int* colrows = SCIPmatrixGetColIdxPtr(matrix, col);
-               SCIP_Real* colvals = SCIPmatrixGetColValPtr(matrix, col);
+               int ncolnnonz = matrixGetColumnNNonz(matrix, col);
+               int* colrows = matrixGetColumnIndices(matrix, col);
+               SCIP_Real* colvals = matrixGetColumnValues(matrix, col);
                SCIP_CALL( SCIPnetmatdecTryAddRow(transdec, col, colrows, colvals, ncolnnonz, &componenttransnetwork) );
             }
          }
@@ -691,7 +1631,7 @@ SCIP_RETCODE findImpliedIntegers(
       for( int i = startcol; i < startcol + ncols; ++i )
       {
          int col = comp->componentcols[i];
-         SCIP_VAR* var = SCIPmatrixGetVar(matrix, col);
+         SCIP_VAR* var = matrixGetVar(matrix, col);
          SCIP_Bool infeasible = FALSE;
          SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
          (*nchgvartypes)++;
@@ -783,31 +1723,11 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                    "   (%.1fs) implied integrality detection started\n", starttime);
 
-   SCIP_Bool initialized;
-   SCIP_Bool complete;
-   SCIP_Bool infeasible;
-   SCIP_MATRIX* matrix = NULL;
-   SCIP_Bool onlyifcomplete = TRUE;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, onlyifcomplete, &initialized, &complete, &infeasible,
-                              naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
-   /*If infeasibility was detected during matrix creation, we return. */
-   if( infeasible )
+   SCIP_Bool success = TRUE;
+   IMPLINT_MATRIX* matrix = NULL;
+   SCIP_CALL( matrixCreate(scip, &matrix, &success) );
+   if( !success )
    {
-      if( initialized )
-      {
-         SCIPmatrixFree(scip, &matrix);
-      }
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-
-   /*For now, we only work on pure MILP's TODO; use uplocks/downlocks */
-   if( !( initialized && complete ) )
-   {
-      if( initialized )
-      {
-         SCIPmatrixFree(scip, &matrix);
-      }
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
                       "   (%.1fs) implied integrality detection stopped because problem is not an MILP\n",
                       SCIPgetSolvingTime(scip));
@@ -839,7 +1759,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    }
    freeMatrixStatistics(scip, &stats);
    freeMatrixComponents(scip, &comp);
-   SCIPmatrixFree(scip, &matrix);
+   matrixFree(scip, &matrix);
 
    return SCIP_OKAY;
 }
