@@ -1485,7 +1485,7 @@ SCIP_ROW* SCIPeventGetRow(
          return event->data.eventrowdeletedsepa.row;
       case SCIP_EVENTTYPE_ROWADDEDLP:
          return event->data.eventrowaddedlp.row;
-      case SCIP_EVENTTYPE_ROWDELETEDLP:
+      case SCIP_EVENTTYPE_ROWDELETEDLP: /*lint !e30 !e142*/
          return event->data.eventrowdeletedlp.row;
       case SCIP_EVENTTYPE_ROWCOEFCHANGED: /*lint !e30 !e142*/
          return event->data.eventrowcoefchanged.row;
@@ -1667,6 +1667,7 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_NODEINFEASIBLE:
    case SCIP_EVENTTYPE_NODEBRANCHED:
    case SCIP_EVENTTYPE_NODEDELETE:
+   case SCIP_EVENTTYPE_DUALBOUNDIMPROVED:
    case SCIP_EVENTTYPE_FIRSTLPSOLVED:
    case SCIP_EVENTTYPE_LPSOLVED:
    case SCIP_EVENTTYPE_POORSOLFOUND:
@@ -1674,7 +1675,7 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_ROWADDEDSEPA:
    case SCIP_EVENTTYPE_ROWDELETEDSEPA:
    case SCIP_EVENTTYPE_ROWADDEDLP:
-   case SCIP_EVENTTYPE_ROWDELETEDLP:
+   case SCIP_EVENTTYPE_ROWDELETEDLP: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_ROWCOEFCHANGED: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_ROWCONSTCHANGED: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_ROWSIDECHANGED: /*lint !e30 !e142*/
@@ -2174,7 +2175,7 @@ SCIP_RETCODE SCIPeventfilterProcess(
 
    eventtype = event->eventtype;
 
-   /* check, if there may be any event handler for specific event */
+   /* check if there may be any event handler for specific event */
    if( (eventtype & eventfilter->eventmask) == 0 )
       return SCIP_OKAY;
 
@@ -2366,6 +2367,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_NODEINFEASIBLE:
       case SCIP_EVENTTYPE_NODEBRANCHED:
       case SCIP_EVENTTYPE_NODEDELETE:
+      case SCIP_EVENTTYPE_DUALBOUNDIMPROVED:
       case SCIP_EVENTTYPE_FIRSTLPSOLVED:
       case SCIP_EVENTTYPE_LPSOLVED:
       case SCIP_EVENTTYPE_POORSOLFOUND:
@@ -2377,7 +2379,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_ROWADDEDSEPA: /* @todo remove previous DELETEDSEPA event */
       case SCIP_EVENTTYPE_ROWDELETEDSEPA: /* @todo remove previous ADDEDSEPA event */
       case SCIP_EVENTTYPE_ROWADDEDLP: /* @todo remove previous DELETEDLP event */
-      case SCIP_EVENTTYPE_ROWDELETEDLP: /* @todo remove previous ADDEDLP event */
+      case SCIP_EVENTTYPE_ROWDELETEDLP: /* @todo remove previous ADDEDLP event */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_ROWCOEFCHANGED: /* @todo merge? */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_ROWCONSTCHANGED: /* @todo merge with previous constchanged event */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_ROWSIDECHANGED: /* @todo merge with previous sidechanged event */ /*lint !e30 !e142*/
@@ -2574,7 +2576,7 @@ SCIP_RETCODE SCIPeventqueueProcess(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    SCIP_EVENT* event;
