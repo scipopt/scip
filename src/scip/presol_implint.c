@@ -67,7 +67,13 @@
 
 #define PRESOL_NAME             "implint"
 #define PRESOL_DESC             "detects implicit integer variables"
-#define PRESOL_PRIORITY         100 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
+/* We want to run as late as possible, but before symmetry detection.
+ * The main reason for this is that symmetry detection may add linear constraints that
+ * impede the detection of implied integrality, but do not break implied integrality itself.
+ * Also, symmetry methods rely on the fact that each variable in an orbit is integral,
+ * as otherwise certain reductions may break. So it is currently not safe to run implied integrality detection
+ * after symmetry methods are applied. */
+#define PRESOL_PRIORITY         (-900000) /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
 #define PRESOL_MAXROUNDS        0 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
@@ -96,7 +102,7 @@ struct ImplintMatrix
    SCIP_Real*            lb;                 /**< lower bound per variable */
    SCIP_Real*            ub;                 /**< upper bound per variable */
    SCIP_Bool*            colintegral;
-   // integrality constraint? implied integral? bounds integral? number of +-1 nonzeros?
+   // implied integral? bounds integral? number of +-1 nonzeros?
    // contained in nonlinear term? ntimes operand / resultant in logical constraints?
    // nconstraints (different from nnonz because of multiple row constraints)
    // npmonenonzeros in integral equality rows
@@ -115,6 +121,7 @@ struct ImplintMatrix
    SCIP_CONS**           rowcons;            /**< Constraint where the row originated from */
 
    int                   nnonzs;             /**< sparsity counter */
+   int                   memnonz;
 };
 typedef struct ImplintMatrix IMPLINT_MATRIX;
 
@@ -329,6 +336,7 @@ SCIP_RETCODE matrixAddRow(
       if( SCIPisZero(scip, vals[j]) )
          continue;
 
+      assert(matrix->nnonzs < matrix->memnonz);
       matrix->rowmatval[matrix->nnonzs] = vals[j];
       probindex = SCIPvarGetProbindex(vars[j]);
       assert(0 <= probindex && probindex < matrix->ncols);
@@ -495,7 +503,6 @@ SCIP_RETCODE addXorLinearization(
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, noperands + 1) );
    if( noperands == 3)
    {
-
    }
    else
    {
@@ -621,6 +628,7 @@ SCIP_RETCODE matrixCreate(
    nconshdlrs = SCIPgetNConshdlrs(scip);
    conshdlrs = SCIPgetConshdlrs(scip);
    nmatrixrows = 0;
+   nnonzstmp = 0;
 
    for( i = 0; i < nconshdlrs; ++i )
    {
@@ -644,6 +652,7 @@ SCIP_RETCODE matrixCreate(
             for( j = 0; j < nconshdlrconss; ++j )
             {
                nmatrixrows = nmatrixrows + SCIPgetNVarsAnd(scip, checked[j]) + 1;
+               nnonzstmp += SCIPgetNVarsAnd(scip, checked[j]);
             }
          }
          else if( strcmp(conshdlrname, "or") == 0 )
@@ -653,6 +662,7 @@ SCIP_RETCODE matrixCreate(
             for( j = 0; j < nconshdlrconss; ++j )
             {
                nmatrixrows = nmatrixrows + SCIPgetNVarsOr(scip, checked[j]) + 1;
+               nnonzstmp += SCIPgetNVarsOr(scip, checked[j]);
             }
          }
          else if( strcmp(conshdlrname, "xor") == 0 )
@@ -665,7 +675,10 @@ SCIP_RETCODE matrixCreate(
             {
                int nxorvars = SCIPgetNVarsXor(scip, checked[j]);
                if( nxorvars == 3 )
+               {
                   nmatrixrows += 4;
+                  nnonzstmp += 6;
+               }
                else
                   nmatrixrows += 1;
             }
@@ -689,11 +702,9 @@ SCIP_RETCODE matrixCreate(
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
 
-   /*@todo; is this sufficient for AND, OR, XOR constraints? Probably better count in the loop above */
    /* approximate number of nonzeros by taking for each variable the number of up- and downlocks;
     * this counts nonzeros in equalities twice, but can be at most two times as high as the exact number
     */
-   nnonzstmp = 0;
    for( i = 0; i < nvars; ++i )
    {
       nnonzstmp += SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL);
@@ -711,7 +722,7 @@ SCIP_RETCODE matrixCreate(
 
    SCIP_CALL( SCIPduplicateBufferArray(scip, &matrix->vars, vars, nvars) );
    matrix->ncols = nvars;
-
+   matrix->memnonz = nnonzstmp;
    matrix->nnonzs = 0;
    matrix->nrows = 0;
 
