@@ -139,9 +139,9 @@ void blisshook(
    {
       int cnt = 0;
       for (int j = nsymvars; j < permlen; ++j, ++cnt)
-         p[cnt] = (int) aut[j];
+         p[cnt] = (int) aut[j] - nsymvars;
       for (int j = 0; j < nsymvars; ++j, ++cnt)
-         p[cnt] = (int) aut[j];
+         p[cnt] = (int) aut[j] + data->nnodessdg;
    }
 
    /* check whether we should allocate space for perms */

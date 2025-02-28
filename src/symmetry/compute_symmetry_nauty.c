@@ -186,9 +186,9 @@ void nautyhook(
          return;
 
       for (j = nsymvars; j < permlen; ++j, ++cnt)
-         pp[cnt] = p[j];
+         pp[cnt] = p[j] - nsymvars;
       for (j = 0; j < nsymvars; ++j, ++cnt)
-         pp[cnt] = p[j];
+         pp[cnt] = p[j] + data_.nnodessdg;
    }
 
    data_.perms[data_.nperms++] = pp;
