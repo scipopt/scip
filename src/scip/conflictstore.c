@@ -439,8 +439,8 @@ SCIP_RETCODE delPosDualray(
    {
       assert(transprob != NULL);
       SCIP_CALL( SCIPconsDelete(dualproof, blkmem, set, stat, transprob, reopt) );
-      SCIP_CALL( removeExactConflictFromCertificateHashmap(set, dualproof) );
    }
+   SCIP_CALL( removeExactConflictFromCertificateHashmap(set, dualproof) );
    SCIP_CALL( SCIPconsRelease(&dualproof, blkmem, set) );
 
    /* replace with dual ray at the last position */

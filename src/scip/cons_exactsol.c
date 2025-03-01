@@ -504,8 +504,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    {
       SCIP_Real multiplier;
 
-      SCIP_CALL( bufferSolution(scip, sol, conshdlrdata) );
-
       multiplier = SCIPgetSolTransObj(scip, sol) > 0 ? 1 + conshdlrdata->minimprove : 1 - conshdlrdata->minimprove;
       if( !SCIPisLT(scip, multiplier * SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip)) )
       {
