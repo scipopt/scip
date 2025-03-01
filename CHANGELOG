@@ -19,9 +19,10 @@ Build system
 
 ### Cmake
 
--  allow to set HIGHS_DIR via -D flag as well
+- allow to set HIGHS_DIR via -D flag as well
 - reenable building and testing of SCFLP example
 - fixed that compiler flags for sanitizers were not used for compiling objects of SCIP library
+- prioritize local includes in applications and examples to link the intended SCIP version to them
 
 ### Makefile
 
