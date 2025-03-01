@@ -9,7 +9,7 @@ else()
   find_package(SCIP REQUIRED)
 endif()
 
-include_directories(${SCIP_INCLUDE_DIRS})
+include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(sciptsp
    src/ConshdlrSubtour.cpp
