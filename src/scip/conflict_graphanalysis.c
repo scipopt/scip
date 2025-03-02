@@ -3870,7 +3870,6 @@ SCIP_RETCODE conflictAnalyze(
       SCIP_Bool forceresolve;
       int bdchgdepth;
 
-
       assert(!SCIPbdchginfoIsRedundant(bdchginfo));
 
       /* check if the next bound change must be resolved in every case */
