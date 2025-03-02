@@ -23,4 +23,9 @@ if( TARGET applications )
     add_dependencies( applications pbsolver )
 endif()
 
+#
+# add check subdirectory for tests
+#
+add_subdirectory(check)
+
 enable_testing()
