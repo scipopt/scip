@@ -34,6 +34,7 @@ if(NOT LIBM)
 endif()
 
 target_link_libraries(cycleclustering ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(cycleclustering PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET applications )
     add_dependencies( applications cycleclustering)
