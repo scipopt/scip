@@ -483,7 +483,7 @@ void SCIPrationalMAX(
    );
 
 /*
- * Comparisoon methods
+ * Comparison methods
  */
 
 /** checks if two rationals are equal */

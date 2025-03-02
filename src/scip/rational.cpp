@@ -1201,7 +1201,7 @@ void SCIPrationalInvert(
 }
 
 /*
- * Comparisoon methods
+ * Comparison methods
  */
 
 /** compute the minimum of two rationals */

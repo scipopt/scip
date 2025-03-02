@@ -9935,7 +9935,7 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
       SCIPrationalMult(ratscm, ratscm, ratupdate);
       SCIPrationalCanonicalize(ratscm);
 
-      scm= SCIPrationalNumerator(ratscm);
+      scm = SCIPrationalNumerator(ratscm);
 
       if( scm == SCIP_LONGINT_MAX )
       {
