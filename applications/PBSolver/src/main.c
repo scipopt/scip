@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   main.cpp
+/**@file   main.c
  * @brief  main file for the Pseudo-Boolean solver application
  * @author Alexander Hoen
  * @author Gioni Mexi
@@ -33,9 +33,9 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <cstdio>
-#include <cstring>
-#include <ctime>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
 #include "message_pb.h"

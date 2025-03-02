@@ -12,7 +12,7 @@ endif()
 include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(pbsolver
-    src/main.cpp
+    src/main.c
     src/message_pb.c
     src/event_bestsol.c
 )

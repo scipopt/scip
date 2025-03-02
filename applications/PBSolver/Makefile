@@ -71,13 +71,11 @@ include $(SCIPDIR)/make/make.project
 #-----------------------------------------------------------------------------
 
 MAINNAME	=	pbsolver
-MAINOBJ	=	message_pb.o \
-				event_bestsol.o \
-				main.o
+MAINOBJ		=	message_pb.o \
+			event_bestsol.o \
+			main.o
 
-MAINSRC	=	$(SRCDIR)/message_pb.c \
-				$(SRCDIR)/event_bestsol.c \
-				$(SRCDIR)/main.cpp
+MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 
 MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINFILE	=	$(BINDIR)/$(MAIN)
