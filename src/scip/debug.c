@@ -119,6 +119,7 @@ SCIP_Bool debugSolutionAvailable(
    assert(set != NULL);
 
    debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
 
    /* check whether a debug solution is specified */
     if( strcmp(set->misc_debugsol, "-") == 0 )
@@ -348,13 +349,15 @@ SCIP_RETCODE readSolution(
 
    assert(set != NULL);
 
-   debugsoldata = SCIPsetGetDebugSolData(set);
-
    /* check whether a debug solution is available */
    if( !debugSolutionAvailable(set) )
       return SCIP_OKAY;
 
-   if( debugsoldata == NULL || debugsoldata->nsolvals > 0 )
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   /* check whether no debug solution is read */
+   if( debugsoldata->debugsol != NULL )
       return SCIP_OKAY;
 
    SCIP_CALL( readSolfile(set, set->misc_debugsol, &debugsoldata->debugsol, &debugsoldata->debugsolval,
