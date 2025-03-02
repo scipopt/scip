@@ -36,6 +36,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_rational.h"
 #include "scip/type_sol.h"
 #include "scip/type_heur.h"
 #include "scip/type_relax.h"
