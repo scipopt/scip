@@ -44,6 +44,7 @@
 #include "scip/def.h"
 #include "scip/type_cons.h"
 #include "scip/type_heur.h"
+#include "scip/type_rational.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"

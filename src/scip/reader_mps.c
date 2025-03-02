@@ -64,6 +64,7 @@
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/reader_mps.h"
+#include "scip/rational.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_mem.h"

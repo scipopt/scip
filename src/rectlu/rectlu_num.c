@@ -34,12 +34,10 @@
 /*
  * include build configuration flags
  */
-#ifndef NO_CONFIG_HEADER
 #include "scip/config.h"
-#endif
 
-#include "rectlu_factor.h"
-#include "rectlu.h"
+#include "rectlu/rectlu_factor.h"
+#include "rectlu/rectlu.h"
 
 #pragma GCC diagnostic ignored "-Wpedantic"
 

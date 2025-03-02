@@ -37,6 +37,7 @@
 #include <stdio.h>
 
 #include "scip/def.h"
+#include "scip/type_rational.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"

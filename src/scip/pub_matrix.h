@@ -37,6 +37,7 @@
 #include "scip/type_var.h"
 #include "scip/type_cons.h"
 #include "scip/type_matrix.h"
+#include "scip/type_rational.h"
 
 #ifdef NDEBUG
 #include "scip/struct_matrix.h"

@@ -370,10 +370,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( conshdlrdata->probhasconteqs == -1 )
       checkProbHasContEqs(scip, conshdlrdata);
 
-   /**@todo conduct a performance test if removing this restriction helps */
-   if( conshdlrdata->probhasconteqs == 1 )
-      return SCIP_OKAY;
-
    /* disable exact sol if we stalled too often in a row */
    if( conshdlrdata->ncurrentstalls >= conshdlrdata->maxstalls )
       return SCIP_OKAY;
