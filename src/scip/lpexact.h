@@ -830,12 +830,6 @@ SCIP_RETCODE SCIPlpExactEndDive(
    int                   nvars               /**< number of active variables */
    );
 
-/** returns whether the exact LP is in diving mode */
-SCIP_EXPORT
-SCIP_Bool SCIPlpExactDiving(
-   SCIP_LPEXACT*         lpexact             /**< current exact LP data */
-   );
-
 /** writes exact LP to a file */
 SCIP_RETCODE SCIPlpExactWrite(
    SCIP_LPEXACT*         lp,                 /**< current LP data */
