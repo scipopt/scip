@@ -99,14 +99,14 @@
  */
 #define SOLSTOP 10000000.0
 
-/** return TRUE if conflict analysis is applicable; In case the function return FALSE there is no need to initialize the
+/** return TRUE if conflict analysis is applicable; In case the function returns FALSE there is no need to initialize the
  *  conflict analysis since it will not be applied
  */
 SCIP_Bool SCIPconflictApplicable(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-
+   assert(set != NULL);
    /* check, if resolution or propagation conflict analysis is enabled */
    if( !set->conf_enable || !( set->conf_useprop || set->conf_usegeneralres ) )
       return FALSE;
@@ -493,7 +493,7 @@ SCIP_Real SCIPconflictGetPropTime(
    return SCIPclockGetTime(conflict->propanalyzetime);
 }
 
-/** gets time in seconds used for analyzing propagation conflicts with generalized resolution*/
+/** gets time in seconds used for analyzing propagation conflicts with generalized resolution */
 SCIP_Real SCIPconflictGetResTime(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -543,7 +543,7 @@ SCIP_Longint SCIPconflictGetNPropConflictLiterals(
    return conflict->npropconfliterals;
 }
 
-/** gets total number of variables in resolution conflict constraints created in propagation conflict analysis */
+/** returns total number of variables in resolution conflict constraints created in propagation conflict analysis */
 SCIP_Longint SCIPconflictGetNResConflictVars(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
