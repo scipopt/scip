@@ -163,7 +163,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
       SCIP_Bool aggregated;
       SCIP_Bool noconsknapsack;
 
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER);
+      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(vars[v]));
 
       /* skip variables which cannot be multi-aggregated */
       if( SCIPdoNotMultaggrVar(scip, vars[v]) )

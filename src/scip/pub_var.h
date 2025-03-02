@@ -458,6 +458,12 @@ SCIP_VARTYPE SCIPvarGetType(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets the implied integral type of the variable */
+SCIP_EXPORT
+SCIP_IMPLINTTYPE SCIPvarGetImplType(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** returns TRUE if the variable is of binary type; this is the case if:
  *  (1) variable type is binary
  *  (2) variable type is integer or implicit integer and 
@@ -469,9 +475,21 @@ SCIP_Bool SCIPvarIsBinary(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns whether variable is of integral type (binary, integer, or implicit integer) */
+/** returns whether variable is of integral type (binary, integer, or implied integral of any type) */
 SCIP_EXPORT
 SCIP_Bool SCIPvarIsIntegral(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns whether variable is implied integral (weakly or strongly) */
+SCIP_EXPORT
+SCIP_Bool SCIPvarIsImpliedIntegral(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns TRUE if the variable is integral, but not implied integral. */
+SCIP_EXPORT
+SCIP_Bool SCIPvarIsNonimpliedIntegral(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -967,8 +985,11 @@ void SCIPvarMarkRelaxationOnly(
 #define SCIPvarIsNegated(var)           ((var)->varstatus == SCIP_VARSTATUS_NEGATED)
 #define SCIPvarGetType(var)             ((SCIP_VARTYPE)((var)->vartype))
 #define SCIPvarIsBinary(var)            ((var)->vartype == SCIP_VARTYPE_BINARY || \
-      ((var)->vartype != SCIP_VARTYPE_CONTINUOUS && (var)->glbdom.lb >= 0.0 && (var)->glbdom.ub <= 1.0))
-#define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS)
+      (((var)->vartype != SCIP_VARTYPE_CONTINUOUS || (var)->varimpltype != SCIP_IMPLINTTYPE_NONE) \
+      && (var)->glbdom.lb >= 0.0 && (var)->glbdom.ub <= 1.0))
+#define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS || (var)->varimpltype != SCIP_IMPLINTTYPE_NONE)
+#define SCIPvarIsImpliedIntegral(var)   ((var)->varimpltype != SCIP_IMPLINTTYPE_NONE)
+#define SCIPvarIsNonimpliedIntegral(var) ((var)->vartype != SCIP_VARTYPE_CONTINUOUS && (var)->varimpltype == SCIP_IMPLINTTYPE_NONE)
 #define SCIPvarIsInitial(var)           (var)->initial
 #define SCIPvarIsRemovable(var)         (var)->removable
 #define SCIPvarIsDeleted(var)           (var)->deleted
@@ -1226,6 +1247,19 @@ SCIP_EXPORT
 SCIP_Bool SCIPvarWasFixedEarlier(
    SCIP_VAR*             var1,               /**< first binary variable */
    SCIP_VAR*             var2                /**< second binary variable */
+   );
+
+/** for a given array of variables, this function counts the numbers of variables for each variable and implied type combination */
+SCIP_EXPORT
+void SCIPvarsCountTypes(
+   SCIP_VAR**            vars,               /**< array of variables to count the types for */
+   int                   nvars,              /**< number of variables in the array */
+   int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
+   int*                  nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
+   int*                  nbinimplvars,       /**< pointer to store number of binary implicit integral vars or NULL if not needed */
+   int*                  nintimplvars,       /**< pointer to store number of integer implicit integral vars or NULL if not needed */
+   int*                  ncontimplvars,      /**< pointer to store number of continuous implicit integral vars or NULL if not needed */
+   int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    );
 
 /**

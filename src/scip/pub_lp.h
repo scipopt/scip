@@ -131,9 +131,15 @@ int SCIPcolGetVarProbindex(
    SCIP_COL*             col                 /**< LP col */
    );
 
-/** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
+/** returns whether the associated variable is of integral type (binary, integer, or implied integral) */
 SCIP_EXPORT
 SCIP_Bool SCIPcolIsIntegral(
+   SCIP_COL*             col                 /**< LP column */
+   );
+
+/** returns whether the associated variable is implied integral */
+SCIP_EXPORT
+SCIP_Bool SCIPcolIsImpliedIntegral(
    SCIP_COL*             col                 /**< LP column */
    );
 
@@ -412,7 +418,7 @@ int SCIProwGetRank(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
+/** returns TRUE if the activity of the row (without the row's constant) is integral for an optimal solution */
 SCIP_EXPORT
 SCIP_Bool SCIProwIsIntegral(
    SCIP_ROW*             row                 /**< LP row */

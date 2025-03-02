@@ -354,14 +354,14 @@ SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 endif
-LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/include/bliss\".\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.a\"\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.so\""
+LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/src\".\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/build/libbliss_static.a\"\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/build/libbliss.so\""
 endif
 
 SYMOPTIONS	+=	sbliss
 ifeq ($(SYM),sbliss)
-SYMOBJ		=	symmetry/build_sassy_graph.o
+SYMOBJ		=	symmetry/build_dejavu_graph.o
 SYMOBJ		+=	symmetry/compute_symmetry_sassy_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC		=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
@@ -375,9 +375,9 @@ SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 endif
-LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/include/bliss\".\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.a\"\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.so\""
+LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/src\".\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/build/libbliss_static.a\"\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/build/libbliss.so\""
 endif
 
 SYMOPTIONS	+=	nauty
@@ -412,7 +412,7 @@ endif
 
 SYMOPTIONS	+=	snauty
 ifeq ($(SYM),snauty)
-SYMOBJ		=	symmetry/build_sassy_graph.o
+SYMOBJ		=	symmetry/build_dejavu_graph.o
 SYMOBJ		+=	symmetry/compute_symmetry_sassy_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
@@ -440,6 +440,22 @@ LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<N
 endif
 ALLSRC		+=	$(SYMSRC)
 CXXFLAGS	+=	$(CXX17FLAG)
+endif
+
+SYMOPTIONS	+=	dejavu
+ifeq ($(SYM),dejavu)
+SYMOBJ		=	symmetry/build_dejavu_graph.o
+SYMOBJ		+=	symmetry/compute_symmetry_dejavu.o
+SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
+SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+ifeq ($(DEJAVUEXTERNAL),false)
+FLAGS		+=	-I$(SRCDIR)/dejavu
+else
+FLAGS		+=	-I$(LIBDIR)/include/dejavuinc
+SOFTLINKS	+=	$(LIBDIR)/include/dejavuinc
+LPIINSTMSG	+=	"\n  -> \"dejavuinc\" is the path to the dejavu source directory, e.g., \"<DEJAVU-path>\".\n"
+endif
+ALLSRC		+=	$(SYMSRC)
 endif
 
 #-----------------------------------------------------------------------------
@@ -602,6 +618,8 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_or.o \
 			scip/cons_orbisack.o \
 			scip/cons_orbitope.o \
+			scip/cons_orbitope_full.o \
+			scip/cons_orbitope_pp.o \
 			scip/cons_pseudoboolean.o \
 			scip/cons_quadratic.o \
 			scip/cons_setppc.o \
@@ -994,6 +1012,7 @@ SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
 SCIPBUILDFLAGSFILE = 	$(OBJDIR)/include/scip/buildflags.h
 SCIPCONFIGHFILE	= 	$(OBJDIR)/include/scip/config.h
 SCIPEXPORTHFILE	= 	$(OBJDIR)/include/scip/scip_export.h
+SCIPCONFIGINCLUDE =	$(LIBDIR)/$(LIBTYPE)/include
 
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
@@ -1260,6 +1279,13 @@ $(MAINLINK) $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(MAINFILE)) $(notdir $@)
 
+# update link to config files; (the cd $(@D) is for windows, where LN_s is cp)
+.PHONY: $(SCIPCONFIGINCLUDE)
+$(SCIPCONFIGINCLUDE): $(SCIPCONFIGHFILE)
+		@rm -rf $@
+		@mkdir -p $(@D)
+		cd $(@D) && $(LN_s) ../../$(OBJDIR)/include $(@F)
+
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
 
@@ -1317,6 +1343,8 @@ cleanlibs:      | $(LIBDIR)/$(LIBTYPE)
 		@-rm -f $(TPILIBFILE) $(TPILIBLINK) $(TPILIBSHORTLINK)
 		@echo "-> remove library $(SCIPLIBFILE)"
 		@-rm -f $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(SCIPLIBSOLVERLINK) $(SCIPLIBSOLVERSHORTLINK)
+		@echo "-> remove headers directory $(SCIPCONFIGINCLUDE)"
+		@-rm -rf $(SCIPCONFIGINCLUDE)
 
 .PHONY: cleanbin
 cleanbin:       | $(BINDIR)
@@ -1352,7 +1380,7 @@ endif
 
 .PHONY: libscipbase
 libscipbase:	preprocess
-		@$(MAKE) $(SCIPLIBBASEFILE) $(SCIPLIBBASELINK) $(SCIPLIBBASESHORTLINK)
+		@$(MAKE) $(SCIPLIBBASEFILE) $(SCIPLIBBASELINK) $(SCIPLIBBASESHORTLINK) $(SCIPCONFIGINCLUDE)
 
 $(SCIPLIBBASEFILE):	$(SCIPLIBBASEOBJFILES) $(SYMOBJFILES) | $(LIBDIR)/$(LIBTYPE) $(LIBOBJSUBDIRS)
 		@echo "-> generating library $@"
@@ -1507,7 +1535,6 @@ $(SCIPCONFIGHFILE) :
 		@echo "#define SCIP_VERSION_MAJOR $(SCIP_VERSION_MAJOR)" >> $@
 		@echo "#define SCIP_VERSION_MINOR $(SCIP_VERSION_MINOR)" >> $@
 		@echo "#define SCIP_VERSION_PATCH $(SCIP_VERSION_PATCH)" >> $@
-		@echo "#define SCIP_VERSION_SUB $(SCIP_VERSION_SUB)" >> $@
 		@echo "#define SCIP_VERSION_API $(SCIP_VERSION_API)" >> $@
 ifeq ($(NOBLKBUFMEM),true)
 		@echo "#define BMS_NOBLOCKMEM" >> $@
@@ -1700,8 +1727,10 @@ ifneq ($(SYM),bliss)
 ifneq ($(SYM),sbliss)
 ifneq ($(SYM),nauty)
 ifneq ($(SYM),snauty)
+ifneq ($(SYM),dejavu)
 ifneq ($(SYM),none)
 		$(error invalid SYM flag selected: SYM=$(SYM). Possible options are: $(SYMOPTIONS))
+endif
 endif
 endif
 endif
@@ -1765,7 +1794,7 @@ help:
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
 		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
-		@echo "  - SYM=<none|bliss|nauty|sbliss|snauty>: To choose type of symmetry handling."
+		@echo "  - SYM=<none|bliss|nauty|sbliss|snauty|dejavu>: To choose type of symmetry handling."
 		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP (deprecated, use THREADSAFE)."
 		@echo "  - THREADSAFE=<true|false>: Build thread safe."
 		@echo "  - NOBLKMEM=<true|false>: Turn off block memory or on (default)."

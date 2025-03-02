@@ -31,6 +31,7 @@
 
 #include "scip/benders.h"
 #include "scip/pub_benders.h"
+#include "scip/cons_linear.h"
 #include "scip/scip.h"
 
 
@@ -271,6 +272,9 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
+
+   /* including cons_linear */
+   SCIP_CALL( SCIPincludeConshdlrLinear(scip) );
 
    /* including the test Benders' decomposition */
    SCIP_CALL( SCIPincludeBendersTest(scip) );

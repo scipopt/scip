@@ -1480,7 +1480,7 @@ SCIP_RETCODE rowEventCoefChanged(
    /* check, if the row is being tracked for coefficient changes
     * if so, issue ROWCOEFCHANGED event
     */
-   if( (row->eventfilter->len > 0 && (row->eventfilter->eventmask & SCIP_EVENTTYPE_ROWCOEFCHANGED) != 0) )
+   if( (row->eventfilter->len > 0 && (row->eventfilter->eventmask & SCIP_EVENTTYPE_ROWCOEFCHANGED) != 0) ) /*lint !e587*/
    {
       SCIP_EVENT* event;
 
@@ -3360,6 +3360,7 @@ SCIP_RETCODE SCIPcolCreate(
    (*col)->ubchanged = FALSE;
    (*col)->coefchanged = FALSE;
    (*col)->integral = SCIPvarIsIntegral(var);
+   (*col)->impliedintegral = SCIPvarIsImpliedIntegral(var);
    (*col)->removable = removable;
    (*col)->sbdownvalid = FALSE;
    (*col)->sbupvalid = FALSE;
@@ -9461,6 +9462,7 @@ SCIP_RETCODE SCIPlpAddCol(
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
    assert(SCIPvarIsIntegral(col->var) == col->integral);
+   assert(SCIPvarIsImpliedIntegral(col->var) == col->impliedintegral);
 
    SCIPsetDebugMsg(set, "adding column <%s> to LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
 #ifdef SCIP_DEBUG
@@ -9742,7 +9744,7 @@ SCIP_RETCODE SCIPlpShrinkRows(
          /* check, if row deletion events are tracked
           * if so, issue ROWDELETEDLP event
           */
-         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )
+         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )  /*lint !e587*/
          {
             SCIP_EVENT* event;
 
@@ -15443,7 +15445,7 @@ SCIP_RETCODE lpDelRowset(
          /* check, if row deletion events are tracked
           * if so, issue ROWDELETEDLP event
           */
-         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )
+         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )  /*lint !e587*/
          {
             SCIP_EVENT* event;
 
@@ -17068,7 +17070,7 @@ int SCIPcolGetVarProbindex(
    return col->var_probindex;
 }
 
-/** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
+/** returns whether the associated variable is of integral type (binary, integer, or implied integral) */
 SCIP_Bool SCIPcolIsIntegral(
    SCIP_COL*             col                 /**< LP column */
    )
@@ -17077,6 +17079,17 @@ SCIP_Bool SCIPcolIsIntegral(
    assert(SCIPvarIsIntegral(col->var) == col->integral);
 
    return col->integral;
+}
+
+/** returns whether the associated variable is implied integral */
+SCIP_Bool SCIPcolIsImpliedIntegral(
+   SCIP_COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+   assert(SCIPvarIsImpliedIntegral(col->var) == col->impliedintegral);
+
+   return col->impliedintegral;
 }
 
 /** returns TRUE iff column is removable from the LP (due to aging or cleanup) */
@@ -17387,7 +17400,7 @@ int SCIProwGetRank(
    return row->rank;
 }
 
-/** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
+/** returns TRUE if the activity of the row (without the row's constant) is integral for an optimal solution */
 SCIP_Bool SCIProwIsIntegral(
    SCIP_ROW*             row                 /**< LP row */
    )

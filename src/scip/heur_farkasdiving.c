@@ -509,7 +509,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFarkasdiving)
    }
 
    /* prefer decisions on binary variables */
-   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
+   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(cand) )
       *score = -1.0 / *score;
 
    return SCIP_OKAY;

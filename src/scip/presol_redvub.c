@@ -122,6 +122,9 @@ SCIP_Bool isVub(
       var2 = SCIPmatrixGetVar(matrix, idx2);
       type2 = SCIPvarGetType(var2);
 
+      if( SCIPvarIsImpliedIntegral(var1) || SCIPvarIsImpliedIntegral(var2) )
+         return isvub;
+
       /* we claim that the vub has the structure ax + cy >= b
        * with a<0, c>0, x continuous, x>=0, y binary and obj(y)>=0
        */
@@ -202,6 +205,9 @@ SCIP_Bool isVlb(
       val2 = *valpnt;
       var2 = SCIPmatrixGetVar(matrix, idx2);
       type2 = SCIPvarGetType(var2);
+
+      if( SCIPvarIsImpliedIntegral(var1) || SCIPvarIsImpliedIntegral(var2) )
+         return isvlb;
 
       /* we claim that the vlb has the structure ax + cy >= b
        * with a>0, c<0, x continuous, x>=0, y binary and obj(y)>=0
@@ -300,7 +306,7 @@ SCIP_RETCODE detectDominatingVubs(
 #ifdef SCIP_DEBUG
                SCIPdebugMsg(scip, "Aggregate variable %s by %s\n", SCIPvarGetName(var2), SCIPvarGetName(var1));
                SCIPdebugMsg(scip, "Delete variable upper bound constraint:\n");
-               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[j]), NULL));
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[j]), NULL) );
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
@@ -317,7 +323,7 @@ SCIP_RETCODE detectDominatingVubs(
 #ifdef SCIP_DEBUG
                SCIPdebugMsg(scip, "Aggregate variable %s by %s\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
                SCIPdebugMsg(scip, "Delete variable upper bound constraint:\n");
-               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[i]), NULL));
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[i]), NULL) );
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
@@ -407,7 +413,7 @@ SCIP_RETCODE detectDominatingVlbs(
 #ifdef SCIP_DEBUG
                SCIPdebugMsg(scip, "Aggregate variable %s by %s\n", SCIPvarGetName(var2), SCIPvarGetName(var1));
                SCIPdebugMsg(scip, "Delete variable lower bound constraint:\n");
-               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[j]), NULL));
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[j]), NULL) );
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
@@ -424,7 +430,7 @@ SCIP_RETCODE detectDominatingVlbs(
 #ifdef SCIP_DEBUG
                SCIPdebugMsg(scip, "Aggregate variable %s by %s\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
                SCIPdebugMsg(scip, "Delete variable lower bound constraint:\n");
-               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[i]), NULL));
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[i]), NULL) );
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
@@ -484,7 +490,7 @@ SCIP_RETCODE findVarAggrRedVbcons(
 
       var = SCIPmatrixGetVar(matrix, c);
 
-      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(var) )
          continue;
 
       /* search vubs per variable */

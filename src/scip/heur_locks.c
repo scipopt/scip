@@ -589,7 +589,7 @@ SCIP_RETCODE SCIPapplyLockFixings(
                for( w = ncols - 1; w >= 0; --w  )
                {
                   colvar = SCIPcolGetVar(cols[w]);
-                  if( SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY && colvar != var )
+                  if( SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(colvar) && colvar != var )
                   {
                      assert(sortvars[varpos[SCIPvarGetProbindex(colvar)]] == colvar);
                      pos = varpos[SCIPvarGetProbindex(colvar)];

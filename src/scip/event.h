@@ -298,14 +298,23 @@ SCIP_RETCODE SCIPeventCreateImplAdded(
    SCIP_VAR*             var                 /**< variable that was fixed */
    );
 
-/** creates an event for a changeing the type of a variable */
+/** creates an event for changing the type of a variable */
 SCIP_RETCODE SCIPeventCreateTypeChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR*             var,                /**< variable whose objective value changed */
+   SCIP_VAR*             var,                /**< variable whose type changed */
    SCIP_VARTYPE          oldtype,            /**< old variable type */
    SCIP_VARTYPE          newtype             /**< new variable type */
    );
+
+/** creates an event for changing the implied integral type of a variable */
+SCIP_RETCODE SCIPeventCreateImplTypeChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose implied type changed */
+   SCIP_IMPLINTTYPE      oldtype,            /**< old variable implied type */
+   SCIP_IMPLINTTYPE      newtype             /**< new variable implied type */
+);
 
 /** creates an event for the addition of a linear row to the separation storage */
 SCIP_RETCODE SCIPeventCreateRowAddedSepa(
@@ -493,7 +502,7 @@ SCIP_RETCODE SCIPeventqueueProcess(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** returns TRUE iff events of the queue are delayed until the next SCIPeventqueueProcess() call */

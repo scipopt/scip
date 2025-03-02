@@ -80,7 +80,6 @@
 #include "scip/sepa_mcf.h"
 #include <string.h>
 
-
 #define SEPA_NAME                        "mcf"
 #define SEPA_DESC                        "multi-commodity-flow network cut separator"
 #define SEPA_PRIORITY                    -10000
@@ -827,7 +826,7 @@ void printCommodities(
       if( rowcommodity[r] == -1 && (capacityrowsigns == NULL || (capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) == 0) )
       {
          MCFdebugMessage(" row <%s>\n", SCIProwGetName(rows[r]));
-         /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, rows[r], NULL)) );*/
+         /*SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rows[r], NULL) ) );*/
       }
    }
    MCFdebugMessage("\n");
@@ -942,32 +941,38 @@ SCIP_RETCODE extractFlowRows(
       ncontvars = 0;
       for( i = 0; i < rowlen; i++ )
       {
+         SCIP_VAR* var;
          SCIP_Real absval = ABS(rowvals[i]);
+
          if( !SCIPisEQ(scip, absval, coef) )
             break;
 
-         hasposcoef = hasposcoef || (rowvals[i] > 0.0);
-         hasnegcoef = hasnegcoef || (rowvals[i] < 0.0);
-         switch( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) )
+         hasposcoef = (hasposcoef || rowvals[i] > 0.0);
+         hasnegcoef = (hasnegcoef || rowvals[i] < 0.0);
+         var = SCIPcolGetVar(rowcols[i]);
+
+         if ( SCIPvarIsImpliedIntegral(var) )
+            ++nimplintvars;
+         else
          {
-         case SCIP_VARTYPE_BINARY:
-            nbinvars++;
-            break;
-         case SCIP_VARTYPE_INTEGER:
-            nintvars++;
-            break;
-         case SCIP_VARTYPE_IMPLINT:
-            nimplintvars++;
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
-               ncontvars++;
-               break;
-         default:
-            SCIPerrorMessage("unknown variable type\n");
-            SCIPABORT();
-            return SCIP_INVALIDDATA;  /*lint !e527*/
+            switch( SCIPvarGetType(var) )
+            {
+               case SCIP_VARTYPE_BINARY:
+                  ++nbinvars;
+                  break;
+               case SCIP_VARTYPE_INTEGER:
+                  ++nintvars;
+                  break;
+               case SCIP_VARTYPE_CONTINUOUS:
+                  ++ncontvars;
+                  break;
+               default:
+                  SCIPerrorMessage("unknown variable type\n");
+                  return SCIP_INVALIDDATA;
+            } /*lint !e788*/
          }
       }
+
       if( i == rowlen )
       {
          /* Flow conservation constraints should always be a*x <= -d.
@@ -1055,7 +1060,7 @@ SCIP_RETCODE extractFlowRows(
 #ifdef SCIP_DEBUG
    for( r = 0; r < mcfdata->nflowcands; r++ )
    {
-      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, rows[mcfdata->flowcands[r]], NULL)) );*/
+      /*SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rows[mcfdata->flowcands[r]], NULL) ) );*/
       SCIPdebugMsg(scip, "%4d [score: %2g]: %s\n", mcfdata->flowcands[r], flowrowscores[mcfdata->flowcands[r]],
                        SCIProwGetName(rows[mcfdata->flowcands[r]]));
    }
@@ -1256,7 +1261,7 @@ SCIP_RETCODE extractCapacityRows(
                nnegcapacitycoefs++;
 
             /* a continuous variable is considered to be not so nice*/
-            if( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) == SCIP_VARTYPE_CONTINUOUS )
+            if( !SCIPvarIsIntegral(SCIPcolGetVar(rowcols[i])) )
                nbadcoefs++;
          }
       }
@@ -1423,7 +1428,7 @@ SCIP_RETCODE extractCapacityRows(
    {
       SCIPdebugMsg(scip, "row %4d [score: %2g]: %s\n", mcfdata->capacitycands[r],
                        capacityrowscores[mcfdata->capacitycands[r]], SCIProwGetName(rows[mcfdata->capacitycands[r]]));
-      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, rows[mcfdata->capacitycands[r]], NULL)) );*/
+      /*SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rows[mcfdata->capacitycands[r]], NULL) ) );*/
    }
 #endif
 
@@ -1613,7 +1618,7 @@ void addFlowrowToCommodity(
    SCIPdebugMsg(scip, "adding flow row %d <%s> with sign %+d%s to commodity %d [score:%g]\n",
                     r, SCIProwGetName(row), rowscale, (rowsign & INVERTED) != 0 ? " (inverted)" : "",
                     k, mcfdata->flowrowscores[r]);
-   /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );*/
+   /*SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );*/
 
    /* add row to commodity */
    rowcommodity[r] = k;
@@ -4607,24 +4612,26 @@ SCIP_RETCODE printFlowSystemInfo(
             nflowvars++;
             col = cols[c];
             colvisited[c] = TRUE;
-            switch( SCIPvarGetType(SCIPcolGetVar(col)) )
+            if( SCIPcolIsImpliedIntegral(col) )
+               ++nintflowvars;
+            else
             {
-            case SCIP_VARTYPE_BINARY:
-               nbinflowvars++;
-               break;
-            case SCIP_VARTYPE_INTEGER:
-               nintflowvars++;
-               break;
-            case SCIP_VARTYPE_IMPLINT:
-               nintflowvars++;
-               break;
-               case SCIP_VARTYPE_CONTINUOUS:
-                  ncontflowvars++;
-                  break;
-            default:
-               SCIPerrorMessage("unknown variable type\n");
-               SCIPABORT();
-               return SCIP_INVALIDDATA;  /*lint !e527*/
+               switch( SCIPvarGetType(SCIPcolGetVar(col)))
+               {
+                  case SCIP_VARTYPE_BINARY:
+                     nbinflowvars++;
+                     break;
+                  case SCIP_VARTYPE_INTEGER:
+                     nintflowvars++;
+                     break;
+                  case SCIP_VARTYPE_CONTINUOUS:
+                     ncontflowvars++;
+                     break;
+                  default:
+                     SCIPerrorMessage("unknown variable type\n");
+                     SCIPABORT();
+                     return SCIP_INVALIDDATA;  /*lint !e527*/
+               }
             }
          }
       }
@@ -4653,24 +4660,26 @@ SCIP_RETCODE printFlowSystemInfo(
                {
                   ncapvars++;
                   colvisited[c] = TRUE;
-                  switch( SCIPvarGetType(SCIPcolGetVar(rowcols[i]) ) )
+                  if( SCIPcolIsImpliedIntegral(rowcols[i]) )
+                     nintcapvars++;
+                  else
                   {
-                  case SCIP_VARTYPE_BINARY:
-                     nbincapvars++;
-                     break;
-                  case SCIP_VARTYPE_INTEGER:
-                     nintcapvars++;
-                     break;
-                  case SCIP_VARTYPE_IMPLINT:
-                     nintcapvars++;
-                     break;
-                  case SCIP_VARTYPE_CONTINUOUS:
-                     ncontcapvars++;
-                     break;
-                  default:
-                     SCIPerrorMessage("unknown variable type\n");
-                     SCIPABORT();
-                     return SCIP_INVALIDDATA;  /*lint !e527*/
+                     switch( SCIPvarGetType(SCIPcolGetVar(rowcols[i])))
+                     {
+                        case SCIP_VARTYPE_BINARY:
+                           nbincapvars++;
+                           break;
+                        case SCIP_VARTYPE_INTEGER:
+                           nintcapvars++;
+                           break;
+                        case SCIP_VARTYPE_CONTINUOUS:
+                           ncontcapvars++;
+                           break;
+                        default:
+                           SCIPerrorMessage("unknown variable type\n");
+                           SCIPABORT();
+                           return SCIP_INVALIDDATA;  /*lint !e527*/
+                     }
                   }
                }
             }
@@ -5844,7 +5853,7 @@ SCIP_RETCODE addCut(
 
    SCIPdebugMsg(scip, " -> found MCF cut <%s>: rhs=%f, act=%f eff=%f rank=%d\n",
                 cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut));
-   /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
+   /*SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );*/
 
    if( !cutislocal )
    {
@@ -6195,7 +6204,7 @@ SCIP_RETCODE generateClusterCuts(
             rowweights[r] = arccapacityscales[a];
             SCIPdebugMsg(scip, " -> arc %d, r=%d, capacity row <%s>: weight=%g slack=%g dual=%g\n", a, r, SCIProwGetName(arccapacityrows[a]), rowweights[r],
                              SCIPgetRowFeasibility(scip, arccapacityrows[a]), SCIProwGetDualsol(arccapacityrows[a]));
-            /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, arccapacityrows[a], NULL)) );*/
+            /*SCIPdebug( SCIP_CALL( SCIPprintRow(scip, arccapacityrows[a], NULL) ) );*/
 
             if( sepadata->separateflowcutset )
             {
@@ -6350,7 +6359,7 @@ SCIP_RETCODE generateClusterCuts(
                      SCIPdebugMsg(scip, " -> node %d, commodity %d, r=%d, flow row <%s>: scale=%g weight=%g slack=%g dual=%g\n",
                                       v, k, r, SCIProwGetName(nodeflowrows[v][k]), scale, rowweights[r],
                                       SCIPgetRowFeasibility(scip, nodeflowrows[v][k]), SCIProwGetDualsol(nodeflowrows[v][k]));
-                     /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, nodeflowrows[v][k], NULL)) );*/
+                     /*SCIPdebug( SCIP_CALL( SCIPprintRow(scip, nodeflowrows[v][k], NULL) ) );*/
                      if( sepadata->separateflowcutset )
                      {
                         if( nodeflowscales[v][k] > 0.0 )
@@ -6706,8 +6715,7 @@ SCIP_RETCODE separateCuts(
       }
 
 #ifdef COUNTNETWORKVARIABLETYPES
-      SCIP_CALL( printFlowSystemInfo(scip,sepadata->mcfnetworks,sepadata->nmcfnetworks));
-
+      SCIP_CALL( printFlowSystemInfo(scip,sepadata->mcfnetworks,sepadata->nmcfnetworks) );
 #endif
    }
    assert(sepadata->nmcfnetworks >= 0);

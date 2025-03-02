@@ -60,7 +60,6 @@
 #include "scip/expr_abs.h"
 #include <string.h>
 
-
 #define READER_NAME             "gmsreader"
 #define READER_DESC             "file writer for (MI)(N)LPs in GAMS file format"
 #define READER_EXTENSION        "gms"
@@ -72,7 +71,6 @@
 #define GMS_PRINTLEN         100
 #define GMS_DEFAULT_BIGM     1e+6
 #define GMS_DEFAULT_INDICATORREFORM 's'
-#define GMS_DEFAULT_SIGNPOWER FALSE
 
 /*
  * Local methods (for writing)
@@ -1314,10 +1312,6 @@ SCIP_RETCODE SCIPincludeReaderGms(
          "reading/gmsreader/indicatorreform", "which reformulation to use for indicator constraints: 'b'ig-M, 's'os1",
          NULL, FALSE, GMS_DEFAULT_INDICATORREFORM, "bs", NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/gmsreader/signpower", "is it allowed to use the gams function signpower(x,a)?",
-         NULL, FALSE, GMS_DEFAULT_SIGNPOWER, NULL, NULL) );
-
    return SCIP_OKAY;
 }
 
@@ -1374,18 +1368,17 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Bool discrete;
    SCIP_Bool rangedrow;
    SCIP_Bool indicatorsosdef;
-   SCIP_Bool signpowerallowed;
    SCIP_Bool needcomma;
 
-   assert( scip != NULL );
-   assert( vars != NULL || nvars == 0 );
+   SCIP_VARTYPE vartype;
+   int implintlevel;
+   int nintegers = nvars - ncontvars;
+   assert(nintegers >= 0);
 
    /* check if the variable names are not too long */
    SCIP_CALL( checkVarnames(scip, vars, nvars) );
    /* check if the constraint names are too long */
    SCIP_CALL( checkConsnames(scip, conss, nconss, transformed) );
-
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/signpower", &signpowerallowed) );
 
    /* check if the objective is a single continuous variable, so we would not have to introduce an auxiliary variable
     * for GAMS
@@ -1395,7 +1388,9 @@ SCIP_RETCODE SCIPwriteGms(
    {
       for( v = 0; v < nvars; ++v )
       {
-         if( SCIPvarGetObj(vars[v]) == 0.0 ) /*lint !e613*/
+         var = vars[v];
+
+         if( SCIPvarGetObj(var) == 0.0 ) /*lint !e613*/
             continue;
 
          if( objvar == NULL )
@@ -1403,11 +1398,10 @@ SCIP_RETCODE SCIPwriteGms(
             /* first variable with nonzero obj coefficient
              * if not active or having coefficient != 1.0, or being binary/integer, then give up
              */
-            if( !SCIPvarIsActive(vars[v]) || SCIPvarGetObj(vars[v]) != 1.0 ||
-               SCIPvarGetType(vars[v]) < SCIP_VARTYPE_IMPLINT ) /*lint !e613*/
+            if( !SCIPvarIsActive(var) || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || SCIPvarGetObj(var) != 1.0 ) /*lint !e613*/
                break;
 
-            objvar = vars[v]; /*lint !e613*/
+            objvar = var; /*lint !e613*/
          }
          else
          {
@@ -1417,6 +1411,11 @@ SCIP_RETCODE SCIPwriteGms(
          }
       }
    }
+
+   /* adjust written integrality constraints on implied integral variables based on the implied integral level */
+   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
+   assert(implintlevel >= -2);
+   assert(implintlevel <= 2);
 
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "$OFFLISTING\n");
@@ -1443,8 +1442,7 @@ SCIP_RETCODE SCIPwriteGms(
    /* "model" variables */
    for( v = 0; v < nvars; ++v )
    {
-      var = vars[v]; /*lint !e613*/
-      assert( var != NULL );
+      var = vars[v];
 
       SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
       (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%c", varname, (v < nvars - 1) ? ',' : ';');
@@ -1452,51 +1450,82 @@ SCIP_RETCODE SCIPwriteGms(
 
       if( (linecnt > 0 && (v == nbinvars - 1 || v == nbinvars + nintvars - 1 ||
             v == nbinvars + nintvars + nimplvars - 1)) || v == nvars - 1 )
-      {
          endLine(scip, file, linebuffer, &linecnt);
-         clearLine(linebuffer, &linecnt);
-      }
    }
 
    SCIPinfoMessage(scip, file, "\n");
+   discrete = FALSE;
 
    /* declare binary variables if present */
-   if( nbinvars > 0 )
    {
-      SCIPinfoMessage(scip, file, "Binary variables\n");
-      clearLine(linebuffer, &linecnt);
+      SCIP_Bool initial = TRUE;
 
-      for( v = 0; v < nbinvars; ++v )
+      /* output active variables */
+      for( v = 0; v < nintegers; ++v )
       {
-         var = vars[v]; /*lint !e613*/
+         var = vars[v];
+
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+            continue;
+
+         if( initial )
+            SCIPinfoMessage(scip, file, "Binary variables\n");
 
          SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nbinvars - 1) ? "," : ";");
-
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, initial ? " %s" : ", %s", varname);
          appendLine(scip, file, linebuffer, &linecnt, buffer);
+         initial = FALSE;
       }
 
-      endLine(scip, file, linebuffer, &linecnt);
-      SCIPinfoMessage(scip, file, "\n");
+      if( !initial )
+      {
+         appendLine(scip, file, linebuffer, &linecnt, ";\n");
+         endLine(scip, file, linebuffer, &linecnt);
+         discrete = TRUE;
+      }
    }
 
    /* declare integer variables if present */
-   if( nintvars > 0 )
    {
-      SCIPinfoMessage(scip, file, "Integer variables\n");
-      clearLine(linebuffer, &linecnt);
+      SCIP_Bool initial = TRUE;
 
-      for( v = 0; v < nintvars; ++v )
+      /* output active variables */
+      for( v = nbinvars; v < nintegers; ++v )
       {
-         var = vars[nbinvars + v]; /*lint !e613*/
+         var = vars[v];
+
+         switch( SCIPvarGetType(var) )
+         {
+            case SCIP_VARTYPE_BINARY:
+               continue;
+            case SCIP_VARTYPE_INTEGER:
+               if( (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+                  continue;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               if( (int)SCIPvarGetImplType(var) <= 2 - implintlevel )
+                  continue;
+               break;
+            default:
+               SCIPerrorMessage("unknown variable type\n");
+               return SCIP_INVALIDDATA;
+         } /*lint !e788*/
+
+         if( initial )
+            SCIPinfoMessage(scip, file, "Integer variables\n");
 
          SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nintvars - 1) ? "," : ";");
-
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, initial ? " %s" : ", %s", varname);
          appendLine(scip, file, linebuffer, &linecnt, buffer);
+         initial = FALSE;
       }
-      endLine(scip, file, linebuffer, &linecnt);
-      SCIPinfoMessage(scip, file, "\n");
+
+      if( !initial )
+      {
+         appendLine(scip, file, linebuffer, &linecnt, ";\n");
+         endLine(scip, file, linebuffer, &linecnt);
+         discrete = TRUE;
+      }
    }
 
    /* print variable bounds */
@@ -1505,8 +1534,20 @@ SCIP_RETCODE SCIPwriteGms(
 
    for( v = 0; v < nvars; ++v )
    {
-      var = vars[v]; /*lint !e613*/
-      assert( var != NULL );
+      var = vars[v];
+      vartype = SCIPvarGetType(var);
+
+      /* determine written type */
+      if( vartype == SCIP_VARTYPE_CONTINUOUS )
+      {
+         if( (int)SCIPvarGetImplType(var) > 2 - implintlevel )
+            vartype = SCIP_VARTYPE_INTEGER;
+      }
+      else
+      {
+         if( (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+            vartype = SCIP_VARTYPE_CONTINUOUS;
+      }
 
       SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
 
@@ -1526,10 +1567,10 @@ SCIP_RETCODE SCIPwriteGms(
       /* fixed */
       if( SCIPisEQ(scip, lb, ub) )
       {
-         if( v < nintvars )
-            SCIPinfoMessage(scip, file, " %s.fx = %g;\n", varname, SCIPfloor(scip, lb + 0.5));
-         else
+         if( vartype == SCIP_VARTYPE_CONTINUOUS )
             SCIPinfoMessage(scip, file, " %s.fx = %.15g;\n", varname, lb);
+         else
+            SCIPinfoMessage(scip, file, " %s.fx = %g;\n", varname, SCIPfloor(scip, lb + 0.5));
          nondefbounds = TRUE;
 
          /* no need to write lower and upper bounds additionally */
@@ -1537,7 +1578,7 @@ SCIP_RETCODE SCIPwriteGms(
       }
 
       /* lower bound */
-      if( v < nbinvars + nintvars )
+      if( vartype != SCIP_VARTYPE_CONTINUOUS )
       {
          /* default lower bound of binaries and integers is 0 */
          if( !SCIPisZero(scip, lb) )
@@ -1549,7 +1590,7 @@ SCIP_RETCODE SCIPwriteGms(
             nondefbounds = TRUE;
          }
       }
-      else if( v >= nbinvars + nintvars && !SCIPisInfinity(scip, -lb) )
+      else if( !SCIPisInfinity(scip, -lb) )
       {
          /* continuous variables are free by default */
          SCIPinfoMessage(scip, file, " %s.lo = %.15g;\n", varname, lb);
@@ -1557,7 +1598,7 @@ SCIP_RETCODE SCIPwriteGms(
       }
 
       /* upper bound */
-      if( v < nbinvars )
+      if( vartype == SCIP_VARTYPE_BINARY )
       {
          /* binary variables have default upper bound 1.0 */
          if( !SCIPisFeasEQ(scip, ub, 1.0) )
@@ -1566,7 +1607,7 @@ SCIP_RETCODE SCIPwriteGms(
             nondefbounds = TRUE;
          }
       }
-      else if( v < nbinvars + nintvars )
+      else if( vartype == SCIP_VARTYPE_INTEGER )
       {
          /* integer variables have default upper bound +inf */
          if( !SCIPisInfinity(scip, ub) )
@@ -1577,6 +1618,7 @@ SCIP_RETCODE SCIPwriteGms(
       }
       else
       {
+         assert(vartype == SCIP_VARTYPE_CONTINUOUS);
          /* continuous variables have default upper bound +inf */
          if( !SCIPisInfinity(scip, ub) )
          {
@@ -1678,8 +1720,7 @@ SCIP_RETCODE SCIPwriteGms(
 
       for( v = 0; v < nvars; ++v )
       {
-         var = vars[v]; /*lint !e613*/
-         assert( var != NULL );
+         var = vars[v];
 
          /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
          assert( transformed || SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
@@ -1695,7 +1736,6 @@ SCIP_RETCODE SCIPwriteGms(
    }
 
    /* print constraints */
-   discrete = nbinvars > 0 || nintvars > 0;
    indicatorsosdef = FALSE;
    for( c = 0; c < nconss; ++c )
    {
@@ -1831,7 +1871,7 @@ SCIP_RETCODE SCIPwriteGms(
 
    /* print solve command */
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s",
-         discrete ? "MI" : "", nlcons ? (nqcons ? "QCP" : ((nsmooth && !discrete) ? "DNLP" : "NLP")) : (discrete > 0 ? "P" : "LP"));
+         discrete ? "MI" : "", nlcons ? (nqcons ? "QCP" : ((nsmooth && !discrete) ? "DNLP" : "NLP")) : (discrete ? "P" : "LP"));
 
    if( objvar != NULL )
    {

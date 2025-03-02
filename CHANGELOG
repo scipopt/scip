@@ -9,16 +9,22 @@ Features
 - added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
 - copy variable data pointer if no copy routine was supplied.
 - added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
+- Dejavu can be used to compute symmetries; the source code is shipped with SCIP and incorporates sassy.
 - implemented symmetry detection callbacks for cons_disjunction and cons_superindicator
 - detailed information about applied symmetry handling techniques can be printed to the terminal
 - added a new separator sepa_multilinear to generate flower cuts from AND constraints nonlinear product expressions.
 - added functionality to deal with hypergraphs by means of efficient access to vertices, edges and intersections edges.
 - added support for (transposed) network matrix detection in pub_network.h
-- added a new presolver presol_implint which detects implied integers by detecting (transposed) network submatrices in the problem. For now, this plugin is disabled by default.
+- added a new presolver presol_implint which detects implied integral variables by detecting (transposed) network submatrices in the problem. For now, this plugin is disabled by default.
 - added new plugin type for finding irreducible infeasible subsystems (IIS). Users can now include their own IIS algorithms. Basic addition and deletion based algorithm implemented in iisfinder_greedy.
 - added a new data structure SCIP_DATATREE that holds serializable data and a method to export to a JSON file
 - added ability to collect statistics from tables in a SCIP_DATATREE and write out as JSON file;
   dialog write statistics now writes a JSON file if name of file to write ends with .json
+- improve memory usage by introducing different constraint handlers for full orbitopes and packing/partitioning orbitopes
+- the linking master variables for each Benders' decomposition subproblem are now stored. These can be accessed for the
+  generation of cut and setting up the subproblems.
+- adds objective types for Benders' decomposition; the choice is to sum the subproblems objectives (classical
+  approach) or to use the maximum of the subproblems objectives
 
 Performance improvements
 ------------------------
@@ -33,10 +39,30 @@ Examples and applications
 Interface changes
 -----------------
 
+### Deprecations
+
+- The variable type \ref SCIP_VARTYPE_IMPLINT is deprecated in favor of a new enum \ref SCIP_IMPLINTTYPE that indicates if a
+  variable is implied integral, independent of the variable type.
+  The problem variable arrays is still sorted as:
+  ```
+   (0) | binary | integer | implied integral | continuous | (nvars),
+  ```
+  where the implied integral subsection is now subdivided into 3 parts (left to right):
+  ```
+  | binary implied integral | integer implied integral | continuous implied integral |
+  ```
+  SCIP 10 still supports using SCIP_VARTYPE_IMPLINT for backward compatibility, see SCIPcreateVar() and SCIPchgVarType() for more details.
+  SCIP 11 will remove SCIP_VARTYPE_IMPLINT.
+
 ### New and changed callbacks
+
 - added a new callback TABLE_COLLECT for the table plugin that collects the data for the specific statistics table in a SCIP_DATATREE object
 - for a table plugin, only one of the callbacks TABLE_COLLECT or TABLE_OUTPUT needs to be implemented, but implementing both is preferred;
   if TABLE_OUTPUT is omitted, then SCIP tries to print a table from the data given by TABLE_COLLECT
+- the event SCIP_EVENTTYPE_TYPECHANGED is no longer generated if a variable becomes implied integral
+- new event SCIP_EVENTTYPE_IMPLTYPECHANGED is generated if a variable is declared implied integral, this event is included in the set SCIP_EVENTTYPE_VARCHANGED
+- the callback SCIP_DECL_EXPRINTEGRALITY, which returns the integrality of an expression, had its fourth argument change from SCIP_Bool* to SCIP_IMPLINTTYPE*, to represent implied integrality in nonlinear expressions, that is an implied integral type of an auxiliary variable if the expression were assigned to it
+- new event SCIP_EVENTTYPE_DUALBOUNDIMPROVED is generated whenever the global dual bound is improved
 
 ### Deleted and changed API methods
 
@@ -46,6 +72,14 @@ Interface changes
 - intvar removed from arguments for SCIPcreateConsPseudobooleanWithConss(), SCIPcreateConsPseudoboolean(), and SCIPcreateConsBasicPseudoboolean() due to dysfunctionality of non-linear objective reformulation with pseudoboolean constraint
 - ndelconss added to arguments for SCIPcleanupConssLinear() and SCIPcleanupConssKnapsack() to directly delete empty redundant constraints before creating problem matrix
 - copyiisfinders added to arguments for SCIPcopyPlugins() (16th position)
+- SCIPcreateConsOrbitope() deleted two arguments and changed position of another argument
+- deprecated SCIPsubversion(), will be removed
+- SCIPvarCalcDistributionParameters(): argument impltype added (5th position)
+- SCIPpermuteProb(): argument permuteimplvars has been replaced by new arguments permutebinimplvars, permuteintimplvars, and permutecontimplvars
+- SCIPgetSolVarsData(): argument nimplvars has been replaced by new arguments nbinimplvars, nintimplvars, and ncontimplvars
+- SCIPexprSetIntegrality(): set argument generalized from SCIP_Bool integral to SCIP_IMPLINTTYPE integrality (4th position)
+- Temporarily for SCIP 10 only: Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integral type SCIP_IMPLINTTYPE_WEAK instead
+- Temporarily for SCIP 10 only: SCIPchgVarType() converts a call with type SCIP_VARTYPE_IMPLINT into a call of SCIPchgVarImplType() with type SCIP_IMPLINTTYPE_WEAK
 
 ### New API functions
 
@@ -59,7 +93,7 @@ Interface changes
 - SCIPhypergraphCreate(), SCIPhypergraphClear(), SCIPhypergraphFree(), SCIPhypergraphAddVertex(), SCIPhypergraphAddEdge(), SCIPhypergraphIsValid() and SCIPhypergraphComputeVerticesEdges() for building and deleting hypergraphs, SCIPhypergraphComputeOverlaps(), SCIPhypergraphOverlapFind(), SCIPhypergraphIntersectEdges(), SCIPhypergraphComputeOverlapsEdges(), SCIPhypergraphComputeVerticesOverlaps(), SCIPhypergraphOverlapsDisjoint() to deal with pair-wise intersections of hyperedges, SCIPhypergraphIterInit(), SCIPhypergraphIterClear(), SCIPhypergraphIterStart(), SCIPhypergraphIterValid(), SCIPhypergraphIterNext(), SCIPhypergraphIterBase(), SCIPhypergraphIterAdjacent(), SCIPhypergraphIterMinVertex(), SCIPhypergraphIterOverlap() for iterating over adjacent edges, SCIPhypergraphHasVertexEdges() SCIPhypergraphHasOverlaps(), SCIPhypergraphHasOverlapsEdges(), SCIPhypergraphHasVertexOverlaps(), SCIPhypergraphGetNVertices(), SCIPhypergraphGetNEdges(), SCIPhypergraphBlkmem(), SCIPhypergraphGetNOverlaps(), SCIPhypergraphVertexData(), SCIPhypergraphEdgeData(), SCIPhypergraphEdgeSize(), SCIPhypergraphEdgeVertices(), SCIPhypergraphVertexEdgesFirst(), SCIPhypergraphVertexEdgesBeyond(), SCIPhypergraphVertexEdgesGetAtIndex(), SCIPhypergraphOverlapData(), SCIPhypergraphOverlapSize(), SCIPhypergraphOverlapVertices() SCIPhypergraphEdgesOverlapsFirst(), SCIPhypergraphEdgesOverlapsBeyond(), SCIPhypergraphEdgesOverlapsGetAtIndex(), SCIPhypergraphOverlapsEdgesFirst(), SCIPhypergraphOverlapsEdgesBeyond(), SCIPhypergraphOverlapsEdgesGetAtIndex(), SCIPhypergraphVertexOverlapsFirst(), SCIPhypergraphVertexOverlapsBeyond() and SCIPhypergraphVertexOverlapsGetAtIndex() to query information about vertices, edges and overlaps as well as their incidences.
 - SCIPdebugClearSol() for clearing the debug solution
 - Renamed XML functions to avoid name clash with libxml2 by adding "SCIP": SCIPxmlProcess(), SCIPxmlNewNode(), SCIPxmlNewAttr(), SCIPxmlAddAttr(), SCIPxmlAppendChild(), SCIPxmlFreeNode(), SCIPxmlShowNode(), SCIPxmlGetAttrval(), SCIPxmlFirstNode(), SCIPxmlNextNode(), SCIPxmlFindNode(), SCIPxmlFindNodeMaxdepth(), SCIPxmlNextSibl(), SCIPxmlPrevSibl(), SCIPxmlFirstChild(), SCIPxmlLastChild(), SCIPxmlGetName(), SCIPxmlGetLine(), SCIPxmlGetData(), SCIPxmlFindPcdata().
-- SCIPincludePresolImplint() to include the new implied integer presolver
+- SCIPincludePresolImplint() to include the new implied integral presolver
 - SCIPnetmatdecCreate() and SCIPnetmatdecFree() for creating and deleting a network matrix decomposition. SCIPnetmatdecTryAddCol() and SCIPnetmatdecTryAddRow() are used to add columns and rows of the matrix to the decomposition. SCIPnetmatdecContainsRow() and SCIPnetmatdecContainsColumn() check if the decomposition contains the given row or columns. SCIPnetmatdecRemoveComponent() can remove connected components from the decomposition. SCIPnetmatdecCreateDiGraph() can be used to expose the underlying digraph. SCIPnetmatdecIsMinimal() and SCIPnetmatdecVerifyCycle() check if certain invariants of the decomposition are satisfied and are used in tests.
 - SCIPfreeReaderdataCor(), SCIPfreeReaderdataTim() and SCIPfreeReaderdataSto() for freeing the data for the COR, TIM and
   STO readers respectively. These readers are all used when reading an SMPS instance.
@@ -70,11 +104,29 @@ Interface changes
 - SCIPcollect*Statistics() for every SCIPprint*Statistics() in scip_solvingstats.h
 - SCIPprintStatisticsJson() to output a JSON string of the table statistics data
 - SCIPstatusName() to get a string representation of SCIP_STATUS
+- SCIPbendersGetSubproblemMasterVars(), SCIPbendersGetNSubproblemMasterVars(), SCIPbendersGetSubproblemMasterVarsData()
+  are available to get the linking master variables for each subproblem and details about the number of binary and integer.
+- SCIPsetBendersObjectiveType() for setting the objective type for the aggregation of the Benders' decompostion
+  subproblems
+- SCIPbendersGetObjectiveType() for returning the objective type for the aggregation of the Benders' decomposition
+  subproblems
+- SCIPbenderGetMasterAuxiliaryVar() returns the master auxiliary variable
+- added SCIPcreateVarImpl() and SCIPcreateObjVarImpl(), which behave identically to SCIPcreateVar() and SCIPcreateObjVar(), respectively, but have an additional argument for the new implied integral type flag (8th position)
+- added SCIPchgVarImplType(), SCIPvarGetImplType(), SCIPvarIsImpliedIntegral() to control and query implied integrality
+- added SCIPvarIsNonimpliedIntegral() to query if a variable is integral but not implied integral
+- added SCIPgetNBinImplVars(), SCIPgetNIntImplVars(), SCIPgetNContImplVars() to query the number of implied integral variables of every type; note that SCIPgetNBinVars(), SCIPgetNIntVars(), and SCIPgetNContVars() no longer include the implied integral variables in their counts
+- added SCIPcolIsImpliedIntegral()
+- added SCIPvarsCountTypes() to determine the variable type count distribution for an array of variables
+- added SCIPeventGetOldImplType() and SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
+- added SCIPexprGetIntegrality(), which in addition to the existing function SCIPexprIsIntegral() provides information about the presence of weakly implied integral variables
 
 ### Changes in preprocessor macros
 
 - removed `#define` of `strcasecmp` and `strncasecmp` (in case of Windows builds) in scip/def.h;
   use SCIPstr(n)casecmp() (scip/pub_misc.h) instead
+- SCIPincludeConshdlrOrbitopePP(), SCIPcreateConsOrbitopePP(), SCIPcreateConsBasicOrbitopePP(), SCIPincludeConshdlrOrbitopeFull(), SCIPcreateConsOrbitopeFull(), SCIPcreateConsBasicOrbitopeFull()
+- SCIP_VERSION_SUB and SCIP_SUBVERSION are deprecated
+- removed SCIP_VARTYPE_IMPLINT_CHAR
 
 ### Command line interface
 
@@ -90,6 +142,8 @@ Interface changes
 ### Changed parameters
 
 - heuristics/scheduler/heurtimelimit removed to avoid indeterministic behavior of scheduler heuristic, uses main time limit instead
+- removed parameters "constraints/orbitope/checkpporbitope", "constraints/orbitope/sepafullorbitope", "constraints/orbitope/forceconscopy", which became superfluous
+- removed reading/gmsreader/signpower
 
 ### New parameters
 
@@ -99,8 +153,15 @@ Interface changes
 - new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
 - new parameter "propagating/symmetry/dispsyminfo" to control whether information about which symmetry handling methods are applied are printed
 - new parameter "presolving/implint/columnrowratio" indicates the ratio of rows/columns where the row-wise network matrix detection algorithm is used instead of the column-wise network matrix detection algorithm
-- new parameter "presolving/implint/numericslimit" determines the limit for absolute integral coefficients beyond which the corresponding rows and variables are excluded from implied integer detection
+- new parameter "presolving/implint/numericslimit" determines the limit for absolute integral coefficients beyond which the corresponding rows and variables are excluded from implied integrality detection
 - iis/minimal, iis/nodes, iis/removedbounds, iis/removeunusedvars, iis/silent, iis/stopafterone, iis/time, iis/greedy/additive, iis/greedy/conservative, iis/greedy/delafteradd, iis/greedy/dynamicreordering, iis/greedy/maxbatchsize, iis/greedy/maxrelbatchsize, iis/greedy/nodelimperiter, iis/greedy/priority, iis/greedy/timelimperiter
+- new parameters "constraints/orbitope_full/forceconscopy" and "constraints/orbitope_pp/forceconscopy" to control whether non-model constraints of type full orbitope and packing/partitioning orbitope are copied to sub-SCIPs, respectively
+- new parameter "write/implintlevel" to control if integrality constraints should be written for implied integral variables (regarded by cip, mps, lp, rlp, pip, fzn, and gms writers)
+- new parameter "presolving/milp/enablecliquemerging" to enable clique merging in PaPILO
+- new parameter "presolving/milp/maxedgesparallel" defines the maximal amount of edges in the parallel clique merging graph
+- new parameter "presolving/milp/maxedgessequential" defines the maximal amount of edges in the sequential clique merging graph
+- new parameter "presolving/milp/maxcliquesize" defines the maximal size of cliques considered for clique merging
+- new parameter "presolving/milp/maxgreedycalls" defines the maximal number of greedy max clique calls in a single thread
 
 ### Data structures
 
@@ -135,9 +196,11 @@ Fixed bugs
 
 Miscellaneous
 -------------
+- We now use sassy as shipped with dejavu.
 
 - add objective offset instead of objective offset variable in cip reader
 - updated ampl/mp to v4.0.0
+- removed 4th number in SCIP version; new format is major.minor.patch
 
 Known bugs
 ----------
@@ -190,12 +253,28 @@ Miscellaneous
 Fixed bugs
 ----------
 
+- fixed definition of slack variables of >= constraints and ranged rows in LP interface to Gurobi (lpi_grb.c)
+- free memory leaking singleton arrays for ignored variables in SCIPapplyHeurDualval()
+- use epsilon tolerance for bound implications of dual substitutions in dualPresolve() of cons_linear.c
+- fixed timeouts due to race conditions when using TPI=omp
+- fixed issues with indexing of concurrent solvers when a solver finishes (because SCIP is too fast) before others have been created when using TPI=tny
+- respect fixing if variable is declared binary in bounds section of mps file
+- force local bounds to adjusted value when fixing variable
+
 Build system
 ------------
 
 ### Cmake
 
+- allow to set HIGHS_DIR via -D flag as well
+- reenable building and testing of SCFLP example
+- fixed that compiler flags for sanitizers were not used for compiling objects of SCIP library
+- prioritize local includes in applications and examples to link the intended SCIP version to them
+
 ### Makefile
+
+- fix use of SANITIZE=full for debug builds with GCC on Linux: removed -fsanitize=leak because it cannot be used together with -fsanitize=address
+- fix that make install SHARED=true missed to install libscipbase
 
 Miscellaneous
 -------------
@@ -214,6 +293,7 @@ Fixed bugs
 - added copy callbacks for presolvers dualagg and redvub, branching rules lookahead and cloud, primal heuristics dualval and repair, propagator nlobbt, and separators gauge and convexproj
 - respect maximal separation rounds setting by running remaining delayed separators in last round
 - replace terms consistently in applyFixings() of cons_linear to handle infinite aggregations
+- fixed bug with SOS2 constraints of size that avoided a correct enforcing
 
 Build system
 ------------
@@ -244,6 +324,7 @@ Features
   note that if the concurrent solve is stopped due to a gap limit, the "winner" solver will have an interrupted solution status and
   its primal and dual bounds may not be the best possible ones (use SCIPgetConcurrentPrimalbound() and SCIPgetConcurrentDualbound() instead)
 - parse pseudoboolean constraint from CIP format (and add linear-"and"-reformulation)
+
 
 Performance improvements
 ------------------------
@@ -426,7 +507,7 @@ Interface changes
 
 Build system
 ------------
-
+- new option SYM=dejavu to choose Dejavu for computing symmetries
 - changed the default symmetry computation package from sassy+bliss to sassy+nauty
 - bliss source is no longer included in the source tree, but can be linked as external library (https://github.com/ds4dm/Bliss)
 - cmake now automatically downloads and installs the latest release version of SoPlex from GitHub if it is not found directly

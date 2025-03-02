@@ -141,7 +141,7 @@ SCIP_RETCODE applyBoundHeur(
    {
       var = vars[v];
 
-      assert(SCIPvarGetType(var) < SCIP_VARTYPE_IMPLINT);
+      assert(SCIPvarIsNonimpliedIntegral(var));
 
       /* skip variables which are already fixed */
       if( SCIPvarGetLbLocal(var) + 0.5 > SCIPvarGetUbLocal(var) )
@@ -362,11 +362,11 @@ SCIP_DECL_HEUREXEC(heurExecBound)
 
    if( heurdata->bound == 'l' || heurdata->bound == 'b' )
    {
-      SCIP_CALL(applyBoundHeur(scip, heur, heurdata, TRUE, result) );
+      SCIP_CALL( applyBoundHeur(scip, heur, heurdata, TRUE, result) );
    }
    if( heurdata->bound == 'u' || heurdata->bound == 'b' )
    {
-      SCIP_CALL(applyBoundHeur(scip, heur, heurdata, FALSE, result) );
+      SCIP_CALL( applyBoundHeur(scip, heur, heurdata, FALSE, result) );
    }
 
    return SCIP_OKAY;

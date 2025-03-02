@@ -133,7 +133,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
 
       transvar = vars[i];
 
-      if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vars[i]) )
       {
          SCIP_Real obj;
          SCIP_Real newcoef;
@@ -144,8 +144,8 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
          if( SCIPvarGetLbGlobal(vars[i]) > 0.5 || SCIPvarGetUbGlobal(vars[i]) < 0.5 )
             continue;
 
-         SCIP_CALL( SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip), &oldcoef));
-         SCIP_CALL( SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip)-1, &newcoef));
+         SCIP_CALL( SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip), &oldcoef) );
+         SCIP_CALL( SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip)-1, &newcoef) );
 
          /* check if variable entered or left the objective, or if its objective coefficient changed sign */
          changed = FALSE;

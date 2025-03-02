@@ -514,7 +514,7 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
 
       var = vars[v];
 
-      assert( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT );
+      assert( SCIPvarIsImpliedIntegral(var) );
       solval = SCIPsolGetVal(sol, set, stat, var);
 
       /* we do not need to round integral solution values or those of variables which are not column variables */

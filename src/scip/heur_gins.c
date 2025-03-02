@@ -575,7 +575,7 @@ SCIP_RETCODE decompHorizonInitialize(
       /* determine the block size and the variable types */
       do
       {
-         if( SCIPvarGetType(varscopy[currblockend]) < SCIP_VARTYPE_IMPLINT )
+         if( SCIPvarIsNonimpliedIntegral(varscopy[currblockend]) )
             ++ndiscretevars;
 
          currblockend++;
@@ -1446,7 +1446,7 @@ SCIP_RETCODE selectInitialVariableDecomposition(
       ndiscblockvars = 0;
       for( v = currblockstart; v < currblockend; ++v )
       {
-         if( SCIPvarGetType(varscopy[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(varscopy[v]) == SCIP_VARTYPE_INTEGER )
+         if( SCIPvarIsNonimpliedIntegral(varscopy[v]) )
             discvaridxs[ndiscblockvars++] = v;
       }
 
@@ -1913,7 +1913,7 @@ SCIP_RETCODE determineVariableFixingsDecomp(
             {
                SCIP_VAR* var = vars[v];
 
-               if( heurdata->fixcontvars || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+               if( heurdata->fixcontvars || SCIPvarIsIntegral(var) )
                {
                   SCIP_Real fixval;
 
@@ -2204,7 +2204,7 @@ SCIP_RETCODE setupSubScip(
          cutoff = (1 + heurdata->minimprove) * SCIPgetUpperbound(scip);
    }
    cutoff = MIN(upperbound, cutoff);
-   SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
+   SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
    /* set solve limits for sub-SCIP */
    SCIP_CALL( setLimits(scip, subscip, solvelimits) );

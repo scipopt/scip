@@ -107,7 +107,7 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
       SCIP_Real lb;
       SCIP_Real ub;
 
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER);
+      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(vars[v]));
 
       /* get variable's bounds */
       lb = SCIPvarGetLbGlobal(vars[v]);

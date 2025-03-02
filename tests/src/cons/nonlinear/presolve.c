@@ -159,6 +159,19 @@ void checkTypes(
    cr_expect(SCIPvarGetType(SCIPvarGetTransVar(z)) == vartypez);
 }
 
+/* helper method to check implied variable types */
+static
+void checkImplTypes(
+   SCIP_IMPLINTTYPE      impltypex,          /**< target implied type of x */
+   SCIP_IMPLINTTYPE      impltypey,          /**< target implied type of y */
+   SCIP_IMPLINTTYPE      impltypez           /**< target implied type of z */
+   )
+{
+   cr_expect(SCIPvarGetImplType(SCIPvarGetTransVar(x)) == impltypex);
+   cr_expect(SCIPvarGetImplType(SCIPvarGetTransVar(y)) == impltypey);
+   cr_expect(SCIPvarGetImplType(SCIPvarGetTransVar(z)) == impltypez);
+}
+
 /* test for presolSingleLockedVars() */
 Test(presolve, singlelockedvars1)
 {
@@ -171,6 +184,7 @@ Test(presolve, singlelockedvars1)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_BINARY, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY);
+   checkImplTypes(SCIP_IMPLINTTYPE_NONE, SCIP_IMPLINTTYPE_NONE, SCIP_IMPLINTTYPE_NONE);
 }
 
 /* test for presolSingleLockedVars() */
@@ -186,6 +200,7 @@ Test(presolve, singlelockedvars2)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY);
+   checkImplTypes(SCIP_IMPLINTTYPE_NONE, SCIP_IMPLINTTYPE_NONE, SCIP_IMPLINTTYPE_NONE);
 }
 
 /* test for presolSingleLockedVars() */
@@ -204,6 +219,7 @@ Test(presolve, singlelockedvars3)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_BINARY, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_CONTINUOUS);
+   checkImplTypes(SCIP_IMPLINTTYPE_NONE, SCIP_IMPLINTTYPE_NONE, SCIP_IMPLINTTYPE_NONE);
 }
 
 /* test for presolveImplint()
@@ -230,7 +246,8 @@ Test(presolve, implint)
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
 
    /* check variable types */
-   checkTypes(SCIP_VARTYPE_IMPLINT, SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_BINARY);
+   checkTypes(SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_BINARY);
+   checkImplTypes(SCIP_IMPLINTTYPE_STRONG, SCIP_IMPLINTTYPE_NONE, SCIP_IMPLINTTYPE_NONE);
 }
 
 /* test for presolveImplint()
@@ -261,7 +278,8 @@ Test(presolve, implint2)
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
 
    /* check variable types */
-   checkTypes(SCIP_VARTYPE_IMPLINT, SCIP_VARTYPE_BINARY, SCIP_VARTYPE_BINARY);
+   checkTypes(SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY, SCIP_VARTYPE_BINARY);
+   checkImplTypes(SCIP_IMPLINTTYPE_STRONG, SCIP_IMPLINTTYPE_NONE, SCIP_IMPLINTTYPE_NONE);
 }
 
 /* test for presolveImplint()
@@ -289,6 +307,7 @@ Test(presolve, implint3)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY);
+   checkImplTypes(SCIP_IMPLINTTYPE_NONE, SCIP_IMPLINTTYPE_NONE, SCIP_IMPLINTTYPE_NONE);
 }
 
 /* tests setppc upgrade */

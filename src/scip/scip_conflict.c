@@ -689,8 +689,8 @@ SCIP_RETCODE SCIPanalyzeConflict(
    if(scip->set->conf_usegeneralres && SCIPsetGetStage(scip->set) == SCIP_STAGE_SOLVING)
    {
          SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-                  scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, NULL,
-                  validdepth, &conflictlearned) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+               scip->cliquetable, NULL, validdepth, &conflictlearned) );
    }
    if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
    {
@@ -740,8 +740,8 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
          conflictrow = SCIPconsCreateRow(scip, cons);
 
          SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-                     scip->origprob, scip->tree, scip->reopt, scip->lp,  scip->branchcand, scip->eventqueue, scip->cliquetable,
-                     conflictrow, 0, &conflictlearned) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp,  scip->branchcand, scip->eventqueue, scip->eventfilter,
+               scip->cliquetable, conflictrow, 0, &conflictlearned) );
       }
       if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
       {
@@ -769,8 +769,8 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
          conflictrow = SCIPconsCreateRow(scip, cons);
 
          SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-                     scip->origprob, scip->tree, scip->reopt, scip->lp,  scip->branchcand, scip->eventqueue, scip->cliquetable,
-                     conflictrow, SCIPconsGetValidDepth(cons), &conflictlearned) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp,  scip->branchcand, scip->eventqueue, scip->eventfilter,
+               scip->cliquetable, conflictrow, SCIPconsGetValidDepth(cons), &conflictlearned) );
       }
       /* @todo generalized resolution for the local case */
       if( !(scip->set->conf_favorresolution) || !(conflictlearned) )

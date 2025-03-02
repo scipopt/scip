@@ -369,48 +369,51 @@ SECTION: General Questions about SCIP
         </ul>
     </p>
 
-    QUESTION: What are implicit-integer variables?
-    LABEL:implicitinteger
+    QUESTION: What are implied integral variables, and what is the difference between weak and strong implied integrality?
+    LABEL:impliedinteger
     ANSWER:
     <p>
-       Originally, variable type <code>SCIP_VARTYPE_IMPLINT</code> was used for continuous variables that are known to take an integral value in any feasible solution.<br/>
-       For example, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y = b, variable y could be declared to be implicit-integer if
-       the coefficients a<sub>i</sub> and b were integral for all i and variables x<sub>i</sub> were of type integer (or binary) for all i.
-       Algorithms in SCIP could make use of the knowledge that y can take only integral values in a feasible solution.
-       For example, if some domain propagation algorithm deduces y &ge; 0.5, then the lower bound can automatically be tightened to 1.
-       Further, cuts may be tightened when integrality for integer-implicit variables can be assumed.<br/>
-       Of course, it would also be possible to change the type of variable y to "integer" (<code>SCIP_VARTYPE_INTEGER</code>), but this would mean that SCIP may
-       try to actively enforce integrality of y, e.g., by branching on y if it takes a fractional value in a relaxations solution.
-       Thus, to express that a variable will eventually take an integral value but does not need to be branched on, variable type SCIP_VARTYPE_IMPLINT is used.
-       In fact, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y = b with all coefficients being integral and all variables integer,
-       SCIP may decide to change the type of variable y to implicit-integer.
+        A variable is said to be an implied integral variable if its integrality is implied by the integrality constraints of other variables through the active constraints.
+        SCIP distinguishes between two types of implied integrality: weak and strong,
+        which are encoded by an additional flag of type <code>SCIP_IMPLINTTYPE</code>.
     </p>
     <p>
-       At a later time, the meaning of variable type SCIP_VARTYPE_IMPLINT has been changed to be apply to continuous variables that are known to take an
-       integral value in at least one <b>optimal</b> solution. In addition, a check had been added to exclude solutions with fractional value in an implicit-integer variables.<br/>
-       This less restrictive definition allowed to use the variable type in additional situations.
-       For example, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y &le; b where again the coefficients a<sub>i</sub> and b were integral for all i,
-       and variables x<sub>i</sub> are of type integer (or binary) for all i, variable y could be declared to be implicit-integer if it does not appear in any other constraint
-       and its bounds are integral, since for any optimal solution where y takes a fractional solution, another optimal solution with y rounded up or down exists.
-       (Generalizations for the case where y appears in additional constraints exist, see <tt>cons_linear.c:fullDualPresolve()</tt>.)<br/>
-       Again, changing the type of a variable from continuous to implicit-integer has the advantage that algorithms can take advantage of this information, e.g.,
-       for deriving tighter bounds in domain propagation.
+        A variable is strongly implied integral if it can only have an integer solution value in the problem that remains after relaxing all integrality constraints and
+        fixing all non-implied integral variables to feasible integer values.
+        For example, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y = b, the variable y
+        can be declared strongly implied integral if the variables x<sub>i</sub> are non-implied integral and the
+        coefficients a<sub>i</sub> and the right hand side b are integral, because then y = b - &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub>
+        is also integral in any feasible solution.
+        Algorithms within SCIP can exploit the fact that a variable is implied integral.
+        If the variable type of y is continuous and some domain propagation algorithm deduces that
+        y &ge; 0.5 holds, then the lower bound of y can be automatically tightened to 1 by using integrality.
+        Further, cuts may be tightened by using the integrality of y, and new classes of cuts may become available.
+        Even if y has variable type binary or integer, its implied integrality may still be useful.
+        For example, strong implied integrality of y indicates that it is unnecessary to branch on y, since branching on
+        all x-variables will automatically enforce the integrality constraint on y.
     </p>
     <p>
-       The check that excluded solutions with fractional value in an implicit-integer variable had the disadvantage that it forbids solutions which
-       would have been feasible before a continuous variable was changed to an implicit-integer one.
-       In addition, it required that primal heuristics that construct solutions had to take care of ensuring integral values for implicit-integer variables.
-       This lead to confusion when a heuristic decided that after having constructed integral values for all integer variables, it would be sufficient to check
-       all constraints other than <code>cons_integral</code> to ensure feasibility.<br/>
-       As a consequence, the check that implicit-integer variables need to have an integral value in a solution has been dropped with SCIP 8.0.5.
-       Since it is possible to use variable type SCIP_VARTYPE_IMPLINT also in the original problem formulation, this also required to update the definition
-       of this variable type again. The current formulation reads <b>continuous variable with optional integrality restriction</b>.<br/>
-       Therefore, setting the type of a variable to SCIP_VARTYPE_IMPLINT means that SCIP does not ensure that the variable will take an integral value in a solution.
-       However, it may apply reductions that prevent the variable from taking any fractional value.
-       Integrality therefore serves as a kind of "soft-constraint" here.<br/>
-       The typical use case for this variable type are variables which are known to take an integral value in all feasible or at least all optimal solutions
-       (and where one does not want to rely on SCIP to detect this).
-       For this reason, and to avoid major API changes, the variable type has not been renamed.
+        Weak implied integrality is less restrictive than strong implied integrality.
+        A variable is said to be weakly implied integral if there exists an optimal solution to the relaxed problem
+        where only the non-implied integral variables have integrality constraints,
+        so that all weakly implied integral variables have integer solution values.
+        For example, a free variable y is weakly implied integral if it occurs only in a linear constraint of the form
+        &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y &le; b, where x<sub>i</sub>, a<sub>i</sub> and b are all integer.
+        In contrast to strong implied integrality, the weakly implied integral variable y might not be forced to take an integer solution value after the x-variables are fixed.
+        However, there is an optimal solution where y takes the integer solution value b - &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub>.
+    </p>
+    <p>
+        Originally, the variable type <code>SCIP_VARTYPE_IMPLINT</code> was used for continuous variables which are
+        all known to simultaneously take integer solution values in an optimal solution.
+        With SCIP 10, this variable type is deprecated in favor of a new flag of type <code>SCIP_IMPLINTTYPE</code>,
+        which can take the values <code>SCIP_IMPLINTTYPE_NONE</code>, <code>SCIP_IMPLINTTYPE_WEAK</code>, and <code>SCIP_IMPLINTTYPE_STRONG</code>.
+        The primary motivation for this change is to allow users to declare implied integrality of variables of binary
+        and integer type, which was previously impossible.
+        In SCIP 8.1 and 9, <code>SCIP_VARTYPE_IMPLINT</code> was interpreted to not have an
+        integrality constraint, which meant that binary or integer variables which integrality was also weakly implied could not be marked as implied integral,
+        since it could not be guaranteed that they were having an integral value in all primal solutions.
+        In SCIP 10 and above, variables that were previously of type <code>SCIP_VARTYPE_IMPLINT</code> are equivalent
+        to variables with variable type <code>SCIP_VARTYPE_CONTINUOUS</code> and implied integral type <code>SCIP_IMPLINTTYPE_WEAK</code>.
     </p>
 
     QUESTION: How can I analyse an infeasible problem?

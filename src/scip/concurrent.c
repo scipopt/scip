@@ -50,9 +50,18 @@
 #include "scip/event_globalbnd.h"
 #include "scip/scip.h"
 #include "scip/syncstore.h"
+#include "scip/type_syncstore.h"
 #include "scip/set.h"
 #include "tpi/tpi.h"
 #include "tpi/def_openmp.h"
+
+/** TPI job data */
+struct SCIP_ConcurrentData
+{
+   SCIP*                 scip;               /**< SCIP datastructure */
+   int                   solverindex;        /**< index of solver running concurrently */
+};
+typedef struct SCIP_ConcurrentData SCIP_CONCURRENTDATA;
 
 /** create concurrent data */
 SCIP_RETCODE SCIPcreateConcurrent(
@@ -468,14 +477,18 @@ SCIP_RETCODE execConcsolver(
    void*                 args                /**< SCIP data structure passed in as a void pointer */
    )
 {
+   SCIP_CONCURRENTDATA* concurrentdata;
    SCIP* scip;
+   int solverindex;
 
    assert(args != NULL);
 
-   scip = (SCIP*) args;
+   concurrentdata = (SCIP_CONCURRENTDATA*) args;
+   scip = concurrentdata->scip;
+   solverindex = concurrentdata->solverindex;
 
-   SCIP_CALL( SCIPconcsolverExec(scip->set->concsolvers[SCIPtpiGetThreadNum()]) );
-   SCIP_CALL( SCIPconcsolverSync(scip->set->concsolvers[SCIPtpiGetThreadNum()], scip->set) );
+   SCIP_CALL( SCIPconcsolverExec(scip->set->concsolvers[solverindex]) );
+   SCIP_CALL( SCIPconcsolverSync(scip->set->concsolvers[solverindex], scip->set) );
 
    return SCIP_OKAY;
 }
@@ -492,6 +505,7 @@ SCIP_RETCODE SCIPconcurrentSolve(
    SCIP_RETCODE      retcode;
    SCIP_CONCSOLVER** concsolvers;
    int               nconcsolvers;
+   SCIP_CONCURRENTDATA** concurrentdata;
 
    assert(scip != NULL);
 
@@ -505,6 +519,12 @@ SCIP_RETCODE SCIPconcurrentSolve(
    SCIPsyncstoreSetSolveIsStopped(syncstore, FALSE);
    jobid = SCIPtpiGetNewJobID();
 
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &concurrentdata, nconcsolvers) );
+   for( i = 0; i < nconcsolvers; ++i )
+   {
+      SCIP_CALL( SCIPallocBlockMemory(scip, &concurrentdata[i]) );  /*lint !e866*/
+   }
+
    TPI_PARA
    {
       TPI_SINGLE
@@ -515,7 +535,10 @@ SCIP_RETCODE SCIPconcurrentSolve(
             SCIP_JOB*         job;
             SCIP_SUBMITSTATUS status;
 
-            SCIP_CALL_ABORT( SCIPtpiCreateJob(&job, jobid, execConcsolver, scip) );
+            concurrentdata[i]->scip = scip;
+            concurrentdata[i]->solverindex = i;
+
+            SCIP_CALL_ABORT( SCIPtpiCreateJob(&job, jobid, execConcsolver, concurrentdata[i]) );
             SCIP_CALL_ABORT( SCIPtpiSubmitJob(job, &status) );
 
             assert(status == SCIP_SUBMIT_SUCCESS);
@@ -532,6 +555,10 @@ SCIP_RETCODE SCIPconcurrentSolve(
       idx = 0;
 
    SCIP_CALL( SCIPconcsolverGetSolvingData(concsolvers[idx], scip) );
+
+   for( i = nconcsolvers - 1; i >= 0; i-- )
+      SCIPfreeBlockMemory(scip, &concurrentdata[i]);   /*lint !e866*/
+   SCIPfreeBlockMemoryArray(scip, &concurrentdata, nconcsolvers);
 
    return retcode;
 }

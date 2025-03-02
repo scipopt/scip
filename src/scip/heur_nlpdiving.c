@@ -482,7 +482,7 @@ SCIP_RETCODE chooseVeclenVar(
       score = (objdelta + SCIPsumepsilon(scip))/((SCIP_Real)nlocks+1.0);
 
       /* prefer decisions on binary variables */
-      if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
          score *= 1000.0;
 
       /* prefer decisions on cover variables */
@@ -1919,7 +1919,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          for( c = 0; c < ncovervars; c++ )
          {
             /* insert variable into hash map */
-            if( SCIPvarGetType(covervars[c]) < SCIP_VARTYPE_IMPLINT )
+            if( SCIPvarIsNonimpliedIntegral(covervars[c]) )
             {
                assert(!SCIPhashmapExists(varincover, covervars[c]));
                SCIP_CALL( SCIPhashmapInsertInt(varincover, covervars[c], c+1) );
@@ -2284,7 +2284,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                      nlpsolval = SCIPvarGetNLPSol(covervars[c]);
                      nlpsolval = MIN(nlpsolval,ub);
                      nlpsolval = MAX(nlpsolval,lb);
-                     assert(SCIPvarGetType(covervars[c]) >= SCIP_VARTYPE_IMPLINT || SCIPisFeasIntegral(scip, nlpsolval));
+                     assert(!SCIPvarIsNonimpliedIntegral(covervars[c]) || SCIPisFeasIntegral(scip, nlpsolval));
 
                      /* open a new probing node if this will not exceed the maximal tree depth,
                       * otherwise fix all the remaining variables at the same probing node
@@ -2327,7 +2327,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                SCIP_Bool success;
                success = FALSE;
 
-               SCIP_CALL( solveSubMIP(scip, heur, covervars, ncovervars, &success));
+               SCIP_CALL( solveSubMIP(scip, heur, covervars, ncovervars, &success) );
                if( success )
                   *result = SCIP_FOUNDSOL;
                backtracked = TRUE; /* to avoid backtracking */

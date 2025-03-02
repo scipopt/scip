@@ -2207,23 +2207,25 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
          {
             ++propdata->nmovedpermvars;
 
-            switch ( SCIPvarGetType(propdata->permvars[v]) )
-            {
-            case SCIP_VARTYPE_BINARY:
-               ++propdata->nmovedbinpermvars;
-               break;
-            case SCIP_VARTYPE_INTEGER:
-               ++propdata->nmovedintpermvars;
-               break;
-            case SCIP_VARTYPE_IMPLINT:
+            if ( SCIPvarIsImpliedIntegral(propdata->permvars[v]) )
                ++propdata->nmovedimplintpermvars;
-               break;
-            case SCIP_VARTYPE_CONTINUOUS:
-               ++propdata->nmovedcontpermvars;
-               break;
-            default:
-               SCIPerrorMessage("Variable provided with unknown vartype\n");
-               return SCIP_ERROR;
+            else
+            {
+               switch ( SCIPvarGetType(propdata->permvars[v]) )
+               {
+                  case SCIP_VARTYPE_BINARY:
+                     ++propdata->nmovedbinpermvars;
+                     break;
+                  case SCIP_VARTYPE_INTEGER:
+                     ++propdata->nmovedintpermvars;
+                     break;
+                  case SCIP_VARTYPE_CONTINUOUS:
+                     ++propdata->nmovedcontpermvars;
+                     break;
+                  default:
+                     SCIPerrorMessage("unknown variable type\n");
+                     return SCIP_INVALIDDATA;
+               } /*lint !e788*/
             }
          }
       }
@@ -3020,7 +3022,6 @@ SCIP_RETCODE addOrbitopeSubgroup(
    int**                 lexorder,           /**< pointer to array storing lexicographic order defined by sub orbitopes */
    int*                  nvarslexorder,      /**< number of variables in lexicographic order */
    int*                  maxnvarslexorder,   /**< maximum number of variables in lexicographic order */
-   SCIP_Bool             mayinteract,        /**< whether orbitope's symmetries might interact with other symmetries */
    SCIP_Bool*            success             /**< whether the orbitope could be added */
    )
 {  /*lint --e{571}*/
@@ -3198,8 +3199,8 @@ SCIP_RETCODE addOrbitopeSubgroup(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "suborbitope_%d_%d", graphcoloridx, propdata->norbitopes);
 
    SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopevarmatrix,
-         SCIP_ORBITOPETYPE_FULL, nrows, ngencols, FALSE, mayinteract, FALSE, FALSE, propdata->conssaddlp,
-         TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_ORBITOPETYPE_FULL, nrows, ngencols, FALSE, FALSE, TRUE,
+         propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    *success = TRUE;
@@ -3766,7 +3767,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
    int nvarslexorder = 0;
    int maxnvarslexorder = 0;
    SCIP_Shortbool* permused;
-   SCIP_Bool allpermsused = FALSE;
    SCIP_Bool handlednonbinarysymmetry = FALSE;
    int norbitopesincomp;
 
@@ -3883,9 +3883,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
    SCIPdebugMsg(scip, "  created subgroup detection graph using %d of the permutations\n", nusedperms);
 
-   if ( nusedperms == npermsincomp )
-      allpermsused = TRUE;
-
    assert( graphcomponents != NULL );
    assert( graphcompbegins != NULL );
    assert( compcolorbegins != NULL );
@@ -3948,7 +3945,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
                propdata->perms[propdata->components[propdata->componentbegins[cidx] + k]],
                propdata->permvars, propdata->npermvars, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         SCIP_CALL( SCIPaddCons(scip, cons));
+         SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
          SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
@@ -4070,7 +4067,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
           */
          SCIP_CALL( addOrbitopeSubgroup(scip, propdata, usedperms, nusedperms, compcolorbegins,
                graphcompbegins, graphcomponents, j, nbinarycomps, largestcompsize, &firstvaridx, &chosencomp,
-               &lexorder, &nvarslexorder, &maxnvarslexorder, allpermsused, &orbitopeadded) );
+               &lexorder, &nvarslexorder, &maxnvarslexorder, &orbitopeadded) );
 
          if ( orbitopeadded )
          {
@@ -4210,7 +4207,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name,
                symresackperm, modifiedpermvars, propdata->npermvars, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         SCIP_CALL( SCIPaddCons(scip, cons));
+         SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
          SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
@@ -4778,20 +4775,22 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
       leadervar = permvars[orbits[orbitbegins[orbitidx] + orbitleaderidx]];
 
       SCIPinfoMessage(scip, NULL, "  use %d SST cuts for leader %s of type ", orbitsize - 1, SCIPvarGetName(leadervar));
-      switch ( SCIPvarGetType(leadervar) )
-      {
-      case SCIP_VARTYPE_BINARY:
-         SCIPinfoMessage(scip, NULL, "BINARY\n");
-         break;
-      case SCIP_VARTYPE_INTEGER:
-         SCIPinfoMessage(scip, NULL, "INTEGER\n");
-         break;
-      case SCIP_VARTYPE_IMPLINT:
+      if ( SCIPvarIsImpliedIntegral(leadervar) )
          SCIPinfoMessage(scip, NULL, "IMPLICIT INTEGER\n");
-         break;
-      default:
-         SCIPinfoMessage(scip, NULL, "CONTINUOUS\n");
-      } /*lint !e788*/
+      else
+      {
+         switch ( SCIPvarGetType(leadervar) )
+         {
+            case SCIP_VARTYPE_BINARY:
+               SCIPinfoMessage(scip, NULL, "BINARY\n");
+               break;
+            case SCIP_VARTYPE_INTEGER:
+               SCIPinfoMessage(scip, NULL, "INTEGER\n");
+               break;
+            default:
+               SCIPinfoMessage(scip, NULL, "CONTINUOUS\n");
+         } /*lint !e788*/
+      }
    }
 
    /* (re-)allocate memory for Schreier Sims constraints and leaders */
@@ -4910,6 +4909,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
    int                   leaderrule,         /**< rule to select leader */
    int                   tiebreakrule,       /**< tie break rule to select leader */
    SCIP_VARTYPE          leadervartype,      /**< variable type of leader */
+   SCIP_IMPLINTTYPE      leadervarimpltype,  /**< implied integral type of the leader */
    int*                  orbitidx,           /**< pointer to index of selected orbit */
    int*                  leaderidx,          /**< pointer to leader in orbit */
    SCIP_Shortbool*       orbitvarinconflict, /**< array to store whether a var in the orbit is conflicting with leader */
@@ -4956,7 +4956,8 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       {
          /* skip orbits containing vars different to the leader's vartype */
          /* Conflictvars is permvars! */
-         if ( SCIPvarGetType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype )
+         if ( ( leadervarimpltype != SCIP_IMPLINTTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[orbits[orbitbegins[i]]])
+            || ( leadervarimpltype == SCIP_IMPLINTTYPE_NONE && SCIPvarGetType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype ) )
             continue;
 
          if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MINORBIT )
@@ -5076,7 +5077,8 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       for (i = 0; i < nconflictvars; ++i)
       {
          /* skip vars different to the leader's vartype */
-         if ( SCIPvarGetType(conflictvars[i]) != leadervartype )
+         if ( ( leadervarimpltype != SCIP_IMPLINTTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[i])
+            || ( leadervarimpltype == SCIP_IMPLINTTYPE_NONE && SCIPvarGetType(conflictvars[i]) != leadervartype ) )
             continue;
 
          /* skip variables not affected by symmetry */
@@ -5182,6 +5184,7 @@ SCIP_RETCODE addSSTConss(
    int tiebreakrule;
    int leadervartype;
    SCIP_VARTYPE selectedtype = SCIP_VARTYPE_CONTINUOUS;
+   SCIP_IMPLINTTYPE selectedimpltype = SCIP_IMPLINTTYPE_NONE;
    int nvarsselectedtype;
    SCIP_Bool conflictgraphcreated = FALSE;
    SCIP_Bool mixedcomponents;
@@ -5263,13 +5266,15 @@ SCIP_RETCODE addSSTConss(
 
    if ( ISSSTIMPLINTACTIVE(leadervartype) && nmovedimplintpermvars > nvarsselectedtype )
    {
-      selectedtype = SCIP_VARTYPE_IMPLINT;
+      selectedtype = SCIP_VARTYPE_CONTINUOUS;
+      selectedimpltype = SCIP_IMPLINTTYPE_WEAK;
       nvarsselectedtype = nmovedimplintpermvars;
    }
 
    if ( ISSSTCONTACTIVE(leadervartype) && nmovedcontpermvars > nvarsselectedtype )
    {
       selectedtype = SCIP_VARTYPE_CONTINUOUS;
+      selectedimpltype = SCIP_IMPLINTTYPE_NONE;
       nvarsselectedtype = nmovedcontpermvars;
    }
 
@@ -5288,7 +5293,7 @@ SCIP_RETCODE addSSTConss(
             if ( perm[i] == i )
                continue;
             vartype = SCIPvarGetType(propdata->permvars[i]);
-            if ( vartype == SCIP_VARTYPE_CONTINUOUS || vartype == SCIP_VARTYPE_IMPLINT )
+            if ( vartype == SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
                goto COMPONENTOK;
          }
       }
@@ -5364,7 +5369,8 @@ SCIP_RETCODE addSSTConss(
          for (p = 0; p < norbits; ++p)
          {
             /* stop if the first element of an orbits has the wrong vartype */
-            if ( SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype )
+            if ( SCIPvarIsImpliedIntegral(permvars[orbits[orbitbegins[p]]]) != ( selectedimpltype != SCIP_IMPLINTTYPE_NONE )
+               || ( selectedimpltype == SCIP_IMPLINTTYPE_NONE && SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype ) )
             {
                success = FALSE;
                break;
@@ -5393,9 +5399,9 @@ SCIP_RETCODE addSSTConss(
          tiebreakrule = SCIP_LEADERTIEBREAKRULE_MAXORBIT;
 
       /* select orbit and leader */
-      SCIP_CALL( selectOrbitLeaderSSTConss(scip, varconflicts, permvars, npermvars, orbits, orbitbegins,
-            norbits, propdata->sstleaderrule, propdata->ssttiebreakrule, selectedtype, &orbitidx, &orbitleaderidx,
-            orbitvarinconflict, &norbitvarinconflict, &success) );
+      SCIP_CALL( selectOrbitLeaderSSTConss(scip, varconflicts, permvars, npermvars, orbits, orbitbegins, norbits,
+            propdata->sstleaderrule, propdata->ssttiebreakrule, selectedtype, selectedimpltype, &orbitidx,
+            &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, &success) );
 
       if ( ! success )
          break;
@@ -5580,7 +5586,7 @@ SCIP_RETCODE addOrbitopesDynamic(
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_pp", partialname);
       SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, ppvarsarrayonlypprows, SCIP_ORBITOPETYPE_PACKING,
-            npprows, ncols, FALSE, FALSE, FALSE, FALSE, propdata->conssaddlp,
+            npprows, ncols, FALSE, FALSE, FALSE, propdata->conssaddlp,
             TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -5770,8 +5776,9 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
          if ( i == j )
             continue;
          /* only check for situations where i and j are binary variables */
-         assert( SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) );
-         if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY )
+         assert( ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) == SCIPvarIsImpliedIntegral(propdata->permvars[j]) )
+               && ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) || SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) ) );
+         if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
             continue;
          /* the permutation must be an involution on binary variables */
          if ( perm[j] != i )
@@ -5833,9 +5840,10 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
             /* ignore fixed points in permutation, and only consider rows with i < j */
             if ( i >= j )
                continue;
-            /* only for situations where i and j are binary variables */
-            assert( SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) );
-            if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY )
+            /* only check for situations where i and j are binary variables */
+            assert( ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) == SCIPvarIsImpliedIntegral(propdata->permvars[j]) )
+                  && ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) || SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) ) );
+            if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
                continue;
             assert( perm[j] == i );
             assert( checkSortedArraysHaveOverlappingEntry((void**) permvarssetppcconss[i], npermvarssetppcconss[i],
@@ -5852,8 +5860,8 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
          /* create constraint, use same parameterization as in orbitope packing partitioning checker */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_pp_upgrade_lexred%d", p);
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, ppvarsmatrix, SCIP_ORBITOPETYPE_PACKING, nrows, 2,
-            FALSE, FALSE, FALSE, FALSE,
-            propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+               FALSE, FALSE, FALSE,
+               propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
             &propdata->genlinconsssize, propdata->ngenlinconss + 1) );
@@ -6015,7 +6023,6 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
 
       if ( propdata->dispsyminfo )
          SCIPinfoMessage(scip, NULL, "  use lexicographic reduction for %d permutations\n", componentsize);
-
    }
    else if ( propdata->usesimplesgncomp && ! propdata->componentblocked[cidx] )
    {
@@ -6423,7 +6430,7 @@ SCIP_RETCODE handleOrbitope(
                SCIPinfoMessage(scip, NULL, "  use full orbitope on %d x %d matrix\n", nbinrows, ncols);
             }
             SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, partialname, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
-                  nbinrows, ncols, propdata->usedynamicprop /* @todo disable */, FALSE, FALSE, FALSE,
+                  nbinrows, ncols, FALSE, FALSE, TRUE,
                   propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -6653,7 +6660,6 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
                   SCIP_ROWORDERING_NONE, SCIP_COLUMNORDERING_NONE,
                   orbitopevarmatrix, ncols, nactiverows, success) );
-
          }
          assert( propdata->ngenlinconss <= propdata->genlinconsssize );
       }
@@ -6731,7 +6737,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             }
 
             SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, partialname, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
-                  nbinrows, ncols, propdata->usedynamicprop /* @todo disable */, FALSE, FALSE, FALSE,
+                  nbinrows, ncols, FALSE, FALSE, TRUE,
                   propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -7434,7 +7440,6 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
    {
       SCIP_CALL( printSyminfoFooter(scip) );
    }
-
 
 #ifdef SYMMETRY_STATISTICS
    SCIP_CALL( SCIPdisplaySymmetryStatistics(scip, propdata) );

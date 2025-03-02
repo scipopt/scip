@@ -503,7 +503,7 @@ SCIP_RETCODE setupAndSolveSubscip(
             cutoff = (1 + minimprove) * SCIPgetUpperbound(scip);
       }
       cutoff = MIN(upperbound, cutoff);
-      SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
+      SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
    }
 
    /* presolve the subproblem */

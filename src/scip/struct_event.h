@@ -107,6 +107,14 @@ struct SCIP_EventTypeChg
    SCIP_VAR*             var;                /**< variable whose type changed */
 };
 
+/** data for variable implied type change events */
+struct SCIP_EventImplTypeChg
+{
+   SCIP_IMPLINTTYPE      oldtype;            /**< old variable implied type */
+   SCIP_IMPLINTTYPE      newtype;            /**< new variable implied type */
+   SCIP_VAR*             var;                /**< variable whose type changed */
+};
+
 /** data for row addition to separation storage events */
 struct SCIP_EventRowAddedSepa
 {
@@ -171,6 +179,7 @@ struct SCIP_Event
       SCIP_EVENTHOLE     eventhole;           /**< data for domain hole events */
       SCIP_EVENTIMPLADD  eventimpladd;        /**< data for implication added events */
       SCIP_EVENTTYPECHG  eventtypechg;        /**< data for variable type change events */
+      SCIP_EVENTTYPEIMPLCHG eventimpltypechg; /**< data for variable implied type change events */
       SCIP_EVENTROWADDEDSEPA eventrowaddedsepa; /**< data for row addition to separation storage events */
       SCIP_EVENTROWDELETEDSEPA eventrowdeletedsepa; /**< data for row deletion from separation storage events */
       SCIP_EVENTROWADDEDLP eventrowaddedlp;   /**< data for row addition to LP events */

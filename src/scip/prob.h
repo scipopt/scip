@@ -162,8 +162,8 @@ SCIP_RETCODE SCIPprobTransform(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_PROB**           target              /**< pointer to target problem data structure */
    );
@@ -220,8 +220,8 @@ SCIP_RETCODE SCIPprobAddVar(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR*             var                 /**< variable to add */
    );
 
@@ -257,8 +257,22 @@ SCIP_RETCODE SCIPprobChgVarType(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_VAR*             var,                /**< variable to add */
+   SCIP_VAR*             var,                /**< variable to change type of */
    SCIP_VARTYPE          vartype             /**< new type of variable */
+   );
+
+/** changes the implied integral type of a variable in the problem */
+SCIP_RETCODE SCIPprobChgVarImplType(
+   SCIP_PROB*            prob,               /**< problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_VAR*             var,                /**< variable to change implied integral type of */
+   SCIP_IMPLINTTYPE      impltype            /**< new implied integral type of variable */
    );
 
 /** informs problem, that the given loose problem variable changed its status */
@@ -354,8 +368,8 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */
@@ -369,8 +383,8 @@ SCIP_RETCODE SCIPprobScaleObj(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** remembers the current solution as root solution in the problem variables */
@@ -423,18 +437,6 @@ SCIP_RETCODE SCIPprobExitSolve(
 SCIP_RETCODE SCIPprobSetName(
    SCIP_PROB*            prob,               /**< problem data */
    const char*           name                /**< name to be set */
-   );
-
-/** returns the number of implicit binary variables, meaning variable of vartype != SCIP_VARTYPE_BINARY and !=
- *  SCIP_VARTYPE_CONTINUOUS but with global bounds [0,1]
- *
- *  @note this number needs to be computed, because it cannot be update like the othe counters for binary and interger
- *        variables, each time the variable type changes(, we would need to update this counter each time a global bound
- *        changes), even at the end of presolving this cannot be computed, because some variable can change to an
- *        implicit binary status
- */
-int SCIPprobGetNImplBinVars(
-   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** returns the number of variables with non-zero objective coefficient */
@@ -602,7 +604,7 @@ int SCIPprobGetNIntVars(
    SCIP_PROB*            prob                /**< problem data */
    );
 
-/** gets number of implicit integer problem variables */
+/** gets number of implied integral problem variables of any type */
 int SCIPprobGetNImplVars(
    SCIP_PROB*            prob                /**< problem data */
    );
@@ -696,7 +698,7 @@ void SCIPprobEnableConsCompression(
 #define SCIPprobGetNVars(prob)          ((prob)->nvars)
 #define SCIPprobGetNBinVars(prob)       ((prob)->nbinvars)
 #define SCIPprobGetNIntVars(prob)       ((prob)->nintvars)
-#define SCIPprobGetNImplVars(prob)      ((prob)->nimplvars)
+#define SCIPprobGetNImplVars(prob)      ((prob)->nbinimplvars + (prob)->nintimplvars + (prob)->ncontimplvars)
 #define SCIPprobGetNContVars(prob)      ((prob)->ncontvars)
 #define SCIPprobGetVars(prob)           ((prob)->vars)
 #define SCIPprobGetNFixedVars(prob)     ((prob)->nfixedvars)

@@ -1641,8 +1641,8 @@ SCIP_RETCODE SCIPupdateCutoffbound(
 
    assert(cutoffbound <= SCIPgetCutoffbound(scip));
 
-   SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-         scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, cutoffbound, FALSE) );
+   SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+         scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, cutoffbound, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -1935,8 +1935,8 @@ SCIP_Real SCIPgetAvgPseudocostScore(
  *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_Real SCIPgetAvgDPseudocostScore(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_Real             discountfac          /**< discount factor for discounted pseudocost */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             discountfac         /**< discount factor for discounted pseudocost */
    )
 {
    SCIP_Real pscostdown;
@@ -2599,7 +2599,7 @@ void SCIPprintOrigProblemStatistics(
 SCIP_RETCODE SCIPcollectOrigProblemStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    assert(scip != NULL);
    assert(datatree != NULL);
@@ -2643,7 +2643,7 @@ void SCIPprintTransProblemStatistics(
 SCIP_RETCODE SCIPcollectTransProblemStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    assert(scip != NULL);
    assert(datatree != NULL);
@@ -2782,7 +2782,7 @@ void SCIPprintPresolverStatistics(
 SCIP_RETCODE SCIPcollectPresolverStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* plugins;
    SCIP_DATATREE* rootdata;
@@ -2947,7 +2947,7 @@ void SCIPprintConstraintStatistics(
 SCIP_RETCODE SCIPcollectConstraintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* constraints;
    int i;
@@ -3053,7 +3053,7 @@ void SCIPprintConstraintTimingStatistics(
 SCIP_RETCODE SCIPcollectConstraintTimingStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* constrainttimings;
    int i;
@@ -3162,7 +3162,7 @@ void SCIPprintPropagatorStatistics(
 SCIP_RETCODE SCIPcollectPropagatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* propagators;
    int i;
@@ -3359,7 +3359,7 @@ void SCIPprintConflictStatistics(
 SCIP_RETCODE SCIPcollectConflictStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    int initstoresize;
    int maxstoresize;
@@ -3512,7 +3512,7 @@ void SCIPprintSeparatorStatistics(
 SCIP_RETCODE SCIPcollectSeparatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* separators;
    SCIP_DATATREE* cutpool;
@@ -3653,7 +3653,7 @@ void SCIPprintCutselectorStatistics(
 SCIP_RETCODE SCIPcollectCutselectorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* cutselectors;
    int i;
@@ -3735,7 +3735,7 @@ void SCIPprintPricerStatistics(
 SCIP_RETCODE SCIPcollectPricerStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* pricers;
    SCIP_DATATREE* probvars;
@@ -3820,7 +3820,7 @@ void SCIPprintBranchruleStatistics(
 SCIP_RETCODE SCIPcollectBranchruleStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* branchruletree;
    int i;
@@ -4136,7 +4136,7 @@ void SCIPprintCompressionStatistics(
 SCIP_RETCODE SCIPcollectCompressionStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* compressions;
    int i;
@@ -4294,7 +4294,7 @@ void SCIPprintLPStatistics(
 SCIP_RETCODE SCIPcollectLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* primal;
    SCIP_DATATREE* dual;
@@ -4449,7 +4449,7 @@ void SCIPprintNLPStatistics(
 SCIP_RETCODE SCIPcollectNLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    int nnlrowlinear;
    int nnlrowconvexineq;
@@ -4527,7 +4527,7 @@ void SCIPprintRelaxatorStatistics(
 SCIP_RETCODE SCIPcollectRelaxatorStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* relaxators;
    int i;
@@ -4618,7 +4618,7 @@ void SCIPprintTreeStatistics(
 SCIP_RETCODE SCIPcollectTreeStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* nodes;
    SCIP_DATATREE* totalnodes;
@@ -4882,7 +4882,7 @@ void SCIPprintSolutionStatistics(
 SCIP_RETCODE SCIPcollectSolutionStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_Real firstprimalbound;
    SCIP_Real primalbound;
@@ -4980,7 +4980,7 @@ void SCIPprintConcsolverStatistics(
 SCIP_RETCODE SCIPcollectConcsolverStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* concsolverstree;
    SCIP_CONCSOLVER** concsolvers;
@@ -5089,7 +5089,7 @@ void SCIPprintBendersStatistics(
 SCIP_RETCODE SCIPcollectBendersStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* benderstree;
    SCIP_BENDERS** benders;
@@ -5212,7 +5212,7 @@ void SCIPprintRootStatistics(
 SCIP_RETCODE SCIPcollectRootStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_Real dualboundroot;
    SCIP_Real firstdualboundroot;
@@ -5435,7 +5435,7 @@ void SCIPprintExpressionHandlerStatistics(
 SCIP_RETCODE SCIPcollectExpressionHandlerStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* exprhdlrstree;
    int i;
@@ -5603,7 +5603,7 @@ const char* nlpsolstatToString(
 SCIP_RETCODE SCIPcollectNLPIStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* nlpistree;
    int i;
@@ -5612,6 +5612,9 @@ SCIP_RETCODE SCIPcollectNLPIStatistics(
    assert(datatree != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectNLPIStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->set->nnlpis == 0 )
+      return SCIP_OKAY;
 
    /* Create a subtree for NLPI statistics */
    SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &nlpistree, "nlp_solvers", scip->set->nnlpis) );
@@ -6125,7 +6128,7 @@ SCIP_RETCODE SCIPcollectBranchingStatistics(
          /* add total statistics */
          SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "total_branchings_down", SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS)) );
          SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "total_branchings_up", SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS)) );
-         SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "total_strong_branchings", totalnstrongbranchs));
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "total_strong_branchings", totalnstrongbranchs) );
          SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "avg_inferences_down",
             SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) > 0 ?
             SCIPhistoryGetInferenceSum(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) /

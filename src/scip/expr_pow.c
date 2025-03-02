@@ -878,7 +878,6 @@ void estimateHyperbolaPositive(
       computeSecant(scip, FALSE, exponent, xlb, xub, constant, slope, success);
       *islocal = TRUE;
    }
-
 }
 
 /** Separation for mixed-sign hyperbola
@@ -1618,7 +1617,6 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
 
          return SCIP_OKAY;
       }
-
    }
    else
    {
@@ -2454,24 +2452,18 @@ SCIP_DECL_EXPRINTEGRALITY(integralityPow)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(isintegral != NULL);
+   assert(integrality != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-
-   *isintegral = FALSE;
 
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
-
-   /* expression can not be integral if child is not */
-   if( !SCIPexprIsIntegral(child) )
-      return SCIP_OKAY;
 
    exponent = SCIPgetExponentExprPow(expr);
    assert(exponent != 0.0);
    expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
 
-   /* expression is integral if and only if exponent non-negative and integral */
-   *isintegral = expisint && exponent >= 0.0;
+   /* maintain child integrality if exponent is non-negative and integral */
+   *integrality = (expisint && exponent >= 0.0) ? SCIPexprGetIntegrality(child) : SCIP_IMPLINTTYPE_NONE;
 
    return SCIP_OKAY;
 }

@@ -345,7 +345,7 @@ SCIP_RETCODE SCIPupdateVarPseudocostSymmetric(
    assert( branchruledata != NULL );
 
    /* update the discounted pseudo cost of the current node branched variable */
-   SCIP_CALL(SCIPgetBoolParam(scip, "branching/collectancpscost", &useancpscost));
+   SCIP_CALL( SCIPgetBoolParam(scip, "branching/collectancpscost", &useancpscost) );
    if( useancpscost )
    {
       SCIP_NODE* currentnode;
@@ -369,8 +369,7 @@ SCIP_RETCODE SCIPupdateVarPseudocostSymmetric(
             var = SCIPboundchgGetVar(boundchg);
             assert(var != NULL);
 
-            if( SCIPboundchgGetBoundchgtype(boundchg) == SCIP_BOUNDCHGTYPE_BRANCHING &&
-               SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            if( SCIPboundchgGetBoundchgtype(boundchg) == SCIP_BOUNDCHGTYPE_BRANCHING && SCIPvarIsIntegral(var) )
             {
                parentlpsolval = SCIPboundchgGetLPSolVal(boundchg);
                if( parentlpsolval >= SCIP_INVALID )
@@ -1012,7 +1011,7 @@ SCIP_RETCODE execRelpscost(
       SCIP_Real degeneracyfactor = 1.0;
       SCIP_Bool useancpscost;
 
-      SCIP_CALL(SCIPgetBoolParam(scip, "branching/collectancpscost", &useancpscost));
+      SCIP_CALL( SCIPgetBoolParam(scip, "branching/collectancpscost", &useancpscost) );
 
       /* get LP degeneracy information and compute a factor to change weighting of pseudo cost score vs. other scores */
       if( branchruledata->degeneracyaware > 0 && (SCIPgetDepth(scip) > 0 || branchruledata->degeneracyaware > 1) )

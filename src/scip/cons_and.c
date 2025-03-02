@@ -914,7 +914,7 @@ SCIP_RETCODE applyFixings(
 #endif
 
    SCIPdebugMsg(scip, "after fixings: ");
-   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL)) );
+   SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL)) );
    SCIPdebugMsgPrint(scip, "\n");
 
    return SCIP_OKAY;
@@ -1649,11 +1649,12 @@ SCIP_RETCODE mergeMultiples(
       assert(0 <= probidx);
 
       /* check variable type, either pure binary or an integer/implicit integer variable with 0/1 bounds */
-      assert((probidx < nbinvars && SCIPvarGetType(probvar) == SCIP_VARTYPE_BINARY)
+      assert((probidx < nbinvars && SCIPvarGetType(probvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(probvar))
 	 || (SCIPvarIsBinary(probvar) &&
-            ((probidx >= nbinvars && probidx < nbinvars + nintvars && SCIPvarGetType(probvar) == SCIP_VARTYPE_INTEGER) ||
+            ((probidx >= nbinvars && probidx < nbinvars + nintvars && SCIPvarGetType(probvar) == SCIP_VARTYPE_INTEGER
+            && !SCIPvarIsImpliedIntegral(probvar)) ||
                (probidx >= nbinvars + nintvars && probidx < nbinvars + nintvars + nimplvars &&
-                  SCIPvarGetType(probvar) == SCIP_VARTYPE_IMPLINT))));
+                  SCIPvarIsImpliedIntegral(probvar)))));
 
       /* var is not active yet */
       (*entries)[probidx] = 0;
@@ -5117,7 +5118,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
 
    /* upgrade binary resultant variable to an implicit binary variable */
    /* @todo add implicit upgrade in presolving, improve decision making for upgrade by creating an implication graph */
-   if( conshdlrdata->upgrresultant && SCIPvarGetType(resvar) == SCIP_VARTYPE_BINARY
+   if( conshdlrdata->upgrresultant && SCIPvarGetType(resvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(resvar)
 #if 1 /* todo delete following hack,
        *      the following avoids upgrading not artificial variables, for example and-resultants which are generated
        *      from the gate presolver, it seems better to not upgrade these variables
@@ -5136,7 +5137,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
       else
          activeresvar = resvar;
 
-      if( SCIPvarGetType(activeresvar) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(activeresvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(activeresvar) )
       {
          /* check if we can upgrade the variable type of the resultant */
          for( v = nvars - 1; v >= 0; --v )
@@ -5146,14 +5147,14 @@ SCIP_RETCODE SCIPcreateConsAnd(
             else
                activevar = vars[v];
 
-            if( activevar == activeresvar || SCIPvarGetType(activevar) == SCIP_VARTYPE_IMPLINT )
+            if( activevar == activeresvar || SCIPvarIsImpliedIntegral(activevar) )
                break;
          }
 
          /* upgrade the type of the resultant */
          if( v < 0 )
          {
-            SCIP_CALL( SCIPchgVarType(scip, resvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
+            SCIP_CALL( SCIPchgVarImplType(scip, resvar, SCIP_IMPLINTTYPE_STRONG, &infeasible) );
             assert(!infeasible);
          }
       }

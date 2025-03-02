@@ -783,6 +783,10 @@ Test(solve, test4)
    SCIP_Real lb[2];
    SCIP_Real ub[2];
 
+   /* Mosek will return either primal or dual infeasiblity, so we cannot detect that both are infeasible. */
+   if ( strncmp(SCIPlpiGetSolverName(), "MOSEK", 5) == 0 )
+      return;
+
    /* fill variable data */
    lb[0] = -SCIPlpiInfinity(lpi);
    lb[1] = -SCIPlpiInfinity(lpi);

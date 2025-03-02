@@ -372,7 +372,7 @@ SCIP_RETCODE varIsSemicontinuous(
     */
    for( c = 0; c < nvlbs; ++c )
    {
-      if( SCIPvarGetType(vlbvars[c]) != SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(vlbvars[c]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(vlbvars[c]) )
          continue;
 
       SCIPdebugMsg(scip, "var <%s>[%f, %f] lower bound: %f <%s> %+f", SCIPvarGetName(var), glb, gub, vlbcoefs[c], SCIPvarGetName(vlbvars[c]), vlbconstants[c]);
@@ -420,7 +420,7 @@ SCIP_RETCODE varIsSemicontinuous(
    for( c = 0; c < nvubs; ++c )
    {
       /* coverity[var_deref_op] */
-      if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY )  /*lint !e613*/
+      if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(vubvars[c]) )  /*lint !e613*/
          continue;
 
       bvar = vubvars[c];  /*lint !e613*/
@@ -1871,7 +1871,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
             {
                /* update the rowprep by adding cst0 - cst0*z */
                SCIProwprepAddConstant(rowprep, cst0);
-               SCIP_CALL(SCIPaddRowprepTerm(scip, rowprep, indicator, -cst0));
+               SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, indicator, -cst0) );
             }
             else
             {
@@ -1879,7 +1879,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
                continue;
             }
 
-            SCIP_CALL(SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0));
+            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
             SCIPdebugMsg(scip, "rowprep after perspectivy is: \n");
 #ifdef SCIP_DEBUG

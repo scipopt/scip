@@ -193,7 +193,7 @@ SCIP_RETCODE sampleRandomPoints(
          assert(SCIPisFeasGE(scip, val, lb) && SCIPisFeasLE(scip, val, ub));
 
          /* set solution value; round the sampled point for integer variables */
-         if( SCIPvarGetType(vars[i]) < SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(vars[i]) )
             val = SCIPfeasRound(scip, val);
          SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i], val) );
       }

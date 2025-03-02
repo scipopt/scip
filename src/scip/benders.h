@@ -421,6 +421,15 @@ SCIP_Bool SCIPbendersGetMastervarsCont(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** sets the objective type for the aggregation of the Benders' decomposition subproblem objectives. This is either the
+ * summation of the objective values or a minimax of the objective values (such as for a makespan objective)
+ */
+SCIP_EXPORT
+void SCIPbendersSetObjectiveType(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_BENDERSOBJTYPE   objectivetype       /**< the objective type */
+   );
+
 /** adds the data for the generated cuts to the Benders' cut storage */
 SCIP_RETCODE SCIPbendersStoreCut(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition cut */

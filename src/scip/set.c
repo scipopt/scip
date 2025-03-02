@@ -551,6 +551,11 @@
 
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
 #define SCIP_DEFAULT_PRINTZEROS           FALSE /**< should variables set to zero be printed? */
+#define SCIP_DEFAULT_WRITE_IMPLINTLEVEL      0  /**< should integrality constraints (i.c.) be written for implied integral
+                                                 *   variables? (0: use original i.c., 1: add i.c. to strongly implied integral
+                                                 *   vars, 2: add i.c. to all implied integral vars, -1: remove i.c. from
+                                                 *   strongly implied integral vars, -2: remove i.c. from all implied integral
+                                                 *   vars)" */
 
 
 
@@ -2891,6 +2896,13 @@ SCIP_RETCODE SCIPsetCreate(
          "write/genericnamesoffset",
          "when writing a generic problem the index for the first variable should start with?",
          &(*set)->write_genoffset, FALSE, SCIP_DEFAULT_WRITE_GENNAMES_OFFSET, 0, INT_MAX/2,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "write/implintlevel",
+         "should integrality constraints (i.c.) be written for implied integral variables? (0: use original i.c., "
+         "1: add i.c. to strongly implied integral vars, 2: add i.c. to all implied integral vars, "
+         "-1: remove i.c. from strongly implied integral vars, -2: remove i.c. from all implied integral vars)",
+         &(*set)->write_implintlevel, FALSE, SCIP_DEFAULT_WRITE_IMPLINTLEVEL, -2, 2,
          NULL, NULL) );
 
    return SCIP_OKAY;
@@ -6432,6 +6444,8 @@ SCIP_Bool SCIPsetIsEQ(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6450,6 +6464,8 @@ SCIP_Bool SCIPsetIsLT(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6468,6 +6484,8 @@ SCIP_Bool SCIPsetIsLE(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6486,6 +6504,8 @@ SCIP_Bool SCIPsetIsGT(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6504,6 +6524,8 @@ SCIP_Bool SCIPsetIsGE(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6554,6 +6576,7 @@ SCIP_Bool SCIPsetIsIntegral(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSISINT(val, set->num_epsilon);
 }
@@ -6568,6 +6591,8 @@ SCIP_Bool SCIPsetIsScalingIntegral(
    SCIP_Real scaledeps;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val));
+   assert(SCIPisFinite(scalar));
 
    scaledeps = REALABS(scalar);
    scaledeps = MAX(scaledeps, 1.0);
@@ -6585,6 +6610,7 @@ SCIP_Bool SCIPsetIsFracIntegral(
    assert(set != NULL);
    assert(SCIPsetIsGE(set, val, -set->num_epsilon));
    assert(SCIPsetIsLE(set, val, 1.0+set->num_epsilon));
+   assert(SCIPisFinite(val));
 
    return (val <= set->num_epsilon);
 }
@@ -6596,6 +6622,7 @@ SCIP_Real SCIPsetFloor(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFLOOR(val, set->num_epsilon);
 }
@@ -6607,6 +6634,7 @@ SCIP_Real SCIPsetCeil(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSCEIL(val, set->num_epsilon);
 }
@@ -6618,6 +6646,7 @@ SCIP_Real SCIPsetRound(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSROUND(val, set->num_epsilon);
 }
@@ -6629,6 +6658,7 @@ SCIP_Real SCIPsetFrac(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFRAC(val, set->num_epsilon);
 }
@@ -6641,6 +6671,8 @@ SCIP_Bool SCIPsetIsSumEQ(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6659,6 +6691,8 @@ SCIP_Bool SCIPsetIsSumLT(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6677,6 +6711,8 @@ SCIP_Bool SCIPsetIsSumLE(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6695,6 +6731,8 @@ SCIP_Bool SCIPsetIsSumGT(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6713,6 +6751,8 @@ SCIP_Bool SCIPsetIsSumGE(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6763,6 +6803,7 @@ SCIP_Real SCIPsetSumFloor(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFLOOR(val, set->num_sumepsilon);
 }
@@ -6774,6 +6815,7 @@ SCIP_Real SCIPsetSumCeil(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSCEIL(val, set->num_sumepsilon);
 }
@@ -6785,6 +6827,7 @@ SCIP_Real SCIPsetSumRound(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSROUND(val, set->num_sumepsilon);
 }
@@ -6796,6 +6839,7 @@ SCIP_Real SCIPsetSumFrac(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFRAC(val, set->num_sumepsilon);
 }
@@ -6810,6 +6854,8 @@ SCIP_Bool SCIPsetIsFeasEQ(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6832,6 +6878,8 @@ SCIP_Bool SCIPsetIsFeasLT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6854,6 +6902,8 @@ SCIP_Bool SCIPsetIsFeasLE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6876,6 +6926,8 @@ SCIP_Bool SCIPsetIsFeasGT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6898,6 +6950,8 @@ SCIP_Bool SCIPsetIsFeasGE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6950,6 +7004,7 @@ SCIP_Bool SCIPsetIsFeasIntegral(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSISINT(val, set->num_feastol);
 }
@@ -6963,6 +7018,7 @@ SCIP_Bool SCIPsetIsFeasFracIntegral(
    assert(set != NULL);
    assert(SCIPsetIsGE(set, val, -2*set->num_feastol));
    assert(SCIPsetIsLE(set, val, 1.0+set->num_feastol));
+   assert(SCIPisFinite(val));
 
    return (val <= set->num_feastol);
 }
@@ -6974,6 +7030,7 @@ SCIP_Real SCIPsetFeasFloor(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFLOOR(val, set->num_feastol);
 }
@@ -6985,6 +7042,7 @@ SCIP_Real SCIPsetFeasCeil(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSCEIL(val, set->num_feastol);
 }
@@ -6996,6 +7054,7 @@ SCIP_Real SCIPsetFeasRound(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSROUND(val, set->num_feastol);
 }
@@ -7007,6 +7066,7 @@ SCIP_Real SCIPsetFeasFrac(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFRAC(val, set->num_feastol);
 }
@@ -7021,6 +7081,8 @@ SCIP_Bool SCIPsetIsDualfeasEQ(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7043,6 +7105,8 @@ SCIP_Bool SCIPsetIsDualfeasLT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7065,6 +7129,8 @@ SCIP_Bool SCIPsetIsDualfeasLE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7087,6 +7153,8 @@ SCIP_Bool SCIPsetIsDualfeasGT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7109,6 +7177,8 @@ SCIP_Bool SCIPsetIsDualfeasGE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7161,6 +7231,7 @@ SCIP_Bool SCIPsetIsDualfeasIntegral(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSISINT(val, set->num_dualfeastol);
 }
@@ -7174,6 +7245,7 @@ SCIP_Bool SCIPsetIsDualfeasFracIntegral(
    assert(set != NULL);
    assert(SCIPsetIsGE(set, val, -set->num_dualfeastol));
    assert(SCIPsetIsLE(set, val, 1.0+set->num_dualfeastol));
+   assert(SCIPisFinite(val));
 
    return (val <= set->num_dualfeastol);
 }
@@ -7185,6 +7257,7 @@ SCIP_Real SCIPsetDualfeasFloor(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFLOOR(val, set->num_dualfeastol);
 }
@@ -7196,6 +7269,7 @@ SCIP_Real SCIPsetDualfeasCeil(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSCEIL(val, set->num_dualfeastol);
 }
@@ -7207,6 +7281,7 @@ SCIP_Real SCIPsetDualfeasRound(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSROUND(val, set->num_dualfeastol);
 }
@@ -7218,6 +7293,7 @@ SCIP_Real SCIPsetDualfeasFrac(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFRAC(val, set->num_dualfeastol);
 }
@@ -7235,6 +7311,9 @@ SCIP_Bool SCIPsetIsLbBetter(
 {
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
+   assert(SCIPisFinite(newlb));
+   assert(SCIPisFinite(oldlb));
+   assert(SCIPisFinite(oldub));
 
    /* if lower bound is moved to 0 or higher, always accept bound change */
    if( oldlb < 0.0 && newlb >= 0.0 )
@@ -7256,6 +7335,9 @@ SCIP_Bool SCIPsetIsUbBetter(
 {
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
+   assert(SCIPisFinite(newub));
+   assert(SCIPisFinite(oldlb));
+   assert(SCIPisFinite(oldub));
 
    /* if upper bound is moved to 0 or lower, always accept bound change */
    if( oldub > 0.0 && newub <= 0.0 )
@@ -7272,6 +7354,7 @@ SCIP_Bool SCIPsetIsEfficacious(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(efficacy));
 
    if( root )
       return EPSP(efficacy, set->sepa_minefficacyroot);
@@ -7289,6 +7372,8 @@ SCIP_Bool SCIPsetIsRelEQ(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7311,6 +7396,8 @@ SCIP_Bool SCIPsetIsRelLT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7333,6 +7420,8 @@ SCIP_Bool SCIPsetIsRelLE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7355,6 +7444,8 @@ SCIP_Bool SCIPsetIsRelGT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7377,6 +7468,8 @@ SCIP_Bool SCIPsetIsRelGE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7399,6 +7492,8 @@ SCIP_Bool SCIPsetIsSumRelEQ(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7421,6 +7516,8 @@ SCIP_Bool SCIPsetIsSumRelLT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7443,6 +7540,8 @@ SCIP_Bool SCIPsetIsSumRelLE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7465,6 +7564,8 @@ SCIP_Bool SCIPsetIsSumRelGT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7487,6 +7588,8 @@ SCIP_Bool SCIPsetIsSumRelGE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */

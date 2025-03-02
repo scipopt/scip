@@ -392,7 +392,7 @@ SCIP_RETCODE addLinearConstraints(
 
          for( j = 0; j < nvars; ++j )
          {
-            if( SCIPvarGetType(vars[j]) >= SCIP_VARTYPE_CONTINUOUS )
+            if( !SCIPvarIsIntegral(vars[j]) )
             {
                iscombinatorial = FALSE;
                break;
@@ -453,7 +453,7 @@ SCIP_RETCODE addVarboundConstraints(
       vars[0] = SCIPgetVarVarbound(scip, conss[i]);
       vars[1] = SCIPgetVbdvarVarbound(scip, conss[i]);
 
-      iscombinatorial = SCIPvarGetType(vars[0]) < SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vars[1]) < SCIP_VARTYPE_CONTINUOUS;
+      iscombinatorial = SCIPvarIsIntegral(vars[0]) && SCIPvarIsIntegral(vars[1]);
 
       /* skip constraint, if not of interest */
       if( (iscombinatorial && !addcombconss) || (!iscombinatorial && !addcontconss) )
@@ -2400,24 +2400,30 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       }
       else
       {
+         /* ignore fixed vars in input */
+         if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(v), SCIPvarGetUbGlobal(v)) )
+         {
+            SCIPfreeBlockMemoryArray(heurdata->subscip, &newval, 1);
+            continue;
+         }
+
          if( ranks[i] > 0 )
          {
             if( SCIPvarIsBinary(v) && SCIPisEQ(scip, 1.0, SCIPgetSolVal(scip, transsol, v)) )
+            {
+               SCIPfreeBlockMemoryArray(heurdata->subscip, &newval, 1);
                continue;
-
-            /* ignore fixed vars in input */
-            if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(v), SCIPvarGetUbGlobal(v)) )
-               continue;
+            }
 
             *newval = SCIPgetSolVal(scip, transsol, v) + 1;
          }
          else
          {
             if( SCIPvarIsBinary(v) && SCIPisEQ(scip, 0.0, SCIPgetSolVal(scip, transsol, v)) )
+            {
+               SCIPfreeBlockMemoryArray(heurdata->subscip, &newval, 1);
                continue;
-
-            if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(v), SCIPvarGetUbGlobal(v)) )
-               continue;
+            }
 
             *newval = SCIPgetSolVal(scip, transsol, v) - 1;
          }

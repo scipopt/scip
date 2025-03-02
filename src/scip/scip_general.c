@@ -129,7 +129,7 @@ int SCIPminorVersion(
    return SCIP_VERSION_MINOR;
 }
 
-/** returns SCIP technical version
+/** returns SCIP technical (or patch) version
  *
  *  @return technical SCIP version
  */
@@ -143,6 +143,8 @@ int SCIPtechVersion(
 /** returns SCIP sub version number
  *
  *  @return subversion SCIP version
+ *
+ *  @deprecated SCIPsubversion() always returns 0 and will be removed in a future release.
  */
 int SCIPsubversion(
    void
@@ -164,9 +166,6 @@ void SCIPprintVersion(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP version %d.%d.%d",
       SCIPmajorVersion(), SCIPminorVersion(), SCIPtechVersion());
-#if SCIP_SUBVERSION > 0
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, ".%d", SCIPsubversion());
-#endif
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, " [precision: %d byte]", (int)sizeof(SCIP_Real));
 

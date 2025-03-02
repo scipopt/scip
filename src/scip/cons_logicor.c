@@ -1172,7 +1172,7 @@ SCIP_RETCODE applyFixings(
    }
 
    SCIPdebugMsg(scip, "after fixings: ");
-   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
+   SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL, TRUE) ) );
 
  TERMINATE:
    /* free temporary memory */
@@ -1322,11 +1322,12 @@ SCIP_RETCODE mergeMultiples(
       pos = SCIPvarGetProbindex(var);
 
       /* check variable type, either pure binary or an integer/implicit integer variable with 0/1 bounds */
-      assert((pos < nbinvars && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY)
+      assert((pos < nbinvars && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var))
 	 || (SCIPvarIsBinary(var) &&
-            ((pos >= nbinvars && pos < nbinvars + nintvars && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER) ||
+            ((pos >= nbinvars && pos < nbinvars + nintvars && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER
+            && !SCIPvarIsImpliedIntegral(var)) ||
                (pos >= nbinvars + nintvars && pos < nbinvars + nintvars + nimplvars &&
-                  SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT))));
+                  SCIPvarIsImpliedIntegral(var)))));
 
       /* var is not active yet */
       (*entries)[pos] = 0;
@@ -4915,7 +4916,7 @@ SCIP_DECL_CONSACTIVE(consActiveLogicor)
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
    SCIPdebugMsg(scip, "activating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
+   SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL, TRUE) ) );
 
    /* catch events on watched variables */
    if( consdata->watchedvar1 != -1 )
@@ -4959,7 +4960,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
    SCIPdebugMsg(scip, "deactivating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
+   SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL, TRUE) ) );
 
    /* drop events on watched variables */
    if( consdata->watchedvar1 != -1 )

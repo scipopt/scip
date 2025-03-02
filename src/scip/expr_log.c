@@ -188,9 +188,9 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyLog)
    assert(child != NULL);
 
    /* check for value expression */
-   if( SCIPisExprValue(scip, child) )
+   /* TODO better handling of non-positive value? */
+   if( SCIPisExprValue(scip, child) && SCIPisPositive(scip, SCIPgetValueExprValue(child)) )
    {
-      /* TODO how to handle a non-positive value? */
       assert(SCIPgetValueExprValue(child) > 0.0);
 
       SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, log(SCIPgetValueExprValue(child)), ownercreate,

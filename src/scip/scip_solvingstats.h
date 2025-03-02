@@ -1478,8 +1478,8 @@ SCIP_Real SCIPgetAvgPseudocostScore(
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetAvgDPseudocostScore(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_Real             discountfac          /**< discount factor for discounted pseudocost */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             discountfac         /**< discount factor for discounted pseudocost */
    );
 
 /** returns the variance of pseudo costs for all variables in the requested direction

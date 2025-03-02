@@ -214,7 +214,7 @@ SCIP_RETCODE consdataAddCons(
 
    if( SCIPisTransformed(scip) )
    {
-      SCIP_CALL( SCIPtransformCons(scip, consdata->conss[consdata->nconss - 1], &(consdata->conss[consdata->nconss - 1])));
+      SCIP_CALL( SCIPtransformCons(scip, consdata->conss[consdata->nconss - 1], &(consdata->conss[consdata->nconss - 1])) );
    }
    else
    {

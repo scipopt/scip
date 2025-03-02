@@ -108,6 +108,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_CONFLICTROW*     conflictrow,        /**< conflict row to add to the tree */
    SCIP_Bool*            success,            /**< true if the conflict is added to the problem */

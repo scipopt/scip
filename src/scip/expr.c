@@ -1084,21 +1084,21 @@ SCIP_RETCODE SCIPexprhdlrIntegralityExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to check integrality for */
-   SCIP_Bool*            isintegral          /**< buffer to store whether expression is integral */
+   SCIP_IMPLINTTYPE*     integrality         /**< buffer to store the integrality level of the expression */
    )
 {
    assert(exprhdlr != NULL);
    assert(set != NULL);
    assert(expr != NULL);
    assert(expr->exprhdlr == exprhdlr);
-   assert(isintegral != NULL);
+   assert(integrality != NULL);
 
-   *isintegral = FALSE;
+   *integrality = SCIP_IMPLINTTYPE_NONE;
 
    /* check whether the expression handler implements the monotonicity callback */
    if( exprhdlr->integrality != NULL )
    {
-      SCIP_CALL( exprhdlr->integrality(set->scip, expr, isintegral) );
+      SCIP_CALL( exprhdlr->integrality(set->scip, expr, integrality) );
    }
 
    return SCIP_OKAY;
@@ -3034,7 +3034,7 @@ SCIP_RETCODE SCIPexprEvalActivity(
              * use SCIPceil and SCIPfloor for now the default intevalVar does not relax variables, so can omit
              * expressions without children (constants should be ok, too)
              */
-            if( expr->isintegral && expr->nchildren > 0 )
+            if( expr->integrality != SCIP_IMPLINTTYPE_NONE && expr->nchildren > 0 )
             {
                if( expr->activity.inf > -SCIP_INTERVAL_INFINITY )
                   expr->activity.inf = SCIPsetCeil(set, expr->activity.inf);
@@ -3841,6 +3841,7 @@ CLEANUP:
 #undef SCIPexprSetActivity
 #undef SCIPexprGetCurvature
 #undef SCIPexprSetCurvature
+#undef SCIPexprGetIntegrality
 #undef SCIPexprIsIntegral
 #undef SCIPexprSetIntegrality
 #undef SCIPexprAreQuadraticExprsVariables
@@ -4075,25 +4076,35 @@ void SCIPexprSetCurvature(
    expr->curvature = curvature;
 }
 
-/** returns whether an expression is integral */
+/** returns implied integrality of an expression */
+SCIP_IMPLINTTYPE SCIPexprGetIntegrality(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->integrality;
+}
+
+/** returns whether an expression is integral, i.e. whether the integrality flag is not equal to SCIP_IMPLINTTYPE_NONE */
 SCIP_Bool SCIPexprIsIntegral(
    SCIP_EXPR*            expr                /**< expression */
    )
 {
    assert(expr != NULL);
 
-   return expr->isintegral;
+   return expr->integrality != SCIP_IMPLINTTYPE_NONE;
 }
 
 /** sets the integrality flag of an expression */
 void SCIPexprSetIntegrality(
    SCIP_EXPR*            expr,               /**< expression */
-   SCIP_Bool             isintegral          /**< integrality of the expression */
+   SCIP_IMPLINTTYPE      integrality         /**< integrality level of the expression */
    )
 {
    assert(expr != NULL);
 
-   expr->isintegral = isintegral;
+   expr->integrality = integrality;
 }
 
 /** gives the coefficients and expressions that define a quadratic expression

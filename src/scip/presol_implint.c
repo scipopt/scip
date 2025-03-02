@@ -85,7 +85,7 @@ struct MatrixComponents
    int nmatrixrows;                          /**< Number of rows in the matrix for the linear part of the problem */
    int nmatrixcols;                          /**< Number of columns in the matrix for the linear part of the problem */
 
-   SCIP_VARTYPE* coltype;                    /**< SCIP_VARTYPE of the associated column */
+   SCIP_Bool* isintegral;                    /**< Whether associated column is integral */
 
    int* rowcomponent;                        /**< Maps a row to the index of the component it belongs to */
    int* colcomponent;                        /**< Maps a column to the index of the component it belongs to */
@@ -100,7 +100,7 @@ typedef struct MatrixComponents MATRIX_COMPONENTS;
 
 /** A temporary data structure that stores some statistics/data on the rows and columns.
  *
- * This is freed again after implied integer detection is finished.
+ * This is freed again after implied integral detection is finished.
  */
 struct MatrixStatistics
 {
@@ -111,7 +111,6 @@ struct MatrixStatistics
    int* rowncontinuous;                      /**< The number of those nonzeros that are in continuous columns */
    int* rowncontinuouspmone;                 /**< The number of +-1 entries in continuous columns */
    SCIP_Bool* colintegralbounds;             /**< Does the column have integral bounds? */
-
 };
 typedef struct MatrixStatistics MATRIX_STATISTICS;
 
@@ -132,11 +131,11 @@ SCIP_RETCODE createMatrixComponents(
    comp->nmatrixrows = nrows;
    comp->nmatrixcols = ncols;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &comp->coltype, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &comp->isintegral, ncols) );
    for( int i = 0; i < ncols; ++i )
    {
       SCIP_VAR* var = SCIPmatrixGetVar(matrix,i);
-      comp->coltype[i] = SCIPvarGetType(var);
+      comp->isintegral[i] = SCIPvarIsIntegral(var);
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &comp->rowcomponent, nrows) );
@@ -177,7 +176,7 @@ void freeMatrixComponents(
    SCIPfreeBufferArray(scip, &comp->componentrows);
    SCIPfreeBufferArray(scip, &comp->colcomponent);
    SCIPfreeBufferArray(scip, &comp->rowcomponent);
-   SCIPfreeBufferArray(scip, &comp->coltype);
+   SCIPfreeBufferArray(scip, &comp->isintegral);
 
    SCIPfreeBuffer(scip, pmatrixcomponents);
 }
@@ -271,7 +270,7 @@ SCIP_RETCODE computeContinuousComponents(
 
    for( int col = 0; col < comp->nmatrixcols; ++col )
    {
-      if( comp->coltype[col] != SCIP_VARTYPE_CONTINUOUS )
+      if( comp->isintegral[col] )
       {
          continue;
       }
@@ -291,7 +290,7 @@ SCIP_RETCODE computeContinuousComponents(
       }
    }
 
-   /** Now, fill in the relevant data. */
+   /* Now, fill in the relevant data. */
    int* representativecomponent;
    SCIP_CALL( SCIPallocBufferArray(scip, &representativecomponent, comp->nmatrixcols + comp->nmatrixrows) );
 
@@ -302,7 +301,7 @@ SCIP_RETCODE computeContinuousComponents(
    comp->ncomponents = 0;
    for( int col = 0; col < comp->nmatrixcols; ++col )
    {
-      if( comp->coltype[col] != SCIP_VARTYPE_CONTINUOUS )
+      if( comp->isintegral[col] )
       {
          continue;
       }
@@ -406,7 +405,7 @@ SCIP_RETCODE computeMatrixStatistics(
    MATRIX_COMPONENTS*    comp,               /**< Datastructure that contains the components of the matrix */
    MATRIX_STATISTICS**   pstats,             /**< Pointer to allocate the statistics data structure at */
    SCIP_Real             numericslimit       /**< The limit beyond which we consider integrality of coefficients
-                                                * to be unreliable */
+                                              *   to be unreliable */
    )
 {
    SCIP_CALL( SCIPallocBuffer(scip, pstats) );
@@ -443,7 +442,7 @@ SCIP_RETCODE computeMatrixStatistics(
       int ncontinuouspmone = 0;
       for( int j = 0; j < nnonz; ++j )
       {
-         SCIP_Bool continuous = comp->coltype[cols[j]] == SCIP_VARTYPE_CONTINUOUS;
+         SCIP_Bool continuous = !comp->isintegral[cols[j]];
          SCIP_Real value = vals[j];
          if( continuous )
          {
@@ -471,14 +470,13 @@ SCIP_RETCODE computeMatrixStatistics(
 
    for( int i = 0; i < ncols; ++i )
    {
-
       SCIP_Real lb = SCIPmatrixGetColLb(matrix, i);
       SCIP_Real ub = SCIPmatrixGetColUb(matrix, i);
       stats->colintegralbounds[i] = ( SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip, lb) )
                                  && ( SCIPisInfinity(scip, ub) || SCIPisIntegral(scip, ub) );
 
       /* Check that integer variables have integer bounds, as expected. */
-      assert(comp->coltype[i] == SCIP_VARTYPE_CONTINUOUS || stats->colintegralbounds[i]);
+      assert(!comp->isintegral[i] || stats->colintegralbounds[i]);
    }
 
    return SCIP_OKAY;
@@ -489,7 +487,7 @@ static
 void freeMatrixStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    MATRIX_STATISTICS**   pstats              /**< Pointer to the statistics data structure to be freed */
-)
+   )
 {
    MATRIX_STATISTICS* stats= *pstats;
 
@@ -505,20 +503,20 @@ void freeMatrixStatistics(
    SCIPfreeBuffer(scip, pstats);
 }
 
-/** Given the continuous components and statistics on the matrix, detect components that have implied integer variables
+/** Given the continuous components and statistics on the matrix, detect components that have implied integral variables
  * by checking if the component is a (transposed) network matrix and if all the bounds/sides/coefficients are integral.
  *
  * For every component, we detect if the associated matrix is either a network matrix or a transposed network matrix
  * (or both, in which case it represents a planar graph).
  * We choose to check if it is a (transposed) network matrix either in a row-wise or in a column-wise fashion,
- * depending on the size of the component.
- * Finally, every variable that is in a network matrix or transposed network matrix is changed to an implied integer.
+ * depending on the size of the component. Finally, every variable that is in a network matrix or transposed network
+ * matrix is derived to be weakly implied integral.
  */
 static
 SCIP_RETCODE findImpliedIntegers(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOLDATA*      presoldata,         /**< The data belonging to the presolver */
-   SCIP_MATRIX*          matrix,             /**< The constraint matrix to compute implied integers for */
+   SCIP_MATRIX*          matrix,             /**< The constraint matrix to compute implied integral variables for */
    MATRIX_COMPONENTS*    comp,               /**< The continuous connected components of the matrix */
    MATRIX_STATISTICS*    stats,              /**< Statistics of the matrix */
    int*                  nchgvartypes        /**< Pointer to count the number of changed variable types */
@@ -541,8 +539,8 @@ SCIP_RETCODE findImpliedIntegers(
     */
    SCIP_Real* tempValArray;
    int* tempIdxArray;
-   SCIP_CALL(SCIPallocBufferArray(scip, &tempValArray, comp->nmatrixcols));
-   SCIP_CALL(SCIPallocBufferArray(scip, &tempIdxArray, comp->nmatrixcols));
+   SCIP_CALL( SCIPallocBufferArray(scip, &tempValArray, comp->nmatrixcols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tempIdxArray, comp->nmatrixcols) );
 
    for( int component = 0; component < comp->ncomponents; ++component )
    {
@@ -603,7 +601,7 @@ SCIP_RETCODE findImpliedIntegers(
             for( int j = 0; j < nrownnoz; ++j )
             {
                int col = rowcols[j];
-               if( comp->coltype[col] == SCIP_VARTYPE_CONTINUOUS )
+               if( !comp->isintegral[col] )
                {
                   tempIdxArray[ncontnonz] = col;
                   tempValArray[ncontnonz] = rowvals[j];
@@ -651,7 +649,7 @@ SCIP_RETCODE findImpliedIntegers(
                for( int j = 0; j < nrownnoz; ++j )
                {
                   int col = rowcols[j];
-                  if( comp->coltype[col] == SCIP_VARTYPE_CONTINUOUS )
+                  if( !comp->isintegral[col] )
                   {
                      tempIdxArray[ncontnonz] = col;
                      tempValArray[ncontnonz] = rowvals[j];
@@ -695,19 +693,19 @@ SCIP_RETCODE findImpliedIntegers(
          int col = comp->componentcols[i];
          SCIP_VAR* var = SCIPmatrixGetVar(matrix, col);
          SCIP_Bool infeasible = FALSE;
-         SCIP_CALL(SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible));
+         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
          (*nchgvartypes)++;
          assert(!infeasible);
       }
    }
    if( *nchgvartypes == 0 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No implied integers detected \n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No implied integral variables detected \n");
    }
    else
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-                      "%d implied integers in %d / %d components (disqualified: %d by integrality, %d by numerics, %d not network) \n",
+                      "%d implied integral variables in %d / %d components (disqualified: %d by integrality, %d by numerics, %d not network) \n",
                       *nchgvartypes, ngoodcomponents, comp->ncomponents, nbadintegrality, nbadnumerics, nnonnetwork);
    }
 
@@ -766,7 +764,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    {
       return SCIP_OKAY;
    }
-   /* Since implied integer detection relies on rows being static, we disable it for branch-and-price applications*/
+   /* Since implied integrality detection relies on rows being static, we disable it for branch-and-price applications*/
    if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
    {
       return SCIP_OKAY;
@@ -783,7 +781,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
 
    SCIP_Real starttime = SCIPgetSolvingTime(scip);
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                   "   (%.1fs) implied integer detection started\n", starttime);
+                   "   (%.1fs) implied integrality detection started\n", starttime);
 
    SCIP_Bool initialized;
    SCIP_Bool complete;
@@ -811,7 +809,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
          SCIPmatrixFree(scip, &matrix);
       }
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-                      "   (%.1fs) implied integer detection stopped because problem is not an MILP\n",
+                      "   (%.1fs) implied integrality detection stopped because problem is not an MILP\n",
                       SCIPgetSolvingTime(scip));
       return SCIP_OKAY;
    }
@@ -829,13 +827,13 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    if( afterchanged == beforechanged )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                      "   (%.1fs) no implied integers detected (time: %.2fs)\n", endtime, endtime - starttime);
+                      "   (%.1fs) no implied integral variables detected (time: %.2fs)\n", endtime, endtime - starttime);
       *result = SCIP_DIDNOTFIND;
    }
    else
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                      "   (%.1fs) %d implied integers detected (time: %.2fs)\n",endtime,*nchgvartypes,endtime-starttime);
+                      "   (%.1fs) %d implied integral variables detected (time: %.2fs)\n",endtime,*nchgvartypes,endtime-starttime);
 
       *result = SCIP_SUCCESS;
    }

@@ -423,7 +423,7 @@ SCIP_RETCODE consdataLinearize(
    return SCIP_OKAY;
 }
 
-/** creates the binary  variables */
+/** creates the binary variables */
 static
 SCIP_RETCODE consdataCreateBinvars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -445,13 +445,11 @@ SCIP_RETCODE consdataCreateBinvars(
    assert(consdata != NULL);
    assert(consdata->nbinvars == 0);
    assert(consdata->binvars == NULL);
+   assert(SCIPvarIsIntegral(consdata->linkvar));
+   assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->linkvar)));
+   assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->linkvar)));
 
    SCIPdebugMsg(scip, "create binary variables for linking variable <%s>\n", SCIPvarGetName(consdata->linkvar));
-
-   /* author bzfhende
-    *
-    * TODO ensure that this method is only called for integer linking variables, because it does not make sense for continuous linking variables.
-    */
 
    linkvar = consdata->linkvar;
    lb = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(linkvar));
@@ -544,7 +542,7 @@ SCIP_RETCODE consdataCreate(
    assert(consdata != NULL);
    assert(linkvar != NULL);
    assert(binvars != NULL || nbinvars == 0);
-   assert(SCIPvarGetType(linkvar) != SCIP_VARTYPE_CONTINUOUS || nbinvars > 0);
+   assert(SCIPvarIsIntegral(linkvar) || nbinvars > 0);
 
    /* allocate memory for consdata */
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
@@ -2862,7 +2860,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
          }
          cutoff = infeasible;
 
-         SCIP_CALL(SCIPdelCons(scip, cons));
+         SCIP_CALL( SCIPdelCons(scip, cons) );
          ++(*ndelconss);
       }
 
@@ -3609,8 +3607,9 @@ SCIP_RETCODE SCIPcreateConsLinking(
    int k;
 
    assert(scip != NULL);
-   assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(linkvar)));
-   assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(linkvar)));
+   assert(linkvar != NULL);
+   assert(binvars != NULL || nbinvars == 0);
+   assert(vals != NULL || nbinvars == 0);
 
    /* find the linking constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -3622,9 +3621,25 @@ SCIP_RETCODE SCIPcreateConsLinking(
 
    SCIPdebugMsg(scip, "create linking constraint for variable <%s> with %d binary variables (SCIP stage %d)\n",
       SCIPvarGetName(linkvar), nbinvars, SCIPgetStage(scip));
-   for( k = 0; k < nbinvars; k++ )
+
+   if( binvars == NULL && ( !SCIPvarIsIntegral(linkvar)
+      || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(linkvar))
+      || SCIPisInfinity(scip, SCIPvarGetUbGlobal(linkvar)) ) )
+   {
+      SCIPerrorMessage("linking variable <%s> is %s\n",
+            SCIPvarGetName(linkvar), SCIPvarIsIntegral(linkvar) ? "unbounded" : "continuous");
+      return SCIP_INVALIDDATA;
+   }
+
+   for( k = 0; k < nbinvars; ++k )
    {
       SCIPdebugMsg(scip, "Var %d : <%s>\n", k, SCIPvarGetName(binvars[k]));
+      if( !SCIPisFinite(vals[k]) || SCIPisInfinity(scip, REALABS(vals[k])) )
+      {
+         SCIPerrorMessage("linking value %lf of <%s> is %s\n",
+               vals[k], SCIPvarGetName(binvars[k]), SCIPisFinite(vals[k]) ? "infinite" : "nan");
+         return SCIP_INVALIDDATA;
+      }
    }
 
    /* get constraint handler data */
@@ -3647,7 +3662,7 @@ SCIP_RETCODE SCIPcreateConsLinking(
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
    /* create binary variables for the real domain */
-   if( nbinvars == 0 )
+   if( consdata->binvars == NULL )
    {
       SCIP_CALL( consdataCreateBinvars(scip, *cons, consdata, conshdlrdata->eventhdlr, conshdlrdata->linearize) );
    }
@@ -3768,21 +3783,6 @@ SCIP_RETCODE SCIPgetBinvarsLinking(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   if( consdata->binvars == NULL )
-   {
-      SCIP_CONSHDLR* conshdlr;
-      SCIP_CONSHDLRDATA* conshdlrdata;
-
-      conshdlr = SCIPconsGetHdlr(cons);
-      assert(conshdlr != NULL);
-
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-
-      SCIP_CALL( consdataCreateBinvars(scip, cons, consdata, conshdlrdata->eventhdlr, conshdlrdata->linearize) );
-   }
-
    assert(consdata->binvars != NULL);
 
    if( binvars != NULL )

@@ -59,7 +59,7 @@ SCIP_RETCODE datatreeExpand(
    SCIP_DATATREE*        datatree,           /**< data tree */
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory */
-)
+   )
 {
    int newsize;
 
@@ -81,7 +81,7 @@ SCIP_RETCODE datatreeExpand(
 static
 const char* datatreeValueTypeToString(
    SCIP_DATATREE_VALUETYPE type
-)
+   )
 {
    switch( type )
    {
@@ -113,7 +113,7 @@ SCIP_RETCODE SCIPdatatreeCreate(
    SCIP_DATATREE**       datatree,           /**< buffer to store pointer to created datatree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   capacity            /**< initial capacity */
-)
+   )
 {
    assert(datatree != NULL);
    assert(blkmem != NULL);
@@ -135,7 +135,7 @@ SCIP_RETCODE SCIPdatatreeCreate(
 void SCIPdatatreeFree(
    SCIP_DATATREE**       datatree,           /**< pointer to datatree to free */
    BMS_BLKMEM*           blkmem              /**< block memory */
-)
+   )
 {
    int i;
 
@@ -195,7 +195,7 @@ SCIP_RETCODE SCIPdatatreeInsertBool(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of entry */
    SCIP_Bool             value               /**< value of entry */
-)
+   )
 {
    SCIP_DATATREEITEM* item;
 
@@ -226,7 +226,7 @@ SCIP_RETCODE SCIPdatatreeInsertLong(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of entry */
    SCIP_Longint          value               /**< value of entry */
-)
+   )
 {
    SCIP_DATATREEITEM* item;
 
@@ -257,7 +257,7 @@ SCIP_RETCODE SCIPdatatreeInsertReal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of entry */
    SCIP_Real             value               /**< value of entry */
-)
+   )
 {
    SCIP_DATATREEITEM* item;
 
@@ -288,7 +288,7 @@ SCIP_RETCODE SCIPdatatreeInsertString(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of entry */
    const char*           value               /**< value of entry */
-)
+   )
 {
    SCIP_DATATREEITEM* item;
 
@@ -320,7 +320,7 @@ SCIP_RETCODE SCIPdatatreeInsertBoolArray(
    const char*           name,               /**< name of entry */
    const SCIP_Bool*      values,             /**< values of entry */
    int                   nvalues             /**< number of values */
-)
+   )
 {
    SCIP_DATATREEITEM* item;
 
@@ -355,7 +355,7 @@ SCIP_RETCODE SCIPdatatreeInsertLongArray(
    const char*           name,               /**< name of entry */
    const SCIP_Longint*   values,             /**< values of entry */
    int                   nvalues             /**< number of values */
-)
+   )
 {
    SCIP_DATATREEITEM* item;
 
@@ -390,7 +390,7 @@ SCIP_RETCODE SCIPdatatreeInsertRealArray(
    const char*           name,               /**< name of entry */
    const SCIP_Real*      values,             /**< values of entry */
    int                   nvalues             /**< number of values */
-)
+   )
 {
    SCIP_DATATREEITEM* item;
 
@@ -425,7 +425,7 @@ SCIP_RETCODE SCIPdatatreeInsertStringArray(
    const char*           name,               /**< name of entry */
    const char* const*    values,             /**< values of entry */
    int                   nvalues             /**< number of values */
-)
+   )
 {
    SCIP_DATATREEITEM* item;
    int i;
@@ -464,7 +464,7 @@ SCIP_RETCODE SCIPdatatreeInsertTree(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of entry */
    SCIP_DATATREE*        value               /**< value of entry */
-)
+   )
 {
    SCIP_DATATREEITEM* item;
 
@@ -493,7 +493,7 @@ SCIP_RETCODE SCIPdatatreeWriteJson(
    SCIP_DATATREE*        datatree,           /**< data tree */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< file to write to, or NULL for stdout */
-)
+   )
 {
    int i;
 
@@ -601,7 +601,7 @@ SCIP_RETCODE SCIPdatatreeGetBool(
    SCIP_DATATREE*        datatree,           /**< data tree */
    const char*           name,               /**< name to look up */
    SCIP_Bool*            value               /**< buffer to store value */
-)
+   )
 {
    int i;
 
@@ -630,7 +630,7 @@ SCIP_RETCODE SCIPdatatreeGetLong(
    SCIP_DATATREE*        datatree,           /**< data tree */
    const char*           name,               /**< name to look up */
    SCIP_Longint*         value               /**< buffer to store value */
-)
+   )
 {
    int i;
 
@@ -659,7 +659,7 @@ SCIP_RETCODE SCIPdatatreeGetReal(
    SCIP_DATATREE*        datatree,           /**< data tree */
    const char*           name,               /**< name to look up */
    SCIP_Real*            value               /**< buffer to store value */
-)
+   )
 {
    int i;
 
@@ -688,7 +688,7 @@ SCIP_RETCODE SCIPdatatreeGetString(
    SCIP_DATATREE*        datatree,           /**< data tree */
    const char*           name,               /**< name to look up */
    const char**          value               /**< buffer to store pointer to string */
-)
+   )
 {
    int i;
 
@@ -718,7 +718,7 @@ SCIP_RETCODE SCIPdatatreeGetBoolArray(
    const char*           name,               /**< name to look up */
    SCIP_Bool**           values,             /**< buffer to store pointer to values */
    int*                  nvalues             /**< buffer to store number of values */
-)
+   )
 {
    int i;
 
@@ -754,7 +754,7 @@ SCIP_RETCODE SCIPdatatreeGetLongArray(
    const char*           name,               /**< name to look up */
    SCIP_Longint**        values,             /**< buffer to store pointer to values */
    int*                  nvalues             /**< buffer to store number of values */
-)
+   )
 {
    int i;
 
@@ -790,7 +790,7 @@ SCIP_RETCODE SCIPdatatreeGetRealArray(
    const char*           name,               /**< name to look up */
    SCIP_Real**           values,             /**< buffer to store pointer to values */
    int*                  nvalues             /**< buffer to store number of values */
-)
+   )
 {
    int i;
 
@@ -827,7 +827,7 @@ SCIP_RETCODE SCIPdatatreeGetStringArray(
    const char*           name,               /**< name to look up */
    char***               values,             /**< buffer to store pointer to values */
    int*                  nvalues             /**< buffer to store number of values */
-)
+   )
 {
    int i;
 
@@ -862,7 +862,7 @@ SCIP_RETCODE SCIPdatatreeGetTree(
    SCIP_DATATREE*        datatree,           /**< data tree */
    const char*           name,               /**< name to look up */
    SCIP_DATATREE**       value               /**< buffer to store pointer to datatree */
-)
+   )
 {
    int i;
 

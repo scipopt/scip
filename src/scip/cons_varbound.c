@@ -300,7 +300,7 @@ SCIP_RETCODE consdataCreate(
    )
 {
    assert(consdata != NULL);
-   assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(vbdvar));
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
@@ -441,7 +441,7 @@ SCIP_RETCODE addRelaxation(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   assert(SCIPvarGetType(consdata->vbdvar) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(consdata->vbdvar));
 
    /* check whether the coefficient is too large to put the row into the LP */
    if( SCIPisGT(scip, REALABS(consdata->vbdcoef), conshdlrdata->maxlpcoef) )
@@ -672,7 +672,7 @@ SCIP_RETCODE resolvePropagation(
    case PROPRULE_2:
       /* lhs <= x + c*y: left hand side and upper bound on x -> bound on y */
       assert(infervar == vbdvar);
-      assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
+      assert(SCIPvarIsIntegral(vbdvar));
       assert(!SCIPisInfinity(scip, -consdata->lhs));
 
       if( usebdwidening )
@@ -859,7 +859,7 @@ SCIP_RETCODE resolvePropagation(
    case PROPRULE_4:
       /* x + c*y <= rhs: right hand side and lower bound on x -> bound on y */
       assert(infervar == vbdvar);
-      assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
+      assert(SCIPvarIsIntegral(vbdvar));
       assert(!SCIPisInfinity(scip, consdata->rhs));
 
       if( usebdwidening )
@@ -1180,7 +1180,7 @@ SCIP_RETCODE separateCons(
    var = consdata->var;
    vbdvar = consdata->vbdvar;
    vbdcoef = consdata->vbdcoef;
-   assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(vbdvar));
 
    /* if x is not multiaggregated and y is fixed, propagate bounds on x */
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR && SCIPvarGetLbLocal(vbdvar) + 0.5 > SCIPvarGetUbLocal(vbdvar) )
@@ -2002,7 +2002,7 @@ void checkRedundancySide(
          valuex2 = MIN(valuex2, ubvar);
 
          /* if variable is of integral type make values integral too */
-         if( SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
          {
             if( !SCIPisFeasIntegral(scip, valuex1) )
                valuex1 = SCIPfeasFloor(scip, valuex1);
@@ -2018,7 +2018,7 @@ void checkRedundancySide(
          valuex2 = MAX(valuex2, lbvar);
 
          /* if variable is of integral type make values integral too */
-         if( SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
          {
             if( !SCIPisFeasIntegral(scip, valuex1) )
                valuex1 = SCIPfeasCeil(scip, valuex1);
@@ -2888,10 +2888,9 @@ void prettifyConss(
       /* @note: we allow that the variable type of the bounded variable can be smaller than the variable type of the
        *        bounding variable
        */
-      if( (SCIPvarGetType(consdata->var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(consdata->var) == SCIP_VARTYPE_INTEGER
-	    || SCIPvarGetType(consdata->var) == SCIP_VARTYPE_IMPLINT)
-	 && (SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_IMPLINT)
-	 && SCIPisLT(scip, REALABS(consdata->vbdcoef), 1.0) )
+      if( SCIPvarIsIntegral(consdata->var) && SCIPvarIsIntegral(consdata->vbdvar)
+         && SCIPvarGetType(consdata->vbdvar) != SCIP_VARTYPE_BINARY
+         && SCIPisLT(scip, REALABS(consdata->vbdcoef), 1.0) )
       {
          SCIP_Real epsilon;
          SCIP_Longint nominator;
@@ -3533,8 +3532,7 @@ SCIP_RETCODE tightenCoefs(
    consdata->tightened = TRUE;
 
    /* if values and variable are integral the sides should it be too */
-   if( SCIPvarGetType(consdata->var) <= SCIP_VARTYPE_IMPLINT
-      && SCIPvarGetType(consdata->vbdvar) <= SCIP_VARTYPE_IMPLINT
+   if( SCIPvarIsIntegral(consdata->var) && SCIPvarIsIntegral(consdata->vbdvar)
       && SCIPisIntegral(scip, consdata->vbdcoef) )
    {
       if( !SCIPisIntegral(scip, consdata->lhs) )
@@ -3602,10 +3600,9 @@ SCIP_RETCODE tightenCoefs(
     *
     *             x + b*y <= rhs  =>   x + b*y <= floor(rhs)
     */
-   if( (SCIPvarGetType(consdata->var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(consdata->var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(consdata->var) == SCIP_VARTYPE_BINARY)
-      && !SCIPisIntegral(scip, consdata->vbdcoef)
-      && (!SCIPisIntegral(scip, consdata->lhs) || SCIPisInfinity(scip, -consdata->lhs)
-	 || !SCIPisIntegral(scip, consdata->rhs) || SCIPisInfinity(scip, consdata->rhs)) )
+   if( SCIPvarIsIntegral(consdata->var) && !SCIPisIntegral(scip, consdata->vbdcoef)
+      && ( !SCIPisIntegral(scip, consdata->lhs) || SCIPisInfinity(scip, -consdata->lhs)
+      || !SCIPisIntegral(scip, consdata->rhs) || SCIPisInfinity(scip, consdata->rhs) ) )
    {
       /* infinity should be an integral value */
       assert(!SCIPisInfinity(scip, -consdata->lhs) || SCIPisIntegral(scip, consdata->lhs));
@@ -3826,7 +3823,7 @@ SCIP_RETCODE tightenCoefs(
             if( !SCIPisFeasIntegral(scip, oldrhs) && SCIPisFeasIntegral(scip, newrhs))
             {
                consdata->tightened = FALSE;
-               SCIP_CALL(tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds));
+               SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds) );
                assert(consdata->tightened);
             }
             else
@@ -3883,7 +3880,7 @@ SCIP_RETCODE tightenCoefs(
             if( !SCIPisFeasIntegral(scip, oldlhs) && SCIPisFeasIntegral(scip, newlhs))
             {
                consdata->tightened = FALSE;
-               SCIP_CALL(tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds));
+               SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds) );
                assert(consdata->tightened);
             }
             else
@@ -4280,12 +4277,14 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
       SCIP_Real vbdcoef;
       SCIP_Real vbdlhs;
       SCIP_Real vbdrhs;
+      SCIP_VARTYPE zerotype = SCIPvarIsImpliedIntegral(vars[0]) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(vars[0]);
+      SCIP_VARTYPE onetype = SCIPvarIsImpliedIntegral(vars[1]) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(vars[1]);
       int vbdind;
 
       /* decide which variable we want to use as bounding variable y */
-      if( SCIPvarGetType(vars[0]) < SCIPvarGetType(vars[1]) )
+      if( zerotype < onetype )
          vbdind = 0;
-      else if( SCIPvarGetType(vars[0]) > SCIPvarGetType(vars[1]) )
+      else if( zerotype > onetype )
          vbdind = 1;
       else if( SCIPisIntegral(scip, vals[0]) && !SCIPisIntegral(scip, vals[1]) )
          vbdind = 0;
@@ -5053,15 +5052,10 @@ SCIP_DECL_CONSPRINT(consPrintVarbound)
       && !SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
       SCIPinfoMessage(scip, file, "%.15g <= ", consdata->lhs);
 
-   /* print coefficients and variables */
-   SCIPinfoMessage(scip, file, "<%s>[%c] %+.15g<%s>[%c]", SCIPvarGetName(consdata->var),
-      SCIPvarGetType(consdata->var) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
-      SCIPvarGetType(consdata->var) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR :
-      SCIPvarGetType(consdata->var) == SCIP_VARTYPE_IMPLINT ? SCIP_VARTYPE_IMPLINT_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR,
-      consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar),
-      SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
-      SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR :
-      SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_IMPLINT ? SCIP_VARTYPE_IMPLINT_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR);
+   /* print variables and coefficient */
+   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->var, TRUE) );
+   SCIPinfoMessage(scip, file, " %+.15g", consdata->vbdcoef);
+   SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vbdvar, TRUE) );
 
    /* print right hand side */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )

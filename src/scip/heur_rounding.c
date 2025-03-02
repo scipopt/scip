@@ -230,7 +230,6 @@ SCIP_RETCODE selectRounding(
    SCIP_Real obj;
    SCIP_Real deltaobj;
    SCIP_Real bestdeltaobj;
-   SCIP_VARTYPE vartype;
    int nrowcols;
    int nlocks;
    int minnlocks;
@@ -255,8 +254,7 @@ SCIP_RETCODE selectRounding(
       col = rowcols[c];
       var = SCIPcolGetVar(col);
 
-      vartype = SCIPvarGetType(var);
-      if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
+      if( SCIPvarIsNonimpliedIntegral(var) )
       {
          solval = SCIPgetSolVal(scip, sol, var);
 
@@ -377,7 +375,7 @@ SCIP_RETCODE selectEssentialRounding(
    for( v = 0; v < nlpcands; ++v )
    {
       var = lpcands[v];
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+      assert(SCIPvarIsNonimpliedIntegral(var));
 
       solval = SCIPgetSolVal(scip, sol, var);
       if( !SCIPisFeasIntegral(scip, solval) )
