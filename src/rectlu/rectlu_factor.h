@@ -32,8 +32,9 @@
  * @author Kati Wolter
  */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#include "rectlu_num.h"
-#include "rectlu.h"
+
+#include "rectlu/rectlu_num.h"
+#include "rectlu/rectlu.h"
 
 #ifndef __RECTLU_FACTOR_H
 #define __RECTLU_FACTOR_H

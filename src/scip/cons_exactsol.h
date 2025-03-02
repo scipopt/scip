@@ -36,7 +36,6 @@
 #include "scip/lpexact.h"
 #include "scip/pub_var.h"
 #include "scip/rational.h"
-//#include "scip/struct_rational.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_lpexact.h"
 #include "scip/scip_sol.h"

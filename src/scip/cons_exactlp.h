@@ -44,7 +44,7 @@
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 #include "scip/type_certificate.h"
-#include "scip/rational.h"
+#include "scip/type_rational.h"
 
 #ifdef __cplusplus
 extern "C" {
