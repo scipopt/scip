@@ -12,7 +12,7 @@
    #include <boost/multiprecision/gmp.hpp>
    using namespace boost::multiprecision;
 /* MP@LE Please fix indentation of #include, using .. and add empty lines between logical blocks. For example, why is the next line not indented, while the previous is? */
-namespace scip_rational
+namespace scip
 {
    using Rational = boost::multiprecision::number<gmp_rational, et_off>;
    using Integer = number<gmp_int, et_off>;
@@ -20,18 +20,18 @@ namespace scip_rational
 #else
    #include <boost/multiprecision/cpp_int.hpp>
    using namespace boost::multiprecision;
-namespace scip_rational
+namespace scip
 {
    using Rational = cpp_rational;
    using Integer = cpp_int;
 }
 #endif
-namespace scip_rational
+namespace scip
 {
    using sparsevec = std::vector<SCIP_Rational>;
 }
 #else
-namespace scip_rational
+namespace scip
 {
    class Rational
    {
