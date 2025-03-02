@@ -212,9 +212,9 @@ void setRational(
 
    res->val = papilo::Rational(papiloval.backend().data());
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-   if( SCIPisInfinity(scip, REALABS(RatApproxReal(res))) )
+   if( SCIPisInfinity(scip, REALABS(SCIPrationalApproxReal(res))) )
    {
-      res->val > 0 ? RatSetString(res, "inf") : RatSetString(res, "-inf");
+      res->val > 0 ? SCIPrationalSetString(res, "inf") : SCIPrationalSetString(res, "-inf");
    }
 }
 
@@ -242,8 +242,8 @@ Problem<papilo::Rational> buildProblemRational(
       SCIP_Rational* ub = SCIPvarGetUbGlobalExact(var);
       builder.setColLb(i, lb->val);
       builder.setColUb(i, ub->val);
-      builder.setColLbInf(i, RatIsNegInfinity(lb));
-      builder.setColUbInf(i, RatIsInfinity(ub));
+      builder.setColLbInf(i, SCIPrationalIsNegInfinity(lb));
+      builder.setColUbInf(i, SCIPrationalIsInfinity(ub));
 
       builder.setColIntegral(i, SCIPvarIsIntegral(var));
       builder.setObj(i, SCIPvarGetObjExact(var)->val);
@@ -265,8 +265,8 @@ Problem<papilo::Rational> buildProblemRational(
       SCIP_Rational* rhs = SCIPmatrixGetRowRhsExact(matrix, i);
       builder.setRowLhs(i, lhs->val);
       builder.setRowRhs(i, rhs->val);
-      builder.setRowLhsInf(i, RatIsNegInfinity(lhs));
-      builder.setRowRhsInf(i, RatIsInfinity(rhs));
+      builder.setRowLhsInf(i, SCIPrationalIsNegInfinity(lhs));
+      builder.setRowRhsInf(i, SCIPrationalIsInfinity(rhs));
    }
 
    builder.setObjOffset(0);
@@ -626,9 +626,9 @@ SCIP_RETCODE performRationalPresolving(
          SCIP_Rational* tmplhs;
          SCIP_Rational* tmprhs;
 
-         SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &tmpvals, rowlen) );
-         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmprhs) );
-         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmplhs) );
+         SCIP_CALL( SCIPcreateRationalBufferArray(SCIPbuffer(scip), &tmpvals, rowlen) );
+         SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmprhs) );
+         SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmplhs) );
 
          for( int j = 0; j < rowlen; j++ )
             setRational(scip, tmpvals[j], rowvals[j]);
@@ -636,9 +636,9 @@ SCIP_RETCODE performRationalPresolving(
          setRational(scip, tmprhs, rhs);
          setRational(scip, tmplhs, lhs);
          if( rflags[i].test(RowFlag::kLhsInf) )
-            RatSetString(tmplhs, "-inf");
+            SCIPrationalSetString(tmplhs, "-inf");
          if( rflags[i].test(RowFlag::kRhsInf) )
-            RatSetString(tmprhs, "inf");
+            SCIPrationalSetString(tmprhs, "inf");
 
          SCIP_CALL( SCIPcreateConsBasicExactLinear(scip, &cons, SCIPconsGetName(oldcons), rowlen, tmpvars.data(), tmpvals, tmplhs, tmprhs) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -647,9 +647,9 @@ SCIP_RETCODE performRationalPresolving(
          SCIP_CALL( SCIPreleaseCons(scip, &oldcons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-         RatFreeBuffer(SCIPbuffer(scip), &tmprhs);
-         RatFreeBuffer(SCIPbuffer(scip), &tmplhs);
-         RatFreeBufferArray(SCIPbuffer(scip), &tmpvals, rowlen);
+         SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmprhs);
+         SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmplhs);
+         SCIPfreeRationalBufferArray(SCIPbuffer(scip), &tmpvals, rowlen);
       }
    }
 
@@ -674,7 +674,7 @@ SCIP_RETCODE performRationalPresolving(
 
          papilo::Rational value = res.postsolve.values[first];
 
-         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpval) );
+         SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmpval) );
          setRational(scip, tmpval, value);
 
          RatDebugMessage("Papilo fix var %s to %q \n", SCIPvarGetName(var), tmpval);
@@ -691,14 +691,14 @@ SCIP_RETCODE performRationalPresolving(
             aggregatedConst = SCIPvarGetAggrConstantExact(var);
 
             /* fix aggregation variable y in x = a*y + c, instead of fixing x directly */
-            assert( RatIsZero(SCIPvarGetObjExact(var)) );
-            assert( !RatIsZero(aggregatedScalar));
-            if( RatIsAbsInfinity(tmpval) )
-               RatMultReal(tmpval, tmpval, RatIsNegative(aggregatedScalar) ? -1 : 1);
+            assert( SCIPrationalIsZero(SCIPvarGetObjExact(var)) );
+            assert( !SCIPrationalIsZero(aggregatedScalar));
+            if( SCIPrationalIsAbsInfinity(tmpval) )
+               SCIPrationalMultReal(tmpval, tmpval, SCIPrationalIsNegative(aggregatedScalar) ? -1 : 1);
             else
             {
-               RatDiff(tmpval, tmpval, aggregatedConst);
-               RatDiv(tmpval, tmpval, aggregatedScalar);
+               SCIPrationalDiff(tmpval, tmpval, aggregatedConst);
+               SCIPrationalDiv(tmpval, tmpval, aggregatedScalar);
             }
             var = SCIPvarGetAggrVar(var);
          }
@@ -711,7 +711,7 @@ SCIP_RETCODE performRationalPresolving(
 
          *nfixedvars += 1;
 
-         RatFreeBuffer(SCIPbuffer(scip), &tmpval);
+         SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmpval);
 
          assert(!infeas);
          assert(fixed || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED ||
@@ -778,10 +778,10 @@ SCIP_RETCODE performRationalPresolving(
             SCIP_Rational* tmpscalarx;
             SCIP_Rational* tmpscalary;
             SCIP_Rational* tmpside;
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpscalarx) );
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpscalary) );
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpside) );
+            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &constant) );
+            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmpscalarx) );
+            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmpscalary) );
+            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmpside) );
 
             setRational(scip, tmpscalarx, scalarx);
             setRational(scip, tmpscalary, scalary);
@@ -793,17 +793,17 @@ SCIP_RETCODE performRationalPresolving(
             assert(SCIPvarGetStatus(vary) != SCIP_VARSTATUS_MULTAGGR);
 
             setRational(scip, tmpside, side);
-            RatDiff(tmpside, tmpside, constant);
+            SCIPrationalDiff(tmpside, tmpside, constant);
 
             RatDebugMessage("Papilo aggregate vars %s, %s with scalars %q, %q and constant %q \n", SCIPvarGetName(varx), SCIPvarGetName(vary),
                tmpscalarx, tmpscalary, constant);
 
             SCIP_CALL( SCIPaggregateVarsExact(scip, varx, vary, tmpscalarx, tmpscalary, tmpside, &infeas, &redundant, &aggregated) );
 
-            RatFreeBuffer(SCIPbuffer(scip), &tmpside);
-            RatFreeBuffer(SCIPbuffer(scip), &tmpscalary);
-            RatFreeBuffer(SCIPbuffer(scip), &tmpscalarx);
-            RatFreeBuffer(SCIPbuffer(scip), &constant);
+            SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmpside);
+            SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmpscalary);
+            SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmpscalarx);
+            SCIPfreeRationalBuffer(SCIPbuffer(scip), &constant);
          }
          else
          {
@@ -812,10 +812,10 @@ SCIP_RETCODE performRationalPresolving(
             SCIP_Rational** tmpvals;
             int c = 0;
 
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &colCoef) );
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &updatedSide) );
-            SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &tmpvals, rowlen) );
+            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &constant) );
+            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &colCoef) );
+            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &updatedSide) );
+            SCIP_CALL( SCIPcreateRationalBufferArray(SCIPbuffer(scip), &tmpvals, rowlen) );
 
             for( int j = startRowCoefficients; j < lastRowCoefficients; ++j )
             {
@@ -829,7 +829,7 @@ SCIP_RETCODE performRationalPresolving(
             tmpvars.clear();
             tmpvars.reserve(rowlen);
 
-            assert(!RatIsZero(colCoef));
+            assert(!SCIPrationalIsZero(colCoef));
             SCIP_VAR* aggrvar = SCIPmatrixGetVar(matrix, col);
 
             SCIP_CALL( SCIPgetProbvarSumExact(scip, &aggrvar, colCoef, constant) );
@@ -845,18 +845,18 @@ SCIP_RETCODE performRationalPresolving(
                c++;
             }
             setRational(scip, updatedSide, side);
-            RatDiff(updatedSide, updatedSide, constant);
-            RatDiv(updatedSide, updatedSide, colCoef);
+            SCIPrationalDiff(updatedSide, updatedSide, constant);
+            SCIPrationalDiv(updatedSide, updatedSide, colCoef);
 
             RatDebugMessage("Papilo multiaggregate var %s, constant %q \n", SCIPvarGetName(aggrvar), updatedSide);
 
             SCIP_CALL( SCIPmultiaggregateVarExact(scip, aggrvar, tmpvars.size(),
                   tmpvars.data(), tmpvals, updatedSide, &infeas, &aggregated) );
 
-            RatFreeBufferArray(SCIPbuffer(scip), &tmpvals, rowlen);
-            RatFreeBuffer(SCIPbuffer(scip), &updatedSide);
-            RatFreeBuffer(SCIPbuffer(scip), &colCoef);
-            RatFreeBuffer(SCIPbuffer(scip), &constant);
+            SCIPfreeRationalBufferArray(SCIPbuffer(scip), &tmpvals, rowlen);
+            SCIPfreeRationalBuffer(SCIPbuffer(scip), &updatedSide);
+            SCIPfreeRationalBuffer(SCIPbuffer(scip), &colCoef);
+            SCIPfreeRationalBuffer(SCIPbuffer(scip), &constant);
          }
 
          if( aggregated )
@@ -867,8 +867,8 @@ SCIP_RETCODE performRationalPresolving(
             SCIP_Rational** tmpvals;
             SCIP_Rational* tmpside;
 
-            SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &tmpvals, rowlen) );
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpside) );
+            SCIP_CALL( SCIPcreateRationalBufferArray(SCIPbuffer(scip), &tmpvals, rowlen) );
+            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmpside) );
 
             setRational(scip, tmpside, side);
 
@@ -891,8 +891,8 @@ SCIP_RETCODE performRationalPresolving(
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
             *naddconss += 1;
 
-            RatFreeBuffer(SCIPbuffer(scip), &tmpside);
-            RatFreeBufferArray(SCIPbuffer(scip), &tmpvals, rowlen);
+            SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmpside);
+            SCIPfreeRationalBufferArray(SCIPbuffer(scip), &tmpvals, rowlen);
          }
 
          if( infeas )
@@ -914,8 +914,8 @@ SCIP_RETCODE performRationalPresolving(
          SCIP_Bool fixed;
          SCIP_Rational* value;
 
-         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &value) );
-         RatSetString(value, "inf");
+         SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &value) );
+         SCIPrationalSetString(value, "inf");
 
          int column = res.postsolve.indices[first];
          bool is_negative_infinity = res.postsolve.values[first] < 0;
@@ -923,7 +923,7 @@ SCIP_RETCODE performRationalPresolving(
 
          if( is_negative_infinity )
          {
-            RatSetString(value, "-inf");
+            SCIPrationalSetString(value, "-inf");
          }
 
          SCIP_CALL( SCIPfixVarExact(scip, column_variable, value, &infeas, &fixed) );
@@ -932,7 +932,7 @@ SCIP_RETCODE performRationalPresolving(
          assert(!infeas);
          assert(fixed);
 
-         RatFreeBuffer(SCIPbuffer(scip), &value);
+         SCIPfreeRationalBuffer(SCIPbuffer(scip), &value);
 
          break;
       }
@@ -964,7 +964,7 @@ SCIP_RETCODE performRationalPresolving(
    {
       VariableDomains<papilo::Rational>& varDomains = problem.getVariableDomains();
       SCIP_Rational* varbound;
-      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &varbound) );
+      SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &varbound) );
       varbound->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 
       for( int i = 0; i != problem.getNCols(); ++i )
@@ -1014,7 +1014,7 @@ SCIP_RETCODE performRationalPresolving(
          }
       }
 
-      RatFreeBuffer(SCIPbuffer(scip), &varbound);
+      SCIPfreeRationalBuffer(SCIPbuffer(scip), &varbound);
    }
 
    /* finish with a final verb message and return */

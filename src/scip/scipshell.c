@@ -540,8 +540,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
             {
                SCIP_Bool error;
 
-               SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &primalreferencerational) );
-               SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &dualreferencerational) );
+               SCIP_CALL( SCIPcreateRationalBlock(SCIPblkmem(scip), &primalreferencerational) );
+               SCIP_CALL( SCIPcreateRationalBlock(SCIPblkmem(scip), &dualreferencerational) );
 
                error = !SCIPparseRational(scip, primalrefstring, primalreferencerational, &endptr) ||
                        !SCIPparseRational(scip, primalrefstring, dualreferencerational, &endptr);
@@ -566,8 +566,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
             else
             {
                SCIP_CALL( SCIPvalidateSolveExact(scip, primalreferencerational, dualreferencerational, FALSE, NULL, NULL, NULL) );
-               RatFreeBlock(SCIPblkmem(scip), &dualreferencerational);
-               RatFreeBlock(SCIPblkmem(scip), &primalreferencerational);
+               SCIPfreeRationalBlock(SCIPblkmem(scip), &dualreferencerational);
+               SCIPfreeRationalBlock(SCIPblkmem(scip), &primalreferencerational);
             }
          }
       }

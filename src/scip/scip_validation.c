@@ -239,10 +239,10 @@ SCIP_RETCODE SCIPvalidateSolveExact(
    assert(scip != NULL);
    assert(SCIPisExactSolve(scip));
 
-   SCIP_CALL( RatCreate(&primviol) );
-   SCIP_CALL( RatCreate(&dualviol) );
-   SCIP_CALL( RatCreate(&pb) );
-   SCIP_CALL( RatCreate(&db) );
+   SCIP_CALL( SCIPcreateRational(&primviol) );
+   SCIP_CALL( SCIPcreateRational(&dualviol) );
+   SCIP_CALL( SCIPcreateRational(&pb) );
+   SCIP_CALL( SCIPcreateRational(&db) );
 
    /* if no problem exists, there is no need for validation */
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
@@ -275,13 +275,13 @@ SCIP_RETCODE SCIPvalidateSolveExact(
       localfeasible = TRUE;
    }
 
-   RatSetInt(primviol, 0L, 1L);
-   RatSetInt(dualviol, 0L, 1L);
+   SCIPrationalSetInt(primviol, 0L, 1L);
+   SCIPrationalSetInt(dualviol, 0L, 1L);
 
    /* check the primal and dual bounds computed by SCIP against the external reference values within reference tolerance */
    /* solution for an infeasible problem */
-   if( SCIPgetNSols(scip) > 0 && ((SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && RatIsInfinity(dualreference))
-            || (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && RatIsNegInfinity(dualreference))) )
+   if( SCIPgetNSols(scip) > 0 && ((SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && SCIPrationalIsInfinity(dualreference))
+            || (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPrationalIsNegInfinity(dualreference))) )
       localprimalboundcheck = FALSE;
    else
    {
@@ -294,16 +294,16 @@ SCIP_RETCODE SCIPvalidateSolveExact(
       /* compute the relative violation between the primal bound and dual reference value, and vice versa */
       if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
       {
-         RatRelDiff(primviol, dualreference, pb);
-         RatRelDiff(dualviol, db, primalreference);
+         SCIPrationalRelDiff(primviol, dualreference, pb);
+         SCIPrationalRelDiff(dualviol, db, primalreference);
       }
       else
       {
-            RatRelDiff(primviol, pb, dualreference);
-            RatRelDiff(dualviol, primalreference, db);
+            SCIPrationalRelDiff(primviol, pb, dualreference);
+            SCIPrationalRelDiff(dualviol, primalreference, db);
       }
-      localprimalboundcheck = RatIsZero(primviol);
-      localdualboundcheck = RatIsZero(dualviol);
+      localprimalboundcheck = SCIPrationalIsZero(primviol);
+      localdualboundcheck = SCIPrationalIsZero(dualviol);
    }
 
    if( !quiet )
@@ -321,23 +321,23 @@ SCIP_RETCODE SCIPvalidateSolveExact(
          SCIPinfoMessage(scip, NULL, "Success");
       SCIPinfoMessage(scip, NULL, "\n");
       SCIPinfoMessage(scip, NULL, "  %-17s: %10u\n", "cons violation", !localfeasible);
-      len = RatToString(primviol, rationalstring1, SCIP_MAXSTRLEN);
+      len = SCIPrationalToString(primviol, rationalstring1, SCIP_MAXSTRLEN);
       if( len == SCIP_MAXSTRLEN )
       {
          SCIPerrorMessage("rational too long to be converted to string \n");
       }
-      len = RatToString(dualreference, rationalstring2, SCIP_MAXSTRLEN);
+      len = SCIPrationalToString(dualreference, rationalstring2, SCIP_MAXSTRLEN);
       if( len == SCIP_MAXSTRLEN )
       {
          SCIPerrorMessage("rational too long to be converted to string \n");
       }
       SCIPinfoMessage(scip, NULL, "  %-17s: %s (reference: %s)\n", "primal violation", rationalstring1, rationalstring2);
-      len = RatToString(dualviol, rationalstring1, SCIP_MAXSTRLEN);
+      len = SCIPrationalToString(dualviol, rationalstring1, SCIP_MAXSTRLEN);
       if( len == SCIP_MAXSTRLEN )
       {
          SCIPerrorMessage("rational too long to be converted to string \n");
       }
-      len = RatToString(primalreference, rationalstring2, SCIP_MAXSTRLEN);
+      len = SCIPrationalToString(primalreference, rationalstring2, SCIP_MAXSTRLEN);
       if( len == SCIP_MAXSTRLEN )
       {
          SCIPerrorMessage("rational too long to be converted to string \n");
@@ -352,10 +352,10 @@ SCIP_RETCODE SCIPvalidateSolveExact(
    if( dualboundcheck != NULL )
       *dualboundcheck = localdualboundcheck;
 
-   RatFree(&primviol);
-   RatFree(&dualviol);
-   RatFree(&pb);
-   RatFree(&db);
+   SCIPfreeRational(&primviol);
+   SCIPfreeRational(&dualviol);
+   SCIPfreeRational(&pb);
+   SCIPfreeRational(&db);
 
    return SCIP_OKAY;
 }

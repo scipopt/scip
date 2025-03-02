@@ -3135,7 +3135,7 @@ SCIP_RETCODE applyBounding(
 
       /* check for infeasible node by bounding */
       if( (!set->exact_enabled && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound))
-         || (set->exact_enabled && RatIsGE(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact)) )
+         || (set->exact_enabled && SCIPrationalIsGE(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact)) )
       {
          *cutoff = TRUE;
 

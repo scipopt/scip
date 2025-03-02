@@ -330,8 +330,8 @@ SCIP_RETCODE convertSides(
       int state1;
       int state2;
 
-      lhsg = RatGetGMP(lhs[i]);
-      rhsg = RatGetGMP(rhs[i]);
+      lhsg = SCIPrationalGetGMP(lhs[i]);
+      rhsg = SCIPrationalGetGMP(rhs[i]);
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
       state1 = ((mpq_cmp(*lhsg, mpq_ILL_MINDOUBLE) <= 0) ? 1U : 0U);
       state2 = ((mpq_cmp(*rhsg, mpq_ILL_MAXDOUBLE) >= 0) ? 2U : 0U);
@@ -347,7 +347,7 @@ SCIP_RETCODE convertSides(
       switch( state )
       {
       case 0:
-         if( RatIsEqual(lhs[i], rhs[i]) )
+         if( SCIPrationalIsEqual(lhs[i], rhs[i]) )
          {
             lpi->isen[i] = 'E';
             mpq_set(lpi->irhs[i], *lhsg);
@@ -688,23 +688,23 @@ SCIP_RETCODE SCIPlpiExactAddCols(
       }
 
       SCIP_ALLOC( BMSallocMemoryArray(&valgmp, nnonz) );
-      RatSetGMPArray(valgmp, val, nnonz);
+      SCIPrationalSetGMPArray(valgmp, val, nnonz);
 
       /* and add the columns */
       for( i = 0; i < ncols; ++i )
       {
          mpq_QSadd_col(lpi->prob, lpi->iccnt[i], &ind[beg[i]], &(valgmp[beg[i]]),
-            *RatGetGMP(obj[i]), *RatGetGMP(lb[i]), *RatGetGMP(ub[i]), (const char*) colnames[i]);
+            *SCIPrationalGetGMP(obj[i]), *SCIPrationalGetGMP(lb[i]), *SCIPrationalGetGMP(ub[i]), (const char*) colnames[i]);
       }
 
-      RatClearGMPArray(valgmp, nnonz);
+      SCIPrationalClearArrayGMP(valgmp, nnonz);
       BMSfreeMemoryArray(&valgmp);
    }
    else
    {
       for( i = 0; i < ncols; ++i )
       {
-         rval = mpq_QSnew_col(lpi->prob, *RatGetGMP(obj[i]), *RatGetGMP(lb[i]), *RatGetGMP(ub[i]), (const char*) colnames[i]);
+         rval = mpq_QSnew_col(lpi->prob, *SCIPrationalGetGMP(obj[i]), *SCIPrationalGetGMP(lb[i]), *SCIPrationalGetGMP(ub[i]), (const char*) colnames[i]);
       }
    }
 
@@ -814,13 +814,13 @@ SCIP_RETCODE SCIPlpiExactAddRows(
    }
 
    SCIP_ALLOC( BMSallocMemoryArray(&valgmp, nnonz) );
-   RatSetGMPArray(valgmp, val, nnonz);
+   SCIPrationalSetGMPArray(valgmp, val, nnonz);
 
    rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, (const mpq_t*) valgmp, (const mpq_t*) lpi->irhs,
       lpi->isen, (const mpq_t*) lpi->irng, (const char**) rownames);
    QS_CONDRET(rval);
 
-   RatClearGMPArray(valgmp, nnonz);
+   SCIPrationalClearArrayGMP(valgmp, nnonz);
    BMSfreeMemoryArray(&valgmp);
 
    return SCIP_OKAY;
@@ -957,11 +957,11 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
       for( j = 0; j < ncols; ++j )
       {
          if( lb == NULL)
-            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [--,%Qd]\n", ind[j], *RatGetGMP(ub[j]));
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [--,%Qd]\n", ind[j], *SCIPrationalGetGMP(ub[j]));
          else if( ub == NULL )
-            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,--]\n", ind[j], *RatGetGMP(lb[j]));
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,--]\n", ind[j], *SCIPrationalGetGMP(lb[j]));
          else
-            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,%Qd]\n", ind[j], *RatGetGMP(lb[j]), *RatGetGMP(ub[j]));
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,%Qd]\n", ind[j], *SCIPrationalGetGMP(lb[j]), *SCIPrationalGetGMP(ub[j]));
          SCIPdebugPrintf(s);
       }
    }
@@ -974,7 +974,7 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
       for( i = 0; i < ncols; i++ )
       {
          lpi->iccha[i] = 'L';
-         rval = mpq_QSchange_bound(lpi->prob, ind[i], lpi->iccha[i], *RatGetGMP(lb[i]));
+         rval = mpq_QSchange_bound(lpi->prob, ind[i], lpi->iccha[i], *SCIPrationalGetGMP(lb[i]));
          QS_CONDRET(rval);
       }
    }
@@ -984,7 +984,7 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
       for( i = 0; i < ncols; i++ )
       {
          lpi->iccha[i] = 'U';
-         rval = mpq_QSchange_bound(lpi->prob, ind[i], lpi->iccha[i], *RatGetGMP(ub[i]));
+         rval = mpq_QSchange_bound(lpi->prob, ind[i], lpi->iccha[i], *SCIPrationalGetGMP(ub[i]));
          QS_CONDRET(rval);
       }
    }
@@ -1048,9 +1048,9 @@ SCIP_RETCODE SCIPlpiExactChgCoef(
 
    lpi->solstat = 0;
 
-   SCIPdebugMessage("changing coefficient row %d, column %d in QSopt_ex to %g\n", row, col, RatApproxReal(newval));
+   SCIPdebugMessage("changing coefficient row %d, column %d in QSopt_ex to %g\n", row, col, SCIPrationalApproxReal(newval));
 
-   rval = mpq_QSchange_coef(lpi->prob, row, col, *RatGetGMP(newval));
+   rval = mpq_QSchange_coef(lpi->prob, row, col, *SCIPrationalGetGMP(newval));
 
    QS_RETURN(rval);
 }
@@ -1103,7 +1103,7 @@ SCIP_RETCODE SCIPlpiExactChgObj(
 
    for( i = 0; i < ncols; ++i )
    {
-      rval = mpq_QSchange_objcoef(lpi->prob, ind[i], *RatGetGMP(obj[i]));
+      rval = mpq_QSchange_objcoef(lpi->prob, ind[i], *SCIPrationalGetGMP(obj[i]));
       QS_CONDRET(rval);
    }
    QS_RETURN(rval);
@@ -1139,20 +1139,20 @@ SCIP_RETCODE SCIPlpiExactScaleRow(
    /* change all coefficients in the constraint */
    for( i = 0; i < rowcnt[0]; ++i )
    {
-      mpq_mul(svl, rowval[i], *RatGetGMP(scaleval));
+      mpq_mul(svl, rowval[i], *SCIPrationalGetGMP(scaleval));
       rval = mpq_QSchange_coef(lpi->prob, row, rowind[i], svl);
       QS_TESTG(rval, CLEANUP, " ");
    }
 
    /* if we have a positive scalar, we just scale rhs and range */
-   if( RatGetSign(scaleval) >= 0 )
+   if( SCIPrationalGetSign(scaleval) >= 0 )
    {
-      mpq_mul(svl, *RatGetGMP(scaleval), rhs[0]);
+      mpq_mul(svl, *SCIPrationalGetGMP(scaleval), rhs[0]);
       rval = mpq_QSchange_rhscoef(lpi->prob, row, svl);
       QS_TESTG(rval, CLEANUP, " ");
       if (sense[0] == 'R')
       {
-	 mpq_mul(svl, range[0], *RatGetGMP(scaleval));
+	 mpq_mul(svl, range[0], *SCIPrationalGetGMP(scaleval));
 	 rval = mpq_QSchange_range(lpi->prob, row, svl);
 	 QS_TESTG(rval, CLEANUP, " ");
       }
@@ -1163,19 +1163,19 @@ SCIP_RETCODE SCIPlpiExactScaleRow(
       switch( sense[0] )
       {
       case 'E':
-         mpq_mul(svl, rhs[0], *RatGetGMP(scaleval));
+         mpq_mul(svl, rhs[0], *SCIPrationalGetGMP(scaleval));
          rval = mpq_QSchange_rhscoef(lpi->prob, row, svl);
          QS_TESTG(rval, CLEANUP, " ");
          break;
       case 'L':
-         mpq_mul(svl, rhs[0], *RatGetGMP(scaleval));
+         mpq_mul(svl, rhs[0], *SCIPrationalGetGMP(scaleval));
          rval = mpq_QSchange_rhscoef(lpi->prob, row, svl);
          QS_TESTG(rval, CLEANUP, " ");
          rval = mpq_QSchange_sense(lpi->prob, row, 'G');
          QS_TESTG(rval, CLEANUP, " ");
 	      break;
       case 'G':
-         mpq_mul(svl, rhs[0], *RatGetGMP(scaleval));
+         mpq_mul(svl, rhs[0], *SCIPrationalGetGMP(scaleval));
          rval = mpq_QSchange_rhscoef(lpi->prob, row, svl);
          QS_TESTG(rval, CLEANUP, " ");
          rval = mpq_QSchange_sense(lpi->prob, row, 'L');
@@ -1183,10 +1183,10 @@ SCIP_RETCODE SCIPlpiExactScaleRow(
          break;
       case 'R':
          mpq_add(svl, rhs[0], range[0]);
-         mpq_mul(svl, svl, *RatGetGMP(scaleval));
+         mpq_mul(svl, svl, *SCIPrationalGetGMP(scaleval));
          rval = mpq_QSchange_rhscoef(lpi->prob, row, svl);
          QS_TESTG(rval, CLEANUP, " ");
-         mpq_abs(svl,*RatGetGMP(scaleval));
+         mpq_abs(svl,*SCIPrationalGetGMP(scaleval));
          mpq_mul(svl, svl, range[0]);
          rval = mpq_QSchange_range(lpi->prob, row, svl);
          QS_TESTG(rval, CLEANUP, " ");
@@ -1234,7 +1234,7 @@ SCIP_RETCODE SCIPlpiExactScaleCol(
    mpq_init(svl);
    lpi->solstat = 0;
    SCIPdebugMessage("scaling column %d with factor %g in QSopt_ex\n",
-      col, RatApproxReal(scaleval));
+      col, SCIPrationalApproxReal(scaleval));
 
    /* get the column */
    collist[0] = col;
@@ -1244,18 +1244,18 @@ SCIP_RETCODE SCIPlpiExactScaleCol(
    /* scale column coefficients */
    for( i = 0; i < colcnt[0]; ++i )
    {
-      mpq_mul(svl, colval[i], *RatGetGMP(scaleval));
+      mpq_mul(svl, colval[i], *SCIPrationalGetGMP(scaleval));
       rval = mpq_QSchange_coef(lpi->prob, colind[i], col, svl);
       QS_TESTG(rval,CLEANUP," ");
    }
 
    /* scale objective value */
-   mpq_mul(svl, obj[0], *RatGetGMP(scaleval));
+   mpq_mul(svl, obj[0], *SCIPrationalGetGMP(scaleval));
    rval = mpq_QSchange_objcoef(lpi->prob, col, svl);
    QS_TESTG(rval,CLEANUP," ");
 
    /* scale column bounds */
-   if( mpq_sgn(*RatGetGMP(scaleval)) < 0 )
+   if( mpq_sgn(*SCIPrationalGetGMP(scaleval)) < 0 )
    {
       mpq_set(obj[0], lb[0]);
       mpq_neg(lb[0], ub[0]);
@@ -1263,12 +1263,12 @@ SCIP_RETCODE SCIPlpiExactScaleCol(
    }
    if( mpq_cmp(lb[0],mpq_ILL_MINDOUBLE) > 0 )
    {
-      mpq_abs(svl,*RatGetGMP(scaleval));
+      mpq_abs(svl,*SCIPrationalGetGMP(scaleval));
       mpq_mul(lb[0], lb[0], svl);
    }
    if( mpq_cmp(ub[0], mpq_ILL_MAXDOUBLE) < 0 )
    {
-      mpq_abs(svl, *RatGetGMP(scaleval));
+      mpq_abs(svl, *SCIPrationalGetGMP(scaleval));
       mpq_mul(ub[0], ub[0], svl);
    }
 
@@ -1414,7 +1414,7 @@ SCIP_RETCODE SCIPlpiExactGetCols(
       for( i = 0; i < *nnonz; ++i )
       {
          ind[i] = lind[i];  /*lint !e613*/
-         RatSetGMP(val[i], lval[i]);
+         SCIPrationalSetGMP(val[i], lval[i]);
       }
    }
    if( lb )
@@ -1424,8 +1424,8 @@ SCIP_RETCODE SCIPlpiExactGetCols(
 
       for( i = 0; i < len; ++i )
       {
-         RatSetGMP(lb[i], llb[i]);
-         RatSetGMP(ub[i], lub[i]);   /*lint !e613*/
+         SCIPrationalSetGMP(lb[i], llb[i]);
+         SCIPrationalSetGMP(ub[i], lub[i]);   /*lint !e613*/
       }
    }
 
@@ -1499,7 +1499,7 @@ SCIP_RETCODE SCIPlpiExactGetRows(
       for( i = 0; i < *nnonz; ++i )
       {
          ind[i] = lind[i];  /*lint !e613*/
-         RatSetGMP(val[i], lval[i]);  /*lint !e613*/
+         SCIPrationalSetGMP(val[i], lval[i]);  /*lint !e613*/
       }
    }
    if( rhs )
@@ -1513,21 +1513,21 @@ SCIP_RETCODE SCIPlpiExactGetRows(
          switch( lsense[i] )
          {
          case 'R':
-            RatSetGMP(lhs[i], lrhs[i]);
-            RatSetGMP(rhs[i], lrng[i]);
-            RatAdd(rhs[i], rhs[i], lhs[i]);
+            SCIPrationalSetGMP(lhs[i], lrhs[i]);
+            SCIPrationalSetGMP(rhs[i], lrng[i]);
+            SCIPrationalAdd(rhs[i], rhs[i], lhs[i]);
             break;
          case 'E':
-            RatSetGMP(lhs[i], lrhs[i]);
-            RatSetGMP(rhs[i], lrhs[i]);
+            SCIPrationalSetGMP(lhs[i], lrhs[i]);
+            SCIPrationalSetGMP(rhs[i], lrhs[i]);
             break;
          case 'L':
-            RatSetGMP(rhs[i], lrhs[i]);
-            RatSetGMP(lhs[i], mpq_ILL_MINDOUBLE);      /*lint !e613*/
+            SCIPrationalSetGMP(rhs[i], lrhs[i]);
+            SCIPrationalSetGMP(lhs[i], mpq_ILL_MINDOUBLE);      /*lint !e613*/
             break;
          case 'G':
-            RatSetGMP(lhs[i], lrhs[i]);
-            RatSetGMP(rhs[i], mpq_ILL_MAXDOUBLE);
+            SCIPrationalSetGMP(lhs[i], lrhs[i]);
+            SCIPrationalSetGMP(rhs[i], mpq_ILL_MAXDOUBLE);
             break;
          default:
             SCIPerrorMessage("Unknown sense %c from QSopt_ex", lsense[i]);
@@ -1573,12 +1573,12 @@ SCIP_RETCODE SCIPlpiExactGetObj(
       lpi->iccnt[i] = i + firstcol;
 
    SCIP_ALLOC( BMSallocMemoryArray(&valgmp, len) );
-   RatSetGMPArray(valgmp, vals, len);
+   SCIPrationalSetGMPArray(valgmp, vals, len);
    /* get data from qsopt */
    rval = mpq_QSget_obj_list(lpi->prob, len, lpi->iccnt, valgmp);
-   RatSetArrayGMP(vals, valgmp, len);
+   SCIPrationalSetArrayGMP(vals, valgmp, len);
 
-   RatClearGMPArray(valgmp, len);
+   SCIPrationalClearArrayGMP(valgmp, len);
    BMSfreeMemoryArray(&valgmp);
 
    QS_RETURN(rval);
@@ -1609,15 +1609,15 @@ SCIP_RETCODE SCIPlpiExactGetBounds(
    {
       if( lbs != NULL )
       {
-         QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'L', RatGetGMP(lbs[i])) );
-         RatCheckInfByValue(lbs[i]);
-         RatResetFloatingPointRepresentable(lbs[i]);
+         QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'L', SCIPrationalGetGMP(lbs[i])) );
+         SCIPrationalCheckInfByValue(lbs[i]);
+         SCIPrationalResetFloatingPointRepresentable(lbs[i]);
       }
       if( ubs != NULL )
       {
-         QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'U', RatGetGMP(ubs[i])) );
-         RatCheckInfByValue(ubs[i]);
-         RatResetFloatingPointRepresentable(ubs[i]);
+         QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'U', SCIPrationalGetGMP(ubs[i])) );
+         SCIPrationalCheckInfByValue(ubs[i]);
+         SCIPrationalResetFloatingPointRepresentable(ubs[i]);
       }
    }
 
@@ -1662,21 +1662,21 @@ SCIP_RETCODE SCIPlpiExactGetSides(
       switch (lsense[i])
       {
       case 'R':
-         RatSetGMP(lhss[i], lrhs[i]);
-         RatSetGMP(rhss[i], lrng[i]);
-         RatAdd(rhss[i], rhss[i], lhss[i]);
+         SCIPrationalSetGMP(lhss[i], lrhs[i]);
+         SCIPrationalSetGMP(rhss[i], lrng[i]);
+         SCIPrationalAdd(rhss[i], rhss[i], lhss[i]);
          break;
       case 'E':
-         RatSetGMP(lhss[i], lrhs[i]);
-         RatSetGMP(rhss[i], lrhs[i]);
+         SCIPrationalSetGMP(lhss[i], lrhs[i]);
+         SCIPrationalSetGMP(rhss[i], lrhs[i]);
          break;
       case 'L':
-         RatSetGMP(rhss[i], lrhs[i]);
-         RatSetGMP(lhss[i], mpq_ILL_MINDOUBLE);
+         SCIPrationalSetGMP(rhss[i], lrhs[i]);
+         SCIPrationalSetGMP(lhss[i], mpq_ILL_MINDOUBLE);
          break;
       case 'G':
-         RatSetGMP(lhss[i], lrhs[i]);
-         RatSetGMP(rhss[i], mpq_ILL_MAXDOUBLE);
+         SCIPrationalSetGMP(lhss[i], lrhs[i]);
+         SCIPrationalSetGMP(rhss[i], mpq_ILL_MAXDOUBLE);
          break;
       default:
          SCIPerrorMessage("Unknown sense %c from QSopt_ex", lsense[i]);
@@ -1710,9 +1710,9 @@ SCIP_RETCODE SCIPlpiExactGetCoef(
 
    SCIPdebugMessage("getting coefficient of row %d col %d\n", row, col);
 
-   rval = mpq_QSget_coef(lpi->prob, row, col, RatGetGMP(val));
-   RatCheckInfByValue(val);
-   RatResetFloatingPointRepresentable(val);
+   rval = mpq_QSget_coef(lpi->prob, row, col, SCIPrationalGetGMP(val));
+   SCIPrationalCheckInfByValue(val);
+   SCIPrationalResetFloatingPointRepresentable(val);
 
    QS_RETURN(rval);
 }
@@ -2085,9 +2085,9 @@ SCIP_RETCODE SCIPlpiExactGetObjval(
 
    SCIPdebugMessage("getting solution's objective value\n");
 
-   rval = mpq_QSget_objval(lpi->prob, RatGetGMP(objval));
-   RatCheckInfByValue(objval);
-   RatResetFloatingPointRepresentable(objval);
+   rval = mpq_QSget_objval(lpi->prob, SCIPrationalGetGMP(objval));
+   SCIPrationalCheckInfByValue(objval);
+   SCIPrationalResetFloatingPointRepresentable(objval);
 
    QS_RETURN(rval);
 }
@@ -2120,26 +2120,26 @@ SCIP_RETCODE SCIPlpiExactGetSol(
    else
    {
       SCIP_ALLOC( BMSallocMemoryArray(&primsolgmp, ncols) );
-      RatSetGMPArray(primsolgmp, primsol, ncols);
+      SCIPrationalSetGMPArray(primsolgmp, primsol, ncols);
    }
    if( redcost == NULL )
       redcostgmp = NULL;
    else
    {
       SCIP_ALLOC( BMSallocMemoryArray(&redcostgmp, ncols) );
-      RatSetGMPArray(redcostgmp, redcost, ncols);
+      SCIPrationalSetGMPArray(redcostgmp, redcost, ncols);
    }
    if( dualsol == NULL )
       dualsolgmp = NULL;
    else
    {
       SCIP_ALLOC( BMSallocMemoryArray(&dualsolgmp, nrows) );
-      RatSetGMPArray(dualsolgmp, dualsol, nrows);
+      SCIPrationalSetGMPArray(dualsolgmp, dualsol, nrows);
    }
    if( objval != NULL )
    {
-      objvalgmp = RatGetGMP(objval);
-      RatResetFloatingPointRepresentable(objval);
+      objvalgmp = SCIPrationalGetGMP(objval);
+      SCIPrationalResetFloatingPointRepresentable(objval);
    }
    else
       objvalgmp = NULL;
@@ -2147,24 +2147,24 @@ SCIP_RETCODE SCIPlpiExactGetSol(
    rval = mpq_QSget_solution(lpi->prob, objvalgmp, primsolgmp, dualsolgmp, lpi->irng, redcostgmp);
 
    if( objval != NULL )
-      RatCheckInfByValue(objval);
+      SCIPrationalCheckInfByValue(objval);
 
    if( redcost != NULL )
    {
-      RatSetArrayGMP(redcost, redcostgmp, ncols);
-      RatClearGMPArray(redcostgmp, ncols);
+      SCIPrationalSetArrayGMP(redcost, redcostgmp, ncols);
+      SCIPrationalClearArrayGMP(redcostgmp, ncols);
       BMSfreeMemoryArray(&redcostgmp);
    }
    if( primsol != NULL )
    {
-      RatSetArrayGMP(primsol, primsolgmp, ncols);
-      RatClearGMPArray(primsolgmp, ncols);
+      SCIPrationalSetArrayGMP(primsol, primsolgmp, ncols);
+      SCIPrationalClearArrayGMP(primsolgmp, ncols);
       BMSfreeMemoryArray(&primsolgmp);
    }
    if( dualsol != NULL )
    {
-      RatSetArrayGMP(dualsol, dualsolgmp, nrows);
-      RatClearGMPArray(dualsolgmp, nrows);
+      SCIPrationalSetArrayGMP(dualsol, dualsolgmp, nrows);
+      SCIPrationalClearArrayGMP(dualsolgmp, nrows);
       BMSfreeMemoryArray(&dualsolgmp);
    }
 
@@ -2185,14 +2185,14 @@ SCIP_RETCODE SCIPlpiExactGetSol(
          case 'R':
          case 'E':
          case 'G':
-            mpq_add(*RatGetGMP(activity[i]), lpi->irhs[i], lpi->irng[i]);
-            RatResetFloatingPointRepresentable(activity[i]);
-            RatCheckInfByValue(activity[i]);
+            mpq_add(*SCIPrationalGetGMP(activity[i]), lpi->irhs[i], lpi->irng[i]);
+            SCIPrationalResetFloatingPointRepresentable(activity[i]);
+            SCIPrationalCheckInfByValue(activity[i]);
             break;
          case 'L':
-            mpq_sub(*RatGetGMP(activity[i]), lpi->irhs[i], lpi->irng[i]);
-            RatResetFloatingPointRepresentable(activity[i]);
-            RatCheckInfByValue(activity[i]);
+            mpq_sub(*SCIPrationalGetGMP(activity[i]), lpi->irhs[i], lpi->irng[i]);
+            SCIPrationalResetFloatingPointRepresentable(activity[i]);
+            SCIPrationalCheckInfByValue(activity[i]);
             break;
          default:
             SCIPerrorMessage("unknown sense %c\n", lpi->isen[i]);
@@ -2237,12 +2237,12 @@ SCIP_RETCODE SCIPlpiExactGetDualfarkas(
 
    nrows = mpq_QSget_rowcount(lpi->prob);\
    SCIP_ALLOC( BMSallocMemoryArray(&dualfarkasgmp, nrows) );
-   RatSetGMPArray(dualfarkasgmp, dualfarkas, nrows);
+   SCIPrationalSetGMPArray(dualfarkasgmp, dualfarkas, nrows);
 
    rval = mpq_QSget_infeas_array(lpi->prob, dualfarkasgmp);
 
-   RatSetArrayGMP(dualfarkas, dualfarkasgmp, nrows);
-   RatClearGMPArray(dualfarkasgmp, nrows);
+   SCIPrationalSetArrayGMP(dualfarkas, dualfarkasgmp, nrows);
+   SCIPrationalClearArrayGMP(dualfarkasgmp, nrows);
    BMSfreeMemoryArray(&dualfarkasgmp);
 
    QS_RETURN(rval);
@@ -2956,7 +2956,7 @@ void SCIPlpiExactPosInfinity(
 {
    assert(infval != NULL);
 
-   RatSetGMP(infval, mpq_ILL_MAXDOUBLE);
+   SCIPrationalSetGMP(infval, mpq_ILL_MAXDOUBLE);
 }
 
 /** checks if given value is treated as positive infinity in the LP solver */
@@ -2965,7 +2965,7 @@ SCIP_Bool SCIPlpiExactIsPosInfinity(
    SCIP_Rational*        val                 /**< given value */
    )
 {  /*lint --e{715} */
-   return (mpq_cmp(*RatGetGMP(val), mpq_ILL_MAXDOUBLE) >= 0);
+   return (mpq_cmp(*SCIPrationalGetGMP(val), mpq_ILL_MAXDOUBLE) >= 0);
 }
 
 /** returns value treated as negative infinity in the LP solver */
@@ -2976,7 +2976,7 @@ void SCIPlpiExactNegInfinity(
 {  /*lint --e{715} */
    assert(infval != NULL);
 
-   RatSetGMP(infval, mpq_ILL_MINDOUBLE);
+   SCIPrationalSetGMP(infval, mpq_ILL_MINDOUBLE);
 }
 
 /** checks if given value is treated as negative infinity in the LP solver */
@@ -2985,7 +2985,7 @@ SCIP_Bool SCIPlpiExactIsNegInfinity(
    SCIP_Rational*        val                 /**< given value */
    )
 {  /*lint --e{715} */
-   return (mpq_cmp(*RatGetGMP(val), mpq_ILL_MINDOUBLE) <= 0);
+   return (mpq_cmp(*SCIPrationalGetGMP(val), mpq_ILL_MINDOUBLE) <= 0);
 }
 
 /** returns value treated as negative infinity in the LP solver */

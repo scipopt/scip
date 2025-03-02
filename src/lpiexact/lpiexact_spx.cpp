@@ -206,11 +206,11 @@ static void RsetSpxR(
 {
    if( SCIPlpiExactIsInfinity(lpi, double(spxr)) )
    {
-      RatSetString(r, "inf");
+      SCIPrationalSetString(r, "inf");
    }
    else if( SCIPlpiExactIsInfinity(lpi, -double(spxr)) )
    {
-      RatSetString(r, "-inf");
+      SCIPrationalSetString(r, "-inf");
    }
    else
    {
@@ -247,9 +247,9 @@ static void SpxRSetRat(
    SCIP_Rational*        src                 /**< SCIP_Rational */
    )
 {
-   if( RatIsAbsInfinity(src) )
+   if( SCIPrationalIsAbsInfinity(src) )
    {
-      if( RatIsPositive(src) )
+      if( SCIPrationalIsPositive(src) )
          spxr = soplex::Rational(SCIPlpiExactInfinity(lpi));
       else
          spxr = soplex::Rational(-SCIPlpiExactInfinity(lpi));
@@ -257,9 +257,9 @@ static void SpxRSetRat(
    else
    {
 #if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
-      spxr = soplex::Rational(*RatGetGMP(src));
+      spxr = soplex::Rational(*SCIPrationalGetGMP(src));
 #else
-      spxr = soplex::Rational(RatApproxReal(src));
+      spxr = soplex::Rational(SCIPrationalApproxReal(src));
 #endif
    }
 }
@@ -957,7 +957,7 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
       for( j = 0; j < nnonz; j++ )
       {
          assert(val[j] != NULL);
-         assert(!RatIsZero(val[j]));
+         assert(!SCIPrationalIsZero(val[j]));
       }
    }
 #endif
@@ -1060,7 +1060,7 @@ SCIP_RETCODE SCIPlpiExactAddCols(
       {
          assert( 0 <= ind[j] && ind[j] < nrows );
          assert( val[j] != NULL );
-         assert( !RatIsZero(val[j]) );
+         assert( !SCIPrationalIsZero(val[j]) );
       }
    }
 #endif
@@ -1209,7 +1209,7 @@ SCIP_RETCODE SCIPlpiExactAddRows(
       int ncols = lpi->spx->numColsRational();
       for (int j = 0; j < nnonz; ++j)
       {
-         assert( !RatIsZero(val[j]) );
+         assert( !SCIPrationalIsZero(val[j]) );
          assert( 0 <= ind[j] && ind[j] < ncols );
       }
    }
@@ -1372,12 +1372,12 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
          assert(0 <= ind[i] && ind[i] < lpi->spx->numColsRational());
          assert(lb[i] != NULL && ub[i] != NULL);
 
-         if( RatIsInfinity(lb[i]) )
+         if( SCIPrationalIsInfinity(lb[i]) )
          {
             SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
             return SCIP_LPERROR;
          }
-         if( RatIsNegInfinity(ub[i]) )
+         if( SCIPrationalIsNegInfinity(ub[i]) )
          {
             SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
             return SCIP_LPERROR;

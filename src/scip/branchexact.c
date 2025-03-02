@@ -138,7 +138,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
    branchcand->npriolpcands = 0;
    branchcand->npriolpbins = 0;
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
 
    for( c = 0; c < ncols; ++c )
    {
@@ -172,14 +172,14 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
       if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
          continue;
 
-      RatSetReal(tmp, primsol);
+      SCIPrationalSetReal(tmp, primsol);
 
       /* check, if the LP solution value is fractional */
-      if( RatIsIntegral(tmp) )
+      if( SCIPrationalIsIntegral(tmp) )
          continue;
 
-      RatGetFrac(tmp, tmp);
-      frac = RatApproxReal(tmp);
+      SCIPrationalGetFrac(tmp, tmp);
+      frac = SCIPrationalApproxReal(tmp);
 
       /* insert candidate in candidate list */
       branchpriority = SCIPvarGetBranchPriority(var);
@@ -280,7 +280,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
 
    SCIPsetDebugMsg(set, " -> %d fractional variables (%d of maximal priority)\n", branchcand->nlpcands, branchcand->npriolpcands);
 
-   RatFreeBuffer(set->buffer, &tmp);
+   SCIPfreeRationalBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -506,11 +506,11 @@ SCIP_RETCODE SCIPbranchExecLPExact(
          SCIP_Rational* tmp;
          SCIP_Real branchval;
 
-         SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
          branchval = branchcand->lpcandssol[i];
-         RatSetReal(tmp, branchval);
-         assert(!RatIsIntegral(tmp));
-         RatFreeBuffer(set->buffer, &tmp);
+         SCIPrationalSetReal(tmp, branchval);
+         assert(!SCIPrationalIsIntegral(tmp));
+         SCIPfreeRationalBuffer(set->buffer, &tmp);
       }
 #endif
 

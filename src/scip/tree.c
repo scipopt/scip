@@ -827,7 +827,7 @@ SCIP_RETCODE nodeAssignParent(
       node->estimate = parent->estimate;
       node->depth = parent->depth+1; /*lint !e732*/
       if( set->exact_enabled )
-         RatSet(node->lowerboundexact, parent->lowerboundexact);
+         SCIPrationalSet(node->lowerboundexact, parent->lowerboundexact);
 
       if( parent->depth >= SCIP_MAXTREEDEPTH )
       {
@@ -1040,8 +1040,8 @@ SCIP_RETCODE nodeCreate(
    (*node)->repropsubtreemark = 0;
    if( set->exact_enabled )
    {
-      SCIP_CALL( RatCreateBlock(blkmem, &(*node)->lowerboundexact) );
-      RatSetString((*node)->lowerboundexact, "-inf");
+      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*node)->lowerboundexact) );
+      SCIPrationalSetString((*node)->lowerboundexact, "-inf");
    }
 
    return SCIP_OKAY;
@@ -1240,7 +1240,7 @@ SCIP_RETCODE SCIPnodeFree(
    }
 
    if( set->exact_enabled )
-      RatFreeBlock(blkmem, &(*node)->lowerboundexact);
+      SCIPfreeRationalBlock(blkmem, &(*node)->lowerboundexact);
 
    BMSfreeBlockMemory(blkmem, node);
 
@@ -1797,9 +1797,9 @@ SCIP_RETCODE treeAddPendingBdchg(
    {
       if( tree->pendingbdchgs[tree->npendingbdchgs].newboundexact == NULL )
       {
-         SCIP_CALL( RatCreate(&tree->pendingbdchgs[tree->npendingbdchgs].newboundexact) );
+         SCIP_CALL( SCIPcreateRational(&tree->pendingbdchgs[tree->npendingbdchgs].newboundexact) );
       }
-      RatSet(tree->pendingbdchgs[tree->npendingbdchgs].newboundexact, newboundexact);
+      SCIPrationalSet(tree->pendingbdchgs[tree->npendingbdchgs].newboundexact, newboundexact);
    }
    tree->npendingbdchgs++;
 
@@ -1902,15 +1902,15 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    {
       SCIP_Rational* newboundex;
 
-      SCIP_CALL( RatCreateBuffer(SCIPbuffer(set->scip), &newboundex) );
+      SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(set->scip), &newboundex) );
 
-      RatSetReal(newboundex, newbound);
+      SCIPrationalSetReal(newboundex, newbound);
       SCIP_CALL( SCIPcertificatePrintGlobalBound(set->scip, stat->certificate, var, boundtype,
          newboundex, SCIPcertificateGetCurrentIndex(stat->certificate) - 1) );
       SCIP_CALL( SCIPvarChgBdGlobalExact(var, blkmem, set, stat, lp->lpexact, branchcand,
          eventqueue, cliquetable, newboundex, boundtype) );
 
-      RatFreeBuffer(SCIPbuffer(set->scip), &newboundex);
+      SCIPfreeRationalBuffer(SCIPbuffer(set->scip), &newboundex);
    }
 
    assert(node != NULL);
@@ -2113,12 +2113,12 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
             certificate */
          SCIP_Rational* bound;
          bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
-         RatSetReal(bound, newbound);
+         SCIPrationalSetReal(bound, newbound);
          SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact,
                node, set, transprob, inferboundtype == SCIP_BOUNDTYPE_LOWER,
                SCIPvarGetCertificateIndex(var), SCIPcertificateGetCurrentIndex(stat->certificate) - 1,
                newpseudoobjval) );
-         RatSetReal(bound, oldbound);
+         SCIPrationalSetReal(bound, oldbound);
       }
 
       SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, newpseudoobjval);
@@ -2233,8 +2233,8 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    assert(var != NULL);
    assert(node->active || (infercons == NULL && inferprop == NULL));
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
-   assert((boundtype == SCIP_BOUNDTYPE_LOWER && RatIsGT(newbound, oldlb))
-         || (boundtype == SCIP_BOUNDTYPE_UPPER && RatIsLT(newbound, oldub)));
+   assert((boundtype == SCIP_BOUNDTYPE_LOWER && SCIPrationalIsGT(newbound, oldlb))
+         || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPrationalIsLT(newbound, oldub)));
 
    RatDebugMessage("adding boundchange at node %llu at depth %u to variable <%s>: old bounds=[%q,%q], new %s bound: %q (infer%s=<%s>, inferinfo=%d)\n",
       node->number, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var),
@@ -2245,10 +2245,10 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    infervar = var;
    inferboundtype = boundtype;
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &oldbound) );
+   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &oldbound) );
 
    SCIP_CALL( SCIPvarGetProbvarBoundExact(&var, newbound, &boundtype) );
-   newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
+   newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? SCIPrationalRoundReal(newbound, SCIP_R_ROUND_UPWARDS) : SCIPrationalRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
@@ -2269,18 +2269,18 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       oldlb = SCIPvarGetLbLocalExact(var);
       oldub = SCIPvarGetUbLocalExact(var);
    }
-   assert(RatIsLE(oldlb, oldub));
+   assert(SCIPrationalIsLE(oldlb, oldub));
 
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
       /* adjust lower bound w.r.t. to integrality */
       SCIPvarAdjustLbExact(var, set, newbound);
-      assert(RatIsLE(newbound, oldub));
-      RatSet(oldbound, oldlb);
-      RatMIN(newbound, newbound, oldub);
-      oldboundreal = RatRoundReal(oldbound, SCIP_R_ROUND_UPWARDS);
+      assert(SCIPrationalIsLE(newbound, oldub));
+      SCIPrationalSet(oldbound, oldlb);
+      SCIPrationalMIN(newbound, newbound, oldub);
+      oldboundreal = SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_UPWARDS);
 
-      if ( set->stage == SCIP_STAGE_SOLVING && RatIsInfinity(newbound) )
+      if ( set->stage == SCIP_STAGE_SOLVING && SCIPrationalIsInfinity(newbound) )
       {
          SCIPerrorMessage("cannot change lower bound of variable <%s> to infinity.\n", SCIPvarGetName(var));
          SCIPABORT();
@@ -2293,12 +2293,12 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
 
       /* adjust the new upper bound */
       SCIPvarAdjustUbExact(var, set, newbound);
-      assert(RatIsGE(newbound, oldlb));
-      RatSet(oldbound, oldub);
-      RatMAX(newbound, newbound, oldlb);
-      oldboundreal = RatRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS);
+      assert(SCIPrationalIsGE(newbound, oldlb));
+      SCIPrationalSet(oldbound, oldub);
+      SCIPrationalMAX(newbound, newbound, oldlb);
+      oldboundreal = SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS);
 
-      if ( set->stage == SCIP_STAGE_SOLVING && RatIsNegInfinity(newbound) )
+      if ( set->stage == SCIP_STAGE_SOLVING && SCIPrationalIsNegInfinity(newbound) )
       {
          SCIPerrorMessage("cannot change upper bound of variable <%s> to minus infinity.\n", SCIPvarGetName(var));
          SCIPABORT();
@@ -2309,10 +2309,10 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    /* after switching to the active variable, the bounds might become redundant
     * if this happens, ignore the bound change
     */
-   if( (boundtype == SCIP_BOUNDTYPE_LOWER && !RatIsGT(newbound, oldlb))
-       || (boundtype == SCIP_BOUNDTYPE_UPPER && !RatIsLT(newbound, oldub)) )
+   if( (boundtype == SCIP_BOUNDTYPE_LOWER && !SCIPrationalIsGT(newbound, oldlb))
+       || (boundtype == SCIP_BOUNDTYPE_UPPER && !SCIPrationalIsLT(newbound, oldub)) )
    {
-      RatFreeBuffer(set->buffer, &oldbound);
+      SCIPfreeRationalBuffer(set->buffer, &oldbound);
       return SCIP_OKAY;
    }
 
@@ -2350,7 +2350,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
          /* mark the node with the conflicting bound change to be cut off */
          SCIP_CALL( SCIPnodeCutoff(tree->path[conflictingdepth], set, stat, tree, transprob, origprob, reopt, lpexact->fplp, blkmem) );
 
-         RatFreeBuffer(set->buffer, &oldbound);
+         SCIPfreeRationalBuffer(set->buffer, &oldbound);
          return SCIP_OKAY;
       }
    }
@@ -2380,7 +2380,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
             boundtype == SCIP_BOUNDTYPE_LOWER ? oldub : newbound, node->depth);
       }
 
-      RatFreeBuffer(set->buffer, &oldbound);
+      SCIPfreeRationalBuffer(set->buffer, &oldbound);
       return SCIP_OKAY;
    }
 
@@ -2411,7 +2411,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
          lpsolval = SCIP_INVALID;
 
       /* remember the bound change as branching decision (infervar/infercons/inferprop are not important: use NULL) */
-      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, RatIsIntegral(newbound) ? NULL : newbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING,
+      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, SCIPrationalIsIntegral(newbound) ? NULL : newbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING,
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
       if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
@@ -2428,11 +2428,11 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
             certificate */
          SCIP_Rational* bound;
          bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
-         RatSet(bound, newbound);
+         SCIPrationalSet(bound, newbound);
          SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lpexact, node, set, transprob,
                inferboundtype == SCIP_BOUNDTYPE_LOWER, SCIPvarGetCertificateIndex(var),
                SCIPcertificateGetCurrentIndex(stat->certificate) -1, newpseudoobjval) );
-         RatSet(bound, oldbound);
+         SCIPrationalSet(bound, oldbound);
       }
 
       SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, newpseudoobjval);
@@ -2443,7 +2443,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       /** @todo exip debug solution */
 
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */
-      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, RatIsIntegral(newbound) ? NULL : newbound, boundtype,
+      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, SCIPrationalIsIntegral(newbound) ? NULL : newbound, boundtype,
             infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER,
             0.0, infervar, infercons, inferprop, inferinfo, inferboundtype) );
 
@@ -2476,7 +2476,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       assert(!cutoff);
    }
 
-   RatFreeBuffer(set->buffer, &oldbound);
+   SCIPfreeRationalBuffer(set->buffer, &oldbound);
    return SCIP_OKAY;
 }
 
@@ -2808,8 +2808,8 @@ void SCIPnodeUpdateLowerbound(
 
       node->lowerbound = newbound;
 
-      if( set->exact_enabled && RatIsLTReal(node->lowerboundexact, newbound) )
-         RatSetReal(node->lowerboundexact, newbound);
+      if( set->exact_enabled && SCIPrationalIsLTReal(node->lowerboundexact, newbound) )
+         SCIPrationalSetReal(node->lowerboundexact, newbound);
 
       if( node->estimate < newbound )
          node->estimate = newbound;
@@ -2846,13 +2846,13 @@ void SCIPnodeUpdateExactLowerbound(
    assert(node != NULL);
    assert(stat != NULL);
 
-   if( RatIsGT(newbound, node->lowerboundexact) )
+   if( SCIPrationalIsGT(newbound, node->lowerboundexact) )
    {
       SCIP_Real oldbound;
 
       oldbound = node->lowerbound;
-      RatSet(node->lowerboundexact, newbound);
-      node->lowerbound = RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
+      SCIPrationalSet(node->lowerboundexact, newbound);
+      node->lowerbound = SCIPrationalRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
       node->estimate = MAX(node->estimate, node->lowerbound);
 
       if( node->depth == 0 )
@@ -2905,12 +2905,12 @@ SCIP_RETCODE SCIPnodeUpdateExactLowerboundLP(
       SCIPABORT();
    }
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &lpobjval) );
+   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &lpobjval) );
 
    SCIPlpExactGetObjval(lp->lpexact, set, lpobjval);
    SCIPnodeUpdateExactLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
 
-   RatFreeBuffer(set->buffer, &lpobjval);
+   SCIPfreeRationalBuffer(set->buffer, &lpobjval);
 
    return SCIP_OKAY;
 }
@@ -2947,7 +2947,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
 
    if( set->exact_enabled && !SCIPtreeProbing(tree)
       && ( lpobjval > SCIPnodeGetLowerbound(node)
-      || RatIsGT(lp->lpexact->lpobjval, SCIPnodeGetLowerboundExact(node)) ) )
+      || SCIPrationalIsGT(lp->lpexact->lpobjval, SCIPnodeGetLowerboundExact(node)) ) )
    {
       SCIP_Bool usefarkas;
       usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);

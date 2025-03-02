@@ -4118,7 +4118,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
 
       if( SCIPisExactSolve(scip) )
       {
-         SCIP_CALL( RatCreateArray(&refvalsrat, 2) );
+         SCIP_CALL( SCIPcreateRationalArray(&refvalsrat, 2) );
       }
 
       /* read in primal and dual reference values */
@@ -4160,7 +4160,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
          {
             assert(refvalsrat != NULL);
             SCIP_CALL( SCIPvalidateSolveExact(scip, refvalsrat[0], refvalsrat[1], FALSE, NULL, NULL, NULL) );
-            RatFreeArray(&refvalsrat, 2);
+            SCIPfreeRationalArray(&refvalsrat, 2);
          }
          else
          {

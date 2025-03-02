@@ -351,7 +351,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->objoffsetexact = NULL;
    if( set->exact_enabled )
    {
-      SCIP_CALL( RatCreateBlock(blkmem, &(*prob)->objoffsetexact) );
+      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*prob)->objoffsetexact) );
    }
 
    return SCIP_OKAY;
@@ -538,7 +538,7 @@ SCIP_RETCODE SCIPprobFree(
    }
    if( (*prob)->objoffsetexact != NULL )
    {
-      RatFreeBlock(blkmem, &(*prob)->objoffsetexact);
+      SCIPfreeRationalBlock(blkmem, &(*prob)->objoffsetexact);
    }
    BMSfreeMemoryArray(&(*prob)->name);
    BMSfreeMemory(prob);
@@ -1674,7 +1674,7 @@ void SCIPprobAddObjoffsetExact(
    assert(prob->objoffsetexact != NULL);
 
    RatDebugMessage("adding %q to objective offset %q \n", addval, prob->objoffsetexact);
-   RatAdd(prob->objoffsetexact, prob->objoffsetexact, addval);
+   SCIPrationalAdd(prob->objoffsetexact, prob->objoffsetexact, addval);
 }
 
 /** sets the dual bound on objective function */
@@ -1869,7 +1869,7 @@ SCIP_RETCODE probScaleObjExact(
 
       /* get objective value of variable; it it is non-zero, no scaling can be applied */
       obj = SCIPvarGetObjExact(transprob->vars[v]);
-      if( !RatIsZero(obj) )
+      if( !SCIPrationalIsZero(obj) )
          break;
    }
 
@@ -1881,12 +1881,12 @@ SCIP_RETCODE probScaleObjExact(
       SCIP_Bool success;
 
       /* get temporary memory */
-      SCIP_CALL( RatCreateBuffer(set->buffer, &intscalar) );
-      SCIP_CALL( RatCreateBufferArray(set->buffer, &objvals, nints) );
+      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &intscalar) );
+      SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &objvals, nints) );
 
       /* get objective values of integer variables */
       for( v = 0; v < nints; ++v )
-         RatSet(objvals[v], SCIPvarGetObjExact(transprob->vars[v]));
+         SCIPrationalSet(objvals[v], SCIPvarGetObjExact(transprob->vars[v]));
 
       /* calculate integral scalar */
       SCIP_CALL( SCIPcalcIntegralScalarExact(set->buffer, objvals, nints, OBJSCALE_MAXFINALSCALE,
@@ -1895,13 +1895,13 @@ SCIP_RETCODE probScaleObjExact(
       RatDebugMessage("integral objective scalar: success=%u, intscalar=%q\n", success, intscalar);
 
       /* apply scaling */
-      if( success && !RatIsEqualReal(intscalar, 1.0) )
+      if( success && !SCIPrationalIsEqualReal(intscalar, 1.0) )
       {
          /* calculate scaled objective values */
          for( v = 0; v < nints; ++v )
          {
-            RatMult(objvals[v], objvals[v], intscalar);
-            assert(RatIsIntegral(objvals[v]));
+            SCIPrationalMult(objvals[v], objvals[v], intscalar);
+            assert(SCIPrationalIsIntegral(objvals[v]));
          }
 
          /* change the variables' objective values and adjust objscale and objoffset */
@@ -1912,8 +1912,8 @@ SCIP_RETCODE probScaleObjExact(
                RatDebugMessage(" -> var <%s>: newobj = %q\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
                SCIP_CALL( SCIPvarChgObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpexact, eventqueue, objvals[v]) );
             }
-            transprob->objoffset *= RatApproxReal(intscalar);
-            transprob->objscale /= RatApproxReal(intscalar);
+            transprob->objoffset *= SCIPrationalApproxReal(intscalar);
+            transprob->objscale /= SCIPrationalApproxReal(intscalar);
             transprob->objisintegral = TRUE;
             SCIPsetDebugMsg(set, "integral objective scalar: objscale=%g\n", transprob->objscale);
 
@@ -1923,8 +1923,8 @@ SCIP_RETCODE probScaleObjExact(
       }
 
       /* free temporary memory */
-      RatFreeBuffer(set->buffer, &intscalar);
-      RatFreeBufferArray(set->buffer, &objvals, nints);
+      SCIPfreeRationalBuffer(set->buffer, &intscalar);
+      SCIPfreeRationalBufferArray(set->buffer, &objvals, nints);
    }
 
    return SCIP_OKAY;
@@ -2463,22 +2463,22 @@ void SCIPprobExternObjvalExact(
    assert(transprob->objscale > 0.0);
    assert(set->exact_enabled);
 
-   (void) RatCreateBuffer(set->buffer, &tmpval);
+   (void) SCIPcreateRationalBuffer(set->buffer, &tmpval);
 
-   if( RatIsAbsInfinity(objval) )
+   if( SCIPrationalIsAbsInfinity(objval) )
    {
-      RatSetReal(tmpval, (SCIP_Real) transprob->objsense);
-      RatMult(objvalext, tmpval, objval);
+      SCIPrationalSetReal(tmpval, (SCIP_Real) transprob->objsense);
+      SCIPrationalMult(objvalext, tmpval, objval);
    }
    else
    {
-      RatAdd(objvalext, objval, transprob->objoffsetexact);
-      RatMultReal(objvalext, objvalext, transprob->objscale);
-      RatMultReal(objvalext, objvalext, (SCIP_Real) transprob->objsense);
-      RatAdd(objvalext, objvalext, origprob->objoffsetexact);
+      SCIPrationalAdd(objvalext, objval, transprob->objoffsetexact);
+      SCIPrationalMultReal(objvalext, objvalext, transprob->objscale);
+      SCIPrationalMultReal(objvalext, objvalext, (SCIP_Real) transprob->objsense);
+      SCIPrationalAdd(objvalext, objvalext, origprob->objoffsetexact);
    }
 
-   RatFreeBuffer(set->buffer, &tmpval);
+   SCIPfreeRationalBuffer(set->buffer, &tmpval);
 }
 
 /** returns the internal value of the given external objective value */
@@ -2521,22 +2521,22 @@ void SCIPprobInternObjvalExact(
    assert(transprob->objscale > 0.0);
    assert(set->exact_enabled);
 
-   (void) RatCreateBuffer(set->buffer, &tmpval);
+   (void) SCIPcreateRationalBuffer(set->buffer, &tmpval);
 
-   if( RatIsAbsInfinity(objval) )
+   if( SCIPrationalIsAbsInfinity(objval) )
    {
-      RatSetReal(tmpval, (SCIP_Real) transprob->objsense);
-      RatMult(objvalint, tmpval, objval);
+      SCIPrationalSetReal(tmpval, (SCIP_Real) transprob->objsense);
+      SCIPrationalMult(objvalint, tmpval, objval);
    }
    else
    {
-      RatDiff(objvalint, objval, origprob->objoffsetexact);
-      RatDivReal(objvalint, objvalint, transprob->objscale);
-      RatMultReal(objvalint, objvalint, (SCIP_Real) transprob->objsense);
-      RatDiff(objvalint, objvalint, transprob->objoffsetexact);
+      SCIPrationalDiff(objvalint, objval, origprob->objoffsetexact);
+      SCIPrationalDivReal(objvalint, objvalint, transprob->objscale);
+      SCIPrationalMultReal(objvalint, objvalint, (SCIP_Real) transprob->objsense);
+      SCIPrationalDiff(objvalint, objvalint, transprob->objoffsetexact);
    }
 
-   RatFreeBuffer(set->buffer, &tmpval);
+   SCIPfreeRationalBuffer(set->buffer, &tmpval);
 }
 
 /** returns variable of the problem with given name */
@@ -2990,10 +2990,10 @@ SCIP_RETCODE SCIPprobCheckObjIntegralExact(
       obj = SCIPvarGetObjExact(transprob->vars[v]);
 
       /* check, if objective value is non-zero */
-      if( !RatIsZero(obj) )
+      if( !SCIPrationalIsZero(obj) )
       {
          /* if variable's objective value is fractional, the problem's objective value may also be fractional */
-         if( !RatIsIntegral(obj) )
+         if( !SCIPrationalIsIntegral(obj) )
             break;
 
          /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */

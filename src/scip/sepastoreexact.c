@@ -155,7 +155,7 @@ SCIP_RETCODE SCIPsepastoreExactAddCut(
    assert(sepastoreexact != NULL);
    assert(set != NULL);
    assert(cut != NULL);
-   assert(!RatIsNegInfinity(SCIProwExactGetLhs(cut)) || !RatIsInfinity(SCIProwExactGetRhs(cut)));
+   assert(!SCIPrationalIsNegInfinity(SCIProwExactGetLhs(cut)) || !SCIPrationalIsInfinity(SCIProwExactGetRhs(cut)));
    assert(eventqueue != NULL);
 
    /* debug: check cut for feasibility */

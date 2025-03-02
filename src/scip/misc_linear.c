@@ -98,7 +98,7 @@ SCIP_Real SCIPconsGetRhs(
    }
    else if( strcmp(conshdlrname, "exactlinear") == 0 )
    {
-      rhs = RatApproxReal(SCIPgetRhsExactLinear(scip, cons));
+      rhs = SCIPrationalApproxReal(SCIPgetRhsExactLinear(scip, cons));
    }
    else
    {
@@ -166,7 +166,7 @@ SCIP_Real SCIPconsGetLhs(
    }
    else if( strcmp(conshdlrname, "exactlinear") == 0 )
    {
-      lhs = RatApproxReal(SCIPgetLhsExactLinear(scip, cons));
+      lhs = SCIPrationalApproxReal(SCIPgetLhsExactLinear(scip, cons));
    }
    else
    {
@@ -438,7 +438,7 @@ SCIP_RETCODE SCIPgetConsValsExact(
       SCIP_Rational** weights;
       weights = SCIPgetValsExactLinear(scip, cons);
       for( i = 0; i < nvars; i++ )
-         RatSet(vals[i], weights[i]);
+         SCIPrationalSet(vals[i], weights[i]);
    }
    else
    {

@@ -1435,13 +1435,13 @@ void SCIPgetDualboundExact(
    )
 {
    SCIP_Rational* tmpval;
-   (void) RatCreateBuffer(SCIPbuffer(scip), &tmpval);
+   (void) SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmpval);
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDualboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    /* in case we are in presolving we use the stored dual bound if it exits */
    if( scip->set->stage <= SCIP_STAGE_INITSOLVE && scip->transprob->dualbound < SCIP_INVALID )
-      RatSetReal(result, scip->transprob->dualbound);
+      SCIPrationalSetReal(result, scip->transprob->dualbound);
    else
    {
       /* all the lower bounds should be proved bounds, so SCIPgetLowerbound should be safe */
@@ -1449,7 +1449,7 @@ void SCIPgetDualboundExact(
       SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmpval, result);
    }
 
-   RatFreeBuffer(SCIPbuffer(scip), &tmpval);
+   SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmpval);
 }
 
 /** gets global lower (dual) bound in transformed problem
@@ -1528,14 +1528,14 @@ void SCIPgetLowerboundExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLowerboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
-      RatSetString(result, "-inf");
+      SCIPrationalSetString(result, "-inf");
    else if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
    {
       /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with lower
        * bound = -inf instead of lower bound = upper bound = +inf also in case we prove that the problem is unbounded,
        * it seems to make sense to return with lower bound = -inf, since -infinity is the only valid lower bound
        */
-      RatSetString(result, "-inf");
+      SCIPrationalSetString(result, "-inf");
    }
    else
    {
@@ -1546,8 +1546,8 @@ void SCIPgetLowerboundExact(
        * the global lower bound is given by the upper bound value
        */
       treelowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
-      RatSetReal(result, treelowerbound);
-      RatMIN(result, result, scip->primal->upperboundexact);
+      SCIPrationalSetReal(result, treelowerbound);
+      SCIPrationalMIN(result, result, scip->primal->upperboundexact);
    }
 }
 
@@ -1748,9 +1748,9 @@ void SCIPgetUpperboundExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetUpperbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    if( SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
-      RatSetString(result, "-inf");
+      SCIPrationalSetString(result, "-inf");
    else
-      RatSet(result, scip->primal->upperboundexact);
+      SCIPrationalSet(result, scip->primal->upperboundexact);
 }
 
 /** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff

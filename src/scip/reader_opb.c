@@ -1243,28 +1243,28 @@ SCIP_RETCODE setObjective(
 
          if( SCIPisExactSolve(scip) )
          {
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &obj) );
+            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &obj) );
 
             if( SCIPvarIsNegated(linvars[v]) )
             {
                SCIP_VAR* negvar = SCIPvarGetNegationVar(linvars[v]);
 
-               RatSetReal(obj, coefs[v]);
+               SCIPrationalSetReal(obj, coefs[v]);
                SCIP_CALL( SCIPaddOrigObjoffsetExact(scip, obj) );
 
-               RatMultReal(obj, obj, -scale);
-               RatAdd(obj, obj, SCIPvarGetObjExact(negvar));
+               SCIPrationalMultReal(obj, obj, -scale);
+               SCIPrationalAdd(obj, obj, SCIPvarGetObjExact(negvar));
                SCIP_CALL( SCIPchgVarObjExact(scip, negvar, obj) );
             }
             else
             {
-               RatSetReal(obj, coefs[v]);
-               RatMultReal(obj, obj, scale);
-               RatAdd(obj, obj, SCIPvarGetObjExact(linvars[v]));
+               SCIPrationalSetReal(obj, coefs[v]);
+               SCIPrationalMultReal(obj, obj, scale);
+               SCIPrationalAdd(obj, obj, SCIPvarGetObjExact(linvars[v]));
                SCIP_CALL( SCIPchgVarObjExact(scip, linvars[v], obj) );
             }
 
-            RatFreeBuffer(SCIPbuffer(scip), &obj);
+            SCIPfreeRationalBuffer(SCIPbuffer(scip), &obj);
          }
          else
          {
@@ -1505,18 +1505,18 @@ SCIP_RETCODE readConstraints(
          SCIP_Rational* lhsrat;
          SCIP_Rational* rhsrat;
 
-         SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &lincoefsrat, nlincoefs) );
-         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lhsrat) );
-         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &rhsrat) );
-         RatSetReal(lhsrat, lhs);
-         RatSetReal(rhsrat, rhs);
+         SCIP_CALL( SCIPcreateRationalBufferArray(SCIPbuffer(scip), &lincoefsrat, nlincoefs) );
+         SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &lhsrat) );
+         SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &rhsrat) );
+         SCIPrationalSetReal(lhsrat, lhs);
+         SCIPrationalSetReal(rhsrat, rhs);
          for( int i = 0; i < nlincoefs; ++i )
-            RatSetReal(lincoefsrat[i], lincoefs[i]);
+            SCIPrationalSetReal(lincoefsrat[i], lincoefs[i]);
          retcode = SCIPcreateConsExactLinear(scip, &cons, name, nlincoefs, linvars, lincoefsrat, lhsrat, rhsrat,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
-         RatFreeBuffer(SCIPbuffer(scip), &rhsrat);
-         RatFreeBuffer(SCIPbuffer(scip), &lhsrat);
-         RatFreeBufferArray(SCIPbuffer(scip), &lincoefsrat, nlincoefs);
+         SCIPfreeRationalBuffer(SCIPbuffer(scip), &rhsrat);
+         SCIPfreeRationalBuffer(SCIPbuffer(scip), &lhsrat);
+         SCIPfreeRationalBufferArray(SCIPbuffer(scip), &lincoefsrat, nlincoefs);
       }
 
       if( retcode != SCIP_OKAY )
@@ -1762,17 +1762,17 @@ SCIP_RETCODE readOPBFile(
          SCIP_Rational* lhs;
          SCIP_Rational* rhs;
 
-         SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars) );
-         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lhs) );
-         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &rhs) );
-         RatSetString(lhs, "-inf");
-         RatSetReal(rhs, (SCIP_Real) topcostrhs);
+         SCIP_CALL( SCIPcreateRationalBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars) );
+         SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &lhs) );
+         SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &rhs) );
+         SCIPrationalSetString(lhs, "-inf");
+         SCIPrationalSetReal(rhs, (SCIP_Real) topcostrhs);
          for( int j = 0; j < ntopcostvars; ++j )
-            RatSetReal(topcostsrat[j], topcosts[j]);
+            SCIPrationalSetReal(topcostsrat[j], topcosts[j]);
          SCIP_CALL( SCIPcreateConsExactLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcostsrat, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         RatFreeBuffer(SCIPbuffer(scip), &rhs);
-         RatFreeBuffer(SCIPbuffer(scip), &lhs);
-         RatFreeBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars);
+         SCIPfreeRationalBuffer(SCIPbuffer(scip), &rhs);
+         SCIPfreeRationalBuffer(SCIPbuffer(scip), &lhs);
+         SCIPfreeRationalBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars);
       }
 
       SCIP_CALL( SCIPaddCons(scip, topcostcons) );
