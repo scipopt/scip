@@ -72,6 +72,7 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR*             var,                /**< variable to branch on */
    SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
    SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
@@ -93,6 +94,7 @@ SCIP_RETCODE SCIPbranchExecLPExact(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Real             cutoffbound,        /**< global upper cutoff bound */
    SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */

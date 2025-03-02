@@ -442,6 +442,7 @@ SCIP_RETCODE tightenSingleVar(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidates */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             val,                /**< coefficient of the variable */
@@ -485,7 +486,7 @@ SCIP_RETCODE tightenSingleVar(
             SCIPvarGetName(var), SCIPvarGetLbLocal(var),
             SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
             (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"), newbound);
-      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
    }
    else
    {
@@ -539,8 +540,8 @@ SCIP_RETCODE tightenSingleVar(
                (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var)),
                newbound);
 
-         SCIP_CALL( SCIPnodeAddBoundchg(tree->path[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
-               eventqueue, cliquetable, var, newbound, boundtype, FALSE) );
+         SCIP_CALL( SCIPnodeAddBoundchg(tree->path[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
+               eventqueue, eventfilter, cliquetable, var, newbound, boundtype, FALSE) );
 
          /* mark the node in the validdepth to be propagated again */
          SCIPnodePropagateAgain(tree->path[0], set, stat, tree);
@@ -740,6 +741,7 @@ SCIP_RETCODE propagateLongProof(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Real*            coefs,              /**< coefficients in sparse representation */
    int*                  inds,               /**< non-zero indices */
@@ -798,8 +800,8 @@ SCIP_RETCODE propagateLongProof(
          if( SCIPsetIsGE(set, newub, ub) )
             continue;
 
-         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand, \
-               eventqueue, cliquetable, var, val, rhs-resminact, conflicttype, validdepth) );
+         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand,
+               eventqueue, eventfilter, cliquetable, var, val, rhs-resminact, conflicttype, validdepth) );
       }
       /* we got a potential new lower bound */
       else
@@ -816,8 +818,8 @@ SCIP_RETCODE propagateLongProof(
          if( SCIPsetIsLE(set, newlb, lb) )
             continue;
 
-         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand, \
-               eventqueue, cliquetable, var, val, rhs-resminact, conflicttype, validdepth) );
+         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand,
+               eventqueue, eventfilter, cliquetable, var, val, rhs-resminact, conflicttype, validdepth) );
       }
 
       /* the minimal activity should stay unchanged because we tightened the bound that doesn't contribute to the
@@ -844,6 +846,7 @@ SCIP_RETCODE createAndAddProofcons(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
@@ -903,7 +906,8 @@ SCIP_RETCODE createAndAddProofcons(
       if( SCIPsetIsGT(set, globalminactivity, rhs) )
       {
          SCIPsetDebugMsg(set, "detect global infeasibility: minactivity=%g, rhs=%g\n", globalminactivity, rhs);
-         SCIP_CALL( SCIPnodeCutoff(tree->path[proofset->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+
+         SCIP_CALL( SCIPnodeCutoff(tree->path[proofset->validdepth], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
 
          goto UPDATESTATISTICS;
       }
@@ -945,7 +949,7 @@ SCIP_RETCODE createAndAddProofcons(
       if( applyglobal )
       {
          SCIP_CALL( propagateLongProof(conflict, set, stat, reopt, tree, blkmem, origprob, transprob, lp, branchcand,
-               eventqueue, cliquetable, coefs, inds, nnz, rhs, conflicttype, proofset->validdepth) );
+               eventqueue, eventfilter, cliquetable, coefs, inds, nnz, rhs, conflicttype, proofset->validdepth) );
       }
       return SCIP_OKAY;
    }
@@ -1179,6 +1183,7 @@ SCIP_RETCODE SCIPconflictFlushProofset(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    )
 {
@@ -1200,9 +1205,9 @@ SCIP_RETCODE SCIPconflictFlushProofset(
          inds = proofsetGetInds(conflict->proofset);
          rhs = proofsetGetRhs(conflict->proofset);
 
-         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, \
-               branchcand, eventqueue, cliquetable, vars[inds[0]], coefs[0], rhs, conflict->proofset->conflicttype,
-               conflict->proofset->validdepth) );
+         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
+               branchcand, eventqueue, eventfilter, cliquetable, vars[inds[0]], coefs[0], rhs,
+               conflict->proofset->conflicttype, conflict->proofset->validdepth) );
       }
       else
       {
@@ -1229,8 +1234,8 @@ SCIP_RETCODE SCIPconflictFlushProofset(
          if( !skipinitialproof )
          {
             /* create and add the original proof */
-            SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofset, set, stat, origprob, transprob, \
-                  tree, reopt, lp, branchcand, eventqueue, cliquetable, blkmem) );
+            SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofset, set, stat, origprob, transprob,
+                  tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, blkmem) );
          }
       }
 
@@ -1262,14 +1267,14 @@ SCIP_RETCODE SCIPconflictFlushProofset(
             rhs = proofsetGetRhs(conflict->proofsets[i]);
 
             SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
-                  branchcand, eventqueue, cliquetable, vars[inds[0]], coefs[0], rhs,
+                  branchcand, eventqueue, eventfilter, cliquetable, vars[inds[0]], coefs[0], rhs,
                   conflict->proofsets[i]->conflicttype, conflict->proofsets[i]->validdepth) );
          }
          else
          {
             /* create and add proof constraint */
-            SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofsets[i], set, stat, origprob, \
-                  transprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, blkmem) );
+            SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofsets[i], set, stat, origprob,
+                  transprob, tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, blkmem) );
          }
       }
 
@@ -1675,6 +1680,7 @@ SCIP_RETCODE SCIPconflictAnalyzeDualProof(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem */
@@ -1722,7 +1728,7 @@ SCIP_RETCODE SCIPconflictAnalyzeDualProof(
    {
       SCIPsetDebugMsg(set, " -> empty farkas-proof in depth %d cuts off sub tree at depth %d\n", SCIPtreeGetFocusDepth(tree), validdepth);
 
-      SCIP_CALL( SCIPnodeCutoff(tree->path[validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[validdepth], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
 
       *globalinfeasible = TRUE;
       *success = TRUE;
@@ -1739,7 +1745,7 @@ SCIP_RETCODE SCIPconflictAnalyzeDualProof(
    if( *globalinfeasible )
    {
       SCIPsetDebugMsg(set, "detect global: cutoff root node\n");
-      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
       *success = TRUE;
 
       ++conflict->ndualproofsinfsuccess;

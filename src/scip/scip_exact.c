@@ -372,8 +372,8 @@ SCIP_RETCODE SCIPbranchLPExact(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPbranchLPExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbranchExecLPExact(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound,
-         TRUE, result) );
+         scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->primal->cutoffbound, TRUE, result) );
 
    return SCIP_OKAY;
 }
