@@ -1734,7 +1734,8 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    assert(origprob != NULL);
 
    if( set->exact_enabled )
-      return SCIPprobCheckObjIntegralExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventfilter, eventqueue);
+      return SCIPprobCheckObjIntegralExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventqueue,
+            eventfilter);
 
    /* if we know already, that the objective value is integral, nothing has to be done */
    if( transprob->objisintegral )
@@ -1847,8 +1848,8 @@ SCIP_RETCODE probScaleObjExact(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    int v;
@@ -1958,7 +1959,8 @@ SCIP_RETCODE SCIPprobScaleObj(
 
    if( set->exact_enabled )
    {
-      SCIP_CALL( probScaleObjExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventfilter, eventqueue) );
+      SCIP_CALL( probScaleObjExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventqueue,
+            eventfilter) );
       return SCIP_OKAY;
    }
 
@@ -2961,8 +2963,8 @@ SCIP_RETCODE SCIPprobCheckObjIntegralExact(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    SCIP_Rational* obj;
