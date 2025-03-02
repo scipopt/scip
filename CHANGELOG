@@ -191,6 +191,8 @@ Build system
   please build and install from https://github.com/scipopt/bliss before and specify -DBLISS_DIR
 - replaced `SANITIZE_XYZ=(on|off)` options by `SANITIZE=(on|off|thread|address|memory)`;
   undefined behavior sanitizer is always enabled if not `SANITIZE=off`
+- scip-config.cmake now defines a variable SCIP_COMPILE_FLAGS, which could be used to compile code that builds against SCIP via cmake;
+  currently, this only passes on the sanitizer flags that were used to build libscip
 
 Fixed bugs
 ----------

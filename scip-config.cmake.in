@@ -12,6 +12,8 @@ if(@SOPLEX_NEEDED@)
    find_package(SOPLEX QUIET CONFIG)
 endif()
 
-set(SCIP_LIBRARIES libscip)
+set(SCIP_LIBRARIES libscip @CONF_SANITIZE_FLAGS@)
 set(SCIP_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
+# additional compilation flags to use
+set(SCIP_COMPILE_FLAGS @CONF_SANITIZE_FLAGS@)
 set(SCIP_FOUND TRUE)

@@ -60,6 +60,9 @@ endfunction()
 
 function(add_sanitizers ...)
     foreach (TARGET ${ARGV})
+        # ensure the SANITIZE_FLAGS property exists also if no sanitizers are available
+        set_property(TARGET ${TARGET} PROPERTY SANITIZE_FLAGS "")
+
         # Check if this target will be compiled by exactly one compiler. Other-
         # wise sanitizers can't be used and a warning should be printed once.
         sanitizer_target_compilers(${TARGET} TARGET_COMPILER)
