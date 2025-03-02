@@ -2466,21 +2466,21 @@ SCIP_RETCODE conflictQueueBound(
    assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER || SCIPsetIsGE(set, relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo)));
    assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER || SCIPsetIsLE(set, relaxedbd, SCIPbdchginfoGetNewbound(bdchginfo)));
 
-   if (success != NULL)
+   if( success != NULL )
       *success = FALSE;
 
-   if (conflict->reasonclauseres)
+   if( conflict->reasonclauseres )
    {
       /* insert the bound change into the separate queue */
       assert(conflict->bdchgonlyresqueue);
       SCIP_CALL( SCIPpqueueInsert(conflict->separatebdchgqueue, (void*)bdchginfo) );
    }
-   else if (set->conf_usegeneralres && !conflict->bdchgonlyconfqueue)
+   else if( set->conf_usegeneralres && !conflict->bdchgonlyconfqueue )
    {
-      if(!betterBoundInResolutionQueue(conflict, set, bdchginfo))
+      if( !betterBoundInResolutionQueue(conflict, set, bdchginfo) )
       {
          SCIP_CALL( SCIPpqueueInsert(conflict->resbdchgqueue, (void*)bdchginfo) );
-         if (success != NULL)
+         if( success != NULL )
             *success = TRUE;
       }
    }
@@ -2494,13 +2494,13 @@ SCIP_RETCODE conflictQueueBound(
          && !isBoundchgUseless(set, bdchginfo) )
       {
          SCIP_CALL( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
-         if (success != NULL)
+         if( success != NULL )
             *success = TRUE;
       }
       else
       {
          SCIP_CALL( SCIPpqueueInsert(conflict->forcedbdchgqueue, (void*)bdchginfo) );
-         if (success != NULL)
+         if( success != NULL )
             *success = TRUE;
       }
 
@@ -2571,8 +2571,8 @@ SCIP_RETCODE conflictAddBound(
     *
     * @note That is different to the VSIDS presented in the literature
     */
-      /* refactortodo update VSIDS score only in case of successfully adding the bound change to the queue? */
-      SCIP_CALL( incVSIDS(var, blkmem, set, stat, boundtype, relaxedbd, set->conf_conflictgraphweight) );
+   /* refactortodo update VSIDS score only in case of successfully adding the bound change to the queue? */
+   SCIP_CALL( incVSIDS(var, blkmem, set, stat, boundtype, relaxedbd, set->conf_conflictgraphweight) );
 
    return SCIP_OKAY;
 }
@@ -3402,7 +3402,7 @@ void conflictClearResolution(
    SCIPpqueueClear(conflict->separatebdchgqueue);
 
    /* reset the current lower and upper bounds leading to conflict */
-   if ( set->conf_usegeneralres )
+   if( set->conf_usegeneralres )
    {
       SCIP_VAR** vars;
       int nvars;
@@ -3438,7 +3438,7 @@ SCIP_RETCODE SCIPconflictInit(
    /* clear the conflict candidate queue and the conflict set */
    conflictClear(conflict);
 
-   if ( set->conf_usegeneralres )
+   if( set->conf_usegeneralres )
       conflictClearResolution(conflict, set, prob);
 
    /* set conflict type */
@@ -5531,7 +5531,7 @@ SCIP_RETCODE SCIPrunBoundHeuristic(
          /* The LPI data are out of sync with LP data. Thus, the LP should be marked
           * unsolved. However, for strong branching calls, the LP has to have status 'solved'; in
           * this case, marklpunsolved is FALSE and synchronization is performed later. */
-         if ( marklpunsolved )
+         if( marklpunsolved )
          {
             lp->solved = FALSE;
             lp->primalfeasible = FALSE;
