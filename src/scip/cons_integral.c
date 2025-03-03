@@ -173,7 +173,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
    /* call branching methods */
    SCIP_CALL( SCIPbranchLP(scip, result) );
 
-   if( SCIPisExactSolve(scip) && *result == SCIP_DIDNOTRUN )
+   if( SCIPisExact(scip) && *result == SCIP_DIDNOTRUN )
    {
       SCIP_CALL( SCIPbranchLPExact(scip, result) );
    }
@@ -275,7 +275,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    nintegers -= ncontimplvars + ncontvars;
    assert(nintegers >= 0);
 
-   if( !SCIPisExactSolve(scip) )
+   if( !SCIPisExact(scip) )
    {
       for( v = 0; v < nintegers; ++v )
       {

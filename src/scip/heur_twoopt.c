@@ -1747,7 +1747,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
          SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
 
          /* in exact mode we have to end diving prior to trying the solution */
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
             SCIP_CALL( SCIPunlinkSol(scip, worksol) );
             SCIP_CALL( SCIPendDive(scip) );

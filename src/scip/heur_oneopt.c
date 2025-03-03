@@ -572,7 +572,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result)
        * if we are not in exact solving mode
        */
-      if( cutoff && !SCIPisExactSolve(scip) )
+      if( cutoff && !SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
@@ -868,7 +868,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
 
             /* in exact mode we have to end diving prior to trying the solution */
-            if( SCIPisExactSolve(scip) )
+            if( SCIPisExact(scip) )
             {
                SCIP_CALL( SCIPunlinkSol(scip, worksol) );
                SCIP_CALL( SCIPendDive(scip) );

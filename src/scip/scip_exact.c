@@ -145,11 +145,9 @@
 
 /** returns whether the solution process should be probably correct
  *
- *  @note This feature is not supported yet!
- *
- *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
+ *  @return Returns TRUE if \SCIP is in exact solving mode, otherwise FALSE
  */
-SCIP_Bool SCIPisExactSolve(
+SCIP_Bool SCIPisExact(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -159,7 +157,7 @@ SCIP_Bool SCIPisExactSolve(
    return (scip->set->exact_enabled);
 }
 
-/** returns whether aggreagtion is allowed to use negative slack */
+/** returns whether aggregation is allowed to use negative slack */
 SCIP_Bool SCIPallowNegSlack(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -167,7 +165,7 @@ SCIP_Bool SCIPallowNegSlack(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return (!SCIPisExactSolve(scip)) || (scip->set->exact_allownegslack);
+   return (!SCIPisExact(scip)) || (scip->set->exact_allownegslack);
 }
 
 /** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina,
@@ -219,7 +217,7 @@ SCIP_RETCODE SCIPfreeRowCertInfo(
    SCIP_AGGREGATIONINFO* aggrinfo;
    SCIP_MIRINFO* mirinfo;
 
-   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+   if( !SCIPisExact(scip) || !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
 
    certificate = SCIPgetCertificate(scip);
@@ -292,7 +290,7 @@ SCIP_RETCODE SCIPprintCertificateMirCut(
 {
    SCIP_CERTIFICATE* certificate;
 
-   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+   if( !SCIPisExact(scip) || !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
 
    certificate = SCIPgetCertificate(scip);

@@ -359,7 +359,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    assert(conshdlrdata != NULL);
 
    /* if we are not solving exactly, we have nothing to check */
-   if( !SCIPisExactSolve(scip) )
+   if( !SCIPisExact(scip) )
       return SCIP_OKAY;
 
    /**@todo add event handler to check again if constraints were added/modified or a variable (impl) type changed */

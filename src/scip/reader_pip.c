@@ -3271,7 +3271,7 @@ SCIP_RETCODE SCIPreadPip(
 
    *result = SCIP_DIDNOTRUN;
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("reading of pip format in exact solving mode is not yet supported\n");
       return SCIP_READERROR;

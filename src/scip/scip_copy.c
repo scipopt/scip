@@ -1044,7 +1044,7 @@ SCIP_RETCODE copyVars(
       /* copy variable and add this copy to the target SCIP if the copying was valid */
       SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevars[i], &targetvar, localvarmap, localconsmap, global, &success) );
       /* copy exact data, if solving exactly */
-      if( SCIPisExactSolve(targetscip) && SCIPisExactSolve(sourcescip) )
+      if( SCIPisExact(targetscip) && SCIPisExact(sourcescip) )
       {
          SCIP_CALL( SCIPvarCopyExactData(targetscip->mem->probmem, targetvar, sourcevars[i], FALSE) );
       }

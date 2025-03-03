@@ -229,7 +229,7 @@ SCIP_DECL_READERREAD(readerReadFix)
       return SCIP_READERROR;
    }
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("reading of fixing file in exact solving mode is not yet supported\n");
       return SCIP_READERROR;

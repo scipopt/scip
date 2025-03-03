@@ -861,7 +861,7 @@ SCIP_RETCODE getVariable(
       SCIPdebugMsg(scip, "creating new variable: <%s>\n", name);
       SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
             initial, removable, NULL, NULL, NULL, NULL, NULL) );
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPaddVarExactData(scip, newvar, NULL, NULL, NULL) );
       }
@@ -1666,7 +1666,7 @@ SCIP_RETCODE readObjective(
 
    assert(lpinput != NULL);
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIP_CALL( readObjectiveRational(scip, lpinput) );
       return SCIP_OKAY;
@@ -2247,7 +2247,7 @@ SCIP_RETCODE readConstraints(
 
    retcode = SCIP_OKAY;
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIP_CALL( readConstraintsRational(scip, lpinput) );
       return SCIP_OKAY;
@@ -2645,7 +2645,7 @@ SCIP_RETCODE readBounds(
 {
    assert(lpinput != NULL);
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIP_CALL( readBoundsRational(scip, lpinput) );
       return SCIP_OKAY;
@@ -2900,7 +2900,7 @@ SCIP_RETCODE readBinaries(
       if( SCIPvarGetLbGlobal(var) < 0.0 )
       {
          SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
             SCIP_Rational* tmp;
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
@@ -2912,7 +2912,7 @@ SCIP_RETCODE readBinaries(
       if( SCIPvarGetUbGlobal(var) > 1.0 )
       {
          SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
             SCIP_Rational* tmp;
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );

@@ -70,14 +70,14 @@ extern "C" {
 
 /** returns whether the solution process is arithmetically exact, i.e., not subject to roundoff errors
  *
- *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
+ *  @return Returns TRUE if \SCIP is in exact solving mode, otherwise FALSE
  */
 SCIP_EXPORT
-SCIP_Bool SCIPisExactSolve(
+SCIP_Bool SCIPisExact(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether aggreagtion is allowed to use negative slack */
+/** returns whether aggregation is allowed to use negative slack */
 SCIP_EXPORT
 SCIP_Bool SCIPallowNegSlack(
    SCIP*                 scip                /**< SCIP data structure */

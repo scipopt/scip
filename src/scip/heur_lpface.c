@@ -791,7 +791,7 @@ SCIP_RETCODE setupSubscipLpface(
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
       }
    }
-   assert(!SCIPisExactSolve(subscip));
+   assert(!SCIPisExact(subscip));
 
    /* fill subvars array with mapping from original variables and set the objective coefficient to the desired value */
    for( i = 0; i < nvars; i++ )

@@ -158,7 +158,7 @@ SCIP_RETCODE setupProbingSCIP(
    /* copy SCIP instance */
    SCIP_CALL( SCIPcopyConsCompression(scip, *probingscip, *varmapfw, NULL, "feaspump", NULL, NULL, 0, FALSE, FALSE,
          FALSE, TRUE, success) );
-   assert(!SCIPisExactSolve(*probingscip));
+   assert(!SCIPisExact(*probingscip));
 
    if( copycuts )
    {
@@ -224,7 +224,7 @@ SCIP_RETCODE setupSCIPparamsStage3(
     *       this triggers an error message that exact/enabled cannot be changed in or after problem creatin stage
     */
    SCIP_CALL( SCIPcopyParamSettings(scip, probingscip) );
-   assert(!SCIPisExactSolve(probingscip));
+   assert(!SCIPisExact(probingscip));
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
@@ -1254,7 +1254,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
 
       /* in exact mode we have to end diving prior to trying the solution */
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
          SCIP_CALL( SCIPendDive(scip) );

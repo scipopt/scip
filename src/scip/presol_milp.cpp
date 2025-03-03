@@ -1666,7 +1666,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    }
 
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
       return performRationalPresolving(scip, matrix, data, initialized, nfixedvars, naggrvars, nchgvartypes, nchgbds,
          naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result);
    else

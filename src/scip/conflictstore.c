@@ -321,7 +321,7 @@ SCIP_RETCODE removeExactConflictFromCertificateHashmap(
    assert(set->scip != NULL);
    assert(cons != NULL);
 
-   if( !SCIPisExactSolve(set->scip) || !SCIPisCertificateActive(set->scip)
+   if( !SCIPisExact(set->scip) || !SCIPisCertificateActive(set->scip)
       || strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "exactlinear") != 0 )
       return SCIP_OKAY;
 

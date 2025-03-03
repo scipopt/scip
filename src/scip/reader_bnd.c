@@ -300,7 +300,7 @@ SCIP_DECL_READERREAD(readerReadBnd)
       return SCIP_READERROR;
    }
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("reading of bounds file in exact solving mode is not yet supported\n");
       return SCIP_READERROR;

@@ -7575,7 +7575,7 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
     *       for example.  In this case, whether an exact or an fp copy is created, could probably decided by looking at
     *       the parameter value of exact/enabled in the target SCIP.
     */
-   assert(!SCIPisExactSolve(scip));
+   assert(!SCIPisExact(scip));
    (*valid) = FALSE;
 
    if( SCIPisGT(scip, lhs, rhs) )

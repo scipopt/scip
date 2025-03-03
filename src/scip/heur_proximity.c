@@ -216,7 +216,7 @@ SCIP_RETCODE solveLp(
       SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
       /* in exact mode we have to end diving prior to trying the solution */
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPunlinkSol(scip, sol) );
          SCIP_CALL( SCIPendDive(scip) );

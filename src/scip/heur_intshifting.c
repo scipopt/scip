@@ -1123,7 +1123,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
          /* in exact mode we have to end diving prior to trying the solution */
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
             SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
             SCIP_CALL( SCIPendDive(scip) );

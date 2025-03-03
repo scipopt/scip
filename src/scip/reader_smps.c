@@ -259,7 +259,7 @@ SCIP_DECL_READERREAD(readerReadSmps)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("reading of smps format in exact solving mode is not yet supported\n");
       return SCIP_READERROR;

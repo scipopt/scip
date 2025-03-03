@@ -2311,7 +2311,7 @@ SCIP_RETCODE SCIPendDive(
 
    /* the lower bound may have changed slightly due to LP resolve in SCIPlpEndDive() */
    if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL && SCIPlpIsRelax(scip->lp) && SCIPlpIsSolved(scip->lp)
-       && !SCIPlpExactDiving(scip->lpexact) && !SCIPisExactSolve(scip) )
+       && !SCIPlpExactDiving(scip->lpexact) && !SCIPisExact(scip) )
    {
       assert(SCIPtreeIsFocusNodeLPConstructed(scip->tree));
       SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->eventfilter, scip->tree, scip->transprob,

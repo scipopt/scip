@@ -583,7 +583,7 @@ SCIP_RETCODE applyRepair(
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_repairsub", SCIPgetProbName(scip));
 
    SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-   assert(!SCIPisExactSolve(subscip));
+   assert(!SCIPisExact(subscip));
 
    /* a trivial feasible solution can be constructed if violations are modeled with slack variables */
    if( heurdata->useslackvars )
@@ -1239,7 +1239,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
       /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result)
        * if we are not in exact solving mode
        */
-      if( cutoff && !SCIPisExactSolve(scip) )
+      if( cutoff && !SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;

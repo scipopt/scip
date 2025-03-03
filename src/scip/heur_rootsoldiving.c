@@ -344,7 +344,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
       SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
 
-      if( success && !SCIPisExactSolve(scip) )
+      if( success && !SCIPisExact(scip) )
       {
          SCIPdebugMsg(scip, "rootsoldiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
@@ -560,7 +560,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       SCIPdebugMsg(scip, "rootsoldiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* in exact mode we have to end diving prior to trying the solution */
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
          SCIP_CALL( SCIPendDive(scip) );

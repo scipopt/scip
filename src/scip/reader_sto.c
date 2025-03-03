@@ -2746,7 +2746,7 @@ SCIP_DECL_READERREAD(readerReadSto)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("reading of sto format in exact solving mode is not yet supported\n");
       return SCIP_READERROR;

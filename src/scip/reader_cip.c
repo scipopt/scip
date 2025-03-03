@@ -428,7 +428,7 @@ SCIP_RETCODE getVariable(
 
    /* parse the variable */
    SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, NULL, &endptr, &success) );
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIP_CALL( SCIPaddVarExactData(scip, var, NULL, NULL, NULL) );
    }

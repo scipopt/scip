@@ -1412,7 +1412,7 @@ SCIP_Rational* SCIPgetOrigObjoffsetExact(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetOrigObjoffsetExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   assert(SCIPisExactSolve(scip));
+   assert(SCIPisExact(scip));
 
    return scip->origprob->objoffsetexact;
 }
@@ -1777,12 +1777,12 @@ SCIP_RETCODE SCIPaddVar(
    }
 
    /* exact variable data should be available if and only if exact solving is turned on */
-   if( SCIPisExactSolve(scip) && !SCIPvarIsExact(var) )
+   if( SCIPisExact(scip) && !SCIPvarIsExact(var) )
    {
       SCIPerrorMessage("cannot add variable without exact data while exact solving is enabled\n");
       return SCIP_INVALIDDATA;
    }
-   else if( !SCIPisExactSolve(scip) && SCIPvarIsExact(var) )
+   else if( !SCIPisExact(scip) && SCIPvarIsExact(var) )
    {
       SCIPerrorMessage("cannot add variable with exact data while exact solving is disabled\n");
       return SCIP_INVALIDDATA;
@@ -3038,12 +3038,12 @@ SCIP_RETCODE SCIPaddCons(
    /* exact constraints should be added if and only if exact solving is turned on */
    /**@todo Add constraint handler flag "isexact" and provide method SCIPconshdlrIsExact() to avoid string comparison */
    isconsexact = strncmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "exactlinear", 11) == 0;
-   if( SCIPisExactSolve(scip) && !isconsexact )
+   if( SCIPisExact(scip) && !isconsexact )
    {
       SCIPerrorMessage("cannot add inexact constraint while exact solving is enabled\n");
       return SCIP_INVALIDDATA;
    }
-   else if( !SCIPisExactSolve(scip) && isconsexact )
+   else if( !SCIPisExact(scip) && isconsexact )
    {
       SCIPerrorMessage("cannot add exact constraint while exact solving is disabled\n");
       return SCIP_INVALIDDATA;
@@ -3610,12 +3610,12 @@ SCIP_RETCODE SCIPaddConsNode(
 
    /* exact constraints should be added if and only if exact solving is turned on */
    isconsexact = strncmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "exactlinear", 11) == 0;
-   if( SCIPisExactSolve(scip) && !isconsexact )
+   if( SCIPisExact(scip) && !isconsexact )
    {
       SCIPerrorMessage("cannot add inexact constraint while exact solving is enabled\n");
       return SCIP_INVALIDDATA;
    }
-   else if( !SCIPisExactSolve(scip) && isconsexact )
+   else if( !SCIPisExact(scip) && isconsexact )
    {
       SCIPerrorMessage("cannot add exact constraint while exact solving is disabled\n");
       return SCIP_INVALIDDATA;

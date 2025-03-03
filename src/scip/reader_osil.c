@@ -2360,7 +2360,7 @@ SCIP_DECL_READERREAD(readerReadOsil)
    nvars = 0;
    nconss = -1;
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("reading of osil format in exact solving mode is not yet supported\n");
       return SCIP_READERROR;

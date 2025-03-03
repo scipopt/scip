@@ -184,7 +184,7 @@ SCIP_RETCODE abortReadIfExact(
    const char*           errmsg              /**< Error Message */
    )
 {
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("%s\n",errmsg);
       if( created != NULL )
@@ -560,7 +560,7 @@ SCIP_RETCODE addConsTerm(
    SCIP_Bool lazycut;
    int i;
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       /* get exact lhs and rhs */
       switch( type )
@@ -764,7 +764,7 @@ SCIP_RETCODE addConsTerm(
       }
       else
       {
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
             SCIP_VAR* scipvar;
             SCIP_Rational* scipvalrat;
@@ -921,7 +921,7 @@ SCIP_RETCODE addConsTerm(
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       RatFreeBlock(SCIPblkmem(scip), &ratlhs);
       RatFreeBlock(SCIPblkmem(scip), &ratrhs);
@@ -955,7 +955,7 @@ SCIP_RETCODE addObjTerm(
          assert(mono_is_linear(term_get_element(term, i)));
 
          scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
             char str[SCIP_MAXSTRLEN];
             SCIP_Rational* scipvalrat;
@@ -1078,7 +1078,7 @@ SCIP_RETCODE addVar(
    SCIP_Bool removable;
    int branchpriority;
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       /* get exact lower bounds for exactlp constraint handler and safe FP-values for FP-problem */
       switch( bound_get_type(lower) )
@@ -1193,7 +1193,7 @@ SCIP_RETCODE addVar(
    SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, lb, ub, 0.0, vartype, varimpltype, initial, removable,
          NULL, NULL, NULL, NULL, NULL) );
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIP_CALL( SCIPaddVarExactData(scip, var, lbrat, ubrat, NULL) );
 #ifdef SCIP_MORE_DEBUG

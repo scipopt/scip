@@ -178,7 +178,7 @@ SCIP_DECL_READERREAD(readerReadSol)
       return SCIP_OKAY;
    }
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("reading of solution file in exact solving mode is not yet supported\n");
       return SCIP_READERROR;
