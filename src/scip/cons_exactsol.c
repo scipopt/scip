@@ -35,17 +35,15 @@
 
 #include "scip/cons_exactsol.h"
 #include "scip/cons_exactlp.h"
-#include "scip/lp.h"
-#include "scip/lpexact.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_lpexact.h"
+#include "scip/pub_sol.h"
 #include "scip/pub_var.h"
 #include "scip/rational.h"
-#include "scip/cons.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_lpexact.h"
 #include "scip/scip_sol.h"
 #include "scip/set.h"
-#include "scip/sol.h"
-#include "scip/stat.h"
 
 
 /* fundamental constraint handler properties */
@@ -345,8 +343,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    int nconsprob;
    int i;
    int c;
-   SCIP_Real starttime;
-   SCIP_Real endtime;
    SCIP_CONSHDLRDATA* conshdlrdata;
 #ifdef NDEBUG
    SCIP_RETCODE retstat;
@@ -423,7 +419,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       SCIP_CALL( SCIPflushLP(scip) );
    }
 
-   starttime = SCIPgetSolvingTime(scip);
    nconsprob = SCIPgetNConss(scip);
    consprob = SCIPgetConss(scip);
 
@@ -507,8 +502,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
          return SCIP_OKAY;
       }
    }
-
-   scip->stat->ncallsexactsol++;
 
    /* start exact diving */
    SCIP_CALL( SCIPstartExactDive(scip) );
@@ -633,21 +626,17 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    /* terminate exact diving */
    SCIP_CALL( SCIPendExactDive(scip) );
 
-   endtime = SCIPgetSolvingTime(scip);
    if( foundsol )
    {
       SCIPdebugMessage("successfully found feasible improving solution, objval %g, upperbound %g\n",
          SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip));
       conshdlrdata->ncurrentstalls = 0;
-      scip->stat->nfoundexactsol++;
-      scip->stat->timesuccessexactsol += (endtime - starttime);
    }
    else
    {
       SCIPdebugMessage("repaired solution not feasible or not improving, objval %g, upperbound %g \n",
          SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip));
       conshdlrdata->ncurrentstalls++;
-      scip->stat->timefailexactsol += (endtime - starttime);
    }
 
    return SCIP_OKAY;
@@ -773,7 +762,7 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
 
-   /* create ExactSol constraint handler data */
+   /* create exactsol constraint handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    conshdlr = NULL;
 
@@ -782,10 +771,16 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpExactSol, consEnfopsExactSol, consCheckExactSol, consLockExactSol,
          conshdlrdata) );
+   assert(conshdlr != NULL);
 
+   /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyExactSol, NULL) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxExactSol) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitExactSol) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitExactSol) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeExactSol) );
 
+   /* add exactsol constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/checkfpfeasibility",
          "should a solution be checked in floating-point arithmetic prior to being processed?",
@@ -802,11 +797,6 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
          "constraints/" CONSHDLR_NAME "/minimprove",
          "minimal percentage of primal improvement to trigger solution processing",
          &conshdlrdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   SCIPconshdlrSetInit(conshdlr, consInitExactSol);
-   SCIPconshdlrSetExit(conshdlr, consExitExactSol);
-   SCIPconshdlrSetFree(conshdlr, consFreeExactSol);
-   assert(conshdlr != NULL);
 
    return SCIP_OKAY;
 }
