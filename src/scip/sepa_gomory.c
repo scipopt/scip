@@ -848,10 +848,10 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          sepaExeclpGomory, NULL,
          sepadata) );
 
+   assert(sepa != NULL);
+
    /* gomory is safe to use in exact solving mode */
    SCIPsepaMarkExact(sepa);
-
-   assert(sepa != NULL);
 
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->strongcg, "strongcg", "separator for strong CG cuts", -100000, SEPA_FREQ, 0.0,
       SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );

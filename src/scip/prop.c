@@ -938,7 +938,6 @@ void SCIPpropSetResprop(
 }
 
 /** marks the propagator as safe to use in exact solving mode */
-SCIP_EXPORT
 void SCIPpropMarkExact(
    SCIP_PROP*            prop                /**< propagator */
    )
