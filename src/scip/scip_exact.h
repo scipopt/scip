@@ -92,13 +92,6 @@ char SCIPdualBoundMethod(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** enforce integrality of the current exact rational lp solution */ 
-SCIP_EXPORT
-SCIP_RETCODE SCIPcheckIntegralityExact(
-   SCIP*                 scip,
-   SCIP_RESULT*          result
-   );
-
 /** returns whether the certificate output is activated */
 SCIP_EXPORT
 SCIP_Bool SCIPisCertificateActive(
@@ -176,20 +169,6 @@ SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
 /** frees the active aggregation information */
 SCIP_EXPORT
 SCIP_RETCODE SCIPfreeCertificateActiveAggregationInfo(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** computes a safe bound that is valid in exact rational arithmetic */
-SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeSafeBound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             proveinfeas,        /**< should infeasibility be proven instead */
-   SCIP_Real*            safebound           /**< store the safe bound */
-   );
-
-/** forces the next lp to be solved by a rational lp solver */
-SCIP_EXPORT
-SCIP_RETCODE SCIPforceExactSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

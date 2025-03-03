@@ -728,16 +728,6 @@ SCIP_RETCODE SCIPlpExactClear(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** checks whether primal solution satisfies all integrality restrictions exactly.
- * This checks either the fp solution exactly or checks the exact solution, if one exists.
- */
-SCIP_RETCODE SCIPlpExactcheckIntegralityExact(
-   SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_RESULT*          result              /**< result pointer */
-   );
-
 /** forces an exact lp to be solved in the next exact bound computation */
 void SCIPlpExactForceExactSolve(
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
