@@ -47,7 +47,7 @@
 #include "scip/type_prob.h"
 #include "scip/type_rational.h"
 #include "scip/type_sol.h"
-#include "scip/pub_lp.h"
+#include "scip/pub_lpexact.h"
 
 #include "scip/struct_lpexact.h"
 
