@@ -1432,7 +1432,7 @@ SCIP_Bool solOfInterest(
 
       SCIP_CALL_ABORT( RatCreateBuffer(set->buffer, &tmpobj) );
 
-      if(SCIPsolIsExact(sol))
+      if( SCIPsolIsExact(sol) )
          SCIPsolGetObjExact(sol, set, transprob, origprob, tmpobj);
       else
          RatSetReal(tmpobj, SCIPsolGetObj(sol, set, transprob, origprob));
