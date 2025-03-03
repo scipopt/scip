@@ -137,6 +137,12 @@ SCIP_Bool SCIProwExactHasFpRelax(
    SCIP_ROWEXACT*        row                 /**< SCIP row */
    );
 
+/** returns whether the exact LP is in diving mode */
+SCIP_EXPORT
+SCIP_Bool SCIPlpExactDiving(
+   SCIP_LPEXACT*         lpexact             /**< current exact LP data */
+   );
+
 #ifdef __cplusplus
 }
 #endif

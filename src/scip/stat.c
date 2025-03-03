@@ -684,10 +684,6 @@ void SCIPstatResetCurrentRun(
    stat->boundingerrorbs = 0;
    stat->boundingerrorps = 0;
    stat->boundingerrorexlp = 0;
-   stat->ncallsexactsol = 0;
-   stat->nfoundexactsol = 0;
-   stat->timefailexactsol = 0;
-   stat->timesuccessexactsol = 0;
    stat->lastbranchvar = NULL;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
    stat->nrootboundchgsrun = 0;

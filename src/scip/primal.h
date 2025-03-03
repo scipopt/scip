@@ -78,8 +78,8 @@ SCIP_RETCODE SCIPprimalSetCutoffbound(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -96,8 +96,8 @@ SCIP_RETCODE SCIPprimalSetUpperbound(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
@@ -111,8 +111,8 @@ SCIP_RETCODE SCIPprimalUpdateObjlimit(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -126,8 +126,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -141,8 +141,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -201,7 +201,7 @@ SCIP_RETCODE SCIPprimalAddSol(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
@@ -219,7 +219,7 @@ SCIP_RETCODE SCIPprimalAddSolFree(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
@@ -259,7 +259,7 @@ SCIP_RETCODE SCIPprimalAddCurrentSol(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution (or NULL if it's from the tree) */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
@@ -277,7 +277,7 @@ SCIP_RETCODE SCIPprimalTrySol(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
    SCIP_Bool             completely,         /**< Should all violations be checked? */
@@ -300,7 +300,7 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
    SCIP_Bool             completely,         /**< Should all violations be checked? */
@@ -323,7 +323,7 @@ SCIP_RETCODE SCIPprimalTryCurrentSol(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution (or NULL if it's from the tree) */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
    SCIP_Bool             completely,         /**< Should all violations be checked? */
@@ -363,8 +363,8 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -386,7 +386,7 @@ SCIP_RETCODE SCIPprimalTransformSol(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Real*            solvals,            /**< array for internal use to store solution values, or NULL;
                                               *   if the method is called multiple times in a row, an array with size >=
                                               *   number of active variables should be given for performance reasons */

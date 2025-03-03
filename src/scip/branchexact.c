@@ -302,6 +302,7 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR*             var,                /**< variable to branch on */
    SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
    SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
@@ -404,8 +405,8 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
       /* update branching information in certificate, if certificate is active */
       SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
 
-      SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-            NULL, var, downub, SCIP_BOUNDTYPE_UPPER, FALSE) );
+      SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
+            eventqueue, eventfilter, NULL, var, downub, SCIP_BOUNDTYPE_UPPER, FALSE) );
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
 
@@ -428,8 +429,8 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
       /* update branching information in certificate, if certificate is active */
       SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, uplb) );
 
-      SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-            NULL, var, uplb, SCIP_BOUNDTYPE_LOWER, FALSE) );
+      SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
+            eventqueue, eventfilter, NULL, var, uplb, SCIP_BOUNDTYPE_LOWER, FALSE) );
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
 
@@ -455,6 +456,7 @@ SCIP_RETCODE SCIPbranchExecLPExact(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Real             cutoffbound,        /**< global upper cutoff bound */
    SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
@@ -486,8 +488,8 @@ SCIP_RETCODE SCIPbranchExecLPExact(
     */
    if( branchcand->pseudomaxpriority > branchcand->lpmaxpriority )
    {
-      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cutoffbound,
-            allowaddcons, result) );
+      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
+            eventfilter, cutoffbound, allowaddcons, result) );
       assert(*result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND);
       return SCIP_OKAY;
    }
@@ -515,7 +517,7 @@ SCIP_RETCODE SCIPbranchExecLPExact(
 #endif
 
       SCIP_CALL( SCIPtreeBranchVarExact(tree, reopt, blkmem, set, stat, transprob, origprob, lp,
-            branchcand, eventqueue, branchvar, NULL, NULL, NULL) );
+            branchcand, eventqueue, eventfilter, branchvar, NULL, NULL, NULL) );
       *result = SCIP_BRANCHED;
    }
    /* reset the validlpcandslp to recalculate the branchcands for normal branching */

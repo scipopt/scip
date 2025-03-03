@@ -463,33 +463,6 @@ SCIP_Longint SCIPgetNExactLP(
    return scip->stat->nexlpinf + scip->stat->nexlp;
 }
 
-/** gets number of calls to the exact repair heuristic
- *
- *  @return the number of calls to the exact repair heuristic
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- */
-SCIP_Longint SCIPgetNExactSol(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNExactSol", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-
-   return scip->stat->ncallsexactsol;
-}
-
 /** gets total number of iterations used so far in primal and dual simplex and barrier algorithm
  *
  *  @return the total number of iterations used so far in primal and dual simplex and barrier algorithm
@@ -1835,8 +1808,8 @@ SCIP_RETCODE SCIPupdateCutoffbound(
 
    assert(cutoffbound <= SCIPgetCutoffbound(scip));
 
-   SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-         scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, cutoffbound, FALSE) );
+   SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+         scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, cutoffbound, FALSE) );
 
    return SCIP_OKAY;
 }

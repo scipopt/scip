@@ -301,58 +301,6 @@ SCIP_RETCODE SCIPprintCertificateMirCut(
    return SCIP_OKAY;
 }
 
-/** compute a safe bound for the current lp solution */
-SCIP_RETCODE SCIPcomputeSafeBound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             proveinfeas,        /**< should infeasibility be proven */
-   SCIP_Real*            safebound           /**< safe the resulting bound */
-   )
-{
-   SCIP_Bool lperror = false;
-
-   assert(scip != NULL);
-   assert(scip->stat != NULL);
-   assert(scip->lp != NULL && scip->lpexact != NULL);
-
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPcomputeSafeBound", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   SCIP_CALL( SCIPlpExactComputeSafeBound(scip->lp, scip->lpexact, scip->set, scip->messagehdlr, SCIPblkmem(scip),
-         scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob,
-         &lperror, proveinfeas, safebound, NULL, NULL) );
-
-   if( lperror )
-      return SCIP_ERROR;
-
-   return SCIP_OKAY;
-}
-
-/** force the next lp to be solved exactly */
-SCIP_RETCODE SCIPforceExactSolve(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->lpexact != NULL);
-
-   scip->lpexact->forceexactsolve = TRUE;
-
-   return SCIP_OKAY;
-}
-
-/** check exact integrality of lp solution */
-SCIP_RETCODE SCIPcheckIntegralityExact(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RESULT*          result              /**< result pointer */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->lp != NULL && scip->lpexact != NULL);
-
-   SCIP_CALL( SCIPlpExactcheckIntegralityExact(scip->lp, scip->lpexact, scip->set, result) );
-
-   return SCIP_OKAY;
-}
-
 /** branches on an LP solution exactly; does not call branching rules, since fractionalities are assumed to small;
  *  if no fractional variables exist, the result is SCIP_DIDNOTRUN;
  *
@@ -372,8 +320,8 @@ SCIP_RETCODE SCIPbranchLPExact(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPbranchLPExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbranchExecLPExact(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound,
-         TRUE, result) );
+         scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->primal->cutoffbound, TRUE, result) );
 
    return SCIP_OKAY;
 }

@@ -161,12 +161,8 @@ struct SCIP_Stat
    SCIP_Real             boundingerrorbs;    /**< aggregated error of all bound shift calls */
    SCIP_Real             boundingerrorps;    /**< aggregated error of all project-and-shift calls */
    SCIP_Real             boundingerrorexlp;  /**< aggregated error of all exact lp calls */
-   SCIP_Real             timesuccessexactsol;/**< time spent in exactsol constraint handler that led to a found solution */
-   SCIP_Real             timefailexactsol;   /**< time spent in exactsol constraint handler that did not lead to a solution */
    SCIP_Real             timefailexlpinf;    /**< time spent in exact lp that failed to prove infeasibility */
    SCIP_Real             timefailexlp;       /**< time spent in exact lp that failed to prove bounds */
-   SCIP_Longint          ncallsexactsol;     /**< number of runs of exactsol constraint handler */
-   SCIP_Longint          nfoundexactsol;     /**< number of sols found by exactsol constraint handler */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           solvingtimeoverall; /**< total time used for solving (including presolving) during reoptimization */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */

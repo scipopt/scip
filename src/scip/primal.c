@@ -269,8 +269,8 @@ SCIP_RETCODE primalSetCutoffbound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -302,7 +302,7 @@ SCIP_RETCODE primalSetCutoffbound(
    SCIP_CALL( SCIPlpSetCutoffbound(lp, set, prob, primal->cutoffbound) );
 
    /* cut off leaves of the tree */
-   SCIP_CALL( SCIPtreeCutoff(tree, reopt, blkmem, set, stat, eventfilter, eventqueue, lp, primal->cutoffbound) );
+   SCIP_CALL( SCIPtreeCutoff(tree, reopt, blkmem, set, stat, eventqueue, eventfilter, lp, primal->cutoffbound) );
 
    return SCIP_OKAY;
 }
@@ -315,8 +315,8 @@ SCIP_RETCODE primalSetCutoffboundExact(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -337,7 +337,7 @@ SCIP_RETCODE primalSetCutoffboundExact(
    SCIP_CALL( SCIPlpSetCutoffbound(lp, set, prob, primal->cutoffbound) );
 
    /* cut off leaves of the tree */
-   SCIP_CALL( SCIPtreeCutoff(tree, reopt, blkmem, set, stat, eventfilter, eventqueue, lp, primal->cutoffbound) );
+   SCIP_CALL( SCIPtreeCutoff(tree, reopt, blkmem, set, stat, eventqueue, eventfilter, lp, primal->cutoffbound) );
 
    return SCIP_OKAY;
 }
@@ -348,8 +348,8 @@ SCIP_RETCODE SCIPprimalSetCutoffbound(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            transprob,          /**< transformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -384,7 +384,7 @@ SCIP_RETCODE SCIPprimalSetCutoffbound(
       }
 
       /* update cutoff bound */
-      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventfilter, eventqueue, tree, reopt, lp, cutoffbound) );
+      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventqueue, eventfilter, tree, reopt, lp, cutoffbound) );
    }
    else if( cutoffbound > primal->cutoffbound )
    {
@@ -402,8 +402,8 @@ SCIP_RETCODE primalSetUpperbound(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
@@ -439,7 +439,7 @@ SCIP_RETCODE primalSetUpperbound(
    /* update cutoff bound */
    if( cutoffbound < primal->cutoffbound )
    {
-      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, prob, eventfilter, eventqueue, tree, reopt, lp, cutoffbound) );
+      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, prob, eventqueue, eventfilter, tree, reopt, lp, cutoffbound) );
    }
 
    /* update upper bound in visualization output */
@@ -458,8 +458,8 @@ SCIP_RETCODE primalSetUpperboundExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
@@ -498,7 +498,7 @@ SCIP_RETCODE primalSetUpperboundExact(
    /* update cutoff bound */
    if( SCIPrationalIsLT(cutoffbound, primal->cutoffboundexact) )
    {
-      SCIP_CALL( primalSetCutoffboundExact(primal, blkmem, set, stat, prob, eventfilter, eventqueue, tree, reopt, lp, cutoffbound) );
+      SCIP_CALL( primalSetCutoffboundExact(primal, blkmem, set, stat, prob, eventqueue, eventfilter, tree, reopt, lp, cutoffbound) );
    }
 
    /* update upper bound in visualization output */
@@ -518,8 +518,8 @@ SCIP_RETCODE SCIPprimalSetUpperbound(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
@@ -533,7 +533,7 @@ SCIP_RETCODE SCIPprimalSetUpperbound(
    if( upperbound < primal->upperbound )
    {
       /* update primal bound */
-      SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventfilter, eventqueue, prob, tree, reopt, lp, upperbound) );
+      SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, eventfilter, prob, tree, reopt, lp, upperbound) );
    }
    else if( upperbound > primal->upperbound )
    {
@@ -550,8 +550,8 @@ SCIP_RETCODE SCIPprimalUpdateObjlimit(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            transprob,          /**< transformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -572,13 +572,13 @@ SCIP_RETCODE SCIPprimalUpdateObjlimit(
    /* update the cutoff bound */
    if( objlimit < primal->cutoffbound )
    {
-      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventfilter, eventqueue, tree, reopt, lp, objlimit) );
+      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventqueue, eventfilter, tree, reopt, lp, objlimit) );
    }
 
    /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */
    if( objlimit < primal->upperbound )
    {
-      SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, tree, reopt, lp, objlimit) );
+      SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, tree, reopt, lp, objlimit) );
    }
 
    return SCIP_OKAY;
@@ -590,8 +590,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -625,17 +625,17 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    }
 
    /* invalidate old upper bound */
-   SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, tree, reopt, lp, SCIPsetInfinity(set)) );
+   SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, tree, reopt, lp, SCIPsetInfinity(set)) );
 
    /* reset the cutoff bound
     *
     * @note we might need to relax the bound since in presolving the objective correction of an
     *       aggregation is still in progress
     */
-   SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventfilter, eventqueue, tree, reopt, lp, upperbound) );
+   SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventqueue, eventfilter, tree, reopt, lp, upperbound) );
 
    /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */
-   SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, tree, reopt, lp, upperbound) );
+   SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, tree, reopt, lp, upperbound) );
 
    return SCIP_OKAY;
 }
@@ -646,8 +646,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -695,17 +695,17 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    }
 
    /* invalidate old upper bound */
-   SCIP_CALL( primalSetUpperboundExact(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, tree, reopt, lp, inf) );
+   SCIP_CALL( primalSetUpperboundExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, tree, reopt, lp, inf) );
 
    /* reset the cutoff bound
     *
     * @note we might need to relax the bound since in presolving the objective correction of an
     *       aggregation is still in progress
     */
-   SCIP_CALL( primalSetCutoffboundExact(primal, blkmem, set, stat, transprob, eventfilter, eventqueue, tree, reopt, lp, upperbound) );
+   SCIP_CALL( primalSetCutoffboundExact(primal, blkmem, set, stat, transprob, eventqueue, eventfilter, tree, reopt, lp, upperbound) );
 
    /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */
-   SCIP_CALL( primalSetUpperboundExact(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, tree, reopt, lp, upperbound) );
+   SCIP_CALL( primalSetUpperboundExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, tree, reopt, lp, upperbound) );
 
    SCIPfreeRationalBuffer(set->buffer, &inf);
    SCIPfreeRationalBuffer(set->buffer, &upperbound);
@@ -865,7 +865,7 @@ SCIP_RETCODE primalAddSol(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_SOL**            solptr,             /**< pointer to primal CIP solution */
    int                   insertpos,          /**< position in solution storage to add solution to */
    SCIP_Bool             replace             /**< should the solution at insertpos be replaced by the new solution? */
@@ -1067,7 +1067,7 @@ SCIP_RETCODE primalAddSol(
       SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
       /* update the upper bound */
-      SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, tree, reopt, lp, obj) );
+      SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, tree, reopt, lp, obj) );
 
       primal->nbestsolsfound++;
       stat->bestsolnode = stat->nnodes;
@@ -1432,7 +1432,7 @@ SCIP_Bool solOfInterest(
 
       SCIP_CALL_ABORT( SCIPcreateRationalBuffer(set->buffer, &tmpobj) );
 
-      if(SCIPsolIsExact(sol))
+      if( SCIPsolIsExact(sol) )
          SCIPsolGetObjExact(sol, set, transprob, origprob, tmpobj);
       else
          SCIPrationalSetReal(tmpobj, SCIPsolGetObj(sol, set, transprob, origprob));
@@ -1497,7 +1497,7 @@ SCIP_RETCODE SCIPprimalAddSol(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
@@ -1565,7 +1565,7 @@ SCIP_RETCODE SCIPprimalAddSolFree(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
@@ -1759,7 +1759,7 @@ SCIP_RETCODE SCIPprimalAddCurrentSol(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution (or NULL if it's from the tree) */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
@@ -1789,7 +1789,7 @@ SCIP_RETCODE SCIPprimalTrySol(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
    SCIP_Bool             completely,         /**< Should all violations be checked? */
@@ -1859,7 +1859,7 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool             printreason,        /**< Should all the reasons of violations be printed? */
    SCIP_Bool             completely,         /**< Should all violations be checked? */
@@ -1933,7 +1933,7 @@ SCIP_RETCODE SCIPprimalTryCurrentSol(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution (or NULL if it's from the tree) */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
    SCIP_Bool             completely,         /**< Should all violations be checked? */
@@ -2036,8 +2036,8 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -2072,7 +2072,7 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
       if( obj < primal->cutoffbound )
       {
          /* update the upper bound */
-         SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, tree, reopt, lp, obj) );
+         SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, tree, reopt, lp, obj) );
       }
    }
 
@@ -2093,7 +2093,7 @@ SCIP_RETCODE SCIPprimalTransformSol(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Real*            solvals,            /**< array for internal use to store solution values, or NULL;
                                               *   if the method is called multiple times in a row, an array with size >=
                                               *   number of active variables should be given for performance reasons */

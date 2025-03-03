@@ -51,6 +51,7 @@
 #include "scip/misc.h"
 #include "scip/prob.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_lpexact.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
@@ -9969,7 +9970,7 @@ SCIP_RETCODE SCIPlpShrinkRows(
          /* check, if row deletion events are tracked
           * if so, issue ROWDELETEDLP event
           */
-         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )
+         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )  /*lint !e587*/
          {
             SCIP_EVENT* event;
 
@@ -15767,7 +15768,7 @@ SCIP_RETCODE lpDelRowset(
          /* check, if row deletion events are tracked
           * if so, issue ROWDELETEDLP event
           */
-         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )
+         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )  /*lint !e587*/
          {
             SCIP_EVENT* event;
 

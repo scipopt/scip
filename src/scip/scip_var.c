@@ -3627,7 +3627,8 @@ SCIP_RETCODE analyzeStrongbranch(
          assert(downconflict != NULL);
          assert(upconflict   != NULL);
          SCIP_CALL( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->conflictstore, scip->mem->probmem, scip->set, scip->stat,
-               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, col, downconflict, upconflict) );
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, \
+               scip->cliquetable, col, downconflict, upconflict) );
       }
    }
 
@@ -5538,7 +5539,7 @@ SCIP_RETCODE SCIPaddVarObj(
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
       SCIP_CALL( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal,
-            scip->tree, scip->reopt, scip->lp, scip->eventfilter, scip->eventqueue, addobj) );
+            scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter, addobj) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -5546,7 +5547,7 @@ SCIP_RETCODE SCIPaddVarObj(
    case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_PRESOLVED:
       SCIP_CALL( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal,
-            scip->tree, scip->reopt, scip->lp, scip->eventfilter, scip->eventqueue, addobj) );
+            scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter, addobj) );
       return SCIP_OKAY;
 
    default:
@@ -5725,11 +5726,11 @@ SCIP_RETCODE SCIPchgVarLb(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgLbOriginal(var, scip->set, newbound) );
       SCIP_CALL( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
       SCIP_CALL( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      SCIP_CALL( SCIPvarChgLbOriginal(var, scip->set, newbound) );
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -5745,8 +5746,8 @@ SCIP_RETCODE SCIPchgVarLb(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-               var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -5761,8 +5762,7 @@ SCIP_RETCODE SCIPchgVarLb(
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, newbound,
-            SCIP_BOUNDTYPE_LOWER, FALSE) );
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
       break;
 
    default:
@@ -5815,11 +5815,11 @@ SCIP_RETCODE SCIPchgVarLbExact(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgLbOriginalExact(var, scip->set, newbound) );
       SCIP_CALL( SCIPvarChgLbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
             scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
       SCIP_CALL( SCIPvarChgLbLocalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
             scip->branchcand, scip->eventqueue, newbound) );
-      SCIP_CALL( SCIPvarChgLbOriginalExact(var, scip->set, newbound) );
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -5834,9 +5834,9 @@ SCIP_RETCODE SCIPchgVarLbExact(
          assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
-         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable,
-               var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
+               scip->eventqueue, scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -5849,10 +5849,9 @@ SCIP_RETCODE SCIPchgVarLbExact(
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
-      SCIP_CALL( SCIPnodeAddBoundchgExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, newbound,
-            SCIP_BOUNDTYPE_LOWER, FALSE) );
+      SCIP_CALL( SCIPnodeAddBoundchgExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set,
+            scip->stat, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
+            scip->eventqueue, scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
       break;
 
    default:
@@ -5905,11 +5904,11 @@ SCIP_RETCODE SCIPchgVarUb(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgUbOriginal(var, scip->set, newbound) );
       SCIP_CALL( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
       SCIP_CALL( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      SCIP_CALL( SCIPvarChgUbOriginal(var, scip->set, newbound) );
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -5926,7 +5925,7 @@ SCIP_RETCODE SCIPchgVarUb(
 
          SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
                scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-               scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -5941,7 +5940,7 @@ SCIP_RETCODE SCIPchgVarUb(
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
       break;
 
    default:
@@ -5994,11 +5993,11 @@ SCIP_RETCODE SCIPchgVarUbExact(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgUbOriginalExact(var, scip->set, newbound) );
       SCIP_CALL( SCIPvarChgUbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
             scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
       SCIP_CALL( SCIPvarChgUbLocalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
             scip->branchcand, scip->eventqueue, newbound) );
-      SCIP_CALL( SCIPvarChgUbOriginalExact(var, scip->set, newbound) );
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -6013,9 +6012,9 @@ SCIP_RETCODE SCIPchgVarUbExact(
          assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
-         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue,
-               scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
+               scip->eventqueue, scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -6028,9 +6027,9 @@ SCIP_RETCODE SCIPchgVarUbExact(
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
-      SCIP_CALL( SCIPnodeAddBoundchgExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+      SCIP_CALL( SCIPnodeAddBoundchgExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set,
+            scip->stat, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
+            scip->eventqueue, scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
       break;
 
    default:
@@ -6078,8 +6077,8 @@ SCIP_RETCODE SCIPchgVarLbNode(
       }
 
       SCIP_CALL( SCIPnodeAddBoundchg(node, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-            SCIP_BOUNDTYPE_LOWER, FALSE) );
+            scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
    }
 
    return SCIP_OKAY;
@@ -6122,8 +6121,8 @@ SCIP_RETCODE SCIPchgVarUbNode(
       }
 
       SCIP_CALL( SCIPnodeAddBoundchg(node, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-            SCIP_BOUNDTYPE_UPPER, FALSE) );
+            scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
    }
 
    return SCIP_OKAY;
@@ -6191,8 +6190,8 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-               SCIP_BOUNDTYPE_LOWER, FALSE) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -6206,8 +6205,8 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-            SCIP_BOUNDTYPE_LOWER, FALSE) );
+            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
       break;
 
    default:
@@ -6280,8 +6279,8 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-               SCIP_BOUNDTYPE_UPPER, FALSE) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -6295,8 +6294,8 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-            SCIP_BOUNDTYPE_UPPER, FALSE) );
+            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
       break;
 
    default:
@@ -6477,8 +6476,8 @@ SCIP_RETCODE SCIPtightenVarLb(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-               SCIP_BOUNDTYPE_LOWER, FALSE) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -6490,8 +6489,8 @@ SCIP_RETCODE SCIPtightenVarLb(
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-            var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
       break;
 
    default:
@@ -6605,9 +6604,9 @@ SCIP_RETCODE SCIPtightenVarLbExact(
          assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
-         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-               SCIP_BOUNDTYPE_LOWER, FALSE) );
+         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
+               scip->eventqueue, scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -6618,9 +6617,9 @@ SCIP_RETCODE SCIPtightenVarLbExact(
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
-      SCIP_CALL( SCIPnodeAddBoundchgExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable,
-            var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+      SCIP_CALL( SCIPnodeAddBoundchgExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set,
+            scip->stat, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
+            scip->eventqueue, scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
       break;
 
    default:
@@ -6727,8 +6726,8 @@ SCIP_RETCODE SCIPtightenVarUb(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-               SCIP_BOUNDTYPE_UPPER, FALSE) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -6741,7 +6740,7 @@ SCIP_RETCODE SCIPtightenVarUb(
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
       break;
 
    default:
@@ -6855,9 +6854,9 @@ SCIP_RETCODE SCIPtightenVarUbExact(
          assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
-         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-               SCIP_BOUNDTYPE_UPPER, FALSE) );
+         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
+               scip->eventqueue, scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -6868,9 +6867,9 @@ SCIP_RETCODE SCIPtightenVarUbExact(
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
-      SCIP_CALL( SCIPnodeAddBoundchgExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable,
-            var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+      SCIP_CALL( SCIPnodeAddBoundchgExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set,
+            scip->stat, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
+            scip->eventqueue, scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
       break;
 
    default:
@@ -6927,8 +6926,8 @@ SCIP_RETCODE SCIPinferVarFixCons(
       SCIP_Bool fixed;
 
       SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter,
-            scip->eventqueue, scip->cliquetable, fixedval, infeasible, &fixed) );
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+            scip->eventfilter, scip->cliquetable, fixedval, infeasible, &fixed) );
 
       if( tightened != NULL )
 	 *tightened = fixed;
@@ -7037,8 +7036,8 @@ SCIP_RETCODE SCIPinferVarLbCons(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-               SCIP_BOUNDTYPE_LOWER, FALSE) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -7051,7 +7050,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, infercons, NULL, inferinfo, FALSE) );
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, infercons, NULL, inferinfo, FALSE) );
       break;
 
    default:
@@ -7151,8 +7150,8 @@ SCIP_RETCODE SCIPinferVarUbCons(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-               SCIP_BOUNDTYPE_UPPER, FALSE) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -7165,7 +7164,7 @@ SCIP_RETCODE SCIPinferVarUbCons(
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, infercons, NULL, inferinfo, FALSE) );
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, infercons, NULL, inferinfo, FALSE) );
       break;
 
    default:
@@ -7272,9 +7271,10 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
          assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
-         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, adjustedBound,
-               SCIP_BOUNDTYPE_UPPER, FALSE) );
+         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
+               scip->eventqueue, scip->eventfilter, scip->cliquetable, var, adjustedBound, SCIP_BOUNDTYPE_UPPER,
+               FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -7285,9 +7285,10 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
-      SCIP_CALL( SCIPnodeAddBoundinferExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, adjustedBound, SCIP_BOUNDTYPE_UPPER, infercons, NULL, inferinfo, FALSE) );
+      SCIP_CALL( SCIPnodeAddBoundinferExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set,
+            scip->stat, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
+            scip->eventqueue, scip->eventfilter, scip->cliquetable, var, adjustedBound, SCIP_BOUNDTYPE_UPPER,
+            infercons, NULL, inferinfo, FALSE) );
       break;
 
    default:
@@ -7392,9 +7393,10 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
          assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
-         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, adjustedBound,
-               SCIP_BOUNDTYPE_LOWER, FALSE) );
+         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
+               scip->eventqueue, scip->eventfilter, scip->cliquetable, var, adjustedBound, SCIP_BOUNDTYPE_LOWER,
+               FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -7405,9 +7407,10 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
-      SCIP_CALL( SCIPnodeAddBoundinferExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, adjustedBound, SCIP_BOUNDTYPE_LOWER, infercons, NULL, inferinfo, FALSE) );
+      SCIP_CALL( SCIPnodeAddBoundinferExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set,
+            scip->stat, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
+            scip->eventqueue, scip->eventfilter, scip->cliquetable, var, adjustedBound, SCIP_BOUNDTYPE_LOWER,
+            infercons, NULL, inferinfo, FALSE) );
       break;
 
    default:
@@ -7491,7 +7494,7 @@ SCIP_RETCODE SCIPinferBinvarCons(
          SCIP_Bool fixed;
 
          SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
                scip->cliquetable, (SCIP_Real)fixedval, infeasible, &fixed) );
          break;
       }
@@ -7501,13 +7504,13 @@ SCIP_RETCODE SCIPinferBinvarCons(
       {
          SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
                scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-               scip->cliquetable, var, 1.0, SCIP_BOUNDTYPE_LOWER, infercons, NULL, inferinfo, FALSE) );
+               scip->eventfilter, scip->cliquetable, var, 1.0, SCIP_BOUNDTYPE_LOWER, infercons, NULL, inferinfo, FALSE) );
       }
       else
       {
          SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
                scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-               scip->cliquetable, var, 0.0, SCIP_BOUNDTYPE_UPPER, infercons, NULL, inferinfo, FALSE) );
+               scip->eventfilter, scip->cliquetable, var, 0.0, SCIP_BOUNDTYPE_UPPER, infercons, NULL, inferinfo, FALSE) );
       }
       break;
 
@@ -7561,7 +7564,7 @@ SCIP_RETCODE SCIPinferVarFixProp(
       SCIP_Bool fixed;
 
       SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
             scip->cliquetable, fixedval, infeasible, &fixed) );
 
       if( tightened != NULL )
@@ -7672,8 +7675,8 @@ SCIP_RETCODE SCIPinferVarLbProp(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-               SCIP_BOUNDTYPE_LOWER, FALSE) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -7686,7 +7689,7 @@ SCIP_RETCODE SCIPinferVarLbProp(
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL, inferprop, inferinfo, FALSE) );
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL, inferprop, inferinfo, FALSE) );
       break;
 
    default:
@@ -7787,8 +7790,8 @@ SCIP_RETCODE SCIPinferVarUbProp(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-               SCIP_BOUNDTYPE_UPPER, FALSE) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -7801,7 +7804,7 @@ SCIP_RETCODE SCIPinferVarUbProp(
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL, inferprop, inferinfo, FALSE) );
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL, inferprop, inferinfo, FALSE) );
       break;
 
    default:
@@ -7888,7 +7891,7 @@ SCIP_RETCODE SCIPinferBinvarProp(
          SCIP_Bool fixed;
 
          SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
                scip->cliquetable, (SCIP_Real)fixedval, infeasible, &fixed) );
          break;
       }
@@ -7897,14 +7900,14 @@ SCIP_RETCODE SCIPinferBinvarProp(
       if( fixedval == TRUE )
       {
          SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, 1.0,
-               SCIP_BOUNDTYPE_LOWER, NULL, inferprop, inferinfo, FALSE) );
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, 1.0, SCIP_BOUNDTYPE_LOWER, NULL, inferprop, inferinfo, FALSE) );
       }
       else
       {
          SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
-               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, 0.0,
-               SCIP_BOUNDTYPE_UPPER, NULL, inferprop, inferinfo, FALSE) );
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, 0.0, SCIP_BOUNDTYPE_UPPER, NULL, inferprop, inferinfo, FALSE) );
       }
       break;
 
@@ -7995,9 +7998,10 @@ SCIP_RETCODE tightenVarLbGlobalSafe(
          assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
-         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newboundexact,
-               SCIP_BOUNDTYPE_LOWER, FALSE) );
+         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
+               scip->eventqueue, scip->eventfilter, scip->cliquetable, var, newboundexact, SCIP_BOUNDTYPE_LOWER,
+               FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -8009,8 +8013,8 @@ SCIP_RETCODE tightenVarLbGlobalSafe(
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-            scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newboundexact,
-            SCIP_BOUNDTYPE_LOWER, FALSE) );
+            scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue,
+            scip->eventfilter, scip->cliquetable, var, newboundexact, SCIP_BOUNDTYPE_LOWER, FALSE) );
       break;
 
    default:
@@ -8121,8 +8125,8 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-               SCIP_BOUNDTYPE_LOWER, FALSE) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -8134,8 +8138,8 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-            SCIP_BOUNDTYPE_LOWER, FALSE) );
+            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
       break;
 
    default:
@@ -8227,8 +8231,8 @@ SCIP_RETCODE tightenVarUbGlobalSafe(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newboundexact,
-               SCIP_BOUNDTYPE_UPPER, FALSE) );
+               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newboundexact, SCIP_BOUNDTYPE_UPPER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -8240,8 +8244,8 @@ SCIP_RETCODE tightenVarUbGlobalSafe(
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-            scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newboundexact,
-            SCIP_BOUNDTYPE_UPPER, FALSE) );
+            scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue,
+            scip->eventfilter, scip->cliquetable, var, newboundexact, SCIP_BOUNDTYPE_UPPER, FALSE) );
       break;
 
    default:
@@ -8352,8 +8356,8 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-               SCIP_BOUNDTYPE_UPPER, FALSE) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
          {
@@ -8365,8 +8369,8 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
-            SCIP_BOUNDTYPE_UPPER, FALSE) );
+            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
       break;
 
    default:
@@ -8655,8 +8659,8 @@ SCIP_RETCODE SCIPaddVarVlb(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarVlb", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPvarAddVlb(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->tree,
-         scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, vlbvar, vlbcoef, vlbconstant,
-         TRUE, infeasible, &nlocalbdchgs) );
+         scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, scip->eventfilter, vlbvar, vlbcoef,
+         vlbconstant, TRUE, infeasible, &nlocalbdchgs) );
 
    *nbdchgs = nlocalbdchgs;
 
@@ -8669,15 +8673,15 @@ SCIP_RETCODE SCIPaddVarVlb(
       {
          /* if b > 0, we have a variable upper bound: x >= b*z + d  =>  z <= (x-d)/b */
          SCIP_CALL( SCIPvarAddVub(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef,
-               -vlbconstant/vlbcoef, TRUE, infeasible, &nlocalbdchgs) );
+               scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, scip->eventfilter,
+               var, 1.0/vlbcoef, -vlbconstant/vlbcoef, TRUE, infeasible, &nlocalbdchgs) );
       }
       else
       {
          /* if b < 0, we have a variable lower bound: x >= b*z + d  =>  z >= (x-d)/b */
          SCIP_CALL( SCIPvarAddVlb(vlbvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, 1.0/vlbcoef,
-               -vlbconstant/vlbcoef, TRUE, infeasible, &nlocalbdchgs) );
+               scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, scip->eventfilter,
+               var, 1.0/vlbcoef, -vlbconstant/vlbcoef, TRUE, infeasible, &nlocalbdchgs) );
       }
       *nbdchgs += nlocalbdchgs;
    }
@@ -8714,8 +8718,8 @@ SCIP_RETCODE SCIPaddVarVub(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarVub", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPvarAddVub(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->tree,
-         scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, vubvar, vubcoef, vubconstant, TRUE,
-         infeasible, &nlocalbdchgs) );
+         scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, scip->eventfilter, vubvar, vubcoef,
+         vubconstant, TRUE, infeasible, &nlocalbdchgs) );
 
    *nbdchgs = nlocalbdchgs;
 
@@ -8728,15 +8732,15 @@ SCIP_RETCODE SCIPaddVarVub(
       {
          /* if b < 0, we have a variable lower bound: x >= b*z + d  =>  z >= (x-d)/b */
          SCIP_CALL( SCIPvarAddVlb(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, 1.0/vubcoef,
-               -vubconstant/vubcoef, TRUE, infeasible, &nlocalbdchgs) );
+               scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, scip->eventfilter,
+               var, 1.0/vubcoef, -vubconstant/vubcoef, TRUE, infeasible, &nlocalbdchgs) );
       }
       else
       {
          /* if b > 0, we have a variable upper bound: x >= b*z + d  =>  z <= (x-d)/b */
          SCIP_CALL( SCIPvarAddVub(vubvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var, 1.0/vubcoef,
-               -vubconstant/vubcoef, TRUE, infeasible, &nlocalbdchgs) );
+               scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, scip->eventfilter,
+               var, 1.0/vubcoef, -vubconstant/vubcoef, TRUE, infeasible, &nlocalbdchgs) );
       }
       *nbdchgs += nlocalbdchgs;
    }
@@ -8841,8 +8845,8 @@ SCIP_RETCODE SCIPaddVarImplication(
                return SCIP_OKAY;
 
             SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-                  scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
-                  implbound - lby, lby, TRUE, infeasible, nbdchgs) );
+                  scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, scip->eventfilter,
+                  var, implbound - lby, lby, TRUE, infeasible, nbdchgs) );
          }
          else
          {
@@ -8851,8 +8855,8 @@ SCIP_RETCODE SCIPaddVarImplication(
                return SCIP_OKAY;
 
             SCIP_CALL( SCIPvarAddVub(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-                  scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
-                  implbound - uby, uby, TRUE, infeasible, nbdchgs) );
+                  scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, scip->eventfilter,
+                  var, implbound - uby, uby, TRUE, infeasible, nbdchgs) );
          }
       }
       else
@@ -8864,8 +8868,8 @@ SCIP_RETCODE SCIPaddVarImplication(
                return SCIP_OKAY;
 
             SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-                  scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
-                  lby - implbound, implbound, TRUE, infeasible, nbdchgs) );
+                  scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, scip->eventfilter,
+                  var, lby - implbound, implbound, TRUE, infeasible, nbdchgs) );
          }
          else
          {
@@ -8874,16 +8878,16 @@ SCIP_RETCODE SCIPaddVarImplication(
                return SCIP_OKAY;
 
             SCIP_CALL( SCIPvarAddVub(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-                  scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
-                  uby - implbound, implbound, TRUE, infeasible, nbdchgs) );
+                  scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, scip->eventfilter,
+                  var, uby - implbound, implbound, TRUE, infeasible, nbdchgs) );
          }
       }
    }
    else
    {
       SCIP_CALL( SCIPvarAddImplic(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, varfixing, implvar, impltype,
-            implbound, TRUE, infeasible, nbdchgs) );
+            scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, scip->eventfilter,
+            varfixing, implvar, impltype, implbound, TRUE, infeasible, nbdchgs) );
    }
 
    return SCIP_OKAY;
@@ -8921,8 +8925,8 @@ SCIP_RETCODE SCIPaddClique(
    {
       /* add the clique to the clique table */
       SCIP_CALL( SCIPcliquetableAdd(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, vars, values, nvars, isequation,
-            infeasible, nbdchgs) );
+            scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+            vars, values, nvars, isequation, infeasible, nbdchgs) );
    }
 
    return SCIP_OKAY;
@@ -9525,8 +9529,8 @@ SCIP_RETCODE SCIPcleanupCliques(
    globalinfeasibility = FALSE;
    nlocalbdchgs = 0;
    SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-         scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, &nlocalbdchgs,
-         &globalinfeasibility) );
+         scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         &nlocalbdchgs, &globalinfeasibility) );
 
    if( infeasible != NULL )
       *infeasible = globalinfeasibility;
@@ -10381,16 +10385,16 @@ SCIP_RETCODE SCIPfixVar(
    /* in the problem creation stage, modify the bounds as requested, independently from the current bounds */
    if( scip->set->stage != SCIP_STAGE_PROBLEM )
    {
-      if( (SCIPvarIsIntegral(var) && !SCIPsetIsFeasIntegral(scip->set, fixedval))
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+      {
+         *infeasible = !SCIPsetIsFeasEQ(scip->set, fixedval, SCIPvarGetLbLocal(var));
+         return SCIP_OKAY;
+      }
+      else if( ( SCIPvarIsIntegral(var) && !SCIPsetIsFeasIntegral(scip->set, fixedval) )
          || SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetLbLocal(var))
          || SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
       {
          *infeasible = TRUE;
-         return SCIP_OKAY;
-      }
-      else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
-      {
-         *infeasible = !SCIPsetIsFeasEQ(scip->set, fixedval, SCIPvarGetLbLocal(var));
          return SCIP_OKAY;
       }
    }
@@ -10400,29 +10404,17 @@ SCIP_RETCODE SCIPfixVar(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      /* in the problem creation stage, modify the bounds as requested, independently from the current bounds;
-       * we have to make sure, that the order of the bound changes does not intermediately produce an invalid
-       * interval lb > ub
-       */
-      if( fixedval <= SCIPvarGetLbLocal(var) )
-      {
-         SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
-         SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
-         *fixed = TRUE;
-      }
-      else
-      {
-         SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
-         SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
-         *fixed = TRUE;
-      }
+      /* in the problem creation stage, modify the bounds as requested, independently from the current bounds */
+      SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
+      SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
+      *fixed = TRUE;
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
       if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
       {
          SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
                scip->cliquetable, fixedval, infeasible, fixed) );
          return SCIP_OKAY;
       }
@@ -10541,7 +10533,7 @@ SCIP_RETCODE SCIPfixVarExact(
       if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
       {
          SCIP_CALL( SCIPvarFixExact(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
                scip->cliquetable, fixedval, infeasible, fixed) );
          return SCIP_OKAY;
       }
@@ -10678,7 +10670,7 @@ SCIP_RETCODE SCIPaggregateVars(
 
       /* variable x was resolved to fixed variable: variable y can be fixed to c'/b' */
       SCIP_CALL( SCIPvarFix(vary, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
             scip->cliquetable, rhs/scalary, infeasible, aggregated) );
       *redundant = TRUE;
    }
@@ -10689,7 +10681,7 @@ SCIP_RETCODE SCIPaggregateVars(
 
       /* variable y was resolved to fixed variable: variable x can be fixed to c'/a' */
       SCIP_CALL( SCIPvarFix(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
             scip->cliquetable, rhs/scalarx, infeasible, aggregated) );
       *redundant = TRUE;
    }
@@ -10706,7 +10698,7 @@ SCIP_RETCODE SCIPaggregateVars(
       {
          /* sum of scalars is not zero: fix variable x' == y' to c'/(a'+b') */
          SCIP_CALL( SCIPvarFix(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
                scip->cliquetable, rhs/scalarx, infeasible, aggregated) );
       }
       *redundant = TRUE;
@@ -10715,8 +10707,8 @@ SCIP_RETCODE SCIPaggregateVars(
    {
       /* both variables are different active problem variables, and both scalars are non-zero: try to aggregate them */
       SCIP_CALL( SCIPvarTryAggregateVars(scip->set, scip->mem->probmem, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventfilter,
-            scip->eventqueue, varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue,
+            scip->eventfilter, varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
       *redundant = *aggregated;
    }
 
@@ -10823,7 +10815,7 @@ SCIP_RETCODE SCIPaggregateVarsExact(
       SCIPrationalDiv(rhs, rhs, scalary);
       /* variable x was resolved to fixed variable: variable y can be fixed to c'/b' */
       SCIP_CALL( SCIPvarFixExact(vary, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
             scip->cliquetable, rhs, infeasible, aggregated) );
       *redundant = TRUE;
    }
@@ -10835,7 +10827,7 @@ SCIP_RETCODE SCIPaggregateVarsExact(
       SCIPrationalDiv(rhs, rhs, scalarx);
       /* variable y was resolved to fixed variable: variable x can be fixed to c'/a' */
       SCIP_CALL( SCIPvarFixExact(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
             scip->cliquetable, rhs, infeasible, aggregated) );
       *redundant = TRUE;
    }
@@ -10853,7 +10845,7 @@ SCIP_RETCODE SCIPaggregateVarsExact(
          SCIPrationalDiv(rhs, rhs, scalarx);
          /* sum of scalars is not zero: fix variable x' == y' to c'/(a'+b') */
          SCIP_CALL( SCIPvarFixExact(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
                scip->cliquetable, rhs, infeasible, aggregated) );
       }
       *redundant = TRUE;
@@ -10862,8 +10854,8 @@ SCIP_RETCODE SCIPaggregateVarsExact(
    {
       /* both variables are different active problem variables, and both scalars are non-zero: try to aggregate them */
       SCIP_CALL( SCIPvarTryAggregateVarsExact(scip->set, scip->mem->probmem, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventfilter,
-            scip->eventqueue, varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue,
+            scip->eventfilter, varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
       *redundant = *aggregated;
    }
 
@@ -10912,8 +10904,8 @@ SCIP_RETCODE SCIPmultiaggregateVar(
    assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
 
    SCIP_CALL( SCIPvarMultiaggregate(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->primal, scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventfilter,
-         scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible, aggregated) );
+         scip->primal, scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue,
+         scip->eventfilter, naggvars, aggvars, scalars, constant, infeasible, aggregated) );
 
    return SCIP_OKAY;
 }
@@ -10957,8 +10949,8 @@ SCIP_RETCODE SCIPmultiaggregateVarExact(
    assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
 
    SCIP_CALL( SCIPvarMultiaggregateExact(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->primal, scip->tree, scip->reopt, scip->lpexact, scip->cliquetable, scip->branchcand, scip->eventfilter,
-         scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible, aggregated) );
+         scip->primal, scip->tree, scip->reopt, scip->lpexact, scip->cliquetable, scip->branchcand, scip->eventqueue,
+         scip->eventfilter, naggvars, aggvars, scalars, constant, infeasible, aggregated) );
 
    return SCIP_OKAY;
 }

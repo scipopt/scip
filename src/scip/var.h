@@ -431,8 +431,8 @@ SCIP_RETCODE SCIPvarFix(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Real             fixedval,           /**< value to fix variable at */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
@@ -452,8 +452,8 @@ SCIP_RETCODE SCIPvarFixExact(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Rational*        fixedval,           /**< value to fix variable at */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
@@ -566,8 +566,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR*             varx,               /**< variable x in equality a*x + b*y == c */
    SCIP_VAR*             vary,               /**< variable y in equality a*x + b*y == c */
    SCIP_Real             scalarx,            /**< multiplier a in equality a*x + b*y == c */
@@ -602,8 +602,8 @@ SCIP_RETCODE SCIPvarTryAggregateVarsExact(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR*             varx,               /**< variable x in equality a*x + b*y == c */
    SCIP_VAR*             vary,               /**< variable y in equality a*x + b*y == c */
    SCIP_Rational*        scalarx,            /**< multiplier a in equality a*x + b*y == c */
@@ -627,8 +627,8 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
    SCIP_Real             scalar,             /**< multiplier a in aggregation x = a*y + c */
    SCIP_Real             constant,           /**< constant shift c in aggregation x = a*y + c */
@@ -650,8 +650,8 @@ SCIP_RETCODE SCIPvarAggregateExact(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
    SCIP_Rational*        scalar,             /**< multiplier a in aggregation x = a*y + c */
    SCIP_Rational*        constant,           /**< constant shift c in aggregation x = a*y + c */
@@ -673,8 +673,8 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int                   naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    SCIP_VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    SCIP_Real*            scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
@@ -697,8 +697,8 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int                   naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    SCIP_VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    SCIP_Rational**       scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
@@ -874,8 +874,8 @@ SCIP_RETCODE SCIPvarAddObj(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Real             addobj              /**< additional objective value for variable */
    );
 
@@ -891,8 +891,8 @@ SCIP_RETCODE SCIPvarAddObjExact(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Rational*        addobj              /**< additional objective value for variable */
    );
 
@@ -1285,6 +1285,7 @@ SCIP_RETCODE SCIPvarAddVlb(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR*             vlbvar,             /**< variable z    in x >= b*z + d */
    SCIP_Real             vlbcoef,            /**< coefficient b in x >= b*z + d */
    SCIP_Real             vlbconstant,        /**< constant d    in x >= b*z + d */
@@ -1310,6 +1311,7 @@ SCIP_RETCODE SCIPvarAddVub(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR*             vubvar,             /**< variable z    in x <= b*z + d */
    SCIP_Real             vubcoef,            /**< coefficient b in x <= b*z + d */
    SCIP_Real             vubconstant,        /**< constant d    in x <= b*z + d */
@@ -1337,6 +1339,7 @@ SCIP_RETCODE SCIPvarAddImplic(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
    SCIP_VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    SCIP_BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
@@ -1359,6 +1362,7 @@ SCIP_RETCODE SCIPvarFixBinary(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             value,              /**< value to fix variable to */
    SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
@@ -1382,6 +1386,7 @@ SCIP_RETCODE SCIPvarAddClique(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             value,              /**< value of the variable in the clique */
    SCIP_CLIQUE*          clique,             /**< clique the variable should be added to */

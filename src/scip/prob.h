@@ -163,8 +163,8 @@ SCIP_RETCODE SCIPprobTransform(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_PROB**           target              /**< pointer to target problem data structure */
    );
@@ -221,8 +221,8 @@ SCIP_RETCODE SCIPprobAddVar(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR*             var                 /**< variable to add */
    );
 
@@ -375,8 +375,8 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */
@@ -390,8 +390,8 @@ SCIP_RETCODE SCIPprobScaleObj(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** remembers the current solution as root solution in the problem variables */
@@ -739,23 +739,6 @@ void SCIPprobEnableConsCompression(
 #define SCIPprobIsConsCompressionEnabled(prob)  ((prob)->conscompression)
 #define SCIPprobEnableConsCompression(prob)  ((prob)->conscompression = TRUE)
 #endif
-
-/** sets integral objective value flag, if all variables with non-zero objective values are integral and have
- *  integral objective value and also updates the cutoff bound if primal solution is already known
- */
-SCIP_RETCODE SCIPprobCheckObjIntegralExact(
-   SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< original problem data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
-   );
 
 #ifdef __cplusplus
 }
