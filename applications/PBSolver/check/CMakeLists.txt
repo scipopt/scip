@@ -42,7 +42,6 @@ foreach(instance ${instances})
     PASS_REGULAR_EXPRESSION "o ${optval}"
     PASS_REGULAR_EXPRESSION "s OPTIMUM FOUND"
     DEPENDS applications-pbsolver-build
-    RESOURCE_LOCK libscip
     )
   if(WIN32)
     # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
