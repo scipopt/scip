@@ -1086,18 +1086,28 @@ SCIP_RETCODE SCIPincludeHeurLocks(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create primal heuristic data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyLocks,
-         heurFreeLocks, heurInitLocks, heurExitLocks,
-         heurInitsolLocks, heurExitsolLocks, heurExecLocks,
-         heurdata) );
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
+         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecLocks, heurdata) );
 
+   assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
+
+   /* set non-NULL pointers to callback methods */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyLocks) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeLocks) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitLocks) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitLocks) );
+
+   /* add locks primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxproprounds",
          "maximum number of propagation rounds to be performed in each propagation call (-1: no limit, -2: parameter settings)",
          &heurdata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -2, INT_MAX, NULL, NULL) );

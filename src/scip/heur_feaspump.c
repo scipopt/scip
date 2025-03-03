@@ -1403,6 +1403,9 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
 
    assert(heur != NULL);
 
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
+
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyFeaspump) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeFeaspump) );

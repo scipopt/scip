@@ -178,6 +178,9 @@ SCIP_RETCODE SCIPincludeHeurSync(
 
    assert(heur != NULL);
 
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
+
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSync) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitSync) );

@@ -2269,6 +2269,9 @@ SCIP_RETCODE SCIPincludeHeurDps(
 
    assert(heur != NULL);
 
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
+
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyDps) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeDps) );

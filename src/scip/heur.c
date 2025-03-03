@@ -1290,6 +1290,9 @@ SCIP_RETCODE SCIPheurExec(
 
    *result = SCIP_DIDNOTRUN;
 
+   if( set->exact_enabled && !heur->isexact )
+      return SCIP_OKAY;
+
    delayed = FALSE;
    execute = SCIPheurShouldBeExecuted(heur, depth, lpstateforkdepth, heurtiming, &delayed);
 
@@ -1448,6 +1451,16 @@ void SCIPheurSetExitsol(
    assert(heur != NULL);
 
    heur->heurexitsol = heurexitsol;
+}
+
+/** marks the primal heuristic as safe to use in exact solving mode */
+void SCIPheurMarkExact(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->isexact = TRUE;
 }
 
 /** gets name of primal heuristic */
