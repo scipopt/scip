@@ -43,6 +43,7 @@
 
 #define SETOBJ         FALSE                 /**< insert objective function if no exists */
 #define HEURISTICS_OFF FALSE                 /**< turn off heuristics */
+#define MAXINTSIZE     47                    /**< maximal intsize accepted in problem instance */
 #define MAXMEMUSAGE    0.9                   /**< maximal memory usage relative to given memory limit */
 #define POSTTIME       3.0                   /**< time in seconds saved in the end to display solution and free everything */
 
@@ -274,6 +275,9 @@ SCIP_RETCODE fromCommandLine(
 
    /* use wall clock */
    SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", 2) );
+
+   /* set intsize limit */
+   SCIP_CALL( SCIPsetIntParam(scip, "reading/opbreader/maxintsize", MAXINTSIZE) );
 
    /********************
     * Problem Creation *
