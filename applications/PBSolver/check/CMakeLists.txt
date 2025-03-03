@@ -28,10 +28,8 @@ set_tests_properties(applications-pbsolver-build
 # add a test for every instance
 #
 foreach(instance ${instances})
-
   list(GET instance 0 name)
   list(GET instance 1 optval)
-
   get_filename_component(basename ${name} NAME_WE)
   #
   # call the PBSolver binary and validate the solve with the given objective value
