@@ -39,8 +39,8 @@ foreach(instance ${instances})
     )
   set_tests_properties("applications-pbsolver-${basename}"
     PROPERTIES
-    PASS_REGULAR_EXPRESSION "o ${optval}"
-    PASS_REGULAR_EXPRESSION "s OPTIMUM FOUND"
+    PASS_REGULAR_EXPRESSION "o ${optval}.*s OPTIMUM FOUND"
+    FAIL_REGULAR_EXPRESSION "ERROR|o ${optval}.*\no "
     DEPENDS applications-pbsolver-build
     )
   if(WIN32)
