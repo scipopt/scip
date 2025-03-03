@@ -1713,6 +1713,74 @@ void SCIPprobSetObjIntegral(
 /** sets integral objective value flag, if all variables with non-zero objective values are integral and have
  *  integral objective value and also updates the cutoff bound if primal solution is already known
  */
+static
+SCIP_RETCODE probCheckObjIntegralExact(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
+   )
+{
+   SCIP_Rational* obj;
+   int v;
+
+   assert(transprob != NULL);
+   assert(origprob != NULL);
+   assert(set->exact_enabled);
+
+   /* if we know already, that the objective value is integral, nothing has to be done */
+   if( transprob->objisintegral )
+      return SCIP_OKAY;
+
+   /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
+   if( set->nactivepricers != 0 || set->nactivebenders != 0 )
+      return SCIP_OKAY;
+
+   /* if the objective value offset is fractional, the value itself is possibly fractional */
+   if( !EPSISINT(transprob->objoffset, 0.0) ) /*lint !e835*/
+      return SCIP_OKAY;
+
+   /* scan through the variables */
+   for( v = 0; v < transprob->nvars; ++v )
+   {
+      /* get objective value of variable */
+      obj = SCIPvarGetObjExact(transprob->vars[v]);
+
+      /* check, if objective value is non-zero */
+      if( !RatIsZero(obj) )
+      {
+         /* if variable's objective value is fractional, the problem's objective value may also be fractional */
+         if( !RatIsIntegral(obj) )
+            break;
+
+         /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
+         if( SCIPvarGetType(transprob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+            break;
+      }
+   }
+
+   /* objective value is integral, if the variable loop scanned all variables */
+   if( v == transprob->nvars )
+   {
+      transprob->objisintegral = TRUE;
+
+      /* update upper bound and cutoff bound in primal data structure due to new internality information */
+      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets integral objective value flag, if all variables with non-zero objective values are integral and have
+ *  integral objective value and also updates the cutoff bound if primal solution is already known
+ */
 SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
@@ -1734,7 +1802,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    assert(origprob != NULL);
 
    if( set->exact_enabled )
-      return SCIPprobCheckObjIntegralExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventqueue,
+      return probCheckObjIntegralExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventqueue,
             eventfilter);
 
    /* if we know already, that the objective value is integral, nothing has to be done */
@@ -2947,72 +3015,3 @@ void SCIPprobEnableConsCompression(
 }
 
 #endif
-
-/** exact methods */
-
-/** sets integral objective value flag, if all variables with non-zero objective values are integral and have
- *  integral objective value and also updates the cutoff bound if primal solution is already known
- */
-SCIP_RETCODE SCIPprobCheckObjIntegralExact(
-   SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob,           /**< original problem data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
-   )
-{
-   SCIP_Rational* obj;
-   int v;
-
-   assert(transprob != NULL);
-   assert(origprob != NULL);
-   assert(set->exact_enabled);
-
-   /* if we know already, that the objective value is integral, nothing has to be done */
-   if( transprob->objisintegral )
-      return SCIP_OKAY;
-
-   /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
-   if( set->nactivepricers != 0 || set->nactivebenders != 0 )
-      return SCIP_OKAY;
-
-   /* if the objective value offset is fractional, the value itself is possibly fractional */
-   if( !EPSISINT(transprob->objoffset, 0.0) ) /*lint !e835*/
-      return SCIP_OKAY;
-
-   /* scan through the variables */
-   for( v = 0; v < transprob->nvars; ++v )
-   {
-      /* get objective value of variable */
-      obj = SCIPvarGetObjExact(transprob->vars[v]);
-
-      /* check, if objective value is non-zero */
-      if( !RatIsZero(obj) )
-      {
-         /* if variable's objective value is fractional, the problem's objective value may also be fractional */
-         if( !RatIsIntegral(obj) )
-            break;
-
-         /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
-         if( SCIPvarGetType(transprob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
-            break;
-      }
-   }
-
-   /* objective value is integral, if the variable loop scanned all variables */
-   if( v == transprob->nvars )
-   {
-      transprob->objisintegral = TRUE;
-
-      /* update upper bound and cutoff bound in primal data structure due to new internality information */
-      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
-   }
-
-   return SCIP_OKAY;
-}
