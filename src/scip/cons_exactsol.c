@@ -589,7 +589,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       retstat = SCIPsolveExactDiveLP(scip, -1, &lperror, NULL);
       if( retstat != SCIP_OKAY )
       {
-         SCIPwarningMessage(scip, "Error while solving LP in Exactsol Constraint Handler; Exact LP solve terminated with code <%d>\n",retstat);
+         SCIPwarningMessage(scip, "Error while solving LP in Exactsol Constraint Handler; exact LP solve terminated with code <%d>\n",retstat);
       }
 #else
       SCIP_CALL( SCIPsolveExactDiveLP(scip, -1, &lperror, NULL) );
