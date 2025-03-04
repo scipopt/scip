@@ -773,6 +773,9 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
          conshdlrdata) );
    assert(conshdlr != NULL);
 
+   /* mark constraint handler as exact */
+   SCIPconshdlrMarkExact(conshdlr);
+
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyExactSol, NULL) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxExactSol) );

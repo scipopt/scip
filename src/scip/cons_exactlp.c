@@ -7196,6 +7196,9 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
 
    assert(conshdlr != NULL);
 
+   /* mark constraint handler as exact */
+   SCIPconshdlrMarkExact(conshdlr);
+
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyExactLinear, consCopyExactLinear) );
    SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveExactLinear) );
