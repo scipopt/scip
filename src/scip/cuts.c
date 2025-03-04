@@ -2852,7 +2852,12 @@ SCIP_RETCODE findMIRBestLb(
             {
                SCIP_Real vlbsol;
 
-               vlbsol = vlbcoefs[i] * (sol == NULL ? SCIPvarGetLPSol(vlbvars[i]) : SCIPgetSolVal(scip, sol, vlbvars[i])) + vlbconsts[i];
+               if( sol == NULL )
+                  vlbsol = SCIPvarGetLPSol(vlbvars[i]);
+               else
+                  vlbsol = SCIPgetSolVal(scip, sol, vlbvars[i]);
+               vlbsol = vlbcoefs[i] * vlbsol + vlbconsts[i];
+
                if( vlbsol > bestvlb )
                {
                   bestvlb = vlbsol;
@@ -2938,7 +2943,12 @@ SCIP_RETCODE findMIRBestUb(
             {
                SCIP_Real vubsol;
 
-               vubsol = vubcoefs[i] * (sol == NULL ? SCIPvarGetLPSol(vubvars[i]) : SCIPgetSolVal(scip, sol, vubvars[i])) + vubconsts[i];
+               if( sol == NULL )
+                  vubsol = SCIPvarGetLPSol(vubvars[i]);
+               else
+                  vubsol = SCIPgetSolVal(scip, sol, vubvars[i]);
+               vubsol = vubcoefs[i] * vubsol + vubconsts[i];
+
                if( vubsol < bestvub )
                {
                   bestvub = vubsol;
@@ -3007,6 +3017,7 @@ SCIP_RETCODE determineBestBounds(
             *bestlb = SCIPvarGetLbLocal(var);  /* use local standard lower bound */
          else
          {
+            SCIP_Real vlbsol;
             SCIP_VAR** vlbvars;
             SCIP_Real* vlbcoefs;
             SCIP_Real* vlbconsts;
@@ -3024,7 +3035,12 @@ SCIP_RETCODE determineBestBounds(
             assert(vlbcoefs != NULL);
             assert(vlbconsts != NULL);
 
-            *bestlb = vlbcoefs[k] * (sol == NULL ? SCIPvarGetLPSol(vlbvars[k]) : SCIPgetSolVal(scip, sol, vlbvars[k])) + vlbconsts[k];
+            if( sol == NULL )
+               vlbsol = SCIPvarGetLPSol(vlbvars[k]);
+            else
+               vlbsol = SCIPgetSolVal(scip, sol, vlbvars[k]);
+
+            *bestlb = vlbcoefs[k] * vlbsol + vlbconsts[k];
          }
 
          assert(!SCIPisInfinity(scip, - *bestlb));
@@ -3045,6 +3061,7 @@ SCIP_RETCODE determineBestBounds(
             *bestub = SCIPvarGetUbLocal(var);  /* use local standard upper bound */
          else
          {
+            SCIP_Real vubsol;
             SCIP_VAR** vubvars;
             SCIP_Real* vubcoefs;
             SCIP_Real* vubconsts;
@@ -3062,8 +3079,12 @@ SCIP_RETCODE determineBestBounds(
             assert(vubcoefs != NULL);
             assert(vubconsts != NULL);
 
-            /* we have to avoid cyclic variable bound usage, so we enforce to use only variable bounds variables of smaller index */
-            *bestub = vubcoefs[k] * (sol == NULL ? SCIPvarGetLPSol(vubvars[k]) : SCIPgetSolVal(scip, sol, vubvars[k])) + vubconsts[k];
+            if( sol == NULL )
+               vubsol = SCIPvarGetLPSol(vubvars[k]);
+            else
+               vubsol = SCIPgetSolVal(scip, sol, vubvars[k]);
+
+            *bestub = vubcoefs[k] * vubsol + vubconsts[k];
          }
 
          assert(!SCIPisInfinity(scip, *bestub));
