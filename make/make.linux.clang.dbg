@@ -4,12 +4,6 @@ CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)
 
 # Enable sanitizers (http://clang.llvm.org/docs/UsersManual.html#controlling-code-generation).
-#
-# The default (SANITIZE=true) is to enable the UndefinedBehaviorSanitzer.
-# If SANITIZE=thread or address, then also ThreadSanitizer or the AddressSanitizer
-# are enabled (they cannot be used together).
-
-SANITIZE = true
 
 # enable ThreadSanitizer (http://clang.llvm.org/docs/ThreadSanitizer.html)
 ifeq ($(SANITIZE),thread)
@@ -26,7 +20,7 @@ ifeq ($(SANITIZE),memory)
   SANITIZERFLAGS = -fsanitize=memory
 endif
 
-# UndefinedBehaviorSanitizer if SANITIZE is true (default), thread, address, or memory
+# UndefinedBehaviorSanitizer if SANITIZE is true, thread, address, or memory
 ifneq ($(filter $(SANITIZE),true thread address memory),)
   SANITIZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
 endif
