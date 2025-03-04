@@ -1003,7 +1003,7 @@ SCIP_RETCODE extractFlowRows(
           *    integer:    score  +500
           *    binary:     score  +100
           */
-         if( ncontvars == rowlen )
+         if( ncontvars == rowlen || nimplintvars == rowlen )
             flowrowscores[r] += 1000.0;
          else if( nintvars + nimplintvars == rowlen )
             flowrowscores[r] += 500.0;
@@ -5861,7 +5861,7 @@ SCIP_RETCODE addCut(
    }
    else
    {
-      SCIP_CALL( SCIPaddRow(scip, cut, FALSE, cutoff) );
+      SCIP_CALL( SCIPaddRow(scip, cut, TRUE, cutoff) );
    }
    (*ncuts)++;
 

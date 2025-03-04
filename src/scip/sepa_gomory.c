@@ -556,7 +556,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       {
          assert(c < ncols);
          var = SCIPcolGetVar(cols[c]);
-         if( SCIPvarIsIntegral(var) )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
          {
             frac = SCIPfeasFrac(scip, SCIPcolGetPrimsol(cols[c]));
             frac = MIN(frac, 1.0 - frac);
@@ -569,8 +569,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          assert(0 <= -c-1 && -c-1 < nrows);
          row = rows[-c-1];
          /* We allow separating on rows with a 'slack' implied integral variable */
-         if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) &&
-             SCIPgetRowNumImpliedIntCols(scip, row) != SCIPgetRowNumIntCols(scip, row) )
+         if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0 )
          {
             frac = SCIPfeasFrac(scip, SCIPgetRowActivity(scip, row));
             frac = MIN(frac, 1.0 - frac);
