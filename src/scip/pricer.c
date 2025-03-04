@@ -156,6 +156,7 @@ SCIP_RETCODE doPricerCreate(
    (*pricer)->delay = delay;
    (*pricer)->active = FALSE;
    (*pricer)->initialized = FALSE;
+   (*pricer)->isexact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "pricers/%s/priority", name);
@@ -411,6 +412,10 @@ SCIP_RETCODE SCIPpricerRedcost(
    assert(lowerbound != NULL);
    assert(result != NULL);
 
+   /* check, if the pricer is compatible with exact solving mode */
+   if( set->exact_enabled && !pricer->isexact )
+      return SCIP_OKAY;
+
    SCIPsetDebugMsg(set, "executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
 
    oldnvars = SCIPprobGetNVars(prob);
@@ -448,6 +453,10 @@ SCIP_RETCODE SCIPpricerFarkas(
 
    /* check, if pricer implemented a Farkas pricing algorithm */
    if( pricer->pricerfarkas == NULL )
+      return SCIP_OKAY;
+
+   /* check, if the pricer is compatible with exact solving mode */
+   if( set->exact_enabled && !pricer->isexact )
       return SCIP_OKAY;
 
    SCIPsetDebugMsg(set, "executing Farkas pricing of variable pricer <%s>\n", pricer->name);
@@ -594,6 +603,16 @@ void SCIPpricerSetExitsol(
    assert(pricer != NULL);
 
    pricer->pricerexitsol = pricerexitsol;
+}
+
+/** marks the variable pricer as safe to use in exact solving mode */
+void SCIPpricerMarkExact(
+   SCIP_PRICER*          pricer              /**< pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->isexact = TRUE;
 }
 
 /** gets name of variable pricer */

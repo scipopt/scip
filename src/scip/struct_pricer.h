@@ -64,6 +64,7 @@ struct SCIP_Pricer
    SCIP_Bool             delay;              /**< should the pricer be delayed until no other pricers or already existing
                                               *   problem variables with negative reduced costs are found */
    SCIP_Bool             active;             /**< is variable pricer in use for the current problem? */
+   SCIP_Bool             isexact;            /**< is variable pricer safe to be used in exact solving mode? */
    SCIP_Bool             initialized;        /**< is variable pricer initialized? */
 };
 
