@@ -2680,6 +2680,7 @@ SCIP_RETCODE findBestLb(
 {
    assert(bestlb != NULL);
    assert(bestlbtype != NULL);
+   assert(usevbds >= 0 && usevbds <= 2);
 
    *bestlb = SCIPvarGetLbGlobal(var);
    *bestlbtype = -1;
@@ -2696,7 +2697,7 @@ SCIP_RETCODE findBestLb(
       }
    }
 
-   if( usevbds )
+   if( usevbds > 0 )
    {
       SCIP_Real bestvlb;
       int bestvlbidx;
@@ -2739,6 +2740,7 @@ SCIP_RETCODE findBestUb(
 {
    assert(bestub != NULL);
    assert(bestubtype != NULL);
+   assert(usevbds >= 0 && usevbds <= 2);
 
    *bestub = SCIPvarGetUbGlobal(var);
    *bestubtype = -1;
@@ -2755,7 +2757,7 @@ SCIP_RETCODE findBestUb(
       }
    }
 
-   if( usevbds )
+   if( usevbds > 0 )
    {
       SCIP_Real bestvub;
       int bestvubidx;
@@ -2801,6 +2803,7 @@ SCIP_RETCODE findMIRBestLb(
 {
    assert(bestlb != NULL);
    assert(bestlbtype != NULL);
+   assert(usevbds >= 0 && usevbds <= 2);
 
    *bestlb = SCIPvarGetLbGlobal(var);
    *bestlbtype = -1;
@@ -2819,7 +2822,7 @@ SCIP_RETCODE findMIRBestLb(
 
    *simplebound = *bestlb;
 
-   if( usevbds )
+   if( usevbds > 0 )
    {
       int nvlbs = SCIPvarGetNVlbs(var);
 
@@ -2844,7 +2847,8 @@ SCIP_RETCODE findMIRBestLb(
             /* For now, we only allow variable bounds from sections that are strictly greater to prevent cyclic usage.*/
             /** @todo: We don't use the caching mechanism of SCIPvarGetClosestVLB() anymore because the cached
              *  variable bound may be illegal. We could still cache something useful here. */
-            if( SCIPvarIsActive(vlbvars[i]) && boundedsection < varSection(data, SCIPvarGetProbindex(vlbvars[i])) )
+            if( SCIPvarIsActive(vlbvars[i]) && boundedsection < varSection(data, SCIPvarGetProbindex(vlbvars[i])) &&
+                  (usevbds == 2 || SCIPvarIsBinary(vlbvars[i])) )
             {
                SCIP_Real vlbsol;
 
@@ -2885,6 +2889,7 @@ SCIP_RETCODE findMIRBestUb(
 {
    assert(bestub != NULL);
    assert(bestubtype != NULL);
+   assert(usevbds >= 0 && usevbds <= 2);
 
    *bestub = SCIPvarGetUbGlobal(var);
    *bestubtype = -1;
@@ -2903,7 +2908,7 @@ SCIP_RETCODE findMIRBestUb(
 
    *simplebound = *bestub;
 
-   if( usevbds )
+   if( usevbds > 0 )
    {
       int nvubs = SCIPvarGetNVubs(var);
 
@@ -2928,7 +2933,8 @@ SCIP_RETCODE findMIRBestUb(
             /* For now, we only allow variable bounds from sections that are strictly greater to prevent cyclic usage.*/
             /** @todo: We don't use the caching mechanism of SCIPvarGetClosestVUB() anymore because the cached
              *  variable bound may be illegal. We could still cache something useful here. */
-            if( SCIPvarIsActive(vubvars[i]) && boundedsection < varSection(data, SCIPvarGetProbindex(vubvars[i])) )
+            if( SCIPvarIsActive(vubvars[i]) && boundedsection < varSection(data, SCIPvarGetProbindex(vubvars[i])) &&
+               (usevbds == 2 || SCIPvarIsBinary(vubvars[i])) )
             {
                SCIP_Real vubsol;
 
@@ -2977,6 +2983,7 @@ SCIP_RETCODE determineBestBounds(
    SCIP_Bool*            freevariable        /**< pointer to store if this is a free variable */
    )
 {
+   assert(usevbds >= 0 && usevbds <= 2);
    SCIP_Real simplelb;
    SCIP_Real simpleub;
    int v;
@@ -3165,6 +3172,7 @@ SCIP_RETCODE createMIRData(
 {
    int i;
    int nnz;
+   assert(sectionusevbds >= 0 && sectionusevbds < NSECTIONS);
 
    assert(pdata != NULL);
    SCIP_CALL( SCIPallocBuffer(scip, pdata) );
