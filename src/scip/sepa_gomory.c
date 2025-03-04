@@ -367,15 +367,17 @@ SCIP_RETCODE addCut(
                }
 
                ++(*naddedcuts);
-               if( SCIPisExact(scip) )
-               {
-                  if( SCIPisCertificateActive(scip) )
-                  {
-                     SCIP_CALL( SCIPstoreCertificateActiveAggregationInfo(scip, cut) );
-                     SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
-                  }
 
-                  /* certify local cuts immediately or the bonds might be wrong in the certificate */
+               /* for certification we need to create the exact representation of the row; we need to perform this here
+                * because the certificate uses the current variable bounds; if certification is not active, we delay the
+                * creation of the exact row until the cut is actually selected to enter the LP, see sepastore.c; note
+                * that this could lead to different solving paths when solving with/without certification
+                */
+               if( SCIPisCertificateActive(scip) )
+               {
+                  SCIP_CALL( SCIPstoreCertificateActiveAggregationInfo(scip, cut) );
+                  SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
+
                   if( SCIProwGetRowExact(cut) == NULL )
                   {
                      if( !cutislocal )
@@ -390,10 +392,7 @@ SCIP_RETCODE addCut(
                      }
                   }
 
-                  if( SCIPisCertificateActive(scip) )
-                  {
-                     SCIP_CALL( SCIPprintCertificateMirCut(scip, cut) );
-                  }
+                  SCIP_CALL( SCIPprintCertificateMirCut(scip, cut) );
                }
             }
          }
