@@ -339,6 +339,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    SCIP_SOL* worksol;
    SCIP_Bool foundsol;
    SCIP_Bool lperror;
+   int nvars;
    int nintegers;
    int nconsprob;
    int i;
@@ -503,8 +504,23 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       }
    }
 
-   /* start exact diving */
+   /* start exact diving and set global bounds of continuous variables */
    SCIP_CALL( SCIPstartExactDive(scip) );
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   nintegers = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   for( i = nintegers; i < nvars; ++i )
+   {
+      if( SCIPvarGetStatusExact(vars[i]) == SCIP_VARSTATUS_COLUMN )
+      {
+         SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
+         SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
+
+         SCIP_CALL( SCIPchgVarLbExactDive(scip, vars[i], SCIPvarGetLbGlobalExact(vars[i])) );
+         SCIP_CALL( SCIPchgVarUbExactDive(scip, vars[i], SCIPvarGetUbGlobalExact(vars[i])) );
+      }
+   }
 
    /* sort solubuffer by objval try to repair best solutions first */
    SCIPsortPtr((void**)conshdlrdata->solubuffer, SCIPsolComp, conshdlrdata->nbufferedsols);
@@ -528,9 +544,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
          SCIPheurGetName(SCIPsolGetHeur(worksol)), SCIPgetSolTransObj(scip, worksol));
 
       /* set the bounds of the variables: fixed for integral variables, global bounds for continuous ones */
-      vars = SCIPgetVars(scip);
-      nintegers = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
-
       for( i = 0; i < nintegers; ++i )
       {
          if( SCIPvarGetStatusExact(vars[i]) == SCIP_VARSTATUS_COLUMN )
