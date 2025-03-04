@@ -156,7 +156,7 @@ SCIP_RETCODE doPricerCreate(
    (*pricer)->delay = delay;
    (*pricer)->active = FALSE;
    (*pricer)->initialized = FALSE;
-   (*pricer)->isexact = FALSE;
+   (*pricer)->exact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "pricers/%s/priority", name);
@@ -413,7 +413,7 @@ SCIP_RETCODE SCIPpricerRedcost(
    assert(result != NULL);
 
    /* check, if the pricer is compatible with exact solving mode */
-   if( set->exact_enabled && !pricer->isexact )
+   if( set->exact_enabled && !pricer->exact )
       return SCIP_OKAY;
 
    SCIPsetDebugMsg(set, "executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
@@ -456,7 +456,7 @@ SCIP_RETCODE SCIPpricerFarkas(
       return SCIP_OKAY;
 
    /* check, if the pricer is compatible with exact solving mode */
-   if( set->exact_enabled && !pricer->isexact )
+   if( set->exact_enabled && !pricer->exact )
       return SCIP_OKAY;
 
    SCIPsetDebugMsg(set, "executing Farkas pricing of variable pricer <%s>\n", pricer->name);
@@ -612,7 +612,7 @@ void SCIPpricerMarkExact(
 {
    assert(pricer != NULL);
 
-   pricer->isexact = TRUE;
+   pricer->exact = TRUE;
 }
 
 /** gets name of variable pricer */

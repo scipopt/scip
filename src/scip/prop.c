@@ -193,8 +193,8 @@ SCIP_RETCODE doPropCreate(
    (*prop)->ncutoffs = 0;
    (*prop)->ndomredsfound = 0;
    (*prop)->wasdelayed = FALSE;
+   (*prop)->exact = FALSE;
    (*prop)->initialized = FALSE;
-   (*prop)->isexact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/priority", name);
@@ -551,7 +551,7 @@ SCIP_RETCODE SCIPpropPresol(
 
    *result = SCIP_DIDNOTRUN;
 
-   if( prop->proppresol == NULL || (set->exact_enabled && !prop->isexact) )
+   if( prop->proppresol == NULL || (set->exact_enabled && !prop->exact) )
       return SCIP_OKAY;
 
    /* check number of presolving rounds */
@@ -664,7 +664,7 @@ SCIP_RETCODE SCIPpropExec(
    assert(result != NULL);
 
    if( ((depth == 0 && prop->freq == 0) || (prop->freq > 0 && depth % prop->freq == 0))
-         && (!set->exact_enabled || prop->isexact) )
+         && (!set->exact_enabled || prop->exact) )
    {
       if( !prop->delay || execdelayed )
       {
@@ -944,7 +944,7 @@ void SCIPpropMarkExact(
 {
    assert(prop != NULL);
 
-   prop->isexact = TRUE;
+   prop->exact = TRUE;
 }
 
 /** gets name of propagator */

@@ -164,10 +164,10 @@ SCIP_RETCODE doSepaCreate(
    (*sepa)->ncutsfoundatnode = 0;
    (*sepa)->lpwasdelayed = FALSE;
    (*sepa)->solwasdelayed = FALSE;
+   (*sepa)->exact = FALSE;
    (*sepa)->initialized = FALSE;
    (*sepa)->isparentsepa = FALSE;
    (*sepa)->parentsepa = NULL;
-   (*sepa)->isexact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/priority", name);
@@ -428,7 +428,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          (sepa->freq > 0 && depth % sepa->freq == 0 &&
             (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, LOG2(depth * (1.0 / sepa->freq)) / LOG2((SCIP_Real)sepa->expbackoff)))) ||
          sepa->lpwasdelayed) &&
-         (!set->exact_enabled || sepa->isexact)
+         (!set->exact_enabled || sepa->exact)
      )
    {
       if( (!sepa->delay && !sepa->lpwasdelayed) || execdelayed )
@@ -545,7 +545,7 @@ SCIP_RETCODE SCIPsepaExecSol(
          (sepa->freq > 0 && depth % sepa->freq == 0 &&
             (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, LOG2(depth * (1.0 / sepa->freq) / LOG2((SCIP_Real)sepa->expbackoff))))) ||
          sepa->solwasdelayed ) &&
-         (!set->exact_enabled || sepa->isexact)
+         (!set->exact_enabled || sepa->exact)
      )
    {
       if( (!sepa->delay && !sepa->solwasdelayed) || execdelayed )
@@ -814,7 +814,7 @@ void SCIPsepaMarkExact(
 {
    assert(sepa != NULL);
 
-   sepa->isexact = TRUE;
+   sepa->exact = TRUE;
 }
 
 /** get maximal bound distance at which the separator is called */

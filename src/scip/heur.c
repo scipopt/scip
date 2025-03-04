@@ -959,10 +959,10 @@ SCIP_RETCODE doHeurCreate(
    (*heur)->ncalls = 0;
    (*heur)->nsolsfound = 0;
    (*heur)->nbestsolsfound = 0;
+   (*heur)->exact = FALSE;
    (*heur)->initialized = FALSE;
    (*heur)->divesets = NULL;
    (*heur)->ndivesets = 0;
-   (*heur)->isexact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/priority", name);
@@ -1290,7 +1290,7 @@ SCIP_RETCODE SCIPheurExec(
 
    *result = SCIP_DIDNOTRUN;
 
-   if( set->exact_enabled && !heur->isexact )
+   if( set->exact_enabled && !heur->exact )
       return SCIP_OKAY;
 
    delayed = FALSE;
@@ -1460,7 +1460,7 @@ void SCIPheurMarkExact(
 {
    assert(heur != NULL);
 
-   heur->isexact = TRUE;
+   heur->exact = TRUE;
 }
 
 /** gets name of primal heuristic */
@@ -2080,5 +2080,5 @@ SCIP_Bool SCIPheurIsExact(
 {
    assert(heur != NULL);
 
-   return heur->isexact;
+   return heur->exact;
 }

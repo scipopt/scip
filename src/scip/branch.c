@@ -1341,7 +1341,7 @@ SCIP_RETCODE doBranchruleCreate(
    (*branchrule)->ndomredsfound = 0;
    (*branchrule)->nchildren = 0;
    (*branchrule)->initialized = FALSE;
-   (*branchrule)->isexact = FALSE;
+   (*branchrule)->exact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/priority", name);
@@ -1570,7 +1570,7 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexeclp != NULL
       && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree))
-      && (!set->exact_enabled || branchrule->isexact) )
+      && (!set->exact_enabled || branchrule->exact) )
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
@@ -1678,7 +1678,7 @@ SCIP_RETCODE SCIPbranchruleExecExternSol(
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexecext != NULL
       && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) 
-      && (!set->exact_enabled || branchrule->isexact) )
+      && (!set->exact_enabled || branchrule->exact) )
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
@@ -1784,7 +1784,7 @@ SCIP_RETCODE SCIPbranchruleExecPseudoSol(
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexecps != NULL
       && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree))
-      && (!set->exact_enabled || branchrule->isexact) )
+      && (!set->exact_enabled || branchrule->exact) )
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
@@ -1894,7 +1894,7 @@ void SCIPbranchruleMarkExact(
 {
    assert(branchrule != NULL);
 
-   branchrule->isexact = TRUE;
+   branchrule->exact = TRUE;
 }
 
 /** sets copy method of branching rule */

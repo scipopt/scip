@@ -97,8 +97,8 @@ struct SCIP_Prop
    int                   npresolcalls;       /**< number of times the propagator was called in presolving and tried to find reductions */
    SCIP_Bool             delay;              /**< should propagator be delayed, if other propagators found reductions? */
    SCIP_Bool             wasdelayed;         /**< was the propagator delayed at the last call? */
+   SCIP_Bool             exact;              /**< is the propagator safe to be used in exact solving mode? */
    SCIP_Bool             initialized;        /**< is propagator initialized? */
-   SCIP_Bool             isexact;            /**< is the propagator safe to be used in exact solving mode? */
 };
 
 #ifdef __cplusplus

@@ -153,7 +153,7 @@ SCIP_RETCODE doRelaxCreate(
    (*relax)->nseparated = 0;
    (*relax)->lastsolvednode = -1;
    (*relax)->initialized = FALSE;
-   (*relax)->isexact = FALSE;
+   (*relax)->exact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/priority", name);
@@ -372,7 +372,7 @@ SCIP_RETCODE SCIPrelaxExec(
    *result = SCIP_DIDNOTRUN;
 
    /* check, if the relaxator is compatible with exact solving mode */
-   if( set->exact_enabled && !relax->isexact )
+   if( set->exact_enabled && !relax->exact )
       return SCIP_OKAY;
 
    /* check, if the relaxation is already solved */
@@ -550,7 +550,7 @@ void SCIPrelaxMarkExact(
 {
    assert(relax != NULL);
 
-   relax->isexact = TRUE;
+   relax->exact = TRUE;
 }
 
 /** gets name of relaxation handler */
