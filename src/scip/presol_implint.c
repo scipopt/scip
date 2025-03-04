@@ -107,17 +107,18 @@ struct ImplintMatrix
    SCIP_Real*            lb;                 /**< lower bound per variable */
    SCIP_Real*            ub;                 /**< upper bound per variable */
    SCIP_Bool*            colintegral;
-   // implied integral? bounds integral? number of +-1 nonzeros?
-   // contained in nonlinear term? ntimes operand / resultant in logical constraints?
-   // nconstraints (different from nnonz because of multiple row constraints)
-   // npmonenonzeros in integral equality rows
+   /* TODO: fields for more involved detection and scoring:
+    * implied integral? bounds integral? number of +-1 nonzeros?
+    * contained in nonlinear term? ntimes operand / resultant in logical constraints?
+    * nconstraints (different from nnonz because of multiple row constraints)
+    * npmonenonzeros in integral equality rows */
+
    SCIP_VAR**            vars;
 
    SCIP_Real*            rowmatval;          /**< coefficients in row major format */
    int*                  rowmatind;          /**< column indexed in row major format */
    int*                  rowmatbeg;          /**< row storage offset */
    int*                  rowmatcnt;          /**< number of column entries per row */
-   // boundsintegral, rowequality, rowbadnumerics, rowncontinuous, rowncontinuouspmone, rownintegralpmone
 
    int                   nrows;              /**< complete number of rows */
    SCIP_Real*            lhs;                /**< left hand side per row */
