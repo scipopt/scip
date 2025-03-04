@@ -52,6 +52,7 @@
 #include "scip/pub_var.h"
 
 #include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_mem.h"
@@ -84,6 +85,8 @@
 /** presolver data */
 struct SCIP_PresolData
 {
+   SCIP_Bool             computedimplints;   /**< Were implied integers already computed? */
+
    SCIP_Real             columnrowratio;     /**< Use the network row addition algorithm when the column to row ratio
                                                * becomes larger than this threshold. Otherwise, use column addition. */
    SCIP_Real             numericslimit;      /**< A row that contains variables with coefficients that are greater in
@@ -1567,6 +1570,8 @@ SCIP_RETCODE findImpliedIntegers(
 
       if( !componentokay )
       {
+         compNetworkValid[component] = FALSE;
+         compTransNetworkValid[component] = FALSE;
          continue;
       }
 
@@ -1838,9 +1843,6 @@ SCIP_RETCODE findImpliedIntegers(
             }
          }
       }
-      printf("%d integer columns converted (choice: %d network, %d tr. network)\n",
-             integerNetwork >= integerTransNetwork ? integerNetwork : integerTransNetwork,
-             integerNetwork, integerTransNetwork);
 
       SCIPfreeBufferArray(scip, &ptrArray);
       SCIPfreeBufferArray(scip, &candidateScores);
@@ -1930,14 +1932,24 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
       return SCIP_OKAY;
    }
 
-   *result = SCIP_DIDNOTFIND;
+   /* Only run if we would otherwise terminate presolving */
+   if( !SCIPisPresolveFinished(scip) )
+      return SCIP_OKAY;
 
-   /* Exit early if there are no variables to upgrade */
+   /* For now, we don't re-run detection for primal heuristics / subscips */
+   if( SCIPgetSubscipDepth(scip) > 0 )
+      return SCIP_OKAY;
+
+   /* Exit early if we already ran or if there are no variables to upgrade */
    SCIP_PRESOLDATA* presoldata = SCIPpresolGetData(presol);
-   if( !presoldata->convertintegers && SCIPgetNContVars(scip) == 0 )
+   if( presoldata->computedimplints || (!presoldata->convertintegers && SCIPgetNContVars(scip) == 0) )
    {
       return SCIP_OKAY;
    }
+
+   presoldata->computedimplints = TRUE;
+
+   *result = SCIP_DIDNOTFIND;
 
    SCIP_Real starttime = SCIPgetSolvingTime(scip);
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
@@ -1967,13 +1979,15 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    if( afterchanged == beforechanged )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                      "   (%.1fs) no implied integral variables detected (time: %.2fs)\n", endtime, endtime - starttime);
+            "   (%.1fs) no implied integral variables detected (time: %.2fs)\n",
+            endtime, endtime - starttime);
       *result = SCIP_DIDNOTFIND;
    }
    else
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                      "   (%.1fs) %d implied integral variables detected (time: %.2fs)\n",endtime,*nchgvartypes,endtime-starttime);
+            "   (%.1fs) %d implied integral variables detected (time: %.2fs)\n",
+            endtime, afterchanged-beforechanged,endtime-starttime);
 
       *result = SCIP_SUCCESS;
    }
@@ -1999,6 +2013,8 @@ SCIP_RETCODE SCIPincludePresolImplint(
 
    /* create implint presolver data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
+
+   presoldata->computedimplints = FALSE;
 
    /* include implint presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
