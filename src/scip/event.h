@@ -502,7 +502,7 @@ SCIP_RETCODE SCIPeventqueueProcess(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** returns TRUE iff events of the queue are delayed until the next SCIPeventqueueProcess() call */

@@ -1073,7 +1073,7 @@ SCIP_RETCODE SCIPbranchVar(
    }
 
    SCIP_CALL( SCIPtreeBranchVar(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->lp, scip->branchcand, scip->eventqueue, var, SCIP_INVALID, downchild, eqchild, upchild) );
+         scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, var, SCIP_INVALID, downchild, eqchild, upchild) );
 
    return SCIP_OKAY;
 }
@@ -1102,7 +1102,7 @@ SCIP_RETCODE SCIPbranchVarHole(
    assert( var->scip == scip );
 
    SCIP_CALL( SCIPtreeBranchVarHole(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-         scip->origprob, scip->lp, scip->branchcand, scip->eventqueue, var, left, right, downchild, upchild) );
+         scip->origprob, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, var, left, right, downchild, upchild) );
 
    return SCIP_OKAY;
 }
@@ -1154,7 +1154,7 @@ SCIP_RETCODE SCIPbranchVarVal(
    }
 
    SCIP_CALL( SCIPtreeBranchVar(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->lp, scip->branchcand, scip->eventqueue, var, val, downchild, eqchild, upchild) );
+         scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, var, val, downchild, eqchild, upchild) );
 
    return SCIP_OKAY;
 }
@@ -1212,7 +1212,7 @@ SCIP_RETCODE SCIPbranchVarValNary(
    }
 
    SCIP_CALL( SCIPtreeBranchVarNary(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-         scip->origprob, scip->lp, scip->branchcand, scip->eventqueue, var, val, n, minwidth, widthfactor, nchildren) );
+         scip->origprob, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, var, val, n, minwidth, widthfactor, nchildren) );
 
    return SCIP_OKAY;
 }
@@ -1237,8 +1237,8 @@ SCIP_RETCODE SCIPbranchLP(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPbranchLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbranchExecLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->tree, scip->reopt, scip->lp, scip->sepastore, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound,
-         TRUE, result) );
+         scip->tree, scip->reopt, scip->lp, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->primal->cutoffbound, TRUE, result) );
 
    return SCIP_OKAY;
 }
@@ -1261,8 +1261,8 @@ SCIP_RETCODE SCIPbranchExtern(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPbranchExtern", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbranchExecExtern(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->tree, scip->reopt, scip->lp, scip->sepastore, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound,
-         TRUE, result) );
+         scip->tree, scip->reopt, scip->lp, scip->sepastore, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->primal->cutoffbound, TRUE, result) );
 
    return SCIP_OKAY;
 }
@@ -1285,7 +1285,7 @@ SCIP_RETCODE SCIPbranchPseudo(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPbranchPseudo", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbranchExecPseudo(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound, TRUE, result) );
+         scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, scip->primal->cutoffbound, TRUE, result) );
 
    return SCIP_OKAY;
 }
