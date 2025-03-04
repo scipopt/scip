@@ -3267,7 +3267,7 @@ SCIP_RETCODE createMIRData(
 static
 void freeMIRData(
    SCIP*                 scip,               /**< SCIP data structure */
-   MIR_DATA**            pdata               /**< buffer where the MIR data structure is stored */
+   MIR_DATA**            pdata               /**< MIR data structure to be freed */
    )
 {
    assert(pdata != NULL);
