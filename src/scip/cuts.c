@@ -3499,6 +3499,7 @@ SCIP_RETCODE cutsTransformMIR(
       /* perform bound substitution for added variables */
       for( i = cutindsstart; i < data->ncutinds; ++i )
       {
+         SCIP_Real bestbnd;
          int v = data->cutinds[i];
 
          if( selectedbounds[i] == SCIP_BOUNDTYPE_LOWER )
@@ -3508,8 +3509,7 @@ SCIP_RETCODE cutsTransformMIR(
             /* use lower bound as transformation bound: x'_j := x_j - lb_j */
             boundtype[i] = bestlbtypes[i];
             varsign[i] = +1;
-
-            doMIRBoundSubstitution(scip, data, varsign[i], boundtype[i], bestlbs[i], v, localbdsused);
+            bestbnd = bestlbs[i];
          }
          else
          {
@@ -3518,9 +3518,9 @@ SCIP_RETCODE cutsTransformMIR(
             /* use upper bound as transformation bound: x'_j := ub_j - x_j */
             boundtype[i] = bestubtypes[i];
             varsign[i] = -1;
-
-            doMIRBoundSubstitution(scip, data, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
+            bestbnd = bestubs[i];
          }
+         doMIRBoundSubstitution(scip, data, varsign[i], boundtype[i], bestbnd, v, localbdsused);
       }
    }
 
@@ -8872,6 +8872,7 @@ SCIP_RETCODE cutsTransformStrongCG(
       /* perform bound substitution for all nonzeros in the section */
       for( i = cutindsstart; i < data->ncutinds; ++i )
       {
+         SCIP_Real bestbnd;
          int v = data->cutinds[i];
 
          if( selectedbounds[i] == SCIP_BOUNDTYPE_LOWER )
@@ -8881,8 +8882,7 @@ SCIP_RETCODE cutsTransformStrongCG(
             /* use lower bound as transformation bound: x'_j := x_j - lb_j */
             boundtype[i] = bestlbtypes[i];
             varsign[i] = +1;
-
-            doMIRBoundSubstitution(scip, data, varsign[i], boundtype[i], bestlbs[i], v, localbdsused);
+            bestbnd = bestlbs[i];
          }
          else
          {
@@ -8891,9 +8891,10 @@ SCIP_RETCODE cutsTransformStrongCG(
             /* use upper bound as transformation bound: x'_j := ub_j - x_j */
             boundtype[i] = bestubtypes[i];
             varsign[i] = -1;
-
-            doMIRBoundSubstitution(scip, data, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
+            bestbnd = bestubs[i];
          }
+
+         doMIRBoundSubstitution(scip, data, varsign[i], boundtype[i], bestbnd, v, localbdsused);
       }
    }
 
