@@ -2605,8 +2605,8 @@ SCIP_Real SCIPaggrRowGetRhs(
 typedef struct MIR_Data
 {
    int totalnnz;
-   int* indices[NSECTIONS];
-   int nnz[NSECTIONS];
+   int* secindices[NSECTIONS];
+   int secnnz[NSECTIONS];
 
    SCIP_Bool isenfint[NSECTIONS];            /**< Does the section have an integrality constraint? */
    SCIP_Bool isimplint[NSECTIONS];           /**< Is the section implied integer variables? */
@@ -3205,8 +3205,8 @@ SCIP_RETCODE createMIRData(
    /* initialize sections */
    for( i = 0; i < NSECTIONS; ++i )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &data->indices[i], nnz) );
-      data->nnz[i] = 0;
+      SCIP_CALL( SCIPallocBufferArray(scip, &data->secindices[i], nnz) );
+      data->secnnz[i] = 0;
       /* Cont. | cont impl. | int impl. | bin impl. | int | bin */
       data->isenfint[i] = i >= 2 ? TRUE : FALSE;
       data->isimplint[i] = i >= 1 && i <= 3 ? TRUE : FALSE;
@@ -3253,8 +3253,8 @@ SCIP_RETCODE createMIRData(
       for( i = 0; i < nnz; ++i )
       {
          int section = varSection(data, data->cutinds[i]);
-         data->indices[section][data->nnz[section]] = data->cutinds[i];
-         ++data->nnz[section];
+         data->secindices[section][data->secnnz[section]] = data->cutinds[i];
+         ++data->secnnz[section];
       }
    }
 
@@ -3281,7 +3281,7 @@ void freeMIRData(
 
    for( int i = NSECTIONS - 1; i >= 0; --i )
    {
-      SCIPfreeBufferArray(scip, &data->indices[i]);
+      SCIPfreeBufferArray(scip, &data->secindices[i]);
    }
 
    SCIPfreeBuffer(scip, pdata);
@@ -3357,8 +3357,8 @@ void doMIRBoundSubstitution(
          int section = varSection(data, zidx);
          assert(section > varSection(data, probindex));
 
-         data->indices[section][data->nnz[section]] = zidx;
-         ++data->nnz[section];
+         data->secindices[section][data->secnnz[section]] = zidx;
+         ++data->secnnz[section];
          ++data->totalnnz;
       }
 
@@ -3441,13 +3441,13 @@ SCIP_RETCODE cutsTransformMIR(
    /* transform the cut, one variable section at a time */
    for( s = 0; s < NSECTIONS; ++s )
    {
-      int* indices = data->indices[s];
+      int* indices = data->secindices[s];
 
       int cutindsstart = data->ncutinds;
       int usevbds = data->usevbds[s];
 
       i = 0;
-      while( i < data->nnz[s] )
+      while( i < data->secnnz[s] )
       {
          int index = data->ncutinds;
          int v = indices[i];
@@ -3458,9 +3458,9 @@ SCIP_RETCODE cutsTransformMIR(
          {
             QUAD_ASSIGN(coef, 0.0);
             QUAD_ARRAY_STORE(data->cutcoefs, v, coef);
-            --data->nnz[s];
+            --data->secnnz[s];
             --data->totalnnz;
-            indices[i] = indices[data->nnz[s]];
+            indices[i] = indices[data->secnnz[s]];
             /* do not increase the index */
             continue;
          }
@@ -3485,8 +3485,8 @@ SCIP_RETCODE cutsTransformMIR(
             /* if we terminate early, we need to make sure all the zeros in the cut coefficient array are cancelled */
             for( j = 0; j < NSECTIONS; ++j )
             {
-               int* indexlist = data->indices[j];
-               for( k = 0; k < data->nnz[j]; ++k )
+               int* indexlist = data->secindices[j];
+               for( k = 0; k < data->secnnz[j]; ++k )
                {
                   data->cutinds[data->ncutinds] = indexlist[k];
                   ++data->ncutinds;
@@ -3740,8 +3740,8 @@ SCIP_RETCODE cutsRoundMIR(
    cutindex = data->ncutinds - 1;
    for( s = NSECTIONS - 1; s >= 0; --s )
    {
-      int* indices = data->indices[s];
-      int nnz = data->nnz[s];
+      int* indices = data->secindices[s];
+      int nnz = data->secnnz[s];
 
       SCIP_Bool enfintegral = data->isenfint[s];
       SCIP_Bool implintegral = data->isimplint[s];
@@ -3810,8 +3810,8 @@ SCIP_RETCODE cutsRoundMIR(
             QUAD_ASSIGN(cutaj, 0.0);
             QUAD_ARRAY_STORE(data->cutcoefs, v, cutaj);
             --data->totalnnz;
-            --data->nnz[s];
-            indices[i] = indices[data->nnz[s]];
+            --data->secnnz[s];
+            indices[i] = indices[data->secnnz[s]];
             continue;
          }
 
@@ -3900,8 +3900,8 @@ SCIP_RETCODE cutsRoundMIR(
             if( QUAD_HI(zcoef) == 0.0 )
             {
                int zsection = varSection(data, zidx);
-               data->indices[zsection][data->nnz[zsection]] = zidx;
-               ++data->nnz[zsection];
+               data->secindices[zsection][data->secnnz[zsection]] = zidx;
+               ++data->secnnz[zsection];
                ++data->totalnnz;
             }
 
@@ -3917,8 +3917,8 @@ SCIP_RETCODE cutsRoundMIR(
    data->ncutinds = 0;
    for( s = 0; s < NSECTIONS; ++s )
    {
-      int* indices = data->indices[s];
-      int nnz = data->nnz[s];
+      int* indices = data->secindices[s];
+      int nnz = data->secnnz[s];
       for( i = 0; i < nnz; ++i )
       {
          data->cutinds[data->ncutinds] = indices[i];
@@ -8744,13 +8744,13 @@ SCIP_RETCODE cutsTransformStrongCG(
    /* transform the cut, one variable section at a time */
    for( s = 0; s < NSECTIONS; ++s )
    {
-      int* indices = data->indices[s];
+      int* indices = data->secindices[s];
       int cutindsstart = data->ncutinds;
       int usevbds = data->usevbds[s];
 
       i = 0;
       /* Iterate over all nonzeros in the section */
-      while( i < data->nnz[s] )
+      while( i < data->secnnz[s] )
       {
          SCIP_Real QUAD(coef);
          int index = data->ncutinds;
@@ -8762,9 +8762,9 @@ SCIP_RETCODE cutsTransformStrongCG(
          {
             QUAD_ASSIGN(coef, 0.0);
             QUAD_ARRAY_STORE(data->cutcoefs, v, coef);
-            --data->nnz[s];
+            --data->secnnz[s];
             --data->totalnnz;
-            indices[i] = indices[data->nnz[s]];
+            indices[i] = indices[data->secnnz[s]];
             /* do not increase the index */
             continue;
          }
@@ -8912,8 +8912,8 @@ SCIP_RETCODE cutsTransformStrongCG(
       data->ncutinds = 0;
       for( j = 0; j < NSECTIONS; ++j )
       {
-         int* indexlist = data->indices[j];
-         for( k = 0; k < data->nnz[j]; ++k )
+         int* indexlist = data->secindices[j];
+         for( k = 0; k < data->secnnz[j]; ++k )
          {
             data->cutinds[data->ncutinds] = indexlist[k];
             ++data->ncutinds;
@@ -9014,8 +9014,8 @@ SCIP_RETCODE cutsRoundStrongCG(
    cutindex = data->ncutinds - 1;
    for( s = NSECTIONS - 1; s >= 0; --s )
    {
-      int* indices = data->indices[s];
-      int nnz = data->nnz[s];
+      int* indices = data->secindices[s];
+      int nnz = data->secnnz[s];
 
       SCIP_Bool enfintegral = data->isenfint[s];
       SCIP_Bool implintegral = data->isimplint[s];
@@ -9084,8 +9084,8 @@ SCIP_RETCODE cutsRoundStrongCG(
             QUAD_ASSIGN(cutaj, 0.0);
             QUAD_ARRAY_STORE(data->cutcoefs, v, cutaj);
             --data->totalnnz;
-            --data->nnz[s];
-            indices[i] = indices[data->nnz[s]];
+            --data->secnnz[s];
+            indices[i] = indices[data->secnnz[s]];
             continue;
          }
 
@@ -9174,8 +9174,8 @@ SCIP_RETCODE cutsRoundStrongCG(
             if( QUAD_HI(zcoef) == 0.0 )
             {
                int zsection = varSection(data, zidx);
-               data->indices[zsection][data->nnz[zsection]] = zidx;
-               ++data->nnz[zsection];
+               data->secindices[zsection][data->secnnz[zsection]] = zidx;
+               ++data->secnnz[zsection];
                ++data->totalnnz;
             }
 
@@ -9191,8 +9191,8 @@ SCIP_RETCODE cutsRoundStrongCG(
    data->ncutinds = 0;
    for( s = 0; s < NSECTIONS; ++s )
    {
-      int* indices = data->indices[s];
-      int nnz = data->nnz[s];
+      int* indices = data->secindices[s];
+      int nnz = data->secnnz[s];
       for( i = 0; i < nnz; ++i )
       {
          data->cutinds[data->ncutinds] = indices[i];
