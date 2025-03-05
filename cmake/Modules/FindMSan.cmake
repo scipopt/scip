@@ -33,13 +33,13 @@ if(${SANITIZE} STREQUAL "memory")
         message(WARNING "MemorySanitizer disabled for target ${TARGET} because "
             "MemorySanitizer is supported for Linux systems only.")
         set(SANITIZE Off CACHE BOOL
-            "should sanitizers be enabled in debug mode if available" FORCE)
+            "should sanitizers be enabled if available" FORCE)
         set(${FLAG_CANDIDATES} "")
     elseif (NOT ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
         message(WARNING "MemorySanitizer disabled for target ${TARGET} because "
             "MemorySanitizer is supported for 64bit systems only.")
         set(SANITIZE Off CACHE BOOL
-            "should sanitizers be enabled in debug mode if available" FORCE)
+            "should sanitizers be enabled if available" FORCE)
         set(${FLAG_CANDIDATES} "")
     else ()
         sanitizer_check_compiler_flags("${FLAG_CANDIDATES}" "MemorySanitizer"

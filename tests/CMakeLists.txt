@@ -64,9 +64,9 @@ if( CRITERION_FOUND )
     #
     include_directories(${CRITERION_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND SANITIZE)
+    if(SANITIZE)
         find_package(Sanitizers)
-    endif()
+    endif(SANITIZE)
 
     #
     # Prepare unit test executable for every source file
@@ -101,9 +101,9 @@ if( CRITERION_FOUND )
         #
         target_link_libraries(${testName} ${CRITERION_LIBRARIES} libscip m)
 
-        if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND SANITIZE)
+        if(SANITIZE)
             add_sanitizers(${testName})
-        endif()
+        endif(SANITIZE)
 
         #
         # use the directory name (relative to src/) to build the executable
