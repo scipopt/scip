@@ -551,7 +551,7 @@ SCIP_Bool mpsinputReadLine(
             /* len < 14 is to handle ROW lines with embedded spaces
              * in the names correctly
              */
-            if( number || len < 14 )
+            if( number || (len < 14 && mpsi->section == MPS_ROWS) )
             {
                /* We assume fixed format, so we patch possible embedded spaces. */
                patchField(mpsi->buf,  4, 12);
