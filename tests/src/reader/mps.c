@@ -94,3 +94,19 @@ Test(readermps, spaceinrowname, .description = "check for reading with a space i
     cr_expect( SCIPgetNVars(scip) == 6 );
     cr_expect( SCIPgetNConss(scip) == 3 );
 }
+
+Test(readermps, shortlines, .description = "check for reading with short lines")
+{
+    /* a free-form mps file with short row and column names
+     * the special treatment for fixed-form mps in reader_mps (len<14, see above)
+     * prevented a file like this to be read correctly, because "x1 obj 1" was
+     * read treated as a single column name
+     * with a fix that restricts the len<14 special case to the row section this was fixed
+     */
+    char filename[SCIP_MAXSTRLEN];
+    TESTsetTestfilename(filename, __FILE__, "shortlines.mps");
+
+    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+    cr_expect( SCIPgetNVars(scip) == 7 );
+    cr_expect( SCIPgetNConss(scip) == 3 );
+}
