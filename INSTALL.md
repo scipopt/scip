@@ -340,7 +340,7 @@ In your SCIP main directory, enter `make [options]` with the following options:
 | `OSTYPE`              | `[linux, darwin, cygwin, irix, windows, mingw]` | the operating system: try to autedetect                               |
 | `PAPILO=false`        | `[false, true]`      | to disable or disable the MILP presolver based on the presolving library PaPILO                  |
 | `READLINE=true`       | `[true, false]`      | to enable or disable readline library for interactive shell                                      |
-| `SANITIZE=true`       | `[true, false, thread, address, memory]` | sanitizers to enable: SANITIZE not set to false enables undefined-behavior sanitizer, SANITIZE=thread enables thread sanitizer, SANITIZE=address enables address sanitizer, SANITIZE=memory enables memory sanitizer (clang only); only used if OPT=dbg |
+| `SANITIZE=false`      | `[true, false, thread, address, memory]` | sanitizers to enable: SANITIZE not set to false enables undefined-behavior sanitizer, SANITIZE=thread enables also thread sanitizer, SANITIZE=address enables also address sanitizer, SANITIZE=memory enables also memory sanitizer (clang only); Linux clang/gcc only |
 | `SHARED=false`        | `[false, true]`      | to suppress or create shared libraries (only Gnu compiler)                                       |
 | `SYM=none`            | `[none, nauty, snauty, bliss, sbliss, dejavu]` | to choose method for computing symmetries in mixed nonlinear integer programs                  |
 | `TPI=none`            | `[none, omp, tny]`   | to disable the task processing interface or use it with the openmp or tinycthreads interface for concurrent solves |

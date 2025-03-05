@@ -2,29 +2,3 @@ FLAGS		+=	-DSCIP_ROUNDING_FE
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN) -funit-at-a-time
 CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time
-
-# ThreadSanitizer (https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual)
-ifeq ($(SANITIZE),thread)
-  SANITIZERFLAGS = -fsanitize=thread
-endif
-
-# AddressSanitizer (https://github.com/google/sanitizers/wiki/AddressSanitizer)
-ifeq ($(SANITIZE),address)
-  SANITIZERFLAGS = -fsanitize=address
-endif
-
-ifeq ($(SANITIZE),memory)
-  $(warning Memory Sanitizer not available with GCC)
-endif
-
-# UndefinedBehaviorSanitizer if SANITIZE is true, thread, address, or memory
-ifneq ($(filter $(SANITIZE),true thread address memory),)
-  SANITIZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
-endif
-
-CFLAGS += $(SANITIZERFLAGS)
-CXXFLAGS += $(SANITIZERFLAGS)
-LDFLAGS += $(SANITIZERFLAGS)
-ifeq ($(SHARED),true)
-  LIBBUILDFLAGS += $(SANITIZERFLAGS)
-endif

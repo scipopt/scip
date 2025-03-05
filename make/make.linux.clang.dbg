@@ -2,32 +2,3 @@ FLAGS		+=	-DSCIP_ROUNDING_FE
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)
-
-# Enable sanitizers (http://clang.llvm.org/docs/UsersManual.html#controlling-code-generation).
-
-# enable ThreadSanitizer (http://clang.llvm.org/docs/ThreadSanitizer.html)
-ifeq ($(SANITIZE),thread)
-  SANITIZERFLAGS = -fsanitize=thread
-endif
-
-# enable AddressSanitizer (http://clang.llvm.org/docs/AddressSanitizer.html)
-ifeq ($(SANITIZE),address)
-  SANITIZERFLAGS = -fsanitize=address
-endif
-
-# enable MemorySanitizer (http://clang.llvm.org/docs/MemorySanitizer.html)
-ifeq ($(SANITIZE),memory)
-  SANITIZERFLAGS = -fsanitize=memory
-endif
-
-# UndefinedBehaviorSanitizer if SANITIZE is true, thread, address, or memory
-ifneq ($(filter $(SANITIZE),true thread address memory),)
-  SANITIZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
-endif
-
-CFLAGS += $(SANITIZERFLAGS)
-CXXFLAGS += $(SANITIZERFLAGS)
-LDFLAGS += $(SANITIZERFLAGS)
-ifeq ($(SHARED),true)
-  LIBBUILDFLAGS += $(SANITIZERFLAGS)
-endif
