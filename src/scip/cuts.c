@@ -7928,7 +7928,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
       {
          /* find closest lower bound in standard lower bound or variable lower bound for continuous variable
           * so that it will have a positive coefficient */
-         SCIP_CALL( findBestLb(scip, vars[v], sol, 1, allowlocal, bestbds + i, boundtype + i) );
+         SCIP_CALL( findBestLb(scip, vars[v], sol, SCIPvarIsIntegral(vars[v]) ? 0 : 1, allowlocal, bestbds + i, boundtype + i) );
 
          /* cannot transform into knapsack */
          if( SCIPisInfinity(scip, -bestbds[i]) )
@@ -7940,7 +7940,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
       {
          /* find closest upper bound in standard upper bound or variable upper bound for continuous variable
           * so that it will have a positive coefficient */
-         SCIP_CALL( findBestUb(scip, vars[v], sol, 1, allowlocal, bestbds + i, boundtype + i) );
+         SCIP_CALL( findBestUb(scip, vars[v], sol, SCIPvarIsIntegral(vars[v]) ? 0 : 1, allowlocal, bestbds + i, boundtype + i) );
 
           /* cannot transform into knapsack */
          if( SCIPisInfinity(scip, bestbds[i]) )
