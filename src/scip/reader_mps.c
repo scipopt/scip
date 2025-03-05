@@ -897,7 +897,8 @@ SCIP_RETCODE readRows(
       {
          if( *mpsinputObjname(mpsi) == '\0' )
             mpsinputSetObjname(mpsi, mpsinputField2(mpsi));
-         else
+         else if( strcmp(mpsinputObjname(mpsi), mpsinputField2(mpsi)) != 0 )
+            /* if OBJNAME was given and N-row is named differently, then warn that the N-row is not used as objective (OBJNAME takes precedence) */
             mpsinputEntryIgnored(scip, mpsi, "row", mpsinputField2(mpsi), "objective function", "N", SCIP_VERBLEVEL_NORMAL);
       }
       else
