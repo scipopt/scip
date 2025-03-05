@@ -79,3 +79,18 @@ Test(readermps, read2, .description = "check the function for reading a *.mps fi
     SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
     cr_expect( SCIPgetNVars(scip) == 5 );
 }
+
+Test(readermps, spaceinrowname, .description = "check for reading with a space in a row name")
+{
+    /* a fixed-form mps file with spaces in row and column names
+     * for this, there is a special treatment (len<14) in reader_mps
+     * it used to work, then broke (maybe only when using windows lineendings),
+     * then was fixed again (by ignoring trailing whitespace for len)
+     */
+    char filename[SCIP_MAXSTRLEN];
+    TESTsetTestfilename(filename, __FILE__, "forplan_begin.mps");
+
+    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+    cr_expect( SCIPgetNVars(scip) == 6 );
+    cr_expect( SCIPgetNConss(scip) == 3 );
+}
