@@ -22,26 +22,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-option(SANITIZE_UNDEFINED
-    "Enable UndefinedBehaviorSanitizer for sanitized targets." Off)
-
 set(FLAG_CANDIDATES
+    "-g -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero"
     "-g -fsanitize=undefined"
 )
 
-
 include(sanitize-helpers)
 
-if (SANITIZE_UNDEFINED)
-    sanitizer_check_compiler_flags("${FLAG_CANDIDATES}"
-        "UndefinedBehaviorSanitizer" "UBSan")
-endif ()
+sanitizer_check_compiler_flags("${FLAG_CANDIDATES}" "UndefinedBehaviorSanitizer" "UBSan")
 
 function (add_sanitize_undefined TARGET)
-    if (NOT SANITIZE_UNDEFINED)
-        return()
-    endif ()
-    sanitizer_add_flags(${TARGET} "UndefinedBehaviorSanitizer" "UBSan")
+    if(${TARGET} STREQUAL "libscip")
+        # make sure the C++ lib libscip is linked with -lubsan already
+        # this is necessary for C applications (e.g., applications/Coloring), where linking with
+        # -fsanitize=undefined does not link the C++-version of the ubsan library
+        sanitizer_add_flags(${TARGET} "UndefinedBehaviorSanitizer" "UBSan" "-lubsan")
+    else()
+        sanitizer_add_flags(${TARGET} "UndefinedBehaviorSanitizer" "UBSan" "")
+    endif()
 endfunction ()
 
 include(FindPackageHandleStandardArgs)

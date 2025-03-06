@@ -17,6 +17,7 @@ add_executable(relaxator
    src/relax_nlp.c)
 
 target_link_libraries(relaxator ${SCIP_LIBRARIES})
+target_compile_options(relaxator PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET examples )
     add_dependencies( examples relaxator )

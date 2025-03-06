@@ -1458,12 +1458,8 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(DFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
 
-# add special target for papilo to avoid sanitizers (leading to false positives in TBB)
-ifeq ($(SANITIZE),true)
-$(LIBOBJDIR)/scip/presol_milp.o: $(SRCDIR)/scip/presol_milp.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
-		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@ -fno-sanitize=all
-endif
+# always turn off sanitizer for papilo (leading to false positives in TBB); TODO turn off the false positives only
+$(LIBOBJDIR)/scip/presol_milp.o: SANITIZERFLAGS=
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
@@ -1509,7 +1505,7 @@ ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
 		@$(MAKE) $(SCIPCONFIGHFILE)
 endif
 ifneq ($(SANITIZE),$(LAST_SANITIZE))
-		# touch all files if SANITIZE is changed; this is necessary since some files (e.g., dijkstra, ...) do not depend on the buildflags
+# touch all files if SANITIZE is changed; this is necessary since some files (e.g., dijkstra, ...) do not depend on the buildflags
 		@-touch -c $(ALLSRC)
 endif
 		@-rm -f $(LASTSETTINGS)
@@ -1793,6 +1789,7 @@ help:
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
 		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
+		@echo "  - SANITIZE=<false|true|thread|address|memory>: To choose type of sanitizer."
 		@echo "  - SYM=<none|bliss|nauty|sbliss|snauty|dejavu>: To choose type of symmetry handling."
 		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP (deprecated, use THREADSAFE)."
 		@echo "  - THREADSAFE=<true|false>: Build thread safe."

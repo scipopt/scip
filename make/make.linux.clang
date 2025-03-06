@@ -24,3 +24,32 @@ ifeq ($(SHARED),true)
 FLAGS		+=	-fPIC
 endif
 LINK_shared		=	-shared
+
+# Enable sanitizers (http://clang.llvm.org/docs/UsersManual.html#controlling-code-generation).
+
+# enable ThreadSanitizer (http://clang.llvm.org/docs/ThreadSanitizer.html)
+ifeq ($(SANITIZE),thread)
+  SANITIZERFLAGS = -g -fsanitize=thread
+endif
+
+# enable AddressSanitizer (http://clang.llvm.org/docs/AddressSanitizer.html)
+ifeq ($(SANITIZE),address)
+  SANITIZERFLAGS = -g -fsanitize=address
+endif
+
+# enable MemorySanitizer (http://clang.llvm.org/docs/MemorySanitizer.html)
+ifeq ($(SANITIZE),memory)
+  SANITIZERFLAGS = -g -fsanitize=memory
+endif
+
+# UndefinedBehaviorSanitizer if SANITIZE is true, thread, address, or memory
+ifneq ($(filter $(SANITIZE),true thread address memory),)
+  SANITIZERFLAGS += -g -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
+endif
+
+CFLAGS += $(SANITIZERFLAGS)
+CXXFLAGS += $(SANITIZERFLAGS)
+LDFLAGS += $(SANITIZERFLAGS)
+ifeq ($(SHARED),true)
+  LIBBUILDFLAGS += $(SANITIZERFLAGS)
+endif
