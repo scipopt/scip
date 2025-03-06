@@ -569,7 +569,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          assert(0 <= -c-1 && -c-1 < nrows);
          row = rows[-c-1];
          /* We allow separating on rows with a 'slack' implied integral variable */
-         if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0 )
+         if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) &&
+            SCIPgetRowNumImpliedIntCols(scip, row) <= 1 )
          {
             frac = SCIPfeasFrac(scip, SCIPgetRowActivity(scip, row));
             frac = MIN(frac, 1.0 - frac);
