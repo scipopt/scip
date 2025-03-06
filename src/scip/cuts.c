@@ -5523,7 +5523,7 @@ SCIP_RETCODE determineBoundForSNF(
       bestlb[varposinrow] = bestslb[varposinrow];
       bestlbtype[varposinrow] = bestslbtype[varposinrow];
 
-      if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       {
          SCIP_Real bestvlb;
          int bestvlbidx;
@@ -5545,7 +5545,7 @@ SCIP_RETCODE determineBoundForSNF(
       bestub[varposinrow] = bestsub[varposinrow];
       bestubtype[varposinrow] = bestsubtype[varposinrow];
 
-      if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       {
          SCIP_Real bestvub;
          int bestvubidx;
@@ -7928,7 +7928,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
       {
          /* find closest lower bound in standard lower bound or variable lower bound for continuous variable
           * so that it will have a positive coefficient */
-         SCIP_CALL( findBestLb(scip, vars[v], sol, SCIPvarIsIntegral(vars[v]) ? 0 : 1, allowlocal, bestbds + i, boundtype + i) );
+         SCIP_CALL( findBestLb(scip, vars[v], sol, SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS ? 1 : 0, allowlocal, bestbds + i, boundtype + i) );
 
          /* cannot transform into knapsack */
          if( SCIPisInfinity(scip, -bestbds[i]) )
@@ -7940,7 +7940,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
       {
          /* find closest upper bound in standard upper bound or variable upper bound for continuous variable
           * so that it will have a positive coefficient */
-         SCIP_CALL( findBestUb(scip, vars[v], sol, SCIPvarIsIntegral(vars[v]) ? 0 : 1, allowlocal, bestbds + i, boundtype + i) );
+         SCIP_CALL( findBestUb(scip, vars[v], sol, SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS ? 1 : 0, allowlocal, bestbds + i, boundtype + i) );
 
           /* cannot transform into knapsack */
          if( SCIPisInfinity(scip, bestbds[i]) )
