@@ -52,6 +52,7 @@ Fixed bugs
 - fixed timeouts due to race conditions when using TPI=omp
 - fixed issues with indexing of concurrent solvers when a solver finishes (because SCIP is too fast) before others have been created when using TPI=tny
 - respect fixing if variable is declared binary in bounds section of mps file
+- fixed reading mps files with short row and column names and some fixed-form mps files with spaces in row names
 - force local bounds to adjusted value when fixing variable
 
 Build system
