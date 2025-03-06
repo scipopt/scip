@@ -1442,9 +1442,11 @@ SCIP_RETCODE cutTightenCoefsQuad(
 
    SCIPsortDownInd(cutinds, compareAbsCoefsQuad, (void*) cutcoefs, *cutnnz);
 
+   /* not yet implemented safely */
+   if( SCIPisExactSolve(scip) )
+      return SCIP_OKAY;
+
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
-   /** @todo exip implement and certify this */
-#ifdef SCIP_DISABLED_CODE
    for( i = 0; i < *cutnnz; )
    {
       SCIP_Real QUAD(val);
@@ -1558,10 +1560,9 @@ SCIP_RETCODE cutTightenCoefsQuad(
 
       ++i;
    }
-#endif /*lint --e{438}*/
 
    return SCIP_OKAY;
-} 
+}
 
 /** multiplies a parameter for a variable in a row safely (using variable bounds and increasing the rhs)
  * @return the scaled value
