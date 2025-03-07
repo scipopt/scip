@@ -68,6 +68,20 @@
 extern "C" {
 #endif
 
+/** enable exact solving mode
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPenableExactSolving(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             enable              /**< enable exact solving (TRUE) or disable it (FALSE) */
+   );
+
 /** returns whether the solution process is arithmetically exact, i.e., not subject to roundoff errors
  *
  *  @return Returns TRUE if \SCIP is in exact solving mode, otherwise FALSE

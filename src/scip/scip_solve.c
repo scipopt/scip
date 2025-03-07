@@ -3209,6 +3209,13 @@ SCIP_RETCODE SCIPenableReoptimization(
       return SCIP_INVALIDCALL;
    }
 
+   /* reoptimization in combination with exact solving has not been implemented */
+   if( scip->set->exact_enabled )
+   {
+      SCIPerrorMessage("Reoptimization cannot (yet) be started in exact solving mode.\n");
+      return SCIP_INVALIDCALL;
+   }
+
    /* if the current stage is SCIP_STAGE_PROBLEM we have to include the heuristics and branching rule */
    if( scip->set->stage == SCIP_STAGE_PROBLEM || (!enable && scip->set->stage == SCIP_STAGE_PRESOLVED) )
    {
