@@ -745,10 +745,10 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
    retcode = SCIPenableReoptimization(scip, SCIPparamGetBool(param));
 
    /* an appropriate error message is already printed in the above method */
-   if( retcode != SCIP_OKAY )
+   if( retcode == SCIP_INVALIDCALL )
       return SCIP_PARAMETERWRONGVAL;
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** information method for a parameter change of usesymmetry */
@@ -782,10 +782,10 @@ SCIP_DECL_PARAMCHGD(paramChgdExactSolve)
    retcode = SCIPenableExactSolving(scip, SCIPparamGetBool(param));
 
    /* an appropriate error message is already printed in the above method */
-   if( retcode != SCIP_OKAY )
+   if( retcode == SCIP_INVALIDCALL )
       return SCIP_PARAMETERWRONGVAL;
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** set parameters for reoptimization */
