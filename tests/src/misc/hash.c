@@ -44,7 +44,7 @@ void teardown(void) { }
 
 TestSuite(hash, .init = setup, .fini = teardown);
 
-Test(hash, setup_and_teardown, .description = "test that setup and teardown work correctly")
+Test(hash, setup_and_teardown, .description = "test that hashing numerics are correct")
 {
    cr_expect_eq(SCIPrealHashCode(-1), SCIPrealHashCode(-0.9999999998));
 
@@ -69,7 +69,6 @@ Test(hash, setup_and_teardown, .description = "test that setup and teardown work
    cr_expect_eq(SCIPrealHashCode(-1), SCIPrealHashCode(-0.9999999998));
 
    /* Check if sensible things happen at the numerical limits and at +- zero representation */
-
    cr_expect_neq(SCIPrealHashCode(DBL_MAX), SCIPrealHashCode(DBL_MIN));
    cr_expect_neq(SCIPrealHashCode(DBL_MAX), SCIPrealHashCode(0.0));
    cr_expect_neq(SCIPrealHashCode(DBL_MIN), SCIPrealHashCode(0.0));
