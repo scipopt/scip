@@ -33,7 +33,8 @@ Performance improvements
 
 Examples and applications
 -------------------------
-- Add pseudoboolean solver application
+
+- Add pbsolver application to solve pseudoboolean instances in OPB and WBO format while complying with PB competition rules
 
 - Coloring: new parameter branching/coloring/strategy to choose the least/most fractional variable for branching
 
