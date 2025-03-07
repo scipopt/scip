@@ -2968,17 +2968,21 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    {
       SCIPintervalSetRoundingModeDownwards();
       sideval = userow->lhs - userow->constant;
+#ifdef SCIP_DISABLED_CODE
       /** @todo exip: we can't certify this yet so we have to disable it, if enabled change also in cutsSubstituteMIRSafe */
-      // if( userow->integral )
-      //    sideval = ceil(sideval)
+      if( userow->integral )
+         sideval = ceil(sideval)
+#endif
    }
    else
    {
       SCIPintervalSetRoundingModeUpwards();
       sideval = userow->rhs - userow->constant;
+#ifdef SCIP_DISABLED_CODE
       /** @todo exip: we can't certify this yet so we have to disable it */
-      // if( userow->integral )
-      //    sideval = floor(sideval);
+      if( userow->integral )
+         sideval = floor(sideval);
+#endif
    }
 
    SCIPintervalSetRoundingModeUpwards();
@@ -3440,9 +3444,11 @@ SCIP_RETCODE addOneRowSafely(
 
       sideval = userow->lhs - userow->constant;
       /* row is integral? round left hand side up */
+#ifdef SCIP_DISABLED_CODE
       /** @todo exip: we can't certify this yet so we have to disable it, if enabled change also in cutsSubstituteMIRSafe */
-      // if( userow->integral )
-      //    sideval = ceil(sideval);
+      if( userow->integral )
+         sideval = ceil(sideval);
+#endif
    }
    else
    {
@@ -3455,10 +3461,12 @@ SCIP_RETCODE addOneRowSafely(
       SCIPintervalSetRoundingModeUpwards();
 
       sideval = userow->rhs - userow->constant;
+#ifdef SCIP_DISABLED_CODE
       /* row is integral? round right hand side down */
       /** @todo exip: we can't certify this yet so we have to disable it */
-      // if( userow->integral )
-      //    sideval = floor(sideval);
+      if( userow->integral )
+         sideval = floor(sideval);
+#endif
    }
 
    SCIPintervalSetRoundingModeUpwards();
@@ -3579,14 +3587,14 @@ SCIP_RETCODE SCIPaggrRowSumRows(
             {
                SCIP_ROW* row = rows[rowinds[k]];
                SCIP_Bool integral = FALSE;
-               // just exclude the negative continuous slacks for the certificate rows
+               /* just exclude the negative continuous slacks for the certificate rows */
                if( row->integral &&
                   ((!lhsused && SCIPisExactlyIntegral(row->rhs) &&  SCIPisExactlyIntegral(row->constant)) ||
                   (lhsused && SCIPisExactlyIntegral(row->lhs) &&  SCIPisExactlyIntegral(row->constant))) )
                {
                   SCIPdebugMessage("row has integral slack\n");
                   rowusedcert = FALSE;
-                  integral = TRUE; //SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
+                  integral = TRUE;
                }
                else
                {
@@ -3634,14 +3642,14 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                {
                   SCIP_ROW* row = rows[k];
                   SCIP_Bool integral = FALSE;
-                  // just exclude the negative continuous slacks for the certificate rows
+                  /* just exclude the negative continuous slacks for the certificate rows */
                   if( row->integral &&
                      ((!lhsused && SCIPisExactlyIntegral(row->rhs) &&  SCIPisExactlyIntegral(row->constant)) ||
                      (lhsused && SCIPisExactlyIntegral(row->lhs) &&  SCIPisExactlyIntegral(row->constant))) )
                   {
                      rowusedcert = FALSE;
                      SCIPdebugMessage("row has integral slack\n");
-                     integral = TRUE; //SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
+                     integral = TRUE;
                   }
                   else
                   {
@@ -6448,7 +6456,6 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
             SCIPintervalSet(&cutar, downar);
             splitcoef = downar;
             slackweight = weights[i];
-            //slackroundeddown = slacksign[i] == -1 ? fr.inf : fr.sup;
             slackroundeddown = TRUE;
             SCIPintervalMul(SCIPinfinity(scip), &fr, fr, onedivoneminusf0);
             SCIPdebugMessage("fractionality %g, f0 %g -> round down to %g\n", fr.inf, f0.inf, splitcoef);
@@ -6498,8 +6505,9 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
       if( SCIPisCertificateActive(scip) && integralslack) /*lint --e{644}*/
       {
          assert(mirinfo != NULL);
-         // save the value for the split disjunction for the integer slack and the continous part (for rounded up we subtract 1-f)
-         // multiply by -slacksign (same as above) since slack = side - row
+         /* save the value for the split disjunction for the integer slack and the continous part (for rounded up we
+          * subtract 1-f); multiply by -slacksign (same as above) since slack = side - row
+          */
          mirinfo->slackrows[mirinfo->nslacks] = userow;
          SCIP_CALL( SCIPcaptureRow(scip, userow) );
          mirinfo->slackcoefficients[mirinfo->nslacks] = splitcoef * (-slacksign[i]);
@@ -6509,8 +6517,8 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
          mirinfo->slackscale[mirinfo->nslacks] = scale;
          mirinfo->slackusedcoef[mirinfo->nslacks] = mult;
 
-         // save the value that goes into the certificate aggregation row (either downar or ar)
-         mirinfo->slackroundeddown[mirinfo->nslacks] = slackroundeddown; // * slacksign[i];
+         /* save the value that goes into the certificate aggregation row (either downar or ar) */
+         mirinfo->slackroundeddown[mirinfo->nslacks] = slackroundeddown;
          if( slackroundeddown )
             mirinfo->nrounddownslacks++;
          mirinfo->nslacks++;
@@ -6521,8 +6529,8 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
          continue;
 
       /* depending on the slack's sign, we have
-       *   sign = 1: s = rhs - a^Tx >= 0
-           sign = -1: s = lhs - a^Tx <= 0
+       * - sign = 1: s = rhs - a^Tx >= 0
+       * - sign = -1: s = lhs - a^Tx <= 0
        */
       {
          SCIP_Bool success;
@@ -6554,16 +6562,16 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
          assert(!SCIPisInfinity(scip, userow->rhs));
          SCIPintervalSet(&rowrhs, userow->rhs);
          SCIPintervalSubScalar(SCIPinfinity(scip), &rowrhs, rowrhs, userow->constant);
+#ifdef SCIP_DISABLED_CODE
          /** @todo exip: can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
-         // if( row->integral )
-         // {
-         //    /* the right hand side was implicitly rounded down in row aggregation */
-         //    QUAD_ASSIGN(rowrhs, floor(QUAD_TO_DBL(rowrhs)));
-         // }
+         if( row->integral )
+         {
+            /* the right hand side was implicitly rounded down in row aggregation */
+            QUAD_ASSIGN(rowrhs, floor(QUAD_TO_DBL(rowrhs)));
+         }
+#endif
          SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, cutar, rowrhs);
          *cutrhs += SCIPintervalGetSup(tmpinterval);
-         // if( SCIPisCertificateActive(scip) )
-         //    RatAddReal(mirinfo->rhs, mirinfo->rhs, +SCIPintervalGetInf(tmpinterval));
       }
       else
       {
@@ -6574,16 +6582,16 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
          assert(!SCIPisInfinity(scip, -userow->lhs));
          SCIPintervalSet(&rowlhs, userow->lhs);
          SCIPintervalSubScalar(SCIPinfinity(scip), &rowlhs, rowlhs, userow->constant);
+#ifdef SCIP_DISABLED_CODE
          /** @todo exip: can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
-         // if( row->integral )
-         // {
-         //    /* the left hand side was implicitly rounded up in row aggregation */
-         //    QUAD_ASSIGN(rowlhs, floor(QUAD_TO_DBL(rowlhs)));
-         // }
+         if( row->integral )
+         {
+            /* the left hand side was implicitly rounded up in row aggregation */
+            QUAD_ASSIGN(rowlhs, floor(QUAD_TO_DBL(rowlhs)));
+         }
+#endif
          SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, cutar, rowlhs);
          *cutrhs += SCIPintervalGetSup(tmpinterval);
-         // if( SCIPisCertificateActive(scip) )
-         //    RatAddProdReal(mirinfo->rhs, mirinfo->rhs, -SCIPintervalGetSup(tmpinterval));
       }
    }
 
@@ -6654,8 +6662,6 @@ SCIP_RETCODE cutsSubstituteMIRRational(
    assert(QUAD_HI(cutrhs) != NULL);
    assert(cutinds != NULL);
    assert(nnz != NULL);
-   //assert(0.0 < SCIPintervalGetInf(f0) && SCIPintervalGetSup(f0) < 1.0);
-
    assert(SCIPisExactSolve(scip));
 
    SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmprational) );
@@ -6795,13 +6801,14 @@ SCIP_RETCODE cutsSubstituteMIRRational(
          SCIPintervalSetRoundingModeUpwards();
          /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
          assert(!SCIPisInfinity(scip, userow->rhs));
-         //SCIPquadprecSumDD(rowrhs, userow->rhs, SCIPintervalNegateReal(userow->constant));
+#ifdef SCIP_DISABLED_CODE
          /** @todo exip: can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
-         // if( row->integral )
-         // {
-         //    /* the right hand side was implicitly rounded down in row aggregation */
-         //    QUAD_ASSIGN(rowrhs, floor(QUAD_TO_DBL(rowrhs)));
-         // }
+         if( row->integral )
+         {
+            /* the right hand side was implicitly rounded down in row aggregation */
+            QUAD_ASSIGN(rowrhs, floor(QUAD_TO_DBL(rowrhs)));
+         }
+#endif
          SCIPintervalSet(&valinterval, userow->rhs);
          SCIPintervalSubScalar(SCIPinfinity(scip), &valinterval, valinterval, userow->constant);
          SCIPintervalSetRational(&cutarinterval, cutar);
@@ -6816,13 +6823,14 @@ SCIP_RETCODE cutsSubstituteMIRRational(
          SCIPintervalSetRoundingModeUpwards();
          /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
          assert(!SCIPisInfinity(scip, -userow->lhs));
-         //SCIPquadprecSumDD(rowlhs, userow->lhs, -userow->constant);
+#ifdef SCIP_DISABLED_CODE
          /** @todo exip: can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
-         // if( row->integral )
-         // {
-         //    /* the left hand side was implicitly rounded up in row aggregation */
-         //    QUAD_ASSIGN(rowlhs, floor(QUAD_TO_DBL(rowlhs)));
-         // }
+         if( row->integral )
+         {
+            /* the left hand side was implicitly rounded up in row aggregation */
+            QUAD_ASSIGN(rowlhs, floor(QUAD_TO_DBL(rowlhs)));
+         }
+#endif
          SCIPintervalSet(&valinterval, userow->lhs);
          SCIPintervalSubScalar(SCIPinfinity(scip), &valinterval, valinterval, userow->constant);
          SCIPintervalSetRational(&cutarinterval, cutar);
