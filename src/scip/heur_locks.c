@@ -183,9 +183,6 @@ SCIP_DECL_HEUREXIT(heurExitLocks) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-#define heurInitsolLocks NULL
-#define heurExitsolLocks NULL
-
 /** apply fix-and-propagate scheme based on variable locks
  *
  *  @note probing mode of SCIP needs to be enabled before
