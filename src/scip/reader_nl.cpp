@@ -54,7 +54,6 @@
 #include "scip/expr_exp.h"
 #include "scip/expr_trig.h"
 #include "scip/expr_abs.h"
-#include "scip/scip_exact.h"
 
 // disable -Wshadow warnings for upcoming includes of AMPL/MP
 // disable -Wimplicit-fallthrough as I don't want to maintain extra comments in AMPL/MP code to suppress these
@@ -1761,12 +1760,6 @@ SCIP_DECL_READERREAD(readerReadNl)
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-
-   if( SCIPisExact(scip) )
-   {
-      SCIPerrorMessage("reading of AMPL .nl file in exact solving mode is not yet supported\n");
-      return SCIP_READERROR;
-   }
 
    try
    {

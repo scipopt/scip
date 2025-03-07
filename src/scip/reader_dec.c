@@ -81,7 +81,6 @@
 #include "scip/pub_var.h"
 #include "scip/reader_dec.h"
 #include "scip/scip_dcmp.h"
-#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -365,12 +364,6 @@ SCIP_DECL_READERREAD(readerReadDec)
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
    {
       SCIPerrorMessage("reading of decomposition file is only possible after a problem was created\n");
-      return SCIP_READERROR;
-   }
-
-   if( SCIPisExact(scip) )
-   {
-      SCIPerrorMessage("reading of decomposition file in exact solving mode is not yet supported\n");
       return SCIP_READERROR;
    }
 

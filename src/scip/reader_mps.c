@@ -4914,6 +4914,9 @@ SCIP_RETCODE SCIPincludeReaderMps(
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
 
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
+
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyMps) );
    SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeMps) );

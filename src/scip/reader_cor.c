@@ -36,7 +36,6 @@
 #include "scip/reader_mps.h"
 #include "scip/reader_tim.h"
 #include "scip/reader_sto.h"
-#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_prob.h"
@@ -210,12 +209,6 @@ SCIP_RETCODE SCIPreadCor(
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-
-   if( SCIPisExact(scip) )
-   {
-      SCIPerrorMessage("reading of cor format in exact solving mode is not yet supported\n");
-      return SCIP_READERROR;
-   }
 
    reader = SCIPfindReader(scip, READER_NAME);
    assert(reader != NULL);

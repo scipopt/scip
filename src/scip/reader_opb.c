@@ -4312,6 +4312,9 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
 
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
+
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyOpb) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadOpb) );

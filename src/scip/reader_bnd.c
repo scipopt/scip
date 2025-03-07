@@ -49,7 +49,6 @@
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/reader_bnd.h"
-#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -297,12 +296,6 @@ SCIP_DECL_READERREAD(readerReadBnd)
    if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
    {
       SCIPerrorMessage("reading of bounds file is only possible during problem creation stage\n");
-      return SCIP_READERROR;
-   }
-
-   if( SCIPisExact(scip) )
-   {
-      SCIPerrorMessage("reading of bounds file in exact solving mode is not yet supported\n");
       return SCIP_READERROR;
    }
 
