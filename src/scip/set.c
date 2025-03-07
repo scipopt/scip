@@ -745,7 +745,7 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
    retcode = SCIPenableReoptimization(scip, SCIPparamGetBool(param));
 
    /* an appropriate error message is already printed in the above method */
-   if( retcode == SCIP_INVALIDCALL )
+   if( retcode != SCIP_OKAY )
       return SCIP_PARAMETERWRONGVAL;
 
    return SCIP_OKAY;
@@ -774,14 +774,16 @@ SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
 static
 SCIP_DECL_PARAMCHGD(paramChgdExactSolve)
 {  /*lint --e{715}*/
+   SCIP_RETCODE retcode;
+
    assert( scip != NULL );
    assert( param != NULL );
 
-   if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
-   {
-      SCIPerrorMessage("Exact solving mode can only be enabled/disabled before reading/creating a problem.\n");
+   retcode = SCIPenableExactSolving(scip, SCIPparamGetBool(param));
+
+   /* an appropriate error message is already printed in the above method */
+   if( retcode != SCIP_OKAY )
       return SCIP_PARAMETERWRONGVAL;
-   }
 
    return SCIP_OKAY;
 }

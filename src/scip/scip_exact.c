@@ -143,6 +143,44 @@
 #include "scip/struct_scip.h"
 #endif
 
+/** enables or disables exact solving mode
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ */
+SCIP_RETCODE SCIPenableExactSolving(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             enable              /**< enable exact solving (TRUE) or disable it (FALSE) */
+   )
+{
+   assert(scip != NULL);
+
+   /* skip if nothing has changed */
+   if( enable == scip->set->exact_enabled )
+      return SCIP_OKAY;
+
+   /* check stage and throw an error */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("Exact solving mode can only be enabled/disabled before reading/creating a problem.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* reoptimization in combination with exact solving has not been implemented */
+   if( scip->set->reopt_enable )
+   {
+      SCIPerrorMessage("Exact solving mode not (yet) compatible with reoptimization.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   scip->set->reopt_enable = enable;
+
+   return SCIP_OKAY;
+}
+
 /** returns whether the solution process should be probably correct
  *
  *  @return Returns TRUE if \SCIP is in exact solving mode, otherwise FALSE
