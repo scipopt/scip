@@ -59,6 +59,12 @@ void SCIPreaderSetData(
    SCIP_READERDATA*      readerdata          /**< new reader user data */
    );
 
+/** marks the reader as safe to use in exact solving mode */
+SCIP_EXPORT
+void SCIPreaderMarkExact(
+   SCIP_READER*          reader              /**< reader */
+   );
+
 /** gets name of reader */
 SCIP_EXPORT
 const char* SCIPreaderGetName(

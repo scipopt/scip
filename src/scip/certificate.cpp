@@ -3819,7 +3819,7 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    if( !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
    certificate = SCIPgetCertificate(scip);
-   row = SCIPgetRowexExactLinear(scip, cons);
+   row = SCIPgetRowExactExactLinear(scip, cons);
 
    lhs = SCIProwExactGetLhs(row);
    rhs = SCIProwExactGetRhs(row);

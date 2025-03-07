@@ -1909,6 +1909,10 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
    assert(reader != NULL);
 
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
+
+   /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyZpl) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadZpl) );
 

@@ -1727,7 +1727,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitMILP) );
 
    /* mark as exact */
-   SCIPpresolSetExact(presol);
+   SCIPpresolMarkExact(presol);
 
    /* add MILP presolver parameters */
 #ifdef PAPILO_TBB

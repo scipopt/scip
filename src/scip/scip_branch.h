@@ -223,12 +223,6 @@ SCIP_RETCODE SCIPsetBranchruleMaxbounddist(
    SCIP_Real             maxbounddist        /**< new maxbounddist of the branching rule */
    );
 
-/** flags this branching rule to be safe for use in exact solving mode */
-SCIP_EXPORT
-void SCIPsetBranchruleExact(
-   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
-   );
-
 /* @} */
 
 /**@addtogroup PublicBranchingMethods

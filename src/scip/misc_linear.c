@@ -96,10 +96,6 @@ SCIP_Real SCIPconsGetRhs(
    {
       rhs = SCIPgetRhsVarbound(scip, cons);
    }
-   else if( strcmp(conshdlrname, "exactlinear") == 0 )
-   {
-      rhs = RatApproxReal(SCIPgetRhsExactLinear(scip, cons));
-   }
    else
    {
       SCIPwarningMessage(scip, "Cannot return rhs for constraint of type <%s>\n", conshdlrname);
@@ -164,10 +160,6 @@ SCIP_Real SCIPconsGetLhs(
    {
       lhs = SCIPgetLhsVarbound(scip, cons);
    }
-   else if( strcmp(conshdlrname, "exactlinear") == 0 )
-   {
-      lhs = RatApproxReal(SCIPgetLhsExactLinear(scip, cons));
-   }
    else
    {
       SCIPwarningMessage(scip, "Cannot return lhs for constraint of type <%s>\n", conshdlrname);
@@ -207,7 +199,7 @@ SCIP_Rational* SCIPconsGetRhsExact(
    }
    else
    {
-      SCIPwarningMessage(scip, "Cannot return rhs for constraint of type <%s>\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return exact rhs for constraint of type <%s>\n", conshdlrname);
       *success = FALSE;
    }
 
@@ -244,7 +236,7 @@ SCIP_Rational* SCIPconsGetLhsExact(
    }
    else
    {
-      SCIPwarningMessage(scip, "Cannot return lhs for constraint of type <%s>\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return exact lhs for constraint of type <%s>\n", conshdlrname);
       *success = FALSE;
    }
 
@@ -367,16 +359,6 @@ SCIP_RETCODE SCIPgetConsVals(
          vals[i] = weights[i];
       }
    }
-   else if( strcmp(conshdlrname, "exactlinear") == 0 )
-   {
-      SCIP_INTERVAL* weights;
-
-      weights = SCIPgetValsRealExactLinear(scip, cons);
-      for( i = 0; i < nvars; i++ )
-      {
-         vals[i] = weights[i].inf;
-      }
-   }
    else
    {
       SCIPwarningMessage(scip, "Cannot return value array for constraint of type <%s>\n", conshdlrname);
@@ -422,13 +404,13 @@ SCIP_RETCODE SCIPgetConsValsExact(
 
    if( !(*success) )
    {
-      SCIPwarningMessage(scip, "Cannot return value array for constraint of type <%s>\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return exact value array for constraint of type <%s>\n", conshdlrname);
       return SCIP_OKAY;
    }
 
    if( varssize < nvars )
    {
-      SCIPwarningMessage(scip, "Cannot return value array for constraint of type <%s> (insufficient memory provided)\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return exact value array for constraint of type <%s> (insufficient memory provided)\n", conshdlrname);
       *success = FALSE;
       return SCIP_OKAY;
    }
@@ -442,7 +424,7 @@ SCIP_RETCODE SCIPgetConsValsExact(
    }
    else
    {
-      SCIPwarningMessage(scip, "Cannot return value array for constraint of type <%s>\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return exact value array for constraint of type <%s>\n", conshdlrname);
       *success = FALSE;
    }
 

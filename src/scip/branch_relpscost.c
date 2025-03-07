@@ -2384,7 +2384,8 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->discountfactor, FALSE, BRANCHRULE_DISCOUNTFACTOR, 0.0, 1.0, NULL, NULL) );
 
    /* relpcost is safe to use in exact solving mode */
-   SCIPsetBranchruleExact(branchrule);
+   SCIPbranchruleMarkExact(branchrule);
+
    /* initialise the Treemodel parameters */
    SCIP_CALL( SCIPtreemodelInit(scip, &branchruledata->treemodel) );
 

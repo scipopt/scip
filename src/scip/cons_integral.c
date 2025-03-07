@@ -402,6 +402,9 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
 
    assert(conshdlr != NULL);
 
+   /* mark constraint handler as exact */
+   SCIPconshdlrMarkExact(conshdlr);
+
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIntegral, consCopyIntegral) );
    SCIP_CALL( SCIPsetConshdlrGetDiveBdChgs(scip, conshdlr, consGetDiveBdChgsIntegral) );

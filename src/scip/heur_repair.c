@@ -1329,6 +1329,9 @@ SCIP_RETCODE SCIPincludeHeurRepair(
    assert(heur != NULL);
    assert(heurdata != NULL);
 
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
+
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyRepair) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeRepair) );
