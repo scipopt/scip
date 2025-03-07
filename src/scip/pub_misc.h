@@ -575,8 +575,30 @@ int SCIPpqueueFind(
 INLINE static
 uint32_t SCIPrealHashCode(double x)
 {
+   /* Hashing infinite or nan values is currently not supported, because they are hashed to 0 */
+   assert(x != INFINITY && x != -INFINITY && !isnan(x) );
+
    int theexp;
-   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &theexp), 15))<<16) | (uint32_t)(uint16_t)theexp;
+   double fac = frexp(x, &theexp);
+   double base = ldexp(fac, 15);
+   int16_t basebits = (int16_t) base;
+
+   /* If we do not take care of it, we get 'hard' boundaries at powers of two because the exponent changes here.
+    * This is undesirable because many coefficients may be powers of two, and it leads to
+    * e.g. 0.99999999 and 1.0 being hashed as different numbers.
+    * To tackle this, we change the mantissa ourselves if all of the bits in it are set to one, which effectively
+    * 'rounds up' the floating point representation.
+    * */
+
+   if( abs(basebits) == ((1 << 15) -1) )
+   {
+      basebits /= 2;
+      int16_t sign = (basebits < 0 ? -1 : +1);
+      basebits = basebits + sign;
+      theexp += 1;
+   }
+
+   return (((uint32_t)(uint16_t) basebits) << 16) | (uint32_t)(uint16_t)theexp;
 }
 
 /** creates a hash table */
