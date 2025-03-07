@@ -2271,7 +2271,6 @@ SCIP_RETCODE cutTightenCoefs(
 
                SCIPquadprecProdDD(quadprod, val, lb);
                SCIPquadprecSumQQ(maxacttmp, maxacttmp, quadprod);
-               maxact = QUAD_TO_DBL(maxacttmp);
             }
             else
             {
@@ -2281,7 +2280,6 @@ SCIP_RETCODE cutTightenCoefs(
 
                SCIPquadprecProdDD(quadprod, val, ub);
                SCIPquadprecSumQQ(maxacttmp, maxacttmp, quadprod);
-               maxact = QUAD_TO_DBL(maxacttmp);
             }
          }
 
