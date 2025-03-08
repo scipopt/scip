@@ -48,6 +48,8 @@ Test(hash, setup_and_teardown, .description = "test that hashing numerics are co
 {
    cr_expect_eq(SCIPrealHashCode(-1), SCIPrealHashCode(-0.9999999998));
 
+   cr_expect_eq(SCIPrealHashCode(1.5), SCIPrealHashCode(1.4999999999));
+
    /* Things can go wrong around powers of two because the exponent of the floating point representation changes here */
    cr_expect_eq(SCIPrealHashCode(0.125), SCIPrealHashCode(0.12499999999999));
 

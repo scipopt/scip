@@ -575,30 +575,31 @@ int SCIPpqueueFind(
 INLINE static
 uint32_t SCIPrealHashCode(double x)
 {
-   /* Hashing infinite or nan values is currently not supported, because they are hashed to 0 */
-   assert(x != INFINITY && x != -INFINITY && !isnan(x) );
-
+   uint16_t numbits;
+   int thenum;
    int theexp;
-   double fac = frexp(x, &theexp);
-   double base = ldexp(fac, 15);
-   int16_t basebits = (int16_t) base;
 
-   /* If we do not take care of it, we get 'hard' boundaries at powers of two because the exponent changes here.
-    * This is undesirable because many coefficients may be powers of two, and it leads to
-    * e.g. 0.99999999 and 1.0 being hashed as different numbers.
-    * To tackle this, we change the mantissa ourselves if all of the bits in it are set to one, which effectively
-    * 'rounds up' the floating point representation.
-    * */
+   /* hashing infinite or nan values is not supported */
+   assert(!isnan(x));
+   assert(x != INFINITY);
+   assert(x != -INFINITY);
 
-   if( abs(basebits) == ((1 << 15) -1) )
+   /* get mantissa part */
+   numbits = (uint16_t)ldexp(frexp(ABS(x), &theexp), 16) + 1;
+
+   /* apply mantissa overflow */
+   if( numbits == 0 )
    {
-      basebits /= 2;
-      int16_t sign = (basebits < 0 ? -1 : +1);
-      basebits = basebits + sign;
-      theexp += 1;
+      numbits = 1 << 14;
+      ++theexp;
    }
+   else
+      numbits >>= 1;
 
-   return (((uint32_t)(uint16_t) basebits) << 16) | (uint32_t)(uint16_t)theexp;
+   /* determine mantissa hash */
+   thenum = x < 0.0 ? -(int)numbits : (int)numbits;
+
+   return (((uint32_t)(uint16_t)theexp) << 16) | ((uint32_t)(uint16_t)thenum);
 }
 
 /** creates a hash table */
