@@ -61,21 +61,21 @@ static void setup(void)
    blkmem = BMScreateBlockMemory(1, 10);
    buffmem = BMScreateBufferMemory(1.2, 4, FALSE);
 
-   (void) SCIPcreateRationalBuffer(buffmem, &rbuf);
-   (void) SCIPcreateRationalBlock(blkmem, &r1);
-   SCIPcopyRationalBlock(blkmem, &r2, r1);
+   (void) SCIPrationalCreateBuffer(buffmem, &rbuf);
+   (void) SCIPrationalCreateBlock(blkmem, &r1);
+   SCIPrationalCopyBlock(blkmem, &r2, r1);
 
-   (void) SCIPcreateRationalBlockArray(blkmem, &ratpt, 10);
+   (void) SCIPrationalCreateBlockArray(blkmem, &ratpt, 10);
    SCIPrationalarrayCreate(&ratar, blkmem);
 }
 
 static void teardown(void)
 {
-   SCIPfreeRationalBlock(blkmem, &r1);
-   SCIPfreeRationalBlock(blkmem, &r2);
-   SCIPfreeRationalBuffer(buffmem, &rbuf);
+   SCIPrationalFreeBlock(blkmem, &r1);
+   SCIPrationalFreeBlock(blkmem, &r2);
+   SCIPrationalFreeBuffer(buffmem, &rbuf);
 
-   SCIPfreeRationalBlockArray(blkmem, &ratpt, 10);
+   SCIPrationalFreeBlockArray(blkmem, &ratpt, 10);
    SCIPrationalarrayFree(&ratar, blkmem);
 
    BMSdestroyBlockMemory(&blkmem);
@@ -94,9 +94,9 @@ Test(rationals, create_and_free)
    size_t nusedbuffers;
    nusedbuffers = BMSgetNUsedBufferMemory(buffmem);
 
-   (void) SCIPcreateRationalBufferArray(buffmem, &buffer, 5);
-   SCIPreallocRationalBufferArray(buffmem, &buffer, 5, 10);
-   SCIPfreeRationalBufferArray(buffmem, &buffer, 10);
+   (void) SCIPrationalCreateBufferArray(buffmem, &buffer, 5);
+   SCIPrationalReallocBufferArray(buffmem, &buffer, 5, 10);
+   SCIPrationalFreeBufferArray(buffmem, &buffer, 10);
    cr_assert_eq(nusedbuffers, BMSgetNUsedBufferMemory(buffmem));
 }
 
@@ -113,7 +113,7 @@ Test(rationals, setting, .description = "tests all the different methods to set/
 
    /* create some rationals with different methods*/
 
-   (void) SCIPcreateRationalBlockGMP(blkmem, &testr, gmpr);
+   (void) SCIPrationalCreateBlockGMP(blkmem, &testr, gmpr);
 #endif
 
    /* test setter methods */
@@ -151,7 +151,7 @@ Test(rationals, setting, .description = "tests all the different methods to set/
 #endif
 
    /* delete the rationals */
-   SCIPfreeRationalBlock(blkmem, &testr);
+   SCIPrationalFreeBlock(blkmem, &testr);
 }
 
 Test(rationals, arithmetic, .description = "tests rational arithmetic methods")

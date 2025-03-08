@@ -658,7 +658,7 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
 
    if( !(*lperror) )
    {
-      SCIP_CALL( SCIPcreateRationalBuffer(scip->set->buffer, &objval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(scip->set->buffer, &objval) );
       SCIPgetLPExactObjval(scip, objval);
 
       /* the LP is infeasible or the objective limit was reached */
@@ -670,7 +670,7 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
             *cutoff = TRUE;
       }
 
-      SCIPfreeRationalBuffer(scip->set->buffer, &objval);
+      SCIPrationalFreeBuffer(scip->set->buffer, &objval);
    }
 
    return SCIP_OKAY;

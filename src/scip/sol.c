@@ -374,10 +374,10 @@ SCIP_RETCODE solUnlinkVarExact(
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_LPSOL:
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &solval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &solval) );
       SCIPvarGetLPSolExact(var, solval);
       SCIP_CALL( solSetArrayValExact(sol, set, var, solval) );
-      SCIPfreeRationalBuffer(set->buffer, &solval);
+      SCIPrationalFreeBuffer(set->buffer, &solval);
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_PSEUDOSOL:
@@ -482,7 +482,7 @@ SCIP_RETCODE SCIPsolCreateExact(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(*sol)->valsexact) );
    SCIP_CALL( SCIPrationalarrayCreate(&(*sol)->valsexact->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valsexact->valid, blkmem) );
-   SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*sol)->valsexact->obj) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*sol)->valsexact->obj) );
 
    assert(SCIPsolIsExact(*sol));
 
@@ -501,7 +501,7 @@ SCIP_RETCODE SCIPvalsExactCopy(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, valsexact) );
    SCIP_CALL( SCIPrationalarrayCopy(&(*valsexact)->vals, blkmem, sourcevals->vals) );
    SCIP_CALL( SCIPboolarrayCopy(&(*valsexact)->valid, blkmem, sourcevals->valid) );
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(*valsexact)->obj, sourcevals->obj) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(*valsexact)->obj, sourcevals->obj) );
 
    return SCIP_OKAY;
 }
@@ -565,7 +565,7 @@ SCIP_RETCODE SCIPsolCreateOriginalExact(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(*sol)->valsexact ) );
    SCIP_CALL( SCIPrationalarrayCreate(&(*sol)->valsexact->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valsexact->valid, blkmem) );
-   SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*sol)->valsexact->obj) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*sol)->valsexact->obj) );
 
    assert(SCIPsolIsExact(*sol));
 
@@ -1110,7 +1110,7 @@ SCIP_RETCODE valsExactFree(
    assert(valsexact != NULL);
    assert(*valsexact != NULL);
 
-   SCIPfreeRationalBlock(blkmem, &(*valsexact)->obj);
+   SCIPrationalFreeBlock(blkmem, &(*valsexact)->obj);
    SCIP_CALL( SCIPrationalarrayFree(&(*valsexact)->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayFree(&(*valsexact)->valid) );
    BMSfreeBlockMemory(blkmem, valsexact);
@@ -1727,7 +1727,7 @@ SCIP_RETCODE SCIPsolSetValExact(
    case SCIP_VARSTATUS_ORIGINAL:
       if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL )
       {
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &oldval) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldval) );
 
          solGetArrayValExact(oldval, sol, var);
 
@@ -1742,7 +1742,7 @@ SCIP_RETCODE SCIPsolSetValExact(
             SCIPrationalAddProd(sol->valsexact->obj, obj, val);
          }
 
-         SCIPfreeRationalBuffer(set->buffer, &oldval);
+         SCIPrationalFreeBuffer(set->buffer, &oldval);
          return SCIP_OKAY;
       }
       else
@@ -1751,7 +1751,7 @@ SCIP_RETCODE SCIPsolSetValExact(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &oldval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldval) );
 
       solGetArrayValExact(oldval, sol, var);
 
@@ -1764,7 +1764,7 @@ SCIP_RETCODE SCIPsolSetValExact(
          SCIPrationalAddProd(sol->valsexact->obj, obj, val);
       }
 
-      SCIPfreeRationalBuffer(set->buffer, &oldval);
+      SCIPrationalFreeBuffer(set->buffer, &oldval);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -1782,7 +1782,7 @@ SCIP_RETCODE SCIPsolSetValExact(
       assert(!SCIPrationalIsAbsInfinity(SCIPvarGetAggrConstantExact(var)));
       assert(!SCIPrationalIsAbsInfinity(SCIPvarGetAggrScalarExact(var)));
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
       if( SCIPrationalIsAbsInfinity(val) )
       {
@@ -1797,7 +1797,7 @@ SCIP_RETCODE SCIPsolSetValExact(
          retcode = SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetAggrVar(var), tmp);
       }
 
-      SCIPfreeRationalBuffer(set->buffer, &tmp);
+      SCIPrationalFreeBuffer(set->buffer, &tmp);
       return retcode;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -2056,8 +2056,8 @@ void SCIPsolGetValExact(
       SCIP_Rational* scalar;
       SCIP_Rational* constant;
 
-      (void) SCIPcreateRationalBuffer(set->buffer, &scalar);
-      (void) SCIPcreateRationalBuffer(set->buffer, &constant);
+      (void) SCIPrationalCreateBuffer(set->buffer, &scalar);
+      (void) SCIPrationalCreateBuffer(set->buffer, &constant);
 
       /* we cannot get the value of a transformed variable for a solution that lives in the original problem space
        * -> get the corresponding original variable first
@@ -2084,8 +2084,8 @@ void SCIPsolGetValExact(
       SCIPrationalMult(res, res, scalar);
       SCIPrationalAdd(res, res, constant);
 
-      SCIPfreeRationalBuffer(set->buffer, &constant);
-      SCIPfreeRationalBuffer(set->buffer, &scalar);
+      SCIPrationalFreeBuffer(set->buffer, &constant);
+      SCIPrationalFreeBuffer(set->buffer, &scalar);
 
       return;
    }
@@ -2136,7 +2136,7 @@ void SCIPsolGetValExact(
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      (void) SCIPcreateRationalBuffer(set->buffer, &solval);
+      (void) SCIPrationalCreateBuffer(set->buffer, &solval);
 
       nvars = SCIPvarGetMultaggrNVars(var);
       vars = SCIPvarGetMultaggrVars(var);
@@ -2155,7 +2155,7 @@ void SCIPsolGetValExact(
          }
          SCIPrationalAddProd(res, scalars[i], solval);
       }
-      SCIPfreeRationalBuffer(set->buffer, &solval);
+      SCIPrationalFreeBuffer(set->buffer, &solval);
       break;
 
    case SCIP_VARSTATUS_NEGATED:
@@ -2390,7 +2390,7 @@ SCIP_RETCODE solCheckExact(
    if( !printreason )
       completely = FALSE;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &solval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &solval) );
 
    /* check whether the solution respects the global bounds of the variables */
    /** @todo exip: always check this in exact solving mode, for now */
@@ -2478,7 +2478,7 @@ SCIP_RETCODE solCheckExact(
 #endif
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &solval);
+   SCIPrationalFreeBuffer(set->buffer, &solval);
 
    return SCIP_OKAY;
 }
@@ -2872,9 +2872,9 @@ SCIP_RETCODE SCIPsolMakeExact(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &sol->valsexact ) );
    SCIP_CALL( SCIPrationalarrayCreate(&sol->valsexact->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&sol->valsexact->valid, blkmem) );
-   SCIP_CALL( SCIPcreateRationalBlock(blkmem, &sol->valsexact->obj) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &sol->valsexact->obj) );
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
    SCIP_CALL( SCIPsolUnlink(sol, set, prob) );
 
@@ -2888,7 +2888,7 @@ SCIP_RETCODE SCIPsolMakeExact(
 
    SCIPsolRecomputeInternObjExact(sol, set, stat, prob);
 
-   SCIPfreeRationalBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -3103,11 +3103,11 @@ SCIP_RETCODE SCIPsolRetransformExact(
    /* allocate temporary memory for getting the active representation of the original variables, buffering the solution
     * values of all active variables and storing the original solution values
     */
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &transsolvals, ntransvars + 1) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &transsolvals, ntransvars + 1) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, ntransvars + 1) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &activevals, ntransvars + 1) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &solvals, nvars) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &constant) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &activevals, ntransvars + 1) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &solvals, nvars) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &constant) );
 
    assert(transsolvals != NULL); /* for flexelint */
 
@@ -3162,11 +3162,11 @@ SCIP_RETCODE SCIPsolRetransformExact(
    }
 
    /* free temporary memory */
-   SCIPfreeRationalBuffer(set->buffer, &constant);
-   SCIPfreeRationalBufferArray(set->buffer, &solvals, nvars);
-   SCIPfreeRationalBufferArray(set->buffer, &activevals, ntransvars + 1);
+   SCIPrationalFreeBuffer(set->buffer, &constant);
+   SCIPrationalFreeBufferArray(set->buffer, &solvals, nvars);
+   SCIPrationalFreeBufferArray(set->buffer, &activevals, ntransvars + 1);
    SCIPsetFreeBufferArray(set, &activevars);
-   SCIPfreeRationalBufferArray(set->buffer, &transsolvals, ntransvars + 1);
+   SCIPrationalFreeBufferArray(set->buffer, &transsolvals, ntransvars + 1);
 
    return SCIP_OKAY;
 }
@@ -3227,7 +3227,7 @@ void SCIPsolRecomputeInternObjExact(
 
    vars = prob->vars;
    nvars = prob->nvars;
-   (void) SCIPcreateRationalBuffer(set->buffer, &solval);
+   (void) SCIPrationalCreateBuffer(set->buffer, &solval);
 
    SCIPrationalSetInt(sol->valsexact->obj, 0L, 1L);
 
@@ -3241,7 +3241,7 @@ void SCIPsolRecomputeInternObjExact(
       }
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &solval);
+   SCIPrationalFreeBuffer(set->buffer, &solval);
 }
 
 /** returns whether the given solutions (exact or floating point) are exactly equal */
@@ -3266,8 +3266,8 @@ SCIP_Bool solsAreEqualExact(
    assert(sol2 != NULL);
    assert(((SCIPsolGetOrigin(sol1) == SCIP_SOLORIGIN_ORIGINAL) && (SCIPsolGetOrigin(sol2) == SCIP_SOLORIGIN_ORIGINAL)) || transprob != NULL);
 
-   (void) SCIPcreateRationalBuffer(set->buffer, &tmp1);
-   (void) SCIPcreateRationalBuffer(set->buffer, &tmp2);
+   (void) SCIPrationalCreateBuffer(set->buffer, &tmp1);
+   (void) SCIPrationalCreateBuffer(set->buffer, &tmp2);
 
    /* if both solutions are original or both are transformed, take the objective values stored in the solutions */
    if( (SCIPsolGetOrigin(sol1) == SCIP_SOLORIGIN_ORIGINAL) == (SCIPsolGetOrigin(sol2) == SCIP_SOLORIGIN_ORIGINAL) )
@@ -3316,8 +3316,8 @@ SCIP_Bool solsAreEqualExact(
          result = FALSE;
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &tmp2);
-   SCIPfreeRationalBuffer(set->buffer, &tmp1);
+   SCIPrationalFreeBuffer(set->buffer, &tmp2);
+   SCIPrationalFreeBuffer(set->buffer, &tmp1);
 
    return result;
 }
@@ -3553,7 +3553,7 @@ SCIP_RETCODE SCIPsolPrintExact(
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || prob->transformed || transprob != NULL);
    assert(SCIPsolIsExact(sol));
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &solval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &solval) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &solvalstr, solvalsize) );
 
    /* display variables of problem data */
@@ -3713,7 +3713,7 @@ SCIP_RETCODE SCIPsolPrintExact(
    }
 
    SCIPsetFreeBufferArray(set, &solvalstr);
-   SCIPfreeRationalBuffer(set->buffer, &solval);
+   SCIPrationalFreeBuffer(set->buffer, &solval);
 
    return SCIP_OKAY;
 }
@@ -4020,7 +4020,7 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
    vars = SCIPsolIsOriginal(sol) ? SCIPprobGetVars(origprob) : SCIPprobGetVars(transprob);
    nvars = SCIPsolIsOriginal(sol) ? SCIPprobGetNVars(origprob) : SCIPprobGetNVars(transprob);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &solval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &solval) );
 
    /* overwrite all the variables */
    for( i = 0; i < nvars; i++ )
@@ -4048,7 +4048,7 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
    /* hard-set the obj value of the solution  */
    sol->obj = SCIPrationalRoundReal(solval, SCIP_R_ROUND_UPWARDS);
 
-   SCIPfreeRationalBuffer(set->buffer, &solval);
+   SCIPrationalFreeBuffer(set->buffer, &solval);
 
    return SCIP_OKAY;
 }

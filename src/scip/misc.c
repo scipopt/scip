@@ -9868,8 +9868,8 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
    scm = 1;
    scalable = TRUE;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(buffer, &ratupdate) );
-   SCIP_CALL( SCIPcreateRationalBuffer(buffer, &ratscm) );
+   SCIP_CALL( SCIPrationalCreateBuffer(buffer, &ratupdate) );
+   SCIP_CALL( SCIPrationalCreateBuffer(buffer, &ratscm) );
 
    /* first value (to initialize gcd) */
    for( c = 0; c < nvals && scalable; ++c )
@@ -9958,8 +9958,8 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
 
    }
 
-   SCIPfreeRationalBuffer(buffer, &ratscm);
-   SCIPfreeRationalBuffer(buffer, &ratupdate);
+   SCIPrationalFreeBuffer(buffer, &ratscm);
+   SCIPrationalFreeBuffer(buffer, &ratupdate);
 
    return SCIP_OKAY;
 }

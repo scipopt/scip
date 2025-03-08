@@ -1504,7 +1504,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
    nvars = 0;
    vars = NULL;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &coef) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &coef) );
    SCIPrationalSetString(coef, "inf");
 
    SCIPdebugMsg(scip, "parsing polynomial from '%s'\n", str);
@@ -1530,7 +1530,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
                monomialssize = SCIPcalcMemGrowSize(scip, *nmonomials+1);
 
                SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  *nmonomials, monomialssize) );
-               SCIP_CALL( SCIPreallocRationalBlockArray(SCIPblkmem(scip), monomialcoefs, *nmonomials, monomialssize) );
+               SCIP_CALL( SCIPrationalReallocBlockArray(SCIPblkmem(scip), monomialcoefs, *nmonomials, monomialssize) );
             }
 
             if( nvars > 0 )
@@ -1685,7 +1685,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
          {
             monomialssize = *nmonomials+1;
             SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  *nmonomials, monomialssize) );
-            SCIP_CALL( SCIPreallocRationalBlockArray(SCIPblkmem(scip), monomialcoefs, *nmonomials, monomialssize) );
+            SCIP_CALL( SCIPrationalReallocBlockArray(SCIPblkmem(scip), monomialcoefs, *nmonomials, monomialssize) );
          }
 
          if( nvars > 0 )
@@ -1727,7 +1727,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
       /* shrink arrays to required size, so we do not need to keep monomialssize around */
       assert(*nmonomials <= monomialssize);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  monomialssize, *nmonomials) );
-      SCIP_CALL( SCIPreallocRationalBlockArray(SCIPblkmem(scip), monomialcoefs, monomialssize, *nmonomials) );
+      SCIP_CALL( SCIPrationalReallocBlockArray(SCIPblkmem(scip), monomialcoefs, monomialssize, *nmonomials) );
 
       /* SCIPwriteVarsPolynomial(scip, NULL, *monomialvars, *monomialexps, *monomialcoefs, *monomialnvars, *nmonomials, FALSE); */
    }
@@ -1738,7 +1738,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
       *nmonomials = 0;
    }
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &coef);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &coef);
 
    return SCIP_OKAY;
 }
@@ -1836,7 +1836,7 @@ void SCIPfreeParseVarsPolynomialDataExact(
       SCIPfreeBlockMemoryArrayNull(scip, &(*monomialvars)[i], 1);
    }
 
-   SCIPfreeRationalBlockArray(SCIPblkmem(scip), monomialcoefs, nmonomials);
+   SCIPrationalFreeBlockArray(SCIPblkmem(scip), monomialcoefs, nmonomials);
    SCIPfreeBlockMemoryArray(scip, monomialvars, nmonomials);
 }
 
@@ -6557,8 +6557,8 @@ SCIP_RETCODE SCIPtightenVarLbExact(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &ub) );
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &lb) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &ub) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lb) );
 
    /* get current bounds */
    SCIP_CALL( SCIPcomputeVarLbLocalExact(scip, var, lb) );
@@ -6569,8 +6569,8 @@ SCIP_RETCODE SCIPtightenVarLbExact(
    if( SCIPrationalIsGT(newbound, ub) )
    {
       *infeasible = TRUE;
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &lb);
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &ub);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
 
       return SCIP_OKAY;
    }
@@ -6578,8 +6578,8 @@ SCIP_RETCODE SCIPtightenVarLbExact(
    SCIPrationalMIN(newbound, newbound, ub);
    if( SCIPrationalIsLE(newbound, lb) )
    {
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &lb);
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &ub);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
 
       return SCIP_OKAY;
    }
@@ -6632,8 +6632,8 @@ SCIP_RETCODE SCIPtightenVarLbExact(
    if( tightened != NULL && SCIPrationalIsLT(lb, newbound) )
       *tightened = TRUE;
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &lb);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &ub);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
 
    return SCIP_OKAY;
 }
@@ -6807,8 +6807,8 @@ SCIP_RETCODE SCIPtightenVarUbExact(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &ub) );
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &lb) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &ub) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lb) );
 
    /* get current bounds */
    SCIP_CALL( SCIPcomputeVarLbLocalExact(scip, var, lb) );
@@ -6818,8 +6818,8 @@ SCIP_RETCODE SCIPtightenVarUbExact(
 
    if( SCIPrationalIsLT(newbound, lb) )
    {
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &lb);
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &ub);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
 
       *infeasible = TRUE;
       return SCIP_OKAY;
@@ -6828,8 +6828,8 @@ SCIP_RETCODE SCIPtightenVarUbExact(
    SCIPrationalMAX(newbound, newbound, lb);
    if( SCIPrationalIsGE(newbound, ub) )
    {
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &lb);
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &ub);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
 
       return SCIP_OKAY;
    }
@@ -6881,8 +6881,8 @@ SCIP_RETCODE SCIPtightenVarUbExact(
    if( tightened != NULL && SCIPrationalIsGT(ub, newbound) )
       *tightened = TRUE;
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &lb);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &ub);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
 
    return SCIP_OKAY;
 }
@@ -7210,7 +7210,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    SCIP_Rational* lb;
    SCIP_Rational* ub;
    SCIP_Rational* adjustedBound;
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &adjustedBound) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &adjustedBound) );
    SCIPrationalSet(adjustedBound, newbound);
    assert(infeasible != NULL);
 
@@ -7293,11 +7293,11 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
 
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &adjustedBound);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &adjustedBound);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 RETURN_SCIP_OKAY:
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &adjustedBound);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &adjustedBound);
    return SCIP_OKAY;
 }
 
@@ -7332,7 +7332,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    SCIP_Rational* ub;
    SCIP_Rational* lb;
    SCIP_Rational* adjustedBound;
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &adjustedBound) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &adjustedBound) );
    SCIPrationalSet(adjustedBound, newbound);
    assert(infeasible != NULL);
 
@@ -7415,11 +7415,11 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
 
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &adjustedBound);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &adjustedBound);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 RETURN_SCIP_OKAY:
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &adjustedBound);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &adjustedBound);
    return SCIP_OKAY;
 }
 
@@ -7973,7 +7973,7 @@ SCIP_RETCODE tightenVarLbGlobalSafe(
    if( SCIPsetIsEQ(scip->set, lb, newbound) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &newboundexact) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &newboundexact) );
    SCIPrationalSetReal(newboundexact, newbound);
 
    switch( scip->set->stage )
@@ -8026,7 +8026,7 @@ SCIP_RETCODE tightenVarLbGlobalSafe(
    if( tightened != NULL && lb < SCIPcomputeVarLbGlobal(scip, var) )
       *tightened = TRUE;
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &newboundexact);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &newboundexact);
 
    return SCIP_OKAY;
 }
@@ -8205,7 +8205,7 @@ SCIP_RETCODE tightenVarUbGlobalSafe(
    if( SCIPsetIsEQ(scip->set, ub, newbound) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &newboundexact) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &newboundexact) );
    SCIPrationalSetReal(newboundexact, newbound);
 
    switch( scip->set->stage )
@@ -8257,7 +8257,7 @@ SCIP_RETCODE tightenVarUbGlobalSafe(
    if( tightened != NULL && ub > SCIPcomputeVarUbGlobal(scip, var) )
       *tightened = TRUE;
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &newboundexact);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &newboundexact);
 
    return SCIP_OKAY;
 }
@@ -10754,8 +10754,8 @@ SCIP_RETCODE SCIPaggregateVarsExact(
    SCIP_Rational* constantx;
    SCIP_Rational* constanty;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &constantx) );
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &constanty) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constantx) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constanty) );
 
    assert(infeasible != NULL);
    assert(redundant != NULL);
@@ -10859,8 +10859,8 @@ SCIP_RETCODE SCIPaggregateVarsExact(
       *redundant = *aggregated;
    }
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &constanty);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &constantx);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &constanty);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &constantx);
 
    return SCIP_OKAY;
 }

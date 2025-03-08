@@ -125,7 +125,7 @@ SCIP_RETCODE getActiveVariablesExact(
    if( requiredsize > *nvars )
    {
       SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
-      SCIP_CALL( SCIPreallocRationalBufferArray(SCIPbuffer(scip), &scalars, *nvars, requiredsize) );
+      SCIP_CALL( SCIPrationalReallocBufferArray(SCIPbuffer(scip), &scalars, *nvars, requiredsize) );
 
       /* call function a second time with enough memory */
       SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, *vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
@@ -493,19 +493,19 @@ SCIP_RETCODE addConstraintExact(
    activevars = NULL;
    activevals = NULL;
    nactivevars = nvars;
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &activeconstant) );
-   SCIP_CALL( SCIPcopyRationalBuffer(SCIPbuffer(scip), &tmplhs, lhs) );
-   SCIP_CALL( SCIPcopyRationalBuffer(SCIPbuffer(scip), &tmprhs, rhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &activeconstant) );
+   SCIP_CALL( SCIPrationalCopyBuffer(SCIPbuffer(scip), &tmplhs, lhs) );
+   SCIP_CALL( SCIPrationalCopyBuffer(SCIPbuffer(scip), &tmprhs, rhs) );
 
    /* duplicate variable and value array */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
    if( vals != NULL )
    {
-      SCIP_CALL( SCIPcopyRationalBufferArray(SCIPbuffer(scip), &activevals, vals, nactivevars ) );
+      SCIP_CALL( SCIPrationalCopyBufferArray(SCIPbuffer(scip), &activevals, vals, nactivevars ) );
    }
    else
    {
-      SCIP_CALL( SCIPcreateRationalBufferArray(SCIPbuffer(scip), &activevals, nactivevars) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &activevals, nactivevars) );
 
       for( v = 0; v < nactivevars; v++ )
          SCIPrationalSetInt(activevals[v], 1L, 1L);
@@ -527,12 +527,12 @@ SCIP_RETCODE addConstraintExact(
    }
 
    /* free buffer arrays */
-   SCIPfreeRationalBufferArray(SCIPbuffer(scip), &activevals, nvars);
+   SCIPrationalFreeBufferArray(SCIPbuffer(scip), &activevals, nvars);
    SCIPfreeBufferArray(scip, &activevars);
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmprhs);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmplhs);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &activeconstant);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmprhs);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmplhs);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &activeconstant);
 
    return SCIP_OKAY;
 }
@@ -879,10 +879,10 @@ SCIP_RETCODE SCIPmatrixCreate(
    if( SCIPisExactSolve(scip) )
    {
       SCIP_CALL( SCIPallocBuffer(scip, &matrix->matrixvalsexact) );
-      SCIP_CALL( SCIPcreateRationalBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->colmatvalexact, nnonzstmp) );
-      SCIP_CALL( SCIPcreateRationalBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->rowmatvalexact, nnonzstmp) );
-      SCIP_CALL( SCIPcreateRationalBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->lhsexact, nconss) );
-      SCIP_CALL( SCIPcreateRationalBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->rhsexact, nconss) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->colmatvalexact, nnonzstmp) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->rowmatvalexact, nnonzstmp) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->lhsexact, nconss) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->rhsexact, nconss) );
       SCIP_CALL( SCIPallocBufferArray(scip, &matrix->matrixvalsexact->lbexact, matrix->ncols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &matrix->matrixvalsexact->ubexact, matrix->ncols) );
       matrix->matrixvalsexact->buffersize = nnonzstmp;
@@ -1323,10 +1323,10 @@ SCIP_RETCODE SCIPmatrixCreate(
       {
          SCIPfreeBufferArray(scip, &matrix->matrixvalsexact->ubexact);
          SCIPfreeBufferArray(scip, &matrix->matrixvalsexact->lbexact);
-         SCIPfreeRationalBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->rhsexact, nconss);
-         SCIPfreeRationalBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->lhsexact, nconss);
-         SCIPfreeRationalBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->rowmatvalexact, nnonzstmp);
-         SCIPfreeRationalBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->colmatvalexact, nnonzstmp);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->rhsexact, nconss);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->lhsexact, nconss);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->rowmatvalexact, nnonzstmp);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->colmatvalexact, nnonzstmp);
          SCIPfreeBuffer(scip, &matrix->matrixvalsexact);
       }
 
@@ -1397,11 +1397,11 @@ void SCIPmatrixFree(
          assert((*matrix)->matrixvalsexact != NULL);
          SCIPfreeBufferArray(scip, &(*matrix)->matrixvalsexact->ubexact);
          SCIPfreeBufferArray(scip, &(*matrix)->matrixvalsexact->lbexact);
-         SCIPfreeRationalBufferArray(SCIPbuffer(scip), &(*matrix)->matrixvalsexact->rhsexact, (*matrix)->matrixvalsexact->buffersizenconss);
-         SCIPfreeRationalBufferArray(SCIPbuffer(scip), &(*matrix)->matrixvalsexact->lhsexact, (*matrix)->matrixvalsexact->buffersizenconss);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &(*matrix)->matrixvalsexact->rhsexact, (*matrix)->matrixvalsexact->buffersizenconss);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &(*matrix)->matrixvalsexact->lhsexact, (*matrix)->matrixvalsexact->buffersizenconss);
 
-         SCIPfreeRationalBufferArray(SCIPbuffer(scip), &(*matrix)->matrixvalsexact->rowmatvalexact, (*matrix)->matrixvalsexact->buffersize);
-         SCIPfreeRationalBufferArray(SCIPbuffer(scip), &(*matrix)->matrixvalsexact->colmatvalexact, (*matrix)->matrixvalsexact->buffersize);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &(*matrix)->matrixvalsexact->rowmatvalexact, (*matrix)->matrixvalsexact->buffersize);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &(*matrix)->matrixvalsexact->colmatvalexact, (*matrix)->matrixvalsexact->buffersize);
          SCIPfreeBuffer(scip, &(*matrix)->matrixvalsexact);
       }
 

@@ -402,7 +402,7 @@ SCIP_RETCODE consdataEnsureVarsSize(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->vals, consdata->varssize, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->valsreal, consdata->varssize, newsize) );
       for( k = consdata->varssize; k < newsize; ++k )
-         SCIP_CALL( SCIPcreateRationalBlock(SCIPblkmem(scip), &consdata->vals[k]) );
+         SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &consdata->vals[k]) );
 
       if( consdata->eventdata != NULL )
       {
@@ -445,10 +445,10 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->nconspropnoninit = 0;
    (*conshdlrdata)->propnonzeros = 0;
    (*conshdlrdata)->propnonzerosnoninit = 0;
-   SCIP_CALL( SCIPcreateRationalBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxaggrnormscale) );
-   SCIP_CALL( SCIPcreateRationalBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxcardbounddist) );
-   SCIP_CALL( SCIPcreateRationalBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxeasyactivitydelta) );
-   SCIP_CALL( SCIPcreateRationalBlock(SCIPblkmem(scip), &(*conshdlrdata)->mingainpernmincomp) );
+   SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxaggrnormscale) );
+   SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxcardbounddist) );
+   SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxeasyactivitydelta) );
+   SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->mingainpernmincomp) );
 
    /* set event handler for updating linear constraint activity bounds */
    (*conshdlrdata)->eventhdlr = eventhdlr;
@@ -469,10 +469,10 @@ void conshdlrdataFree(
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*conshdlrdata)->linconsupgrades, (*conshdlrdata)->linconsupgradessize);
 
-   SCIPfreeRationalBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxaggrnormscale);
-   SCIPfreeRationalBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxcardbounddist);
-   SCIPfreeRationalBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxeasyactivitydelta);
-   SCIPfreeRationalBlock(SCIPblkmem(scip), &(*conshdlrdata)->mingainpernmincomp);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxaggrnormscale);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxcardbounddist);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxeasyactivitydelta);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->mingainpernmincomp);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
 }
@@ -725,7 +725,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->vals = NULL;
    (*consdata)->valsreal = NULL;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &constant) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constant) );
    if( nvars > 0 )
    {
       int k;
@@ -736,7 +736,7 @@ SCIP_RETCODE consdataCreate(
 
       /* copy variables into temporary buffer */
       SCIP_CALL( SCIPallocBufferArray(scip, &varsbuffer, nvars) );
-      SCIP_CALL( SCIPcreateRationalBufferArray(SCIPbuffer(scip), &valsbuffer, nvars) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &valsbuffer, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &valsrealbuffer, nvars) );
       k = 0;
 
@@ -784,12 +784,12 @@ SCIP_RETCODE consdataCreate(
       {
          /* copy the possibly reduced buffer arrays into block */
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, k) );
-         SCIP_CALL( SCIPcopyRationalBlockArray(SCIPblkmem(scip), &(*consdata)->vals, valsbuffer, k) );
+         SCIP_CALL( SCIPrationalCopyBlockArray(SCIPblkmem(scip), &(*consdata)->vals, valsbuffer, k) );
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->valsreal, valsrealbuffer, k) );
          (*consdata)->varssize = k;
       }
 
-      SCIPfreeRationalBufferArray(SCIPbuffer(scip), &valsbuffer, nvars);
+      SCIPrationalFreeBufferArray(SCIPbuffer(scip), &valsbuffer, nvars);
       SCIPfreeBufferArray(scip, &varsbuffer);
       SCIPfreeBufferArray(scip, &valsrealbuffer);
    }
@@ -812,12 +812,12 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->rowlhs = NULL;
    (*consdata)->rowrhs = NULL;
    (*consdata)->rowexact = NULL;
-   SCIP_CALL( SCIPcopyRationalBlock(SCIPblkmem(scip), &(*consdata)->lhs, lhs) );
-   SCIP_CALL( SCIPcopyRationalBlock(SCIPblkmem(scip), &(*consdata)->rhs, rhs) );
+   SCIP_CALL( SCIPrationalCopyBlock(SCIPblkmem(scip), &(*consdata)->lhs, lhs) );
+   SCIP_CALL( SCIPrationalCopyBlock(SCIPblkmem(scip), &(*consdata)->rhs, rhs) );
    (*consdata)->lhsreal = lhsrel;
    (*consdata)->rhsreal = rhsrel;
-   SCIP_CALL( SCIPcreateRationalString(SCIPblkmem(scip), &(*consdata)->maxabsvalEx, "inf") );
-   SCIP_CALL( SCIPcreateRationalString(SCIPblkmem(scip), &(*consdata)->minabsvalEx, "inf") );
+   SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &(*consdata)->maxabsvalEx, "inf") );
+   SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &(*consdata)->minabsvalEx, "inf") );
    (*consdata)->maxabsval = SCIP_INVALID;
    (*consdata)->minabsval = SCIP_INVALID;
    (*consdata)->minactivity = SCIP_INVALID;
@@ -875,8 +875,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->onerowrelax = FALSE;
    (*consdata)->hasfprelax = FALSE;
 
-   SCIP_CALL( SCIPcreateRationalBlock(SCIPblkmem(scip), &(*consdata)->activity) );
-   SCIP_CALL( SCIPcreateRationalBlock(SCIPblkmem(scip), &(*consdata)->violation) );
+   SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &(*consdata)->activity) );
+   SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &(*consdata)->violation) );
 
    if( SCIPisTransformed(scip) )
    {
@@ -892,7 +892,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &constant);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
 
    return SCIP_OKAY;
 }
@@ -929,18 +929,18 @@ SCIP_RETCODE consdataFree(
       SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->vars[v])) );
    }
 
-   SCIPfreeRationalBlockArray(SCIPblkmem(scip), &(*consdata)->vals, (*consdata)->varssize);
+   SCIPrationalFreeBlockArray(SCIPblkmem(scip), &(*consdata)->vals, (*consdata)->varssize);
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vals, (*consdata)->varssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->valsreal, (*consdata)->varssize);
 
-   SCIPfreeRationalBlock(SCIPblkmem(scip), &(*consdata)->lhs);
-   SCIPfreeRationalBlock(SCIPblkmem(scip), &(*consdata)->rhs);
-   SCIPfreeRationalBlock(SCIPblkmem(scip), &(*consdata)->maxabsvalEx);
-   SCIPfreeRationalBlock(SCIPblkmem(scip), &(*consdata)->minabsvalEx);
-   SCIPfreeRationalBlock(SCIPblkmem(scip), &(*consdata)->violation);
-   SCIPfreeRationalBlock(SCIPblkmem(scip), &(*consdata)->activity);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->lhs);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->rhs);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->maxabsvalEx);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->minabsvalEx);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->violation);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->activity);
 
    SCIPfreeBlockMemory(scip, consdata);
    return SCIP_OKAY;
@@ -1063,10 +1063,10 @@ SCIP_RETCODE consPrintConsSol(
             else
             {
                SCIP_Rational* tmp;
-               SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmp) );
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
                SCIPgetSolValExact(scip, sol, consdata->vars[v], tmp);
                SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, tmp);
-               SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmp);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
             }
          }
       }
@@ -1402,9 +1402,9 @@ void checkMaxActivityDelta(
 {
    if( consdata->maxactdelta != SCIP_INVALID )
    {
-      SCIP_Ratoinal* SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &maxactdelta );
-      SCIP_Ratoinal* SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &domain );
-      SCIP_Ratoinal* SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &delta );
+      SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &maxactdelta );
+      SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &domain );
+      SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &delta );
       SCIP_Rational* lb;
       SCIP_Rational* ub;
       int v;
@@ -1431,9 +1431,9 @@ void checkMaxActivityDelta(
       }
       assert(SCIPrationalIsEqual(maxactdelta, consdata->maxactdelta));
 
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), delta);
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), domain);
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), maxactdelta);   }
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), delta);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), domain);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), maxactdelta);   }
 }
 #else
 #define checkMaxActivityDelta(scip, consdata) /**/
@@ -2283,7 +2283,7 @@ void consdataScaleMinValue(
 
    assert(!SCIPrationalIsZero(minabsval) || consdata->nvars == 0);
 
-   (void) SCIPcreateRationalBuffer(SCIPbuffer(scip), &scalingfactor);
+   (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &scalingfactor);
 
    if( SCIPrationalIsLTReal(minabsval, minval) )
    {
@@ -2305,7 +2305,7 @@ void consdataScaleMinValue(
 
    consdataInvalidateActivities(consdata);
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &scalingfactor);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &scalingfactor);
 }
 
 /** calculates minimum and maximum local and global activity for constraint from scratch;
@@ -2938,7 +2938,7 @@ void consdataGetActivity(
       SCIP_Bool negsign;
       int v;
 
-      (void) SCIPcreateRationalBuffer(SCIPbuffer(scip), &solval);
+      (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &solval);
 
       SCIPrationalSetInt(activity, 0L, 1L);
       nposinf = 0;
@@ -2981,7 +2981,7 @@ void consdataGetActivity(
          SCIPrationalSetString(activity, "-inf");
 
       RatDebugMessage("corrected activity of linear constraint: %q\n", activity);
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &solval);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
    }
 }
 
@@ -3001,9 +3001,9 @@ void consdataGetFeasibility(
    assert(scip != NULL);
    assert(consdata != NULL);
 
-   (void) SCIPcreateRationalBuffer(SCIPbuffer(scip), &activity);
-   (void) SCIPcreateRationalBuffer(SCIPbuffer(scip), &op1);
-   (void) SCIPcreateRationalBuffer(SCIPbuffer(scip), &op2);
+   (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &activity);
+   (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &op1);
+   (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &op2);
 
    consdataGetActivity(scip, consdata, sol, FALSE, activity);
    SCIPrationalDiff(op1, consdata->rhs, activity);
@@ -3011,9 +3011,9 @@ void consdataGetFeasibility(
 
    SCIPrationalMIN(ret, op1, op2);
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &activity);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &op1);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &op2);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &activity);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &op1);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &op2);
 }
 
 /** updates bit signatures after adding a single coefficient */
@@ -3169,8 +3169,8 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
             SCIP_Rational* abscont1;
             SCIP_Rational* abscont2;
 
-            (void) SCIPcreateRational(&abscont1);
-	    (void) SCIPcreateRational(&abscont2);
+            (void) SCIPrationalCreate(&abscont1);
+	    (void) SCIPrationalCreate(&abscont2);
 
             SCIPrationalDiff(abscont1, SCIPvarGetUbGlobalExact(var1), SCIPvarGetLbGlobalExact(var1));
             SCIPrationalMult(abscont1, consdata->vals[ind1], abscont1);
@@ -3179,20 +3179,20 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
             SCIPrationalMult(abscont2, consdata->vals[ind2], abscont2);
 
             if( SCIPrationalIsAbsEqual(abscont1, abscont2) ) {
-               SCIPfreeRational(&abscont1);
-               SCIPfreeRational(&abscont2);
+               SCIPrationalFree(&abscont1);
+               SCIPrationalFree(&abscont2);
                return (SCIPvarGetProbindex(var1) - SCIPvarGetProbindex(var2));
             }
             if( SCIPrationalIsAbsGT(abscont2, abscont1) )
             {
-               SCIPfreeRational(&abscont1);
-               SCIPfreeRational(&abscont2);
+               SCIPrationalFree(&abscont1);
+               SCIPrationalFree(&abscont2);
                return 1;
             }
             else
             {
-               SCIPfreeRational(&abscont1);
-               SCIPfreeRational(&abscont2);
+               SCIPrationalFree(&abscont1);
+               SCIPrationalFree(&abscont2);
                return -1;
             }
          }
@@ -3972,7 +3972,7 @@ SCIP_RETCODE mergeMultiples(
    if( consdata->merged )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &valsum) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &valsum) );
 
    /* sort the constraint */
    SCIP_CALL( consdataSort(scip, consdata) );
@@ -4019,7 +4019,7 @@ SCIP_RETCODE mergeMultiples(
       --v;
    }
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &valsum);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &valsum);
    consdata->merged = TRUE;
 
    return SCIP_OKAY;
@@ -4078,9 +4078,9 @@ SCIP_RETCODE applyFixings(
       SCIP_Rational* rhssubtrahend;
       SCIP_Rational* tmpval;
 
-      SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &lhssubtrahend) );
-      SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &rhssubtrahend) );
-      SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmpval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhssubtrahend) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhssubtrahend) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpval) );
 
       SCIPdebugMsg(scip, "applying fixings:\n");
       SCIPdebugPrintCons(scip, cons, NULL);
@@ -4169,8 +4169,8 @@ SCIP_RETCODE applyFixings(
             SCIP_Rational* activescalar;
             SCIP_Rational* activeconstant;
 
-            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &activescalar) );
-            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &activeconstant) );
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &activescalar) );
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &activeconstant) );
 
             SCIPrationalMult(activescalar, val, SCIPvarGetAggrScalarExact(var));
             SCIPrationalMult(activeconstant, val, SCIPvarGetAggrConstantExact(var));
@@ -4194,8 +4194,8 @@ SCIP_RETCODE applyFixings(
 
             SCIP_CALL( delCoefPos(scip, cons, v) );
 
-            SCIPfreeRationalBuffer(SCIPbuffer(scip), &activescalar);
-            SCIPfreeRationalBuffer(SCIPbuffer(scip), &activeconstant);
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &activescalar);
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &activeconstant);
             break;
          }
          case SCIP_VARSTATUS_MULTAGGR:
@@ -4274,9 +4274,9 @@ SCIP_RETCODE applyFixings(
       SCIPdebugMsg(scip, "after merging:\n");
       SCIPdebugPrintCons(scip, cons, NULL);
 
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmpval);
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &rhssubtrahend);
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &lhssubtrahend);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpval);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhssubtrahend);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhssubtrahend);
    }
    assert(consdata->removedfixings);
 
@@ -4306,7 +4306,7 @@ SCIP_RETCODE certificatePrintActivityConflict(
 
    if (!SCIPisCertificateActive(scip))
       return SCIP_OKAY;
-   SCIP_CALL(SCIPcreateRationalBuffer(SCIPbuffer(scip), &diff));
+   SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(scip), &diff));
 
    if ( rhs )
    {
@@ -4339,7 +4339,7 @@ SCIP_RETCODE certificatePrintActivityConflict(
    SCIP_CALL( SCIPcertificatePrintActivityConflict(scip, cons, consdata->rowexact, consdata->lhs, consdata->rhs,
       nvals, vals, consdata->vars, diff, rhs) );
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &diff);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &diff);
 
    return SCIP_OKAY;
 }
@@ -4461,7 +4461,7 @@ SCIP_RETCODE tightenVarBounds(
             {
                SCIP_Longint maxdenom;
 
-               SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmpbound) );
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpbound) );
                SCIPrationalSetReal(tmpbound, newub);
 
                if( conshdlrdata->limitdenom )
@@ -4476,7 +4476,7 @@ SCIP_RETCODE tightenVarBounds(
 
                SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos),
                      &infeasible, &tightened) );
-               SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmpbound);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpbound);
             }
             else
             {
@@ -4535,7 +4535,7 @@ SCIP_RETCODE tightenVarBounds(
             {
                SCIP_Longint maxdenom;
 
-               SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmpbound) );
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpbound) );
                SCIPrationalSetReal(tmpbound, newlb);
 
                if( conshdlrdata->limitdenom )
@@ -4549,7 +4549,7 @@ SCIP_RETCODE tightenVarBounds(
 
                SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos),
                      &infeasible, &tightened) );
-               SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmpbound);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpbound);
             }
             else
             {
@@ -4612,7 +4612,7 @@ SCIP_RETCODE tightenVarBounds(
             {
                SCIP_Longint maxdenom;
 
-               SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmpbound) );
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpbound) );
                SCIPrationalSetReal(tmpbound, newlb);
 
                if( conshdlrdata->limitdenom )
@@ -4626,7 +4626,7 @@ SCIP_RETCODE tightenVarBounds(
 
                SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos),
                      &infeasible, &tightened) );
-               SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmpbound);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpbound);
             }
             else
             {
@@ -4686,7 +4686,7 @@ SCIP_RETCODE tightenVarBounds(
             {
                SCIP_Longint maxdenom;
 
-               SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmpbound) );
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpbound) );
                SCIPrationalSetReal(tmpbound, newub);
 
                if( conshdlrdata->limitdenom )
@@ -4700,7 +4700,7 @@ SCIP_RETCODE tightenVarBounds(
 
                SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos),
                      &infeasible, &tightened) );
-               SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmpbound);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpbound);
             }
             else
             {
@@ -5951,7 +5951,7 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
             SCIP_CONSDATA* consdata;
             SCIP_Rational* activity;
 
-            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &activity) );
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &activity) );
 
             consdata = SCIPconsGetData(conss[c]);
             assert( consdata != NULL);
@@ -5978,7 +5978,7 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
                SCIPinfoMessage(scip, NULL, "\n");
             }
 
-            SCIPfreeRationalBuffer(SCIPbuffer(scip), &activity);
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &activity);
          }
       }
    }
@@ -6791,8 +6791,8 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    assert(cons != NULL);
 
    /* set left and right hand side to their default values */
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &lhs) );
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &rhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
 
    SCIPrationalSetString(lhs, "-inf");
    SCIPrationalSetString(rhs, "inf");
@@ -6892,7 +6892,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    /* initialize buffers for storing the variables and coefficients */
    coefssize = 100;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars,  coefssize) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(SCIPbuffer(scip), &coefs, coefssize) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &coefs, coefssize) );
 
    assert(varstrptr != NULL);
 
@@ -6903,7 +6903,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    {
       /* realloc buffers and try again */
       SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
-      SCIP_CALL( SCIPreallocRationalBufferArray(SCIPbuffer(scip), &coefs, coefssize, requsize) );
+      SCIP_CALL( SCIPrationalReallocBufferArray(SCIPbuffer(scip), &coefs, coefssize, requsize) );
 
       coefssize = requsize;
 
@@ -6921,11 +6921,11 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
-   SCIPfreeRationalBufferArray(SCIPbuffer(scip), &coefs, coefssize);
+   SCIPrationalFreeBufferArray(SCIPbuffer(scip), &coefs, coefssize);
    SCIPfreeBufferArray(scip, &vars);
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &rhs);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &lhs);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhs);
 
    return SCIP_OKAY;
 }
@@ -7407,7 +7407,7 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
       int nconsvars;
       int requiredsize;
 
-      SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &constant) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constant) );
 
       nconsvars = nvars;
       SCIP_CALL( SCIPduplicateBufferArray(scip, &consvars, vars, nconsvars) );
@@ -7487,7 +7487,7 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
       SCIP_CALL( consdataCreate(scip, &consdata, nconsvars, consvars, consvals, lhs, rhs) );
       assert(consdata != NULL);
 
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &constant);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
       SCIPfreeBufferArray(scip, &consvals);
       SCIPfreeBufferArray(scip, &consvars);
    }
@@ -7710,8 +7710,8 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
       consvars[0] = var;
-      SCIP_CALL( SCIPcopyRationalBlock(SCIPblkmem(scip), &consvals[0], val) );
-      SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &constant) );
+      SCIP_CALL( SCIPrationalCopyBlock(SCIPblkmem(scip), &consvals[0], val) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constant) );
 
       /* get active variables for new constraint */
       SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, consvars, consvals, &nconsvars, nconsvars, constant, &requiredsize, TRUE) );
@@ -7729,8 +7729,8 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      SCIP_CALL( SCIPcopyRationalBlock(SCIPblkmem(scip), &lhs, consdata->lhs) );
-      SCIP_CALL( SCIPcopyRationalBlock(SCIPblkmem(scip), &rhs, consdata->rhs) );
+      SCIP_CALL( SCIPrationalCopyBlock(SCIPblkmem(scip), &lhs, consdata->lhs) );
+      SCIP_CALL( SCIPrationalCopyBlock(SCIPblkmem(scip), &rhs, consdata->rhs) );
 
       /* adjust sides and check that we do not subtract infinity values */
       /* constant is infinite */
@@ -7808,7 +7808,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       SCIP_CALL( chgLhs(scip, cons, lhs));
       SCIP_CALL( chgRhs(scip, cons, rhs));
 
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &constant);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
       SCIPfreeBufferArray(scip, &consvals);
       SCIPfreeBufferArray(scip, &consvars);
    }
@@ -7907,11 +7907,11 @@ SCIP_RETCODE SCIPdelCoefExactLinear(
    assert(cons != NULL);
    assert(var != NULL);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &temp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &temp) );
 
    SCIP_CALL( SCIPchgCoefExactLinear(scip, cons, var, temp) );
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &temp);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &temp);
 
    return SCIP_OKAY;
 }

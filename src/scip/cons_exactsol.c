@@ -551,7 +551,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
             {
                SCIP_Rational* newbound;
 
-               SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &newbound) );
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &newbound) );
 
                /* create rational solval and round it to the nearest integer */
                SCIPrationalSetReal(newbound, solval);
@@ -563,7 +563,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
                SCIP_CALL( SCIPchgVarLbExactDive(scip, vars[i], newbound) );
                SCIP_CALL( SCIPchgVarUbExactDive(scip, vars[i], newbound) );
 
-               SCIPfreeRationalBuffer(SCIPbuffer(scip), &newbound);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &newbound);
             }
             else
                *result = SCIP_INFEASIBLE;

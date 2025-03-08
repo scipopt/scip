@@ -289,7 +289,7 @@ SCIP_RETCODE checkSolOrigExact(
    if( !printreason )
       completely = FALSE;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &solval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &solval) );
 
    /* check bounds */
    if( checkbounds )
@@ -319,14 +319,14 @@ SCIP_RETCODE checkSolOrigExact(
 
             if( !completely )
             {
-               SCIPfreeRationalBuffer(SCIPbuffer(scip), &solval);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
                return SCIP_OKAY;
             }
          }
       }
    }
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &solval);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
 
    /* call constraint handlers with positive or zero check priority that don't need constraints */
    for( h = 0; h < scip->set->nconshdlrs; ++h )
@@ -1898,7 +1898,7 @@ void SCIPgetSolOrigObjExact(
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolOrigObjExact", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   SCIP_CALL_ABORT( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmp) );
+   SCIP_CALL_ABORT( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
    if( sol != NULL )
    {
       SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob, tmp);
@@ -1919,7 +1919,7 @@ void SCIPgetSolOrigObjExact(
          SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, res);
       }
    }
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmp);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
 }
 
 /** returns transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
@@ -2376,16 +2376,16 @@ SCIP_RETCODE SCIPprintSolExact(
    }
    else
    {
-      SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &objval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
 
       if( SCIPsolIsOriginal(sol) )
          SCIPrationalSet(objval, SCIPsolGetOrigObjExact(sol));
       else
       {
-         SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmp) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
          SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob, tmp);
          SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, objval);
-         SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmp);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
       }
 
       objvalsize = SCIPrationalStrLen(objval) + 1;
@@ -2393,7 +2393,7 @@ SCIP_RETCODE SCIPprintSolExact(
       (void)SCIPrationalToString(objval, objvalstr, objvalsize);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "%20s\n", objvalstr);
       SCIPfreeBufferArray(scip, &objvalstr);
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &objval);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &objval);
    }
 
    SCIP_CALL( SCIPsolPrintExact(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, FALSE,

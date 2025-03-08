@@ -138,7 +138,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
    branchcand->npriolpcands = 0;
    branchcand->npriolpbins = 0;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
    for( c = 0; c < ncols; ++c )
    {
@@ -280,7 +280,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
 
    SCIPsetDebugMsg(set, " -> %d fractional variables (%d of maximal priority)\n", branchcand->nlpcands, branchcand->npriolpcands);
 
-   SCIPfreeRationalBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -508,11 +508,11 @@ SCIP_RETCODE SCIPbranchExecLPExact(
          SCIP_Rational* tmp;
          SCIP_Real branchval;
 
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
          branchval = branchcand->lpcandssol[i];
          SCIPrationalSetReal(tmp, branchval);
          assert(!SCIPrationalIsIntegral(tmp));
-         SCIPfreeRationalBuffer(set->buffer, &tmp);
+         SCIPrationalFreeBuffer(set->buffer, &tmp);
       }
 #endif
 

@@ -1026,8 +1026,8 @@ SCIP_RETCODE readRowsExact(
          dynamic = mpsi->dynamicconss;
          removable = mpsi->dynamicrows || (mpsinputSection(mpsi) == MPS_USERCUTS);
 
-         SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &lhs) );
-         SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &rhs) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
 
          switch(*mpsinputField1(mpsi))
          {
@@ -1054,8 +1054,8 @@ SCIP_RETCODE readRowsExact(
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-         SCIPfreeRationalBuffer(SCIPbuffer(scip), &rhs);
-         SCIPfreeRationalBuffer(SCIPbuffer(scip), &lhs);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhs);
 
          /* if the file is of type cor, then the constraint names must be stored */
          SCIP_CALL( addConsNameToStorage(scip, consnames, consnamessize, nconsnames, mpsinputField2(mpsi)) );
@@ -1284,7 +1284,7 @@ SCIP_RETCODE readColsExact(
       }
       assert(var != NULL);
 
-      SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &val) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &val) );
       SCIPrationalSetString(val, mpsinputField3(mpsi));
       SCIPrationalCanonicalize(val);
 
@@ -1333,7 +1333,7 @@ SCIP_RETCODE readColsExact(
          }
       }
       /* free rational buffer */
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &val);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &val);
    }
    mpsinputSyntaxerror(mpsi);
 
@@ -1501,7 +1501,7 @@ SCIP_RETCODE readRhsExact(
    SCIP_Rational*   rhs;
    SCIP_Rational*   valexact;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &valexact) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &valexact) );
 
    SCIPdebugMsg(scip, "read right hand sides\n");
 
@@ -1528,7 +1528,7 @@ SCIP_RETCODE readRhsExact(
          else
             break;
 
-         SCIPfreeRationalBuffer(SCIPbuffer(scip), &valexact);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &valexact);
 
          return SCIP_OKAY;
       }
@@ -1797,7 +1797,7 @@ SCIP_RETCODE readRangesExact(
 
    SCIPdebugMsg(scip, "read ranges\n");
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &val) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &val) );
 
    while( mpsinputReadLine(mpsi) )
    {
@@ -1820,7 +1820,7 @@ SCIP_RETCODE readRangesExact(
          else
             break;
 
-         SCIPfreeRationalBuffer(SCIPbuffer(scip), &val);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &val);
 
          return SCIP_OKAY;
       }
@@ -2337,7 +2337,7 @@ SCIP_RETCODE readBoundsExact(
    nsemicont = 0;
    semicontsize = 0;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &val) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &val) );
 
    SCIPdebugMsg(scip, "read bounds\n");
 
@@ -2477,13 +2477,13 @@ SCIP_RETCODE readBoundsExact(
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
             assert(!infeasible);
 
-            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmp) );
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
             SCIPrationalSetString(tmp, "inf");
 
             oldvartype =  SCIP_VARTYPE_INTEGER;
 
             SCIP_CALL( SCIPchgVarUbExact(scip, var, tmp) );
-            SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmp);
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
          }
 
          /* switch variable type to continuous before applying the bound, this is necessary for stupid non-integral
@@ -2653,7 +2653,7 @@ SCIP_RETCODE readBoundsExact(
    }
 
    SCIPfreeBufferArrayNull(scip, &semicont);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &val);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &val);
 
    SCIP_CALL( retcode );
 

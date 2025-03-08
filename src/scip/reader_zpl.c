@@ -154,7 +154,7 @@ SCIP_RETCODE RcreateNumb(
 
    SCIPdebug(gmp_printf("the rational is: %Qd\n",temp));
 
-   SCIP_CALL( SCIPcreateRationalBlockGMP(mem, rational, temp) );
+   SCIP_CALL( SCIPrationalCreateBlockGMP(mem, rational, temp) );
    mpq_clear(temp);
 
    return SCIP_OKAY;
@@ -168,7 +168,7 @@ SCIP_RETCODE RcreateNumb(
    const Numb*           numb
    )
 {
-   SCIP_CALL( SCIPcreateRationalBlock(mem, rational) );
+   SCIP_CALL( SCIPrationalCreateBlock(mem, rational) );
    SCIPrationalSetReal(*rational, numb_todbl(numb));
    return SCIP_OKAY;
 }
@@ -566,16 +566,16 @@ SCIP_RETCODE addConsTerm(
       switch( type )
       {
       case CON_FREE:
-         SCIP_CALL( SCIPcreateRationalString(SCIPblkmem(scip), &ratlhs, "-inf") ); // todo: set this to infinity
-         SCIP_CALL( SCIPcreateRationalString(SCIPblkmem(scip), &ratrhs, "inf") );
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ratlhs, "-inf") ); // todo: set this to infinity
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ratrhs, "inf") );
          break;
       case CON_LHS:
          SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratlhs, lhs) );
-         SCIP_CALL( SCIPcreateRationalString(SCIPblkmem(scip), &ratrhs, "inf") );
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ratrhs, "inf") );
          break;
       case CON_RHS:
          SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratrhs, rhs) );
-         SCIP_CALL( SCIPcreateRationalString(SCIPblkmem(scip), &ratlhs, "-inf") );
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ratlhs, "-inf") );
          break;
       case CON_RANGE:
          SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratlhs, lhs) );
@@ -784,7 +784,7 @@ SCIP_RETCODE addConsTerm(
 
                scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, 0), 0);
                SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &scipvalrat, mono_get_coeff(term_get_element(term, 0))) );
-               SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &quotient) );
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &quotient) );
 
                if( !SCIPrationalIsInfinity(ratrhs) )
                {
@@ -843,8 +843,8 @@ SCIP_RETCODE addConsTerm(
                   SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, scipvar, scipvalrat) );
                }
 
-               SCIPfreeRationalBlock(SCIPblkmem(scip), &scipvalrat);
-               SCIPfreeRationalBuffer(SCIPbuffer(scip), &quotient);
+               SCIPrationalFreeBlock(SCIPblkmem(scip), &scipvalrat);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &quotient);
             }
             else
             {
@@ -861,7 +861,7 @@ SCIP_RETCODE addConsTerm(
                   SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &scipvalrat, mono_get_coeff(term_get_element(term, i))) );
 
                   SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, scipvar, scipvalrat) );
-                  SCIPfreeRationalBlock(SCIPblkmem(scip), &scipvalrat);
+                  SCIPrationalFreeBlock(SCIPblkmem(scip), &scipvalrat);
                }
             }
          }
@@ -923,8 +923,8 @@ SCIP_RETCODE addConsTerm(
 
    if( SCIPisExactSolve(scip) )
    {
-      SCIPfreeRationalBlock(SCIPblkmem(scip), &ratlhs);
-      SCIPfreeRationalBlock(SCIPblkmem(scip), &ratrhs);
+      SCIPrationalFreeBlock(SCIPblkmem(scip), &ratlhs);
+      SCIPrationalFreeBlock(SCIPblkmem(scip), &ratrhs);
    }
 
    return SCIP_OKAY;
@@ -971,7 +971,7 @@ SCIP_RETCODE addObjTerm(
             readerdata->retcode = SCIPchgVarObjExact(scip, scipvar, scipvalrat);
             SCIPchgVarObj(scip, scipvar, SCIPrationalApproxReal(scipvalrat));
 
-            SCIPfreeRationalBlock(SCIPblkmem(scip), &scipvalrat);
+            SCIPrationalFreeBlock(SCIPblkmem(scip), &scipvalrat);
          }
          else
          {
@@ -1088,17 +1088,17 @@ SCIP_RETCODE addVar(
          lb = SCIPrationalRoundReal(lbrat, SCIP_R_ROUND_DOWNWARDS);
          break;
       case BOUND_INFTY:
-         SCIP_CALL( SCIPcreateRationalString(SCIPblkmem(scip), &lbrat, "inf") );
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &lbrat, "inf") );
          lb = SCIPinfinity(scip);
          break;
       case BOUND_MINUS_INFTY:
-         SCIP_CALL( SCIPcreateRationalString(SCIPblkmem(scip), &lbrat, "-inf") );
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &lbrat, "-inf") );
          lb = -SCIPinfinity(scip);
          break;
       case BOUND_ERROR:
       default:
          SCIPerrorMessage("invalid lower bound type <%d> in ZIMPL reader\n", bound_get_type(lower));
-         SCIP_CALL( SCIPcreateRationalBlock(SCIPblkmem(scip), &lbrat) );
+         SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &lbrat) );
          lb = 0.0;
          break;
       }
@@ -1111,17 +1111,17 @@ SCIP_RETCODE addVar(
          ub = SCIPrationalRoundReal(ubrat, SCIP_R_ROUND_UPWARDS);
          break;
       case BOUND_INFTY:
-         SCIP_CALL( SCIPcreateRationalString(SCIPblkmem(scip), &ubrat, "inf") );
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ubrat, "inf") );
          ub = SCIPinfinity(scip);
          break;
       case BOUND_MINUS_INFTY:
-         SCIP_CALL( SCIPcreateRationalString(SCIPblkmem(scip), &ubrat, "-inf") );
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ubrat, "-inf") );
          ub = -SCIPinfinity(scip);
          break;
       case BOUND_ERROR:
       default:
          SCIPerrorMessage("invalid upper bound type <%d> in ZIMPL reader\n", bound_get_type(upper));
-         SCIP_CALL( SCIPcreateRationalBlock(SCIPblkmem(scip), &ubrat) );
+         SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &ubrat) );
          ub = 0.0;
          break;
       }
@@ -1202,8 +1202,8 @@ SCIP_RETCODE addVar(
       SCIPrationalToString(ubrat, strub);
       SCIPdebugMessage("exact bounds are [%s,%s]\n", strlb, strub);
 #endif
-      SCIPfreeRationalBlock(SCIPblkmem(scip), &lbrat);
-      SCIPfreeRationalBlock(SCIPblkmem(scip), &ubrat);
+      SCIPrationalFreeBlock(SCIPblkmem(scip), &lbrat);
+      SCIPrationalFreeBlock(SCIPblkmem(scip), &ubrat);
    }
 
    /* add variable to the problem; we are releasing the variable later */

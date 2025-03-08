@@ -1040,7 +1040,7 @@ SCIP_RETCODE nodeCreate(
    (*node)->repropsubtreemark = 0;
    if( set->exact_enabled )
    {
-      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*node)->lowerboundexact) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*node)->lowerboundexact) );
       SCIPrationalSetString((*node)->lowerboundexact, "-inf");
    }
 
@@ -1240,7 +1240,7 @@ SCIP_RETCODE SCIPnodeFree(
    }
 
    if( set->exact_enabled )
-      SCIPfreeRationalBlock(blkmem, &(*node)->lowerboundexact);
+      SCIPrationalFreeBlock(blkmem, &(*node)->lowerboundexact);
 
    BMSfreeBlockMemory(blkmem, node);
 
@@ -1806,7 +1806,7 @@ SCIP_RETCODE treeAddPendingBdchg(
    {
       if( tree->pendingbdchgs[tree->npendingbdchgs].newboundexact == NULL )
       {
-         SCIP_CALL( SCIPcreateRational(&tree->pendingbdchgs[tree->npendingbdchgs].newboundexact) );
+         SCIP_CALL( SCIPrationalCreate(&tree->pendingbdchgs[tree->npendingbdchgs].newboundexact) );
       }
       SCIPrationalSet(tree->pendingbdchgs[tree->npendingbdchgs].newboundexact, newboundexact);
    }
@@ -1912,7 +1912,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    {
       SCIP_Rational* newboundex;
 
-      SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(set->scip), &newboundex) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &newboundex) );
 
       SCIPrationalSetReal(newboundex, newbound);
       SCIP_CALL( SCIPcertificatePrintGlobalBound(set->scip, stat->certificate, var, boundtype,
@@ -1920,7 +1920,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       SCIP_CALL( SCIPvarChgBdGlobalExact(var, blkmem, set, stat, lp->lpexact, branchcand,
          eventqueue, cliquetable, newboundex, boundtype) );
 
-      SCIPfreeRationalBuffer(SCIPbuffer(set->scip), &newboundex);
+      SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &newboundex);
    }
 
    assert(node != NULL);
@@ -2256,7 +2256,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    infervar = var;
    inferboundtype = boundtype;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &oldbound) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldbound) );
 
    SCIP_CALL( SCIPvarGetProbvarBoundExact(&var, newbound, &boundtype) );
    newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? SCIPrationalRoundReal(newbound, SCIP_R_ROUND_UPWARDS) : SCIPrationalRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
@@ -2323,7 +2323,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    if( (boundtype == SCIP_BOUNDTYPE_LOWER && !SCIPrationalIsGT(newbound, oldlb))
        || (boundtype == SCIP_BOUNDTYPE_UPPER && !SCIPrationalIsLT(newbound, oldub)) )
    {
-      SCIPfreeRationalBuffer(set->buffer, &oldbound);
+      SCIPrationalFreeBuffer(set->buffer, &oldbound);
       return SCIP_OKAY;
    }
 
@@ -2361,7 +2361,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
          /* mark the node with the conflicting bound change to be cut off */
          SCIP_CALL( SCIPnodeCutoff(tree->path[conflictingdepth], set, stat, eventfilter, tree, transprob, origprob, reopt, lpexact->fplp, blkmem) );
 
-         SCIPfreeRationalBuffer(set->buffer, &oldbound);
+         SCIPrationalFreeBuffer(set->buffer, &oldbound);
          return SCIP_OKAY;
       }
    }
@@ -2391,7 +2391,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
             boundtype == SCIP_BOUNDTYPE_LOWER ? oldub : newbound, node->depth);
       }
 
-      SCIPfreeRationalBuffer(set->buffer, &oldbound);
+      SCIPrationalFreeBuffer(set->buffer, &oldbound);
       return SCIP_OKAY;
    }
 
@@ -2487,7 +2487,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       assert(!cutoff);
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &oldbound);
+   SCIPrationalFreeBuffer(set->buffer, &oldbound);
    return SCIP_OKAY;
 }
 
@@ -2932,12 +2932,12 @@ SCIP_RETCODE SCIPnodeUpdateExactLowerboundLP(
       SCIPABORT();
    }
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &lpobjval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lpobjval) );
 
    SCIPlpExactGetObjval(lp->lpexact, set, lpobjval);
    SCIPnodeUpdateExactLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
 
-   SCIPfreeRationalBuffer(set->buffer, &lpobjval);
+   SCIPrationalFreeBuffer(set->buffer, &lpobjval);
 
    return SCIP_OKAY;
 }

@@ -1370,7 +1370,7 @@ SCIP_RETCODE SCIPdomchgFree(
       {
          SCIP_CALL( boundchgReleaseData(&(*domchg)->domchgbound.boundchgs[i], blkmem, set, eventqueue, lp) );
          if( (*domchg)->domchgbound.boundchgs[i].newboundexact != NULL )
-            SCIPfreeRationalBlock(blkmem, &(*domchg)->domchgbound.boundchgs[i].newboundexact);
+            SCIPrationalFreeBlock(blkmem, &(*domchg)->domchgbound.boundchgs[i].newboundexact);
       }
 
       /* free memory for bound and hole changes */
@@ -1818,7 +1818,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    if( newboundexact != NULL )
    {
       if( boundchg->newboundexact == NULL )
-         SCIP_CALL( SCIPcopyRationalBlock(blkmem, &boundchg->newboundexact, newboundexact) );
+         SCIP_CALL( SCIPrationalCopyBlock(blkmem, &boundchg->newboundexact, newboundexact) );
       else
          SCIPrationalSet(boundchg->newboundexact, newboundexact);
    }
@@ -2582,15 +2582,15 @@ SCIP_RETCODE SCIPvarAddExactData(
 
    if( lb != NULL )
    {
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &var->exactdata->glbdom.lb, lb) );
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &var->exactdata->locdom.lb, lb) );
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &var->exactdata->origdom.lb, lb) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->glbdom.lb, lb) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->locdom.lb, lb) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->origdom.lb, lb) );
    }
    else
    {
-      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &var->exactdata->glbdom.lb) );
-      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &var->exactdata->locdom.lb) );
-      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &var->exactdata->origdom.lb) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->glbdom.lb) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->locdom.lb) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->origdom.lb) );
 
       SCIPrationalSetReal(var->exactdata->glbdom.lb, var->glbdom.lb);
       SCIPrationalSetReal(var->exactdata->locdom.lb, var->locdom.lb);
@@ -2599,15 +2599,15 @@ SCIP_RETCODE SCIPvarAddExactData(
 
    if( ub != NULL )
    {
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &var->exactdata->glbdom.ub, ub) );
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &var->exactdata->locdom.ub, ub) );
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &var->exactdata->origdom.ub, ub) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->glbdom.ub, ub) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->locdom.ub, ub) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->origdom.ub, ub) );
    }
    else
    {
-      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &var->exactdata->glbdom.ub) );
-      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &var->exactdata->locdom.ub) );
-      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &var->exactdata->origdom.ub) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->glbdom.ub) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->locdom.ub) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->origdom.ub) );
 
       SCIPrationalSetReal(var->exactdata->glbdom.ub, var->glbdom.ub);
       SCIPrationalSetReal(var->exactdata->locdom.ub, var->locdom.ub);
@@ -2616,12 +2616,12 @@ SCIP_RETCODE SCIPvarAddExactData(
 
    if( obj != NULL )
    {
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &var->exactdata->obj, obj) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->obj, obj) );
       SCIPintervalSetRational(&var->exactdata->objinterval, obj);
    }
    else
    {
-      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &var->exactdata->obj) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->obj) );
       SCIPrationalSetReal(var->exactdata->obj, var->obj);
       SCIPintervalSet(&var->exactdata->objinterval, 0.0);
    }
@@ -2664,17 +2664,17 @@ SCIP_RETCODE SCIPvarCopyExactData(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(targetvar->exactdata)) );
    targetvar->exactdata->glbdom = sourcevar->exactdata->glbdom;
    targetvar->exactdata->locdom = sourcevar->exactdata->locdom;
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &targetvar->exactdata->glbdom.lb, sourcevar->exactdata->glbdom.lb) );
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &targetvar->exactdata->glbdom.ub, sourcevar->exactdata->glbdom.ub) );
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &targetvar->exactdata->locdom.lb, sourcevar->exactdata->locdom.lb) );
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &targetvar->exactdata->locdom.ub, sourcevar->exactdata->locdom.ub) );
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &targetvar->exactdata->origdom.lb, sourcevar->exactdata->origdom.lb) );
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &targetvar->exactdata->origdom.ub, sourcevar->exactdata->origdom.ub) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &targetvar->exactdata->glbdom.lb, sourcevar->exactdata->glbdom.lb) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &targetvar->exactdata->glbdom.ub, sourcevar->exactdata->glbdom.ub) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &targetvar->exactdata->locdom.lb, sourcevar->exactdata->locdom.lb) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &targetvar->exactdata->locdom.ub, sourcevar->exactdata->locdom.ub) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &targetvar->exactdata->origdom.lb, sourcevar->exactdata->origdom.lb) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &targetvar->exactdata->origdom.ub, sourcevar->exactdata->origdom.ub) );
 
    if( sourcevar->exactdata->aggregate.scalar != NULL )
    {
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &targetvar->exactdata->aggregate.scalar, sourcevar->exactdata->aggregate.scalar) );
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->aggregate.constant) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &targetvar->exactdata->aggregate.scalar, sourcevar->exactdata->aggregate.scalar) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->aggregate.constant) );
    }
    else
    {
@@ -2684,8 +2684,8 @@ SCIP_RETCODE SCIPvarCopyExactData(
 
    if( sourcevar->exactdata->multaggr.scalars != NULL )
    {
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->multaggr.constant) );
-      SCIP_CALL( SCIPcopyRationalBlockArray(blkmem, &targetvar->exactdata->multaggr.scalars, sourcevar->exactdata->multaggr.scalars, sourcevar->data.multaggr.nvars) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->multaggr.constant) );
+      SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &targetvar->exactdata->multaggr.scalars, sourcevar->exactdata->multaggr.scalars, sourcevar->data.multaggr.nvars) );
    }
    else
    {
@@ -2693,7 +2693,7 @@ SCIP_RETCODE SCIPvarCopyExactData(
       targetvar->exactdata->multaggr.scalars = NULL;
    }
 
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
    if( negateobj )
    {
       SCIPrationalNegate(targetvar->exactdata->obj, targetvar->exactdata->obj);
@@ -3379,23 +3379,23 @@ SCIP_RETCODE varFreeExactData(
 
       if( var->exactdata->aggregate.scalar != NULL )
       {
-         SCIPfreeRationalBlock(blkmem, &(var)->exactdata->aggregate.constant);
-         SCIPfreeRationalBlock(blkmem, &(var)->exactdata->aggregate.scalar);
+         SCIPrationalFreeBlock(blkmem, &(var)->exactdata->aggregate.constant);
+         SCIPrationalFreeBlock(blkmem, &(var)->exactdata->aggregate.scalar);
       }
 
       if( var->exactdata->multaggr.scalars != NULL )
       {
-         SCIPfreeRationalBlock(blkmem, &(var)->exactdata->multaggr.constant);
-         SCIPfreeRationalBlockArray(blkmem, &(var)->exactdata->multaggr.scalars, var->data.multaggr.varssize);
+         SCIPrationalFreeBlock(blkmem, &(var)->exactdata->multaggr.constant);
+         SCIPrationalFreeBlockArray(blkmem, &(var)->exactdata->multaggr.scalars, var->data.multaggr.varssize);
       }
 
-      SCIPfreeRationalBlock(blkmem, &(var)->exactdata->glbdom.lb);
-      SCIPfreeRationalBlock(blkmem, &(var)->exactdata->glbdom.ub);
-      SCIPfreeRationalBlock(blkmem, &(var)->exactdata->locdom.lb);
-      SCIPfreeRationalBlock(blkmem, &(var)->exactdata->locdom.ub);
-      SCIPfreeRationalBlock(blkmem, &(var)->exactdata->origdom.lb);
-      SCIPfreeRationalBlock(blkmem, &(var)->exactdata->origdom.ub);
-      SCIPfreeRationalBlock(blkmem, &(var)->exactdata->obj );
+      SCIPrationalFreeBlock(blkmem, &(var)->exactdata->glbdom.lb);
+      SCIPrationalFreeBlock(blkmem, &(var)->exactdata->glbdom.ub);
+      SCIPrationalFreeBlock(blkmem, &(var)->exactdata->locdom.lb);
+      SCIPrationalFreeBlock(blkmem, &(var)->exactdata->locdom.ub);
+      SCIPrationalFreeBlock(blkmem, &(var)->exactdata->origdom.lb);
+      SCIPrationalFreeBlock(blkmem, &(var)->exactdata->origdom.ub);
+      SCIPrationalFreeBlock(blkmem, &(var)->exactdata->obj );
 
       BMSfreeBlockMemory(blkmem, &(var)->exactdata);
       assert((var)->exactdata == NULL);
@@ -4687,9 +4687,9 @@ SCIP_RETCODE SCIPvarFixExact(
 
    RatDebugMessage("fix variable <%s>[%g,%g] to %q\n", var->name, var->glbdom.lb, var->glbdom.ub, fixedval);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &obj) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &childfixedval) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmpval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &obj) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &childfixedval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmpval) );
 
    assert(SCIPvarGetStatusExact(var) == SCIPvarGetStatus(var));
 
@@ -4822,9 +4822,9 @@ SCIP_RETCODE SCIPvarFixExact(
    }
 
 terminate:
-   SCIPfreeRationalBuffer(set->buffer, &tmpval);
-   SCIPfreeRationalBuffer(set->buffer, &childfixedval);
-   SCIPfreeRationalBuffer(set->buffer, &obj);
+   SCIPrationalFreeBuffer(set->buffer, &tmpval);
+   SCIPrationalFreeBuffer(set->buffer, &childfixedval);
+   SCIPrationalFreeBuffer(set->buffer, &obj);
 
    return SCIP_OKAY;
 }
@@ -5239,8 +5239,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
    }
 
    nactivevars = 0;
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &scalar) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &activeconstant) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &scalar) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &activeconstant) );
    activeconstantinf = FALSE;
    activevarssize = (*nvars) * 2;
    ntmpvars = *nvars;
@@ -5250,11 +5250,11 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpvars2, tmpvarssize2) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &tmpscalars2, tmpvarssize2) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &tmpscalars2, tmpvarssize2) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, activevarssize) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &activescalars, activevarssize) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &activescalars, activevarssize) );
    SCIP_CALL( SCIPsetDuplicateBufferArray(set, &tmpvars, vars, ntmpvars) );
-   SCIP_CALL( SCIPcopyRationalBufferArray(set->buffer, &tmpscalars, scalars, *nvars) );
+   SCIP_CALL( SCIPrationalCopyBufferArray(set->buffer, &tmpscalars, scalars, *nvars) );
 
    /* to avoid unnecessary expanding of variable arrays while disaggregating several variables multiple times combine same variables
     * first, first get all corresponding variables with status loose, column, multaggr or fixed
@@ -5339,7 +5339,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
          {
             int newactivevarssize = activevarssize * 2;
             SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, newactivevarssize) );
-            SCIP_CALL( SCIPreallocRationalBufferArray(set->buffer, &activescalars, activevarssize, newactivevarssize) );
+            SCIP_CALL( SCIPrationalReallocBufferArray(set->buffer, &activescalars, activevarssize, newactivevarssize) );
             activevarssize = newactivevarssize;
             assert(nactivevars < activevarssize);
          }
@@ -5361,7 +5361,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
             while( nmultvars + ntmpvars > ntmpvarsnew )
                ntmpvarsnew *= 2;
             SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars, ntmpvarsnew) );
-            SCIP_CALL( SCIPreallocRationalBufferArray(set->buffer, &tmpscalars, tmpvarssize, ntmpvarsnew) );
+            SCIP_CALL( SCIPrationalReallocBufferArray(set->buffer, &tmpscalars, tmpvarssize, ntmpvarsnew) );
             assert(nmultvars + ntmpvars <= ntmpvarsnew);
             tmpvarssize = ntmpvarsnew;
          }
@@ -5372,7 +5372,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
             while( nmultvars > ntmpvarsnew )
                ntmpvarsnew *= 2;
             SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars2, ntmpvarsnew) );
-            SCIP_CALL( SCIPreallocRationalBufferArray(set->buffer, &tmpscalars2, tmpvarssize2, ntmpvarsnew) );
+            SCIP_CALL( SCIPrationalReallocBufferArray(set->buffer, &tmpscalars2, tmpvarssize2, ntmpvarsnew) );
             assert(nmultvars <= ntmpvarsnew);
             tmpvarssize2 = ntmpvarsnew;
          }
@@ -5381,8 +5381,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
 
          for( ; nmultvars >= 0; --nmultvars )
          {
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &multconstant) );
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &multscalar) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &multconstant) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &multscalar) );
 
             multvar = multvars[nmultvars];
             SCIPrationalSet(multscalar, multscalars[nmultvars]);
@@ -5431,8 +5431,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
                assert(ntmpvars2 <= tmpvarssize2);
             }
 
-            SCIPfreeRationalBuffer(set->buffer, &multscalar);
-            SCIPfreeRationalBuffer(set->buffer, &multconstant);
+            SCIPrationalFreeBuffer(set->buffer, &multscalar);
+            SCIPrationalFreeBuffer(set->buffer, &multconstant);
          }
 
          if( ntmpvars2 > 0 )
@@ -5634,15 +5634,15 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
       }
    }
 
-   SCIPfreeRationalBufferArray(set->buffer, &tmpscalars, tmpvarssize);
+   SCIPrationalFreeBufferArray(set->buffer, &tmpscalars, tmpvarssize);
    SCIPsetFreeBufferArray(set, &tmpvars);
-   SCIPfreeRationalBufferArray(set->buffer, &activescalars, activevarssize);
+   SCIPrationalFreeBufferArray(set->buffer, &activescalars, activevarssize);
    SCIPsetFreeBufferArray(set, &activevars);
-   SCIPfreeRationalBufferArray(set->buffer, &tmpscalars2, tmpvarssize2);
+   SCIPrationalFreeBufferArray(set->buffer, &tmpscalars2, tmpvarssize2);
    SCIPsetFreeBufferArray(set, &tmpvars2);
 
-   SCIPfreeRationalBuffer(set->buffer, &activeconstant);
-   SCIPfreeRationalBuffer(set->buffer, &scalar);
+   SCIPrationalFreeBuffer(set->buffer, &activeconstant);
+   SCIPrationalFreeBuffer(set->buffer, &scalar);
 
    return SCIP_OKAY;
 }
@@ -5742,7 +5742,7 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
       {
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.vars), multvarssize, multrequiredsize) );
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.scalars), multvarssize, multrequiredsize) );
-         SCIP_CALL( SCIPreallocRationalBlockArray(blkmem, &(var->exactdata->multaggr.scalars), multvarssize, multrequiredsize) );
+         SCIP_CALL( SCIPrationalReallocBlockArray(blkmem, &(var->exactdata->multaggr.scalars), multvarssize, multrequiredsize) );
          multvarssize = multrequiredsize;
          SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, var->data.multaggr.vars, var->exactdata->multaggr.scalars,
             &nmultvars, multvarssize, var->exactdata->multaggr.constant, &multrequiredsize, TRUE) );
@@ -6033,10 +6033,10 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
    assert(infeasible != NULL);
    assert(fixed != NULL);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &varlb) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &varub) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &aggvarlb) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &aggvarub) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &varlb) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &varub) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &aggvarlb) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &aggvarub) );
 
    *infeasible = FALSE;
    *fixed = FALSE;
@@ -6222,10 +6222,10 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
    RatDebugMessage("  new bounds: <%s> [%q,%q]   <%s> [%q,%q]\n",
       var->name, var->exactdata->glbdom.lb, var->exactdata->glbdom.ub, aggvar->name, aggvar->exactdata->glbdom.lb, aggvar->exactdata->glbdom.ub);
 
-   SCIPfreeRationalBuffer(set->buffer, &aggvarub);
-   SCIPfreeRationalBuffer(set->buffer, &aggvarlb);
-   SCIPfreeRationalBuffer(set->buffer, &varub);
-   SCIPfreeRationalBuffer(set->buffer, &varlb);
+   SCIPrationalFreeBuffer(set->buffer, &aggvarub);
+   SCIPrationalFreeBuffer(set->buffer, &aggvarlb);
+   SCIPrationalFreeBuffer(set->buffer, &varub);
+   SCIPrationalFreeBuffer(set->buffer, &varlb);
 
    return SCIP_OKAY;
 }
@@ -6624,7 +6624,7 @@ SCIP_RETCODE SCIPvarAggregateExact(
          *infeasible = !SCIPrationalIsZero(constant);
       else
       {
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmpval) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmpval) );
          /* fix to constant/(1-scalar) */
          SCIPrationalDiffReal(tmpval, scalar, 1.0);
          SCIPrationalNegate(tmpval, tmpval);
@@ -6632,7 +6632,7 @@ SCIP_RETCODE SCIPvarAggregateExact(
          SCIP_CALL( SCIPvarFixExact(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
                eventqueue, eventfilter, cliquetable, tmpval, infeasible, aggregated) );
 
-         SCIPfreeRationalBuffer(set->buffer, &tmpval);
+         SCIPrationalFreeBuffer(set->buffer, &tmpval);
       }
       return SCIP_OKAY;
    }
@@ -6652,15 +6652,15 @@ SCIP_RETCODE SCIPvarAggregateExact(
    SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, FALSE) );
    assert(var->cliquelist == NULL);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &obj) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmpval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &obj) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmpval) );
 
    /* set the aggregated variable's objective value to 0.0 */
    SCIPrationalSet(obj, var->exactdata->obj);
    SCIPrationalSetReal(tmpval, 0.0);
    SCIP_CALL( SCIPvarChgObjExact(var, blkmem, set, transprob, primal, lp->lpexact, eventqueue, tmpval) );
 
-   SCIPfreeRationalBuffer(set->buffer, &tmpval);
+   SCIPrationalFreeBuffer(set->buffer, &tmpval);
 
    /* unlock all locks */
    for( i = 0; i < NLOCKTYPES; i++ )
@@ -6696,8 +6696,8 @@ SCIP_RETCODE SCIPvarAggregateExact(
       /* convert variable into aggregated variable */
       var->varstatus = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
       var->exactdata->varstatusexact = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
-      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &var->exactdata->aggregate.scalar) );
-      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &var->exactdata->aggregate.constant) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->aggregate.scalar) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->aggregate.constant) );
 
       var->data.aggregate.var = aggvar;
       SCIPrationalSet(var->exactdata->aggregate.scalar, scalar);
@@ -6799,7 +6799,7 @@ SCIP_RETCODE SCIPvarAggregateExact(
    /* issue VARFIXED event */
    SCIP_CALL( varEventVarFixed(var, blkmem, set, eventqueue, 1) );
 
-   SCIPfreeRationalBuffer(set->buffer, &obj);
+   SCIPrationalFreeBuffer(set->buffer, &obj);
 
    *aggregated = TRUE;
 
@@ -7120,9 +7120,9 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    assert(!SCIPrationalIsZero(scalarx));
    assert(!SCIPrationalIsZero(scalary));
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmprat1) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmprat2) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmprat3) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmprat1) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmprat2) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmprat3) );
 
    *infeasible = FALSE;
    *aggregated = FALSE;
@@ -7299,9 +7299,9 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    SCIP_CALL( SCIPvarRelease(&aggvar, blkmem, set, eventqueue, lp) );
 
 FREE:
-   SCIPfreeRationalBuffer(set->buffer, &tmprat3);
-   SCIPfreeRationalBuffer(set->buffer, &tmprat2);
-   SCIPfreeRationalBuffer(set->buffer, &tmprat1);
+   SCIPrationalFreeBuffer(set->buffer, &tmprat3);
+   SCIPrationalFreeBuffer(set->buffer, &tmprat2);
+   SCIPrationalFreeBuffer(set->buffer, &tmprat1);
 
    return SCIP_OKAY;  /*lint !e438*/
 }
@@ -7557,8 +7557,8 @@ SCIP_RETCODE SCIPvarTryAggregateVarsExact(
    if( absquot > maxscalar || absquot < 1 / maxscalar )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &quotxy) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &quotyx) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &quotxy) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &quotyx) );
 
    SCIPrationalDiv(quotxy, scalarx, scalary);
    SCIPrationalInvert(quotyx, quotxy);
@@ -7641,7 +7641,7 @@ SCIP_RETCODE SCIPvarTryAggregateVarsExact(
    {
       SCIP_Rational* constant;
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &constant) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &constant) );
 
       assert(typex >= typey);
 
@@ -7670,7 +7670,7 @@ SCIP_RETCODE SCIPvarTryAggregateVarsExact(
             branchcand, eventqueue, eventfilter, vary, quotyx, constant, infeasible, aggregated) );
       assert(*aggregated || *infeasible || SCIPvarDoNotAggr(varx));
 FREE:
-      SCIPfreeRationalBuffer(set->buffer, &constant);
+      SCIPrationalFreeBuffer(set->buffer, &constant);
    }
    else if( (typex == SCIP_VARTYPE_INTEGER || typex == SCIP_DEPRECATED_VARTYPE_IMPLINT)
       && (typey == SCIP_VARTYPE_INTEGER || typey == SCIP_DEPRECATED_VARTYPE_IMPLINT) )
@@ -7680,8 +7680,8 @@ FREE:
             branchcand, eventqueue, eventfilter, varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &quotyx);
-   SCIPfreeRationalBuffer(set->buffer, &quotxy);
+   SCIPrationalFreeBuffer(set->buffer, &quotyx);
+   SCIPrationalFreeBuffer(set->buffer, &quotxy);
 
    return SCIP_OKAY;
 }
@@ -8094,10 +8094,10 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
    *infeasible = FALSE;
    *aggregated = FALSE;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmpconstant) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmpscalar) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &obj) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmpval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmpconstant) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmpscalar) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &obj) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmpval) );
 
    switch( SCIPvarGetStatusExact(var) )
    {
@@ -8119,14 +8119,14 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
       tmpvarssize = naggvars;
       SCIPrationalSet(tmpconstant, constant);
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &tmpvars, aggvars, ntmpvars) );
-      SCIP_CALL( SCIPcopyRationalBlockArray(blkmem, &tmpscalars, scalars, ntmpvars) );
+      SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &tmpscalars, scalars, ntmpvars) );
 
       /* get all active variables for multi-aggregation */
       SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, tmpvars, tmpscalars, &ntmpvars, tmpvarssize, tmpconstant, &tmprequiredsize, FALSE) );
       if( tmprequiredsize > tmpvarssize )
       {
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tmpvars, tmpvarssize, tmprequiredsize) );
-         SCIP_CALL( SCIPreallocRationalBlockArray(blkmem, &tmpscalars, tmpvarssize, tmprequiredsize) );
+         SCIP_CALL( SCIPrationalReallocBlockArray(blkmem, &tmpscalars, tmpvarssize, tmprequiredsize) );
          tmpvarssize = tmprequiredsize;
          SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, tmpvars, tmpscalars, &ntmpvars, tmpvarssize, tmpconstant, &tmprequiredsize, FALSE) );
          assert( tmprequiredsize <= tmpvarssize );
@@ -8284,11 +8284,11 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
       var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
       var->exactdata->varstatusexact = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->data.multaggr.vars, tmpvars, ntmpvars) );
-      SCIP_CALL( SCIPcopyRationalBlockArray(blkmem, &(var->exactdata->multaggr.scalars), tmpscalars, ntmpvars) );
+      SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &(var->exactdata->multaggr.scalars), tmpscalars, ntmpvars) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &var->data.multaggr.scalars, ntmpvars) );
       for( i = 0; i < ntmpvars; ++i )
          var->data.multaggr.scalars[i] = SCIPrationalApproxReal(tmpscalars[i]);
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(var->exactdata->multaggr.constant), tmpconstant) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(var->exactdata->multaggr.constant), tmpconstant) );
       var->data.multaggr.constant = SCIPrationalApproxReal(tmpconstant);
       var->data.multaggr.nvars = ntmpvars;
       var->data.multaggr.varssize = ntmpvars;
@@ -8355,7 +8355,7 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
       *aggregated = TRUE;
 
    TERMINATE:
-      SCIPfreeRationalBlockArray(blkmem, &tmpscalars, tmpvarssize);
+      SCIPrationalFreeBlockArray(blkmem, &tmpscalars, tmpvarssize);
       BMSfreeBlockMemoryArray(blkmem, &tmpvars, tmpvarssize);
       break;
 
@@ -8406,10 +8406,10 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
       return SCIP_INVALIDDATA;
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &tmpval);
-   SCIPfreeRationalBuffer(set->buffer, &obj);
-   SCIPfreeRationalBuffer(set->buffer, &tmpscalar);
-   SCIPfreeRationalBuffer(set->buffer, &tmpconstant);
+   SCIPrationalFreeBuffer(set->buffer, &tmpval);
+   SCIPrationalFreeBuffer(set->buffer, &obj);
+   SCIPrationalFreeBuffer(set->buffer, &tmpscalar);
+   SCIPrationalFreeBuffer(set->buffer, &tmpconstant);
 
    return SCIP_OKAY;
 }
@@ -9119,8 +9119,8 @@ SCIP_RETCODE SCIPvarChgObjExact(
    assert(var->exactdata != NULL);
    assert(var->scip == set->scip);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &oldobj) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldobj) );
    newobjreal = SCIPrationalApproxReal(newobj);
 
    RatDebugMessage("changing exact objective value of <%s> from %q to %q\n", var->name, var->exactdata->obj, newobj);
@@ -9183,8 +9183,8 @@ SCIP_RETCODE SCIPvarChgObjExact(
       }
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &oldobj);
-   SCIPfreeRationalBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &oldobj);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -9334,8 +9334,8 @@ SCIP_RETCODE SCIPvarAddObjExact(
 
    RatDebugMessage("adding %q to objective value %q of <%s>\n", addobj, var->exactdata->obj, var->name);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &oldobj) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmpobj) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldobj) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmpobj) );
 
    if( !SCIPrationalIsZero(addobj) )
    {
@@ -9409,7 +9409,7 @@ SCIP_RETCODE SCIPvarAddObjExact(
       case SCIP_VARSTATUS_MULTAGGR:
          assert(!var->donotmultaggr);
          /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &multaggrobj) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &multaggrobj) );
 
          SCIPrationalMult(tmpobj, var->exactdata->multaggr.constant, addobj);
          SCIPprobAddObjoffsetExact(transprob, tmpobj);
@@ -9422,7 +9422,7 @@ SCIP_RETCODE SCIPvarAddObjExact(
             SCIP_CALL( SCIPvarAddObjExact(var->data.multaggr.vars[i], blkmem, set, stat, transprob, origprob, primal, tree,
                   reopt, lp, eventqueue, eventfilter, multaggrobj) );
          }
-         SCIPfreeRationalBuffer(set->buffer, &multaggrobj);
+         SCIPrationalFreeBuffer(set->buffer, &multaggrobj);
          break;
 
       case SCIP_VARSTATUS_NEGATED:
@@ -9447,8 +9447,8 @@ SCIP_RETCODE SCIPvarAddObjExact(
       }
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &tmpobj);
-   SCIPfreeRationalBuffer(set->buffer, &oldobj);
+   SCIPrationalFreeBuffer(set->buffer, &tmpobj);
+   SCIPrationalFreeBuffer(set->buffer, &oldobj);
 
    return SCIP_OKAY;
 }
@@ -9710,7 +9710,7 @@ SCIP_RETCODE SCIPvarChgLbOriginalExact(
    assert(var->scip == set->scip);
    assert(set->stage == SCIP_STAGE_PROBLEM);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmpval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmpval) );
    SCIPrationalSet(tmpval, newbound);
 
    /* check that the bound is feasible */
@@ -9727,7 +9727,7 @@ SCIP_RETCODE SCIPvarChgLbOriginalExact(
 
       if( SCIPrationalIsEqual(var->exactdata->origdom.lb, newbound) )
       {
-         SCIPfreeRationalBuffer(set->buffer, &tmpval);
+         SCIPrationalFreeBuffer(set->buffer, &tmpval);
          return SCIP_OKAY;
       }
 
@@ -9762,7 +9762,7 @@ SCIP_RETCODE SCIPvarChgLbOriginalExact(
       SCIP_CALL( SCIPvarChgUbOriginalExact(parentvar, set, tmpval) );
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &tmpval);
+   SCIPrationalFreeBuffer(set->buffer, &tmpval);
 
    return SCIP_OKAY;
 }
@@ -9843,7 +9843,7 @@ SCIP_RETCODE SCIPvarChgUbOriginalExact(
    assert(var->scip == set->scip);
    assert(set->stage == SCIP_STAGE_PROBLEM);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmpval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmpval) );
 
    /* check that the bound is feasible */
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPrationalIsGE(newbound, SCIPvarGetLbOriginalExact(var)));
@@ -9859,7 +9859,7 @@ SCIP_RETCODE SCIPvarChgUbOriginalExact(
 
       if( SCIPrationalIsEqual(var->exactdata->origdom.ub, newbound) )
       {
-         SCIPfreeRationalBuffer(set->buffer, &tmpval);
+         SCIPrationalFreeBuffer(set->buffer, &tmpval);
          return SCIP_OKAY;
       }
 
@@ -9894,7 +9894,7 @@ SCIP_RETCODE SCIPvarChgUbOriginalExact(
       SCIP_CALL( SCIPvarChgLbOriginalExact(parentvar, set, tmpval) );
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &tmpval);
+   SCIPrationalFreeBuffer(set->buffer, &tmpval);
 
    return SCIP_OKAY;
 }
@@ -10526,7 +10526,7 @@ SCIP_RETCODE varProcessChgLbGlobalExact(
    assert(var->scip == set->scip);
    assert(stat != NULL);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &oldbound) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldbound) );
 
    /* adjust bound to integral value if variable is of integral type */
    adjustedLbExact(set, SCIPvarIsIntegral(var), newbound);
@@ -10546,7 +10546,7 @@ SCIP_RETCODE varProcessChgLbGlobalExact(
 
    if( SCIPrationalIsEqual(newbound, var->exactdata->glbdom.lb) )
    {
-      SCIPfreeRationalBuffer(set->buffer, &oldbound);
+      SCIPrationalFreeBuffer(set->buffer, &oldbound);
       return SCIP_OKAY;
    }
 
@@ -10600,7 +10600,7 @@ SCIP_RETCODE varProcessChgLbGlobalExact(
          assert(parentvar->data.aggregate.var == var);
          if( SCIPrationalIsPositive( parentvar->exactdata->aggregate.scalar) )
          {
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &parentnewbound) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &parentnewbound) );
             /* a > 0 -> change lower bound of y */
             if( !SCIPrationalIsAbsInfinity(newbound) )
             {
@@ -10610,11 +10610,11 @@ SCIP_RETCODE varProcessChgLbGlobalExact(
             else
                SCIPrationalSet(parentnewbound, newbound);
             SCIP_CALL( varProcessChgLbGlobalExact(parentvar, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable, parentnewbound) );
-            SCIPfreeRationalBuffer(set->buffer, &parentnewbound);
+            SCIPrationalFreeBuffer(set->buffer, &parentnewbound);
          }
          else
          {
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &parentnewbound) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &parentnewbound) );
             /* a < 0 -> change upper bound of y */
             if( !SCIPrationalIsAbsInfinity(newbound) )
             {
@@ -10624,7 +10624,7 @@ SCIP_RETCODE varProcessChgLbGlobalExact(
             else
                SCIPrationalNegate(parentnewbound, newbound);
             SCIP_CALL( varProcessChgUbGlobalExact(parentvar, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable, parentnewbound) );
-            SCIPfreeRationalBuffer(set->buffer, &parentnewbound);
+            SCIPrationalFreeBuffer(set->buffer, &parentnewbound);
          }
          break;
 
@@ -10632,12 +10632,12 @@ SCIP_RETCODE varProcessChgLbGlobalExact(
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(parentvar->negatedvar->negatedvar == parentvar);
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &parentnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &parentnewbound) );
          SCIPrationalDiffReal(parentnewbound, newbound, parentvar->data.negate.constant);
          SCIPrationalNegate(parentnewbound, parentnewbound);
          SCIP_CALL( varProcessChgUbGlobalExact(parentvar, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable,
                parentnewbound) );
-         SCIPfreeRationalBuffer(set->buffer, &parentnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &parentnewbound);
          break;
 
       default:
@@ -10645,7 +10645,7 @@ SCIP_RETCODE varProcessChgLbGlobalExact(
          return SCIP_INVALIDDATA;
       }
    }
-   SCIPfreeRationalBuffer(set->buffer, &oldbound);
+   SCIPrationalFreeBuffer(set->buffer, &oldbound);
 
    return SCIP_OKAY;
 }
@@ -10677,7 +10677,7 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
    assert(var->scip == set->scip);
    assert(stat != NULL);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &oldbound) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldbound) );
 
    /* adjust bound to integral value if variable is of integral type */
    adjustedUbExact(set, SCIPvarIsIntegral(var), newbound);
@@ -10697,7 +10697,7 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
 
    if( SCIPrationalIsEqual(newbound, var->exactdata->glbdom.ub) )
    {
-      SCIPfreeRationalBuffer(set->buffer, &oldbound);
+      SCIPrationalFreeBuffer(set->buffer, &oldbound);
       return SCIP_OKAY;
    }
 
@@ -10751,7 +10751,7 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
          assert(parentvar->data.aggregate.var == var);
          if( SCIPrationalIsPositive( parentvar->exactdata->aggregate.scalar) )
          {
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &parentnewbound) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &parentnewbound) );
             /* a > 0 -> change lower bound of y */
             if( !SCIPrationalIsAbsInfinity(newbound) )
             {
@@ -10761,11 +10761,11 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
             else
                SCIPrationalSet(parentnewbound, newbound);
             SCIP_CALL( varProcessChgUbGlobalExact(parentvar, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable, parentnewbound) );
-            SCIPfreeRationalBuffer(set->buffer, &parentnewbound);
+            SCIPrationalFreeBuffer(set->buffer, &parentnewbound);
          }
          else
          {
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &parentnewbound) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &parentnewbound) );
             /* a < 0 -> change upper bound of y */
             if( !SCIPrationalIsAbsInfinity(newbound) )
             {
@@ -10775,7 +10775,7 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
             else
                SCIPrationalNegate(parentnewbound, newbound);
             SCIP_CALL( varProcessChgLbGlobalExact(parentvar, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable, parentnewbound) );
-            SCIPfreeRationalBuffer(set->buffer, &parentnewbound);
+            SCIPrationalFreeBuffer(set->buffer, &parentnewbound);
          }
          break;
 
@@ -10783,12 +10783,12 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(parentvar->negatedvar->negatedvar == parentvar);
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &parentnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &parentnewbound) );
          SCIPrationalDiffReal(parentnewbound, newbound, parentvar->data.negate.constant);
          SCIPrationalNegate(parentnewbound, parentnewbound);
          SCIP_CALL( varProcessChgLbGlobalExact(parentvar, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable,
                parentnewbound) );
-         SCIPfreeRationalBuffer(set->buffer, &parentnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &parentnewbound);
          break;
 
       default:
@@ -10796,7 +10796,7 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
          return SCIP_INVALIDDATA;
       }
    }
-   SCIPfreeRationalBuffer(set->buffer, &oldbound);
+   SCIPrationalFreeBuffer(set->buffer, &oldbound);
 
    return SCIP_OKAY;
 }
@@ -11032,7 +11032,7 @@ SCIP_RETCODE SCIPvarChgLbGlobalExact(
       assert(var->data.aggregate.var != NULL);
       if( SCIPrationalIsPositive(var->exactdata->aggregate.scalar) )
       {
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &childnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &childnewbound) );
 
          /* a > 0 -> change lower bound of y */
          if( !SCIPrationalIsAbsInfinity(newbound) )
@@ -11046,11 +11046,11 @@ SCIP_RETCODE SCIPvarChgLbGlobalExact(
          SCIP_CALL( SCIPvarChgLbGlobalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable,
                childnewbound) );
 
-         SCIPfreeRationalBuffer(set->buffer, &childnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &childnewbound);
       }
       else if( SCIPrationalIsNegative(var->exactdata->aggregate.scalar) )
       {
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &childnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &childnewbound) );
 
          /* a < 0 -> change upper bound of y */
          if( !SCIPrationalIsAbsInfinity(newbound) )
@@ -11064,7 +11064,7 @@ SCIP_RETCODE SCIPvarChgLbGlobalExact(
          SCIP_CALL( SCIPvarChgUbGlobalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable,
                childnewbound) );
 
-         SCIPfreeRationalBuffer(set->buffer, &childnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &childnewbound);
       }
       else
       {
@@ -11082,12 +11082,12 @@ SCIP_RETCODE SCIPvarChgLbGlobalExact(
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &childnewbound) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &childnewbound) );
       SCIPrationalDiffReal(childnewbound, newbound, var->data.negate.constant);
       SCIPrationalNegate(childnewbound, childnewbound);
       SCIP_CALL( SCIPvarChgUbGlobalExact(var->negatedvar, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable,
             childnewbound) );
-      SCIPfreeRationalBuffer(set->buffer, &childnewbound);
+      SCIPrationalFreeBuffer(set->buffer, &childnewbound);
       break;
 
    default:
@@ -11330,7 +11330,7 @@ SCIP_RETCODE SCIPvarChgUbGlobalExact(
       assert(var->data.aggregate.var != NULL);
       if( SCIPrationalIsPositive(var->exactdata->aggregate.scalar) )
       {
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &childnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &childnewbound) );
 
          /* a > 0 -> change lower bound of y */
          if( !SCIPrationalIsAbsInfinity(newbound) )
@@ -11344,11 +11344,11 @@ SCIP_RETCODE SCIPvarChgUbGlobalExact(
          SCIP_CALL( SCIPvarChgUbGlobalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable,
                childnewbound) );
 
-         SCIPfreeRationalBuffer(set->buffer, &childnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &childnewbound);
       }
       else if( SCIPrationalIsNegative(var->exactdata->aggregate.scalar) )
       {
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &childnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &childnewbound) );
 
          /* a < 0 -> change upper bound of y */
          if( !SCIPrationalIsAbsInfinity(newbound) )
@@ -11362,7 +11362,7 @@ SCIP_RETCODE SCIPvarChgUbGlobalExact(
          SCIP_CALL( SCIPvarChgLbGlobalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable,
                childnewbound) );
 
-         SCIPfreeRationalBuffer(set->buffer, &childnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &childnewbound);
       }
       else
       {
@@ -11380,12 +11380,12 @@ SCIP_RETCODE SCIPvarChgUbGlobalExact(
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &childnewbound) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &childnewbound) );
       SCIPrationalDiffReal(childnewbound, newbound, var->data.negate.constant);
       SCIPrationalNegate(childnewbound, childnewbound);
       SCIP_CALL( SCIPvarChgLbGlobalExact(var->negatedvar, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable,
             childnewbound) );
-      SCIPfreeRationalBuffer(set->buffer, &childnewbound);
+      SCIPrationalFreeBuffer(set->buffer, &childnewbound);
       break;
 
    default:
@@ -12083,7 +12083,7 @@ SCIP_RETCODE varProcessChgLbLocalExact(
             || SCIPrationalIsEqual(newbound, var->exactdata->locdom.ub)))
       || !SCIPvarIsIntegral(var));
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &oldbound) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldbound) );
 
    /* check that the bound is feasible */
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPrationalIsLE(newbound, var->exactdata->glbdom.ub));
@@ -12147,7 +12147,7 @@ SCIP_RETCODE varProcessChgLbLocalExact(
 
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &parentnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &parentnewbound) );
          if( SCIPrationalIsPositive(parentvar->exactdata->aggregate.scalar) )
          {
             /* a > 0 -> change lower bound of y */
@@ -12174,19 +12174,19 @@ SCIP_RETCODE varProcessChgLbLocalExact(
 
             SCIP_CALL( varProcessChgUbLocalExact(parentvar, blkmem, set, NULL, lpexact, branchcand, eventqueue, parentnewbound) );
          }
-         SCIPfreeRationalBuffer(set->buffer, &parentnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &parentnewbound);
          break;
 
       case SCIP_VARSTATUS_NEGATED: /* x = offset - x'  ->  x' = offset - x */
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(parentvar->negatedvar->negatedvar == parentvar);
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &parentnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &parentnewbound) );
          SCIPrationalDiffReal(parentnewbound, newbound, parentvar->data.negate.constant);
          SCIPrationalNegate(parentnewbound, parentnewbound);
          SCIP_CALL( varProcessChgUbLocalExact(parentvar, blkmem, set, NULL, lpexact, branchcand, eventqueue,
                parentnewbound) );
-         SCIPfreeRationalBuffer(set->buffer, &parentnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &parentnewbound);
          break;
 
       default:
@@ -12195,7 +12195,7 @@ SCIP_RETCODE varProcessChgLbLocalExact(
       }
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &oldbound);
+   SCIPrationalFreeBuffer(set->buffer, &oldbound);
 
    return SCIP_OKAY;
 }
@@ -12227,7 +12227,7 @@ SCIP_RETCODE varProcessChgUbLocalExact(
             || SCIPrationalIsEqual(newbound, var->exactdata->locdom.ub)))
       || !SCIPvarIsIntegral(var));
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &oldbound) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldbound) );
 
    /* check that the bound is feasible */
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPrationalIsGE(newbound, var->exactdata->glbdom.lb));
@@ -12291,7 +12291,7 @@ SCIP_RETCODE varProcessChgUbLocalExact(
 
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &parentnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &parentnewbound) );
          if( SCIPrationalIsPositive(parentvar->exactdata->aggregate.scalar) )
          {
             /* a > 0 -> change upper bound of y */
@@ -12318,19 +12318,19 @@ SCIP_RETCODE varProcessChgUbLocalExact(
 
             SCIP_CALL( varProcessChgLbLocalExact(parentvar, blkmem, set, NULL, lpexact, branchcand, eventqueue, parentnewbound) );
          }
-         SCIPfreeRationalBuffer(set->buffer, &parentnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &parentnewbound);
          break;
 
       case SCIP_VARSTATUS_NEGATED: /* x = offset - x'  ->  x' = offset - x */
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(parentvar->negatedvar->negatedvar == parentvar);
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &parentnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &parentnewbound) );
          SCIPrationalDiffReal(parentnewbound, newbound, parentvar->data.negate.constant);
          SCIPrationalNegate(parentnewbound, parentnewbound);
          SCIP_CALL( varProcessChgLbLocalExact(parentvar, blkmem, set, NULL, lpexact, branchcand, eventqueue,
                parentnewbound) );
-         SCIPfreeRationalBuffer(set->buffer, &parentnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &parentnewbound);
          break;
 
       default:
@@ -12339,7 +12339,7 @@ SCIP_RETCODE varProcessChgUbLocalExact(
       }
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &oldbound);
+   SCIPrationalFreeBuffer(set->buffer, &oldbound);
 
    return SCIP_OKAY;
 }
@@ -12547,7 +12547,7 @@ SCIP_RETCODE SCIPvarChgLbLocalExact(
       {
          SCIP_Rational* childnewbound;
 
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &childnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &childnewbound) );
 
          /* a > 0 -> change lower bound of y */
          if( !SCIPrationalIsNegInfinity(newbound) && !SCIPrationalIsInfinity(newbound) )
@@ -12561,13 +12561,13 @@ SCIP_RETCODE SCIPvarChgLbLocalExact(
          SCIP_CALL( SCIPvarChgLbLocalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue,
                childnewbound) );
 
-         SCIPfreeRationalBuffer(set->buffer, &childnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &childnewbound);
       }
       else if( SCIPrationalIsNegative(var->exactdata->aggregate.scalar) )
       {
          SCIP_Rational* childnewbound;
 
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &childnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &childnewbound) );
 
          /* a < 0 -> change upper bound of y */
          if( !SCIPrationalIsNegInfinity(newbound) && !SCIPrationalIsInfinity(newbound) )
@@ -12581,7 +12581,7 @@ SCIP_RETCODE SCIPvarChgLbLocalExact(
          SCIP_CALL( SCIPvarChgUbLocalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue,
                childnewbound) );
 
-         SCIPfreeRationalBuffer(set->buffer, &childnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &childnewbound);
       }
       else
       {
@@ -12814,7 +12814,7 @@ SCIP_RETCODE SCIPvarChgUbLocalExact(
       {
          SCIP_Rational* childnewbound;
 
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &childnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &childnewbound) );
 
          /* a > 0 -> change upper bound of y */
          if( !SCIPrationalIsNegInfinity(newbound) && !SCIPrationalIsInfinity(newbound) )
@@ -12827,13 +12827,13 @@ SCIP_RETCODE SCIPvarChgUbLocalExact(
          SCIP_CALL( SCIPvarChgUbLocalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue,
                childnewbound) );
 
-         SCIPfreeRationalBuffer(set->buffer, &childnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &childnewbound);
       }
       else if( SCIPrationalIsNegative(var->exactdata->aggregate.scalar) )
       {
          SCIP_Rational* childnewbound;
 
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &childnewbound) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &childnewbound) );
 
          /* a < 0 -> change lower bound of y */
          if( !SCIPrationalIsNegInfinity(newbound) && !SCIPrationalIsInfinity(newbound) )
@@ -12847,7 +12847,7 @@ SCIP_RETCODE SCIPvarChgUbLocalExact(
          SCIP_CALL( SCIPvarChgLbLocalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue,
                childnewbound) );
 
-         SCIPfreeRationalBuffer(set->buffer, &childnewbound);
+         SCIPrationalFreeBuffer(set->buffer, &childnewbound);
       }
       else
       {
@@ -13288,8 +13288,8 @@ SCIP_RETCODE SCIPvarGetMultaggrLbLocalExact(
    assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &lb) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &bnd) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lb) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &bnd) );
 
    posinf = FALSE;
    neginf = FALSE;
@@ -13342,8 +13342,8 @@ SCIP_RETCODE SCIPvarGetMultaggrLbLocalExact(
    else
       SCIPrationalMAX(result, lb, SCIPvarGetLbLocalExact(var));
 
-   SCIPfreeRationalBuffer(set->buffer, &bnd);
-   SCIPfreeRationalBuffer(set->buffer, &lb);
+   SCIPrationalFreeBuffer(set->buffer, &bnd);
+   SCIPrationalFreeBuffer(set->buffer, &lb);
 
    return SCIP_OKAY;
 }
@@ -13436,8 +13436,8 @@ SCIP_RETCODE SCIPvarGetMultaggrUbLocalExact(
    assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &ub) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &bnd) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &ub) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &bnd) );
 
    posinf = FALSE;
    neginf = FALSE;
@@ -13490,8 +13490,8 @@ SCIP_RETCODE SCIPvarGetMultaggrUbLocalExact(
    else
       SCIPrationalMIN(result, ub, SCIPvarGetUbLocalExact(var));
 
-   SCIPfreeRationalBuffer(set->buffer, &bnd);
-   SCIPfreeRationalBuffer(set->buffer, &ub);
+   SCIPrationalFreeBuffer(set->buffer, &bnd);
+   SCIPrationalFreeBuffer(set->buffer, &ub);
 
    return SCIP_OKAY;
 }
@@ -18464,7 +18464,7 @@ void SCIPvarGetLPSolExact_rec(
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
 
-      (void) SCIPcreateRational(&tmp);
+      (void) SCIPrationalCreate(&tmp);
       /* Due to method SCIPvarFlattenAggregationGraph(), this assert is no longer correct
        * assert(var->data.multaggr.nvars >= 2);
        */
@@ -18474,7 +18474,7 @@ void SCIPvarGetLPSolExact_rec(
          SCIPvarGetLPSolExact(var->data.multaggr.vars[i], tmp);
          SCIPrationalAddProd(res, var->exactdata->multaggr.scalars[i], tmp);
       }
-      SCIPfreeRational(&tmp);
+      SCIPrationalFree(&tmp);
       break;
    }
 
@@ -19811,10 +19811,10 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       /* add globally fixed variables as constant */
       if( SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub) )
       {
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
          SCIPrationalMult(tmp, val, var->exactdata->glbdom.lb);
          SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
-         SCIPfreeRationalBuffer(set->buffer, &tmp);
+         SCIPrationalFreeBuffer(set->buffer, &tmp);
          break;
       }
       /* convert loose variable into column */
@@ -19834,25 +19834,25 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       assert(SCIPrationalIsEqual(var->exactdata->locdom.lb, var->exactdata->glbdom.lb)); /*lint !e777*/
       assert(!SCIPrationalIsAbsInfinity(var->exactdata->locdom.lb));
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
       SCIPrationalMult(tmp, val, var->exactdata->locdom.lb);
       SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
 
-      SCIPfreeRationalBuffer(set->buffer, &tmp);
+      SCIPrationalFreeBuffer(set->buffer, &tmp);
 
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
       SCIPrationalMult(tmp, var->exactdata->aggregate.scalar, val);
       SCIP_CALL( SCIPvarAddToRowExact(var->data.aggregate.var, blkmem, set, stat, eventqueue, prob, lpexact,
             rowexact, tmp) );
       SCIPrationalMult(tmp, var->exactdata->aggregate.constant, val);
       SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
-      SCIPfreeRationalBuffer(set->buffer, &tmp);
+      SCIPrationalFreeBuffer(set->buffer, &tmp);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -19860,7 +19860,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
@@ -19871,7 +19871,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       SCIPrationalMult(tmp, var->exactdata->multaggr.constant, val);
       SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
 
-      SCIPfreeRationalBuffer(set->buffer, &tmp);
+      SCIPrationalFreeBuffer(set->buffer, &tmp);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -19879,7 +19879,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       assert(SCIPvarGetStatusExact(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
       SCIPrationalNegate(tmp, val);
       SCIP_CALL( SCIPvarAddToRowExact(var->negatedvar, blkmem, set, stat, eventqueue, prob, lpexact, rowexact, tmp) );
@@ -19887,7 +19887,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       SCIPrationalMultReal(tmp, val, var->data.negate.constant);
       SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
 
-      SCIPfreeRationalBuffer(set->buffer, &tmp);
+      SCIPrationalFreeBuffer(set->buffer, &tmp);
 
       break;
 

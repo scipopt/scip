@@ -69,7 +69,7 @@ static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are cons
  */
 
 /** allocate and create a rational from nominator and denominator using ordinary memory */
-SCIP_RETCODE SCIPcreateRational(
+SCIP_RETCODE SCIPrationalCreate(
    SCIP_Rational**       rational            /**< pointer to the rational to create */
    )
 {
@@ -83,7 +83,7 @@ SCIP_RETCODE SCIPcreateRational(
 }
 
 /** allocate and create a rational from nominator and denominator using block memory */
-SCIP_RETCODE SCIPcreateRationalBlock(
+SCIP_RETCODE SCIPrationalCreateBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational            /**< pointer to the rational to create */
    )
@@ -98,7 +98,7 @@ SCIP_RETCODE SCIPcreateRationalBlock(
 }
 
 /** allocate and create a rational from nominator and denominator using buffer memory */
-SCIP_RETCODE SCIPcreateRationalBuffer(
+SCIP_RETCODE SCIPrationalCreateBuffer(
    BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational**       rational            /**< pointer to the rational to create */
    )
@@ -113,7 +113,7 @@ SCIP_RETCODE SCIPcreateRationalBuffer(
 }
 
 /** allocate and create a rational from a string in the format, e.g. "12/35" */
-SCIP_RETCODE SCIPcreateRationalString(
+SCIP_RETCODE SCIPrationalCreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
    const char*           desc                /**< the string describing the rational */
@@ -129,7 +129,7 @@ SCIP_RETCODE SCIPcreateRationalString(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPcreateRationalBlock(mem, rational) );
+   SCIP_CALL( SCIPrationalCreateBlock(mem, rational) );
 
    switch( *desc )
    {
@@ -162,12 +162,12 @@ SCIP_RETCODE SCIPcreateRationalString(
 }
 
 /** creates a copy of a rational using ordinary memory */
-SCIP_RETCODE SCIPcopyRational(
+SCIP_RETCODE SCIPrationalCopy(
    SCIP_Rational**       result,             /**< pointer to the rational to create */
    SCIP_Rational*        src                 /**< rational to copy */
    )
 {
-   SCIP_CALL( SCIPcreateRational(result) );
+   SCIP_CALL( SCIPrationalCreate(result) );
 
    SCIPrationalSet(*result, src);
 
@@ -175,13 +175,13 @@ SCIP_RETCODE SCIPcopyRational(
 }
 
 /** creates a copy of a rational using block memory */
-SCIP_RETCODE SCIPcopyRationalBlock(
+SCIP_RETCODE SCIPrationalCopyBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       result,             /**< pointer to the rational to create */
    SCIP_Rational*        src                 /**< rational to copy */
    )
 {
-   SCIP_CALL( SCIPcreateRationalBlock(mem, result) );
+   SCIP_CALL( SCIPrationalCreateBlock(mem, result) );
 
    SCIPrationalSet(*result, src);
 
@@ -189,13 +189,13 @@ SCIP_RETCODE SCIPcopyRationalBlock(
 }
 
 /** creates a copy of a rational using buffer memory */
-SCIP_RETCODE SCIPcopyRationalBuffer(
+SCIP_RETCODE SCIPrationalCopyBuffer(
    BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational**       result,             /**< pointer to the rational to create */
    SCIP_Rational*        src                 /**< rational to copy */
    )
 {
-   SCIP_CALL( SCIPcreateRationalBuffer(mem, result) );
+   SCIP_CALL( SCIPrationalCreateBuffer(mem, result) );
 
    SCIPrationalSet(*result, src);
 
@@ -203,7 +203,7 @@ SCIP_RETCODE SCIPcopyRationalBuffer(
 }
 
 /** create an array of rationals using ordinary memory */
-SCIP_RETCODE SCIPcreateRationalArray(
+SCIP_RETCODE SCIPrationalCreateArray(
    SCIP_Rational***      rational,           /**< pointer to the array to create */
    int                   size                /**< the size of the array */
    )
@@ -212,7 +212,7 @@ SCIP_RETCODE SCIPcreateRationalArray(
 
    for( int i = 0; i < size; ++i )
    {
-      SCIP_CALL( SCIPcreateRational(&(*rational)[i]) );
+      SCIP_CALL( SCIPrationalCreate(&(*rational)[i]) );
       (*rational)[i]->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
    }
 
@@ -220,7 +220,7 @@ SCIP_RETCODE SCIPcreateRationalArray(
 }
 
 /** create an array of rationals using block memory */
-SCIP_RETCODE SCIPcreateRationalBlockArray(
+SCIP_RETCODE SCIPrationalCreateBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      rational,           /**< pointer to the array to create */
    int                   size                /**< the size of the array */
@@ -230,7 +230,7 @@ SCIP_RETCODE SCIPcreateRationalBlockArray(
 
    for( int i = 0; i < size; ++i )
    {
-      SCIP_CALL( SCIPcreateRationalBlock(mem, &(*rational)[i]) );
+      SCIP_CALL( SCIPrationalCreateBlock(mem, &(*rational)[i]) );
       (*rational)[i]->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
    }
 
@@ -238,7 +238,7 @@ SCIP_RETCODE SCIPcreateRationalBlockArray(
 }
 
 /** create an array of rationals using buffer memory */
-SCIP_RETCODE SCIPcreateRationalBufferArray(
+SCIP_RETCODE SCIPrationalCreateBufferArray(
    BMS_BUFMEM*           mem,                /**< block memory */
    SCIP_Rational***      rational,           /**< pointer to the arrat to create */
    int                   size                /**< the size of the array */
@@ -248,7 +248,7 @@ SCIP_RETCODE SCIPcreateRationalBufferArray(
 
    for( int i = 0; i < size; ++i )
    {
-      SCIP_CALL( SCIPcreateRationalBuffer(mem, &(*rational)[i]) );
+      SCIP_CALL( SCIPrationalCreateBuffer(mem, &(*rational)[i]) );
       (*rational)[i]->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
    }
 
@@ -256,7 +256,7 @@ SCIP_RETCODE SCIPcreateRationalBufferArray(
 }
 
 /** copy an array of rationals using ordinary memory */
-SCIP_RETCODE SCIPcopyRationalArray(
+SCIP_RETCODE SCIPrationalCopyArray(
    SCIP_Rational***      result,             /**< address to copy to */
    SCIP_Rational**       src,                /**< src array */
    int                   len                 /**< size of src array */
@@ -266,14 +266,14 @@ SCIP_RETCODE SCIPcopyRationalArray(
 
    for( int i = 0; i < len; ++i )
    {
-      SCIP_CALL( SCIPcopyRational(&(*result)[i], src[i]) );
+      SCIP_CALL( SCIPrationalCopy(&(*result)[i], src[i]) );
    }
 
    return SCIP_OKAY;
 }
 
 /** copy an array of rationals using block memory */
-SCIP_RETCODE SCIPcopyRationalBlockArray(
+SCIP_RETCODE SCIPrationalCopyBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      result,             /**< address to copy to */
    SCIP_Rational**       src,                /**< src array */
@@ -284,14 +284,14 @@ SCIP_RETCODE SCIPcopyRationalBlockArray(
 
    for( int i = 0; i < len; ++i )
    {
-      SCIP_CALL( SCIPcopyRationalBlock(mem, &(*result)[i], src[i]) );
+      SCIP_CALL( SCIPrationalCopyBlock(mem, &(*result)[i], src[i]) );
    }
 
    return SCIP_OKAY;
 }
 
 /** copy an array of rationals using buffer memory */
-SCIP_RETCODE SCIPcopyRationalBufferArray(
+SCIP_RETCODE SCIPrationalCopyBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational***      result,             /**< address to copy to */
    SCIP_Rational**       src,                /**< src array */
@@ -302,14 +302,14 @@ SCIP_RETCODE SCIPcopyRationalBufferArray(
 
    for( int i = 0; i < len; ++i )
    {
-      SCIP_CALL( SCIPcopyRationalBuffer(mem, &(*result)[i], src[i]) );
+      SCIP_CALL( SCIPrationalCopyBuffer(mem, &(*result)[i], src[i]) );
    }
 
    return SCIP_OKAY;
 }
 
 /** realloc a rational ordinary arrray */
-SCIP_RETCODE SCIPreallocRationalArray(
+SCIP_RETCODE SCIPrationalReallocArray(
    SCIP_Rational***      result,             /**< address to copy to */
    int                   oldlen,             /**< size of src array */
    int                   newlen              /**< size of src array */
@@ -321,14 +321,14 @@ SCIP_RETCODE SCIPreallocRationalArray(
 
    for( int i = oldlen; i < newlen; ++i )
    {
-      SCIP_CALL( SCIPcreateRational(&(*result)[i]) );
+      SCIP_CALL( SCIPrationalCreate(&(*result)[i]) );
    }
 
    return SCIP_OKAY;
 }
 
 /** realloc a rational buffer arrray */
-SCIP_RETCODE SCIPreallocRationalBufferArray(
+SCIP_RETCODE SCIPrationalReallocBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational***      result,             /**< address to copy to */
    int                   oldlen,             /**< size of src array */
@@ -341,14 +341,14 @@ SCIP_RETCODE SCIPreallocRationalBufferArray(
 
    for( int i = oldlen; i < newlen; ++i )
    {
-      SCIP_CALL( SCIPcreateRationalBuffer(mem, &(*result)[i]) );
+      SCIP_CALL( SCIPrationalCreateBuffer(mem, &(*result)[i]) );
    }
 
    return SCIP_OKAY;
 }
 
 /** realloc a rational block arrray */
-SCIP_RETCODE SCIPreallocRationalBlockArray(
+SCIP_RETCODE SCIPrationalReallocBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      result,             /**< address to copy to */
    int                   oldlen,             /**< size of src array */
@@ -359,7 +359,7 @@ SCIP_RETCODE SCIPreallocRationalBlockArray(
    {
       for( int i = newlen; i < oldlen; ++i )
       {
-         SCIPfreeRationalBlock(mem, &((*result)[i]));
+         SCIPrationalFreeBlock(mem, &((*result)[i]));
       }
    }
    else
@@ -368,7 +368,7 @@ SCIP_RETCODE SCIPreallocRationalBlockArray(
 
       for( int i = oldlen; i < newlen; ++i )
       {
-         SCIP_CALL( SCIPcreateRationalBlock(mem, &((*result)[i])) );
+         SCIP_CALL( SCIPrationalCreateBlock(mem, &((*result)[i])) );
       }
    }
 
@@ -378,7 +378,7 @@ SCIP_RETCODE SCIPreallocRationalBlockArray(
 #ifdef SCIP_WITH_BOOST
 /** creates a rational from an mpq_t */
 #ifdef SCIP_WITH_GMP
-SCIP_RETCODE SCIPcreateRationalBlockGMP(
+SCIP_RETCODE SCIPrationalCreateBlockGMP(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
    mpq_t                 numb                /**< the gmp rational */
@@ -462,7 +462,7 @@ void SCIPrationalClearArrayGMP(
 #endif
 
 /** delete a rational and free the allocated ordinary memory */
-void SCIPfreeRational(
+void SCIPrationalFree(
    SCIP_Rational**       rational            /**< adress of the rational */
    )
 {
@@ -473,7 +473,7 @@ void SCIPfreeRational(
 }
 
 /** delete a rational and free the allocated block memory */
-void SCIPfreeRationalBlock(
+void SCIPrationalFreeBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational            /**< adress of the rational */
    )
@@ -485,7 +485,7 @@ void SCIPfreeRationalBlock(
 }
 
 /** delete a rational and free the allocated buffer memory */
-void SCIPfreeRationalBuffer(
+void SCIPrationalFreeBuffer(
    BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational**       rational            /**< adress of the rational */
    )
@@ -497,7 +497,7 @@ void SCIPfreeRationalBuffer(
 }
 
 /** deletes an array of rationals and frees the allocated ordinary memory */
-void SCIPfreeRationalArray(
+void SCIPrationalFreeArray(
    SCIP_Rational***      ratarray,           /**< pointer to the array */
    int                   size                /**< size of the array */
    )
@@ -506,14 +506,14 @@ void SCIPfreeRationalArray(
 
    for( int i = 0; i < size; ++i )
    {
-      SCIPfreeRational(&((*ratarray)[i]));
+      SCIPrationalFree(&((*ratarray)[i]));
    }
 
    BMSfreeMemoryArrayNull(ratarray);
 }
 
 /** deletes an array of rationals and frees the allocated block memory */
-void SCIPfreeRationalBlockArray(
+void SCIPrationalFreeBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      ratblockarray,      /**< pointer to the array */
    int                   size                /**< size of the array */
@@ -523,14 +523,14 @@ void SCIPfreeRationalBlockArray(
 
    for( int i = 0; i < size; ++i )
    {
-      SCIPfreeRationalBlock(mem, &((*ratblockarray)[i]));
+      SCIPrationalFreeBlock(mem, &((*ratblockarray)[i]));
    }
 
    BMSfreeBlockMemoryArrayNull(mem, ratblockarray, size);
 }
 
 /** deletes an array of rationals and frees the allocated buffer memory */
-void SCIPfreeRationalBufferArray(
+void SCIPrationalFreeBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational***      ratbufarray,        /**< pointer to the array */
    int                   size                /**< size of the array */
@@ -540,7 +540,7 @@ void SCIPfreeRationalBufferArray(
 
    for( int i = size - 1; i >= 0; --i )
    {
-      SCIPfreeRationalBuffer(mem, &((*ratbufarray)[i]));
+      SCIPrationalFreeBuffer(mem, &((*ratbufarray)[i]));
    }
 
    BMSfreeBufferMemoryArrayNull(mem, ratbufarray);

@@ -1366,7 +1366,7 @@ SCIP_RETCODE readCoefficientsRational(
    *newsection = FALSE;
    inquadpart = FALSE;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &coef) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &coef) );
 
    if( isobjective )
    {
@@ -1415,7 +1415,7 @@ SCIP_RETCODE readCoefficientsRational(
    /* initialize buffers for storing the coefficients */
    *coefssize = LP_INIT_COEFSSIZE;
 
-   SCIP_CALL( SCIPcreateRationalBlockArray(SCIPblkmem(scip), coefs, *coefssize) );
+   SCIP_CALL( SCIPrationalCreateBlockArray(SCIPblkmem(scip), coefs, *coefssize) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, vars, *coefssize) );
 
    /* read the coefficients */
@@ -1564,7 +1564,7 @@ SCIP_RETCODE readCoefficientsRational(
                *coefssize *= 2;
                *coefssize = MAX(*coefssize, (*ncoefs)+1);
                SCIP_CALL( SCIPreallocBlockMemoryArray(scip, vars, oldcoefssize, *coefssize) );
-               SCIP_CALL( SCIPreallocRationalBlockArray(SCIPblkmem(scip), coefs, oldcoefssize, *coefssize) );
+               SCIP_CALL( SCIPrationalReallocBlockArray(SCIPblkmem(scip), coefs, oldcoefssize, *coefssize) );
             }
             assert(*ncoefs < *coefssize);
 
@@ -1584,7 +1584,7 @@ SCIP_RETCODE readCoefficientsRational(
    }
 
 TERMINATE:
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &coef);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &coef);
 
    return SCIP_OKAY;
 }
@@ -1607,8 +1607,8 @@ SCIP_RETCODE readObjectiveRational(
 
    assert(lpinput != NULL);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &objoffset) );
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmpval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objoffset) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpval) );
 
    /* read the objective coefficients */
    SCIP_CALL( readCoefficientsRational(scip, lpinput, TRUE, name, &coefssize, &vars, &coefs, &ncoefs,
@@ -1635,10 +1635,10 @@ SCIP_RETCODE readObjectiveRational(
 
    /* free memory */
    SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
-   SCIPfreeRationalBlockArray(SCIPblkmem(scip), &coefs, coefssize);
+   SCIPrationalFreeBlockArray(SCIPblkmem(scip), &coefs, coefssize);
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmpval);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &objoffset);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpval);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &objoffset);
 
    return SCIP_OKAY; /*lint !e438*/
 }
@@ -2000,9 +2000,9 @@ SCIP_RETCODE readConstraintsRational(
 
    retcode = SCIP_OKAY;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &lhs) );
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &rhs) );
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &sidevalue) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &sidevalue) );
 
    /* read coefficients */
    SCIP_CALL( readCoefficientsRational(scip, lpinput, FALSE, name, &coefssize, &vars, &coefs, &ncoefs,
@@ -2185,12 +2185,12 @@ SCIP_RETCODE readConstraintsRational(
 
  TERMINATE:
    /* free memory */
-   SCIPfreeRationalBlockArray(SCIPblkmem(scip), &coefs, coefssize);
+   SCIPrationalFreeBlockArray(SCIPblkmem(scip), &coefs, coefssize);
    SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &sidevalue);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &rhs);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &lhs);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &sidevalue);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhs);
 
    SCIP_CALL( retcode );
 
@@ -2466,9 +2466,9 @@ SCIP_RETCODE readBoundsRational(
 
    assert(lpinput != NULL);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &value) );
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &lb) );
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &ub) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &value) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lb) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &ub) );
 
    while( getNextToken(scip, lpinput) )
    {
@@ -2628,9 +2628,9 @@ SCIP_RETCODE readBoundsRational(
    }
 
 TERMINATE:
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &ub);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &lb);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &value);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &value);
 
    return SCIP_OKAY;
 }
@@ -2903,10 +2903,10 @@ SCIP_RETCODE readBinaries(
          if( SCIPisExactSolve(scip) )
          {
             SCIP_Rational* tmp;
-            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmp) );
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
             SCIPrationalSetReal(tmp, 0.0);
             SCIP_CALL( SCIPchgVarLbExact(scip, var, tmp) );
-            SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmp);
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
          }
       }
       if( SCIPvarGetUbGlobal(var) > 1.0 )
@@ -2915,10 +2915,10 @@ SCIP_RETCODE readBinaries(
          if( SCIPisExactSolve(scip) )
          {
             SCIP_Rational* tmp;
-            SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmp) );
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
             SCIPrationalSetReal(tmp, 1.0);
             SCIP_CALL( SCIPchgVarUbExact(scip, var, tmp) );
-            SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmp);
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
          }
       }
       SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );

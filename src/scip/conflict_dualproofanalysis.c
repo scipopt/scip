@@ -989,11 +989,11 @@ SCIP_RETCODE createAndAddProofcons(
          return SCIP_OKAY;
       }
 
-      SCIP_CALL(SCIPcreateRationalBuffer(SCIPbuffer(set->scip), &lhs_exact));
-      SCIP_CALL(SCIPcreateRationalBuffer(SCIPbuffer(set->scip), &rhs_exact));
+      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &lhs_exact));
+      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &rhs_exact));
       SCIPrationalSetString(lhs_exact, "-inf");
       SCIPrationalSetReal(rhs_exact, rhs);
-      SCIP_CALL(SCIPcreateRationalBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz));
+      SCIP_CALL(SCIPrationalCreateBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz));
       SCIP_CALL(SCIPallocBufferArray(set->scip, &consvars, nnz));
       assert(nnz > 0);
       for( i = 0; i < nnz; i++ )
@@ -1010,9 +1010,9 @@ SCIP_RETCODE createAndAddProofcons(
          SCIP_CALL( SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, cons, proofset->certificateline) );
       }
       SCIPfreeBufferArray(set->scip, &consvars);
-      SCIPfreeRationalBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz);
-      SCIPfreeRationalBuffer(SCIPbuffer(set->scip), &rhs_exact);
-      SCIPfreeRationalBuffer(SCIPbuffer(set->scip), &lhs_exact);
+      SCIPrationalFreeBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz);
+      SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &rhs_exact);
+      SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &lhs_exact);
    }
    else
    {

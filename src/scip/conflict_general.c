@@ -1572,8 +1572,8 @@ SCIP_RETCODE getObjectiveRow(
    SCIP_CALL( SCIPallocBufferArray(scip, &valsexact, SCIPgetNLPCols(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cols, SCIPgetNLPCols(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &colsexact, SCIPgetNLPCols(scip)) );
-   SCIP_CALL(SCIPcreateRationalBuffer(SCIPbuffer(scip), &lhsexact));
-   SCIP_CALL(SCIPcreateRationalBuffer(SCIPbuffer(scip), &rhsexact));
+   SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhsexact));
+   SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhsexact));
    nvals = 0;
 
    SCIPrationalSetString(lhsexact, "-inf");
@@ -1612,8 +1612,8 @@ SCIP_RETCODE getObjectiveRow(
       SCIPdebugMessage("%d == %d", SCIPgetNLPCols(scip), SCIProwGetNNonz(*row));
    }
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &lhsexact);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &rhsexact);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhsexact);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhsexact);
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &cols);
    SCIPfreeBufferArray(scip, &colsexact);

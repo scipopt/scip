@@ -5546,8 +5546,8 @@ SCIP_RETCODE cutsRoundMIRRational(
    assert(SCIPrationalIsPositive(f0) && SCIPrationalIsLTReal(f0, 1.0));
    assert(SCIPisExactSolve(scip));
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &onedivoneminusf0) );
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &onedivoneminusf0) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
 
    /* round up at first, since we are dividing and divisor should be as large as possible,
     * then switch to down since we are working on lhs */
@@ -5594,7 +5594,7 @@ SCIP_RETCODE cutsRoundMIRRational(
       v = cutinds[i];
       assert(0 <= v && v < SCIPgetNVars(scip));
 
-      SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &cutaj) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &cutaj) );
 
       var = vars[v];
       assert(var != NULL);
@@ -5607,7 +5607,7 @@ SCIP_RETCODE cutsRoundMIRRational(
          SCIP_Real downaj;
          SCIP_Rational* fj;
 
-         SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &fj) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &fj) );
 
          QUAD_ARRAY_LOAD(aj, cutcoefs, v);
          QUAD_SCALE(aj, varsign[i]);
@@ -5666,7 +5666,7 @@ SCIP_RETCODE cutsRoundMIRRational(
 
          SCIPrationalMultReal(cutaj, cutaj, varsign[i]);
 
-         SCIPfreeRationalBuffer(SCIPbuffer(scip), &fj);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &fj);
       }
 
       /* remove zero cut coefficients from cut, only remove positive coefficients in exact solving mode */
@@ -5677,7 +5677,7 @@ SCIP_RETCODE cutsRoundMIRRational(
          QUAD_ARRAY_STORE(cutcoefs, v, cutajquad);
          --*nnz;
          cutinds[i] = cutinds[*nnz];
-         SCIPfreeRationalBuffer(SCIPbuffer(scip), &cutaj);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &cutaj);
          continue;
       }
 
@@ -5726,7 +5726,7 @@ SCIP_RETCODE cutsRoundMIRRational(
             SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPrationalRoundReal(tmp, SCIP_R_ROUND_UPWARDS)); /* rhs += cutaj * SCIPvarGetUbLocal(var) */
          }
       }
-      SCIPfreeRationalBuffer(SCIPbuffer(scip), &cutaj);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &cutaj);
    }
 
    /* now process the continuous variables; postpone deletetion of zeros till all continuous variables have been processed */
@@ -5744,8 +5744,8 @@ SCIP_RETCODE cutsRoundMIRRational(
       /* adapt lhs -> round down */
       SCIPintervalSetRoundingModeDownwards();
 
-      SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &cutaj) );
-      SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmprational) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &cutaj) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmprational) );
 
       v = cutinds[i];
       assert(0 <= v && v < SCIPgetNVars(scip));
@@ -5782,8 +5782,8 @@ SCIP_RETCODE cutsRoundMIRRational(
          boundtype[i] = boundtype[ndelcontvars];
          ++ndelcontvars;
 
-         SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmprational);
-         SCIPfreeRationalBuffer(SCIPbuffer(scip), &cutaj);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmprational);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &cutaj);
 
          continue;
       }
@@ -5834,8 +5834,8 @@ SCIP_RETCODE cutsRoundMIRRational(
             }
          }
 
-         SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmprational);
-         SCIPfreeRationalBuffer(SCIPbuffer(scip), &cutaj);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmprational);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &cutaj);
       }
       else
       {
@@ -5912,8 +5912,8 @@ SCIP_RETCODE cutsRoundMIRRational(
    /* reset rounding mode, also set the rhs->data in the mirinfo */
    SCIPintervalSetRoundingMode(previousroundmode);
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmp);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &onedivoneminusf0);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &onedivoneminusf0);
 
    return SCIP_OKAY;
 }
@@ -6611,10 +6611,10 @@ SCIP_RETCODE cutsSubstituteMIRRational(
 
    assert(SCIPisExactSolve(scip));
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmprational) );
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &onedivoneminusf0) );
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &ar) );
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &cutar) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmprational) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &onedivoneminusf0) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &ar) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &cutar) );
 
 
    /* compute 1/(1-f0) in interval arithmetic */
@@ -6791,11 +6791,11 @@ SCIP_RETCODE cutsSubstituteMIRRational(
    if( SCIPisExactSolve(scip) )
       SCIPintervalSetRoundingMode(previousroundmode);
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &cutar);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &ar);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &cutar);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &ar);
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &onedivoneminusf0);
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmprational);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &onedivoneminusf0);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmprational);
 
    return SCIP_OKAY;
 }

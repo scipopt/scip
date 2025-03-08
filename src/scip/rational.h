@@ -58,27 +58,27 @@ extern "C" {
 
 /** creates a rational using standard memory allocation */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateRational(
+SCIP_RETCODE SCIPrationalCreate(
    SCIP_Rational**       rational            /**< pointer to the rational to create */
    );
 
 /** creates a rational using buffer memory */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateRationalBuffer(
+SCIP_RETCODE SCIPrationalCreateBuffer(
    BMS_BUFMEM*           buf,                /**< buffer memory */
    SCIP_Rational**       rational            /**< pointer to the rational to create */
    );
 
 /** creates a rational using block memory */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateRationalBlock(
+SCIP_RETCODE SCIPrationalCreateBlock(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Rational**       rational            /**< pointer to the rational to create */
    );
 
 /** allocates and creates a rational from a string in the format, e.g. "12/35" */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateRationalString(
+SCIP_RETCODE SCIPrationalCreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
    const char*           desc                /**< the string describing the rational */
@@ -86,14 +86,14 @@ SCIP_RETCODE SCIPcreateRationalString(
 
 /** creates a copy of a rational using ordinary memory */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcopyRational(
+SCIP_RETCODE SCIPrationalCopy(
    SCIP_Rational**       result,             /**< pointer to the rational to create */
    SCIP_Rational*        src                 /**< rational to copy */
    );
 
 /** creates a copy of a rational using block memory */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcopyRationalBlock(
+SCIP_RETCODE SCIPrationalCopyBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       result,             /**< pointer to the rational to create */
    SCIP_Rational*        src                 /**< rational to copy */
@@ -101,7 +101,7 @@ SCIP_RETCODE SCIPcopyRationalBlock(
 
 /** creates a copy of a rational */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcopyRationalBuffer(
+SCIP_RETCODE SCIPrationalCopyBuffer(
    BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
    SCIP_Rational*        src                 /**< rational to copy */
@@ -109,14 +109,14 @@ SCIP_RETCODE SCIPcopyRationalBuffer(
 
 /** creates an array of rationals using ordinary memory */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateRationalArray(
+SCIP_RETCODE SCIPrationalCreateArray(
    SCIP_Rational***      rational,           /**< pointer to the array to create */
    int                   size                /**< the size of the array */
    );
 
 /** creates an array of rationals using block memory */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateRationalBlockArray(
+SCIP_RETCODE SCIPrationalCreateBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      rational,           /**< pointer to the array to create */
    int                   size                /**< the size of the array */
@@ -124,7 +124,7 @@ SCIP_RETCODE SCIPcreateRationalBlockArray(
 
 /** creates an array of rationals using buffer memory */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateRationalBufferArray(
+SCIP_RETCODE SCIPrationalCreateBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational***      rational,           /**< pointer to the array to create */
    int                   size                /**< the size of the array */
@@ -132,7 +132,7 @@ SCIP_RETCODE SCIPcreateRationalBufferArray(
 
 /** copies an array of rationals using ordinary memory */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcopyRationalArray(
+SCIP_RETCODE SCIPrationalCopyArray(
    SCIP_Rational***      target,             /**< address to copy to */
    SCIP_Rational**       src,                /**< src array */
    int                   len                 /**< size of src array */
@@ -140,7 +140,7 @@ SCIP_RETCODE SCIPcopyRationalArray(
 
 /** copies an array of rationals using block memory */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcopyRationalBlockArray(
+SCIP_RETCODE SCIPrationalCopyBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      target,             /**< address to copy to */
    SCIP_Rational**       src,                /**< src array */
@@ -149,7 +149,7 @@ SCIP_RETCODE SCIPcopyRationalBlockArray(
 
 /** copy an array of rationals using buffer memory */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcopyRationalBufferArray(
+SCIP_RETCODE SCIPrationalCopyBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational***      result,             /**< address to copy to */
    SCIP_Rational**       src,                /**< src array */
@@ -158,7 +158,7 @@ SCIP_RETCODE SCIPcopyRationalBufferArray(
 
 /** realloc a rational ordinary array */
 SCIP_EXPORT
-SCIP_RETCODE SCIPreallocRationalArray(
+SCIP_RETCODE SCIPrationalReallocArray(
    SCIP_Rational***      result,             /**< address to copy to */
    int                   oldlen,             /**< size of src array */
    int                   newlen              /**< size of src array */
@@ -166,7 +166,7 @@ SCIP_RETCODE SCIPreallocRationalArray(
 
 /** realloc a rational buffer arrray */
 SCIP_EXPORT
-SCIP_RETCODE SCIPreallocRationalBufferArray(
+SCIP_RETCODE SCIPrationalReallocBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational***      result,             /**< address to copy to */
    int                   oldlen,             /**< size of src array */
@@ -175,7 +175,7 @@ SCIP_RETCODE SCIPreallocRationalBufferArray(
 
 /** realloc a rational block arrray */
 SCIP_EXPORT
-SCIP_RETCODE SCIPreallocRationalBlockArray(
+SCIP_RETCODE SCIPrationalReallocBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      result,             /**< address to copy to */
    int                   oldlen,             /**< size of src array */
@@ -185,7 +185,7 @@ SCIP_RETCODE SCIPreallocRationalBlockArray(
 #ifdef SCIP_WITH_GMP
 /** creates a rational from an mpq_t */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateRationalBlockGMP(
+SCIP_RETCODE SCIPrationalCreateBlockGMP(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
    mpq_t                 numb                /**< the mpq_rational */
@@ -230,34 +230,34 @@ void SCIPrationalClearArrayGMP(
 
 /** deletes a rational and frees the allocated ordinary memory */
 SCIP_EXPORT
-void SCIPfreeRational(
+void SCIPrationalFree(
    SCIP_Rational**       r                   /**< adress of the rational */
    );
 
 /** deletes a rational and frees the allocated block memory */
 SCIP_EXPORT
-void SCIPfreeRationalBlock(
+void SCIPrationalFreeBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       r                   /**< adress of the rational */
    );
 
 /** deletes a rational and frees the allocated buffer memory */
 SCIP_EXPORT
-void SCIPfreeRationalBuffer(
+void SCIPrationalFreeBuffer(
    BMS_BUFMEM*           buf,                /**< buffer memory */
    SCIP_Rational**       r                   /**< adress of the rational */
    );
 
 /** deletes an array of rationals and frees the allocated ordinary memory */
 SCIP_EXPORT
-void SCIPfreeRationalArray(
+void SCIPrationalFreeArray(
    SCIP_Rational***      array,              /**< address of rational array */
    int                   size                /**< size of the array */
    );
 
 /** deletes an array of rationals and frees the allocated block memory */
 SCIP_EXPORT
-void SCIPfreeRationalBlockArray(
+void SCIPrationalFreeBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      array,              /**< address of rational array */
    int                   size                /**< size of the array */
@@ -265,7 +265,7 @@ void SCIPfreeRationalBlockArray(
 
 /** deletes an array of rationals and frees the allocated buffer memory */
 SCIP_EXPORT
-void SCIPfreeRationalBufferArray(
+void SCIPrationalFreeBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational***      array,              /**< pointer to the array */
    int                   size                /**< size of the array */

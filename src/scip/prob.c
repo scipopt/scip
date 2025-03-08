@@ -351,7 +351,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->objoffsetexact = NULL;
    if( set->exact_enabled )
    {
-      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*prob)->objoffsetexact) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*prob)->objoffsetexact) );
    }
 
    return SCIP_OKAY;
@@ -538,7 +538,7 @@ SCIP_RETCODE SCIPprobFree(
    }
    if( (*prob)->objoffsetexact != NULL )
    {
-      SCIPfreeRationalBlock(blkmem, &(*prob)->objoffsetexact);
+      SCIPrationalFreeBlock(blkmem, &(*prob)->objoffsetexact);
    }
    BMSfreeMemoryArray(&(*prob)->name);
    BMSfreeMemory(prob);
@@ -1951,8 +1951,8 @@ SCIP_RETCODE probScaleObjExact(
       SCIP_Bool success;
 
       /* get temporary memory */
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &intscalar) );
-      SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &objvals, nints) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &intscalar) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &objvals, nints) );
 
       /* get objective values of integer variables */
       for( v = 0; v < nints; ++v )
@@ -1993,8 +1993,8 @@ SCIP_RETCODE probScaleObjExact(
       }
 
       /* free temporary memory */
-      SCIPfreeRationalBuffer(set->buffer, &intscalar);
-      SCIPfreeRationalBufferArray(set->buffer, &objvals, nints);
+      SCIPrationalFreeBuffer(set->buffer, &intscalar);
+      SCIPrationalFreeBufferArray(set->buffer, &objvals, nints);
    }
 
    return SCIP_OKAY;
@@ -2534,7 +2534,7 @@ void SCIPprobExternObjvalExact(
    assert(transprob->objscale > 0.0);
    assert(set->exact_enabled);
 
-   (void) SCIPcreateRationalBuffer(set->buffer, &tmpval);
+   (void) SCIPrationalCreateBuffer(set->buffer, &tmpval);
 
    if( SCIPrationalIsAbsInfinity(objval) )
    {
@@ -2549,7 +2549,7 @@ void SCIPprobExternObjvalExact(
       SCIPrationalAdd(objvalext, objvalext, origprob->objoffsetexact);
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &tmpval);
+   SCIPrationalFreeBuffer(set->buffer, &tmpval);
 }
 
 /** returns the internal value of the given external objective value */
@@ -2592,7 +2592,7 @@ void SCIPprobInternObjvalExact(
    assert(transprob->objscale > 0.0);
    assert(set->exact_enabled);
 
-   (void) SCIPcreateRationalBuffer(set->buffer, &tmpval);
+   (void) SCIPrationalCreateBuffer(set->buffer, &tmpval);
 
    if( SCIPrationalIsAbsInfinity(objval) )
    {
@@ -2607,7 +2607,7 @@ void SCIPprobInternObjvalExact(
       SCIPrationalDiff(objvalint, objvalint, transprob->objoffsetexact);
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &tmpval);
+   SCIPrationalFreeBuffer(set->buffer, &tmpval);
 }
 
 /** returns variable of the problem with given name */

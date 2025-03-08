@@ -101,8 +101,8 @@ SCIP_RETCODE updateLpExactBoundChange(
       SCIP_Rational* newbound;
       SCIP_Rational* oldbound;
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &newbound) );
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &oldbound) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &newbound) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldbound) );
       SCIPrationalSetReal(newbound, event->data.eventbdchg.newbound);
       SCIPrationalSetReal(oldbound, event->data.eventbdchg.oldbound);
 
@@ -140,8 +140,8 @@ SCIP_RETCODE updateLpExactBoundChange(
          }
       }
 
-      SCIPfreeRationalBuffer(set->buffer, &oldbound);
-      SCIPfreeRationalBuffer(set->buffer, &newbound);
+      SCIPrationalFreeBuffer(set->buffer, &oldbound);
+      SCIPrationalFreeBuffer(set->buffer, &newbound);
    }
 
    return SCIP_OKAY;
@@ -817,8 +817,8 @@ SCIP_RETCODE SCIPeventAddExactBdChg(
    assert(!SCIPrationalIsEqual(oldbound, newbound));
    assert((event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED));
 
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(event->data.eventbdchg.oldboundexact), oldbound) );
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(event->data.eventbdchg.newboundexact), newbound) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(event->data.eventbdchg.oldboundexact), oldbound) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(event->data.eventbdchg.newboundexact), newbound) );
 
    return SCIP_OKAY;
 }
@@ -835,8 +835,8 @@ SCIP_RETCODE SCIPeventAddExactObjChg(
    assert(blkmem != NULL);
    assert(!SCIPrationalIsEqual(oldobj, newobj));
 
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(event->data.eventobjchg.oldobjexact), oldobj) );
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(event->data.eventobjchg.newobjexact), newobj) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(event->data.eventobjchg.oldobjexact), oldobj) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(event->data.eventobjchg.newobjexact), newobj) );
 
    return SCIP_OKAY;
 }
@@ -1153,14 +1153,14 @@ static void eventFreeExactData(
 
    if( ((event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)) && (event)->data.eventbdchg.newboundexact != NULL )
    {
-      SCIPfreeRationalBlock(blkmem, &(event)->data.eventbdchg.newboundexact);
-      SCIPfreeRationalBlock(blkmem, &(event)->data.eventbdchg.oldboundexact);
+      SCIPrationalFreeBlock(blkmem, &(event)->data.eventbdchg.newboundexact);
+      SCIPrationalFreeBlock(blkmem, &(event)->data.eventbdchg.oldboundexact);
    }
 
    if( ((event)->eventtype & SCIP_EVENTTYPE_OBJCHANGED) && (event)->data.eventobjchg.newobjexact != NULL )
    {
-      SCIPfreeRationalBlock(blkmem, &(event)->data.eventobjchg.newobjexact);
-      SCIPfreeRationalBlock(blkmem, &(event)->data.eventobjchg.oldobjexact);
+      SCIPrationalFreeBlock(blkmem, &(event)->data.eventobjchg.newobjexact);
+      SCIPrationalFreeBlock(blkmem, &(event)->data.eventobjchg.oldobjexact);
    }
 }
 
@@ -1900,8 +1900,8 @@ SCIP_RETCODE SCIPeventProcess(
          }
          else
          {
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &newobj) );
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &oldobj) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &newobj) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldobj) );
             SCIPrationalSetReal(newobj, event->data.eventobjchg.newobj);
             SCIPrationalSetReal(oldobj, event->data.eventobjchg.oldobj);
          }
@@ -1914,8 +1914,8 @@ SCIP_RETCODE SCIPeventProcess(
 
          if( event->data.eventobjchg.newobjexact == NULL )
          {
-            SCIPfreeRationalBuffer(set->buffer, &oldobj);
-            SCIPfreeRationalBuffer(set->buffer, &newobj);
+            SCIPrationalFreeBuffer(set->buffer, &oldobj);
+            SCIPrationalFreeBuffer(set->buffer, &newobj);
          }
       }
 
@@ -2714,8 +2714,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
             {
                if( qevent->data.eventbdchg.newboundexact != NULL )
                {
-                  SCIPfreeRationalBlock(blkmem, &(qevent->data.eventbdchg.newboundexact));
-                  SCIPfreeRationalBlock(blkmem, &(qevent->data.eventbdchg.oldboundexact));
+                  SCIPrationalFreeBlock(blkmem, &(qevent->data.eventbdchg.newboundexact));
+                  SCIPrationalFreeBlock(blkmem, &(qevent->data.eventbdchg.oldboundexact));
                }
             }
 
@@ -2784,8 +2784,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
             {
                if( qevent->data.eventbdchg.newboundexact != NULL )
                {
-                  SCIPfreeRationalBlock(blkmem, &(qevent->data.eventbdchg.newboundexact));
-                  SCIPfreeRationalBlock(blkmem, &(qevent->data.eventbdchg.oldboundexact));
+                  SCIPrationalFreeBlock(blkmem, &(qevent->data.eventbdchg.newboundexact));
+                  SCIPrationalFreeBlock(blkmem, &(qevent->data.eventbdchg.oldboundexact));
                }
             }
 

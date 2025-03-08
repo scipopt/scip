@@ -446,7 +446,7 @@ SCIP_RETCODE colExactEnsureSize(
       /* realloc colexact */
       for( i = col->size; i < newsize; ++i )
       {
-         SCIP_CALL( SCIPcreateRationalBlock(blkmem, &col->vals[i]) );
+         SCIP_CALL( SCIPrationalCreateBlock(blkmem, &col->vals[i]) );
       }
 
       col->size = newsize;
@@ -823,7 +823,7 @@ SCIP_RETCODE colExactSwapCoefs(
    if( pos1 == pos2 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(buffer, &tmpval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(buffer, &tmpval) );
 
    /* swap coefficients */
    tmprow = col->rows[pos2];
@@ -838,7 +838,7 @@ SCIP_RETCODE colExactSwapCoefs(
    SCIPrationalSet(col->vals[pos1], tmpval);
    col->linkpos[pos1] = tmplinkpos;
 
-   SCIPfreeRationalBuffer(buffer, &tmpval);
+   SCIPrationalFreeBuffer(buffer, &tmpval);
 
    /* update link position in rows */
    if( col->linkpos[pos1] >= 0 )
@@ -932,7 +932,7 @@ SCIP_RETCODE rowExactSwapCoefs(
    if( pos1 == pos2 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(buffer, &tmpval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(buffer, &tmpval) );
 
    /* swap coefficients */
    tmpcol = row->cols[pos2];
@@ -953,7 +953,7 @@ SCIP_RETCODE rowExactSwapCoefs(
    row->valsinterval[pos1] = tmp;
    row->linkpos[pos1] = tmplinkpos;
 
-   SCIPfreeRationalBuffer(buffer, &tmpval);
+   SCIPrationalFreeBuffer(buffer, &tmpval);
 
    /* update link position in columns */
    if( row->linkpos[pos1] >= 0 )
@@ -1070,7 +1070,7 @@ SCIP_RETCODE colExactAddCoef(
    if( col->vals[pos] != NULL )
       SCIPrationalSet(col->vals[pos], val);
    else
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &col->vals[pos], val) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &col->vals[pos], val) );
 
    col->linkpos[pos] = linkpos;
    if( linkpos == -1 )
@@ -1283,7 +1283,7 @@ SCIP_RETCODE rowExactAddCoef(
    row->cols[pos] = col;
    row->cols_index[pos] = col->index;
    if( row->vals[pos] == NULL )
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &row->vals[pos], val) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &row->vals[pos], val) );
    else
       SCIPrationalSet(row->vals[pos], val);
 
@@ -1851,10 +1851,10 @@ SCIP_RETCODE lpExactFlushAddCols(
    assert(naddcols > 0);
 
    /* get temporary memory for changes */
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &obj, naddcols) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &lb, naddcols) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &ub, naddcols) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &val, naddcoefs) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &obj, naddcols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &lb, naddcols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &ub, naddcols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &val, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &beg, naddcols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &name, naddcols) );
@@ -1930,10 +1930,10 @@ SCIP_RETCODE lpExactFlushAddCols(
    SCIPsetFreeBufferArray(set, &name);
    SCIPsetFreeBufferArray(set, &ind);
    SCIPsetFreeBufferArray(set, &beg);
-   SCIPfreeRationalBufferArray(set->buffer, &val, naddcoefs);
-   SCIPfreeRationalBufferArray(set->buffer, &ub, naddcols);
-   SCIPfreeRationalBufferArray(set->buffer, &lb, naddcols);
-   SCIPfreeRationalBufferArray(set->buffer, &obj, naddcols);
+   SCIPrationalFreeBufferArray(set->buffer, &val, naddcoefs);
+   SCIPrationalFreeBufferArray(set->buffer, &ub, naddcols);
+   SCIPrationalFreeBufferArray(set->buffer, &lb, naddcols);
+   SCIPrationalFreeBufferArray(set->buffer, &obj, naddcols);
 
    lp->flushaddedcols = TRUE;
    lp->updateintegrality = TRUE;
@@ -2052,9 +2052,9 @@ SCIP_RETCODE lpExactFlushAddRows(
    assert(naddrows > 0);
 
    /* get temporary memory for changes */
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &lhs, naddrows) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &rhs, naddrows) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &val, naddcoefs) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &lhs, naddrows) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &rhs, naddrows) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &val, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &beg, naddrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &name, naddrows) );
@@ -2126,9 +2126,9 @@ SCIP_RETCODE lpExactFlushAddRows(
    SCIPsetFreeBufferArray(set, &name);
    SCIPsetFreeBufferArray(set, &ind);
    SCIPsetFreeBufferArray(set, &beg);
-   SCIPfreeRationalBufferArray(set->buffer, &val, naddcoefs);
-   SCIPfreeRationalBufferArray(set->buffer, &rhs, naddrows);
-   SCIPfreeRationalBufferArray(set->buffer, &lhs, naddrows);
+   SCIPrationalFreeBufferArray(set->buffer, &val, naddcoefs);
+   SCIPrationalFreeBufferArray(set->buffer, &rhs, naddrows);
+   SCIPrationalFreeBufferArray(set->buffer, &lhs, naddrows);
 
    lp->flushaddedrows = TRUE;
 
@@ -2168,9 +2168,9 @@ SCIP_RETCODE lpExactFlushChgCols(
    /* get temporary memory for changes */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &objind, lp->ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &bdind, lp->ncols) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &obj, lp->ncols) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &lb, lp->ncols) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &ub, lp->ncols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &obj, lp->ncols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &lb, lp->ncols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &ub, lp->ncols) );
 
    /* collect all cached bound and objective changes */
    nobjchg = 0;
@@ -2193,16 +2193,16 @@ SCIP_RETCODE lpExactFlushChgCols(
             SCIP_Rational* lpiub;
             SCIP_Rational* lpilb;
 
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &lpiobj) );
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &lpilb) );
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &lpiub) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lpiobj) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lpilb) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lpiub) );
 
             SCIP_CALL( SCIPlpiExactGetObj(lp->lpiexact, col->lpipos, col->lpipos, &lpiobj) );
             SCIP_CALL( SCIPlpiExactGetBounds(lp->lpiexact, col->lpipos, col->lpipos, &lpilb, &lpiub) );
             assert(SCIPrationalIsEqual(lpiobj, col->flushedobj));
-            SCIPfreeRationalBuffer(set->buffer, &lpiub);
-            SCIPfreeRationalBuffer(set->buffer, &lpilb);
-            SCIPfreeRationalBuffer(set->buffer, &lpiobj);
+            SCIPrationalFreeBuffer(set->buffer, &lpiub);
+            SCIPrationalFreeBuffer(set->buffer, &lpilb);
+            SCIPrationalFreeBuffer(set->buffer, &lpiobj);
          }
 #endif
 
@@ -2265,9 +2265,9 @@ SCIP_RETCODE lpExactFlushChgCols(
    lp->nchgcols = 0;
 
    /* free temporary memory */
-   SCIPfreeRationalBufferArray(set->buffer, &ub, lp->ncols);
-   SCIPfreeRationalBufferArray(set->buffer, &lb, lp->ncols);
-   SCIPfreeRationalBufferArray(set->buffer, &obj, lp->ncols);
+   SCIPrationalFreeBufferArray(set->buffer, &ub, lp->ncols);
+   SCIPrationalFreeBufferArray(set->buffer, &lb, lp->ncols);
+   SCIPrationalFreeBufferArray(set->buffer, &obj, lp->ncols);
    SCIPsetFreeBufferArray(set, &bdind);
    SCIPsetFreeBufferArray(set, &objind);
 
@@ -2298,8 +2298,8 @@ SCIP_RETCODE lpExactFlushChgRows(
 
    /* get temporary memory for changes */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, lp->nrows) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &lhs, lp->nrows) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &rhs, lp->nrows) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &lhs, lp->nrows) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &rhs, lp->nrows) );
 
    /* collect all cached left and right hand side changes */
    nchg = 0;
@@ -2317,15 +2317,15 @@ SCIP_RETCODE lpExactFlushChgRows(
             SCIP_Rational* lpirhs;
             SCIP_Rational* lpilhs;
 
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &lpilhs) );
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &lpirhs) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lpilhs) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lpirhs) );
 
             SCIP_CALL( SCIPlpiExactGetSides(lp->lpiexact, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
             assert(SCIPrationalIsEqual(lpilhs, row->flushedlhs));
             assert(SCIPrationalIsEqual(lpirhs, row->flushedrhs));
 
-            SCIPfreeRationalBuffer(set->buffer, &lpirhs);
-            SCIPfreeRationalBuffer(set->buffer, &lpilhs);
+            SCIPrationalFreeBuffer(set->buffer, &lpirhs);
+            SCIPrationalFreeBuffer(set->buffer, &lpilhs);
          }
 #endif
          if( row->lhschanged || row->rhschanged )
@@ -2333,8 +2333,8 @@ SCIP_RETCODE lpExactFlushChgRows(
             SCIP_Rational* newlhs;
             SCIP_Rational* newrhs;
 
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &newlhs) );
-            SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &newrhs) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &newlhs) );
+            SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &newrhs) );
 
             SCIPrationalDiff(newlhs, row->lhs, row->constant);
             SCIPrationalDiff(newrhs, row->rhs, row->constant);
@@ -2351,8 +2351,8 @@ SCIP_RETCODE lpExactFlushChgRows(
             row->lhschanged = FALSE;
             row->rhschanged = FALSE;
 
-            SCIPfreeRationalBuffer(set->buffer, &newrhs);
-            SCIPfreeRationalBuffer(set->buffer, &newlhs);
+            SCIPrationalFreeBuffer(set->buffer, &newrhs);
+            SCIPrationalFreeBuffer(set->buffer, &newlhs);
          }
       }
    }
@@ -2372,8 +2372,8 @@ SCIP_RETCODE lpExactFlushChgRows(
    lp->nchgrows = 0;
 
    /* free temporary memory */
-   SCIPfreeRationalBufferArray(set->buffer, &rhs, lp->nrows);
-   SCIPfreeRationalBufferArray(set->buffer, &lhs, lp->nrows);
+   SCIPrationalFreeBufferArray(set->buffer, &rhs, lp->nrows);
+   SCIPrationalFreeBufferArray(set->buffer, &lhs, lp->nrows);
    SCIPsetFreeBufferArray(set, &ind);
 
    return SCIP_OKAY;
@@ -2433,7 +2433,7 @@ SCIP_RETCODE SCIPcolExactCreate(
 
    if( len > 0 )
    {
-      SCIP_CALL( SCIPcopyRationalBlockArray(blkmem, &(*col)->vals, vals, len) );
+      SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &(*col)->vals, vals, len) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*col)->linkpos, len) );
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*col)->rows, rows, len) );
 
@@ -2452,16 +2452,16 @@ SCIP_RETCODE SCIPcolExactCreate(
    }
 
    (*col)->var = var;
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(*col)->obj, SCIPvarGetObjExact(var)) );
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(*col)->lb, SCIPvarGetLbLocalExact(var)) );
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(*col)->ub, SCIPvarGetUbLocalExact(var)) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(*col)->obj, SCIPvarGetObjExact(var)) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(*col)->lb, SCIPvarGetLbLocalExact(var)) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(*col)->ub, SCIPvarGetUbLocalExact(var)) );
    (*col)->index = (*col)->fpcol->index;
-   SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*col)->flushedobj) );
-   SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*col)->flushedlb) );
-   SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*col)->flushedub) );
-   SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*col)->primsol) );
-   SCIP_CALL( SCIPcreateRationalString(blkmem, &(*col)->redcost, "inf") );
-   SCIP_CALL( SCIPcreateRationalString(blkmem, &(*col)->farkascoef, "inf") );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*col)->flushedobj) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*col)->flushedlb) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*col)->flushedub) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*col)->primsol) );
+   SCIP_CALL( SCIPrationalCreateString(blkmem, &(*col)->redcost, "inf") );
+   SCIP_CALL( SCIPrationalCreateString(blkmem, &(*col)->farkascoef, "inf") );
 
    (*col)->storedsolvals = NULL;
    (*col)->size = len;
@@ -2759,7 +2759,7 @@ SCIP_RETCODE SCIPcolExactFree(
 
    if( (*col)->size > 0 )
    {
-      SCIPfreeRationalBlockArray(blkmem, &(*col)->vals, (*col)->size);
+      SCIPrationalFreeBlockArray(blkmem, &(*col)->vals, (*col)->size);
       BMSfreeBlockMemoryArray(blkmem, &(*col)->linkpos, (*col)->size);
       BMSfreeBlockMemoryArray(blkmem, &(*col)->rows, (*col)->size);
    }
@@ -2768,20 +2768,20 @@ SCIP_RETCODE SCIPcolExactFree(
 
    if( (*col)->storedsolvals != NULL )
    {
-      SCIPfreeRationalBlock(blkmem, &(*col)->storedsolvals->primsol);
-      SCIPfreeRationalBlock(blkmem, &(*col)->storedsolvals->redcost);
+      SCIPrationalFreeBlock(blkmem, &(*col)->storedsolvals->primsol);
+      SCIPrationalFreeBlock(blkmem, &(*col)->storedsolvals->redcost);
       BMSfreeBlockMemoryNull(blkmem, &(*col)->storedsolvals);
    }
 
-   SCIPfreeRationalBlock(blkmem, &(*col)->obj);
-   SCIPfreeRationalBlock(blkmem, &(*col)->lb);
-   SCIPfreeRationalBlock(blkmem, &(*col)->ub);
-   SCIPfreeRationalBlock(blkmem, &(*col)->flushedobj);
-   SCIPfreeRationalBlock(blkmem, &(*col)->flushedlb);
-   SCIPfreeRationalBlock(blkmem, &(*col)->flushedub);
-   SCIPfreeRationalBlock(blkmem, &(*col)->primsol);
-   SCIPfreeRationalBlock(blkmem, &(*col)->redcost);
-   SCIPfreeRationalBlock(blkmem, &(*col)->farkascoef);
+   SCIPrationalFreeBlock(blkmem, &(*col)->obj);
+   SCIPrationalFreeBlock(blkmem, &(*col)->lb);
+   SCIPrationalFreeBlock(blkmem, &(*col)->ub);
+   SCIPrationalFreeBlock(blkmem, &(*col)->flushedobj);
+   SCIPrationalFreeBlock(blkmem, &(*col)->flushedlb);
+   SCIPrationalFreeBlock(blkmem, &(*col)->flushedub);
+   SCIPrationalFreeBlock(blkmem, &(*col)->primsol);
+   SCIPrationalFreeBlock(blkmem, &(*col)->redcost);
+   SCIPrationalFreeBlock(blkmem, &(*col)->farkascoef);
 
    BMSfreeBlockMemory(blkmem, col);
 
@@ -3185,7 +3185,7 @@ SCIP_RETCODE SCIProwExactCreate(
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*row)->cols_index, len) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*row)->linkpos, len) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*row)->valsinterval, len) );
-      SCIP_CALL( SCIPcopyRationalBlockArray(blkmem, &(*row)->vals, vals, len) );
+      SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &(*row)->vals, vals, len) );
 
       for( i = 0; i < len; ++i )
       {
@@ -3214,16 +3214,16 @@ SCIP_RETCODE SCIProwExactCreate(
       (*row)->cols_index = NULL;
    }
 
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(*row)->lhs, lhs) );
-   SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(*row)->rhs, rhs) );
-   SCIP_CALL( SCIPcreateRationalString(blkmem, &(*row)->flushedlhs, "-inf") );
-   SCIP_CALL( SCIPcreateRationalString(blkmem, &(*row)->flushedrhs, "inf") );
-   SCIP_CALL( SCIPcreateRationalString(blkmem, &(*row)->objprod, "0") );
-   SCIP_CALL( SCIPcreateRationalString(blkmem, &(*row)->dualsol, "0") );
-   SCIP_CALL( SCIPcreateRationalString(blkmem, &(*row)->activity, "inf") );
-   SCIP_CALL( SCIPcreateRationalString(blkmem, &(*row)->dualfarkas, "0") );
-   SCIP_CALL( SCIPcreateRationalString(blkmem, &(*row)->pseudoactivity, "inf") );
-   SCIP_CALL( SCIPcreateRationalString(blkmem, &(*row)->constant, "0") );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(*row)->lhs, lhs) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(*row)->rhs, rhs) );
+   SCIP_CALL( SCIPrationalCreateString(blkmem, &(*row)->flushedlhs, "-inf") );
+   SCIP_CALL( SCIPrationalCreateString(blkmem, &(*row)->flushedrhs, "inf") );
+   SCIP_CALL( SCIPrationalCreateString(blkmem, &(*row)->objprod, "0") );
+   SCIP_CALL( SCIPrationalCreateString(blkmem, &(*row)->dualsol, "0") );
+   SCIP_CALL( SCIPrationalCreateString(blkmem, &(*row)->activity, "inf") );
+   SCIP_CALL( SCIPrationalCreateString(blkmem, &(*row)->dualfarkas, "0") );
+   SCIP_CALL( SCIPrationalCreateString(blkmem, &(*row)->pseudoactivity, "inf") );
+   SCIP_CALL( SCIPrationalCreateString(blkmem, &(*row)->constant, "0") );
 
    (*row)->index = stat->nrowidx;
    SCIPstatIncrement(stat, set, nrowidx);
@@ -3273,9 +3273,9 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    SCIPdebugMessage("approximating row ");
    SCIPdebug(SCIPprintRow(set->scip, row, NULL));
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &val) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &difference) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &newval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &val) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &difference) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &newval) );
 
    rhschange = 0;
    maxboundval = set->exact_cutapproxmaxboundval;
@@ -3352,9 +3352,9 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    SCIP_CALL( SCIProwChgRhs(rowexact->fprow, blkmem, set, eventqueue, lpexact->fplp,
       SCIPrationalRoundReal(rowexact->rhs, SCIP_R_ROUND_UPWARDS) + rhschange) );
 
-   SCIPfreeRationalBuffer(set->buffer, &newval);
-   SCIPfreeRationalBuffer(set->buffer, &difference);
-   SCIPfreeRationalBuffer(set->buffer, &val);
+   SCIPrationalFreeBuffer(set->buffer, &newval);
+   SCIPrationalFreeBuffer(set->buffer, &difference);
+   SCIPrationalFreeBuffer(set->buffer, &val);
 
    SCIPdebugMessage("new row ");
    SCIPdebug(SCIPprintRowExact(set->scip, rowexact, NULL));
@@ -3391,8 +3391,8 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    assert(blkmem != NULL);
    assert(stat != NULL);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmpval) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmplhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmpval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmplhs) );
 
    if( !SCIPsetIsInfinity(set, fprow->rhs) )
       SCIPrationalSetReal(tmpval, fprow->rhs);
@@ -3434,8 +3434,8 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
       }
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &tmplhs);
-   SCIPfreeRationalBuffer(set->buffer, &tmpval);
+   SCIPrationalFreeBuffer(set->buffer, &tmplhs);
+   SCIPrationalFreeBuffer(set->buffer, &tmpval);
 
    fprow->nlocks = nlocks; /*lint !e732*/
 
@@ -3858,15 +3858,15 @@ SCIP_RETCODE SCIPlpExactProjectShiftFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->dvarmap, projshiftdata->ndvarmap);
 
    if( projshiftdata->interiorpoint != NULL )
-      SCIPfreeRationalBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows);
+      SCIPrationalFreeBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows);
    if( projshiftdata->interiorray != NULL )
-      SCIPfreeRationalBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows);
+      SCIPrationalFreeBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows);
    if( projshiftdata->violation != NULL )
-      SCIPfreeRationalBlockArray(blkmem, &projshiftdata->violation, projshiftdata->violationsize);
+      SCIPrationalFreeBlockArray(blkmem, &projshiftdata->violation, projshiftdata->violationsize);
    if( projshiftdata->correction != NULL )
-      SCIPfreeRationalBlockArray(blkmem, &projshiftdata->correction, projshiftdata->nextendedrows);
+      SCIPrationalFreeBlockArray(blkmem, &projshiftdata->correction, projshiftdata->nextendedrows);
    if( projshiftdata->commonslack != NULL )
-      SCIPfreeRationalBlock(blkmem, &projshiftdata->commonslack);
+      SCIPrationalFreeBlock(blkmem, &projshiftdata->commonslack);
 
    BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->includedrows, projshiftdata->nextendedrows);
    BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->projshiftbasis, projshiftdata->nextendedrows);
@@ -4019,10 +4019,10 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->lpiobjlim = SCIPlpiExactInfinity((*lp)->lpiexact);
    (*lp)->cutoffbound = SCIPsetInfinity(set);
    (*lp)->oldcutoffbound = SCIPsetInfinity(set);
-   SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*lp)->lpobjval) );
-   SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*lp)->pseudoobjval) );
-   SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*lp)->glbpseudoobjval) );
-   SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(*lp)->looseobjval) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*lp)->lpobjval) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*lp)->pseudoobjval) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*lp)->glbpseudoobjval) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*lp)->looseobjval) );
 
    return SCIP_OKAY;
 }
@@ -4058,14 +4058,14 @@ SCIP_RETCODE SCIPlpExactFree(
       SCIP_CALL( SCIPlpiExactFree(&(*lp)->lpiexact) );
    }
 
-   SCIPfreeRationalBlock(blkmem, &(*lp)->lpobjval);
-   SCIPfreeRationalBlock(blkmem, &(*lp)->pseudoobjval);
-   SCIPfreeRationalBlock(blkmem, &(*lp)->glbpseudoobjval);
-   SCIPfreeRationalBlock(blkmem, &(*lp)->looseobjval);
+   SCIPrationalFreeBlock(blkmem, &(*lp)->lpobjval);
+   SCIPrationalFreeBlock(blkmem, &(*lp)->pseudoobjval);
+   SCIPrationalFreeBlock(blkmem, &(*lp)->glbpseudoobjval);
+   SCIPrationalFreeBlock(blkmem, &(*lp)->looseobjval);
 
    if( (*lp)->storedsolvals != NULL )
    {
-      SCIPfreeRationalBlock(blkmem, &(*lp)->storedsolvals->lpobjval);
+      SCIPrationalFreeBlock(blkmem, &(*lp)->storedsolvals->lpobjval);
       BMSfreeMemoryNull(&(*lp)->storedsolvals);
    }
    BMSfreeMemoryArrayNull(&(*lp)->lpicols);
@@ -4185,7 +4185,7 @@ SCIP_RETCODE SCIPlpExactSetCutoffbound(
 
    SCIPsetDebugMsg(set, "setting exact LP upper objective limit from %g to %g\n", lpexact->cutoffbound, cutoffbound);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmpobj) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmpobj) );
    if( lpexact->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && lpexact->solved && lpexact->flushed )
       SCIPlpExactGetObjval(lpexact, set, tmpobj);
 
@@ -4207,7 +4207,7 @@ SCIP_RETCODE SCIPlpExactSetCutoffbound(
       assert(lpexact->solved);
       lpexact->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
    }
-   SCIPfreeRationalBuffer(set->buffer, &tmpobj);
+   SCIPrationalFreeBuffer(set->buffer, &tmpobj);
    lpexact->cutoffbound = cutoffbound;
 
    return SCIP_OKAY;
@@ -4663,7 +4663,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
       {
          SCIP_Rational* objval;
 
-         SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &objval) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &objval) );
          /* actually, SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) should hold, but we are a bit less strict in
           * the assert by using !SCIPsetIsFeasNegative()
           */
@@ -4716,7 +4716,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
                lp->hasprovedbound = FALSE;
 
                retcode = *lperror ? SCIP_OKAY : SCIP_LPERROR;
-               SCIPfreeRationalBuffer(set->buffer, &objval);
+               SCIPrationalFreeBuffer(set->buffer, &objval);
                goto TERMINATE;
             }
 
@@ -4869,7 +4869,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
             lp->hasprovedbound = TRUE;
          }
 
-         SCIPfreeRationalBuffer(set->buffer, &objval);
+         SCIPrationalFreeBuffer(set->buffer, &objval);
       }
       SCIPsetDebugMsg(set, " -> LP objective limit reached\n");
       break;
@@ -5136,7 +5136,7 @@ SCIP_RETCODE SCIPcolExactCalcFarkasRedcostCoef(
    else
       SCIPrationalSet(result, col->obj);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
    for( i = 0; i < col->nlprows; ++i )
    {
@@ -5197,7 +5197,7 @@ SCIP_RETCODE SCIPcolExactCalcFarkasRedcostCoef(
    }
 #endif
 
-   SCIPfreeRationalBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -5345,7 +5345,7 @@ SCIP_RETCODE SCIProwExactIncCoef(
    if( SCIPrationalIsZero(incval) )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
    /* search the position of the column in the row's col vector */
    pos = rowExactSearchCoef(row, col);
@@ -5382,7 +5382,7 @@ SCIP_RETCODE SCIProwExactIncCoef(
    /* invalid the activity */
    row->validactivitylp = -1;
 
-   SCIPfreeRationalBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -5438,11 +5438,11 @@ SCIP_RETCODE SCIProwExactAddConstant(
 
    if( !SCIPrationalIsZero(addval) )
    {
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
       SCIPrationalAdd(tmp, row->constant, addval);
       SCIP_CALL( SCIProwExactChgConstant(row, stat, lp, tmp) );
 
-      SCIPfreeRationalBuffer(set->buffer, &tmp);
+      SCIPrationalFreeBuffer(set->buffer, &tmp);
    }
 
    return SCIP_OKAY;
@@ -5460,8 +5460,8 @@ SCIP_RETCODE SCIProwExactGetSolFeasibility(
    SCIP_Rational* temp1;
    SCIP_Rational* temp2;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &temp1) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &temp2) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &temp1) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &temp2) );
 
    assert(row != NULL);
 
@@ -5471,8 +5471,8 @@ SCIP_RETCODE SCIProwExactGetSolFeasibility(
    SCIPrationalDiff(temp2, result, row->lhs);
    SCIPrationalMIN(result, temp1, temp2);
 
-   SCIPfreeRationalBuffer(set->buffer, &temp2);
-   SCIPfreeRationalBuffer(set->buffer, &temp1);
+   SCIPrationalFreeBuffer(set->buffer, &temp2);
+   SCIPrationalFreeBuffer(set->buffer, &temp1);
 
    return SCIP_OKAY;
 }
@@ -5547,7 +5547,7 @@ SCIP_RETCODE SCIProwExactGetSolActivity(
 
    assert(rowexact != NULL);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &solval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &solval) );
    SCIPrationalSet(result, rowexact->constant);
    for( i = 0; i < rowexact->len; ++i )
    {
@@ -5580,7 +5580,7 @@ SCIP_RETCODE SCIProwExactGetSolActivity(
       SCIPrationalAdd(result, result, solval);
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &solval);
+   SCIPrationalFreeBuffer(set->buffer, &solval);
 
    return SCIP_OKAY;
 }
@@ -5632,23 +5632,23 @@ SCIP_RETCODE SCIProwExactFree(
 
    if( (*row)->storedsolvals != NULL )
    {
-      SCIPfreeRationalBlock(blkmem, &(*row)->storedsolvals->activity);
-      SCIPfreeRationalBlock(blkmem, &(*row)->storedsolvals->dualsol);
+      SCIPrationalFreeBlock(blkmem, &(*row)->storedsolvals->activity);
+      SCIPrationalFreeBlock(blkmem, &(*row)->storedsolvals->dualsol);
       BMSfreeBlockMemoryNull(blkmem, &(*row)->storedsolvals);
    }
 
-   SCIPfreeRationalBlock(blkmem, &(*row)->constant);
-   SCIPfreeRationalBlock(blkmem, &(*row)->lhs);
-   SCIPfreeRationalBlock(blkmem, &(*row)->rhs);
-   SCIPfreeRationalBlock(blkmem, &(*row)->flushedlhs);
-   SCIPfreeRationalBlock(blkmem, &(*row)->flushedrhs);
-   SCIPfreeRationalBlock(blkmem, &(*row)->objprod);
-   SCIPfreeRationalBlock(blkmem, &(*row)->dualsol);
-   SCIPfreeRationalBlock(blkmem, &(*row)->activity);
-   SCIPfreeRationalBlock(blkmem, &(*row)->dualfarkas);
-   SCIPfreeRationalBlock(blkmem, &(*row)->pseudoactivity);
+   SCIPrationalFreeBlock(blkmem, &(*row)->constant);
+   SCIPrationalFreeBlock(blkmem, &(*row)->lhs);
+   SCIPrationalFreeBlock(blkmem, &(*row)->rhs);
+   SCIPrationalFreeBlock(blkmem, &(*row)->flushedlhs);
+   SCIPrationalFreeBlock(blkmem, &(*row)->flushedrhs);
+   SCIPrationalFreeBlock(blkmem, &(*row)->objprod);
+   SCIPrationalFreeBlock(blkmem, &(*row)->dualsol);
+   SCIPrationalFreeBlock(blkmem, &(*row)->activity);
+   SCIPrationalFreeBlock(blkmem, &(*row)->dualfarkas);
+   SCIPrationalFreeBlock(blkmem, &(*row)->pseudoactivity);
 
-   SCIPfreeRationalBlockArray(blkmem, &(*row)->vals, (*row)->size);
+   SCIPrationalFreeBlockArray(blkmem, &(*row)->vals, (*row)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->valsinterval, (*row)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->cols, (*row)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->cols_index, (*row)->size);
@@ -5671,8 +5671,8 @@ SCIP_RETCODE SCIProwExactGetLPFeasibility(
    SCIP_Rational* actrhs;
    SCIP_Rational* actlhs;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &actrhs) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &actlhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &actrhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &actlhs) );
    assert(row != NULL);
 
    activity = SCIProwExactGetLPActivity(row, stat, lp);
@@ -5681,8 +5681,8 @@ SCIP_RETCODE SCIProwExactGetLPFeasibility(
    SCIPrationalDiff(actrhs, activity, row->lhs);
    SCIPrationalMIN(result, actrhs, actlhs);
 
-   SCIPfreeRationalBuffer(set->buffer, &actlhs);
-   SCIPfreeRationalBuffer(set->buffer, &actrhs);
+   SCIPrationalFreeBuffer(set->buffer, &actlhs);
+   SCIPrationalFreeBuffer(set->buffer, &actrhs);
 
    return SCIP_OKAY;
 }
@@ -5701,8 +5701,8 @@ SCIP_RETCODE SCIProwExactGetPseudoFeasibility(
 
    assert(row != NULL);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &actrhs) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &actlhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &actrhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &actlhs) );
 
    pseudoactivity = SCIProwExactGetPseudoActivity(row, stat);
 
@@ -5710,8 +5710,8 @@ SCIP_RETCODE SCIProwExactGetPseudoFeasibility(
    SCIPrationalDiff(actrhs, pseudoactivity, row->lhs);
    SCIPrationalMIN(result, actrhs, actlhs);
 
-   SCIPfreeRationalBuffer(set->buffer, &actlhs);
-   SCIPfreeRationalBuffer(set->buffer, &actrhs);
+   SCIPrationalFreeBuffer(set->buffer, &actlhs);
+   SCIPrationalFreeBuffer(set->buffer, &actrhs);
 
    return SCIP_OKAY;
 }
@@ -6088,7 +6088,7 @@ SCIP_RETCODE SCIProwExactEnsureSize(
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &row->vals, row->size, newsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &row->valsinterval, row->size, newsize) );
       for( i = row->size; i < newsize; ++i )
-         SCIP_CALL( SCIPcreateRationalBlock(blkmem, &row->vals[i]) );
+         SCIP_CALL( SCIPrationalCreateBlock(blkmem, &row->vals[i]) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &row->linkpos, row->size, newsize) );
       row->size = newsize;
    }
@@ -6122,7 +6122,7 @@ SCIP_RETCODE getObjvalDeltaObjExact(
    assert(!SCIPrationalIsEqual(oldobj, newobj));
 
    SCIPrationalSetReal(deltaval, 0.0);
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
    (*deltainf) = 0;
 
    if( SCIPrationalIsPositive(oldobj) )
@@ -6253,7 +6253,7 @@ SCIP_RETCODE getObjvalDeltaObjExact(
       }
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -6450,7 +6450,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarObj(
       assert(lp->fplp->probing || SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var)));
       assert(lp->fplp->probing || SCIPrationalIsEqual(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbLocalExact(var)));
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &deltaval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &deltaval) );
 
       /* compute the pseudo objective delta due the new objective coefficient */
       SCIP_CALL( getObjvalDeltaObjExact(set, oldobj, newobj, SCIPvarGetLbLocalExact(var),
@@ -6466,7 +6466,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarObj(
       /* update the global pseudo objective value */
       lpExactUpdateObjval(lp, var, deltaval, deltainf, FALSE, FALSE, TRUE);
 
-      SCIPfreeRationalBuffer(set->buffer, &deltaval);
+      SCIPrationalFreeBuffer(set->buffer, &deltaval);
    }
 
    return SCIP_OKAY;
@@ -6490,7 +6490,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLbGlobal(
       SCIP_Rational* deltaval;
       int deltainf;
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &deltaval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &deltaval) );
 
       /* compute the pseudo objective delta due the new lower bound */
       getObjvalDeltaLbExact(SCIPvarGetObjExact(var), oldlb, newlb, deltaval, &deltainf);
@@ -6498,7 +6498,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLbGlobal(
       /* update the root pseudo objective values */
       lpExactUpdateObjval(lp, var, deltaval, deltainf, FALSE, FALSE, TRUE);
 
-      SCIPfreeRationalBuffer(set->buffer, &deltaval);
+      SCIPrationalFreeBuffer(set->buffer, &deltaval);
    }
 
    return SCIP_OKAY;
@@ -6525,7 +6525,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLb(
       assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
       assert(SCIPvarGetProbindex(var) >= 0);
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &deltaval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &deltaval) );
 
       /* compute the pseudo objective delta due the new lower bound */
       getObjvalDeltaLbExact(SCIPvarGetObjExact(var), oldlb, newlb, deltaval, &deltainf);
@@ -6533,7 +6533,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLb(
       /* update the pseudo and loose objective values */
       lpExactUpdateObjval(lp, var, deltaval, deltainf, TRUE, FALSE, FALSE);
 
-      SCIPfreeRationalBuffer(set->buffer, &deltaval);
+      SCIPrationalFreeBuffer(set->buffer, &deltaval);
    }
 
    return SCIP_OKAY;
@@ -6557,7 +6557,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarUbGlobal(
       SCIP_Rational* deltaval;
       int deltainf;
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &deltaval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &deltaval) );
 
       /* compute the pseudo objective delta due the new lower bound */
       getObjvalDeltaUbExact(SCIPvarGetObjExact(var), oldub, newub, deltaval, &deltainf);
@@ -6565,7 +6565,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarUbGlobal(
       /* update the root pseudo objective values */
       lpExactUpdateObjval(lp, var, deltaval, deltainf, FALSE, FALSE, TRUE);
 
-      SCIPfreeRationalBuffer(set->buffer, &deltaval);
+      SCIPrationalFreeBuffer(set->buffer, &deltaval);
    }
 
    return SCIP_OKAY;
@@ -6592,7 +6592,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarUb(
       assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
       assert(SCIPvarGetProbindex(var) >= 0);
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &deltaval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &deltaval) );
 
       /* compute the pseudo objective delta due the new lower bound */
       getObjvalDeltaUbExact(SCIPvarGetObjExact(var), oldub, newub, deltaval, &deltainf);
@@ -6600,7 +6600,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarUb(
       /* update the pseudo and loose objective values */
       lpExactUpdateObjval(lp, var, deltaval, deltainf, TRUE, FALSE, FALSE);
 
-      SCIPfreeRationalBuffer(set->buffer, &deltaval);
+      SCIPrationalFreeBuffer(set->buffer, &deltaval);
    }
 
    return SCIP_OKAY;
@@ -6623,7 +6623,7 @@ SCIP_RETCODE SCIPlpExactUpdateAddVar(
    assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetProbindex(var) >= 0);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
    /* add the variable to the loose objective value sum */
    SCIP_CALL( SCIPlpExactUpdateVarObj(set, lpexact, var, tmp, SCIPvarGetObjExact(var)) );
@@ -6632,7 +6632,7 @@ SCIP_RETCODE SCIPlpExactUpdateAddVar(
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE )
       lpexact->nloosevars++;
 
-   SCIPfreeRationalBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -6650,7 +6650,7 @@ SCIP_RETCODE SCIPlpExactUpdateDelVar(
    assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetProbindex(var) >= 0);
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &ratzero) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &ratzero) );
 
    /* subtract the variable from the loose objective value sum */
    SCIP_CALL( SCIPlpExactUpdateVarObj(set, lp, var, SCIPvarGetObjExact(var), ratzero) );
@@ -6661,7 +6661,7 @@ SCIP_RETCODE SCIPlpExactUpdateDelVar(
       SCIPlpExactDecNLoosevars(lp);
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &ratzero);
+   SCIPrationalFreeBuffer(set->buffer, &ratzero);
 
    return SCIP_OKAY;
 }
@@ -6678,7 +6678,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarColumn(
    SCIP_Rational* lb;
    SCIP_Rational* ub;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
    assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetProbindex(var) >= 0);
@@ -6716,7 +6716,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarColumn(
 
    assert(lp->looseobjvalinf >= 0);
 
-   SCIPfreeRationalBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -6733,7 +6733,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLoose(
    SCIP_Rational* lb;
    SCIP_Rational* ub;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(SCIPvarGetProbindex(var) >= 0);
@@ -6768,7 +6768,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLoose(
 
    assert(lp->looseobjvalinf >= 0);
 
-   SCIPfreeRationalBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -6814,8 +6814,8 @@ SCIP_RETCODE lpexactComputeDualValidity(
    SCIP_Rational** obj;
    SCIP_Rational* objval;
 
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &obj, lp->ncols) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &objval) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &obj, lp->ncols) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &objval) );
 
    for( c = 0; c < lp->nlpicols; c++ )
    {
@@ -6849,8 +6849,8 @@ SCIP_RETCODE lpexactComputeDualValidity(
       assert(SCIPrationalIsZero(obj[c]));
    }
 
-   SCIPfreeRationalBuffer(set->buffer, &objval);
-   SCIPfreeRationalBufferArray(set->buffer, &obj, lp->ncols);
+   SCIPrationalFreeBuffer(set->buffer, &objval);
+   SCIPrationalFreeBufferArray(set->buffer, &obj, lp->ncols);
 
    return SCIP_OKAY;
 }
@@ -6918,13 +6918,13 @@ SCIP_RETCODE SCIPlpExactGetSol(
    lpcount = stat->lpcount;
 
    /* get temporary memory */
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &primalbound) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &dualbound) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &primsol, nlpicols) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &dualsol, nlpirows) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &activity, nlpirows) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &redcost, nlpicols) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &primalbound) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &dualbound) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &primsol, nlpicols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &dualsol, nlpirows) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &activity, nlpirows) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &redcost, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
 
@@ -7116,13 +7116,13 @@ SCIP_RETCODE SCIPlpExactGetSol(
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &rstat);
    SCIPsetFreeBufferArray(set, &cstat);
-   SCIPfreeRationalBufferArray(set->buffer, &redcost, nlpicols);
-   SCIPfreeRationalBufferArray(set->buffer, &activity, nlpirows);
-   SCIPfreeRationalBufferArray(set->buffer, &dualsol, nlpirows);
-   SCIPfreeRationalBufferArray(set->buffer, &primsol, nlpicols);
-   SCIPfreeRationalBuffer(set->buffer, &tmp);
-   SCIPfreeRationalBuffer(set->buffer, &dualbound);
-   SCIPfreeRationalBuffer(set->buffer, &primalbound);
+   SCIPrationalFreeBufferArray(set->buffer, &redcost, nlpicols);
+   SCIPrationalFreeBufferArray(set->buffer, &activity, nlpirows);
+   SCIPrationalFreeBufferArray(set->buffer, &dualsol, nlpirows);
+   SCIPrationalFreeBufferArray(set->buffer, &primsol, nlpicols);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &dualbound);
+   SCIPrationalFreeBuffer(set->buffer, &primalbound);
 
    return SCIP_OKAY;
 }
@@ -7171,7 +7171,7 @@ SCIP_RETCODE SCIPlpExactGetPrimalRay(
    }
 
    /* get temporary memory */
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &lpiray, lp->nlpicols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &lpiray, lp->nlpicols) );
 
    SCIPsetDebugMsg(set, "getting primal ray values\n");
 
@@ -7192,7 +7192,7 @@ SCIP_RETCODE SCIPlpExactGetPrimalRay(
       SCIPrationalSet(ray[SCIPvarGetProbindex(var)], lpiray[c]);
    }
 
-   SCIPfreeRationalBufferArray(set->buffer, &lpiray, lp->nlpicols);
+   SCIPrationalFreeBufferArray(set->buffer, &lpiray, lp->nlpicols);
 
    return SCIP_OKAY;
 }
@@ -7234,17 +7234,17 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
       *valid = TRUE;
 
    farkascoefs = NULL;
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &maxactivity) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &farkaslhs) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &maxactivity) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &farkaslhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
    checkfarkas = (set->lp_checkfarkas && valid != NULL);
 
    /* get temporary memory */
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &dualfarkas, lp->nlpirows) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &dualfarkas, lp->nlpirows) );
 
    if( checkfarkas )
-      SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &farkascoefs, lp->nlpicols) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &farkascoefs, lp->nlpicols) );
 
    /* get dual Farkas infeasibility proof */
    SCIP_CALL( SCIPlpiExactGetDualfarkas(lp->lpiexact, dualfarkas) );
@@ -7391,12 +7391,12 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
   TERMINATE:
    /* free temporary memory */
    if( checkfarkas )
-      SCIPfreeRationalBufferArray(set->buffer, &farkascoefs, nlpicols);
+      SCIPrationalFreeBufferArray(set->buffer, &farkascoefs, nlpicols);
 
-   SCIPfreeRationalBufferArray(set->buffer, &dualfarkas, nlpirows);
-   SCIPfreeRationalBuffer(set->buffer, &tmp);
-   SCIPfreeRationalBuffer(set->buffer, &farkaslhs);
-   SCIPfreeRationalBuffer(set->buffer, &maxactivity);
+   SCIPrationalFreeBufferArray(set->buffer, &dualfarkas, nlpirows);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &farkaslhs);
+   SCIPrationalFreeBuffer(set->buffer, &maxactivity);
 
    return SCIP_OKAY;
 }
@@ -7671,8 +7671,8 @@ SCIP_RETCODE colExactStoreSolVals(
       storedsolvals = colexact->storedsolvals;
 
       /* store values */
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(storedsolvals->primsol), colexact->primsol) );
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(storedsolvals->redcost), colexact->redcost) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(storedsolvals->primsol), colexact->primsol) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(storedsolvals->redcost), colexact->redcost) );
       storedsolvals->basisstatus = colexact->basisstatus; /*lint !e641 !e732*/
    }
    else
@@ -7758,15 +7758,15 @@ SCIP_RETCODE rowExactStoreSolVals(
       /* store values */
       if( infeasible )
       {
-         SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(storedsolvals->dualsol), rowexact->dualfarkas) );
-         SCIP_CALL( SCIPcreateRationalBlock(blkmem, &(storedsolvals->activity)) );
+         SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(storedsolvals->dualsol), rowexact->dualfarkas) );
+         SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(storedsolvals->activity)) );
          SCIPrationalSetString(storedsolvals->activity, "inf");
          storedsolvals->basisstatus = SCIP_BASESTAT_BASIC;  /*lint !e641*/
       }
       else
       {
-         SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(storedsolvals->dualsol), rowexact->dualsol) );
-         SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(storedsolvals->activity), rowexact->activity) );
+         SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(storedsolvals->dualsol), rowexact->dualsol) );
+         SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(storedsolvals->activity), rowexact->activity) );
          storedsolvals->basisstatus = rowexact->basisstatus; /*lint !e641 !e732*/
       }
    }
@@ -7863,7 +7863,7 @@ SCIP_RETCODE lpExactStoreSolVals(
       storedsolvals = lpexact->storedsolvals;
 
       /* store values */
-      SCIP_CALL( SCIPcopyRationalBlock(blkmem, &(storedsolvals->lpobjval), lpexact->lpobjval));
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(storedsolvals->lpobjval), lpexact->lpobjval));
       storedsolvals->lpsolstat = lpexact->lpsolstat;
       storedsolvals->primalfeasible = lpexact->primalfeasible;
       storedsolvals->primalchecked = lpexact->primalchecked;
@@ -8323,7 +8323,7 @@ SCIP_RETCODE SCIPlpExactEndDive(
       SCIP_SIDETYPE sidetype;
       SCIP_ROWEXACT* row;
 
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &oldside) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldside) );
 
       lpexact->ndivechgsides--;
       SCIPrationalSet(oldside, lpexact->divechgsides[lpexact->ndivechgsides]);
@@ -8339,7 +8339,7 @@ SCIP_RETCODE SCIPlpExactEndDive(
          SCIP_CALL( SCIProwExactChgRhs(row, set, lpexact, oldside) );
       }
 
-      SCIPfreeRationalBuffer(set->buffer, &oldside);
+      SCIPrationalFreeBuffer(set->buffer, &oldside);
    }
 
    /* restore LPI iteration limit */

@@ -1408,7 +1408,7 @@ void SCIPgetDualboundExact(
    )
 {
    SCIP_Rational* tmpval;
-   (void) SCIPcreateRationalBuffer(SCIPbuffer(scip), &tmpval);
+   (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpval);
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDualboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
@@ -1422,7 +1422,7 @@ void SCIPgetDualboundExact(
       SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmpval, result);
    }
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &tmpval);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpval);
 }
 
 /** gets global lower (dual) bound in transformed problem

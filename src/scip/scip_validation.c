@@ -239,10 +239,10 @@ SCIP_RETCODE SCIPvalidateSolveExact(
    assert(scip != NULL);
    assert(SCIPisExactSolve(scip));
 
-   SCIP_CALL( SCIPcreateRational(&primviol) );
-   SCIP_CALL( SCIPcreateRational(&dualviol) );
-   SCIP_CALL( SCIPcreateRational(&pb) );
-   SCIP_CALL( SCIPcreateRational(&db) );
+   SCIP_CALL( SCIPrationalCreate(&primviol) );
+   SCIP_CALL( SCIPrationalCreate(&dualviol) );
+   SCIP_CALL( SCIPrationalCreate(&pb) );
+   SCIP_CALL( SCIPrationalCreate(&db) );
 
    /* if no problem exists, there is no need for validation */
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
@@ -352,10 +352,10 @@ SCIP_RETCODE SCIPvalidateSolveExact(
    if( dualboundcheck != NULL )
       *dualboundcheck = localdualboundcheck;
 
-   SCIPfreeRational(&primviol);
-   SCIPfreeRational(&dualviol);
-   SCIPfreeRational(&pb);
-   SCIPfreeRational(&db);
+   SCIPrationalFree(&primviol);
+   SCIPrationalFree(&dualviol);
+   SCIPrationalFree(&pb);
+   SCIPrationalFree(&db);
 
    return SCIP_OKAY;
 }

@@ -190,8 +190,8 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
       SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, prob, 100,
                &lperror, FALSE) );
 
-      SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &rootprimal, ncols) );
-      SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &rootactivity, nrows) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &rootprimal, ncols) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &rootactivity, nrows) );
 
       /* get the primal solution and activity */
       SCIP_CALL( SCIPlpiExactGetSol(lpexact->lpiexact, NULL, rootprimal, NULL, rootactivity, NULL) );
@@ -214,8 +214,8 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
             projshiftdata->includedrows[2*nrows + ncols + i] = 1;
       }
 
-      SCIPfreeRationalBufferArray(set->buffer, &rootactivity, nrows);
-      SCIPfreeRationalBufferArray(set->buffer, &rootprimal, ncols);
+      SCIPrationalFreeBufferArray(set->buffer, &rootactivity, nrows);
+      SCIPrationalFreeBufferArray(set->buffer, &rootprimal, ncols);
    }
    else if( set->exact_psdualcolselection == PS_DUALCOSTSEL_ACTIVE_FPLP )
    {
@@ -288,7 +288,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projlen, nextendedrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projind, 2*nnonz + 2*ncols) );
    BMSclearMemoryArray(projind, 2*nnonz + 2*ncols);
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &projval, 2*nnonz + 2*ncols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &projval, 2*nnonz + 2*ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projvalgmp, 2*nnonz + 2*ncols) );
 
    /* allocate memory for the basis mapping */
@@ -398,7 +398,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
 
    SCIPrationalClearArrayGMP(projvalgmp, 2 * nnonz+ 2 * ncols);
    SCIPsetFreeBufferArray(set, &projvalgmp);
-   SCIPfreeRationalBufferArray(set->buffer, &projval, 2*nnonz + 2*ncols);
+   SCIPrationalFreeBufferArray(set->buffer, &projval, 2*nnonz + 2*ncols);
    SCIPsetFreeBufferArray(set, &projind);
    SCIPsetFreeBufferArray(set, &projlen);
    SCIPsetFreeBufferArray(set, &projbeg);
@@ -716,8 +716,8 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
 
       assert(projshiftdata->projshifthasray == FALSE);
 
-      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &auxval1) );
-      SCIP_CALL( SCIPcreateRationalBlock(blkmem, &auxval2) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &auxval1) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &auxval2) );
 
       /* update the objective on d */
       SCIPrationalSetInt(auxval1, 0, 1);
@@ -734,8 +734,8 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       SCIPrationalSetString(auxval2, "inf");
       SCIP_CALL( SCIPlpiExactChgBounds(pslpiexact, 1, &ndvarmap, &auxval1, &auxval2) );
 
-      SCIPfreeRationalBlock(blkmem, &auxval2);
-      SCIPfreeRationalBlock(blkmem, &auxval1);
+      SCIPrationalFreeBlock(blkmem, &auxval2);
+      SCIPrationalFreeBlock(blkmem, &auxval1);
    }
 
    /* set the display informatino */
@@ -764,8 +764,8 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       SCIPdebugMessage("   exact LP solved to optimality\n");
 
       /* get optimal dual solution */
-      SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &sol, psncols) );
-      SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &objval) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &sol, psncols) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &objval) );
       SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, sol, NULL, NULL, NULL) );
 
       SCIPrationalSet(projshiftdata->commonslack, sol[psncols - 1]);
@@ -793,8 +793,8 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
             projshiftdata->projshifthasray = TRUE;
       }
 
-      SCIPfreeRationalBuffer(set->buffer, &objval);
-      SCIPfreeRationalBufferArray(set->buffer, &sol, psncols);
+      SCIPrationalFreeBuffer(set->buffer, &objval);
+      SCIPrationalFreeBufferArray(set->buffer, &sol, psncols);
    }
    else
       projshiftdata->projshiftdatafail = TRUE;
@@ -919,9 +919,9 @@ SCIP_RETCODE projectShiftConstructLP(
     *   (reduced from nextendedrows to ndvarmap)
     * - dvarincidence gives the incidence vector of variables used in aux problem
     */
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &alpha) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &beta) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &alpha) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &beta) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dvarincidence, nextendedrows) );
    {
       /* if the aux. lp is not reduced then expand the selection for dvarmap to include all dual vars with finite cost */
@@ -969,12 +969,12 @@ SCIP_RETCODE projectShiftConstructLP(
    psnnonz = computeProjectShiftNnonz(lpexact, dvarincidence);
    psnnonz += 2*projshiftdata->projshiftbasisdim;
 
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &psobj, psncols) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &pslb, psncols) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &psub, psncols) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &pslhs, psnrows) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &psrhs, psnrows) );
-   SCIP_CALL( SCIPcreateRationalBufferArray(set->buffer, &psval, psnnonz) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &psobj, psncols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &pslb, psncols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &psub, psncols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &pslhs, psnrows) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &psrhs, psnrows) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &psval, psnnonz) );
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &psbeg, psnrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &pslen, psnrows) );
@@ -1024,18 +1024,18 @@ SCIP_RETCODE projectShiftConstructLP(
    SCIPsetFreeBufferArray(set, &pslen);
    SCIPsetFreeBufferArray(set, &psbeg);
 
-   SCIPfreeRationalBufferArray(set->buffer, &psval, psnnonz);
-   SCIPfreeRationalBufferArray(set->buffer, &psrhs, psnrows);
-   SCIPfreeRationalBufferArray(set->buffer, &pslhs, psnrows);
-   SCIPfreeRationalBufferArray(set->buffer, &psub, psncols);
-   SCIPfreeRationalBufferArray(set->buffer, &pslb, psncols);
-   SCIPfreeRationalBufferArray(set->buffer, &psobj, psncols);
+   SCIPrationalFreeBufferArray(set->buffer, &psval, psnnonz);
+   SCIPrationalFreeBufferArray(set->buffer, &psrhs, psnrows);
+   SCIPrationalFreeBufferArray(set->buffer, &pslhs, psnrows);
+   SCIPrationalFreeBufferArray(set->buffer, &psub, psncols);
+   SCIPrationalFreeBufferArray(set->buffer, &pslb, psncols);
+   SCIPrationalFreeBufferArray(set->buffer, &psobj, psncols);
 
    SCIPsetFreeBufferArray(set, &dvarincidence);
 
-   SCIPfreeRationalBuffer(set->buffer, &beta);
-   SCIPfreeRationalBuffer(set->buffer, &alpha);
-   SCIPfreeRationalBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &beta);
+   SCIPrationalFreeBuffer(set->buffer, &alpha);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -1069,7 +1069,7 @@ SCIP_RETCODE constructProjectShiftDataLPIExact(
    SCIPdebugMessage("calling constructProjectShiftDataLPIExact()\n");
    SCIPclockStart(stat->provedfeaspstime, set);
 
-   SCIP_CALL( SCIPcreateRationalBlock(blkmem, &projshiftdata->commonslack) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &projshiftdata->commonslack) );
 
    /* process the bound changes */
    SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );
@@ -1148,12 +1148,12 @@ SCIP_RETCODE constructProjectShiftData(
       if( projshiftdata->projshiftuseintpoint )
       {
          /* compute S-interior point if we need it */
-         SCIP_CALL( SCIPcreateRationalBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows) );
+         SCIP_CALL( SCIPrationalCreateBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows) );
          SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, TRUE) );
       }
 
       /* always try to compute the S-interior ray (for infeasibility proofs) */
-      SCIP_CALL( SCIPcreateRationalBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
+      SCIP_CALL( SCIPrationalCreateBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
       SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, FALSE) );
    }
 
@@ -1163,8 +1163,8 @@ SCIP_RETCODE constructProjectShiftData(
    else
       projshiftdata->projshiftdatafail = FALSE;
 
-   SCIP_CALL( SCIPcreateRationalBlockArray(blkmem, &projshiftdata->violation, lpexact->ncols) );
-   SCIP_CALL( SCIPcreateRationalBlockArray(blkmem, &projshiftdata->correction, projshiftdata->nextendedrows) );
+   SCIP_CALL( SCIPrationalCreateBlockArray(blkmem, &projshiftdata->violation, lpexact->ncols) );
+   SCIP_CALL( SCIPrationalCreateBlockArray(blkmem, &projshiftdata->correction, projshiftdata->nextendedrows) );
    projshiftdata->violationsize = lpexact->ncols;
 
    SCIPclockStop(stat->provedfeaspstime, set);
@@ -1273,12 +1273,12 @@ SCIP_RETCODE projectShift(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &tmp2) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &lambda1) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &lambda2) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &maxv) );
-   SCIP_CALL( SCIPcreateRationalBuffer(set->buffer, &dualbound) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp2) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lambda1) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lambda2) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &maxv) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &dualbound) );
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
@@ -1840,12 +1840,12 @@ SCIP_RETCODE projectShift(
    SCIPsetFreeBufferArray(set, &isupper);
    SCIPsetFreeBufferArray(set, &dualsol);
 
-   SCIPfreeRationalBuffer(set->buffer, &dualbound);
-   SCIPfreeRationalBuffer(set->buffer, &maxv);
-   SCIPfreeRationalBuffer(set->buffer, &lambda2);
-   SCIPfreeRationalBuffer(set->buffer, &lambda1);
-   SCIPfreeRationalBuffer(set->buffer, &tmp2);
-   SCIPfreeRationalBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &dualbound);
+   SCIPrationalFreeBuffer(set->buffer, &maxv);
+   SCIPrationalFreeBuffer(set->buffer, &lambda2);
+   SCIPrationalFreeBuffer(set->buffer, &lambda1);
+   SCIPrationalFreeBuffer(set->buffer, &tmp2);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    if( usefarkas )
       SCIPclockStop(stat->provedinfeaspstime, set);

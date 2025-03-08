@@ -81,7 +81,7 @@ SCIP_RETCODE checkIntegralityExact(
 
    integral = TRUE;
 
-   SCIP_CALL( SCIPcreateRationalBuffer(SCIPbuffer(scip), &solval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &solval) );
 
    /* get all problem variables and integer region in vars array */
    SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nintegers, NULL, NULL, NULL, NULL, &ncontimplvars, &ncontvars) );
@@ -114,7 +114,7 @@ SCIP_RETCODE checkIntegralityExact(
       }
    }
 
-   SCIPfreeRationalBuffer(SCIPbuffer(scip), &solval);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
 
    return SCIP_OKAY;
 }
