@@ -40,7 +40,6 @@
 #include "scip/reader_smps.h"
 #include "scip/reader_sto.h"
 #include "scip/reader_tim.h"
-#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_prob.h"
@@ -258,12 +257,6 @@ SCIP_DECL_READERREAD(readerReadSmps)
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-
-   if( SCIPisExactSolve(scip) )
-   {
-      SCIPerrorMessage("reading of smps format in exact solving mode is not yet supported\n");
-      return SCIP_READERROR;
-   }
 
    /* copy filename */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );

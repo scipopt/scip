@@ -7196,6 +7196,9 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
 
    assert(conshdlr != NULL);
 
+   /* mark constraint handler as exact */
+   SCIPconshdlrMarkExact(conshdlr);
+
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyExactLinear, consCopyExactLinear) );
    SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveExactLinear) );
@@ -7575,7 +7578,7 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
     *       for example.  In this case, whether an exact or an fp copy is created, could probably decided by looking at
     *       the parameter value of exact/enabled in the target SCIP.
     */
-   assert(!SCIPisExactSolve(scip));
+   assert(!SCIPisExact(scip));
    (*valid) = FALSE;
 
    if( SCIPisGT(scip, lhs, rhs) )
@@ -7683,7 +7686,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -7845,7 +7848,7 @@ SCIP_RETCODE SCIPchgCoefExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -7928,7 +7931,7 @@ SCIP_Rational* SCIPgetLhsExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
       return NULL;  /* todo: exip: what should we return in this case? */ /*lint !e527*/
    }
@@ -7951,7 +7954,7 @@ SCIP_Rational* SCIPgetRhsExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
       return NULL;   /* todo: exip: what should we return in this case? */ /*lint !e527*/
    }
@@ -7974,7 +7977,7 @@ SCIP_RETCODE SCIPchgLhsExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -7992,7 +7995,7 @@ SCIP_RETCODE SCIPchgRhsExactLinear(
 {
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -8013,7 +8016,7 @@ int SCIPgetNVarsExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
       return -1;  /*lint !e527*/
    }
@@ -8036,7 +8039,7 @@ SCIP_VAR** SCIPgetVarsExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
       return NULL;  /*lint !e527*/
    }
@@ -8059,7 +8062,7 @@ SCIP_INTERVAL* SCIPgetValsRealExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
       return NULL;  /*lint !e527*/
    }
@@ -8082,7 +8085,7 @@ SCIP_Rational** SCIPgetValsExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
       return NULL;  /*lint !e527*/
    }
@@ -8111,7 +8114,7 @@ SCIP_RETCODE SCIPgetActivityExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
       SCIPrationalSetString(ret, "inf");  /*lint !e527*/
    }
@@ -8143,7 +8146,7 @@ SCIP_RETCODE SCIPgetFeasibilityExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
    }
 
@@ -8173,7 +8176,7 @@ void SCIPgetDualsolExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
    }
 
@@ -8201,7 +8204,7 @@ void SCIPgetDualfarkasExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
    }
 
@@ -8229,7 +8232,7 @@ SCIP_ROW* SCIPgetRowExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
       return NULL;  /*lint !e527*/
    }
@@ -8243,7 +8246,7 @@ SCIP_ROW* SCIPgetRowExactLinear(
 /** returns the exact linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;
  *  the user must not modify the row!
  */
-SCIP_ROWEXACT* SCIPgetRowexExactLinear(
+SCIP_ROWEXACT* SCIPgetRowExactExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
@@ -8254,7 +8257,7 @@ SCIP_ROWEXACT* SCIPgetRowexExactLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not linear\n");
+      SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
       return NULL;  /*lint !e527*/
    }

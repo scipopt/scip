@@ -1123,7 +1123,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
          /* in exact mode we have to end diving prior to trying the solution */
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
             SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
             SCIP_CALL( SCIPendDive(scip) );
@@ -1180,6 +1180,9 @@ SCIP_RETCODE SCIPincludeHeurIntshifting(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecIntshifting, NULL) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIntshifting) );

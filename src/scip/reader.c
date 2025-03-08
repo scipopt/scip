@@ -102,6 +102,7 @@ SCIP_RETCODE doReaderCreate(
    (*reader)->readerread = readerread;
    (*reader)->readerwrite = readerwrite;
    (*reader)->readerdata = readerdata;
+   (*reader)->exact = FALSE;
 
    /* create reading clock */
    SCIP_CALL( SCIPclockCreate(&(*reader)->readingtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -199,6 +200,13 @@ SCIP_RETCODE SCIPreaderRead(
    if( readerIsApplicable(reader, extension) && reader->readerread != NULL )
    {
       SCIP_CLOCK* readingtime;
+
+      /* only readers marked as exact can read and write in exact solving mode */
+      if( set->exact_enabled && !reader->exact )
+      {
+         SCIPerrorMessage("reader %s cannot read problems exactly\n", SCIPreaderGetName(reader));
+         return SCIP_READERROR;
+      }
 
       /**@note we need temporary clock to measure the reading time correctly since in case of creating a new problem
        *       within the reader all clocks are reset (including the reader clocks); this resetting is necessary for
@@ -302,6 +310,13 @@ SCIP_RETCODE SCIPreaderWrite(
       int nconss;
       int nvars;
       int i;
+
+      /* only readers marked as exact can read and write in exact solving mode */
+      if( set->exact_enabled && !reader->exact )
+      {
+         SCIPerrorMessage("reader %s cannot write problems exactly\n", SCIPreaderGetName(reader));
+         return SCIP_READERROR;
+      }
 
       vars = SCIPprobGetVars(prob);
       nvars = SCIPprobGetNVars(prob);
@@ -551,6 +566,16 @@ void SCIPreaderSetWrite(
    assert(reader != NULL);
 
    reader->readerwrite = readerwrite;
+}
+
+/** marks the reader as safe to use in exact solving mode */
+void SCIPreaderMarkExact(
+   SCIP_READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+
+   reader->exact = TRUE;
 }
 
 /** gets name of reader */

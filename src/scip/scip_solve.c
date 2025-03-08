@@ -267,7 +267,7 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPbranchcandCreate(&scip->branchcand) );
    SCIP_CALL( SCIPlpCreate(&scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
    SCIP_CALL( SCIPprimalCreate(&scip->primal) );
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &scip->primal->upperboundexact) );
       SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &scip->primal->cutoffboundexact) );
@@ -886,9 +886,9 @@ SCIP_RETCODE presolveRound(
    }
 
    /* call presolve methods of constraint handlers */
-   while( k < consend && !(*unbounded) && !(*infeasible) && !aborted && !SCIPisExactSolve(scip) )
+   while( k < consend && !(*unbounded) && !(*infeasible) && !aborted && !SCIPisExact(scip) )
    {
-      /** @todo exip: add an isexact flag to conshdlrs and only call for exact conshdrls */
+      /** @todo exip: add an exact flag to conshdlrs and only call for exact conshdrls */
       SCIPdebugMsg(scip, "executing presolve method of constraint handler <%s>\n",
          SCIPconshdlrGetName(scip->set->conshdlrs[k]));
       SCIP_CALL( SCIPconshdlrPresolve(scip->set->conshdlrs[k], scip->mem->probmem, scip->set, scip->stat,
@@ -1228,7 +1228,7 @@ SCIP_RETCODE presolve(
    }
 
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving%s:\n",
-      SCIPisExactSolve(scip) ? " (in exact solving mode)" : "");
+      SCIPisExact(scip) ? " (in exact solving mode)" : "");
 
    *infeasible = FALSE;
    *unbounded = (*unbounded) || (SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip))));
@@ -1339,7 +1339,7 @@ SCIP_RETCODE presolve(
 
       SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 
-      if( !SCIPisExactSolve(scip) )
+      if( !SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
       }
@@ -1648,7 +1648,7 @@ SCIP_RETCODE initSolve(
          objbound = SCIPnextafter(objbound, SCIP_REAL_MAX);
 
       /* update cutoff bound */
-      if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound, scip->primal->cutoffbound) && !SCIPisExactSolve(scip) )
+      if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound, scip->primal->cutoffbound) && !SCIPisExact(scip) )
       {
          /* adjust cutoff bound */
          SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -1750,7 +1750,7 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing, scip->mem->probmem) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore, scip->mem->probmem) );
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIP_CALL( SCIPsepastoreExactClearCuts(scip->sepastoreexact, scip->mem->probmem, scip->set, scip->lpexact) );
       SCIP_CALL( SCIPsepastoreExactFree(&scip->sepastoreexact) );
@@ -2782,7 +2782,7 @@ SCIP_RETCODE SCIPsolve(
          }
 
          /* continue solution process */
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
             SCIPinfoMessage(scip, NULL, "solving problem in exact solving mode\n\n");
 
          SCIP_CALL( SCIPsolveCIP(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->mem, scip->origprob, scip->transprob,
@@ -3010,7 +3010,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
    }
 
    /* as long as no exact copy functionality is available, concurrent solving is not possible */
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("Concurrent solve not implemented for exact solving mode.\n");
       return SCIP_NOTIMPLEMENTED;
@@ -3206,6 +3206,13 @@ SCIP_RETCODE SCIPenableReoptimization(
    if( scip->set->stage > SCIP_STAGE_PROBLEM && !(!enable && scip->set->stage == SCIP_STAGE_PRESOLVED) )
    {
       SCIPerrorMessage("Reoptimization cannot be %s after starting the (pre)solving process.\n", enable ? "enabled" : "disabled");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* reoptimization in combination with exact solving has not been implemented */
+   if( scip->set->exact_enabled )
+   {
+      SCIPerrorMessage("Reoptimization cannot (yet) be started in exact solving mode.\n");
       return SCIP_INVALIDCALL;
    }
 

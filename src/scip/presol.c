@@ -154,7 +154,7 @@ SCIP_RETCODE doPresolCreate(
    SCIP_CALL( SCIPclockCreate(&(*presol)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*presol)->presolclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*presol)->initialized = FALSE;
-   (*presol)->isexact = FALSE;
+   (*presol)->exact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/priority", name);
@@ -433,7 +433,7 @@ SCIP_RETCODE SCIPpresolExec(
    *result = SCIP_DIDNOTRUN;
 
    /* do not execute if in exact solving mode and presolver is not safe */
-   if( set->exact_enabled && !presol->isexact )
+   if( set->exact_enabled && !presol->exact )
       return SCIP_OKAY;
 
    /* check number of presolving rounds */
@@ -600,6 +600,16 @@ void SCIPpresolSetExitpre(
    presol->presolexitpre = presolexitpre;
 }
 
+/** marks the presolver as safe to use in exact solving mode */
+void SCIPpresolMarkExact(
+   SCIP_PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   presol->exact = TRUE;
+}
+
 /** gets name of presolver */
 const char* SCIPpresolGetName(
    SCIP_PRESOL*          presol              /**< presolver */
@@ -673,16 +683,6 @@ void SCIPpresolSetTiming(
    assert(presol != NULL);
 
    presol->timing = timing;
-}
-
-/** mark that the presolver is safe to use in exact solving mode */
-void SCIPpresolSetExact(
-   SCIP_PRESOL*          presol              /**< presolver */
-   )
-{
-   assert(presol != NULL);
-
-   presol->isexact = TRUE;
 }
 
 /** is presolver initialized? */

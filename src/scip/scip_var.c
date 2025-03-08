@@ -3609,9 +3609,9 @@ SCIP_RETCODE analyzeStrongbranch(
    downcutoff = col->sbdownvalid && SCIPsetIsGE(scip->set, col->sbdown, scip->lp->cutoffbound);
    upcutoff = col->sbupvalid && SCIPsetIsGE(scip->set, col->sbup, scip->lp->cutoffbound);
 
-   if( downinf != NULL && !SCIPisExactSolve(scip) )
+   if( downinf != NULL && !SCIPisExact(scip) )
       *downinf = downcutoff;
-   if( upinf != NULL && !SCIPisExactSolve(scip) )
+   if( upinf != NULL && !SCIPisExact(scip) )
       *upinf = upcutoff;
 
    /* analyze infeasible strong branching sub problems:
@@ -3638,7 +3638,7 @@ SCIP_RETCODE analyzeStrongbranch(
     * @note Ignore the results if the LP solution of the down (up) branch LP is smaller which should not happened by
     *       theory but can arise due to numerical issues.
     */
-   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) && SCIPlpIsDualReliable(scip->lp) && !SCIPisExactSolve(scip) )
+   if( SCIPtreeGetCurrentDepth(scip->tree) == 0 && SCIPvarIsBinary(var) && SCIPlpIsDualReliable(scip->lp) && !SCIPisExact(scip) )
    {
       SCIP_Real lpobjval;
 
@@ -6535,7 +6535,7 @@ SCIP_RETCODE SCIPtightenVarLbExact(
    SCIP_Rational* ub;
 
    assert(infeasible != NULL);
-   assert(SCIPisExactSolve(scip));
+   assert(SCIPisExact(scip));
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarLbExact", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
@@ -6785,7 +6785,7 @@ SCIP_RETCODE SCIPtightenVarUbExact(
    SCIP_Rational* ub;
 
    assert(infeasible != NULL);
-   assert(SCIPisExactSolve(scip));
+   assert(SCIPisExact(scip));
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarUbExact", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
@@ -8065,7 +8065,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarLbGlobal", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
       return tightenVarLbGlobalSafe(scip, var, newbound, force, infeasible, tightened);
 
    *infeasible = FALSE;
@@ -8296,7 +8296,7 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarUbGlobal", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
       return tightenVarUbGlobalSafe(scip, var, newbound, force, infeasible, tightened);
 
    *infeasible = FALSE;
@@ -10478,10 +10478,10 @@ SCIP_RETCODE SCIPfixVarExact(
    assert(var != NULL);
    assert(infeasible != NULL);
    assert(fixed != NULL);
-   assert(SCIPisExactSolve(scip));
+   assert(SCIPisExact(scip));
    assert(var->exactdata != NULL);
 
-   if( !SCIPisExactSolve(scip) )
+   if( !SCIPisExact(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPfixVarExact", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );

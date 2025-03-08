@@ -339,6 +339,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    SCIP_SOL* worksol;
    SCIP_Bool foundsol;
    SCIP_Bool lperror;
+   int nvars;
    int nintegers;
    int nconsprob;
    int i;
@@ -359,7 +360,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    assert(conshdlrdata != NULL);
 
    /* if we are not solving exactly, we have nothing to check */
-   if( !SCIPisExactSolve(scip) )
+   if( !SCIPisExact(scip) )
       return SCIP_OKAY;
 
    /**@todo add event handler to check again if constraints were added/modified or a variable (impl) type changed */
@@ -503,8 +504,23 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       }
    }
 
-   /* start exact diving */
+   /* start exact diving and set global bounds of continuous variables */
    SCIP_CALL( SCIPstartExactDive(scip) );
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   nintegers = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   for( i = nintegers; i < nvars; ++i )
+   {
+      if( SCIPvarGetStatusExact(vars[i]) == SCIP_VARSTATUS_COLUMN )
+      {
+         SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
+         SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
+
+         SCIP_CALL( SCIPchgVarLbExactDive(scip, vars[i], SCIPvarGetLbGlobalExact(vars[i])) );
+         SCIP_CALL( SCIPchgVarUbExactDive(scip, vars[i], SCIPvarGetUbGlobalExact(vars[i])) );
+      }
+   }
 
    /* sort solubuffer by objval try to repair best solutions first */
    SCIPsortPtr((void**)conshdlrdata->solubuffer, SCIPsolComp, conshdlrdata->nbufferedsols);
@@ -528,9 +544,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
          SCIPheurGetName(SCIPsolGetHeur(worksol)), SCIPgetSolTransObj(scip, worksol));
 
       /* set the bounds of the variables: fixed for integral variables, global bounds for continuous ones */
-      vars = SCIPgetVars(scip);
-      nintegers = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
-
       for( i = 0; i < nintegers; ++i )
       {
          if( SCIPvarGetStatusExact(vars[i]) == SCIP_VARSTATUS_COLUMN )
@@ -589,7 +602,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       retstat = SCIPsolveExactDiveLP(scip, -1, &lperror, NULL);
       if( retstat != SCIP_OKAY )
       {
-         SCIPwarningMessage(scip, "Error while solving LP in Exactsol Constraint Handler; Exact LP solve terminated with code <%d>\n",retstat);
+         SCIPwarningMessage(scip, "Error while solving LP in Exactsol Constraint Handler; exact LP solve terminated with code <%d>\n",retstat);
       }
 #else
       SCIP_CALL( SCIPsolveExactDiveLP(scip, -1, &lperror, NULL) );
@@ -772,6 +785,9 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
          consEnfolpExactSol, consEnfopsExactSol, consCheckExactSol, consLockExactSol,
          conshdlrdata) );
    assert(conshdlr != NULL);
+
+   /* mark constraint handler as exact */
+   SCIPconshdlrMarkExact(conshdlr);
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyExactSol, NULL) );

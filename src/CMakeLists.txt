@@ -795,6 +795,7 @@ set(scipheaders
     scip/pub_iisfinder.h
     scip/pub_implics.h
     scip/pub_lp.h
+    scip/pub_lpexact.h
     scip/pub_matrix.h
     scip/pub_message.h
     scip/pub_misc.h

@@ -127,7 +127,7 @@ SCIP_RETCODE checkSolOrig(
    if( !printreason )
       completely = FALSE;
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
          SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->origprob) );
@@ -273,7 +273,7 @@ SCIP_RETCODE checkSolOrigExact(
    assert(scip != NULL);
    assert(sol != NULL);
    assert(feasible != NULL);
-   assert(SCIPisExactSolve(scip));
+   assert(SCIPisExact(scip));
 
    SCIP_CALL( SCIPcheckStage(scip, "checkSolOrigExact", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -2276,7 +2276,7 @@ SCIP_RETCODE SCIPprintSol(
 
    currentsol = (sol == NULL);
 
-   if( currentsol ? SCIPisExactSolve(scip) : SCIPsolIsExact(sol) )
+   if( currentsol ? SCIPisExact(scip) : SCIPsolIsExact(sol) )
    {
       SCIP_CALL( SCIPprintSolExact(scip, sol, file, printzeros) );
       return SCIP_OKAY;
@@ -4073,7 +4073,7 @@ SCIP_RETCODE SCIPcheckSol(
    /* SCIPsolCheck() can only be called on transformed solutions */
    if( SCIPsolIsOriginal(sol) )
    {
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          SCIP_CALL( checkSolOrigExact(scip, sol, feasible, printreason, completely, checkbounds, checkintegrality, checklprows, FALSE) );
       }
@@ -4134,7 +4134,7 @@ SCIP_RETCODE SCIPcheckSolOrig(
       completely = FALSE;
 
    /* check solution in original problem; that includes bounds, integrality, and non modifiable constraints */
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIP_CALL( checkSolOrigExact(scip, sol, feasible, printreason, completely, TRUE, TRUE, TRUE, FALSE) );
    }

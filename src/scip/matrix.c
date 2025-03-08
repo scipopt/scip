@@ -589,7 +589,7 @@ SCIP_RETCODE setColumnMajorFormat(
       rowpnt = matrix->rowmatind + matrix->rowmatbeg[i];
       rowend = rowpnt + matrix->rowmatcnt[i];
       valpnt = matrix->rowmatval + matrix->rowmatbeg[i];
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
          valpntrational = matrix->matrixvalsexact->rowmatvalexact[matrix->rowmatbeg[i]];
 
       for( ; rowpnt < rowend; rowpnt++, valpnt++ )
@@ -597,7 +597,7 @@ SCIP_RETCODE setColumnMajorFormat(
          assert(*rowpnt < matrix->ncols);
          colidx = *rowpnt;
          matrix->colmatval[matrix->colmatbeg[colidx] + fillidx[colidx]] = *valpnt;
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
             SCIPrationalSet(matrix->matrixvalsexact->colmatvalexact[matrix->colmatbeg[colidx] + fillidx[colidx]], valpntrational); /*lint !e644*/
          matrix->colmatind[matrix->colmatbeg[colidx] + fillidx[colidx]] = i;
          fillidx[colidx]++;
@@ -646,7 +646,7 @@ SCIP_RETCODE calcActivityBounds(
 
          /* get variable coefficient */
          val = *valpnt;
-         assert(!SCIPisZero(scip, val) || SCIPisExactSolve(scip));
+         assert(!SCIPisZero(scip, val) || SCIPisExact(scip));
 
          assert(matrix->ncols > col);
 
@@ -876,7 +876,7 @@ SCIP_RETCODE SCIPmatrixCreate(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->ub, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->nuplocks, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->ndownlocks, matrix->ncols) );
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIP_CALL( SCIPallocBuffer(scip, &matrix->matrixvalsexact) );
       SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->colmatvalexact, nnonzstmp) );
@@ -901,7 +901,7 @@ SCIP_RETCODE SCIPmatrixCreate(
       matrix->lb[v] = SCIPvarGetLbGlobal(var);
       matrix->ub[v] = SCIPvarGetUbGlobal(var);
 
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          matrix->matrixvalsexact->lbexact[v] = SCIPvarGetLbGlobalExact(var);
          matrix->matrixvalsexact->ubexact[v] = SCIPvarGetUbGlobalExact(var);
@@ -1319,7 +1319,7 @@ SCIP_RETCODE SCIPmatrixCreate(
       SCIPfreeBufferArray(scip, &matrix->ndownlocks);
       SCIPfreeBufferArray(scip, &matrix->nuplocks);
 
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          SCIPfreeBufferArray(scip, &matrix->matrixvalsexact->ubexact);
          SCIPfreeBufferArray(scip, &matrix->matrixvalsexact->lbexact);
@@ -1392,7 +1392,7 @@ void SCIPmatrixFree(
       SCIPfreeBufferArray(scip, &((*matrix)->ndownlocks));
       SCIPfreeBufferArray(scip, &((*matrix)->nuplocks));
 
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          assert((*matrix)->matrixvalsexact != NULL);
          SCIPfreeBufferArray(scip, &(*matrix)->matrixvalsexact->ubexact);

@@ -217,7 +217,7 @@ SCIP_RETCODE addCut(
    assert(cutoff != NULL);
    assert(naddedcuts != NULL);
 
-   if( cutnnz == 0 && SCIPisFeasNegative(scip, cutrhs) && !SCIPisExactSolve(scip) ) /*lint !e644*/
+   if( cutnnz == 0 && SCIPisFeasNegative(scip, cutrhs) && !SCIPisExact(scip) ) /*lint !e644*/
    {
       SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %g.\n", cutrhs);
       *cutoff = TRUE;
@@ -253,7 +253,7 @@ SCIP_RETCODE addCut(
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%" SCIP_LONGINT_FORMAT "_s%d", SCIPgetNLPs(scip), -c-1);
       }
 
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          SCIP_ROUNDMODE roundmode;
 
@@ -306,7 +306,7 @@ SCIP_RETCODE addCut(
       /* flush all changes before adding the cut */
       SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-      if( SCIProwGetNNonz(cut) == 0 && !SCIPisExactSolve(scip) )
+      if( SCIProwGetNNonz(cut) == 0 && !SCIPisExact(scip) )
       {
          assert( SCIPisFeasNegative(scip, cutrhs) );
          SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %g.\n", cutrhs);
@@ -367,15 +367,17 @@ SCIP_RETCODE addCut(
                }
 
                ++(*naddedcuts);
-               if( SCIPisExactSolve(scip) )
-               {
-                  if( SCIPisCertificateActive(scip) )
-                  {
-                     SCIP_CALL( SCIPstoreCertificateActiveAggregationInfo(scip, cut) );
-                     SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
-                  }
 
-                  /* certify local cuts immediately or the bonds might be wrong in the certificate */
+               /* for certification we need to create the exact representation of the row; we need to perform this here
+                * because the certificate uses the current variable bounds; if certification is not active, we delay the
+                * creation of the exact row until the cut is actually selected to enter the LP, see sepastore.c; note
+                * that this could lead to different solving paths when solving with/without certification
+                */
+               if( SCIPisCertificateActive(scip) )
+               {
+                  SCIP_CALL( SCIPstoreCertificateActiveAggregationInfo(scip, cut) );
+                  SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
+
                   if( SCIProwGetRowExact(cut) == NULL )
                   {
                      if( !cutislocal )
@@ -390,10 +392,7 @@ SCIP_RETCODE addCut(
                      }
                   }
 
-                  if( SCIPisCertificateActive(scip) )
-                  {
-                     SCIP_CALL( SCIPprintCertificateMirCut(scip, cut) );
-                  }
+                  SCIP_CALL( SCIPprintCertificateMirCut(scip, cut) );
                }
             }
          }
@@ -704,7 +703,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          continue;
 
       /* try to create a strong CG cut out of the aggregation row */
-      if( separatescg && !SCIPisExactSolve(scip) )
+      if( separatescg && !SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, minfrac, maxfrac,
             1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &strongcgsuccess) );
@@ -848,10 +847,10 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          sepaExeclpGomory, NULL,
          sepadata) );
 
-   /* gomory is safe to use in exact solving mode */
-   SCIPsepaSetExact(sepa);
-
    assert(sepa != NULL);
+
+   /* gomory is safe to use in exact solving mode */
+   SCIPsepaMarkExact(sepa);
 
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->strongcg, "strongcg", "separator for strong CG cuts", -100000, SEPA_FREQ, 0.0,
       SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );

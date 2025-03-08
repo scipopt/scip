@@ -68,16 +68,30 @@
 extern "C" {
 #endif
 
-/** returns whether the solution process is arithmetically exact, i.e., not subject to roundoff errors
+/** enable exact solving mode
  *
- *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
  */
 SCIP_EXPORT
-SCIP_Bool SCIPisExactSolve(
+SCIP_RETCODE SCIPenableExactSolving(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             enable              /**< enable exact solving (TRUE) or disable it (FALSE) */
+   );
+
+/** returns whether the solution process is arithmetically exact, i.e., not subject to roundoff errors
+ *
+ *  @return Returns TRUE if \SCIP is in exact solving mode, otherwise FALSE
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPisExact(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether aggreagtion is allowed to use negative slack */
+/** returns whether aggregation is allowed to use negative slack */
 SCIP_EXPORT
 SCIP_Bool SCIPallowNegSlack(
    SCIP*                 scip                /**< SCIP data structure */

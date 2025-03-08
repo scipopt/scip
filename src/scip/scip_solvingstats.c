@@ -454,11 +454,11 @@ SCIP_Longint SCIPgetNLPs(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-SCIP_Longint SCIPgetNExactLP(
+SCIP_Longint SCIPgetNExactLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNExactLP", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNExactLPs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->nexlpinf + scip->stat->nexlp;
 }
@@ -4446,7 +4446,7 @@ void SCIPprintLPStatistics(
 
    if( scip->set->exact_enabled )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Exact LP           :       Time      Calls Iterations  Iter/call   Iter/sec     Nfails   AvgError   NObjlim  NObjlimF \n");
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Safe Bounding      :       Time      Calls Iterations  Iter/call   Iter/sec     Nfails   AvgError   NObjlim  NObjlimF \n");
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp feas    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
          SCIPclockGetTime(scip->stat->provedfeaslptime),
          scip->stat->nexlp,

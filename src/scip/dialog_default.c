@@ -4116,7 +4116,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
       char prompt[SCIP_MAXSTRLEN];
       int i;
 
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPrationalCreateArray(&refvalsrat, 2) );
       }
@@ -4137,7 +4137,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
          }
          else if( strncmp(refstrs[i], "q", 1) == 0 )
             break;
-         else if( SCIPisExactSolve(scip) )
+         else if( SCIPisExact(scip) )
          {
             assert(refvalsrat != NULL);
             if( !SCIPparseRational(scip, refstrs[i], refvalsrat[i], &endptr) ) /*lint !e644*/
@@ -4156,7 +4156,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
       /* check if the loop finished by checking the value of 'i'. Do not validate if user input is missing */
       if( i == 2 ) /*lint !e850*/
       {
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
             assert(refvalsrat != NULL);
             SCIP_CALL( SCIPvalidateSolveExact(scip, refvalsrat[0], refvalsrat[1], FALSE, NULL, NULL, NULL) );

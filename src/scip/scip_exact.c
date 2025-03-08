@@ -143,13 +143,49 @@
 #include "scip/struct_scip.h"
 #endif
 
+/** enables or disables exact solving mode
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ */
+SCIP_RETCODE SCIPenableExactSolving(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             enable              /**< enable exact solving (TRUE) or disable it (FALSE) */
+   )
+{
+   assert(scip != NULL);
+
+   /* skip if nothing has changed */
+   if( enable == scip->set->exact_enabled )
+      return SCIP_OKAY;
+
+   /* check stage and throw an error */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("Exact solving mode can only be enabled/disabled before reading/creating a problem.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* reoptimization in combination with exact solving has not been implemented */
+   if( scip->set->reopt_enable )
+   {
+      SCIPerrorMessage("Exact solving mode not (yet) compatible with reoptimization.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   scip->set->reopt_enable = enable;
+
+   return SCIP_OKAY;
+}
+
 /** returns whether the solution process should be probably correct
  *
- *  @note This feature is not supported yet!
- *
- *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
+ *  @return Returns TRUE if \SCIP is in exact solving mode, otherwise FALSE
  */
-SCIP_Bool SCIPisExactSolve(
+SCIP_Bool SCIPisExact(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -159,7 +195,7 @@ SCIP_Bool SCIPisExactSolve(
    return (scip->set->exact_enabled);
 }
 
-/** returns whether aggreagtion is allowed to use negative slack */
+/** returns whether aggregation is allowed to use negative slack */
 SCIP_Bool SCIPallowNegSlack(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -167,7 +203,7 @@ SCIP_Bool SCIPallowNegSlack(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return (!SCIPisExactSolve(scip)) || (scip->set->exact_allownegslack);
+   return (!SCIPisExact(scip)) || (scip->set->exact_allownegslack);
 }
 
 /** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina,
@@ -219,7 +255,7 @@ SCIP_RETCODE SCIPfreeRowCertInfo(
    SCIP_AGGREGATIONINFO* aggrinfo;
    SCIP_MIRINFO* mirinfo;
 
-   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+   if( !SCIPisExact(scip) || !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
 
    certificate = SCIPgetCertificate(scip);
@@ -292,7 +328,7 @@ SCIP_RETCODE SCIPprintCertificateMirCut(
 {
    SCIP_CERTIFICATE* certificate;
 
-   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+   if( !SCIPisExact(scip) || !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
 
    certificate = SCIPgetCertificate(scip);

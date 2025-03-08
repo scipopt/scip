@@ -1277,7 +1277,7 @@ SCIP_RETCODE readColsExact(
                   !mpsi->dynamiccols, mpsi->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
          }
          /* create exact data if we are in exact solving mode */
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
             SCIP_CALL( SCIPaddVarExactData(scip, var, NULL, NULL, NULL) );
          }
@@ -2698,7 +2698,7 @@ SCIP_RETCODE readSOS(
    dynamic = mpsi->dynamicconss;
    removable = mpsi->dynamicrows;
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("Exact solving mode cannot handle SOS constraints currently \n");
       return SCIP_READERROR;
@@ -2883,7 +2883,7 @@ SCIP_RETCODE readQMatrix(
 
    SCIPdebugMsg(scip, "read %s objective\n", isQuadObj ? "QUADOBJ" : "QMATRIX");
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("Exact solving mode cannot handle QMatrix constraints currently \n");
       return SCIP_READERROR;
@@ -3107,7 +3107,7 @@ SCIP_RETCODE readQCMatrix(
       return SCIP_OKAY;
    }
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("Exact solving mode cannot handle QCMatrix constraints currently \n");
       return SCIP_READERROR;
@@ -3295,7 +3295,7 @@ SCIP_RETCODE readIndicators(
 
    SCIPdebugMsg(scip, "read INDICATORS constraints\n");
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("Exact solving mode cannot handle indicator constraints currently \n");
       return SCIP_READERROR;
@@ -3634,7 +3634,7 @@ SCIP_RETCODE readMpsExact(
 
    assert(scip != NULL);
    assert(filename != NULL);
-   assert(SCIPisExactSolve(scip));
+   assert(SCIPisExact(scip));
 
    fp = SCIPfopen(filename, "r");
    if( fp == NULL )
@@ -4914,6 +4914,9 @@ SCIP_RETCODE SCIPincludeReaderMps(
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
 
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
+
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyMps) );
    SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeMps) );
@@ -4954,7 +4957,7 @@ SCIP_RETCODE SCIPreadMps(
    assert(scip != NULL);
    assert(result != NULL);
 
-   if( !SCIPisExactSolve(scip) )
+   if( !SCIPisExact(scip) )
       retcode = readMps(scip, filename, varnames, consnames, varnamessize, consnamessize, nvarnames, nconsnames);
    else
       retcode = readMpsExact(scip, filename, varnames, consnames, varnamessize, consnamessize, nvarnames, nconsnames);

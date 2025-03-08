@@ -1452,7 +1452,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result)
        * if we are not in exact solving mode
        */
-      if( cutoff && !SCIPisExactSolve(scip) )
+      if( cutoff && !SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
@@ -2411,6 +2411,9 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecShiftandpropagate, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyShiftandpropagate) );

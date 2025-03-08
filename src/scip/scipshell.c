@@ -131,7 +131,7 @@ SCIP_RETCODE fromCommandLine(
 
          SCIP_CALL( SCIPcreateSolCopy(scip, &origsol, bestsol) );
          SCIP_CALL( SCIPretransformSol(scip, origsol) );
-         if( SCIPisExactSolve(scip) && SCIPisExactSol(scip, bestsol) )
+         if( SCIPisExact(scip) && SCIPisExactSol(scip, bestsol) )
          {
             SCIP_CALL( SCIPprintSolExact(scip, origsol, NULL, FALSE) );
          }
@@ -525,7 +525,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
          if( primalrefstring != NULL && dualrefstring != NULL )
          {
             char *endptr;
-            if( !SCIPisExactSolve(scip) )
+            if( !SCIPisExact(scip) )
             {
                if( ! SCIPparseReal(scip, primalrefstring, &primalreference, &endptr) ||
                         ! SCIPparseReal(scip, dualrefstring, &dualreference, &endptr) )
@@ -559,7 +559,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
          /* validate the solve */
          if( validatesolve )
          {
-            if( !SCIPisExactSolve(scip) )
+            if( !SCIPisExact(scip) )
             {
                SCIP_CALL( SCIPvalidateSolve(scip, primalreference, dualreference, SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
             }

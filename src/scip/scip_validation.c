@@ -237,7 +237,7 @@ SCIP_RETCODE SCIPvalidateSolveExact(
    char rationalstring2[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
-   assert(SCIPisExactSolve(scip));
+   assert(SCIPisExact(scip));
 
    SCIP_CALL( SCIPrationalCreate(&primviol) );
    SCIP_CALL( SCIPrationalCreate(&dualviol) );

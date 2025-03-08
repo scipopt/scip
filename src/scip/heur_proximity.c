@@ -216,7 +216,7 @@ SCIP_RETCODE solveLp(
       SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
       /* in exact mode we have to end diving prior to trying the solution */
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPunlinkSol(scip, sol) );
          SCIP_CALL( SCIPendDive(scip) );
@@ -1044,6 +1044,9 @@ SCIP_RETCODE SCIPincludeHeurProximity(
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecProximity, heurdata) );
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyProximity) );
