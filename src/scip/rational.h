@@ -836,7 +836,7 @@ void SCIPrationalSetInfinity(
 
 /** return the infinity threshold for rationals */
 SCIP_EXPORT
-SCIP_Real SCIPrationalRatGetInfinity(
+SCIP_Real SCIPrationalGetInfinity(
    void
    );
 
