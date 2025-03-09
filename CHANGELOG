@@ -16,6 +16,7 @@ Fixed bugs
 - force local bounds to adjusted value when fixing variable
 - adds missing NULL check for Benders' subproblems in feasalt cut
 - apply objective scale to pseudoboolean non-linear terms
+- impose pseudoboolean cost bound without intermediate casting
 
 Build system
 ------------
