@@ -366,7 +366,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsSafely(
    assert(vals != NULL);
    assert(nnz != NULL);
    assert(row != NULL);
-   assert(SCIPisExact(scip));
+   assert(SCIPisExactSolve(scip));
 
    previousroundmode = SCIPintervalGetRoundingMode();
    SCIPintervalSetRoundingModeDownwards();
@@ -1142,7 +1142,7 @@ SCIP_Bool chgCoeffWithBoundSafely(
    SCIP_INTERVAL delta;
    SCIP_ROUNDMODE previousroundmode;
 
-   assert(SCIPisExact(scip));
+   assert(SCIPisExactSolve(scip));
 
    previousroundmode = SCIPintervalGetRoundingMode();
    SCIPintervalSetRoundingModeUpwards();
@@ -1586,7 +1586,7 @@ SCIP_Real scaleValSafely(
    SCIP_Real lb;
    SCIP_Real newval = 0.0;
 
-   assert(SCIPisExact(scip));
+   assert(SCIPisExactSolve(scip));
 
    previousroundmode = SCIPintervalGetRoundingMode();
    SCIPintervalSetRoundingModeDownwards();
@@ -2107,7 +2107,7 @@ SCIP_RETCODE cutTightenCoefs(
    SCIP_Real maxabsintval = 0.0;
    SCIP_Real maxabscontval = 0.0;
 
-   assert(!SCIPisExact(scip));
+   assert(!SCIPisExactSolve(scip));
 
    QUAD_ASSIGN(maxacttmp, 0.0);
 
@@ -2880,7 +2880,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    SCIP_ROUNDMODE previousroundmode;
    int i;
 
-   assert(SCIPisExact(scip));
+   assert(SCIPisExactSolve(scip));
 
    /* update local flag */
    aggrrow->local = aggrrow->local || row->local;
@@ -3358,7 +3358,7 @@ SCIP_RETCODE addOneRowSafely(
    SCIP_ROUNDMODE previousroundmode;
    int i;
 
-   assert(SCIPisExact(scip));
+   assert(SCIPisExactSolve(scip));
    assert(rowtoolong != NULL);
    *rowtoolong = FALSE;
    *rowused = FALSE;
@@ -3527,7 +3527,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
       SCIPaggrRowClearSafe(aggrrow);
    else
       SCIPaggrRowClear(aggrrow);
-   *valid = FALSE;
+   *valid = TRUE;
    lhsused = FALSE;
    nusedrows = 0;
    nnegslackrows = 0;
@@ -3659,7 +3659,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    }
 
    if( *valid )
-   SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, valid);
+      SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, valid);
    if( SCIPisCertificateActive(scip) )
    {
       SCIP_Bool validcert;
@@ -3837,7 +3837,7 @@ SCIP_RETCODE postprocessCutSafely(
    SCIP_Real maxcoef;
    SCIP_Real minallowedcoef;
 
-   assert(SCIPisExact(scip));
+   assert(SCIPisExactSolve(scip));
 
    assert(scip != NULL);
    assert(cutinds != NULL);
