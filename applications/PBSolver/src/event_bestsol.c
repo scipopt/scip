@@ -86,11 +86,9 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
 {  /*lint --e{715}*/
    SCIP_MESSAGEHDLR* messagehdlr;
    SCIP_MESSAGEHDLRDATA* messagehdlrdata;
-   SCIP_SOL* bestsol;
-   SCIP_Real solvalue;
+   SCIP_Real solval;
    SCIP_Bool quiet;
    SCIP_Bool comment;
-   int solval;
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
@@ -100,10 +98,9 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
 
    SCIPdebugMessage("exec method of best solution event of pbsolver\n");
 
-   bestsol = SCIPgetBestSol(scip);
-   assert(bestsol != NULL);
-   solvalue = SCIPgetSolOrigObj(scip, bestsol);
-   solval = (solvalue > 0.0) ? (solvalue + 0.5) : (solvalue - 0.5); /*lint !e524*/
+   /* get best solution value */
+   solval = SCIPround(scip, SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
+   assert(!SCIPisHugeValue(scip, ABS(solval)));
 
    messagehdlr = SCIPgetMessagehdlr(scip);
    assert(messagehdlr != NULL);
@@ -119,7 +116,7 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
    messagehdlrdata->comment = FALSE;
 
    /* print best solution value */
-   SCIPinfoMessage(scip, NULL, "o %d\n", solval);
+   SCIPinfoMessage(scip, NULL, "o %.0lf\n", -solval != 0.0 ? solval : 0.0); /*lint !e777*/
 
    /* reset old values of message handler data */
    SCIPmessagehdlrSetQuiet(messagehdlr, quiet);
