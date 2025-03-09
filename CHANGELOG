@@ -270,6 +270,7 @@ Fixed bugs
 - respect fixing if variable is declared binary in bounds section of mps file
 - fixed reading mps files with short row and column names and some fixed-form mps files with spaces in row names
 - force local bounds to adjusted value when fixing variable
+- adds missing NULL check for Benders' subproblems in feasalt cut
 
 Build system
 ------------
