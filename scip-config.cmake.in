@@ -7,8 +7,10 @@ include(CMakeFindDependencyMacro)
 
 list(APPEND CMAKE_MODULE_PATH @EXTRA_CMAKE_MODULE_PATH@)
 
-set(SCIP_LIBRARIES libscip)
+set(SCIP_LIBRARIES libscip @CONF_SANITIZE_FLAGS@)
 set(SCIP_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
+# additional compilation flags to use
+set(SCIP_COMPILE_FLAGS @CONF_SANITIZE_FLAGS@)
 set(SCIP_FOUND TRUE)
 
 # If SCIP was built with GMP then we also need it.

@@ -523,6 +523,9 @@ SCIP_RETCODE catchEventBinvar(
    /* catch bound change events on variable */
    SCIP_CALL( SCIPcatchVarEvent(scip, binvar, eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
 
+   assert(consdata->nglbfixedzeros >= 0);
+   assert(consdata->nglbfixedones >= 0);
+
    /* update the globally fixed variables counter for this variable */
    if( SCIPvarGetUbGlobal(binvar) < 0.5)
       consdata->nglbfixedzeros++;
@@ -582,8 +585,6 @@ SCIP_RETCODE dropEventBinvar(
 
    assert(consdata->nglbfixedzeros >= 0);
    assert(consdata->nglbfixedones >= 0);
-   assert(consdata->nfixedzeros >= 0);
-   assert(consdata->nfixedones >= 0);
 
    return SCIP_OKAY;
 }
@@ -667,10 +668,10 @@ SCIP_RETCODE catchAllEvents(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->nglbfixedones == 0);
+
+   /* check that the global constraint state is clean */
    assert(consdata->nglbfixedzeros == 0);
-   assert(consdata->nfixedones == 0);
-   assert(consdata->nfixedzeros == 0);
+   assert(consdata->nglbfixedones == 0);
 
    /* catch event for every single variable */
    for( v = 0; v < consdata->nvars; ++v )
@@ -709,11 +710,9 @@ SCIP_RETCODE dropAllEvents(
       SCIP_CALL( dropEventIntvar(scip, cons, eventhdlrintvars, v) );
    }
 
-   /* check that the internal constraint state is rested */
-   assert(consdata->nglbfixedones == 0);
+   /* check that the global constraint state is reset */
    assert(consdata->nglbfixedzeros == 0);
-   assert(consdata->nfixedones == 0);
-   assert(consdata->nfixedzeros == 0);
+   assert(consdata->nglbfixedones == 0);
 
    return SCIP_OKAY;
 }
@@ -2102,6 +2101,11 @@ SCIP_RETCODE consdataDeletePos(
       SCIP_CALL( dropEventBinvar(scip, cons, conshdlrdata->eventhdlrbinvars, pos) );
       SCIP_CALL( dropEventIntvar(scip, cons, conshdlrdata->eventhdlrintvars, pos) );
    }
+
+   assert(consdata->nglbfixedzeros >= 0);
+   assert(consdata->nglbfixedones >= 0);
+   assert(consdata->nfixedzeros >= 0);
+   assert(consdata->nfixedones >= 0);
 
    SCIPdebugMessage("remove variable <%s> from optcumulative constraint <%s>\n",
       SCIPvarGetName(consdata->binvars[pos]), SCIPconsGetName(cons));
@@ -4162,9 +4166,10 @@ SCIP_RETCODE SCIPcreateConsOptcumulative(
       assert(conshdlrdata != NULL);
       assert(conshdlrdata->eventhdlrbinvars != NULL);
       assert(conshdlrdata->eventhdlrintvars != NULL);
-
-      assert(consdata->nglbfixedones == 0);
       assert(consdata->nglbfixedzeros == 0);
+      assert(consdata->nglbfixedones == 0);
+      assert(consdata->nfixedzeros == 0);
+      assert(consdata->nfixedones == 0);
 
       /* catch bound change events of variables */
       SCIP_CALL( catchAllEvents(scip, *cons, conshdlrdata->eventhdlrbinvars, conshdlrdata->eventhdlrintvars) );

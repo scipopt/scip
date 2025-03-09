@@ -18,6 +18,7 @@ add_executable(lop
    src/reader_lop.c)
 
 target_link_libraries(lop ${SCIP_LIBRARIES})
+target_compile_options(lop PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET examples )
     add_dependencies( examples lop )

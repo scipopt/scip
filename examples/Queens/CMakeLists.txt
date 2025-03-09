@@ -16,6 +16,7 @@ add_executable(queens
    src/queens_main.cpp)
 
 target_link_libraries(queens ${SCIP_LIBRARIES})
+target_compile_options(queens PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET examples )
     add_dependencies( examples queens )
