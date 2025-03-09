@@ -328,9 +328,9 @@ SCIP_RETCODE primalSetCutoffboundExact(
    assert(!SCIPtreeInRepropagation(tree));
    assert(set->exact_enabled);
 
-   RatDebugMessage("changing exact cutoff bound from %q to %q\n", primal->cutoffboundexact, cutoffbound);
+   SCIPrationalDebugMessage("changing exact cutoff bound from %q to %q\n", primal->cutoffboundexact, cutoffbound);
 
-   SCIPrationalMIN(primal->cutoffboundexact, cutoffbound, primal->upperboundexact); /* get rid of numerical issues */
+   SCIPrationalMin(primal->cutoffboundexact, cutoffbound, primal->upperboundexact); /* get rid of numerical issues */
    primal->cutoffbound = SCIPrationalRoundReal(primal->cutoffboundexact, SCIP_R_ROUND_UPWARDS);
 
    /* set cut off value in LP solver */
@@ -475,7 +475,7 @@ SCIP_RETCODE primalSetUpperboundExact(
    assert(SCIPrationalIsLEReal(upperbound, SCIPsetInfinity(set)));
    assert(SCIPrationalIsLEReal(upperbound, primal->upperbound) || stat->nnodes == 0);
 
-   RatDebugMessage("changing upper bound from %q to %q\n", primal->upperboundexact, upperbound);
+   SCIPrationalDebugMessage("changing upper bound from %q to %q\n", primal->upperboundexact, upperbound);
 
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &cutoffbound) );
    SCIPrationalSet(primal->upperboundexact, upperbound);
@@ -689,7 +689,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
       else
          SCIPsolGetObjExact(primal->sols[0], set, transprob, origprob, obj);
 
-      SCIPrationalMIN(upperbound, upperbound, obj);
+      SCIPrationalMin(upperbound, upperbound, obj);
 
       SCIPrationalFreeBuffer(set->buffer, &obj);
    }
@@ -923,8 +923,8 @@ SCIP_RETCODE primalAddSol(
          SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &objexact) );
          SCIPsolGetObjExact(sol, set, transprob, origprob, objexact);
 
-         SCIPrationalMIN(primal->cutoffboundexact, primal->cutoffboundexact, objexact);
-         SCIPrationalMIN(primal->upperboundexact, primal->upperboundexact, objexact);
+         SCIPrationalMin(primal->cutoffboundexact, primal->cutoffboundexact, objexact);
+         SCIPrationalMin(primal->upperboundexact, primal->upperboundexact, objexact);
 
          SCIPrationalFreeBuffer(set->buffer, &objexact);
       }

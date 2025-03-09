@@ -1129,7 +1129,7 @@ SCIP_RETCODE SCIPlpiExactScaleRow(
 
    mpq_init(svl);
    lpi->solstat = 0;
-   RatDebugMessage("scaling row %d with factor %g in QSopt_ex\n", row, scaleval);
+   SCIPrationalDebugMessage("scaling row %d with factor %g in QSopt_ex\n", row, scaleval);
 
    rowlist[0] = row;
    /* get row */

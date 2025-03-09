@@ -1583,7 +1583,7 @@ SCIP_RETCODE projectShift(
                SCIPrationalSet(tmp2, projshiftdata->interiorpoint[map]);
                SCIPrationalDiff(tmp, projshiftdata->interiorpoint[map], correction[i]);
                SCIPrationalDiv(tmp2, tmp2, tmp);
-               SCIPrationalMIN(lambda1, lambda1, tmp2);
+               SCIPrationalMin(lambda1, lambda1, tmp2);
             }
          }
          SCIPrationalSetInt(lambda2, 1, 1);
@@ -1601,7 +1601,7 @@ SCIP_RETCODE projectShift(
             {
                SCIPrationalDiv(tmp, correction[i], projshiftdata->interiorray[map]);
                SCIPrationalNegate(tmp, tmp);
-               SCIPrationalMAX(lambda2, lambda2, tmp);
+               SCIPrationalMax(lambda2, lambda2, tmp);
             }
          }
       }
@@ -1705,7 +1705,7 @@ SCIP_RETCODE projectShift(
    {
       if( !SCIPrationalIsZero(dualsol[i]) )
       {
-         RatDebugMessage("row %s has multiplier %q: ", lpexact->rows[i]->fprow->name, dualsol[i]);
+         SCIPrationalDebugMessage("row %s has multiplier %q: ", lpexact->rows[i]->fprow->name, dualsol[i]);
          SCIPdebug(SCIProwExactPrint(lpexact->rows[i], messagehdlr, NULL));
       }
       for( j = 0; j < lpexact->rows[i]->len; j++ )
@@ -1719,7 +1719,7 @@ SCIP_RETCODE projectShift(
    {
       if( !SCIPrationalIsZero(lpexact->cols[i]->farkascoef) )
       {
-         RatDebugMessage("variable %q <= %s <= %q has farkas coefficient %q \n", lpexact->cols[i]->lb,
+         SCIPrationalDebugMessage("variable %q <= %s <= %q has farkas coefficient %q \n", lpexact->cols[i]->lb,
             SCIPvarGetName(lpexact->cols[i]->var), lpexact->cols[i]->ub, lpexact->cols[i]->farkascoef);
       }
       SCIPrationalDiff(violation[i], violation[i], dualsol[i + nrows]);

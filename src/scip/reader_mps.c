@@ -1588,7 +1588,7 @@ SCIP_RETCODE readRhsExact(
                SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, valexact) );
                SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, valexact) );
             }
-            RatDebugMessage("RHS <%s> lhs: %q  rhs: %q  val: <%q>\n", mpsinputField2(mpsi), lhs, rhs, valexact);
+            SCIPrationalDebugMessage("RHS <%s> lhs: %q  rhs: %q  val: <%q>\n", mpsinputField2(mpsi), lhs, rhs, valexact);
          }
          if( mpsinputField5(mpsi) != NULL )
          {
@@ -1632,7 +1632,7 @@ SCIP_RETCODE readRhsExact(
                   SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, valexact) );
                   SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, valexact) );
                }
-               RatDebugMessage("RHS <%s> lhs: %q  rhs: %q  val: <%q>\n", mpsinputField4(mpsi), lhs, rhs, valexact);
+               SCIPrationalDebugMessage("RHS <%s> lhs: %q  rhs: %q  val: <%q>\n", mpsinputField4(mpsi), lhs, rhs, valexact);
             }
          }
       }

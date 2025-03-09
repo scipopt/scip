@@ -1520,7 +1520,7 @@ void SCIPgetLowerboundExact(
        */
       treelowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
       SCIPrationalSetReal(result, treelowerbound);
-      SCIPrationalMIN(result, result, scip->primal->upperboundexact);
+      SCIPrationalMin(result, result, scip->primal->upperboundexact);
    }
 }
 

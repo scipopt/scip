@@ -254,9 +254,9 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    cr_assert(SCIPrationalIsEqual(rbuf, r1));
 
    /* min/max */
-   SCIPrationalMIN(r2, r1, rbuf);
+   SCIPrationalMin(r2, r1, rbuf);
    cr_assert(SCIPrationalIsEqual(rbuf, r2));
-   SCIPrationalMAX(r2, r1, rbuf);
+   SCIPrationalMax(r2, r1, rbuf);
    cr_assert(SCIPrationalIsEqual(r1, r2));
 
    /* comparisons (GT/LT/GE/LE) (only one checed, since use each other)*/

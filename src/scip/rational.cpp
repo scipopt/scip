@@ -612,87 +612,6 @@ void SCIPrationalSetInt(
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
-/** checks if a string describes a rational number */
-SCIP_Bool SCIPisRationalString(
-   const char*           desc                /**< string to check */
-   )
-{
-   assert(desc != NULL);
-
-   if( *desc == '-' || *desc == '+' )
-      ++desc;
-
-   if( *desc == '\0' || *desc == '/' )
-      return FALSE;
-
-   if( SCIPstrncasecmp(desc, "inf", 3) == 0 )
-      return TRUE;
-
-   desc += strspn(desc, "0123456789");
-
-   if( *desc == '\0' )
-      return TRUE;
-
-   if( *desc != '/' )
-      return FALSE;
-
-   ++desc;
-
-   if( *desc == '\0' )
-      return FALSE;
-
-   desc += strspn(desc, "0123456789");
-
-   return *desc == '\0';
-}
-
-/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p str
- *
- *  @return Returns TRUE if a value could be extracted, otherwise FALSE
- */
-SCIP_Bool SCIPstrToRationalValue(
-   char*                 str,                /**< string to search */
-   SCIP_Rational*        value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
-   )
-{
-   size_t endpos;
-
-   assert(str != nullptr);
-   assert(value != nullptr);
-   assert(endptr != nullptr);
-
-   *endptr = str;
-
-   if( *str == '-' || *str == '+' )
-      ++str;
-
-   endpos = strspn(str, "0123456789");
-
-   if( endpos == 0 )
-      return FALSE;
-
-   str += endpos;
-
-   if( *str == '/' )
-   {
-      ++str;
-      endpos = strspn(str, "0123456789");
-
-      if( endpos == 0 )
-         return FALSE;
-
-      str += endpos;
-   }
-
-   std::string s(*endptr, str);
-
-   *endptr = str;
-   SCIPrationalSetString(value, s.c_str());
-
-   return TRUE;
-}
-
 /** set a rational to the value described by a string */
 void SCIPrationalSetString(
    SCIP_Rational*        res,                /**< the result */
@@ -804,6 +723,87 @@ void SCIPrationalResetFloatingPointRepresentable(
    assert(rat != nullptr);
 
    rat->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+}
+
+/** checks if a string describes a rational number */
+SCIP_Bool SCIPisRationalString(
+   const char*           desc                /**< string to check */
+   )
+{
+   assert(desc != NULL);
+
+   if( *desc == '-' || *desc == '+' )
+      ++desc;
+
+   if( *desc == '\0' || *desc == '/' )
+      return FALSE;
+
+   if( SCIPstrncasecmp(desc, "inf", 3) == 0 )
+      return TRUE;
+
+   desc += strspn(desc, "0123456789");
+
+   if( *desc == '\0' )
+      return TRUE;
+
+   if( *desc != '/' )
+      return FALSE;
+
+   ++desc;
+
+   if( *desc == '\0' )
+      return FALSE;
+
+   desc += strspn(desc, "0123456789");
+
+   return *desc == '\0';
+}
+
+/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
+SCIP_Bool SCIPstrToRationalValue(
+   char*                 str,                /**< string to search */
+   SCIP_Rational*        value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   )
+{
+   size_t endpos;
+
+   assert(str != nullptr);
+   assert(value != nullptr);
+   assert(endptr != nullptr);
+
+   *endptr = str;
+
+   if( *str == '-' || *str == '+' )
+      ++str;
+
+   endpos = strspn(str, "0123456789");
+
+   if( endpos == 0 )
+      return FALSE;
+
+   str += endpos;
+
+   if( *str == '/' )
+   {
+      ++str;
+      endpos = strspn(str, "0123456789");
+
+      if( endpos == 0 )
+         return FALSE;
+
+      str += endpos;
+   }
+
+   std::string s(*endptr, str);
+
+   *endptr = str;
+   SCIPrationalSetString(value, s.c_str());
+
+   return TRUE;
 }
 
 /*
@@ -1205,7 +1205,7 @@ void SCIPrationalInvert(
  */
 
 /** compute the minimum of two rationals */
-void SCIPrationalMIN(
+void SCIPrationalMin(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< the first rational */
    SCIP_Rational*        op2                 /**< the second rational */
@@ -1236,7 +1236,7 @@ void SCIPrationalMIN(
 }
 
 /** compute the minimum of two rationals */
-void SCIPrationalMAX(
+void SCIPrationalMax(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< the first rational */
    SCIP_Rational*        op2                 /**< the second rational */
@@ -1632,7 +1632,7 @@ int SCIPrationalToString(
    }
    if( ret == strlen )
    {
-      RatDebugMessage("Rational string too long to fit in buffer. Rational : %q \n", rational);
+      SCIPrationalDebugMessage("Rational string too long to fit in buffer. Rational : %q \n", rational);
    }
 
    return ret;
@@ -2728,7 +2728,7 @@ void SCIPrationalSetInfinity(
 }
 
 /** return the infinity threshold for rationals */
-SCIP_Real SCIPrationalRatGetInfinity(
+SCIP_Real SCIPrationalGetInfinity(
    void
    )
 {

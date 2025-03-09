@@ -2428,7 +2428,7 @@ SCIP_RETCODE solCheckExact(
 #ifdef SCIP_DEBUG
                else
                {
-                  RatDebugMessage("  -> solution value %q violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
+                  SCIPrationalDebugMessage("  -> solution value %q violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
                      SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
                }
 #endif
@@ -2445,13 +2445,13 @@ SCIP_RETCODE solCheckExact(
                {
                   if( printreason )
                   {
-                     RatDebugMessage("infinite solution value %q for variable  <%s> with obj %q implies objective value +infinity\n",
+                     SCIPrationalDebugMessage("infinite solution value %q for variable  <%s> with obj %q implies objective value +infinity\n",
                         SCIPrationalApproxReal(solval), SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
                   }
 #ifdef SCIP_DEBUG
                   else
                   {
-                     RatDebugMessage("infinite solution value %q for variable  <%s> with obj %g implies objective value +infinity\n",
+                     SCIPrationalDebugMessage("infinite solution value %q for variable  <%s> with obj %g implies objective value +infinity\n",
                         solval, SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
                   }
 #endif
@@ -4029,7 +4029,7 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
       SCIPsolGetValExact(solval, sol, set, stat, vars[i]);
       roundmode = vars[i]->obj > 0 ? SCIP_R_ROUND_UPWARDS : SCIP_R_ROUND_DOWNWARDS;
 
-      RatDebugMessage("overwriting value %g of var %s with value %g (%q) \n", SCIPsolGetVal(sol, set, stat, vars[i]),
+      SCIPrationalDebugMessage("overwriting value %g of var %s with value %g (%q) \n", SCIPsolGetVal(sol, set, stat, vars[i]),
            vars[i]->name, SCIPrationalRoundReal(solval, roundmode), solval);
 
       SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[i],

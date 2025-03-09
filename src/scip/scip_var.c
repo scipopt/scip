@@ -6575,7 +6575,7 @@ SCIP_RETCODE SCIPtightenVarLbExact(
       return SCIP_OKAY;
    }
 
-   SCIPrationalMIN(newbound, newbound, ub);
+   SCIPrationalMin(newbound, newbound, ub);
    if( SCIPrationalIsLE(newbound, lb) )
    {
       SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
@@ -6825,7 +6825,7 @@ SCIP_RETCODE SCIPtightenVarUbExact(
       return SCIP_OKAY;
    }
 
-   SCIPrationalMAX(newbound, newbound, lb);
+   SCIPrationalMax(newbound, newbound, lb);
    if( SCIPrationalIsGE(newbound, ub) )
    {
       SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
@@ -7226,7 +7226,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    if( SCIPrationalIsNegInfinity(adjustedBound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
-      RatDebugMessage("ignore upper bound tightening for %s from %q to -infinity\n", SCIPvarGetName(var),
+      SCIPrationalDebugMessage("ignore upper bound tightening for %s from %q to -infinity\n", SCIPvarGetName(var),
          SCIPvarGetUbLocalExact(var));
 #endif
       goto RETURN_SCIP_OKAY;
@@ -7348,7 +7348,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    if( SCIPrationalIsNegInfinity(adjustedBound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
-      RatDebugMessage("ignore upper bound tightening for %s from %q to -infinity\n", SCIPvarGetName(var),
+      SCIPrationalDebugMessage("ignore upper bound tightening for %s from %q to -infinity\n", SCIPvarGetName(var),
          SCIPvarGetUbLocalExact(var));
 #endif
       goto RETURN_SCIP_OKAY;

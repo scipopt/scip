@@ -2980,7 +2980,7 @@ void consdataGetActivity(
       else if( nneginf > 0 )
          SCIPrationalSetString(activity, "-inf");
 
-      RatDebugMessage("corrected activity of linear constraint: %q\n", activity);
+      SCIPrationalDebugMessage("corrected activity of linear constraint: %q\n", activity);
       SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
    }
 }
@@ -3009,7 +3009,7 @@ void consdataGetFeasibility(
    SCIPrationalDiff(op1, consdata->rhs, activity);
    SCIPrationalDiff(op2, activity, consdata->lhs);
 
-   SCIPrationalMIN(ret, op1, op2);
+   SCIPrationalMin(ret, op1, op2);
 
    SCIPrationalFreeBuffer(SCIPbuffer(scip), &activity);
    SCIPrationalFreeBuffer(SCIPbuffer(scip), &op1);
@@ -4989,7 +4989,7 @@ SCIP_RETCODE checkCons(
    else
       consdataGetActivity(scip, consdata, sol, useexactsol, activity);
 
-   RatDebugMessage("consdata activity=%q (lhs=%q, rhs=%q, row=%p, checklprows=%u, rowinlp=%u, sol=%p, hascurrentnodelp=%u)\n",
+   SCIPrationalDebugMessage("consdata activity=%q (lhs=%q, rhs=%q, row=%p, checklprows=%u, rowinlp=%u, sol=%p, hascurrentnodelp=%u)\n",
       activity, consdata->lhs, consdata->rhs, (void*)consdata->rowexact, checklprows,
       consdata->rowexact == NULL ? 0 : SCIProwExactIsInLP(consdata->rowexact), (void*)sol,
       consdata->rowexact == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
@@ -5284,7 +5284,7 @@ SCIP_RETCODE propagateCons(
 
          if( minactivity > consdata->rhsreal )
          {
-            RatDebugMessage("linear constraint <%s> is infeasible (rhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
+            SCIPrationalDebugMessage("linear constraint <%s> is infeasible (rhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
             SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, TRUE) );
             /* analyze conflict */
@@ -5295,7 +5295,7 @@ SCIP_RETCODE propagateCons(
          }
          else if( maxactivity < consdata->lhsreal )
          {
-            RatDebugMessage("linear constraint <%s> is infeasible (lhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
+            SCIPrationalDebugMessage("linear constraint <%s> is infeasible (lhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhsreal, consdata->rhsreal);
             SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, FALSE) );
             /* analyze conflict */

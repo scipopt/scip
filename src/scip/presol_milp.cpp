@@ -677,7 +677,7 @@ SCIP_RETCODE performRationalPresolving(
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpval) );
          setRational(scip, tmpval, value);
 
-         RatDebugMessage("Papilo fix var %s to %q \n", SCIPvarGetName(var), tmpval);
+         SCIPrationalDebugMessage("Papilo fix var %s to %q \n", SCIPvarGetName(var), tmpval);
 
          /* SCIP has different rules for aggregation than PaPILO
           * As a result, SCIP might have aggregated and replaced the variable that PaPILO now wants to fix
@@ -795,7 +795,7 @@ SCIP_RETCODE performRationalPresolving(
             setRational(scip, tmpside, side);
             SCIPrationalDiff(tmpside, tmpside, constant);
 
-            RatDebugMessage("Papilo aggregate vars %s, %s with scalars %q, %q and constant %q \n", SCIPvarGetName(varx), SCIPvarGetName(vary),
+            SCIPrationalDebugMessage("Papilo aggregate vars %s, %s with scalars %q, %q and constant %q \n", SCIPvarGetName(varx), SCIPvarGetName(vary),
                tmpscalarx, tmpscalary, constant);
 
             SCIP_CALL( SCIPaggregateVarsExact(scip, varx, vary, tmpscalarx, tmpscalary, tmpside, &infeas, &redundant, &aggregated) );
@@ -848,7 +848,7 @@ SCIP_RETCODE performRationalPresolving(
             SCIPrationalDiff(updatedSide, updatedSide, constant);
             SCIPrationalDiv(updatedSide, updatedSide, colCoef);
 
-            RatDebugMessage("Papilo multiaggregate var %s, constant %q \n", SCIPvarGetName(aggrvar), updatedSide);
+            SCIPrationalDebugMessage("Papilo multiaggregate var %s, constant %q \n", SCIPvarGetName(aggrvar), updatedSide);
 
             SCIP_CALL( SCIPmultiaggregateVarExact(scip, aggrvar, tmpvars.size(),
                   tmpvars.data(), tmpvals, updatedSide, &infeas, &aggregated) );
@@ -982,7 +982,7 @@ SCIP_RETCODE performRationalPresolving(
             if( tightened )
             {
                *nchgbds += 1;
-               RatDebugMessage("Papilo tightened lb of variable %s \n", SCIPvarGetName(var));
+               SCIPrationalDebugMessage("Papilo tightened lb of variable %s \n", SCIPvarGetName(var));
             }
 
             if( infeas )
@@ -1003,7 +1003,7 @@ SCIP_RETCODE performRationalPresolving(
             if( tightened )
             {
                *nchgbds += 1;
-               RatDebugMessage("Papilo tightened ub of variable %s \n", SCIPvarGetName(var));
+               SCIPrationalDebugMessage("Papilo tightened ub of variable %s \n", SCIPvarGetName(var));
             }
 
             if( infeas )

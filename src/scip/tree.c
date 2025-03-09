@@ -2247,7 +2247,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    assert((boundtype == SCIP_BOUNDTYPE_LOWER && SCIPrationalIsGT(newbound, oldlb))
          || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPrationalIsLT(newbound, oldub)));
 
-   RatDebugMessage("adding boundchange at node %llu at depth %u to variable <%s>: old bounds=[%q,%q], new %s bound: %q (infer%s=<%s>, inferinfo=%d)\n",
+   SCIPrationalDebugMessage("adding boundchange at node %llu at depth %u to variable <%s>: old bounds=[%q,%q], new %s bound: %q (infer%s=<%s>, inferinfo=%d)\n",
       node->number, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var),
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound, infercons != NULL ? "cons" : "prop",
       infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo);
@@ -2288,7 +2288,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       SCIPvarAdjustLbExact(var, set, newbound);
       assert(SCIPrationalIsLE(newbound, oldub));
       SCIPrationalSet(oldbound, oldlb);
-      SCIPrationalMIN(newbound, newbound, oldub);
+      SCIPrationalMin(newbound, newbound, oldub);
       oldboundreal = SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_UPWARDS);
 
       if ( set->stage == SCIP_STAGE_SOLVING && SCIPrationalIsInfinity(newbound) )
@@ -2306,7 +2306,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       SCIPvarAdjustUbExact(var, set, newbound);
       assert(SCIPrationalIsGE(newbound, oldlb));
       SCIPrationalSet(oldbound, oldub);
-      SCIPrationalMAX(newbound, newbound, oldlb);
+      SCIPrationalMax(newbound, newbound, oldlb);
       oldboundreal = SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS);
 
       if ( set->stage == SCIP_STAGE_SOLVING && SCIPrationalIsNegInfinity(newbound) )
@@ -2327,7 +2327,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       return SCIP_OKAY;
    }
 
-   RatDebugMessage(" -> transformed to active variable <%s>: old bounds=[%q,%q], new %s bound: %q, obj: %q\n",
+   SCIPrationalDebugMessage(" -> transformed to active variable <%s>: old bounds=[%q,%q], new %s bound: %q, obj: %q\n",
       SCIPvarGetName(var), oldlb, oldub, boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound,
       SCIPvarGetObjExact(var));
 
@@ -2350,7 +2350,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
          assert(conflictingdepth > 0);
          assert(conflictingdepth < tree->pathlen);
 
-         RatDebugMessage(" -> bound change <%s> %s %g violates current local bounds [%q,%q] since depth %d: remember for later application\n",
+         SCIPrationalDebugMessage(" -> bound change <%s> %s %g violates current local bounds [%q,%q] since depth %d: remember for later application\n",
             SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", newbound,
             SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var), conflictingdepth);
 
@@ -2386,7 +2386,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       {
          /* the root should be repropagated due to the bound change */
          SCIPnodePropagateAgain(tree->root, set, stat, tree);
-         RatDebugMessage("marked root node to be repropagated due to global bound change <%s>:[%q,%q] -> [%q,%q] found in depth %u\n",
+         SCIPrationalDebugMessage("marked root node to be repropagated due to global bound change <%s>:[%q,%q] -> [%q,%q] found in depth %u\n",
             SCIPvarGetName(var), oldlb, oldub, boundtype == SCIP_BOUNDTYPE_LOWER ? newbound : oldlb,
             boundtype == SCIP_BOUNDTYPE_LOWER ? oldub : newbound, node->depth);
       }

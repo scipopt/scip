@@ -1427,7 +1427,7 @@ SCIP_RETCODE certificatePrintMirSplit(
    vars = SCIPprobGetVars(prob);
    slackrhs = 0;
 
-   RatDebugMessage("printing split disjunction <= %q \\/ >= %q+1  \n", mirinfo->rhs, mirinfo->rhs);
+   SCIPrationalDebugMessage("printing split disjunction <= %q \\/ >= %q+1  \n", mirinfo->rhs, mirinfo->rhs);
 
    for( i = 0; i < mirinfo->nsplitvars; ++i )
    {
@@ -1814,10 +1814,10 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
             SCIPrationalNegate(tmpval, tmpval);
             SCIPrationalMultReal(tmpval, tmpval, mirinfo->slacksign[i]);
             SCIPrationalDiv(tmpval, tmpval, oneminusf0);
-            RatDebugMessage("tmpval 1 %g \n", SCIPrationalApproxReal(tmpval));
+            SCIPrationalDebugMessage("tmpval 1 %g \n", SCIPrationalApproxReal(tmpval));
             SCIPrationalSetReal(tmpval, mirinfo->slackusedcoef[i]);;
             SCIPrationalDiffReal(tmpval, tmpval, mirinfo->slackcoefficients[i]);
-            RatDebugMessage("tmpval 2 %g (slacksign %d, splitcoef %g, cutval %g) \n", SCIPrationalApproxReal(tmpval), mirinfo->slacksign[i], mirinfo->slackcoefficients[i], mirinfo->slackusedcoef[i]);
+            SCIPrationalDebugMessage("tmpval 2 %g (slacksign %d, splitcoef %g, cutval %g) \n", SCIPrationalApproxReal(tmpval), mirinfo->slacksign[i], mirinfo->slackcoefficients[i], mirinfo->slackusedcoef[i]);
          }
 
          key = SCIPcertificateGetRowIndex(certificate, slackrow, SCIPrationalIsPositive(tmpval));
@@ -1859,7 +1859,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
          SCIPrationalSetReal(value, -aggrinfo->negslackweights[i]);
          SCIPrationalDiv(value, value, oneminusf0);
          SCIPrationalAddReal(value, value, aggrinfo->substfactor[i]);
-         RatDebugMessage("adding %q times row (negative continous slacks) (%g aggweight %g substfactor): ", value, -aggrinfo->negslackweights[i] / SCIPrationalApproxReal(oneminusf0), aggrinfo->substfactor[i]);
+         SCIPrationalDebugMessage("adding %q times row (negative continous slacks) (%g aggweight %g substfactor): ", value, -aggrinfo->negslackweights[i] / SCIPrationalApproxReal(oneminusf0), aggrinfo->substfactor[i]);
          SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
 
          assert(slackrow != NULL);
@@ -1901,12 +1901,12 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
             SCIPrationalDiv(value, value, oneminusf0); // (fr-f0) / (1-f0)
             SCIPrationalAddReal(value, value, (mirinfo->slackcoefficients[i] * -mirinfo->slacksign[i]) - 1); // (down(ar) + (fr-f0) / (1-f0)
             SCIPrationalMultReal(value, value, mirinfo->slacksign[i]);
-            RatDebugMessage("Exact coefficient %q(%g), used coefficient %g\n", value, SCIPrationalApproxReal(value), mirinfo->slackusedcoef[i]);
+            SCIPrationalDebugMessage("Exact coefficient %q(%g), used coefficient %g\n", value, SCIPrationalApproxReal(value), mirinfo->slackusedcoef[i]);
 
             SCIPrationalAddReal(value, value, mirinfo->slackusedcoef[i]);
          }
 
-         RatDebugMessage("adding %q(%g) times row: ", value, SCIPrationalApproxReal(value));
+         SCIPrationalDebugMessage("adding %q(%g) times row: ", value, SCIPrationalApproxReal(value));
          SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
 
          assert(slackrow != NULL);
@@ -2187,7 +2187,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 
          ind[len] = SCIPrationalIsNegative(vals[len]) ? SCIPvarGetUbCertificateIndexLocal(var) : SCIPvarGetLbCertificateIndexLocal(var);
 
-         RatDebugMessage("Column %d for var %s has index %l and farkas coef %q \n", col->index, col->var->name, ind[len], val);
+         SCIPrationalDebugMessage("Column %d for var %s has index %l and farkas coef %q \n", col->index, col->var->name, ind[len], val);
 
          /* update farkasrhs */
          if( usefarkas )
@@ -2230,7 +2230,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          if( !SCIPrationalIsEqual(row->lhs, row->rhs) && !SCIPrationalIsAbsInfinity(row->lhs) && SCIPrationalIsNegative(val) )
              ind[len] += 1;
 
-         RatDebugMessage("Row (index %d, %s has index %l and farkas coef %q ", row->index, row->fprow->name, ind[len], val);
+         SCIPrationalDebugMessage("Row (index %d, %s has index %l and farkas coef %q ", row->index, row->fprow->name, ind[len], val);
          SCIPdebug(SCIProwExactPrint(row, set->scip->messagehdlr, NULL) );
 
          /* update farkasrhs */
@@ -3267,7 +3267,7 @@ SCIP_RETCODE SCIPcertificatePrintUnsplitting(
       else if( nodedata->rightinfeas )
          SCIPrationalSet(lowerbound, nodedata->derbound_left);
       else
-         SCIPrationalMIN(lowerbound, nodedata->derbound_left, nodedata->derbound_right);
+         SCIPrationalMin(lowerbound, nodedata->derbound_left, nodedata->derbound_right);
 
       if( SCIPrationalIsInfinity(nodedata->derbound_left) && SCIPrationalIsInfinity(nodedata->derbound_right) )
          infeas = TRUE;

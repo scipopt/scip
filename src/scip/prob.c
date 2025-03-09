@@ -1674,7 +1674,7 @@ void SCIPprobAddObjoffsetExact(
    assert(prob->transformed);
    assert(prob->objoffsetexact != NULL);
 
-   RatDebugMessage("adding %q to objective offset %q \n", addval, prob->objoffsetexact);
+   SCIPrationalDebugMessage("adding %q to objective offset %q \n", addval, prob->objoffsetexact);
    SCIPrationalAdd(prob->objoffsetexact, prob->objoffsetexact, addval);
 }
 
@@ -1962,7 +1962,7 @@ SCIP_RETCODE probScaleObjExact(
       SCIP_CALL( SCIPcalcIntegralScalarExact(set->buffer, objvals, nints, OBJSCALE_MAXFINALSCALE,
          intscalar, &success) );
 
-      RatDebugMessage("integral objective scalar: success=%u, intscalar=%q\n", success, intscalar);
+      SCIPrationalDebugMessage("integral objective scalar: success=%u, intscalar=%q\n", success, intscalar);
 
       /* apply scaling */
       if( success && !SCIPrationalIsEqualReal(intscalar, 1.0) )
@@ -1979,7 +1979,7 @@ SCIP_RETCODE probScaleObjExact(
          {
             for( v = 0; v < nints; ++v )
             {
-               RatDebugMessage(" -> var <%s>: newobj = %q\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
+               SCIPrationalDebugMessage(" -> var <%s>: newobj = %q\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
                SCIP_CALL( SCIPvarChgObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpexact, eventqueue, objvals[v]) );
             }
             transprob->objoffset *= SCIPrationalApproxReal(intscalar);

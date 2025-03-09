@@ -286,6 +286,20 @@ void SCIPrationalSetInt(
    SCIP_Longint          denom               /**< the denominator */
    );
 
+/** sets a rational to the value described by a string */
+SCIP_EXPORT
+void SCIPrationalSetString(
+   SCIP_Rational*        res,                /**< the result */
+   const char*           desc                /**< the string describing the rational */
+   );
+
+/** sets a rational to the value of another a real */
+SCIP_EXPORT
+void SCIPrationalSetReal(
+   SCIP_Rational*        res,                /**< the result */
+   SCIP_Real             real                /**< the value to set to */
+   );
+
 /** checks if a string describes a rational number */
 SCIP_EXPORT
 SCIP_Bool SCIPisRationalString(
@@ -301,20 +315,6 @@ SCIP_Bool SCIPstrToRationalValue(
    char*                 str,                /**< string to search */
    SCIP_Rational*        value,              /**< pointer to store the parsed value */
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
-   );
-
-/** sets a rational to the value described by a string */
-SCIP_EXPORT
-void SCIPrationalSetString(
-   SCIP_Rational*        res,                /**< the result */
-   const char*           desc                /**< the string describing the rational */
-   );
-
-/** sets a rational to the value of another a real */
-SCIP_EXPORT
-void SCIPrationalSetReal(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Real             real                /**< the value to set to */
    );
 
 /** resets the flag isfprepresentable to SCIP_ISFPREPRESENTABLE_UNKNOWN */
@@ -468,7 +468,7 @@ void SCIPrationalInvert(
 
 /** compute the minimum of two rationals */
 SCIP_EXPORT
-void SCIPrationalMIN(
+void SCIPrationalMin(
    SCIP_Rational*        ret,                /**< the result */
    SCIP_Rational*        r1,                 /**< the first rational */
    SCIP_Rational*        r2                  /**< the second rational */
@@ -476,7 +476,7 @@ void SCIPrationalMIN(
 
 /** compute the maximum of two rationals */
 SCIP_EXPORT
-void SCIPrationalMAX(
+void SCIPrationalMax(
    SCIP_Rational*        ret,                /**< the result */
    SCIP_Rational*        r1,                 /**< the first rational */
    SCIP_Rational*        r2                  /**< the second rational */
@@ -685,13 +685,13 @@ SCIP_EXPORT
 void SCIPrationalPrintf(const char *format, ...);
 
 /** rational extension for the SCIPdebugMsg */
-/*lint -emacro(681,RatDebugMessage) */
-/*lint -emacro(506,RatDebugMessage) */
-/*lint -emacro(774,RatDebugMessage) */
+/*lint -emacro(681,SCIPrationalDebugMessage) */
+/*lint -emacro(506,SCIPrationalDebugMessage) */
+/*lint -emacro(774,SCIPrationalDebugMessage) */
 #ifdef SCIP_DEBUG
-#define RatDebugMessage                 printf("[%s:%d] debug: ", __FILE__, __LINE__), SCIPrationalPrintf
+#define SCIPrationalDebugMessage                 printf("[%s:%d] debug: ", __FILE__, __LINE__), SCIPrationalPrintf
 #else
-#define RatDebugMessage                 while( FALSE ) /*lint -e{530}*/ SCIPrationalPrintf
+#define SCIPrationalDebugMessage                 while( FALSE ) /*lint -e{530}*/ SCIPrationalPrintf
 #endif
 
 /** prints rational to file using message handler */
