@@ -17,7 +17,14 @@ add_executable(pbsolver
     src/event_bestsol.c
 )
 
-target_link_libraries(pbsolver ${SCIP_LIBRARIES})
+# link to math library if it is available
+find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
+endif()
+
+target_link_libraries(pbsolver ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(pbsolver PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET applications )
     add_dependencies( applications pbsolver )
