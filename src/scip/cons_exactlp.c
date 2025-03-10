@@ -711,7 +711,7 @@ SCIP_RETCODE consdataCreate(
    if( SCIPrationalIsGT(lhs, rhs) )
    {
       SCIPwarningMessage(scip, "left hand side of linear constraint greater than right hand side\n");
-      SCIPwarningMessage(scip, " -> lhs=%g, rhs=%g\n", SCIPrationalApproxReal(lhs), SCIPrationalApproxReal(rhs));
+      SCIPwarningMessage(scip, " -> lhs=%g, rhs=%g\n", SCIPrationalGetRealApproximation(lhs), SCIPrationalGetRealApproximation(rhs));
    }
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
@@ -2967,7 +2967,7 @@ void consdataGetActivity(
       }
       assert(nneginf >= 0 && nposinf >= 0);
 
-      SCIPdebugMsg(scip, "activity of linear constraint: %.15g, %d positive infinity values, %d negative infinity values \n", SCIPrationalApproxReal(activity), nposinf, nneginf);
+      SCIPdebugMsg(scip, "activity of linear constraint: %.15g, %d positive infinity values, %d negative infinity values \n", SCIPrationalGetRealApproximation(activity), nposinf, nneginf);
 
       /* check for amount of infinity values and correct the activity */
       if( nposinf > 0 && nneginf > 0 )
@@ -5763,7 +5763,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactLinear)
    loclowerbound = SCIPgetLocalLowerbound(scip);
    glblowerbound = SCIPgetLowerbound(scip);
    cutoffbound = SCIPgetCutoffbound(scip);
-   maxbound = glblowerbound + SCIPrationalApproxReal(conshdlrdata->maxcardbounddist) * (cutoffbound - glblowerbound);
+   maxbound = glblowerbound + SCIPrationalGetRealApproximation(conshdlrdata->maxcardbounddist) * (cutoffbound - glblowerbound);
 
    separatecards = SCIPisLE(scip, loclowerbound, maxbound);
    separatecards = separatecards && (SCIPgetNLPBranchCands(scip) > 0);
@@ -6653,7 +6653,7 @@ SCIP_DECL_CONSCOPY(consCopyExactLinear)
       consname = SCIPconsGetName(sourcecons);
 
    SCIP_CALL( SCIPcopyConsExactLinear(scip, cons, sourcescip, consname, nvars, sourcevars, sourcecoefs,
-         SCIPrationalApproxReal(SCIPgetLhsExactLinear(sourcescip, sourcecons)), SCIPrationalApproxReal(SCIPgetRhsExactLinear(sourcescip, sourcecons)), varmap, consmap,
+         SCIPrationalGetRealApproximation(SCIPgetLhsExactLinear(sourcescip, sourcecons)), SCIPrationalGetRealApproximation(SCIPgetRhsExactLinear(sourcescip, sourcecons)), varmap, consmap,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
    assert(cons != NULL || *valid == FALSE);
 

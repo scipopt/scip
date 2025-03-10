@@ -4972,7 +4972,7 @@ void SCIProwExactPrint(
          SCIPmessageFPrintInfo(messagehdlr, file, "+ ");
 
       SCIPrationalMessage(messagehdlr, file, row->vals[r]);
-      SCIPmessageFPrintInfo(messagehdlr, file, "(%g)<%s> ", SCIPrationalApproxReal(row->vals[r]), SCIPvarGetName(row->cols[r]->var));
+      SCIPmessageFPrintInfo(messagehdlr, file, "(%g)<%s> ", SCIPrationalGetRealApproximation(row->vals[r]), SCIPvarGetName(row->cols[r]->var));
    }
 
    /* print constant */
@@ -5959,7 +5959,7 @@ void SCIProwExactRecalcLPActivity(
    }
 #endif
 
-   row->activity = SCIPrationalApproxReal(rowexact->activity);
+   row->activity = SCIPrationalGetRealApproximation(rowexact->activity);
    row->validactivitylp = stat->lpcount;
 }
 
@@ -5996,7 +5996,7 @@ void SCIProwExactRecalcPseudoActivity(
    }
 
    row->validpsactivitydomchg = stat->domchgcount;
-   row->pseudoactivity = SCIPrationalApproxReal(rowexact->pseudoactivity);
+   row->pseudoactivity = SCIPrationalGetRealApproximation(rowexact->pseudoactivity);
 }
 
 /** gets objective value of column */
@@ -6966,8 +6966,8 @@ SCIP_RETCODE SCIPlpExactGetSol(
       lpicols[c]->validredcostlp = lpcount;
       if( overwritefplp )
       {
-         lp->fplp->lpicols[c]->primsol =  SCIPrationalApproxReal(primsol[c]);
-         lp->fplp->lpicols[c]->redcost =  SCIPrationalApproxReal(redcost[c]);
+         lp->fplp->lpicols[c]->primsol =  SCIPrationalGetRealApproximation(primsol[c]);
+         lp->fplp->lpicols[c]->redcost =  SCIPrationalGetRealApproximation(redcost[c]);
          lp->fplp->lpicols[c]->basisstatus = (unsigned int) cstat[c];
          lp->fplp->lpicols[c]->validredcostlp = lpcount;
       }
@@ -7032,8 +7032,8 @@ SCIP_RETCODE SCIPlpExactGetSol(
             assert(SCIProwIsInLP(lpirows[r]->fprowrhs));
             fprow = lpirows[r]->fprowrhs;
          }
-         fprow->dualsol = SCIPrationalApproxReal(dualsol[r]);
-         fprow->activity = SCIPrationalApproxReal(lpirows[r]->activity);
+         fprow->dualsol = SCIPrationalGetRealApproximation(dualsol[r]);
+         fprow->activity = SCIPrationalGetRealApproximation(lpirows[r]->activity);
          fprow->basisstatus = (unsigned int) rstat[r]; /*lint !e732*/
          fprow->validactivitylp = lpcount;
       }
@@ -7272,7 +7272,7 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
       lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
       if( overwritefplp )
       {
-         lp->fplp->lpirows[r]->dualfarkas = SCIPrationalApproxReal(dualfarkas[r]);
+         lp->fplp->lpirows[r]->dualfarkas = SCIPrationalGetRealApproximation(dualfarkas[r]);
          lp->fplp->lpirows[r]->dualsol = SCIPsetInfinity(set);
          lp->fplp->lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
          lp->fplp->lpirows[r]->validactivitylp = -1L;
@@ -8464,16 +8464,16 @@ void SCIPlpExactOverwriteFpDualSol(
    for( int c = 0; c < lp->ncols; ++c )
    {
       if( dualfarkas )
-         lp->cols[c]->fpcol->farkascoef = SCIPrationalApproxReal(lp->cols[c]->farkascoef);
+         lp->cols[c]->fpcol->farkascoef = SCIPrationalGetRealApproximation(lp->cols[c]->farkascoef);
       else
-         lp->cols[c]->fpcol->redcost = SCIPrationalApproxReal(lp->cols[c]->redcost);
+         lp->cols[c]->fpcol->redcost = SCIPrationalGetRealApproximation(lp->cols[c]->redcost);
    }
 
    for( int r = 0; r < lp->nrows; ++r )
    {
       if( dualfarkas )
-         lp->rows[r]->fprow->dualfarkas = SCIPrationalApproxReal(lp->rows[r]->dualfarkas);
+         lp->rows[r]->fprow->dualfarkas = SCIPrationalGetRealApproximation(lp->rows[r]->dualfarkas);
       else
-         lp->rows[r]->fprow->dualsol = SCIPrationalApproxReal(lp->rows[r]->dualsol);
+         lp->rows[r]->fprow->dualsol = SCIPrationalGetRealApproximation(lp->rows[r]->dualsol);
    }
 }

@@ -711,7 +711,7 @@ SCIP_Real SCIPrationalRoundReal(
 
 /** returns approximation of rational as SCIP_Real */
 SCIP_EXPORT
-SCIP_Real SCIPrationalApproxReal(
+SCIP_Real SCIPrationalGetRealApproximation(
    SCIP_Rational*        r                   /**< the rational to convert */
    );
 

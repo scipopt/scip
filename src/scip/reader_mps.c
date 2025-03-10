@@ -1303,7 +1303,7 @@ SCIP_RETCODE readColsExact(
             if( SCIPrationalIsAbsInfinity(val) )
             {
                SCIPwarningMessage(scip, "Coefficient of variable <%s> in constraint <%s> contains infinite value <%e>,"
-                  " consider adjusting SCIP infinity.\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPrationalApproxReal(val));
+                  " consider adjusting SCIP infinity.\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPrationalGetRealApproximation(val));
             }
             SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, var, val) );
          }
@@ -2501,7 +2501,7 @@ SCIP_RETCODE readBoundsExact(
          case 'L':
             if( !SCIPrationalIsZero(SCIPvarGetLbGlobalExact(var)) && SCIPrationalIsLT(val, SCIPvarGetLbGlobalExact(var)) )
             {
-               SCIPwarningMessage(scip, "Relaxing already defined lower bound (%.14g) of variable <%s> to (%.14g) not allowed.\n", SCIPvarGetLbGlobal(var), SCIPvarGetName(var), SCIPrationalApproxReal(val));
+               SCIPwarningMessage(scip, "Relaxing already defined lower bound (%.14g) of variable <%s> to (%.14g) not allowed.\n", SCIPvarGetLbGlobal(var), SCIPvarGetName(var), SCIPrationalGetRealApproximation(val));
             }
 
             SCIP_CALL( SCIPchgVarLbExact(scip, var, val) );
@@ -2510,7 +2510,7 @@ SCIP_RETCODE readBoundsExact(
             {
                if( !SCIPrationalIsIntegral(val) )
                {
-                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalApproxReal(val));
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalGetRealApproximation(val));
                }
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
                /* don't assert feasibility here because the presolver will and should detect a infeasibility */
@@ -2519,7 +2519,7 @@ SCIP_RETCODE readBoundsExact(
             {
                if( !SCIPrationalIsIntegral(val) )
                {
-                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalApproxReal(val));
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalGetRealApproximation(val));
                }
             }
 
@@ -2527,7 +2527,7 @@ SCIP_RETCODE readBoundsExact(
          case 'U':
             if( SCIPrationalIsGT(val, SCIPvarGetUbGlobalExact(var)) )
             {
-               SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), SCIPrationalApproxReal(val));
+               SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), SCIPrationalGetRealApproximation(val));
             }
 
             SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
@@ -2535,7 +2535,7 @@ SCIP_RETCODE readBoundsExact(
             {
                if( !SCIPrationalIsIntegral(val) )
                {
-                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalApproxReal(val));
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalGetRealApproximation(val));
                }
 
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
@@ -2545,7 +2545,7 @@ SCIP_RETCODE readBoundsExact(
             {
                if( !SCIPrationalIsIntegral(val) )
                {
-                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalApproxReal(val));
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalGetRealApproximation(val));
                }
             }
             break;
@@ -2579,7 +2579,7 @@ SCIP_RETCODE readBoundsExact(
             {
                if( SCIPrationalIsGT(val, SCIPvarGetUbGlobalExact(var)) )
                {
-                  SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), SCIPrationalApproxReal(val));
+                  SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), SCIPrationalGetRealApproximation(val));
                }
 
                SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );

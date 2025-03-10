@@ -964,12 +964,12 @@ SCIP_RETCODE addObjTerm(
             SCIPrationalAdd(scipvalrat, scipvalrat, SCIPvarGetObjExact(scipvar));
 
             SCIPdebugMessage("zimpl reader: change obj<%g> of var: add<%g> as approx", SCIPvarGetObj(scipvar),
-               SCIPrationalApproxReal(scipvalrat) );
+               SCIPrationalGetRealApproximation(scipvalrat) );
             SCIPdebug(SCIPrationalToString(scipvalrat, str));
             SCIPdebugMessage(" (<%s> as exact) \n", str);
 
             readerdata->retcode = SCIPchgVarObjExact(scip, scipvar, scipvalrat);
-            SCIPchgVarObj(scip, scipvar, SCIPrationalApproxReal(scipvalrat));
+            SCIPchgVarObj(scip, scipvar, SCIPrationalGetRealApproximation(scipvalrat));
 
             SCIPrationalFreeBlock(SCIPblkmem(scip), &scipvalrat);
          }

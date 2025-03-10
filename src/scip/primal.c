@@ -2317,7 +2317,7 @@ SCIP_RETCODE primalAddSolExact(
    SCIPsolGetObjExact(sol, set, transprob, origprob, obj);
 
    SCIPsetDebugMsg(set, "insert exact primal solution %p with obj %g at position %d (replace=%u):\n",
-      (void*)sol, SCIPrationalApproxReal(obj), insertpos, replace);
+      (void*)sol, SCIPrationalGetRealApproximation(obj), insertpos, replace);
 
    SCIPdebug( SCIP_CALL( SCIPsolPrintExact(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
 

@@ -322,7 +322,7 @@ SCIP_RETCODE addRowExact(
             continue;
 
          SCIPrationalMultReal(matrix->matrixvalsexact->rowmatvalexact[matrix->nnonzs], vals[j], factor);
-         matrix->rowmatval[matrix->nnonzs] = SCIPrationalApproxReal(matrix->matrixvalsexact->rowmatvalexact[matrix->nnonzs]);
+         matrix->rowmatval[matrix->nnonzs] = SCIPrationalGetRealApproximation(matrix->matrixvalsexact->rowmatvalexact[matrix->nnonzs]);
          probindex = SCIPvarGetProbindex(vars[j]);
          assert(matrix->vars[probindex] == vars[j]);
 
@@ -348,7 +348,7 @@ SCIP_RETCODE addRowExact(
 
          /* due to the factor, <= constraints will be transfered to >= */
          SCIPrationalMultReal(matrix->matrixvalsexact->rowmatvalexact[matrix->nnonzs], vals[j], factor);
-         matrix->rowmatval[matrix->nnonzs] = SCIPrationalApproxReal(matrix->matrixvalsexact->rowmatvalexact[matrix->nnonzs]);
+         matrix->rowmatval[matrix->nnonzs] = SCIPrationalGetRealApproximation(matrix->matrixvalsexact->rowmatvalexact[matrix->nnonzs]);
          probindex = SCIPvarGetProbindex(vars[j]);
          assert(matrix->vars[probindex] == vars[j]);
 

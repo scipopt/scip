@@ -179,7 +179,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
          continue;
 
       SCIPrationalGetFrac(tmp, tmp);
-      frac = SCIPrationalApproxReal(tmp);
+      frac = SCIPrationalGetRealApproximation(tmp);
 
       /* insert candidate in candidate list */
       branchpriority = SCIPvarGetBranchPriority(var);

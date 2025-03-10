@@ -1439,7 +1439,7 @@ SCIP_RETCODE readCoefficientsRational(
                syntaxError(scip, lpinput, "two objective offsets.");
                goto TERMINATE;
             }
-            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * SCIPrationalApproxReal(coef));
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * SCIPrationalGetRealApproximation(coef));
             haveobjoffset = TRUE;
             SCIPrationalMultReal(objoffset, coef, (double) coefsign);
          }
@@ -1456,7 +1456,7 @@ SCIP_RETCODE readCoefficientsRational(
       /* check if we read a value */
       if( isValueRational(scip, lpinput, coef) )
       {
-         SCIPdebugMsg(scip, "(line %d) read coefficient value: %g with sign %+d\n", lpinput->linenumber, SCIPrationalApproxReal(coef), coefsign);
+         SCIPdebugMsg(scip, "(line %d) read coefficient value: %g with sign %+d\n", lpinput->linenumber, SCIPrationalGetRealApproximation(coef), coefsign);
          if( havevalue )
          {
             syntaxError(scip, lpinput, "two consecutive values.");
@@ -1498,7 +1498,7 @@ SCIP_RETCODE readCoefficientsRational(
                syntaxError(scip, lpinput, "two objective offsets.");
                goto TERMINATE;
             }
-            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * SCIPrationalApproxReal(coef));
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * SCIPrationalGetRealApproximation(coef));
             SCIPrationalMultReal(objoffset, coef, (double) coefsign);
          }
 
@@ -1553,7 +1553,7 @@ SCIP_RETCODE readCoefficientsRational(
       if( !inquadpart )
       {
          /* insert the linear coefficient */
-         SCIPdebugMsg(scip, "(line %d) read linear coefficient: %+g<%s>\n", lpinput->linenumber, coefsign * SCIPrationalApproxReal(coef), SCIPvarGetName(var));
+         SCIPdebugMsg(scip, "(line %d) read linear coefficient: %+g<%s>\n", lpinput->linenumber, coefsign * SCIPrationalGetRealApproximation(coef), SCIPvarGetName(var));
          if( !SCIPrationalIsZero(coef) )
          {
             /* resize the vars and coefs array if needed */
@@ -2180,7 +2180,7 @@ SCIP_RETCODE readConstraintsRational(
          goto TERMINATE;
       }
       assert(vars != NULL);
-      retcode = createIndicatorConstraint(scip, lpinput, name, vars[0], SCIPrationalApproxReal(lhs));
+      retcode = createIndicatorConstraint(scip, lpinput, name, vars[0], SCIPrationalGetRealApproximation(lhs));
    }
 
  TERMINATE:
