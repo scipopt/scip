@@ -25,6 +25,7 @@ namespace scip
    using Integer = cpp_int;
 }
 #endif
+
 namespace scip
 {
    using sparsevec = std::vector<SCIP_Rational>;
@@ -32,6 +33,7 @@ namespace scip
 #else
 namespace scip
 {
+   /**@todo replace this dummy class with a direct interface to GMP for systems where Boost is not available */
    class Rational
    {
    public:
