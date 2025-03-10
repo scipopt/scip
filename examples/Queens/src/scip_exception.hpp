@@ -39,7 +39,7 @@
  */
 inline char* SCIPgetErrorString(SCIP_RETCODE retcode, char* buffer_str, int buffersize)
 {
-   // the following was copied from SCIPprintError
+   // the following was copied from SCIPretcodePrintError()
    switch(retcode)
    {
    case SCIP_OKAY:
