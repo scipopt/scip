@@ -34,15 +34,7 @@
 #include "include/scip_test.h"
 
 
-static
-void setup(void) { }
-
-
-static
-void teardown(void) { }
-
-
-TestSuite(hash, .init = setup, .fini = teardown);
+TestSuite(hash);
 
 Test(hash, setup_and_teardown, .description = "test that hashing numerics are correct")
 {
