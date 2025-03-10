@@ -3362,7 +3362,11 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    return SCIP_OKAY;
 }
 
-/** creates and captures an exact LP row from a fp row */
+/** creates and captures an exact LP row from a fp row
+ *
+ *  @note This may change the floating-point coefficients slightly if the rational representation is rounded to smaller
+ *  denominators according to parameter exact/cutmaxdenomsize.
+ */
 SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_ROW*             fprow,              /**< corresponding fp row to create from */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -3376,15 +3380,16 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_ROWEXACT** row;
    SCIP_ROWEXACT* workrow;
    int i;
-   int nlocks;
+   int oldnlocks;
    SCIP_Rational* tmpval;
    SCIP_Rational* tmplhs;
    SCIP_Real* rowvals;
 
    row = &(fprow->rowexact);
 
-   nlocks = (int) fprow->nlocks;
-   fprow->nlocks = 0; // bit hacky: unlock the row to be able to change it (slightly)
+   /* unlock the row temporarily to be able to change it (slightly) */
+   oldnlocks = (int) fprow->nlocks;
+   fprow->nlocks = 0;
 
    assert(row != NULL);
    assert(fprow != NULL);
@@ -3437,7 +3442,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    RatFreeBuffer(set->buffer, &tmplhs);
    RatFreeBuffer(set->buffer, &tmpval);
 
-   fprow->nlocks = nlocks; /*lint !e732*/
+   fprow->nlocks = oldnlocks; /*lint !e732*/
 
    return SCIP_OKAY;
 }
@@ -7598,81 +7603,6 @@ SCIP_RETCODE SCIPlpExactClear(
    SCIPsetDebugMsg(set, "clearing LP\n");
    SCIP_CALL( SCIPlpExactshrinkCols(lp, set, 0) );
    SCIP_CALL( SCIPlpExactshrinkRows(lp, blkmem, set, 0) );
-
-   return SCIP_OKAY;
-}
-
-/** checks whether primal solution satisfies all integrality restrictions exactly.
- * This checks either the fp solution exactly or checks the exact solution, if one exists.
- */
-SCIP_RETCODE SCIPlpExactcheckIntegralityExact(
-   SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_RESULT*          result              /**< result pointer */
-   )
-{
-   int c;
-   int ncols;
-   SCIP_VARTYPE vartype;
-   SCIP_COL* col;
-   SCIP_COL** cols;
-   SCIP_COLEXACT* colexact;
-   SCIP_Real primsol;
-   SCIP_VAR* var;
-   SCIP_Rational* primsolexact;
-   SCIP_Bool exintegral = TRUE;
-
-   assert(result != NULL);
-
-   SCIPdebugMessage("enforcing integrality of exact LP solution:\n");
-
-   cols = lp->cols;
-   ncols = lp->ncols;
-
-   SCIP_CALL( RatCreateBuffer(set->buffer, &primsolexact) );
-
-   for( c = 0; c < ncols; ++c )
-   {
-      col = cols[c];
-      colexact = SCIPcolGetColExact(col);
-
-      assert(col != NULL);
-      assert(col->lppos == c);
-      assert(col->lpipos >= 0);
-
-      primsol = SCIPcolGetPrimsol(col);
-      if( lpexact->solved )
-         RatSet(primsolexact, colexact->primsol);
-      else
-         RatSetReal(primsolexact, primsol);
-
-      assert(primsol < SCIP_INVALID);
-      assert(SCIPsetIsInfinity(set, col->ub) || SCIPsetIsFeasLE(set, primsol, col->ub));
-
-      var = col->var;
-      assert(var != NULL);
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-      assert(SCIPvarGetCol(var) == col);
-
-      /* LP branching candidates are fractional binary and integer variables; implicit variables are kept at the end
-       * of the candidates array for some rounding heuristics
-       */
-      vartype = SCIPvarGetType(var);
-      if( vartype == SCIP_VARTYPE_CONTINUOUS )
-         continue;
-
-      exintegral = RatIsIntegral(primsolexact);
-      if( !exintegral )
-         break;
-   }
-
-   if( exintegral )
-      *result = SCIP_FEASIBLE;
-   else
-      *result = SCIP_INFEASIBLE;
-
-   RatFreeBuffer(set->buffer, &primsolexact);
 
    return SCIP_OKAY;
 }

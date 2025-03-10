@@ -795,6 +795,7 @@ set(scipheaders
     scip/pub_iisfinder.h
     scip/pub_implics.h
     scip/pub_lp.h
+    scip/pub_lpexact.h
     scip/pub_matrix.h
     scip/pub_message.h
     scip/pub_misc.h
@@ -1178,14 +1179,12 @@ include(GenerateExportHeader)
 generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${PROJECT_BINARY_DIR}/scip/scip_export.h)
 target_compile_definitions(scip PRIVATE SCIP_STATIC_DEFINE)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    if (SANITIZE_ADDRESS OR SANITIZE_MEMORY OR SANITIZE_THREAD OR
-        SANITIZE_UNDEFINED)
-       find_package(Sanitizers)
-       add_sanitizers(libscip)
-       add_sanitizers(scip)
-    endif()
-endif()
+if(SANITIZE)
+    find_package(Sanitizers)
+    add_sanitizers(libscip)
+    add_sanitizers(scip)
+    get_target_property(CONF_SANITIZE_FLAGS libscip SANITIZE_FLAGS)
+endif(SANITIZE)
 
 target_link_libraries(scip
     PUBLIC

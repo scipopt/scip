@@ -2584,7 +2584,7 @@ SCIP_RETCODE branchOnVar(
 
    /* update the lower bounds in the children; we must not do this if columns are missing in the LP
     * (e.g., because we are doing branch-and-price) or the problem should be solved exactly */
-   if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
+   if( SCIPallColsInLP(scip) && !SCIPisExact(scip) )
    {
       /* update the lower bound for the LPs for further children of both created nodes */
       if( decision->downdbvalid )
@@ -6090,7 +6090,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          }
 #endif
          /* update lower bound of current node */
-         if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
+         if( SCIPallColsInLP(scip) && !SCIPisExact(scip) )
          {
             SCIP_CALL( SCIPupdateLocalLowerbound(scip, decision->proveddb) );
          }

@@ -3060,7 +3060,7 @@ SCIP_RETCODE SCIPstoreCertificateActiveAggregationInfo(
    SCIP_CERTIFICATE* certificate;
    SCIP_AGGREGATIONINFO* aggrinfo;
 
-   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+   if( !SCIPisExact(scip) || !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
 
    certificate = SCIPgetCertificate(scip);
@@ -3089,7 +3089,7 @@ SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
    int i;
    int csplit;
 
-   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+   if( !SCIPisExact(scip) || !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
 
    certificate = SCIPgetCertificate(scip);
@@ -3150,7 +3150,7 @@ SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
    SCIP_MIRINFO* mirinfo;
    int i;
 
-   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+   if( !SCIPisExact(scip) || !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
 
    certificate = SCIPgetCertificate(scip);
@@ -3203,7 +3203,7 @@ SCIP_RETCODE SCIPfreeCertificateActiveAggregationInfo(
    SCIP_CERTIFICATE* certificate;
    SCIP_AGGREGATIONINFO* aggrinfo;
 
-   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+   if( !SCIPisExact(scip) || !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
 
    certificate = SCIPgetCertificate(scip);
@@ -3819,7 +3819,7 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    if( !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
    certificate = SCIPgetCertificate(scip);
-   row = SCIPgetRowexExactLinear(scip, cons);
+   row = SCIPgetRowExactExactLinear(scip, cons);
 
    lhs = SCIProwExactGetLhs(row);
    rhs = SCIProwExactGetRhs(row);

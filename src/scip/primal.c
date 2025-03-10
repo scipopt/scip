@@ -1426,12 +1426,17 @@ SCIP_Bool solOfInterest(
    /* in exact solving mode, we need to compare the exact objective value with the exact cutoff bound in order to
     * determine whether a solution is improving
     */
-   if( set->exact_enabled && set->exact_improvingsols && SCIPsolIsExact(sol) )
+   if( set->exact_enabled && set->exact_improvingsols )
    {
       SCIP_Rational* tmpobj;
 
       SCIP_CALL_ABORT( RatCreateBuffer(set->buffer, &tmpobj) );
-      SCIPsolGetObjExact(sol, set, transprob, origprob, tmpobj);
+
+      if( SCIPsolIsExact(sol) )
+         SCIPsolGetObjExact(sol, set, transprob, origprob, tmpobj);
+      else
+         RatSetReal(tmpobj, SCIPsolGetObj(sol, set, transprob, origprob));
+
       solisbetterexact = RatIsLT(tmpobj, primal->cutoffboundexact);
 
       RatFreeBuffer(set->buffer, &tmpobj);

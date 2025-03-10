@@ -516,6 +516,9 @@ SCIP_RETCODE SCIPincludeHeurSimplerounding(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecSimplerounding, heurdata) );
    assert(heur != NULL);
 
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
+
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopySimplerounding) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitSimplerounding) );

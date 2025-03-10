@@ -45,8 +45,9 @@
 #include "scip/type_lpexact.h"
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
+#include "scip/type_rational.h"
 #include "scip/type_sol.h"
-#include "scip/pub_lp.h"
+#include "scip/pub_lpexact.h"
 
 #include "scip/struct_lpexact.h"
 
@@ -239,7 +240,11 @@ SCIP_RETCODE SCIProwExactCreate(
    SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    );
 
-/** creates and captures an exact LP row from a fp row */
+/** creates and captures an exact LP row from a fp row
+ *
+ *  @note This may change the floating-point coefficients slightly if the rational representation is rounded to smaller
+ *  denominators according to parameter exact/cutmaxdenomsize.
+ */
 SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_ROW*             fprow,              /**< corresponding fp row to create from */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -727,16 +732,6 @@ SCIP_RETCODE SCIPlpExactClear(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** checks whether primal solution satisfies all integrality restrictions exactly.
- * This checks either the fp solution exactly or checks the exact solution, if one exists.
- */
-SCIP_RETCODE SCIPlpExactcheckIntegralityExact(
-   SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_RESULT*          result              /**< result pointer */
-   );
-
 /** forces an exact lp to be solved in the next exact bound computation */
 void SCIPlpExactForceExactSolve(
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
@@ -827,12 +822,6 @@ SCIP_RETCODE SCIPlpExactEndDive(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR**            vars,               /**< array with all active variables */
    int                   nvars               /**< number of active variables */
-   );
-
-/** returns whether the exact LP is in diving mode */
-SCIP_EXPORT
-SCIP_Bool SCIPlpExactDiving(
-   SCIP_LPEXACT*         lpexact             /**< current exact LP data */
    );
 
 /** writes exact LP to a file */

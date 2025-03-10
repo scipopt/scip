@@ -597,7 +597,7 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
 
    /* we cannot apply reduced cost fixing, if we want to solve exactly */
    /**@todo implement reduced cost fixing with interval arithmetics */
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
       return SCIP_OKAY;
 
    /* only call propagator, if the current node has an LP */

@@ -31,9 +31,13 @@ if(NOT LIBM)
 endif()
 
 target_link_libraries(gastrans ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(gastrans PRIVATE ${SCIP_COMPILE_FLAGS})
 target_link_libraries(spring ${SCIP_LIBRARIES})
+target_compile_options(spring PRIVATE ${SCIP_COMPILE_FLAGS})
 target_link_libraries(brachistochrone ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(brachistochrone PRIVATE ${SCIP_COMPILE_FLAGS})
 target_link_libraries(circlepacking ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(circlepacking PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET examples )
     add_dependencies( examples gastrans spring brachistochrone circlepacking )

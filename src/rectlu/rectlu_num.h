@@ -34,14 +34,12 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
-#ifdef SCIP_WITH_GMP
-#include <gmp.h>
-#endif
-
 #ifndef __RECTLU_NUM_H
 #define __RECTLU_NUM_H
 
 #ifdef SCIP_WITH_GMP
+#include <gmp.h>
+
 #define QSnum_type mpq_t
 
 /*lint --e(160)*/

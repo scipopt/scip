@@ -2319,7 +2319,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING || SCIPinProbing(scip) || SCIPisExactSolve(scip) )
+   if( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING || SCIPinProbing(scip) || SCIPisExact(scip) )
       return SCIP_OKAY;
 
    /* do not run, if not all variables are explicitly known */

@@ -120,8 +120,8 @@ struct SCIP_Heur
    int                   ndivesets;          /**< number of diving controllers of this heuristic */
    SCIP_HEURTIMING       timingmask;         /**< positions in the node solving loop where heuristic should be executed */
    SCIP_Bool             usessubscip;        /**< does the heuristic use a secondary SCIP instance? */
+   SCIP_Bool             exact;              /**< is the primal heuristic safe to be used in exact solving mode? */
    SCIP_Bool             initialized;        /**< is primal heuristic initialized? */
-   SCIP_Bool             isexact;            /**< is the primal heurisitc safe to be used in exact solving mode */
    char                  dispchar;           /**< display character of primal heuristic */
 };
 

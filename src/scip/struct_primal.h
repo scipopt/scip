@@ -35,6 +35,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_rational.h"
 #include "scip/type_sol.h"
 #include "scip/type_primal.h"
 

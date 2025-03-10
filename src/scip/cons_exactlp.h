@@ -44,7 +44,7 @@
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 #include "scip/type_certificate.h"
-#include "scip/rational.h"
+#include "scip/type_rational.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -367,7 +367,7 @@ SCIP_ROW* SCIPgetRowExactLinear(
  *  the user must not modify the row!
  */
 SCIP_EXPORT
-SCIP_ROWEXACT* SCIPgetRowexExactLinear(
+SCIP_ROWEXACT* SCIPgetRowExactExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );

@@ -26,6 +26,8 @@ if(NOT LIBM)
 endif()
 
 target_link_libraries(ringpacking ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(ringpacking PRIVATE ${SCIP_COMPILE_FLAGS})
+
 if( TARGET applications )
     add_dependencies( applications ringpacking )
 endif()

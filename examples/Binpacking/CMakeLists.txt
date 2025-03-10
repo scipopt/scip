@@ -27,6 +27,8 @@ if(NOT LIBM)
 endif()
 
 target_link_libraries(binpacking ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(binpacking PRIVATE ${SCIP_COMPILE_FLAGS})
+
 if( TARGET examples )
     add_dependencies( examples binpacking )
 endif()

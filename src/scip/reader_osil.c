@@ -56,7 +56,6 @@
 #include "scip/pub_var.h"
 #include "scip/reader_osil.h"
 #include "scip/scip_cons.h"
-#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
@@ -2359,12 +2358,6 @@ SCIP_DECL_READERREAD(readerReadOsil)
    vars = NULL;
    nvars = 0;
    nconss = -1;
-
-   if( SCIPisExactSolve(scip) )
-   {
-      SCIPerrorMessage("reading of osil format in exact solving mode is not yet supported\n");
-      return SCIP_READERROR;
-   }
 
    /* read OSiL xml file */
    start = SCIPxmlProcess(filename);

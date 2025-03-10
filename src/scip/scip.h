@@ -107,6 +107,7 @@
 #include "scip/pub_iisfinder.h"
 #include "scip/pub_implics.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_lpexact.h"
 #include "scip/pub_nlp.h"
 #include "scip/pub_matrix.h"
 #include "scip/pub_message.h"

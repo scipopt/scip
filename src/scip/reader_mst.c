@@ -37,7 +37,6 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_reader.h"
 #include "scip/reader_mst.h"
-#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_param.h"
@@ -150,12 +149,6 @@ SCIP_DECL_READERREAD(readerReadMst)
    if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
    {
       SCIPerrorMessage("reading of partial solution file is only possible before the solving process is started\n");
-      return SCIP_READERROR;
-   }
-
-   if( SCIPisExactSolve(scip) )
-   {
-      SCIPerrorMessage("reading of partial solution file in exact solving mode is not yet supported\n");
       return SCIP_READERROR;
    }
 

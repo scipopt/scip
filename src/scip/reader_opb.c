@@ -677,7 +677,7 @@ SCIP_RETCODE createVariable(
 
    SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
          initial, removable, NULL, NULL, NULL, NULL, NULL) );
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIP_CALL( SCIPaddVarExactData(scip, newvar, NULL, NULL, NULL) );
    }
@@ -1166,7 +1166,7 @@ SCIP_RETCODE setObjective(
       /* handle non-linear terms by and-constraints */
       if( ntermcoefs > 0 )
       {
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
             SCIPerrorMessage("non-linear objectives are not supported in exact mode\n");
             return SCIP_READERROR;
@@ -1241,7 +1241,7 @@ SCIP_RETCODE setObjective(
          assert(linvars != NULL); /* for lint */
          assert(coefs != NULL);
 
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &obj) );
 
@@ -1469,7 +1469,7 @@ SCIP_RETCODE readConstraints(
 
    if( ntermcoefs > 0 || issoftcons )
    {
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          SCIPerrorMessage("non-linear constraints are not supported in exact mode\n");
          return SCIP_READERROR;
@@ -1494,7 +1494,7 @@ SCIP_RETCODE readConstraints(
 #else
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "linear");
 #endif
-      if( !SCIPisExactSolve(scip) )
+      if( !SCIPisExact(scip) )
       {
          retcode = SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs,
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
@@ -1751,7 +1751,7 @@ SCIP_RETCODE readOPBFile(
       else
          topcostrhs = (SCIP_Longint) SCIPfloor(scip, opbinput->topcost);
 
-      if( !SCIPisExactSolve(scip) )
+      if( !SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcosts, -SCIPinfinity(scip),
             (SCIP_Real) topcostrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -4012,7 +4012,7 @@ SCIP_RETCODE SCIPreadOpb(
 
    *result = SCIP_DIDNOTRUN;
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIPerrorMessage("reading of opb/wbo format in exact solving mode is not yet supported\n");
       return SCIP_READERROR;
@@ -4311,6 +4311,9 @@ SCIP_RETCODE SCIPincludeReaderOpb(
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
+
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyOpb) );

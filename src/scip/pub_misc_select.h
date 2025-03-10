@@ -36,8 +36,8 @@
 #define __SCIP_PUB_MISC_SELECT_H__
 
 #include "scip/def.h"
-#include "type_misc.h"
-#include "intervalarith.h"
+#include "scip/type_misc.h"
+#include "scip/intervalarith.h"
 
 #ifdef __cplusplus
 extern "C" {

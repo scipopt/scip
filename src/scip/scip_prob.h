@@ -47,6 +47,7 @@
 #include "scip/type_event.h"
 #include "scip/type_misc.h"
 #include "scip/type_prob.h"
+#include "scip/type_rational.h"
 #include "scip/type_result.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"

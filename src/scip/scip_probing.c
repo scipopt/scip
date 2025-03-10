@@ -590,7 +590,7 @@ SCIP_RETCODE SCIPpropagateProbing(
    SCIP_Bool changedobj;
    int nobjchg;
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpropagateProbing", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );

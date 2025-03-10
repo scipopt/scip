@@ -1930,7 +1930,7 @@ char chooseInitialBoundingMethod(
 /** chooses which bounding method to use after failed attempt to provide safe bound for current lp */
 static
 char chooseFallbackBoundingMethod(
-   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    char                  lastboundmethod     /**< last attempted dual bounding method */
    )
@@ -1973,7 +1973,7 @@ char chooseFallbackBoundingMethod(
 /* choose the next bounding method for safe dual bounding */
 static
 char chooseBoundingMethod(
-   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_PROB*            prob,               /**< problem data */
@@ -1999,7 +1999,7 @@ char chooseBoundingMethod(
 static
 SCIP_RETCODE boundShift(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
