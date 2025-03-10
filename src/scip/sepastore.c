@@ -1023,6 +1023,9 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
          if( !applied )
          {
+            /* create rational representation of the cut; note that this may slightly change the floating-point
+             * coefficients
+             */
             if( set->exact_enabled && SCIProwGetRowExact(cut) == NULL )
             {
                SCIP_Bool poolcut = FALSE;

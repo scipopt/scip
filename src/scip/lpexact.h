@@ -240,7 +240,11 @@ SCIP_RETCODE SCIProwExactCreate(
    SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    );
 
-/** creates and captures an exact LP row from a fp row */
+/** creates and captures an exact LP row from a fp row
+ *
+ *  @note This may change the floating-point coefficients slightly if the rational representation is rounded to smaller
+ *  denominators according to parameter exact/cutmaxdenomsize.
+ */
 SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_ROW*             fprow,              /**< corresponding fp row to create from */
    BMS_BLKMEM*           blkmem,             /**< block memory */

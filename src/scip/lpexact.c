@@ -3362,7 +3362,11 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    return SCIP_OKAY;
 }
 
-/** creates and captures an exact LP row from a fp row */
+/** creates and captures an exact LP row from a fp row
+ *
+ *  @note This may change the floating-point coefficients slightly if the rational representation is rounded to smaller
+ *  denominators according to parameter exact/cutmaxdenomsize.
+ */
 SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_ROW*             fprow,              /**< corresponding fp row to create from */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -3376,15 +3380,16 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_ROWEXACT** row;
    SCIP_ROWEXACT* workrow;
    int i;
-   int nlocks;
+   int oldnlocks;
    SCIP_Rational* tmpval;
    SCIP_Rational* tmplhs;
    SCIP_Real* rowvals;
 
    row = &(fprow->rowexact);
 
-   nlocks = (int) fprow->nlocks;
-   fprow->nlocks = 0; // bit hacky: unlock the row to be able to change it (slightly)
+   /* unlock the row temporarily to be able to change it (slightly) */
+   oldnlocks = (int) fprow->nlocks;
+   fprow->nlocks = 0;
 
    assert(row != NULL);
    assert(fprow != NULL);
@@ -3437,7 +3442,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    RatFreeBuffer(set->buffer, &tmplhs);
    RatFreeBuffer(set->buffer, &tmpval);
 
-   fprow->nlocks = nlocks; /*lint !e732*/
+   fprow->nlocks = oldnlocks; /*lint !e732*/
 
    return SCIP_OKAY;
 }
