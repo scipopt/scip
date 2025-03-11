@@ -274,9 +274,6 @@ SCIP_RETCODE fromCommandLine(
    /* add reading time */
    SCIP_CALL( SCIPsetBoolParam(scip, "timing/reading", TRUE) );
 
-   /* use wall clock */
-   SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", 2) );
-
    /* set intsize limit */
    SCIP_CALL( SCIPsetIntParam(scip, "reading/opbreader/maxintsize", MAXINTSIZE) );
 
