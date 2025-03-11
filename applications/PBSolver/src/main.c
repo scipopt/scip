@@ -416,11 +416,6 @@ SCIP_RETCODE fromCommandLine(
          /* load settings for pure SAT */
          SCIP_CALL( loadSettingsPureSat(scip) );
       }
-      else
-      {
-         /* activate rapidlearning */
-         SCIP_CALL( SCIPsetIntParam(scip, "separating/rapidlearning/freq", 0) );
-      }
 
 #if HEURISTICS_OFF
       /* turn off heuristics */
