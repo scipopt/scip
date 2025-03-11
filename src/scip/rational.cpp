@@ -2730,8 +2730,12 @@ void SCIPrationalSetInfinity(
    assert(inf > 0);
 
 #ifdef SCIP_THREADSAFE
-   SCIPerrorMessage("method SCIPrationalSetInfinity() not thread safe\n");
-   SCIPABORT();
+   if( inf != SCIP_DEFAULT_INFINITY )
+   {
+      SCIPerrorMessage("method SCIPrationalSetInfinity() not thread safe\n");
+      SCIPABORT();
+   }
+   assert(inf == SCIP_DEFAULT_INFINITY);
 #else
    infinity = inf;
 #endif
