@@ -1982,8 +1982,8 @@ SCIP_RETCODE probScaleObjExact(
                SCIPrationalDebugMessage(" -> var <%s>: newobj = %q\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
                SCIP_CALL( SCIPvarChgObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpexact, eventqueue, objvals[v]) );
             }
-            transprob->objoffset *= SCIPrationalGetRealApproximation(intscalar);
-            transprob->objscale /= SCIPrationalGetRealApproximation(intscalar);
+            transprob->objoffset *= SCIPrationalGetReal(intscalar);
+            transprob->objscale /= SCIPrationalGetReal(intscalar);
             transprob->objisintegral = TRUE;
             SCIPsetDebugMsg(set, "integral objective scalar: objscale=%g\n", transprob->objscale);
 

@@ -711,7 +711,7 @@ void SCIPrationalGetFrac(
 
 /** returns approximation of rational as SCIP_Real */
 SCIP_EXPORT
-SCIP_Real SCIPrationalGetRealApproximation(
+SCIP_Real SCIPrationalGetReal(
    SCIP_Rational*        r                   /**< the rational to convert */
    );
 

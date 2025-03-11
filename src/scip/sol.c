@@ -1719,7 +1719,7 @@ SCIP_RETCODE SCIPsolSetValExact(
    assert(!SCIPrationalIsAbsInfinity(val));
    assert(SCIPsolIsExact(sol));
 
-   SCIPsetDebugMsg(set, "setting value of <%s> in exact solution %p to %g\n", SCIPvarGetName(var), (void*)sol, SCIPrationalGetRealApproximation(val));
+   SCIPsetDebugMsg(set, "setting value of <%s> in exact solution %p to %g\n", SCIPvarGetName(var), (void*)sol, SCIPrationalGetReal(val));
 
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
    switch( SCIPvarGetStatusExact(var) )
@@ -1772,7 +1772,7 @@ SCIP_RETCODE SCIPsolSetValExact(
       if( !SCIPrationalIsEqual(val, SCIPvarGetLbGlobalExact(var)) )
       {
          SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %.15g to different value %.15g\n",
-            SCIPvarGetName(var), SCIPrationalGetRealApproximation(SCIPvarGetLbGlobalExact(var)), SCIPrationalGetRealApproximation(val));
+            SCIPvarGetName(var), SCIPrationalGetReal(SCIPvarGetLbGlobalExact(var)), SCIPrationalGetReal(val));
          return SCIP_INVALIDDATA;
       }
       return SCIP_OKAY;
@@ -2422,8 +2422,8 @@ SCIP_RETCODE solCheckExact(
 
                if( printreason )
                {
-                  SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", SCIPrationalGetRealApproximation(solval), SCIPvarGetName(var),
-                     SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), SCIPrationalIsGT(solval, ub) ? SCIPrationalGetRealApproximation(lb) - SCIPrationalGetRealApproximation(solval) : SCIPrationalGetRealApproximation(solval) - SCIPrationalGetRealApproximation(ub));
+                  SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", SCIPrationalGetReal(solval), SCIPvarGetName(var),
+                     SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), SCIPrationalIsGT(solval, ub) ? SCIPrationalGetReal(lb) - SCIPrationalGetReal(solval) : SCIPrationalGetReal(solval) - SCIPrationalGetReal(ub));
                }
 #ifdef SCIP_DEBUG
                else
@@ -2446,7 +2446,7 @@ SCIP_RETCODE solCheckExact(
                   if( printreason )
                   {
                      SCIPrationalDebugMessage("infinite solution value %q for variable  <%s> with obj %q implies objective value +infinity\n",
-                        SCIPrationalGetRealApproximation(solval), SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
+                        SCIPrationalGetReal(solval), SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
                   }
 #ifdef SCIP_DEBUG
                   else
@@ -4168,7 +4168,7 @@ void SCIPsolOrigAddObjvalExact(
    assert(SCIPsolIsExact(sol));
 
    SCIPrationalAdd(sol->valsexact->obj, sol->valsexact->obj, addval);
-   sol->obj = SCIPrationalGetRealApproximation(sol->valsexact->obj);
+   sol->obj = SCIPrationalGetReal(sol->valsexact->obj);
 }
 
 /** gets clock time, when this solution was found */

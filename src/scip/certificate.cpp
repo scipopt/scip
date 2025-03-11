@@ -1769,7 +1769,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       SCIPrationalSetReal(tmpval, mirinfo->scale);
       SCIP_CALL( SCIPcertificatePrintProofRational(certificate, tmpval, 10) );
 
-      SCIPdebugMessage("Verifying left part of split disjunction, multipliers 1 and 1/%g \n", SCIPrationalGetRealApproximation(oneminusf0));
+      SCIPdebugMessage("Verifying left part of split disjunction, multipliers 1 and 1/%g \n", SCIPrationalGetReal(oneminusf0));
 
       SCIPdebugMessage("Correcting for negative continous slacks ( needed for v >= 0 part ) \n");
       for( i = 0; i < aggrinfo->nnegslackrows; i++ )
@@ -1814,10 +1814,10 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
             SCIPrationalNegate(tmpval, tmpval);
             SCIPrationalMultReal(tmpval, tmpval, mirinfo->slacksign[i]);
             SCIPrationalDiv(tmpval, tmpval, oneminusf0);
-            SCIPrationalDebugMessage("tmpval 1 %g \n", SCIPrationalGetRealApproximation(tmpval));
+            SCIPrationalDebugMessage("tmpval 1 %g \n", SCIPrationalGetReal(tmpval));
             SCIPrationalSetReal(tmpval, mirinfo->slackusedcoef[i]);;
             SCIPrationalDiffReal(tmpval, tmpval, mirinfo->slackcoefficients[i]);
-            SCIPrationalDebugMessage("tmpval 2 %g (slacksign %d, splitcoef %g, cutval %g) \n", SCIPrationalGetRealApproximation(tmpval), mirinfo->slacksign[i], mirinfo->slackcoefficients[i], mirinfo->slackusedcoef[i]);
+            SCIPrationalDebugMessage("tmpval 2 %g (slacksign %d, splitcoef %g, cutval %g) \n", SCIPrationalGetReal(tmpval), mirinfo->slacksign[i], mirinfo->slackcoefficients[i], mirinfo->slackusedcoef[i]);
          }
 
          key = SCIPcertificateGetRowIndex(certificate, slackrow, SCIPrationalIsPositive(tmpval));
@@ -1859,7 +1859,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
          SCIPrationalSetReal(value, -aggrinfo->negslackweights[i]);
          SCIPrationalDiv(value, value, oneminusf0);
          SCIPrationalAddReal(value, value, aggrinfo->substfactor[i]);
-         SCIPrationalDebugMessage("adding %q times row (negative continous slacks) (%g aggweight %g substfactor): ", value, -aggrinfo->negslackweights[i] / SCIPrationalGetRealApproximation(oneminusf0), aggrinfo->substfactor[i]);
+         SCIPrationalDebugMessage("adding %q times row (negative continous slacks) (%g aggweight %g substfactor): ", value, -aggrinfo->negslackweights[i] / SCIPrationalGetReal(oneminusf0), aggrinfo->substfactor[i]);
          SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
 
          assert(slackrow != NULL);
@@ -1901,12 +1901,12 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
             SCIPrationalDiv(value, value, oneminusf0); // (fr-f0) / (1-f0)
             SCIPrationalAddReal(value, value, (mirinfo->slackcoefficients[i] * -mirinfo->slacksign[i]) - 1); // (down(ar) + (fr-f0) / (1-f0)
             SCIPrationalMultReal(value, value, mirinfo->slacksign[i]);
-            SCIPrationalDebugMessage("Exact coefficient %q(%g), used coefficient %g\n", value, SCIPrationalGetRealApproximation(value), mirinfo->slackusedcoef[i]);
+            SCIPrationalDebugMessage("Exact coefficient %q(%g), used coefficient %g\n", value, SCIPrationalGetReal(value), mirinfo->slackusedcoef[i]);
 
             SCIPrationalAddReal(value, value, mirinfo->slackusedcoef[i]);
          }
 
-         SCIPrationalDebugMessage("adding %q(%g) times row: ", value, SCIPrationalGetRealApproximation(value));
+         SCIPrationalDebugMessage("adding %q(%g) times row: ", value, SCIPrationalGetReal(value));
          SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
 
          assert(slackrow != NULL);
@@ -1930,7 +1930,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
          SCIPrationalSetReal(value, aggrinfo->weights[i]);
          SCIPrationalDiv(value, value, oneminusf0);
 
-         SCIPdebugMessage("adding (%g/%g) = %g times row: ", aggrinfo->weights[i], SCIPrationalGetRealApproximation(oneminusf0), SCIPrationalGetRealApproximation(value));
+         SCIPdebugMessage("adding (%g/%g) = %g times row: ", aggrinfo->weights[i], SCIPrationalGetReal(oneminusf0), SCIPrationalGetReal(value));
          SCIPdebug(SCIProwExactPrint(aggrrow, set->scip->messagehdlr, NULL));
 
          assert(aggrrow != NULL);

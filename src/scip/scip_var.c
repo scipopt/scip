@@ -1522,7 +1522,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
       {
          if( !SCIPrationalIsInfinity(coef)  ) /*lint !e777*/
          {
-            SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", SCIPrationalGetRealApproximation(coef), nvars);
+            SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", SCIPrationalGetReal(coef), nvars);
 
             /* push previous monomial */
             if( monomialssize <= *nmonomials )
@@ -1680,7 +1680,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
       if( !SCIPrationalIsInfinity(coef) ) /*lint !e777*/
       {
          /* push last monomial */
-         SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", SCIPrationalGetRealApproximation(coef), nvars);
+         SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", SCIPrationalGetReal(coef), nvars);
          if( monomialssize <= *nmonomials )
          {
             monomialssize = *nmonomials+1;

@@ -496,7 +496,7 @@ SCIP_RETCODE setupProjectShiftOpt(
       /* divide through by alpha and round beta to be a power of 2 */
       SCIPrationalDiv(beta, beta, alpha);
       SCIPrationalSetInt(alpha, 1, 1);
-      SCIPrationalSetReal(beta, pow(2, (int) (log(SCIPrationalGetRealApproximation(beta))/log(2))));
+      SCIPrationalSetReal(beta, pow(2, (int) (log(SCIPrationalGetReal(beta))/log(2))));
    }
 
    /* set objective to normalized value */
@@ -1416,7 +1416,7 @@ SCIP_RETCODE projectShift(
       }
    }
 
-   SCIPrationalPrintf("   objective value=%f (%q) \n", SCIPrationalGetRealApproximation(dualbound), dualbound);
+   SCIPrationalPrintf("   objective value=%f (%q) \n", SCIPrationalGetReal(dualbound), dualbound);
 #endif
 
    /* calculate violation of equality constraints r=c-A^ty */
@@ -1684,7 +1684,7 @@ SCIP_RETCODE projectShift(
       printf("projected and shifted dual solution (should be an exact dual feasible solution)\n");
       for( i = 0; i < nrows+ncols; i++ )
       {
-         SCIPrationalPrintf("   i=%d: %f.20 (%q) \n", i, SCIPrationalGetRealApproximation(dualsol[i]), dualsol[i]);
+         SCIPrationalPrintf("   i=%d: %f.20 (%q) \n", i, SCIPrationalGetReal(dualsol[i]), dualsol[i]);
       }
 #endif
    }
@@ -1807,19 +1807,19 @@ SCIP_RETCODE projectShift(
    }
 
 #ifdef PS_OUT
-   printf("   common slack=%.20f (", SCIPrationalGetRealApproximation(projshiftdata->commonslack));
+   printf("   common slack=%.20f (", SCIPrationalGetReal(projshiftdata->commonslack));
    SCIPrationalPrint(projshiftdata->commonslack);
    printf(")\n");
 
-   printf("   max violation=%.20f (", SCIPrationalGetRealApproximation(maxv));
+   printf("   max violation=%.20f (", SCIPrationalGetReal(maxv));
    SCIPrationalPrint(maxv);
    printf(")\n");
 
-   printf("   lambda (use of interior point)=%.20f (", SCIPrationalGetRealApproximation(lambda2));
+   printf("   lambda (use of interior point)=%.20f (", SCIPrationalGetReal(lambda2));
    SCIPrationalPrint(lambda2);
    printf(")\n");
 
-   printf("   dual objective value=%.20f (", SCIPrationalGetRealApproximation(dualbound));
+   printf("   dual objective value=%.20f (", SCIPrationalGetReal(dualbound));
    SCIPrationalPrint(dualbound);
    printf(")\n");
 #endif

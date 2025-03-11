@@ -1929,9 +1929,9 @@ void adjustedLbExact(
    SCIP_Rational*        lb                  /**< lower bound to adjust */
    )
 {
-   if( SCIPrationalIsNegative(lb) && SCIPsetIsInfinity(set, -SCIPrationalGetRealApproximation(lb)) )
+   if( SCIPrationalIsNegative(lb) && SCIPsetIsInfinity(set, -SCIPrationalGetReal(lb)) )
       SCIPrationalSetString(lb, "-inf");
-   else if( SCIPrationalIsPositive(lb) && SCIPsetIsInfinity(set, SCIPrationalGetRealApproximation(lb)) )
+   else if( SCIPrationalIsPositive(lb) && SCIPsetIsInfinity(set, SCIPrationalGetReal(lb)) )
       SCIPrationalSetString(lb, "inf");
    else if( isintegral )
       SCIPrationalRound(lb, lb, SCIP_R_ROUND_UPWARDS);
@@ -1978,9 +1978,9 @@ void adjustedUbExact(
    SCIP_Rational*        ub                  /**< lower bound to adjust */
    )
 {
-   if( SCIPrationalIsNegative(ub) && SCIPsetIsInfinity(set, -SCIPrationalGetRealApproximation(ub)) )
+   if( SCIPrationalIsNegative(ub) && SCIPsetIsInfinity(set, -SCIPrationalGetReal(ub)) )
       SCIPrationalSetString(ub, "-inf");
-   else if( SCIPrationalIsPositive(ub) && SCIPsetIsInfinity(set, SCIPrationalGetRealApproximation(ub)) )
+   else if( SCIPrationalIsPositive(ub) && SCIPsetIsInfinity(set, SCIPrationalGetReal(ub)) )
       SCIPrationalSetString(ub, "inf");
    else if( isintegral )
       SCIPrationalRound(ub, ub, SCIP_R_ROUND_DOWNWARDS);
@@ -1998,10 +1998,10 @@ void overwriteMultAggrWithExactData(
    if( !set->exact_enabled || SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
       return;
 
-   var->data.multaggr.constant = SCIPrationalGetRealApproximation(var->exactdata->multaggr.constant);
+   var->data.multaggr.constant = SCIPrationalGetReal(var->exactdata->multaggr.constant);
    for( i = 0; i < var->data.multaggr.nvars; i++ )
    {
-      var->data.multaggr.scalars[i] = SCIPrationalGetRealApproximation(var->exactdata->multaggr.scalars[i]);
+      var->data.multaggr.scalars[i] = SCIPrationalGetReal(var->exactdata->multaggr.scalars[i]);
    }
 }
 
@@ -6702,8 +6702,8 @@ SCIP_RETCODE SCIPvarAggregateExact(
       var->data.aggregate.var = aggvar;
       SCIPrationalSet(var->exactdata->aggregate.scalar, scalar);
       SCIPrationalSet(var->exactdata->aggregate.constant, constant);
-      var->data.aggregate.scalar = SCIPrationalGetRealApproximation(scalar);
-      var->data.aggregate.constant = SCIPrationalGetRealApproximation(constant);
+      var->data.aggregate.scalar = SCIPrationalGetReal(scalar);
+      var->data.aggregate.constant = SCIPrationalGetReal(constant);
 
       /* copy doNotMultiaggr status */
       aggvar->donotmultaggr |= var->donotmultaggr;
@@ -7550,7 +7550,7 @@ SCIP_RETCODE SCIPvarTryAggregateVarsExact(
    *infeasible = FALSE;
    *aggregated = FALSE;
 
-   absquot = REALABS(SCIPrationalGetRealApproximation(scalarx) / SCIPrationalGetRealApproximation(scalary));
+   absquot = REALABS(SCIPrationalGetReal(scalarx) / SCIPrationalGetReal(scalary));
    maxscalar = SCIPsetFeastol(set) / SCIPsetEpsilon(set);
    maxscalar = MAX(maxscalar, 1.0);
 
@@ -7602,7 +7602,7 @@ SCIP_RETCODE SCIPvarTryAggregateVarsExact(
     *
     *   a*x + b*y == c -> x == -b/a * y + c/a iff |b/a| > feastol and |a/b| > feastol
     */
-   if( !SCIPsetIsFeasZero(set, SCIPrationalGetRealApproximation(quotyx)) && !SCIPsetIsFeasZero(set, SCIPrationalGetRealApproximation(quotxy)) )
+   if( !SCIPsetIsFeasZero(set, SCIPrationalGetReal(quotyx)) && !SCIPsetIsFeasZero(set, SCIPrationalGetReal(quotxy)) )
    {
       if( typex == SCIP_VARTYPE_CONTINUOUS && typey != SCIP_VARTYPE_CONTINUOUS )
       {
@@ -7649,7 +7649,7 @@ SCIP_RETCODE SCIPvarTryAggregateVarsExact(
       SCIPrationalNegate(quotyx, quotyx);
       SCIPrationalDiv(constant, rhs, scalarx);
 
-      if( REALABS(SCIPrationalGetRealApproximation(constant)) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) ) /*lint !e653*/
+      if( REALABS(SCIPrationalGetReal(constant)) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) ) /*lint !e653*/
          goto FREE;
 
       /* check aggregation for integer feasibility */
@@ -8287,9 +8287,9 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
       SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &(var->exactdata->multaggr.scalars), tmpscalars, ntmpvars) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &var->data.multaggr.scalars, ntmpvars) );
       for( i = 0; i < ntmpvars; ++i )
-         var->data.multaggr.scalars[i] = SCIPrationalGetRealApproximation(tmpscalars[i]);
+         var->data.multaggr.scalars[i] = SCIPrationalGetReal(tmpscalars[i]);
       SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(var->exactdata->multaggr.constant), tmpconstant) );
-      var->data.multaggr.constant = SCIPrationalGetRealApproximation(tmpconstant);
+      var->data.multaggr.constant = SCIPrationalGetReal(tmpconstant);
       var->data.multaggr.nvars = ntmpvars;
       var->data.multaggr.varssize = ntmpvars;
 
@@ -9012,7 +9012,7 @@ SCIP_RETCODE varEventObjChangedExact(
    */
    assert(!SCIPrationalIsEqual(oldobj, newobj));
 
-   SCIP_CALL( SCIPeventCreateObjChanged(&event, blkmem, var, SCIPrationalGetRealApproximation(oldobj), SCIPrationalGetRealApproximation(newobj)) );
+   SCIP_CALL( SCIPeventCreateObjChanged(&event, blkmem, var, SCIPrationalGetReal(oldobj), SCIPrationalGetReal(newobj)) );
    SCIP_CALL( SCIPeventAddExactObjChg(event, blkmem, oldobj, newobj) );
    SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
 
@@ -9121,7 +9121,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
 
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldobj) );
-   newobjreal = SCIPrationalGetRealApproximation(newobj);
+   newobjreal = SCIPrationalGetReal(newobj);
 
    SCIPrationalDebugMessage("changing exact objective value of <%s> from %q to %q\n", var->name, var->exactdata->obj, newobj);
 
@@ -9164,7 +9164,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
           * since the objective of inactive variables cannot be changed, this corresponds to probindex != -1
           */
          if( SCIPvarIsActive(var) )
-            SCIPprobUpdateNObjVars(prob, set, SCIPrationalGetRealApproximation(oldobj), var->obj);
+            SCIPprobUpdateNObjVars(prob, set, SCIPrationalGetReal(oldobj), var->obj);
 
          SCIP_CALL( varEventObjChangedExact(var, blkmem, set, primal, lp->fplp, eventqueue, oldobj, var->exactdata->obj) );
 
@@ -9340,7 +9340,7 @@ SCIP_RETCODE SCIPvarAddObjExact(
    if( !SCIPrationalIsZero(addobj) )
    {
       int i;
-      addobjreal = SCIPrationalGetRealApproximation(addobj);
+      addobjreal = SCIPrationalGetReal(addobj);
 
       switch( SCIPvarGetStatusExact(var) )
       {
@@ -9356,7 +9356,7 @@ SCIP_RETCODE SCIPvarAddObjExact(
 
          SCIPrationalAdd(var->exactdata->obj, var->exactdata->obj, addobj);
          SCIPintervalSetRational(&(var->exactdata->objinterval), var->exactdata->obj);
-         var->obj = SCIPrationalGetRealApproximation(var->exactdata->obj);
+         var->obj = SCIPrationalGetReal(var->exactdata->obj);
          var->unchangedobj = var->obj;
 
          break;
@@ -9367,7 +9367,7 @@ SCIP_RETCODE SCIPvarAddObjExact(
          oldobjreal = var->obj;
          SCIPrationalAdd(var->exactdata->obj, var->exactdata->obj, addobj);
          SCIPintervalSetRational(&(var->exactdata->objinterval), var->exactdata->obj);
-         var->obj = SCIPrationalGetRealApproximation(var->exactdata->obj);
+         var->obj = SCIPrationalGetReal(var->exactdata->obj);
 
          /* update unchanged objective value of variable */
          if( !lp->divingobjchg )
@@ -10043,7 +10043,7 @@ SCIP_RETCODE varEventGubChangedExact(
    {
       SCIP_EVENT* event;
 
-      SCIPsetDebugMsg(set, "issue GUBCHANGED event for variable <%s>: %g -> %g\n", var->name, SCIPrationalGetRealApproximation(oldbound), SCIPrationalGetRealApproximation(newbound));
+      SCIPsetDebugMsg(set, "issue GUBCHANGED event for variable <%s>: %g -> %g\n", var->name, SCIPrationalGetReal(oldbound), SCIPrationalGetReal(newbound));
 
       SCIP_CALL( SCIPeventCreateGubChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_UPWARDS), SCIPrationalRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
@@ -11642,7 +11642,7 @@ SCIP_RETCODE varEventUbChangedExact(
    {
       SCIP_EVENT* event;
 
-      SCIPsetDebugMsg(set, "issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, SCIPrationalGetRealApproximation(oldbound), SCIPrationalGetRealApproximation(newbound));
+      SCIPsetDebugMsg(set, "issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, SCIPrationalGetReal(oldbound), SCIPrationalGetReal(newbound));
 
       SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_UPWARDS), SCIPrationalRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );

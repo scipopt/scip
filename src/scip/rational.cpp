@@ -1330,7 +1330,7 @@ SCIP_Bool SCIPrationalIsApproxEqualReal(
    else
    {
       if( roundmode == SCIP_R_ROUND_NEAREST )
-         return SCIPsetIsEQ(set, real, SCIPrationalGetRealApproximation(rat));
+         return SCIPsetIsEQ(set, real, SCIPrationalGetReal(rat));
       else
          return SCIPsetIsEQ(set, real, SCIPrationalRoundReal(rat, roundmode));
    }
@@ -1446,7 +1446,7 @@ SCIP_Bool SCIPrationalIsGEReal(
 
    if( rat->isinf )
    {
-      return SCIPrationalGetRealApproximation(rat) >= real;
+      return SCIPrationalGetReal(rat) >= real;
    }
    else
    {
@@ -1482,7 +1482,7 @@ SCIP_Bool SCIPrationalIsLEReal(
 
    if( rat->isinf )
    {
-      return SCIPrationalGetRealApproximation(rat) <= real;
+      return SCIPrationalGetReal(rat) <= real;
    }
    else
    {
@@ -1957,7 +1957,7 @@ void SCIPrationalGetFrac(
 }
 
 /** returns approximation of rational as SCIP_Real */
-SCIP_Real SCIPrationalGetRealApproximation(
+SCIP_Real SCIPrationalGetReal(
    SCIP_Rational*        rational            /**< the rational */
    )
 {
@@ -1994,7 +1994,7 @@ SCIP_Real SCIPrationalRoundReal(
    if( rational->isinf )
       return (rational->val.sign() * infinity);
    if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_R_ROUND_NEAREST )
-      return SCIPrationalGetRealApproximation(rational);
+      return SCIPrationalGetReal(rational);
 
 #if defined(SCIP_WITH_MPFR) && defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
    {
@@ -2377,7 +2377,7 @@ void SCIPrationalComputeApproximation(
       return;
    }
    /* close to 0, we can just set to 1/maxdenom or 0, depending on sign */
-   else if( src->val.sign() == 1 && SCIPrationalGetRealApproximation(src) < (1.0 / maxdenom) )
+   else if( src->val.sign() == 1 && SCIPrationalGetReal(src) < (1.0 / maxdenom) )
    {
       if( forcegreater == 1 )
          SCIPrationalSetInt(res, 1, maxdenom);
@@ -2386,7 +2386,7 @@ void SCIPrationalComputeApproximation(
 
       return;
    }
-   else if( src->val.sign() == -1 && SCIPrationalGetRealApproximation(src) > (-1.0 / maxdenom) )
+   else if( src->val.sign() == -1 && SCIPrationalGetReal(src) > (-1.0 / maxdenom) )
    {
       if( forcegreater == -1 )
          SCIPrationalSetInt(res, -1, maxdenom);

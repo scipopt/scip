@@ -212,7 +212,7 @@ void setRational(
 
    res->val = papilo::Rational(papiloval.backend().data());
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-   if( SCIPisInfinity(scip, REALABS(SCIPrationalGetRealApproximation(res))) )
+   if( SCIPisInfinity(scip, REALABS(SCIPrationalGetReal(res))) )
    {
       res->val > 0 ? SCIPrationalSetString(res, "inf") : SCIPrationalSetString(res, "-inf");
    }

@@ -5771,7 +5771,7 @@ SCIP_RETCODE cutsRoundMIRRational(
        * to the current position, so that all integral variables stay behind the continuous
        * variables
        */
-      if( EPSZ(SCIPrationalGetRealApproximation(cutaj), QUAD_EPSILON) && SCIPrationalIsGEReal(cutaj, 0.0) )
+      if( EPSZ(SCIPrationalGetReal(cutaj), QUAD_EPSILON) && SCIPrationalIsGEReal(cutaj, 0.0) )
       {
          assert(SCIPrationalIsZero(cutaj));
          SCIPrationalSetReal(cutaj, 0.0);

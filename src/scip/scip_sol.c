@@ -314,7 +314,7 @@ SCIP_RETCODE checkSolOrigExact(
             if( printreason )
             {
                SCIPmessagePrintInfo(scip->messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
-                  SCIPvarGetName(var), SCIPrationalGetRealApproximation(lb), SCIPrationalGetRealApproximation(ub), SCIPrationalGetRealApproximation(solval));
+                  SCIPvarGetName(var), SCIPrationalGetReal(lb), SCIPrationalGetReal(ub), SCIPrationalGetReal(solval));
             }
 
             if( !completely )
