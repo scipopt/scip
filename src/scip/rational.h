@@ -632,31 +632,6 @@ SCIP_Bool SCIPrationalIsFpRepresentable(
  * Printing/Conversion methods
  */
 
-/** returns the numerator of a rational as a long */
-SCIP_EXPORT
-SCIP_Longint SCIPrationalNumerator(
-   SCIP_Rational*        rational            /**< the rational */
-   );
-
-/** returns the denominator of a rational as a long */
-SCIP_EXPORT
-SCIP_Longint SCIPrationalDenominator(
-   SCIP_Rational*        rational            /**< the rational */
-   );
-
-/** returns the denominator of a rational as a long */
-SCIP_EXPORT
-SCIP_Bool SCIPrationalDenominatorIsLE(
-   SCIP_Rational*        rational,           /**< the rational */
-   SCIP_Longint          val                 /**< long value to compare to */
-   );
-
-/** returns the sign of the rational (1 if positive, -1 if negative, 0 if zero) */
-SCIP_EXPORT
-int SCIPrationalGetSign(
-   const SCIP_Rational*  rational            /**< the rational */
-   );
-
 /** converts a rational to a string for printing, returns the number of copied characters.
  *
  *  @note If return value is equal to strlen, it means the string was truncated.
@@ -673,16 +648,6 @@ SCIP_EXPORT
 int SCIPrationalStrLen(
    SCIP_Rational*        r                   /** rational to consider */
    );
-
-/** prints a rational to command line (for debugging) */
-SCIP_EXPORT
-void SCIPrationalPrint(
-   SCIP_Rational*        r                   /**< the rational to print */
-   );
-
-/** printf extension for rationals (does not support all format options yet) */
-SCIP_EXPORT
-void SCIPrationalPrintf(const char *format, ...);
 
 /** rational extension for the SCIPdebugMsg */
 /*lint -emacro(681,SCIPrationalDebugMessage) */
@@ -702,34 +667,39 @@ void SCIPrationalMessage(
    SCIP_Rational*        r                   /**< the rational to print */
    );
 
-/** returns approximation of rational as SCIP_Real */
+/** prints a rational to command line (for debugging) */
 SCIP_EXPORT
-SCIP_Real SCIPrationalRoundReal(
-   SCIP_Rational*        r,                  /**< the rational to convert */
-   SCIP_ROUNDMODE_RAT    roundmode           /**< rounding direction (not really working yet) */
+void SCIPrationalPrint(
+   SCIP_Rational*        r                   /**< the rational to print */
    );
 
-/** returns approximation of rational as SCIP_Real */
+/** printf extension for rationals (does not support all format options yet) */
 SCIP_EXPORT
-SCIP_Real SCIPrationalGetRealApproximation(
-   SCIP_Rational*        r                   /**< the rational to convert */
+void SCIPrationalPrintf(const char *format, ...);
+
+/** returns the numerator of a rational as a long */
+SCIP_EXPORT
+SCIP_Longint SCIPrationalNumerator(
+   SCIP_Rational*        rational            /**< the rational */
    );
 
-/** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
+/** returns the denominator of a rational as a long */
 SCIP_EXPORT
-void SCIPrationalComputeApproximation(
-   SCIP_Rational*        res,
-   SCIP_Rational*        src,
-   SCIP_Longint          maxdenom,
-   int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
+SCIP_Longint SCIPrationalDenominator(
+   SCIP_Rational*        rational            /**< the rational */
    );
 
-/** round a rational to the nearest integer and save it as a rational */
+/** compares denominator of a rational to a long */
 SCIP_EXPORT
-void SCIPrationalRound(
-   SCIP_Rational*        res,                /**< the resulting rounded integer */
-   SCIP_Rational*        src,                /**< the rational to round */
-   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
+SCIP_Bool SCIPrationalDenominatorIsLE(
+   SCIP_Rational*        rational,           /**< the rational */
+   SCIP_Longint          val                 /**< long value to compare to */
+   );
+
+/** returns the sign of the rational (1 if positive, -1 if negative, 0 if zero) */
+SCIP_EXPORT
+int SCIPrationalGetSign(
+   const SCIP_Rational*  rational            /**< the rational */
    );
 
 /** computes fractional part of a rational number */
@@ -739,12 +709,48 @@ void SCIPrationalGetFrac(
    SCIP_Rational*        src                 /**< src rational */
    );
 
-/** rounds rational to next integer in direction of roundmode */
+/** returns approximation of rational as SCIP_Real */
+SCIP_EXPORT
+SCIP_Real SCIPrationalGetRealApproximation(
+   SCIP_Rational*        r                   /**< the rational to convert */
+   );
+
+/** gets the relaxation of a rational as a real
+ *
+ *  @note Requires MPFR if rational is not fp-representable and roundmode is different from SCIP_R_ROUND_NEAREST.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPrationalRoundReal(
+   SCIP_Rational*        r,                  /**< the rational to convert */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< rounding direction (not really working yet) */
+   );
+
+/** rounds a rational to an integer and saves it as a rational */
+SCIP_EXPORT
+void SCIPrationalRound(
+   SCIP_Rational*        res,                /**< the resulting rounded integer */
+   SCIP_Rational*        src,                /**< the rational to round */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
+   );
+
+/** rounds rational to next integer in direction of roundmode
+ *
+ *  @return FALSE if rational outside of long-range
+ */
 SCIP_EXPORT
 SCIP_Bool SCIPrationalRoundInteger(
    SCIP_Longint*         retval,             /**< the resulting rounded lon int */
    SCIP_Rational*        src,                /**< the rational to round */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
+   );
+
+/** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
+SCIP_EXPORT
+void SCIPrationalComputeApproximation(
+   SCIP_Rational*        res,
+   SCIP_Rational*        src,
+   SCIP_Longint          maxdenom,
+   int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
    );
 
 /*

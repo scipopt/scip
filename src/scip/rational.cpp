@@ -1873,7 +1873,7 @@ SCIP_Longint SCIPrationalDenominator(
    return result;
 }
 
-/** returns the denominator of a rational as a long */
+/** compares denominator of a rational to a long */
 SCIP_Bool SCIPrationalDenominatorIsLE(
    SCIP_Rational*        rational,           /**< the rational */
    SCIP_Longint          val                 /**< long value to compare to */
@@ -1928,9 +1928,61 @@ int SCIPrationalGetSign(
    return rational->val.sign();
 }
 
-/** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr
+/** computes fractional part of a rational */
+void SCIPrationalGetFrac(
+   SCIP_Rational*        res,                /**< rational to save the frac */
+   SCIP_Rational*        src                 /**< src rational */
+   )
+{
+#ifdef SCIP_WITH_BOOST
+   scip::Integer roundint, rest;
+
+   assert(src != nullptr);
+   assert(res != nullptr);
+
+   if( src->isinf )
+      SCIPrationalSetReal(res, 0.0);
+   else
+   {
+      roundint = 0;
+      rest = 0;
+      divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
+      if( rest != 0 )
+      {
+         roundint = src->val.sign() > 0 ? roundint : roundint - 1;
+      }
+      res->val = src->val - roundint;
+   }
+#endif
+}
+
+/** returns approximation of rational as SCIP_Real */
+SCIP_Real SCIPrationalGetRealApproximation(
+   SCIP_Rational*        rational            /**< the rational */
+   )
+{
+   SCIP_Real retval = 0.0;
+#ifdef SCIP_WITH_BOOST
+   assert(rational != nullptr);
+
+   if( rational->isinf )
+      return (rational->val.sign() * infinity);
+
+#ifdef SCIP_WITH_GMP
+   /* mpq_get_d is faster than the boost internal implementation */
+   retval = mpq_get_d(rational->val.backend().data());
+#else
+   retval = rational->val.convert_to<SCIP_Real>();
+#endif
+#endif
+   return retval;
+}
+
+/** gets the relaxation of a rational as a real
  *
- * @todo exip: we might have to worry about incorrect results when huge coefficients occur
+ *  @note Requires MPFR if rational is not fp-representable and roundmode is different from SCIP_R_ROUND_NEAREST.
+ *
+ *  @todo exip: we might have to worry about incorrect results when huge coefficients occur
  */
 SCIP_Real SCIPrationalRoundReal(
    SCIP_Rational*        rational,           /**< the rational */
@@ -1981,7 +2033,7 @@ SCIP_Real SCIPrationalRoundReal(
 #endif
 }
 
-/** round a rational to the nearest integer and save it as a rational */
+/** rounds a rational to an integer and saves it as a rational */
 void SCIPrationalRound(
    SCIP_Rational*        res,                /**< the resulting rounded integer */
    SCIP_Rational*        src,                /**< the rational to round */
@@ -2003,7 +2055,7 @@ void SCIPrationalRound(
       divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
       if( rest != 0 )
       {
-         switch (roundmode)
+         switch( roundmode )
          {
          case SCIP_R_ROUND_DOWNWARDS:
             roundint = src->val.sign() > 0 ? roundint : roundint - 1;
@@ -2025,37 +2077,9 @@ void SCIPrationalRound(
 #endif
 }
 
-/** computes fractional part of a rational */
-void SCIPrationalGetFrac(
-   SCIP_Rational*        res,                /**< rational to save the frac */
-   SCIP_Rational*        src                 /**< src rational */
-   )
-{
-#ifdef SCIP_WITH_BOOST
-   scip::Integer roundint, rest;
-
-   assert(src != nullptr);
-   assert(res != nullptr);
-
-   if( src->isinf )
-      SCIPrationalSetReal(res, 0.0);
-   else
-   {
-      roundint = 0;
-      rest = 0;
-      divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
-      if( rest != 0 )
-      {
-         roundint = src->val.sign() > 0 ? roundint : roundint - 1;
-      }
-      res->val = src->val - roundint;
-   }
-#endif
-}
-
-/** round rational to next integer in direction of roundmode
+/** rounds rational to next integer in direction of roundmode
  *
- * return FALSE if rational outside of long-range
+ *  @return FALSE if rational outside of long-range
  */
 SCIP_Bool SCIPrationalRoundInteger(
    SCIP_Longint*         res,                /**< the resulting rounded long int */
@@ -2097,30 +2121,6 @@ SCIP_Bool SCIPrationalRoundInteger(
       success = TRUE;
 #endif
    return success;
-}
-
-/** returns approximation of rational as SCIP_Real
- *
- *  Unfortunately you cannot control the roundmode without using mpfr.
- */
-SCIP_Real SCIPrationalGetRealApproximation(
-   SCIP_Rational*        rational            /**< the rational */
-   )
-{
-   SCIP_Real retval = 0.0;
-#ifdef SCIP_WITH_BOOST
-   assert(rational != nullptr);
-
-   if( rational->isinf )
-      return (rational->val.sign() * infinity);
-
-#ifdef SCIP_WITH_GMP
-   retval = mpq_get_d(rational->val.backend().data()); // mpq_get_d is faster than the boost internal implementation
-#else
-   retval = rational->val.convert_to<SCIP_Real>();
-#endif
-#endif
-   return retval;
 }
 
 #ifdef SCIP_WITH_BOOST
