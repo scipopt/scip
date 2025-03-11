@@ -2487,7 +2487,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
       certificate->lastinfo->isbound = FALSE;
 
       SCIPcertificatePrintProofMessage(certificate, "R%d G ", certificate->indexcounter - 1);
-      SCIPrationalRound(lowerbound, lowerbound, SCIP_R_ROUND_UPWARDS);
+      SCIPrationalRoundInteger(lowerbound, lowerbound, SCIP_R_ROUND_UPWARDS);
 
       SCIP_CALL( SCIPcertificatePrintProofRational(certificate, lowerbound, 10) );
 
@@ -2648,7 +2648,7 @@ SCIP_RETCODE SCIPcertificatePrintCutoffBound(
 
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &newbound) );
    if( SCIPisObjIntegral(scip) && ! SCIPrationalIsIntegral(bound) )
-      SCIPrationalRound(newbound, bound, SCIP_R_ROUND_DOWNWARDS);
+      SCIPrationalRoundInteger(newbound, bound, SCIP_R_ROUND_DOWNWARDS);
    else
       SCIPrationalSet(newbound, bound);
 
@@ -3744,7 +3744,7 @@ SCIP_RETCODE SCIPcertificatePrintActivityVarBoundEx(
       certificate->indexcounter++;
 
       SCIPcertificatePrintProofMessage(certificate, "ACT_R%d %c ", certificate->indexcounter - 1, getInequalitySense(boundtype == SCIP_BOUNDTYPE_LOWER));
-      SCIPrationalRound(newbound, newbound, boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_R_ROUND_DOWNWARDS : SCIP_R_ROUND_UPWARDS);
+      SCIPrationalRoundInteger(newbound, newbound, boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_R_ROUND_DOWNWARDS : SCIP_R_ROUND_UPWARDS);
 
       SCIP_CALL( SCIPcertificatePrintProofRational(certificate, newbound, 10) );
 

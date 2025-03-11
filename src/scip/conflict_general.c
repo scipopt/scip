@@ -1580,7 +1580,7 @@ SCIP_RETCODE getObjectiveRow(
    SCIPrationalSetReal(rhsexact, rhs);
    if ( SCIPisObjIntegral(scip) )
    {
-      SCIPrationalRound(rhsexact, rhsexact, SCIP_R_ROUND_DOWNWARDS);
+      SCIPrationalRoundInteger(rhsexact, rhsexact, SCIP_R_ROUND_DOWNWARDS);
       rhs = floor(rhs);
    }
    for (int i = 0; i < SCIPgetNLPCols(scip); i++)

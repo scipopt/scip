@@ -2034,7 +2034,7 @@ SCIP_Real SCIPrationalRoundReal(
 }
 
 /** rounds a rational to an integer and saves it as a rational */
-void SCIPrationalRound(
+void SCIPrationalRoundInteger(
    SCIP_Rational*        res,                /**< the resulting rounded integer */
    SCIP_Rational*        src,                /**< the rational to round */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */

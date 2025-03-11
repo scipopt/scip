@@ -1934,7 +1934,7 @@ void adjustedLbExact(
    else if( SCIPrationalIsPositive(lb) && SCIPsetIsInfinity(set, SCIPrationalGetReal(lb)) )
       SCIPrationalSetString(lb, "inf");
    else if( isintegral )
-      SCIPrationalRound(lb, lb, SCIP_R_ROUND_UPWARDS);
+      SCIPrationalRoundInteger(lb, lb, SCIP_R_ROUND_UPWARDS);
 }
 
 /** returns adjusted upper bound value, which is rounded for integral variable types */
@@ -1983,7 +1983,7 @@ void adjustedUbExact(
    else if( SCIPrationalIsPositive(ub) && SCIPsetIsInfinity(set, SCIPrationalGetReal(ub)) )
       SCIPrationalSetString(ub, "inf");
    else if( isintegral )
-      SCIPrationalRound(ub, ub, SCIP_R_ROUND_DOWNWARDS);
+      SCIPrationalRoundInteger(ub, ub, SCIP_R_ROUND_DOWNWARDS);
 }
 
 /** writes the approximate exact multi-aggregate data in the floating-point structs */
