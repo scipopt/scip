@@ -302,7 +302,7 @@ void SCIPrationalSetReal(
 
 /** checks if a string describes a rational number */
 SCIP_EXPORT
-SCIP_Bool SCIPisRationalString(
+SCIP_Bool SCIPrationalIsString(
    const char*           desc                /**< string to check */
    );
 

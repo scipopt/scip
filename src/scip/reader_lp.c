@@ -792,7 +792,7 @@ SCIP_Bool isValueRational(
    {
       double val;
 
-      if( isValue(scip, lpinput, &val) || SCIPisRationalString(lpinput->token) )
+      if( isValue(scip, lpinput, &val) || SCIPrationalIsString(lpinput->token) )
       {
          SCIPrationalSetString(value, lpinput->token);
          return TRUE;

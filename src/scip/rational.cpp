@@ -726,7 +726,7 @@ void SCIPrationalResetFloatingPointRepresentable(
 }
 
 /** checks if a string describes a rational number */
-SCIP_Bool SCIPisRationalString(
+SCIP_Bool SCIPrationalIsString(
    const char*           desc                /**< string to check */
    )
 {
