@@ -62,7 +62,11 @@ using namespace scip;
 
 extern "C" {
 
+#ifdef SCIP_THREADSAFE
+const static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
+#else
 static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
+#endif
 
 /*
  * Creation methods
@@ -2724,7 +2728,13 @@ void SCIPrationalSetInfinity(
    )
 {
    assert(inf > 0);
+
+#ifdef SCIP_THREADSAFE
+   SCIPerrorMessage("method SCIPrationalSetInfinity() not thread safe\n");
+   SCIPABORT();
+#else
    infinity = inf;
+#endif
 }
 
 /** return the infinity threshold for rationals */
