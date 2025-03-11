@@ -2081,7 +2081,7 @@ void SCIPrationalRound(
  *
  *  @return FALSE if rational outside of long-range
  */
-SCIP_Bool SCIPrationalRoundInteger(
+SCIP_Bool SCIPrationalRoundLong(
    SCIP_Longint*         res,                /**< the resulting rounded long int */
    SCIP_Rational*        src,                /**< the rational to round */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */

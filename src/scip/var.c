@@ -7157,7 +7157,7 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    }
 
    /* we know rhs is integral, so check if it is in integer range */
-   if( !SCIPrationalRoundInteger(&c, rhs, SCIP_R_ROUND_DOWNWARDS) )
+   if( !SCIPrationalRoundLong(&c, rhs, SCIP_R_ROUND_DOWNWARDS) )
    {
       *infeasible = TRUE;
       goto FREE;

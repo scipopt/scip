@@ -1809,7 +1809,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
             SCIPrationalSetReal(tmpval, mirinfo->slackweight[i]);
             SCIPrationalMultReal(tmpval, tmpval, mirinfo->slackscale[i]);
             SCIPrationalMultReal(tmpval, tmpval, mirinfo->slacksign[i]);
-            (void) SCIPrationalRoundInteger(&upar, tmpval, SCIP_R_ROUND_UPWARDS);
+            (void) SCIPrationalRoundLong(&upar, tmpval, SCIP_R_ROUND_UPWARDS);
             SCIPrationalDiffReal(tmpval, tmpval, upar);
             SCIPrationalNegate(tmpval, tmpval);
             SCIPrationalMultReal(tmpval, tmpval, mirinfo->slacksign[i]);
