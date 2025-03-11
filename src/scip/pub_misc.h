@@ -1879,6 +1879,12 @@ SCIP_Bool SCIPrealToRational(
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    );
 
+/** checks, if value is integral without any tolerances */
+SCIP_EXPORT
+SCIP_Bool SCIPrealIsExactlyIntegral(
+   SCIP_Real             val                 /**< value to process */
+   );
+
 /** tries to find a value, such that all given values, if scaled with this value become integral in relative allowed
  *  difference in between mindelta and maxdelta
  */

@@ -368,10 +368,13 @@ SCIP_RETCODE addCut(
 
                ++(*naddedcuts);
 
-               /* for certification we need to create the exact representation of the row; we need to perform this here
+               /* For certification we need to create the exact representation of the row; we need to perform this here
                 * because the certificate uses the current variable bounds; if certification is not active, we delay the
-                * creation of the exact row until the cut is actually selected to enter the LP, see sepastore.c; note
-                * that this could lead to different solving paths when solving with/without certification
+                * creation of the exact row until the cut is actually selected to enter the LP, see sepastore.c.
+                *
+                * Note that this can lead to different solving paths when solving with/without certification, because
+                * the floating-point coefficients can change slightly during the creation of the exact row (if rational
+                * coefficients are rounded to smaller denominators) and this may affect cut selection.
                 */
                if( SCIPisCertificateActive(scip) )
                {
@@ -380,6 +383,7 @@ SCIP_RETCODE addCut(
 
                   if( SCIProwGetRowExact(cut) == NULL )
                   {
+                     /**@todo delay creation of exact row for globally valid cuts */
                      if( !cutislocal )
                      {
                         SCIP_CALL( SCIPdelPoolCut(scip, cut) );

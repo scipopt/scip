@@ -24,6 +24,7 @@ if(NOT LIBM)
 endif()
 
 target_link_libraries(miniisc ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(miniisc PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET applications )
     add_dependencies( applications miniisc )

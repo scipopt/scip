@@ -2228,7 +2228,7 @@ SCIP_RETCODE rowAddCoef(
    row->linkpos[pos] = linkpos;
    row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
    if( set->exact_enabled )
-      row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPisExactlyIntegral(val);
+      row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPrealIsExactlyIntegral(val);
    if( linkpos == -1 )
    {
       row->nunlinked++;
@@ -2417,7 +2417,7 @@ SCIP_RETCODE rowChgCoefPos(
       row->vals[pos] = val;
       row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
       if( set->exact_enabled )
-         row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPisExactlyIntegral(val);
+         row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPrealIsExactlyIntegral(val);
       rowAddNorms(row, set, col, row->vals[pos], TRUE);
       coefChanged(row, col, lp);
 
@@ -5248,7 +5248,7 @@ SCIP_RETCODE rowScale(
       {
          row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
          if( set->exact_enabled )
-            row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPisExactlyIntegral(val);
+            row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPrealIsExactlyIntegral(val);
       }
 
       ++c;
@@ -6314,7 +6314,7 @@ void rowMerge(
 
                row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
                if( set->exact_enabled )
-                  row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPisExactlyIntegral(vals[t]);
+                  row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPrealIsExactlyIntegral(vals[t]);
                t++;
             }
             cols[t] = cols[s];
@@ -6326,7 +6326,7 @@ void rowMerge(
       {
          row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
          if( set->exact_enabled )
-            row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPisExactlyIntegral(vals[t]);
+            row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPrealIsExactlyIntegral(vals[t]);
          t++;
       }
       assert(s == row->len);

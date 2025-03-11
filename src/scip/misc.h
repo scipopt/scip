@@ -350,12 +350,6 @@ SCIP_Real SCIPnegateReal(
    SCIP_Real             x                   /**< value to negate */
    );
 
-/** checks, if value is integral without any tolerances */
-SCIP_EXPORT
-SCIP_Bool SCIPisExactlyIntegral(
-   SCIP_Real             val                 /**< value to process */
-   );
-
 /** internal random number generator methods
  *
  * see \ref RandomNumbers for public random number generator methods

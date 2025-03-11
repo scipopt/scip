@@ -3548,8 +3548,8 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                SCIP_Bool integral = FALSE;
                // just exclude the negative continuous slacks for the certificate rows
                if( row->integral &&
-                  ((!lhsused && SCIPisExactlyIntegral(row->rhs) &&  SCIPisExactlyIntegral(row->constant)) ||
-                  (lhsused && SCIPisExactlyIntegral(row->lhs) &&  SCIPisExactlyIntegral(row->constant))) )
+                  ((!lhsused && SCIPrealIsExactlyIntegral(row->rhs) &&  SCIPrealIsExactlyIntegral(row->constant)) ||
+                  (lhsused && SCIPrealIsExactlyIntegral(row->lhs) &&  SCIPrealIsExactlyIntegral(row->constant))) )
                {
                   SCIPdebugMessage("row has integral slack\n");
                   rowusedcert = FALSE;
@@ -3603,8 +3603,8 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   SCIP_Bool integral = FALSE;
                   // just exclude the negative continuous slacks for the certificate rows
                   if( row->integral &&
-                     ((!lhsused && SCIPisExactlyIntegral(row->rhs) &&  SCIPisExactlyIntegral(row->constant)) ||
-                     (lhsused && SCIPisExactlyIntegral(row->lhs) &&  SCIPisExactlyIntegral(row->constant))) )
+                     ((!lhsused && SCIPrealIsExactlyIntegral(row->rhs) &&  SCIPrealIsExactlyIntegral(row->constant)) ||
+                     (lhsused && SCIPrealIsExactlyIntegral(row->lhs) &&  SCIPrealIsExactlyIntegral(row->constant))) )
                   {
                      rowusedcert = FALSE;
                      SCIPdebugMessage("row has integral slack\n");
@@ -6380,8 +6380,8 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
       /* calculate slack variable's coefficient a^_r in the cut */
       /** @todo exip: add certification for integer slacks */
       if( row->integral &&
-            ((slacksign[i] == +1 && SCIPisExactlyIntegral(row->rhs) &&  SCIPisExactlyIntegral(row->constant))
-            || (slacksign[i] == -1 && SCIPisExactlyIntegral(row->lhs) &&  SCIPisExactlyIntegral(row->constant))) ) /*lint !e613*/
+            ((slacksign[i] == +1 && SCIPrealIsExactlyIntegral(row->rhs) &&  SCIPrealIsExactlyIntegral(row->constant))
+            || (slacksign[i] == -1 && SCIPrealIsExactlyIntegral(row->lhs) &&  SCIPrealIsExactlyIntegral(row->constant))) ) /*lint !e613*/
       {
          /* slack variable is always integral:
           *    a^_r = a~_r = down(a'_r)                      , if f_r <= f0
@@ -6457,7 +6457,7 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
          SCIP_CALL( SCIPcaptureRow(scip, userow) );
          mirinfo->slackcoefficients[mirinfo->nslacks] = splitcoef * (-slacksign[i]);
          mirinfo->slacksign[mirinfo->nslacks] = slacksign[i];
-         assert(SCIPisExactlyIntegral(splitcoef));
+         assert(SCIPrealIsExactlyIntegral(splitcoef));
          mirinfo->slackweight[mirinfo->nslacks] = slackweight;
          mirinfo->slackscale[mirinfo->nslacks] = scale;
          mirinfo->slackusedcoef[mirinfo->nslacks] = mult;
