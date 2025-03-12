@@ -1236,13 +1236,13 @@ SCIP_RETCODE setObjective(
       /* set the objective values */
       for( v = 0; v < ncoefs; ++v )
       {
-         SCIP_Rational* obj;
-
          assert(linvars != NULL); /* for lint */
          assert(coefs != NULL);
 
          if( SCIPisExact(scip) )
          {
+            SCIP_Rational* obj;
+
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &obj) );
 
             if( SCIPvarIsNegated(linvars[v]) )
