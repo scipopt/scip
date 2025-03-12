@@ -463,7 +463,7 @@ int SCIPconshdlrGetEagerFreq(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** needs constraint handler a constraint to be called? */
+/** does the constraint handler need a constraint in order to be called? */
 SCIP_EXPORT
 SCIP_Bool SCIPconshdlrNeedsCons(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
