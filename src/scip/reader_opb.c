@@ -1168,7 +1168,7 @@ SCIP_RETCODE setObjective(
       {
          if( SCIPisExact(scip) )
          {
-            SCIPerrorMessage("non-linear objectives are not supported in exact solving mode\n");
+            SCIPerrorMessage("Non-linear objectives are not supported in exact solving mode.\n");
             return SCIP_READERROR;
          }
 
@@ -1356,7 +1356,7 @@ SCIP_RETCODE readConstraints(
          }
 
          /* set objective function  */
-         SCIP_CALL( setObjective(scip, opbinput, name, objscale, linvars, lincoefs, nlincoefs, terms, termcoefs, ntermvars, ntermcoefs) );
+         SCIP_CALL_TERMINATE( retcode, setObjective(scip, opbinput, name, objscale, linvars, lincoefs, nlincoefs, terms, termcoefs, ntermvars, ntermcoefs), TERMINATE );
       }
       else if( strcmp(name, "soft") == 0 )
       {
@@ -1436,7 +1436,8 @@ SCIP_RETCODE readConstraints(
    case OPB_SENSE_NOTHING:
    default:
       SCIPerrorMessage("invalid constraint sense <%d>\n", sense);
-      return SCIP_INVALIDDATA;
+      retcode = SCIP_INVALIDDATA;
+      goto TERMINATE;
    }
 
    /* create and add the linear constraint */
@@ -1471,8 +1472,9 @@ SCIP_RETCODE readConstraints(
    {
       if( SCIPisExact(scip) )
       {
-         SCIPerrorMessage("non-linear constraints are not supported in exact solving mode\n");
-         return SCIP_READERROR;
+         SCIPerrorMessage("Non-linear constraints are not supported in exact solving mode.\n");
+         retcode = SCIP_READERROR;
+         goto TERMINATE;
       }
 #if GENCONSNAMES == TRUE
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean%d", opbinput->consnumber);
