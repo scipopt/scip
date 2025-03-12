@@ -634,6 +634,8 @@ SCIP_Bool SCIPrationalIsFpRepresentable(
 
 /** converts a rational to a string for printing, returns the number of copied characters.
  *
+ *  @return number of characters printed into string, see also SCIPstrncpy()
+ *
  *  @note If return value is equal to strlen, it means the string was truncated.
  */
 SCIP_EXPORT
