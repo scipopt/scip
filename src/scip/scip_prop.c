@@ -55,6 +55,10 @@
 
 /** creates a propagator and includes it in SCIP.
  *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
  *  @note method has all propagator callbacks as arguments and is thus changed every time a new
  *        callback is added in future releases; consider using SCIPincludePropBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
