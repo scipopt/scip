@@ -1409,13 +1409,13 @@ void SCIPgetDualboundExact(
    )
 {
    SCIP_Rational* tmpval;
-   (void) RatCreateBuffer(SCIPbuffer(scip), &tmpval);
+   (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpval);
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDualboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    /* in case we are in presolving we use the stored dual bound if it exits */
    if( scip->set->stage <= SCIP_STAGE_INITSOLVE && scip->transprob->dualbound < SCIP_INVALID )
-      RatSetReal(result, scip->transprob->dualbound);
+      SCIPrationalSetReal(result, scip->transprob->dualbound);
    else
    {
       /* all the lower bounds should be proved bounds, so SCIPgetLowerbound should be safe */
@@ -1423,7 +1423,7 @@ void SCIPgetDualboundExact(
       SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmpval, result);
    }
 
-   RatFreeBuffer(SCIPbuffer(scip), &tmpval);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpval);
 }
 
 /** gets global lower (dual) bound in transformed problem
@@ -1502,14 +1502,14 @@ void SCIPgetLowerboundExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLowerboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
-      RatSetString(result, "-inf");
+      SCIPrationalSetString(result, "-inf");
    else if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
    {
       /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with lower
        * bound = -inf instead of lower bound = upper bound = +inf also in case we prove that the problem is unbounded,
        * it seems to make sense to return with lower bound = -inf, since -infinity is the only valid lower bound
        */
-      RatSetString(result, "-inf");
+      SCIPrationalSetString(result, "-inf");
    }
    else
    {
@@ -1520,8 +1520,8 @@ void SCIPgetLowerboundExact(
        * the global lower bound is given by the upper bound value
        */
       treelowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
-      RatSetReal(result, treelowerbound);
-      RatMIN(result, result, scip->primal->upperboundexact);
+      SCIPrationalSetReal(result, treelowerbound);
+      SCIPrationalMin(result, result, scip->primal->upperboundexact);
    }
 }
 
@@ -1722,9 +1722,9 @@ void SCIPgetUpperboundExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetUpperbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    if( SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
-      RatSetString(result, "-inf");
+      SCIPrationalSetString(result, "-inf");
    else
-      RatSet(result, scip->primal->upperboundexact);
+      SCIPrationalSet(result, scip->primal->upperboundexact);
 }
 
 /** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff
@@ -5042,16 +5042,16 @@ void SCIPprintSolutionStatistics(
    {
       SCIP_Rational* objval;
 
-      SCIP_CALL_ABORT( RatCreateBuffer(SCIPbuffer(scip), &objval) );
+      SCIP_CALL_ABORT( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Exact Prim. Bound: ");
       SCIPgetPrimalboundExact(scip, objval);
-      RatMessage(scip->messagehdlr, file, objval);
+      SCIPrationalMessage(scip->messagehdlr, file, objval);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Exact Dual Bound : ");
       SCIPgetDualboundExact(scip, objval);
-      RatMessage(scip->messagehdlr, file, objval);
+      SCIPrationalMessage(scip->messagehdlr, file, objval);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
-      RatFreeBuffer(SCIPbuffer(scip), &objval);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &objval);
    }
 
    if( scip->set->misc_calcintegral )
@@ -5146,19 +5146,19 @@ SCIP_RETCODE SCIPcollectSolutionStatistics(
       SCIP_Rational* objval;
       char strbuffer[SCIP_MAXSTRLEN];
 
-      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &objval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
 
       SCIPgetPrimalboundExact(scip, objval);
-      if( RatToString(objval, strbuffer, SCIP_MAXSTRLEN) >= SCIP_MAXSTRLEN )
+      if( SCIPrationalToString(objval, strbuffer, SCIP_MAXSTRLEN) >= SCIP_MAXSTRLEN )
          SCIPwarningMessage(scip, "string encoding of exact primal bound too long: printing \"unknown\" into JSON\n");
       SCIP_CALL( SCIPinsertDatatreeString(scip, datatree, "exact_primal_bound", strbuffer) );
 
       SCIPgetDualboundExact(scip, objval);
-      if( RatToString(objval, strbuffer, SCIP_MAXSTRLEN) >= SCIP_MAXSTRLEN )
+      if( SCIPrationalToString(objval, strbuffer, SCIP_MAXSTRLEN) >= SCIP_MAXSTRLEN )
          SCIPwarningMessage(scip, "string encoding of exact dual bound too long: printing \"unknown\" into JSON\n");
       SCIP_CALL( SCIPinsertDatatreeString(scip, datatree, "exact_dual_bound", strbuffer) );
 
-      RatFreeBuffer(SCIPbuffer(scip), &objval);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &objval);
    }
 
    /* Objective limit reached */

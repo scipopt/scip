@@ -379,9 +379,9 @@ SCIP_RETCODE SCIPgetRowSolActivityExact(
       SCIP_CALL( SCIProwExactGetSolActivity(row, scip->set, scip->stat, sol, useexact, result) );
    }
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-      RatSet(result, SCIProwExactGetLPActivity(row, scip->stat, scip->lpexact));
+      SCIPrationalSet(result, SCIProwExactGetLPActivity(row, scip->stat, scip->lpexact));
    else
-      RatSet(result, SCIProwExactGetPseudoActivity(row, scip->stat));
+      SCIPrationalSet(result, SCIProwExactGetPseudoActivity(row, scip->stat));
 
    return SCIP_OKAY;
 }
@@ -658,19 +658,19 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
 
    if( !(*lperror) )
    {
-      SCIP_CALL( RatCreateBuffer(scip->set->buffer, &objval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(scip->set->buffer, &objval) );
       SCIPgetLPExactObjval(scip, objval);
 
       /* the LP is infeasible or the objective limit was reached */
       if( SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_OBJLIMIT
          || (SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_OPTIMAL &&
-            RatIsGE(objval, SCIPgetCutoffboundExact(scip))) )
+            SCIPrationalIsGE(objval, SCIPgetCutoffboundExact(scip))) )
       {
          if( cutoff != NULL )
             *cutoff = TRUE;
       }
 
-      RatFreeBuffer(scip->set->buffer, &objval);
+      SCIPrationalFreeBuffer(scip->set->buffer, &objval);
    }
 
    return SCIP_OKAY;

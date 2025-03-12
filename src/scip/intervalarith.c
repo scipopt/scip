@@ -438,8 +438,8 @@ void SCIPintervalSetRational(
 {
    assert(resultant != NULL);
 
-   resultant->inf = RatRoundReal(value, SCIP_R_ROUND_DOWNWARDS);
-   resultant->sup = RatRoundReal(value, SCIP_R_ROUND_UPWARDS);
+   resultant->inf = SCIPrationalRoundReal(value, SCIP_R_ROUND_DOWNWARDS);
+   resultant->sup = SCIPrationalRoundReal(value, SCIP_R_ROUND_UPWARDS);
 }
 
 /** stores given infimum and supremum as interval */

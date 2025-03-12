@@ -305,12 +305,12 @@ SCIP_RETCODE SCIPaddVarExactData(
 {
    assert(var != NULL);
 
-   assert(lb == NULL || ub == NULL || RatIsLE(lb, ub));
+   assert(lb == NULL || ub == NULL || SCIPrationalIsLE(lb, ub));
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarExactData", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* forbid infinite objective function values */
-   if( obj != NULL && RatIsAbsInfinity(obj) )
+   if( obj != NULL && SCIPrationalIsAbsInfinity(obj) )
    {
       SCIPerrorMessage("invalid objective function value: value is infinite\n");
       return SCIP_INVALIDDATA;
@@ -544,19 +544,19 @@ SCIP_RETCODE SCIPwriteVarsLinearsumExact(
    {
       if( vals != NULL )
       {
-         if( RatIsEqualReal(vals[v], 1.0) )
+         if( SCIPrationalIsEqualReal(vals[v], 1.0) )
          {
             if( v > 0 )
                SCIPinfoMessage(scip, file, " +");
          }
-         else if( RatIsEqualReal(vals[v], -1.0) )
+         else if( SCIPrationalIsEqualReal(vals[v], -1.0) )
             SCIPinfoMessage(scip, file, " -");
          else
          {
             char buf[3 * SCIP_MAXSTRLEN];
             int len;
 
-            len = RatToString(vals[v], buf, 3 * SCIP_MAXSTRLEN);
+            len = SCIPrationalToString(vals[v], buf, 3 * SCIP_MAXSTRLEN);
             if( len == SCIP_MAXSTRLEN )
             {
                SCIPerrorMessage("rational was truncated while printing\n");
@@ -1044,7 +1044,7 @@ SCIP_RETCODE SCIPparseVarsLinearsumExact(
    }
 
    /* check if linear sum is just "0" */
-   if( nmonomials == 1 && RatIsZero(monomialcoefs[0]) )
+   if( nmonomials == 1 && SCIPrationalIsZero(monomialcoefs[0]) )
    {
       *nvars = 0;
       *requiredsize = 0;
@@ -1067,7 +1067,7 @@ SCIP_RETCODE SCIPparseVarsLinearsumExact(
          assert(monomialvars[v][0] != NULL);
 
          vars[v] = monomialvars[v][0]; /*lint !e613*/
-         RatSet(vals[v], monomialcoefs[v]); /*lint !e613*/
+         SCIPrationalSet(vals[v], monomialcoefs[v]); /*lint !e613*/
       }
    }
 
@@ -1504,8 +1504,8 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
    nvars = 0;
    vars = NULL;
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &coef) );
-   RatSetString(coef, "inf");
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &coef) );
+   SCIPrationalSetString(coef, "inf");
 
    SCIPdebugMsg(scip, "parsing polynomial from '%s'\n", str);
 
@@ -1520,9 +1520,9 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
       {
       case SCIPPARSEPOLYNOMIAL_STATE_BEGIN:
       {
-         if( !RatIsInfinity(coef)  ) /*lint !e777*/
+         if( !SCIPrationalIsInfinity(coef)  ) /*lint !e777*/
          {
-            SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", RatApproxReal(coef), nvars);
+            SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", SCIPrationalGetReal(coef), nvars);
 
             /* push previous monomial */
             if( monomialssize <= *nmonomials )
@@ -1530,7 +1530,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
                monomialssize = SCIPcalcMemGrowSize(scip, *nmonomials+1);
 
                SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  *nmonomials, monomialssize) );
-               SCIP_CALL( RatReallocBlockArray(SCIPblkmem(scip), monomialcoefs, *nmonomials, monomialssize) );
+               SCIP_CALL( SCIPrationalReallocBlockArray(SCIPblkmem(scip), monomialcoefs, *nmonomials, monomialssize) );
             }
 
             if( nvars > 0 )
@@ -1542,11 +1542,11 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
                (*monomialvars)[*nmonomials] = NULL;
             }
 
-            RatSet((*monomialcoefs)[*nmonomials], coef);
+            SCIPrationalSet((*monomialcoefs)[*nmonomials], coef);
             ++*nmonomials;
 
             nvars = 0;
-            RatSetString(coef, "inf");
+            SCIPrationalSetString(coef, "inf");
          }
 
          if( *str == '<' )
@@ -1555,7 +1555,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
              * so assume the coefficient is 1.0
              */
             state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
-            RatSetString(coef, "1");
+            SCIPrationalSetString(coef, "1");
          }
          else if( *str == '-' || *str == '+' || isdigit(*str) )
             state = SCIPPARSEPOLYNOMIAL_STATE_COEF;
@@ -1588,13 +1588,13 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
          if( *str == '+' && !isdigit(str[1]) )
          {
             /* only a plus sign, without number */
-            RatSetString(coef, "1");
+            SCIPrationalSetString(coef, "1");
             ++str;
          }
          else if( *str == '-' && !isdigit(str[1]) )
          {
             /* only a minus sign, without number */
-            RatSetString(coef, "-1");
+            SCIPrationalSetString(coef, "-1");
             ++str;
          }
          else if( SCIPstrToRationalValue(str, coef, endptr) )
@@ -1677,15 +1677,15 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
    case SCIPPARSEPOLYNOMIAL_STATE_END:
    case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
    {
-      if( !RatIsInfinity(coef) ) /*lint !e777*/
+      if( !SCIPrationalIsInfinity(coef) ) /*lint !e777*/
       {
          /* push last monomial */
-         SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", RatApproxReal(coef), nvars);
+         SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", SCIPrationalGetReal(coef), nvars);
          if( monomialssize <= *nmonomials )
          {
             monomialssize = *nmonomials+1;
             SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  *nmonomials, monomialssize) );
-            SCIP_CALL( RatReallocBlockArray(SCIPblkmem(scip), monomialcoefs, *nmonomials, monomialssize) );
+            SCIP_CALL( SCIPrationalReallocBlockArray(SCIPblkmem(scip), monomialcoefs, *nmonomials, monomialssize) );
          }
 
          if( nvars > 0 )
@@ -1699,7 +1699,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
          {
             (*monomialvars)[*nmonomials] = NULL;
          }
-         RatSet((*monomialcoefs)[*nmonomials], coef);
+         SCIPrationalSet((*monomialcoefs)[*nmonomials], coef);
          ++*nmonomials;
       }
 
@@ -1727,7 +1727,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
       /* shrink arrays to required size, so we do not need to keep monomialssize around */
       assert(*nmonomials <= monomialssize);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  monomialssize, *nmonomials) );
-      SCIP_CALL( RatReallocBlockArray(SCIPblkmem(scip), monomialcoefs, monomialssize, *nmonomials) );
+      SCIP_CALL( SCIPrationalReallocBlockArray(SCIPblkmem(scip), monomialcoefs, monomialssize, *nmonomials) );
 
       /* SCIPwriteVarsPolynomial(scip, NULL, *monomialvars, *monomialexps, *monomialcoefs, *monomialnvars, *nmonomials, FALSE); */
    }
@@ -1738,7 +1738,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
       *nmonomials = 0;
    }
 
-   RatFreeBuffer(SCIPbuffer(scip), &coef);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &coef);
 
    return SCIP_OKAY;
 }
@@ -1836,7 +1836,7 @@ void SCIPfreeParseVarsPolynomialDataExact(
       SCIPfreeBlockMemoryArrayNull(scip, &(*monomialvars)[i], 1);
    }
 
-   RatFreeBlockArray(SCIPblkmem(scip), monomialcoefs, nmonomials);
+   SCIPrationalFreeBlockArray(SCIPblkmem(scip), monomialcoefs, nmonomials);
    SCIPfreeBlockMemoryArray(scip, monomialvars, nmonomials);
 }
 
@@ -5436,7 +5436,7 @@ SCIP_RETCODE SCIPchgVarObjExact(
    assert( var->scip == scip );
 
    /* forbid infinite objective values */
-   if( RatIsAbsInfinity(newobj) )
+   if( SCIPrationalIsAbsInfinity(newobj) )
    {
       SCIPerrorMessage("invalid objective value: objective value is infinite\n");
       return SCIP_INVALIDDATA;
@@ -5802,7 +5802,7 @@ SCIP_RETCODE SCIPchgVarLbExact(
    SCIPvarAdjustLbExact(var, scip->set, newbound);
 
    /* ignore tightenings of lower bounds to +infinity during solving process */
-   if( RatIsInfinity(newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   if( SCIPrationalIsInfinity(newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
       SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
@@ -5980,7 +5980,7 @@ SCIP_RETCODE SCIPchgVarUbExact(
    SCIPvarAdjustUbExact(var, scip->set, newbound);
 
    /* ignore tightenings of upper bounds to -infinity during solving process */
-   if( RatIsNegInfinity(newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   if( SCIPrationalIsNegInfinity(newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
       SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
@@ -6548,7 +6548,7 @@ SCIP_RETCODE SCIPtightenVarLbExact(
    SCIPvarAdjustLbExact(var, scip->set, newbound);
 
    /* ignore tightenings of lower bounds to +infinity during solving process */
-   if( RatIsInfinity(newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   if( SCIPrationalIsInfinity(newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
       SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
@@ -6557,29 +6557,29 @@ SCIP_RETCODE SCIPtightenVarLbExact(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &ub) );
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lb) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &ub) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lb) );
 
    /* get current bounds */
    SCIP_CALL( SCIPcomputeVarLbLocalExact(scip, var, lb) );
    SCIP_CALL( SCIPcomputeVarUbLocalExact(scip, var, ub) );
 
-   assert(RatIsLE(lb, ub));
+   assert(SCIPrationalIsLE(lb, ub));
 
-   if( RatIsGT(newbound, ub) )
+   if( SCIPrationalIsGT(newbound, ub) )
    {
       *infeasible = TRUE;
-      RatFreeBuffer(SCIPbuffer(scip), &lb);
-      RatFreeBuffer(SCIPbuffer(scip), &ub);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
 
       return SCIP_OKAY;
    }
 
-   RatMIN(newbound, newbound, ub);
-   if( RatIsLE(newbound, lb) )
+   SCIPrationalMin(newbound, newbound, ub);
+   if( SCIPrationalIsLE(newbound, lb) )
    {
-      RatFreeBuffer(SCIPbuffer(scip), &lb);
-      RatFreeBuffer(SCIPbuffer(scip), &ub);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
 
       return SCIP_OKAY;
    }
@@ -6629,11 +6629,11 @@ SCIP_RETCODE SCIPtightenVarLbExact(
 
    /* check whether the lower bound improved */
    SCIP_CALL( SCIPcomputeVarLbLocalExact(scip, var, newbound) );
-   if( tightened != NULL && RatIsLT(lb, newbound) )
+   if( tightened != NULL && SCIPrationalIsLT(lb, newbound) )
       *tightened = TRUE;
 
-   RatFreeBuffer(SCIPbuffer(scip), &lb);
-   RatFreeBuffer(SCIPbuffer(scip), &ub);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
 
    return SCIP_OKAY;
 }
@@ -6798,7 +6798,7 @@ SCIP_RETCODE SCIPtightenVarUbExact(
    SCIPvarAdjustUbExact(var, scip->set, newbound);
 
    /* ignore tightenings of upper bounds to -infinity during solving process */
-   if( RatIsNegInfinity(newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   if( SCIPrationalIsNegInfinity(newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
       SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
@@ -6807,29 +6807,29 @@ SCIP_RETCODE SCIPtightenVarUbExact(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &ub) );
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lb) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &ub) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lb) );
 
    /* get current bounds */
    SCIP_CALL( SCIPcomputeVarLbLocalExact(scip, var, lb) );
    SCIP_CALL( SCIPcomputeVarUbLocalExact(scip, var, ub) );
 
-   assert(RatIsLE(lb, ub));
+   assert(SCIPrationalIsLE(lb, ub));
 
-   if( RatIsLT(newbound, lb) )
+   if( SCIPrationalIsLT(newbound, lb) )
    {
-      RatFreeBuffer(SCIPbuffer(scip), &lb);
-      RatFreeBuffer(SCIPbuffer(scip), &ub);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
 
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
 
-   RatMAX(newbound, newbound, lb);
-   if( RatIsGE(newbound, ub) )
+   SCIPrationalMax(newbound, newbound, lb);
+   if( SCIPrationalIsGE(newbound, ub) )
    {
-      RatFreeBuffer(SCIPbuffer(scip), &lb);
-      RatFreeBuffer(SCIPbuffer(scip), &ub);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
 
       return SCIP_OKAY;
    }
@@ -6878,11 +6878,11 @@ SCIP_RETCODE SCIPtightenVarUbExact(
    }  /*lint !e788*/
 
    /* check whether the lower bound improved */
-   if( tightened != NULL && RatIsGT(ub, newbound) )
+   if( tightened != NULL && SCIPrationalIsGT(ub, newbound) )
       *tightened = TRUE;
 
-   RatFreeBuffer(SCIPbuffer(scip), &lb);
-   RatFreeBuffer(SCIPbuffer(scip), &ub);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
 
    return SCIP_OKAY;
 }
@@ -7210,8 +7210,8 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    SCIP_Rational* lb;
    SCIP_Rational* ub;
    SCIP_Rational* adjustedBound;
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &adjustedBound) );
-   RatSet(adjustedBound, newbound);
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &adjustedBound) );
+   SCIPrationalSet(adjustedBound, newbound);
    assert(infeasible != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPinferVarUbConsExact", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -7223,10 +7223,10 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    SCIPvarAdjustUbExact(var, scip->set, adjustedBound);
 
    /* ignore tightenings of upper bounds to -infinity during solving process */
-   if( RatIsNegInfinity(adjustedBound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   if( SCIPrationalIsNegInfinity(adjustedBound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
-      RatDebugMessage("ignore upper bound tightening for %s from %q to -infinity\n", SCIPvarGetName(var),
+      SCIPrationalDebugMessage("ignore upper bound tightening for %s from %q to -infinity\n", SCIPvarGetName(var),
          SCIPvarGetUbLocalExact(var));
 #endif
       goto RETURN_SCIP_OKAY;
@@ -7235,9 +7235,9 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    /* get current bounds */
    lb = SCIPvarGetLbLocalExact(var);
    ub = SCIPvarGetUbLocalExact(var);
-   assert(RatIsLE(lb, ub));
+   assert(SCIPrationalIsLE(lb, ub));
 
-   if( RatIsLT(adjustedBound, lb) )
+   if( SCIPrationalIsLT(adjustedBound, lb) )
    {
       *infeasible = TRUE;
       if( SCIPcertificateShouldTrackBounds(scip) )
@@ -7246,7 +7246,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
       goto RETURN_SCIP_OKAY;
    }
 
-   if( RatIsGE(adjustedBound, ub) ) {
+   if( SCIPrationalIsGE(adjustedBound, ub) ) {
       goto RETURN_SCIP_OKAY;
    }
 
@@ -7293,11 +7293,11 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
 
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      RatFreeBuffer(SCIPbuffer(scip), &adjustedBound);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &adjustedBound);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 RETURN_SCIP_OKAY:
-   RatFreeBuffer(SCIPbuffer(scip), &adjustedBound);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &adjustedBound);
    return SCIP_OKAY;
 }
 
@@ -7332,8 +7332,8 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    SCIP_Rational* ub;
    SCIP_Rational* lb;
    SCIP_Rational* adjustedBound;
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &adjustedBound) );
-   RatSet(adjustedBound, newbound);
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &adjustedBound) );
+   SCIPrationalSet(adjustedBound, newbound);
    assert(infeasible != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPinferVarLbConsExact", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -7345,10 +7345,10 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    SCIPvarAdjustLbExact(var, scip->set, adjustedBound);
 
    /* ignore tightenings of upper bounds to -infinity during solving process */
-   if( RatIsNegInfinity(adjustedBound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   if( SCIPrationalIsNegInfinity(adjustedBound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
-      RatDebugMessage("ignore upper bound tightening for %s from %q to -infinity\n", SCIPvarGetName(var),
+      SCIPrationalDebugMessage("ignore upper bound tightening for %s from %q to -infinity\n", SCIPvarGetName(var),
          SCIPvarGetUbLocalExact(var));
 #endif
       goto RETURN_SCIP_OKAY;
@@ -7357,9 +7357,9 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    /* get current bounds */
    lb = SCIPvarGetLbLocalExact(var);
    ub = SCIPvarGetUbLocalExact(var);
-   assert(RatIsLE(lb, ub));
+   assert(SCIPrationalIsLE(lb, ub));
 
-   if( RatIsGT(adjustedBound, ub) )
+   if( SCIPrationalIsGT(adjustedBound, ub) )
    {
       *infeasible = TRUE;
       if (SCIPcertificateShouldTrackBounds(scip))
@@ -7368,7 +7368,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
       goto RETURN_SCIP_OKAY;
    }
 
-   if( RatIsLE(adjustedBound, lb) ) {
+   if( SCIPrationalIsLE(adjustedBound, lb) ) {
       goto RETURN_SCIP_OKAY;
    }
 
@@ -7415,11 +7415,11 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
 
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      RatFreeBuffer(SCIPbuffer(scip), &adjustedBound);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &adjustedBound);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 RETURN_SCIP_OKAY:
-   RatFreeBuffer(SCIPbuffer(scip), &adjustedBound);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &adjustedBound);
    return SCIP_OKAY;
 }
 
@@ -7973,8 +7973,8 @@ SCIP_RETCODE tightenVarLbGlobalSafe(
    if( SCIPsetIsEQ(scip->set, lb, newbound) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &newboundexact) );
-   RatSetReal(newboundexact, newbound);
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &newboundexact) );
+   SCIPrationalSetReal(newboundexact, newbound);
 
    switch( scip->set->stage )
    {
@@ -8026,7 +8026,7 @@ SCIP_RETCODE tightenVarLbGlobalSafe(
    if( tightened != NULL && lb < SCIPcomputeVarLbGlobal(scip, var) )
       *tightened = TRUE;
 
-   RatFreeBuffer(SCIPbuffer(scip), &newboundexact);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &newboundexact);
 
    return SCIP_OKAY;
 }
@@ -8205,8 +8205,8 @@ SCIP_RETCODE tightenVarUbGlobalSafe(
    if( SCIPsetIsEQ(scip->set, ub, newbound) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &newboundexact) );
-   RatSetReal(newboundexact, newbound);
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &newboundexact) );
+   SCIPrationalSetReal(newboundexact, newbound);
 
    switch( scip->set->stage )
    {
@@ -8257,7 +8257,7 @@ SCIP_RETCODE tightenVarUbGlobalSafe(
    if( tightened != NULL && ub > SCIPcomputeVarUbGlobal(scip, var) )
       *tightened = TRUE;
 
-   RatFreeBuffer(SCIPbuffer(scip), &newboundexact);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &newboundexact);
 
    return SCIP_OKAY;
 }
@@ -8473,7 +8473,7 @@ SCIP_RETCODE SCIPcomputeVarLbLocalExact(
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_MULTAGGR )
       SCIP_CALL( SCIPvarGetMultaggrLbLocalExact(var, scip->set, result) );
    else
-      RatSet(result, SCIPvarGetLbLocalExact(var));
+      SCIPrationalSet(result, SCIPvarGetLbLocalExact(var));
 
    return SCIP_OKAY;
 }
@@ -8518,7 +8518,7 @@ SCIP_RETCODE SCIPcomputeVarUbLocalExact(
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_MULTAGGR )
       SCIP_CALL( SCIPvarGetMultaggrUbLocalExact(var, scip->set, result) );
    else
-      RatSet(result, SCIPvarGetUbLocalExact(var));
+      SCIPrationalSet(result, SCIPvarGetUbLocalExact(var));
 
    return SCIP_OKAY;
 }
@@ -10492,16 +10492,16 @@ SCIP_RETCODE SCIPfixVarExact(
    /* in the problem creation stage, modify the bounds as requested, independently from the current bounds */
    if( scip->set->stage != SCIP_STAGE_PROBLEM )
    {
-      if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !RatIsIntegral(fixedval))
-         || RatIsLT(fixedval, SCIPvarGetLbLocalExact(var))
-         || RatIsGT(fixedval, SCIPvarGetUbLocalExact(var)) )
+      if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPrationalIsIntegral(fixedval))
+         || SCIPrationalIsLT(fixedval, SCIPvarGetLbLocalExact(var))
+         || SCIPrationalIsGT(fixedval, SCIPvarGetUbLocalExact(var)) )
       {
          *infeasible = TRUE;
          return SCIP_OKAY;
       }
       else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
       {
-         *infeasible = !RatIsEqual(fixedval, SCIPvarGetLbLocalExact(var));
+         *infeasible = !SCIPrationalIsEqual(fixedval, SCIPvarGetLbLocalExact(var));
          return SCIP_OKAY;
       }
    }
@@ -10515,16 +10515,16 @@ SCIP_RETCODE SCIPfixVarExact(
        * we have to make sure, that the order of the bound changes does not intermediately produce an invalid
        * interval lb > ub
        */
-      if( RatIsLE(fixedval, SCIPvarGetLbLocalExact(var)) )
+      if( SCIPrationalIsLE(fixedval, SCIPvarGetLbLocalExact(var)) )
       {
-         SCIP_CALL( SCIPchgVarLb(scip, var, RatRoundReal(fixedval, SCIP_R_ROUND_DOWNWARDS)) );
-         SCIP_CALL( SCIPchgVarUb(scip, var, RatRoundReal(fixedval, SCIP_R_ROUND_UPWARDS)) );
+         SCIP_CALL( SCIPchgVarLb(scip, var, SCIPrationalRoundReal(fixedval, SCIP_R_ROUND_DOWNWARDS)) );
+         SCIP_CALL( SCIPchgVarUb(scip, var, SCIPrationalRoundReal(fixedval, SCIP_R_ROUND_UPWARDS)) );
          *fixed = TRUE;
       }
       else
       {
-         SCIP_CALL( SCIPchgVarUb(scip, var, RatRoundReal(fixedval, SCIP_R_ROUND_UPWARDS)) );
-         SCIP_CALL( SCIPchgVarLb(scip, var, RatRoundReal(fixedval, SCIP_R_ROUND_DOWNWARDS)) );
+         SCIP_CALL( SCIPchgVarUb(scip, var, SCIPrationalRoundReal(fixedval, SCIP_R_ROUND_UPWARDS)) );
+         SCIP_CALL( SCIPchgVarLb(scip, var, SCIPrationalRoundReal(fixedval, SCIP_R_ROUND_DOWNWARDS)) );
          *fixed = TRUE;
       }
       return SCIP_OKAY;
@@ -10539,29 +10539,29 @@ SCIP_RETCODE SCIPfixVarExact(
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
-      if( RatIsGT(fixedval, SCIPvarGetLbLocalExact(var)) )
+      if( SCIPrationalIsGT(fixedval, SCIPvarGetLbLocalExact(var)) )
       {
-         if( RatIsGT(fixedval, SCIPvarGetUbLocalExact(var)) )
+         if( SCIPrationalIsGT(fixedval, SCIPvarGetUbLocalExact(var)) )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
          }
          else
          {
-            SCIP_CALL( SCIPchgVarLb(scip, var, RatRoundReal(fixedval, SCIP_R_ROUND_DOWNWARDS)) );
+            SCIP_CALL( SCIPchgVarLb(scip, var, SCIPrationalRoundReal(fixedval, SCIP_R_ROUND_DOWNWARDS)) );
             *fixed = TRUE;
          }
       }
-      if( RatIsLT(fixedval, SCIPvarGetUbLocalExact(var)) )
+      if( SCIPrationalIsLT(fixedval, SCIPvarGetUbLocalExact(var)) )
       {
-         if( RatIsLT(fixedval, SCIPvarGetLbLocalExact(var)) )
+         if( SCIPrationalIsLT(fixedval, SCIPvarGetLbLocalExact(var)) )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
          }
          else
          {
-            SCIP_CALL( SCIPchgVarUb(scip, var, RatRoundReal(fixedval, SCIP_R_ROUND_UPWARDS)) );
+            SCIP_CALL( SCIPchgVarUb(scip, var, SCIPrationalRoundReal(fixedval, SCIP_R_ROUND_UPWARDS)) );
             *fixed = TRUE;
          }
       }
@@ -10754,8 +10754,8 @@ SCIP_RETCODE SCIPaggregateVarsExact(
    SCIP_Rational* constantx;
    SCIP_Rational* constanty;
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constantx) );
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constanty) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constantx) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constanty) );
 
    assert(infeasible != NULL);
    assert(redundant != NULL);
@@ -10789,13 +10789,13 @@ SCIP_RETCODE SCIPaggregateVarsExact(
       return SCIP_OKAY;
 
    /* move the constant to the right hand side to acquire the form "a'*x' + b'*y' == c'" */
-   RatDiff(rhs, rhs, constantx);
-   RatDiff(rhs, rhs, constanty);
+   SCIPrationalDiff(rhs, rhs, constantx);
+   SCIPrationalDiff(rhs, rhs, constanty);
 
    /* if a scalar is zero, treat the variable as fixed-to-zero variable */
-   if( RatIsZero(scalarx) )
+   if( SCIPrationalIsZero(scalarx) )
       varx = NULL;
-   if( RatIsZero(scalary) )
+   if( SCIPrationalIsZero(scalary) )
       vary = NULL;
 
    /* capture the special cases that less than two variables are left, due to resolutions to a fixed variable or
@@ -10804,15 +10804,15 @@ SCIP_RETCODE SCIPaggregateVarsExact(
    if( varx == NULL && vary == NULL )
    {
       /* both variables were resolved to fixed variables */
-      *infeasible = !RatIsZero(rhs);
+      *infeasible = !SCIPrationalIsZero(rhs);
       *redundant = TRUE;
    }
    else if( varx == NULL )
    {
-      assert(RatIsZero(scalarx));
-      assert(!RatIsZero(scalary));
+      assert(SCIPrationalIsZero(scalarx));
+      assert(!SCIPrationalIsZero(scalary));
 
-      RatDiv(rhs, rhs, scalary);
+      SCIPrationalDiv(rhs, rhs, scalary);
       /* variable x was resolved to fixed variable: variable y can be fixed to c'/b' */
       SCIP_CALL( SCIPvarFixExact(vary, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
             scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
@@ -10821,10 +10821,10 @@ SCIP_RETCODE SCIPaggregateVarsExact(
    }
    else if( vary == NULL )
    {
-      assert(RatIsZero(scalarx));
-      assert(!RatIsZero(scalary));
+      assert(SCIPrationalIsZero(scalarx));
+      assert(!SCIPrationalIsZero(scalary));
 
-      RatDiv(rhs, rhs, scalarx);
+      SCIPrationalDiv(rhs, rhs, scalarx);
       /* variable y was resolved to fixed variable: variable x can be fixed to c'/a' */
       SCIP_CALL( SCIPvarFixExact(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
             scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
@@ -10834,15 +10834,15 @@ SCIP_RETCODE SCIPaggregateVarsExact(
    else if( varx == vary )
    {
       /* both variables were resolved to the same active problem variable: this variable can be fixed */
-      RatAdd(scalarx, scalarx, scalary);
-      if( RatIsZero(scalarx) )
+      SCIPrationalAdd(scalarx, scalarx, scalary);
+      if( SCIPrationalIsZero(scalarx) )
       {
          /* left hand side of equality is zero: equality is potentially infeasible */
-         *infeasible = !RatIsZero(rhs);
+         *infeasible = !SCIPrationalIsZero(rhs);
       }
       else
       {
-         RatDiv(rhs, rhs, scalarx);
+         SCIPrationalDiv(rhs, rhs, scalarx);
          /* sum of scalars is not zero: fix variable x' == y' to c'/(a'+b') */
          SCIP_CALL( SCIPvarFixExact(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
                scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
@@ -10859,8 +10859,8 @@ SCIP_RETCODE SCIPaggregateVarsExact(
       *redundant = *aggregated;
    }
 
-   RatFreeBuffer(SCIPbuffer(scip), &constanty);
-   RatFreeBuffer(SCIPbuffer(scip), &constantx);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &constanty);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &constantx);
 
    return SCIP_OKAY;
 }

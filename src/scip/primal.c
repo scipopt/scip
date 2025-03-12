@@ -175,8 +175,8 @@ SCIP_RETCODE SCIPprimalFree(
    BMSfreeMemoryArrayNull(&(*primal)->existingsols);
    if( (*primal)->cutoffboundexact != NULL )
    {
-      RatFreeBlock(blkmem, &(*primal)->upperboundexact);
-      RatFreeBlock(blkmem, &(*primal)->cutoffboundexact);
+      SCIPrationalFreeBlock(blkmem, &(*primal)->upperboundexact);
+      SCIPrationalFreeBlock(blkmem, &(*primal)->cutoffboundexact);
    }
 
    BMSfreeMemory(primal);
@@ -291,11 +291,11 @@ SCIP_RETCODE primalSetCutoffbound(
    {
       SCIP_Rational* tmp;
 
-      SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
-      RatSetReal(tmp, primal->cutoffbound);
-      if( RatIsGT(primal->cutoffboundexact, tmp) )
-         RatSet(primal->cutoffboundexact, tmp);
-      RatFreeBuffer(set->buffer, &tmp);
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
+      SCIPrationalSetReal(tmp, primal->cutoffbound);
+      if( SCIPrationalIsGT(primal->cutoffboundexact, tmp) )
+         SCIPrationalSet(primal->cutoffboundexact, tmp);
+      SCIPrationalFreeBuffer(set->buffer, &tmp);
    }
 
    /* set cut off value in LP solver */
@@ -324,14 +324,14 @@ SCIP_RETCODE primalSetCutoffboundExact(
    )
 {
    assert(primal != NULL);
-   assert(RatIsLEReal(cutoffbound, SCIPsetInfinity(set)));
+   assert(SCIPrationalIsLEReal(cutoffbound, SCIPsetInfinity(set)));
    assert(!SCIPtreeInRepropagation(tree));
    assert(set->exact_enabled);
 
-   RatDebugMessage("changing exact cutoff bound from %q to %q\n", primal->cutoffboundexact, cutoffbound);
+   SCIPrationalDebugMessage("changing exact cutoff bound from %q to %q\n", primal->cutoffboundexact, cutoffbound);
 
-   RatMIN(primal->cutoffboundexact, cutoffbound, primal->upperboundexact); /* get rid of numerical issues */
-   primal->cutoffbound = RatRoundReal(primal->cutoffboundexact, SCIP_R_ROUND_UPWARDS);
+   SCIPrationalMin(primal->cutoffboundexact, cutoffbound, primal->upperboundexact); /* get rid of numerical issues */
+   primal->cutoffbound = SCIPrationalRoundReal(primal->cutoffboundexact, SCIP_R_ROUND_UPWARDS);
 
    /* set cut off value in LP solver */
    SCIP_CALL( SCIPlpSetCutoffbound(lp, set, prob, primal->cutoffbound) );
@@ -472,31 +472,31 @@ SCIP_RETCODE primalSetUpperboundExact(
    assert(primal != NULL);
    assert(stat != NULL);
    assert(set->exact_enabled);
-   assert(RatIsLEReal(upperbound, SCIPsetInfinity(set)));
-   assert(RatIsLEReal(upperbound, primal->upperbound) || stat->nnodes == 0);
+   assert(SCIPrationalIsLEReal(upperbound, SCIPsetInfinity(set)));
+   assert(SCIPrationalIsLEReal(upperbound, primal->upperbound) || stat->nnodes == 0);
 
-   RatDebugMessage("changing upper bound from %q to %q\n", primal->upperboundexact, upperbound);
+   SCIPrationalDebugMessage("changing upper bound from %q to %q\n", primal->upperboundexact, upperbound);
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &cutoffbound) );
-   RatSet(primal->upperboundexact, upperbound);
-   primal->upperbound = RatRoundReal(primal->upperboundexact, SCIP_R_ROUND_UPWARDS);
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &cutoffbound) );
+   SCIPrationalSet(primal->upperboundexact, upperbound);
+   primal->upperbound = SCIPrationalRoundReal(primal->upperboundexact, SCIP_R_ROUND_UPWARDS);
 
    /* if objective value is always integral, the cutoff bound can be reduced to nearly the previous integer number */
-   if( SCIPprobIsObjIntegral(prob) && !RatIsInfinity(upperbound) )
+   if( SCIPprobIsObjIntegral(prob) && !SCIPrationalIsInfinity(upperbound) )
    {
       SCIP_Real delta;
 
       delta = SCIPsetCutoffbounddelta(set);
 
-      RatRound(cutoffbound, primal->upperboundexact, SCIP_R_ROUND_DOWNWARDS);
-      RatAddReal(cutoffbound, cutoffbound, delta);
+      SCIPrationalRoundInteger(cutoffbound, primal->upperboundexact, SCIP_R_ROUND_DOWNWARDS);
+      SCIPrationalAddReal(cutoffbound, cutoffbound, delta);
       /** @todo: exip We can probably stop adding the delta */
    }
    else
-      RatSet(cutoffbound, upperbound);
+      SCIPrationalSet(cutoffbound, upperbound);
 
    /* update cutoff bound */
-   if( RatIsLT(cutoffbound, primal->cutoffboundexact) )
+   if( SCIPrationalIsLT(cutoffbound, primal->cutoffboundexact) )
    {
       SCIP_CALL( primalSetCutoffboundExact(primal, blkmem, set, stat, prob, eventqueue, eventfilter, tree, reopt, lp, cutoffbound) );
    }
@@ -507,7 +507,7 @@ SCIP_RETCODE primalSetUpperboundExact(
       SCIPvisualUpperbound(stat->visual, set, stat, primal->upperbound);
    }
 
-   RatFreeBuffer(set->buffer, &cutoffbound);
+   SCIPrationalFreeBuffer(set->buffer, &cutoffbound);
 
    return SCIP_OKAY;
 }
@@ -662,14 +662,14 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    assert(primal != NULL);
    assert(SCIPsetGetStage(set) <= SCIP_STAGE_PRESOLVED);
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &upperbound) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &inf) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &upperbound) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &inf) );
 
    /* recalculate internal objective limit */
    /** @todo exip: do we need probgetobjlim in exact variant? */
-   RatSetReal(tmp, SCIPprobGetObjlim(origprob, set));
-   RatSetString(inf, "inf");
+   SCIPrationalSetReal(tmp, SCIPprobGetObjlim(origprob, set));
+   SCIPrationalSetString(inf, "inf");
    SCIPprobInternObjvalExact(transprob, origprob, set, tmp, upperbound);
 
    /* resort current primal solutions */
@@ -680,18 +680,18 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    {
       SCIP_Rational* obj;
 
-      SCIP_CALL( RatCreateBuffer(set->buffer, &obj) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &obj) );
 
       assert(SCIPsolIsOriginal(primal->sols[0]));
 
       if( !SCIPsolIsExact(primal->sols[0]) )
-         RatSetReal(obj, SCIPsolGetObj(primal->sols[0], set, transprob, origprob));
+         SCIPrationalSetReal(obj, SCIPsolGetObj(primal->sols[0], set, transprob, origprob));
       else
          SCIPsolGetObjExact(primal->sols[0], set, transprob, origprob, obj);
 
-      RatMIN(upperbound, upperbound, obj);
+      SCIPrationalMin(upperbound, upperbound, obj);
 
-      RatFreeBuffer(set->buffer, &obj);
+      SCIPrationalFreeBuffer(set->buffer, &obj);
    }
 
    /* invalidate old upper bound */
@@ -707,9 +707,9 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */
    SCIP_CALL( primalSetUpperboundExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, tree, reopt, lp, upperbound) );
 
-   RatFreeBuffer(set->buffer, &inf);
-   RatFreeBuffer(set->buffer, &upperbound);
-   RatFreeBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &inf);
+   SCIPrationalFreeBuffer(set->buffer, &upperbound);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -920,13 +920,13 @@ SCIP_RETCODE primalAddSol(
       {
          SCIP_Rational* objexact;
 
-         SCIP_CALL( RatCreateBuffer(set->buffer, &objexact) );
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &objexact) );
          SCIPsolGetObjExact(sol, set, transprob, origprob, objexact);
 
-         RatMIN(primal->cutoffboundexact, primal->cutoffboundexact, objexact);
-         RatMIN(primal->upperboundexact, primal->upperboundexact, objexact);
+         SCIPrationalMin(primal->cutoffboundexact, primal->cutoffboundexact, objexact);
+         SCIPrationalMin(primal->upperboundexact, primal->upperboundexact, objexact);
 
-         RatFreeBuffer(set->buffer, &objexact);
+         SCIPrationalFreeBuffer(set->buffer, &objexact);
       }
    }
 
@@ -1430,16 +1430,16 @@ SCIP_Bool solOfInterest(
    {
       SCIP_Rational* tmpobj;
 
-      SCIP_CALL_ABORT( RatCreateBuffer(set->buffer, &tmpobj) );
+      SCIP_CALL_ABORT( SCIPrationalCreateBuffer(set->buffer, &tmpobj) );
 
       if( SCIPsolIsExact(sol) )
          SCIPsolGetObjExact(sol, set, transprob, origprob, tmpobj);
       else
-         RatSetReal(tmpobj, SCIPsolGetObj(sol, set, transprob, origprob));
+         SCIPrationalSetReal(tmpobj, SCIPsolGetObj(sol, set, transprob, origprob));
 
-      solisbetterexact = RatIsLT(tmpobj, primal->cutoffboundexact);
+      solisbetterexact = SCIPrationalIsLT(tmpobj, primal->cutoffboundexact);
 
-      RatFreeBuffer(set->buffer, &tmpobj);
+      SCIPrationalFreeBuffer(set->buffer, &tmpobj);
    }
    /* check if we are willing to check worse solutions; a solution is better if the objective is smaller than the
     * current cutoff bound; solutions with infinite objective value are never accepted
@@ -2312,12 +2312,12 @@ SCIP_RETCODE primalAddSolExact(
    sol = *solptr;
    assert(sol != NULL);
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &obj) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &obj) );
 
    SCIPsolGetObjExact(sol, set, transprob, origprob, obj);
 
    SCIPsetDebugMsg(set, "insert exact primal solution %p with obj %g at position %d (replace=%u):\n",
-      (void*)sol, RatApproxReal(obj), insertpos, replace);
+      (void*)sol, SCIPrationalGetReal(obj), insertpos, replace);
 
    SCIPdebug( SCIP_CALL( SCIPsolPrintExact(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
 
@@ -2331,7 +2331,7 @@ SCIP_RETCODE primalAddSolExact(
             origprob, transprob, tree, reopt,
             lp->fplp, eventqueue, eventfilter, &sol, &stored) );
 
-   RatFreeBuffer(set->buffer, &obj);
+   SCIPrationalFreeBuffer(set->buffer, &obj);
 
    return SCIP_OKAY;
 }

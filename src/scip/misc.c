@@ -9876,17 +9876,17 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
    scm = 1;
    scalable = TRUE;
 
-   SCIP_CALL( RatCreateBuffer(buffer, &ratupdate) );
-   SCIP_CALL( RatCreateBuffer(buffer, &ratscm) );
+   SCIP_CALL( SCIPrationalCreateBuffer(buffer, &ratupdate) );
+   SCIP_CALL( SCIPrationalCreateBuffer(buffer, &ratscm) );
 
    /* first value (to initialize gcd) */
    for( c = 0; c < nvals && scalable; ++c )
    {
-      if( RatIsZero(vals[c]) ) /* zeros are allowed in the vals array */
+      if( SCIPrationalIsZero(vals[c]) ) /* zeros are allowed in the vals array */
          continue;
 
       /* get numerator and check whether it fits into SCIP_Longint */
-      numerator = RatNumerator(vals[c]);
+      numerator = SCIPrationalNumerator(vals[c]);
       if( numerator == SCIP_LONGINT_MAX )
       {
          scalable = FALSE;
@@ -9894,7 +9894,7 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
       }
 
       /* get numerator and check whether it fits into SCIP_Longint */
-      denominator = RatDenominator(vals[c]);
+      denominator = SCIPrationalDenominator(vals[c]);
       if( denominator == SCIP_LONGINT_MAX )
       {
          scalable = FALSE;
@@ -9913,11 +9913,11 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
    /* remaining values */
    for( ++c; c < nvals && scalable; ++c )
    {
-      if( RatIsZero(vals[c]) ) /* zeros are allowed in the vals array */
+      if( SCIPrationalIsZero(vals[c]) ) /* zeros are allowed in the vals array */
          continue;
 
       /* get numerator and check whether it fits into SCIP_Longint */
-      numerator = RatNumerator(vals[c]);
+      numerator = SCIPrationalNumerator(vals[c]);
       if( numerator == SCIP_LONGINT_MAX )
       {
          scalable = FALSE;
@@ -9925,7 +9925,7 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
       }
 
       /* get denom and check whether it fits into SCIP_Longint */
-      denominator = RatDenominator(vals[c]);
+      denominator = SCIPrationalDenominator(vals[c]);
       if( denominator == SCIP_LONGINT_MAX )
       {
          scalable = FALSE;
@@ -9938,12 +9938,12 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
 
       /* update scm via newscm = scm * denominator / gcd(scm, denominator) and check whether it fits into SCIP_Longint */
       updatemultiplier = denominator / SCIPcalcGreComDiv(scm, denominator);
-      RatSetInt(ratupdate, updatemultiplier, 1L);
-      RatSetInt(ratscm, scm, 1L);
-      RatMult(ratscm, ratscm, ratupdate);
-      RatCanonicalize(ratscm);
+      SCIPrationalSetInt(ratupdate, updatemultiplier, 1L);
+      SCIPrationalSetInt(ratscm, scm, 1L);
+      SCIPrationalMult(ratscm, ratscm, ratupdate);
+      SCIPrationalCanonicalize(ratscm);
 
-      scm= RatNumerator(ratscm);
+      scm = SCIPrationalNumerator(ratscm);
 
       if( scm == SCIP_LONGINT_MAX )
       {
@@ -9959,15 +9959,15 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
       /* make values integral by multiplying them with the smallest common multiple of the denominators */
       assert((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
 
-      RatSetInt(intscalar, scm, gcd);
-      RatCanonicalize(intscalar);
+      SCIPrationalSetInt(intscalar, scm, gcd);
+      SCIPrationalCanonicalize(intscalar);
 
       *success = TRUE;
 
    }
 
-   RatFreeBuffer(buffer, &ratscm);
-   RatFreeBuffer(buffer, &ratupdate);
+   SCIPrationalFreeBuffer(buffer, &ratscm);
+   SCIPrationalFreeBuffer(buffer, &ratupdate);
 
    return SCIP_OKAY;
 }

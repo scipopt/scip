@@ -402,7 +402,7 @@ SCIP_RETCODE consdataEnsureVarsSize(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->vals, consdata->varssize, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->valsreal, consdata->varssize, newsize) );
       for( k = consdata->varssize; k < newsize; ++k )
-         SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &consdata->vals[k]) );
+         SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &consdata->vals[k]) );
 
       if( consdata->eventdata != NULL )
       {
@@ -445,10 +445,10 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->nconspropnoninit = 0;
    (*conshdlrdata)->propnonzeros = 0;
    (*conshdlrdata)->propnonzerosnoninit = 0;
-   SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxaggrnormscale) );
-   SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxcardbounddist) );
-   SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxeasyactivitydelta) );
-   SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->mingainpernmincomp) );
+   SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxaggrnormscale) );
+   SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxcardbounddist) );
+   SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxeasyactivitydelta) );
+   SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->mingainpernmincomp) );
 
    /* set event handler for updating linear constraint activity bounds */
    (*conshdlrdata)->eventhdlr = eventhdlr;
@@ -469,10 +469,10 @@ void conshdlrdataFree(
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*conshdlrdata)->linconsupgrades, (*conshdlrdata)->linconsupgradessize);
 
-   RatFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxaggrnormscale);
-   RatFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxcardbounddist);
-   RatFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxeasyactivitydelta);
-   RatFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->mingainpernmincomp);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxaggrnormscale);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxcardbounddist);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxeasyactivitydelta);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->mingainpernmincomp);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
 }
@@ -498,17 +498,17 @@ SCIP_RETCODE lockRounding(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(!RatIsZero(val));
+   assert(!SCIPrationalIsZero(val));
 
-   if( RatIsPositive(val) )
+   if( SCIPrationalIsPositive(val) )
    {
       SCIP_CALL( SCIPlockVarCons(scip, var, cons,
-         !RatIsNegInfinity(consdata->lhs), !RatIsInfinity(consdata->rhs)) );
+         !SCIPrationalIsNegInfinity(consdata->lhs), !SCIPrationalIsInfinity(consdata->rhs)) );
    }
    else
    {
       SCIP_CALL( SCIPlockVarCons(scip, var, cons,
-         !RatIsInfinity(consdata->rhs), !RatIsNegInfinity(consdata->lhs)) );
+         !SCIPrationalIsInfinity(consdata->rhs), !SCIPrationalIsNegInfinity(consdata->lhs)) );
    }
 
    return SCIP_OKAY;
@@ -531,17 +531,17 @@ SCIP_RETCODE unlockRounding(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(!RatIsZero(val));
+   assert(!SCIPrationalIsZero(val));
 
-   if( RatIsPositive(val) )
+   if( SCIPrationalIsPositive(val) )
    {
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, !RatIsNegInfinity(consdata->lhs),
-         !RatIsInfinity(consdata->rhs)) );
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, !SCIPrationalIsNegInfinity(consdata->lhs),
+         !SCIPrationalIsInfinity(consdata->rhs)) );
    }
    else
    {
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, !RatIsInfinity(consdata->rhs),
-         !RatIsNegInfinity(consdata->lhs)) );
+      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, !SCIPrationalIsInfinity(consdata->rhs),
+         !SCIPrationalIsNegInfinity(consdata->lhs)) );
    }
 
    return SCIP_OKAY;
@@ -708,10 +708,10 @@ SCIP_RETCODE consdataCreate(
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
 
-   if( RatIsGT(lhs, rhs) )
+   if( SCIPrationalIsGT(lhs, rhs) )
    {
       SCIPwarningMessage(scip, "left hand side of linear constraint greater than right hand side\n");
-      SCIPwarningMessage(scip, " -> lhs=%g, rhs=%g\n", RatApproxReal(lhs), RatApproxReal(rhs));
+      SCIPwarningMessage(scip, " -> lhs=%g, rhs=%g\n", SCIPrationalGetReal(lhs), SCIPrationalGetReal(rhs));
    }
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
@@ -725,7 +725,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->vals = NULL;
    (*consdata)->valsreal = NULL;
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constant) );
    if( nvars > 0 )
    {
       int k;
@@ -736,7 +736,7 @@ SCIP_RETCODE consdataCreate(
 
       /* copy variables into temporary buffer */
       SCIP_CALL( SCIPallocBufferArray(scip, &varsbuffer, nvars) );
-      SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &valsbuffer, nvars) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &valsbuffer, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &valsrealbuffer, nvars) );
       k = 0;
 
@@ -748,17 +748,17 @@ SCIP_RETCODE consdataCreate(
          var = vars[v];
 
          assert(var != NULL);
-         if( !RatIsZero(vals[v]) )
+         if( !SCIPrationalIsZero(vals[v]) )
          {
             /* treat fixed variable as a constant if problem compression is enabled */
-            if( SCIPisConsCompressionEnabled(scip) && RatIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var)) )
+            if( SCIPisConsCompressionEnabled(scip) && SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var)) )
             {
-               RatAddProd(constant, vals[v], SCIPvarGetLbGlobalExact(var));
+               SCIPrationalAddProd(constant, vals[v], SCIPvarGetLbGlobalExact(var));
             }
             else
             {
                varsbuffer[k] = var;
-               RatSet(valsbuffer[k], vals[v]);
+               SCIPrationalSet(valsbuffer[k], vals[v]);
                SCIPintervalSetRational(&(valsrealbuffer[k]), vals[v]);
                k++;
 
@@ -784,40 +784,40 @@ SCIP_RETCODE consdataCreate(
       {
          /* copy the possibly reduced buffer arrays into block */
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, k) );
-         SCIP_CALL( RatCopyBlockArray(SCIPblkmem(scip), &(*consdata)->vals, valsbuffer, k) );
+         SCIP_CALL( SCIPrationalCopyBlockArray(SCIPblkmem(scip), &(*consdata)->vals, valsbuffer, k) );
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->valsreal, valsrealbuffer, k) );
          (*consdata)->varssize = k;
       }
 
-      RatFreeBufferArray(SCIPbuffer(scip), &valsbuffer, nvars);
+      SCIPrationalFreeBufferArray(SCIPbuffer(scip), &valsbuffer, nvars);
       SCIPfreeBufferArray(scip, &varsbuffer);
       SCIPfreeBufferArray(scip, &valsrealbuffer);
    }
 
    (*consdata)->eventdata = NULL;
 
-   lhsrel = RatRoundReal(lhs, SCIP_R_ROUND_DOWNWARDS);
-   rhsrel = RatRoundReal(rhs, SCIP_R_ROUND_UPWARDS);
+   lhsrel = SCIPrationalRoundReal(lhs, SCIP_R_ROUND_DOWNWARDS);
+   rhsrel = SCIPrationalRoundReal(rhs, SCIP_R_ROUND_UPWARDS);
 
    /* due to compressed copying, we may have fixed variables contributing to the left and right hand side */
-   if( !RatIsZero(constant) )
+   if( !SCIPrationalIsZero(constant) )
    {
-      if( !RatIsAbsInfinity(lhs) )
-         RatDiff(lhs, lhs, constant);
+      if( !SCIPrationalIsAbsInfinity(lhs) )
+         SCIPrationalDiff(lhs, lhs, constant);
 
-      if( !RatIsAbsInfinity(rhs) )
-         RatDiff(rhs, rhs, constant);
+      if( !SCIPrationalIsAbsInfinity(rhs) )
+         SCIPrationalDiff(rhs, rhs, constant);
    }
 
    (*consdata)->rowlhs = NULL;
    (*consdata)->rowrhs = NULL;
    (*consdata)->rowexact = NULL;
-   SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &(*consdata)->lhs, lhs) );
-   SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &(*consdata)->rhs, rhs) );
+   SCIP_CALL( SCIPrationalCopyBlock(SCIPblkmem(scip), &(*consdata)->lhs, lhs) );
+   SCIP_CALL( SCIPrationalCopyBlock(SCIPblkmem(scip), &(*consdata)->rhs, rhs) );
    (*consdata)->lhsreal = lhsrel;
    (*consdata)->rhsreal = rhsrel;
-   SCIP_CALL( RatCreateString(SCIPblkmem(scip), &(*consdata)->maxabsvalEx, "inf") );
-   SCIP_CALL( RatCreateString(SCIPblkmem(scip), &(*consdata)->minabsvalEx, "inf") );
+   SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &(*consdata)->maxabsvalEx, "inf") );
+   SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &(*consdata)->minabsvalEx, "inf") );
    (*consdata)->maxabsval = SCIP_INVALID;
    (*consdata)->minabsval = SCIP_INVALID;
    (*consdata)->minactivity = SCIP_INVALID;
@@ -875,8 +875,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->onerowrelax = FALSE;
    (*consdata)->hasfprelax = FALSE;
 
-   SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*consdata)->activity) );
-   SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*consdata)->violation) );
+   SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &(*consdata)->activity) );
+   SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &(*consdata)->violation) );
 
    if( SCIPisTransformed(scip) )
    {
@@ -888,11 +888,11 @@ SCIP_RETCODE consdataCreate(
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
       assert((*consdata)->vars[v] != NULL);
-      assert(!RatIsZero((*consdata)->vals[v]));
+      assert(!SCIPrationalIsZero((*consdata)->vals[v]));
       SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
 
-   RatFreeBuffer(SCIPbuffer(scip), &constant);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
 
    return SCIP_OKAY;
 }
@@ -925,22 +925,22 @@ SCIP_RETCODE consdataFree(
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
       assert((*consdata)->vars[v] != NULL);
-      assert(!RatIsZero((*consdata)->vals[v]));
+      assert(!SCIPrationalIsZero((*consdata)->vals[v]));
       SCIP_CALL( SCIPreleaseVar(scip, &((*consdata)->vars[v])) );
    }
 
-   RatFreeBlockArray(SCIPblkmem(scip), &(*consdata)->vals, (*consdata)->varssize);
+   SCIPrationalFreeBlockArray(SCIPblkmem(scip), &(*consdata)->vals, (*consdata)->varssize);
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vals, (*consdata)->varssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->valsreal, (*consdata)->varssize);
 
-   RatFreeBlock(SCIPblkmem(scip), &(*consdata)->lhs);
-   RatFreeBlock(SCIPblkmem(scip), &(*consdata)->rhs);
-   RatFreeBlock(SCIPblkmem(scip), &(*consdata)->maxabsvalEx);
-   RatFreeBlock(SCIPblkmem(scip), &(*consdata)->minabsvalEx);
-   RatFreeBlock(SCIPblkmem(scip), &(*consdata)->violation);
-   RatFreeBlock(SCIPblkmem(scip), &(*consdata)->activity);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->lhs);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->rhs);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->maxabsvalEx);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->minabsvalEx);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->violation);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->activity);
 
    SCIPfreeBlockMemory(scip, consdata);
    return SCIP_OKAY;
@@ -957,11 +957,11 @@ SCIP_RETCODE consdataPrint(
    assert(consdata != NULL);
 
    /* print left hand side for ranged rows */
-   if( !RatIsNegInfinity(consdata->lhs)
-      && !RatIsInfinity(consdata->rhs)
-      && !RatIsEqual(consdata->lhs, consdata->rhs) )
+   if( !SCIPrationalIsNegInfinity(consdata->lhs)
+      && !SCIPrationalIsInfinity(consdata->rhs)
+      && !SCIPrationalIsEqual(consdata->lhs, consdata->rhs) )
    {
-      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
+      SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
       SCIPinfoMessage(scip, file, " <= ");
    }
 
@@ -975,20 +975,20 @@ SCIP_RETCODE consdataPrint(
    }
 
    /* print right hand side */
-   if( RatIsEqual(consdata->lhs, consdata->rhs) )
+   if( SCIPrationalIsEqual(consdata->lhs, consdata->rhs) )
    {
       SCIPinfoMessage(scip, file, " == ");
-      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
+      SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
    }
-   else if( !RatIsInfinity(consdata->rhs) )
+   else if( !SCIPrationalIsInfinity(consdata->rhs) )
    {
       SCIPinfoMessage(scip, file, " <= ");
-      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->rhs);
+      SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, consdata->rhs);
    }
-   else if( !RatIsNegInfinity(consdata->lhs) )
+   else if( !SCIPrationalIsNegInfinity(consdata->lhs) )
    {
       SCIPinfoMessage(scip, file, " >= ");
-      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
+      SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
    }
    else
       SCIPinfoMessage(scip, file, " [free]");
@@ -1018,11 +1018,11 @@ SCIP_RETCODE consPrintConsSol(
 
    /* print left hand side for ranged rows */
    /* print left hand side for ranged rows */
-   if( !RatIsNegInfinity(consdata->lhs)
-      && !RatIsInfinity(consdata->rhs)
-      && !RatIsEqual(consdata->lhs, consdata->rhs) )
+   if( !SCIPrationalIsNegInfinity(consdata->lhs)
+      && !SCIPrationalIsInfinity(consdata->rhs)
+      && !SCIPrationalIsEqual(consdata->lhs, consdata->rhs) )
    {
-      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
+      SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
       SCIPinfoMessage(scip, file, " <= ");
    }
 
@@ -1038,16 +1038,16 @@ SCIP_RETCODE consPrintConsSol(
       {
          if( consdata->vals != NULL )
          {
-            if( RatIsEqualReal(consdata->vals[v], 1.0) )
+            if( SCIPrationalIsEqualReal(consdata->vals[v], 1.0) )
             {
                if( v > 0 )
                   SCIPinfoMessage(scip, file, " +");
             }
-            else if( RatIsEqualReal(consdata->vals[v], -1.0) )
+            else if( SCIPrationalIsEqualReal(consdata->vals[v], -1.0) )
                SCIPinfoMessage(scip, file, " -");
             else
             {
-               RatMessage(SCIPgetMessagehdlr(scip), file, consdata->vals[v]);
+               SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, consdata->vals[v]);
             }
          }
          else if( consdata->nvars > 0 )
@@ -1063,30 +1063,30 @@ SCIP_RETCODE consPrintConsSol(
             else
             {
                SCIP_Rational* tmp;
-               SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
                SCIPgetSolValExact(scip, sol, consdata->vars[v], tmp);
-               RatMessage(SCIPgetMessagehdlr(scip), file, tmp);
-               RatFreeBuffer(SCIPbuffer(scip), &tmp);
+               SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, tmp);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
             }
          }
       }
    }
 
    /* print right hand side */
-   if( RatIsEqual(consdata->lhs, consdata->rhs) )
+   if( SCIPrationalIsEqual(consdata->lhs, consdata->rhs) )
    {
       SCIPinfoMessage(scip, file, " == ");
-      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
+      SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
    }
-   else if( !RatIsInfinity(consdata->rhs) )
+   else if( !SCIPrationalIsInfinity(consdata->rhs) )
    {
       SCIPinfoMessage(scip, file, " <= ");
-      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->rhs);
+      SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, consdata->rhs);
    }
-   else if( !RatIsNegInfinity(consdata->lhs) )
+   else if( !SCIPrationalIsNegInfinity(consdata->lhs) )
    {
       SCIPinfoMessage(scip, file, " >= ");
-      RatMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
+      SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
    }
    else
       SCIPinfoMessage(scip, file, " [free]");
@@ -1119,8 +1119,8 @@ void consdataInvalidateActivities(
    consdata->maxabsval = SCIP_INVALID;
    consdata->minabsval = SCIP_INVALID;
    consdata->maxactdelta = SCIP_INVALID;
-   RatSetString(consdata->maxabsvalEx, "inf");
-   RatSetString(consdata->minabsvalEx, "inf");
+   SCIPrationalSetString(consdata->maxabsvalEx, "inf");
+   SCIPrationalSetString(consdata->minabsvalEx, "inf");
    consdata->maxactdeltavar = NULL;
    consdata->minactivityneginf = -1;
    consdata->minactivityposinf = -1;
@@ -1159,7 +1159,7 @@ void consdataComputePseudoActivity(
    SCIP_Rational* bound;
    SCIP_Rational* val;
 
-   RatSetInt(pseudoactivity, 0L, 1L);
+   SCIPrationalSetInt(pseudoactivity, 0L, 1L);
 
    pseudoactivityposinf = 0;
    pseudoactivityneginf = 0;
@@ -1169,25 +1169,25 @@ void consdataComputePseudoActivity(
       val = consdata->vals[i];
       /** @todo exip: should bound be rational? */
       bound = (SCIPvarGetBestBoundType(consdata->vars[i]) == SCIP_BOUNDTYPE_LOWER) ? SCIPvarGetLbLocalExact(consdata->vars[i]) : SCIPvarGetUbLocalExact(consdata->vars[i]);
-      if( RatIsInfinity(bound) )
+      if( SCIPrationalIsInfinity(bound) )
       {
-         if( RatIsPositive(val) )
+         if( SCIPrationalIsPositive(val) )
             pseudoactivityposinf++;
          else
             pseudoactivityneginf++;
       }
       else
       {
-         if( RatIsNegInfinity(bound) )
+         if( SCIPrationalIsNegInfinity(bound) )
          {
-            if( RatIsPositive(val) )
+            if( SCIPrationalIsPositive(val) )
                pseudoactivityneginf++;
             else
                pseudoactivityposinf++;
          }
          else
          {
-            RatAddProd(pseudoactivity, val, bound);
+            SCIPrationalAddProd(pseudoactivity, val, bound);
          }
       }
    }
@@ -1196,9 +1196,9 @@ void consdataComputePseudoActivity(
       //TODO is then currently now the activity of the non infinity vars returned?
       return; /** @todo exip what to do in this case? */
    else if( pseudoactivityneginf > 0 )
-      RatSetString(pseudoactivity, "-inf");
+      SCIPrationalSetString(pseudoactivity, "-inf");
    else if( pseudoactivityposinf > 0 )
-      RatSetString(pseudoactivity, "inf");
+      SCIPrationalSetString(pseudoactivity, "inf");
 }
 
 /** recompute the minactivity of a constraint */
@@ -1345,18 +1345,18 @@ void consdataCalcMinAbsvalEx(
 
    if( consdata->nvars > 0 )
    {
-      RatAbs(consdata->minabsvalEx, consdata->vals[0]);
-      assert(!RatIsZero(consdata->vals[0]));
+      SCIPrationalAbs(consdata->minabsvalEx, consdata->vals[0]);
+      assert(!SCIPrationalIsZero(consdata->vals[0]));
    }
    else
-      RatSetReal(consdata->minabsvalEx, 0.0);
+      SCIPrationalSetReal(consdata->minabsvalEx, 0.0);
 
    for( i = 1; i < consdata->nvars; ++i )
    {
-      assert(!RatIsZero(consdata->vals[i]));
+      assert(!SCIPrationalIsZero(consdata->vals[i]));
 
-      if( RatIsAbsGT(consdata->minabsvalEx, consdata->vals[i]) )
-         RatAbs(consdata->minabsvalEx, consdata->vals[i]);
+      if( SCIPrationalIsAbsGT(consdata->minabsvalEx, consdata->vals[i]) )
+         SCIPrationalAbs(consdata->minabsvalEx, consdata->vals[i]);
    }
 }
 
@@ -1402,9 +1402,9 @@ void checkMaxActivityDelta(
 {
    if( consdata->maxactdelta != SCIP_INVALID )
    {
-      SCIP_Ratoinal* SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &maxactdelta );
-      SCIP_Ratoinal* SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &domain );
-      SCIP_Ratoinal* SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &delta );
+      SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &maxactdelta );
+      SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &domain );
+      SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &delta );
       SCIP_Rational* lb;
       SCIP_Rational* ub;
       int v;
@@ -1426,14 +1426,14 @@ void checkMaxActivityDelta(
 
          if( RisGT(delta,maxactdelta) )
          {
-           RatSet(maxactdelta, delta);
+           SCIPrationalSet(maxactdelta, delta);
          }
       }
-      assert(RatIsEqual(maxactdelta, consdata->maxactdelta));
+      assert(SCIPrationalIsEqual(maxactdelta, consdata->maxactdelta));
 
-      RatFreeBuffer(SCIPbuffer(scip), delta);
-      RatFreeBuffer(SCIPbuffer(scip), domain);
-      RatFreeBuffer(SCIPbuffer(scip), maxactdelta);   }
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), delta);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), domain);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), maxactdelta);   }
 }
 #else
 #define checkMaxActivityDelta(scip, consdata) /**/
@@ -2010,20 +2010,20 @@ void consdataUpdateAddCoef(
       /* invalidate maximum absolute value, if this coefficient was the maximum */
    if( consdata->validmaxabsval )
    {
-      if( RatIsAbsEqual(valExact, consdata->maxabsvalEx) )
+      if( SCIPrationalIsAbsEqual(valExact, consdata->maxabsvalEx) )
       {
          consdata->validmaxabsval = FALSE;
-         RatSetString(consdata->maxabsvalEx, "inf");
+         SCIPrationalSetString(consdata->maxabsvalEx, "inf");
       }
    }
 
    /* invalidate minimum absolute value, if this coefficient was the minimum */
    if( consdata->validminabsval )
    {
-      if( RatIsAbsEqual(valExact, consdata->minabsvalEx) )
+      if( SCIPrationalIsAbsEqual(valExact, consdata->minabsvalEx) )
       {
          consdata->validminabsval = FALSE;
-         RatSetString(consdata->minabsvalEx, "inf");
+         SCIPrationalSetString(consdata->minabsvalEx, "inf");
       }
    }
 
@@ -2087,20 +2087,20 @@ void consdataUpdateDelCoef(
    /* invalidate maximum absolute value, if this coefficient was the maximum */
    if( consdata->validmaxabsval )
    {
-      if( RatIsAbsEqual(valExact, consdata->maxabsvalEx) )
+      if( SCIPrationalIsAbsEqual(valExact, consdata->maxabsvalEx) )
       {
          consdata->validmaxabsval = FALSE;
-         RatSetString(consdata->maxabsvalEx, "inf");
+         SCIPrationalSetString(consdata->maxabsvalEx, "inf");
       }
    }
 
    /* invalidate minimum absolute value, if this coefficient was the minimum */
    if( consdata->validminabsval )
    {
-      if( RatIsAbsEqual(valExact, consdata->minabsvalEx) )
+      if( SCIPrationalIsAbsEqual(valExact, consdata->minabsvalEx) )
       {
          consdata->validminabsval = FALSE;
-         RatSetString(consdata->minabsvalEx, "inf");
+         SCIPrationalSetString(consdata->minabsvalEx, "inf");
       }
    }
 
@@ -2202,34 +2202,34 @@ void consdataUpdateChgCoef(
    /* update maximum absolute value */
    if( consdata->validmaxabsval )
    {
-      if( RatIsAbsGT(newvalExact, consdata->maxabsvalEx) )
+      if( SCIPrationalIsAbsGT(newvalExact, consdata->maxabsvalEx) )
       {
-         RatAbs(consdata->maxabsvalEx, newvalExact);
+         SCIPrationalAbs(consdata->maxabsvalEx, newvalExact);
       }
       else
       {
          /* invalidate maximum absolute value */
-         if( RatIsAbsEqual(oldvalExact, consdata->maxabsvalEx) )
+         if( SCIPrationalIsAbsEqual(oldvalExact, consdata->maxabsvalEx) )
          {
             consdata->validmaxabsval = FALSE;
-            RatSetString(consdata->maxabsvalEx, "inf");
+            SCIPrationalSetString(consdata->maxabsvalEx, "inf");
          }
       }
    }
       /* update minimum absolute value */
    if( consdata->validminabsval )
    {
-      if( RatIsAbsGT(consdata->minabsvalEx, newvalExact) )
+      if( SCIPrationalIsAbsGT(consdata->minabsvalEx, newvalExact) )
       {
-         RatAbs(consdata->minabsvalEx, newvalExact);
+         SCIPrationalAbs(consdata->minabsvalEx, newvalExact);
       }
       else
       {
          /* invalidate minimum absolute value */
-         if( RatIsAbsEqual(oldvalExact, consdata->minabsvalEx) )
+         if( SCIPrationalIsAbsEqual(oldvalExact, consdata->minabsvalEx) )
          {
             consdata->validminabsval = FALSE;
-            RatSetString(consdata->minabsvalEx, "inf");
+            SCIPrationalSetString(consdata->minabsvalEx, "inf");
          }
       }
    }
@@ -2281,31 +2281,31 @@ void consdataScaleMinValue(
 
    minabsval = consdataGetMinAbsvalEx(scip, consdata);
 
-   assert(!RatIsZero(minabsval) || consdata->nvars == 0);
+   assert(!SCIPrationalIsZero(minabsval) || consdata->nvars == 0);
 
-   (void) RatCreateBuffer(SCIPbuffer(scip), &scalingfactor);
+   (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &scalingfactor);
 
-   if( RatIsLTReal(minabsval, minval) )
+   if( SCIPrationalIsLTReal(minabsval, minval) )
    {
-      RatSetReal(scalingfactor, minval);
-      RatDiv(scalingfactor, scalingfactor, minabsval);
+      SCIPrationalSetReal(scalingfactor, minval);
+      SCIPrationalDiv(scalingfactor, scalingfactor, minabsval);
 
       for( i = 0; i < consdata->nvars; i++ )
       {
-         RatMult(consdata->vals[i], consdata->vals[i], scalingfactor);
+         SCIPrationalMult(consdata->vals[i], consdata->vals[i], scalingfactor);
          SCIPintervalSetRational(&(consdata->valsreal[i]), consdata->vals[i]);
       }
 
-      RatMult(consdata->rhs, consdata->rhs, scalingfactor);
-      consdata->rhsreal = RatRoundReal(consdata->rhs, SCIP_R_ROUND_UPWARDS);
+      SCIPrationalMult(consdata->rhs, consdata->rhs, scalingfactor);
+      consdata->rhsreal = SCIPrationalRoundReal(consdata->rhs, SCIP_R_ROUND_UPWARDS);
 
-      RatMult(consdata->lhs, consdata->lhs, scalingfactor);
-      consdata->lhsreal = RatRoundReal(consdata->lhs, SCIP_R_ROUND_DOWNWARDS);
+      SCIPrationalMult(consdata->lhs, consdata->lhs, scalingfactor);
+      consdata->lhsreal = SCIPrationalRoundReal(consdata->lhs, SCIP_R_ROUND_DOWNWARDS);
    }
 
    consdataInvalidateActivities(consdata);
 
-   RatFreeBuffer(SCIPbuffer(scip), &scalingfactor);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &scalingfactor);
 }
 
 /** calculates minimum and maximum local and global activity for constraint from scratch;
@@ -2938,9 +2938,9 @@ void consdataGetActivity(
       SCIP_Bool negsign;
       int v;
 
-      (void) RatCreateBuffer(SCIPbuffer(scip), &solval);
+      (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &solval);
 
-      RatSetInt(activity, 0L, 1L);
+      SCIPrationalSetInt(activity, 0L, 1L);
       nposinf = 0;
       nneginf = 0;
 
@@ -2949,39 +2949,39 @@ void consdataGetActivity(
          if( useexact )
             SCIPgetSolValExact(scip, sol, consdata->vars[v], solval);
          else
-            RatSetReal(solval, SCIPgetSolVal(scip, sol, consdata->vars[v]));
+            SCIPrationalSetReal(solval, SCIPgetSolVal(scip, sol, consdata->vars[v]));
 
-         if( RatIsNegative(consdata->vals[v]) )
+         if( SCIPrationalIsNegative(consdata->vals[v]) )
             negsign = TRUE;
          else
             negsign = FALSE;
 
-         if( (RatIsInfinity(solval) && !negsign) || (RatIsNegInfinity(solval) && negsign) )
+         if( (SCIPrationalIsInfinity(solval) && !negsign) || (SCIPrationalIsNegInfinity(solval) && negsign) )
             ++nposinf;
-         else if( (RatIsInfinity(solval) && negsign) || (RatIsNegInfinity(solval) && !negsign) )
+         else if( (SCIPrationalIsInfinity(solval) && negsign) || (SCIPrationalIsNegInfinity(solval) && !negsign) )
             ++nneginf;
          else
          {
-            RatAddProd(activity, solval, consdata->vals[v]);
+            SCIPrationalAddProd(activity, solval, consdata->vals[v]);
          }
       }
       assert(nneginf >= 0 && nposinf >= 0);
 
-      SCIPdebugMsg(scip, "activity of linear constraint: %.15g, %d positive infinity values, %d negative infinity values \n", RatApproxReal(activity), nposinf, nneginf);
+      SCIPdebugMsg(scip, "activity of linear constraint: %.15g, %d positive infinity values, %d negative infinity values \n", SCIPrationalGetReal(activity), nposinf, nneginf);
 
       /* check for amount of infinity values and correct the activity */
       if( nposinf > 0 && nneginf > 0 )
       {
-         RatAdd(activity, consdata->rhs, consdata->lhs);
-         RatMultReal(activity, activity, 0.5);
+         SCIPrationalAdd(activity, consdata->rhs, consdata->lhs);
+         SCIPrationalMultReal(activity, activity, 0.5);
       }
       else if( nposinf > 0 )
-         RatSetString(activity, "inf");
+         SCIPrationalSetString(activity, "inf");
       else if( nneginf > 0 )
-         RatSetString(activity, "-inf");
+         SCIPrationalSetString(activity, "-inf");
 
-      RatDebugMessage("corrected activity of linear constraint: %q\n", activity);
-      RatFreeBuffer(SCIPbuffer(scip), &solval);
+      SCIPrationalDebugMessage("corrected activity of linear constraint: %q\n", activity);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
    }
 }
 
@@ -3001,19 +3001,19 @@ void consdataGetFeasibility(
    assert(scip != NULL);
    assert(consdata != NULL);
 
-   (void) RatCreateBuffer(SCIPbuffer(scip), &activity);
-   (void) RatCreateBuffer(SCIPbuffer(scip), &op1);
-   (void) RatCreateBuffer(SCIPbuffer(scip), &op2);
+   (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &activity);
+   (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &op1);
+   (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &op2);
 
    consdataGetActivity(scip, consdata, sol, FALSE, activity);
-   RatDiff(op1, consdata->rhs, activity);
-   RatDiff(op2, activity, consdata->lhs);
+   SCIPrationalDiff(op1, consdata->rhs, activity);
+   SCIPrationalDiff(op2, activity, consdata->lhs);
 
-   RatMIN(ret, op1, op2);
+   SCIPrationalMin(ret, op1, op2);
 
-   RatFreeBuffer(SCIPbuffer(scip), &activity);
-   RatFreeBuffer(SCIPbuffer(scip), &op1);
-   RatFreeBuffer(SCIPbuffer(scip), &op2);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &activity);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &op1);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &op2);
 }
 
 /** updates bit signatures after adding a single coefficient */
@@ -3035,9 +3035,9 @@ void consdataUpdateSignatures(
    lb = SCIPvarGetLbGlobal(consdata->vars[pos]);
    ub = SCIPvarGetUbGlobal(consdata->vars[pos]);
    val = consdata->vals[pos];
-   if( (RatIsPositive(val) && ub > 0.0) || (RatIsNegative(val) && lb < 0.0) )
+   if( (SCIPrationalIsPositive(val) && ub > 0.0) || (SCIPrationalIsNegative(val) && lb < 0.0) )
       consdata->possignature |= varsignature;
-   if( (RatIsPositive(val) && lb < 0.0) || (RatIsNegative(val) && ub > 0.0) )
+   if( (SCIPrationalIsPositive(val) && lb < 0.0) || (SCIPrationalIsNegative(val) && ub > 0.0) )
       consdata->negsignature |= varsignature;
 }
 
@@ -3076,18 +3076,18 @@ SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(
          varsindex[i] = SCIPvarGetCertificateIndex(consdata->vars[i]);
 
       /* print constraint */
-      if( RatIsEqual(consdata->lhs, consdata->rhs) )
+      if( SCIPrationalIsEqual(consdata->lhs, consdata->rhs) )
       {
-         assert(!RatIsAbsInfinity(consdata->lhs));
+         assert(!SCIPrationalIsAbsInfinity(consdata->lhs));
          SCIP_CALL( SCIPcertificatePrintCons(certificate, TRUE, NULL, 'E', consdata->lhs, consdata->nvars, varsindex, consdata->vals) );
       }
       else
       {
-         if( !RatIsNegInfinity(consdata->lhs) )
+         if( !SCIPrationalIsNegInfinity(consdata->lhs) )
          {
             SCIP_CALL( SCIPcertificatePrintCons(certificate, TRUE, NULL, 'G', consdata->lhs, consdata->nvars, varsindex, consdata->vals) );
          }
-         if( !RatIsInfinity(consdata->rhs) )
+         if( !SCIPrationalIsInfinity(consdata->rhs) )
          {
             SCIP_CALL( SCIPcertificatePrintCons(certificate, TRUE, NULL, 'L', consdata->rhs, consdata->nvars, varsindex, consdata->vals) );
          }
@@ -3135,10 +3135,10 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
    /* both variables are binary */
    else if( SCIPvarIsBinary(var1) )
    {
-      if( RatIsAbsEqual(consdata->vals[ind1], consdata->vals[ind2]) ) {
+      if( SCIPrationalIsAbsEqual(consdata->vals[ind1], consdata->vals[ind2]) ) {
          return (SCIPvarGetProbindex(var1) - SCIPvarGetProbindex(var2));
       }
-      if( RatIsAbsGT(consdata->vals[ind1], consdata->vals[ind2]) )
+      if( SCIPrationalIsAbsGT(consdata->vals[ind1], consdata->vals[ind2]) )
          return -1;
       else
          return +1;
@@ -3169,30 +3169,30 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
             SCIP_Rational* abscont1;
             SCIP_Rational* abscont2;
 
-            (void) RatCreate(&abscont1);
-	    (void) RatCreate(&abscont2);
+            (void) SCIPrationalCreate(&abscont1);
+	    (void) SCIPrationalCreate(&abscont2);
 
-            RatDiff(abscont1, SCIPvarGetUbGlobalExact(var1), SCIPvarGetLbGlobalExact(var1));
-            RatMult(abscont1, consdata->vals[ind1], abscont1);
+            SCIPrationalDiff(abscont1, SCIPvarGetUbGlobalExact(var1), SCIPvarGetLbGlobalExact(var1));
+            SCIPrationalMult(abscont1, consdata->vals[ind1], abscont1);
 
-            RatDiff(abscont2, SCIPvarGetUbGlobalExact(var2), SCIPvarGetLbGlobalExact(var2));
-            RatMult(abscont2, consdata->vals[ind2], abscont2);
+            SCIPrationalDiff(abscont2, SCIPvarGetUbGlobalExact(var2), SCIPvarGetLbGlobalExact(var2));
+            SCIPrationalMult(abscont2, consdata->vals[ind2], abscont2);
 
-            if( RatIsAbsEqual(abscont1, abscont2) ) {
-               RatFree(&abscont1);
-               RatFree(&abscont2);
+            if( SCIPrationalIsAbsEqual(abscont1, abscont2) ) {
+               SCIPrationalFree(&abscont1);
+               SCIPrationalFree(&abscont2);
                return (SCIPvarGetProbindex(var1) - SCIPvarGetProbindex(var2));
             }
-            if( RatIsAbsGT(abscont2, abscont1) )
+            if( SCIPrationalIsAbsGT(abscont2, abscont1) )
             {
-               RatFree(&abscont1);
-               RatFree(&abscont2);
+               SCIPrationalFree(&abscont1);
+               SCIPrationalFree(&abscont2);
                return 1;
             }
             else
             {
-               RatFree(&abscont1);
-               RatFree(&abscont2);
+               SCIPrationalFree(&abscont1);
+               SCIPrationalFree(&abscont2);
                return -1;
             }
          }
@@ -3361,21 +3361,21 @@ SCIP_RETCODE chgLhs(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(!RatIsInfinity(lhs));
+   assert(!SCIPrationalIsInfinity(lhs));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || (consdata->vars != NULL && consdata->vals != NULL));
-   assert(!RatIsInfinity(consdata->lhs));
+   assert(!SCIPrationalIsInfinity(consdata->lhs));
 
    /* check whether the side is not changed */
-   if( RatIsEqual(consdata->lhs, lhs) )
+   if( SCIPrationalIsEqual(consdata->lhs, lhs) )
       return SCIP_OKAY;
 
    /* ensure that rhs >= lhs is satisfied without numerical tolerance */
-   if( RatIsEqual(lhs, consdata->rhs) )
+   if( SCIPrationalIsEqual(lhs, consdata->rhs) )
    {
-      RatSet(consdata->rhs, lhs);
+      SCIPrationalSet(consdata->rhs, lhs);
       assert(consdata->rowlhs == NULL);
    }
 
@@ -3386,7 +3386,7 @@ SCIP_RETCODE chgLhs(
    /* if necessary, update the rounding locks of variables */
    if( locked )
    {
-      if( RatIsNegInfinity(consdata->lhs) && !RatIsNegInfinity(lhs) )
+      if( SCIPrationalIsNegInfinity(consdata->lhs) && !SCIPrationalIsNegInfinity(lhs) )
       {
          SCIP_VAR** vars;
          SCIP_Rational** vals;
@@ -3399,9 +3399,9 @@ SCIP_RETCODE chgLhs(
          for( v = 0; v < consdata->nvars; ++v )
          {
             assert(vars[v] != NULL);
-            assert(!RatIsZero(vals[v]));
+            assert(!SCIPrationalIsZero(vals[v]));
 
-            if( RatIsPositive(vals[v]) )
+            if( SCIPrationalIsPositive(vals[v]) )
             {
                SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
             }
@@ -3411,7 +3411,7 @@ SCIP_RETCODE chgLhs(
             }
          }
       }
-      else if( !RatIsNegInfinity(consdata->lhs) && RatIsNegInfinity(lhs) )
+      else if( !SCIPrationalIsNegInfinity(consdata->lhs) && SCIPrationalIsNegInfinity(lhs) )
       {
          SCIP_VAR** vars;
          SCIP_Rational** vals;
@@ -3424,9 +3424,9 @@ SCIP_RETCODE chgLhs(
          for( v = 0; v < consdata->nvars; ++v )
          {
             assert(vars[v] != NULL);
-            assert(!RatIsZero(vals[v]));
+            assert(!SCIPrationalIsZero(vals[v]));
 
-            if( RatIsPositive(vals[v]) )
+            if( SCIPrationalIsPositive(vals[v]) )
             {
                SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, TRUE, FALSE) );
             }
@@ -3439,7 +3439,7 @@ SCIP_RETCODE chgLhs(
    }
 
    /* check whether the left hand side is increased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
-   if( !RatIsNegInfinity(lhs) && RatIsGT(lhs, consdata->lhs) )
+   if( !SCIPrationalIsNegInfinity(lhs) && SCIPrationalIsGT(lhs, consdata->lhs) )
    {
       consdata->boundstightened = 0;
       consdata->presolved = FALSE;
@@ -3454,8 +3454,8 @@ SCIP_RETCODE chgLhs(
    }
 
    /* set new left hand side and update constraint data */
-   RatSet(consdata->lhs, lhs);
-   consdata->lhsreal = RatRoundReal(lhs, SCIP_R_ROUND_DOWNWARDS);
+   SCIPrationalSet(consdata->lhs, lhs);
+   consdata->lhsreal = SCIPrationalRoundReal(lhs, SCIP_R_ROUND_DOWNWARDS);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
@@ -3484,21 +3484,21 @@ SCIP_RETCODE chgRhs(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(!RatIsNegInfinity(rhs));
+   assert(!SCIPrationalIsNegInfinity(rhs));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || (consdata->vars != NULL && consdata->vals != NULL));
-   assert(!RatIsNegInfinity(consdata->rhs));
+   assert(!SCIPrationalIsNegInfinity(consdata->rhs));
 
    /* check whether the side is not changed */
-   if( RatIsEqual(consdata->rhs, rhs) )
+   if( SCIPrationalIsEqual(consdata->rhs, rhs) )
       return SCIP_OKAY;
 
    /* ensure that rhs >= lhs is satisfied without numerical tolerance */
-   if( RatIsEqual(rhs, consdata->lhs) )
+   if( SCIPrationalIsEqual(rhs, consdata->lhs) )
    {
-      RatSet(consdata->rhs, rhs);
+      SCIPrationalSet(consdata->rhs, rhs);
       assert(consdata->rowlhs == NULL);
    }
 
@@ -3511,7 +3511,7 @@ SCIP_RETCODE chgRhs(
    {
       assert(SCIPconsIsTransformed(cons));
 
-      if( RatIsInfinity(consdata->rhs) && !RatIsInfinity(rhs) )
+      if( SCIPrationalIsInfinity(consdata->rhs) && !SCIPrationalIsInfinity(rhs) )
       {
          SCIP_VAR** vars;
          SCIP_Rational** vals;
@@ -3524,9 +3524,9 @@ SCIP_RETCODE chgRhs(
          for( v = 0; v < consdata->nvars; ++v )
          {
             assert(vars[v] != NULL);
-            assert(!RatIsZero(vals[v]));
+            assert(!SCIPrationalIsZero(vals[v]));
 
-            if( RatIsPositive(vals[v]) )
+            if( SCIPrationalIsPositive(vals[v]) )
             {
                SCIP_CALL( SCIPlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
             }
@@ -3536,7 +3536,7 @@ SCIP_RETCODE chgRhs(
             }
          }
       }
-      else if( !RatIsInfinity(consdata->rhs) && RatIsInfinity(rhs) )
+      else if( !SCIPrationalIsInfinity(consdata->rhs) && SCIPrationalIsInfinity(rhs) )
       {
          SCIP_VAR** vars;
          SCIP_Rational** vals;
@@ -3549,9 +3549,9 @@ SCIP_RETCODE chgRhs(
          for( v = 0; v < consdata->nvars; ++v )
          {
             assert(vars[v] != NULL);
-            assert(!RatIsZero(vals[v]));
+            assert(!SCIPrationalIsZero(vals[v]));
 
-            if( RatIsPositive(vals[v]) )
+            if( SCIPrationalIsPositive(vals[v]) )
             {
                SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, FALSE, TRUE) );
             }
@@ -3564,7 +3564,7 @@ SCIP_RETCODE chgRhs(
    }
 
    /* check whether the right hand side is decreased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
-   if( !RatIsInfinity(rhs) && RatIsLT(rhs, consdata->rhs) )
+   if( !SCIPrationalIsInfinity(rhs) && SCIPrationalIsLT(rhs, consdata->rhs) )
    {
       consdata->boundstightened = 0;
       consdata->presolved = FALSE;
@@ -3579,8 +3579,8 @@ SCIP_RETCODE chgRhs(
    }
 
    /* set new right hand side and update constraint data */
-   RatSet(consdata->rhs, rhs);
-   consdata->rhsreal = RatRoundReal(rhs, SCIP_R_ROUND_UPWARDS);
+   SCIPrationalSet(consdata->rhs, rhs);
+   consdata->rhsreal = SCIPrationalRoundReal(rhs, SCIP_R_ROUND_UPWARDS);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
@@ -3612,7 +3612,7 @@ SCIP_RETCODE addCoef(
    assert(var != NULL);
 
    /* ignore coefficient if it is nearly zero */
-   if( RatIsZero(val) )
+   if( SCIPrationalIsZero(val) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -3631,7 +3631,7 @@ SCIP_RETCODE addCoef(
 
    SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1) );
    consdata->vars[consdata->nvars] = var;
-   RatSet(consdata->vals[consdata->nvars], val);
+   SCIPrationalSet(consdata->vals[consdata->nvars], val);
    SCIPintervalSetRational(&(consdata->valsreal[consdata->nvars]), val);
    consdata->nvars++;
 
@@ -3782,7 +3782,7 @@ SCIP_RETCODE delCoefPos(
    if( pos != consdata->nvars - 1 )
    {
       consdata->vars[pos] = consdata->vars[consdata->nvars-1];
-      RatSet(consdata->vals[pos], consdata->vals[consdata->nvars - 1]);
+      SCIPrationalSet(consdata->vals[pos], consdata->vals[consdata->nvars - 1]);
       consdata->valsreal[pos] = consdata->valsreal[consdata->nvars -1];
 
       if( consdata->eventdata != NULL )
@@ -3849,7 +3849,7 @@ SCIP_RETCODE chgCoefPos(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(!RatIsZero(newval));
+   assert(!SCIPrationalIsZero(newval));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3865,7 +3865,7 @@ SCIP_RETCODE chgCoefPos(
       locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) i);
 
    /* if necessary, update the rounding locks of the variable */
-   if( locked && ((RatIsNegative(newval) && RatIsPositive(val)) || (RatIsNegative(val) && RatIsPositive(newval))) )
+   if( locked && ((SCIPrationalIsNegative(newval) && SCIPrationalIsPositive(val)) || (SCIPrationalIsNegative(val) && SCIPrationalIsPositive(newval))) )
    {
       assert(SCIPconsIsTransformed(cons));
 
@@ -3881,7 +3881,7 @@ SCIP_RETCODE chgCoefPos(
       consdataUpdateChgCoef(scip, consdata, var, consdata->valsreal[pos], val, newvalfp, newval);
 
       /* change the value */
-   RatSet(consdata->vals[pos], newval);
+   SCIPrationalSet(consdata->vals[pos], newval);
    consdata->valsreal[pos] = newvalfp;
    if( consdata->coefsorted )
    {
@@ -3972,7 +3972,7 @@ SCIP_RETCODE mergeMultiples(
    if( consdata->merged )
       return SCIP_OKAY;
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &valsum) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &valsum) );
 
    /* sort the constraint */
    SCIP_CALL( consdataSort(scip, consdata) );
@@ -3987,18 +3987,18 @@ SCIP_RETCODE mergeMultiples(
       var = consdata->vars[v];
       if( consdata->vars[v-1] == var )
       {
-         RatSet(valsum, consdata->vals[v]);
+         SCIPrationalSet(valsum, consdata->vals[v]);
          do
          {
             SCIP_CALL( delCoefPos(scip, cons, v) );
             --v;
-            RatAdd(valsum, valsum, consdata->vals[v]);
+            SCIPrationalAdd(valsum, valsum, consdata->vals[v]);
          }
          while( v >= 1 && consdata->vars[v-1] == var );
 
          /* modify the last existing occurrence of the variable */
          assert(consdata->vars[v] == var);
-         if( RatIsZero(valsum) )
+         if( SCIPrationalIsZero(valsum) )
          {
             SCIP_CALL( delCoefPos(scip, cons, v) );
 
@@ -4019,7 +4019,7 @@ SCIP_RETCODE mergeMultiples(
       --v;
    }
 
-   RatFreeBuffer(SCIPbuffer(scip), &valsum);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &valsum);
    consdata->merged = TRUE;
 
    return SCIP_OKAY;
@@ -4078,9 +4078,9 @@ SCIP_RETCODE applyFixings(
       SCIP_Rational* rhssubtrahend;
       SCIP_Rational* tmpval;
 
-      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lhssubtrahend) );
-      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &rhssubtrahend) );
-      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhssubtrahend) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhssubtrahend) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpval) );
 
       SCIPdebugMsg(scip, "applying fixings:\n");
       SCIPdebugPrintCons(scip, cons, NULL);
@@ -4106,13 +4106,13 @@ SCIP_RETCODE applyFixings(
          case SCIP_VARSTATUS_FIXED:
             assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)));
             fixedval = SCIPvarGetLbGlobalExact(var);
-            if( !RatIsNegInfinity(consdata->lhs) )
+            if( !SCIPrationalIsNegInfinity(consdata->lhs) )
             {
-               if( RatIsAbsInfinity(fixedval) )
+               if( SCIPrationalIsAbsInfinity(fixedval) )
                {
-                  if( RatGetSign(val) == RatGetSign(fixedval) )
+                  if( SCIPrationalGetSign(val) == SCIPrationalGetSign(fixedval) )
                   {
-                     RatSetString(tmpval, "-inf");
+                     SCIPrationalSetString(tmpval, "-inf");
                      SCIP_CALL( chgLhs(scip, cons, tmpval) );
                   }
                   else
@@ -4125,19 +4125,19 @@ SCIP_RETCODE applyFixings(
                      }
                      else
                      {
-                        RatSetString(tmpval, "inf");
+                        SCIPrationalSetString(tmpval, "inf");
                         SCIP_CALL( chgLhs(scip, cons, tmpval) );
                      }
                   }
                }
                else
-                  RatAddProd(lhssubtrahend, val, fixedval);
+                  SCIPrationalAddProd(lhssubtrahend, val, fixedval);
             }
-            if( !RatIsInfinity(consdata->rhs) )
+            if( !SCIPrationalIsInfinity(consdata->rhs) )
             {
-               if( RatIsAbsInfinity(fixedval) )
+               if( SCIPrationalIsAbsInfinity(fixedval) )
                {
-                  if( RatGetSign(val) == RatGetSign(fixedval) )
+                  if( SCIPrationalGetSign(val) == SCIPrationalGetSign(fixedval) )
                   {
                      if( infeasible != NULL )
                      {
@@ -4147,18 +4147,18 @@ SCIP_RETCODE applyFixings(
                      }
                      else
                      {
-                        RatSetString(tmpval, "-inf");
+                        SCIPrationalSetString(tmpval, "-inf");
                         SCIP_CALL( chgRhs(scip, cons, tmpval) );
                      }
                   }
                   else
                   {
-                     RatSetString(tmpval, "inf");
+                     SCIPrationalSetString(tmpval, "inf");
                      SCIP_CALL( chgRhs(scip, cons, tmpval) );
                   }
                }
                else
-                  RatAddProd(rhssubtrahend, val, fixedval);
+                  SCIPrationalAddProd(rhssubtrahend, val, fixedval);
             }
             SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
@@ -4169,33 +4169,33 @@ SCIP_RETCODE applyFixings(
             SCIP_Rational* activescalar;
             SCIP_Rational* activeconstant;
 
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &activescalar) );
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &activeconstant) );
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &activescalar) );
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &activeconstant) );
 
-            RatMult(activescalar, val, SCIPvarGetAggrScalarExact(var));
-            RatMult(activeconstant, val, SCIPvarGetAggrConstantExact(var));
+            SCIPrationalMult(activescalar, val, SCIPvarGetAggrScalarExact(var));
+            SCIPrationalMult(activeconstant, val, SCIPvarGetAggrConstantExact(var));
 
             assert(activevar != NULL);
             SCIP_CALL( SCIPgetProbvarSumExact(scip, &activevar, activescalar, activeconstant) );
             assert(activevar != NULL);
 
-            if( !RatIsZero(activescalar) )
+            if( !SCIPrationalIsZero(activescalar) )
             {
                SCIP_CALL( addCoef(scip, cons, activevar, activescalar) );
             }
 
-            if( !RatIsZero(activeconstant) )
+            if( !SCIPrationalIsZero(activeconstant) )
             {
-               if( !RatIsNegInfinity(consdata->lhs) )
-                  RatAdd(lhssubtrahend, lhssubtrahend, activeconstant);
-               if( !RatIsInfinity(consdata->rhs) )
-                  RatAdd(rhssubtrahend, rhssubtrahend, activeconstant);
+               if( !SCIPrationalIsNegInfinity(consdata->lhs) )
+                  SCIPrationalAdd(lhssubtrahend, lhssubtrahend, activeconstant);
+               if( !SCIPrationalIsInfinity(consdata->rhs) )
+                  SCIPrationalAdd(rhssubtrahend, rhssubtrahend, activeconstant);
             }
 
             SCIP_CALL( delCoefPos(scip, cons, v) );
 
-            RatFreeBuffer(SCIPbuffer(scip), &activescalar);
-            RatFreeBuffer(SCIPbuffer(scip), &activeconstant);
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &activescalar);
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &activeconstant);
             break;
          }
          case SCIP_VARSTATUS_MULTAGGR:
@@ -4205,39 +4205,39 @@ SCIP_RETCODE applyFixings(
             aggrscalars = SCIPvarGetMultaggrScalarsExact(var);
             for( i = 0; i < naggrvars; ++i )
             {
-               RatMult(tmpval, val, aggrscalars[i]);
+               SCIPrationalMult(tmpval, val, aggrscalars[i]);
                SCIP_CALL( addCoef(scip, cons, aggrvars[i], tmpval) );
             }
             aggrconst = SCIPvarGetMultaggrConstantExact(var);
 
-            if( !RatIsNegInfinity(consdata->lhs) )
+            if( !SCIPrationalIsNegInfinity(consdata->lhs) )
             {
-               RatMult(tmpval, val, aggrconst);
-               RatAdd(lhssubtrahend, lhssubtrahend, tmpval);
+               SCIPrationalMult(tmpval, val, aggrconst);
+               SCIPrationalAdd(lhssubtrahend, lhssubtrahend, tmpval);
             }
-            if( !RatIsInfinity(consdata->rhs) )
+            if( !SCIPrationalIsInfinity(consdata->rhs) )
             {
-               RatMult(tmpval, val, aggrconst);
-               RatAdd(rhssubtrahend, rhssubtrahend, tmpval);
+               SCIPrationalMult(tmpval, val, aggrconst);
+               SCIPrationalAdd(rhssubtrahend, rhssubtrahend, tmpval);
             }
 
             SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
 
          case SCIP_VARSTATUS_NEGATED:
-            RatNegate(tmpval, val);
+            SCIPrationalNegate(tmpval, val);
             SCIP_CALL( addCoef(scip, cons, SCIPvarGetNegationVar(var), tmpval) );
             negconst = SCIPvarGetNegationConstant(var);
 
-            if( !RatIsNegInfinity(consdata->lhs) )
+            if( !SCIPrationalIsNegInfinity(consdata->lhs) )
             {
-               RatMultReal(tmpval, val, negconst);
-               RatAdd(lhssubtrahend, lhssubtrahend, tmpval);
+               SCIPrationalMultReal(tmpval, val, negconst);
+               SCIPrationalAdd(lhssubtrahend, lhssubtrahend, tmpval);
             }
-            if( !RatIsInfinity(consdata->rhs) )
+            if( !SCIPrationalIsInfinity(consdata->rhs) )
             {
-               RatMultReal(tmpval, val, negconst);
-               RatAdd(rhssubtrahend, rhssubtrahend, tmpval);
+               SCIPrationalMultReal(tmpval, val, negconst);
+               SCIPrationalAdd(rhssubtrahend, rhssubtrahend, tmpval);
             }
 
             SCIP_CALL( delCoefPos(scip, cons, v) );
@@ -4250,14 +4250,14 @@ SCIP_RETCODE applyFixings(
          }
       }
 
-      if( !RatIsAbsInfinity(consdata->lhs) )
+      if( !SCIPrationalIsAbsInfinity(consdata->lhs) )
       {
-         RatDiff(tmpval, consdata->lhs, lhssubtrahend);
+         SCIPrationalDiff(tmpval, consdata->lhs, lhssubtrahend);
          SCIP_CALL( chgLhs(scip, cons, tmpval) );
       }
-      if( !RatIsAbsInfinity(consdata->rhs) )
+      if( !SCIPrationalIsAbsInfinity(consdata->rhs) )
       {
-         RatDiff(tmpval, consdata->rhs, rhssubtrahend);
+         SCIPrationalDiff(tmpval, consdata->rhs, rhssubtrahend);
          SCIP_CALL( chgRhs(scip, cons, tmpval) );
       }
 
@@ -4274,9 +4274,9 @@ SCIP_RETCODE applyFixings(
       SCIPdebugMsg(scip, "after merging:\n");
       SCIPdebugPrintCons(scip, cons, NULL);
 
-      RatFreeBuffer(SCIPbuffer(scip), &tmpval);
-      RatFreeBuffer(SCIPbuffer(scip), &rhssubtrahend);
-      RatFreeBuffer(SCIPbuffer(scip), &lhssubtrahend);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpval);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhssubtrahend);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhssubtrahend);
    }
    assert(consdata->removedfixings);
 
@@ -4306,7 +4306,7 @@ SCIP_RETCODE certificatePrintActivityConflict(
 
    if (!SCIPisCertificateActive(scip))
       return SCIP_OKAY;
-   SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &diff));
+   SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(scip), &diff));
 
    if ( rhs )
    {
@@ -4333,13 +4333,13 @@ SCIP_RETCODE certificatePrintActivityConflict(
       nvals = consdata->nvars;
       vals = consdata->vals;
    }
-   RatSetReal(diff, activity);
-   RatDiffReal(diff, diff, side);
+   SCIPrationalSetReal(diff, activity);
+   SCIPrationalDiffReal(diff, diff, side);
 
    SCIP_CALL( SCIPcertificatePrintActivityConflict(scip, cons, consdata->rowexact, consdata->lhs, consdata->rhs,
       nvals, vals, consdata->vars, diff, rhs) );
 
-   RatFreeBuffer(SCIPbuffer(scip), &diff);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &diff);
 
    return SCIP_OKAY;
 }
@@ -4461,13 +4461,13 @@ SCIP_RETCODE tightenVarBounds(
             {
                SCIP_Longint maxdenom;
 
-               SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpbound) );
-               RatSetReal(tmpbound, newub);
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpbound) );
+               SCIPrationalSetReal(tmpbound, newub);
 
                if( conshdlrdata->limitdenom )
                {
                   maxdenom = conshdlrdata->maxdenom;
-                  RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
+                  SCIPrationalComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
                }
 
                if( SCIPcertificateShouldTrackBounds(scip) )
@@ -4476,7 +4476,7 @@ SCIP_RETCODE tightenVarBounds(
 
                SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos),
                      &infeasible, &tightened) );
-               RatFreeBuffer(SCIPbuffer(scip), &tmpbound);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpbound);
             }
             else
             {
@@ -4535,13 +4535,13 @@ SCIP_RETCODE tightenVarBounds(
             {
                SCIP_Longint maxdenom;
 
-               SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpbound) );
-               RatSetReal(tmpbound, newlb);
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpbound) );
+               SCIPrationalSetReal(tmpbound, newlb);
 
                if( conshdlrdata->limitdenom )
                {
                   maxdenom = conshdlrdata->maxdenom;
-                  RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
+                  SCIPrationalComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
                }
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
@@ -4549,7 +4549,7 @@ SCIP_RETCODE tightenVarBounds(
 
                SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos),
                      &infeasible, &tightened) );
-               RatFreeBuffer(SCIPbuffer(scip), &tmpbound);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpbound);
             }
             else
             {
@@ -4612,13 +4612,13 @@ SCIP_RETCODE tightenVarBounds(
             {
                SCIP_Longint maxdenom;
 
-               SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpbound) );
-               RatSetReal(tmpbound, newlb);
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpbound) );
+               SCIPrationalSetReal(tmpbound, newlb);
 
                if( conshdlrdata->limitdenom )
                {
                   maxdenom = conshdlrdata->maxdenom;
-                  RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
+                  SCIPrationalComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
                }
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
@@ -4626,7 +4626,7 @@ SCIP_RETCODE tightenVarBounds(
 
                SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos),
                      &infeasible, &tightened) );
-               RatFreeBuffer(SCIPbuffer(scip), &tmpbound);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpbound);
             }
             else
             {
@@ -4686,13 +4686,13 @@ SCIP_RETCODE tightenVarBounds(
             {
                SCIP_Longint maxdenom;
 
-               SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpbound) );
-               RatSetReal(tmpbound, newub);
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpbound) );
+               SCIPrationalSetReal(tmpbound, newub);
 
                if( conshdlrdata->limitdenom )
                {
                   maxdenom = conshdlrdata->maxdenom;
-                  RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
+                  SCIPrationalComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
                }
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
@@ -4700,7 +4700,7 @@ SCIP_RETCODE tightenVarBounds(
 
                SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos),
                      &infeasible, &tightened) );
-               RatFreeBuffer(SCIPbuffer(scip), &tmpbound);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpbound);
             }
             else
             {
@@ -4937,7 +4937,7 @@ SCIP_RETCODE checkCons(
    activity = consdata->activity;
 
    /* only check exact constraint if fp cons is feasible enough */
-   if( (consdata->rowexact == NULL || checklprows) && !RatIsEqual(consdata->lhs, consdata->rhs) )
+   if( (consdata->rowexact == NULL || checklprows) && !SCIPrationalIsEqual(consdata->lhs, consdata->rhs) )
    {
       SCIP_Real activityfp;
       SCIP_Real mu;
@@ -4989,7 +4989,7 @@ SCIP_RETCODE checkCons(
    else
       consdataGetActivity(scip, consdata, sol, useexactsol, activity);
 
-   RatDebugMessage("consdata activity=%q (lhs=%q, rhs=%q, row=%p, checklprows=%u, rowinlp=%u, sol=%p, hascurrentnodelp=%u)\n",
+   SCIPrationalDebugMessage("consdata activity=%q (lhs=%q, rhs=%q, row=%p, checklprows=%u, rowinlp=%u, sol=%p, hascurrentnodelp=%u)\n",
       activity, consdata->lhs, consdata->rhs, (void*)consdata->rowexact, checklprows,
       consdata->rowexact == NULL ? 0 : SCIProwExactIsInLP(consdata->rowexact), (void*)sol,
       consdata->rowexact == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
@@ -5010,8 +5010,8 @@ SCIP_RETCODE checkCons(
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
    }
    /* check with absolute tolerances, always do this for exact constraints */
-   else if( ((!RatIsNegInfinity(consdata->lhs) && RatIsLT(activity, consdata->lhs)) ||
-      (!RatIsInfinity(consdata->rhs) && RatIsGT(activity, consdata->rhs))) )
+   else if( ((!SCIPrationalIsNegInfinity(consdata->lhs) && SCIPrationalIsLT(activity, consdata->lhs)) ||
+      (!SCIPrationalIsInfinity(consdata->rhs) && SCIPrationalIsGT(activity, consdata->rhs))) )
    {
       *violated = TRUE;
 
@@ -5121,7 +5121,7 @@ SCIP_RETCODE addRelaxation(
       SCIPdebug( SCIP_CALL( SCIPprintRowExact(scip, consdata->rowexact, NULL)) ); // Maybe we should still add the row even if rowlhs is already in the LP?
 
       /* if presolving is turned off, the row might be trivial */
-      if ( !RatIsNegInfinity(consdata->lhs) || !RatIsInfinity(consdata->rhs) )
+      if ( !SCIPrationalIsNegInfinity(consdata->lhs) || !SCIPrationalIsInfinity(consdata->rhs) )
       {
          SCIP_CALL( SCIPaddRow(scip, consdata->rowlhs, FALSE, cutoff) );
          SCIP_CALL( SCIPaddRowExact(scip, consdata->rowexact) );
@@ -5284,7 +5284,7 @@ SCIP_RETCODE propagateCons(
 
          if( minactivity > consdata->rhsreal )
          {
-            RatDebugMessage("linear constraint <%s> is infeasible (rhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
+            SCIPrationalDebugMessage("linear constraint <%s> is infeasible (rhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
             SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, TRUE) );
             /* analyze conflict */
@@ -5295,7 +5295,7 @@ SCIP_RETCODE propagateCons(
          }
          else if( maxactivity < consdata->lhsreal )
          {
-            RatDebugMessage("linear constraint <%s> is infeasible (lhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
+            SCIPrationalDebugMessage("linear constraint <%s> is infeasible (lhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhsreal, consdata->rhsreal);
             SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, FALSE) );
             /* analyze conflict */
@@ -5763,7 +5763,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactLinear)
    loclowerbound = SCIPgetLocalLowerbound(scip);
    glblowerbound = SCIPgetLowerbound(scip);
    cutoffbound = SCIPgetCutoffbound(scip);
-   maxbound = glblowerbound + RatApproxReal(conshdlrdata->maxcardbounddist) * (cutoffbound - glblowerbound);
+   maxbound = glblowerbound + SCIPrationalGetReal(conshdlrdata->maxcardbounddist) * (cutoffbound - glblowerbound);
 
    separatecards = SCIPisLE(scip, loclowerbound, maxbound);
    separatecards = separatecards && (SCIPgetNLPBranchCands(scip) > 0);
@@ -5951,7 +5951,7 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
             SCIP_CONSDATA* consdata;
             SCIP_Rational* activity;
 
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &activity) );
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &activity) );
 
             consdata = SCIPconsGetData(conss[c]);
             assert( consdata != NULL);
@@ -5961,24 +5961,24 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
             SCIP_CALL( consPrintConsSol(scip, conss[c], sol, checkexact, NULL ) );
             SCIPinfoMessage(scip, NULL, ";\n");
 
-            if( RatIsAbsInfinity(activity) ) /*lint !e777*/
+            if( SCIPrationalIsAbsInfinity(activity) ) /*lint !e777*/
                SCIPinfoMessage(scip, NULL, "activity invalid due to positive and negative infinity contributions\n");
-            else if( RatIsLT(activity, consdata->lhs) )
+            else if( SCIPrationalIsLT(activity, consdata->lhs) )
             {
-               RatDiff(activity, consdata->lhs, activity);
+               SCIPrationalDiff(activity, consdata->lhs, activity);
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by ");
-               RatPrint(activity);
+               SCIPrationalPrint(activity);
                SCIPinfoMessage(scip, NULL, "\n");
             }
-            else if( RatIsGT(activity, consdata->rhs) )
+            else if( SCIPrationalIsGT(activity, consdata->rhs) )
             {
-               RatDiff(activity, activity, consdata->rhs);
+               SCIPrationalDiff(activity, activity, consdata->rhs);
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by ");
-               RatPrint(activity);
+               SCIPrationalPrint(activity);
                SCIPinfoMessage(scip, NULL, "\n");
             }
 
-            RatFreeBuffer(SCIPbuffer(scip), &activity);
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &activity);
          }
       }
    }
@@ -6566,13 +6566,13 @@ SCIP_DECL_CONSLOCK(consLockExactLinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   haslhs = !RatIsNegInfinity(consdata->lhs);
-   hasrhs = !RatIsInfinity(consdata->rhs);
+   haslhs = !SCIPrationalIsNegInfinity(consdata->lhs);
+   hasrhs = !SCIPrationalIsInfinity(consdata->rhs);
 
    /* update rounding locks of every single variable */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      if( RatIsPositive(consdata->vals[i]) )
+      if( SCIPrationalIsPositive(consdata->vals[i]) )
       {
          if( haslhs )
          {
@@ -6653,7 +6653,7 @@ SCIP_DECL_CONSCOPY(consCopyExactLinear)
       consname = SCIPconsGetName(sourcecons);
 
    SCIP_CALL( SCIPcopyConsExactLinear(scip, cons, sourcescip, consname, nvars, sourcevars, sourcecoefs,
-         RatApproxReal(SCIPgetLhsExactLinear(sourcescip, sourcecons)), RatApproxReal(SCIPgetRhsExactLinear(sourcescip, sourcecons)), varmap, consmap,
+         SCIPrationalGetReal(SCIPgetLhsExactLinear(sourcescip, sourcecons)), SCIPrationalGetReal(SCIPgetRhsExactLinear(sourcescip, sourcecons)), varmap, consmap,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
    assert(cons != NULL || *valid == FALSE);
 
@@ -6791,11 +6791,11 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    assert(cons != NULL);
 
    /* set left and right hand side to their default values */
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lhs) );
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &rhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
 
-   RatSetString(lhs, "-inf");
-   RatSetString(rhs, "inf");
+   SCIPrationalSetString(lhs, "-inf");
+   SCIPrationalSetString(rhs, "inf");
 
    (*success) = FALSE;
 
@@ -6876,7 +6876,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
 
       /* in case of an equation, assign the left also to the right hand side */
       if( rhsstrptr == lhsstrptr )
-         RatSet(rhs, lhs);
+         SCIPrationalSet(rhs, lhs);
    }
 
    /* parse right hand side, if different from left hand side */
@@ -6892,7 +6892,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    /* initialize buffers for storing the variables and coefficients */
    coefssize = 100;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars,  coefssize) );
-   SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &coefs, coefssize) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &coefs, coefssize) );
 
    assert(varstrptr != NULL);
 
@@ -6903,7 +6903,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    {
       /* realloc buffers and try again */
       SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
-      SCIP_CALL( RatReallocBufferArray(SCIPbuffer(scip), &coefs, coefssize, requsize) );
+      SCIP_CALL( SCIPrationalReallocBufferArray(SCIPbuffer(scip), &coefs, coefssize, requsize) );
 
       coefssize = requsize;
 
@@ -6921,11 +6921,11 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
-   RatFreeBufferArray(SCIPbuffer(scip), &coefs, coefssize);
+   SCIPrationalFreeBufferArray(SCIPbuffer(scip), &coefs, coefssize);
    SCIPfreeBufferArray(scip, &vars);
 
-   RatFreeBuffer(SCIPbuffer(scip), &rhs);
-   RatFreeBuffer(SCIPbuffer(scip), &lhs);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhs);
 
    return SCIP_OKAY;
 }
@@ -7410,7 +7410,7 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
       int nconsvars;
       int requiredsize;
 
-      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constant) );
 
       nconsvars = nvars;
       SCIP_CALL( SCIPduplicateBufferArray(scip, &consvars, vars, nconsvars) );
@@ -7430,11 +7430,11 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
       }
 
       /* adjust sides and check that we do not subtract infinity values */
-      if( RatIsAbsInfinity(constant) )
+      if( SCIPrationalIsAbsInfinity(constant) )
       {
-         if( RatIsNegative(constant) )
+         if( SCIPrationalIsNegative(constant) )
          {
-            if( RatIsInfinity(lhs) )
+            if( SCIPrationalIsInfinity(lhs) )
             {
                SCIPfreeBufferArray(scip, &consvals);
                SCIPfreeBufferArray(scip, &consvars);
@@ -7444,7 +7444,7 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
                SCIPABORT();
                return SCIP_INVALIDDATA; /*lint !e527*/
             }
-            if( RatIsInfinity(rhs) )
+            if( SCIPrationalIsInfinity(rhs) )
             {
                SCIPfreeBufferArray(scip, &consvals);
                SCIPfreeBufferArray(scip, &consvars);
@@ -7455,12 +7455,12 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
                return SCIP_INVALIDDATA; /*lint !e527*/
             }
 
-            RatSetString(lhs, "-inf");
-            RatSetString(rhs, "-inf");
+            SCIPrationalSetString(lhs, "-inf");
+            SCIPrationalSetString(rhs, "-inf");
          }
          else
          {
-            if( RatIsNegInfinity(lhs) )
+            if( SCIPrationalIsNegInfinity(lhs) )
             {
                SCIPfreeBufferArray(scip, &consvals);
                SCIPfreeBufferArray(scip, &consvars);
@@ -7470,7 +7470,7 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
                SCIPABORT();
                return SCIP_INVALIDDATA; /*lint !e527*/
             }
-            if( RatIsNegInfinity(rhs) )
+            if( SCIPrationalIsNegInfinity(rhs) )
             {
                SCIPfreeBufferArray(scip, &consvals);
                SCIPfreeBufferArray(scip, &consvars);
@@ -7481,8 +7481,8 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
                return SCIP_INVALIDDATA; /*lint !e527*/
             }
 
-            RatSetString(lhs, "inf");
-            RatSetString(lhs, "inf");
+            SCIPrationalSetString(lhs, "inf");
+            SCIPrationalSetString(lhs, "inf");
          }
       }
 
@@ -7490,7 +7490,7 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
       SCIP_CALL( consdataCreate(scip, &consdata, nconsvars, consvars, consvals, lhs, rhs) );
       assert(consdata != NULL);
 
-      RatFreeBuffer(SCIPbuffer(scip), &constant);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
       SCIPfreeBufferArray(scip, &consvals);
       SCIPfreeBufferArray(scip, &consvars);
    }
@@ -7713,8 +7713,8 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
       consvars[0] = var;
-      SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &consvals[0], val) );
-      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
+      SCIP_CALL( SCIPrationalCopyBlock(SCIPblkmem(scip), &consvals[0], val) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constant) );
 
       /* get active variables for new constraint */
       SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, consvars, consvals, &nconsvars, nconsvars, constant, &requiredsize, TRUE) );
@@ -7732,16 +7732,16 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &lhs, consdata->lhs) );
-      SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &rhs, consdata->rhs) );
+      SCIP_CALL( SCIPrationalCopyBlock(SCIPblkmem(scip), &lhs, consdata->lhs) );
+      SCIP_CALL( SCIPrationalCopyBlock(SCIPblkmem(scip), &rhs, consdata->rhs) );
 
       /* adjust sides and check that we do not subtract infinity values */
       /* constant is infinite */
-      if( RatIsAbsInfinity(constant) )
+      if( SCIPrationalIsAbsInfinity(constant) )
       {
-         if( RatIsNegative(constant) )
+         if( SCIPrationalIsNegative(constant) )
          {
-            if( RatIsInfinity(lhs) )
+            if( SCIPrationalIsInfinity(lhs) )
             {
                SCIPfreeBufferArray(scip, &consvals);
                SCIPfreeBufferArray(scip, &consvars);
@@ -7751,7 +7751,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
                SCIPABORT();
                return SCIP_INVALIDDATA; /*lint !e527*/
             }
-            if( RatIsInfinity(rhs) )
+            if( SCIPrationalIsInfinity(rhs) )
             {
                SCIPfreeBufferArray(scip, &consvals);
                SCIPfreeBufferArray(scip, &consvars);
@@ -7762,12 +7762,12 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
                return SCIP_INVALIDDATA; /*lint !e527*/
             }
 
-            RatSetString(lhs, "-ing");
-            RatSetString(rhs, "-inf");
+            SCIPrationalSetString(lhs, "-ing");
+            SCIPrationalSetString(rhs, "-inf");
          }
          else
          {
-            if( RatIsNegInfinity(lhs) )
+            if( SCIPrationalIsNegInfinity(lhs) )
             {
                SCIPfreeBufferArray(scip, &consvals);
                SCIPfreeBufferArray(scip, &consvars);
@@ -7777,7 +7777,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
                SCIPABORT();
                return SCIP_INVALIDDATA; /*lint !e527*/
             }
-            if( RatIsNegInfinity(rhs) )
+            if( SCIPrationalIsNegInfinity(rhs) )
             {
                SCIPfreeBufferArray(scip, &consvals);
                SCIPfreeBufferArray(scip, &consvars);
@@ -7788,17 +7788,17 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
                return SCIP_INVALIDDATA; /*lint !e527*/
             }
 
-            RatSetString(lhs, "inf");
-            RatSetString(rhs, "inf");
+            SCIPrationalSetString(lhs, "inf");
+            SCIPrationalSetString(rhs, "inf");
          }
       }
       /* constant is not infinite */
       else
       {
-         if( !RatIsAbsInfinity(lhs) )
-            RatDiff(lhs, lhs, constant);
-         if( !RatIsAbsInfinity(rhs) )
-            RatDiff(rhs, rhs, constant);
+         if( !SCIPrationalIsAbsInfinity(lhs) )
+            SCIPrationalDiff(lhs, lhs, constant);
+         if( !SCIPrationalIsAbsInfinity(rhs) )
+            SCIPrationalDiff(rhs, rhs, constant);
       }
 
       /* add all active variables to constraint */
@@ -7811,7 +7811,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       SCIP_CALL( chgLhs(scip, cons, lhs));
       SCIP_CALL( chgRhs(scip, cons, rhs));
 
-      RatFreeBuffer(SCIPbuffer(scip), &constant);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
       SCIPfreeBufferArray(scip, &consvals);
       SCIPfreeBufferArray(scip, &consvars);
    }
@@ -7868,7 +7868,7 @@ SCIP_RETCODE SCIPchgCoefExactLinear(
    {
       if( vars[i] == var )
       {
-         if( found || RatIsZero(val) )
+         if( found || SCIPrationalIsZero(val) )
          {
             SCIP_CALL( delCoefPos(scip, cons, i) );
 
@@ -7884,7 +7884,7 @@ SCIP_RETCODE SCIPchgCoefExactLinear(
       i++;
    }
 
-   if( !found && !RatIsZero(val) )
+   if( !found && !SCIPrationalIsZero(val) )
    {
       SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, var, val) );
    }
@@ -7910,11 +7910,11 @@ SCIP_RETCODE SCIPdelCoefExactLinear(
    assert(cons != NULL);
    assert(var != NULL);
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &temp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &temp) );
 
    SCIP_CALL( SCIPchgCoefExactLinear(scip, cons, var, temp) );
 
-   RatFreeBuffer(SCIPbuffer(scip), &temp);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &temp);
 
    return SCIP_OKAY;
 }
@@ -8116,7 +8116,7 @@ SCIP_RETCODE SCIPgetActivityExactLinear(
    {
       SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
-      RatSetString(ret, "inf");  /*lint !e527*/
+      SCIPrationalSetString(ret, "inf");  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -8184,9 +8184,9 @@ void SCIPgetDualsolExactLinear(
    assert(consdata != NULL);
 
    if( consdata->rowlhs != NULL )
-      RatSetReal(ret, SCIProwGetDualsol(consdata->rowlhs));
+      SCIPrationalSetReal(ret, SCIProwGetDualsol(consdata->rowlhs));
    else
-      RatSetReal(ret, 0.0);
+      SCIPrationalSetReal(ret, 0.0);
 }
 
 /** @todo exip: WIP returns fp dual */
@@ -8212,9 +8212,9 @@ void SCIPgetDualfarkasExactLinear(
    assert(consdata != NULL);
 
    if( consdata->rowlhs != NULL )
-      RatSetReal(ret, SCIProwGetDualfarkas(consdata->rowlhs));
+      SCIPrationalSetReal(ret, SCIProwGetDualfarkas(consdata->rowlhs));
    else
-      RatSetReal(ret, 0.0);
+      SCIPrationalSetReal(ret, 0.0);
 }
 
 /** @todo exip: maybe this should set the missing side of rowlhs to at least get an approximation? */

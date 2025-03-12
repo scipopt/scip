@@ -1572,22 +1572,22 @@ SCIP_RETCODE getObjectiveRow(
    SCIP_CALL( SCIPallocBufferArray(scip, &valsexact, SCIPgetNLPCols(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cols, SCIPgetNLPCols(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &colsexact, SCIPgetNLPCols(scip)) );
-   SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &lhsexact));
-   SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &rhsexact));
+   SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhsexact));
+   SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhsexact));
    nvals = 0;
 
-   RatSetString(lhsexact, "-inf");
-   RatSetReal(rhsexact, rhs);
+   SCIPrationalSetString(lhsexact, "-inf");
+   SCIPrationalSetReal(rhsexact, rhs);
    if ( SCIPisObjIntegral(scip) )
    {
-      RatRound(rhsexact, rhsexact, SCIP_R_ROUND_DOWNWARDS);
+      SCIPrationalRoundInteger(rhsexact, rhsexact, SCIP_R_ROUND_DOWNWARDS);
       rhs = floor(rhs);
    }
    for (int i = 0; i < SCIPgetNLPCols(scip); i++)
    {
       SCIP_Rational* val;
       val = SCIPvarGetObjExact(scip->lpexact->cols[i]->var);
-      if ( RatIsZero(val) )
+      if ( SCIPrationalIsZero(val) )
          continue;
 
       vals[nvals] = SCIPvarGetObj(scip->lpexact->cols[i]->var);
@@ -1612,8 +1612,8 @@ SCIP_RETCODE getObjectiveRow(
       SCIPdebugMessage("%d == %d", SCIPgetNLPCols(scip), SCIProwGetNNonz(*row));
    }
 
-   RatFreeBuffer(SCIPbuffer(scip), &lhsexact);
-   RatFreeBuffer(SCIPbuffer(scip), &rhsexact);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhsexact);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhsexact);
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &cols);
    SCIPfreeBufferArray(scip, &colsexact);
@@ -1750,7 +1750,7 @@ SCIP_RETCODE SCIPgetDualProof(
    {
       double cutoffbound;
 
-      cutoffbound = RatRoundReal(SCIPgetCutoffboundExact(set->scip), SCIP_R_ROUND_UPWARDS);
+      cutoffbound = SCIPrationalRoundReal(SCIPgetCutoffboundExact(set->scip), SCIP_R_ROUND_UPWARDS);
 
       SCIP_CALL( getObjectiveRow(set->scip, &objectiverow, cutoffbound, valid) );
       if( *valid )

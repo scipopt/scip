@@ -468,21 +468,21 @@ SCIP_Bool SCIPparseRational(
    /* test for a special infinity first */
    if( strncmp(localstr, "+infinity", 9) == 0 )
    {
-      RatSetString(value, "inf");
+      SCIPrationalSetString(value, "inf");
       *endptr = (char*)(localstr + 9);
       return TRUE;
    }
    else if( strncmp(localstr, "-infinity", 9) == 0 )
    {
-      RatSetString(value, "-inf");
+      SCIPrationalSetString(value, "-inf");
       *endptr = (char*)(localstr + 9);
       return TRUE;
    }
    else
    {
       /* parse a finite value */
-      RatSetString(value, str);
-      *endptr = (char*)(localstr + RatStrlen(value));
+      SCIPrationalSetString(value, str);
+      *endptr = (char*)(localstr + SCIPrationalStrLen(value));
       return TRUE;
    }
 }

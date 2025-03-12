@@ -266,7 +266,7 @@ void checkProbHasContEqs(
       if( SCIPconsGetHdlr(conss[c]) == SCIPfindConshdlr(scip, "exactlinear") )
       {
          /* constraint is an equality constraint */
-         if( RatIsEqual(SCIPconsGetRhsExact(scip, conss[c], &success), SCIPconsGetLhsExact(scip, conss[c], &success)) ) /*lint !e864*/
+         if( SCIPrationalIsEqual(SCIPconsGetRhsExact(scip, conss[c], &success), SCIPconsGetLhsExact(scip, conss[c], &success)) ) /*lint !e864*/
          {
             /* check if there are continuous variables involved */
             SCIP_VAR** vars = SCIPgetVarsExactLinear(scip, conss[c]);
@@ -551,7 +551,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
             SCIP_Real solval;
             solval = SCIPgetSolVal(scip, worksol, vars[i]);
 
-            assert(RatIsLE(SCIPvarGetLbLocalExact(vars[i]), SCIPvarGetUbLocalExact(vars[i])));
+            assert(SCIPrationalIsLE(SCIPvarGetLbLocalExact(vars[i]), SCIPvarGetUbLocalExact(vars[i])));
 
             /* check if solution value is integral and abort if not, except if integrality is weakly implied: then the
              * solution value could be fractional in a floating-point feasible solution and we know that an optimal
@@ -564,11 +564,11 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
             {
                SCIP_Rational* newbound;
 
-               SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &newbound) );
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &newbound) );
 
                /* create rational solval and round it to the nearest integer */
-               RatSetReal(newbound, solval);
-               RatRound(newbound, newbound, SCIP_R_ROUND_NEAREST);
+               SCIPrationalSetReal(newbound, solval);
+               SCIPrationalRoundInteger(newbound, newbound, SCIP_R_ROUND_NEAREST);
 
                SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPround(scip, solval)) );
                SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPround(scip, solval)) );
@@ -576,7 +576,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
                SCIP_CALL( SCIPchgVarLbExactDive(scip, vars[i], newbound) );
                SCIP_CALL( SCIPchgVarUbExactDive(scip, vars[i], newbound) );
 
-               RatFreeBuffer(SCIPbuffer(scip), &newbound);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &newbound);
             }
             else
                *result = SCIP_INFEASIBLE;

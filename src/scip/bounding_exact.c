@@ -168,16 +168,16 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
        */
       for( i = 0; i < nrows; i++ )
       {
-         if( !RatIsNegInfinity(lpexact->rows[i]->lhs) )
+         if( !SCIPrationalIsNegInfinity(lpexact->rows[i]->lhs) )
             projshiftdata->includedrows[i] = 1;
-         if( !RatIsInfinity(lpexact->rows[i]->rhs) )
+         if( !SCIPrationalIsInfinity(lpexact->rows[i]->rhs) )
             projshiftdata->includedrows[nrows + i] = 1;
       }
       for( i = 0; i < ncols; i++ )
       {
-         if( !RatIsNegInfinity(lpexact->cols[i]->lb) )
+         if( !SCIPrationalIsNegInfinity(lpexact->cols[i]->lb) )
             projshiftdata->includedrows[2*nrows + i] = 1;
-         if( !RatIsInfinity(lpexact->cols[i]->ub) )
+         if( !SCIPrationalIsInfinity(lpexact->cols[i]->ub) )
             projshiftdata->includedrows[2*nrows + ncols + i] = 1;
       }
    }
@@ -190,8 +190,8 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
       SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, prob, 100,
                &lperror, FALSE) );
 
-      SCIP_CALL( RatCreateBufferArray(set->buffer, &rootprimal, ncols) );
-      SCIP_CALL( RatCreateBufferArray(set->buffer, &rootactivity, nrows) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &rootprimal, ncols) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &rootactivity, nrows) );
 
       /* get the primal solution and activity */
       SCIP_CALL( SCIPlpiExactGetSol(lpexact->lpiexact, NULL, rootprimal, NULL, rootactivity, NULL) );
@@ -201,21 +201,21 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
        */
       for( i = 0; i < nrows; i++ )
       {
-         if( RatIsEqual(rootactivity[i], lpexact->rows[i]->lhs) )
+         if( SCIPrationalIsEqual(rootactivity[i], lpexact->rows[i]->lhs) )
             projshiftdata->includedrows[i] = 1;
-         if( RatIsEqual(rootactivity[i], lpexact->rows[i]->rhs) )
+         if( SCIPrationalIsEqual(rootactivity[i], lpexact->rows[i]->rhs) )
             projshiftdata->includedrows[nrows + i] = 1;
       }
       for( i = 0; i < ncols; i++ )
       {
-         if( RatIsEqual(rootprimal[i], lpexact->cols[i]->lb) )
+         if( SCIPrationalIsEqual(rootprimal[i], lpexact->cols[i]->lb) )
             projshiftdata->includedrows[2*nrows + i] = 1;
-         if( RatIsEqual(rootprimal[i], lpexact->cols[i]->ub) )
+         if( SCIPrationalIsEqual(rootprimal[i], lpexact->cols[i]->ub) )
             projshiftdata->includedrows[2*nrows + ncols + i] = 1;
       }
 
-      RatFreeBufferArray(set->buffer, &rootactivity, nrows);
-      RatFreeBufferArray(set->buffer, &rootprimal, ncols);
+      SCIPrationalFreeBufferArray(set->buffer, &rootactivity, nrows);
+      SCIPrationalFreeBufferArray(set->buffer, &rootprimal, ncols);
    }
    else if( set->exact_psdualcolselection == PS_DUALCOSTSEL_ACTIVE_FPLP )
    {
@@ -288,7 +288,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projlen, nextendedrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projind, 2*nnonz + 2*ncols) );
    BMSclearMemoryArray(projind, 2*nnonz + 2*ncols);
-   SCIP_CALL( RatCreateBufferArray(set->buffer, &projval, 2*nnonz + 2*ncols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &projval, 2*nnonz + 2*ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projvalgmp, 2*nnonz + 2*ncols) );
 
    /* allocate memory for the basis mapping */
@@ -320,7 +320,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
          for( j = 0; j < projlen[i]; j++ )
          {
             projind[ projbeg[i] + j ] = lpexact->rows[i]->cols_index[j];
-            RatSet( projval[ projbeg[i] + j], lpexact->rows[i]->vals[j]);
+            SCIPrationalSet( projval[ projbeg[i] + j], lpexact->rows[i]->vals[j]);
          }
          pos += projlen[i];
       }
@@ -332,7 +332,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
          for(j = 0; j < projlen[i]; j++)
          {
             projind[ projbeg[i] + j ] = lpexact->rows[i - nrows]->cols_index[j];
-            RatNegate( projval[ projbeg[i] + j], lpexact->rows[i - nrows]->vals[j]);
+            SCIPrationalNegate( projval[ projbeg[i] + j], lpexact->rows[i - nrows]->vals[j]);
          }
          pos += projlen[i];
       }
@@ -342,7 +342,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
          projbeg[i] = pos;
          projlen[i] = 1;
          projind[pos] = i - 2*nrows;
-         RatSetInt(projval[pos], 1, 1);
+         SCIPrationalSetInt(projval[pos], 1, 1);
          pos ++;
       }
       /* -I part (ub constraints) */
@@ -351,7 +351,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
          projbeg[i] = pos;
          projlen[i] = 1;
          projind[pos] = i - (2*nrows + ncols);
-         RatSetInt(projval[pos], -1, 1);
+         SCIPrationalSetInt(projval[pos], -1, 1);
          pos ++;
       }
    }
@@ -364,7 +364,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    for( i = 0; i < 2*nnonz + 2*ncols; i++ )
    {
       printf("   i=%d:\t projind=<%d>,\t projval=<", i, projind[i]);
-      RatPrint(projval[i]);
+      SCIPrationalPrint(projval[i]);
       printf(">\n");
    }
 #endif
@@ -374,7 +374,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
     *   strictly positive value in the relative interior point
     * - D is equal to a subset of [A',-A',I,-I] and is given to the factor code in sparse column representation
     */
-   RatSetGMPArray(projvalgmp, projval, 2 * nnonz + 2 * ncols);
+   SCIPrationalSetGMPArray(projvalgmp, projval, 2 * nnonz + 2 * ncols);
 
 #if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
    rval = RECTLUbuildFactorization(&projshiftdata->rectfactor, ncols, projshiftdata->projshiftbasisdim,
@@ -396,9 +396,9 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    printf("   matrix factorization complete: %s\n", rval ? "failed" : "correct termination");
 #endif
 
-   RatClearGMPArray(projvalgmp, 2 * nnonz+ 2 * ncols);
+   SCIPrationalClearArrayGMP(projvalgmp, 2 * nnonz+ 2 * ncols);
    SCIPsetFreeBufferArray(set, &projvalgmp);
-   RatFreeBufferArray(set->buffer, &projval, 2*nnonz + 2*ncols);
+   SCIPrationalFreeBufferArray(set->buffer, &projval, 2*nnonz + 2*ncols);
    SCIPsetFreeBufferArray(set, &projind);
    SCIPsetFreeBufferArray(set, &projlen);
    SCIPsetFreeBufferArray(set, &projbeg);
@@ -449,7 +449,7 @@ SCIP_RETCODE setupProjectShiftOpt(
    {
       if( dvarincidence[i] )
       {
-         RatSet(psobj[pos], lpexact->rows[i]->lhs);
+         SCIPrationalSet(psobj[pos], lpexact->rows[i]->lhs);
          pos++;
       }
    }
@@ -457,7 +457,7 @@ SCIP_RETCODE setupProjectShiftOpt(
    {
       if( dvarincidence[nrows + i] )
       {
-         RatNegate(psobj[pos], lpexact->rows[i]->rhs);
+         SCIPrationalNegate(psobj[pos], lpexact->rows[i]->rhs);
          pos++;
       }
    }
@@ -465,7 +465,7 @@ SCIP_RETCODE setupProjectShiftOpt(
    {
       if( dvarincidence[2*nrows + i] )
       {
-         RatSet(psobj[pos], lpexact->cols[i]->lb);
+         SCIPrationalSet(psobj[pos], lpexact->cols[i]->lb);
          pos++;
       }
    }
@@ -473,56 +473,56 @@ SCIP_RETCODE setupProjectShiftOpt(
    {
       if( dvarincidence[2*nrows + ncols + i])
       {
-         RatNegate(psobj[pos], lpexact->cols[i]->ub);
+         SCIPrationalNegate(psobj[pos], lpexact->cols[i]->ub);
          pos++;
       }
    }
    assert(pos == ndvarmap);
 
    /* set alpha and beta. */
-   RatSetReal(alpha, projshiftdata->projshiftobjweight);
-   RatSetInt(beta, 1, 1);
+   SCIPrationalSetReal(alpha, projshiftdata->projshiftobjweight);
+   SCIPrationalSetInt(beta, 1, 1);
 
-   if( RatIsPositive(alpha) )
+   if( SCIPrationalIsPositive(alpha) )
    {
-      RatDiff(beta, beta, alpha);
+      SCIPrationalDiff(beta, beta, alpha);
 
       /*  beta = (1-alpha)*|OBJ|   Where OBJ = optimal objective value of root LP, if |OBJ|<1 use 1 instead */
       if( REALABS(SCIPlpGetObjval(lp, set, prob)) > 1 )
       {
-         RatSetReal(tmp, REALABS(SCIPlpGetObjval(lp, set, prob)));
-         RatMult(beta, beta, tmp);
+         SCIPrationalSetReal(tmp, REALABS(SCIPlpGetObjval(lp, set, prob)));
+         SCIPrationalMult(beta, beta, tmp);
       }
       /* divide through by alpha and round beta to be a power of 2 */
-      RatDiv(beta, beta, alpha);
-      RatSetInt(alpha, 1, 1);
-      RatSetReal(beta, pow(2, (int) (log(RatApproxReal(beta))/log(2))));
+      SCIPrationalDiv(beta, beta, alpha);
+      SCIPrationalSetInt(alpha, 1, 1);
+      SCIPrationalSetReal(beta, pow(2, (int) (log(SCIPrationalGetReal(beta))/log(2))));
    }
 
    /* set objective to normalized value */
    for( i = 0; i < ndvarmap; i ++ )
-      RatMult(psobj[i], psobj[i], alpha);
-   RatSet(psobj[ndvarmap], beta);
+      SCIPrationalMult(psobj[i], psobj[i], alpha);
+   SCIPrationalSet(psobj[ndvarmap], beta);
 
    /* set variable bounds */
    for( i = 0; i < ndvarmap; i++ )
    {
-      RatSetString(psub[i], "inf");
-      RatSetInt(pslb[i], 0, 1);
+      SCIPrationalSetString(psub[i], "inf");
+      SCIPrationalSetInt(pslb[i], 0, 1);
    }
-   RatSetInt(psub[ndvarmap], PSBIGM, 1);
-   RatSetInt(pslb[ndvarmap], 0 ,1);
+   SCIPrationalSetInt(psub[ndvarmap], PSBIGM, 1);
+   SCIPrationalSetInt(pslb[ndvarmap], 0 ,1);
 
    /* set up constraint bounds */
    for( i = 0; i < ncols; i++ )
    {
-      RatSet(pslhs[i], lpexact->cols[i]->obj);
-      RatSet(psrhs[i], lpexact->cols[i]->obj);
+      SCIPrationalSet(pslhs[i], lpexact->cols[i]->obj);
+      SCIPrationalSet(psrhs[i], lpexact->cols[i]->obj);
    }
    for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
    {
-      RatSetInt(pslhs[ncols + i], 0, 1);
-      RatSetString(psrhs[ncols + i], "inf");
+      SCIPrationalSetInt(pslhs[ncols + i], 0, 1);
+      SCIPrationalSetString(psrhs[ncols + i], "inf");
    }
 
    /* set up constraint matrix: this involves transposing the constraint matrix */
@@ -579,9 +579,9 @@ SCIP_RETCODE setupProjectShiftOpt(
             pos = psbeg[lpexact->rows[indx]->cols_index[j]] + pslen[lpexact->rows[indx]->cols_index[j]];
             psind[pos] = i;
             if(dvarmap[i]<nrows)
-               RatSet(psval[pos], lpexact->rows[indx]->vals[j]);
+               SCIPrationalSet(psval[pos], lpexact->rows[indx]->vals[j]);
             else
-               RatNegate(psval[pos], lpexact->rows[indx]->vals[j]);
+               SCIPrationalNegate(psval[pos], lpexact->rows[indx]->vals[j]);
             pslen[lpexact->rows[indx]->cols_index[j]]++;
          }
       }
@@ -594,9 +594,9 @@ SCIP_RETCODE setupProjectShiftOpt(
          pos = psbeg[indx] + pslen[indx];
          psind[pos] = i;
          if( dvarmap[i] < 2*nrows + ncols)
-            RatSetInt(psval[pos], 1, 1);
+            SCIPrationalSetInt(psval[pos], 1, 1);
          else
-            RatSetInt(psval[pos], -1, 1);
+            SCIPrationalSetInt(psval[pos], -1, 1);
          pslen[indx]++;
       }
    }
@@ -608,9 +608,9 @@ SCIP_RETCODE setupProjectShiftOpt(
       if( projshiftdata->includedrows[indx] )
       {
          psind[psbeg[pos]] = i;
-         RatSetInt(psval[psbeg[pos]], 1, 1);
+         SCIPrationalSetInt(psval[psbeg[pos]], 1, 1);
          psind[psbeg[pos] + 1] = psncols - 1;
-         RatSetInt(psval[psbeg[pos] + 1], -1, 1);
+         SCIPrationalSetInt(psval[psbeg[pos] + 1], -1, 1);
          pos++;
       }
    }
@@ -716,11 +716,11 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
 
       assert(projshiftdata->projshifthasray == FALSE);
 
-      SCIP_CALL( RatCreateBlock(blkmem, &auxval1) );
-      SCIP_CALL( RatCreateBlock(blkmem, &auxval2) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &auxval1) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &auxval2) );
 
       /* update the objective on d */
-      RatSetInt(auxval1, 0, 1);
+      SCIPrationalSetInt(auxval1, 0, 1);
       SCIP_CALL( SCIPlpiExactChgObj(pslpiexact, 1, &ndvarmap, &auxval1) );
 
       /* update the rhs/lhs */
@@ -730,12 +730,12 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       }
 
       /* update bounds on d */
-      RatSetInt(auxval1, 1 ,1);
-      RatSetString(auxval2, "inf");
+      SCIPrationalSetInt(auxval1, 1 ,1);
+      SCIPrationalSetString(auxval2, "inf");
       SCIP_CALL( SCIPlpiExactChgBounds(pslpiexact, 1, &ndvarmap, &auxval1, &auxval2) );
 
-      RatFreeBlock(blkmem, &auxval2);
-      RatFreeBlock(blkmem, &auxval1);
+      SCIPrationalFreeBlock(blkmem, &auxval2);
+      SCIPrationalFreeBlock(blkmem, &auxval1);
    }
 
    /* set the display informatino */
@@ -764,12 +764,12 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       SCIPdebugMessage("   exact LP solved to optimality\n");
 
       /* get optimal dual solution */
-      SCIP_CALL( RatCreateBufferArray(set->buffer, &sol, psncols) );
-      SCIP_CALL( RatCreateBuffer(set->buffer, &objval) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &sol, psncols) );
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &objval) );
       SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, sol, NULL, NULL, NULL) );
 
-      RatSet(projshiftdata->commonslack, sol[psncols - 1]);
-      if( RatIsZero(projshiftdata->commonslack) )
+      SCIPrationalSet(projshiftdata->commonslack, sol[psncols - 1]);
+      if( SCIPrationalIsZero(projshiftdata->commonslack) )
       {
          /* if commonslack == 0, point/ray is not interior */
          SCIPdebugMessage("   --> project-and-shift failed to find interior point/ray\n");
@@ -783,9 +783,9 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
          for( i = 0; i < ndvarmap; i++ )
          {
             if( findintpoint )
-               RatSet( projshiftdata->interiorpoint[dvarmap[i]], sol[i]);
+               SCIPrationalSet( projshiftdata->interiorpoint[dvarmap[i]], sol[i]);
             else
-               RatSet( projshiftdata->interiorray[dvarmap[i]], sol[i]);
+               SCIPrationalSet( projshiftdata->interiorray[dvarmap[i]], sol[i]);
          }
          if( findintpoint )
             projshiftdata->projshifthaspoint = TRUE;
@@ -793,8 +793,8 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
             projshiftdata->projshifthasray = TRUE;
       }
 
-      RatFreeBuffer(set->buffer, &objval);
-      RatFreeBufferArray(set->buffer, &sol, psncols);
+      SCIPrationalFreeBuffer(set->buffer, &objval);
+      SCIPrationalFreeBufferArray(set->buffer, &sol, psncols);
    }
    else
       projshiftdata->projshiftdatafail = TRUE;
@@ -804,14 +804,14 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       int i;
 
       for( i = 0; i < ndvarmap; i++ )
-         RatCanonicalize(projshiftdata->interiorpoint[i]);
+         SCIPrationalCanonicalize(projshiftdata->interiorpoint[i]);
    }
    else if( !findintpoint && projshiftdata->projshifthasray )
    {
       int i;
 
       for( i = 0; i < ndvarmap; i++ )
-         RatCanonicalize(projshiftdata->interiorray[i]);
+         SCIPrationalCanonicalize(projshiftdata->interiorray[i]);
    }
 
    /* free memory for exact LPI if not needed anymore */
@@ -919,9 +919,9 @@ SCIP_RETCODE projectShiftConstructLP(
     *   (reduced from nextendedrows to ndvarmap)
     * - dvarincidence gives the incidence vector of variables used in aux problem
     */
-   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &alpha) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &beta) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &alpha) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &beta) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dvarincidence, nextendedrows) );
    {
       /* if the aux. lp is not reduced then expand the selection for dvarmap to include all dual vars with finite cost */
@@ -929,16 +929,16 @@ SCIP_RETCODE projectShiftConstructLP(
          dvarincidence[i] = 0;
       for( i = 0; i < nrows; i++ )
       {
-         if( !RatIsNegInfinity(lprows[i]->lhs) )
+         if( !SCIPrationalIsNegInfinity(lprows[i]->lhs) )
             dvarincidence[i] = 1;
-         if( !RatIsInfinity(lprows[i]->rhs) )
+         if( !SCIPrationalIsInfinity(lprows[i]->rhs) )
             dvarincidence[nrows + i] = 1;
       }
       for( i = 0; i < ncols; i++ )
       {
-         if( !RatIsNegInfinity(lpcols[i]->lb) )
+         if( !SCIPrationalIsNegInfinity(lpcols[i]->lb) )
             dvarincidence[2*nrows + i] = 1;
-         if( !RatIsInfinity(lpcols[i]->ub) )
+         if( !SCIPrationalIsInfinity(lpcols[i]->ub) )
             dvarincidence[2*nrows + ncols + i] = 1;
       }
    }
@@ -969,12 +969,12 @@ SCIP_RETCODE projectShiftConstructLP(
    psnnonz = computeProjectShiftNnonz(lpexact, dvarincidence);
    psnnonz += 2*projshiftdata->projshiftbasisdim;
 
-   SCIP_CALL( RatCreateBufferArray(set->buffer, &psobj, psncols) );
-   SCIP_CALL( RatCreateBufferArray(set->buffer, &pslb, psncols) );
-   SCIP_CALL( RatCreateBufferArray(set->buffer, &psub, psncols) );
-   SCIP_CALL( RatCreateBufferArray(set->buffer, &pslhs, psnrows) );
-   SCIP_CALL( RatCreateBufferArray(set->buffer, &psrhs, psnrows) );
-   SCIP_CALL( RatCreateBufferArray(set->buffer, &psval, psnnonz) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &psobj, psncols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &pslb, psncols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &psub, psncols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &pslhs, psnrows) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &psrhs, psnrows) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &psval, psnnonz) );
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &psbeg, psnrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &pslen, psnrows) );
@@ -1024,18 +1024,18 @@ SCIP_RETCODE projectShiftConstructLP(
    SCIPsetFreeBufferArray(set, &pslen);
    SCIPsetFreeBufferArray(set, &psbeg);
 
-   RatFreeBufferArray(set->buffer, &psval, psnnonz);
-   RatFreeBufferArray(set->buffer, &psrhs, psnrows);
-   RatFreeBufferArray(set->buffer, &pslhs, psnrows);
-   RatFreeBufferArray(set->buffer, &psub, psncols);
-   RatFreeBufferArray(set->buffer, &pslb, psncols);
-   RatFreeBufferArray(set->buffer, &psobj, psncols);
+   SCIPrationalFreeBufferArray(set->buffer, &psval, psnnonz);
+   SCIPrationalFreeBufferArray(set->buffer, &psrhs, psnrows);
+   SCIPrationalFreeBufferArray(set->buffer, &pslhs, psnrows);
+   SCIPrationalFreeBufferArray(set->buffer, &psub, psncols);
+   SCIPrationalFreeBufferArray(set->buffer, &pslb, psncols);
+   SCIPrationalFreeBufferArray(set->buffer, &psobj, psncols);
 
    SCIPsetFreeBufferArray(set, &dvarincidence);
 
-   RatFreeBuffer(set->buffer, &beta);
-   RatFreeBuffer(set->buffer, &alpha);
-   RatFreeBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &beta);
+   SCIPrationalFreeBuffer(set->buffer, &alpha);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -1069,7 +1069,7 @@ SCIP_RETCODE constructProjectShiftDataLPIExact(
    SCIPdebugMessage("calling constructProjectShiftDataLPIExact()\n");
    SCIPclockStart(stat->provedfeaspstime, set);
 
-   SCIP_CALL( RatCreateBlock(blkmem, &projshiftdata->commonslack) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &projshiftdata->commonslack) );
 
    /* process the bound changes */
    SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );
@@ -1148,12 +1148,12 @@ SCIP_RETCODE constructProjectShiftData(
       if( projshiftdata->projshiftuseintpoint )
       {
          /* compute S-interior point if we need it */
-         SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows) );
+         SCIP_CALL( SCIPrationalCreateBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows) );
          SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, TRUE) );
       }
 
       /* always try to compute the S-interior ray (for infeasibility proofs) */
-      SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
+      SCIP_CALL( SCIPrationalCreateBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
       SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, FALSE) );
    }
 
@@ -1163,8 +1163,8 @@ SCIP_RETCODE constructProjectShiftData(
    else
       projshiftdata->projshiftdatafail = FALSE;
 
-   SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->violation, lpexact->ncols) );
-   SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->correction, projshiftdata->nextendedrows) );
+   SCIP_CALL( SCIPrationalCreateBlockArray(blkmem, &projshiftdata->violation, lpexact->ncols) );
+   SCIP_CALL( SCIPrationalCreateBlockArray(blkmem, &projshiftdata->correction, projshiftdata->nextendedrows) );
    projshiftdata->violationsize = lpexact->ncols;
 
    SCIPclockStop(stat->provedfeaspstime, set);
@@ -1273,12 +1273,12 @@ SCIP_RETCODE projectShift(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp2) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &lambda1) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &lambda2) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &maxv) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &dualbound) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp2) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lambda1) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lambda2) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &maxv) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &dualbound) );
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
@@ -1305,13 +1305,13 @@ SCIP_RETCODE projectShift(
       else
          dualsol[i] = usefarkas ? lpexact->cols[i - nrows]->farkascoef : lpexact->cols[i - nrows]->redcost;
 
-      RatSetInt(dualsol[i], 0, 1);
+      SCIPrationalSetInt(dualsol[i], 0, 1);
       if( i < ncols )
-         RatSetInt(violation[i], 0, 1);
+         SCIPrationalSetInt(violation[i], 0, 1);
    }
    for( i = 0; i < nextendedrows; ++i )
    {
-      RatSetInt(correction[i], 0, 1);
+      SCIPrationalSetInt(correction[i], 0, 1);
    }
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &isupper, nrows + ncols) );
@@ -1323,12 +1323,12 @@ SCIP_RETCODE projectShift(
    for( i = 0; i < nrows; i++ )
    {
       if( !usefarkas )
-         RatSetReal(dualsol[i], SCIProwGetDualsol(lp->rows[i]));
+         SCIPrationalSetReal(dualsol[i], SCIProwGetDualsol(lp->rows[i]));
       else
-         RatSetReal(dualsol[i], SCIProwGetDualfarkas(lp->rows[i]));
+         SCIPrationalSetReal(dualsol[i], SCIProwGetDualfarkas(lp->rows[i]));
 
       /* terminate in case of infinity solution */
-      if( RatIsAbsInfinity(dualsol[i]) )
+      if( SCIPrationalIsAbsInfinity(dualsol[i]) )
       {
          SCIPdebugMessage("  no valid unbounded approx dual sol given\n");
          lp->hasprovedbound = FALSE;
@@ -1341,7 +1341,7 @@ SCIP_RETCODE projectShift(
       }
 
       /* positive dual coef -> lhs, negative -> rhs */
-      if( RatIsPositive(dualsol[i]) )
+      if( SCIPrationalIsPositive(dualsol[i]) )
          isupper[i] = FALSE;
       else
          isupper[i] = TRUE;
@@ -1351,12 +1351,12 @@ SCIP_RETCODE projectShift(
    for( i = 0; i < ncols; i++ )
    {
       if( !usefarkas )
-         RatSetReal(dualsol[i+nrows], SCIPcolGetRedcost(cols[i], stat, lp));
+         SCIPrationalSetReal(dualsol[i+nrows], SCIPcolGetRedcost(cols[i], stat, lp));
       else
-         RatSetReal(dualsol[i+nrows], -SCIPcolGetFarkasCoef(cols[i], stat, lp));
+         SCIPrationalSetReal(dualsol[i+nrows], -SCIPcolGetFarkasCoef(cols[i], stat, lp));
 
       /* terminate in case of infinite redcost */
-      if( RatIsAbsInfinity(dualsol[i + nrows]) )
+      if( SCIPrationalIsAbsInfinity(dualsol[i + nrows]) )
       {
          SCIPdebugMessage("  no valid unbounded approx dual sol given\n");
          lp->hasprovedbound = FALSE;
@@ -1369,7 +1369,7 @@ SCIP_RETCODE projectShift(
       }
 
       /* positive redcost -> lb, negative -> ub */
-      if( RatIsPositive(dualsol[i+nrows]) )
+      if( SCIPrationalIsPositive(dualsol[i+nrows]) )
          isupper[i+nrows] = FALSE;
       else
          isupper[i+nrows] = TRUE;
@@ -1385,14 +1385,14 @@ SCIP_RETCODE projectShift(
       else
          val = i < nrows ? lpexact->rows[i]->rhs : lpexact->cols[i - nrows]->ub;
 
-      if( RatIsAbsInfinity(val) )
-         RatSetInt(dualsol[i], 0, 1);
+      if( SCIPrationalIsAbsInfinity(val) )
+         SCIPrationalSetInt(dualsol[i], 0, 1);
    }
 
 #ifdef PS_OUT
    printf("approximate dual solution:\n");
 
-   RatSetInt(dualbound, 0, 1);
+   SCIPrationalSetInt(dualbound, 0, 1);
    for( i = 0; i < nrows + ncols; i++ )
    {
       SCIP_Rational* val;
@@ -1402,21 +1402,21 @@ SCIP_RETCODE projectShift(
       else
          val = i < nrows ? lpexact->rows[i]->rhs : lpexact->cols[i - nrows]->ub;
 
-      RatPrintf("   i=%d: %q * %q \n", i, dualsol[i], val);
-      if( RatIsAbsInfinity(val) )
-         assert(RatIsZero(dualsol[i]));
+      SCIPrationalPrintf("   i=%d: %q * %q \n", i, dualsol[i], val);
+      if( SCIPrationalIsAbsInfinity(val) )
+         assert(SCIPrationalIsZero(dualsol[i]));
       else
       {
          if( i < nrows )
-            RatDiff(tmp, val, lpexact->rows[i]->constant);
+            SCIPrationalDiff(tmp, val, lpexact->rows[i]->constant);
          else
-            RatSet(tmp, val);
-         RatMult(tmp, dualsol[i], tmp);
-         RatAdd(dualbound, dualbound, tmp);
+            SCIPrationalSet(tmp, val);
+         SCIPrationalMult(tmp, dualsol[i], tmp);
+         SCIPrationalAdd(dualbound, dualbound, tmp);
       }
    }
 
-   RatPrintf("   objective value=%f (%q) \n", RatApproxReal(dualbound), dualbound);
+   SCIPrationalPrintf("   objective value=%f (%q) \n", SCIPrationalGetReal(dualbound), dualbound);
 #endif
 
    /* calculate violation of equality constraints r=c-A^ty */
@@ -1426,12 +1426,12 @@ SCIP_RETCODE projectShift(
       if( !usefarkas )
       {
          /* set to obj - bound-redcost */
-         RatDiff(violation[i], lpexact->cols[i]->obj, dualsol[i + nrows]);
+         SCIPrationalDiff(violation[i], lpexact->cols[i]->obj, dualsol[i + nrows]);
       }
       else
       {
          /* set to 0 - bound-redcost */
-         RatNegate(violation[i], dualsol[i+nrows]);
+         SCIPrationalNegate(violation[i], dualsol[i+nrows]);
       }
    }
 
@@ -1441,8 +1441,8 @@ SCIP_RETCODE projectShift(
       for( j = 0; j < lpexact->rows[i]->len; j++)
       {
          currentrow = lpexact->rows[i]->cols_index[j];
-         RatMult(tmp, dualsol[i], lpexact->rows[i]->vals[j]);
-         RatDiff(violation[currentrow], violation[currentrow], tmp);
+         SCIPrationalMult(tmp, dualsol[i], lpexact->rows[i]->vals[j]);
+         SCIPrationalDiff(violation[currentrow], violation[currentrow], tmp);
       }
    }
 
@@ -1452,7 +1452,7 @@ SCIP_RETCODE projectShift(
    for( i = 0; i < ncols; i++ )
    {
       printf("   i=%d: ", i);
-      RatPrint(violation[i]);
+      SCIPrationalPrint(violation[i]);
       printf("\n");
    }
 #endif
@@ -1461,7 +1461,7 @@ SCIP_RETCODE projectShift(
    isfeas = TRUE;
    for( i = 0; i < ncols && isfeas; i++ )
    {
-      if( !RatIsZero(violation[i]) )
+      if( !SCIPrationalIsZero(violation[i]) )
          isfeas = FALSE;
    }
 
@@ -1471,7 +1471,7 @@ SCIP_RETCODE projectShift(
       /* compute projection [z] with Dz=r (D is pre-determined submatrix of extended dual matrix [A', -A', I, -I]) */
       SCIP_CALL( SCIPsetAllocBufferArray(set, &violationgmp, ncols) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &correctiongmp, nextendedrows) );
-      RatSetGMPArray(violationgmp, violation, ncols);
+      SCIPrationalSetGMPArray(violationgmp, violation, ncols);
 
       for ( i = 0; i < nextendedrows; i++)
       {
@@ -1496,14 +1496,14 @@ SCIP_RETCODE projectShift(
          goto TERMINATE;
       }
 
-      RatSetArrayGMP(correction, correctiongmp, nextendedrows);
+      SCIPrationalSetArrayGMP(correction, correctiongmp, nextendedrows);
 
 #ifdef PS_OUT
       printf("correction of solution:\n");
       for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
       {
          printf("   i=%d: ", i);
-         RatPrint(correction[i]);
+         SCIPrationalPrint(correction[i]);
          printf(", position=%d\n", projshiftdata->projshiftbasis[i]);
       }
 #endif
@@ -1520,8 +1520,8 @@ SCIP_RETCODE projectShift(
          {
             if( !isupper[map] )
             {
-               RatAdd(correction[i], correction[i], dualsol[map]);
-               RatSetInt(dualsol[map], 0, 1);
+               SCIPrationalAdd(correction[i], correction[i], dualsol[map]);
+               SCIPrationalSetInt(dualsol[map], 0, 1);
             }
          }
          /* [nrows, ..., 2*nrows] is a rhs-row of A */
@@ -1529,8 +1529,8 @@ SCIP_RETCODE projectShift(
          {
             if( isupper[map - nrowsps] )
             {
-               RatDiff(correction[i], correction[i], dualsol[map - nrowsps]);
-               RatSetInt(dualsol[map - nrowsps], 0, 1);
+               SCIPrationalDiff(correction[i], correction[i], dualsol[map - nrowsps]);
+               SCIPrationalSetInt(dualsol[map - nrowsps], 0, 1);
             }
          }
          /* [2*nrows, ..., 2*nrows+ncols] is a lb-col */
@@ -1538,8 +1538,8 @@ SCIP_RETCODE projectShift(
          {
             if( !isupper[map - nrowsps + shift] )
             {
-               RatAdd(correction[i], correction[i], dualsol[map - nrowsps + shift]);
-               RatSetInt(dualsol[map - nrowsps + shift], 0, 1);
+               SCIPrationalAdd(correction[i], correction[i], dualsol[map - nrowsps + shift]);
+               SCIPrationalSetInt(dualsol[map - nrowsps + shift], 0, 1);
             }
          }
          /* [2*nrows+ncols, ..., 2*nrows+2*ncols] is a ub-col */
@@ -1547,8 +1547,8 @@ SCIP_RETCODE projectShift(
          {
             if( isupper[map - nrowsps - ncols  + shift] )
             {
-               RatDiff(correction[i], correction[i], dualsol[map - nrowsps - ncols + shift]);
-               RatSetInt(dualsol[map - nrowsps - ncols + shift], 0, 1);
+               SCIPrationalDiff(correction[i], correction[i], dualsol[map - nrowsps - ncols + shift]);
+               SCIPrationalSetInt(dualsol[map - nrowsps - ncols + shift], 0, 1);
             }
          }
       }
@@ -1558,7 +1558,7 @@ SCIP_RETCODE projectShift(
       for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
       {
          printf("   i=%d: ", i);
-         RatPrint(correction[i]);
+         SCIPrationalPrint(correction[i]);
          printf(", position=%d\n", projshiftdata->projshiftbasis[i]);
       }
 #endif
@@ -1573,35 +1573,35 @@ SCIP_RETCODE projectShift(
          */
 
          /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-         RatSetInt(lambda1, 1, 1);
+         SCIPrationalSetInt(lambda1, 1, 1);
          for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
          {
-            if( RatIsNegative(correction[i]) )
+            if( SCIPrationalIsNegative(correction[i]) )
             {
                int map = projshiftdata->projshiftbasis[i];
 
-               RatSet(tmp2, projshiftdata->interiorpoint[map]);
-               RatDiff(tmp, projshiftdata->interiorpoint[map], correction[i]);
-               RatDiv(tmp2, tmp2, tmp);
-               RatMIN(lambda1, lambda1, tmp2);
+               SCIPrationalSet(tmp2, projshiftdata->interiorpoint[map]);
+               SCIPrationalDiff(tmp, projshiftdata->interiorpoint[map], correction[i]);
+               SCIPrationalDiv(tmp2, tmp2, tmp);
+               SCIPrationalMin(lambda1, lambda1, tmp2);
             }
          }
-         RatSetInt(lambda2, 1, 1);
-         RatDiff(lambda2, lambda2, lambda1);
+         SCIPrationalSetInt(lambda2, 1, 1);
+         SCIPrationalDiff(lambda2, lambda2, lambda1);
       }
       else
       {
          /* in this case we are using an interior ray that can be added freely to the solution */
          /* compute lambda values: compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-         RatSetInt(lambda1, 1, 1);
+         SCIPrationalSetInt(lambda1, 1, 1);
          for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
          {
             int map = projshiftdata->projshiftbasis[i];
-            if( RatIsNegative(correction[i]) && projshiftdata->includedrows[map] )
+            if( SCIPrationalIsNegative(correction[i]) && projshiftdata->includedrows[map] )
             {
-               RatDiv(tmp, correction[i], projshiftdata->interiorray[map]);
-               RatNegate(tmp, tmp);
-               RatMAX(lambda2, lambda2, tmp);
+               SCIPrationalDiv(tmp, correction[i], projshiftdata->interiorray[map]);
+               SCIPrationalNegate(tmp, tmp);
+               SCIPrationalMax(lambda2, lambda2, tmp);
             }
          }
       }
@@ -1609,18 +1609,18 @@ SCIP_RETCODE projectShift(
 #ifdef PS_OUT
       printf("transformed projected dual solution:\n");
 
-      RatSetInt(dualbound, 0, 1);
+      SCIPrationalSetInt(dualbound, 0, 1);
       for( i = 0; i < nrows + ncols; i++ )
       {
          SCIP_Rational* val;
 
          printf("   i=%d: ", i);
-         RatPrint(dualsol[i]);
+         SCIPrationalPrint(dualsol[i]);
          printf("\n");
       }
 
       printf("   lambda1: ");
-      RatPrint(lambda1);
+      SCIPrationalPrint(lambda1);
       printf(")\n");
 #endif
 
@@ -1629,39 +1629,39 @@ SCIP_RETCODE projectShift(
       {
          int map = projshiftdata->projshiftbasis[i];
          if( map < nrowsps )
-            RatAdd(dualsol[map], dualsol[map], correction[i]);
+            SCIPrationalAdd(dualsol[map], dualsol[map], correction[i]);
          else if( map < 2 * nrowsps )
-            RatDiff(dualsol[map - nrowsps], dualsol[map - nrowsps], correction[i]);
+            SCIPrationalDiff(dualsol[map - nrowsps], dualsol[map - nrowsps], correction[i]);
          else if ( map < 2 * nrowsps + ncols )
-            RatAdd(dualsol[map - nrowsps + shift], dualsol[map - nrowsps + shift], correction[i]);
+            SCIPrationalAdd(dualsol[map - nrowsps + shift], dualsol[map - nrowsps + shift], correction[i]);
          else
-            RatDiff(dualsol[map - nrowsps - ncols + shift], dualsol[map - nrowsps - ncols + shift], correction[i]);
+            SCIPrationalDiff(dualsol[map - nrowsps - ncols + shift], dualsol[map - nrowsps - ncols + shift], correction[i]);
       }
 
 #ifdef PS_OUT
       printf("transformed projected dual solution:\n");
 
-      RatSetInt(dualbound, 0, 1);
+      SCIPrationalSetInt(dualbound, 0, 1);
       for( i = 0; i < nrows + ncols; i++ )
       {
          SCIP_Rational* val;
 
          printf("   i=%d: ", i);
-         RatPrint(dualsol[i]);
+         SCIPrationalPrint(dualsol[i]);
          printf("\n");
       }
 
       printf("   lambda1: ");
-      RatPrint(lambda1);
+      SCIPrationalPrint(lambda1);
       printf(")\n");
 #endif
 
       /* perform shift */
-      if( !RatIsZero(lambda2) )
+      if( !SCIPrationalIsZero(lambda2) )
       {
          for( i = 0; i < nrows + ncols; i++ )
          {
-            RatMult(dualsol[i], dualsol[i], lambda1);
+            SCIPrationalMult(dualsol[i], dualsol[i], lambda1);
          }
          for( i = 0; i < nrows + ncols; i++ )
          {
@@ -1672,11 +1672,11 @@ SCIP_RETCODE projectShift(
             if( i < nrows && i >= nrowsps )
                continue;
             map = (i < nrowsps) ? i + nrowsps : i + nrowsps + ncols - shift;
-            RatMult(tmp, useinteriorpoint ? projshiftdata->interiorpoint[map] : projshiftdata->interiorray[map], lambda2);
-            RatDiff(dualsol[i], dualsol[i], tmp);
+            SCIPrationalMult(tmp, useinteriorpoint ? projshiftdata->interiorpoint[map] : projshiftdata->interiorray[map], lambda2);
+            SCIPrationalDiff(dualsol[i], dualsol[i], tmp);
             map = (i < nrowsps) ? i : i + nrowsps - shift;
-            RatMult(tmp, useinteriorpoint ? projshiftdata->interiorpoint[map] : projshiftdata->interiorray[map], lambda2);
-            RatAdd(dualsol[i], dualsol[i], tmp);
+            SCIPrationalMult(tmp, useinteriorpoint ? projshiftdata->interiorpoint[map] : projshiftdata->interiorray[map], lambda2);
+            SCIPrationalAdd(dualsol[i], dualsol[i], tmp);
          }
       }
 
@@ -1684,7 +1684,7 @@ SCIP_RETCODE projectShift(
       printf("projected and shifted dual solution (should be an exact dual feasible solution)\n");
       for( i = 0; i < nrows+ncols; i++ )
       {
-         RatPrintf("   i=%d: %f.20 (%q) \n", i, RatApproxReal(dualsol[i]), dualsol[i]);
+         SCIPrationalPrintf("   i=%d: %f.20 (%q) \n", i, SCIPrationalGetReal(dualsol[i]), dualsol[i]);
       }
 #endif
    }
@@ -1697,37 +1697,37 @@ SCIP_RETCODE projectShift(
    for( i = 0; i < ncols; i++ )
    {
       if( !usefarkas )
-        RatSet(violation[i], lpexact->cols[i]->obj);
+        SCIPrationalSet(violation[i], lpexact->cols[i]->obj);
       else
-         RatSetInt(violation[i], 0, 1);
+         SCIPrationalSetInt(violation[i], 0, 1);
    }
    for( i = 0; i < nrows; i++ )
    {
-      if( !RatIsZero(dualsol[i]) )
+      if( !SCIPrationalIsZero(dualsol[i]) )
       {
-         RatDebugMessage("row %s has multiplier %q: ", lpexact->rows[i]->fprow->name, dualsol[i]);
+         SCIPrationalDebugMessage("row %s has multiplier %q: ", lpexact->rows[i]->fprow->name, dualsol[i]);
          SCIPdebug(SCIProwExactPrint(lpexact->rows[i], messagehdlr, NULL));
       }
       for( j = 0; j < lpexact->rows[i]->len; j++ )
       {
          currentrow = lpexact->rows[i]->cols_index[j];
-         RatMult(tmp, dualsol[i], lpexact->rows[i]->vals[j]);
-         RatDiff(violation[currentrow], violation[currentrow], tmp);
+         SCIPrationalMult(tmp, dualsol[i], lpexact->rows[i]->vals[j]);
+         SCIPrationalDiff(violation[currentrow], violation[currentrow], tmp);
       }
    }
    for( i = 0; i < ncols; i++ )
    {
-      if( !RatIsZero(lpexact->cols[i]->farkascoef) )
+      if( !SCIPrationalIsZero(lpexact->cols[i]->farkascoef) )
       {
-         RatDebugMessage("variable %q <= %s <= %q has farkas coefficient %q \n", lpexact->cols[i]->lb,
+         SCIPrationalDebugMessage("variable %q <= %s <= %q has farkas coefficient %q \n", lpexact->cols[i]->lb,
             SCIPvarGetName(lpexact->cols[i]->var), lpexact->cols[i]->ub, lpexact->cols[i]->farkascoef);
       }
-      RatDiff(violation[i], violation[i], dualsol[i + nrows]);
+      SCIPrationalDiff(violation[i], violation[i], dualsol[i + nrows]);
    }
 
    for( i = 0; i < ncols && rval == 0; i++ )
    {
-      if( !RatIsZero(violation[i]) )
+      if( !SCIPrationalIsZero(violation[i]) )
       {
          SCIPdebugMessage("   dual solution incorrect, violates equalities\n");
          rval = 1;
@@ -1738,21 +1738,21 @@ SCIP_RETCODE projectShift(
    assert(!rval);
 #endif
 
-   RatSetInt(dualbound, 0, 1);
+   SCIPrationalSetInt(dualbound, 0, 1);
    for( i = 0; i < nrows + ncols; i++ )
    {
       SCIP_Rational* val;
-      if( RatIsPositive(dualsol[i]) )
+      if( SCIPrationalIsPositive(dualsol[i]) )
          val = i < nrows ? lpexact->rows[i]->lhs : lpexact->cols[i - nrows]->lb;
       else
          val = i < nrows ? lpexact->rows[i]->rhs : lpexact->cols[i - nrows]->ub;
 
       if( i < nrows )
-         RatDiff(tmp, val, lpexact->rows[i]->constant);
+         SCIPrationalDiff(tmp, val, lpexact->rows[i]->constant);
       else
-         RatSet(tmp, val);
-      RatMult(tmp, dualsol[i], tmp);
-      RatAdd(dualbound, dualbound, tmp);
+         SCIPrationalSet(tmp, val);
+      SCIPrationalMult(tmp, dualsol[i], tmp);
+      SCIPrationalAdd(dualbound, dualbound, tmp);
    }
 
    /* since we negate the farkas-coef for the project-shift representation, it has to be negated again here for saving */
@@ -1760,11 +1760,11 @@ SCIP_RETCODE projectShift(
    {
       for( i = nrows; i < ncols + nrows; i++ )
       {
-         RatNegate(dualsol[i], dualsol[i]);
+         SCIPrationalNegate(dualsol[i], dualsol[i]);
       }
    }
 
-   computedbound = RatRoundReal(dualbound, SCIP_R_ROUND_DOWNWARDS);
+   computedbound = SCIPrationalRoundReal(dualbound, SCIP_R_ROUND_DOWNWARDS);
 
    if( !usefarkas )
    {
@@ -1776,10 +1776,10 @@ SCIP_RETCODE projectShift(
          stat->nprojshiftobjlimfail++;
          assert(!lp->hasprovedbound);
       }
-      else if( RatIsGTReal(dualbound, -SCIPsetInfinity(set)) )
+      else if( SCIPrationalIsGTReal(dualbound, -SCIPsetInfinity(set)) )
       {
          stat->boundingerrorps += REALABS(lp->lpobjval - computedbound);
-         RatSet(lpexact->lpobjval, dualbound);
+         SCIPrationalSet(lpexact->lpobjval, dualbound);
          *safebound = computedbound;
          lp->lpobjval = *safebound;
          lp->hasprovedbound = TRUE;
@@ -1793,9 +1793,9 @@ SCIP_RETCODE projectShift(
    else
    {
       /* if the objective value of the corrected ray is positive we can prune node, otherwise not */
-      if( RatIsPositive(dualbound) )
+      if( SCIPrationalIsPositive(dualbound) )
       {
-         RatSetString(lpexact->lpobjval, "inf");
+         SCIPrationalSetString(lpexact->lpobjval, "inf");
          lp->lpobjval = SCIPsetInfinity(set);
          lp->hasprovedbound = TRUE;
       }
@@ -1807,20 +1807,20 @@ SCIP_RETCODE projectShift(
    }
 
 #ifdef PS_OUT
-   printf("   common slack=%.20f (", RatApproxReal(projshiftdata->commonslack));
-   RatPrint(projshiftdata->commonslack);
+   printf("   common slack=%.20f (", SCIPrationalGetReal(projshiftdata->commonslack));
+   SCIPrationalPrint(projshiftdata->commonslack);
    printf(")\n");
 
-   printf("   max violation=%.20f (", RatApproxReal(maxv));
-   RatPrint(maxv);
+   printf("   max violation=%.20f (", SCIPrationalGetReal(maxv));
+   SCIPrationalPrint(maxv);
    printf(")\n");
 
-   printf("   lambda (use of interior point)=%.20f (", RatApproxReal(lambda2));
-   RatPrint(lambda2);
+   printf("   lambda (use of interior point)=%.20f (", SCIPrationalGetReal(lambda2));
+   SCIPrationalPrint(lambda2);
    printf(")\n");
 
-   printf("   dual objective value=%.20f (", RatApproxReal(dualbound));
-   RatPrint(dualbound);
+   printf("   dual objective value=%.20f (", SCIPrationalGetReal(dualbound));
+   SCIPrationalPrint(dualbound);
    printf(")\n");
 #endif
 
@@ -1828,24 +1828,24 @@ SCIP_RETCODE projectShift(
    /* free memory */
    if( correctiongmp != NULL )
    {
-      RatClearGMPArray(correctiongmp, nextendedrows);
+      SCIPrationalClearArrayGMP(correctiongmp, nextendedrows);
       SCIPsetFreeBufferArray(set, &correctiongmp);
    }
    if( violationgmp != NULL )
    {
-      RatClearGMPArray(violationgmp, ncols);
+      SCIPrationalClearArrayGMP(violationgmp, ncols);
       SCIPsetFreeBufferArray(set, &violationgmp);
    }
 
    SCIPsetFreeBufferArray(set, &isupper);
    SCIPsetFreeBufferArray(set, &dualsol);
 
-   RatFreeBuffer(set->buffer, &dualbound);
-   RatFreeBuffer(set->buffer, &maxv);
-   RatFreeBuffer(set->buffer, &lambda2);
-   RatFreeBuffer(set->buffer, &lambda1);
-   RatFreeBuffer(set->buffer, &tmp2);
-   RatFreeBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBuffer(set->buffer, &dualbound);
+   SCIPrationalFreeBuffer(set->buffer, &maxv);
+   SCIPrationalFreeBuffer(set->buffer, &lambda2);
+   SCIPrationalFreeBuffer(set->buffer, &lambda1);
+   SCIPrationalFreeBuffer(set->buffer, &tmp2);
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    if( usefarkas )
       SCIPclockStop(stat->provedinfeaspstime, set);
@@ -2138,7 +2138,7 @@ SCIP_RETCODE boundShift(
          rowexact = colexact->rows[i];
 
          val = rowexact->valsinterval[colexact->linkpos[i]];
-         assert(RatIsGEReal(colexact->vals[i], val.inf) && RatIsLEReal(colexact->vals[i], val.sup));
+         assert(SCIPrationalIsGEReal(colexact->vals[i], val.inf) && SCIPrationalIsLEReal(colexact->vals[i], val.sup));
 
          SCIPintervalSetBounds(&lpcolvals[i], -val.sup, -val.inf);
          fpdualcolwise[i] = fpdual[colexact->rows[i]->lppos];
@@ -2171,12 +2171,12 @@ SCIP_RETCODE boundShift(
       else
       {
          obj[j] = SCIPvarGetObjInterval(SCIPcolGetVar(col));
-         assert(RatIsGEReal(SCIPcolExactGetObj(SCIPcolGetColExact(col)), obj[j].inf));
-         assert(RatIsLEReal(SCIPcolExactGetObj(SCIPcolGetColExact(col)), obj[j].sup));
+         assert(SCIPrationalIsGEReal(SCIPcolExactGetObj(SCIPcolGetColExact(col)), obj[j].inf));
+         assert(SCIPrationalIsLEReal(SCIPcolExactGetObj(SCIPcolGetColExact(col)), obj[j].sup));
       }
 
-      assert(SCIPcolGetLb(col) <= RatRoundReal(SCIPvarGetLbLocalExact(col->var), SCIP_R_ROUND_DOWNWARDS));
-      assert(SCIPcolGetUb(col) >= RatRoundReal(SCIPvarGetUbLocalExact(col->var), SCIP_R_ROUND_UPWARDS));
+      assert(SCIPcolGetLb(col) <= SCIPrationalRoundReal(SCIPvarGetLbLocalExact(col->var), SCIP_R_ROUND_DOWNWARDS));
+      assert(SCIPcolGetUb(col) >= SCIPrationalRoundReal(SCIPvarGetUbLocalExact(col->var), SCIP_R_ROUND_UPWARDS));
       SCIPintervalSetBounds(&ublbcol[j], SCIPcolGetLb(col), SCIPcolGetUb(col));
 
       /* opt out if there are infinity bounds and a non-infinty value */
@@ -2250,7 +2250,7 @@ SCIP_RETCODE boundShift(
          lp->hasprovedbound = TRUE;
          SCIPdebugMessage("succesfully proved infeasibility \n");
       }
-      RatSetString(lpexact->lpobjval, "inf");
+      SCIPrationalSetString(lpexact->lpobjval, "inf");
    }
    else
    {
@@ -2264,14 +2264,14 @@ SCIP_RETCODE boundShift(
          stat->nfailboundshift++;
          stat->nboundshiftobjlimfail++;
          assert(!lp->hasprovedbound);
-         RatSetReal(lpexact->lpobjval, SCIPintervalGetInf(safeboundinterval));
+         SCIPrationalSetReal(lpexact->lpobjval, SCIPintervalGetInf(safeboundinterval));
       }
       else if( !SCIPsetIsInfinity(set, -1.0 * (computedbound)) )
       {
          stat->boundingerrorbs += REALABS(lp->lpobjval - computedbound);
          *safebound = computedbound;
          lp->hasprovedbound = TRUE;
-         RatSetReal(lpexact->lpobjval, SCIPintervalGetInf(safeboundinterval));
+         SCIPrationalSetReal(lpexact->lpobjval, SCIPintervalGetInf(safeboundinterval));
       }
       else
       {
@@ -2287,9 +2287,9 @@ SCIP_RETCODE boundShift(
       for( j = 0; j < lpexact->nrows; j++ )
       {
          if( usefarkas )
-            RatSetReal(lpexact->rows[j]->dualfarkas, fpdual[j]);
+            SCIPrationalSetReal(lpexact->rows[j]->dualfarkas, fpdual[j]);
          else
-            RatSetReal(lpexact->rows[j]->dualsol, fpdual[j]);
+            SCIPrationalSetReal(lpexact->rows[j]->dualsol, fpdual[j]);
       }
 
       for( j = 0; j < lpexact->ncols; j++ )

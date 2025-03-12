@@ -6,33 +6,34 @@
 #include <string>
 
 #ifdef SCIP_WITH_BOOST
-   #include <boost/multiprecision/number.hpp>
+#include <boost/multiprecision/number.hpp>
 
 #ifdef SCIP_WITH_GMP
-   #include <boost/multiprecision/gmp.hpp>
-   using namespace boost::multiprecision;
-/* MP@LE Please fix indentation of #include, using .. and add empty lines between logical blocks. For example, why is the next line not indented, while the previous is? */
-namespace scip_rational
+#include <boost/multiprecision/gmp.hpp>
+using namespace boost::multiprecision;
+namespace scip
 {
    using Rational = boost::multiprecision::number<gmp_rational, et_off>;
    using Integer = number<gmp_int, et_off>;
 }
 #else
-   #include <boost/multiprecision/cpp_int.hpp>
-   using namespace boost::multiprecision;
-namespace scip_rational
+#include <boost/multiprecision/cpp_int.hpp>
+using namespace boost::multiprecision;
+namespace scip
 {
    using Rational = cpp_rational;
    using Integer = cpp_int;
 }
 #endif
-namespace scip_rational
+
+namespace scip
 {
    using sparsevec = std::vector<SCIP_Rational>;
 }
 #else
-namespace scip_rational
+namespace scip
 {
+   /**@todo replace this dummy class with a direct interface to GMP for systems where Boost is not available */
    class Rational
    {
    public:

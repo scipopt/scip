@@ -269,10 +269,10 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPprimalCreate(&scip->primal) );
    if( SCIPisExact(scip) )
    {
-      SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &scip->primal->upperboundexact) );
-      SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &scip->primal->cutoffboundexact) );
-      RatSetString(scip->primal->upperboundexact, "inf");
-      RatSetString(scip->primal->cutoffboundexact, "inf");
+      SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &scip->primal->upperboundexact) );
+      SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &scip->primal->cutoffboundexact) );
+      SCIPrationalSetString(scip->primal->upperboundexact, "inf");
+      SCIPrationalSetString(scip->primal->cutoffboundexact, "inf");
       SCIP_CALL( SCIPlpExactCreate(&scip->lpexact, SCIPblkmem(scip), scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
    }
 
@@ -2194,16 +2194,16 @@ SCIP_RETCODE displayRelevantStats(
       if( scip->set->exact_enabled && scip->primal->nsolsfound > 0 )
       {
          SCIP_Rational* objval;
-         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &objval) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
          SCIPmessagePrintInfo(scip->messagehdlr, "Exact Primal Bound : ");
          SCIPgetPrimalboundExact(scip, objval);
-         RatMessage(scip->messagehdlr, NULL, objval);
+         SCIPrationalMessage(scip->messagehdlr, NULL, objval);
          SCIPmessagePrintInfo(scip->messagehdlr, "\n");
          SCIPmessagePrintInfo(scip->messagehdlr, "Exact Dual Bound   : ");
          SCIPgetDualboundExact(scip, objval);
-         RatMessage(scip->messagehdlr, NULL, objval);
+         SCIPrationalMessage(scip->messagehdlr, NULL, objval);
          SCIPmessagePrintInfo(scip->messagehdlr, "\n");
-         RatFreeBuffer(SCIPbuffer(scip), &objval);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &objval);
       }
 
       /* check solution for feasibility in original problem */

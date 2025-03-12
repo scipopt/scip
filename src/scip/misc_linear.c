@@ -160,11 +160,6 @@ SCIP_Real SCIPconsGetLhs(
    {
       lhs = SCIPgetLhsVarbound(scip, cons);
    }
-   else
-   {
-      SCIPwarningMessage(scip, "Cannot return lhs for constraint of type <%s>\n", conshdlrname);
-      *success = FALSE;
-   }
 
    return lhs;
 }
@@ -420,7 +415,7 @@ SCIP_RETCODE SCIPgetConsValsExact(
       SCIP_Rational** weights;
       weights = SCIPgetValsExactLinear(scip, cons);
       for( i = 0; i < nvars; i++ )
-         RatSet(vals[i], weights[i]);
+         SCIPrationalSet(vals[i], weights[i]);
    }
    else
    {

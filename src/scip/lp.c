@@ -13639,7 +13639,7 @@ SCIP_Real lpGetModifiedPseudoObjvalExact(
       SCIP_INTERVAL psval;
 
       SCIPintervalSet(&psval, pseudoobjval);
-      if( RatIsFpRepresentable(SCIPvarGetObjExact(var)) )
+      if( SCIPrationalIsFpRepresentable(SCIPvarGetObjExact(var)) )
          SCIPintervalSet(&objint, SCIPvarGetObj(var));
       else
          SCIPintervalSetRational(&objint, SCIPvarGetObjExact(var));

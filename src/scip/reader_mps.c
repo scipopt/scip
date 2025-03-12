@@ -1031,22 +1031,22 @@ SCIP_RETCODE readRowsExact(
          dynamic = mpsi->dynamicconss;
          removable = mpsi->dynamicrows || (mpsinputSection(mpsi) == MPS_USERCUTS);
 
-         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lhs) );
-         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &rhs) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
 
          switch(*mpsinputField1(mpsi))
          {
          case 'G' :
-            RatSetString(rhs, "inf");
-            RatSetReal(lhs, 0.0);
+            SCIPrationalSetString(rhs, "inf");
+            SCIPrationalSetReal(lhs, 0.0);
             break;
          case 'E' :
-            RatSetReal(rhs, 0.0);
-            RatSetReal(lhs, 0.0);
+            SCIPrationalSetReal(rhs, 0.0);
+            SCIPrationalSetReal(lhs, 0.0);
             break;
          case 'L' :
-            RatSetString(lhs, "-inf");
-            RatSetReal(rhs, 0.0);
+            SCIPrationalSetString(lhs, "-inf");
+            SCIPrationalSetReal(rhs, 0.0);
             break;
          default :
             mpsinputSyntaxerror(mpsi);
@@ -1059,8 +1059,8 @@ SCIP_RETCODE readRowsExact(
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-         RatFreeBuffer(SCIPbuffer(scip), &rhs);
-         RatFreeBuffer(SCIPbuffer(scip), &lhs);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhs);
 
          /* if the file is of type cor, then the constraint names must be stored */
          SCIP_CALL( addConsNameToStorage(scip, consnames, consnamessize, nconsnames, mpsinputField2(mpsi)) );
@@ -1289,9 +1289,9 @@ SCIP_RETCODE readColsExact(
       }
       assert(var != NULL);
 
-      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &val) );
-      RatSetString(val, mpsinputField3(mpsi));
-      RatCanonicalize(val);
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &val) );
+      SCIPrationalSetString(val, mpsinputField3(mpsi));
+      SCIPrationalCanonicalize(val);
 
       if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
       {
@@ -1302,13 +1302,13 @@ SCIP_RETCODE readColsExact(
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
             mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_FULL);
-         else if( !RatIsZero(val) )
+         else if( !SCIPrationalIsZero(val) )
          {
             /* warn the user in case the coefficient is infinite */
-            if( RatIsAbsInfinity(val) )
+            if( SCIPrationalIsAbsInfinity(val) )
             {
                SCIPwarningMessage(scip, "Coefficient of variable <%s> in constraint <%s> contains infinite value <%e>,"
-                  " consider adjusting SCIP infinity.\n", SCIPvarGetName(var), SCIPconsGetName(cons), RatApproxReal(val));
+                  " consider adjusting SCIP infinity.\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPrationalGetReal(val));
             }
             SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, var, val) );
          }
@@ -1317,8 +1317,8 @@ SCIP_RETCODE readColsExact(
       {
          assert(mpsinputField4(mpsi) != NULL);
 
-         RatSetString(val, mpsinputField5(mpsi));
-         RatCanonicalize(val);
+         SCIPrationalSetString(val, mpsinputField5(mpsi));
+         SCIPrationalCanonicalize(val);
 
          if( !strcmp(mpsinputField4(mpsi), mpsinputObjname(mpsi)) )
          {
@@ -1331,14 +1331,14 @@ SCIP_RETCODE readColsExact(
             {
                mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField4(mpsi), SCIP_VERBLEVEL_FULL);
             }
-            else if( !RatIsZero(val) )
+            else if( !SCIPrationalIsZero(val) )
             {
                SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, var, val) );
             }
          }
       }
       /* free rational buffer */
-      RatFreeBuffer(SCIPbuffer(scip), &val);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &val);
    }
    mpsinputSyntaxerror(mpsi);
 
@@ -1506,7 +1506,7 @@ SCIP_RETCODE readRhsExact(
    SCIP_Rational*   rhs;
    SCIP_Rational*   valexact;
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &valexact) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &valexact) );
 
    SCIPdebugMsg(scip, "read right hand sides\n");
 
@@ -1533,7 +1533,7 @@ SCIP_RETCODE readRhsExact(
          else
             break;
 
-         RatFreeBuffer(SCIPbuffer(scip), &valexact);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &valexact);
 
          return SCIP_OKAY;
       }
@@ -1567,33 +1567,33 @@ SCIP_RETCODE readRhsExact(
          }
          else
          {
-            RatSetString(valexact, mpsinputField3(mpsi));
-            RatCanonicalize(valexact);
+            SCIPrationalSetString(valexact, mpsinputField3(mpsi));
+            SCIPrationalCanonicalize(valexact);
 
             /* find out the row sense */
             lhs = SCIPgetLhsExactLinear(scip, cons);
             rhs = SCIPgetRhsExactLinear(scip, cons);
-            if( RatIsNegInfinity(lhs) )
+            if( SCIPrationalIsNegInfinity(lhs) )
             {
                /* lhs = -infinity -> lower or equal */
-               assert(RatIsZero(rhs));
+               assert(SCIPrationalIsZero(rhs));
                SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, valexact) );
             }
-            else if( RatIsInfinity(rhs) )
+            else if( SCIPrationalIsInfinity(rhs) )
             {
                /* rhs = +infinity -> greater or equal */
-               assert(RatIsZero(lhs));
+               assert(SCIPrationalIsZero(lhs));
                SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, valexact) );
             }
             else
             {
                /* lhs > -infinity, rhs < infinity -> equality */
-               assert(RatIsZero(lhs));
-               assert(RatIsZero(rhs));
+               assert(SCIPrationalIsZero(lhs));
+               assert(SCIPrationalIsZero(rhs));
                SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, valexact) );
                SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, valexact) );
             }
-            RatDebugMessage("RHS <%s> lhs: %q  rhs: %q  val: <%q>\n", mpsinputField2(mpsi), lhs, rhs, valexact);
+            SCIPrationalDebugMessage("RHS <%s> lhs: %q  rhs: %q  val: <%q>\n", mpsinputField2(mpsi), lhs, rhs, valexact);
          }
          if( mpsinputField5(mpsi) != NULL )
          {
@@ -1611,33 +1611,33 @@ SCIP_RETCODE readRhsExact(
             }
             else
             {
-               RatSetString(valexact, mpsinputField5(mpsi));
-               RatCanonicalize(valexact);
+               SCIPrationalSetString(valexact, mpsinputField5(mpsi));
+               SCIPrationalCanonicalize(valexact);
 
                /* find out the row sense */
                lhs = SCIPgetLhsExactLinear(scip, cons);
                rhs = SCIPgetRhsExactLinear(scip, cons);
-               if( RatIsNegInfinity(lhs) )
+               if( SCIPrationalIsNegInfinity(lhs) )
                {
                   /* lhs = -infinity -> lower or equal */
-                  assert(RatIsZero(rhs));
+                  assert(SCIPrationalIsZero(rhs));
                   SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, valexact) );
                }
-               else if( RatIsInfinity(rhs) )
+               else if( SCIPrationalIsInfinity(rhs) )
                {
                   /* rhs = +infinity -> greater or equal */
-                  assert(RatIsZero(lhs));
+                  assert(SCIPrationalIsZero(lhs));
                   SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, valexact) );
                }
                else
                {
                   /* lhs > -infinity, rhs < infinity -> equality */
-                  assert(RatIsZero(lhs));
-                  assert(RatIsZero(rhs));
+                  assert(SCIPrationalIsZero(lhs));
+                  assert(SCIPrationalIsZero(rhs));
                   SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, valexact) );
                   SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, valexact) );
                }
-               RatDebugMessage("RHS <%s> lhs: %q  rhs: %q  val: <%q>\n", mpsinputField4(mpsi), lhs, rhs, valexact);
+               SCIPrationalDebugMessage("RHS <%s> lhs: %q  rhs: %q  val: <%q>\n", mpsinputField4(mpsi), lhs, rhs, valexact);
             }
          }
       }
@@ -1802,7 +1802,7 @@ SCIP_RETCODE readRangesExact(
 
    SCIPdebugMsg(scip, "read ranges\n");
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &val) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &val) );
 
    while( mpsinputReadLine(mpsi) )
    {
@@ -1825,7 +1825,7 @@ SCIP_RETCODE readRangesExact(
          else
             break;
 
-         RatFreeBuffer(SCIPbuffer(scip), &val);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &val);
 
          return SCIP_OKAY;
       }
@@ -1859,38 +1859,38 @@ SCIP_RETCODE readRangesExact(
             mpsinputEntryIgnored(scip, mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_NORMAL);
          else
          {
-            RatSetString(val, mpsinputField3(mpsi));
-            RatCanonicalize(val);
+            SCIPrationalSetString(val, mpsinputField3(mpsi));
+            SCIPrationalCanonicalize(val);
 
             /* find out the row sense */
             lhs = SCIPgetLhsExactLinear(scip, cons);
             rhs = SCIPgetRhsExactLinear(scip, cons);
-            if( RatIsNegInfinity(lhs) )
+            if( SCIPrationalIsNegInfinity(lhs) )
             {
                /* lhs = -infinity -> lower or equal */
-               RatAbs(val, val);
-               RatDiff(val, rhs, val);
+               SCIPrationalAbs(val, val);
+               SCIPrationalDiff(val, rhs, val);
                SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, val) );
             }
-            else if( RatIsInfinity(rhs) )
+            else if( SCIPrationalIsInfinity(rhs) )
             {
                /* rhs = +infinity -> greater or equal */
-               RatAbs(val, val);
-               RatAdd(val, val, lhs);
+               SCIPrationalAbs(val, val);
+               SCIPrationalAdd(val, val, lhs);
                SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, val) );
             }
             else
             {
                /* lhs > -infinity, rhs < infinity -> equality */
-               assert(RatIsEqual(lhs, rhs));
-               if( !RatIsNegative(val) )
+               assert(SCIPrationalIsEqual(lhs, rhs));
+               if( !SCIPrationalIsNegative(val) )
                {
-                  RatAdd(val, val, rhs);
+                  SCIPrationalAdd(val, val, rhs);
                   SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, val) );
                }
                else
                {
-                  RatAdd(val, val, lhs);
+                  SCIPrationalAdd(val, val, lhs);
                   SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, val) );
                }
             }
@@ -1902,38 +1902,38 @@ SCIP_RETCODE readRangesExact(
                mpsinputEntryIgnored(scip, mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField4(mpsi), SCIP_VERBLEVEL_NORMAL);
             else
             {
-               RatSetString(val, mpsinputField5(mpsi));
-               RatCanonicalize(val);
+               SCIPrationalSetString(val, mpsinputField5(mpsi));
+               SCIPrationalCanonicalize(val);
 
                /* find out the row sense */
                lhs = SCIPgetLhsExactLinear(scip, cons);
                rhs = SCIPgetRhsExactLinear(scip, cons);
-               if( RatIsNegInfinity(lhs) )
+               if( SCIPrationalIsNegInfinity(lhs) )
                {
                   /* lhs = -infinity -> lower or equal */
-                  RatAbs(val, val);
-                  RatDiff(val, rhs, val);
+                  SCIPrationalAbs(val, val);
+                  SCIPrationalDiff(val, rhs, val);
                   SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, val) );
                }
-               else if( RatIsInfinity(rhs) )
+               else if( SCIPrationalIsInfinity(rhs) )
                {
                   /* rhs = +infinity -> greater or equal */
-                  RatAbs(val, val);
-                  RatAdd(val, lhs, val);
+                  SCIPrationalAbs(val, val);
+                  SCIPrationalAdd(val, lhs, val);
                   SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, val) );
                }
                else
                {
                   /* lhs > -infinity, rhs < infinity -> equality */
-                  assert(RatIsEqual(lhs, rhs));
-                  if( !RatIsNegative(val) )
+                  assert(SCIPrationalIsEqual(lhs, rhs));
+                  if( !SCIPrationalIsNegative(val) )
                   {
-                     RatAdd(val, val, rhs);
+                     SCIPrationalAdd(val, val, rhs);
                      SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, val) );
                   }
                   else
                   {
-                     RatAdd(val, val, lhs);
+                     SCIPrationalAdd(val, val, lhs);
                      SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, val) );
                   }
                }
@@ -2342,7 +2342,7 @@ SCIP_RETCODE readBoundsExact(
    nsemicont = 0;
    semicontsize = 0;
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &val) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &val) );
 
    SCIPdebugMsg(scip, "read bounds\n");
 
@@ -2458,11 +2458,11 @@ SCIP_RETCODE readBoundsExact(
          assert(var != NULL);
 
          if( mpsinputField4(mpsi) == NULL )
-            RatSetReal(val, 0.0);
+            SCIPrationalSetReal(val, 0.0);
          else
          {
-            RatSetString(val, mpsinputField4(mpsi));
-            RatCanonicalize(val);
+            SCIPrationalSetString(val, mpsinputField4(mpsi));
+            SCIPrationalCanonicalize(val);
          }
 
          /* remember variable type */
@@ -2474,21 +2474,21 @@ SCIP_RETCODE readBoundsExact(
           */
          if( oldvartype == SCIP_VARTYPE_BINARY
             && ( mpsinputField1(mpsi)[0] != 'B' || mpsinputField1(mpsi)[1] != 'V' )
-            && ( mpsinputField1(mpsi)[0] != 'U' || RatIsGTReal(val, 1.0) )
+            && ( mpsinputField1(mpsi)[0] != 'U' || SCIPrationalIsGTReal(val, 1.0) )
             && ( mpsinputField1(mpsi)[0] != 'F' || mpsinputField1(mpsi)[1] != 'X'
-            || RatIsNegative(val) || RatIsGTReal(val, 1.0) ) )
+            || SCIPrationalIsNegative(val) || SCIPrationalIsGTReal(val, 1.0) ) )
          {
             SCIP_Rational* tmp;
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
             assert(!infeasible);
 
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
-            RatSetString(tmp, "inf");
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
+            SCIPrationalSetString(tmp, "inf");
 
             oldvartype =  SCIP_VARTYPE_INTEGER;
 
             SCIP_CALL( SCIPchgVarUbExact(scip, var, tmp) );
-            RatFreeBuffer(SCIPbuffer(scip), &tmp);
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
          }
 
          /* switch variable type to continuous before applying the bound, this is necessary for stupid non-integral
@@ -2504,43 +2504,43 @@ SCIP_RETCODE readBoundsExact(
          switch( mpsinputField1(mpsi)[0] )
          {
          case 'L':
-            if( !RatIsZero(SCIPvarGetLbGlobalExact(var)) && RatIsLT(val, SCIPvarGetLbGlobalExact(var)) )
+            if( !SCIPrationalIsZero(SCIPvarGetLbGlobalExact(var)) && SCIPrationalIsLT(val, SCIPvarGetLbGlobalExact(var)) )
             {
-               SCIPwarningMessage(scip, "Relaxing already defined lower bound (%.14g) of variable <%s> to (%.14g) not allowed.\n", SCIPvarGetLbGlobal(var), SCIPvarGetName(var), RatApproxReal(val));
+               SCIPwarningMessage(scip, "Relaxing already defined lower bound (%.14g) of variable <%s> to (%.14g) not allowed.\n", SCIPvarGetLbGlobal(var), SCIPvarGetName(var), SCIPrationalGetReal(val));
             }
 
             SCIP_CALL( SCIPchgVarLbExact(scip, var, val) );
 
             if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
             {
-               if( !RatIsIntegral(val) )
+               if( !SCIPrationalIsIntegral(val) )
                {
-                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), RatApproxReal(val));
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalGetReal(val));
                }
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
                /* don't assert feasibility here because the presolver will and should detect a infeasibility */
             }
             else if( oldvartype < SCIP_VARTYPE_CONTINUOUS )
             {
-               if( !RatIsIntegral(val) )
+               if( !SCIPrationalIsIntegral(val) )
                {
-                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), RatApproxReal(val));
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalGetReal(val));
                }
             }
 
             break;
          case 'U':
-            if( RatIsGT(val, SCIPvarGetUbGlobalExact(var)) )
+            if( SCIPrationalIsGT(val, SCIPvarGetUbGlobalExact(var)) )
             {
-               SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), RatApproxReal(val));
+               SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), SCIPrationalGetReal(val));
             }
 
             SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
             if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
             {
-               if( !RatIsIntegral(val) )
+               if( !SCIPrationalIsIntegral(val) )
                {
-                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), RatApproxReal(val));
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalGetReal(val));
                }
 
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
@@ -2548,9 +2548,9 @@ SCIP_RETCODE readBoundsExact(
             }
             else if( oldvartype < SCIP_VARTYPE_CONTINUOUS )
             {
-               if( !RatIsIntegral(val) )
+               if( !SCIPrationalIsIntegral(val) )
                {
-                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), RatApproxReal(val));
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalGetReal(val));
                }
             }
             break;
@@ -2580,11 +2580,11 @@ SCIP_RETCODE readBoundsExact(
             }
 
             /* if both bounds are infinite anyway, we do not need to print a warning or change the bound */
-            if( !RatIsInfinity(val) || !RatIsInfinity(SCIPvarGetUbGlobalExact(var)) )
+            if( !SCIPrationalIsInfinity(val) || !SCIPrationalIsInfinity(SCIPvarGetUbGlobalExact(var)) )
             {
-               if( RatIsGT(val, SCIPvarGetUbGlobalExact(var)) )
+               if( SCIPrationalIsGT(val, SCIPvarGetUbGlobalExact(var)) )
                {
-                  SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), RatApproxReal(val));
+                  SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), SCIPrationalGetReal(val));
                }
 
                SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
@@ -2598,26 +2598,26 @@ SCIP_RETCODE readBoundsExact(
             }
             else
             {
-               RatSetString(val, "-inf");
+               SCIPrationalSetString(val, "-inf");
                SCIP_CALL( SCIPchgVarLbExact(scip, var, val) );
-               RatSetString(val, "inf");
+               SCIPrationalSetString(val, "inf");
                SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
             }
             break;
          case 'M':
-            RatSetString(val, "-inf");
+            SCIPrationalSetString(val, "-inf");
             SCIP_CALL( SCIPchgVarLbExact(scip, var, val) );
             break;
          case 'P':
-            RatSetString(val, "inf");
+            SCIPrationalSetString(val, "inf");
             SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
             break;
          case 'B':
             if( oldvartype != SCIP_VARTYPE_BINARY )
             {
-               RatSetReal(val, 0.0);
+               SCIPrationalSetReal(val, 0.0);
                SCIP_CALL( SCIPtightenVarLbExact(scip, var, val, &infeasible, NULL) );
-               RatSetReal(val, 1.0);
+               SCIPrationalSetReal(val, 1.0);
                SCIP_CALL( SCIPtightenVarUbExact(scip, var, val, &infeasible, NULL) );
                SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
                /* presolving detects infeasibility */
@@ -2658,7 +2658,7 @@ SCIP_RETCODE readBoundsExact(
    }
 
    SCIPfreeBufferArrayNull(scip, &semicont);
-   RatFreeBuffer(SCIPbuffer(scip), &val);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &val);
 
    SCIP_CALL( retcode );
 

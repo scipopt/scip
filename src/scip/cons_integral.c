@@ -81,7 +81,7 @@ SCIP_RETCODE checkIntegralityExact(
 
    integral = TRUE;
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &solval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &solval) );
 
    /* get all problem variables and integer region in vars array */
    SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nintegers, NULL, NULL, NULL, NULL, &ncontimplvars, &ncontvars) );
@@ -95,26 +95,26 @@ SCIP_RETCODE checkIntegralityExact(
       if( SCIPisExactSol(scip, sol) )
          SCIPgetSolValExact(scip, sol, vars[v], solval);
       else
-         RatSetReal(solval, SCIPgetSolVal(scip, sol, vars[v]));
+         SCIPrationalSetReal(solval, SCIPgetSolVal(scip, sol, vars[v]));
 
       assert(SCIPvarGetProbindex(vars[v]) == v);
       assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER );
 
-      if( !RatIsIntegral(solval) )
+      if( !SCIPrationalIsIntegral(solval) )
       {
          *result = SCIP_INFEASIBLE;
          if( printreason )
          {
             SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> =",
                SCIPvarGetName(vars[v]));
-            RatMessage(SCIPgetMessagehdlr(scip), NULL, solval);
+            SCIPrationalMessage(SCIPgetMessagehdlr(scip), NULL, solval);
             SCIPinfoMessage(scip, NULL, "\n");
          }
          integral = FALSE;
       }
    }
 
-   RatFreeBuffer(SCIPbuffer(scip), &solval);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
 
    return SCIP_OKAY;
 }

@@ -989,18 +989,18 @@ SCIP_RETCODE createAndAddProofcons(
          return SCIP_OKAY;
       }
 
-      SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &lhs_exact));
-      SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &rhs_exact));
-      RatSetString(lhs_exact, "-inf");
-      RatSetReal(rhs_exact, rhs);
-      SCIP_CALL(RatCreateBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz));
+      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &lhs_exact));
+      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &rhs_exact));
+      SCIPrationalSetString(lhs_exact, "-inf");
+      SCIPrationalSetReal(rhs_exact, rhs);
+      SCIP_CALL(SCIPrationalCreateBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz));
       SCIP_CALL(SCIPallocBufferArray(set->scip, &consvars, nnz));
       assert(nnz > 0);
       for( i = 0; i < nnz; i++ )
       {
          consvars[i] = vars[inds[i]];
-         RatSetReal(coefs_exact[i], coefs[i]);
-         assert(!RatIsAbsInfinity(coefs_exact[i]));
+         SCIPrationalSetReal(coefs_exact[i], coefs[i]);
+         assert(!SCIPrationalIsAbsInfinity(coefs_exact[i]));
       }
       SCIP_CALL( SCIPcreateConsExactLinear(set->scip, &cons, name, nnz, consvars, coefs_exact, lhs_exact, rhs_exact,
             FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
@@ -1010,9 +1010,9 @@ SCIP_RETCODE createAndAddProofcons(
          SCIP_CALL( SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, cons, proofset->certificateline) );
       }
       SCIPfreeBufferArray(set->scip, &consvars);
-      RatFreeBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz);
-      RatFreeBuffer(SCIPbuffer(set->scip), &rhs_exact);
-      RatFreeBuffer(SCIPbuffer(set->scip), &lhs_exact);
+      SCIPrationalFreeBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz);
+      SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &rhs_exact);
+      SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &lhs_exact);
    }
    else
    {
@@ -1089,7 +1089,7 @@ SCIP_RETCODE createAndAddProofcons(
          assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 || set->exact_enabled );
          assert(strcmp(SCIPconshdlrGetName(conshdlr), "exactlinear") == 0 || !set->exact_enabled );
 #endif
-         side = set->exact_enabled ? RatRoundReal(SCIPgetLhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST) : SCIPgetLhsLinear(set->scip, cons);
+         side = set->exact_enabled ? SCIPrationalRoundReal(SCIPgetLhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST) : SCIPgetLhsLinear(set->scip, cons);
 
          if( !SCIPsetIsInfinity(set, -side) )
          {
@@ -1105,7 +1105,7 @@ SCIP_RETCODE createAndAddProofcons(
          }
          else
          {
-            side = set->exact_enabled ? RatRoundReal(SCIPgetRhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST) : SCIPgetRhsLinear(set->scip, cons);
+            side = set->exact_enabled ? SCIPrationalRoundReal(SCIPgetRhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST) : SCIPgetRhsLinear(set->scip, cons);
             assert(!SCIPsetIsInfinity(set, side));
 
             if( SCIPsetIsZero(set, side) )
