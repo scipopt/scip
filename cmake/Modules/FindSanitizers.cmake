@@ -33,22 +33,20 @@ endif ()
 
 list(APPEND REQUIRED_SANITIZERS "")
 
-if(SANITIZE_ADDRESS)
+if(${SANITIZE} STREQUAL "address")
    find_package(ASan ${FIND_QUIETLY_FLAG})
    list(APPEND REQUIRED_SANITIZERS "ASan_FOUND")
 endif()
-if(SANITIZE_THREAD)
+if(${SANITIZE} STREQUAL "thread")
    find_package(TSan ${FIND_QUIETLY_FLAG})
    list(APPEND REQUIRED_SANITIZERS "TSan_FOUND")
 endif()
-if(SANITIZE_MEMORY)
+if(${SANITIZE} STREQUAL "memory")
    find_package(MSan ${FIND_QUIETLY_FLAG})
    list(APPEND REQUIRED_SANITIZERS "MSan_FOUND")
 endif()
-if(SANITIZE_UNDEFINED)
-   find_package(UBSan ${FIND_QUIETLY_FLAG})
-   list(APPEND REQUIRED_SANITIZERS "UBSan_FOUND")
-endif()
+find_package(UBSan ${FIND_QUIETLY_FLAG})
+list(APPEND REQUIRED_SANITIZERS "UBSan_FOUND")
 
 function(sanitizer_add_blacklist_file FILE)
     if(NOT IS_ABSOLUTE ${FILE})
@@ -61,13 +59,10 @@ function(sanitizer_add_blacklist_file FILE)
 endfunction()
 
 function(add_sanitizers ...)
-    # If no sanitizer is enabled, return immediately.
-    if (NOT (SANITIZE_ADDRESS OR SANITIZE_MEMORY OR SANITIZE_THREAD OR
-        SANITIZE_UNDEFINED))
-        return()
-    endif ()
-
     foreach (TARGET ${ARGV})
+        # ensure the SANITIZE_FLAGS property exists also if no sanitizers are available
+        set_property(TARGET ${TARGET} PROPERTY SANITIZE_FLAGS "")
+
         # Check if this target will be compiled by exactly one compiler. Other-
         # wise sanitizers can't be used and a warning should be printed once.
         sanitizer_target_compilers(${TARGET} TARGET_COMPILER)
@@ -87,19 +82,17 @@ function(add_sanitizers ...)
         endif ()
 
         # Add sanitizers for target.
-        if(SANITIZE_ADDRESS)
+        if(${SANITIZE} STREQUAL "address")
            add_sanitize_address(${TARGET})
         endif()
-        if(SANITIZE_THREAD)
+        if(${SANITIZE} STREQUAL "thread")
            add_sanitize_thread(${TARGET})
         endif()
-        if(SANITIZE_MEMORY)
+        if(${SANITIZE} STREQUAL "memory")
            add_sanitize_memory(${TARGET})
         endif()
-        if(SANITIZE_UNDEFINED)
-           add_sanitize_undefined(${TARGET})
-        endif()
-	endforeach ()
+        add_sanitize_undefined(${TARGET})
+    endforeach ()
 endfunction(add_sanitizers)
 
 include(FindPackageHandleStandardArgs)

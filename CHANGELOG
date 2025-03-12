@@ -63,6 +63,7 @@ Interface changes
 - new event SCIP_EVENTTYPE_IMPLTYPECHANGED is generated if a variable is declared implied integral, this event is included in the set SCIP_EVENTTYPE_VARCHANGED
 - the callback SCIP_DECL_EXPRINTEGRALITY, which returns the integrality of an expression, had its fourth argument change from SCIP_Bool* to SCIP_IMPLINTTYPE*, to represent implied integrality in nonlinear expressions, that is an implied integral type of an auxiliary variable if the expression were assigned to it
 - new event SCIP_EVENTTYPE_DUALBOUNDIMPROVED is generated whenever the global dual bound is improved
+- new event mask SCIP_EVENTTYPE_GAPUPDATED for catching updates in primal or dual bound
 
 ### Deleted and changed API methods
 
@@ -181,11 +182,19 @@ Build system
 
 ### Makefile
 
+- revised SANITIZE options: removed SANITIZE=full, added SANITIZE=thread, SANITIZE=address, and SANITIZE=memory to enable
+  thread, address, and memory sanitizers, respectively, in addition to undefined behavior sanitizer;
+  changed default to SANITIZE=false
+
 ### Cmake
 
 - increased minimal required cmake version to 3.11
 - removed automatic download and build of Bliss during cmake configuration when -DSYM=(s)bliss;
   please build and install from https://github.com/scipopt/bliss before and specify -DBLISS_DIR
+- replaced `SANITIZE_XYZ=(on|off)` options by `SANITIZE=(on|off|thread|address|memory)`;
+  undefined behavior sanitizer is always enabled if not `SANITIZE=off` (the default)
+- scip-config.cmake now defines a variable SCIP_COMPILE_FLAGS, which could be used to compile code that builds against SCIP via cmake;
+  currently, this only passes on the sanitizer flags that were used to build libscip
 
 Fixed bugs
 ----------
@@ -259,7 +268,9 @@ Fixed bugs
 - fixed timeouts due to race conditions when using TPI=omp
 - fixed issues with indexing of concurrent solvers when a solver finishes (because SCIP is too fast) before others have been created when using TPI=tny
 - respect fixing if variable is declared binary in bounds section of mps file
+- fixed reading mps files with short row and column names and some fixed-form mps files with spaces in row names
 - force local bounds to adjusted value when fixing variable
+- adds missing NULL check for Benders' subproblems in feasalt cut
 
 Build system
 ------------

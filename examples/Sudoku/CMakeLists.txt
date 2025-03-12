@@ -16,6 +16,7 @@ add_executable(sudoku
    src/sudoku_utils.h)
 
 target_link_libraries(sudoku ${SCIP_LIBRARIES})
+target_compile_options(sudoku PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET examples )
     add_dependencies( examples sudoku )

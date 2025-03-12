@@ -119,6 +119,7 @@ int main(int argc, char** argv)
 	 fprintf(file, "%d ", getRandomInt(0, d, &seed));
       fprintf(file, "\n");
    }
+   fclose(file);
 
    printf("Wrote random LOP instance to %s\n", argv[1]);
    printf("Size: %d\n", n);
