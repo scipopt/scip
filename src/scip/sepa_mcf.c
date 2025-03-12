@@ -5861,7 +5861,7 @@ SCIP_RETCODE addCut(
    }
    else
    {
-      SCIP_CALL( SCIPaddRow(scip, cut, TRUE, cutoff) );
+      SCIP_CALL( SCIPaddRow(scip, cut, FALSE, cutoff) );
    }
    (*ncuts)++;
 
