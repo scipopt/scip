@@ -1990,7 +1990,6 @@ int SCIPgetRandomInt(
    unsigned int*         seedp               /**< pointer to seed value */
    );
 
-
 /** returns a random integer between minrandval and maxrandval */
 SCIP_EXPORT
 int SCIPrandomGetInt(

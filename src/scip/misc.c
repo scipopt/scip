@@ -10105,8 +10105,6 @@ void SCIPrandomFree(
    return;
 }
 
-
-
 /** returns a random integer between minrandval and maxrandval */
 int SCIPrandomGetInt(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
