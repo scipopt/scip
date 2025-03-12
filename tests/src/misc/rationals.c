@@ -118,24 +118,24 @@ Test(rationals, setting, .description = "tests all the different methods to set/
 
    /* test setter methods */
    SCIPrationalSetInt(r1, testint, 1);
-   cr_assert_eq(SCIPrationalGetRealApproximation(r1), testint, "setting from and converting back to int did not give same result");
+   cr_assert_eq(SCIPrationalGetReal(r1), testint, "setting from and converting back to int did not give same result");
    /* set to fp number */
    SCIPrationalSetReal(r1, testreal);
-   cr_assert_eq(SCIPrationalGetRealApproximation(r1), testreal, "setting from and converting back to real did not give same result");
+   cr_assert_eq(SCIPrationalGetReal(r1), testreal, "setting from and converting back to real did not give same result");
    cr_assert(SCIPrationalIsFpRepresentable(r1), "fp-rep number not detected as representable");
 
    /* set to string rep */
    SCIPrationalSetReal(r1, 0.1246912);
-   cr_log_info("%.17e \n", SCIPrationalGetRealApproximation(r1));
+   cr_log_info("%.17e \n", SCIPrationalGetReal(r1));
    cr_assert(SCIPrationalIsFpRepresentable(r1), "fp number 0.124691234 not fp representable");
 
    /* set to string rep */
    SCIPrationalSetString(r1, "1/3");
    cr_assert(!SCIPrationalIsFpRepresentable(r1), "non-fp-rep number not detected as non-representable");
-   cr_assert(!SCIPrationalIsEqualReal(r1, SCIPrationalGetRealApproximation(r1)), "approximation of 1/3 should not be the same");
+   cr_assert(!SCIPrationalIsEqualReal(r1, SCIPrationalGetReal(r1)), "approximation of 1/3 should not be the same");
 
    /* test rounding */
-   cr_log_info("printing test approx: %.17e \n", SCIPrationalGetRealApproximation(r1));
+   cr_log_info("printing test approx: %.17e \n", SCIPrationalGetReal(r1));
    cr_log_info("rounding down:        %.17e \n", SCIPrationalRoundReal(r1, SCIP_R_ROUND_DOWNWARDS));
    cr_log_info("rounding up:          %.17e \n", SCIPrationalRoundReal(r1, SCIP_R_ROUND_UPWARDS));
    cr_log_info("rounding nearest:     %.17e \n", SCIPrationalRoundReal(r1, SCIP_R_ROUND_NEAREST));
@@ -146,7 +146,7 @@ Test(rationals, setting, .description = "tests all the different methods to set/
    /* test gmp conversion */
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_BOOST)
    SCIPrationalSetGMP(r1, gmpr);
-   cr_assert_eq(SCIPrationalGetRealApproximation(r1), mpq_get_d(gmpr), "gmp and Rational should be the same ");
+   cr_assert_eq(SCIPrationalGetReal(r1), mpq_get_d(gmpr), "gmp and Rational should be the same ");
    cr_assert(0 == mpq_cmp(gmpr, *SCIPrationalGetGMP(r1)));
 #endif
 
@@ -280,17 +280,17 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
 
    /* comparing fp and rat */
    SCIPrationalSetString(r2, "123646/1215977400");
-   cr_assert(!SCIPrationalIsEqualReal(r2, SCIPrationalGetRealApproximation(r2)));
+   cr_assert(!SCIPrationalIsEqualReal(r2, SCIPrationalGetReal(r2)));
 
    SCIPrationalSetString(r1, "1/3");
    cr_assert(SCIPrationalIsLT(r2, r1));
 
    /* test rounding/ fp approximation */
    SCIPrationalAdd(rbuf, r1, r1);
-   doub = SCIPrationalGetRealApproximation(r1);
+   doub = SCIPrationalGetReal(r1);
    cr_log_info("rounding nearest:     %.17e \n", SCIPrationalRoundReal(rbuf, SCIP_R_ROUND_NEAREST));
    cr_log_info("rounding first:       %.17e \n", 2 * doub);
-   cr_assert_leq(2 * doub, SCIPrationalGetRealApproximation(rbuf));
+   cr_assert_leq(2 * doub, SCIPrationalGetReal(rbuf));
    cr_assert(!SCIPrationalIsFpRepresentable(rbuf));
 
    cr_assert(!SCIPrationalIsIntegral(rbuf));
@@ -301,16 +301,16 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    SCIPrationalToString(r1, buf, SCIP_MAXSTRLEN);
    cr_log_info("Test print 1/3: %s \n", buf);
    SCIPrationalSetString(r1, "3/4");
-   SCIPrationalRoundInteger(&intval, r1, SCIP_R_ROUND_DOWNWARDS);
+   SCIPrationalRoundLong(&intval, r1, SCIP_R_ROUND_DOWNWARDS);
    cr_assert_eq(intval, 0);
    SCIPrationalSetString(r1, "3/4");
-   SCIPrationalRoundInteger(&intval, r1, SCIP_R_ROUND_UPWARDS);
+   SCIPrationalRoundLong(&intval, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(intval, 1);
    SCIPrationalSetString(r1, "-5/4");
-   SCIPrationalRoundInteger(&intval, r1, SCIP_R_ROUND_DOWNWARDS);
+   SCIPrationalRoundLong(&intval, r1, SCIP_R_ROUND_DOWNWARDS);
    cr_assert_eq(intval, -2);
    SCIPrationalSetString(r1, "-9/4");
-   SCIPrationalRoundInteger(&intval, r1, SCIP_R_ROUND_UPWARDS);
+   SCIPrationalRoundLong(&intval, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(intval, -2);
 }
 
@@ -321,46 +321,46 @@ Test(rationals, overflows, .description = "test conversion methods with huge rat
 
    // round -1/2 up/down/nearest
    SCIPrationalSetInt(r1, testlong, -(testlong * 2));
-   SCIPrationalRound(r2, r1, SCIP_R_ROUND_UPWARDS);
-   cr_assert_eq(SCIPrationalGetRealApproximation(r2), 0);
-   SCIPrationalRoundInteger(&reslong, r1, SCIP_R_ROUND_UPWARDS);
+   SCIPrationalRoundInteger(r2, r1, SCIP_R_ROUND_UPWARDS);
+   cr_assert_eq(SCIPrationalGetReal(r2), 0);
+   SCIPrationalRoundLong(&reslong, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(reslong, 0);
 
-   SCIPrationalRound(r2, r1, SCIP_R_ROUND_DOWNWARDS);
-   cr_assert_eq(SCIPrationalGetRealApproximation(r2), -1);
-   SCIPrationalRoundInteger(&reslong, r1, SCIP_R_ROUND_DOWNWARDS);
+   SCIPrationalRoundInteger(r2, r1, SCIP_R_ROUND_DOWNWARDS);
+   cr_assert_eq(SCIPrationalGetReal(r2), -1);
+   SCIPrationalRoundLong(&reslong, r1, SCIP_R_ROUND_DOWNWARDS);
    cr_assert_eq(reslong, -1);
 
-   SCIPrationalRound(r2, r1, SCIP_R_ROUND_NEAREST);
-   cr_assert_eq(SCIPrationalGetRealApproximation(r2), -1);
-   SCIPrationalRoundInteger(&reslong, r1, SCIP_R_ROUND_NEAREST);
+   SCIPrationalRoundInteger(r2, r1, SCIP_R_ROUND_NEAREST);
+   cr_assert_eq(SCIPrationalGetReal(r2), -1);
+   SCIPrationalRoundLong(&reslong, r1, SCIP_R_ROUND_NEAREST);
    cr_assert_eq(reslong, -1);
 
    // round 1/2 up/down/nearest
    SCIPrationalSetInt(r1, testlong, (testlong * 2));
-   SCIPrationalRound(r2, r1, SCIP_R_ROUND_UPWARDS);
-   cr_assert_eq(SCIPrationalGetRealApproximation(r2), 1);
-   SCIPrationalRoundInteger(&reslong, r1, SCIP_R_ROUND_UPWARDS);
+   SCIPrationalRoundInteger(r2, r1, SCIP_R_ROUND_UPWARDS);
+   cr_assert_eq(SCIPrationalGetReal(r2), 1);
+   SCIPrationalRoundLong(&reslong, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(reslong, 1);
 
-   SCIPrationalRound(r2, r1, SCIP_R_ROUND_DOWNWARDS);
-   cr_assert_eq(SCIPrationalGetRealApproximation(r2), 0);
-   SCIPrationalRoundInteger(&reslong, r1, SCIP_R_ROUND_DOWNWARDS);
+   SCIPrationalRoundInteger(r2, r1, SCIP_R_ROUND_DOWNWARDS);
+   cr_assert_eq(SCIPrationalGetReal(r2), 0);
+   SCIPrationalRoundLong(&reslong, r1, SCIP_R_ROUND_DOWNWARDS);
    cr_assert_eq(reslong, 0);
 
-   SCIPrationalRound(r2, r1, SCIP_R_ROUND_NEAREST);
-   cr_assert_eq(SCIPrationalGetRealApproximation(r2), 1);
-   SCIPrationalRoundInteger(&reslong, r1, SCIP_R_ROUND_NEAREST);
+   SCIPrationalRoundInteger(r2, r1, SCIP_R_ROUND_NEAREST);
+   cr_assert_eq(SCIPrationalGetReal(r2), 1);
+   SCIPrationalRoundLong(&reslong, r1, SCIP_R_ROUND_NEAREST);
    cr_assert_eq(reslong, 1);
 
    // round -1/3 up/down/nearest
    SCIPrationalSetInt(r1, testlong, -(testlong * 3));
-   SCIPrationalRound(r2, r1, SCIP_R_ROUND_UPWARDS);
-   cr_assert_eq(SCIPrationalGetRealApproximation(r2), 0);
-   SCIPrationalRound(r2, r1, SCIP_R_ROUND_DOWNWARDS);
-   cr_assert_eq(SCIPrationalGetRealApproximation(r2), -1);
-   SCIPrationalRound(r2, r1, SCIP_R_ROUND_NEAREST);
-   cr_assert_eq(SCIPrationalGetRealApproximation(r2), 0);
+   SCIPrationalRoundInteger(r2, r1, SCIP_R_ROUND_UPWARDS);
+   cr_assert_eq(SCIPrationalGetReal(r2), 0);
+   SCIPrationalRoundInteger(r2, r1, SCIP_R_ROUND_DOWNWARDS);
+   cr_assert_eq(SCIPrationalGetReal(r2), -1);
+   SCIPrationalRoundInteger(r2, r1, SCIP_R_ROUND_NEAREST);
+   cr_assert_eq(SCIPrationalGetReal(r2), 0);
 }
 
 Test(rationals, arrays, .description = "tests rational array methods")
