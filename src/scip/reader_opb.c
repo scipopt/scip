@@ -1168,7 +1168,7 @@ SCIP_RETCODE setObjective(
       {
          if( SCIPisExact(scip) )
          {
-            SCIPerrorMessage("non-linear objectives are not supported in exact mode\n");
+            SCIPerrorMessage("non-linear objectives are not supported in exact solving mode\n");
             return SCIP_READERROR;
          }
 
@@ -1236,13 +1236,13 @@ SCIP_RETCODE setObjective(
       /* set the objective values */
       for( v = 0; v < ncoefs; ++v )
       {
-         SCIP_Rational* obj;
-
          assert(linvars != NULL); /* for lint */
          assert(coefs != NULL);
 
          if( SCIPisExact(scip) )
          {
+            SCIP_Rational* obj;
+
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &obj) );
 
             if( SCIPvarIsNegated(linvars[v]) )
@@ -1471,7 +1471,7 @@ SCIP_RETCODE readConstraints(
    {
       if( SCIPisExact(scip) )
       {
-         SCIPerrorMessage("non-linear constraints are not supported in exact mode\n");
+         SCIPerrorMessage("non-linear constraints are not supported in exact solving mode\n");
          return SCIP_READERROR;
       }
 #if GENCONSNAMES == TRUE
@@ -4009,12 +4009,6 @@ SCIP_RETCODE SCIPreadOpb(
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-
-   if( SCIPisExact(scip) )
-   {
-      SCIPerrorMessage("reading of opb/wbo format in exact solving mode is not yet supported\n");
-      return SCIP_READERROR;
-   }
 
    /* initialize OPB input data (use block memory because order can change during execution) */
    opbinput.file = NULL;
