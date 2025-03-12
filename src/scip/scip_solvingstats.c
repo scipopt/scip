@@ -110,6 +110,7 @@
 #include "scip/tree.h"
 #include "scip/var.h"
 #include "scip/cons_exactlp.h"
+#include "scip/scip_exact.h"
 #include <string.h>
 
 /** gets number of branch and bound runs performed, including the current run
@@ -5036,6 +5037,23 @@ void SCIPprintSolutionStatistics(
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap              : %10.2f %%\n", 100.0 * gap);
 
+   /* print exact bounds */
+   if( SCIPisExact(scip) )
+   {
+      SCIP_Rational* objval;
+
+      SCIP_CALL_ABORT( RatCreateBuffer(SCIPbuffer(scip), &objval) );
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Exact Prim. Bound: ");
+      SCIPgetPrimalboundExact(scip, objval);
+      RatMessage(scip->messagehdlr, file, objval);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Exact Dual Bound : ");
+      SCIPgetDualboundExact(scip, objval);
+      RatMessage(scip->messagehdlr, file, objval);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+      RatFreeBuffer(SCIPbuffer(scip), &objval);
+   }
+
    if( scip->set->misc_calcintegral )
    {
       int s;
@@ -5121,6 +5139,27 @@ SCIP_RETCODE SCIPcollectSolutionStatistics(
    SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "primal_bound", primalbound) );
    SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "dual_bound", dualbound) );
    SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "gap", gap) );
+
+   /* Exact bounds */
+   if( SCIPisExact(scip) )
+   {
+      SCIP_Rational* objval;
+      char strbuffer[SCIP_MAXSTRLEN];
+
+      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &objval) );
+
+      SCIPgetPrimalboundExact(scip, objval);
+      if( RatToString(objval, strbuffer, SCIP_MAXSTRLEN) >= SCIP_MAXSTRLEN )
+         SCIPwarningMessage(scip, "string encoding of exact primal bound too long: printing \"unknown\" into JSON\n");
+      SCIP_CALL( SCIPinsertDatatreeString(scip, datatree, "exact_primal_bound", strbuffer) );
+
+      SCIPgetDualboundExact(scip, objval);
+      if( RatToString(objval, strbuffer, SCIP_MAXSTRLEN) >= SCIP_MAXSTRLEN )
+         SCIPwarningMessage(scip, "string encoding of exact dual bound too long: printing \"unknown\" into JSON\n");
+      SCIP_CALL( SCIPinsertDatatreeString(scip, datatree, "exact_dual_bound", strbuffer) );
+
+      RatFreeBuffer(SCIPbuffer(scip), &objval);
+   }
 
    /* Objective limit reached */
    objlimitreached = (SCIPgetStage(scip) == SCIP_STAGE_SOLVED) && (scip->primal->nlimsolsfound == 0) &&
