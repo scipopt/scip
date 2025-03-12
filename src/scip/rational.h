@@ -724,7 +724,7 @@ SCIP_Real SCIPrationalGetReal(
 SCIP_EXPORT
 SCIP_Real SCIPrationalRoundReal(
    SCIP_Rational*        r,                  /**< the rational to convert */
-   SCIP_ROUNDMODE_RAT    roundmode           /**< rounding direction (not really working yet) */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    );
 
 /** rounds a rational to an integer and saves it as a rational */

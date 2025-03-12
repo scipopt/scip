@@ -1707,71 +1707,6 @@ std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r)
    return os;
 }
 
-#ifdef SCIP_DISABLED_CODE
-/** convert va_arg format string into std:string */
-static
-std::string RatString(const char *format, va_list arguments)
-{
-   std::ostringstream stream;
-   SCIP_Rational* rat;
-   char* sval;
-   SCIP_Real dval;
-   int ival;
-   char cval;
-
-   while( *format != '\0' )
-   {
-      if(*format == '%' && *(format+1) != '%')
-      {
-         switch (*++format)
-         {
-         case 'q':
-            rat = va_arg(arguments, SCIP_Rational*);
-            stream << *rat;
-            break;
-         case 's':
-            for (sval = va_arg(arguments, char *); *sval; sval++)
-               stream << (*sval);
-            break;
-         case 'f':
-            dval = va_arg(arguments, SCIP_Real);
-            stream << boost::format("%f") % dval;
-            break;
-         case 'g':
-            dval = va_arg(arguments, SCIP_Real);
-            stream << boost::format("%g") % dval;
-            break;
-         case 'e':
-            dval = va_arg(arguments, SCIP_Real);
-            stream << boost::format("%e") % dval;
-            break;
-         case 'd':
-         case 'i':
-         case 'u':
-            ival = va_arg(arguments, int);
-            stream << ival;
-            break;
-         case 'c':
-            cval = (char) va_arg(arguments, int);
-            stream << cval;
-            break;
-         default:
-            stream << (*format);
-            break;
-         }
-      }
-      else
-      {
-         stream << (*format);
-      }
-      ++format;
-   }
-
-   std::string ret = stream.str();
-   return ret;
-}
-#endif
-
 /** printf extension for rationals (not supporting all format options) */
 void SCIPrationalPrintf(const char *format, ...)
 {
@@ -1987,8 +1922,6 @@ SCIP_Real SCIPrationalGetReal(
 /** gets the relaxation of a rational as a real
  *
  *  @note Requires MPFR if rational is not fp-representable and roundmode is different from SCIP_R_ROUND_NEAREST.
- *
- *  @todo exip: we might have to worry about incorrect results when huge coefficients occur
  */
 SCIP_Real SCIPrationalRoundReal(
    SCIP_Rational*        rational,           /**< the rational */
