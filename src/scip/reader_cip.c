@@ -42,7 +42,6 @@
 #include "scip/pub_var.h"
 #include "scip/reader_cip.h"
 #include "scip/scip_cons.h"
-#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -428,10 +427,6 @@ SCIP_RETCODE getVariable(
 
    /* parse the variable */
    SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, NULL, &endptr, &success) );
-   if( SCIPisExact(scip) )
-   {
-      SCIP_CALL( SCIPaddVarExactData(scip, var, NULL, NULL, NULL) );
-   }
 
    if( !success )
    {
@@ -1122,9 +1117,6 @@ SCIP_RETCODE SCIPincludeReaderCip(
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
-
-   /* reader is safe to use in exact solving mode */
-   SCIPreaderMarkExact(reader);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCip) );
