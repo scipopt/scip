@@ -244,7 +244,7 @@ SCIP_RETCODE SCIPreaderRead(
       return retcode;
 
    /* check if the result code is valid in case no reader error occurred */
-   assert( *result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS );
+   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS);
 
    SCIP_CALL( retcode );
 
@@ -399,7 +399,7 @@ SCIP_RETCODE SCIPreaderWrite(
          /* compute length of the generic variable names:
           * - nvars + 1 to avoid log of zero
           * - +3 (zero at end + 'x' + 1 because we round down)
-          * Example: 10 -> need 4 chars ("x10\0") 
+          * Example: 10 -> needs 4 chars ("x10\0")
           */
          size = (int) log10(nvars+1.0) + 3;
 
@@ -411,7 +411,7 @@ SCIP_RETCODE SCIPreaderWrite(
             SCIP_CALL( SCIPsetAllocBufferArray(set, &name, size) );
             (void) SCIPsnprintf(name, size, "x%d", i + set->write_genoffset);
             SCIPvarSetNamePointer(var, name);
-         }  
+         }
 
          /* compute length of the generic variable names */
          size = (int) log10(nfixedvars+1.0) + 3;
@@ -454,7 +454,7 @@ SCIP_RETCODE SCIPreaderWrite(
 
       /* reset variable and constraint names to original names */
       if( genericnames )
-      {  
+      {
          assert(varnames != NULL);
          assert(fixedvarnames != NULL);
          assert(consnames != NULL);

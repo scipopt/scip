@@ -1191,7 +1191,7 @@ SCIP_RETCODE setObjective(
             /* @todo: reuse equivalent terms */
             /* create auxiliary variable */
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, ARTIFICIALVARNAMEPREFIX"obj_%d", t);
-            SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, termcoefs[t], SCIP_VARTYPE_BINARY,
+            SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, scale * termcoefs[t], SCIP_VARTYPE_BINARY,
                   TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
 
             /* @todo: check if it is better to change the branching priority for the artificial variables */
@@ -1722,13 +1722,13 @@ SCIP_RETCODE readOPBFile(
    /* if we read a wbo file we need to make sure that the top cost won't be exceeded */
    if( opbinput->wbo )
    {
-      SCIP_VAR** topcostvars;
-      SCIP_Real* topcosts;
       SCIP_VAR** vars;
+      SCIP_VAR** topcostvars;
+      SCIP_CONS* topcostcons;
+      SCIP_Real* topcosts;
+      SCIP_Real topcostrhs;
       int nvars;
       int ntopcostvars;
-      SCIP_Longint topcostrhs;
-      SCIP_CONS* topcostcons;
 
       nvars = SCIPgetNVars(scip);
       vars = SCIPgetVars(scip);
@@ -1739,22 +1739,20 @@ SCIP_RETCODE readOPBFile(
 
       ntopcostvars = 0;
       for( i = nvars - 1; i >= 0; --i )
+      {
          if( !SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
          {
             topcostvars[ntopcostvars] = vars[i];
             topcosts[ntopcostvars] = SCIPvarGetObj(vars[i]);
             ++ntopcostvars;
          }
-
-      if( SCIPisIntegral(scip, opbinput->topcost) )
-         topcostrhs = (SCIP_Longint) SCIPfloor(scip, opbinput->topcost - 1);
-      else
-         topcostrhs = (SCIP_Longint) SCIPfloor(scip, opbinput->topcost);
+      }
+      topcostrhs = SCIPceil(scip, opbinput->topcost - 1.0);
 
       if( !SCIPisExact(scip) )
       {
-         SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcosts, -SCIPinfinity(scip),
-            (SCIP_Real) topcostrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcosts,
+               -SCIPinfinity(scip), topcostrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       }
       else
       {
@@ -1766,7 +1764,7 @@ SCIP_RETCODE readOPBFile(
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
          SCIPrationalSetString(lhs, "-inf");
-         SCIPrationalSetReal(rhs, (SCIP_Real) topcostrhs);
+         SCIPrationalSetReal(rhs, topcostrhs);
          for( int j = 0; j < ntopcostvars; ++j )
             SCIPrationalSetReal(topcostsrat[j], topcosts[j]);
          SCIP_CALL( SCIPcreateConsExactLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcostsrat, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );

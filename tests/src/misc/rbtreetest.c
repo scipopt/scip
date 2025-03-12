@@ -34,8 +34,8 @@
 #include "include/scip_test.h"
 
 /** GLOBAL VARIABLES **/
+static SCIP* scip;
 static SCIP_RANDNUMGEN* randgen;
-static BMS_BLKMEM* blkmem;
 static unsigned int randomseed = 42;
 
 typedef struct SomeType
@@ -56,15 +56,15 @@ SCIP_DEF_RBTREE_FIND(findSomeType, int, SOME_TYPE, SOMETYPE_LT, SOMETYPE_GT)
 static
 void setup(void)
 {
-   blkmem = BMScreateBlockMemory(1, 10);
-   SCIP_CALL_ABORT( SCIPrandomCreate(&randgen, blkmem, randomseed) );
+   SCIP_CALL_ABORT( SCIPcreate(&scip) );
+   SCIP_CALL_ABORT( SCIPcreateRandom(scip, &randgen, randomseed, FALSE) );
 }
 
 static
 void teardown(void)
 {
-   SCIPrandomFree(&randgen, blkmem);
-   BMSdestroyBlockMemory(&blkmem);
+   SCIPfreeRandom(scip, &randgen);
+   SCIP_CALL_ABORT( SCIPfree(&scip) );
 }
 
 TestSuite(select, .init = setup, .fini = teardown);
@@ -79,6 +79,7 @@ Test(rbtree, create_and_free)
 #define ARRAYMEMSIZE 700
 Test(rbtree, rb_random_insert, .description = "tests rb tree insertion and lookup of the integers 1...n in random order",  .init = setup, .fini = teardown)
 {
+   BMS_BLKMEM* blkmem = SCIPblkmem(scip);
    int len = ARRAYMEMSIZE;
    int key[ARRAYMEMSIZE];
    int i;
@@ -86,6 +87,7 @@ Test(rbtree, rb_random_insert, .description = "tests rb tree insertion and looku
    int pos;
    SOME_TYPE* root;
    SOME_TYPE* x;
+
    /* initialize key */
    for( j = 0; j < len; ++j )
       key[j] = j;

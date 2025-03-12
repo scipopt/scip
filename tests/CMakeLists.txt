@@ -62,7 +62,7 @@ if( CRITERION_FOUND )
     # and the source directory of the parent SCIP directory to be able to include C-sources of SCIP
     # into our unittests
     #
-    include_directories(${CRITERION_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+    include_directories(BEFORE PUBLIC ${CRITERION_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 
     if(SANITIZE)
         find_package(Sanitizers)
