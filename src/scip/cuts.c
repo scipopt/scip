@@ -6515,8 +6515,6 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
          // }
          SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, cutar, rowrhs);
          *cutrhs += SCIPintervalGetSup(tmpinterval);
-         // if( SCIPisCertificateActive(scip) )
-         //    SCIPrationalAddReal(mirinfo->rhs, mirinfo->rhs, +SCIPintervalGetInf(tmpinterval));
       }
       else
       {
@@ -6535,8 +6533,6 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
          // }
          SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, cutar, rowlhs);
          *cutrhs += SCIPintervalGetSup(tmpinterval);
-         // if( SCIPisCertificateActive(scip) )
-         //    SCIPrationalAddProdReal(mirinfo->rhs, mirinfo->rhs, -SCIPintervalGetSup(tmpinterval));
       }
    }
 
