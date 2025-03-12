@@ -1147,7 +1147,7 @@ SCIP_RETCODE separateCuts(
    nvars = SCIPgetNVars(scip);
    ncontvars = SCIPgetNContVars(scip);
 #ifdef IMPLINTSARECONT
-   ncontvars += SCIPgetNImplVars(scip); /* also aggregate out implicit integers */
+   ncontvars += SCIPgetNContImplVars(scip); /* also aggregate out implicit integers */
 #endif
    nintvars = nvars - ncontvars;
    assert(nvars == 0 || vars != NULL);
