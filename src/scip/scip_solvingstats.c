@@ -5042,16 +5042,16 @@ void SCIPprintSolutionStatistics(
    {
       SCIP_Rational* objval;
 
-      SCIP_CALL_ABORT( RatCreateBuffer(SCIPbuffer(scip), &objval) );
+      SCIP_CALL_ABORT( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Exact Prim. Bound: ");
       SCIPgetPrimalboundExact(scip, objval);
-      RatMessage(scip->messagehdlr, file, objval);
+      SCIPrationalMessage(scip->messagehdlr, file, objval);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Exact Dual Bound : ");
       SCIPgetDualboundExact(scip, objval);
-      RatMessage(scip->messagehdlr, file, objval);
+      SCIPrationalMessage(scip->messagehdlr, file, objval);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
-      RatFreeBuffer(SCIPbuffer(scip), &objval);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &objval);
    }
 
    if( scip->set->misc_calcintegral )
@@ -5146,19 +5146,19 @@ SCIP_RETCODE SCIPcollectSolutionStatistics(
       SCIP_Rational* objval;
       char strbuffer[SCIP_MAXSTRLEN];
 
-      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &objval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
 
       SCIPgetPrimalboundExact(scip, objval);
-      if( RatToString(objval, strbuffer, SCIP_MAXSTRLEN) >= SCIP_MAXSTRLEN )
+      if( SCIPrationalToString(objval, strbuffer, SCIP_MAXSTRLEN) >= SCIP_MAXSTRLEN )
          SCIPwarningMessage(scip, "string encoding of exact primal bound too long: printing \"unknown\" into JSON\n");
       SCIP_CALL( SCIPinsertDatatreeString(scip, datatree, "exact_primal_bound", strbuffer) );
 
       SCIPgetDualboundExact(scip, objval);
-      if( RatToString(objval, strbuffer, SCIP_MAXSTRLEN) >= SCIP_MAXSTRLEN )
+      if( SCIPrationalToString(objval, strbuffer, SCIP_MAXSTRLEN) >= SCIP_MAXSTRLEN )
          SCIPwarningMessage(scip, "string encoding of exact dual bound too long: printing \"unknown\" into JSON\n");
       SCIP_CALL( SCIPinsertDatatreeString(scip, datatree, "exact_dual_bound", strbuffer) );
 
-      RatFreeBuffer(SCIPbuffer(scip), &objval);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &objval);
    }
 
    /* Objective limit reached */
