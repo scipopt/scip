@@ -53,6 +53,9 @@
 #include "scip/tree.h"
 
 /** creates a separator and includes it in SCIP.
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
  *
  *  @note method has all separator callbacks as arguments and is thus changed every time a new
  *        callback is added
@@ -103,6 +106,9 @@ SCIP_RETCODE SCIPincludeSepa(
  *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
  *  Optional callbacks can be set via specific setter functions, see SCIPsetSepaInit(), SCIPsetSepaFree(),
  *  SCIPsetSepaInitsol(), SCIPsetSepaExitsol(), SCIPsetSepaCopy(), SCIPsetExit().
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeSepa() instead
  */
