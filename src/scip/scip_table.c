@@ -52,7 +52,12 @@
 #include "scip/table.h"
 
 
-/** creates a statistics table and includes it in SCIP */
+/** creates a statistics table and includes it in SCIP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+         - \ref SCIP_STAGE_INIT
+         - \ref SCIP_STAGE_PROBLEM
+ */
 SCIP_RETCODE SCIPincludeTable(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of statistics table */
