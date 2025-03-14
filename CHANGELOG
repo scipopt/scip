@@ -25,6 +25,7 @@ Features
   generation of cut and setting up the subproblems.
 - adds objective types for Benders' decomposition; the choice is to sum the subproblems objectives (classical
   approach) or to use the maximum of the subproblems objectives
+- symmetry detection does not treat implicit integer variables separately anymore, but computes symmetries based on the variable type inferred from the implicit integer variable
 
 Performance improvements
 ------------------------
