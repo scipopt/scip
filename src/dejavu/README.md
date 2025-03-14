@@ -34,4 +34,4 @@ Then, you may run the tests:
 ./dejavu_test
 ```
 
-Note that when running cmake with `-DTEST=0`, the `dejavu` target will also be compiled with assertions on (and hence, may run slower).
+Note that when running cmake with `-DTEST=1`, the `dejavu` target will also be compiled with assertions on (and hence, may run slower).
