@@ -4649,7 +4649,8 @@ namespace sassy {
             PRINT("____________________________________________________");
             PRINT(std::setw(16) << std::left << (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - std::chrono::high_resolution_clock::now()).count()) / 1000000.0  << std::setw(16) << "start" << std::setw(10) << g->v_size << std::setw(10) << g->e_size );
 
-            std::chrono::high_resolution_clock::time_point timer = std::chrono::high_resolution_clock::now();
+            //SV took this out, as it is only used if the PRINT macro is enabled (and CONFIG_PRINT is enabled)
+            //SV std::chrono::high_resolution_clock::time_point timer = std::chrono::high_resolution_clock::now();
 
             if(config->CONFIG_TRANSLATE_ONLY) {
                 translate_layer_fwd.reserve(g->v_size);
