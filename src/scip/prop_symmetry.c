@@ -186,7 +186,7 @@
 /* default parameters for Schreier Sims constraints */
 #define DEFAULT_SSTTIEBREAKRULE   1          /**< index of tie break rule for selecting orbit for Schreier Sims constraints? */
 #define DEFAULT_SSTLEADERRULE     0          /**< index of rule for selecting leader variables for Schreier Sims constraints? */
-#define DEFAULT_SSTLEADERVARTYPE 14          /**< bitset encoding which variable types can be leaders (1: binary; 2: integer; 4: impl. int; 8: continuous);
+#define DEFAULT_SSTLEADERVARTYPE  6          /**< bitset encoding which variable types can be leaders (1: binary; 2: integer; 4: continuous);
                                               *   if multiple types are allowed, take the one with most affected vars */
 #define DEFAULT_ADDCONFLICTCUTS       TRUE   /**< Should Schreier Sims constraints be added if we use a conflict based rule? */
 #define DEFAULT_SSTADDCUTS            TRUE   /**< Should Schreier Sims constraints be added? */
@@ -215,7 +215,6 @@
 
 #define ISSSTBINACTIVE(x)          (((unsigned) x & SCIP_SSTTYPE_BINARY) != 0)
 #define ISSSTINTACTIVE(x)          (((unsigned) x & SCIP_SSTTYPE_INTEGER) != 0)
-#define ISSSTIMPLINTACTIVE(x)      (((unsigned) x & SCIP_SSTTYPE_IMPLINT) != 0)
 #define ISSSTCONTACTIVE(x)         (((unsigned) x & SCIP_SSTTYPE_CONTINUOUS) != 0)
 
 /* enable symmetry statistics */
@@ -236,7 +235,6 @@ struct SCIP_PropData
    int                   nmovedpermvars;     /**< number of variables moved by any permutation */
    int                   nmovedbinpermvars;  /**< number of binary variables moved by any permutation */
    int                   nmovedintpermvars;  /**< number of integer variables moved by any permutation */
-   int                   nmovedimplintpermvars; /**< number of implicitly integer variables moved by any permutation */
    int                   nmovedcontpermvars; /**< number of continuous variables moved by any permutation */
    SCIP_HASHMAP*         customsymopnodetypes; /**< types of operator nodes introduced
                                                 *   by a user for symmetry detection */
@@ -1000,7 +998,6 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->nmovedpermvars == -1 );
    assert( propdata->nmovedbinpermvars == 0 );
    assert( propdata->nmovedintpermvars == 0 );
-   assert( propdata->nmovedimplintpermvars == 0 );
    assert( propdata->nmovedcontpermvars == 0 );
    assert( propdata->nmovedvars == -1 );
    assert( propdata->binvaraffected == FALSE );
@@ -1200,7 +1197,6 @@ SCIP_RETCODE freeSymmetryData(
       propdata->nmovedpermvars = -1;
       propdata->nmovedbinpermvars = 0;
       propdata->nmovedintpermvars = 0;
-      propdata->nmovedimplintpermvars = 0;
       propdata->nmovedcontpermvars = 0;
       propdata->nmovedvars = -1;
       propdata->log10groupsize = -1.0;
@@ -2196,7 +2192,6 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
    propdata->nmovedpermvars = 0;
    propdata->nmovedbinpermvars = 0;
    propdata->nmovedintpermvars = 0;
-   propdata->nmovedimplintpermvars = 0;
    propdata->nmovedcontpermvars = 0;
 
    for (p = 0; p < propdata->nperms; ++p)
@@ -2207,25 +2202,20 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
          {
             ++propdata->nmovedpermvars;
 
-            if ( SCIPvarIsImpliedIntegral(propdata->permvars[v]) )
-               ++propdata->nmovedimplintpermvars;
-            else
+            switch ( SCIPgetSymInferredVarType(propdata->permvars[v]) )
             {
-               switch ( SCIPvarGetType(propdata->permvars[v]) )
-               {
-                  case SCIP_VARTYPE_BINARY:
-                     ++propdata->nmovedbinpermvars;
-                     break;
-                  case SCIP_VARTYPE_INTEGER:
-                     ++propdata->nmovedintpermvars;
-                     break;
-                  case SCIP_VARTYPE_CONTINUOUS:
-                     ++propdata->nmovedcontpermvars;
-                     break;
-                  default:
-                     SCIPerrorMessage("unknown variable type\n");
-                     return SCIP_INVALIDDATA;
-               } /*lint !e788*/
+            case SCIP_VARTYPE_BINARY:
+               ++propdata->nmovedbinpermvars;
+               break;
+            case SCIP_VARTYPE_INTEGER:
+               ++propdata->nmovedintpermvars;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               ++propdata->nmovedcontpermvars;
+               break;
+            default:
+               SCIPerrorMessage("unknown variable type\n");
+               return SCIP_INVALIDDATA;
             }
          }
       }
@@ -2246,6 +2236,10 @@ SCIP_Bool testSymmetryComputationRequired(
    if ( propdata->enforcecomputesymmetry )
       return TRUE;
 
+   /* avoid trivial cases */
+   if ( SCIPgetNVars(scip) <= 0 )
+      return FALSE;
+
    /* for dynamic symmetry handling or orbital reduction, branching must be possible */
    if ( propdata->usedynamicprop || ISORBITALREDUCTIONACTIVE(propdata->usesymmetry) )
    {
@@ -2255,8 +2249,7 @@ SCIP_Bool testSymmetryComputationRequired(
       if ( SCIPgetNIntVars(scip) > 0 )
          return TRUE;
       /* continuous variables can be branched on if nonlinear constraints exist */
-      if ( ( SCIPgetNContVars(scip) > 0 || SCIPgetNImplVars(scip) > 0 )
-         && SCIPconshdlrGetNActiveConss(propdata->conshdlr_nonlinear) > 0 )
+      if ( SCIPconshdlrGetNActiveConss(propdata->conshdlr_nonlinear) > 0 )
          return TRUE;
    }
 
@@ -2266,8 +2259,6 @@ SCIP_Bool testSymmetryComputationRequired(
       if ( ISSSTBINACTIVE(propdata->sstleadervartype) && SCIPgetNBinVars(scip) > 0 ) /*lint !e641*/
          return TRUE;
       if ( ISSSTINTACTIVE(propdata->sstleadervartype) && SCIPgetNIntVars(scip) > 0 ) /*lint !e641*/
-         return TRUE;
-      if ( ISSSTIMPLINTACTIVE(propdata->sstleadervartype) && SCIPgetNImplVars(scip) > 0 ) /*lint !e641*/
          return TRUE;
       if ( ISSSTCONTACTIVE(propdata->sstleadervartype) && SCIPgetNContVars(scip) > 0 ) /*lint !e641*/
          return TRUE;
@@ -4629,7 +4620,6 @@ SCIP_RETCODE addSymresackConss(
    {
       /* the leader must be binary for compatability */
       if ( (ISSSTINTACTIVE(propdata->sstleadervartype)
-            || ISSSTIMPLINTACTIVE(propdata->sstleadervartype)
             || ISSSTCONTACTIVE(propdata->sstleadervartype)) )
          return SCIP_OKAY;
    }
@@ -4775,22 +4765,17 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
       leadervar = permvars[orbits[orbitbegins[orbitidx] + orbitleaderidx]];
 
       SCIPinfoMessage(scip, NULL, "  use %d SST cuts for leader %s of type ", orbitsize - 1, SCIPvarGetName(leadervar));
-      if ( SCIPvarIsImpliedIntegral(leadervar) )
-         SCIPinfoMessage(scip, NULL, "IMPLICIT INTEGER\n");
-      else
+      switch ( SCIPgetSymInferredVarType(leadervar) )
       {
-         switch ( SCIPvarGetType(leadervar) )
-         {
-            case SCIP_VARTYPE_BINARY:
-               SCIPinfoMessage(scip, NULL, "BINARY\n");
-               break;
-            case SCIP_VARTYPE_INTEGER:
-               SCIPinfoMessage(scip, NULL, "INTEGER\n");
-               break;
-            default:
-               SCIPinfoMessage(scip, NULL, "CONTINUOUS\n");
-         } /*lint !e788*/
-      }
+      case SCIP_VARTYPE_BINARY:
+         SCIPinfoMessage(scip, NULL, "BINARY\n");
+         break;
+      case SCIP_VARTYPE_INTEGER:
+         SCIPinfoMessage(scip, NULL, "INTEGER\n");
+         break;
+      default:
+         SCIPinfoMessage(scip, NULL, "CONTINUOUS\n");
+      } /*lint !e788*/
    }
 
    /* (re-)allocate memory for Schreier Sims constraints and leaders */
@@ -4909,7 +4894,6 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
    int                   leaderrule,         /**< rule to select leader */
    int                   tiebreakrule,       /**< tie break rule to select leader */
    SCIP_VARTYPE          leadervartype,      /**< variable type of leader */
-   SCIP_IMPLINTTYPE      leadervarimpltype,  /**< implied integral type of the leader */
    int*                  orbitidx,           /**< pointer to index of selected orbit */
    int*                  leaderidx,          /**< pointer to leader in orbit */
    SCIP_Shortbool*       orbitvarinconflict, /**< array to store whether a var in the orbit is conflicting with leader */
@@ -4956,8 +4940,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       {
          /* skip orbits containing vars different to the leader's vartype */
          /* Conflictvars is permvars! */
-         if ( ( leadervarimpltype != SCIP_IMPLINTTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[orbits[orbitbegins[i]]])
-            || ( leadervarimpltype == SCIP_IMPLINTTYPE_NONE && SCIPvarGetType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype ) )
+         if ( SCIPgetSymInferredVarType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype )
             continue;
 
          if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MINORBIT )
@@ -5077,8 +5060,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       for (i = 0; i < nconflictvars; ++i)
       {
          /* skip vars different to the leader's vartype */
-         if ( ( leadervarimpltype != SCIP_IMPLINTTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[i])
-            || ( leadervarimpltype == SCIP_IMPLINTTYPE_NONE && SCIPvarGetType(conflictvars[i]) != leadervartype ) )
+         if ( SCIPgetSymInferredVarType(conflictvars[i]) != leadervartype )
             continue;
 
          /* skip variables not affected by symmetry */
@@ -5160,7 +5142,6 @@ SCIP_RETCODE addSSTConss(
    int nmovedpermvars;
    int nmovedbinpermvars;
    int nmovedintpermvars;
-   int nmovedimplintpermvars;
    int nmovedcontpermvars;
    int nperms;
 
@@ -5184,7 +5165,6 @@ SCIP_RETCODE addSSTConss(
    int tiebreakrule;
    int leadervartype;
    SCIP_VARTYPE selectedtype = SCIP_VARTYPE_CONTINUOUS;
-   SCIP_IMPLINTTYPE selectedimpltype = SCIP_IMPLINTTYPE_NONE;
    int nvarsselectedtype;
    SCIP_Bool conflictgraphcreated = FALSE;
    SCIP_Bool mixedcomponents;
@@ -5246,7 +5226,6 @@ SCIP_RETCODE addSSTConss(
    nmovedpermvars = propdata->nmovedpermvars;
    nmovedbinpermvars = propdata->nmovedbinpermvars;
    nmovedintpermvars = propdata->nmovedintpermvars;
-   nmovedimplintpermvars = propdata->nmovedimplintpermvars;
    nmovedcontpermvars = propdata->nmovedcontpermvars;
    assert( nmovedpermvars > 0 );  /* nperms > 0 implies this */
 
@@ -5264,17 +5243,9 @@ SCIP_RETCODE addSSTConss(
       nvarsselectedtype = nmovedintpermvars;
    }
 
-   if ( ISSSTIMPLINTACTIVE(leadervartype) && nmovedimplintpermvars > nvarsselectedtype )
-   {
-      selectedtype = SCIP_VARTYPE_CONTINUOUS;
-      selectedimpltype = SCIP_IMPLINTTYPE_WEAK;
-      nvarsselectedtype = nmovedimplintpermvars;
-   }
-
    if ( ISSSTCONTACTIVE(leadervartype) && nmovedcontpermvars > nvarsselectedtype )
    {
       selectedtype = SCIP_VARTYPE_CONTINUOUS;
-      selectedimpltype = SCIP_IMPLINTTYPE_NONE;
       nvarsselectedtype = nmovedcontpermvars;
    }
 
@@ -5292,8 +5263,8 @@ SCIP_RETCODE addSSTConss(
          {
             if ( perm[i] == i )
                continue;
-            vartype = SCIPvarGetType(propdata->permvars[i]);
-            if ( vartype == SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
+            vartype = SCIPgetSymInferredVarType(propdata->permvars[i]);
+            if ( vartype == SCIP_VARTYPE_CONTINUOUS )
                goto COMPONENTOK;
          }
       }
@@ -5369,8 +5340,7 @@ SCIP_RETCODE addSSTConss(
          for (p = 0; p < norbits; ++p)
          {
             /* stop if the first element of an orbits has the wrong vartype */
-            if ( SCIPvarIsImpliedIntegral(permvars[orbits[orbitbegins[p]]]) != ( selectedimpltype != SCIP_IMPLINTTYPE_NONE )
-               || ( selectedimpltype == SCIP_IMPLINTTYPE_NONE && SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype ) )
+            if ( SCIPgetSymInferredVarType(permvars[orbits[orbitbegins[p]]]) != selectedtype )
             {
                success = FALSE;
                break;
@@ -5400,7 +5370,7 @@ SCIP_RETCODE addSSTConss(
 
       /* select orbit and leader */
       SCIP_CALL( selectOrbitLeaderSSTConss(scip, varconflicts, permvars, npermvars, orbits, orbitbegins, norbits,
-            propdata->sstleaderrule, propdata->ssttiebreakrule, selectedtype, selectedimpltype, &orbitidx,
+            propdata->sstleaderrule, propdata->ssttiebreakrule, selectedtype, &orbitidx,
             &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, &success) );
 
       if ( ! success )
@@ -5776,9 +5746,8 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
          if ( i == j )
             continue;
          /* only check for situations where i and j are binary variables */
-         assert( ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) == SCIPvarIsImpliedIntegral(propdata->permvars[j]) )
-               && ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) || SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) ) );
-         if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
+         assert( ( SCIPgetSymInferredVarType(propdata->permvars[i]) == SCIPgetSymInferredVarType(propdata->permvars[j]) ) );
+         if ( SCIPgetSymInferredVarType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY )
             continue;
          /* the permutation must be an involution on binary variables */
          if ( perm[j] != i )
@@ -5841,9 +5810,8 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
             if ( i >= j )
                continue;
             /* only check for situations where i and j are binary variables */
-            assert( ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) == SCIPvarIsImpliedIntegral(propdata->permvars[j]) )
-                  && ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) || SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) ) );
-            if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
+            assert( SCIPgetSymInferredVarType(propdata->permvars[i]) == SCIPgetSymInferredVarType(propdata->permvars[j]) );
+            if ( SCIPgetSymInferredVarType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY )
                continue;
             assert( perm[j] == i );
             assert( checkSortedArraysHaveOverlappingEntry((void**) permvarssetppcconss[i], npermvarssetppcconss[i],
@@ -7888,7 +7856,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->nmovedpermvars = -1;
    propdata->nmovedbinpermvars = 0;
    propdata->nmovedintpermvars = 0;
-   propdata->nmovedimplintpermvars = 0;
    propdata->nmovedcontpermvars = 0;
    propdata->lastrestart = 0;
    propdata->symfoundreduction = FALSE;
@@ -8043,9 +8010,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/sstleadervartype",
-         "bitset encoding which variable types can be leaders (1: binary; 2: integer; 4: impl. int; 8: continuous);" \
+         "bitset encoding which variable types can be leaders (1: binary; 2: integer; 4: continuous);" \
          "if multiple types are allowed, take the one with most affected vars",
-         &propdata->sstleadervartype, TRUE, DEFAULT_SSTLEADERVARTYPE, 1, 15, NULL, NULL) );
+         &propdata->sstleadervartype, TRUE, DEFAULT_SSTLEADERVARTYPE, 1, 7, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/addconflictcuts",
