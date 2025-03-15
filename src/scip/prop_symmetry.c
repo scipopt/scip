@@ -2216,7 +2216,7 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
             default:
                SCIPerrorMessage("unknown variable type\n");
                return SCIP_INVALIDDATA;
-            }
+            } /*lint !e788*/
          }
       }
    }
