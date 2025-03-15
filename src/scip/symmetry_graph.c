@@ -30,6 +30,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/symmetry.h"
 #include "scip/symmetry_graph.h"
 #include "scip/scip.h"
 #include "scip/misc.h"
@@ -818,22 +819,6 @@ SCIP_RETCODE SCIPaddSymgraphEdge(
  * methods to compute colors
  */
 
-/** returns inferred type of variable */
-static
-SCIP_VARTYPE getInferredVarType(
-   SCIP_VAR*             var                 /**< variable whose inferred type has to be returned */
-   )
-{
-   assert(var != NULL);
-
-   if( SCIPvarIsBinary(var) )
-      return SCIP_VARTYPE_BINARY;
-   if( SCIPvarIsIntegral(var) )
-      return SCIP_VARTYPE_INTEGER;
-
-   return SCIP_VARTYPE_CONTINUOUS;
-}
-
 /** compares two variables for permutation symmetry detection
  *
  *  Variables are sorted first by their type, then by their objective coefficient,
@@ -857,8 +842,8 @@ int compareVars(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   type1 = getInferredVarType(var1);
-   type2 = getInferredVarType(var2);
+   type1 = SCIPgetSymInferredVarType(var1);
+   type2 = SCIPgetSymInferredVarType(var2);
 
    if( type1 < type2 )
       return -1;
@@ -998,8 +983,8 @@ int compareVarsSignedPerm(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   type1 = getInferredVarType(var1);
-   type2 = getInferredVarType(var2);
+   type1 = SCIPgetSymInferredVarType(var1);
+   type2 = SCIPgetSymInferredVarType(var2);
 
    if( type1 < type2 )
       return -1;
