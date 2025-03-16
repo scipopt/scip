@@ -585,12 +585,12 @@ uint32_t SCIPrealHashCode(double x)
    assert(x != -INFINITY);
 
    /* get mantissa part */
-   numbits = (uint16_t)ldexp(frexp(ABS(x), &theexp), 16) + 1;
+   numbits = (uint16_t)ldexp(frexp(ABS(x), &theexp), 15) + 1;
 
    /* apply mantissa overflow */
-   if( numbits == 0 )
+   if( (numbits >> 15) == 1 )
    {
-      numbits = 1 << 14;
+      numbits >>= 2;
       ++theexp;
    }
    else
