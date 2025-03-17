@@ -2587,14 +2587,7 @@ SCIP_RETCODE reasonBoundChanges(
    SCIP_PROP* inferprop;
    SCIP_RESULT result;
 
-#ifndef NDEBUG
-
-   /* store the current size of the conflict queues */
    assert(conflict != NULL);
-#else
-   assert(conflict != NULL);
-#endif
-
    assert(!SCIPbdchginfoIsRedundant(bdchginfo));
 
    *resolved = FALSE;
@@ -2720,11 +2713,8 @@ SCIP_RETCODE reasonBoundChanges(
 
    SCIPsetDebugMsgPrint(set, " \t -> resolving status: %u\n", *resolved);
 
-#ifndef NDEBUG
-
    /* in case the bound change was not resolved, the separate conflict queue should have zero elements */
    assert((*resolved) || (SCIPpqueueNElems(conflict->separatebdchgqueue) == 0));
-#endif
 
    return SCIP_OKAY;
 }
