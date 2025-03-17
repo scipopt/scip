@@ -34,6 +34,7 @@ Performance improvements
 Examples and applications
 -------------------------
 
+- Add PBSolver application to solve pseudoboolean instances in OPB and WBO format while complying with PB competition rules
 - Coloring: new parameter branching/coloring/strategy to choose the least/most fractional variable for branching
 
 Interface changes
@@ -163,6 +164,7 @@ Interface changes
 - new parameter "presolving/milp/maxedgessequential" defines the maximal amount of edges in the sequential clique merging graph
 - new parameter "presolving/milp/maxcliquesize" defines the maximal size of cliques considered for clique merging
 - new parameter "presolving/milp/maxgreedycalls" defines the maximal number of greedy max clique calls in a single thread
+- reading/opbreader/maxintsize to define the maximal intsize above which an OPB instance is rejected
 
 ### Data structures
 
