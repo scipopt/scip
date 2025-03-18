@@ -940,6 +940,182 @@ Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic const
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
+/* detects x*y >= 1 with x and y nonnegative as soc */
+Test(nlhdlrsoc, detectandfree15, .description = "detects simple bilinear constraint as soc")
+{
+   SCIP_CONS* cons;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, x, 0.0) );
+
+   /* create nonlinear constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons,
+         (char*) "[nonlinear] <test>: <x>*<y> >= 1",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* add locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
+
+   expr = SCIPgetExprNonlinear(cons);
+
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
+   cr_assert_not_null(nlhdlrexprdata);
+
+   /* remove locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* disable cons, so it can be deleted */
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+/* detects -2*x*y <= -1 with x and y nonnegative as soc */
+Test(nlhdlrsoc, detectandfree16, .description = "detects simple bilinear constraint as soc")
+{
+   SCIP_CONS* cons;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, x, 0.0) );
+
+   /* create nonlinear constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons,
+         (char*) "[nonlinear] <test>: -2*<x>*<y> <= -1",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* add locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
+
+   expr = SCIPgetExprNonlinear(cons);
+
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
+   cr_assert_not_null(nlhdlrexprdata);
+
+   /* remove locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* disable cons, so it can be deleted */
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+/* detects 2*x^2 <= 1 not as soc */
+Test(nlhdlrsoc, detectandfree17, .description = "detects too simple quadratic constraint not as soc")
+{
+   SCIP_CONS* cons;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+
+   /* create nonlinear constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons,
+         (char*) "[nonlinear] <test>: 2*<x>^2 <= 1",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* add locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
+
+   expr = SCIPgetExprNonlinear(cons);
+
+   /* check that soc nlhdlr did not detect */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
+   cr_assert_null(nlhdlrexprdata);
+
+   /* remove locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* disable cons, so it can be deleted */
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+/* detects x*y in x*y - z >= 1 with x,y nonnegative not as soc */
+Test(nlhdlrsoc, detectandfree18, .description = "detects bivariate term not as soc")
+{
+   SCIP_CONS* cons;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, x, 0.0) );
+
+   /* create nonlinear constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons,
+         (char*) "[nonlinear] <test>: <x>*<y> - <z> >= 1",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* add locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
+
+   expr = SCIPgetExprNonlinear(cons);
+
+   /* check that soc nlhdlr did not detect */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
+   cr_assert_null(nlhdlrexprdata);
+
+   /* check that soc nlhdlr did not detect on x*y either */
+   expr = SCIPexprGetChildren(SCIPgetExprNonlinear(cons))[0];
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
+   cr_assert_null(nlhdlrexprdata);
+
+   /* remove locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* disable cons, so it can be deleted */
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
 
 /* disaggregates sqrt( 8 + 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) <= -2*(w - 1) */
 Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the resulting datastructure")
