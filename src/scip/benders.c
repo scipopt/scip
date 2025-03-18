@@ -71,7 +71,7 @@
 #define SCIP_DEFAULT_STRENGTHENPERTURB    1e-06  /** the amount by which the cut strengthening solution is perturbed */
 #define SCIP_DEFAULT_STRENGTHENENABLED    FALSE  /** enable the core point cut strengthening approach */
 #define SCIP_DEFAULT_STRENGTHENINTPOINT     'r'  /** where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros) */
-#if SCIP_DISABLED_CODE /* temporarily disabling support for multiple threads in Benders' decomposition */
+#ifdef SCIP_DISABLED_CODE /* temporarily disabling support for multiple threads in Benders' decomposition */
 #define SCIP_DEFAULT_NUMTHREADS               1  /** the number of parallel threads to use when solving the subproblems */
 #endif
 #define SCIP_DEFAULT_EXECFEASPHASE        FALSE  /** should a feasibility phase be executed during the root node processing */
@@ -1301,7 +1301,7 @@ SCIP_RETCODE doBendersCreate(
          "where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros)",
          &(*benders)->strengthenintpoint, FALSE, SCIP_DEFAULT_STRENGTHENINTPOINT, "lfiroz", NULL, NULL) ); /*lint !e740*/
 
-#if SCIP_DISABLED_CODE /* temporarily disabling support for multiple threads in Benders' decomposition */
+#ifdef SCIP_DISABLED_CODE /* temporarily disabling support for multiple threads in Benders' decomposition */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/numthreads", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "the number of threads to use when solving the subproblems", &(*benders)->numthreads, TRUE,
