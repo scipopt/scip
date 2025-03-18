@@ -259,7 +259,7 @@ static void SpxRSetRat(
 #if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
       spxr = soplex::Rational(*SCIPrationalGetGMP(src));
 #else
-      spxr = soplex::Rational(SCIPrationalGetRealApproximation(src));
+      spxr = soplex::Rational(SCIPrationalGetReal(src));
 #endif
    }
 }

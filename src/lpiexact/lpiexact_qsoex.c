@@ -1048,7 +1048,7 @@ SCIP_RETCODE SCIPlpiExactChgCoef(
 
    lpi->solstat = 0;
 
-   SCIPdebugMessage("changing coefficient row %d, column %d in QSopt_ex to %g\n", row, col, SCIPrationalGetRealApproximation(newval));
+   SCIPdebugMessage("changing coefficient row %d, column %d in QSopt_ex to %g\n", row, col, SCIPrationalGetReal(newval));
 
    rval = mpq_QSchange_coef(lpi->prob, row, col, *SCIPrationalGetGMP(newval));
 
@@ -1234,7 +1234,7 @@ SCIP_RETCODE SCIPlpiExactScaleCol(
    mpq_init(svl);
    lpi->solstat = 0;
    SCIPdebugMessage("scaling column %d with factor %g in QSopt_ex\n",
-      col, SCIPrationalGetRealApproximation(scaleval));
+      col, SCIPrationalGetReal(scaleval));
 
    /* get the column */
    collist[0] = col;
