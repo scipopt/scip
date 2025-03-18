@@ -46,6 +46,7 @@ ifeq ($(OPENSOURCE),false)
 	override EXPRINT	=	none
 	override GMP		=	false
 	override MPFR		=	false
+	override BOOST		=	false
 	override READLINE	=	false
 	override ZLIB		=	false
 	override ZIMPL		=	false
@@ -124,7 +125,7 @@ LPILIBSHORTNAME	=	lpi$(LPS)
 LPILIBNAME	=	$(LPILIBSHORTNAME)-$(VERSION)
 LPILIBOBJ	=
 LPSOPTIONS	=
-LPSEXOPTIONS	=
+LPSEXACTOPTIONS	=
 LPIINSTMSG	=
 
 LPSOPTIONS	+=	cpx
@@ -202,10 +203,9 @@ endif
 LPSOPTIONS	+=	spx ( = spx2)
 ifeq ($(LPS),spx2)
 LINKER		=	CPP
+FLAGS		+=	-I$(LIBDIR)/include/spxinc
 LPILIBOBJ	=	lpi/lpi_spx2.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx2.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
-ifeq ($(USEEXSPX),false)
-FLAGS		+=	-I$(LIBDIR)/include/spxinc
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
@@ -225,7 +225,6 @@ endif
 LPIINSTMSG	+=	"  -> \"cpxinc\" is the path to the CPLEX \"include\" directory, e.g., \"<CPLEX-path>/include/ilcplex\".\n"
 LPIINSTMSG	+=	" -> \"libcplex.*.a\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a\"\n"
 LPIINSTMSG	+=	" -> \"libcplex.*.so\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/bin/x86-64_linux/libcplex1263.so\""
-endif
 endif
 endif
 
@@ -307,24 +306,24 @@ endif
 # exact LP solver interface
 #-----------------------------------------------------------------------------
 
-LPSEXOPTIONS	+=	spx
-ifeq ($(LPSEX),spx)
+LPSEXACTOPTIONS	+=	spx
+ifeq ($(LPSEXACT),spx)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/include/spxexinc
+FLAGS		+=	-I$(LIBDIR)/include/spxinc
 LPIEXLIBOBJ	+=	lpiexact/lpiexact_spx.o
 LPIEXLIBSRC	+=	$(SRCDIR)/lpiexact/lpiexact_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
-SOFTLINKS	+=	$(LIBDIR)/include/spxexinc
+SOFTLINKS	+=	$(LIBDIR)/include/spxinc
 ifeq ($(SHARED),true)
-SOFTLINKS	+=	$(LIBDIR)/shared/libsoplex.exact.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/shared/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
 else
-SOFTLINKS	+=	$(LIBDIR)/static/libsoplex.exact.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/static/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
 endif
-LPIINSTMSG	=	"  -> \"spxexinc\" is the path to the SoPlex \"src\" directory, e.g., \"<SoPlex-path>/src\".\n"
+LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"<SoPlex-path>/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"<SoPlex-path>/lib/libsoplex.linux.x86.gnu.opt.a\""
 endif
 
-LPSEXOPTIONS	+=	none
-ifeq ($(LPSEX),none)
+LPSEXACTOPTIONS	+=	none
+ifeq ($(LPSEXACT),none)
 LPILIBOBJ	+=	lpiexact/lpiexact_none.o
 endif
 
@@ -492,19 +491,26 @@ ALLSRC		+=	$(SYMSRC)
 endif
 
 #-----------------------------------------------------------------------------
+# Boost
+#-----------------------------------------------------------------------------
+
+ifeq ($(BOOST),true)
+FLAGS        +=    -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
+SOFTLINKS    +=    $(LIBDIR)/include/boostinc
+LPIINSTMSG    +=    "\n  -> \"boostinc\" is the path to the boost include folder\n"
+endif
+
+#-----------------------------------------------------------------------------
 # PaPILO Library
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
+ifeq ($(BOOST),false)
+$(error PaPILO requires Boost to be available. Use either PAPILO=false or BOOST=true.)
+endif
 FLAGS        +=    -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
 SOFTLINKS    +=    $(LIBDIR)/include/papilo
 LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO directory\n"
-SOFTLINKS    +=    $(LIBDIR)/include/boost
-LPIINSTMSG    +=    "\n  -> \"boost\" is the path to the boost include folder\n"
-SOFTLINKS    +=    $(LIBDIR)/include/tbb
-LPIINSTMSG    +=    "\n  -> \"tbb\" is the path to the tbb include folder\n"
-SOFTLINKS    +=    $(LIBDIR)/shared/libtbb.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
-LPIINSTMSG    +=    " -> \"libtbb.*.so\" is the path to the oneTBB library, e.g., \"<oneTBB-path>/libtbb.so\""
 endif
 
 #-----------------------------------------------------------------------------
@@ -513,11 +519,16 @@ endif
 
 ifeq ($(EXACTSOLVE),true)
 ifeq ($(GMP),false)
-$(error exact solving mode requires the GMP library to be linked. Use either EXACTSOLVE=false or GMP=true.)
+$(error Exact solving mode requires the GMP library to be linked. Use either EXACTSOLVE=false or GMP=true.)
 endif
-ifneq ($(PAPILO),true)   # add boost softlink only once
-SOFTLINKS	+=    $(LIBDIR)/include/boost
-LPIINSTMSG	+=    "\n  -> \"boost\" is the path to the boost include folder\n"
+ifeq ($(MPFR),false)
+$(error Exact solving mode requires the MPFR library to be linked. Use either EXACTSOLVE=false or MPFR=true.)
+endif
+ifeq ($(BOOST),false)
+$(error Exact solving mode requires the Boost library to be linked. Use either EXACTSOLVE=false or BOOST=true.)
+endif
+ifeq ($(LPSEXACT),none)
+$(error Exact solving mode requires an exact LP solver to be linked. Use either EXACTSOLVE=false or LPSEXACT=spx.)
 endif
 LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/rectlu
 endif
@@ -1644,6 +1655,8 @@ ifeq ($(MPFR),true)
 endif
 ifeq ($(EXACTSOLVE),true)
 		@echo "#define SCIP_WITH_EXACTSOLVE" >> $@
+endif
+ifeq ($(BOOST),true)
 		@echo "#define SCIP_WITH_BOOST" >> $@
 endif
 ifeq ($(LPSCHECK),true)
