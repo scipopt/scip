@@ -616,36 +616,28 @@ FLAGS		+=	$(GMP_FLAGS)
 LDFLAGS		+=	$(GMP_LDFLAGS)
 endif
 
+# enable EXACTSOLVE if GMP and MPRF and BOOST are enabled and an exact LP solver is available
 ifeq ($(EXACTSOLVE),auto)
-EXACTSOLVE		=	false
-ifeq ($(GMP),true)
-ifeq ($(MPFR),true)
-ifeq ($(BOOST),true)
-ifneq ($(LPSEXACT),none)
-EXACTSOLVE		=	true
-endif
-endif
-endif
-ifeq ($(GMP),false)
-ifeq ($(MAKELEVEL),0)
-$(warning Exact solving mode was deactived because of missing GMP support.)
-endif
-endif
-ifeq ($(MPFR),false)
-ifeq ($(MAKELEVEL),0)
-$(warning Exact solving mode was deactived because of missing MPFR support.)
-endif
-endif
-ifeq ($(BOOST),false)
-ifeq ($(MAKELEVEL),0)
-$(warning Exact solving mode was deactived because of missing Boost support.)
-endif
-endif
-ifeq ($(LPSEXACT),none)
-ifeq ($(MAKELEVEL),0)
-$(warning Exact solving mode was deactived because of missing exact LP solver.)
-endif
-endif
+ EXACTSOLVE = false
+ ifeq ($(GMP)-$(MPFR)-$(BOOST),true-true-true)
+  ifneq ($(LPSEXACT),none)
+   EXACTSOLVE = true
+  endif
+ endif
+ ifeq ($(EXACTSOLVE)-$(MAKELEVEL),false-0)
+  ifeq ($(GMP),false)
+   $(warning Exact solving mode was deactivated because of missing GMP support.)
+  endif
+  ifeq ($(MPFR),false)
+   $(warning Exact solving mode was deactivated because of missing MPFR support.)
+  endif
+  ifeq ($(BOOST),false)
+   $(warning Exact solving mode was deactivated because of missing Boost support.)
+  endif
+  ifeq ($(LPSEXACT),none)
+   $(warning Exact solving mode was deactivated because of missing exact LP solver.)
+  endif
+ endif
 endif
 
 ifeq ($(READLINE_LDFLAGS),)
