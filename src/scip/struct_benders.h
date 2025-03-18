@@ -101,7 +101,9 @@ struct SCIP_Benders
    SCIP_Bool             cutcheck;           /**< should cuts be generated while checking solutions? */
    SCIP_Bool             threadsafe;         /**< has the copy been created requiring thread safety */
    SCIP_Real             solutiontol;        /**< storing the tolerance for optimality in Benders' decomposition */
+#if SCIP_DISABLED_CODE /* temporarily disabling support for multiple threads in Benders' decomposition */
    int                   numthreads;         /**< the number of threads to use when solving the subproblem */
+#endif
    SCIP_Bool             execfeasphase;      /**< should a feasibility phase be executed during the root node, i.e.
                                                   adding slack variables to constraints to ensure feasibility */
    SCIP_Real             slackvarcoef;       /**< the initial objective coefficient of the slack variables in the subproblem */

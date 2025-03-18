@@ -146,6 +146,7 @@ Interface changes
 - heuristics/scheduler/heurtimelimit removed to avoid indeterministic behavior of scheduler heuristic, uses main time limit instead
 - removed parameters "constraints/orbitope/checkpporbitope", "constraints/orbitope/sepafullorbitope", "constraints/orbitope/forceconscopy", which became superfluous
 - removed reading/gmsreader/signpower
+- removed benders/default/numthreads, multi-threading support for Benders' decomposition has been temporarily disabled.
 
 ### New parameters
 
