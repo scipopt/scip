@@ -204,6 +204,9 @@ LPSOPTIONS	+=	spx ( = spx2)
 ifeq ($(LPS),spx2)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
+ifeq ($(MPFR),true)
+LPSLDFLAGS	+=	$(MPFR_LDFLAGS)
+endif
 LPILIBOBJ	=	lpi/lpi_spx2.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx2.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
@@ -312,11 +315,17 @@ LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
 LPIEXLIBOBJ	+=	lpiexact/lpiexact_spx.o
 LPIEXLIBSRC	+=	$(SRCDIR)/lpiexact/lpiexact_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
+ifneq ($(LPS),spx)
+ifneq ($(LPS),spx1)
+ifneq ($(LPS),spx2)
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
+endif
+endif
+endif
 endif
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"<SoPlex-path>/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"<SoPlex-path>/lib/libsoplex.linux.x86.gnu.opt.a\""
@@ -496,8 +505,8 @@ endif
 
 ifeq ($(BOOST),true)
 FLAGS        +=    -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
-SOFTLINKS    +=    $(LIBDIR)/include/boostinc
-LPIINSTMSG    +=    "\n  -> \"boostinc\" is the path to the boost include folder\n"
+SOFTLINKS    +=    $(LIBDIR)/include/boost
+LPIINSTMSG    +=    "\n  -> \"boost\" is the path to the boost include folder\n"
 endif
 
 #-----------------------------------------------------------------------------
@@ -1575,6 +1584,7 @@ ifneq ($(subst \\n,\n,$(BUILDFLAGS)$(LPS)$(IPOPT)),$(LAST_BUILDFLAGS)$(LAST_LPS)
 		@mkdir -p $(OBJDIR)/include/scip
 		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $(SCIPBUILDFLAGSFILE)
 		@echo "#define SCIP_LPS \"$(LPS)\"" >> $(SCIPBUILDFLAGSFILE)
+		@echo "#define SCIP_LPSEXACT \"$(LPSEXACT)\"" >> $(SCIPBUILDFLAGSFILE)
 		@echo "#define SCIP_IPOPT \"$(IPOPT)\"" >> $(SCIPBUILDFLAGSFILE)
 endif
 ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
@@ -1588,6 +1598,7 @@ endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_LPS=\"$(LPS)\"" >> $(LASTSETTINGS)
+		@echo "LAST_LPSEXACT=\"$(LPSEXACT)\"" >> $(LASTSETTINGS)
 		@echo "LAST_IPOPT=\"$(IPOPT)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SANITIZE=$(SANITIZE)" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
@@ -1596,6 +1607,7 @@ $(SCIPBUILDFLAGSFILE) :
 		@mkdir -p $(@D)
 		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $@
 		@echo "#define SCIP_LPS \"$(LPS)\"" >> $(SCIPBUILDFLAGSFILE)
+		@echo "#define SCIP_LPSEXACT \"$(LPSEXACT)\"" >> $(SCIPBUILDFLAGSFILE)
 		@echo "#define SCIP_IPOPT \"$(IPOPT)\"" >> $(SCIPBUILDFLAGSFILE)
 
 $(SCIPCONFIGHFILE) :
@@ -1653,11 +1665,11 @@ endif
 ifeq ($(MPFR),true)
 		@echo "#define SCIP_WITH_MPFR" >> $@
 endif
-ifeq ($(EXACTSOLVE),true)
-		@echo "#define SCIP_WITH_EXACTSOLVE" >> $@
-endif
 ifeq ($(BOOST),true)
 		@echo "#define SCIP_WITH_BOOST" >> $@
+endif
+ifeq ($(EXACTSOLVE),true)
+		@echo "#define SCIP_WITH_EXACTSOLVE" >> $@
 endif
 ifeq ($(LPSCHECK),true)
 		@echo "#define SCIP_WITH_LPSCHECK" >> $@
@@ -1861,17 +1873,20 @@ help:
 		@echo
 		@echo "  General options:"
 		@echo "  - OPT={dbg|opt}: Use debug or optimized (default) mode, respectively."
-		@echo "  - LPS={clp|cpx|grb|glop|msk|qso|spx|xprs|none}: Determine LP-solver."
+		@echo "  - LPS={clp|cpx|grb|glop|msk|qso|spx|spx1|xprs|none}: Determine LP-solver."
 		@echo "      clp: COIN-OR Clp LP-solver"
 		@echo "      cpx: CPLEX LP-solver"
 		@echo "      glop: Glop LP-solver"
 		@echo "      grb: Gurobi LP-solver"
 		@echo "      msk: Mosek LP-solver"
 		@echo "      qso: QSopt LP-solver"
-		@echo "      spx: old SoPlex LP-solver (for versions < 2)"
-		@echo "      spx2: new SoPlex LP-solver (default) (from version 2)"
+		@echo "      spx: new SoPlex LP-solver (default) (from version 2)"
+		@echo "      spx1: old SoPlex LP-solver (for versions < 2)"
 		@echo "      xprs: XPress LP-solver"
 		@echo "      none: no LP-solver"
+		@echo "  - LPSEXACT={spx|none}: Determine exact LP-solver (default is auto)."
+		@echo "      spx: SoPlex LP-solver"
+		@echo "      none: no exact LP-solver"
 		@echo "  - COMP={clang|gnu|intel}: Determine compiler."
 		@echo "  - TPI={none|omp|tny}: Determine parallel interface for concurrent solve (default: none)."
 		@echo "  - SHARED={true|false}: Build shared libraries or not (default)."
@@ -1882,6 +1897,10 @@ help:
 		@echo "  - AMPL=<true|false>: Turn AMPL .nl support on (default) or off."
 		@echo "  - LPSOPT=<dbg|opt>: Use debug or optimized (default) mode for LP-solver (SoPlex and Clp only)."
 		@echo "  - READLINE=<true|false>: Turns support via the readline library on (default) or off."
+		@echo "  - GMP=<true|false>: Turns GMP on (default) or off."
+		@echo "  - MPFR=<true|false>: Turns MPFR on (default) or off."
+		@echo "  - BOOST=<true|false>: Turns Boost on or off (default)."
+		@echo "  - EXACTSOLVE=<true|false>: Turns exact solving modeon or off (default is auto)."
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
 		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
