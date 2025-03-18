@@ -770,6 +770,7 @@ SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_WITH_EXACTSOLVE
 /** information method for a parameter change of exact solving mode */
 static
 SCIP_DECL_PARAMCHGD(paramChgdExactSolve)
@@ -787,6 +788,7 @@ SCIP_DECL_PARAMCHGD(paramChgdExactSolve)
 
    return retcode;
 }
+#endif
 
 /** set parameters for reoptimization */
 SCIP_RETCODE SCIPsetSetReoptimizationParams(
@@ -2808,6 +2810,7 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->visual_objextern, FALSE, SCIP_DEFAULT_VISUAL_OBJEXTERN,
          NULL, NULL) );
 
+#ifdef SCIP_WITH_EXACTSOLVE
    /* exact SCIP parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/enabled",
@@ -2867,6 +2870,7 @@ SCIP_RETCODE SCIPsetCreate(
          "maximum size of the certificate file in MB (stop printing when reached)",
          &(*set)->certificate_maxfilesize, FALSE, (SCIP_Real)SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE, 0.0, (SCIP_Real)SCIP_MEM_NOLIMIT,
          NULL, NULL) );
+#endif
 
    /* Reading parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,

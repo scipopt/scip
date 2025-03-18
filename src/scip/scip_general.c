@@ -303,7 +303,24 @@ SCIP_RETCODE doScipCreate(
    }
 #endif
 
+   /* check whether all dependencies for exact solving mode are present */
 #ifdef SCIP_WITH_EXACTSOLVE
+#ifndef SCIP_WITH_GMP
+   SCIPerrorMessage("SCIP was compiled with exact solve support, but without GMP. Please recompile SCIP with GMP.\n");
+   return SCIP_ERROR;
+   /* external code information for GMP added in SCIPincludeConshdlrCountsols() */
+#endif
+#ifndef SCIP_WITH_MPFR
+   SCIPerrorMessage("SCIP was compiled with exact solve support, but without MPFR. Please recompile SCIP with MPFR.\n");
+   return SCIP_ERROR;
+#else
+   {
+      char name[SCIP_MAXSTRLEN];
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "MPFR %s", MPFR_VERSION_STRING);
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "GNU Multiple Precision Floating-Point Reliable Library (mpfr.org)") );
+   }
+#endif /*lint --e{529}*/
 #ifndef SCIP_WITH_BOOST
    SCIPerrorMessage("SCIP was compiled with exact solve support, but without Boost. Please recompile SCIP with Boost.\n");
    return SCIP_ERROR;
@@ -318,18 +335,13 @@ SCIP_RETCODE doScipCreate(
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "Boost C++ Libraries (boost.org)") );
    }
 #endif
-#ifndef SCIP_WITH_MPFR
-   SCIPerrorMessage("SCIP was compiled with exact solve support, but without MPFR. Please recompile SCIP with MPFR.\n");
-   return SCIP_ERROR;
-#else
+   if( strcmp(SCIPlpiExactGetSolverName(), "NONE") == 0 )
    {
-      char name[SCIP_MAXSTRLEN];
-
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "MPFR %s", MPFR_VERSION_STRING);
-      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "GNU Multiple Precision Floating-Point Reliable Library (mpfr.org)") );
+      SCIPerrorMessage("SCIP was compiled with exact solve support, but without an exact LP solver. Please recompile SCIP with an exact LP solver.\n");
+      return SCIP_ERROR;
    }
-#endif /*lint --e{529}*/
 #endif
+
    if( SCIPtpiIsAvailable() )
    {
       char name[20];
