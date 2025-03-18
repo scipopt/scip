@@ -312,7 +312,7 @@ endif
 LPSEXACTOPTIONS	+=	spx
 ifeq ($(LPSEXACT),spx)
 ifeq ($(EXACTSOLVE),false)
-$(error Building with SoPlex as exact LP solver requires GMP, MPFR and Boost to be available. Use either LPSEXACTSOLVE=none or GMP,MPFR,BOOST=true.)
+$(error Building with SoPlex as exact LP solver requires GMP, MPFR and Boost to be available. Use either LPSEXACT=none or all of GMP,MPFR,BOOST=true.)
 endif
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
