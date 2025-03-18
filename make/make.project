@@ -105,7 +105,7 @@ VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
-LPSEXACT =	spx
+LPSEXACT =	auto
 EXACTSOLVE  =  auto
 TPI		=	tny
 SYM		=	snauty
@@ -510,6 +510,16 @@ LPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIBNAME).$(LIBEXT)
 
 
 #-------------------------------------------------------
+ifeq ($(LPSEXACT),auto)
+LPSEXACT =  none
+ifeq ($(LPS),spx)
+LPSEXACT		=	spx
+endif
+ifeq ($(LPS),spx2)
+LPSEXACT		=	spx
+endif
+endif
+
 # add flags for exact SoPlex
 ifeq ($(LPSEXACT),spx)
 LPSLDFLAGS	=	$(LINKCXX_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
