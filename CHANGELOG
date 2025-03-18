@@ -287,6 +287,7 @@ Build system
 - reenable building and testing of SCFLP example
 - fixed that compiler flags for sanitizers were not used for compiling objects of SCIP library
 - prioritize local includes for unittests, examples, and applications to link the intended SCIP version
+- fix detection of Gurobi 11 and 12 libs on Linux
 
 ### Makefile
 
