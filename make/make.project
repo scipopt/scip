@@ -509,7 +509,10 @@ LPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIB).$(LIBEXT)
 LPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIBNAME).$(LIBEXT)
 
 
-#-------------------------------------------------------
+#-----------------------------------------------------------------------------
+# exact LP Solver Interface
+#-----------------------------------------------------------------------------
+
 ifeq ($(LPSEXACT),auto)
 LPSEXACT =  none
 ifeq ($(LPS),spx)
@@ -520,12 +523,18 @@ LPSEXACT		=	spx
 endif
 endif
 
+LPIEXLIBNAME	=	lpi$(LPSEXACT)
+
+#-------------------------------------------------------
 # add flags for exact SoPlex
 ifeq ($(LPSEXACT),spx)
 LPSLDFLAGS	=	$(LINKCXX_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 LPSLIBFILES	=	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 endif
 
+LPIEXLIB		=	$(LPIEXLIBNAME).$(BASE)
+LPIEXLIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPIEXLIB).$(LIBEXT)
+LPIEXLIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPIEXLIBNAME).$(LIBEXT)
 
 #-----------------------------------------------------------------------------
 # Parallel Interface
@@ -784,7 +793,8 @@ OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(OBJSCIPLIBNAME).$(LIBEX
 
 # link SCIP for C projects
 LINKCXXSCIPALL	=	$(LINKCXX_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIBBASE)$(LINKLIBSUFFIX) \
-			$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) \
+			$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) \
+			$(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPIEXLIB)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)
 
 # link SCIP for C++ projects (including libobjscip)
