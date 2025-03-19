@@ -125,7 +125,6 @@ LPILIBSHORTNAME	=	lpi$(LPS)
 LPILIBNAME	=	$(LPILIBSHORTNAME)-$(VERSION)
 LPILIBOBJ	=
 LPSOPTIONS	=
-LPSEXACTOPTIONS	=
 LPIINSTMSG	=
 
 LPSOPTIONS	+=	cpx
@@ -292,11 +291,9 @@ endif
 LPILIB		=	$(LPILIBNAME).$(BASE)
 LPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIB).$(LIBEXT)
 LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
-LPIEXLIBOBJFILES= 	$(addprefix $(LIBOBJDIR)/,$(LPIEXLIBOBJ))
 LPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(BASE).$(LIBEXT)
 LPILIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(LPILIBSRC)
-ALLSRC		+= 	$(LPIEXLIBSRC)
 
 ifeq ($(SHARED),true)
 LPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LPSLDFLAGS)
@@ -309,13 +306,21 @@ endif
 # exact LP solver interface
 #-----------------------------------------------------------------------------
 
+LPIEXLIBSHORTNAME	=	lpiexact$(LPSEXACT)
+LPIEXLIBNAME	=	$(LPIEXLIBSHORTNAME)-$(VERSION)
+LPIEXLIBOBJ	=
+LPSEXACTOPTIONS	=
+
 LPSEXACTOPTIONS	+=	spx
 ifeq ($(LPSEXACT),spx)
 ifeq ($(EXACTSOLVE),false)
-$(error Building with SoPlex as exact LP solver requires GMP, MPFR and Boost to be available. Use either LPSEXACT=none or all of GMP,MPFR,BOOST=true.)
+$(error Building with SoPlex as exact LP solver requires GMP, MPFR, and Boost to be available. Use either LPSEXACT=none or all of GMP,MPFR,BOOST=true.)
 endif
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
+ifeq ($(MPFR),true)
+LPSEXLDFLAGS	+=	$(MPFR_LDFLAGS)
+endif
 LPIEXLIBOBJ	+=	lpiexact/lpiexact_spx.o
 LPIEXLIBSRC	+=	$(SRCDIR)/lpiexact/lpiexact_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
 ifneq ($(LPS),spx)
@@ -336,7 +341,21 @@ endif
 
 LPSEXACTOPTIONS	+=	none
 ifeq ($(LPSEXACT),none)
-LPILIBOBJ	+=	lpiexact/lpiexact_none.o
+LPIEXLIBOBJ	+=	lpiexact/lpiexact_none.o
+endif
+
+LPIEXLIB		=	$(LPIEXLIBNAME).$(BASE)
+LPIEXLIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPIEXLIB).$(LIBEXT)
+LPIEXLIBOBJFILES= 	$(addprefix $(LIBOBJDIR)/,$(LPIEXLIBOBJ))
+LPIEXLIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPIEXLIBSHORTNAME).$(BASE).$(LIBEXT)
+LPIEXLIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(LPIEXLIBSHORTNAME).$(LIBEXT)
+ALLSRC		+= 	$(LPIEXLIBSRC)
+
+ifeq ($(SHARED),true)
+LPIEXLIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LPSEXLDFLAGS)
+ifneq ($(LINKRPATH),)
+LPIEXLIBEXTLIBS	+=	$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
+endif
 endif
 
 #-----------------------------------------------------------------------------
@@ -1165,9 +1184,9 @@ LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 # Rules
 #-----------------------------------------------------------------------------
 
-ifeq ($(VERBOSE),false)
-.SILENT:	$(MAINFILE) $(SCIPLIBBASEFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) \
-		$(LPILIBLINK) $(LPILIBSHORTLINK) $(TPILIBLINK) $(TPILIBSHORTLINK) $(SCIPLIBBASELINK) $(SCIPLIBBASESHORTLINK) \
+ifeq ($(VERBOSE),false)	
+.SILENT:	$(MAINFILE) $(SCIPLIBBASEFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(LPIEXLIBFILE) $(TPILIBFILE) \
+		$(LPILIBLINK) $(LPIEXLIBLINK) $(LPILIBSHORTLINK) $(LPIEXLIBSHORTLINK) $(TPILIBLINK) $(TPILIBSHORTLINK) $(SCIPLIBBASELINK) $(SCIPLIBBASESHORTLINK) \
 		$(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) \
 		$(MAINLINK) $(MAINSHORTLINK) \
 		$(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) $(TPILIBOBJFILES) $(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES) $(SYMOBJFILES) \
@@ -1180,7 +1199,7 @@ all:		libs
 		@$(MAKE) $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: libs
-libs:		libscipbase libobjscip liblpi libtpi
+libs:		libscipbase libobjscip liblpi liblpiexact libtpi
 ifeq ($(SHARED),true)
 		@$(MAKE) libscip
 endif
@@ -1316,6 +1335,16 @@ $(LPILIBSHORTLINK):	$(LPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $@)
 
+$(LPIEXLIBLINK):	$(LPIEXLIBFILE)
+		@rm -f $@
+		cd $(dir $@) && $(LN_s) $(notdir $(LPIEXLIBFILE)) $(notdir $@)
+
+# the short link targets should be phony such that they are always updated and point to the files with last make options, even if nothing needed to be rebuilt
+.PHONY: $(LPIEXLIBSHORTLINK)
+$(LPIEXLIBSHORTLINK):	$(LPIEXLIBFILE)
+		@rm -f $@
+		cd $(dir $@) && $(LN_s) $(notdir $(LPIEXLIBFILE)) $(notdir $@)
+
 $(TPILIBLINK):	$(TPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(TPILIBFILE)) $(notdir $@)
@@ -1425,6 +1454,8 @@ cleanlibs:      | $(LIBDIR)/$(LIBTYPE)
 		@-rm -f $(OBJSCIPLIBFILE) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
 		@echo "-> remove library $(LPILIBFILE)"
 		@-rm -f $(LPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK)
+		@echo "-> remove library $(LPIEXLIBFILE)"
+		@-rm -f $(LPIEXLIBFILE) $(LPIEXLIBLINK) $(LPIEXLIBSHORTLINK)
 		@echo "-> remove library $(TPILIBFILE)"
 		@-rm -f $(TPILIBFILE) $(TPILIBLINK) $(TPILIBSHORTLINK)
 		@echo "-> remove library $(SCIPLIBFILE)"
@@ -1454,7 +1485,7 @@ endif
 endif
 
 # make binary
-$(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBBASEFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
+$(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBBASEFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(LPIEXLIBFILE) $(TPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		$(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCC_o)$@ \
@@ -1493,10 +1524,22 @@ endif
 liblpi:		preprocess
 		@$(MAKE) $(LPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK)
 
-$(LPILIBFILE):	$(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
+$(LPILIBFILE):	$(LPILIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
 		@echo "-> generating library $@"
 		-rm -f $@
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) $(LPILIBEXTLIBS)
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(LPILIBOBJFILES) $(LPILIBEXTLIBS)
+ifneq ($(RANLIB),)
+		$(RANLIB) $@
+endif
+
+.PHONY: liblpiexact
+liblpiexact:		preprocess
+		@$(MAKE) $(LPIEXLIBFILE) $(LPIEXLIBLINK) $(LPIEXLIBSHORTLINK)
+
+$(LPIEXLIBFILE):	$(LPIEXLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
+		@echo "-> generating library $@"
+		-rm -f $@
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(LPIEXLIBOBJFILES) $(LPIEXLIBEXTLIBS)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
@@ -1530,7 +1573,7 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 else
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBBASEOBJFILES) $(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) $(LPILIBEXTLIBS) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES) $(SCIPLIBEXTLIBS) \
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBBASEOBJFILES) $(LPILIBOBJFILES) $(LPILIBEXTLIBS) $(LPIEXLIBOBJFILES) $(LPIEXLIBEXTLIBS) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES) $(SCIPLIBEXTLIBS) \
 		$(LPSLDFLAGS) $(LDFLAGS) $(LIBSCIPRPATHARG)
 endif
 
