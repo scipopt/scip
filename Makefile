@@ -507,7 +507,6 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(BOOST),true)
-FLAGS        +=    -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
 SOFTLINKS    +=    $(LIBDIR)/include/boost
 LPIINSTMSG    +=    "\n  -> \"boost\" is the path to the boost include folder\n"
 endif
