@@ -103,7 +103,11 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #endif
 
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && !defined(PAPILO_HAVE_GMP)
-#warning SCIP with GMP and exact solving but PaPILO without GMP disables exact presolving.
+#warning SCIP built with GMP and exact solving, but PaPILO without GMP disables exact presolving.
+#endif
+
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
+#define PAPILO_WITH_EXACTPRESOLVE
 #endif
 
 #define PRESOL_NAME                "milp"
@@ -198,7 +202,7 @@ using namespace papilo;
  * Local methods
  */
 
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
+#if defined(PAPILO_WITH_EXACTPRESOLVE)
 /** casts rational value from PaPILO to SCIP */
 static
 void setRational(
@@ -481,7 +485,7 @@ SCIP_RETCODE setupPresolve(
 }
 
 
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
+#if defined(PAPILO_WITH_EXACTPRESOLVE)
 /** calls PaPILO presolving in rational arithmetic*/
 static
 SCIP_RETCODE performRationalPresolving(
@@ -1665,14 +1669,16 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       SCIP_CALL( SCIPwriteTransProblem(scip, data->filename, NULL, FALSE) );
    }
 
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
-   if( SCIPisExact(scip) )
-      return performRationalPresolving(scip, matrix, data, initialized, nfixedvars, naggrvars, nchgvartypes, nchgbds,
-         naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result);
-   else
-#endif
+   if( !SCIPisExact(scip) )
       return performRealPresolving(scip, matrix, data, initialized, nfixedvars, naggrvars, nchgvartypes, nchgbds,
          naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result);
+#if defined(PAPILO_WITH_EXACTPRESOLVE)
+   else
+      return performRationalPresolving(scip, matrix, data, initialized, nfixedvars, naggrvars, nchgvartypes, nchgbds,
+         naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result);
+#endif
+
+   return SCIP_OKAY;
 }
 
 
@@ -1726,8 +1732,10 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeMILP) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitMILP) );
 
-   /* mark as exact */
+#if defined(PAPILO_WITH_EXACTPRESOLVE)
+   /* mark presolver as exact */
    SCIPpresolMarkExact(presol);
+#endif
 
    /* add MILP presolver parameters */
 #ifdef PAPILO_TBB
