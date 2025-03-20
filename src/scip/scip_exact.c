@@ -186,9 +186,6 @@ SCIP_RETCODE SCIPenableExactSolving(
    return SCIP_OKAY;
 }
 
-/* if SCIP is built without exact solving mode, we define SCIPisExact as FALSE */
-#undef SCIPisExact
-
 /** returns whether the solution process should be probably correct
  *
  *  @return Returns TRUE if \SCIP is in exact solving mode, otherwise FALSE

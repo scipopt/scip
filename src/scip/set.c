@@ -527,6 +527,8 @@
 #define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION 1 /**< strategy to select which dual columns to use for lp to compute interior point
                                                  *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
 #define SCIP_DEFAULT_EXACT_LPINFO         FALSE /**< should the exact LP solver display status messages? */
+#define SCIP_DEFAULT_EXACT_ALLOWNEGSLACK   TRUE /**< should the exact LP solver display status messages? */
+#define SCIP_DEFAULT_EXACT_WEAKENCUTS     FALSE /**< should cuts be weakenend in exact mode? */
 #define SCIP_DEFAULT_CUTMAXDENOMSIZE     131072L /**< maximal denominator in cut coefficient, leading to slightly weaker (default is 2^17)
                                                  *   but numerically better cuts (0: disabled) */
 #define SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL 10000L /**< maximal absolute bound value for wich cut coefficient should
@@ -2843,12 +2845,12 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/allownegslack",
          "should the exact LP solver display status messages?",
-         &(*set)->exact_allownegslack, FALSE, TRUE,
+         &(*set)->exact_allownegslack, FALSE, SCIP_DEFAULT_EXACT_ALLOWNEGSLACK,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/weakencuts",
          "should cuts be weakenend in exact mode?",
-         &(*set)->exact_weakencuts, FALSE, FALSE,
+         &(*set)->exact_weakencuts, FALSE, SCIP_DEFAULT_EXACT_WEAKENCUTS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "exact/cutmaxdenomsize",
@@ -2870,6 +2872,22 @@ SCIP_RETCODE SCIPsetCreate(
          "maximum size of the certificate file in MB (stop printing when reached)",
          &(*set)->certificate_maxfilesize, FALSE, (SCIP_Real)SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE, 0.0, (SCIP_Real)SCIP_MEM_NOLIMIT,
          NULL, NULL) );
+#else
+   /* if SCIP is built without support for exact solving, we initialize the values of the exact parameters, but do not
+    * display the parameters to the SCIP user
+    */
+   (*set)->exact_enabled = FALSE;
+   (*set)->exact_improvingsols = SCIP_DEFAULT_EXACT_IMPROVINGSOLS;
+   (*set)->exact_safedbmethod = SCIP_DEFAULT_EXACT_SAFEDBMETHOD;
+   (*set)->exact_psdualcolselection = SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION;
+   (*set)->exact_interleavestrategy = SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY;
+   (*set)->exact_lpinfo = SCIP_DEFAULT_EXACT_LPINFO;
+   (*set)->exact_allownegslack = SCIP_DEFAULT_EXACT_ALLOWNEGSLACK;
+   (*set)->exact_weakencuts = SCIP_DEFAULT_EXACT_WEAKENCUTS;
+   (*set)->exact_cutmaxdenomsize = SCIP_DEFAULT_CUTMAXDENOMSIZE;
+   (*set)->exact_cutapproxmaxboundval = SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL;
+   (*set)->certificate_filename = SCIP_DEFAULT_CERTIFICATE_FILENAME;
+   (*set)->certificate_maxfilesize = (SCIP_Real)SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE;
 #endif
 
    /* Reading parameters */

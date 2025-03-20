@@ -217,12 +217,6 @@ SCIP_RETCODE SCIPaddRowExact(
    SCIP_ROWEXACT*        rowexact            /**< exact row to add */
    );
 
-#ifndef SCIP_WITH_EXACTSOLVE
-
-#define SCIPisExact(scip) FALSE
-
-#endif
-
 #ifdef __cplusplus
 }
 #endif
