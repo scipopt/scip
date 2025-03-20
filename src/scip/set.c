@@ -535,7 +535,7 @@
                                                  *   be approximated with bounded denominator (0: no restriction) */
 
 /* certificate settings */
-#define SCIP_DEFAULT_CERTIFICATE_FILENAME   "-" /**< name of the certificate file, or "-" if no output should be created */
+static const char SCIP_DEFAULT_CERTIFICATE_FILENAME[2] = {'-', '\0'}; /**< name of the certificate file, or "-" if no output should be created */
 #define SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE SCIP_MEM_NOLIMIT /**< maximum size of the certificate file in MB (stop printing when reached) */
 
 /* Reading */
@@ -2876,7 +2876,8 @@ SCIP_RETCODE SCIPsetCreate(
    /* if SCIP is built without support for exact solving, we initialize the values of the exact parameters, but do not
     * display the parameters to the SCIP user
     */
-   (*set)->exact_enabled = FALSE;
+   (*set)->exact_enabled = SCIP_DEFAULT_EXACT_ENABLED;
+   assert((*set)->exact_enabled == FALSE);
    (*set)->exact_improvingsols = SCIP_DEFAULT_EXACT_IMPROVINGSOLS;
    (*set)->exact_safedbmethod = SCIP_DEFAULT_EXACT_SAFEDBMETHOD;
    (*set)->exact_psdualcolselection = SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION;
@@ -2886,8 +2887,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->exact_weakencuts = SCIP_DEFAULT_EXACT_WEAKENCUTS;
    (*set)->exact_cutmaxdenomsize = SCIP_DEFAULT_CUTMAXDENOMSIZE;
    (*set)->exact_cutapproxmaxboundval = SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL;
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*set)->certificate_filename, SCIP_DEFAULT_CERTIFICATE_FILENAME,
-         strlen(SCIP_DEFAULT_CERTIFICATE_FILENAME)+1) );
+   (*set)->certificate_filename = (char*)SCIP_DEFAULT_CERTIFICATE_FILENAME;
    (*set)->certificate_maxfilesize = (SCIP_Real)SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE;
 #endif
 
