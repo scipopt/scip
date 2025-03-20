@@ -150,6 +150,7 @@ OPENSOURCE   	=	true
 READLINE	=	true
 ZLIB		=	true
 GMP		=	true
+MPFR		=	false
 ZIMPL		=	false
 AMPL		=	true
 IPOPT		=	false
@@ -361,8 +362,6 @@ ifeq ($(LPS),spx)
 override LPS	=	spx2
 endif
 
-LPILIBNAME	=	lpi$(LPS)
-
 #-------------------------------------------------------
 # define flags for CPLEX
 ifeq ($(LPS),cpx)
@@ -498,9 +497,12 @@ ifeq ($(LPS),none)
 LPSLDFLAGS	=
 endif
 
-LPILIB		=	$(LPILIBNAME).$(BASE)
+#-------------------------------------------------------
+LPILIBSHORTNAME	=	lpi$(LPS)
+LPILIBNAME	=	$(LPILIBSHORTNAME)-$(VERSION)
+LPILIB		=	$(LPILIBSHORTNAME).$(BASE)
 LPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIB).$(LIBEXT)
-LPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIBNAME).$(LIBEXT)
+LPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -555,14 +557,6 @@ CXXFLAGS	+=	$(CXX14FLAG)
 endif
 
 #-----------------------------------------------------------------------------
-# PaPILO Library
-#-----------------------------------------------------------------------------
-
-ifeq ($(PAPILO),true)
-LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)tbb.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-endif
-
-#-----------------------------------------------------------------------------
 # External Libraries
 #-----------------------------------------------------------------------------
 
@@ -577,10 +571,8 @@ endif
 
 ifeq ($(ZIMPL),auto)
 ZIMPL		=	$(GMP)
-ifeq ($(ZIMPL),false)
-ifeq ($(MAKELEVEL),0)
+ifeq ($(ZIMPL)-$(MAKELEVEL),false-0)
 $(warning ZIMPL was deactived because of missing GMP support.)
-endif
 endif
 endif
 
@@ -600,6 +592,14 @@ endif
 ifeq ($(GMP),true)
 FLAGS		+=	$(GMP_FLAGS)
 LDFLAGS		+=	$(GMP_LDFLAGS)
+endif
+
+ifeq ($(MPFR),true)
+ifeq ($(MPFR_LDFLAGS),)
+$(error MPFR_LDFLAGS is empty. Do not know how to link MPFR, but MPFR=true)
+endif
+FLAGS          +=      $(MPFR_FLAGS)
+LDFLAGS        +=      $(MPFR_LDFLAGS)
 endif
 
 ifeq ($(READLINE_LDFLAGS),)
