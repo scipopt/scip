@@ -2725,7 +2725,7 @@ SCIP_RETCODE doCopy(
    /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
     * handler is in place to perform a final repair step
     */
-   SCIP_CALL( SCIPsetBoolParam(targetscip, "exact/enabled", FALSE) );
+   SCIP_CALL( SCIPenableExactSolving(targetscip, FALSE) );
 
    /* restore original quiet state */
    SCIPsetMessagehdlrQuiet(targetscip, msghdlrquiet);

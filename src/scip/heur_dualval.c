@@ -974,7 +974,7 @@ SCIP_RETCODE createSubSCIP(
    /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
     * handler is in place to perform a final repair step
     */
-   SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "exact/enabled", FALSE) );
+   SCIP_CALL( SCIPenableExactSolving(heurdata->subscip, FALSE) );
 
    /* disable bound limits */
    SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/primal", SCIP_INVALID) );

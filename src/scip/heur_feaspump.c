@@ -221,7 +221,7 @@ SCIP_RETCODE setupSCIPparamsStage3(
    )
 {
    /**@todo restore the copied settings that were changed in setupSCIPparamsFP2() without copying all parameters, since
-    *       this triggers an error message that exact/enabled cannot be changed in or after problem creatin stage
+    *       this triggers an error message that exact solving cannot be enabled/disabled in or after problem creation stage
     */
    SCIP_CALL( SCIPcopyParamSettings(scip, probingscip) );
    assert(!SCIPisExact(probingscip));

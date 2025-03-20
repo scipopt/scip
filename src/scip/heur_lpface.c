@@ -769,7 +769,7 @@ SCIP_RETCODE setupSubscipLpface(
       /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
        * handler is in place to perform a final repair step
        */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "exact/enabled", FALSE) );
+      SCIP_CALL( SCIPenableExactSolving(subscip, FALSE) );
 
       /* get name of the original problem and add the string "_lpfacesub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_lpfacesub", SCIPgetProbName(scip));

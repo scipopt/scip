@@ -7575,8 +7575,8 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
 
    /**@todo This method is currently only used for subSCIPs in floating-point heuristics, but should be extended to be
     *       able to perform an exact copy in the future.  This would allow application of the cons_components presolver,
-    *       for example.  In this case, whether an exact or an fp copy is created, could probably decided by looking at
-    *       the parameter value of exact/enabled in the target SCIP.
+    *       for example.  In this case, whether an exact or an fp copy is created, could probably be decided by checking
+    *       SCIPisExact() for the target SCIP.
     */
    assert(!SCIPisExact(scip));
    (*valid) = FALSE;
