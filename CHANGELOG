@@ -34,6 +34,7 @@ Performance improvements
 Examples and applications
 -------------------------
 
+- Add PBSolver application to solve pseudoboolean instances in OPB and WBO format while complying with PB competition rules
 - Coloring: new parameter branching/coloring/strategy to choose the least/most fractional variable for branching
 
 Interface changes
@@ -145,6 +146,7 @@ Interface changes
 - heuristics/scheduler/heurtimelimit removed to avoid indeterministic behavior of scheduler heuristic, uses main time limit instead
 - removed parameters "constraints/orbitope/checkpporbitope", "constraints/orbitope/sepafullorbitope", "constraints/orbitope/forceconscopy", which became superfluous
 - removed reading/gmsreader/signpower
+- removed benders/default/numthreads, multi-threading support for Benders' decomposition has been temporarily disabled.
 
 ### New parameters
 
@@ -163,6 +165,7 @@ Interface changes
 - new parameter "presolving/milp/maxedgessequential" defines the maximal amount of edges in the sequential clique merging graph
 - new parameter "presolving/milp/maxcliquesize" defines the maximal size of cliques considered for clique merging
 - new parameter "presolving/milp/maxgreedycalls" defines the maximal number of greedy max clique calls in a single thread
+- reading/opbreader/maxintsize to define the maximal intsize above which an OPB instance is rejected
 
 ### Data structures
 
@@ -185,6 +188,12 @@ Build system
 - revised SANITIZE options: removed SANITIZE=full, added SANITIZE=thread, SANITIZE=address, and SANITIZE=memory to enable
   thread, address, and memory sanitizers, respectively, in addition to undefined behavior sanitizer;
   changed default to SANITIZE=false
+- added build flag MPFR (default: false) to link with the multiprecision floating-point library, needed when SoPlex is also
+  built with MPFR=true for precision boosting in rational solving mode
+- the symlink $(LIBDIR)/include/papilo should now point to the `src` subdirectory of a PaPILO repository or the headers directory
+  of a PaPILO installation without TBB; pointing to the directory of a PaPILO repository still works, but is deprecated
+- removed option to link TBB library, as this is not used by default when PaPILO has not been built via cmake
+  (use USRCXXFLAGS=-DPAPILO_TBB USRLDFLAGS=-ltbb to enable TBB for PaPILO)
 
 ### Cmake
 
@@ -286,6 +295,7 @@ Build system
 - reenable building and testing of SCFLP example
 - fixed that compiler flags for sanitizers were not used for compiling objects of SCIP library
 - prioritize local includes for unittests, examples, and applications to link the intended SCIP version
+- fix detection of Gurobi 11 and 12 libs on Linux
 
 ### Makefile
 

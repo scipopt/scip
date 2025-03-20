@@ -45,8 +45,8 @@ INSTALLDIR	=
 ifeq ($(OPENSOURCE),false)
 	override EXPRINT	=	none
 	override GMP		=	false
-	override MPFR		=	false
 	override BOOST		=	false
+	override MPFR		=	false
 	override READLINE	=	false
 	override ZLIB		=	false
 	override ZIMPL		=	false
@@ -86,6 +86,7 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		DEBUGSOL=$(DEBUGSOL)\\n\
 		EXPRINT=$(EXPRINT)\\n\
 		GMP=$(GMP)\\n\
+		BOOST=$(BOOST)\\n\
 		MPFR=$(MPFR)\\n\
 		EXACTSOLVE=$(EXACTSOLVE)\\n\
 		IPOPTOPT=$(IPOPTOPT)\\n\
@@ -121,8 +122,6 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
-LPILIBSHORTNAME	=	lpi$(LPS)
-LPILIBNAME	=	$(LPILIBSHORTNAME)-$(VERSION)
 LPILIBOBJ	=
 LPSOPTIONS	=
 LPIINSTMSG	=
@@ -312,7 +311,7 @@ LPSEXACTOPTIONS	=
 LPSEXACTOPTIONS	+=	spx
 ifeq ($(LPSEXACT),spx)
 ifeq ($(EXACTSOLVE),false)
-$(error Building with SoPlex as exact LP solver requires GMP, MPFR, and Boost to be available. Use either LPSEXACT=none or all of GMP,MPFR,BOOST=true.)
+$(error Building with SoPlex as exact LP solver requires GMP, MPFR, and Boost to be available. Use either LPSEXACT=none or all of GMP,BOOST,MPFR=true.)
 endif
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
@@ -536,9 +535,9 @@ ifeq ($(PAPILO),true)
 ifeq ($(BOOST),false)
 $(error PaPILO requires Boost to be available. Use either PAPILO=false or BOOST=true.)
 endif
-FLAGS        +=    -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
+FLAGS        +=    -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/papilo -I$(LIBDIR)/include/papilo/src # the last include is for backwards compatibility or if users link to the PaPILO repo
 SOFTLINKS    +=    $(LIBDIR)/include/papilo
-LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO directory\n"
+LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO source directory, i.e., \"<papilo>/papilo/Config.hpp\" should exist.\n"
 endif
 
 #-----------------------------------------------------------------------------
@@ -1486,12 +1485,12 @@ endif
 $(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBBASEFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(LPIEXLIBFILE) $(TPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
-		$(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCC_o)$@ \
-		|| ($(MAKE) errorhints && false)
+		($(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCC_o)$@ \
+		|| ($(MAKE) errorhints && false)) && ($(MAKE) successwarnings || true)
 endif
 ifeq ($(LINKER),CPP)
-		$(LINKCXX) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCXX_o)$@ \
-		|| ($(MAKE) errorhints && false)
+		($(LINKCXX) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCXX_o)$@ \
+		|| ($(MAKE) errorhints && false)) && ($(MAKE) successwarnings || true)
 endif
 
 .PHONY: libscipbase
@@ -1586,9 +1585,6 @@ $(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(BINOBJDIR)
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(DFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
-
-# always turn off sanitizer for papilo (leading to false positives in TBB); TODO turn off the false positives only
-$(LIBOBJDIR)/scip/presol_milp.o: SANITIZERFLAGS=
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
@@ -1826,7 +1822,9 @@ endif
 endif
 ifneq ($(ZIMPL),true)
 ifneq ($(ZIMPL),false)
+ifneq ($(ZIMPL),auto)
 		$(error invalid ZIMPL flag selected: ZIMPL=$(ZIMPL). Possible options are: true false auto)
+endif
 endif
 endif
 ifneq ($(AMPL),true)
@@ -1907,8 +1905,32 @@ ifeq ($(LPS),spx2)
 		@echo "build failed with GMP=false and LPS=spx2: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
 endif
 endif
+ifeq ($(BOOST),true)
+		@echo "build failed with BOOST=true: if BOOST is not available, try building with BOOST=false (note that this will deactivate exact solving support)"
+endif
 ifeq ($(MPFR),true)
 		@echo "build failed with MPFR=true: if MPFR is not available, try building with MPFR=false (note that this will deactivate exact solving support)"
+endif
+ifeq ($(MPFR),false)
+ifeq ($(LPS),spx2)
+		@echo "build failed with MPFR=false and LPS=spx2: use MPFR=true or make sure that SoPlex is also built without MPFR support (make MPFR=false)"
+endif
+endif
+
+
+.PHONY: successwarnings
+successwarnings:
+ifeq ($(READLINE),false)
+		@echo "WARNING: built with READLINE=false: interactive shell misses tab completion, history capability, and in-line editing"
+endif
+ifeq ($(GMP),false)
+		@echo "WARNING: built with GMP=false: ZIMPL support and solution counting feature are not available"
+endif
+ifeq ($(ZLIB),false)
+		@echo "WARNING: built with ZLIB=false: support for reading gzipped files is not available"
+endif
+ifeq ($(EXACTSOLVE),false)
+		@echo "WARNING: exact solving mode not available (build with GMP=true BOOST=true MPFR=true LPSEXACT=spx to enable it)"
 endif
 
 .PHONY: help
@@ -1939,15 +1961,15 @@ help:
 		@echo "  - SHARED={true|false}: Build shared libraries or not (default)."
 		@echo
 		@echo "  More detailed options:"
-		@echo "  - ZIMPL=<true|false>: Turn ZIMPL support on or off (default)."
+		@echo "  - ZIMPL=<true|false|auto>: Turn ZIMPL support on, off, or to the same value as GMP (default)."
 		@echo "  - ZIMPLOPT=<dbg|opt>: Use debug or optimized (default) mode for ZIMPL."
 		@echo "  - AMPL=<true|false>: Turn AMPL .nl support on (default) or off."
 		@echo "  - LPSOPT=<dbg|opt>: Use debug or optimized (default) mode for LP-solver (SoPlex and Clp only)."
 		@echo "  - READLINE=<true|false>: Turns support via the readline library on (default) or off."
 		@echo "  - GMP=<true|false>: Turns GMP on (default) or off."
-		@echo "  - MPFR=<true|false>: Turns MPFR on (default) or off."
 		@echo "  - BOOST=<true|false>: Turns Boost on or off (default)."
-		@echo "  - EXACTSOLVE=<true|false>: Turns exact solving modeon or off (default is auto)."
+		@echo "  - MPFR=<true|false|auto>: Turns MPFR on (required for exact solving mode and if SoPlex is built with MPFR; must be installed on the system), off, or to the same value as BOOST (default)."
+		@echo "  - EXACTSOLVE=<true|false|auto>: Turns exact solving mode on, off, or turns it on if all necessary dependencies are available (default)."
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
 		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
