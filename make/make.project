@@ -515,11 +515,13 @@ LPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIBNAME).$(LIBEXT)
 
 ifeq ($(LPSEXACT),auto)
 LPSEXACT =  none
+ifeq ($(BOOST),true)
 ifeq ($(LPS),spx)
 LPSEXACT		=	spx
 endif
 ifeq ($(LPS),spx2)
 LPSEXACT		=	spx
+endif
 endif
 endif
 
