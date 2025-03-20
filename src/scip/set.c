@@ -2886,7 +2886,8 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->exact_weakencuts = SCIP_DEFAULT_EXACT_WEAKENCUTS;
    (*set)->exact_cutmaxdenomsize = SCIP_DEFAULT_CUTMAXDENOMSIZE;
    (*set)->exact_cutapproxmaxboundval = SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL;
-   (*set)->certificate_filename = SCIP_DEFAULT_CERTIFICATE_FILENAME;
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*set)->certificate_filename, SCIP_DEFAULT_CERTIFICATE_FILENAME,
+         strlen(SCIP_DEFAULT_CERTIFICATE_FILENAME)+1) );
    (*set)->certificate_maxfilesize = (SCIP_Real)SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE;
 #endif
 
