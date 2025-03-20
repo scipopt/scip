@@ -1802,6 +1802,9 @@ checkdefines:
 ifeq ($(LPILIBOBJ),)
 		$(error invalid LP solver selected: LPS=$(LPS). Possible options are: $(LPSOPTIONS))
 endif
+ifeq ($(LPIEXLIBOBJ),)
+		$(error invalid exact LP solver selected: LPSEXACT=$(LPSEXACT). Possible options are: $(LPSEXACTOPTIONS))
+endif
 ifneq ($(TPI),none)
 ifneq ($(TPI),omp)
 ifneq ($(TPI),tny)
