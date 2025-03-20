@@ -306,8 +306,6 @@ endif
 # exact LP solver interface
 #-----------------------------------------------------------------------------
 
-LPIEXLIBSHORTNAME	=	lpiexact$(LPSEXACT)
-LPIEXLIBNAME	=	$(LPIEXLIBSHORTNAME)-$(VERSION)
 LPIEXLIBOBJ	=
 LPSEXACTOPTIONS	=
 

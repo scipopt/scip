@@ -525,8 +525,6 @@ endif
 endif
 endif
 
-LPIEXLIBNAME	=	lpi$(LPSEXACT)
-
 #-------------------------------------------------------
 # add flags for exact SoPlex
 ifeq ($(LPSEXACT),spx)
@@ -534,9 +532,12 @@ LPSLDFLAGS	=	$(LINKCXX_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCXX_l)sop
 LPSLIBFILES	=	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 endif
 
-LPIEXLIB		=	$(LPIEXLIBNAME).$(BASE)
+#-------------------------------------------------------
+LPIEXLIBSHORTNAME	=	lpiexact$(LPSEXACT)
+LPIEXLIBNAME	=	$(LPIEXLIBSHORTNAME)-$(VERSION)
+LPIEXLIB		=	$(LPIEXLIBSHORTNAME).$(BASE)
 LPIEXLIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPIEXLIB).$(LIBEXT)
-LPIEXLIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPIEXLIBNAME).$(LIBEXT)
+LPIEXLIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPIEXLIBSHORTNAME).$(LIBEXT)
 
 #-----------------------------------------------------------------------------
 # Parallel Interface
