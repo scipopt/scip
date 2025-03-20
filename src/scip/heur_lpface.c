@@ -46,6 +46,7 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
 #include "scip/scip_event.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"

@@ -30,6 +30,7 @@
 
 #include "scip/heuristics.h"
 #include "scip/cons_linear.h"
+#include "scip/scip_exact.h"
 #include "scip/scipdefplugins.h"
 #include "scip/stat.h"
 #include "scip/struct_scip.h"
