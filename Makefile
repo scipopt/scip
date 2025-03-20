@@ -1691,6 +1691,9 @@ ifeq ($(LAPACK),true)
 endif
 ifeq ($(PAPILO),true)
 		@echo "#define SCIP_WITH_PAPILO" >> $@
+ifeq ($(GMP),true)
+		@echo "#define PAPILO_HAVE_GMP" >> $@
+endif
 endif
 ifeq ($(ZLIB),true)
 		@echo "#define SCIP_WITH_ZLIB" >> $@
