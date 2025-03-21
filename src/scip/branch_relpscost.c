@@ -422,44 +422,6 @@ SCIP_RETCODE SCIPupdateVarPseudocostSymmetric(
    return SCIP_OKAY;
 }
 
-/**! [SnippetCodeStyleStaticAsserts] */
-
-/** return probindex of variable or corresponding active variable (if negated or aggregated) or -1 (if multiaggregated) */
-static
-SCIP_RETCODE binvarGetActiveProbindex(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< binary variable */
-   int*                  probindex           /**< buffer to store probindex */
-   )
-{
-   assert(scip != NULL);
-   assert(var != NULL);
-   assert(SCIPvarIsBinary(var));
-   assert(probindex != NULL);
-
-/**! [SnippetCodeStyleStaticAsserts] */
-
-   *probindex = SCIPvarGetProbindex(var);
-
-   /* if variable is not active, try to find active representative */
-   if( *probindex == -1 )
-   {
-      SCIP_VAR* repvar;
-      SCIP_Bool negated;
-
-      SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
-      assert(repvar != NULL);
-      assert(SCIPvarGetStatus(repvar) != SCIP_VARSTATUS_FIXED);
-
-      if( SCIPvarIsActive(repvar) )
-         *probindex = SCIPvarGetProbindex(repvar);
-      else if( SCIPvarIsNegated(repvar) )
-         *probindex = SCIPvarGetProbindex(SCIPvarGetNegationVar(repvar));
-   }
-
-   return SCIP_OKAY;
-}
-
 /**! [SnippetCodeStyleDeclaration] */
 
 /** counts number of nonlinear constraints in which each variable appears */
@@ -502,7 +464,7 @@ SCIP_RETCODE countNonlinearities(
    {
       int c;
 
-      for( c = 0; c < SCIPconshdlrGetNActiveConss(andconshdlr); c++ )
+      for( c = 0; c < SCIPconshdlrGetNActiveConss(andconshdlr); ++c )
       {
          SCIP_CONS* andcons;
          SCIP_VAR** andvars;
@@ -517,34 +479,28 @@ SCIP_RETCODE countNonlinearities(
          andvars = SCIPgetVarsAnd(scip, andcons);
          andres = SCIPgetResultantAnd(scip, andcons);
 
-         probindex = -1;
+         /* get active index of resultant */
+         probindex = SCIPvarGetProbindex(SCIPvarGetProbvar(andres));
 
-         /**! [SnippetCodeStyleIfFor] */
-
-         for( v = 0; v < nandvars; v++ )
-         {
-            /* don't rely on the and conshdlr removing fixed variables
-             * @todo fix the and conshdlr in that respect
-             */
-            if( SCIPvarGetStatus(andvars[v]) != SCIP_VARSTATUS_FIXED )
-            {
-               SCIP_CALL( binvarGetActiveProbindex(scip, andvars[v], &probindex) );
-               if( probindex >= 0 )
-                  nlcount[probindex]++;
-            }
-         }
-
-         /**! [SnippetCodeStyleIfFor] */
-
-         SCIP_CALL( binvarGetActiveProbindex(scip, andres, &probindex) );
+         /* the resultant might be deleted */
          if( probindex >= 0 )
-            nlcount[probindex]++;
+            ++nlcount[probindex];
+
+         for( v = 0; v < nandvars; ++v )
+         {
+            /* get active index of operator */
+            probindex = SCIPvarGetProbindex(SCIPvarGetProbvar(andvars[v]));
+
+            /* the operator might be deleted */
+            if( probindex >= 0 )
+               ++nlcount[probindex];
+         }
       }
    }
 
    /* compute maximum count value */
    *nlcountmax = 1;
-   for( i = 0; i < nvars; i++ )
+   for( i = 0; i < nvars; ++i )
    {
       if( *nlcountmax < nlcount[i] )
          *nlcountmax = nlcount[i];
