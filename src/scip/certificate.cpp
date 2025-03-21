@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   certificate.c
+/**@file   certificate.cpp
  * @brief  methods for certificate output
  * @author Ambros Gleixner
  * @author Daniel Steffy
