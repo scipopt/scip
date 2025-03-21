@@ -331,7 +331,7 @@ SCIP_RETCODE doScipCreate(
       int boost_version_minor = BOOST_VERSION / 100 % 1000;
       int boost_version_patch = BOOST_VERSION % 100;
 
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "BOOST %d.%d.%d", boost_version_major, boost_version_minor, boost_version_patch);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "Boost %d.%d.%d", boost_version_major, boost_version_minor, boost_version_patch);
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "Boost C++ Libraries (boost.org)") );
    }
 #endif
