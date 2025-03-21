@@ -174,8 +174,6 @@ struct SCIP_ConsData
    SCIP_VAR*             maxactdeltavar;     /**< variable with maximal activity contribution, or NULL if invalid */
    SCIP_Rational*        maxabsvalEx;          /**< maximum absolute value of all coefficients */
    SCIP_Rational*        minabsvalEx;          /**< minimal absolute value of all coefficients */
-   uint64_t              possignature;       /**< bit signature of coefficients that may take a positive value */
-   uint64_t              negsignature;       /**< bit signature of coefficients that may take a negative value */
    SCIP_ROW*             rowlhs;             /**< LP row, if constraint is already stored in LP row format; represents fp-relaxation of lhs-part of rowexact;
                                                   only this row will be added to the exact LP, rowrhs is used for safe aggregation of rows */
    SCIP_ROW*             rowrhs;             /**< LP row, if constraint is already stored in LP row format; represents fp-relaxation of rhs-part of rowexact */
@@ -218,7 +216,6 @@ struct SCIP_ConsData
    unsigned int          validglbmaxact:1;   /**< is the global maxactivity valid? */
    unsigned int          presolved:1;        /**< is constraint already presolved? */
    unsigned int          removedfixings:1;   /**< are all fixed variables removed from the constraint? */
-   unsigned int          validsignature:1;   /**< is the bit signature valid? */
    unsigned int          changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
    unsigned int          normalized:1;       /**< is the constraint in normalized form? */
    unsigned int          upgradetried:1;     /**< was the constraint already tried to be upgraded? */
@@ -846,8 +843,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->glbminactivityposhuge = -1;
    (*consdata)->glbmaxactivityneghuge = -1;
    (*consdata)->glbmaxactivityposhuge = -1;
-   (*consdata)->possignature = 0;
-   (*consdata)->negsignature = 0;
    (*consdata)->validmaxabsval = FALSE;
    (*consdata)->validminabsval = FALSE;
    (*consdata)->validactivities = FALSE;
@@ -858,7 +853,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->boundstightened = 0;
    (*consdata)->presolved = FALSE;
    (*consdata)->removedfixings = FALSE;
-   (*consdata)->validsignature = FALSE;
    (*consdata)->changed = TRUE;
    (*consdata)->normalized = FALSE;
    (*consdata)->upgradetried = FALSE;
@@ -3016,31 +3010,6 @@ void consdataGetFeasibility(
    SCIPrationalFreeBuffer(SCIPbuffer(scip), &op2);
 }
 
-/** updates bit signatures after adding a single coefficient */
-static
-void consdataUpdateSignatures(
-   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
-   int                   pos                 /**< position of coefficient to update signatures for */
-   )
-{
-   uint64_t varsignature;
-   SCIP_Real lb;
-   SCIP_Real ub;
-   SCIP_Rational* val;
-
-   assert(consdata != NULL);
-   assert(consdata->validsignature);
-
-   varsignature = SCIPhashSignature64(SCIPvarGetIndex(consdata->vars[pos]));
-   lb = SCIPvarGetLbGlobal(consdata->vars[pos]);
-   ub = SCIPvarGetUbGlobal(consdata->vars[pos]);
-   val = consdata->vals[pos];
-   if( (SCIPrationalIsPositive(val) && ub > 0.0) || (SCIPrationalIsNegative(val) && lb < 0.0) )
-      consdata->possignature |= varsignature;
-   if( (SCIPrationalIsPositive(val) && lb < 0.0) || (SCIPrationalIsNegative(val) && ub > 0.0) )
-      consdata->negsignature |= varsignature;
-}
-
 /** creates an LP row in a linear constraint data */
 static
 SCIP_RETCODE createRows(
@@ -3676,9 +3645,6 @@ SCIP_RETCODE addCoef(
    consdata->presolved = FALSE;
    consdata->removedfixings = consdata->removedfixings && SCIPvarIsActive(var);
 
-   if( consdata->validsignature )
-      consdataUpdateSignatures(consdata, consdata->nvars-1);
-
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
@@ -3805,7 +3771,6 @@ SCIP_RETCODE delCoefPos(
 
    consdata->boundstightened = 0;
    consdata->presolved = FALSE;
-   consdata->validsignature = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
@@ -3898,7 +3863,6 @@ SCIP_RETCODE chgCoefPos(
 
    consdata->boundstightened = 0;
    consdata->presolved = FALSE;
-   // todo: exip  consdata->validsignature = consdata->validsignature && (newval * val > 0.0);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
