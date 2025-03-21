@@ -203,7 +203,7 @@ Fixed bugs
   Benders' decomposition, data is created that was not correctly released. Also, data within the Benders' decomposition
   framework was not appropriately reset. The data is now released/reset as expected.
 - To fix a bug where duplicate cuts from different constraint handlers were not recognized, SCIPrealHash() was changed
-  to be more stable around powers of two, and a numerical tolerance for comparing cutting plane efficacy for the aggregation
+  to be stable around shortly representable numbers, and a numerical tolerance for comparing cutting plane efficacy for the aggregation
   separator is introduced.
 
 Miscellaneous
