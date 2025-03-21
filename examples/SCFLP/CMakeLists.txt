@@ -9,7 +9,7 @@ else()
   find_package(SCIP REQUIRED)
 endif()
 
-include_directories(${SCIP_INCLUDE_DIRS})
+include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(scflp
    src/cmain.c
@@ -23,6 +23,8 @@ if(NOT LIBM)
 endif()
 
 target_link_libraries(scflp ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(scflp PRIVATE ${SCIP_COMPILE_FLAGS})
+
 if( TARGET examples )
     add_dependencies( examples scflp )
 endif()

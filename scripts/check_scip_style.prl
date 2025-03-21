@@ -3,6 +3,9 @@
 # Heuristic routines for checking whether code conforms to the SCIP
 # coding style guideline. We check the following:
 #
+# - List lines with trailing space
+#   [checktrailspace, default: true]
+#
 # - List function parameter lines that are not indented as specified
 #   by the SCIP coding style.
 #   [checkindent, default: true]
@@ -72,6 +75,7 @@ my $checkcomments = 0;   # check for two comments in a line
 my $checkoperspaces = 0; # check for spaces around operators
 my $checkoperstrict = 0; # check strict rules for operators
 
+my $checktrailspace = 1; # check for trailing space
 my $checkindent = 1;     # check for correct indentation
 my $checksepdoclines = 1;# check for separate documentation lines
 my $checktabsparam = 1;  # check whether tabs in parameter lists are present
@@ -162,6 +166,13 @@ for (my $i = 0; $i < $narg; ++$i)
       my $str = $_;
       $documentationpos = -1;
 
+      # check trailing space
+      if ( $checktrailspace == 1 && $str =~ /\s$/ )
+      {
+         printf("%d: trailing space\n", $line);
+      }
+
+      # ----------------------------------------
       # check for empty lines in functions
       if ( $depth > $foundexternc && $checkemptylines == 1 )
       {

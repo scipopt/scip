@@ -376,6 +376,7 @@ SCIP_RETCODE SCIPreoptApply(
    SCIP_LP*              lp,                 /**< current LP */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree to reactivate */

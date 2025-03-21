@@ -700,6 +700,7 @@ SCIP_RETCODE detectImpliedBounds(
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_TREE*            tree,               /**< tree data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_REOPT*           reopt,              /**< reoptimization data */
@@ -895,7 +896,7 @@ SCIP_RETCODE detectImpliedBounds(
       {
          SCIPsetDebugMsg(set, "conflict set (%p) led to global infeasibility\n", (void*) conflictset);
 
-         SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, prob, origprob, reopt, lp, blkmem) );
+         SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, eventfilter, tree, prob, origprob, reopt, lp, blkmem) );
 
          /* clear the memory array before freeing it */
          BMSclearMemoryArray(redundants, nbdchginfos);
@@ -1752,6 +1753,7 @@ SCIP_RETCODE conflictAddConflictCons(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_CONFLICTSET*     conflictset,        /**< conflict set to add to the tree */
    int                   insertdepth,        /**< depth level at which the conflict set should be added */
@@ -1789,7 +1791,7 @@ SCIP_RETCODE conflictAddConflictCons(
       SCIPclockStart(conflict->dIBclock, set);
 
       /* find global bound changes which can be derived from the new conflict set */
-      SCIP_CALL( detectImpliedBounds(set, transprob, stat, tree, blkmem, origprob, reopt, lp, conflictset, &nbdchgs, &nredvars, &redundant) );
+      SCIP_CALL( detectImpliedBounds(set, transprob, stat, tree, eventfilter, blkmem, origprob, reopt, lp, conflictset, &nbdchgs, &nredvars, &redundant) );
 
       /* all variables where removed, we have an infeasibility proof */
       if( conflictset->nbdchginfos == 0 )
@@ -1852,7 +1854,7 @@ SCIP_RETCODE conflictAddConflictCons(
          SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bound);
 
       SCIP_CALL( SCIPnodeAddBoundchg(tree->path[conflictset->validdepth], blkmem, set, stat, transprob, origprob, tree,
-            reopt, lp, branchcand, eventqueue, cliquetable, var, bound, boundtype, FALSE) );
+            reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, var, bound, boundtype, FALSE) );
 
       *success = TRUE;
       SCIP_CALL( updateStatistics(conflict, blkmem, set, stat, conflictset, insertdepth) );
@@ -1925,6 +1927,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    )
 {
@@ -2000,7 +2003,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
             SCIPsetDebugMsg(set, " -> empty conflict set in depth %d cuts off sub tree at depth %d\n",
                focusdepth, conflictset->validdepth);
 
-            SCIP_CALL( SCIPnodeCutoff(tree->path[conflictset->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+            SCIP_CALL( SCIPnodeCutoff(tree->path[conflictset->validdepth], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
             cutoffdepth = conflictset->validdepth;
             continue;
          }
@@ -2020,8 +2023,8 @@ SCIP_RETCODE SCIPconflictFlushConss(
             SCIP_Bool success;
 
             /* call conflict handlers to create a conflict constraint */
-            SCIP_CALL( conflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, \
-                  branchcand, eventqueue, cliquetable, conflictset, conflictset->insertdepth, &success) );
+            SCIP_CALL( conflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
+                  branchcand, eventqueue, eventfilter, cliquetable, conflictset, conflictset->insertdepth, &success) );
 
             /* if no conflict bounds exist, the node and its sub tree in the conflict set's valid depth can be
              * cut off completely
@@ -2033,8 +2036,8 @@ SCIP_RETCODE SCIPconflictFlushConss(
                SCIPsetDebugMsg(set, " -> empty conflict set in depth %d cuts off sub tree at depth %d\n",
                   focusdepth, conflictset->validdepth);
 
-               SCIP_CALL( SCIPnodeCutoff(tree->path[conflictset->validdepth], set, stat, tree, transprob, origprob, \
-                     reopt, lp, blkmem) );
+               SCIP_CALL( SCIPnodeCutoff(tree->path[conflictset->validdepth], set, stat, eventfilter, tree, transprob,
+                     origprob, reopt, lp, blkmem) );
                cutoffdepth = conflictset->validdepth;
                continue;
             }
@@ -2071,8 +2074,8 @@ SCIP_RETCODE SCIPconflictFlushConss(
             assert(repropconflictset->repropagate);
             assert(repropconflictset->repropdepth == repropdepth);
 
-            SCIP_CALL( conflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, \
-                  branchcand, eventqueue, cliquetable, repropconflictset, repropdepth, &success) );
+            SCIP_CALL( conflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
+                  branchcand, eventqueue, eventfilter, cliquetable, repropconflictset, repropdepth, &success) );
 
             /* if no conflict bounds exist, the node and its sub tree in the conflict set's valid depth can be
              * cut off completely
@@ -2084,8 +2087,8 @@ SCIP_RETCODE SCIPconflictFlushConss(
                SCIPsetDebugMsg(set, " -> empty reprop conflict set in depth %d cuts off sub tree at depth %d\n",
                   focusdepth, repropconflictset->validdepth);
 
-               SCIP_CALL( SCIPnodeCutoff(tree->path[repropconflictset->validdepth], set, stat, tree, transprob, \
-                     origprob, reopt, lp, blkmem) );
+               SCIP_CALL( SCIPnodeCutoff(tree->path[repropconflictset->validdepth], set, stat, eventfilter, tree,
+                     transprob, origprob, reopt, lp, blkmem) );
             }
 
 #ifdef SCIP_DEBUG
@@ -5076,6 +5079,7 @@ SCIP_RETCODE SCIPrunBoundHeuristic(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPI*             lpi,                /**< LPI data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Real*            proofcoefs,         /**< coefficients in the proof constraint */
    SCIP_Real*            prooflhs,           /**< lhs of the proof constraint */
@@ -5297,8 +5301,8 @@ SCIP_RETCODE SCIPrunBoundHeuristic(
                   conflict->conflictset->conflicttype = SCIP_CONFTYPE_INFEASLP;
 
                   /* start dual proof analysis */
-                  SCIP_CALL( SCIPconflictAnalyzeDualProof(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, \
-                        farkasrow, validdepth, curvarlbs, curvarubs, FALSE, &globalinfeasible, dualproofsuccess) );
+                  SCIP_CALL( SCIPconflictAnalyzeDualProof(conflict, set, stat, eventfilter, blkmem, origprob, transprob, tree, reopt,
+                        lp, farkasrow, validdepth, curvarlbs, curvarubs, FALSE, &globalinfeasible, dualproofsuccess) );
 
                   conflict->conflictset->conflicttype = oldconftype;
                }

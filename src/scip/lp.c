@@ -9744,7 +9744,7 @@ SCIP_RETCODE SCIPlpShrinkRows(
          /* check, if row deletion events are tracked
           * if so, issue ROWDELETEDLP event
           */
-         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )
+         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )  /*lint !e587*/
          {
             SCIP_EVENT* event;
 
@@ -15445,7 +15445,7 @@ SCIP_RETCODE lpDelRowset(
          /* check, if row deletion events are tracked
           * if so, issue ROWDELETEDLP event
           */
-         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )
+         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )  /*lint !e587*/
          {
             SCIP_EVENT* event;
 

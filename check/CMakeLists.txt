@@ -505,6 +505,8 @@ set(pairs_Issue
     "instances/Issue/3752.cip\;28066\;default"
     "instances/Issue/3787.lp\;1\;default"
     "instances/Issue/3832.cip\;0\;default"
+    # Test currently not working since problems with the relative check for presolved problems appear: https://git.zib.de/integer/scip/-/issues/3819
+    # "instances/Issue/3842.cip\;-16812.7692740365\;default"
 )
 
 #
@@ -882,6 +884,24 @@ if(NOT ${TPI} STREQUAL "none")
                                 DEPENDS scip-build
                             )
     endforeach(instance)
+    #
+    # repeat the test with egout several times, because when it used to fail, it wasn't doing this deterministically
+    #
+    set(path "instances/MIP/egout.mps")
+    set(optval "568.1007")
+    get_filename_component(basename ${path} NAME)
+    foreach(runid RANGE 9)
+       configure_file(interactiveshell/concurrentsolve.bat.in interactiveshell/concurrentsolve-egout-repeat${runid}.bat)
+       add_test(NAME MIP-concurrentsolve-egout-repeat${runid}
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-egout-repeat${runid}.bat
+               )
+       set_tests_properties(MIP-concurrentsolve-egout-repeat${runid}
+                            PROPERTIES
+                               PASS_REGULAR_EXPRESSION "Validation         : Success"
+                               FAIL_REGULAR_EXPRESSION "ERROR"
+                               DEPENDS scip-build
+                           )
+    endforeach()
 endif()
 
 #

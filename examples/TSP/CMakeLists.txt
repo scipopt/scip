@@ -9,7 +9,7 @@ else()
   find_package(SCIP REQUIRED)
 endif()
 
-include_directories(${SCIP_INCLUDE_DIRS})
+include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(sciptsp
    src/ConshdlrSubtour.cpp
@@ -23,6 +23,7 @@ add_executable(sciptsp
    src/ReaderTSP.cpp)
 
 target_link_libraries(sciptsp ${SCIP_LIBRARIES})
+target_compile_options(sciptsp PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if(ZLIB)
     find_package(ZLIB)

@@ -494,6 +494,10 @@ SCIP_Bool mpsinputReadLine(
          if( (mpsi->buf[i] == '\t') || (mpsi->buf[i] == '\n') || (mpsi->buf[i] == '\r') )
             mpsi->buf[i] = BLANK;
 
+      /* remove trailing whitespace, for len < 14 check to succeed on forplan.mps again */
+      while( len > 0 && mpsi->buf[len-1] == BLANK )
+         --len;
+
       if( len < 80 )
          clearFrom(mpsi->buf, len);
 
@@ -544,10 +548,10 @@ SCIP_Bool mpsinputReadLine(
                || isdigit((unsigned char)mpsi->buf[32]) || isdigit((unsigned char)mpsi->buf[33])
                || isdigit((unsigned char)mpsi->buf[34]) || isdigit((unsigned char)mpsi->buf[35]);
 
-            /* len < 14 is handle ROW lines with embedded spaces
+            /* len < 14 is to handle ROW lines with embedded spaces
              * in the names correctly
              */
-            if( number || len < 14 )
+            if( number || (len < 14 && mpsi->section == MPS_ROWS) )
             {
                /* We assume fixed format, so we patch possible embedded spaces. */
                patchField(mpsi->buf,  4, 12);
@@ -897,7 +901,8 @@ SCIP_RETCODE readRows(
       {
          if( *mpsinputObjname(mpsi) == '\0' )
             mpsinputSetObjname(mpsi, mpsinputField2(mpsi));
-         else
+         else if( strcmp(mpsinputObjname(mpsi), mpsinputField2(mpsi)) != 0 )
+            /* if OBJNAME was given and N-row is named differently, then warn that the N-row is not used as objective (OBJNAME takes precedence) */
             mpsinputEntryIgnored(scip, mpsi, "row", mpsinputField2(mpsi), "objective function", "N", SCIP_VERBLEVEL_NORMAL);
       }
       else

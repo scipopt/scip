@@ -2535,6 +2535,8 @@ SCIP_RETCODE SCIPbendersExit(
       SCIP_CALL( SCIPreleaseVar(set->scip, &benders->masterauxvar) );
    }
 
+   BMSfreeMemoryArrayNull(&benders->auxiliaryvarcons);
+
    /* if a corepoint has been used for cut strengthening, then this needs to be freed */
    if( benders->corepoint != NULL )
    {
@@ -2624,6 +2626,21 @@ SCIP_RETCODE SCIPbendersInitpre(
    assert(set != NULL);
    assert(stat != NULL);
 
+   /* the arrays for the auxiliary variables and constraints are not allocated at the activate stage. This is because
+    * SCIPbendersActivate can be called during SCIP_STAGE_PROBLEM. As such, the user may still change the objective type
+    * after the Benders' decomposition has been activated. The memory allocation occurs immediately before the variables
+    * are created, then freed in SCIPbendersExit.
+    */
+   if( benders->objectivetype == SCIP_BENDERSOBJTYPE_SUM )
+   {
+      SCIP_ALLOC( BMSallocClearMemoryArray(&benders->auxiliaryvarcons, 1) );
+   }
+   else
+   {
+      assert(benders->objectivetype == SCIP_BENDERSOBJTYPE_MAX);
+      SCIP_ALLOC( BMSallocClearMemoryArray(&benders->auxiliaryvarcons, benders->nsubproblems) );
+   }
+
    /* if the Benders' decomposition is the original, then the auxiliary variables need to be created. If the Benders'
     * decomposition is a copy, then the auxiliary variables already exist. The assignment of the auxiliary variables
     * occurs in bendersInit
@@ -2656,7 +2673,7 @@ SCIP_RETCODE SCIPbendersInitpre(
 }
 
 
-/** informs the Benders' decomposition that the presolving process has completed */
+/** informs the Benders ' decomposition that the presolving process has completed */
 SCIP_RETCODE SCIPbendersExitpre(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2805,14 +2822,6 @@ SCIP_RETCODE SCIPbendersActivate(
       SCIP_ALLOC( BMSallocMemoryArray(&benders->nsubmastervars, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->nsubmasterbinvars, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->nsubmasterintvars, benders->nsubproblems) );
-      if( benders->objectivetype == SCIP_BENDERSOBJTYPE_SUM )
-      {
-         SCIP_ALLOC( BMSallocMemoryArray(&benders->auxiliaryvarcons, 1) );
-      }
-      else
-      {
-         SCIP_ALLOC( BMSallocMemoryArray(&benders->auxiliaryvarcons, benders->nsubproblems) );
-      }
       SCIP_ALLOC( BMSallocMemoryArray(&benders->solvestat, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobobjval, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->bestsubprobobjval, benders->nsubproblems) );
@@ -2837,8 +2846,6 @@ SCIP_RETCODE SCIPbendersActivate(
 
          benders->subproblems[i] = NULL;
          benders->auxiliaryvars[i] = NULL;
-         if( benders->objectivetype == SCIP_BENDERSOBJTYPE_MAX )
-            benders->auxiliaryvarcons[i] = NULL;
          benders->submastervarssize[i] = BENDERS_MASTERVARARRAYSIZE;
          benders->nsubmastervars[i] = 0;
          benders->nsubmasterbinvars[i] = 0;
@@ -2865,8 +2872,6 @@ SCIP_RETCODE SCIPbendersActivate(
          SCIP_CALL( SCIPpqueueInsert(benders->subprobqueue, benders->solvestat[i]) );
       }
 
-      if( benders->objectivetype == SCIP_BENDERSOBJTYPE_SUM )
-         benders->auxiliaryvarcons[0] = NULL;
 
       if( SCIPsetFindEventhdlr(set, NODESOLVED_EVENTHDLR_NAME) == NULL )
       {
@@ -2944,7 +2949,6 @@ SCIP_RETCODE SCIPbendersDeactivate(
       BMSfreeMemoryArray(&benders->subproblowerbound);
       BMSfreeMemoryArray(&benders->bestsubprobobjval);
       BMSfreeMemoryArray(&benders->subprobobjval);
-      BMSfreeMemoryArray(&benders->auxiliaryvarcons);
       BMSfreeMemoryArray(&benders->solvestat);
       BMSfreeMemoryArray(&benders->nsubmasterintvars);
       BMSfreeMemoryArray(&benders->nsubmasterbinvars);

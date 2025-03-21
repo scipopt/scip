@@ -1895,6 +1895,7 @@ SCIP_RETCODE sortAndMergeClique(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    int*                  nbdchgs,            /**< pointer to store number of fixed variables */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
@@ -2011,7 +2012,7 @@ SCIP_RETCODE sortAndMergeClique(
 
          /* a variable multiple times in one clique forces this variable to be zero */
          SCIP_CALL( SCIPvarFixBinary(var, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-               cliquetable, fixvalue, infeasible, nbdchgs) );
+               eventfilter, cliquetable, fixvalue, infeasible, nbdchgs) );
 
          SCIPsetDebugMsg(set, "same var %s twice in a clique with value %d fixed to %d (was %s)\n", SCIPvarGetName(var), fixvalue ? 0 : 1,
                fixvalue ? 1 : 0, *infeasible ? "infeasible" : "feasible");
@@ -2065,7 +2066,7 @@ SCIP_RETCODE sortAndMergeClique(
                   SCIP_CALL( SCIPvarDelCliqueFromList(clqvars[w], blkmem, clqvalues[w], clique) );
                }
                SCIP_CALL( SCIPvarFixBinary(clqvars[w], blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-                     branchcand, eventqueue, cliquetable, !clqvalues[w], infeasible, nbdchgs) );
+                     branchcand, eventqueue, eventfilter, cliquetable, !clqvalues[w], infeasible, nbdchgs) );
 
                SCIPsetDebugMsg(set, "fixed var %s with value %u to %d (was %s)\n", SCIPvarGetName(clqvars[w]), clqvalues[w],
                   clqvalues[w] ? 0 : 1, *infeasible ? "infeasible" : "feasible");
@@ -2205,7 +2206,7 @@ SCIP_RETCODE sortAndMergeClique(
 
                /* note that the variable status will remain unchanged */
                SCIP_CALL( SCIPvarFixBinary(clqvars[startidx], blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-                     branchcand, eventqueue, cliquetable, !clqvalues[startidx], infeasible, nbdchgs) );
+                     branchcand, eventqueue, eventfilter, cliquetable, !clqvalues[startidx], infeasible, nbdchgs) );
 
                if( *infeasible )
                   return SCIP_OKAY;
@@ -2243,7 +2244,7 @@ SCIP_RETCODE sortAndMergeClique(
             SCIP_CALL( SCIPvarDelCliqueFromList(clqvars[0], blkmem, clqvalues[0], clique) );
          }
          SCIP_CALL( SCIPvarFixBinary(clqvars[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
-               eventqueue, cliquetable, clqvalues[0], infeasible, nbdchgs) );
+               eventqueue, eventfilter, cliquetable, clqvalues[0], infeasible, nbdchgs) );
 
          SCIPsetDebugMsg(set, "fixed last clique var %s with value %u to %d (was %s)\n", SCIPvarGetName(clqvars[0]), clqvalues[0],
             clqvalues[0] ? 1 : 0, *infeasible ? "infeasible" : "feasible");
@@ -2385,6 +2386,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR**            vars,               /**< binary variables in the clique: at most one can be set to the given value */
    SCIP_Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
    int                   nvars,              /**< number of variables in the clique */
@@ -2493,7 +2495,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
                /* fix the variable */
                SCIP_CALL( SCIPvarFixBinary(clqvar, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-                     branchcand, eventqueue, cliquetable, !clqval, infeasible, &nlocalbdchgs) );
+                     branchcand, eventqueue, eventfilter, cliquetable, !clqval, infeasible, &nlocalbdchgs) );
 
                SCIPsetDebugMsg(set, "fixed var %s with value %u to %d (was %s)\n", SCIPvarGetName(clqvar), clqval,
                   clqval ? 0 : 1, *infeasible ? "infeasible" : "feasible");
@@ -2538,7 +2540,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
             nlocalbdchgs = 0;
 
             SCIP_CALL( SCIPvarFixBinary(clqvars[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-                  branchcand, eventqueue, cliquetable, clqvalues[0], infeasible, &nlocalbdchgs) );
+                  branchcand, eventqueue, eventfilter, cliquetable, clqvalues[0], infeasible, &nlocalbdchgs) );
 
             SCIPsetDebugMsg(set, "fixed last clique var %s with value %u to %d (was %s)\n", SCIPvarGetName(clqvars[0]), clqvalues[0],
                clqvalues[0] ? 1 : 0, *infeasible ? "infeasible" : "feasible");
@@ -2561,7 +2563,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
    /* sort the variables and values and remove multiple entries of the same variable */
    SCIP_CALL( sortAndMergeClique(clqvars, clqvalues, &nvars, &isequation, NULL, blkmem, set, stat, transprob, origprob, tree,
-         reopt, lp, branchcand, eventqueue, cliquetable, &nlocalbdchgs, infeasible) );
+         reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, &nlocalbdchgs, infeasible) );
 
    if( nbdchgs != NULL )
       *nbdchgs += nlocalbdchgs;
@@ -2655,6 +2657,7 @@ SCIP_RETCODE cliqueCleanup(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    int*                  nchgbds,            /**< pointer to store number of fixed variables */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
@@ -2821,7 +2824,7 @@ SCIP_RETCODE cliqueCleanup(
                SCIPsetDebugMsg(set, "fixing variable %s in clique %u to %d\n", SCIPvarGetName(clqvar), clique->id, clqval ? 0 : 1);
 
                SCIP_CALL( SCIPvarFixBinary(clqvar, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
-                     eventqueue, cliquetable, !clqval, infeasible, nchgbds) );
+                     eventqueue, eventfilter, cliquetable, !clqval, infeasible, nchgbds) );
 
                if( *infeasible )
                   return SCIP_OKAY;
@@ -2860,7 +2863,7 @@ SCIP_RETCODE cliqueCleanup(
                clique->values[0] ? 1 : 0);
 
             SCIP_CALL( SCIPvarFixBinary(clique->vars[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-                  branchcand, eventqueue, cliquetable, clique->values[0], infeasible, nchgbds) );
+                  branchcand, eventqueue, eventfilter, cliquetable, clique->values[0], infeasible, nchgbds) );
 
             clique->nvars = 0;
             clique->equation = FALSE;
@@ -2876,7 +2879,7 @@ SCIP_RETCODE cliqueCleanup(
 
          /* remove multiple entries of the same variable */
          SCIP_CALL( sortAndMergeClique(clique->vars, clique->values, &(clique->nvars), &isequation, clique, blkmem, set, stat,
-               transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, nchgbds, infeasible) );
+               transprob, origprob, tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, nchgbds, infeasible) );
 
          clique->equation = isequation;
       }
@@ -2929,6 +2932,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int*                  nchgbds,            /**< pointer to store number of fixed variables */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
@@ -2966,7 +2970,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       assert(cliquetable->nentries >= 0);
 
       SCIP_CALL( cliqueCleanup(clique, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-            cliquetable, nchgbds, infeasible) );
+            eventfilter, cliquetable, nchgbds, infeasible) );
 
       if( *infeasible )
          break;
@@ -3039,8 +3043,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
          /* aggregate the variable */
          SCIP_CALL( SCIPvarTryAggregateVars(set, blkmem, stat, transprob, origprob, primal,
-	    tree, lp, cliquetable, branchcand, eventfilter, eventqueue,
-	    var0, var1, scalarx, scalary, rhs, infeasible, &aggregated) );
+               tree, lp, cliquetable, branchcand, eventqueue, eventfilter,
+               var0, var1, scalarx, scalary, rhs, infeasible, &aggregated) );
 
          assert(aggregated || *infeasible);
       }

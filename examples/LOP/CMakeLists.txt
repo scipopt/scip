@@ -10,7 +10,7 @@ else()
   find_package(SCIP REQUIRED)
 endif()
 
-include_directories(${SCIP_INCLUDE_DIRS})
+include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(lop
    src/cmain.c
@@ -18,6 +18,7 @@ add_executable(lop
    src/reader_lop.c)
 
 target_link_libraries(lop ${SCIP_LIBRARIES})
+target_compile_options(lop PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET examples )
     add_dependencies( examples lop )

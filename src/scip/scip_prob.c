@@ -1314,8 +1314,8 @@ SCIP_RETCODE SCIPaddObjoffset(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddObjoffset", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPprobAddObjoffset(scip->transprob, addval);
-   SCIP_CALL( SCIPprimalUpdateObjoffset(scip->primal, SCIPblkmem(scip), scip->set, scip->stat, scip->eventfilter,
-         scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+   SCIP_CALL( SCIPprimalUpdateObjoffset(scip->primal, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue,
+         scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
 
    return SCIP_OKAY;
 }
@@ -1484,8 +1484,8 @@ SCIP_RETCODE SCIPsetObjlimit(
       }
       SCIPprobSetObjlim(scip->origprob, objlimit);
       SCIPprobSetObjlim(scip->transprob, objlimit);
-      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-            scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+            scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
       break;
 
    case SCIP_STAGE_TRANSFORMED:
@@ -1502,8 +1502,8 @@ SCIP_RETCODE SCIPsetObjlimit(
       }
       SCIPprobSetObjlim(scip->origprob, objlimit);
       SCIPprobSetObjlim(scip->transprob, objlimit);
-      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-            scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+            scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
       break;
 
    default:
@@ -1734,7 +1734,7 @@ SCIP_RETCODE SCIPaddVar(
          return SCIP_INVALIDDATA;
       }
       SCIP_CALL( SCIPprobAddVar(scip->origprob, scip->mem->probmem, scip->set, scip->lp, scip->branchcand,
-            scip->eventfilter, scip->eventqueue, var) );
+            scip->eventqueue, scip->eventfilter, var) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -1755,7 +1755,7 @@ SCIP_RETCODE SCIPaddVar(
          return SCIP_INVALIDDATA;
       }
       SCIP_CALL( SCIPprobAddVar(scip->transprob, scip->mem->probmem, scip->set, scip->lp,
-            scip->branchcand, scip->eventfilter, scip->eventqueue, var) );
+            scip->branchcand, scip->eventqueue, scip->eventfilter, var) );
       return SCIP_OKAY;
 
    default:
@@ -1802,7 +1802,7 @@ SCIP_RETCODE SCIPaddPricedVar(
          return SCIP_INVALIDDATA;
       }
       SCIP_CALL( SCIPprobAddVar(scip->transprob, scip->mem->probmem, scip->set, scip->lp,
-            scip->branchcand, scip->eventfilter, scip->eventqueue, var) );
+            scip->branchcand, scip->eventqueue, scip->eventfilter, var) );
    }
 
    /* add variable to pricing storage */
@@ -2216,7 +2216,6 @@ int SCIPgetNImplVars(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_EXPORT
 int SCIPgetNBinImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -2262,7 +2261,6 @@ int SCIPgetNBinImplVars(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_EXPORT
 int SCIPgetNIntImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -2308,7 +2306,6 @@ int SCIPgetNIntImplVars(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_EXPORT
 int SCIPgetNContImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -3968,10 +3965,12 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
     * function instead of in SCIPnodeUpdateLowerbound().
     */
    if( SCIPisLT(scip, newbound, scip->primal->cutoffbound) )
-      SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->tree, scip->transprob, scip->origprob, newbound);
+   {
+      SCIP_CALL( SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->eventfilter, scip->tree, scip->transprob, scip->origprob, newbound) );
+   }
    else
    {
-      SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree, scip->transprob, scip->origprob, scip->reopt, scip->lp, scip->mem->probmem) );
+      SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->eventfilter, scip->tree, scip->transprob, scip->origprob, scip->reopt, scip->lp, scip->mem->probmem) );
    }
 
    return SCIP_OKAY;

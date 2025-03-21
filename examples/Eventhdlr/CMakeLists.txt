@@ -9,7 +9,7 @@ else()
   find_package(SCIP REQUIRED)
 endif()
 
-include_directories(${SCIP_INCLUDE_DIRS})
+include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(eventhdlr
    src/cmain.c
@@ -17,6 +17,7 @@ add_executable(eventhdlr
    src/event_boundwriting.c)
 
 target_link_libraries(eventhdlr ${SCIP_LIBRARIES})
+target_compile_options(eventhdlr PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET examples )
     add_dependencies( examples eventhdlr )
