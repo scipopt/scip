@@ -1,0 +1,347 @@
+STATISTICS
+  Problem name     : model
+  Variables        : 212 (212 binary, 0 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 126 maximal
+OBJECTIVE
+  Sense            : maximize
+VARIABLES
+  [binary] <x1>: obj=171118101060547, original bounds=[0,1]
+  [binary] <x2>: obj=171118235688164, original bounds=[0,1]
+  [binary] <x3>: obj=171118101060545, original bounds=[0,1]
+  [binary] <x4>: obj=171118245315882, original bounds=[0,1]
+  [binary] <x5>: obj=171118101060543, original bounds=[0,1]
+  [binary] <x6>: obj=171118245315880, original bounds=[0,1]
+  [binary] <x7>: obj=171118101060541, original bounds=[0,1]
+  [binary] <x8>: obj=171118245315878, original bounds=[0,1]
+  [binary] <x9>: obj=171118101060539, original bounds=[0,1]
+  [binary] <x10>: obj=171118245315876, original bounds=[0,1]
+  [binary] <x11>: obj=171118101060537, original bounds=[0,1]
+  [binary] <x12>: obj=171118245315874, original bounds=[0,1]
+  [binary] <x13>: obj=171118101060535, original bounds=[0,1]
+  [binary] <x14>: obj=171118245315872, original bounds=[0,1]
+  [binary] <x15>: obj=171118101060533, original bounds=[0,1]
+  [binary] <x16>: obj=171118245315870, original bounds=[0,1]
+  [binary] <x17>: obj=171118101060531, original bounds=[0,1]
+  [binary] <x18>: obj=171118245315868, original bounds=[0,1]
+  [binary] <x19>: obj=171118091272347, original bounds=[0,1]
+  [binary] <x20>: obj=171118235688146, original bounds=[0,1]
+  [binary] <x21>: obj=171118081644625, original bounds=[0,1]
+  [binary] <x22>: obj=171118226060424, original bounds=[0,1]
+  [binary] <x23>: obj=171118072016903, original bounds=[0,1]
+  [binary] <x24>: obj=171118206804982, original bounds=[0,1]
+  [binary] <x25>: obj=171118091272341, original bounds=[0,1]
+  [binary] <x26>: obj=171118187549540, original bounds=[0,1]
+  [binary] <x27>: obj=171118091272339, original bounds=[0,1]
+  [binary] <x28>: obj=171118235688138, original bounds=[0,1]
+  [binary] <x29>: obj=171118101060519, original bounds=[0,1]
+  [binary] <x30>: obj=171118245315856, original bounds=[0,1]
+  [binary] <x31>: obj=171118101060517, original bounds=[0,1]
+  [binary] <x32>: obj=171118245315854, original bounds=[0,1]
+  [binary] <x33>: obj=171118101060515, original bounds=[0,1]
+  [binary] <x34>: obj=171118245315852, original bounds=[0,1]
+  [binary] <x35>: obj=171118101060513, original bounds=[0,1]
+  [binary] <x36>: obj=171118245315850, original bounds=[0,1]
+  [binary] <x37>: obj=171118101060511, original bounds=[0,1]
+  [binary] <x38>: obj=171118245315848, original bounds=[0,1]
+  [binary] <x39>: obj=171118101060509, original bounds=[0,1]
+  [binary] <x40>: obj=171118245315846, original bounds=[0,1]
+  [binary] <x41>: obj=171118101060507, original bounds=[0,1]
+  [binary] <x42>: obj=171118245315844, original bounds=[0,1]
+  [binary] <x43>: obj=171118101060505, original bounds=[0,1]
+  [binary] <x44>: obj=171118245315842, original bounds=[0,1]
+  [binary] <x45>: obj=171118091272321, original bounds=[0,1]
+  [binary] <x46>: obj=171118235688120, original bounds=[0,1]
+  [binary] <x47>: obj=171118081644599, original bounds=[0,1]
+  [binary] <x48>: obj=171118216432678, original bounds=[0,1]
+  [binary] <x49>: obj=171118081644597, original bounds=[0,1]
+  [binary] <x50>: obj=171118197177236, original bounds=[0,1]
+  [binary] <x51>: obj=171118101060497, original bounds=[0,1]
+  [binary] <x52>: obj=171118235688114, original bounds=[0,1]
+  [binary] <x53>: obj=171118101060495, original bounds=[0,1]
+  [binary] <x54>: obj=171118245315832, original bounds=[0,1]
+  [binary] <x55>: obj=171118101060493, original bounds=[0,1]
+  [binary] <x56>: obj=171118245315830, original bounds=[0,1]
+  [binary] <x57>: obj=171118101060491, original bounds=[0,1]
+  [binary] <x58>: obj=171118245315828, original bounds=[0,1]
+  [binary] <x59>: obj=171118101060489, original bounds=[0,1]
+  [binary] <x60>: obj=171118245315826, original bounds=[0,1]
+  [binary] <x61>: obj=171118101060487, original bounds=[0,1]
+  [binary] <x62>: obj=171118245315824, original bounds=[0,1]
+  [binary] <x63>: obj=171118101060485, original bounds=[0,1]
+  [binary] <x64>: obj=171118245315822, original bounds=[0,1]
+  [binary] <x65>: obj=171118101060483, original bounds=[0,1]
+  [binary] <x66>: obj=171118245315820, original bounds=[0,1]
+  [binary] <x67>: obj=171118101060481, original bounds=[0,1]
+  [binary] <x68>: obj=171118245315818, original bounds=[0,1]
+  [binary] <x69>: obj=171118101060479, original bounds=[0,1]
+  [binary] <x70>: obj=171118245315816, original bounds=[0,1]
+  [binary] <x71>: obj=171118091272295, original bounds=[0,1]
+  [binary] <x72>: obj=171118235688094, original bounds=[0,1]
+  [binary] <x73>: obj=171118081644573, original bounds=[0,1]
+  [binary] <x74>: obj=171118216432652, original bounds=[0,1]
+  [binary] <x75>: obj=171118081644571, original bounds=[0,1]
+  [binary] <x76>: obj=171118197177210, original bounds=[0,1]
+  [binary] <x77>: obj=171118101060471, original bounds=[0,1]
+  [binary] <x78>: obj=171118235688088, original bounds=[0,1]
+  [binary] <x79>: obj=171118101060469, original bounds=[0,1]
+  [binary] <x80>: obj=171118245315806, original bounds=[0,1]
+  [binary] <x81>: obj=171118101060467, original bounds=[0,1]
+  [binary] <x82>: obj=171118245315804, original bounds=[0,1]
+  [binary] <x83>: obj=171118101060465, original bounds=[0,1]
+  [binary] <x84>: obj=171118245315802, original bounds=[0,1]
+  [binary] <x85>: obj=171118101060463, original bounds=[0,1]
+  [binary] <x86>: obj=171118245315800, original bounds=[0,1]
+  [binary] <x87>: obj=171118101060461, original bounds=[0,1]
+  [binary] <x88>: obj=171118245315798, original bounds=[0,1]
+  [binary] <x89>: obj=171118101060459, original bounds=[0,1]
+  [binary] <x90>: obj=171118245315796, original bounds=[0,1]
+  [binary] <x91>: obj=171118101060457, original bounds=[0,1]
+  [binary] <x92>: obj=171118245315794, original bounds=[0,1]
+  [binary] <x93>: obj=171118101060455, original bounds=[0,1]
+  [binary] <x94>: obj=171118245315792, original bounds=[0,1]
+  [binary] <x95>: obj=171118101060453, original bounds=[0,1]
+  [binary] <x96>: obj=171118245315790, original bounds=[0,1]
+  [binary] <x97>: obj=171118091272269, original bounds=[0,1]
+  [binary] <x98>: obj=171118235688068, original bounds=[0,1]
+  [binary] <x99>: obj=171118081644547, original bounds=[0,1]
+  [binary] <x100>: obj=171118216432626, original bounds=[0,1]
+  [binary] <x101>: obj=171118081644545, original bounds=[0,1]
+  [binary] <x102>: obj=171118197177184, original bounds=[0,1]
+  [binary] <x103>: obj=171118101060445, original bounds=[0,1]
+  [binary] <x104>: obj=171118235688062, original bounds=[0,1]
+  [binary] <x105>: obj=171118101060443, original bounds=[0,1]
+  [binary] <x106>: obj=171118245315780, original bounds=[0,1]
+  [binary] <x107>: obj=171118101060441, original bounds=[0,1]
+  [binary] <x108>: obj=171118245315778, original bounds=[0,1]
+  [binary] <x109>: obj=171118101060439, original bounds=[0,1]
+  [binary] <x110>: obj=171118245315776, original bounds=[0,1]
+  [binary] <x111>: obj=171118101060437, original bounds=[0,1]
+  [binary] <x112>: obj=171118245315774, original bounds=[0,1]
+  [binary] <x113>: obj=171118101060435, original bounds=[0,1]
+  [binary] <x114>: obj=171118245315772, original bounds=[0,1]
+  [binary] <x115>: obj=171118101060433, original bounds=[0,1]
+  [binary] <x116>: obj=171118245315770, original bounds=[0,1]
+  [binary] <x117>: obj=171118101060431, original bounds=[0,1]
+  [binary] <x118>: obj=171118245315768, original bounds=[0,1]
+  [binary] <x119>: obj=171118101060429, original bounds=[0,1]
+  [binary] <x120>: obj=171118245315766, original bounds=[0,1]
+  [binary] <x121>: obj=171118091272245, original bounds=[0,1]
+  [binary] <x122>: obj=171118235688044, original bounds=[0,1]
+  [binary] <x123>: obj=171118081644523, original bounds=[0,1]
+  [binary] <x124>: obj=171118226060322, original bounds=[0,1]
+  [binary] <x125>: obj=171118072016801, original bounds=[0,1]
+  [binary] <x126>: obj=171118206804880, original bounds=[0,1]
+  [binary] <x127>: obj=171118091272239, original bounds=[0,1]
+  [binary] <x128>: obj=171118187549438, original bounds=[0,1]
+  [binary] <x129>: obj=171118091272237, original bounds=[0,1]
+  [binary] <x130>: obj=171118235688036, original bounds=[0,1]
+  [binary] <x131>: obj=171118101060417, original bounds=[0,1]
+  [binary] <x132>: obj=171118245315754, original bounds=[0,1]
+  [binary] <x133>: obj=171118101060415, original bounds=[0,1]
+  [binary] <x134>: obj=171118245315752, original bounds=[0,1]
+  [binary] <x135>: obj=171118101060413, original bounds=[0,1]
+  [binary] <x136>: obj=171118245315750, original bounds=[0,1]
+  [binary] <x137>: obj=171118101060411, original bounds=[0,1]
+  [binary] <x138>: obj=171118245315748, original bounds=[0,1]
+  [binary] <x139>: obj=171118101060409, original bounds=[0,1]
+  [binary] <x140>: obj=171118245315746, original bounds=[0,1]
+  [binary] <x141>: obj=171118101060407, original bounds=[0,1]
+  [binary] <x142>: obj=171118245315744, original bounds=[0,1]
+  [binary] <x143>: obj=171118101060405, original bounds=[0,1]
+  [binary] <x144>: obj=171118245315742, original bounds=[0,1]
+  [binary] <x145>: obj=171118101060403, original bounds=[0,1]
+  [binary] <x146>: obj=171118245315740, original bounds=[0,1]
+  [binary] <x147>: obj=171118091272219, original bounds=[0,1]
+  [binary] <x148>: obj=171118235688018, original bounds=[0,1]
+  [binary] <x149>: obj=171118081644497, original bounds=[0,1]
+  [binary] <x150>: obj=171118216432576, original bounds=[0,1]
+  [binary] <x151>: obj=171118081644495, original bounds=[0,1]
+  [binary] <x152>: obj=171118197177134, original bounds=[0,1]
+  [binary] <x153>: obj=171118101060395, original bounds=[0,1]
+  [binary] <x154>: obj=171118235688012, original bounds=[0,1]
+  [binary] <x155>: obj=171118101060393, original bounds=[0,1]
+  [binary] <x156>: obj=171118245315730, original bounds=[0,1]
+  [binary] <x157>: obj=171118101060391, original bounds=[0,1]
+  [binary] <x158>: obj=171118245315728, original bounds=[0,1]
+  [binary] <x159>: obj=171118101060389, original bounds=[0,1]
+  [binary] <x160>: obj=171118245315726, original bounds=[0,1]
+  [binary] <x161>: obj=171118101060387, original bounds=[0,1]
+  [binary] <x162>: obj=171118245315724, original bounds=[0,1]
+  [binary] <x163>: obj=171118101060385, original bounds=[0,1]
+  [binary] <x164>: obj=171118245315722, original bounds=[0,1]
+  [binary] <x165>: obj=171118101060383, original bounds=[0,1]
+  [binary] <x166>: obj=171118245315720, original bounds=[0,1]
+  [binary] <x167>: obj=171118101060381, original bounds=[0,1]
+  [binary] <x168>: obj=171118245315718, original bounds=[0,1]
+  [binary] <x169>: obj=171118101060379, original bounds=[0,1]
+  [binary] <x170>: obj=171118245315716, original bounds=[0,1]
+  [binary] <x171>: obj=171118101060377, original bounds=[0,1]
+  [binary] <x172>: obj=171118245315714, original bounds=[0,1]
+  [binary] <x173>: obj=171118091272193, original bounds=[0,1]
+  [binary] <x174>: obj=171118235687992, original bounds=[0,1]
+  [binary] <x175>: obj=171118081644471, original bounds=[0,1]
+  [binary] <x176>: obj=171118216432550, original bounds=[0,1]
+  [binary] <x177>: obj=171118081644469, original bounds=[0,1]
+  [binary] <x178>: obj=171118197177108, original bounds=[0,1]
+  [binary] <x179>: obj=171118101060369, original bounds=[0,1]
+  [binary] <x180>: obj=171118235687986, original bounds=[0,1]
+  [binary] <x181>: obj=171118101060367, original bounds=[0,1]
+  [binary] <x182>: obj=171118245315704, original bounds=[0,1]
+  [binary] <x183>: obj=171118101060365, original bounds=[0,1]
+  [binary] <x184>: obj=171118245315702, original bounds=[0,1]
+  [binary] <x185>: obj=171118101060363, original bounds=[0,1]
+  [binary] <x186>: obj=171118245315700, original bounds=[0,1]
+  [binary] <x187>: obj=171118101060361, original bounds=[0,1]
+  [binary] <x188>: obj=171118245315698, original bounds=[0,1]
+  [binary] <x189>: obj=171118101060359, original bounds=[0,1]
+  [binary] <x190>: obj=171118245315696, original bounds=[0,1]
+  [binary] <x191>: obj=171118101060357, original bounds=[0,1]
+  [binary] <x192>: obj=171118245315694, original bounds=[0,1]
+  [binary] <x193>: obj=171118101060355, original bounds=[0,1]
+  [binary] <x194>: obj=171118245315692, original bounds=[0,1]
+  [binary] <x195>: obj=171118101060353, original bounds=[0,1]
+  [binary] <x196>: obj=171118245315690, original bounds=[0,1]
+  [binary] <x197>: obj=171118101060351, original bounds=[0,1]
+  [binary] <x198>: obj=171118245315688, original bounds=[0,1]
+  [binary] <x199>: obj=171118091272167, original bounds=[0,1]
+  [binary] <x200>: obj=171118235687966, original bounds=[0,1]
+  [binary] <x201>: obj=171118081644445, original bounds=[0,1]
+  [binary] <x202>: obj=171118216432524, original bounds=[0,1]
+  [binary] <x203>: obj=171118081644443, original bounds=[0,1]
+  [binary] <x204>: obj=171118197177082, original bounds=[0,1]
+  [binary] <x205>: obj=171118101060343, original bounds=[0,1]
+  [binary] <x206>: obj=171118235687960, original bounds=[0,1]
+  [binary] <x207>: obj=171118101060341, original bounds=[0,1]
+  [binary] <x208>: obj=171118245315678, original bounds=[0,1]
+  [binary] <x209>: obj=171118101060339, original bounds=[0,1]
+  [binary] <x210>: obj=171118245315676, original bounds=[0,1]
+  [binary] <x211>: obj=171118101060337, original bounds=[0,1]
+  [binary] <x212>: obj=171118235687954, original bounds=[0,1]
+CONSTRAINTS
+  [linear] <c18>: <x201>[B] +<x202>[B] +<x203>[B] +<x204>[B] +<x205>[B] +<x206>[B] +<x207>[B] +<x208>[B] +<x209>[B] == 1;
+  [linear] <c19>: <x1>[B] +<x2>[B] +<x3>[B] +<x4>[B] +<x5>[B] +<x6>[B] == 1;
+  [linear] <c20>: <x15>[B] +<x16>[B] +<x17>[B] +<x18>[B] +<x19>[B] +<x20>[B] +<x21>[B] +<x22>[B] +<x23>[B] == 1;
+  [linear] <c21>: <x188>[B] +<x189>[B] +<x190>[B] +<x191>[B] +<x192>[B] +<x193>[B] +<x194>[B] == 1;
+  [linear] <c22>: <x93>[B] +<x94>[B] +<x95>[B] +<x96>[B] +<x97>[B] +<x98>[B] +<x99>[B] +<x100>[B] +<x101>[B] == 1;
+  [linear] <c23>: <x105>[B] +<x106>[B] +<x107>[B] +<x108>[B] +<x109>[B] +<x110>[B] +<x111>[B] +<x112>[B] +<x113>[B] == 1;
+  [linear] <c24>: <x91>[B] +<x92>[B] +<x93>[B] +<x94>[B] +<x95>[B] +<x96>[B] +<x97>[B] +<x98>[B] +<x99>[B] == 1;
+  [linear] <c25>: <x200>[B] +<x201>[B] +<x202>[B] +<x203>[B] +<x204>[B] +<x205>[B] +<x206>[B] == 1;
+  [linear] <c26>: <x44>[B] +<x45>[B] +<x46>[B] +<x47>[B] +<x48>[B] +<x49>[B] +<x50>[B] == 1;
+  [linear] <c27>: <x52>[B] +<x53>[B] +<x54>[B] +<x55>[B] +<x56>[B] +<x57>[B] +<x58>[B] == 1;
+  [linear] <c28>: <x186>[B] +<x187>[B] +<x188>[B] +<x189>[B] +<x190>[B] +<x191>[B] +<x192>[B] == 1;
+  [linear] <c29>: <x174>[B] +<x175>[B] +<x176>[B] +<x177>[B] +<x178>[B] +<x179>[B] +<x180>[B] == 1;
+  [linear] <c30>: <x51>[B] +<x52>[B] +<x53>[B] +<x54>[B] +<x55>[B] +<x56>[B] +<x57>[B] +<x58>[B] +<x59>[B] == 1;
+  [linear] <c31>: <x143>[B] +<x144>[B] +<x145>[B] +<x146>[B] +<x147>[B] +<x148>[B] +<x149>[B] +<x150>[B] +<x151>[B] == 1;
+  [linear] <c32>: <x134>[B] +<x135>[B] +<x136>[B] +<x137>[B] +<x138>[B] +<x139>[B] +<x140>[B] == 1;
+  [linear] <c33>: <x27>[B] +<x28>[B] +<x29>[B] +<x30>[B] +<x31>[B] +<x32>[B] +<x33>[B] +<x34>[B] +<x35>[B] == 1;
+  [linear] <c34>: <x141>[B] +<x142>[B] +<x143>[B] +<x144>[B] +<x145>[B] +<x146>[B] +<x147>[B] +<x148>[B] +<x149>[B] <= 1;
+  [linear] <c35>: <x148>[B] +<x149>[B] +<x150>[B] +<x151>[B] +<x152>[B] +<x153>[B] +<x154>[B] <= 1;
+  [linear] <c36>: <x1>[B] +<x2>[B] +<x3>[B] +<x4>[B] <= 1;
+  [linear] <c37>: <x210>[B] +<x211>[B] +<x212>[B] <= 1;
+  [linear] <c38>: <x68>[B] +<x69>[B] +<x70>[B] +<x71>[B] +<x72>[B] +<x73>[B] +<x74>[B] <= 1;
+  [linear] <c39>: <x172>[B] +<x173>[B] +<x174>[B] +<x175>[B] +<x176>[B] +<x177>[B] +<x178>[B] <= 1;
+  [linear] <c40>: <x146>[B] +<x147>[B] +<x148>[B] +<x149>[B] +<x150>[B] +<x151>[B] +<x152>[B] <= 1;
+  [linear] <c41>: <x178>[B] +<x179>[B] +<x180>[B] +<x181>[B] +<x182>[B] +<x183>[B] +<x184>[B] <= 1;
+  [linear] <c42>: <x129>[B] +<x130>[B] +<x131>[B] +<x132>[B] +<x133>[B] +<x134>[B] +<x135>[B] +<x136>[B] +<x137>[B] == 1;
+  [linear] <c43>: <x50>[B] +<x51>[B] +<x52>[B] +<x53>[B] +<x54>[B] +<x55>[B] +<x56>[B] == 1;
+  [linear] <c44>: <x179>[B] +<x180>[B] +<x181>[B] +<x182>[B] +<x183>[B] +<x184>[B] +<x185>[B] +<x186>[B] +<x187>[B] == 1;
+  [linear] <c45>: <x47>[B] +<x48>[B] +<x49>[B] +<x50>[B] +<x51>[B] +<x52>[B] +<x53>[B] +<x54>[B] +<x55>[B] == 1;
+  [linear] <c46>: <x125>[B] +<x126>[B] +<x127>[B] +<x128>[B] +<x129>[B] +<x130>[B] +<x131>[B] +<x132>[B] +<x133>[B] == 1;
+  [linear] <c47>: <x57>[B] +<x58>[B] +<x59>[B] +<x60>[B] +<x61>[B] +<x62>[B] +<x63>[B] +<x64>[B] +<x65>[B] == 1;
+  [linear] <c48>: <x29>[B] +<x30>[B] +<x31>[B] +<x32>[B] +<x33>[B] +<x34>[B] +<x35>[B] +<x36>[B] +<x37>[B] == 1;
+  [linear] <c49>: <x110>[B] +<x111>[B] +<x112>[B] +<x113>[B] +<x114>[B] +<x115>[B] +<x116>[B] == 1;
+  [linear] <c50>: <x211>[B] +<x212>[B] == 1;
+  [linear] <c51>: <x96>[B] +<x97>[B] +<x98>[B] +<x99>[B] +<x100>[B] +<x101>[B] +<x102>[B] == 1;
+  [linear] <c52>: <x123>[B] +<x124>[B] +<x125>[B] +<x126>[B] +<x127>[B] +<x128>[B] +<x129>[B] +<x130>[B] +<x131>[B] == 1;
+  [linear] <c53>: <x136>[B] +<x137>[B] +<x138>[B] +<x139>[B] +<x140>[B] +<x141>[B] +<x142>[B] == 1;
+  [linear] <c54>: <x69>[B] +<x70>[B] +<x71>[B] +<x72>[B] +<x73>[B] +<x74>[B] +<x75>[B] +<x76>[B] +<x77>[B] == 1;
+  [linear] <c55>: <x128>[B] +<x129>[B] +<x130>[B] +<x131>[B] +<x132>[B] +<x133>[B] +<x134>[B] == 1;
+  [linear] <c56>: <x42>[B] +<x43>[B] +<x44>[B] +<x45>[B] +<x46>[B] +<x47>[B] +<x48>[B] == 1;
+  [linear] <c57>: <x46>[B] +<x47>[B] +<x48>[B] +<x49>[B] +<x50>[B] +<x51>[B] +<x52>[B] == 1;
+  [linear] <c58>: <x99>[B] +<x100>[B] +<x101>[B] +<x102>[B] +<x103>[B] +<x104>[B] +<x105>[B] +<x106>[B] +<x107>[B] == 1;
+  [linear] <c59>: <x157>[B] +<x158>[B] +<x159>[B] +<x160>[B] +<x161>[B] +<x162>[B] +<x163>[B] +<x164>[B] +<x165>[B] == 1;
+  [linear] <c60>: <x117>[B] +<x118>[B] +<x119>[B] +<x120>[B] +<x121>[B] +<x122>[B] +<x123>[B] +<x124>[B] +<x125>[B] == 1;
+  [linear] <c61>: <x206>[B] +<x207>[B] +<x208>[B] +<x209>[B] +<x210>[B] +<x211>[B] +<x212>[B] == 1;
+  [linear] <c62>: <x10>[B] +<x11>[B] +<x12>[B] +<x13>[B] +<x14>[B] +<x15>[B] +<x16>[B] == 1;
+  [linear] <c63>: <x207>[B] +<x208>[B] +<x209>[B] +<x210>[B] +<x211>[B] +<x212>[B] == 1;
+  [linear] <c64>: <x83>[B] +<x84>[B] +<x85>[B] +<x86>[B] +<x87>[B] +<x88>[B] +<x89>[B] +<x90>[B] +<x91>[B] == 1;
+  [linear] <c65>: <x56>[B] +<x57>[B] +<x58>[B] +<x59>[B] +<x60>[B] +<x61>[B] +<x62>[B] == 1;
+  [linear] <c66>: <x113>[B] +<x114>[B] +<x115>[B] +<x116>[B] +<x117>[B] +<x118>[B] +<x119>[B] +<x120>[B] +<x121>[B] == 1;
+  [linear] <c67>: <x161>[B] +<x162>[B] +<x163>[B] +<x164>[B] +<x165>[B] +<x166>[B] +<x167>[B] +<x168>[B] +<x169>[B] == 1;
+  [linear] <c68>: <x64>[B] +<x65>[B] +<x66>[B] +<x67>[B] +<x68>[B] +<x69>[B] +<x70>[B] == 1;
+  [linear] <c69>: <x21>[B] +<x22>[B] +<x23>[B] +<x24>[B] +<x25>[B] +<x26>[B] +<x27>[B] +<x28>[B] +<x29>[B] == 1;
+  [linear] <c70>: <x98>[B] +<x99>[B] +<x100>[B] +<x101>[B] +<x102>[B] +<x103>[B] +<x104>[B] == 1;
+  [linear] <c71>: <x122>[B] +<x123>[B] +<x124>[B] +<x125>[B] +<x126>[B] +<x127>[B] +<x128>[B] == 1;
+  [linear] <c72>: <x65>[B] +<x66>[B] +<x67>[B] +<x68>[B] +<x69>[B] +<x70>[B] +<x71>[B] +<x72>[B] +<x73>[B] == 1;
+  [linear] <c73>: <x18>[B] +<x19>[B] +<x20>[B] +<x21>[B] +<x22>[B] +<x23>[B] +<x24>[B] == 1;
+  [linear] <c74>: <x95>[B] +<x96>[B] +<x97>[B] +<x98>[B] +<x99>[B] +<x100>[B] +<x101>[B] +<x102>[B] +<x103>[B] == 1;
+  [linear] <c75>: <x165>[B] +<x166>[B] +<x167>[B] +<x168>[B] +<x169>[B] +<x170>[B] +<x171>[B] +<x172>[B] +<x173>[B] == 1;
+  [linear] <c76>: <x43>[B] +<x44>[B] +<x45>[B] +<x46>[B] +<x47>[B] +<x48>[B] +<x49>[B] +<x50>[B] +<x51>[B] == 1;
+  [linear] <c77>: <x153>[B] +<x154>[B] +<x155>[B] +<x156>[B] +<x157>[B] +<x158>[B] +<x159>[B] +<x160>[B] +<x161>[B] == 1;
+  [linear] <c78>: <x195>[B] +<x196>[B] +<x197>[B] +<x198>[B] +<x199>[B] +<x200>[B] +<x201>[B] +<x202>[B] +<x203>[B] == 1;
+  [linear] <c79>: <x58>[B] +<x59>[B] +<x60>[B] +<x61>[B] +<x62>[B] +<x63>[B] +<x64>[B] == 1;
+  [linear] <c80>: <x190>[B] +<x191>[B] +<x192>[B] +<x193>[B] +<x194>[B] +<x195>[B] +<x196>[B] == 1;
+  [linear] <c102>: <x19>[B] +<x20>[B] +<x21>[B] +<x22>[B] +<x23>[B] +<x24>[B] +<x25>[B] +<x26>[B] +<x27>[B] <= 1;
+  [linear] <c103>: <x59>[B] +<x60>[B] +<x61>[B] +<x62>[B] +<x63>[B] +<x64>[B] +<x65>[B] +<x66>[B] +<x67>[B] <= 1;
+  [linear] <c104>: <x130>[B] +<x131>[B] +<x132>[B] +<x133>[B] +<x134>[B] +<x135>[B] +<x136>[B] <= 1;
+  [linear] <c105>: <x114>[B] +<x115>[B] +<x116>[B] +<x117>[B] +<x118>[B] +<x119>[B] +<x120>[B] <= 1;
+  [linear] <c106>: <x193>[B] +<x194>[B] +<x195>[B] +<x196>[B] +<x197>[B] +<x198>[B] +<x199>[B] +<x200>[B] +<x201>[B] <= 1;
+  [linear] <c107>: <x191>[B] +<x192>[B] +<x193>[B] +<x194>[B] +<x195>[B] +<x196>[B] +<x197>[B] +<x198>[B] +<x199>[B] <= 1;
+  [linear] <c108>: <x184>[B] +<x185>[B] +<x186>[B] +<x187>[B] +<x188>[B] +<x189>[B] +<x190>[B] <= 1;
+  [linear] <c109>: <x104>[B] +<x105>[B] +<x106>[B] +<x107>[B] +<x108>[B] +<x109>[B] +<x110>[B] <= 1;
+  [linear] <c165>: <x170>[B] +<x171>[B] +<x172>[B] +<x173>[B] +<x174>[B] +<x175>[B] +<x176>[B] <= 1;
+  [linear] <c166>: <x20>[B] +<x21>[B] +<x22>[B] +<x23>[B] +<x24>[B] +<x25>[B] +<x26>[B] <= 1;
+  [linear] <c167>: <x92>[B] +<x93>[B] +<x94>[B] +<x95>[B] +<x96>[B] +<x97>[B] +<x98>[B] <= 1;
+  [linear] <c168>: <x203>[B] +<x204>[B] +<x205>[B] +<x206>[B] +<x207>[B] +<x208>[B] +<x209>[B] +<x210>[B] +<x211>[B] <= 1;
+  [linear] <c169>: <x159>[B] +<x160>[B] +<x161>[B] +<x162>[B] +<x163>[B] +<x164>[B] +<x165>[B] +<x166>[B] +<x167>[B] <= 1;
+  [linear] <c170>: <x152>[B] +<x153>[B] +<x154>[B] +<x155>[B] +<x156>[B] +<x157>[B] +<x158>[B] <= 1;
+  [linear] <c171>: <x87>[B] +<x88>[B] +<x89>[B] +<x90>[B] +<x91>[B] +<x92>[B] +<x93>[B] +<x94>[B] +<x95>[B] <= 1;
+  [linear] <c172>: <x150>[B] +<x151>[B] +<x152>[B] +<x153>[B] +<x154>[B] +<x155>[B] +<x156>[B] <= 1;
+  [linear] <c173>: <x39>[B] +<x40>[B] +<x41>[B] +<x42>[B] +<x43>[B] +<x44>[B] +<x45>[B] +<x46>[B] +<x47>[B] == 1;
+  [linear] <c174>: <x209>[B] +<x210>[B] +<x211>[B] +<x212>[B] == 1;
+  [linear] <c175>: <x115>[B] +<x116>[B] +<x117>[B] +<x118>[B] +<x119>[B] +<x120>[B] +<x121>[B] +<x122>[B] +<x123>[B] == 1;
+  [linear] <c176>: <x66>[B] +<x67>[B] +<x68>[B] +<x69>[B] +<x70>[B] +<x71>[B] +<x72>[B] == 1;
+  [linear] <c177>: <x9>[B] +<x10>[B] +<x11>[B] +<x12>[B] +<x13>[B] +<x14>[B] +<x15>[B] +<x16>[B] +<x17>[B] == 1;
+  [linear] <c178>: <x4>[B] +<x5>[B] +<x6>[B] +<x7>[B] +<x8>[B] +<x9>[B] +<x10>[B] == 1;
+  [linear] <c179>: <x89>[B] +<x90>[B] +<x91>[B] +<x92>[B] +<x93>[B] +<x94>[B] +<x95>[B] +<x96>[B] +<x97>[B] == 1;
+  [linear] <c180>: <x164>[B] +<x165>[B] +<x166>[B] +<x167>[B] +<x168>[B] +<x169>[B] +<x170>[B] == 1;
+  [linear] <c181>: <x167>[B] +<x168>[B] +<x169>[B] +<x170>[B] +<x171>[B] +<x172>[B] +<x173>[B] +<x174>[B] +<x175>[B] == 1;
+  [linear] <c182>: <x54>[B] +<x55>[B] +<x56>[B] +<x57>[B] +<x58>[B] +<x59>[B] +<x60>[B] == 1;
+  [linear] <c183>: <x108>[B] +<x109>[B] +<x110>[B] +<x111>[B] +<x112>[B] +<x113>[B] +<x114>[B] == 1;
+  [linear] <c184>: <x41>[B] +<x42>[B] +<x43>[B] +<x44>[B] +<x45>[B] +<x46>[B] +<x47>[B] +<x48>[B] +<x49>[B] == 1;
+  [linear] <c185>: <x138>[B] +<x139>[B] +<x140>[B] +<x141>[B] +<x142>[B] +<x143>[B] +<x144>[B] == 1;
+  [linear] <c186>: <x160>[B] +<x161>[B] +<x162>[B] +<x163>[B] +<x164>[B] +<x165>[B] +<x166>[B] == 1;
+  [linear] <c187>: <x127>[B] +<x128>[B] +<x129>[B] +<x130>[B] +<x131>[B] +<x132>[B] +<x133>[B] +<x134>[B] +<x135>[B] == 1;
+  [linear] <c188>: <x168>[B] +<x169>[B] +<x170>[B] +<x171>[B] +<x172>[B] +<x173>[B] +<x174>[B] == 1;
+  [linear] <c189>: <x33>[B] +<x34>[B] +<x35>[B] +<x36>[B] +<x37>[B] +<x38>[B] +<x39>[B] +<x40>[B] +<x41>[B] == 1;
+  [linear] <c190>: <x181>[B] +<x182>[B] +<x183>[B] +<x184>[B] +<x185>[B] +<x186>[B] +<x187>[B] +<x188>[B] +<x189>[B] == 1;
+  [linear] <c191>: <x85>[B] +<x86>[B] +<x87>[B] +<x88>[B] +<x89>[B] +<x90>[B] +<x91>[B] +<x92>[B] +<x93>[B] == 1;
+  [linear] <c192>: <x80>[B] +<x81>[B] +<x82>[B] +<x83>[B] +<x84>[B] +<x85>[B] +<x86>[B] == 1;
+  [linear] <c193>: <x32>[B] +<x33>[B] +<x34>[B] +<x35>[B] +<x36>[B] +<x37>[B] +<x38>[B] == 1;
+  [linear] <c194>: <x189>[B] +<x190>[B] +<x191>[B] +<x192>[B] +<x193>[B] +<x194>[B] +<x195>[B] +<x196>[B] +<x197>[B] == 1;
+  [linear] <c195>: <x37>[B] +<x38>[B] +<x39>[B] +<x40>[B] +<x41>[B] +<x42>[B] +<x43>[B] +<x44>[B] +<x45>[B] == 1;
+  [linear] <c196>: <x121>[B] +<x122>[B] +<x123>[B] +<x124>[B] +<x125>[B] +<x126>[B] +<x127>[B] +<x128>[B] +<x129>[B] == 1;
+  [linear] <c197>: <x14>[B] +<x15>[B] +<x16>[B] +<x17>[B] +<x18>[B] +<x19>[B] +<x20>[B] == 1;
+  [linear] <c198>: <x26>[B] +<x27>[B] +<x28>[B] +<x29>[B] +<x30>[B] +<x31>[B] +<x32>[B] == 1;
+  [linear] <c199>: <x6>[B] +<x7>[B] +<x8>[B] +<x9>[B] +<x10>[B] +<x11>[B] +<x12>[B] == 1;
+  [linear] <c200>: <x118>[B] +<x119>[B] +<x120>[B] +<x121>[B] +<x122>[B] +<x123>[B] +<x124>[B] == 1;
+  [linear] <c201>: <x78>[B] +<x79>[B] +<x80>[B] +<x81>[B] +<x82>[B] +<x83>[B] +<x84>[B] == 1;
+  [linear] <c202>: <x12>[B] +<x13>[B] +<x14>[B] +<x15>[B] +<x16>[B] +<x17>[B] +<x18>[B] == 1;
+  [linear] <c203>: <x132>[B] +<x133>[B] +<x134>[B] +<x135>[B] +<x136>[B] +<x137>[B] +<x138>[B] == 1;
+  [linear] <c204>: <x176>[B] +<x177>[B] +<x178>[B] +<x179>[B] +<x180>[B] +<x181>[B] +<x182>[B] == 1;
+  [linear] <c205>: <x111>[B] +<x112>[B] +<x113>[B] +<x114>[B] +<x115>[B] +<x116>[B] +<x117>[B] +<x118>[B] +<x119>[B] == 1;
+  [linear] <c206>: <x212>[B] == 1;
+  [linear] <c207>: <x72>[B] +<x73>[B] +<x74>[B] +<x75>[B] +<x76>[B] +<x77>[B] +<x78>[B] == 1;
+  [linear] <c208>: <x142>[B] +<x143>[B] +<x144>[B] +<x145>[B] +<x146>[B] +<x147>[B] +<x148>[B] == 1;
+  [linear] <c209>: <x156>[B] +<x157>[B] +<x158>[B] +<x159>[B] +<x160>[B] +<x161>[B] +<x162>[B] == 1;
+  [linear] <c210>: <x119>[B] +<x120>[B] +<x121>[B] +<x122>[B] +<x123>[B] +<x124>[B] +<x125>[B] +<x126>[B] +<x127>[B] == 1;
+  [linear] <c211>: <x36>[B] +<x37>[B] +<x38>[B] +<x39>[B] +<x40>[B] +<x41>[B] +<x42>[B] == 1;
+  [linear] <c212>: <x30>[B] +<x31>[B] +<x32>[B] +<x33>[B] +<x34>[B] +<x35>[B] +<x36>[B] == 1;
+  [linear] <c213>: <x155>[B] +<x156>[B] +<x157>[B] +<x158>[B] +<x159>[B] +<x160>[B] +<x161>[B] +<x162>[B] +<x163>[B] == 1;
+  [linear] <c214>: <x1>[B] +<x2>[B] +<x3>[B] +<x4>[B] +<x5>[B] +<x6>[B] +<x7>[B] +<x8>[B] +<x9>[B] == 1;
+  [linear] <c215>: <x53>[B] +<x54>[B] +<x55>[B] +<x56>[B] +<x57>[B] +<x58>[B] +<x59>[B] +<x60>[B] +<x61>[B] == 1;
+  [linear] <c216>: <x81>[B] +<x82>[B] +<x83>[B] +<x84>[B] +<x85>[B] +<x86>[B] +<x87>[B] +<x88>[B] +<x89>[B] == 1;
+  [linear] <c217>: <x151>[B] +<x152>[B] +<x153>[B] +<x154>[B] +<x155>[B] +<x156>[B] +<x157>[B] +<x158>[B] +<x159>[B] == 1;
+  [linear] <c218>: <x149>[B] +<x150>[B] +<x151>[B] +<x152>[B] +<x153>[B] +<x154>[B] +<x155>[B] +<x156>[B] +<x157>[B] == 1;
+  [linear] <c219>: <x208>[B] +<x209>[B] +<x210>[B] +<x211>[B] +<x212>[B] == 1;
+END
