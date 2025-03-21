@@ -18,6 +18,7 @@ Fixed bugs
 - apply objective scale to pseudoboolean non-linear terms
 - impose pseudoboolean cost bound without intermediate casting
 - flatten aggregation graph before finishing presolving to accelerate evaluating an empty solution
+- respect fixed resultants in binvarGetActiveProbindex() of branch_relpscost.c
 
 Build system
 ------------
