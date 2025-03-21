@@ -17,6 +17,7 @@ Fixed bugs
 - adds missing NULL check for Benders' subproblems in feasalt cut
 - apply objective scale to pseudoboolean non-linear terms
 - impose pseudoboolean cost bound without intermediate casting
+- flatten aggregation graph before finishing presolving to accelerate evaluating an empty solution
 
 Build system
 ------------
