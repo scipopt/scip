@@ -766,8 +766,19 @@ void invalidateSolution(SCIP_LPIEXACT* lpi)
  * Miscellaneous Methods
  */
 
-static char spxname[100];
-static char spxdesc[200];
+#if (SOPLEX_SUBVERSION > 0)
+   const static char spxname[20] = {'S', 'o', 'P', 'l', 'e', 'x', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0', '.', SOPLEX_SUBVERSION + '0', '\0'};
+#else
+   const static char spxname[20] = {'S', 'o', 'P', 'l', 'e', 'x', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0', '\0'};
+#endif
+const static char spxdesc[200] =  {'L', 'i', 'n', 'e', 'a', 'r', ' ', 'p', 'r', 'o', 'g', 'r', 'a', 'm', 'm', 'i', 'n', 'g',
+                                   ' ', 's', 'o', 'l', 'v', 'e', 'r', ' ' , 'd', 'e', 'v', 'e', 'l', 'o', 'p', 'e', 'd',
+                                   ' ', 'a', 't', ' ', 'Z', 'u', 's', 'e', ' ', 'I', 'n', 's', 't', 'i', 't', 'u', 't', 'e',
+                                   ' ', 'B', 'e', 'r', 'l', 'i', 'n', ' ', '(', 's', 'o', 'p', 'l', 'e', 'x', '.', 'z', 'i', 'b', '.', 'd', 'e', ')',
+                                   ' ', '[', 'G', 'i', 't', 'H', 'a', 's', 'h', ':', ' ',
+                                   getGitHash()[0], getGitHash()[1], getGitHash()[2], getGitHash()[3],
+                                   getGitHash()[4], getGitHash()[5], getGitHash()[6], getGitHash()[7],
+                                   ']', '\0'};
 
 /**@name Miscellaneous Methods */
 /**@{ */
@@ -778,12 +789,6 @@ const char* SCIPlpiExactGetSolverName(
    )
 {
    SCIPdebugMessage("calling SCIPlpiExactGetSolverName()\n");
-
-#if (SOPLEX_SUBVERSION > 0)
-   snprintf(spxname, 100, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778 !e845*/
-#else
-   snprintf(spxname, 100, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778 !e845*/
-#endif
    return spxname;
 }
 
@@ -792,8 +797,6 @@ const char* SCIPlpiExactGetSolverDesc(
    void
    )
 {
-   snprintf(spxdesc, 200, "%s [GitHash: %s]", "Exact Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)", getGitHash());
-
    return spxdesc;
 }
 
