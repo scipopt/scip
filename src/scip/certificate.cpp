@@ -1688,7 +1688,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       return SCIP_OKAY;
 
    assert(row != NULL);
-   assert(sense == 'L'); // only take care of this case for now
+   assert(sense == 'L'); /* for now only this case is needed */
    assert(SCIPhashmapExists(certificate->aggrinfohash, (void*) row));
 
    rowexact = SCIProwGetRowExact(row);
@@ -1805,7 +1805,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
             SCIPrationalSetReal(tmpval, 0);
          else
          {
-            // value = weight * scale * sign -> compute (1 - fr)/(1-f0) where fr is the fractionality of value
+            /* value = weight * scale * sign -> compute (1 - fr)/(1-f0) where fr is the fractionality of value */
             SCIPrationalSetReal(tmpval, mirinfo->slackweight[i]);
             SCIPrationalMultReal(tmpval, tmpval, mirinfo->slackscale[i]);
             SCIPrationalMultReal(tmpval, tmpval, mirinfo->slacksign[i]);
@@ -1896,10 +1896,10 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
             SCIPrationalSetReal(value, mirinfo->slackweight[i]);
             SCIPrationalMultReal(value, value, mirinfo->slackscale[i]);
             SCIPrationalMultReal(value, value, mirinfo->slacksign[i]);
-            SCIPrationalDiffReal(value, value, (mirinfo->slackcoefficients[i] * -mirinfo->slacksign[i]) - 1); // fr exactly
-            SCIPrationalDiff(value, value, mirinfo->frac); // fr - f0
-            SCIPrationalDiv(value, value, oneminusf0); // (fr-f0) / (1-f0)
-            SCIPrationalAddReal(value, value, (mirinfo->slackcoefficients[i] * -mirinfo->slacksign[i]) - 1); // (down(ar) + (fr-f0) / (1-f0)
+            SCIPrationalDiffReal(value, value, (mirinfo->slackcoefficients[i] * -mirinfo->slacksign[i]) - 1); /* fr exactly */
+            SCIPrationalDiff(value, value, mirinfo->frac); /* fr - f0 */
+            SCIPrationalDiv(value, value, oneminusf0); /* (fr-f0) / (1-f0) */
+            SCIPrationalAddReal(value, value, (mirinfo->slackcoefficients[i] * -mirinfo->slacksign[i]) - 1); /* (down(ar) + (fr-f0) / (1-f0) */
             SCIPrationalMultReal(value, value, mirinfo->slacksign[i]);
             SCIPrationalDebugMessage("Exact coefficient %q(%g), used coefficient %g\n", value, SCIPrationalGetReal(value), mirinfo->slackusedcoef[i]);
 
@@ -3662,7 +3662,7 @@ SCIP_RETCODE SCIPcertificatePrintActivityVarBoundEx(
       SCIPcertificatePrintProofMessage(certificate, "%s ", linename);
    }
 
-   // find he correct value in the constraint
+   /* find the correct value in the constraint */
    val = NULL;
    for( int i = 0; i < nvars; i++ )
    {
@@ -3675,21 +3675,21 @@ SCIP_RETCODE SCIPcertificatePrintActivityVarBoundEx(
 
    assert(val != NULL);
 
-   // Do we need an upper bound on the contribution val[i]*x_i (otherwise a lowerbound)
+   /* Do we need an upper bound on the contribution val[i]*x_i? (otherwise a lowerbound) */
    upperboundcontribution = (boundtype == SCIP_BOUNDTYPE_UPPER) == SCIPrationalIsPositive(val);
    SCIPcertificatePrintProofMessage(certificate, "%c ", getInequalitySense(upperboundcontribution));
 
-   // new bound = -newbound * val for now, we print a second line where we scale with 1/val
+   /* new bound = -newbound * val for now, we print a second line where we scale with 1/val */
    SCIPrationalMult(newbound, newbound, val);
    SCIPrationalNegate(newbound, newbound);
-   SCIP_CALL_ABORT( SCIPcertificatePrintProofRational(certificate, newbound, 10) ); // update
+   SCIP_CALL_ABORT( SCIPcertificatePrintProofRational(certificate, newbound, 10) );
 
-   // print coeffictent of variable -> val
+   /* print coeffictent of variable -> val */
    SCIPrationalNegate(newbound, newbound);
    SCIPrationalDiv(newbound, newbound, val);
    SCIPcertificatePrintProofMessage(certificate, " 1 %d ", SCIPvarGetCertificateIndex(variable));
 
-   // negate val, print it and reset it again
+   /* negate val, print it and reset it again */
    SCIPrationalNegate(val, val);
    SCIP_CALL_ABORT( SCIPcertificatePrintProofRational(certificate, val, 10) );
    SCIPrationalNegate(val, val);
@@ -3701,7 +3701,7 @@ SCIP_RETCODE SCIPcertificatePrintActivityVarBoundEx(
 
    SCIPcertificatePrintProofMessage(certificate, " { lin %d %d -1", nvars, res);
 
-   // print all other variables with their correct bounds
+   /* print all other variables with their correct bounds */
    for( int i = 0; i < nvars; i++ )
    {
       SCIP_VAR* ivar;
@@ -3724,7 +3724,7 @@ SCIP_RETCODE SCIPcertificatePrintActivityVarBoundEx(
    }
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
 
-   // now scale with 1/val
+   /* now scale with 1/val */
    certificate->indexcounter++;
    SCIPcertificatePrintProofMessage(certificate, "ACT_L%d %c ", certificate->indexcounter - 1, getInequalitySense(boundtype == SCIP_BOUNDTYPE_LOWER));
    SCIP_CALL( SCIPcertificatePrintProofRational(certificate, newbound, 10) );
@@ -3733,12 +3733,12 @@ SCIP_RETCODE SCIPcertificatePrintActivityVarBoundEx(
    SCIPrationalNegate(val, val);
    SCIP_CALL( SCIPcertificatePrintProofRational(certificate, val, 10) );
 
-   // Return val to its original state:
+   /* Return val to its original state: */
    SCIPrationalNegate(val, val);
    SCIPrationalInvert(val, val);
    SCIPcertificatePrintProofMessage(certificate, " } -1\n", SCIPvarGetCertificateIndex(variable), certificate->indexcounter - 2);
 
-   // if variable is integer, round the new bound
+   /* if variable is integer, round the new bound */
    if( !SCIPrationalIsAbsInfinity(newbound) && SCIPvarGetType(variable) != SCIP_VARTYPE_CONTINUOUS && !SCIPrationalIsIntegral(newbound) )
    {
       certificate->indexcounter++;
@@ -3783,8 +3783,9 @@ SCIP_RETCODE SCIPcertificatePrintActivityVarBound(
    int                   nvars               /**< number of values */
    )
 {
-   // It would be more efficient if we could do this all in fp artihmetic. However,
-   // this is not trivial because the translations between aggregate variables need to be done exactly..
+   /* It would be more efficient if we could do this all in fp artihmetic. However, this is not trivial because the
+    * translations between aggregate variables need to be done exactly.
+    */
    SCIP_Rational* newboundex;
 
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &newboundex) );
