@@ -1409,9 +1409,10 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_VAR** orvars;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   SCIP_Real constant = 0.0;
+   SCIP_Real constant;
+   int consnodeidx;
+   int ornodeidx;
    int nlocvars;
-   int nvars;
    int i;
 
    assert(scip != NULL);
@@ -1422,35 +1423,43 @@ SCIP_RETCODE addSymmetryInformation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* get active variables of the constraint */
-   nvars = SCIPgetNVars(scip);
-   nlocvars = SCIPgetNVarsOr(scip, cons);
+   /* create arrays to store active representation of variables */
+   nlocvars = 1;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlocvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlocvars) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+   /* add constraint node */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &consnodeidx) );
 
-   orvars = SCIPgetVarsOr(scip, cons);
+   /* add resultant to symmetry detection graph */
+   assert(consdata->resvar != NULL);
+   vars[0] = consdata->resvar;
+   vals[0] = 1.0;
+   constant = 0.0;
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, consnodeidx, vars, vals, nlocvars, constant) );
+
+   /* add node modeling the OR-part and connect it with constraint node */
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int)SYM_CONSOPTYPE_OR, &ornodeidx) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, ornodeidx, FALSE, 0.0) );
+
+   /* add variables */
+   orvars = consdata->vars;
    for( i = 0; i < consdata->nvars; ++i )
    {
-      vars[i] = orvars[i];
-      vals[i] = 1.0;
+      assert(orvars[i] != NULL);
+      vars[0] = orvars[i];
+      vals[0] = 1.0;
+      constant = 0.0;
+      nlocvars = 1;
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, ornodeidx, vars, vals, nlocvars, constant) );
    }
-
-   assert(SCIPgetResultantOr(scip, cons) != NULL);
-   vars[nlocvars] = SCIPgetResultantOr(scip, cons);
-   vals[nlocvars++] = 2.0;
-   assert(nlocvars <= nvars);
-
-   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
-
-   /* represent the OR constraint via the gadget for linear constraints and use the constant as lhs/rhs to
-    * distinguish different OR constraints (OR constraints do not have an intrinsic right-hand side)
-    */
-   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
-         cons, -constant, -constant, success) );
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
