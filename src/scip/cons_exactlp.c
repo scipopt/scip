@@ -1187,8 +1187,8 @@ void consdataComputePseudoActivity(
    }
 
    if( pseudoactivityneginf > 0 && pseudoactivityposinf > 0 )
-      //TODO is then currently now the activity of the non infinity vars returned?
-      return; /** @todo exip what to do in this case? */
+      /** @todo introduce a rational equivalent of SCIP_INVALID (maybe an additional flag in SCIP_Rational) */
+      return;
    else if( pseudoactivityneginf > 0 )
       SCIPrationalSetString(pseudoactivity, "-inf");
    else if( pseudoactivityposinf > 0 )
@@ -4406,7 +4406,7 @@ SCIP_RETCODE tightenVarBounds(
 
          SCIPintervalSetRoundingModeUpwards();
 
-         // newub = (rhs + SCIPintervalNegateReal(minresactivity))/valrange.inf;
+         /* newub = (rhs + SCIPintervalNegateReal(minresactivity))/valrange.inf; */
          SCIPintervalSet(&ubinterval, rhs);
          SCIPintervalSubScalar(SCIPinfinity(scip), &ubinterval, ubinterval, minresactivity);
          SCIPintervalDiv(SCIPinfinity(scip), &ubinterval, ubinterval, valrange);
@@ -4415,7 +4415,7 @@ SCIP_RETCODE tightenVarBounds(
          if( !SCIPisInfinity(scip, newub) &&
             ((force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub)) || SCIPisUbBetter(scip, newub, lb, ub)) )
          {
-            // activity never is unreliable in exact solving
+            /* activity is never unreliable in exact solving */
 
             /* tighten upper bound */
             SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
@@ -4481,13 +4481,12 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_INTERVAL lbinterval;
 
          SCIPintervalSetRoundingModeDownwards();
-         // newlb = (lhs + SCIPintervalNegateReal(maxresactivity))/valrange.sup;
+         /* newlb = (lhs + SCIPintervalNegateReal(maxresactivity))/valrange.sup; */
          SCIPintervalSet(&lbinterval, lhs);
          SCIPintervalSubScalar(SCIPinfinity(scip), &lbinterval, lbinterval, maxresactivity);
          SCIPintervalDiv(SCIPinfinity(scip), &lbinterval, lbinterval, valrange);
          newlb = lbinterval.inf;
 
-         //assert(newlb <= ub);
          if( !SCIPisInfinity(scip, -newlb) &&
             ((force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb)) || SCIPisLbBetter(scip, newlb, lb, ub)) )
          {
@@ -4564,7 +4563,6 @@ SCIP_RETCODE tightenVarBounds(
 
          assert(newlb <= lbinterval.inf);
 
-         //assert(newlb <= ub);
          if( !SCIPisInfinity(scip, -newlb) &&
             ((force && SCIPisGT(scip, newlb, lb)) || (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb)) || SCIPisLbBetter(scip, newlb, lb, ub)) )
          {
@@ -4610,9 +4608,8 @@ SCIP_RETCODE tightenVarBounds(
 
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, TRUE) );
-               /* analyze conflict */
-               // SCIP_CALL( analyzeConflict(scip, cons, TRUE) );
 
+               /**@todo analyze conflict */
                *cutoff = TRUE;
                goto RETURN_SCIP_OKAY;
             }
@@ -4633,7 +4630,7 @@ SCIP_RETCODE tightenVarBounds(
 
          SCIPintervalSetRoundingModeUpwards();
 
-         // newub = (maxresactivity + SCIPintervalNegateReal(lhs))/SCIPintervalNegateReal(valrange.inf);
+         /* newub = (maxresactivity + SCIPintervalNegateReal(lhs))/SCIPintervalNegateReal(valrange.inf); */
          SCIPintervalSet(&ubinterval, lhs);
          SCIPintervalSubScalar(SCIPinfinity(scip), &ubinterval, ubinterval, maxresactivity);
          SCIPintervalDiv(SCIPinfinity(scip), &ubinterval, ubinterval, valrange);
@@ -4738,17 +4735,7 @@ SCIP_RETCODE tightenBounds(
    if( SCIPconsIsModifiable(cons) )
       return SCIP_OKAY;
 
-   /* if a constraint was created after presolve, then it may hold fixed variables
-    * if there are even multi-aggregated variables, then we cannot do bound tightening on these
-    * thus, ensure here again that variable fixings have been applied
-    */
-   //SCIP_CALL( applyFixings(scip, cons, cutoff) );
-   if( *cutoff )
-      return SCIP_OKAY;
-
-   /* check if constraint has any chances of tightening bounds */
-   //if( !canTightenBounds(cons) )
-   //   return SCIP_OKAY;
+   /* currently, we do not need to call applyFixings() as in cons_linear.c */
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4967,9 +4954,6 @@ SCIP_RETCODE checkCons(
       assert(sol == NULL);
       *violated = TRUE;
 
-      /* set violation of invalid pseudo solutions */
-      //absviol = SCIP_INVALID;
-
       /* reset constraint age since we are in enforcement */
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
    }
@@ -5082,7 +5066,7 @@ SCIP_RETCODE addRelaxation(
    {
       SCIPdebugMsg(scip, "adding relaxation of linear constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->rowlhs, NULL)) );
-      SCIPdebug( SCIP_CALL( SCIPprintRowExact(scip, consdata->rowexact, NULL)) ); // Maybe we should still add the row even if rowlhs is already in the LP?
+      SCIPdebug( SCIP_CALL( SCIPprintRowExact(scip, consdata->rowexact, NULL)) );
 
       /* if presolving is turned off, the row might be trivial */
       if ( !SCIPrationalIsNegInfinity(consdata->lhs) || !SCIPrationalIsInfinity(consdata->rhs) )
@@ -5251,9 +5235,8 @@ SCIP_RETCODE propagateCons(
             SCIPrationalDebugMessage("linear constraint <%s> is infeasible (rhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
             SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, TRUE) );
-            /* analyze conflict */
-            //SCIP_CALL( analyzeConflict(scip, cons, TRUE) );
 
+            /**@todo analyze conflict */
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
          }
@@ -5262,9 +5245,8 @@ SCIP_RETCODE propagateCons(
             SCIPrationalDebugMessage("linear constraint <%s> is infeasible (lhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhsreal, consdata->rhsreal);
             SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, FALSE) );
-            /* analyze conflict */
-            //SCIP_CALL( analyzeConflict(scip, cons, FALSE) );
 
+            /**@todo analyze conflict */
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
          }
@@ -5490,11 +5472,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
 
       if( consdata->upgraded )
       {
-         SCIPerrorMessage("exact linear constraint updrade not implemented yet\n");
-         /* this is no problem reduction, because the upgraded constraint was added to the problem before, and the
-          * (redundant) linear constraint was only kept in order to support presolving the the linear constraint handler
-          */
-         // SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+         SCIPerrorMessage("exact linear constraint upgrade not implemented yet\n");
          return SCIP_ERROR;
       }
       else
@@ -6501,21 +6479,6 @@ SCIP_DECL_CONSPRESOL(consPresolExactLinear)
 }
 
 
-/** propagation conflict resolving method of constraint handler */
-static
-SCIP_DECL_CONSRESPROP(consRespropExactLinear)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(result != NULL);
-
-   SCIPerrorMessage("propagaion of exact linear cons not implemented yet \n");
-//   SCIP_CALL( resolvePropagation(scip, cons, infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, result) );
-
-   return SCIP_OKAY;
-}
-
-
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockExactLinear)
@@ -7181,7 +7144,6 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintExactLinear) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropExactLinear, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
-   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropExactLinear) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpExactLinear, consSepasolExactLinear, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransExactLinear) );
