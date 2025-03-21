@@ -92,7 +92,7 @@ SCIP_Bool fpLPisIntFeasible(
       if( SCIPvarGetType(SCIPcolGetVar(col)) == SCIP_VARTYPE_CONTINUOUS )
          continue;
 
-      // we can't use SCIPsetIsIntegral since we have to chech here in the same way as in SCIPcalcBranchCands
+      /* we can't use SCIPsetIsIntegral since we have to check here in the same way as in SCIPcalcBranchCands() */
       primsol = SCIPcolGetPrimsol(col);
       frac = SCIPsetFeasFrac(set, primsol);
       if( !SCIPsetIsFeasFracIntegral(set, frac) )
@@ -2160,8 +2160,6 @@ SCIP_RETCODE boundShift(
    /* create objective vector and lb/ub vector in interval arithmetic and compute min{(obj^T - dual^TMatrix)lb/ub} */
    for( j = 0; j < lp->ncols; ++j )
    {
-      //assert(!SCIPsetIsInfinity(set, -SCIPcolGetLb(col)));
-      //assert(!SCIPsetIsInfinity(set, SCIPcolGetUb(col)));
       col = lp->cols[j];
       assert(col != NULL);
       assert(col->nunlinked == 0);
@@ -2179,7 +2177,7 @@ SCIP_RETCODE boundShift(
       assert(SCIPcolGetUb(col) >= SCIPrationalRoundReal(SCIPvarGetUbLocalExact(col->var), SCIP_R_ROUND_UPWARDS));
       SCIPintervalSetBounds(&ublbcol[j], SCIPcolGetLb(col), SCIPcolGetUb(col));
 
-      /* opt out if there are infinity bounds and a non-infinty value */
+      /* opt out if there are infinity bounds and a non-infinity value */
       if( (SCIPsetIsInfinity(set, -SCIPcolGetLb(col)) || SCIPsetIsInfinity(set, SCIPcolGetUb(col))) )
       {
          if( productcoldualval[j].inf + obj[j].inf != 0 || productcoldualval[j].sup + obj[j].sup != 0 )
@@ -2206,23 +2204,6 @@ SCIP_RETCODE boundShift(
          }
       }
    }
-   // roundmode = SCIPintervalGetRoundingMode();
-   // SCIPintervalSetRoundingModeDownwards();
-   // {
-   //    SCIP_Real objcontrib = 0;
-   //    for (int k = 0; k < lp->ncols; k++)
-   //    {
-   //       if(obj[k].sup < 0)
-   //       {
-   //          objcontrib += obj[k].sup * SCIPcolGetUb(lp->cols[k]);
-   //       }
-   //       else if(obj[k].inf > 0)
-   //          objcontrib += (-obj[k].inf) * SCIPcolGetLb(lp->cols[k]);
-   //    }
-   //    SCIPintervalScalprod(SCIPsetInfinity(set), &safeboundinterval, lp->ncols, productcoldualval, ublbcol);
-   //    SCIPintervalAddScalar(SCIPsetInfinity(set), &safeboundinterval, safeboundinterval, objcontrib);
-   // }
-   // SCIPintervalSetRoundingMode(roundmode);
 
    SCIPintervalAddVectors(SCIPsetInfinity(set), productcoldualval, lp->ncols, productcoldualval, obj);
    SCIPintervalScalprod(SCIPsetInfinity(set), &safeboundinterval, lp->ncols, productcoldualval, ublbcol);
@@ -2295,9 +2276,10 @@ SCIP_RETCODE boundShift(
       for( j = 0; j < lpexact->ncols; j++ )
       {
          colexact = lpexact->cols[j];
-         /* this should not need to be recomputed. However, since vipr does only detect
-         that a constraint cTx>=b dominates some other constraint c'Tx>=b' if c==c'
-         we need to recompute the exact coefficients here. */
+         /* Since VIPR only detects that a constraint cTx>=b dominates some other constraint c'Tx>=b' if c==c', we
+          * recompute the exact coefficients for the bound constraints here.
+          */
+         /** @todo Avoid recomputation by using weak completion in VIPR. */
          if( usefarkas )
             SCIP_CALL( SCIPcolExactCalcFarkasRedcostCoef(colexact, set, colexact->farkascoef, NULL, usefarkas) );
          else

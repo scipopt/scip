@@ -10432,8 +10432,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
          return SCIP_INVALIDDATA;
 
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
-         // this change does not affect the behavior in floating-point SCIP although it looks like it
-         // at first glance
+         /* this change does not affect the behavior in floating-point SCIP although it looks like it at first glance */
          {
             SCIP_Real parentnewbound;
             assert(parentvar->data.aggregate.var == var);
@@ -11768,8 +11767,7 @@ SCIP_RETCODE varProcessChgLbLocal(
          return SCIP_INVALIDDATA;
 
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
-         // this change does not affect the behavior in floating-point SCIP although it looks like it
-         // at first glance
+         /* this change does not affect the behavior in floating-point SCIP although it looks like it at first glance */
          {
             SCIP_Real parentnewbound;
             assert(parentvar->data.aggregate.var == var);
@@ -11956,8 +11954,7 @@ SCIP_RETCODE varProcessChgUbLocal(
          return SCIP_INVALIDDATA;
 
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
-         // this change does not affect the behavior in floating-point SCIP although it looks like it
-         // at first glance
+         /* this change does not affect the behavior in floating-point SCIP although it looks like it at first glance */
          {
             SCIP_Real parentnewbound;
             assert(parentvar->data.aggregate.var == var);

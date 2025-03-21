@@ -566,7 +566,7 @@ SCIP_RETCODE addConsTerm(
       switch( type )
       {
       case CON_FREE:
-         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ratlhs, "-inf") ); // todo: set this to infinity
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ratlhs, "-inf") );
          SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ratrhs, "inf") );
          break;
       case CON_LHS:

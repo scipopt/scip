@@ -943,7 +943,6 @@ void SCIPrationalMult(
       }
       else
       {
-         // SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
          res->val = op1->val.sign() * op2->val.sign();
          res->isinf = TRUE;
       }
@@ -1941,8 +1940,6 @@ SCIP_Real SCIPrationalRoundReal(
       mpfr_t valmpfr;
       mpq_t* val;
 
-      // SCIPrationalCanonicalize(rational);
-
       val = SCIPrationalGetGMP(rational);
       switch(roundmode)
       {
@@ -2161,7 +2158,7 @@ void SCIPrationalComputeApproximationLong(
       /* if value is almost integer, we use the next best integer (while still adhering to <=/>= requirements) */
       if( temp  < td / (maxdenom * 1.0) )
       {
-         // do not immediately set res to a0 * sign since res and src might be the same pointer
+         /* do not immediately set res to a0 * sign since res and src might be the same pointer */
          if( forcegreater == 1 && a0 * sign < src->val )
          {
             res->val = a0 * sign;

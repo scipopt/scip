@@ -1241,8 +1241,9 @@ SCIP_RETCODE addLocalRows(
             {
                if( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[j]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[j]->var)) )
                {
+                  /* adding unbounded variables safely to an aggregation row is not yet supported */
                   (*valid) = FALSE;
-                  goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
+                  goto TERMINATE;
                }
             }
          }
@@ -1283,7 +1284,8 @@ SCIP_RETCODE addLocalRows(
    }
 
    /* remove all nearly zero coefficients */
-   SCIPaggrRowRemoveZeros(set->scip, proofrow, TRUE, valid); // @TODO, we should maybe only do this when not in exact mode?
+   /**@todo check whether it gives better performance  to keep them in exact mode */
+   SCIPaggrRowRemoveZeros(set->scip, proofrow, TRUE, valid);
 
    TERMINATE:
    if( !(*valid) )
@@ -1420,8 +1422,9 @@ SCIP_RETCODE SCIPgetFarkasProof(
             {
                if( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[i]->var)) )
                {
+                  /* adding unbounded variables safely to an aggregation row is not yet supported */
                   (*valid) = FALSE;
-                  goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
+                  goto TERMINATE;
                }
             }
 
@@ -1712,8 +1715,9 @@ SCIP_RETCODE SCIPgetDualProof(
       {
          if( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(cols[i]->var)) )
          {
+            /* adding unbounded variables safely to an aggregation row is not yet supported */
             (*valid) = FALSE;
-            goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
+            goto TERMINATE;
          }
       }
    }

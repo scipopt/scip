@@ -952,7 +952,7 @@ SCIP_RETCODE performRationalPresolving(
       case ReductionType::kColumnDualValue :
       case ReductionType::kRowDualValue :
       case ReductionType::kCoefficientChange :
-         // dual ReductionTypes should be only calculated for dual reductions and should not appear for MIP
+         /* dual ReductionTypes should be only calculated for dual reductions and should not appear for MIP */
          SCIPerrorMessage("PaPILO: PaPILO should not return dual postsolving reductions in SCIP!!\n");
          SCIPABORT(); /*lint --e{527}*/
          break;
@@ -1550,7 +1550,7 @@ SCIP_RETCODE performRealPresolving(
       case ReductionType::kColumnDualValue :
       case ReductionType::kRowDualValue :
       case ReductionType::kCoefficientChange :
-         // dual ReductionTypes should be only calculated for dual reductions and should not appear for MIP
+         /* dual ReductionTypes should be only calculated for dual reductions and should not appear for MIP */
          SCIPerrorMessage("PaPILO: PaPILO should not return dual postsolving reductions in SCIP!!\n");
          SCIPABORT(); /*lint --e{527}*/
          break;
