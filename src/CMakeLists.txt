@@ -535,7 +535,6 @@ set(scipheaders
     scip/branch_fullstrong.h
     scip/branch_gomory.h
     scip/branch.h
-    scip/branchexact.h
     scip/branch_inference.h
     scip/branch_leastinf.h
     scip/branch_lookahead.h
