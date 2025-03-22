@@ -4268,11 +4268,11 @@ SCIP_RETCODE certificatePrintActivityConflict(
    int nvals;
    SCIP_Rational** vals;
 
-   if (!SCIPisCertificateActive(scip))
+   if( !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
    SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(scip), &diff));
 
-   if ( rhs )
+   if( rhs )
    {
       consdataRecomputeMinactivity(scip, consdata);
       side = consdata->rhsreal;
@@ -4287,7 +4287,7 @@ SCIP_RETCODE certificatePrintActivityConflict(
       assert( activity < side );
    }
 
-   if ( consdata->rowexact != NULL )
+   if( consdata->rowexact != NULL )
    {
       nvals = consdata->rowexact->len;
       vals = consdata->rowexact->vals;
@@ -4832,7 +4832,7 @@ SCIP_RETCODE tightenBounds(
 
 
          /* if there was no progress, skip the rest of the binary variables */
-         if (*cutoff)
+         if( *cutoff )
          {
             break;
          }
@@ -5069,7 +5069,7 @@ SCIP_RETCODE addRelaxation(
       SCIPdebug( SCIP_CALL( SCIPprintRowExact(scip, consdata->rowexact, NULL)) );
 
       /* if presolving is turned off, the row might be trivial */
-      if ( !SCIPrationalIsNegInfinity(consdata->lhs) || !SCIPrationalIsInfinity(consdata->rhs) )
+      if( !SCIPrationalIsNegInfinity(consdata->lhs) || !SCIPrationalIsInfinity(consdata->rhs) )
       {
          SCIP_CALL( SCIPaddRow(scip, consdata->rowlhs, FALSE, cutoff) );
          SCIP_CALL( SCIPaddRowExact(scip, consdata->rowexact) );
@@ -5320,7 +5320,7 @@ SCIP_RETCODE enforceConstraint(
       {
          /* insert LP row as cut */
          SCIP_CALL( addRelaxation(scip, conss[c], &cutoff) );
-         if ( cutoff )
+         if( cutoff )
             *result = SCIP_CUTOFF;
          else
             *result = SCIP_SEPARATED;
@@ -5336,7 +5336,7 @@ SCIP_RETCODE enforceConstraint(
       {
          /* insert LP row as cut */
          SCIP_CALL( addRelaxation(scip, conss[c], &cutoff) );
-         if ( cutoff )
+         if( cutoff )
             *result = SCIP_CUTOFF;
          else
             *result = SCIP_SEPARATED;
@@ -6918,7 +6918,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    cons = eventdata->cons;
    assert(cons != NULL);
    consdata = SCIPconsGetData(cons);
-   if (consdata == NULL)
+   if( consdata == NULL )
       return SCIP_OKAY;
    /* we can skip events droped for deleted constraints */
    if( SCIPconsIsDeleted(cons) )
@@ -7043,8 +7043,11 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
       SCIP_Real newbound;
       SCIP_INTERVAL valrange;
       int varpos;
+
       varpos = eventdata->varpos;
-      if (updateActivities) {
+
+      if( updateActivities )
+      {
          oldbound = SCIPeventGetOldbound(event);
          newbound = SCIPeventGetNewbound(event);
          assert(var != NULL);
@@ -7062,6 +7065,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
             consdataUpdateActivitiesGlbUb(scip, consdata, oldbound, newbound, valrange);
          }
       }
+
       /* if the variable is binary but not fixed it had to become binary due to this global change */
       if( SCIPvarIsBinary(var) && SCIPisGT(scip, SCIPvarGetUbGlobal(var), SCIPvarGetLbGlobal(var)) )
       {
@@ -7081,7 +7085,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
       /* the ordering is preserved if the type changes from something different to binary to binary but SCIPvarIsBinary() is true */
       consdata->indexsorted = (consdata->indexsorted && SCIPeventGetNewtype(event) == SCIP_VARTYPE_BINARY && SCIPvarIsBinary(var));
    }
-   else if ((eventtype & SCIP_EVENTTYPE_VARDELETED) )
+   else if( (eventtype & SCIP_EVENTTYPE_VARDELETED) )
    {
       consdata->varsdeleted = TRUE;
    }
