@@ -370,6 +370,12 @@ SCIP_RETCODE SCIPcertificateFreeMirInfo(
    SCIP_ROW*             row                 /**< row that should be freed, or NULL if not needed */
    );
 
+/** free information that is possibly still stored about this row in the certificate structure */
+SCIP_RETCODE SCIPcertificateFreeRowInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< a SCIP row */
+   );
+
 /** create a new aggregation info for a row */
 SCIP_RETCODE SCIPcertificateNewAggrInfo(
    SCIP*                 scip,               /**< SCIP data structure */

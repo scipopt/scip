@@ -45,25 +45,6 @@
 #include "scip/type_certificate.h"
 #include "scip/type_lpexact.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -152,12 +133,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPprintCertificateMirCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< row that needs to be certified */
-   );
-
-/** free information that is possibly still stored about this row in the certifacte structure */
-SCIP_RETCODE SCIPfreeRowCertInfo(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             row                 /**< a SCIP row */
    );
 
 /** stores the active aggregation information in the certificate data structures for a row */

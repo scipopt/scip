@@ -46,6 +46,7 @@
 #include "scip/sol.h"
 #include "scip/stat.h"
 #include "scip/struct_lp.h"
+#include "scip/struct_lpexact.h"
 #include "scip/struct_prob.h"
 #include "scip/struct_set.h"
 #include "scip/struct_sol.h"

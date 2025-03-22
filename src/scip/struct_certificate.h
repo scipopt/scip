@@ -37,6 +37,7 @@
 #include <stdio.h>
 
 #include "scip/def.h"
+#include "scip/pub_fileio.h"
 #include "scip/type_certificate.h"
 #include "scip/type_var.h"
 #include "scip/type_misc.h"

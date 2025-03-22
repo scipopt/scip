@@ -44,10 +44,6 @@
 #include "scip/type_var.h"
 #include "scip/type_misc.h"
 
-#ifdef NDEBUG
-#include "scip/struct_lpexact.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -61,7 +57,6 @@ SCIP_EXPORT
 SCIP_VAR* SCIPcolExactGetVar(
    SCIP_COLEXACT*        col                 /**< LP column */
    );
-
 
 /** returns the left hand side of the row */
 SCIP_EXPORT
@@ -81,9 +76,21 @@ SCIP_Rational* SCIProwExactGetConstant(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
+/** gets the length of a row */
+SCIP_EXPORT
+int SCIProwExactGetNNonz(
+   SCIP_ROWEXACT*        row                 /**< LP row */
+   );
+
 /** gets array with coefficients of nonzero entries */
 SCIP_EXPORT
 SCIP_Rational** SCIProwExactGetVals(
+   SCIP_ROWEXACT*        row                 /**< LP row */
+   );
+
+/** returns TRUE iff row is member of current LP */
+SCIP_EXPORT
+SCIP_Bool SCIProwExactIsInLP(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
@@ -111,12 +118,6 @@ void SCIProwExactLock(
 SCIP_EXPORT
 void SCIProwExactUnlock(
    SCIP_ROWEXACT*        row                 /**< LP row */
-   );
-
-/** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
-SCIP_EXPORT
-SCIP_ROWEXACT* SCIProwGetRowExact(
-   SCIP_ROW*             row                 /**< SCIP row */
    );
 
 /** returns fp row corresponding to exact row, if it exists. Otherwise returns NULL */

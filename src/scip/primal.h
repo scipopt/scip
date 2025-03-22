@@ -420,7 +420,7 @@ SCIP_RETCODE SCIPprimalTrySolFreeExact(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
@@ -443,7 +443,7 @@ SCIP_RETCODE SCIPprimalAddSolFreeExact(
     SCIP_PROB*            transprob,          /**< transformed problem after presolve */
     SCIP_TREE*            tree,               /**< branch and bound tree */
     SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-    SCIP_LPEXACT*         lp,                 /**< current exact LP data */
+    SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
     SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
     SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
     SCIP_SOL**            sol,                /**< primal CIP solution */

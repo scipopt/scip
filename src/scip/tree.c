@@ -56,6 +56,7 @@
 #include "scip/debug.h"
 #include "scip/prob.h"
 #include "scip/scip.h"
+#include "scip/struct_lpexact.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_event.h"

@@ -39,6 +39,7 @@
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/rational.h"
+#include "scip/type_event.h"
 #include "scip/type_lpexact.h"
 #include "scip/type_misc.h"
 #include "scip/type_prob.h"
@@ -48,8 +49,6 @@
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 #include "scip/pub_lpexact.h"
-
-#include "scip/struct_lpexact.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -169,16 +168,6 @@ void SCIProwExactPrint(
 
 /** get the index of an exact row */
 int SCIProwExactGetIndex(
-   SCIP_ROWEXACT*        row                 /**< LP row */
-   );
-
-/** get the length of a row */
-int SCIProwExactGetNNonz(
-   SCIP_ROWEXACT*        row                 /**< LP row */
-   );
-
-/** returns TRUE iff row is member of current LP */
-SCIP_Bool SCIProwExactIsInLP(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 

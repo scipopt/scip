@@ -48,7 +48,6 @@
 #include "scip/pub_event.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_lpexact.h"
-#include "scip/lpexact.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
@@ -4289,8 +4288,8 @@ SCIP_RETCODE certificatePrintActivityConflict(
 
    if( consdata->rowexact != NULL )
    {
-      nvals = consdata->rowexact->len;
-      vals = consdata->rowexact->vals;
+      nvals = SCIProwExactGetNNonz(consdata->rowexact);
+      vals = SCIProwExactGetVals(consdata->rowexact);
    }
    else
    {
@@ -5026,8 +5025,8 @@ SCIP_RETCODE createRows(
    consdataInvalidateActivities(consdata);
    if( !(consdata->hasfprelax) || consdata->onerowrelax )
       consdata->rowrhs = NULL;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->roweventdata, consdata->rowexact->len) );
-   BMSclearMemoryArray(consdata->roweventdata, consdata->rowexact->len);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->roweventdata, SCIProwExactGetNNonz(consdata->rowexact)) );
+   BMSclearMemoryArray(consdata->roweventdata, SCIProwExactGetNNonz(consdata->rowexact));
 
    return SCIP_OKAY;
 }
@@ -5505,7 +5504,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolExactLinear)
       if( consdata->rowlhs != NULL )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowlhs) );
-         SCIPfreeBlockMemoryArray(scip, &consdata->roweventdata, consdata->rowexact->len);
+         SCIPfreeBlockMemoryArray(scip, &consdata->roweventdata, SCIProwExactGetNNonz(consdata->rowexact));
 
          SCIP_CALL( SCIPreleaseRowExact(scip, &consdata->rowexact) );
          if( consdata->rowrhs != NULL )

@@ -60,6 +60,7 @@
 #include "scip/sepastoreexact.h"
 #include "scip/set.h"
 #include "scip/solve.h"
+#include "scip/struct_lpexact.h"
 #include "scip/struct_primal.h"
 #include "scip/struct_prob.h"
 #include "scip/struct_mem.h"
@@ -572,6 +573,36 @@ SCIP_Bool SCIPisExactDivePossible(
       return FALSE;
 
    return TRUE;
+}
+
+/** returns whether we are in exact diving mode
+ *
+ *  @return whether we are in exact diving mode.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_Bool SCIPinExactDive(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPinExactDive", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPlpExactDiving(scip->lpexact);
 }
 
 /** quits exact LP diving and resets bounds and objective values of columns to the current node's values

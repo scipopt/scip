@@ -252,48 +252,6 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
    return scip->stat->certificate;
 }
 
-/** free information that is possibly still stored about this row in the certifacte structure */
-SCIP_RETCODE SCIPfreeRowCertInfo(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             row                 /**< a SCIP row */
-   )
-{
-   SCIP_CERTIFICATE* certificate;
-   SCIP_AGGREGATIONINFO* aggrinfo;
-   SCIP_MIRINFO* mirinfo;
-
-   if( !SCIPisExact(scip) || !SCIPisCertificateActive(scip) )
-      return SCIP_OKAY;
-
-   certificate = SCIPgetCertificate(scip);
-
-   /* only do something if row does not already exist*/
-   if( SCIPhashmapExists(certificate->rowdatahash, (void*) SCIProwGetRowExact(row)) )
-   {
-      SCIP_CALL( SCIPhashmapRemove(certificate->rowdatahash, (void*) SCIProwGetRowExact(row)) );
-      return SCIP_OKAY;
-   }
-
-   if( certificate->workingaggrinfo || certificate->workingmirinfo )
-      return SCIP_OKAY;
-
-   SCIPdebugMessage("Removing information stored in certificate for row \n");
-
-   if( (certificate->aggrinfohash != NULL) && SCIPhashmapExists(certificate->aggrinfohash, (void*) row) )
-   {
-      aggrinfo = (SCIP_AGGREGATIONINFO*) SCIPhashmapGetImage(certificate->aggrinfohash, (void*) row);
-      SCIP_CALL( SCIPcertificateFreeAggrInfo(scip->set, certificate, scip->lp, aggrinfo, row) );
-   }
-
-   if( (certificate->mirinfohash != NULL) && SCIPhashmapExists(certificate->mirinfohash, (void*) row) )
-   {
-      mirinfo = (SCIP_MIRINFO*) SCIPhashmapGetImage(certificate->mirinfohash, (void*) row);
-      SCIP_CALL( SCIPcertificateFreeMirInfo(scip->set, certificate, scip->lp, mirinfo, row) );
-   }
-
-   return SCIP_OKAY;
-}
-
 /** agg aggregation information to certificate for one row */
 SCIP_RETCODE SCIPaddCertificateAggregation(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -35,26 +35,41 @@
 #include <string.h>
 #include <map>
 
+#include "lpiexact/lpiexact.h"
+#include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "scip/cuts.h"
-#include "scip/cons_exactlp.h"
-#include "scip/scip.h"
-#include "scip/scip_exact.h"
-#include "scip/set.h"
 #include "scip/lp.h"
 #include "scip/lpexact.h"
 #include "scip/misc.h"
+#include "scip/pub_cons.h"
 #include "scip/pub_lpexact.h"
-#include "lpiexact/lpiexact.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_message.h"
+#include "scip/pub_tree.h"
+#include "scip/pub_var.h"
 #include "scip/prob.h"
-#include "scip/certificate.h"
-#include "scip/struct_certificate.h"
+#include "scip/cuts.h"
+#include "scip/cons_exactlp.h"
+#include "scip/scip_exact.h"
+#include "scip/scip_general.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
+#include "scip/set.h"
 #include "scip/sol.h"
+#include "scip/struct_certificate.h"
+#include "scip/struct_lpexact.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_var.h"
-#include "scip/scip_lp.h"
 #include "scip/var.h"
+#include "scip/certificate.h"
 
 #define SCIP_HASHSIZE_CERTIFICATE    500 /**< size of hash map for certificate -> nodesdata mapping used for certificate output */
 #define SCIP_MB_TO_CHAR_RATE   1048576.0 /**< conversion rate from MB to characters */
@@ -2922,6 +2937,48 @@ SCIP_RETCODE SCIPcertificateFreeMirInfo(
       certificate->mirinfo[arraypos]->arpos = arraypos;
    }
    certificate->nmirinfos--;
+
+   return SCIP_OKAY;
+}
+
+/** free information that is possibly still stored about this row in the certificate structure */
+SCIP_RETCODE SCIPcertificateFreeRowInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< a SCIP row */
+   )
+{
+   SCIP_CERTIFICATE* certificate;
+   SCIP_AGGREGATIONINFO* aggrinfo;
+   SCIP_MIRINFO* mirinfo;
+
+   if( !SCIPisExact(scip) || !SCIPisCertificateActive(scip) )
+      return SCIP_OKAY;
+
+   certificate = SCIPgetCertificate(scip);
+
+   /* only do something if row does not already exist*/
+   if( SCIPhashmapExists(certificate->rowdatahash, (void*) SCIProwGetRowExact(row)) )
+   {
+      SCIP_CALL( SCIPhashmapRemove(certificate->rowdatahash, (void*) SCIProwGetRowExact(row)) );
+      return SCIP_OKAY;
+   }
+
+   if( certificate->workingaggrinfo || certificate->workingmirinfo )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("Removing information stored in certificate for row \n");
+
+   if( (certificate->aggrinfohash != NULL) && SCIPhashmapExists(certificate->aggrinfohash, (void*) row) )
+   {
+      aggrinfo = (SCIP_AGGREGATIONINFO*) SCIPhashmapGetImage(certificate->aggrinfohash, (void*) row);
+      SCIP_CALL( SCIPcertificateFreeAggrInfo(scip->set, certificate, scip->lp, aggrinfo, row) );
+   }
+
+   if( (certificate->mirinfohash != NULL) && SCIPhashmapExists(certificate->mirinfohash, (void*) row) )
+   {
+      mirinfo = (SCIP_MIRINFO*) SCIPhashmapGetImage(certificate->mirinfohash, (void*) row);
+      SCIP_CALL( SCIPcertificateFreeMirInfo(scip->set, certificate, scip->lp, mirinfo, row) );
+   }
 
    return SCIP_OKAY;
 }

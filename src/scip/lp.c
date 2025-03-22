@@ -43,6 +43,7 @@
 #include "lpi/lpi.h"
 #include "lpiexact/lpiexact.h"
 #include "scip/clock.h"
+#include "scip/certificate.h"
 #include "scip/cons.h"
 #include "scip/event.h"
 #include "scip/intervalarith.h"
@@ -62,6 +63,7 @@
 #include "scip/stat.h"
 #include "scip/struct_event.h"
 #include "scip/struct_lp.h"
+#include "scip/struct_lpexact.h"
 #include "scip/struct_prob.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
@@ -5573,7 +5575,7 @@ SCIP_RETCODE SCIProwRelease(
    (*row)->nuses--;
    if( (*row)->nuses == 0 )
    {
-      SCIP_CALL( SCIPfreeRowCertInfo(set->scip, (*row)) );
+      SCIP_CALL( SCIPcertificateFreeRowInfo(set->scip, (*row)) );
       SCIP_CALL( SCIProwFree(row, blkmem, set, lp) );
    }
 
@@ -17247,6 +17249,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIProwGetActiveLPCount
 #undef SCIProwGetNLPsAfterCreation
 #undef SCIProwChgRank
+#undef SCIProwGetRowExact
 #undef SCIPlpGetCols
 #undef SCIPlpGetNCols
 #undef SCIPlpGetRows
@@ -17899,6 +17902,16 @@ SCIP_Longint SCIProwGetNLPsAfterCreation(
    assert(row != NULL);
 
    return row->nlpsaftercreation;
+}
+
+/** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
+SCIP_ROWEXACT* SCIProwGetRowExact(
+   SCIP_ROW*             row                 /**< SCIP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->rowexact;
 }
 
 /** gets array with columns of the LP */

@@ -50,9 +50,6 @@
 #include "scip/type_sol.h"
 #include "scip/pub_lp.h"
 
-#include "scip/struct_lp.h"
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif

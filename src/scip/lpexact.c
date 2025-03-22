@@ -37,7 +37,6 @@
 #include "lpi/lpi.h"
 #include "lpiexact/lpiexact.h"
 #include "scip/clock.h"
-#include "scip/cons.h"
 #include "scip/cutpool.h"
 #include "scip/event.h"
 #include "scip/intervalarith.h"
@@ -45,6 +44,7 @@
 #include "scip/lpexact.h"
 #include "scip/misc.h"
 #include "scip/prob.h"
+#include "scip/pub_cons.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_lpexact.h"
 #include "scip/pub_message.h"
@@ -5004,7 +5004,7 @@ int SCIProwExactGetIndex(
    return row->index;
 }
 
-/** get the length of a row */
+/** gets the length of a row */
 int SCIProwExactGetNNonz(
    SCIP_ROWEXACT*        row                 /**< LP row */
    )
@@ -5065,16 +5065,6 @@ SCIP_Bool SCIProwHasExRow(
    assert(lpexact != NULL);
 
    return (NULL != row->rowexact);
-}
-
-/** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
-SCIP_ROWEXACT* SCIProwGetRowExact(
-   SCIP_ROW*             row                 /**< SCIP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->rowexact;
 }
 
 /** returns fp row corresponding to exact row, if it exists. Otherwise returns NULL */

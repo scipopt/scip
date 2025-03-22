@@ -33,16 +33,30 @@
 
 #include <assert.h>
 
-#include "scip/cons_exactsol.h"
+#include "scip/def.h"
 #include "scip/cons_exactlp.h"
+#include "scip/cons_exactsol.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_heur.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_lpexact.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
 #include "scip/rational.h"
+#include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
+#include "scip/scip_lp.h"
 #include "scip/scip_lpexact.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_tree.h"
 #include "scip/set.h"
 
 
@@ -393,11 +407,11 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    /* if we're already in exact diving mode, we already computed an exact solution
     * with this constraint handler and are checking if it's actually feasible
     */
-   if( SCIPlpExactDiving(scip->lpexact) )
+   if( SCIPinExactDive(scip) )
       return SCIP_OKAY;
 
    /* we also don't want to execute the handler, if we are in "normal" diving mode */
-   if( SCIPlpDiving(scip->lp) )
+   if( SCIPinDive(scip) )
       return SCIP_OKAY;
 
    /* do not run for solutions that are already exact */
@@ -405,7 +419,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       return SCIP_OKAY;
 
    /* if we are at a point where we can't dive exactly, buffer the solution and return */
-   if( !SCIPtreeHasCurrentNodeLP(scip->tree) || SCIPnodeGetType(SCIPgetCurrentNode(scip)) != SCIP_NODETYPE_FOCUSNODE )
+   if( !SCIPhasCurrentNodeLP(scip) || SCIPnodeGetType(SCIPgetCurrentNode(scip)) != SCIP_NODETYPE_FOCUSNODE )
    {
       SCIP_CALL( bufferSolution(scip, sol, conshdlrdata) );
       *result = SCIP_INFEASIBLE;

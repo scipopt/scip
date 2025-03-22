@@ -47,6 +47,7 @@
 #include "scip/reopt.h"
 #include "scip/disp.h"
 #include "scip/struct_event.h"
+#include "scip/struct_lpexact.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
 #include "scip/scip_solvingstats.h"
@@ -843,7 +844,7 @@ SCIP_RETCODE primalAddSolExact(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL**            solptr,             /**< pointer to primal CIP solution */
@@ -2287,7 +2288,7 @@ SCIP_RETCODE primalAddSolExact(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL**            solptr,             /**< pointer to primal CIP solution */
@@ -2329,7 +2330,7 @@ SCIP_RETCODE primalAddSolExact(
    /* note: we copy the solution so to not destroy the double-link between sol and fpsol */
    SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat,
             origprob, transprob, tree, reopt,
-            lp->fplp, eventqueue, eventfilter, &sol, &stored) );
+            lpexact->fplp, eventqueue, eventfilter, &sol, &stored) );
 
    SCIPrationalFreeBuffer(set->buffer, &obj);
 
@@ -2347,7 +2348,7 @@ SCIP_RETCODE SCIPprimalTrySolFreeExact(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
@@ -2386,7 +2387,7 @@ SCIP_RETCODE SCIPprimalTrySolFreeExact(
    if( feasible )
    {
       SCIP_CALL( primalAddSolExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-            tree, reopt, lp, eventqueue, eventfilter, sol, insertpos, replace) );
+            tree, reopt, lpexact, eventqueue, eventfilter, sol, insertpos, replace) );
 
       /* clear the pointer, such that the user cannot access the solution anymore */
       *sol = NULL;
@@ -2414,7 +2415,7 @@ SCIP_RETCODE SCIPprimalAddSolFreeExact(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LPEXACT*         lp,                 /**< current exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL**            sol,                /**< primal CIP solution */
@@ -2432,7 +2433,7 @@ SCIP_RETCODE SCIPprimalAddSolFreeExact(
    assert(origprob != NULL);
    assert(transprob != NULL);
    assert(tree != NULL);
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(eventqueue != NULL);
    assert(eventfilter != NULL);
    assert(*sol != NULL);
@@ -2448,7 +2449,7 @@ SCIP_RETCODE SCIPprimalAddSolFreeExact(
 
       /* insert copied solution into solution storage */
       SCIP_CALL( primalAddSolExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-            tree, reopt, lp, eventqueue, eventfilter, sol, insertpos, replace) );
+            tree, reopt, lpexact, eventqueue, eventfilter, sol, insertpos, replace) );
       *stored = TRUE;
       *sol = NULL;
    }
