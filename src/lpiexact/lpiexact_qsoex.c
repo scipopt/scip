@@ -33,7 +33,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /* #define VERIFY_OUT */ /* uncomment to get info of QSopt_ex about verifying dual feasibility of the basis */
 
-/* #define USEOBJLIM */  /* uncomment to pass objlimit to exact lp solver; same as in cons_exactlp.c;  warning: QSopt_ex allows objlimits but the support is buggy; if the limit is reached, QSopt_ex does not stop but increasess the precision */
+/* #define USEOBJLIM */  /* uncomment to pass objlimit to exact lp solver; same as in cons_exactlinear.c;  warning: QSopt_ex allows objlimits but the support is buggy; if the limit is reached, QSopt_ex does not stop but increasess the precision */
 
 #include "scip/def.h"
 

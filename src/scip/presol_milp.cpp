@@ -67,7 +67,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 #include <assert.h>
 #include "scip/cons_linear.h"
-#include "scip/cons_exactlp.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/pub_matrix.h"
 #include "scip/pub_presol.h"
 #include "scip/pub_var.h"

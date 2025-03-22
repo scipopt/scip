@@ -34,7 +34,7 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/cons_exactlp.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/cons_exactsol.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_heur.h"

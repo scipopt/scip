@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_exactlp.h
+/**@file   cons_exactlinear.h
  * @ingroup CONSHDLRS
  * @brief  Constraint handler for linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.
  * @author Leon Eifler
@@ -30,8 +30,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXACTLP_H__
-#define __SCIP_CONS_EXACTLP_H__
+#ifndef __SCIP_CONS_EXACTLINEAR_H__
+#define __SCIP_CONS_EXACTLINEAR_H__
 
 #include "scip/def.h"
 #include "scip/intervalarith.h"

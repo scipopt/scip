@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_exactlp.c
+/**@file   cons_exactlinear.c
  * @brief Constraint handler for exact linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.
  * @author Leon Eifler
  * @author Sander Borst
@@ -37,7 +37,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/certificate.h"
 #include "scip/cons_knapsack.h"
-#include "scip/cons_exactlp.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.h"

@@ -47,7 +47,7 @@
 #include "scip/cons_and.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_nonlinear.h"
-#include "scip/cons_exactlp.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"

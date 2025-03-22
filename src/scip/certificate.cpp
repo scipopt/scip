@@ -49,7 +49,7 @@
 #include "scip/pub_var.h"
 #include "scip/prob.h"
 #include "scip/cuts.h"
-#include "scip/cons_exactlp.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"

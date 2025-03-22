@@ -109,7 +109,7 @@
 #include "scip/table.h"
 #include "scip/tree.h"
 #include "scip/var.h"
-#include "scip/cons_exactlp.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/scip_exact.h"
 #include <string.h>
 

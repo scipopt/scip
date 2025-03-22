@@ -44,7 +44,7 @@
 #define getcwd _getcwd
 #endif
 
-#include "scip/cons_exactlp.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_sos1.h"
@@ -770,7 +770,7 @@ SCIP_RETCODE addConsTerm(
             SCIP_Rational* scipvalrat;
 
             /* due to technical reasons, we do not add singleton constraints but immediately transform them to variable bounds */
-            /** @todo exip: rework this into presolving of cons_exactlp */
+            /** @todo exip: rework this into presolving of cons_exactlinear */
             if( term_get_elements(term) == 1 )
             {
                SCIP_Rational* quotient;
@@ -1080,7 +1080,7 @@ SCIP_RETCODE addVar(
 
    if( SCIPisExact(scip) )
    {
-      /* get exact lower bounds for exactlp constraint handler and safe FP-values for FP-problem */
+      /* get exact lower bounds for exactlinear constraint handler and safe FP-values for FP-problem */
       switch( bound_get_type(lower) )
       {
       case BOUND_VALUE:
@@ -1103,7 +1103,7 @@ SCIP_RETCODE addVar(
          break;
       }
 
-      /* get exact upper bounds for exactlp constraint handler and safe FP-values for FP-problem */
+      /* get exact upper bounds for exactlinear constraint handler and safe FP-values for FP-problem */
       switch( bound_get_type(upper) )
       {
       case BOUND_VALUE:

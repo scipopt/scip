@@ -697,7 +697,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_cumulative.o \
 			scip/cons_disjunction.o \
 			scip/cons_fixedvar.o \
-			scip/cons_exactlp.o \
+			scip/cons_exactlinear.o \
 			scip/cons_exactsol.o \
 			scip/cons_indicator.o \
 			scip/cons_integral.o \

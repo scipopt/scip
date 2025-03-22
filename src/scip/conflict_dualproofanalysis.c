@@ -48,7 +48,7 @@
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
 #include "scip/cons_linear.h"
-#include "scip/cons_exactlp.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/cuts.h"
 #include "scip/history.h"
 #include "scip/lp.h"

@@ -61,7 +61,7 @@ set(scipsources
     scip/cons_countsols.c
     scip/cons_cumulative.c
     scip/cons_disjunction.c
-    scip/cons_exactlp.c
+    scip/cons_exactlinear.c
     scip/cons_exactsol.c
     scip/cons_fixedvar.c
     scip/cons_indicator.c
@@ -568,7 +568,7 @@ set(scipheaders
     scip/cons_countsols.h
     scip/cons_cumulative.h
     scip/cons_disjunction.h
-    scip/cons_exactlp.h
+    scip/cons_exactlinear.h
     scip/cons_exactsol.h
     scip/cons_fixedvar.h
     scip/cons.h
