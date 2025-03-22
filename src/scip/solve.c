@@ -34,7 +34,6 @@
 #include <assert.h>
 
 #include "lpi/lpi.h"
-#include "scip/bounding_exact.h"
 #include "scip/branch.h"
 #include "scip/certificate.h"
 #include "scip/clock.h"
@@ -48,6 +47,7 @@
 #include "scip/interrupt.h"
 #include "scip/lp.h"
 #include "scip/lpexact.h"
+#include "scip/lpexact_bounding.h"
 #include "scip/nodesel.h"
 #include "scip/pricer.h"
 #include "scip/pricestore.h"

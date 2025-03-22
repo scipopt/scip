@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   bounding_exact.c
+/**@file   lpexact_bounding.c
  * @brief  safe exact rational bounding methods
  * @author Leon Eifler
  *
@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "scip/bounding_exact.h"
+#include "scip/lpexact_bounding.h"
 #include "scip/struct_set.h"
 #include "scip/pub_message.h"
 #include "scip/stat.h"

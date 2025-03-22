@@ -31,7 +31,6 @@ set(scipsources
     scip/bandit_exp3.c
     scip/bandit_exp3ix.c
     scip/bandit_ucb.c
-    scip/bounding_exact.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
     scip/branch_distribution.c
@@ -312,6 +311,7 @@ set(scipsources
     scip/lapack_calls.c
     scip/lp.c
     scip/lpexact.c
+    scip/lpexact_bounding.c
     scip/matrix.c
     scip/mem.c
     scip/misc.c
@@ -528,7 +528,6 @@ set(scipheaders
     scip/bendersdefcuts.h
     scip/bitencode.h
     scip/boundstore.h
-    scip/bounding_exact.h
     scip/branch_allfullstrong.h
     scip/branch_cloud.h
     scip/branch_distribution.h
@@ -702,6 +701,7 @@ set(scipheaders
     scip/lapack_calls.h
     scip/lp.h
     scip/lpexact.h
+    scip/lpexact_bounding.h
     scip/mem.h
     scip/message_default.h
     scip/message.h

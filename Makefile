@@ -945,7 +945,6 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/benders.o \
 			scip/benderscut.o \
 			scip/bendersdefcuts.o \
-			scip/bounding_exact.o \
 			scip/clock.o \
 			scip/concsolver.o \
 			scip/concurrent.o \
@@ -978,6 +977,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/lapack_calls.o \
 			scip/lp.o \
 			scip/lpexact.o \
+			scip/lpexact_bounding.o \
 			scip/matrix.o \
 			scip/mem.o \
 			scip/misc.o \
