@@ -282,7 +282,6 @@ set(scipsources
     scip/bendersdefcuts.c
     scip/boundstore.c
     scip/branch.c
-    scip/branchexact.c
     scip/clock.c
     scip/concsolver.c
     scip/concurrent.c

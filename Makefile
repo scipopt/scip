@@ -937,7 +937,6 @@ endif
 
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \
-			scip/branchexact.o \
 			scip/bandit.o \
 			scip/bandit_epsgreedy.o \
 			scip/bandit_exp3.o \

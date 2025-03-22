@@ -47,7 +47,6 @@
 #include "scip/benders.h"
 #include "scip/benderscut.h"
 #include "scip/branch.h"
-#include "scip/branchexact.h"
 #include "scip/bounding_exact.h"
 #include "scip/branch_nodereopt.h"
 #include "scip/certificate.h"

@@ -664,6 +664,30 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    );
 
+/** branches on a variable x; unlike the fp-version this will also branch x <= floor(x'), x >= ceil(x')
+ * if x' is very close to being integral at one of its bounds;
+ * in the fp version this case would be branched in the middle of the domain;
+ * if x' is almost integral but not at a bound, this will branch (x <= x'-1, x == x', x >= x'+1);
+ * not meant for branching on a continuous variables
+ */
+SCIP_RETCODE SCIPtreeBranchVarExact(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
+   SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
+   );
+
 /** branches a variable x using the given domain hole; two child nodes will be created (x <= left, x >= right) */
 SCIP_RETCODE SCIPtreeBranchVarHole(
    SCIP_TREE*            tree,               /**< branch and bound tree */

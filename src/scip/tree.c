@@ -6409,6 +6409,162 @@ SCIP_RETCODE SCIPtreeBranchVar(
    return SCIP_OKAY;
 }
 
+/** branches on a variable x; unlike the fp-version this will also branch x <= floor(x'), x >= ceil(x')
+ * if x' is very close to being integral at one of its bounds;
+ * in the fp version this case would be branched in the middle of the domain;
+ * if x' is almost integral but not at a bound, this will branch (x <= x'-1, x == x', x >= x'+1);
+ * not meant for branching on a continuous variables
+ */
+SCIP_RETCODE SCIPtreeBranchVarExact(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
+   SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
+   )
+{
+   SCIP_NODE* node;
+   SCIP_Real priority;
+   SCIP_Real estimate;
+
+   SCIP_Real downub;
+   SCIP_Real uplb;
+   SCIP_Real val;
+
+   assert(tree != NULL);
+   assert(set != NULL);
+   assert(var != NULL);
+
+   /* initialize children pointer */
+   if( downchild != NULL )
+      *downchild = NULL;
+   if( eqchild != NULL )
+      *eqchild = NULL;
+   if( upchild != NULL )
+      *upchild = NULL;
+
+   var = SCIPvarGetProbvar(var);
+
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+   {
+      SCIPerrorMessage("cannot branch on fixed or multi-aggregated variable <%s>\n", SCIPvarGetName(var));
+      SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
+   }
+
+   /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
+   if( !SCIPvarIsIntegral(var) )
+   {
+      SCIPerrorMessage("Cannot branch exactly on continuous variable %s.\n", SCIPvarGetName(var));
+      SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
+   }
+
+   assert(SCIPvarIsActive(var));
+   assert(SCIPvarGetProbindex(var) >= 0);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
+   assert(SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
+   assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+
+   /* update the information for the focus node before creating children */
+   SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, tree->focusnode) );
+
+   /* get value of variable in current LP or pseudo solution */
+   val = SCIPvarGetSol(var, tree->focusnodehaslp);
+
+   /* avoid branching on infinite values in pseudo solution */
+   if( SCIPsetIsInfinity(set, -val) || SCIPsetIsInfinity(set, val) )
+   {
+      val = SCIPvarGetWorstBoundLocal(var);
+
+      /* if both bounds are infinite, choose zero as branching point */
+      if( SCIPsetIsInfinity(set, -val) || SCIPsetIsInfinity(set, val) )
+      {
+         assert(SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
+         assert(SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
+         val = 0.0;
+      }
+   }
+
+   assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
+   assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
+   /* see comment in SCIPbranchVarVal */
+   assert(SCIPvarIsIntegral(var));
+
+   /* create child nodes with x <= floor(x'), and x >= ceil(x') */
+   downub = floor(val);
+   uplb = downub + 1.0;
+   SCIPsetDebugMsg(set, "fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n",
+      SCIPvarGetName(var), val, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+
+   /* perform the branching;
+    * set the node selection priority in a way, s.t. a node is preferred whose branching goes in the same direction
+    * as the deviation from the variable's root solution
+    */
+   if( downub != SCIP_INVALID )    /*lint !e777*/
+   {
+      /* create child node x <= downub */
+      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_DOWNWARDS, downub);
+      /* if LP solution is cutoff in child, compute a new estimate
+       * otherwise we cannot expect a direct change in the best solution, so we keep the estimate of the parent node */
+      if( SCIPsetIsGT(set, val, downub) )
+         estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, downub);
+      else
+         estimate = SCIPnodeGetEstimate(tree->focusnode);
+      SCIPsetDebugMsg(set, " -> creating child: <%s> <= %g (priority: %g, estimate: %g)\n",
+         SCIPvarGetName(var), downub, priority, estimate);
+      SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
+
+      /* update branching information in certificate, if certificate is active */
+      SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
+
+      SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
+            eventqueue, eventfilter, NULL, var, downub, SCIP_BOUNDTYPE_UPPER, FALSE) );
+      /* output branching bound change to visualization file */
+      SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
+
+      if( downchild != NULL )
+         *downchild = node;
+   }
+
+   if( uplb != SCIP_INVALID )    /*lint !e777*/
+   {
+      /* create child node with x >= uplb */
+      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_UPWARDS, uplb);
+      if( SCIPsetIsLT(set, val, uplb) )
+         estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, uplb);
+      else
+         estimate = SCIPnodeGetEstimate(tree->focusnode);
+      SCIPsetDebugMsg(set, " -> creating child: <%s> >= %g (priority: %g, estimate: %g)\n",
+         SCIPvarGetName(var), uplb, priority, estimate);
+      SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
+
+      /* update branching information in certificate, if certificate is active */
+      SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, uplb) );
+
+      SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
+            eventqueue, eventfilter, NULL, var, uplb, SCIP_BOUNDTYPE_LOWER, FALSE) );
+      /* output branching bound change to visualization file */
+      SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
+
+      if( upchild != NULL )
+         *upchild = node;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** branches a variable x using the given domain hole; two child nodes will be created (x <= left, x >= right) */
 SCIP_RETCODE SCIPtreeBranchVarHole(
    SCIP_TREE*            tree,               /**< branch and bound tree */
