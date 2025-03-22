@@ -37,12 +37,14 @@
 #include <stdio.h>
 
 #include "scip/def.h"
-#include "scip/type_rational.h"
 #include "blockmemshell/memory.h"
+#include "scip/lpexact.h"
+#include "scip/type_rational.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_misc.h"
 #include "scip/type_lp.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
 #include "scip/type_sol.h"
@@ -50,9 +52,6 @@
 
 #include "scip/struct_lp.h"
 
-#include "scip/lpexact.h"
-#include "scip/type_lp.h"
-#include "scip/type_lpexact.h"
 
 #ifdef __cplusplus
 extern "C" {

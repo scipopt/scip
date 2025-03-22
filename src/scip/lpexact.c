@@ -53,6 +53,8 @@
 #include "scip/pub_var.h"
 #include "scip/pub_tree.h"
 #include "scip/rational.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_lpexact.h"
 #include "scip/set.h"
 #include "scip/sepastoreexact.h"
 #include "scip/sol.h"
@@ -70,7 +72,6 @@
 #include <inttypes.h>
 /** @todo exip: remove this and find a clean implementation to access sepastoreex */
 #include "scip/struct_scip.h"
-#include "scip/scip_lpexact.h"
 
 /** comparison method for sorting rows by non-decreasing index */
 SCIP_DECL_SORTPTRCOMP(SCIProwExactComp)

@@ -31,26 +31,26 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "scip/lpexact_bounding.h"
-#include "scip/struct_set.h"
-#include "scip/pub_message.h"
-#include "scip/stat.h"
-#include "scip/set.h"
-#include "scip/rational.h"
-#include "scip/clock.h"
 #include "lpi/lpi.h"
-#include "scip/lp.h"
-#include "scip/lpexact.h"
 #include "lpiexact/lpiexact.h"
-#include "scip/scip_prob.h"
-#include "scip/prob.h"
-#include "scip/scip.h"
-#include "scip/primal.h"
-#include "scip/sepastoreexact.h"
-#include "scip/struct_scip.h"
 #ifdef SCIP_WITH_EXACTSOLVE
 #include "rectlu/rectlu.h"
 #endif
+#include "scip/lpexact_bounding.h"
+#include "scip/pub_message.h"
+#include "scip/clock.h"
+#include "scip/lp.h"
+#include "scip/lpexact.h"
+#include "scip/prob.h"
+#include "scip/rational.h"
+#include "scip/scip.h"
+#include "scip/scip_prob.h"
+#include "scip/sepastoreexact.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/struct_scip.h"
+#include "scip/struct_set.h"
+#include "scip/primal.h"
 
 #ifdef SCIP_WITH_BOOST
 

@@ -37,8 +37,8 @@
 #include <stdio.h>
 
 #include "scip/def.h"
-#include "scip/rational.h"
 #include "blockmemshell/memory.h"
+#include "scip/rational.h"
 #include "scip/type_lpexact.h"
 #include "scip/type_misc.h"
 #include "scip/type_prob.h"
