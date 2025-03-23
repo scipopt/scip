@@ -1073,7 +1073,7 @@ SCIP_RETCODE constructProjectShiftDataLPIExact(
    SCIP_CALL( SCIPrationalCreateBlock(blkmem, &projshiftdata->commonslack) );
 
    /* process the bound changes */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );
+   SCIP_CALL( SCIPlpExactSyncLPs(lpexact, blkmem, set) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    assert(lpexact->nrows > 0);
@@ -1283,7 +1283,7 @@ SCIP_RETCODE projectShift(
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );
+   SCIP_CALL( SCIPlpExactSyncLPs(lpexact, blkmem, set) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    nextendedrows = projshiftdata->nextendedrows;
@@ -2059,7 +2059,7 @@ SCIP_RETCODE boundShift(
 
    SCIPdebugMessage("calling proved bound for %s LP\n", usefarkas ? "infeasible" : "feasible");
 
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );
+   SCIP_CALL( SCIPlpExactSyncLPs(lpexact, blkmem, set) );
    SCIP_CALL( SCIPlpExactLink(lpexact, blkmem, set, eventqueue) );
 
    /* reset proved bound status */

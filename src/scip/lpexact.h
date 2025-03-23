@@ -825,6 +825,13 @@ void SCIPlpExactOverwriteFpDualSol(
    SCIP_Bool             dualfarkas          /**< TRUE if farkas proof, FALSE if dual sol? */
    );
 
+/** synchronizes the exact LP with cuts from the floating-point LP */
+SCIP_RETCODE SCIPlpExactSyncLPs(
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -797,7 +797,7 @@ SCIP_RETCODE SCIPwriteLPexact(
    }
 
    /* we need a flushed lp to write the current lp */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(scip->sepastoreexact, scip->mem->probmem, scip->set, scip->lpexact, scip->eventqueue) );
+   SCIP_CALL( SCIPlpExactSyncLPs(scip->lpexact, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPlpExactFlush(scip->lpexact, scip->mem->probmem, scip->set, scip->eventqueue) );
 
    SCIP_CALL( SCIPlpExactWrite(scip->lpexact, filename) );
