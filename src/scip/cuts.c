@@ -1962,7 +1962,7 @@ SCIP_RETCODE cutTightenCoefsSafely(
 
    SCIPsortDownInd(cutinds, compareAbsCoefs, (void*) cutcoefs, *cutnnz);
 
-/** @todo exip: implement and certify coef tightening */
+/** @todo implement and certify coef tightening */
 #ifdef SCIP_DISABLED_CODE
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
    for( i = 0; i < *cutnnz && FALSE; )
@@ -2941,7 +2941,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       SCIPintervalSetRoundingModeDownwards();
       sideval = userow->lhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /** @todo exip: we can't certify this yet so we have to disable it, if enabled change also in cutsSubstituteMIRSafe */
+      /** @note: we can't certify this yet so we have to disable it, if enabled change also in cutsSubstituteMIRSafe */
       if( userow->integral )
          sideval = ceil(sideval)
 #endif
@@ -2951,7 +2951,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       SCIPintervalSetRoundingModeUpwards();
       sideval = userow->rhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /** @todo exip: we can't certify this yet so we have to disable it */
+      /** @note: we can't certify this yet so we have to disable it */
       if( userow->integral )
          sideval = floor(sideval);
 #endif
@@ -3418,7 +3418,7 @@ SCIP_RETCODE addOneRowSafely(
       sideval = userow->lhs - userow->constant;
       /* row is integral? round left hand side up */
 #ifdef SCIP_DISABLED_CODE
-      /** @todo exip: we can't certify this yet so we have to disable it, if enabled change also in cutsSubstituteMIRSafe */
+      /** @note: we can't certify this yet so we have to disable it, if enabled change also in cutsSubstituteMIRSafe */
       if( userow->integral )
          sideval = ceil(sideval);
 #endif
@@ -3436,7 +3436,7 @@ SCIP_RETCODE addOneRowSafely(
       sideval = userow->rhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
       /* row is integral? round right hand side down */
-      /** @todo exip: we can't certify this yet so we have to disable it */
+      /** @note: we can't certify this yet so we have to disable it */
       if( userow->integral )
          sideval = floor(sideval);
 #endif
@@ -5179,10 +5179,7 @@ SCIP_RETCODE cutsRoundMIRSafely(
     * then switch to down since we are working on lhs */
    /* we need to careate the split-data for certification here, since part of the f_j > f_0 variables goes into the continuous part of the split */
    if( SCIPisCertificateActive(scip) )
-   {
-      /** @todo exip: either change to quad-array or transform cutcoefs to double array */
       mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
-   }
 
    previousroundmode = SCIPintervalGetRoundingMode();
    tmpinterval = f0;
@@ -5575,10 +5572,7 @@ SCIP_RETCODE cutsRoundMIRRational(
     * then switch to down since we are working on lhs */
    /* we need to careate the split-data for certification here, since part of the f_j > f_0 variables goes into the continuous part of the split */
    if( SCIPisCertificateActive(scip) )
-   {
-      /** @todo exip: either change to quad-array or transform cutcoefs to double array */
       mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
-   }
 
    previousroundmode = SCIPintervalGetRoundingMode();
    SCIPrationalSetReal(tmp, 1.0);
@@ -5692,7 +5686,6 @@ SCIP_RETCODE cutsRoundMIRRational(
       }
 
       /* remove zero cut coefficients from cut, only remove positive coefficients in exact solving mode */
-      /** @todo exip: what to do with the split in this case, especially if we are in the f > f_0 case? */
       if( SCIPrationalIsZero(cutaj) )
       {
          QUAD_ASSIGN(cutajquad, 0.0);
@@ -6392,7 +6385,6 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
       SCIPintervalMulScalar(SCIPinfinity(scip), &ar, ar, (double) slacksign[i]);
 
       /* calculate slack variable's coefficient a^_r in the cut */
-      /** @todo exip: add certification for integer slacks */
       if( row->integral &&
             ((slacksign[i] == +1 && SCIPrealIsExactlyIntegral(row->rhs) &&  SCIPrealIsExactlyIntegral(row->constant))
             || (slacksign[i] == -1 && SCIPrealIsExactlyIntegral(row->lhs) &&  SCIPrealIsExactlyIntegral(row->constant))) ) /*lint !e613*/
@@ -6503,7 +6495,6 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
             currentnegslackrow++;
          }
 
-         /** @todo exip: inf/sup here? */
          SCIP_CALL( varVecAddScaledRowCoefsSafely(scip, cutinds, cutcoefs, nnz, userow, mult, &sidevalchg, &success) );
 
          /* move to rhs -> need to round up */
@@ -6522,7 +6513,7 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
          SCIPintervalSet(&rowrhs, userow->rhs);
          SCIPintervalSubScalar(SCIPinfinity(scip), &rowrhs, rowrhs, userow->constant);
 #ifdef SCIP_DISABLED_CODE
-         /** @todo exip: can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
+         /** @note: can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
          if( row->integral )
          {
             /* the right hand side was implicitly rounded down in row aggregation */
@@ -6542,7 +6533,7 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
          SCIPintervalSet(&rowlhs, userow->lhs);
          SCIPintervalSubScalar(SCIPinfinity(scip), &rowlhs, rowlhs, userow->constant);
 #ifdef SCIP_DISABLED_CODE
-         /** @todo exip: can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
+         /** @note can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
          if( row->integral )
          {
             /* the left hand side was implicitly rounded up in row aggregation */
@@ -6668,7 +6659,6 @@ SCIP_RETCODE cutsSubstituteMIRRational(
       SCIPrationalMultReal(ar, ar, slacksign[i]);
 
       /* calculate slack variable's coefficient a^_r in the cut */
-      /** @todo exip: handle integer slacks in exact solving mode */
 #ifdef SCIP_DISABLED_CODE
       if( row->integral && !SCIPisExact(scip)
          && ((slacksign[i] == +1 && SCIPisFeasIntegral(scip, row->rhs - row->constant))
@@ -6743,7 +6733,6 @@ SCIP_RETCODE cutsSubstituteMIRRational(
             currentnegslackrow++;
          }
 
-         /** @todo exip: inf/sup here? */
          SCIP_CALL( varVecAddScaledRowCoefsSafely(scip, cutinds, cutcoefs, nnz, userow, mult, &sidevalchg, &success) );
 
          /* move to rhs -> need to round up */
@@ -6761,7 +6750,7 @@ SCIP_RETCODE cutsSubstituteMIRRational(
          /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
          assert(!SCIPisInfinity(scip, userow->rhs));
 #ifdef SCIP_DISABLED_CODE
-         /** @todo exip: can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
+         /** @note can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
          if( row->integral )
          {
             /* the right hand side was implicitly rounded down in row aggregation */
@@ -6783,7 +6772,7 @@ SCIP_RETCODE cutsSubstituteMIRRational(
          /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
          assert(!SCIPisInfinity(scip, -userow->lhs));
 #ifdef SCIP_DISABLED_CODE
-         /** @todo exip: can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
+         /** @note can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
          if( row->integral )
          {
             /* the left hand side was implicitly rounded up in row aggregation */

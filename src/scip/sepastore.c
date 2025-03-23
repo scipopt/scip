@@ -198,7 +198,7 @@ SCIP_Bool sepastoreIsCutRedundant(
    if( SCIProwIsModifiable(cut) )
       return FALSE;
 
-   /** @todo exip: make a safe version */
+   /** @todo implement a safe redundancy check */
    if( set->exact_enabled )
       return FALSE;
 
@@ -241,7 +241,7 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
 
    *infeasible = FALSE;
 
-   /** @todo exip: make a safe version */
+   /** @todo implement a safe redundancy or infeasibility check */
    if( set->exact_enabled )
       return FALSE;
 

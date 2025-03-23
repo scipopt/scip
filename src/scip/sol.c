@@ -2394,7 +2394,6 @@ SCIP_RETCODE solCheckExact(
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &solval) );
 
    /* check whether the solution respects the global bounds of the variables */
-   /** @todo exip: always check this in exact solving mode, for now */
    {
       int v;
 
@@ -3145,7 +3144,6 @@ SCIP_RETCODE SCIPsolRetransformExact(
 
    /* clear the solution and convert it into original space */
    SCIP_CALL( solClearArrays(sol) );
-   /** @todo exip exact obj offset? */
    SCIPrationalSetReal(sol->valsexact->obj, origprob->objoffset);
    sol->solorigin = SCIP_SOLORIGIN_ORIGINAL;
 
@@ -3157,7 +3155,7 @@ SCIP_RETCODE SCIPsolRetransformExact(
       if( !SCIPrationalIsZero(solvals[v]) )
       {
          SCIP_CALL( solSetArrayValExact(sol, set, vars[v], solvals[v]) );
-         /** @todo exip might need unchangedObjexact if probing mode becomes a thing */
+         /** @note we might require unchangedObjexact if exact probing mode is implemented */
          SCIPrationalAddProd(sol->valsexact->obj, SCIPvarGetObjExact(vars[v]), solvals[v]);
       }
    }

@@ -1137,8 +1137,7 @@ void consdataInvalidateActivities(
    consdata->glbmaxactivityposhuge = -1;
 }
 
-/** @todo exip: should this return a real-relaxation instead
- *  compute the pseudo activity of a constraint */
+/** computes the pseudo activity of a constraint */
 static
 void consdataComputePseudoActivity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1160,8 +1159,8 @@ void consdataComputePseudoActivity(
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
       val = consdata->vals[i];
-      /** @todo exip: should bound be rational? */
       bound = (SCIPvarGetBestBoundType(consdata->vars[i]) == SCIP_BOUNDTYPE_LOWER) ? SCIPvarGetLbLocalExact(consdata->vars[i]) : SCIPvarGetUbLocalExact(consdata->vars[i]);
+
       if( SCIPrationalIsInfinity(bound) )
       {
          if( SCIPrationalIsPositive(val) )
@@ -3690,7 +3689,6 @@ SCIP_RETCODE addCoef(
    /* add the new coefficient to the LP row */
    if( consdata->rowexact != NULL )
    {
-      /**@ todo exip: inexact rows have to be changed as well here */
      SCIP_CALL( SCIPaddVarsToRowExact(scip, consdata->rowexact, 1, &var, &val) );
    }
 
@@ -4945,19 +4943,8 @@ SCIP_RETCODE checkCons(
       consdata->rowexact == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
 
    /* the activity of pseudo solutions may be invalid if it comprises positive and negative infinity contributions; we
-    * return infeasible for safety
-    * @todo exip: do we need to handle this as well? */
-   /*lint --e{506,774}*/
-   if( /* activity == SCIP_INVALID */ FALSE )
-   {
-      assert(sol == NULL);
-      *violated = TRUE;
-
-      /* reset constraint age since we are in enforcement */
-      SCIP_CALL( SCIPresetConsAge(scip, cons) );
-   }
-   /* check with absolute tolerances, always do this for exact constraints */
-   else if( ((!SCIPrationalIsNegInfinity(consdata->lhs) && SCIPrationalIsLT(activity, consdata->lhs)) ||
+    * return infeasible for safety */
+   if( ((!SCIPrationalIsNegInfinity(consdata->lhs) && SCIPrationalIsLT(activity, consdata->lhs)) ||
       (!SCIPrationalIsInfinity(consdata->rhs) && SCIPrationalIsGT(activity, consdata->rhs))) )
    {
       *violated = TRUE;
@@ -5660,7 +5647,6 @@ SCIP_DECL_CONSINITLP(consInitlpExactLinear)
    return SCIP_OKAY;
 }
 
-/** @todo exip: this is not correct yet */
 /** separation method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSSEPALP(consSepalpExactLinear)
@@ -7622,7 +7608,6 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
    /* for the solving process we need linear rows, containing only active variables; therefore when creating a linear
     * constraint after presolving we have to ensure that it holds active variables
     */
-   /** @todo exip: might be needed */
    if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE )
    {
       SCIP_CONSDATA* consdata;
@@ -8118,7 +8103,7 @@ void SCIPgetDualsolExactLinear(
       SCIPrationalSetReal(ret, 0.0);
 }
 
-/** @todo exip: WIP returns fp dual */
+/** @note this method currently returns the floating-point dual farkas */
 /** gets the dual Farkas value of the linear constraint in the current infeasible LP */
 void SCIPgetDualfarkasExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8146,7 +8131,6 @@ void SCIPgetDualfarkasExactLinear(
       SCIPrationalSetReal(ret, 0.0);
 }
 
-/** @todo exip: maybe this should set the missing side of rowlhs to at least get an approximation? */
 /** returns the linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;
  *  the user must not modify the row!
  */

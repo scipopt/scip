@@ -770,7 +770,7 @@ SCIP_RETCODE addConsTerm(
             SCIP_Rational* scipvalrat;
 
             /* due to technical reasons, we do not add singleton constraints but immediately transform them to variable bounds */
-            /** @todo exip: rework this into presolving of cons_exactlinear */
+            /** @todo rework this into presolving of cons_exactlinear */
             if( term_get_elements(term) == 1 )
             {
                SCIP_Rational* quotient;

@@ -668,7 +668,6 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &inf) );
 
    /* recalculate internal objective limit */
-   /** @todo exip: do we need probgetobjlim in exact variant? */
    SCIPrationalSetReal(tmp, SCIPprobGetObjlim(origprob, set));
    SCIPrationalSetString(inf, "inf");
    SCIPprobInternObjvalExact(transprob, origprob, set, tmp, upperbound);

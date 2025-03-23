@@ -2758,7 +2758,6 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
       /* ignore fixed variables (due to numerics, it is possible, that the LP solution of a fixed integer variable
       * (with large fixed value) is fractional in terms of absolute feasibility measure)
       */
-      /** @todo exip: this should be fine, right? */
       if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
          continue;
 

@@ -644,7 +644,6 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
    QS_RETURN(rval);
 }
 
-/** @todo exip: check whether I implemented handling of case beg=ind=val=NULL correctly */
 /** adds columns to the LP */
 SCIP_RETCODE SCIPlpiExactAddCols(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */

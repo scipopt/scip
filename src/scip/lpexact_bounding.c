@@ -777,9 +777,6 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       {
          /* if commonslack == 0, point/ray is not interior */
          SCIPdebugMessage("   --> project-and-shift failed to find interior point/ray\n");
-         /** @todo exip Should we set projshiftdatafail to TRUE? Otherwise, the LPI may currently not be freed below,
-          *        but only at the end of solving.
-          */
       }
       else
       {
@@ -2087,7 +2084,7 @@ SCIP_RETCODE boundShift(
       if( SCIPlpiIsInfinity(lp->lpi, -fpdual[j]) )
 	      fpdual[j] = -SCIPsetInfinity(set);
 
-      /** @todo exip: dual bounding improvement
+      /** @note possible future dual bounding improvement
        *  - should we also set nonzero values of y to zero if corresponding lhs/rhs is not finite (to improve dual bound)?
        *  - do such situations come up?
        */

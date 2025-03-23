@@ -9866,7 +9866,7 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
 
    *success = FALSE;
 
-   /** @todo exip: extension
+   /** @note possible future extension
     *  - we could also compute scm and gcd via mpz_scm() and mpz_gcd(), respectively. check which version is faster
     *  - if we stay with the SCIP_Longint conversion, we could use the other way to check the correctness of our result
     */

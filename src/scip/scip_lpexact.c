@@ -629,7 +629,6 @@ SCIP_RETCODE SCIPendExactDive(
       return SCIP_INVALIDCALL;
    }
 
-   /** @todo exip: adress problem when user calls `SCIPendDive` in between */
    /* end floating-point LP dive, see comment in SCIPstartExactDive() */
    SCIP_CALL( SCIPendDive(scip) );
 

@@ -2652,7 +2652,6 @@ SCIP_RETCODE readBoundsExact(
  READBOUNDS_FINISH:
    if( nsemicont > 0 )
    {
-      /** @todo exip: maybe handle this at some point? */
       SCIPerrorMessage("Exact solving mode cannot handle semicontinous variables at the moment \n");
       SCIPABORT();
    }

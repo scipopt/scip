@@ -157,8 +157,7 @@ SCIP_RETCODE SCIPsepastoreExactAddCut(
    assert(!SCIPrationalIsNegInfinity(SCIProwExactGetLhs(cut)) || !SCIPrationalIsInfinity(SCIProwExactGetRhs(cut)));
    assert(eventqueue != NULL);
 
-   /* debug: check cut for feasibility */
-   /** @todo exip: actually check the exact row */
+   /* debug: check cut for feasibility; note that this just checks for fp feasibility and could be extended */
    SCIP_CALL( SCIPdebugCheckRow(set, cut->fprow) ); /*lint !e506 !e774*/
 
    /* update statistics of total number of found cuts */
@@ -257,8 +256,6 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
          SCIP_CALL( SCIProwExactRelease(&rowexact, blkmem, set, lpexact) );
       }
    }
-
-   /** @todo exip: make this more efficient by not enforcing same order of rows in exact/fp lp */
 
    SCIPsetFreeBufferArray(set, &rowdset);
 

@@ -1007,8 +1007,6 @@ SCIP_RETCODE insertColChgcols(
    SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
-   /** @todo exip: is this correct? we might change multiple times because
-    * we do not sync after every node, etc. */
    if( !col->objchanged && !col->lbchanged && !col->ubchanged )
    {
       SCIP_CALL( ensureChgcolsSize(lp, set, lp->nchgcols+1) );
@@ -3292,7 +3290,6 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
 
       forcegreater = 0;
 
-      /** @todo exip: we only need one bound if we can control the direction we look in */
       if( SCIPrationalIsNegInfinity(SCIPvarGetLbGlobalExact(var)) && SCIPrationalIsInfinity(SCIPvarGetUbGlobalExact(var)) )
          forcegreater = -2;
       else if( SCIPrationalIsNegInfinity(SCIPvarGetLbGlobalExact(var)) )
@@ -3826,7 +3823,6 @@ SCIP_RETCODE SCIPlpExactProjectShiftFreeLPIExact(
    assert(lpiexact != NULL);
    assert(*lpiexact != NULL);
 
-   /** @todo exip This should all happen automatically when calling SCIPlpiExactFree() */
    SCIP_CALL( SCIPlpiExactGetNRows(*lpiexact, &nlpirows) );
    SCIP_CALL( SCIPlpiExactDelRows(*lpiexact, 0, nlpirows - 1) );
 
@@ -4827,7 +4823,6 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
             {
                SCIP_Bool rayfeasible;
 
-               /** @todo exip: this case still needs some work */
                if( set->lp_checkprimfeas )
                {
                   /* get unbounded LP solution and check the solution's feasibility again */

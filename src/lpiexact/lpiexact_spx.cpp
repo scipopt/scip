@@ -239,8 +239,7 @@ static void RsetSpxVector(
    }
 }
 
-/** set the value of a SoPlex rational from a SCIP_Rational*
- * @todo exip: there seems to be something wrong with the = of spx rational */
+/** set the value of a SoPlex rational from a SCIP_Rational */
 static void SpxRSetRat(
    SCIP_LPIEXACT*        lpi,                /**< exact LPI */
    soplex::Rational&     spxr,               /**< SoPlex Rational*/
@@ -1661,7 +1660,6 @@ SCIP_RETCODE SCIPlpiExactGetCols(
 
    if( lb != NULL )
    {
-      /** @todo exip: what about scaling? */
       if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
       {
          const VectorRational& lbvec = lpi->spx->lowerRational();
@@ -1692,7 +1690,6 @@ SCIP_RETCODE SCIPlpiExactGetCols(
       {
          beg[i-firstcol] = *nnonz;
 
-         /** @todo exip: what about scaling? */
          if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) && FALSE )
          {
          }
@@ -1741,7 +1738,6 @@ SCIP_RETCODE SCIPlpiExactGetRows(
 
    if( lhs != NULL )
    {
-      /** @todo exip: what about scaling? */
       if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) && FALSE )
       {
       }
@@ -1764,7 +1760,6 @@ SCIP_RETCODE SCIPlpiExactGetRows(
       {
          beg[i-firstrow] = *nnonz;
 
-         /** @todo exip: what to do about scaling? */
          if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
          {
          }
