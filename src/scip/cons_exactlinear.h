@@ -318,8 +318,7 @@ SCIP_Rational** SCIPgetValsExactLinear(
 
 /** gets the activity of the linear constraint in the given solution
  *
- *  @note if the solution contains values at infinity, this method will return SCIP_INVALID in case the activity
- *        comprises positive and negative infinity contributions
+ *  @note if the activity comprises positive and negative infinity contributions, the result is currently undefined
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetActivityExactLinear(
@@ -338,17 +337,23 @@ SCIP_RETCODE SCIPgetFeasibilityExactLinear(
    SCIP_Rational*        ret                 /**< pointer to store the result */
    );
 
-/** gets the dual solution of the linear constraint in the current LP */
+/** gets the dual solution of the linear constraint in the current LP
+ *
+ *  @note this method currently returns the value from the floating-point LP
+ */
 SCIP_EXPORT
-void SCIPgetDualsolExactLinear(
+void SCIPgetFpDualsolExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_Rational*        ret                 /**< pointer to store the result */
    );
 
-/** gets the dual Farkas value of the linear constraint in the current infeasible LP */
+/** gets the dual Farkas value of the linear constraint in the current infeasible LP
+ *
+ *  @note this method currently returns the value from the floating-point LP
+ */
 SCIP_EXPORT
-void SCIPgetDualfarkasExactLinear(
+void SCIPgetFpDualfarkasExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_Rational*        ret                 /**< pointer to store the result */
