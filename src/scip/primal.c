@@ -295,7 +295,7 @@ SCIP_RETCODE primalSetCutoffbound(
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
       SCIPrationalSetReal(tmp, primal->cutoffbound);
       if( SCIPrationalIsGT(primal->cutoffboundexact, tmp) )
-         SCIPrationalSet(primal->cutoffboundexact, tmp);
+         SCIPrationalSetRational(primal->cutoffboundexact, tmp);
       SCIPrationalFreeBuffer(set->buffer, &tmp);
    }
 
@@ -479,7 +479,7 @@ SCIP_RETCODE primalSetUpperboundExact(
    SCIPrationalDebugMessage("changing upper bound from %q to %q\n", primal->upperboundexact, upperbound);
 
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &cutoffbound) );
-   SCIPrationalSet(primal->upperboundexact, upperbound);
+   SCIPrationalSetRational(primal->upperboundexact, upperbound);
    primal->upperbound = SCIPrationalRoundReal(primal->upperboundexact, SCIP_R_ROUND_UPWARDS);
 
    /* if objective value is always integral, the cutoff bound can be reduced to nearly the previous integer number */
@@ -494,7 +494,7 @@ SCIP_RETCODE primalSetUpperboundExact(
       /** @todo: exip We can probably stop adding the delta */
    }
    else
-      SCIPrationalSet(cutoffbound, upperbound);
+      SCIPrationalSetRational(cutoffbound, upperbound);
 
    /* update cutoff bound */
    if( SCIPrationalIsLT(cutoffbound, primal->cutoffboundexact) )

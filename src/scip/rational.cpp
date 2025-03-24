@@ -173,7 +173,7 @@ SCIP_RETCODE SCIPrationalCopy(
 {
    SCIP_CALL( SCIPrationalCreate(result) );
 
-   SCIPrationalSet(*result, src);
+   SCIPrationalSetRational(*result, src);
 
    return SCIP_OKAY;
 }
@@ -187,7 +187,7 @@ SCIP_RETCODE SCIPrationalCopyBlock(
 {
    SCIP_CALL( SCIPrationalCreateBlock(mem, result) );
 
-   SCIPrationalSet(*result, src);
+   SCIPrationalSetRational(*result, src);
 
    return SCIP_OKAY;
 }
@@ -201,7 +201,7 @@ SCIP_RETCODE SCIPrationalCopyBuffer(
 {
    SCIP_CALL( SCIPrationalCreateBuffer(mem, result) );
 
-   SCIPrationalSet(*result, src);
+   SCIPrationalSetRational(*result, src);
 
    return SCIP_OKAY;
 }
@@ -582,7 +582,7 @@ void SCIPrationalCheckInfByValue(
 }
 
 /** set a rational to the value of another rational */
-void SCIPrationalSet(
+void SCIPrationalSetRational(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        src                 /**< the src */
    )
@@ -825,7 +825,7 @@ void SCIPrationalAdd(
 
    if( op1->isinf || op2->isinf )
    {
-      SCIPrationalSet(res, op1->isinf ? op1 : op2 );
+      SCIPrationalSetRational(res, op1->isinf ? op1 : op2 );
       if( op1->val.sign() != op2->val.sign() && op1->isinf && op2->isinf )
       {
          SCIPerrorMessage("addition of pos and neg infinity not supported \n");
@@ -849,7 +849,7 @@ void SCIPrationalAddReal(
 {
    assert(res != nullptr && rat != nullptr);
    if( rat->isinf )
-      SCIPrationalSet(res, rat);
+      SCIPrationalSetRational(res, rat);
    else if( REALABS(real) >= infinity )
    {
       SCIPrationalSetReal(res, real);
@@ -873,7 +873,7 @@ void SCIPrationalDiff(
 
    if( op1->isinf || op2->isinf )
    {
-      op1->isinf ? SCIPrationalSet(res, op1) : SCIPrationalNegate(res, op2);
+      op1->isinf ? SCIPrationalSetRational(res, op1) : SCIPrationalNegate(res, op2);
       if( op1->val.sign() == op2->val.sign() && op1->isinf && op2->isinf )
       {
          SCIPerrorMessage("subtraction of two infinities with same sign not supported \n");
@@ -995,7 +995,7 @@ void SCIPrationalMultReal(
       }
       else
       {
-         op2 > 0 ? SCIPrationalSet(res, op1) : SCIPrationalNegate(res, op1);
+         op2 > 0 ? SCIPrationalSetRational(res, op1) : SCIPrationalNegate(res, op1);
       }
    }
    else if( REALABS(op2) >= infinity )
@@ -1041,7 +1041,7 @@ void SCIPrationalDivReal(
 
    if( op1->isinf )
    {
-      op2 > 0 ? SCIPrationalSet(res, op1) : SCIPrationalNegate(res, op1);
+      op2 > 0 ? SCIPrationalSetRational(res, op1) : SCIPrationalNegate(res, op1);
    }
    else if( REALABS(op2) >= infinity && !SCIPrationalIsZero(op1) )
    {
@@ -1240,16 +1240,16 @@ void SCIPrationalMin(
    if( op1->isinf )
    {
       if( op1->val > 0 )
-         SCIPrationalSet(res, op2);
+         SCIPrationalSetRational(res, op2);
       else
-         SCIPrationalSet(res, op1);
+         SCIPrationalSetRational(res, op1);
    }
    else if( op2->isinf )
    {
       if( op2->val > 0 )
-         SCIPrationalSet(res, op1);
+         SCIPrationalSetRational(res, op1);
       else
-         SCIPrationalSet(res, op2);
+         SCIPrationalSetRational(res, op2);
    }
    else
    {
@@ -1271,16 +1271,16 @@ void SCIPrationalMax(
    if( op1->isinf )
    {
       if( op1->val > 0 )
-         SCIPrationalSet(res, op1);
+         SCIPrationalSetRational(res, op1);
       else
-         SCIPrationalSet(res, op2);
+         SCIPrationalSetRational(res, op2);
    }
    else if( op2->isinf )
    {
       if( op2->val > 0 )
-         SCIPrationalSet(res, op2);
+         SCIPrationalSetRational(res, op2);
       else
-         SCIPrationalSet(res, op1);
+         SCIPrationalSetRational(res, op1);
    }
    else
    {
@@ -2004,7 +2004,7 @@ void SCIPrationalRoundInteger(
    assert(res != nullptr);
 
    if( src->isinf )
-      SCIPrationalSet(res, src);
+      SCIPrationalSetRational(res, src);
    else
    {
       roundint = 0;
@@ -2575,7 +2575,7 @@ void SCIPrationalarrayGetVal(
       || (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
       SCIPrationalSetInt(result, 0, 1);
    else
-      SCIPrationalSet(result, &rationalarray->vals[idx - rationalarray->firstidx]);
+      SCIPrationalSetRational(result, &rationalarray->vals[idx - rationalarray->firstidx]);
 }
 
 /** sets value of entry in dynamic array */

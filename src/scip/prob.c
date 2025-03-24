@@ -1956,7 +1956,7 @@ SCIP_RETCODE probScaleObjExact(
 
       /* get objective values of integer variables */
       for( v = 0; v < nints; ++v )
-         SCIPrationalSet(objvals[v], SCIPvarGetObjExact(transprob->vars[v]));
+         SCIPrationalSetRational(objvals[v], SCIPvarGetObjExact(transprob->vars[v]));
 
       /* calculate integral scalar */
       SCIP_CALL( SCIPcalcIntegralScalarExact(set->buffer, objvals, nints, OBJSCALE_MAXFINALSCALE,

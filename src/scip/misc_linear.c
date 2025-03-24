@@ -415,7 +415,7 @@ SCIP_RETCODE SCIPgetConsValsExact(
       SCIP_Rational** weights;
       weights = SCIPgetValsExactLinear(scip, cons);
       for( i = 0; i < nvars; i++ )
-         SCIPrationalSet(vals[i], weights[i]);
+         SCIPrationalSetRational(vals[i], weights[i]);
    }
    else
    {

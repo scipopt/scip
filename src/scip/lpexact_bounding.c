@@ -324,7 +324,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
          for( j = 0; j < projlen[i]; j++ )
          {
             projind[ projbeg[i] + j ] = lpexact->rows[i]->cols_index[j];
-            SCIPrationalSet( projval[ projbeg[i] + j], lpexact->rows[i]->vals[j]);
+            SCIPrationalSetRational( projval[ projbeg[i] + j], lpexact->rows[i]->vals[j]);
          }
          pos += projlen[i];
       }
@@ -453,7 +453,7 @@ SCIP_RETCODE setupProjectShiftOpt(
    {
       if( dvarincidence[i] )
       {
-         SCIPrationalSet(psobj[pos], lpexact->rows[i]->lhs);
+         SCIPrationalSetRational(psobj[pos], lpexact->rows[i]->lhs);
          pos++;
       }
    }
@@ -469,7 +469,7 @@ SCIP_RETCODE setupProjectShiftOpt(
    {
       if( dvarincidence[2*nrows + i] )
       {
-         SCIPrationalSet(psobj[pos], lpexact->cols[i]->lb);
+         SCIPrationalSetRational(psobj[pos], lpexact->cols[i]->lb);
          pos++;
       }
    }
@@ -506,7 +506,7 @@ SCIP_RETCODE setupProjectShiftOpt(
    /* set objective to normalized value */
    for( i = 0; i < ndvarmap; i ++ )
       SCIPrationalMult(psobj[i], psobj[i], alpha);
-   SCIPrationalSet(psobj[ndvarmap], beta);
+   SCIPrationalSetRational(psobj[ndvarmap], beta);
 
    /* set variable bounds */
    for( i = 0; i < ndvarmap; i++ )
@@ -520,8 +520,8 @@ SCIP_RETCODE setupProjectShiftOpt(
    /* set up constraint bounds */
    for( i = 0; i < ncols; i++ )
    {
-      SCIPrationalSet(pslhs[i], lpexact->cols[i]->obj);
-      SCIPrationalSet(psrhs[i], lpexact->cols[i]->obj);
+      SCIPrationalSetRational(pslhs[i], lpexact->cols[i]->obj);
+      SCIPrationalSetRational(psrhs[i], lpexact->cols[i]->obj);
    }
    for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
    {
@@ -583,7 +583,7 @@ SCIP_RETCODE setupProjectShiftOpt(
             pos = psbeg[lpexact->rows[indx]->cols_index[j]] + pslen[lpexact->rows[indx]->cols_index[j]];
             psind[pos] = i;
             if(dvarmap[i]<nrows)
-               SCIPrationalSet(psval[pos], lpexact->rows[indx]->vals[j]);
+               SCIPrationalSetRational(psval[pos], lpexact->rows[indx]->vals[j]);
             else
                SCIPrationalNegate(psval[pos], lpexact->rows[indx]->vals[j]);
             pslen[lpexact->rows[indx]->cols_index[j]]++;
@@ -772,7 +772,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &objval) );
       SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, sol, NULL, NULL, NULL) );
 
-      SCIPrationalSet(projshiftdata->commonslack, sol[psncols - 1]);
+      SCIPrationalSetRational(projshiftdata->commonslack, sol[psncols - 1]);
       if( SCIPrationalIsZero(projshiftdata->commonslack) )
       {
          /* if commonslack == 0, point/ray is not interior */
@@ -787,9 +787,9 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
          for( i = 0; i < ndvarmap; i++ )
          {
             if( findintpoint )
-               SCIPrationalSet( projshiftdata->interiorpoint[dvarmap[i]], sol[i]);
+               SCIPrationalSetRational( projshiftdata->interiorpoint[dvarmap[i]], sol[i]);
             else
-               SCIPrationalSet( projshiftdata->interiorray[dvarmap[i]], sol[i]);
+               SCIPrationalSetRational( projshiftdata->interiorray[dvarmap[i]], sol[i]);
          }
          if( findintpoint )
             projshiftdata->projshifthaspoint = TRUE;
@@ -1414,7 +1414,7 @@ SCIP_RETCODE projectShift(
          if( i < nrows )
             SCIPrationalDiff(tmp, val, lpexact->rows[i]->constant);
          else
-            SCIPrationalSet(tmp, val);
+            SCIPrationalSetRational(tmp, val);
          SCIPrationalMult(tmp, dualsol[i], tmp);
          SCIPrationalAdd(dualbound, dualbound, tmp);
       }
@@ -1584,7 +1584,7 @@ SCIP_RETCODE projectShift(
             {
                int map = projshiftdata->projshiftbasis[i];
 
-               SCIPrationalSet(tmp2, projshiftdata->interiorpoint[map]);
+               SCIPrationalSetRational(tmp2, projshiftdata->interiorpoint[map]);
                SCIPrationalDiff(tmp, projshiftdata->interiorpoint[map], correction[i]);
                SCIPrationalDiv(tmp2, tmp2, tmp);
                SCIPrationalMin(lambda1, lambda1, tmp2);
@@ -1701,7 +1701,7 @@ SCIP_RETCODE projectShift(
    for( i = 0; i < ncols; i++ )
    {
       if( !usefarkas )
-        SCIPrationalSet(violation[i], lpexact->cols[i]->obj);
+        SCIPrationalSetRational(violation[i], lpexact->cols[i]->obj);
       else
          SCIPrationalSetInt(violation[i], 0, 1);
    }
@@ -1754,7 +1754,7 @@ SCIP_RETCODE projectShift(
       if( i < nrows )
          SCIPrationalDiff(tmp, val, lpexact->rows[i]->constant);
       else
-         SCIPrationalSet(tmp, val);
+         SCIPrationalSetRational(tmp, val);
       SCIPrationalMult(tmp, dualsol[i], tmp);
       SCIPrationalAdd(dualbound, dualbound, tmp);
    }
@@ -1783,7 +1783,7 @@ SCIP_RETCODE projectShift(
       else if( SCIPrationalIsGTReal(dualbound, -SCIPsetInfinity(set)) )
       {
          stat->boundingerrorps += REALABS(lp->lpobjval - computedbound);
-         SCIPrationalSet(lpexact->lpobjval, dualbound);
+         SCIPrationalSetRational(lpexact->lpobjval, dualbound);
          *safebound = computedbound;
          lp->lpobjval = *safebound;
          lp->hasprovedbound = TRUE;

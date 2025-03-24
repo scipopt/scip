@@ -2056,16 +2056,16 @@ SCIP_RETCODE readConstraintsRational(
    switch( sense ) /*lint !e530*/
    {
    case LP_SENSE_GE:
-      SCIPrationalSet(lhs, sidevalue);
+      SCIPrationalSetRational(lhs, sidevalue);
       SCIPrationalSetString(rhs, "inf");
       break;
    case LP_SENSE_LE:
       SCIPrationalSetString(lhs, "-inf");
-      SCIPrationalSet(rhs, sidevalue);
+      SCIPrationalSetRational(rhs, sidevalue);
       break;
    case LP_SENSE_EQ:
-      SCIPrationalSet(lhs, sidevalue);
-      SCIPrationalSet(rhs, sidevalue);
+      SCIPrationalSetRational(lhs, sidevalue);
+      SCIPrationalSetRational(rhs, sidevalue);
       break;
    case LP_SENSE_NOTHING:
    default:

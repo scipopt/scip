@@ -754,7 +754,7 @@ SCIP_RETCODE consdataCreate(
             else
             {
                varsbuffer[k] = var;
-               SCIPrationalSet(valsbuffer[k], vals[v]);
+               SCIPrationalSetRational(valsbuffer[k], vals[v]);
                SCIPintervalSetRational(&(valsrealbuffer[k]), vals[v]);
                k++;
 
@@ -1419,7 +1419,7 @@ void checkMaxActivityDelta(
 
          if( RisGT(delta,maxactdelta) )
          {
-           SCIPrationalSet(maxactdelta, delta);
+           SCIPrationalSetRational(maxactdelta, delta);
          }
       }
       assert(SCIPrationalIsEqual(maxactdelta, consdata->maxactdelta));
@@ -3343,7 +3343,7 @@ SCIP_RETCODE chgLhs(
    /* ensure that rhs >= lhs is satisfied without numerical tolerance */
    if( SCIPrationalIsEqual(lhs, consdata->rhs) )
    {
-      SCIPrationalSet(consdata->rhs, lhs);
+      SCIPrationalSetRational(consdata->rhs, lhs);
       assert(consdata->rowlhs == NULL);
    }
 
@@ -3422,7 +3422,7 @@ SCIP_RETCODE chgLhs(
    }
 
    /* set new left hand side and update constraint data */
-   SCIPrationalSet(consdata->lhs, lhs);
+   SCIPrationalSetRational(consdata->lhs, lhs);
    consdata->lhsreal = SCIPrationalRoundReal(lhs, SCIP_R_ROUND_DOWNWARDS);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
@@ -3466,7 +3466,7 @@ SCIP_RETCODE chgRhs(
    /* ensure that rhs >= lhs is satisfied without numerical tolerance */
    if( SCIPrationalIsEqual(rhs, consdata->lhs) )
    {
-      SCIPrationalSet(consdata->rhs, rhs);
+      SCIPrationalSetRational(consdata->rhs, rhs);
       assert(consdata->rowlhs == NULL);
    }
 
@@ -3547,7 +3547,7 @@ SCIP_RETCODE chgRhs(
    }
 
    /* set new right hand side and update constraint data */
-   SCIPrationalSet(consdata->rhs, rhs);
+   SCIPrationalSetRational(consdata->rhs, rhs);
    consdata->rhsreal = SCIPrationalRoundReal(rhs, SCIP_R_ROUND_UPWARDS);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
@@ -3599,7 +3599,7 @@ SCIP_RETCODE addCoef(
 
    SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1) );
    consdata->vars[consdata->nvars] = var;
-   SCIPrationalSet(consdata->vals[consdata->nvars], val);
+   SCIPrationalSetRational(consdata->vals[consdata->nvars], val);
    SCIPintervalSetRational(&(consdata->valsreal[consdata->nvars]), val);
    consdata->nvars++;
 
@@ -3747,7 +3747,7 @@ SCIP_RETCODE delCoefPos(
    if( pos != consdata->nvars - 1 )
    {
       consdata->vars[pos] = consdata->vars[consdata->nvars-1];
-      SCIPrationalSet(consdata->vals[pos], consdata->vals[consdata->nvars - 1]);
+      SCIPrationalSetRational(consdata->vals[pos], consdata->vals[consdata->nvars - 1]);
       consdata->valsreal[pos] = consdata->valsreal[consdata->nvars -1];
 
       if( consdata->eventdata != NULL )
@@ -3845,7 +3845,7 @@ SCIP_RETCODE chgCoefPos(
       consdataUpdateChgCoef(scip, consdata, var, consdata->valsreal[pos], val, newvalfp, newval);
 
       /* change the value */
-   SCIPrationalSet(consdata->vals[pos], newval);
+   SCIPrationalSetRational(consdata->vals[pos], newval);
    consdata->valsreal[pos] = newvalfp;
    if( consdata->coefsorted )
    {
@@ -3950,7 +3950,7 @@ SCIP_RETCODE mergeMultiples(
       var = consdata->vars[v];
       if( consdata->vars[v-1] == var )
       {
-         SCIPrationalSet(valsum, consdata->vals[v]);
+         SCIPrationalSetRational(valsum, consdata->vals[v]);
          do
          {
             SCIP_CALL( delCoefPos(scip, cons, v) );
@@ -6802,7 +6802,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
 
       /* in case of an equation, assign the left also to the right hand side */
       if( rhsstrptr == lhsstrptr )
-         SCIPrationalSet(rhs, lhs);
+         SCIPrationalSetRational(rhs, lhs);
    }
 
    /* parse right hand side, if different from left hand side */

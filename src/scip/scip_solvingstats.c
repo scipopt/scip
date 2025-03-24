@@ -1724,7 +1724,7 @@ void SCIPgetUpperboundExact(
    if( SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
       SCIPrationalSetString(result, "-inf");
    else
-      SCIPrationalSet(result, scip->primal->upperboundexact);
+      SCIPrationalSetRational(result, scip->primal->upperboundexact);
 }
 
 /** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff

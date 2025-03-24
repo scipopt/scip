@@ -273,7 +273,7 @@ void SCIPrationalFreeBufferArray(
 
 /** sets a rational to the value of another rational */
 SCIP_EXPORT
-void SCIPrationalSet(
+void SCIPrationalSetRational(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        src                 /**< the src */
    );

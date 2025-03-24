@@ -1067,7 +1067,7 @@ SCIP_RETCODE SCIPparseVarsLinearsumExact(
          assert(monomialvars[v][0] != NULL);
 
          vars[v] = monomialvars[v][0]; /*lint !e613*/
-         SCIPrationalSet(vals[v], monomialcoefs[v]); /*lint !e613*/
+         SCIPrationalSetRational(vals[v], monomialcoefs[v]); /*lint !e613*/
       }
    }
 
@@ -1542,7 +1542,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
                (*monomialvars)[*nmonomials] = NULL;
             }
 
-            SCIPrationalSet((*monomialcoefs)[*nmonomials], coef);
+            SCIPrationalSetRational((*monomialcoefs)[*nmonomials], coef);
             ++*nmonomials;
 
             nvars = 0;
@@ -1699,7 +1699,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
          {
             (*monomialvars)[*nmonomials] = NULL;
          }
-         SCIPrationalSet((*monomialcoefs)[*nmonomials], coef);
+         SCIPrationalSetRational((*monomialcoefs)[*nmonomials], coef);
          ++*nmonomials;
       }
 
@@ -7211,7 +7211,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    SCIP_Rational* ub;
    SCIP_Rational* adjustedBound;
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &adjustedBound) );
-   SCIPrationalSet(adjustedBound, newbound);
+   SCIPrationalSetRational(adjustedBound, newbound);
    assert(infeasible != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPinferVarUbConsExact", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -7333,7 +7333,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    SCIP_Rational* lb;
    SCIP_Rational* adjustedBound;
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &adjustedBound) );
-   SCIPrationalSet(adjustedBound, newbound);
+   SCIPrationalSetRational(adjustedBound, newbound);
    assert(infeasible != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPinferVarLbConsExact", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -8473,7 +8473,7 @@ SCIP_RETCODE SCIPcomputeVarLbLocalExact(
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_MULTAGGR )
       SCIP_CALL( SCIPvarGetMultaggrLbLocalExact(var, scip->set, result) );
    else
-      SCIPrationalSet(result, SCIPvarGetLbLocalExact(var));
+      SCIPrationalSetRational(result, SCIPvarGetLbLocalExact(var));
 
    return SCIP_OKAY;
 }
@@ -8518,7 +8518,7 @@ SCIP_RETCODE SCIPcomputeVarUbLocalExact(
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_MULTAGGR )
       SCIP_CALL( SCIPvarGetMultaggrUbLocalExact(var, scip->set, result) );
    else
-      SCIPrationalSet(result, SCIPvarGetUbLocalExact(var));
+      SCIPrationalSetRational(result, SCIPvarGetUbLocalExact(var));
 
    return SCIP_OKAY;
 }
