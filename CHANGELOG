@@ -20,6 +20,7 @@ Fixed bugs
 - flatten aggregation graph before finishing presolving to accelerate evaluating an empty solution
 - respect fixed resultants in binvarGetActiveProbindex() of branch_relpscost.c
 - corrected symmetry detection graph of cons_and.c, cons_or.c, and cons_xor.c
+- correct matrix entry when resolving aggregated variables in checkSystemGF2() of cons_xor.c
 
 Build system
 ------------
