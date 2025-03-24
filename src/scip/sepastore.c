@@ -198,7 +198,7 @@ SCIP_Bool sepastoreIsCutRedundant(
    if( SCIProwIsModifiable(cut) )
       return FALSE;
 
-   /** @todo implement a safe redundancy check */
+   /** @todo implement a safe redundancy check for cuts in exact solving mode */
    if( set->exact_enabled )
       return FALSE;
 
@@ -241,7 +241,7 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
 
    *infeasible = FALSE;
 
-   /** @todo implement a safe redundancy or infeasibility check */
+   /** @todo implement a safe redundancy or infeasibility check for cuts in exact solving mode */
    if( set->exact_enabled )
       return FALSE;
 

@@ -3150,12 +3150,12 @@ SCIP_RETCODE SCIPsolRetransformExact(
    /* reinsert the values of the original variables */
    for( v = 0; v < nvars; ++v )
    {
+      /* we might require unchangedObjexact for this assert if exact probing mode is implemented */
       assert(SCIPvarGetUnchangedObj(vars[v]) == SCIPvarGetObj(vars[v])); /*lint !e777*/
 
       if( !SCIPrationalIsZero(solvals[v]) )
       {
          SCIP_CALL( solSetArrayValExact(sol, set, vars[v], solvals[v]) );
-         /** @note we might require unchangedObjexact if exact probing mode is implemented */
          SCIPrationalAddProd(sol->valsexact->obj, SCIPvarGetObjExact(vars[v]), solvals[v]);
       }
    }

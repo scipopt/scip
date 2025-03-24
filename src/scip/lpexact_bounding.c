@@ -2084,9 +2084,8 @@ SCIP_RETCODE boundShift(
       if( SCIPlpiIsInfinity(lp->lpi, -fpdual[j]) )
 	      fpdual[j] = -SCIPsetInfinity(set);
 
-      /** @note possible future dual bounding improvement
-       *  - should we also set nonzero values of y to zero if corresponding lhs/rhs is not finite (to improve dual bound)?
-       *  - do such situations come up?
+      /** @todo test whether safe dual bounding in exact solving mode can be improved by setting nonzero values of y to
+       *        zero if corresponding lhs/rhs is not finite (do such situations come up?)
        */
       /* create sides and constant vectors in interval arithmetic */
       if( SCIPsetIsFeasPositive(set, fpdual[j]) )
