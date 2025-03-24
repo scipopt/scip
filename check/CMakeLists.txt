@@ -473,6 +473,7 @@ set(instances_Objlim
 # Pairs of instances and settings
 #
 set(pairs_Issue
+    "instances/Issue/591_1.cip\;0\;reduced_constraints"
     "instances/Issue/591_2.cip\;0\;reduced_and"
     "instances/Issue/3047.lp\;20000\;dualinfer"
     "instances/Issue/3132.lp\;0\;default"

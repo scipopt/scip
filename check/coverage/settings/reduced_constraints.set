@@ -1,0 +1,6 @@
+constraints/and/maxprerounds = 0
+constraints/setppc/maxprerounds = 0
+constraints/xor/maxprerounds = 0
+constraints/components/maxprerounds = 0
+presolving/trivial/maxrounds = 0
+propagating/dualfix/maxprerounds = 0
