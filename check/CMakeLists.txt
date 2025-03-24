@@ -124,7 +124,7 @@ set(settings_fastMIP
     "../../../scripts/trainEstimation/periodic_report"
   )
 set(settings_MIPEX
-    "exact-auto"
+    "exact-default"
     "exact-exactlp"
     "exact-projshift"
     )
