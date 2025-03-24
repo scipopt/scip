@@ -2464,7 +2464,6 @@ SCIP_RETCODE solCheckExact(
    /* check whether the solution fulfills all constraints */
    for( h = 0; h < set->nconshdlrs && (*feasible || completely); ++h )
    {
-      /** @todo: exip turn this into checkExact new callback */
       SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
             TRUE, checklprows, printreason, completely, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);

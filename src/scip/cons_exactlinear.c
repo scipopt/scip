@@ -3704,12 +3704,6 @@ SCIP_RETCODE delCoefPos(
       consdata->hasnonbinvalid = FALSE;
    }
 
-   /* delete coefficient from the LP row */
-   if( consdata->rowexact != NULL )
-   {
-      /** @todo: exip SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, -val) ); */
-   }
-
    /* release variable */
    SCIP_CALL( SCIPreleaseVar(scip, &var) );
 

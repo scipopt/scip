@@ -4136,7 +4136,6 @@ SCIP_RETCODE SCIPlpExactAddRow(
    assert(rowexact->lppos == -1);
    assert(rowexact->fprow != NULL);
 
-   /** @todo: exip do we need locks on exact rows? */
    SCIProwExactCapture(rowexact);
 
    SCIPsetDebugMsg(set, "adding row <%s> to LP (%d rows, %d cols)\n", rowexact->fprow->name, lpexact->nrows, lpexact->ncols);
@@ -4648,7 +4647,6 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
       break;
 
    case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-      /** @todo: exip what do we have to do here?, do we really need this case? */
       SCIPerrorMessage("Feature exakt unbounded ray not fully implemented yet \n");
       break;
 

@@ -1666,9 +1666,9 @@ SCIP_RETCODE projectShift(
          }
          for( i = 0; i < nrows + ncols; i++ )
          {
-            /* todo @exip: refactor this somehow. explanation: when the number of lp-rows increased
-            * the number of rows in the ps-data does not. so we have [1,...,nrows, ... extrarows ..., 1, ... ncols]
-            * so if we map to the column part in the extended space, we have to subtract the difference */
+            /* explanation: when the number of lp-rows increased the number of rows in the ps-data does not.
+             * Therefore, we have [1,...,nrows, ... extrarows ..., 1, ... ncols]
+             * so if we map to the column part in the extended space, we have to subtract the difference */
             int map;
             if( i < nrows && i >= nrowsps )
                continue;
