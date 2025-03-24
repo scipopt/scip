@@ -1528,7 +1528,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
 }
 
 
-/** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
+/** creates a numerically safe row (with corresponding exact row) from the objective, provided rhs is an exactly valid cutoffbound */
 static
 SCIP_RETCODE getObjectiveRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2564,7 +2564,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
          SCIPclockStop(stat->conflictlptime, set);
 
          /* check return code of LP solving call */
-         if( retcode != SCIP_LPERROR && SCIPlpiIsStable(lp->lpi) )
+         if( retcode != SCIP_LPERROR )
          {
             SCIP_CALL( retcode );
          }
@@ -2631,7 +2631,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
          SCIPclockStop(stat->conflictlptime, set);
 
          /* check return code of LP solving call */
-         if( retcode != SCIP_LPERROR && SCIPlpiIsStable(lp->lpi) )
+         if( retcode != SCIP_LPERROR )
          {
             SCIP_CALL( retcode );
          }
