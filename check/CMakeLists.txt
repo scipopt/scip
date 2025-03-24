@@ -124,7 +124,7 @@ set(settings_fastMIP
     "../../../scripts/trainEstimation/periodic_report"
   )
 set(settings_MIPEX
-    "exact-auto"
+    "exact-default"
     "exact-exactlp"
     "exact-projshift"
     )
@@ -330,13 +330,15 @@ endif()
 if(EXACTSOLVE)
 set(instances_MIPEX
     "instances/MIPEX/egout.zpl\;568.1007"
-    "instances/MIPEX/enigma.zpl\;0"
-    "instances/MIPEX/flugpl.zpl\;1201500"
+    "instances/MIP/enigma.mps\;0"
+    "instances/MIPEX/flugpl_rational.mps\;1201500"
     "instances/MIPEX/misc03.zpl\;3360"
-    "instances/MIPEX/mod008.zpl\;307"
     "instances/MIPEX/rgn.zpl\;2054999981/25000000"
     "instances/MIPEX/stein27.zpl\;18"
-    "instances/MIPEX/stein45.zpl\;30"
+    "instances/MIP/stein27_inf.lp\;+infinity"
+    "instances/MIP/Side.lp\;2"
+    "instances/MIPEX/Side-coeftest.lp\;2"
+    "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
     )
 endif()
 
@@ -1209,12 +1211,6 @@ if(EXACTSOLVE)
         #
         # loop over all settings
         #
-
-        add_test(NAME MIPEX-default-${basename}
-                    COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/default.set
-                        read ${PROJECT_SOURCE_DIR}/check/${path}
-                        o q"
-                    )
         foreach(setting ${settings_MIPEX})
             #
             # treat the instance as a tuple (list) of two values
@@ -1248,7 +1244,7 @@ if(EXACTSOLVE)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr
                                  PROPERTIES
                                  DEPENDS MIPEX-${setting}-${basename}-viprcomp
-                                 PASS_REGULAR_EXPRESSION "Successfully verified"
+                                 PASS_REGULAR_EXPRESSION "Successfully verified;Infeasibility verified"
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
 

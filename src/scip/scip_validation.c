@@ -299,8 +299,8 @@ SCIP_RETCODE SCIPvalidateSolveExact(
       }
       else
       {
-            SCIPrationalRelDiff(primviol, pb, dualreference);
-            SCIPrationalRelDiff(dualviol, primalreference, db);
+         SCIPrationalRelDiff(primviol, pb, dualreference);
+         SCIPrationalRelDiff(dualviol, primalreference, db);
       }
       localprimalboundcheck = SCIPrationalIsZero(primviol);
       localdualboundcheck = SCIPrationalIsZero(dualviol);

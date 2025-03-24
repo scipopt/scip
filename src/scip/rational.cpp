@@ -900,7 +900,10 @@ void SCIPrationalDiffReal(
    SCIPrationalAddReal(res, rat, -real);
 }
 
-/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
+/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0)
+ *
+ *  @note this method handles infinity like finite numbers
+ */
 void SCIPrationalRelDiff(
    SCIP_Rational*        res,
    SCIP_Rational*        val1,               /**< first value to be compared */
@@ -912,15 +915,33 @@ void SCIPrationalRelDiff(
    scip::Rational quot;
 
    assert(res != nullptr && val1 != nullptr && val2 != nullptr);
-   assert(!val1->isinf && !val2->isinf);
 
-   absval1 = abs(val1->val);
-   absval2 = abs(val2->val);
-   quot = absval1 >= absval2 ? absval1 : absval2;
-   if( quot < 1.0 )
-      quot = 1.0;
+   if(val1->isinf)
+   {
+      if(val2->isinf)
+      {
+         res->val = SCIPrationalGetSign(val1) == SCIPrationalGetSign(val2) ? 0 : 2 * SCIPrationalGetSign(val1);
+      }
+      else
+      {
+         res->val = SCIPrationalGetSign(val1);
+      }
+   }
+   else if(val2->isinf)
+   {
+      res->val = -SCIPrationalGetSign(val2);
+   }
+   else
+   {
+      absval1 = abs(val1->val);
+      absval2 = abs(val2->val);
+      quot = absval1 >= absval2 ? absval1 : absval2;
+      if( quot < 1.0 )
+         quot = 1.0;
 
-   res->val = ((val1->val)-(val2->val))/quot;
+      res->val = ((val1->val)-(val2->val))/quot;
+   }
+
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
