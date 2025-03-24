@@ -900,7 +900,10 @@ void SCIPrationalDiffReal(
    SCIPrationalAddReal(res, rat, -real);
 }
 
-/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0); note that this method handles infinity like finite numbers */
+/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0)
+ *
+ *  @note this method handles infinity like finite numbers
+ */
 void SCIPrationalRelDiff(
    SCIP_Rational*        res,
    SCIP_Rational*        val1,               /**< first value to be compared */
