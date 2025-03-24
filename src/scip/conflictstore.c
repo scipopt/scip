@@ -308,7 +308,10 @@ void adjustStorageSize(
    return;
 }
 
-/* removes an exact conflict constraint from the certificate hashmap */
+/** removes an exact conflict constraint from the certificate hashmap
+ *
+ *  @todo consider moving this to SCIPconsDelete()
+ */
 static
 SCIP_RETCODE removeExactConflictFromCertificateHashmap(
    SCIP_SET*             set,                /**< global SCIP settings */

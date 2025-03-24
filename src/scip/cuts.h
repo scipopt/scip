@@ -188,9 +188,9 @@ void SCIPaggrRowClear(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
-/** version for use in exact solvig mode of SCIPaggrRowClear */
+/** version for use in exact solving mode of SCIPaggrRowClear() */
 SCIP_EXPORT
-void SCIPaggrRowClearSafe(
+void SCIPaggrRowClearSafely(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 

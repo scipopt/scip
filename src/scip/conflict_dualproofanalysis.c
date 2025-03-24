@@ -67,6 +67,7 @@
 #include "scip/pub_var.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
@@ -83,13 +84,7 @@
 #include "scip/tree.h"
 #include "scip/var.h"
 #include "scip/visual.h"
-#include "scip/visual.h"
-#include "scip/certificate.h"
-#include "scip/scip_exact.h"
 
-/* because calculations might cancel out some values, we stop the infeasibility analysis if a value is bigger than
- * 2^53 = 9007199254740992
- */
 #define BOUNDSWITCH                0.51 /**< threshold for bound switching - see cuts.c */
 #define POSTPROCESS               FALSE /**< apply postprocessing to the cut - see cuts.c */
 #define USEVBDS                   FALSE /**< use variable bounds - see cuts.c */
@@ -944,7 +939,7 @@ SCIP_RETCODE createAndAddProofcons(
    }
 
    /* don't store global dual proofs that are too long / have too many non-zeros */
-   if( toolong && !set->exact_enabled )
+   if( !set->exact_enabled && toolong )
    {
       if( applyglobal )
       {
@@ -976,45 +971,8 @@ SCIP_RETCODE createAndAddProofcons(
       return SCIP_INVALIDCALL;
 
    SCIPdebugMessage("Create constraint from dual ray analysis\n");
-   if( set->exact_enabled )
-   {
-      SCIP_Rational* lhs_exact;
-      SCIP_Rational* rhs_exact;
-      SCIP_Rational** coefs_exact;
-      SCIP_VAR** consvars;
 
-      /* don't store global dual proofs that are too long / have too many non-zeros */
-      if( toolong  )
-      {
-         return SCIP_OKAY;
-      }
-
-      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &lhs_exact));
-      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &rhs_exact));
-      SCIPrationalSetString(lhs_exact, "-inf");
-      SCIPrationalSetReal(rhs_exact, rhs);
-      SCIP_CALL(SCIPrationalCreateBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz));
-      SCIP_CALL(SCIPallocBufferArray(set->scip, &consvars, nnz));
-      assert(nnz > 0);
-      for( i = 0; i < nnz; i++ )
-      {
-         consvars[i] = vars[inds[i]];
-         SCIPrationalSetReal(coefs_exact[i], coefs[i]);
-         assert(!SCIPrationalIsAbsInfinity(coefs_exact[i]));
-      }
-      SCIP_CALL( SCIPcreateConsExactLinear(set->scip, &cons, name, nnz, consvars, coefs_exact, lhs_exact, rhs_exact,
-            FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
-            FALSE, TRUE, TRUE, FALSE) );
-      if( SCIPisCertificateActive(set->scip) )
-      {
-         SCIP_CALL( SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, cons, proofset->certificateline) );
-      }
-      SCIPfreeBufferArray(set->scip, &consvars);
-      SCIPrationalFreeBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz);
-      SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &rhs_exact);
-      SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &lhs_exact);
-   }
-   else
+   if( !set->exact_enabled )
    {
       SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, -SCIPsetInfinity(set), rhs,
             FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
@@ -1026,9 +984,51 @@ SCIP_RETCODE createAndAddProofcons(
          SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, vars[v], coefs[i]) );
       }
    }
+   /* in exact solving mode we don't store global dual proofs that are too long / have too many non-zeros */
+   else if( !toolong )
+   {
+      SCIP_Rational* lhs_exact;
+      SCIP_Rational* rhs_exact;
+      SCIP_Rational** coefs_exact;
+      SCIP_VAR** consvars;
+
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &lhs_exact) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &rhs_exact) );
+      SCIPrationalSetString(lhs_exact, "-inf");
+      SCIPrationalSetReal(rhs_exact, rhs);
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz) );
+      SCIP_CALL( SCIPallocBufferArray(set->scip, &consvars, nnz) );
+
+      assert(nnz > 0);
+
+      for( i = 0; i < nnz; i++ )
+      {
+         consvars[i] = vars[inds[i]];
+         SCIPrationalSetReal(coefs_exact[i], coefs[i]);
+         assert(!SCIPrationalIsAbsInfinity(coefs_exact[i]));
+      }
+
+      SCIP_CALL( SCIPcreateConsExactLinear(set->scip, &cons, name, nnz, consvars, coefs_exact, lhs_exact, rhs_exact,
+            FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal, FALSE, TRUE, TRUE, FALSE) );
+
+      if( SCIPisCertificateActive(set->scip) )
+      {
+         SCIP_CALL( SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, cons, proofset->certificateline) );
+      }
+
+      SCIPfreeBufferArray(set->scip, &consvars);
+      SCIPrationalFreeBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz);
+      SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &rhs_exact);
+      SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &lhs_exact);
+   }
+   else
+   {
+      assert(set->exact_enabled && toolong);
+      return SCIP_OKAY;
+   }
 
    /* do not upgrade linear constraints of size 1 */
-   if( nnz > 1 && !set->exact_enabled )
+   if( !set->exact_enabled && nnz > 1 )
    {
       upgdcons = NULL;
       /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
@@ -1191,8 +1191,9 @@ SCIP_RETCODE SCIPconflictFlushProofset(
 
    if( proofsetGetConftype(conflict->proofset) != SCIP_CONFTYPE_UNKNOWN )
    {
+      /**@todo implement special handling of conflicts with one variable also for exact solving mode */
       /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
-      if( SCIPproofsetGetNVars(conflict->proofset) == 1  && !set->exact_enabled )
+      if( !set->exact_enabled && SCIPproofsetGetNVars(conflict->proofset) == 1 )
       {
          SCIP_VAR** vars;
          SCIP_Real* coefs;
@@ -1252,8 +1253,9 @@ SCIP_RETCODE SCIPconflictFlushProofset(
          assert(conflict->proofsets[i] != NULL);
          assert(proofsetGetConftype(conflict->proofsets[i]) != SCIP_CONFTYPE_UNKNOWN);
 
+         /**@todo implement special handling of conflicts with one variable also for exact solving mode */
          /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
-         if( SCIPproofsetGetNVars(conflict->proofsets[i]) == 1 && !set->exact_enabled )
+         if( !set->exact_enabled && SCIPproofsetGetNVars(conflict->proofsets[i]) == 1 )
          {
             SCIP_VAR** vars;
             SCIP_Real* coefs;
@@ -1306,7 +1308,10 @@ void debugPrintViolationInfo(
 #define debugPrintViolationInfo(...) /**/
 #endif
 
-/** apply coefficient tightening */
+/** apply coefficient tightening
+ *
+ *  @todo implement coefficient tightening for conflicts in exact solving mode
+ */
 static
 void tightenCoefficients(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1540,7 +1545,7 @@ SCIP_RETCODE tightenDualproof(
    debugPrintViolationInfo(set, SCIPaggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, NULL), SCIPaggrRowGetRhs(proofrow), NULL);
 
    /* try to find an alternative proof of local infeasibility that is stronger */
-   if( set->conf_sepaaltproofs && !set->exact_enabled )
+   if( !set->exact_enabled && set->conf_sepaaltproofs )
    {
       SCIP_CALL( separateAlternativeProofs(conflict, set, stat, transprob, tree, blkmem, proofrow, curvarlbs, curvarubs,
             conflict->conflictset->conflicttype) );
@@ -1579,7 +1584,7 @@ SCIP_RETCODE tightenDualproof(
     * todo: check whether we also want to do that for bound exceeding proofs, but then we cannot update the
     *       conflict anymore
     */
-   if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP && !set->exact_enabled )
+   if( !set->exact_enabled && proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
    {
       /* remove all continuous variables that have equal global and local bounds (ub or lb depend on the sign)
        * from the proof
