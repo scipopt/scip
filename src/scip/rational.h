@@ -300,6 +300,18 @@ void SCIPrationalSetReal(
    SCIP_Real             real                /**< the value to set to */
    );
 
+/** sets a rational to positive infinity */
+SCIP_EXPORT
+void SCIPrationalSetInfinity(
+   SCIP_Rational*        res                 /**< the result */
+   );
+
+/** sets a rational to negative infinity */
+SCIP_EXPORT
+void SCIPrationalSetNegInfinity(
+   SCIP_Rational*        res                 /**< the result */
+   );
+
 /** checks if a string describes a rational number */
 SCIP_EXPORT
 SCIP_Bool SCIPrationalIsString(

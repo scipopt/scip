@@ -719,6 +719,30 @@ void SCIPrationalSetReal(
    assert(SCIPrationalIsEqualReal(res, real));
 }
 
+/** sets a rational to positive infinity */
+void SCIPrationalSetInfinity(
+   SCIP_Rational*        res                 /**< the result */
+   )
+{
+   assert(res != NULL);
+
+   res->val = 1;
+   res->isinf = TRUE;
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
+}
+
+/** sets a rational to negative infinity */
+void SCIPrationalSetNegInfinity(
+   SCIP_Rational*        res                 /**< the result */
+   )
+{
+   assert(res != NULL);
+
+   res->val = -1;
+   res->isinf = TRUE;
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
+}
+
 /** resets the flag isfprepresentable to SCIP_ISFPREPRESENTABLE_UNKNOWN */
 void SCIPrationalResetFloatingPointRepresentable(
    SCIP_Rational*        rat                 /**< the number to set flag for */
