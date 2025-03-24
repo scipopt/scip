@@ -331,7 +331,7 @@ if(EXACTSOLVE)
 set(instances_MIPEX
     "instances/MIPEX/egout.zpl\;568.1007"
     "instances/MIP/enigma.mps\;0"
-    "instances/MIP/flugpl.mps\;1201500"
+    "instances/MIPEX/flugpl_rational.mps\;1201500"
     "instances/MIPEX/misc03.zpl\;3360"
     "instances/MIPEX/rgn.zpl\;2054999981/25000000"
     "instances/MIPEX/stein27.zpl\;18"
