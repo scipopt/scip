@@ -807,43 +807,9 @@ SCIP_RETCODE addRowToAggrRow(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             weight,             /**< weight for scaling */
-   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
-   )
-{
-   SCIP_Bool negated;
-
-   assert(set != NULL);
-   assert(row != NULL);
-   assert(weight != 0.0);
-
-   /* add minimal value to dual row's left hand side: y_i < 0 -> lhs, y_i > 0 -> rhs */
-   negated = weight < 0.0;
-
-   assert(!negated || !SCIPsetIsInfinity(set, -row->lhs));
-   assert(negated || !SCIPsetIsInfinity(set, row->rhs));
-   assert(!set->exact_enabled);
-
-   SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight, negated ? -1 : 1) );
-
-   SCIPsetDebugMsg(set, " -> add %s row <%s>[%g,%g](lp depth: %d): dual=%g -> dualrhs=%g\n",
-      row->local ? "local" : "global",
-      SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant,
-      row->lpdepth, weight, SCIPaggrRowGetRhs(aggrrow));
-
-   return SCIP_OKAY;
-}
-
-/** adds a weighted LP row to an aggregation row, safe version for use in exact SCIP
- *
- *  @todo merge with method addRowToAggrRow() in order to avoid code duplication
- */
-static
-SCIP_RETCODE addRowToAggrRowSafely(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_ROW*             row,                /**< LP row */
-   SCIP_Real             weight,             /**< weight for scaling */
    SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
-   SCIP_Bool*            success             /**< was adding thr row successful? */
+   SCIP_Bool             safely,             /**< should the addition be performed safely? */
+   SCIP_Bool*            success             /**< was adding the row successful? */
    )
 {
    SCIP_Bool negated;
@@ -851,7 +817,7 @@ SCIP_RETCODE addRowToAggrRowSafely(
    assert(set != NULL);
    assert(row != NULL);
    assert(weight != 0.0);
-   assert(set->exact_enabled);
+   assert(safely == set->exact_enabled);
 
    /* add minimal value to dual row's left hand side: y_i < 0 -> lhs, y_i > 0 -> rhs */
    negated = weight < 0.0;
@@ -859,7 +825,16 @@ SCIP_RETCODE addRowToAggrRowSafely(
    assert(!negated || !SCIPsetIsInfinity(set, -row->lhs));
    assert(negated || !SCIPsetIsInfinity(set, row->rhs));
 
-   SCIP_CALL( SCIPaggrRowAddRowSafely(set->scip, aggrrow, row, weight, negated ? -1 : 1, success) );
+   if( !safely )
+   {
+      *success = TRUE;
+      SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight, negated ? -1 : 1) );
+   }
+   else
+   {
+      *success = FALSE;
+      SCIP_CALL( SCIPaggrRowAddRowSafely(set->scip, aggrrow, row, weight, negated ? -1 : 1, success) );
+   }
 
    SCIPsetDebugMsg(set, " -> add %s row <%s>[%g,%g](lp depth: %d): dual=%g -> dualrhs=%g\n",
       row->local ? "local" : "global",
@@ -1255,16 +1230,9 @@ SCIP_RETCODE addLocalRows(
          }
 
          /* add row to dual proof */
-         if( !set->exact_enabled )
-         {
-            SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], proofrow) );
-         }
-         else
-         {
-            SCIP_CALL( addRowToAggrRowSafely(set, row, -dualsols[r], proofrow, valid) );
-            if( !(*valid) )
-               goto TERMINATE;
-         }
+         SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], proofrow, set->exact_enabled, valid) );
+         if( !(*valid) )
+            goto TERMINATE;
 
          /* update depth where the proof is valid */
          if( *validdepth < localrowdepth[i] )
@@ -1450,16 +1418,9 @@ SCIP_RETCODE SCIPgetFarkasProof(
          }
          if( !row->local )
          {
-            if( !set->exact_enabled )
-            {
-               SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow) );
-            }
-            else
-            {
-               SCIP_CALL( addRowToAggrRowSafely(set, row, -dualfarkas[r], farkasrow, valid) );
-               if( !(*valid) )
-                  goto TERMINATE;
-            }
+            SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow, set->exact_enabled, valid) );
+            if( !(*valid) )
+               goto TERMINATE;
 
             /* due to numerical reasons we want to stop */
             if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
@@ -1778,7 +1739,7 @@ SCIP_RETCODE SCIPgetDualProof(
       SCIP_CALL( getObjectiveRow(set->scip, &objectiverow, cutoffbound, valid) );
       if( *valid )
       {
-         SCIP_CALL( addRowToAggrRowSafely(set, objectiverow, 1.0, farkasrow, valid) );
+         SCIP_CALL( addRowToAggrRow(set, objectiverow, 1.0, farkasrow, TRUE, valid) );
       }
 
       if( !(*valid) )
@@ -1816,16 +1777,9 @@ SCIP_RETCODE SCIPgetDualProof(
          /* skip local row */
          if( !row->local )
          {
-            if( !set->exact_enabled )
-            {
-               SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], farkasrow) );
-            }
-            else
-            {
-               SCIP_CALL( addRowToAggrRowSafely(set, row, -dualsols[r], farkasrow, valid) );
-               if( !(*valid) )
-                  goto TERMINATE;
-            }
+            SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], farkasrow, set->exact_enabled, valid) );
+            if( !(*valid) )
+               goto TERMINATE;
 
             /* due to numerical reasons we want to stop */
             if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
