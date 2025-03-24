@@ -61,8 +61,9 @@ Fixed bugs
 - impose pseudoboolean cost bound without intermediate casting
 - flatten aggregation graph before finishing presolving to accelerate evaluating an empty solution
 - respect fixed resultants in binvarGetActiveProbindex() of branch_relpscost.c
-- corrected symmetry detection graph of cons_and.c, cons_or.c, and cons_xor.c
+- drop fixed resultants when copying pseudoboolean constraint to avert segmentation fault
 - correct matrix entry when resolving aggregated variables in checkSystemGF2() of cons_xor.c
+- corrected symmetry detection graph of cons_and.c, cons_or.c, and cons_xor.c
 
 Build system
 ------------
