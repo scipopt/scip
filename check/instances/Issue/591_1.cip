@@ -1,0 +1,124 @@
+STATISTICS
+  Problem name     : prob-tasca_1-infeasible
+  Variables        : 99 (92 binary, 0 integer, 7 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 16 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <k_8_4>: obj=0, original bounds=[0,0]
+  [binary] <rk_0_8_5>: obj=0, original bounds=[1,1]
+  [binary] <k_8_5>: obj=0, original bounds=[0,0]
+  [binary] <rk_0_8_6>: obj=0, original bounds=[0,1]
+  [binary] <k_8_6>: obj=0, original bounds=[0,0]
+  [binary] <rk_0_8_7>: obj=0, original bounds=[0,1]
+  [binary] <k_8_7>: obj=0, original bounds=[0,0]
+  [binary] <rk_0_9_0>: obj=0, original bounds=[1,1]
+  [binary] <k_9_0>: obj=0, original bounds=[0,0]
+  [binary] <rk_0_9_1>: obj=0, original bounds=[1,1]
+  [binary] <rk_0_13_6>: obj=0, original bounds=[1,1]
+  [binary] <rk_0_13_7>: obj=0, original bounds=[0,0]
+  [binary] <rk_0_14_0>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_14_1>: obj=0, original bounds=[0,0]
+  [binary] <rk_0_14_2>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_14_3>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_14_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_14_5>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_14_6>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_14_7>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_15_0>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_15_1>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_15_2>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_15_3>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_15_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_15_5>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_15_6>: obj=0, original bounds=[0,1]
+  [binary] <rk_0_15_7>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_0_0>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_0_1>: obj=0, original bounds=[1,1]
+  [binary] <rk_1_a_0_2>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_0_3>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_0_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_0_5>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_0_6>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_0_7>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_1_0>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_1_1>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_1_2>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_1_3>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_1_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_1_5>: obj=0, original bounds=[0,0]
+  [binary] <rk_1_a_1_6>: obj=0, original bounds=[1,1]
+  [binary] <rk_1_a_1_7>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_2_0>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_2_1>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_2_2>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_2_3>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_a_2_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_1_7>: obj=0, original bounds=[0,0]
+  [binary] <rk_1_2_0>: obj=0, original bounds=[0,0]
+  [binary] <rk_1_2_1>: obj=0, original bounds=[1,1]
+  [binary] <rk_1_2_2>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_2_3>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_2_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_2_5>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_2_6>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_5_6>: obj=0, original bounds=[1,1]
+  [binary] <rk_1_5_7>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_6_0>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_6_1>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_6_2>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_6_3>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_6_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_6_5>: obj=0, original bounds=[0,1]
+  [binary] <rk_1_6_6>: obj=0, original bounds=[0,1]
+  [binary] <rk_2_5_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_2_6_2>: obj=0, original bounds=[0,1]
+  [binary] <rk_2_6_5>: obj=0, original bounds=[0,1]
+  [binary] <rk_2_7_1>: obj=0, original bounds=[0,1]
+  [binary] <rk_2_8_1>: obj=0, original bounds=[0,1]
+  [binary] <rk_2_8_2>: obj=0, original bounds=[0,1]
+  [binary] <rk_2_8_3>: obj=0, original bounds=[0,1]
+  [binary] <rk_3_5_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_4_1_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_4_5_0>: obj=0, original bounds=[1,1]
+  [binary] <rk_4_5_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_4_9_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_5_a_1_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_5_1_0>: obj=0, original bounds=[0,1]
+  [binary] <rk_5_1_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_5_5_0>: obj=0, original bounds=[0,1]
+  [binary] <rk_5_5_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_5_9_0>: obj=0, original bounds=[0,1]
+  [binary] <rk_5_9_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_6_a_1_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_6_1_0>: obj=0, original bounds=[0,1]
+  [binary] <rk_6_1_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_6_5_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_6_9_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_7_1_4>: obj=0, original bounds=[0,1]
+  [binary] <rk_7_5_4>: obj=0, original bounds=[0,1]
+  [implicit] <andresultant_5776>: obj=0, original bounds=[0,1]
+  [implicit] <andresultant_6944>: obj=0, original bounds=[1,1]
+  [implicit] <andresultant_7462>: obj=0, original bounds=[0,1]
+  [implicit] <andresultant_7515>: obj=0, original bounds=[0,1]
+  [implicit] <andresultant_8120>: obj=0, original bounds=[0,1]
+  [implicit] <andresultant_8152>: obj=0, original bounds=[0,1]
+  [implicit] <andresultant_9292>: obj=0, original bounds=[0,1]
+CONSTRAINTS
+  [setppc] <pseudoboolean_linear971>:  +<andresultant_7462>[M] +<andresultant_7515>[M] == 1;
+  [setppc] <pseudoboolean_linear972>:  +<~rk_6_a_1_4>[B] +<andresultant_7462>[M] +<andresultant_7515>[M] == 1;
+  [and] <andcons_6944>: <andresultant_6944>[M] == and(<rk_4_5_0>[B],<rk_5_1_0>[B]);
+  [linear] <pseudoboolean_linear716>: <rk_3_5_4>[B] +<rk_4_1_4>[B] -<rk_4_5_4>[B] -2<andresultant_5776>[M] == 0;
+  [linear] <pseudoboolean_linear844>: <rk_4_1_4>[B] +<rk_5_a_1_4>[B] -<rk_5_1_4>[B] == 0;
+  [linear] <pseudoboolean_linear876>: <rk_4_5_4>[B] +<rk_5_1_4>[B] -<rk_5_5_4>[B] == 0;
+  [linear] <pseudoboolean_linear904>: <rk_5_5_0>[B] -<rk_5_9_0>[B] == 0;
+  [linear] <pseudoboolean_linear908>: <rk_4_9_4>[B] +<rk_5_5_4>[B] -<rk_5_9_4>[B] == 0;
+  [linear] <pseudoboolean_linear1000>: <rk_5_1_0>[B] -<rk_6_1_0>[B] == 0;
+  [linear] <pseudoboolean_linear1004>: <rk_5_1_4>[B] +<rk_6_a_1_4>[B] -<rk_6_1_4>[B] == 0;
+  [linear] <pseudoboolean_linear1032>: <rk_5_5_0>[B] +<rk_6_1_0>[B] == 1;
+  [linear] <pseudoboolean_linear1036>: <rk_5_5_4>[B] +<rk_6_1_4>[B] -<rk_6_5_4>[B] -2<andresultant_8120>[M] == 0;
+  [linear] <pseudoboolean_linear1068>: <rk_5_9_4>[B] +<rk_6_5_4>[B] -<rk_6_9_4>[B] -2<andresultant_8152>[M] == 0;
+  [linear] <pseudoboolean_linear1196>: <rk_6_5_4>[B] +<rk_7_1_4>[B] -<rk_7_5_4>[B] -2<andresultant_9292>[M] == 0;
+  [linear] <pseudoboolean_linear1228>: <rk_6_9_4>[B] +<rk_7_5_4>[B] == 1;
+  [linear] <linear1820>: <rk_5_9_0>[B] +<rk_5_9_4>[B] == 1;
+END
