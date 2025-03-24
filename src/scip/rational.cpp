@@ -2675,8 +2675,8 @@ int SCIPrationalarrayGetMaxIdx(
    return rationalarray->firstidx + rationalarray->vals.size() - 1;
 }
 
-/** set the infinity threshold to new value */
-void SCIPrationalSetInfinity(
+/** changes the infinity threshold to new value */
+void SCIPrationalChgInfinity(
    SCIP_Real             inf                 /**< new infinity value */
    )
 {
@@ -2685,7 +2685,7 @@ void SCIPrationalSetInfinity(
 #ifdef SCIP_THREADSAFE
    if( inf != SCIP_DEFAULT_INFINITY )
    {
-      SCIPerrorMessage("method SCIPrationalSetInfinity() not thread safe\n");
+      SCIPerrorMessage("method SCIPrationalChgInfinity() not thread safe\n");
       SCIPABORT();
    }
    assert(inf == SCIP_DEFAULT_INFINITY);

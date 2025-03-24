@@ -839,9 +839,9 @@ int SCIPrationalarrayGetMaxIdx(
    SCIP_RATIONALARRAY*   rationalarray       /**< dynamic rational array */
    );
 
-/** set the infinity threshold to new value */
+/** changes the infinity threshold to new value */
 SCIP_EXPORT
-void SCIPrationalSetInfinity(
+void SCIPrationalChgInfinity(
    SCIP_Real             inf                 /**< new infinity value */
    );
 
