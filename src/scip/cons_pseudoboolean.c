@@ -3826,12 +3826,11 @@ SCIP_RETCODE copyConsPseudoboolean(
             assert(consanddata != NULL);
             oldcons = SCIPconsIsOriginal(sourcecons) ? consanddata->origcons : consanddata->cons;
             targetandresultant = (SCIP_VAR*) SCIPhashmapGetImage(varmap, SCIPgetResultantAnd(sourcescip, oldcons));
-            assert(targetandresultant != NULL);
 
-            /* if compressed copying is active, the resultant might not have been copied by the linear
-             * constraint and we don't need to add it to the pseudo boolean constraint in this case
+            /* if compressed copying is active, the resultant might have been fixed or not required by the linear
+             * constraint so that we do not need to add it to the pseudo boolean constraint in these cases
              */
-            if( !SCIPhashtableExists(linconsvarsmap, targetandresultant) )
+            if( targetandresultant == NULL || !SCIPhashtableExists(linconsvarsmap, targetandresultant) )
                continue;
 
             validand = TRUE;
