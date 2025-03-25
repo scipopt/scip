@@ -468,13 +468,13 @@ SCIP_Bool SCIPparseRational(
    /* test for a special infinity first */
    if( strncmp(localstr, "+infinity", 9) == 0 )
    {
-      SCIPrationalSetString(value, "inf");
+      SCIPrationalSetInfinity(value);
       *endptr = (char*)(localstr + 9);
       return TRUE;
    }
    else if( strncmp(localstr, "-infinity", 9) == 0 )
    {
-      SCIPrationalSetString(value, "-inf");
+      SCIPrationalSetNegInfinity(value);
       *endptr = (char*)(localstr + 9);
       return TRUE;
    }

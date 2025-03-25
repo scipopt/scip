@@ -828,7 +828,7 @@ SCIP_RETCODE nodeAssignParent(
       node->estimate = parent->estimate;
       node->depth = parent->depth+1; /*lint !e732*/
       if( set->exact_enabled )
-         SCIPrationalSet(node->lowerboundexact, parent->lowerboundexact);
+         SCIPrationalSetRational(node->lowerboundexact, parent->lowerboundexact);
 
       if( parent->depth >= SCIP_MAXTREEDEPTH )
       {
@@ -1042,7 +1042,7 @@ SCIP_RETCODE nodeCreate(
    if( set->exact_enabled )
    {
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*node)->lowerboundexact) );
-      SCIPrationalSetString((*node)->lowerboundexact, "-inf");
+      SCIPrationalSetNegInfinity((*node)->lowerboundexact);
    }
 
    return SCIP_OKAY;
@@ -1809,7 +1809,7 @@ SCIP_RETCODE treeAddPendingBdchg(
       {
          SCIP_CALL( SCIPrationalCreate(&tree->pendingbdchgs[tree->npendingbdchgs].newboundexact) );
       }
-      SCIPrationalSet(tree->pendingbdchgs[tree->npendingbdchgs].newboundexact, newboundexact);
+      SCIPrationalSetRational(tree->pendingbdchgs[tree->npendingbdchgs].newboundexact, newboundexact);
    }
    tree->npendingbdchgs++;
 
@@ -2288,7 +2288,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       /* adjust lower bound w.r.t. to integrality */
       SCIPvarAdjustLbExact(var, set, newbound);
       assert(SCIPrationalIsLE(newbound, oldub));
-      SCIPrationalSet(oldbound, oldlb);
+      SCIPrationalSetRational(oldbound, oldlb);
       SCIPrationalMin(newbound, newbound, oldub);
       oldboundreal = SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_UPWARDS);
 
@@ -2306,7 +2306,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       /* adjust the new upper bound */
       SCIPvarAdjustUbExact(var, set, newbound);
       assert(SCIPrationalIsGE(newbound, oldlb));
-      SCIPrationalSet(oldbound, oldub);
+      SCIPrationalSetRational(oldbound, oldub);
       SCIPrationalMax(newbound, newbound, oldlb);
       oldboundreal = SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS);
 
@@ -2440,11 +2440,11 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
             certificate */
          SCIP_Rational* bound;
          bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
-         SCIPrationalSet(bound, newbound);
+         SCIPrationalSetRational(bound, newbound);
          SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lpexact, node, set, transprob,
                inferboundtype == SCIP_BOUNDTYPE_LOWER, SCIPvarGetCertificateIndex(var),
                SCIPcertificateGetCurrentIndex(stat->certificate) -1, newpseudoobjval) );
-         SCIPrationalSet(bound, oldbound);
+         SCIPrationalSetRational(bound, oldbound);
       }
 
       SCIP_CALL( SCIPnodeUpdateLowerbound(node, stat, set, eventfilter, tree, transprob, origprob, newpseudoobjval) );
@@ -2879,7 +2879,7 @@ void SCIPnodeUpdateExactLowerbound(
       SCIP_Real oldbound;
 
       oldbound = node->lowerbound;
-      SCIPrationalSet(node->lowerboundexact, newbound);
+      SCIPrationalSetRational(node->lowerboundexact, newbound);
       node->lowerbound = SCIPrationalRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
       node->estimate = MAX(node->estimate, node->lowerbound);
 

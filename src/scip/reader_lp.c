@@ -785,7 +785,7 @@ SCIP_Bool isValueRational(
 
    if( SCIPstrcasecmp(lpinput->token, "INFINITY") == 0 || SCIPstrcasecmp(lpinput->token, "INF") == 0 )
    {
-      SCIPrationalSetString(value, "inf");
+      SCIPrationalSetInfinity(value);
       return TRUE;
    }
    else
@@ -2056,16 +2056,16 @@ SCIP_RETCODE readConstraintsRational(
    switch( sense ) /*lint !e530*/
    {
    case LP_SENSE_GE:
-      SCIPrationalSet(lhs, sidevalue);
-      SCIPrationalSetString(rhs, "inf");
+      SCIPrationalSetRational(lhs, sidevalue);
+      SCIPrationalSetInfinity(rhs);
       break;
    case LP_SENSE_LE:
-      SCIPrationalSetString(lhs, "-inf");
-      SCIPrationalSet(rhs, sidevalue);
+      SCIPrationalSetNegInfinity(lhs);
+      SCIPrationalSetRational(rhs, sidevalue);
       break;
    case LP_SENSE_EQ:
-      SCIPrationalSet(lhs, sidevalue);
-      SCIPrationalSet(rhs, sidevalue);
+      SCIPrationalSetRational(lhs, sidevalue);
+      SCIPrationalSetRational(rhs, sidevalue);
       break;
    case LP_SENSE_NOTHING:
    default:
@@ -2484,7 +2484,7 @@ SCIP_RETCODE readBoundsRational(
 
       /* default bounds are [0,+inf] */
       SCIPrationalSetReal(lb, 0.0);
-      SCIPrationalSetString(ub, "inf");
+      SCIPrationalSetInfinity(ub);
       leftsense = LP_SENSE_NOTHING;
 
       /* check if the first token is a sign */
@@ -2607,8 +2607,8 @@ SCIP_RETCODE readBoundsRational(
                syntaxError(scip, lpinput, "variable with bound is marked as 'free'.");
                goto TERMINATE;
             }
-            SCIPrationalSetString(lb, "-inf");
-            SCIPrationalSetString(ub, "inf");
+            SCIPrationalSetNegInfinity(lb);
+            SCIPrationalSetInfinity(ub);
          }
          else
          {

@@ -673,7 +673,7 @@ SCIP_DECL_PARAMCHGD(paramChgdInfinity)
    SCIP_Real infinity;
 
    infinity = SCIPparamGetReal(param);
-   SCIPrationalSetInfinity(infinity);
+   SCIPrationalChgInfinity(infinity);
 
    /* Check that infinity value of LP-solver is at least as large as the one used in SCIP. This is necessary, because we
     * transfer SCIP infinity values to the ones by the LPI, but not the converse. */

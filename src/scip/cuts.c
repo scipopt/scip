@@ -5786,7 +5786,7 @@ SCIP_RETCODE cutsRoundMIRRational(
          SCIPrationalSetReal(cutaj, 0.0);
       else
       {
-         SCIPrationalSet(cutaj, onedivoneminusf0);
+         SCIPrationalSetRational(cutaj, onedivoneminusf0);
          SCIPrationalMultReal(cutaj, cutaj, QUAD_TO_DBL(aj)); /* cutaj = varsign[i] * aj * onedivoneminusf0; // a^_j */
       }
 

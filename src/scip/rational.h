@@ -273,7 +273,7 @@ void SCIPrationalFreeBufferArray(
 
 /** sets a rational to the value of another rational */
 SCIP_EXPORT
-void SCIPrationalSet(
+void SCIPrationalSetRational(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        src                 /**< the src */
    );
@@ -298,6 +298,18 @@ SCIP_EXPORT
 void SCIPrationalSetReal(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Real             real                /**< the value to set to */
+   );
+
+/** sets a rational to positive infinity */
+SCIP_EXPORT
+void SCIPrationalSetInfinity(
+   SCIP_Rational*        res                 /**< the result */
+   );
+
+/** sets a rational to negative infinity */
+SCIP_EXPORT
+void SCIPrationalSetNegInfinity(
+   SCIP_Rational*        res                 /**< the result */
    );
 
 /** checks if a string describes a rational number */
@@ -839,9 +851,9 @@ int SCIPrationalarrayGetMaxIdx(
    SCIP_RATIONALARRAY*   rationalarray       /**< dynamic rational array */
    );
 
-/** set the infinity threshold to new value */
+/** changes the infinity threshold to new value */
 SCIP_EXPORT
-void SCIPrationalSetInfinity(
+void SCIPrationalChgInfinity(
    SCIP_Real             inf                 /**< new infinity value */
    );
 

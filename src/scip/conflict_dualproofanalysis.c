@@ -992,9 +992,15 @@ SCIP_RETCODE createAndAddProofcons(
       SCIP_Rational** coefs_exact;
       SCIP_VAR** consvars;
 
-      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &lhs_exact) );
-      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &rhs_exact) );
-      SCIPrationalSetString(lhs_exact, "-inf");
+      /* don't store global dual proofs that are too long / have too many non-zeros */
+      if( toolong  )
+      {
+         return SCIP_OKAY;
+      }
+
+      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &lhs_exact));
+      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &rhs_exact));
+      SCIPrationalSetNegInfinity(lhs_exact);
       SCIPrationalSetReal(rhs_exact, rhs);
       SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz) );
       SCIP_CALL( SCIPallocBufferArray(set->scip, &consvars, nnz) );

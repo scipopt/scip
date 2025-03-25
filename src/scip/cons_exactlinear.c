@@ -171,8 +171,8 @@ struct SCIP_ConsData
                                               *   over all contributing values */
    SCIP_Real             maxactdelta;        /**< maximal activity contribution of a single variable, or SCIP_INVALID if invalid */
    SCIP_VAR*             maxactdeltavar;     /**< variable with maximal activity contribution, or NULL if invalid */
-   SCIP_Rational*        maxabsvalEx;          /**< maximum absolute value of all coefficients */
-   SCIP_Rational*        minabsvalEx;          /**< minimal absolute value of all coefficients */
+   SCIP_Rational*        maxabsvalexact;     /**< exact maximum absolute value of all coefficients */
+   SCIP_Rational*        minabsvalexact;     /**< exact minimal absolute value of all coefficients */
    SCIP_ROW*             rowlhs;             /**< LP row, if constraint is already stored in LP row format; represents fp-relaxation of lhs-part of rowexact;
                                                   only this row will be added to the exact LP, rowrhs is used for safe aggregation of rows */
    SCIP_ROW*             rowrhs;             /**< LP row, if constraint is already stored in LP row format; represents fp-relaxation of rhs-part of rowexact */
@@ -754,7 +754,7 @@ SCIP_RETCODE consdataCreate(
             else
             {
                varsbuffer[k] = var;
-               SCIPrationalSet(valsbuffer[k], vals[v]);
+               SCIPrationalSetRational(valsbuffer[k], vals[v]);
                SCIPintervalSetRational(&(valsrealbuffer[k]), vals[v]);
                k++;
 
@@ -812,8 +812,8 @@ SCIP_RETCODE consdataCreate(
    SCIP_CALL( SCIPrationalCopyBlock(SCIPblkmem(scip), &(*consdata)->rhs, rhs) );
    (*consdata)->lhsreal = lhsrel;
    (*consdata)->rhsreal = rhsrel;
-   SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &(*consdata)->maxabsvalEx, "inf") );
-   SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &(*consdata)->minabsvalEx, "inf") );
+   SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &(*consdata)->maxabsvalexact, "inf") );
+   SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &(*consdata)->minabsvalexact, "inf") );
    (*consdata)->maxabsval = SCIP_INVALID;
    (*consdata)->minabsval = SCIP_INVALID;
    (*consdata)->minactivity = SCIP_INVALID;
@@ -930,8 +930,8 @@ SCIP_RETCODE consdataFree(
 
    SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->lhs);
    SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->rhs);
-   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->maxabsvalEx);
-   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->minabsvalEx);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->maxabsvalexact);
+   SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->minabsvalexact);
    SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->violation);
    SCIPrationalFreeBlock(SCIPblkmem(scip), &(*consdata)->activity);
 
@@ -1112,8 +1112,8 @@ void consdataInvalidateActivities(
    consdata->maxabsval = SCIP_INVALID;
    consdata->minabsval = SCIP_INVALID;
    consdata->maxactdelta = SCIP_INVALID;
-   SCIPrationalSetString(consdata->maxabsvalEx, "inf");
-   SCIPrationalSetString(consdata->minabsvalEx, "inf");
+   SCIPrationalSetInfinity(consdata->maxabsvalexact);
+   SCIPrationalSetInfinity(consdata->minabsvalexact);
    consdata->maxactdeltavar = NULL;
    consdata->minactivityneginf = -1;
    consdata->minactivityposinf = -1;
@@ -1189,9 +1189,9 @@ void consdataComputePseudoActivity(
       /** @todo introduce a rational equivalent of SCIP_INVALID (maybe an additional flag in SCIP_Rational) */
       return;
    else if( pseudoactivityneginf > 0 )
-      SCIPrationalSetString(pseudoactivity, "-inf");
+      SCIPrationalSetNegInfinity(pseudoactivity);
    else if( pseudoactivityposinf > 0 )
-      SCIPrationalSetString(pseudoactivity, "inf");
+      SCIPrationalSetInfinity(pseudoactivity);
 }
 
 /** recompute the minactivity of a constraint */
@@ -1338,18 +1338,18 @@ void consdataCalcMinAbsvalEx(
 
    if( consdata->nvars > 0 )
    {
-      SCIPrationalAbs(consdata->minabsvalEx, consdata->vals[0]);
+      SCIPrationalAbs(consdata->minabsvalexact, consdata->vals[0]);
       assert(!SCIPrationalIsZero(consdata->vals[0]));
    }
    else
-      SCIPrationalSetReal(consdata->minabsvalEx, 0.0);
+      SCIPrationalSetReal(consdata->minabsvalexact, 0.0);
 
    for( i = 1; i < consdata->nvars; ++i )
    {
       assert(!SCIPrationalIsZero(consdata->vals[i]));
 
-      if( SCIPrationalIsAbsGT(consdata->minabsvalEx, consdata->vals[i]) )
-         SCIPrationalAbs(consdata->minabsvalEx, consdata->vals[i]);
+      if( SCIPrationalIsAbsGT(consdata->minabsvalexact, consdata->vals[i]) )
+         SCIPrationalAbs(consdata->minabsvalexact, consdata->vals[i]);
    }
 }
 
@@ -1407,19 +1407,19 @@ void checkMaxActivityDelta(
          lb = SCIPvarGetLbLocalExact(consdata->vars[v]);
          ub = SCIPvarGetUbLocalExact(consdata->vars[v]);
 
-         if( RisNegInfinity(lb) || RisInfinity(ub) )
+         if( SCIPrationalIsNegInfinity(lb) || SCIPrationalIsInfinity(ub) )
          {
-            RsetString(maxactdelta, "inf");
+            SCIPrationalSetInfinity(maxactdelta);
             break;
          }
 
-         Rdiff(domain, ub, lb);
-         Rabs(delta, consdata->vals[v]);
-         Rmult(delta, delta, domain);
+         SCIPrationalDiff(domain, ub, lb);
+         SCIPrationalAbs(delta, consdata->vals[v]);
+         SCIPrationalMult(delta, delta, domain);
 
-         if( RisGT(delta,maxactdelta) )
+         if( SCIPrationalisGT(delta,maxactdelta) )
          {
-           SCIPrationalSet(maxactdelta, delta);
+            SCIPrationalSetRational(maxactdelta, delta);
          }
       }
       assert(SCIPrationalIsEqual(maxactdelta, consdata->maxactdelta));
@@ -2003,20 +2003,20 @@ void consdataUpdateAddCoef(
       /* invalidate maximum absolute value, if this coefficient was the maximum */
    if( consdata->validmaxabsval )
    {
-      if( SCIPrationalIsAbsEqual(valExact, consdata->maxabsvalEx) )
+      if( SCIPrationalIsAbsEqual(valExact, consdata->maxabsvalexact) )
       {
          consdata->validmaxabsval = FALSE;
-         SCIPrationalSetString(consdata->maxabsvalEx, "inf");
+         SCIPrationalSetInfinity(consdata->maxabsvalexact);
       }
    }
 
    /* invalidate minimum absolute value, if this coefficient was the minimum */
    if( consdata->validminabsval )
    {
-      if( SCIPrationalIsAbsEqual(valExact, consdata->minabsvalEx) )
+      if( SCIPrationalIsAbsEqual(valExact, consdata->minabsvalexact) )
       {
          consdata->validminabsval = FALSE;
-         SCIPrationalSetString(consdata->minabsvalEx, "inf");
+         SCIPrationalSetInfinity(consdata->minabsvalexact);
       }
    }
 
@@ -2080,20 +2080,20 @@ void consdataUpdateDelCoef(
    /* invalidate maximum absolute value, if this coefficient was the maximum */
    if( consdata->validmaxabsval )
    {
-      if( SCIPrationalIsAbsEqual(valExact, consdata->maxabsvalEx) )
+      if( SCIPrationalIsAbsEqual(valExact, consdata->maxabsvalexact) )
       {
          consdata->validmaxabsval = FALSE;
-         SCIPrationalSetString(consdata->maxabsvalEx, "inf");
+         SCIPrationalSetInfinity(consdata->maxabsvalexact);
       }
    }
 
    /* invalidate minimum absolute value, if this coefficient was the minimum */
    if( consdata->validminabsval )
    {
-      if( SCIPrationalIsAbsEqual(valExact, consdata->minabsvalEx) )
+      if( SCIPrationalIsAbsEqual(valExact, consdata->minabsvalexact) )
       {
          consdata->validminabsval = FALSE;
-         SCIPrationalSetString(consdata->minabsvalEx, "inf");
+         SCIPrationalSetInfinity(consdata->minabsvalexact);
       }
    }
 
@@ -2125,7 +2125,7 @@ SCIP_Rational* consdataGetMinAbsvalEx(
       consdataCalcMinAbsvalEx(scip, consdata);
    assert(consdata->validminabsval);
 
-   return consdata->minabsvalEx;
+   return consdata->minabsvalexact;
 }
 
 
@@ -2195,34 +2195,34 @@ void consdataUpdateChgCoef(
    /* update maximum absolute value */
    if( consdata->validmaxabsval )
    {
-      if( SCIPrationalIsAbsGT(newvalExact, consdata->maxabsvalEx) )
+      if( SCIPrationalIsAbsGT(newvalExact, consdata->maxabsvalexact) )
       {
-         SCIPrationalAbs(consdata->maxabsvalEx, newvalExact);
+         SCIPrationalAbs(consdata->maxabsvalexact, newvalExact);
       }
       else
       {
          /* invalidate maximum absolute value */
-         if( SCIPrationalIsAbsEqual(oldvalExact, consdata->maxabsvalEx) )
+         if( SCIPrationalIsAbsEqual(oldvalExact, consdata->maxabsvalexact) )
          {
             consdata->validmaxabsval = FALSE;
-            SCIPrationalSetString(consdata->maxabsvalEx, "inf");
+            SCIPrationalSetInfinity(consdata->maxabsvalexact);
          }
       }
    }
       /* update minimum absolute value */
    if( consdata->validminabsval )
    {
-      if( SCIPrationalIsAbsGT(consdata->minabsvalEx, newvalExact) )
+      if( SCIPrationalIsAbsGT(consdata->minabsvalexact, newvalExact) )
       {
-         SCIPrationalAbs(consdata->minabsvalEx, newvalExact);
+         SCIPrationalAbs(consdata->minabsvalexact, newvalExact);
       }
       else
       {
          /* invalidate minimum absolute value */
-         if( SCIPrationalIsAbsEqual(oldvalExact, consdata->minabsvalEx) )
+         if( SCIPrationalIsAbsEqual(oldvalExact, consdata->minabsvalexact) )
          {
             consdata->validminabsval = FALSE;
-            SCIPrationalSetString(consdata->minabsvalEx, "inf");
+            SCIPrationalSetInfinity(consdata->minabsvalexact);
          }
       }
    }
@@ -2969,9 +2969,9 @@ void consdataGetActivity(
          SCIPrationalMultReal(activity, activity, 0.5);
       }
       else if( nposinf > 0 )
-         SCIPrationalSetString(activity, "inf");
+         SCIPrationalSetInfinity(activity);
       else if( nneginf > 0 )
-         SCIPrationalSetString(activity, "-inf");
+         SCIPrationalSetNegInfinity(activity);
 
       SCIPrationalDebugMessage("corrected activity of linear constraint: %q\n", activity);
       SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
@@ -3343,7 +3343,7 @@ SCIP_RETCODE chgLhs(
    /* ensure that rhs >= lhs is satisfied without numerical tolerance */
    if( SCIPrationalIsEqual(lhs, consdata->rhs) )
    {
-      SCIPrationalSet(consdata->rhs, lhs);
+      SCIPrationalSetRational(consdata->rhs, lhs);
       assert(consdata->rowlhs == NULL);
    }
 
@@ -3422,7 +3422,7 @@ SCIP_RETCODE chgLhs(
    }
 
    /* set new left hand side and update constraint data */
-   SCIPrationalSet(consdata->lhs, lhs);
+   SCIPrationalSetRational(consdata->lhs, lhs);
    consdata->lhsreal = SCIPrationalRoundReal(lhs, SCIP_R_ROUND_DOWNWARDS);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
@@ -3466,7 +3466,7 @@ SCIP_RETCODE chgRhs(
    /* ensure that rhs >= lhs is satisfied without numerical tolerance */
    if( SCIPrationalIsEqual(rhs, consdata->lhs) )
    {
-      SCIPrationalSet(consdata->rhs, rhs);
+      SCIPrationalSetRational(consdata->rhs, rhs);
       assert(consdata->rowlhs == NULL);
    }
 
@@ -3547,7 +3547,7 @@ SCIP_RETCODE chgRhs(
    }
 
    /* set new right hand side and update constraint data */
-   SCIPrationalSet(consdata->rhs, rhs);
+   SCIPrationalSetRational(consdata->rhs, rhs);
    consdata->rhsreal = SCIPrationalRoundReal(rhs, SCIP_R_ROUND_UPWARDS);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
@@ -3599,7 +3599,7 @@ SCIP_RETCODE addCoef(
 
    SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1) );
    consdata->vars[consdata->nvars] = var;
-   SCIPrationalSet(consdata->vals[consdata->nvars], val);
+   SCIPrationalSetRational(consdata->vals[consdata->nvars], val);
    SCIPintervalSetRational(&(consdata->valsreal[consdata->nvars]), val);
    consdata->nvars++;
 
@@ -3747,7 +3747,7 @@ SCIP_RETCODE delCoefPos(
    if( pos != consdata->nvars - 1 )
    {
       consdata->vars[pos] = consdata->vars[consdata->nvars-1];
-      SCIPrationalSet(consdata->vals[pos], consdata->vals[consdata->nvars - 1]);
+      SCIPrationalSetRational(consdata->vals[pos], consdata->vals[consdata->nvars - 1]);
       consdata->valsreal[pos] = consdata->valsreal[consdata->nvars -1];
 
       if( consdata->eventdata != NULL )
@@ -3845,7 +3845,7 @@ SCIP_RETCODE chgCoefPos(
       consdataUpdateChgCoef(scip, consdata, var, consdata->valsreal[pos], val, newvalfp, newval);
 
       /* change the value */
-   SCIPrationalSet(consdata->vals[pos], newval);
+   SCIPrationalSetRational(consdata->vals[pos], newval);
    consdata->valsreal[pos] = newvalfp;
    if( consdata->coefsorted )
    {
@@ -3950,7 +3950,7 @@ SCIP_RETCODE mergeMultiples(
       var = consdata->vars[v];
       if( consdata->vars[v-1] == var )
       {
-         SCIPrationalSet(valsum, consdata->vals[v]);
+         SCIPrationalSetRational(valsum, consdata->vals[v]);
          do
          {
             SCIP_CALL( delCoefPos(scip, cons, v) );
@@ -4075,7 +4075,7 @@ SCIP_RETCODE applyFixings(
                {
                   if( SCIPrationalGetSign(val) == SCIPrationalGetSign(fixedval) )
                   {
-                     SCIPrationalSetString(tmpval, "-inf");
+                     SCIPrationalSetNegInfinity(tmpval);
                      SCIP_CALL( chgLhs(scip, cons, tmpval) );
                   }
                   else
@@ -4088,7 +4088,7 @@ SCIP_RETCODE applyFixings(
                      }
                      else
                      {
-                        SCIPrationalSetString(tmpval, "inf");
+                        SCIPrationalSetInfinity(tmpval);
                         SCIP_CALL( chgLhs(scip, cons, tmpval) );
                      }
                   }
@@ -4110,13 +4110,13 @@ SCIP_RETCODE applyFixings(
                      }
                      else
                      {
-                        SCIPrationalSetString(tmpval, "-inf");
+                        SCIPrationalSetNegInfinity(tmpval);
                         SCIP_CALL( chgRhs(scip, cons, tmpval) );
                      }
                   }
                   else
                   {
-                     SCIPrationalSetString(tmpval, "inf");
+                     SCIPrationalSetInfinity(tmpval);
                      SCIP_CALL( chgRhs(scip, cons, tmpval) );
                   }
                }
@@ -6720,8 +6720,8 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
 
-   SCIPrationalSetString(lhs, "-inf");
-   SCIPrationalSetString(rhs, "inf");
+   SCIPrationalSetNegInfinity(lhs);
+   SCIPrationalSetInfinity(rhs);
 
    (*success) = FALSE;
 
@@ -6802,7 +6802,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
 
       /* in case of an equation, assign the left also to the right hand side */
       if( rhsstrptr == lhsstrptr )
-         SCIPrationalSet(rhs, lhs);
+         SCIPrationalSetRational(rhs, lhs);
    }
 
    /* parse right hand side, if different from left hand side */
@@ -7384,8 +7384,8 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
                return SCIP_INVALIDDATA; /*lint !e527*/
             }
 
-            SCIPrationalSetString(lhs, "-inf");
-            SCIPrationalSetString(rhs, "-inf");
+            SCIPrationalSetNegInfinity(lhs);
+            SCIPrationalSetNegInfinity(rhs);
          }
          else
          {
@@ -7410,8 +7410,8 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
                return SCIP_INVALIDDATA; /*lint !e527*/
             }
 
-            SCIPrationalSetString(lhs, "inf");
-            SCIPrationalSetString(lhs, "inf");
+            SCIPrationalSetInfinity(lhs);
+            SCIPrationalSetInfinity(lhs);
          }
       }
 
@@ -7665,61 +7665,16 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       SCIP_CALL( SCIPrationalCopyBlock(SCIPblkmem(scip), &rhs, consdata->rhs) );
 
       /* adjust sides and check that we do not subtract infinity values */
-      /* constant is infinite */
       if( SCIPrationalIsAbsInfinity(constant) )
       {
-         if( SCIPrationalIsNegative(constant) )
-         {
-            if( SCIPrationalIsInfinity(lhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
+         SCIPfreeBufferArray(scip, &consvals);
+         SCIPfreeBufferArray(scip, &consvars);
 
-               SCIPerrorMessage("adding variable <%s> leads to inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+         SCIPerrorMessage("adding variable <%s> to constraint <%s> leads to infinite constant and cannot be handled safely\n",
+            SCIPvarGetName(var), SCIPconsGetName(cons));
 
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            if( SCIPrationalIsInfinity(rhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("adding variable <%s> leads to inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", SCIPvarGetName(var), SCIPconsGetName(cons));
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-
-            SCIPrationalSetString(lhs, "-ing");
-            SCIPrationalSetString(rhs, "-inf");
-         }
-         else
-         {
-            if( SCIPrationalIsNegInfinity(lhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("adding variable <%s> leads to inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", SCIPvarGetName(var), SCIPconsGetName(cons));
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            if( SCIPrationalIsNegInfinity(rhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("adding variable <%s> leads to inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", SCIPvarGetName(var), SCIPconsGetName(cons));
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-
-            SCIPrationalSetString(lhs, "inf");
-            SCIPrationalSetString(rhs, "inf");
-         }
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
       /* constant is not infinite */
       else
@@ -8045,7 +8000,7 @@ SCIP_RETCODE SCIPgetActivityExactLinear(
    {
       SCIPerrorMessage("constraint is not of type exactlinear\n");
       SCIPABORT();
-      SCIPrationalSetString(ret, "inf");  /*lint !e527*/
+      SCIPrationalSetInfinity(ret);  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);

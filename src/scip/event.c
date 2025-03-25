@@ -2708,7 +2708,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
                   SCIP_CALL( SCIPeventAddExactBdChg(qevent, blkmem, (*event)->data.eventbdchg.oldboundexact, (*event)->data.eventbdchg.newboundexact) );
                }
                else
-                  SCIPrationalSet(qevent->data.eventbdchg.newboundexact, (*event)->data.eventbdchg.newboundexact);
+                  SCIPrationalSetRational(qevent->data.eventbdchg.newboundexact, (*event)->data.eventbdchg.newboundexact);
             }
             else
             {
@@ -2778,7 +2778,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
                   SCIP_CALL( SCIPeventAddExactBdChg(qevent, blkmem, (*event)->data.eventbdchg.oldboundexact, (*event)->data.eventbdchg.newboundexact) );
                }
                else
-                  SCIPrationalSet(qevent->data.eventbdchg.newboundexact, (*event)->data.eventbdchg.newboundexact);
+                  SCIPrationalSetRational(qevent->data.eventbdchg.newboundexact, (*event)->data.eventbdchg.newboundexact);
             }
             else
             {

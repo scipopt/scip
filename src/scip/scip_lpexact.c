@@ -380,9 +380,9 @@ SCIP_RETCODE SCIPgetRowSolActivityExact(
       SCIP_CALL( SCIProwExactGetSolActivity(row, scip->set, scip->stat, sol, useexact, result) );
    }
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-      SCIPrationalSet(result, SCIProwExactGetLPActivity(row, scip->stat, scip->lpexact));
+      SCIPrationalSetRational(result, SCIProwExactGetLPActivity(row, scip->stat, scip->lpexact));
    else
-      SCIPrationalSet(result, SCIProwExactGetPseudoActivity(row, scip->stat));
+      SCIPrationalSetRational(result, SCIProwExactGetPseudoActivity(row, scip->stat));
 
    return SCIP_OKAY;
 }
