@@ -7665,61 +7665,16 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       SCIP_CALL( SCIPrationalCopyBlock(SCIPblkmem(scip), &rhs, consdata->rhs) );
 
       /* adjust sides and check that we do not subtract infinity values */
-      /* constant is infinite */
       if( SCIPrationalIsAbsInfinity(constant) )
       {
-         if( SCIPrationalIsNegative(constant) )
-         {
-            if( SCIPrationalIsInfinity(lhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
+         SCIPfreeBufferArray(scip, &consvals);
+         SCIPfreeBufferArray(scip, &consvars);
 
-               SCIPerrorMessage("adding variable <%s> leads to inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+         SCIPerrorMessage("adding variable <%s> to constraint <%s> leads to infinite constant and cannot be handled safely\n",
+            SCIPvarGetName(var), SCIPconsGetName(cons));
 
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            if( SCIPrationalIsInfinity(rhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("adding variable <%s> leads to inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", SCIPvarGetName(var), SCIPconsGetName(cons));
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-
-            SCIPrationalSetString(lhs, "-ing");
-            SCIPrationalSetString(rhs, "-inf");
-         }
-         else
-         {
-            if( SCIPrationalIsNegInfinity(lhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("adding variable <%s> leads to inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", SCIPvarGetName(var), SCIPconsGetName(cons));
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            if( SCIPrationalIsNegInfinity(rhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("adding variable <%s> leads to inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", SCIPvarGetName(var), SCIPconsGetName(cons));
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-
-            SCIPrationalSetString(lhs, "inf");
-            SCIPrationalSetString(rhs, "inf");
-         }
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
       /* constant is not infinite */
       else
