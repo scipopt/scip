@@ -2941,7 +2941,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       SCIPintervalSetRoundingModeDownwards();
       sideval = userow->lhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /** @note we can't certify this yet in exact solving mode, so we have to disable it; if enabled change also in cutsSubstituteMIRSafe() */
+      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafe() */
       /* row is integral? round left hand side up */
       if( userow->integral )
          sideval = ceil(sideval)
@@ -2952,7 +2952,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       SCIPintervalSetRoundingModeUpwards();
       sideval = userow->rhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /** @note we can't certify this yet in exact solving mode, so we have to disable it; if enabled change also in cutsSubstituteMIRSafe() */
+      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafe() */
       /* row is integral? round right hand side down */
       if( userow->integral )
          sideval = floor(sideval);
@@ -3419,7 +3419,7 @@ SCIP_RETCODE addOneRowSafely(
 
       sideval = userow->lhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /** @note we can't certify this yet in exact solving mode, so we have to disable it; if enabled change also in cutsSubstituteMIRSafe() */
+      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafe() */
       /* row is integral? round left hand side up */
       if( userow->integral )
          sideval = ceil(sideval);
@@ -3437,7 +3437,7 @@ SCIP_RETCODE addOneRowSafely(
 
       sideval = userow->rhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /** @note we can't certify this yet in exact solving mode, so we have to disable it; if enabled change also in cutsSubstituteMIRSafe() */
+      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafe() */
       /* row is integral? round right hand side down */
       if( userow->integral )
          sideval = floor(sideval);
@@ -6298,7 +6298,9 @@ SCIP_RETCODE cutsRoundMIR(
  *
  *  Substitute \f$ \hat{a}_r \cdot s_r \f$ by adding \f$ \hat{a}_r \f$ times the slack's definition to the cut.
  *
- * @note this method is safe for usage in exact solving mode
+ *  @note this method is safe for usage in exact solving mode
+ *
+ *  @todo certify and use integrality of row in exact solving mode
  */
 static
 SCIP_RETCODE cutsSubstituteMIRSafely(
@@ -6515,7 +6517,7 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
          SCIPintervalSet(&rowrhs, userow->rhs);
          SCIPintervalSubScalar(SCIPinfinity(scip), &rowrhs, rowrhs, userow->constant);
 #ifdef SCIP_DISABLED_CODE
-         /** @note we can't certify this yet in exact solving mode, so we have to disable it; if enabled change also in addOneRowSafely() */
+         /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in addOneRowSafely() */
          if( row->integral )
          {
             /* the right hand side was implicitly rounded down in row aggregation */
@@ -6535,7 +6537,7 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
          SCIPintervalSet(&rowlhs, userow->lhs);
          SCIPintervalSubScalar(SCIPinfinity(scip), &rowlhs, rowlhs, userow->constant);
 #ifdef SCIP_DISABLED_CODE
-         /** @note we can't certify this yet in exact solving mode, so we have to disable it; if enabled change also in addOneRowSafely() */
+         /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in addOneRowSafely() */
          if( row->integral )
          {
             /* the left hand side was implicitly rounded up in row aggregation */
@@ -6752,7 +6754,7 @@ SCIP_RETCODE cutsSubstituteMIRRational(
          /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
          assert(!SCIPisInfinity(scip, userow->rhs));
 #ifdef SCIP_DISABLED_CODE
-         /** @note we can't certify this yet in exact solving mode, so we have to disable it; if enabled change also in addOneRowSafely() */
+         /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in addOneRowSafely() */
          if( row->integral )
          {
             /* the right hand side was implicitly rounded down in row aggregation */
@@ -6774,7 +6776,7 @@ SCIP_RETCODE cutsSubstituteMIRRational(
          /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
          assert(!SCIPisInfinity(scip, -userow->lhs));
 #ifdef SCIP_DISABLED_CODE
-          /** @note we can't certify this yet in exact solving mode, so we have to disable it; if enabled change also in addOneRowSafely() */
+          /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in addOneRowSafely() */
          if( row->integral )
          {
             /* the left hand side was implicitly rounded up in row aggregation */
