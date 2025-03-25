@@ -373,7 +373,10 @@ void SCIPrationalDiffReal(
    SCIP_Real             real                /**< real number */
    );
 
-/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) of two rationals */
+/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) of two rationals
+ *
+ *  @note this method handles infinity like finite numbers
+ */
 SCIP_EXPORT
 void SCIPrationalRelDiff(
    SCIP_Rational*        res,                /**< the result */
