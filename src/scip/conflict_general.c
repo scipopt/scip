@@ -1383,7 +1383,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
             {
                SCIP_Longint certificate_index;
 
-               /* ensure used rows are certified */
+               /* ensure each row used in the aggregation is certified */
                certificate_index = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, row->rowexact);
                if( certificate_index == LONG_MAX && SCIProwGetOrigintype(row) == SCIP_ROWORIGINTYPE_SEPA )
                {
@@ -1472,6 +1472,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
          }
       }
 
+      /* certify final Farkas row */
       if( SCIPisCertificateActive(set->scip) )
       {
          SCIP_ROW** usedrows;
