@@ -5302,6 +5302,7 @@ SCIP_DECL_CONSINIT(consInitExactLinear)
    int c;
 
    assert(scip != NULL);
+   assert(SCIPisExact(scip) || nconss == 0);
 
    /* check for event handler */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -5328,6 +5329,7 @@ SCIP_DECL_CONSEXIT(consExitExactLinear)
    int c;
 
    assert(scip != NULL);
+   assert(SCIPisExact(scip) || nconss == 0);
 
    /* check for event handler */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -5359,11 +5361,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
 {  /*lint --e{715}*/
    int c;
 
+   assert(scip != NULL);
+   assert(SCIPisExact(scip) || nconss == 0);
+
    /* delete all linear constraints that were upgraded to a more specific constraint type;
     * make sure, only active variables remain in the remaining constraints
     */
-   assert(scip != NULL);
-
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CONSDATA* consdata;
@@ -5397,6 +5400,10 @@ SCIP_DECL_CONSEXITSOL(consExitsolExactLinear)
    int c;
 
    assert(scip != NULL);
+   assert(SCIPisExact(scip) || nconss == 0);
+
+   if( !SCIPisExact(scip) )
+      return SCIP_OKAY;
 
    /* release the rows of all constraints */
    for( c = 0; c < nconss; ++c )
@@ -5449,14 +5456,15 @@ SCIP_DECL_CONSEXITSOL(consExitsolExactLinear)
 static
 SCIP_DECL_CONSDEACTIVE(consDeactiveExactLinear)
 {  /*lint --e{715}*/
-   assert( cons != NULL );
+   assert(scip != NULL);
+   assert(SCIPisExact(scip));
+   assert(cons != NULL);
 
    if( SCIPconsIsDeleted(cons) )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_CONSDATA* consdata;
 
-      assert(scip != NULL);
       assert(conshdlr != NULL);
       assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
@@ -5487,6 +5495,7 @@ static
 SCIP_DECL_CONSDELETE(consDeleteExactLinear)
 {  /*lint --e{715}*/
    assert(scip != NULL);
+   assert(SCIPisExact(scip));
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
@@ -5516,6 +5525,7 @@ SCIP_DECL_CONSTRANS(consTransExactLinear)
    SCIP_CONSDATA* targetdata;
 
    assert(scip != NULL);
+   assert(SCIPisExact(scip));
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
@@ -5549,6 +5559,7 @@ SCIP_DECL_CONSINITLP(consInitlpExactLinear)
    int c;
 
    assert(scip != NULL);
+   assert(SCIPisExact(scip) || nconss == 0);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
    *infeasible = FALSE;
@@ -5581,9 +5592,13 @@ SCIP_DECL_CONSSEPALP(consSepalpExactLinear)
    int ncuts;
 
    assert(scip != NULL);
+   assert(SCIPisExact(scip) || nconss == 0);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   if( !SCIPisExact(scip) )
+      return SCIP_OKAY;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -5643,9 +5658,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolExactLinear)
    SCIP_Bool cutoff;
 
    assert(scip != NULL);
+   assert(SCIPisExact(scip) || nconss == 0);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   if( !SCIPisExact(scip) )
+      return SCIP_OKAY;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -5687,6 +5706,12 @@ SCIP_DECL_CONSSEPASOL(consSepasolExactLinear)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpExactLinear)
 {  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(SCIPisExact(scip) || nconss == 0);
+
+   if( !SCIPisExact(scip) )
+      return SCIP_OKAY;
+
    SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
@@ -5696,6 +5721,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactLinear)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxExactLinear)
 {  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(SCIPisExact(scip) || nconss == 0);
+
+   if( !SCIPisExact(scip) )
+      return SCIP_OKAY;
+
    SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
@@ -5710,6 +5741,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactLinear)
    int c;
 
    assert(scip != NULL);
+   assert(SCIPisExact(scip) || nconss == 0);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
@@ -5718,6 +5750,12 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactLinear)
    assert(conshdlrdata != NULL);
 
    SCIPdebugMsg(scip, "Enfops method of linear constraints\n");
+
+   if( !SCIPisExact(scip) )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    /* if the solution is infeasible anyway due to objective value, skip the enforcement */
    if( objinfeasible )
@@ -5755,11 +5793,15 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
    int c;
 
    assert(scip != NULL);
+   assert(SCIPisExact(scip) || nconss == 0);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
+
+   if( !SCIPisExact(scip) )
+      return SCIP_OKAY;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -5829,9 +5871,13 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
    int i;
 
    assert(scip != NULL);
+   assert(SCIPisExact(scip) || nconss == 0);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   if( !SCIPisExact(scip) )
+      return SCIP_OKAY;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -5885,6 +5931,7 @@ SCIP_DECL_CONSLOCK(consLockExactLinear)
    int i;
 
    assert(scip != NULL);
+   assert(SCIPisExact(scip));
    assert(cons != NULL);
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5928,6 +5975,7 @@ static
 SCIP_DECL_CONSDELVARS(consDelvarsExactLinear)
 {
    assert(scip != NULL);
+   assert(SCIPisExact(scip) || nconss == 0);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
 
@@ -6304,6 +6352,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    SCIP_EVENTTYPE eventtype;
    SCIP_Bool updateActivities;
    assert(scip != NULL);
+   assert(SCIPisExact(scip));
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
