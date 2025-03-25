@@ -156,36 +156,37 @@ void printNlhdlrExprData(
 
       startidx = nlhdlrexprdata->termbegins[i];
 
-      /* v_i is 0 */
       if( startidx == nlhdlrexprdata->termbegins[i + 1] )
       {
+         /* v_i is 0 */
          assert(nlhdlrexprdata->offsets[i] != 0.0);
 
          SCIPinfoMessage(scip, NULL, "%g", SQR(nlhdlrexprdata->offsets[i]));
-         continue;
       }
-
-      /* v_i is not 0 */
-      SCIPinfoMessage(scip, NULL, "(");
-
-      for( j = startidx; j < nlhdlrexprdata->termbegins[i + 1]; ++j )
+      else
       {
-         if( nlhdlrexprdata->transcoefs[j] != 1.0 )
-            SCIPinfoMessage(scip, NULL, " %+g*", nlhdlrexprdata->transcoefs[j]);
-         else
-            SCIPinfoMessage(scip, NULL, " +");
-         if( SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]) != NULL )
-         {
-            SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]])));
-            SCIPinfoMessage(scip, NULL, "(%p)", (void*)nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]);
-         }
-         else
-            SCIPinfoMessage(scip, NULL, "%p", (void*)nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]);
-      }
-      if( nlhdlrexprdata->offsets[i] != 0.0 )
-         SCIPinfoMessage(scip, NULL, " %+g", nlhdlrexprdata->offsets[i]);
+         /* v_i is not 0 */
+         SCIPinfoMessage(scip, NULL, "(");
 
-      SCIPinfoMessage(scip, NULL, ")^2");
+         for( j = startidx; j < nlhdlrexprdata->termbegins[i + 1]; ++j )
+         {
+            if( nlhdlrexprdata->transcoefs[j] != 1.0 )
+               SCIPinfoMessage(scip, NULL, " %+g*", nlhdlrexprdata->transcoefs[j]);
+            else
+               SCIPinfoMessage(scip, NULL, " +");
+            if( SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]) != NULL )
+            {
+               SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]])));
+               SCIPinfoMessage(scip, NULL, "(%p)", (void*)nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]);
+            }
+            else
+               SCIPinfoMessage(scip, NULL, "%p", (void*)nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]);
+         }
+         if( nlhdlrexprdata->offsets[i] != 0.0 )
+            SCIPinfoMessage(scip, NULL, " %+g", nlhdlrexprdata->offsets[i]);
+
+         SCIPinfoMessage(scip, NULL, ")^2");
+      }
 
       if( i < nterms - 2 )
          SCIPinfoMessage(scip, NULL, " + ");
@@ -1623,17 +1624,35 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    *success = FALSE;
 
-   /* check whether expression is a sum with at least 2 children */
-   if( ! SCIPisExprSum(scip, expr) || SCIPexprGetNChildren(expr) < 2 )
+   /* check whether expression is a sum */
+   if( SCIPisExprSum(scip, expr) )
+   {
+      assert(SCIPexprGetNChildren(expr) >= 1);
+
+      /* get children of the sum */
+      children = SCIPexprGetChildren(expr);
+      nchildren = SCIPexprGetNChildren(expr);
+      constant = SCIPgetConstantExprSum(expr);
+
+      /* we duplicate the child coefficients since we have to manipulate them */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &childcoefs, SCIPgetCoefsExprSum(expr), nchildren) ); /*lint !e666*/
+   }
+   else if( SCIPisExprProduct(scip, expr) && SCIPexprGetNChildren(expr) == 2 && conslhs != SCIP_INVALID )  /*lint !e777*/
+   {
+      /* handle bilinear term as SOC, if we have a constraint like x*y >= constant
+       * (if conslhs is SCIP_INVALID, then we have not a constraint, but a subexpression)
+       */
+      children = &expr;
+      nchildren = 1;
+      constant = 0.0;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &childcoefs, 1) );
+      childcoefs[0] = 1.0;
+   }
+   else
+   {
       return SCIP_OKAY;
-
-   /* get children of the sum */
-   children = SCIPexprGetChildren(expr);
-   nchildren = SCIPexprGetNChildren(expr);
-   constant = SCIPgetConstantExprSum(expr);
-
-   /* we duplicate the child coefficients since we have to manipulate them */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &childcoefs, SCIPgetCoefsExprSum(expr), nchildren) ); /*lint !e666*/
+   }
 
    /* initialize data */
    lhsidx = -1;
@@ -1755,6 +1774,10 @@ SCIP_RETCODE detectSocQuadraticSimple(
    }
    else
    {
+      /* we have x*y - z^2 ... -> we want to write x*y >= z^2 ...
+       * or we have x^2 - y^2 - z^2 ... -> we want to write x^2 >= y^2 + z^2 ...
+       * in any case, we need a finite lhs
+       */
       assert(lhsidx != -1);
 
       /* if lhs is infinity, it can't be soc */
@@ -2438,12 +2461,25 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSoc)
    /* inform what we can do */
    *participating = enforcebelow ? SCIP_NLHDLR_METHOD_SEPABELOW : SCIP_NLHDLR_METHOD_SEPAABOVE;
 
-   /* if we have been successful on sqrt(...) <= auxvar, then we enforce
-    * otherwise, expr is quadratic and we separate for expr <= ub(auxvar) only
-    * in that case, we enforce only if expr is the root of a constraint, since then replacing auxvar by up(auxvar) does not relax anything (auxvar <= ub(auxvar) is the only constraint on auxvar)
+   /*
     */
-   if( (SCIPisExprPower(scip, expr) && SCIPgetExponentExprPow(expr) == 0.5) || (cons != NULL) )
+   if( SCIPisExprPower(scip, expr) && SCIPgetExponentExprPow(expr) == 0.5 )
+   {
+      /* if we have been successful on sqrt(...) <= auxvar, then we enforce */
       *enforcing |= *participating;
+   }
+   else if( cons != NULL )
+   {
+      /* expr is quadratic (product or sum) and we separate for expr <= ub(auxvar) or expr >= lb(auxvar) only
+       * in that case, we enforce only if expr is the root of a constraint, since then replacing auxvar by up(auxvar) does not relax anything (auxvar <= ub(auxvar) is the only constraint on auxvar)
+       * however, if the constraint has both lhs and rhs and has only one bilinear term (x*y=constant), then it seems that handling both sides by nlhdlr_bilinear can still be beneficial
+       * (the latter means lhs or rhs disappear, or expr is not a product and not a sum with only 1 term)
+       */
+      if( SCIPisInfinity(scip, -SCIPgetLhsNonlinear(cons)) || SCIPisInfinity(scip, SCIPgetRhsNonlinear(cons)) )
+         *enforcing |= *participating;
+      else if( !SCIPisExprProduct(scip, expr) && SCIPexprGetNChildren(expr) > 1 )
+         *enforcing |= *participating;
+   }
 
    return SCIP_OKAY;
 }
@@ -2486,7 +2522,7 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxSoc)
       *auxvalue = sqrt(*auxvalue);
    }
    /* otherwise, evaluate the original quadratic expression w.r.t. the created auxvars of the children */
-   else
+   else if( SCIPisExprSum(scip, expr) )
    {
       SCIP_EXPR** children;
       SCIP_Real* childcoefs;
@@ -2539,6 +2575,21 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxSoc)
             *auxvalue += childcoefs[i] * SCIPgetSolVal(scip, sol, argauxvar);
          }
       }
+   }
+   else
+   {
+      SCIP_VAR* argauxvar1;
+      SCIP_VAR* argauxvar2;
+
+      assert(SCIPisExprProduct(scip, expr));
+      assert(SCIPexprGetNChildren(expr) == 2);
+
+      argauxvar1 = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[0]);
+      argauxvar2 = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[1]);
+      assert(argauxvar1 != NULL);
+      assert(argauxvar2 != NULL);
+
+      *auxvalue = SCIPgetSolVal(scip, sol, argauxvar1) * SCIPgetSolVal(scip, sol, argauxvar2);
    }
 
    return SCIP_OKAY;

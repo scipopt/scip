@@ -3796,9 +3796,10 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_VAR** andvars;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   SCIP_Real constant = 0.0;
+   SCIP_Real constant;
+   int consnodeidx;
+   int andnodeidx;
    int nlocvars;
-   int nvars;
    int i;
 
    assert(scip != NULL);
@@ -3809,32 +3810,43 @@ SCIP_RETCODE addSymmetryInformation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* get active variables of the constraint */
-   nvars = SCIPgetNVars(scip);
-   nlocvars = SCIPgetNVarsAnd(scip, cons);
+   /* create arrays to store active representation of variables */
+   nlocvars = 1;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlocvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlocvars) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+   /* add constraint node */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &consnodeidx) );
 
-   andvars = SCIPgetVarsAnd(scip, cons);
+   /* add resultant to symmetry detection graph */
+   assert(consdata->resvar != NULL);
+   vars[0] = consdata->resvar;
+   vals[0] = 1.0;
+   constant = 0.0;
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, consnodeidx, vars, vals, nlocvars, constant) );
+
+   /* add node modeling the AND-part and connect it with constraint node */
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int)SYM_CONSOPTYPE_AND, &andnodeidx) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, andnodeidx, FALSE, 0.0) );
+
+   /* add variables */
+   andvars = consdata->vars;
    for( i = 0; i < consdata->nvars; ++i )
    {
-      vars[i] = andvars[i];
-      vals[i] = 1.0;
+      assert(andvars[i] != NULL);
+      vars[0] = andvars[i];
+      vals[0] = 1.0;
+      constant = 0.0;
+      nlocvars = 1;
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, andnodeidx, vars, vals, nlocvars, constant) );
    }
-
-   assert(SCIPgetResultantAnd(scip, cons) != NULL);
-   vars[nlocvars] = SCIPgetResultantAnd(scip, cons);
-   vals[nlocvars++] = 2.0;
-   assert(nlocvars <= nvars);
-
-   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
-
-   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals,
-         nlocvars, cons, constant, constant, success) );
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }

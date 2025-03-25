@@ -23,6 +23,7 @@ add_executable(scheduler
 )
 
 target_link_libraries(scheduler ${SCIP_LIBRARIES})
+target_compile_options(scheduler PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET applications )
     add_dependencies( applications scheduler )

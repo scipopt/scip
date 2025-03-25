@@ -3,7 +3,7 @@
 # run with bash -e makeallclean.sh to stop on errors
 #
 
-APPLICATIONS=(Coloring CycleClustering MinIISC Ringpacking Scheduler)
+APPLICATIONS=(Coloring CycleClustering MinIISC PBSolver Ringpacking Scheduler)
 LPSOLVERS=(spx2 cpx none)
 OPTS=(opt dbg)
 SHARED=(true false)

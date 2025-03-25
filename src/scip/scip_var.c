@@ -10317,7 +10317,6 @@ SCIP_Real SCIPgetVarAvgGMIScore(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincVarGMISumScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */

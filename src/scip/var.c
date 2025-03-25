@@ -17901,7 +17901,6 @@ SCIP_Bool SCIPvarIsImpliedIntegral(
 }
 
 /** returns TRUE if the variable is integral, but not implied integral. */
-SCIP_EXPORT
 SCIP_Bool SCIPvarIsNonimpliedIntegral(
    SCIP_VAR*             var                 /**< problem variable */
    )

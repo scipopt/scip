@@ -62,6 +62,10 @@
 
 /** creates a conflict handler and includes it in SCIP
  *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
  *  @note method has all conflict handler callbacks as arguments and is thus changed every time a new
  *        callback is added
  *        in future releases; consider using SCIPincludeConflicthdlrBasic() and setter functions
@@ -107,6 +111,10 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
  *  Optional callbacks can be set via specific setter functions SCIPsetConflicthdlrCopy(), SCIPsetConflicthdlrFree(),
  *  SCIPsetConflicthdlrInit(), SCIPsetConflicthdlrExit(), SCIPsetConflicthdlrInitsol(),
  *  and SCIPsetConflicthdlrExitsol()
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeConflicthdlr() instead
  */

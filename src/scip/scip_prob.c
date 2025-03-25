@@ -2216,7 +2216,6 @@ int SCIPgetNImplVars(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_EXPORT
 int SCIPgetNBinImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -2262,7 +2261,6 @@ int SCIPgetNBinImplVars(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_EXPORT
 int SCIPgetNIntImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -2308,7 +2306,6 @@ int SCIPgetNIntImplVars(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_EXPORT
 int SCIPgetNContImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    )

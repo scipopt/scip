@@ -23,6 +23,8 @@ if(NOT LIBM)
 endif()
 
 target_link_libraries(scflp ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(scflp PRIVATE ${SCIP_COMPILE_FLAGS})
+
 if( TARGET examples )
     add_dependencies( examples scflp )
 endif()

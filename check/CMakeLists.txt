@@ -473,6 +473,8 @@ set(instances_Objlim
 # Pairs of instances and settings
 #
 set(pairs_Issue
+    "instances/Issue/591_1.cip\;0\;reduced_constraints"
+    "instances/Issue/591_2.cip\;0\;reduced_and"
     "instances/Issue/3047.lp\;20000\;dualinfer"
     "instances/Issue/3132.lp\;0\;default"
     "instances/Issue/3499.lp\;11460\;closeobj"
@@ -507,6 +509,7 @@ set(pairs_Issue
     "instances/Issue/3832.cip\;0\;default"
     # Test currently not working since problems with the relative check for presolved problems appear: https://git.zib.de/integer/scip/-/issues/3819
     # "instances/Issue/3842.cip\;-16812.7692740365\;default"
+    "instances/Issue/3870.cip\;5133546551065818\;default"
 )
 
 #
@@ -595,6 +598,7 @@ macro(add_instancetests instances settings prefix)
             #
             if(NOT ((${setting} STREQUAL "tolerance") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "xprs")))
             if(NOT ((${setting} STREQUAL "default") AND (${basename} STREQUAL "pltexpA4_6.smps") AND (${LPS} STREQUAL "xprs")))
+            if(NOT ((${setting} STREQUAL "lns_epsgreedy_vanilla") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
             add_test(NAME ${prefix}-${setting}-${basename}
                     COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
                     )
@@ -604,6 +608,7 @@ macro(add_instancetests instances settings prefix)
                                     FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
+            endif()  # Gurobi gets stuck in LP solve, #2833
             endif()  # LP Error: Xpress returned 120, #3724 (LPS=xprs, Stochastic-default-pltexpA4_6.smps)
             endif()  # Xpress does not keep feasibility tolerance setting, #3640
         endforeach(setting)

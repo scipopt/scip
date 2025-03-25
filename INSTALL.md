@@ -199,7 +199,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `NOBLKBUFMEM`          | `on`, `off`                        | `NOBLKBUFMEM=[true,false]` |                                                                    |
 | `MT`                   | `on`, `off`                        |                            | use static runtime libraries for Visual Studio compiler on Windows |
 | `THREADSAFE`           | `on`, `off`                        | `THREADSAFE=[true,false]`  | thread safe compilation                                            |
-| `SANITIZE_...`         | `on`, `off`                        | --                         | enable sanitizer in debug mode if available                        |
+| `SANITIZE`             | `on`, `off`, `thread`, `address`, `memory` | `SANITIZE=...`     | sanitizers to enable; if not `off` (default), then enables undefined-behavior sanitizer, `thread` enables also thread sanitizer, `address` enables also address sanitizer, `memory` enables also memory sanitizer |
 | `TPI`                  | `tny`, `omp`, `none`               | `TPI=[tny,omp,none]`       | enable task processing interface required for concurrent solver    |
 
 Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing configuration.
@@ -340,6 +340,7 @@ In your SCIP main directory, enter `make [options]` with the following options:
 | `OSTYPE`              | `[linux, darwin, cygwin, irix, windows, mingw]` | the operating system: try to autedetect                               |
 | `PAPILO=false`        | `[false, true]`      | to disable or disable the MILP presolver based on the presolving library PaPILO                  |
 | `READLINE=true`       | `[true, false]`      | to enable or disable readline library for interactive shell                                      |
+| `SANITIZE=false`      | `[true, false, thread, address, memory]` | sanitizers to enable: SANITIZE not set to false enables undefined-behavior sanitizer, SANITIZE=thread enables also thread sanitizer, SANITIZE=address enables also address sanitizer, SANITIZE=memory enables also memory sanitizer (clang only); Linux clang/gcc only |
 | `SHARED=false`        | `[false, true]`      | to suppress or create shared libraries (only Gnu compiler)                                       |
 | `SYM=none`            | `[none, nauty, snauty, bliss, sbliss, dejavu]` | to choose method for computing symmetries in mixed nonlinear integer programs                  |
 | `TPI=none`            | `[none, omp, tny]`   | to disable the task processing interface or use it with the openmp or tinycthreads interface for concurrent solves |

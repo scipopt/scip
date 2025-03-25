@@ -356,7 +356,6 @@ SCIP_Real SCIPnegateReal(
  */
 
 /** creates and initializes a random number generator */
-SCIP_EXPORT
 SCIP_RETCODE SCIPrandomCreate(
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -364,14 +363,12 @@ SCIP_RETCODE SCIPrandomCreate(
    );
 
 /** frees a random number generator */
-SCIP_EXPORT
 void SCIPrandomFree(
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** initializes a random number generator with a given start seed */
-SCIP_EXPORT
 void SCIPrandomSetSeed(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    unsigned int          initseed            /**< initial random seed */

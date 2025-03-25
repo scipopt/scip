@@ -6257,7 +6257,6 @@ void SCIPstoreSolutionGap(
  *
  * @return returns the primal dual gap stored in the stats
  */
-SCIP_EXPORT
 SCIP_Real SCIPgetPrimalDualIntegral(
    SCIP*                 scip                /**< SCIP data structure */
    )

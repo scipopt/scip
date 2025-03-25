@@ -62,7 +62,12 @@ if( CRITERION_FOUND )
     # and the source directory of the parent SCIP directory to be able to include C-sources of SCIP
     # into our unittests
     #
-    include_directories(${CRITERION_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+    include_directories(BEFORE PUBLIC ${CRITERION_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+
+    if(SANITIZE)
+        find_package(Sanitizers)
+    endif(SANITIZE)
+
     #
     # Prepare unit test executable for every source file
     #
@@ -95,6 +100,10 @@ if( CRITERION_FOUND )
         # link the executable against both criterion and the SCIP library target
         #
         target_link_libraries(${testName} ${CRITERION_LIBRARIES} libscip m)
+
+        if(SANITIZE)
+            add_sanitizers(${testName})
+        endif(SANITIZE)
 
         #
         # use the directory name (relative to src/) to build the executable

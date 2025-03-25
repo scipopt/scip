@@ -34,6 +34,7 @@ Performance improvements
 Examples and applications
 -------------------------
 
+- Add PBSolver application to solve pseudoboolean instances in OPB and WBO format while complying with PB competition rules
 - Coloring: new parameter branching/coloring/strategy to choose the least/most fractional variable for branching
 
 Interface changes
@@ -63,6 +64,7 @@ Interface changes
 - new event SCIP_EVENTTYPE_IMPLTYPECHANGED is generated if a variable is declared implied integral, this event is included in the set SCIP_EVENTTYPE_VARCHANGED
 - the callback SCIP_DECL_EXPRINTEGRALITY, which returns the integrality of an expression, had its fourth argument change from SCIP_Bool* to SCIP_IMPLINTTYPE*, to represent implied integrality in nonlinear expressions, that is an implied integral type of an auxiliary variable if the expression were assigned to it
 - new event SCIP_EVENTTYPE_DUALBOUNDIMPROVED is generated whenever the global dual bound is improved
+- new event mask SCIP_EVENTTYPE_GAPUPDATED for catching updates in primal or dual bound
 
 ### Deleted and changed API methods
 
@@ -144,6 +146,7 @@ Interface changes
 - heuristics/scheduler/heurtimelimit removed to avoid indeterministic behavior of scheduler heuristic, uses main time limit instead
 - removed parameters "constraints/orbitope/checkpporbitope", "constraints/orbitope/sepafullorbitope", "constraints/orbitope/forceconscopy", which became superfluous
 - removed reading/gmsreader/signpower
+- removed benders/default/numthreads, multi-threading support for Benders' decomposition has been temporarily disabled.
 
 ### New parameters
 
@@ -162,6 +165,7 @@ Interface changes
 - new parameter "presolving/milp/maxedgessequential" defines the maximal amount of edges in the sequential clique merging graph
 - new parameter "presolving/milp/maxcliquesize" defines the maximal size of cliques considered for clique merging
 - new parameter "presolving/milp/maxgreedycalls" defines the maximal number of greedy max clique calls in a single thread
+- reading/opbreader/maxintsize to define the maximal intsize above which an OPB instance is rejected
 
 ### Data structures
 
@@ -181,11 +185,25 @@ Build system
 
 ### Makefile
 
+- revised SANITIZE options: removed SANITIZE=full, added SANITIZE=thread, SANITIZE=address, and SANITIZE=memory to enable
+  thread, address, and memory sanitizers, respectively, in addition to undefined behavior sanitizer;
+  changed default to SANITIZE=false
+- added build flag MPFR (default: false) to link with the multiprecision floating-point library, needed when SoPlex is also
+  built with MPFR=true for precision boosting in rational solving mode
+- the symlink $(LIBDIR)/include/papilo should now point to the `src` subdirectory of a PaPILO repository or the headers directory
+  of a PaPILO installation without TBB; pointing to the directory of a PaPILO repository still works, but is deprecated
+- removed option to link TBB library, as this is not used by default when PaPILO has not been built via cmake
+  (use USRCXXFLAGS=-DPAPILO_TBB USRLDFLAGS=-ltbb to enable TBB for PaPILO)
+
 ### Cmake
 
 - increased minimal required cmake version to 3.11
 - removed automatic download and build of Bliss during cmake configuration when -DSYM=(s)bliss;
   please build and install from https://github.com/scipopt/bliss before and specify -DBLISS_DIR
+- replaced `SANITIZE_XYZ=(on|off)` options by `SANITIZE=(on|off|thread|address|memory)`;
+  undefined behavior sanitizer is always enabled if not `SANITIZE=off` (the default)
+- scip-config.cmake now defines a variable SCIP_COMPILE_FLAGS, which could be used to compile code that builds against SCIP via cmake;
+  currently, this only passes on the sanitizer flags that were used to build libscip
 
 Fixed bugs
 ----------
@@ -217,6 +235,8 @@ Features
 
 Performance improvements
 ------------------------
+
+- extended SOC detection to simple bilinear constraints, e.g., x*y >= 1
 
 Examples and applications
 -------------------------
@@ -259,7 +279,16 @@ Fixed bugs
 - fixed timeouts due to race conditions when using TPI=omp
 - fixed issues with indexing of concurrent solvers when a solver finishes (because SCIP is too fast) before others have been created when using TPI=tny
 - respect fixing if variable is declared binary in bounds section of mps file
+- fixed reading mps files with short row and column names and some fixed-form mps files with spaces in row names
 - force local bounds to adjusted value when fixing variable
+- adds missing NULL check for Benders' subproblems in feasalt cut
+- apply objective scale to pseudoboolean non-linear terms
+- impose pseudoboolean cost bound without intermediate casting
+- flatten aggregation graph before finishing presolving to accelerate evaluating an empty solution
+- respect fixed resultants in binvarGetActiveProbindex() of branch_relpscost.c
+- drop fixed resultants when copying pseudoboolean constraint to avert segmentation fault
+- correct matrix entry when resolving aggregated variables in checkSystemGF2() of cons_xor.c
+- corrected symmetry detection graph of cons_and.c, cons_or.c, and cons_xor.c
 
 Build system
 ------------
@@ -269,7 +298,8 @@ Build system
 - allow to set HIGHS_DIR via -D flag as well
 - reenable building and testing of SCFLP example
 - fixed that compiler flags for sanitizers were not used for compiling objects of SCIP library
-- prioritize local includes in applications and examples to link the intended SCIP version to them
+- prioritize local includes for unittests, examples, and applications to link the intended SCIP version
+- fix detection of Gurobi 11 and 12 libs on Linux
 
 ### Makefile
 

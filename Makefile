@@ -45,6 +45,7 @@ INSTALLDIR	=
 ifeq ($(OPENSOURCE),false)
 	override EXPRINT	=	none
 	override GMP		=	false
+	override MPFR		=	false
 	override READLINE	=	false
 	override ZLIB		=	false
 	override ZIMPL		=	false
@@ -84,6 +85,7 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		DEBUGSOL=$(DEBUGSOL)\\n\
 		EXPRINT=$(EXPRINT)\\n\
 		GMP=$(GMP)\\n\
+		MPFR=$(MPFR)\\n\
 		IPOPTOPT=$(IPOPTOPT)\\n\
 		LAPACK=$(LAPACK)\\n\
 		LPSCHECK=$(LPSCHECK)\\n\
@@ -117,8 +119,6 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
-LPILIBSHORTNAME	=	lpi$(LPS)
-LPILIBNAME	=	$(LPILIBSHORTNAME)-$(VERSION)
 LPILIBOBJ	=
 LPSOPTIONS	=
 LPIINSTMSG	=
@@ -463,15 +463,11 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
-FLAGS        +=    -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/tbb/include -I$(LIBDIR)/include/papilo/external -I$(LIBDIR)/include/papilo/src
+FLAGS        +=    -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/papilo -I$(LIBDIR)/include/papilo/src # the last include is for backwards compatibility or if users link to the PaPILO repo
 SOFTLINKS    +=    $(LIBDIR)/include/papilo
-LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO directory\n"
+LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO source directory, i.e., \"<papilo>/papilo/Config.hpp\" should exist.\n"
 SOFTLINKS    +=    $(LIBDIR)/include/boost
 LPIINSTMSG    +=    "\n  -> \"boost\" is the path to the boost include folder\n"
-SOFTLINKS    +=    $(LIBDIR)/include/tbb
-LPIINSTMSG    +=    "\n  -> \"tbb\" is the path to the tbb include folder\n"
-SOFTLINKS    +=    $(LIBDIR)/shared/libtbb.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
-LPIINSTMSG    +=    " -> \"libtbb.*.so\" is the path to the oneTBB library, e.g., \"<oneTBB-path>/libtbb.so\""
 endif
 
 #-----------------------------------------------------------------------------
@@ -1370,12 +1366,12 @@ endif
 $(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBBASEFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
-		$(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCC_o)$@ \
-		|| ($(MAKE) errorhints && false)
+		($(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCC_o)$@ \
+		|| ($(MAKE) errorhints && false)) && ($(MAKE) successwarnings || true)
 endif
 ifeq ($(LINKER),CPP)
-		$(LINKCXX) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCXX_o)$@ \
-		|| ($(MAKE) errorhints && false)
+		($(LINKCXX) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCXX_o)$@ \
+		|| ($(MAKE) errorhints && false)) && ($(MAKE) successwarnings || true)
 endif
 
 .PHONY: libscipbase
@@ -1459,13 +1455,6 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(DFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
 
-# add special target for papilo to avoid sanitizers (leading to false positives in TBB)
-ifeq ($(SANITIZE),true)
-$(LIBOBJDIR)/scip/presol_milp.o: $(SRCDIR)/scip/presol_milp.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
-		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@ -fno-sanitize=all
-endif
-
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
@@ -1510,7 +1499,7 @@ ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
 		@$(MAKE) $(SCIPCONFIGHFILE)
 endif
 ifneq ($(SANITIZE),$(LAST_SANITIZE))
-		# touch all files if SANITIZE is changed; this is necessary since some files (e.g., dijkstra, ...) do not depend on the buildflags
+# touch all files if SANITIZE is changed; this is necessary since some files (e.g., dijkstra, ...) do not depend on the buildflags
 		@-touch -c $(ALLSRC)
 endif
 		@-rm -f $(LASTSETTINGS)
@@ -1680,7 +1669,9 @@ endif
 endif
 ifneq ($(ZIMPL),true)
 ifneq ($(ZIMPL),false)
+ifneq ($(ZIMPL),auto)
 		$(error invalid ZIMPL flag selected: ZIMPL=$(ZIMPL). Possible options are: true false auto)
+endif
 endif
 endif
 ifneq ($(AMPL),true)
@@ -1761,6 +1752,25 @@ ifeq ($(LPS),spx2)
 		@echo "build failed with GMP=false and LPS=spx2: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
 endif
 endif
+ifeq ($(MPFR),false)
+ifeq ($(LPS),spx2)
+		@echo "build failed with MPFR=false and LPS=spx2: use MPFR=true or make sure that SoPlex is also built without MPFR support (make MPFR=false)"
+endif
+endif
+
+
+.PHONY: successwarnings
+successwarnings:
+ifeq ($(READLINE),false)
+		@echo "WARNING: built with READLINE=false: interactive shell misses tab completion, history capability, and in-line editing"
+endif
+ifeq ($(GMP),false)
+		@echo "WARNING: built with GMP=false: ZIMPL support and solution counting feature is not available"
+else
+ifeq ($(ZLIB),false)
+		@echo "WARNING: built with ZLIB=false: support for reading gzipped files is not available"
+endif
+endif
 
 .PHONY: help
 help:
@@ -1770,15 +1780,15 @@ help:
 		@echo
 		@echo "  General options:"
 		@echo "  - OPT={dbg|opt}: Use debug or optimized (default) mode, respectively."
-		@echo "  - LPS={clp|cpx|grb|glop|msk|qso|spx|xprs|none}: Determine LP-solver."
+		@echo "  - LPS={clp|cpx|grb|glop|msk|qso|spx|spx1|xprs|none}: Determine LP-solver."
 		@echo "      clp: COIN-OR Clp LP-solver"
 		@echo "      cpx: CPLEX LP-solver"
 		@echo "      glop: Glop LP-solver"
 		@echo "      grb: Gurobi LP-solver"
 		@echo "      msk: Mosek LP-solver"
 		@echo "      qso: QSopt LP-solver"
-		@echo "      spx: old SoPlex LP-solver (for versions < 2)"
-		@echo "      spx2: new SoPlex LP-solver (default) (from version 2)"
+		@echo "      spx: new SoPlex LP-solver (default) (from version 2)"
+		@echo "      spx1: old SoPlex LP-solver (for versions < 2)"
 		@echo "      xprs: XPress LP-solver"
 		@echo "      none: no LP-solver"
 		@echo "  - COMP={clang|gnu|intel}: Determine compiler."
@@ -1786,7 +1796,7 @@ help:
 		@echo "  - SHARED={true|false}: Build shared libraries or not (default)."
 		@echo
 		@echo "  More detailed options:"
-		@echo "  - ZIMPL=<true|false>: Turn ZIMPL support on or off (default)."
+		@echo "  - ZIMPL=<true|false|auto>: Turn ZIMPL support on, off, or to the same value as GMP (default)."
 		@echo "  - ZIMPLOPT=<dbg|opt>: Use debug or optimized (default) mode for ZIMPL."
 		@echo "  - AMPL=<true|false>: Turn AMPL .nl support on (default) or off."
 		@echo "  - LPSOPT=<dbg|opt>: Use debug or optimized (default) mode for LP-solver (SoPlex and Clp only)."
@@ -1794,9 +1804,11 @@ help:
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
 		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
+		@echo "  - SANITIZE=<false|true|thread|address|memory>: To choose type of sanitizer."
 		@echo "  - SYM=<none|bliss|nauty|sbliss|snauty|dejavu>: To choose type of symmetry handling."
 		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP (deprecated, use THREADSAFE)."
 		@echo "  - THREADSAFE=<true|false>: Build thread safe."
+		@echo "  - MPFR=<true|false>: Link with MPFR (required if SoPlex is built with MPFR; must be installed on the system; default: false)."
 		@echo "  - NOBLKMEM=<true|false>: Turn off block memory or on (default)."
 		@echo "  - NOBUFMEM=<true|false>>: Turn off buffer memory or on (default)."
 		@echo "  - NOBLKBUFMEM=<true|false>: Turn usage of internal memory functions off or on (default)."

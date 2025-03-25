@@ -990,6 +990,16 @@
  *  </tr>
  *  <tr>
  *  <td>
+ *  @subpage PBSOLVER_MAIN
+ *  </td>
+ *  <td>
+ *  A solver for pseudoboolean problems in OPB or WBO format. It complies by default with the technical regulations of
+ *  PB competition. Therefore, it includes a message handler to produce a valid general log and for optimization
+ *  problems an event handler to signal achievements of best primal solutions.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
  *  @subpage RINGPACKING_MAIN "Ringpacking"
  *  </td>
  *  <td>
