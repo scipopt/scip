@@ -12978,7 +12978,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-         /** @todo: exip: do we have to correct here?, maybe let enfolp resolve exact lp if ray not feasible? */
          if( set->lp_checkprimfeas )
          {
             /* get unbounded LP solution and check the solution's feasibility again */

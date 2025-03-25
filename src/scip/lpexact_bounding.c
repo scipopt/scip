@@ -777,9 +777,6 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       {
          /* if commonslack == 0, point/ray is not interior */
          SCIPdebugMessage("   --> project-and-shift failed to find interior point/ray\n");
-         /** @todo exip Should we set projshiftdatafail to TRUE? Otherwise, the LPI may currently not be freed below,
-          *        but only at the end of solving.
-          */
       }
       else
       {
@@ -1076,7 +1073,7 @@ SCIP_RETCODE constructProjectShiftDataLPIExact(
    SCIP_CALL( SCIPrationalCreateBlock(blkmem, &projshiftdata->commonslack) );
 
    /* process the bound changes */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );
+   SCIP_CALL( SCIPlpExactSyncLPs(lpexact, blkmem, set) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    assert(lpexact->nrows > 0);
@@ -1286,7 +1283,7 @@ SCIP_RETCODE projectShift(
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );
+   SCIP_CALL( SCIPlpExactSyncLPs(lpexact, blkmem, set) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    nextendedrows = projshiftdata->nextendedrows;
@@ -1669,9 +1666,9 @@ SCIP_RETCODE projectShift(
          }
          for( i = 0; i < nrows + ncols; i++ )
          {
-            /* todo @exip: refactor this somehow. explanation: when the number of lp-rows increased
-            * the number of rows in the ps-data does not. so we have [1,...,nrows, ... extrarows ..., 1, ... ncols]
-            * so if we map to the column part in the extended space, we have to subtract the difference */
+            /* explanation: when the number of lp-rows increased the number of rows in the ps-data does not.
+             * Therefore, we have [1,...,nrows, ... extrarows ..., 1, ... ncols]
+             * so if we map to the column part in the extended space, we have to subtract the difference */
             int map;
             if( i < nrows && i >= nrowsps )
                continue;
@@ -2062,7 +2059,7 @@ SCIP_RETCODE boundShift(
 
    SCIPdebugMessage("calling proved bound for %s LP\n", usefarkas ? "infeasible" : "feasible");
 
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );
+   SCIP_CALL( SCIPlpExactSyncLPs(lpexact, blkmem, set) );
    SCIP_CALL( SCIPlpExactLink(lpexact, blkmem, set, eventqueue) );
 
    /* reset proved bound status */
@@ -2087,9 +2084,8 @@ SCIP_RETCODE boundShift(
       if( SCIPlpiIsInfinity(lp->lpi, -fpdual[j]) )
 	      fpdual[j] = -SCIPsetInfinity(set);
 
-      /** @todo exip: dual bounding improvement
-       *  - should we also set nonzero values of y to zero if corresponding lhs/rhs is not finite (to improve dual bound)?
-       *  - do such situations come up?
+      /** @todo test whether safe dual bounding in exact solving mode can be improved by setting nonzero values of y to
+       *        zero if corresponding lhs/rhs is not finite (do such situations come up?)
        */
       /* create sides and constant vectors in interval arithmetic */
       if( SCIPsetIsFeasPositive(set, fpdual[j]) )

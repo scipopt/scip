@@ -9866,11 +9866,10 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
 
    *success = FALSE;
 
-   /** @todo exip: extension
-    *  - we could also compute scm and gcd via mpz_scm() and mpz_gcd(), respectively. check which version is faster
-    *  - if we stay with the SCIP_Longint conversion, we could use the other way to check the correctness of our result
+   /** @todo test whether it is faster to compute scm and gcd via mpz_scm() and mpz_gcd() in
+    *        SCIPcalcIntegralScalarExact(); even if we stay with the SCIP_Longint conversion, we could use the other way
+    *        to check the correctness of our result
     */
-
    /* calculate the greatest common divisor of the numerators and the smallest common multiple of the denominators */
    gcd = 1;
    scm = 1;

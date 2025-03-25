@@ -2652,7 +2652,6 @@ SCIP_RETCODE readBoundsExact(
  READBOUNDS_FINISH:
    if( nsemicont > 0 )
    {
-      /** @todo exip: maybe handle this at some point? */
       SCIPerrorMessage("Exact solving mode cannot handle semicontinous variables at the moment \n");
       SCIPABORT();
    }
@@ -3685,8 +3684,6 @@ SCIP_RETCODE readMpsExact(
    {
       SCIP_CALL_TERMINATE( retcode, readBoundsExact(mpsi, scip), TERMINATE );
    }
-   /* exip: these are currently here in order to terminate with
-    * an error if unsupported content is in the mps file */
    if( mpsinputSection(mpsi) == MPS_SOS )
    {
       SCIP_CALL_TERMINATE( retcode, readSOS(mpsi, scip), TERMINATE );

@@ -6728,7 +6728,6 @@ SCIP_RETCODE SCIPvarAggregateExact(
     *  - add all variable bounds again to the variable, thus adding it to the aggregation variable
     *  - free the variable bounds data structures
     */
-   /** @todo exip this is missing still */
    assert(var->vlbs == NULL);
    assert(var->vubs == NULL);
 
@@ -8090,8 +8089,6 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
    assert(aggregated != NULL);
 
    SCIPrationalDebugMessage("trying exact multi-aggregating variable <%s> == ...%d vars... %+q\n", var->name, naggvars, constant);
-
-   /** @todo exip add debug-solution check */
 
    *infeasible = FALSE;
    *aggregated = FALSE;
@@ -10551,9 +10548,6 @@ SCIP_RETCODE varProcessChgLbGlobalExact(
       return SCIP_OKAY;
    }
 
-   /* check bound on debugging solution */
-   /** @todo exip add this for exact */
-
    /* change the bound */
    SCIPrationalSetRational(oldbound, var->exactdata->glbdom.lb);
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPrationalIsLE(newbound, var->exactdata->glbdom.ub));
@@ -10562,14 +10556,8 @@ SCIP_RETCODE varProcessChgLbGlobalExact(
    assert( SCIPrationalIsLE(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) );
    assert( SCIPrationalIsLE(var->exactdata->locdom.ub, var->exactdata->glbdom.ub) );
 
-   /** @todo exip holes woudl be merged here? */
-
    /* update the root bound changes counters */
    varIncRootboundchgs(var, set, stat);
-
-   /** @todo exip: do we need this?  (lbchginfos) */
-
-   /** @todo exip: do we need this? (remove redundant implications and variable bounds) */
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
@@ -10702,9 +10690,6 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
       return SCIP_OKAY;
    }
 
-   /* check bound on debugging solution */
-   /** @todo exip add this for exact */
-
    /* change the bound */
    SCIPrationalSetRational(oldbound, var->exactdata->glbdom.ub);
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPrationalIsGE(newbound, var->exactdata->glbdom.lb));
@@ -10713,14 +10698,8 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
    assert( SCIPrationalIsLE(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) );
    assert( SCIPrationalIsLE(var->exactdata->locdom.ub, var->exactdata->glbdom.ub) );
 
-   /** @todo exip holes woudl be merged here? */
-
    /* update the root bound changes counters */
    varIncRootboundchgs(var, set, stat);
-
-   /** @todo exip: do we need this?  (lbchginfos) */
-
-   /** @todo exip: do we need this? (remove redundant implications and variable bounds) */
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
@@ -12116,8 +12095,6 @@ SCIP_RETCODE varProcessChgLbLocalExact(
    if( stat != NULL )
       SCIPstatIncrement(stat, set, domchgcount);
 
-   /** @todo exip holes ? */
-
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
    if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
@@ -12259,8 +12236,6 @@ SCIP_RETCODE varProcessChgUbLocalExact(
     */
    if( stat != NULL )
       SCIPstatIncrement(stat, set, domchgcount);
-
-   /** @todo exip holes ? */
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));

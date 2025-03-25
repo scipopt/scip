@@ -73,15 +73,6 @@ SCIP_RETCODE SCIPsepastoreExactAddCut(
    SCIP_ROWEXACT*        cut                 /**< separated cut */
    );
 
-/** adds cuts to the LP and clears separation storage */
-SCIP_RETCODE SCIPsepastoreExactSyncLPs(
-   SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPEXACT*         lp,                 /**< LP data */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
-   );
-
 /** clears the separation storage without adding the cuts to the LP */
 SCIP_RETCODE SCIPsepastoreExactClearCuts(
    SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */

@@ -405,7 +405,6 @@ mpq_t* SCIPrationalGetGMP(
 
    if( rational->isinf )
    {
-      /** @todo exip: get proper inf value in here */
       rational->val = 1e150 * rational->val.sign();
       rational->isinf = TRUE;
    }
@@ -551,7 +550,7 @@ void SCIPrationalFreeBufferArray(
 }
 
 /** transforms rational into canonical form
- * @todo exip: this does not work with cpp_rational currently
+ * @todo extend this method to work with cpp_rational
 */
 void SCIPrationalCanonicalize(
    SCIP_Rational*        rational            /**< rational to put in canonical form */
@@ -1035,10 +1034,7 @@ void SCIPrationalMultReal(
 }
 
 
-/** divides two rationals and saves the result in res
- *
- * @todo exip: should we allow infinity here?
- */
+/** divides two rationals and saves the result in res */
 void SCIPrationalDiv(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
@@ -1821,7 +1817,6 @@ void SCIPrationalPrintf(const char *format, ...)
    va_end(arguments);
 }
 
-/** @todo exip take care of long overflow */
 #ifdef SCIP_WITH_BOOST
 
 /** returns the numerator of a rational as a long */

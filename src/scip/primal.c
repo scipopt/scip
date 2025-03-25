@@ -491,7 +491,6 @@ SCIP_RETCODE primalSetUpperboundExact(
 
       SCIPrationalRoundInteger(cutoffbound, primal->upperboundexact, SCIP_R_ROUND_DOWNWARDS);
       SCIPrationalAddReal(cutoffbound, cutoffbound, delta);
-      /** @todo: exip We can probably stop adding the delta */
    }
    else
       SCIPrationalSetRational(cutoffbound, upperbound);
@@ -668,7 +667,6 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &inf) );
 
    /* recalculate internal objective limit */
-   /** @todo exip: do we need probgetobjlim in exact variant? */
    SCIPrationalSetReal(tmp, SCIPprobGetObjlim(origprob, set));
    SCIPrationalSetInfinity(inf);
    SCIPprobInternObjvalExact(transprob, origprob, set, tmp, upperbound);

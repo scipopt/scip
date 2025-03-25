@@ -70,8 +70,6 @@
 #include "scip/var.h"
 #include <string.h>
 #include <inttypes.h>
-/** @todo exip: remove this and find a clean implementation to access sepastoreex */
-#include "scip/struct_scip.h"
 
 /** comparison method for sorting rows by non-decreasing index */
 SCIP_DECL_SORTPTRCOMP(SCIProwExactComp)
@@ -1007,8 +1005,6 @@ SCIP_RETCODE insertColChgcols(
    SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
-   /** @todo exip: is this correct? we might change multiple times because
-    * we do not sync after every node, etc. */
    if( !col->objchanged && !col->lbchanged && !col->ubchanged )
    {
       SCIP_CALL( ensureChgcolsSize(lp, set, lp->nchgcols+1) );
@@ -3292,7 +3288,6 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
 
       forcegreater = 0;
 
-      /** @todo exip: we only need one bound if we can control the direction we look in */
       if( SCIPrationalIsNegInfinity(SCIPvarGetLbGlobalExact(var)) && SCIPrationalIsInfinity(SCIPvarGetUbGlobalExact(var)) )
          forcegreater = -2;
       else if( SCIPrationalIsNegInfinity(SCIPvarGetLbGlobalExact(var)) )
@@ -3826,7 +3821,6 @@ SCIP_RETCODE SCIPlpExactProjectShiftFreeLPIExact(
    assert(lpiexact != NULL);
    assert(*lpiexact != NULL);
 
-   /** @todo exip This should all happen automatically when calling SCIPlpiExactFree() */
    SCIP_CALL( SCIPlpiExactGetNRows(*lpiexact, &nlpirows) );
    SCIP_CALL( SCIPlpiExactDelRows(*lpiexact, 0, nlpirows - 1) );
 
@@ -4142,7 +4136,6 @@ SCIP_RETCODE SCIPlpExactAddRow(
    assert(rowexact->lppos == -1);
    assert(rowexact->fprow != NULL);
 
-   /** @todo: exip do we need locks on exact rows? */
    SCIProwExactCapture(rowexact);
 
    SCIPsetDebugMsg(set, "adding row <%s> to LP (%d rows, %d cols)\n", rowexact->fprow->name, lpexact->nrows, lpexact->ncols);
@@ -4319,7 +4312,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
    lp = lpexact->fplp;
 
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );
+   SCIP_CALL( SCIPlpExactSyncLPs(lpexact, blkmem, set) );
    SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
 
    assert(SCIPlpExactIsSynced(lpexact, set, messagehdlr));
@@ -4654,7 +4647,6 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
       break;
 
    case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-      /** @todo: exip what do we have to do here?, do we really need this case? */
       SCIPerrorMessage("Feature exakt unbounded ray not fully implemented yet \n");
       break;
 
@@ -4827,7 +4819,6 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
             {
                SCIP_Bool rayfeasible;
 
-               /** @todo exip: this case still needs some work */
                if( set->lp_checkprimfeas )
                {
                   /* get unbounded LP solution and check the solution's feasibility again */
@@ -8472,4 +8463,68 @@ void SCIPlpExactOverwriteFpDualSol(
       else
          lp->rows[r]->fprow->dualsol = SCIPrationalGetReal(lp->rows[r]->dualsol);
    }
+}
+
+/** synchronizes the exact LP with cuts from the floating-point LP */
+SCIP_RETCODE SCIPlpExactSyncLPs(
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_LP* fplp;
+   SCIP_ROWEXACT* rowexact;
+   int* rowdset;
+   int nrowsfp;
+   int nrowsex;
+   int i;
+   SCIP_Bool removecut;
+
+   if( !set->exact_enabled )
+      return SCIP_OKAY;
+
+   fplp = lpexact->fplp;
+
+   assert(fplp != NULL);
+
+   nrowsfp = SCIPlpGetNRows(fplp);
+   nrowsex = SCIPlpExactGetNRows(lpexact);
+
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rowdset, lpexact->nrows) );
+
+   removecut = FALSE;
+
+   /* this method should sync the fp-lp withe the exact lp */
+
+   /* remove all rows from exact lp that are not in the floating point lp */
+   for( i = 0; i < nrowsex; ++i )
+   {
+      SCIP_ROW* fprow = lpexact->rows[i]->fprow;
+
+      if( fprow == NULL || !SCIProwIsInLP(fprow) || fprow->lppos != i || removecut )
+      {
+         removecut = TRUE;
+         rowdset[i] = 1;
+      }
+      else
+         rowdset[i] = 0;
+   }
+
+   SCIP_CALL( SCIPlpExactDelRowset(lpexact, blkmem, set, rowdset) );
+
+   for( i = 0; i < nrowsfp; ++i )
+   {
+      rowexact = SCIProwGetRowExact(fplp->rows[i]);
+      assert(rowexact != NULL);
+      /* if the row is already in lp, do nothing */
+      if( !SCIProwExactIsInLP(rowexact) )
+      {
+         /* add the exact row to the exact lp */
+         SCIP_CALL( SCIPlpExactAddRow(lpexact, set, rowexact) );
+      }
+   }
+
+   SCIPsetFreeBufferArray(set, &rowdset);
+
+   return SCIP_OKAY;
 }

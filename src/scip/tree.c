@@ -2119,7 +2119,6 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       if( set->exact_enabled && SCIPcertificateIsEnabled(stat->certificate)
          && !SCIPtreeProbing(tree) && newpseudoobjval > SCIPnodeGetLowerbound(node) )
       {
-         /* @todo exip could this be done differently somewhere else? */
          /* we change the exact local bound here temporarily such that the correct pseudo solution gets printed to the
             certificate */
          SCIP_Rational* bound;
@@ -2176,8 +2175,6 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    return SCIP_OKAY;
 }
 
-/** @todo exip this currently is not complete yet (boundchg not exact) but as it is only used in presolving, where this
- * is not needed, it should be fine for now */
 /** adds exact bound change with inference information to focus node, child of focus node, or probing node;
  *  if possible, adjusts bound to integral value;
  *  at most one of infercons and inferprop may be non-NULL
@@ -2342,7 +2339,6 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    {
       int conflictingdepth;
 
-      /** @todo exip: do we need this exact as well? */
       conflictingdepth = SCIPvarGetConflictingBdchgDepth(var, set, boundtype, newboundreal);
 
       if( conflictingdepth >= 0 )
@@ -2435,7 +2431,6 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       /* print bound to the certificate */
       if( SCIPcertificateIsEnabled(stat->certificate) && newpseudoobjval > SCIPnodeGetLowerbound(node) )
       {
-         /* @todo exip could this be done differently somewhere else? */
          /* we change the exact local bound here temporarily such that the correct pseudo solution gets printed to the
             certificate */
          SCIP_Rational* bound;
@@ -2452,7 +2447,6 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    else
    {
       /* check the infered bound change on the debugging solution */
-      /** @todo exip debug solution */
 
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */
       SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, SCIPrationalIsIntegral(newbound) ? NULL : newbound, boundtype,
