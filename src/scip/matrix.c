@@ -285,14 +285,14 @@ SCIP_RETCODE addRowExact(
    {
       factor = -1.0;
       SCIPrationalNegate(matrix->matrixvalsexact->lhsexact[rowidx], rhs);
-      SCIPrationalSetString(matrix->matrixvalsexact->rhsexact[rowidx], "inf");
+      SCIPrationalSetInfinity(matrix->matrixvalsexact->rhsexact[rowidx]);
       matrix->isrhsinfinite[rowidx] = TRUE;
    }
    else
    {
       factor = 1.0;
-      SCIPrationalSet(matrix->matrixvalsexact->lhsexact[rowidx], lhs);
-      SCIPrationalSet(matrix->matrixvalsexact->rhsexact[rowidx], rhs);
+      SCIPrationalSetRational(matrix->matrixvalsexact->lhsexact[rowidx], lhs);
+      SCIPrationalSetRational(matrix->matrixvalsexact->rhsexact[rowidx], rhs);
       matrix->isrhsinfinite[rowidx] = SCIPrationalIsInfinity(matrix->matrixvalsexact->rhsexact[rowidx]);
 
       if( !SCIPrationalIsInfinity(rhs) )
@@ -598,7 +598,7 @@ SCIP_RETCODE setColumnMajorFormat(
          colidx = *rowpnt;
          matrix->colmatval[matrix->colmatbeg[colidx] + fillidx[colidx]] = *valpnt;
          if( SCIPisExact(scip) )
-            SCIPrationalSet(matrix->matrixvalsexact->colmatvalexact[matrix->colmatbeg[colidx] + fillidx[colidx]], valpntrational); /*lint !e644*/
+            SCIPrationalSetRational(matrix->matrixvalsexact->colmatvalexact[matrix->colmatbeg[colidx] + fillidx[colidx]], valpntrational); /*lint !e644*/
          matrix->colmatind[matrix->colmatbeg[colidx] + fillidx[colidx]] = i;
          fillidx[colidx]++;
       }

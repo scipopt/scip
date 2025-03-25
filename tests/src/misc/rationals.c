@@ -163,19 +163,19 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    doub = 12.3548933;
 
    /* test infinity values */
-   SCIPrationalSetString(r1, "inf");
+   SCIPrationalSetInfinity(r1);
    cr_assert(SCIPrationalIsInfinity(r1));
    cr_assert(!SCIPrationalIsNegInfinity(r1));
-   SCIPrationalSetString(r1, "-inf");
+   SCIPrationalSetNegInfinity(r1);
    cr_assert(!SCIPrationalIsInfinity(r1));
    cr_assert(SCIPrationalIsNegInfinity(r1));
    cr_assert(SCIPrationalIsAbsInfinity(r1));
 
    /* inf printing */
-   SCIPrationalSetString(r1, "inf");
+   SCIPrationalSetInfinity(r1);
    SCIPrationalToString(r1, buf, SCIP_MAXSTRLEN);
    cr_log_info("Test print inf: %s \n", buf);
-   SCIPrationalSetString(r1, "-inf");
+   SCIPrationalSetNegInfinity(r1);
    SCIPrationalToString(r1, buf, SCIP_MAXSTRLEN);
    cr_log_info("Test print -inf: %s \n", buf);
 
@@ -192,12 +192,12 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    cr_assert(SCIPrationalIsInfinity(rbuf));
 
    /* adding inf and not-inf */
-   SCIPrationalSetString(r1, "-inf");
+   SCIPrationalSetNegInfinity(r1);
    SCIPrationalSetReal(r2, 12.3548934);
    SCIPrationalAdd(rbuf, r1, r2);
 
    cr_assert(SCIPrationalIsNegInfinity(rbuf));
-   SCIPrationalSetString(r1, "inf");
+   SCIPrationalSetInfinity(r1);
    SCIPrationalAdd(rbuf, r1, r2);
    cr_assert(SCIPrationalIsInfinity(rbuf));
    cr_assert(!SCIPrationalIsEqual(r1, r2));
@@ -262,9 +262,9 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    /* comparisons (GT/LT/GE/LE) (only one checed, since use each other)*/
    SCIPrationalInvert(r1, r1);
    cr_assert(SCIPrationalIsGT(rbuf, r1));
-   SCIPrationalSetString(r1, "inf");
+   SCIPrationalSetString(r1, "inf"); /* to test an alternative method to create an infinite rational */
    cr_assert(SCIPrationalIsLT(rbuf, r1));
-   SCIPrationalSetString(rbuf, "-inf");
+   SCIPrationalSetString(rbuf, "-inf"); /* to test an alternative method to create an infinite rational */
    cr_assert(SCIPrationalIsLT(rbuf, r1));
    cr_assert(SCIPrationalIsLT(rbuf, r2));
 

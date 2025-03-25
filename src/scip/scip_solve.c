@@ -272,8 +272,8 @@ SCIP_RETCODE SCIPtransformProb(
    {
       SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &scip->primal->upperboundexact) );
       SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &scip->primal->cutoffboundexact) );
-      SCIPrationalSetString(scip->primal->upperboundexact, "inf");
-      SCIPrationalSetString(scip->primal->cutoffboundexact, "inf");
+      SCIPrationalSetInfinity(scip->primal->upperboundexact);
+      SCIPrationalSetInfinity(scip->primal->cutoffboundexact);
       SCIP_CALL( SCIPlpExactCreate(&scip->lpexact, SCIPblkmem(scip), scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
    }
 

@@ -265,7 +265,7 @@ void solGetArrayValExact(
          break;
 
       case SCIP_SOLORIGIN_PSEUDOSOL:
-         SCIPrationalSet(res, SCIPvarGetPseudoSolExact(var));
+         SCIPrationalSetRational(res, SCIPvarGetPseudoSolExact(var));
          break;
 
       case SCIP_SOLORIGIN_PARTIAL:
@@ -2114,7 +2114,7 @@ void SCIPsolGetValExact(
       assert(SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var))); /*lint !e777*/
       assert(SCIPrationalIsEqual(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var))); /*lint !e777*/
       assert(SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var))); /*lint !e777*/
-      SCIPrationalSet(res, SCIPvarGetLbGlobalExact(var));
+      SCIPrationalSetRational(res, SCIPvarGetLbGlobalExact(var));
       break;
 
     case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
@@ -2123,12 +2123,12 @@ void SCIPsolGetValExact(
       {
          if( SCIPrationalGetSign(res) * SCIPrationalGetSign(SCIPvarGetAggrScalarExact(var)) > 0 )
          {
-            SCIPrationalSetString(res, "+infinity");
+            SCIPrationalSetInfinity(res);
             return;
          }
          if( SCIPrationalGetSign(res) * SCIPrationalGetSign(SCIPvarGetAggrScalarExact(var)) < 0 )
          {
-            SCIPrationalSetString(res, "-infinity");
+            SCIPrationalSetNegInfinity(res);
             return;
          }
       }
@@ -2142,16 +2142,16 @@ void SCIPsolGetValExact(
       nvars = SCIPvarGetMultaggrNVars(var);
       vars = SCIPvarGetMultaggrVars(var);
       scalars = SCIPvarGetMultaggrScalarsExact(var);
-      SCIPrationalSet(res, SCIPvarGetMultaggrConstantExact(var));
+      SCIPrationalSetRational(res, SCIPvarGetMultaggrConstantExact(var));
       for( i = 0; i < nvars; ++i )
       {
          SCIPsolGetValExact(solval, sol, set, stat, vars[i]);
          if( SCIPrationalIsAbsInfinity(solval) )
          {
             if( SCIPrationalGetSign(scalars[i]) == SCIPrationalGetSign(solval) )
-               SCIPrationalSetString(res, "+infinity");
+               SCIPrationalSetInfinity(res);
             if( SCIPrationalGetSign(scalars[i]) != SCIPrationalGetSign(solval) && !SCIPrationalIsZero(scalars[i]) )
-               SCIPrationalSetString(res, "-infinity");
+               SCIPrationalSetNegInfinity(res);
             break;
          }
          SCIPrationalAddProd(res, scalars[i], solval);
@@ -2274,7 +2274,7 @@ void SCIPsolGetObjExact(
    if( SCIPsolIsOriginal(sol) )
       SCIPprobInternObjvalExact(transprob, origprob, set, sol->valsexact->obj, objval);
    else
-      SCIPrationalSet(objval, sol->valsexact->obj);
+      SCIPrationalSetRational(objval, sol->valsexact->obj);
 }
 
 /** updates primal solutions after a change in a variable's objective value */
@@ -3132,7 +3132,7 @@ SCIP_RETCODE SCIPsolRetransformExact(
       assert(requiredsize <= ntransvars);
 
       /* compute solution value of the original variable */
-      SCIPrationalSet(solvals[v], constant);
+      SCIPrationalSetRational(solvals[v], constant);
       for( i = 0; i < nactivevars; ++i )
       {
          assert(0 <= SCIPvarGetProbindex(activevars[i]) && SCIPvarGetProbindex(activevars[i]) < ntransvars);
@@ -3273,8 +3273,8 @@ SCIP_Bool solsAreEqualExact(
    /* if both solutions are original or both are transformed, take the objective values stored in the solutions */
    if( (SCIPsolGetOrigin(sol1) == SCIP_SOLORIGIN_ORIGINAL) == (SCIPsolGetOrigin(sol2) == SCIP_SOLORIGIN_ORIGINAL) )
    {
-      SCIPsolIsExact(sol1) ? SCIPrationalSet(tmp1, sol1->valsexact->obj) : SCIPrationalSetReal(tmp1, sol1->obj);
-      SCIPsolIsExact(sol2) ? SCIPrationalSet(tmp2, sol2->valsexact->obj) : SCIPrationalSetReal(tmp2, sol2->obj);
+      SCIPsolIsExact(sol1) ? SCIPrationalSetRational(tmp1, sol1->valsexact->obj) : SCIPrationalSetReal(tmp1, sol1->obj);
+      SCIPsolIsExact(sol2) ? SCIPrationalSetRational(tmp2, sol2->valsexact->obj) : SCIPrationalSetReal(tmp2, sol2->obj);
    }
    /* one solution is original and the other not, so we have to get for both the objective in the transformed problem */
    else
@@ -4039,7 +4039,7 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
 
    if( SCIPsolIsOriginal(sol) )
    {
-      SCIPrationalSet(solval, SCIPsolGetOrigObjExact(sol));
+      SCIPrationalSetRational(solval, SCIPsolGetOrigObjExact(sol));
    }
    else
    {

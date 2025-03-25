@@ -1892,7 +1892,7 @@ void SCIPgetSolOrigObjExact(
    {
       SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolOrigObjExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-      SCIPrationalSet(res, SCIPsolGetOrigObjExact(sol));
+      SCIPrationalSetRational(res, SCIPsolGetOrigObjExact(sol));
       return;
    }
 
@@ -2379,7 +2379,7 @@ SCIP_RETCODE SCIPprintSolExact(
       SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
 
       if( SCIPsolIsOriginal(sol) )
-         SCIPrationalSet(objval, SCIPsolGetOrigObjExact(sol));
+         SCIPrationalSetRational(objval, SCIPsolGetOrigObjExact(sol));
       else
       {
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );

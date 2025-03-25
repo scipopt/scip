@@ -140,7 +140,7 @@ SCIP_Longint printBoundAssumption(
    certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
    certificate->lastinfo->isglobal = FALSE;
    certificate->lastinfo->certificateindex = certificate->indexcounter;
-   SCIPrationalSet(certificate->lastinfo->boundval, boundval);
+   SCIPrationalSetRational(certificate->lastinfo->boundval, boundval);
 #endif
 
    /** @todo: it could be better to separate the printing from insertion of variable bound */
@@ -269,7 +269,7 @@ SCIP_RETCODE SCIPcertificateUpdateBoundData(
 
    nodedata->inheritedbound = FALSE;
    nodedata->derindex_self = fileindex;
-   SCIPrationalSet(nodedata->derbound_self, newbound);
+   SCIPrationalSetRational(nodedata->derbound_self, newbound);
 
    return SCIP_OKAY;
 }
@@ -466,7 +466,7 @@ SCIP_RETCODE SCIPcertificateInit(
       SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &objcoefs, nvars) );
 
       for( j = 0; j < nvars; j++)
-         SCIPrationalSet(objcoefs[j], SCIPvarGetObjExact(vars[j]));
+         SCIPrationalSetRational(objcoefs[j], SCIPvarGetObjExact(vars[j]));
 
       /* print the objective function into certificate header */
       SCIP_CALL( SCIPcertificateSetAndPrintObjective(certificate, TRUE, blkmem, objcoefs, nvars) );
@@ -625,7 +625,7 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
       SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &objcoefs, nvars) );
 
       for( j = 0; j < nvars; j++)
-         SCIPrationalSet(objcoefs[j], SCIPvarGetObjExact(vars[j]));
+         SCIPrationalSetRational(objcoefs[j], SCIPvarGetObjExact(vars[j]));
 
       /* print the objective function into certificate header */
       SCIP_CALL( SCIPcertificateSetAndPrintObjective(certificate, FALSE, blkmem, objcoefs, nvars) );
@@ -972,7 +972,7 @@ SCIP_RETCODE SCIPcertificatePrintResult(
       /* for the orig file we only print the primal bound, since the derivation happens in the transformed problem */
       if( isorigfile )
       {
-         SCIPrationalSetString(dualbound, "-inf");
+         SCIPrationalSetNegInfinity(dualbound);
          /* print RTP range (same when optimal solution found) */
          SCIP_CALL( SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound) );
       }
@@ -1006,13 +1006,13 @@ SCIP_RETCODE SCIPcertificatePrintResult(
       else
       {
          bestsol = NULL;
-         SCIPrationalSetString(primalbound, "inf");
+         SCIPrationalSetInfinity(primalbound);
       }
 
       if( isorigfile )
-         SCIPrationalSetString(dualbound, "-inf");
+         SCIPrationalSetNegInfinity(dualbound);
       else
-         SCIPrationalSet(dualbound, certificate->finalbound);
+         SCIPrationalSetRational(dualbound, certificate->finalbound);
 
       SCIP_CALL( SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound) );
       SCIP_CALL( SCIPcertificatePrintSol(scip, isorigfile, certificate, bestsol) );
@@ -1854,7 +1854,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
       /* (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) */
       SCIPcertificatePrintProofMessage(certificate, "%d ", rightdisjunctionindex);
-      SCIPrationalSet(tmpval, mirinfo->frac);
+      SCIPrationalSetRational(tmpval, mirinfo->frac);
       SCIPrationalNegate(tmpval, tmpval); /* -f */
       SCIPrationalDiv(tmpval, tmpval, oneminusf0); /* -f/(1-f) */
       /* multiply with scaling factor that was used in cut derivation */
@@ -2021,7 +2021,7 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
       certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
       certificate->lastinfo->isglobal = TRUE;
       certificate->lastinfo->certificateindex = certificate->indexcounter - 1;
-      SCIPrationalSet(certificate->lastinfo->boundval, boundval);
+      SCIPrationalSetRational(certificate->lastinfo->boundval, boundval);
 #endif
 
       if( isupper )
@@ -2080,7 +2080,7 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
       if( newbound == NULL )
          certificate->rootinfeas = TRUE;
       else
-         SCIPrationalSet(certificate->rootbound, newbound);
+         SCIPrationalSetRational(certificate->rootbound, newbound);
       return SCIP_OKAY;
    }
 
@@ -2097,7 +2097,7 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
       if( newbound != NULL && !nodedataparent->leftinfeas && (!nodedataparent->leftfilled || SCIPrationalIsGT(newbound, nodedataparent->derbound_left)) )
       {
          nodedataparent->derindex_left = fileindex;
-         SCIPrationalSet(nodedataparent->derbound_left, newbound);
+         SCIPrationalSetRational(nodedataparent->derbound_left, newbound);
       }
       if( newbound == NULL || SCIPrationalIsInfinity(newbound) )
       {
@@ -2111,7 +2111,7 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
       if( newbound != NULL && !nodedataparent->rightinfeas && (!nodedataparent->rightfilled || SCIPrationalIsGT(newbound, nodedataparent->derbound_right)) )
       {
          nodedataparent->derindex_right = fileindex;
-         SCIPrationalSet(nodedataparent->derbound_right, newbound);
+         SCIPrationalSetRational(nodedataparent->derbound_right, newbound);
       }
       if( newbound == NULL || SCIPrationalIsInfinity(newbound) )
       {
@@ -2198,7 +2198,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          if( usefarkas )
             SCIPrationalNegate(vals[len], val);
          else
-            SCIPrationalSet(vals[len], val);
+            SCIPrationalSetRational(vals[len], val);
 
          ind[len] = SCIPrationalIsNegative(vals[len]) ? SCIPvarGetUbCertificateIndexLocal(var) : SCIPvarGetLbCertificateIndexLocal(var);
 
@@ -2223,7 +2223,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 
       if( !SCIPrationalIsZero(val) )
       {
-         SCIPrationalSet(vals[len], val);
+         SCIPrationalSetRational(vals[len], val);
          key = SCIPhashmapGetImageLong(certificate->rowdatahash, (void*) row);
 
          if( key == SCIP_LONGINT_MAX && SCIProwGetOrigintype(SCIProwExactGetRow(row)) == SCIP_ROWORIGINTYPE_SEPA )
@@ -2263,13 +2263,13 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lowerbound) );
    if( usefarkas )
    {
-      SCIPrationalSetString(lowerbound, "inf");
+      SCIPrationalSetInfinity(lowerbound);
    }
    else
    {
       /* vipr does not accept infinity, so in case of objlimit, get the objval from the lpi */
       if( !SCIPrationalIsInfinity(lpexact->lpobjval) )
-         SCIPrationalSet(lowerbound, lpexact->lpobjval);
+         SCIPrationalSetRational(lowerbound, lpexact->lpobjval);
       else
       {
          SCIP_CALL( SCIPlpiExactGetObjval(lpexact->lpiexact, lowerbound) );
@@ -2352,7 +2352,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundPseudo(
       SCIP_Rational* obj = SCIPvarGetObjExact(vars[i]);
       if( !SCIPrationalIsZero(obj) )
       {
-         SCIPrationalSet(bounds[nnonzeros], obj);
+         SCIPrationalSetRational(bounds[nnonzeros], obj);
 
          assert(!SCIPrationalIsAbsInfinity(bounds[nnonzeros]));
 
@@ -2424,7 +2424,7 @@ SCIP_RETCODE SCIPcertificatePrintInheritedBound(
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lowerbound) );
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &val) );
 
-      SCIPrationalSet(lowerbound, nodedata->derbound_self);
+      SCIPrationalSetRational(lowerbound, nodedata->derbound_self);
       SCIPrationalSetInt(val, 1, 1);
 
       (void) SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, 1, ind, &val);
@@ -2638,7 +2638,7 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
       assert(parentdata != NULL);
 
       nodedata->derindex_self = parentdata->derindex_self;
-      SCIPrationalSet(nodedata->derbound_self, parentdata->derbound_self);
+      SCIPrationalSetRational(nodedata->derbound_self, parentdata->derbound_self);
    }
 
    /* link the node to its nodedata in the corresponding hashmap */
@@ -2665,7 +2665,7 @@ SCIP_RETCODE SCIPcertificatePrintCutoffBound(
    if( SCIPisObjIntegral(scip) && ! SCIPrationalIsIntegral(bound) )
       SCIPrationalRoundInteger(newbound, bound, SCIP_R_ROUND_DOWNWARDS);
    else
-      SCIPrationalSet(newbound, bound);
+      SCIPrationalSetRational(newbound, bound);
 
    SCIPcertificatePrintProofMessage(certificate, "O%d L ", certificate->indexcounter);
    SCIP_CALL( SCIPcertificatePrintProofRational(certificate, newbound, 10) );
@@ -3317,12 +3317,12 @@ SCIP_RETCODE SCIPcertificatePrintUnsplitting(
       if( nodedata->leftinfeas && nodedata->rightinfeas )
       {
          infeas = TRUE;
-         SCIPrationalSetString(lowerbound, "inf");
+         SCIPrationalSetInfinity(lowerbound);
       }
       else if( nodedata->leftinfeas )
-         SCIPrationalSet(lowerbound, nodedata->derbound_right);
+         SCIPrationalSetRational(lowerbound, nodedata->derbound_right);
       else if( nodedata->rightinfeas )
-         SCIPrationalSet(lowerbound, nodedata->derbound_left);
+         SCIPrationalSetRational(lowerbound, nodedata->derbound_left);
       else
          SCIPrationalMin(lowerbound, nodedata->derbound_left, nodedata->derbound_right);
 
@@ -3370,7 +3370,7 @@ SCIP_RETCODE SCIPcertificatePrintUnsplitting(
 
          (void) SCIPrationalCreateBuffer(set->buffer, &val);
 
-         SCIPrationalSet(lowerbound, nodedata->derbound_self);
+         SCIPrationalSetRational(lowerbound, nodedata->derbound_self);
          SCIPrationalSetInt(val, 1, 1);
 
          (void) SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, 1, ind, &val);
@@ -3614,7 +3614,7 @@ SCIP_RETCODE SCIPcertificatePrintGlobalBound(
    certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
    certificate->lastinfo->isglobal = TRUE;
    certificate->lastinfo->certificateindex = certificate->indexcounter;
-   SCIPrationalSet(certificate->lastinfo->boundval, value);
+   SCIPrationalSetRational(certificate->lastinfo->boundval, value);
 #endif
 
    SCIPcertificatePrintProofMessage(certificate, "GlobalBound_%d %c ", certificate->indexcounter,
@@ -3815,7 +3815,7 @@ SCIP_RETCODE SCIPcertificatePrintActivityVarBoundEx(
    certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(variable);
    certificate->lastinfo->isglobal = FALSE;
    certificate->lastinfo->certificateindex = certificate->indexcounter - 1;
-   SCIPrationalSet(certificate->lastinfo->boundval, newbound);
+   SCIPrationalSetRational(certificate->lastinfo->boundval, newbound);
 #endif
    (void) SCIPcertificateSetLastBoundIndex(scip, certificate, certificate->indexcounter - 1);
 
