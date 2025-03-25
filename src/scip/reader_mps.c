@@ -3684,8 +3684,6 @@ SCIP_RETCODE readMpsExact(
    {
       SCIP_CALL_TERMINATE( retcode, readBoundsExact(mpsi, scip), TERMINATE );
    }
-   /* exip: these are currently here in order to terminate with
-    * an error if unsupported content is in the mps file */
    if( mpsinputSection(mpsi) == MPS_SOS )
    {
       SCIP_CALL_TERMINATE( retcode, readSOS(mpsi, scip), TERMINATE );

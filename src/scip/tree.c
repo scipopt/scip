@@ -2178,9 +2178,6 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 /** adds exact bound change with inference information to focus node, child of focus node, or probing node;
  *  if possible, adjusts bound to integral value;
  *  at most one of infercons and inferprop may be non-NULL
- *
- *  @note The implementation is not complete yet, because bound change information is not appended exactly; this is
- *        currently not a problem, because the method is only used in presolving.
  */
 SCIP_RETCODE SCIPnodeAddBoundinferExact(
    SCIP_NODE*            node,               /**< node to add bound change to */
