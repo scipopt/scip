@@ -220,7 +220,7 @@ SCIP_RETCODE conflictInsertConflictRow(
    return SCIP_OKAY;
 }
 
-/** gets number of conflict constraints detected in resolution conflict analysis */
+/** gets number of conflict constraints found during propagation with the generalized resolution conflict analysis */
 SCIP_Longint SCIPconflictGetNResConflictConss(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -230,7 +230,7 @@ SCIP_Longint SCIPconflictGetNResConflictConss(
    return conflict->nresconfconss;
 }
 
-/** gets number of calls to resolution conflict analysis that yield at least one conflict constraint */
+/** gets number of calls to generalized resolution conflict analysis that yield at least one conflict constraint */
 SCIP_Longint SCIPconflictGetNResSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -241,7 +241,7 @@ SCIP_Longint SCIPconflictGetNResSuccess(
 }
 
 
-/** gets number of calls to resolution conflict analysis terminating because of large coefficients */
+/** gets number of calls to generalized resolution conflict analysis terminating because of large coefficients */
 SCIP_Longint SCIPconflictGetNResLargeCoefs(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -251,7 +251,7 @@ SCIP_Longint SCIPconflictGetNResLargeCoefs(
    return conflict->nreslargecoefs;
 }
 
-/** gets number of calls to resolution conflict analysis terminating because of long conflicts */
+/** gets number of calls to generalized resolution conflict analysis terminating because of long conflicts */
 SCIP_Longint SCIPconflictGetNResLongConflicts(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -261,7 +261,7 @@ SCIP_Longint SCIPconflictGetNResLongConflicts(
    return conflict->nreslongconfs;
 }
 
-/** gets number of calls to resolution conflict analysis */
+/** gets number of calls to generalized resolution conflict analysis */
 SCIP_Longint SCIPconflictGetNResCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -271,15 +271,6 @@ SCIP_Longint SCIPconflictGetNResCalls(
    return conflict->nrescalls;
 }
 
-/** gets number of calls the mixed binary reduction was successful in conflict analysis */
-SCIP_Longint SCIPconflictGetNIntReductionSuccessMbred(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nintreductionsuccessmbred;
-}
 
 #ifdef SCIP_DEBUG
 static int               dbgelementsoneline = 5;               /**< elements on a single line when writing rows */
@@ -1318,7 +1309,7 @@ SCIP_Bool SCIPconflictResolutionApplicable(
    )
 {
    /* check, if generalized resolution conflict analysis is enabled */
-   if( !set->conf_enable || !set->conf_usegeneralres )
+   if( !set->conf_enable || !set->conf_usegeneralres || SCIPsetGetStage(set) != SCIP_STAGE_SOLVING )
       return FALSE;
 
    return TRUE;
@@ -1348,7 +1339,7 @@ SCIP_RETCODE conflictRowCreate(
    (*row)->insertdepth = 0;
    (*row)->usescutoffbound = FALSE;
    (*row)->isbinary = FALSE;
-   (*row)->conflicttype = SCIP_CONFTYPE_RESOLUTION;
+   (*row)->conflicttype = SCIP_CONFTYPE_PROPAGATION;
 
    return SCIP_OKAY;
 }
@@ -1436,7 +1427,7 @@ void conflictRowClear(
    row->conflictdepth = 0;
    row->repropdepth = 0;
    row->insertdepth = 0;
-   row->conflicttype = SCIP_CONFTYPE_RESOLUTION;
+   row->conflicttype = SCIP_CONFTYPE_PROPAGATION;
    row->usescutoffbound = FALSE;
    row->isbinary = FALSE;
 }
@@ -2183,7 +2174,7 @@ SCIP_RETCODE createAndAddConflictCon(
    SCIP_CALL( updateStatistics(conflict, vars, blkmem, set, stat, conflictrow, conflictrow->validdepth) );
 
    /* add conflict to SCIP */
-   SCIP_CALL( SCIPaddConflict(set->scip, tree->path[insertdepth], cons, tree->path[conflictrow->validdepth], SCIP_CONFTYPE_RESOLUTION, conflict->conflictrow->usescutoffbound) );
+   SCIP_CALL( SCIPaddConflict(set->scip, tree->path[insertdepth], cons, tree->path[conflictrow->validdepth], conflictrow->conflicttype, conflictrow->usescutoffbound) );
    *success = TRUE;
    /* free temporary memory */
    SCIPfreeBufferArray(set->scip, &consvars);
@@ -3860,6 +3851,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    assert(set != NULL);
    assert(stat != NULL);
    assert(0 <= validdepth && validdepth <= SCIPtreeGetCurrentDepth(tree));
+   assert(conflict->conflictrow->conflicttype == SCIP_CONFTYPE_PROPAGATION);
    assert(nconss != NULL);
    assert(nconfvars != NULL);
    assert(conflict->nconflictrows == 0);

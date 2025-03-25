@@ -65,33 +65,28 @@ SCIP_Bool SCIPconflictResolutionApplicable(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** gets number of conflict constraints detected in resolution conflict analysis */
+/** gets number of conflict constraints found during propagation with the generalized resolution conflict analysis */
 SCIP_Longint SCIPconflictGetNResConflictConss(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of calls to resolution conflict analysis that yield at least one conflict constraint */
+/** gets number of calls to generalized resolution conflict analysis that yield at least one conflict constraint */
 SCIP_Longint SCIPconflictGetNResSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of calls to resolution conflict analysis terminating because of large coefficients */
+/** gets number of calls to generalized resolution conflict analysis terminating because of large coefficients */
 SCIP_Longint SCIPconflictGetNResLargeCoefs(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of calls to resolution conflict analysis terminating because of long conflicts */
+/** gets number of calls to generalized resolution conflict analysis terminating because of long conflicts */
 SCIP_Longint SCIPconflictGetNResLongConflicts(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of calls to resolution conflict analysis */
+/** gets number of calls to generalized resolution conflict analysis */
 SCIP_Longint SCIPconflictGetNResCalls(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets number of calls the mixed binary reduction was successful in conflict analysis */
-SCIP_Longint SCIPconflictGetNIntReductionSuccessMbred(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 

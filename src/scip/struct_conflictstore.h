@@ -46,14 +46,11 @@ struct SCIP_ConflictStore
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler to catch improving solutions */
    SCIP_CONS**           conflicts;          /**< array with conflicts */
-   SCIP_CONS**           resconflicts;       /**< array with resolution conflicts */
    SCIP_CONS**           dualrayconfs;       /**< array with proofs based on dual rays */
    SCIP_CONS**           dualsolconfs;       /**< array with proofs based on dual solutions */
    SCIP_CONS**           origconfs;          /**< array of original conflicts added in stage SCIP_STAGE_PROBLEM */
    SCIP_Real*            confprimalbnds;     /**< array of primal bounds valid at the time the corresponding bound exceeding
                                               *   conflict was found (-infinity if the conflict based on an infeasible LP) */
-   SCIP_Real*            resconfprimalbnds;  /**< array of primal bounds valid at the time the corresponding bound exceeding
-                                              *   resolution conflict was found (-infinity if the conflict based on an infeasible LP) */
    SCIP_Real*            dualprimalbnds;     /**< array of primal bounds valid at the time the corresponding dual proof
                                               *   based on a dual solution was found */
    SCIP_Real*            scalefactors;       /**< scaling factor that needs to be considered when updating the side */
@@ -63,13 +60,10 @@ struct SCIP_ConflictStore
    SCIP_Real             avgswitchlength;    /**< average length of switched paths */
    SCIP_Real             lastcutoffbound;    /**< last cutoff bound for which the conflict store was cleaned */
    SCIP_Longint          lastnodenum;        /**< number of the last seen node */
-   SCIP_Longint          lastnodenumres;     /**< number of the last seen node for resolution */
    SCIP_Longint          ncleanups;          /**< number of storage cleanups */
-   SCIP_Longint          nrescleanups;       /**< number of storage cleanups */
    SCIP_Longint          nnzdualrays;        /**< number of non-zeros in all stored proofs based on dual rays */
    SCIP_Longint          nnzdualsols;        /**< number of non-zeros in all stored proofs based on dual solutions */
    int                   conflictsize;       /**< size of conflict array (bounded by conflict->maxpoolsize) */
-   int                   resconflictsize;    /**< size of resolution conflict array (bounded by conflict->maxrespoolsize) */
    int                   origconflictsize;   /**< size of origconfs array */
    int                   nconflicts;         /**< number of stored conflicts */
    int                   nresconflicts;      /**< number of stored resolution conflicts */
@@ -77,16 +71,12 @@ struct SCIP_ConflictStore
    int                   ndualsolconfs;      /**< number of stored proofs based on dual solutions */
    int                   norigconfs;         /**< number of original conflicts */
    int                   ncbconflicts;       /**< number of conflicts depending on cutoff bound */
-   int                   nrescbconflicts;    /**< number of resolution conflicts depending on cutoff bound */
    int                   nconflictsfound;    /**< total number of conflicts found so far */
-   int                   nresconflictsfound; /**< total number of conflicts found so far */
    int                   cleanupfreq;        /**< frequency to cleanup the storage if the storage is not full */
    int                   nswitches;          /**< number of path switches */
    int                   initstoresize;      /**< initial size of the storage (different to maxstoresize iff dynamic) */
    int                   storesize;          /**< current size of the storage (different to maxstoresize iff dynamic) */
-   int                   resstoresize;          /**< current size of the resolution storage (different to maxresstoresize iff dynamic) */
    int                   maxstoresize;       /**< maximal size of the storage */
-   int                   maxresstoresize;       /**< maximal size of the resolution storage */
 };
 
 #ifdef __cplusplus

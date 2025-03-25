@@ -3388,7 +3388,7 @@ void conflictClear(
 }
 
 
-/** clears the resolution conflict analysis queues and bounds leading to conflict */
+/** clears the resolution conflict analysis queues and the bounds leading to conflict */
 static
 void conflictClearResolution(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -3400,6 +3400,10 @@ void conflictClearResolution(
    assert(set != NULL);
    assert(prob != NULL);
 
+   if( !set->conf_usegeneralres )
+      return;
+
+   /* clear the resolution conflict analysis queues */
    SCIPpqueueClear(conflict->resbdchgqueue);
    SCIPpqueueClear(conflict->resforcedbdchgqueue);
    SCIPpqueueClear(conflict->separatebdchgqueue);
@@ -3441,13 +3445,14 @@ SCIP_RETCODE SCIPconflictInit(
    /* clear the conflict candidate queue and the conflict set */
    conflictClear(conflict);
 
-   if( set->conf_usegeneralres )
-      conflictClearResolution(conflict, set, prob);
+   /* clear the resolution conflict analysis queues and the bounds leading to conflict */
+   conflictClearResolution(conflict, set, prob);
 
    /* set conflict type */
    assert(conftype == SCIP_CONFTYPE_BNDEXCEEDING || conftype == SCIP_CONFTYPE_INFEASLP
        || conftype == SCIP_CONFTYPE_PROPAGATION);
    conflict->conflictset->conflicttype = conftype;
+   conflict->conflictrow->conflicttype = conftype;
 
    /* set whether a cutoff bound is involved */
    conflict->conflictset->usescutoffbound = usescutoffbound;

@@ -2250,8 +2250,6 @@ SCIP_RETCODE SCIPcopyConflicts(
    else
       localconsmap = consmap;
 
-   /* @todo copy resolution conflicts to targetscip */
-
    /* get number of conflicts stored in the conflict pool */
    sourceconfssize = SCIPconflictstoreGetNConflictsInStore(sourcescip->conflictstore);
 
@@ -3392,10 +3390,7 @@ SCIP_RETCODE SCIPsetCommonSubscipParams(
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/maxresstoresize") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxresstoresize", 100) );
-   }
+
    /* speed up sub-SCIP by not checking dual LP feasibility */
    SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 

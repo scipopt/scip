@@ -682,21 +682,20 @@ SCIP_RETCODE SCIPanalyzeConflict(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPanalyzeConflict", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   SCIP_Bool successres = FALSE;
+   SCIP_Bool successprop = FALSE;
 
-   SCIP_Bool conflictlearned;
-   conflictlearned = FALSE;
+   /* call resolution conflict analysis */
+   SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+         scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->cliquetable, NULL, validdepth, &successres) );
 
-   if(scip->set->conf_usegeneralres && SCIPsetGetStage(scip->set) == SCIP_STAGE_SOLVING)
-   {
-         SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
-               scip->cliquetable, NULL, validdepth, &conflictlearned) );
-   }
-   if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
-   {
-      SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->tree, validdepth, success) );
-   }
+   /* call graph conflict analysis */
+   SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
+         scip->transprob, scip->tree, validdepth, &successprop) );
+
+   if( success != NULL )
+      *success = (successres || successprop);
 
    return SCIP_OKAY;
 }
@@ -726,60 +725,34 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPanalyzeConflictCons", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   /* refactortodo write function for calling generalized resolution */
+   SCIP_Bool successres = FALSE;
+   SCIP_Bool successprop = FALSE;
+   int validdepth;
+
    if( SCIPconsIsGlobal(cons) )
-   {
-      SCIP_Bool conflictlearned;
-
-      conflictlearned = FALSE;
-
-      if(scip->set->conf_usegeneralres)
-      {
-         SCIP_ROW* conflictrow;
-
-         conflictrow = SCIPconsCreateRow(scip, cons);
-
-         SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp,  scip->branchcand, scip->eventqueue, scip->eventfilter,
-               scip->cliquetable, conflictrow, 0, &conflictlearned) );
-      }
-      if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
-      {
-         SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-               scip->transprob, scip->tree, 0, &conflictlearned) );
-      }
-      else
-      {
-         SCIPdebugMessage("clear bound changes queues if graph conflict analysis is not called \n");
-         SCIP_CALL( SCIPconflictClearQueues(scip->conflict) );
-      }
-      if( success != NULL )
-         *success = conflictlearned;
-   }
+      validdepth = 0;
    else if( SCIPconsIsActive(cons) )
+      validdepth = SCIPconsGetValidDepth(cons);
+   else
+      return SCIP_OKAY;
+
+   /* call resolution conflict analysis */
+   if( scip->set->conf_usegeneralres )
    {
-      SCIP_Bool conflictlearned;
+      SCIP_ROW* conflictrow;
 
-      conflictlearned = FALSE;
-
-      if(scip->set->conf_usegeneralres)
-      {
-         SCIP_ROW* conflictrow;
-
-         conflictrow = SCIPconsCreateRow(scip, cons);
-
-         SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp,  scip->branchcand, scip->eventqueue, scip->eventfilter,
-               scip->cliquetable, conflictrow, SCIPconsGetValidDepth(cons), &conflictlearned) );
-      }
-      /* @todo generalized resolution for the local case */
-      if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
-      {
-         SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-               scip->transprob, scip->tree, SCIPconsGetValidDepth(cons), success) );
-      }
-
+      conflictrow = SCIPconsCreateRow(scip, cons);
+      SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
+            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+            scip->eventfilter, scip->cliquetable, conflictrow, validdepth, &successres) );
    }
+
+   /* call graph conflict analysis */
+   SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
+         scip->transprob, scip->tree, validdepth, &successprop) );
+
+   if( success != NULL )
+      *success = (successres || successprop);
 
    return SCIP_OKAY;
 }

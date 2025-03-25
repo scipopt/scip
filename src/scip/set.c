@@ -113,8 +113,6 @@
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USEGENRES        TRUE /**< should generalized resolution conflict analysis be used? */
-#define SCIP_DEFAULT_CONF_FAVORRESOLUTION FALSE /**< should we apply graph conflict analysis only when generalized resolution is unsuccessful? */
-
 #define SCIP_DEFAULT_CONF_USEINFLP          'b' /**< should infeasible LP conflict analysis be used?
                                                  *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray, 'g'eneralized resolution and dual ray)
                                                  */
@@ -1550,11 +1548,6 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/removable",
          "should the conflict's relaxations be subject to LP aging and cleanup?",
          &(*set)->conf_removable, TRUE, SCIP_DEFAULT_CONF_REMOVEABLE,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/favorresolution",
-         "should we apply graph conflict analysis only when resolution is unsuccessful?",
-         &(*set)->conf_favorresolution, TRUE, SCIP_DEFAULT_CONF_FAVORRESOLUTION,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/fixandcontinue",

@@ -950,5 +950,6 @@ SCIP_RETCODE SCIPincludeTableDefault(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONC, TABLE_DESC_CONC, TRUE,
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConc, tableCollectConc,
          NULL, TABLE_POSITION_CONC, TABLE_EARLIEST_STAGE_CONC) );
+
    return SCIP_OKAY;
 }
