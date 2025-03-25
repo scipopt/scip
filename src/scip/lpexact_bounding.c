@@ -511,7 +511,7 @@ SCIP_RETCODE setupProjectShiftOpt(
    /* set variable bounds */
    for( i = 0; i < ndvarmap; i++ )
    {
-      SCIPrationalSetString(psub[i], "inf");
+      SCIPrationalSetInfinity(psub[i]);
       SCIPrationalSetInt(pslb[i], 0, 1);
    }
    SCIPrationalSetInt(psub[ndvarmap], PSBIGM, 1);
@@ -526,7 +526,7 @@ SCIP_RETCODE setupProjectShiftOpt(
    for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
    {
       SCIPrationalSetInt(pslhs[ncols + i], 0, 1);
-      SCIPrationalSetString(psrhs[ncols + i], "inf");
+      SCIPrationalSetInfinity(psrhs[ncols + i]);
    }
 
    /* set up constraint matrix: this involves transposing the constraint matrix */
@@ -735,7 +735,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
 
       /* update bounds on d */
       SCIPrationalSetInt(auxval1, 1 ,1);
-      SCIPrationalSetString(auxval2, "inf");
+      SCIPrationalSetInfinity(auxval2);
       SCIP_CALL( SCIPlpiExactChgBounds(pslpiexact, 1, &ndvarmap, &auxval1, &auxval2) );
 
       SCIPrationalFreeBlock(blkmem, &auxval2);
@@ -1799,7 +1799,7 @@ SCIP_RETCODE projectShift(
       /* if the objective value of the corrected ray is positive we can prune node, otherwise not */
       if( SCIPrationalIsPositive(dualbound) )
       {
-         SCIPrationalSetString(lpexact->lpobjval, "inf");
+         SCIPrationalSetInfinity(lpexact->lpobjval);
          lp->lpobjval = SCIPsetInfinity(set);
          lp->hasprovedbound = TRUE;
       }
@@ -2235,7 +2235,7 @@ SCIP_RETCODE boundShift(
          lp->hasprovedbound = TRUE;
          SCIPdebugMessage("succesfully proved infeasibility \n");
       }
-      SCIPrationalSetString(lpexact->lpobjval, "inf");
+      SCIPrationalSetInfinity(lpexact->lpobjval);
    }
    else
    {

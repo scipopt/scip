@@ -759,7 +759,7 @@ void coefChangedExact(
       lp->flushed = FALSE;
    }
 
-   SCIPrationalSetString(row->pseudoactivity, "inf");
+   SCIPrationalSetInfinity(row->pseudoactivity);
 }
 
 /*
@@ -2576,7 +2576,7 @@ SCIP_RETCODE lpExactSetObjlim(
             lp->solved = FALSE;
             lp->primalfeasible = FALSE;
             lp->primalchecked = FALSE;
-            SCIPrationalSetString(lp->lpobjval, "inf");
+            SCIPrationalSetInfinity(lp->lpobjval);
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
          lp->lpiobjlim = actualobjlim;
@@ -2610,7 +2610,7 @@ SCIP_RETCODE lpExactSetIterationLimit(
          {
             /* mark the current solution invalid */
             lp->solved = FALSE;
-            SCIPrationalSetString(lp->lpobjval, "inf");
+            SCIPrationalSetInfinity(lp->lpobjval);
             lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          }
          lp->lpiitlim = itlim;
@@ -2630,7 +2630,7 @@ void markRowExactDeleted(
 
    row->lpipos = -1;
    SCIPrationalSetReal(row->dualsol, 0.0);
-   SCIPrationalSetString(row->activity, "inf");
+   SCIPrationalSetInfinity(row->activity);
    SCIPrationalSetReal(row->dualfarkas, 0.0);
    row->basisstatus = SCIP_BASESTAT_BASIC; /*lint !e641*/
    row->validactivitylp = -1;
@@ -2738,7 +2738,7 @@ SCIP_RETCODE SCIPlpExactDelRowset(
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
       lp->dualchecked = FALSE;
-      SCIPrationalSetString(lp->lpobjval, "inf");
+      SCIPrationalSetInfinity(lp->lpobjval);
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
@@ -3403,12 +3403,12 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    if( !SCIPsetIsInfinity(set, fprow->rhs) )
       SCIPrationalSetReal(tmpval, fprow->rhs);
    else
-      SCIPrationalSetString(tmpval, "inf");
+      SCIPrationalSetInfinity(tmpval);
 
    if( !SCIPsetIsInfinity(set, -fprow->lhs) )
       SCIPrationalSetReal(tmplhs, fprow->lhs);
    else
-      SCIPrationalSetString(tmplhs, "-inf");
+      SCIPrationalSetNegInfinity(tmplhs);
 
    SCIP_CALL( SCIProwExactCreate(row, fprow, NULL, blkmem, set, stat, lp, 0, NULL, NULL, tmplhs, tmpval, TRUE) );
 
@@ -4200,7 +4200,7 @@ SCIP_RETCODE SCIPlpExactSetCutoffbound(
    {
       /* mark the current solution invalid */
       lpexact->solved = FALSE;
-      SCIPrationalSetString(lpexact->lpobjval, "inf");
+      SCIPrationalSetInfinity(lpexact->lpobjval);
       lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
    /* if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit;
@@ -4425,22 +4425,22 @@ SCIP_RETCODE lpExactFlushAndSolve(
             /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
             SCIPrationalDebugMessage("optimal solution %q exceeds objective limit %.15g\n", lpexact->lpobjval, lp->lpiobjlim);
             lpexact->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
-            SCIPrationalSetString(lpexact->lpobjval, "inf");
+            SCIPrationalSetInfinity(lpexact->lpobjval);
          }
       }
       else if( SCIPlpiExactIsObjlimExc(lpexact->lpiexact) )
       {
          lpexact->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
-         SCIPrationalSetString(lpexact->lpobjval, "inf");
+         SCIPrationalSetInfinity(lpexact->lpobjval);
       }
       else if( SCIPlpiExactIsPrimalInfeasible(lpexact->lpiexact) )
       {
-         SCIPrationalSetString(lpexact->lpobjval, "inf");
+         SCIPrationalSetInfinity(lpexact->lpobjval);
          lpexact->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
       }
       else if( SCIPlpiExactIsPrimalUnbounded(lpexact->lpiexact) )
       {
-         SCIPrationalSetString(lpexact->lpobjval, "-inf");
+         SCIPrationalSetNegInfinity(lpexact->lpobjval);
          lpexact->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDEDRAY;
       }
       else if( SCIPlpiExactIsIterlimExc(lpexact->lpiexact) )
@@ -7262,7 +7262,7 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
    {
       SCIPrationalDebugMessage(" row <%s>: dualfarkas=%q\n", lpirows[r]->fprow->name, dualfarkas[r]);
       SCIPrationalSetRational(lpirows[r]->dualfarkas, dualfarkas[r]);
-      SCIPrationalSetString(lpirows[r]->dualsol, "inf");
+      SCIPrationalSetInfinity(lpirows[r]->dualsol);
       SCIPrationalSetReal(lpirows[r]->activity, 0.0);
       lpirows[r]->validactivitylp = -1L;
       lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
@@ -7335,8 +7335,8 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
    /* set columns as invalid */
    for( c = 0; c < nlpicols; ++c )
    {
-      SCIPrationalSetString(lpicols[c]->primsol, "inf");
-      SCIPrationalSetString(lpicols[c]->redcost, "inf");
+      SCIPrationalSetInfinity(lpicols[c]->primsol);
+      SCIPrationalSetInfinity(lpicols[c]->redcost);
       lpicols[c]->validredcostlp = -1L;
       lpicols[c]->validfarkaslp = -1L;
       if( farkascoefs != NULL )
@@ -7428,7 +7428,7 @@ void SCIPlpExactGetObjval(
    assert(set != NULL);
 
    if( lp->looseobjvalinf > 0 )
-      SCIPrationalSetString(res, "-inf");
+      SCIPrationalSetNegInfinity(res);
    else if( SCIPrationalIsAbsInfinity(lp->lpobjval) )
       SCIPrationalSetRational(res, lp->lpobjval);
    else
@@ -7449,7 +7449,7 @@ void SCIPlpExactGetPseudoObjval(
    assert(set != NULL);
 
    if( lp->pseudoobjvalinf > 0 || set->nactivepricers > 0 )
-      SCIPrationalSetString(res, "-inf");
+      SCIPrationalSetNegInfinity(res);
    else
       SCIPrationalSetRational(res, lp->pseudoobjval);
 }
@@ -7756,7 +7756,7 @@ SCIP_RETCODE rowExactStoreSolVals(
       {
          SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(storedsolvals->dualsol), rowexact->dualfarkas) );
          SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(storedsolvals->activity)) );
-         SCIPrationalSetString(storedsolvals->activity, "inf");
+         SCIPrationalSetInfinity(storedsolvals->activity);
          storedsolvals->basisstatus = SCIP_BASESTAT_BASIC;  /*lint !e641*/
       }
       else
@@ -7774,7 +7774,7 @@ SCIP_RETCODE rowExactStoreSolVals(
       if( infeasible )
       {
          SCIPrationalSetRational(storedsolvals->dualsol, rowexact->dualfarkas);
-         SCIPrationalSetString(storedsolvals->activity, "inf");
+         SCIPrationalSetInfinity(storedsolvals->activity);
          storedsolvals->basisstatus = SCIP_BASESTAT_BASIC;  /*lint !e641*/
       }
       else
@@ -7929,7 +7929,7 @@ SCIP_RETCODE lpExactRestoreSolVals(
       lpexact->solved = FALSE;
       //lpexact->validsollp = -1;
 
-      SCIPrationalSetString(lpexact->lpobjval, "inf");
+      SCIPrationalSetInfinity(lpexact->lpobjval);
       lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       lpexact->primalfeasible = FALSE;
       lpexact->primalchecked = FALSE;

@@ -1932,9 +1932,9 @@ void adjustedLbExact(
    )
 {
    if( SCIPrationalIsNegative(lb) && SCIPsetIsInfinity(set, -SCIPrationalGetReal(lb)) )
-      SCIPrationalSetString(lb, "-inf");
+      SCIPrationalSetNegInfinity(lb);
    else if( SCIPrationalIsPositive(lb) && SCIPsetIsInfinity(set, SCIPrationalGetReal(lb)) )
-      SCIPrationalSetString(lb, "inf");
+      SCIPrationalSetInfinity(lb);
    else if( isintegral )
       SCIPrationalRoundInteger(lb, lb, SCIP_R_ROUND_UPWARDS);
 }
@@ -1981,9 +1981,9 @@ void adjustedUbExact(
    )
 {
    if( SCIPrationalIsNegative(ub) && SCIPsetIsInfinity(set, -SCIPrationalGetReal(ub)) )
-      SCIPrationalSetString(ub, "-inf");
+      SCIPrationalSetNegInfinity(ub);
    else if( SCIPrationalIsPositive(ub) && SCIPsetIsInfinity(set, SCIPrationalGetReal(ub)) )
-      SCIPrationalSetString(ub, "inf");
+      SCIPrationalSetInfinity(ub);
    else if( isintegral )
       SCIPrationalRoundInteger(ub, ub, SCIP_R_ROUND_DOWNWARDS);
 }
@@ -5407,12 +5407,12 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
                   assert(!SCIPrationalIsZero(scalar));
                   if( SCIPrationalGetSign(scalar) == SCIPrationalGetSign(multconstant) && !SCIPrationalIsZero(scalar) )
                   {
-                     SCIPrationalSetString(activeconstant, "inf");
+                     SCIPrationalSetInfinity(activeconstant);
                      activeconstantinf = TRUE;
                   }
                   else
                   {
-                     SCIPrationalSetString(activeconstant, "-inf");
+                     SCIPrationalSetNegInfinity(activeconstant);
                      activeconstantinf = TRUE;
                   }
                }
@@ -5529,12 +5529,12 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
                assert(!SCIPrationalIsZero(scalar));
                if( SCIPrationalGetSign(scalar) == SCIPrationalGetSign(multconstant) && !SCIPrationalIsZero(scalar) )
                {
-                  SCIPrationalSetString(activeconstant, "inf");
+                  SCIPrationalSetInfinity(activeconstant);
                   activeconstantinf = TRUE;
                }
                else
                {
-                  SCIPrationalSetString(activeconstant, "-inf");
+                  SCIPrationalSetNegInfinity(activeconstant);
                   activeconstantinf = TRUE;
                }
             }
@@ -6056,14 +6056,14 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
       if( SCIPrationalIsPositive(scalar) )
       {
          if( SCIPrationalIsNegInfinity(aggvar->exactdata->glbdom.lb) )
-            SCIPrationalSetString(varlb, "-inf");
+            SCIPrationalSetNegInfinity(varlb);
          else
          {
             SCIPrationalMult(varlb, aggvar->exactdata->glbdom.lb, scalar);
             SCIPrationalAdd(varlb, varlb, constant);
          }
          if( SCIPrationalIsInfinity(aggvar->exactdata->glbdom.ub) )
-            SCIPrationalSetString(varub, "inf");
+            SCIPrationalSetInfinity(varub);
          else
          {
             SCIPrationalMult(varub, aggvar->exactdata->glbdom.ub, scalar);
@@ -6073,14 +6073,14 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
       else
       {
          if( SCIPrationalIsNegInfinity(aggvar->exactdata->glbdom.lb) )
-            SCIPrationalSetString(varub, "inf");
+            SCIPrationalSetInfinity(varub);
          else
          {
             SCIPrationalMult(varub, aggvar->exactdata->glbdom.lb, scalar);
             SCIPrationalAdd(varub, varub, constant);
          }
          if( SCIPrationalIsInfinity(aggvar->exactdata->glbdom.ub) )
-            SCIPrationalSetString(varlb, "-inf");
+            SCIPrationalSetNegInfinity(varlb);
          else
          {
             SCIPrationalMult(varlb, aggvar->exactdata->glbdom.ub, scalar);
@@ -6137,14 +6137,14 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
       if( SCIPrationalIsPositive(scalar) )
       {
          if( SCIPrationalIsNegInfinity(var->exactdata->glbdom.lb) )
-            SCIPrationalSetString(aggvarlb, "-inf");
+            SCIPrationalSetNegInfinity(aggvarlb);
          else
          {
             SCIPrationalDiff(aggvarlb, var->exactdata->glbdom.lb, constant);
             SCIPrationalDiv(aggvarlb, aggvarlb, scalar);
          }
          if( SCIPrationalIsInfinity(var->exactdata->glbdom.ub) )
-            SCIPrationalSetString(aggvarub, "inf");
+            SCIPrationalSetInfinity(aggvarub);
          else
          {
             SCIPrationalDiff(aggvarub, var->exactdata->glbdom.ub, constant);
@@ -6154,14 +6154,14 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
       else
       {
          if( SCIPrationalIsNegInfinity(var->exactdata->glbdom.lb) )
-            SCIPrationalSetString(aggvarub, "inf");
+            SCIPrationalSetInfinity(aggvarub);
          else
          {
             SCIPrationalDiff(aggvarub, var->exactdata->glbdom.lb, constant);
             SCIPrationalDiv(aggvarub, aggvarub, scalar);
          }
          if( SCIPrationalIsInfinity(var->exactdata->glbdom.ub) )
-            SCIPrationalSetString(aggvarlb, "-inf");
+            SCIPrationalSetNegInfinity(aggvarlb);
          else
          {
             SCIPrationalDiff(aggvarlb, var->exactdata->glbdom.ub, constant);
@@ -7272,8 +7272,8 @@ SCIP_RETCODE tryAggregateIntVarsExact(
          SCIPvarIsInitial(varx) || SCIPvarIsInitial(vary), SCIPvarIsRemovable(varx) && SCIPvarIsRemovable(vary),
          NULL, NULL, NULL, NULL, NULL) );
 
-   SCIPrationalSetString(tmprat1, "-inf");
-   SCIPrationalSetString(tmprat2, "inf");
+   SCIPrationalSetNegInfinity(tmprat1);
+   SCIPrationalSetInfinity(tmprat2);
    SCIPrationalSetInt(tmprat3, 0L, 0L);
 
    SCIP_CALL( SCIPvarAddExactData(aggvar, blkmem, tmprat1, tmprat2, tmprat3) );
@@ -13337,7 +13337,7 @@ SCIP_RETCODE SCIPvarGetMultaggrLbLocalExact(
 
    /* if positive infinity flag was set to true return infinity */
    if( posinf && !neginf )
-      SCIPrationalSetString(result, "inf");
+      SCIPrationalSetInfinity(result);
    else
       SCIPrationalMax(result, lb, SCIPvarGetLbLocalExact(var));
 
@@ -13485,7 +13485,7 @@ SCIP_RETCODE SCIPvarGetMultaggrUbLocalExact(
 
    /* if positive infinity flag was set to true return infinity */
    if( !posinf && neginf )
-      SCIPrationalSetString(result, "-inf");
+      SCIPrationalSetNegInfinity(result);
    else
       SCIPrationalMin(result, ub, SCIPvarGetUbLocalExact(var));
 
@@ -17880,9 +17880,9 @@ SCIP_RETCODE SCIPvarGetProbvarSumExact(
             {
                assert(!SCIPrationalIsZero(scalar));
                if( SCIPrationalIsPositive(scalar) == SCIPrationalIsPositive((*var)->exactdata->glbdom.lb) )
-                  SCIPrationalSetString(constant, "inf");
+                  SCIPrationalSetInfinity(constant);
                else
-                  SCIPrationalSetString(constant, "-inf");
+                  SCIPrationalSetNegInfinity(constant);
             }
             else
                SCIPrationalAddProd(constant, scalar, (*var)->exactdata->glbdom.lb);
@@ -17908,12 +17908,12 @@ SCIP_RETCODE SCIPvarGetProbvarSumExact(
                   if( SCIPrationalGetSign(scalar) == SCIPrationalGetSign((*var)->exactdata->multaggr.constant) && !SCIPrationalIsZero(scalar) )
                   {
                      assert(!SCIPrationalIsNegInfinity(constant));
-                     SCIPrationalSetString(constant, "inf");
+                     SCIPrationalSetInfinity(constant);
                   }
                   else
                   {
                      assert(!SCIPrationalIsInfinity(constant));
-                     SCIPrationalSetString(constant, "-inf");
+                     SCIPrationalSetNegInfinity(constant);
                   }
                   SCIPrationalSetReal(scalar, 0.0);
                }
@@ -18429,7 +18429,7 @@ void SCIPvarGetLPSolExact_rec(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
-         SCIPrationalSetString(res, "inf");
+         SCIPrationalSetInfinity(res);
       SCIPvarGetLPSolExact(var->data.original.transvar, res);
       break;
 

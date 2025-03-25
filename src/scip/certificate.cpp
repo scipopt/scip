@@ -972,7 +972,7 @@ SCIP_RETCODE SCIPcertificatePrintResult(
       /* for the orig file we only print the primal bound, since the derivation happens in the transformed problem */
       if( isorigfile )
       {
-         SCIPrationalSetString(dualbound, "-inf");
+         SCIPrationalSetNegInfinity(dualbound);
          /* print RTP range (same when optimal solution found) */
          SCIP_CALL( SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound) );
       }
@@ -1006,11 +1006,11 @@ SCIP_RETCODE SCIPcertificatePrintResult(
       else
       {
          bestsol = NULL;
-         SCIPrationalSetString(primalbound, "inf");
+         SCIPrationalSetInfinity(primalbound);
       }
 
       if( isorigfile )
-         SCIPrationalSetString(dualbound, "-inf");
+         SCIPrationalSetNegInfinity(dualbound);
       else
          SCIPrationalSetRational(dualbound, certificate->finalbound);
 
@@ -2263,7 +2263,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lowerbound) );
    if( usefarkas )
    {
-      SCIPrationalSetString(lowerbound, "inf");
+      SCIPrationalSetInfinity(lowerbound);
    }
    else
    {
@@ -3317,7 +3317,7 @@ SCIP_RETCODE SCIPcertificatePrintUnsplitting(
       if( nodedata->leftinfeas && nodedata->rightinfeas )
       {
          infeas = TRUE;
-         SCIPrationalSetString(lowerbound, "inf");
+         SCIPrationalSetInfinity(lowerbound);
       }
       else if( nodedata->leftinfeas )
          SCIPrationalSetRational(lowerbound, nodedata->derbound_right);

@@ -285,7 +285,7 @@ SCIP_RETCODE addRowExact(
    {
       factor = -1.0;
       SCIPrationalNegate(matrix->matrixvalsexact->lhsexact[rowidx], rhs);
-      SCIPrationalSetString(matrix->matrixvalsexact->rhsexact[rowidx], "inf");
+      SCIPrationalSetInfinity(matrix->matrixvalsexact->rhsexact[rowidx]);
       matrix->isrhsinfinite[rowidx] = TRUE;
    }
    else

@@ -218,7 +218,7 @@ void setRational(
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    if( SCIPisInfinity(scip, REALABS(SCIPrationalGetReal(res))) )
    {
-      res->val > 0 ? SCIPrationalSetString(res, "inf") : SCIPrationalSetString(res, "-inf");
+      res->val > 0 ? SCIPrationalSetInfinity(res) : SCIPrationalSetNegInfinity(res);
    }
 }
 
@@ -640,9 +640,9 @@ SCIP_RETCODE performRationalPresolving(
          setRational(scip, tmprhs, rhs);
          setRational(scip, tmplhs, lhs);
          if( rflags[i].test(RowFlag::kLhsInf) )
-            SCIPrationalSetString(tmplhs, "-inf");
+            SCIPrationalSetNegInfinity(tmplhs);
          if( rflags[i].test(RowFlag::kRhsInf) )
-            SCIPrationalSetString(tmprhs, "inf");
+            SCIPrationalSetInfinity(tmprhs);
 
          SCIP_CALL( SCIPcreateConsBasicExactLinear(scip, &cons, SCIPconsGetName(oldcons), rowlen, tmpvars.data(), tmpvals, tmplhs, tmprhs) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -919,7 +919,7 @@ SCIP_RETCODE performRationalPresolving(
          SCIP_Rational* value;
 
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &value) );
-         SCIPrationalSetString(value, "inf");
+         SCIPrationalSetInfinity(value);
 
          int column = res.postsolve.indices[first];
          bool is_negative_infinity = res.postsolve.values[first] < 0;
@@ -927,7 +927,7 @@ SCIP_RETCODE performRationalPresolving(
 
          if( is_negative_infinity )
          {
-            SCIPrationalSetString(value, "-inf");
+            SCIPrationalSetNegInfinity(value);
          }
 
          SCIP_CALL( SCIPfixVarExact(scip, column_variable, value, &infeas, &fixed) );

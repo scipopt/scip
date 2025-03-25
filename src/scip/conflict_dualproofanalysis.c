@@ -991,7 +991,7 @@ SCIP_RETCODE createAndAddProofcons(
 
       SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &lhs_exact));
       SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &rhs_exact));
-      SCIPrationalSetString(lhs_exact, "-inf");
+      SCIPrationalSetNegInfinity(lhs_exact);
       SCIPrationalSetReal(rhs_exact, rhs);
       SCIP_CALL(SCIPrationalCreateBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz));
       SCIP_CALL(SCIPallocBufferArray(set->scip, &consvars, nnz));

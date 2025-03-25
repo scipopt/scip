@@ -205,13 +205,9 @@ static void RsetSpxR(
    )
 {
    if( SCIPlpiExactIsInfinity(lpi, double(spxr)) )
-   {
-      SCIPrationalSetString(r, "inf");
-   }
+      SCIPrationalSetInfinity(r);
    else if( SCIPlpiExactIsInfinity(lpi, -double(spxr)) )
-   {
-      SCIPrationalSetString(r, "-inf");
-   }
+      SCIPrationalSetNegInfinity(r);
    else
    {
 #if defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)

@@ -2123,12 +2123,12 @@ void SCIPsolGetValExact(
       {
          if( SCIPrationalGetSign(res) * SCIPrationalGetSign(SCIPvarGetAggrScalarExact(var)) > 0 )
          {
-            SCIPrationalSetString(res, "+infinity");
+            SCIPrationalSetInfinity(res);
             return;
          }
          if( SCIPrationalGetSign(res) * SCIPrationalGetSign(SCIPvarGetAggrScalarExact(var)) < 0 )
          {
-            SCIPrationalSetString(res, "-infinity");
+            SCIPrationalSetNegInfinity(res);
             return;
          }
       }
@@ -2149,9 +2149,9 @@ void SCIPsolGetValExact(
          if( SCIPrationalIsAbsInfinity(solval) )
          {
             if( SCIPrationalGetSign(scalars[i]) == SCIPrationalGetSign(solval) )
-               SCIPrationalSetString(res, "+infinity");
+               SCIPrationalSetInfinity(res);
             if( SCIPrationalGetSign(scalars[i]) != SCIPrationalGetSign(solval) && !SCIPrationalIsZero(scalars[i]) )
-               SCIPrationalSetString(res, "-infinity");
+               SCIPrationalSetNegInfinity(res);
             break;
          }
          SCIPrationalAddProd(res, scalars[i], solval);

@@ -1042,7 +1042,7 @@ SCIP_RETCODE nodeCreate(
    if( set->exact_enabled )
    {
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*node)->lowerboundexact) );
-      SCIPrationalSetString((*node)->lowerboundexact, "-inf");
+      SCIPrationalSetNegInfinity((*node)->lowerboundexact);
    }
 
    return SCIP_OKAY;

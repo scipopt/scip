@@ -1037,7 +1037,7 @@ SCIP_RETCODE readRowsExact(
          switch(*mpsinputField1(mpsi))
          {
          case 'G' :
-            SCIPrationalSetString(rhs, "inf");
+            SCIPrationalSetInfinity(rhs);
             SCIPrationalSetReal(lhs, 0.0);
             break;
          case 'E' :
@@ -1045,7 +1045,7 @@ SCIP_RETCODE readRowsExact(
             SCIPrationalSetReal(lhs, 0.0);
             break;
          case 'L' :
-            SCIPrationalSetString(lhs, "-inf");
+            SCIPrationalSetNegInfinity(lhs);
             SCIPrationalSetReal(rhs, 0.0);
             break;
          default :
@@ -2483,7 +2483,7 @@ SCIP_RETCODE readBoundsExact(
             assert(!infeasible);
 
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
-            SCIPrationalSetString(tmp, "inf");
+            SCIPrationalSetInfinity(tmp);
 
             oldvartype =  SCIP_VARTYPE_INTEGER;
 
@@ -2598,18 +2598,18 @@ SCIP_RETCODE readBoundsExact(
             }
             else
             {
-               SCIPrationalSetString(val, "-inf");
+               SCIPrationalSetNegInfinity(val);
                SCIP_CALL( SCIPchgVarLbExact(scip, var, val) );
-               SCIPrationalSetString(val, "inf");
+               SCIPrationalSetInfinity(val);
                SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
             }
             break;
          case 'M':
-            SCIPrationalSetString(val, "-inf");
+            SCIPrationalSetNegInfinity(val);
             SCIP_CALL( SCIPchgVarLbExact(scip, var, val) );
             break;
          case 'P':
-            SCIPrationalSetString(val, "inf");
+            SCIPrationalSetInfinity(val);
             SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
             break;
          case 'B':

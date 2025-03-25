@@ -1579,7 +1579,7 @@ SCIP_RETCODE getObjectiveRow(
    SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhsexact));
    nvals = 0;
 
-   SCIPrationalSetString(lhsexact, "-inf");
+   SCIPrationalSetNegInfinity(lhsexact);
    SCIPrationalSetReal(rhsexact, rhs);
    if ( SCIPisObjIntegral(scip) )
    {

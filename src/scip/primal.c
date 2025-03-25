@@ -670,7 +670,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    /* recalculate internal objective limit */
    /** @todo exip: do we need probgetobjlim in exact variant? */
    SCIPrationalSetReal(tmp, SCIPprobGetObjlim(origprob, set));
-   SCIPrationalSetString(inf, "inf");
+   SCIPrationalSetInfinity(inf);
    SCIPprobInternObjvalExact(transprob, origprob, set, tmp, upperbound);
 
    /* resort current primal solutions */

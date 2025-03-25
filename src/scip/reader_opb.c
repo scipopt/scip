@@ -1855,7 +1855,7 @@ SCIP_RETCODE readOPBFile(
          SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars) );
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
-         SCIPrationalSetString(lhs, "-inf");
+         SCIPrationalSetNegInfinity(lhs);
          SCIPrationalSetReal(rhs, topcostrhs);
          for( int j = 0; j < ntopcostvars; ++j )
             SCIPrationalSetReal(topcostsrat[j], topcosts[j]);

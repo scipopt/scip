@@ -1502,14 +1502,14 @@ void SCIPgetLowerboundExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLowerboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
-      SCIPrationalSetString(result, "-inf");
+      SCIPrationalSetNegInfinity(result);
    else if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
    {
       /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with lower
        * bound = -inf instead of lower bound = upper bound = +inf also in case we prove that the problem is unbounded,
        * it seems to make sense to return with lower bound = -inf, since -infinity is the only valid lower bound
        */
-      SCIPrationalSetString(result, "-inf");
+      SCIPrationalSetNegInfinity(result);
    }
    else
    {
@@ -1722,7 +1722,7 @@ void SCIPgetUpperboundExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetUpperbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    if( SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
-      SCIPrationalSetString(result, "-inf");
+      SCIPrationalSetNegInfinity(result);
    else
       SCIPrationalSetRational(result, scip->primal->upperboundexact);
 }

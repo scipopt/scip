@@ -1505,7 +1505,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
    vars = NULL;
 
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &coef) );
-   SCIPrationalSetString(coef, "inf");
+   SCIPrationalSetInfinity(coef);
 
    SCIPdebugMsg(scip, "parsing polynomial from '%s'\n", str);
 
@@ -1546,7 +1546,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
             ++*nmonomials;
 
             nvars = 0;
-            SCIPrationalSetString(coef, "inf");
+            SCIPrationalSetInfinity(coef);
          }
 
          if( *str == '<' )
