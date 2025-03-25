@@ -2861,7 +2861,8 @@ SCIP_RETCODE SCIPaggrRowAddRow(
 }
 
 /** add weighted row to aggregation row
- * @note this method is the variant of SCIPaggrRowAddRow that is safe to use in exact solving mode
+ *
+ *  @note this method is the variant of SCIPaggrRowAddRow that is safe to use in exact solving mode
  */
 SCIP_RETCODE SCIPaggrRowAddRowSafely(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2903,12 +2904,12 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
 
    if( sidetype == -1 )
    {
-      assert( ! SCIPisInfinity(scip, -row->lhs) );
+      assert(!SCIPisInfinity(scip, -row->lhs));
       uselhs = TRUE;
    }
    else if( sidetype == 1 )
    {
-      assert( ! SCIPisInfinity(scip, row->rhs) );
+      assert(!SCIPisInfinity(scip, row->rhs));
       uselhs = FALSE;
    }
    else
@@ -3169,8 +3170,8 @@ SCIP_RETCODE SCIPaggrRowAddCustomCons(
    return SCIP_OKAY;
 }
 
-/** version for use in exact solvig mode of SCIPaggrRowClear */
-void SCIPaggrRowClearSafe(
+/** version for use in exact solving mode of SCIPaggrRowClear() */
+void SCIPaggrRowClearSafely(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    )
 {
@@ -3526,7 +3527,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
 
    if( SCIPisExact(scip) )
-      SCIPaggrRowClearSafe(aggrrow);
+      SCIPaggrRowClearSafely(aggrrow);
    else
       SCIPaggrRowClear(aggrrow);
    *valid = TRUE;
