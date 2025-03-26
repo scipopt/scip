@@ -28,6 +28,11 @@ Features
 - added decomposition kernel search (DKS) heuristic (disabled by default). This heuristic implements a kernel search framework and can be used
   both as a construction heuristic as well as an improvement heuristic. In addition, existing decomposition information can be utilized by this heuristic.
 - symmetry detection does not treat implicit integer variables separately anymore, but computes symmetries based on the variable type inferred from variable bounds and implied integrality
+- when solving a SCIP problem with additional decomposition information (for example, when reading a DEC file) and enabling decomposition/applybenders,
+  the problem is now solved in a benders relaxator; instead of decomposing the original SCIP instance, the relaxator builds the decomposed problem in
+  sub-SCIPs and solves it via default Benders' Decomposition;
+  a solution to the original (undecomposed) problem is now made available by the relaxator; the SCIP shell dialog "display statistics" now also
+  prints the statistics from solving the Benders' decomposition in the relaxator
 
 Performance improvements
 ------------------------
