@@ -66,8 +66,8 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP_ROWEXACT**       rowexact,           /**< pointer to row */
    SCIP_ROW*             fprow,              /**< pointer to fp-row that corresponds to this row */
    SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
-   SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs,                /**< right hand side of row */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of row */
+   SCIP_RATIONAL*        rhs,                /**< right hand side of row */
    SCIP_Bool             isfprelaxable       /**< is it possible to create an fp relaxation of this row? */
    );
 
@@ -86,9 +86,9 @@ SCIP_RETCODE SCIPcreateRowExact(
    SCIP_ROW*             fprow,              /**< corresponding fp approximation/relaxation */
    int                   len,                /**< number of nonzeros in the row */
    SCIP_COLEXACT**       cols,               /**< array with columns of row entries */
-   SCIP_Rational**       vals,               /**< array with coefficients of row entries */
-   SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs,                /**< right hand side of row */
+   SCIP_RATIONAL**       vals,               /**< array with coefficients of row entries */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of row */
+   SCIP_RATIONAL*        rhs,                /**< right hand side of row */
    SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    );
 
@@ -171,7 +171,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPchgRowExactLhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        lhs                 /**< new left hand side */
+   SCIP_RATIONAL*        lhs                 /**< new left hand side */
    );
 
 /** changes right hand side of exact LP row
@@ -187,7 +187,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPchgRowExactRhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        rhs                 /**< new right hand side */
+   SCIP_RATIONAL*        rhs                 /**< new right hand side */
    );
 
 /** resolves variables to columns and adds them with the coefficients to the row;
@@ -208,7 +208,7 @@ SCIP_RETCODE SCIPaddVarsToRowExact(
    SCIP_ROWEXACT*        row,                /**< LP row */
    int                   nvars,              /**< number of variables to add to the row */
    SCIP_VAR**            vars,               /**< problem variables to add */
-   SCIP_Rational**       vals                /**< values of coefficients */
+   SCIP_RATIONAL**       vals                /**< values of coefficients */
    );
 
 /** returns the activity of a row in the last LP or pseudo solution
@@ -222,7 +222,7 @@ SCIP_EXPORT
 void SCIPgetRowActivityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    );
 
 /** returns the activity of a row for the given primal solution with running error analysis
@@ -252,7 +252,7 @@ SCIP_EXPORT
 void SCIPgetRowFeasibilityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    );
 
 /** returns the activity of a row for the given primal solution
@@ -268,7 +268,7 @@ SCIP_RETCODE SCIPgetRowSolActivityExact(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             useexact,           /**< true if sol should be considered instead of sol */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    );
 
 /** returns the feasibility of a row for the given primal solution
@@ -283,7 +283,7 @@ SCIP_RETCODE SCIPgetRowSolFeasibilityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    );
 
 /** output exact row to file stream via the message handler system
@@ -339,7 +339,7 @@ SCIP_LPSOLSTAT SCIPgetLPExactSolstat(
 SCIP_EXPORT
 void SCIPgetLPExactObjval(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    );
 
 /** changes variable's lower bound in current exact dive
@@ -356,7 +356,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarLbExactDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound            /**< new value for bound */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
    );
 
 /** changes variable's upper bound in current exact dive
@@ -373,7 +373,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarUbExactDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound            /**< new value for bound */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
    );
 
 /** solves the exact LP of the current dive; no separation or pricing is applied

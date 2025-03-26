@@ -98,8 +98,8 @@ SCIP_RETCODE updateLpExactBoundChange(
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN ||
          SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE )
    {
-      SCIP_Rational* newbound;
-      SCIP_Rational* oldbound;
+      SCIP_RATIONAL* newbound;
+      SCIP_RATIONAL* oldbound;
 
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &newbound) );
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldbound) );
@@ -808,8 +808,8 @@ SCIP_RETCODE SCIPeventCreateUbChanged(
 SCIP_RETCODE SCIPeventAddExactBdChg(
    SCIP_EVENT*           event,              /**< the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_Rational*        oldbound,           /**< old bound before bound changed */
-   SCIP_Rational*        newbound            /**< new bound after bound changed */
+   SCIP_RATIONAL*        oldbound,           /**< old bound before bound changed */
+   SCIP_RATIONAL*        newbound            /**< new bound after bound changed */
    )
 {
    assert(event != NULL);
@@ -827,8 +827,8 @@ SCIP_RETCODE SCIPeventAddExactBdChg(
 SCIP_RETCODE SCIPeventAddExactObjChg(
    SCIP_EVENT*           event,              /**< the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_Rational*        oldobj,             /**< old obj before change */
-   SCIP_Rational*        newobj              /**< new obj after change */
+   SCIP_RATIONAL*        oldobj,             /**< old obj before change */
+   SCIP_RATIONAL*        newobj              /**< new obj after change */
    )
 {
    assert(event != NULL);
@@ -1436,7 +1436,7 @@ SCIP_Real SCIPeventGetNewbound(
 }
 
 /** gets new bound for a bound change event */
-SCIP_Rational* SCIPeventGetOldboundExact(
+SCIP_RATIONAL* SCIPeventGetOldboundExact(
    SCIP_EVENT*           event               /**< event */
    )
 {
@@ -1890,8 +1890,8 @@ SCIP_RETCODE SCIPeventProcess(
       /* if in exact solving mode, adjust rational lp data */
       if( set->exact_enabled )
       {
-         SCIP_Rational* newobj;
-         SCIP_Rational* oldobj;
+         SCIP_RATIONAL* newobj;
+         SCIP_RATIONAL* oldobj;
 
          if( event->data.eventobjchg.newobjexact != NULL )
          {

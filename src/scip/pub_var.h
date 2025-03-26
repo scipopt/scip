@@ -219,7 +219,7 @@ SCIP_RETCODE SCIPvarGetProbvarBound(
 SCIP_EXPORT
 SCIP_RETCODE SCIPvarGetProbvarBoundExact(
    SCIP_VAR**            var,                /**< pointer to problem variable */
-   SCIP_Rational*        bound,              /**< pointer to bound value to transform */
+   SCIP_RATIONAL*        bound,              /**< pointer to bound value to transform */
    SCIP_BOUNDTYPE*       boundtype           /**< pointer to type of bound: lower or upper bound */
    );
 
@@ -249,8 +249,8 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
 SCIP_EXPORT
 SCIP_RETCODE SCIPvarGetOrigvarSumExact(
    SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
-   SCIP_Rational*        scalar,             /**< pointer to scalar a in sum a*x + c */
-   SCIP_Rational*        constant            /**< pointer to constant c in sum a*x + c */
+   SCIP_RATIONAL*        scalar,             /**< pointer to scalar a in sum a*x + c */
+   SCIP_RATIONAL*        constant            /**< pointer to constant c in sum a*x + c */
    );
 
 /** returns whether the given variable is the direct counterpart of an original problem variable */
@@ -681,7 +681,7 @@ SCIP_Real SCIPvarGetAggrScalar(
 
 /** gets aggregation scalar a of an aggregated variable x = a*y + c */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetAggrScalarExact(
+SCIP_RATIONAL* SCIPvarGetAggrScalarExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -693,7 +693,7 @@ SCIP_Real SCIPvarGetAggrConstant(
 
 /** gets aggregation constant c of an aggregated variable x = a*y + c */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetAggrConstantExact(
+SCIP_RATIONAL* SCIPvarGetAggrConstantExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -717,7 +717,7 @@ SCIP_Real* SCIPvarGetMultaggrScalars(
 
 /** gets vector of exact aggregation scalars a of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
 SCIP_EXPORT
-SCIP_Rational** SCIPvarGetMultaggrScalarsExact(
+SCIP_RATIONAL** SCIPvarGetMultaggrScalarsExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -729,7 +729,7 @@ SCIP_Real SCIPvarGetMultaggrConstant(
 
 /** gets exact aggregation constant c of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetMultaggrConstantExact(
+SCIP_RATIONAL* SCIPvarGetMultaggrConstantExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -759,7 +759,7 @@ SCIP_Real SCIPvarGetObj(
 
 /** gets objective function value of variable */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetObjExact(
+SCIP_RATIONAL* SCIPvarGetObjExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -783,7 +783,7 @@ SCIP_Real SCIPvarGetLbOriginal(
 
 /** gets original lower bound of original problem variable (i.e. the bound set in problem creation) */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetLbOriginalExact(
+SCIP_RATIONAL* SCIPvarGetLbOriginalExact(
    SCIP_VAR*             var                 /**< original problem variable */
    );
 
@@ -795,7 +795,7 @@ SCIP_Real SCIPvarGetUbOriginal(
 
 /** gets original upper bound of original problem variable (i.e. the bound set in problem creation) */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetUbOriginalExact(
+SCIP_RATIONAL* SCIPvarGetUbOriginalExact(
    SCIP_VAR*             var                 /**< original problem variable */
    );
 
@@ -813,7 +813,7 @@ SCIP_Real SCIPvarGetLbGlobal(
 
 /** gets global lower bound of variable */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetLbGlobalExact(
+SCIP_RATIONAL* SCIPvarGetLbGlobalExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -825,7 +825,7 @@ SCIP_Real SCIPvarGetUbGlobal(
 
 /** gets global upper bound of variable */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetUbGlobalExact(
+SCIP_RATIONAL* SCIPvarGetUbGlobalExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -843,7 +843,7 @@ SCIP_Real SCIPvarGetBestBoundGlobal(
 
 /** gets best global bound of variable with respect to the objective function */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetBestBoundGlobalExact(
+SCIP_RATIONAL* SCIPvarGetBestBoundGlobalExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -855,7 +855,7 @@ SCIP_Real SCIPvarGetWorstBoundGlobal(
 
 /** gets worst global bound of variable with respect to the objective function */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetWorstBoundGlobalExact(
+SCIP_RATIONAL* SCIPvarGetWorstBoundGlobalExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -867,7 +867,7 @@ SCIP_Real SCIPvarGetLbLocal(
 
 /** gets current lower bound of variable */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetLbLocalExact(
+SCIP_RATIONAL* SCIPvarGetLbLocalExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -879,7 +879,7 @@ SCIP_Real SCIPvarGetUbLocal(
 
 /** gets current upper bound of variable */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetUbLocalExact(
+SCIP_RATIONAL* SCIPvarGetUbLocalExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -897,7 +897,7 @@ SCIP_Real SCIPvarGetBestBoundLocal(
 
 /** gets best local bound of variable with respect to the objective function */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetBestBoundLocalExact(
+SCIP_RATIONAL* SCIPvarGetBestBoundLocalExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -909,7 +909,7 @@ SCIP_Real SCIPvarGetWorstBoundLocal(
 
 /** gets worst local bound of variable with respect to the objective function */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetWorstBoundLocalExact(
+SCIP_RATIONAL* SCIPvarGetWorstBoundLocalExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -1098,7 +1098,7 @@ SCIP_Real SCIPvarGetLPSol(
 SCIP_EXPORT
 void SCIPvarGetLPSolExact(
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Rational*        res                 /**< store the resulting value */
+   SCIP_RATIONAL*        res                 /**< store the resulting value */
    );
 
 /** gets primal NLP solution value of variable */
@@ -1284,7 +1284,7 @@ SCIP_Real SCIPvarGetLPSol_rec(
 SCIP_EXPORT
 void SCIPvarGetLPSolExact_rec(
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Rational*        res                 /**< store the resulting value */
+   SCIP_RATIONAL*        res                 /**< store the resulting value */
    );
 
 /** gets primal NLP solution value of variable */
@@ -1301,7 +1301,7 @@ SCIP_Real SCIPvarGetPseudoSol(
 
 /** gets pseudo solution value of variable */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetPseudoSolExact(
+SCIP_RATIONAL* SCIPvarGetPseudoSolExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -1316,7 +1316,7 @@ SCIP_Real SCIPvarGetSol(
 SCIP_EXPORT
 void SCIPvarGetSolExact(
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Rational*        res,                /**< the resulting value */
+   SCIP_RATIONAL*        res,                /**< the resulting value */
    SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
    );
 

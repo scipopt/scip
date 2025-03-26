@@ -112,7 +112,7 @@ SCIP_RETCODE solSetArrayValExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Rational*        val                 /**< value to set variable to */
+   SCIP_RATIONAL*        val                 /**< value to set variable to */
    )
 {
    int idx;
@@ -233,7 +233,7 @@ SCIP_Real solGetArrayVal(
 /** returns the value of the variable in the given exact solution */
 static
 void solGetArrayValExact(
-   SCIP_Rational*        res,
+   SCIP_RATIONAL*        res,
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -350,7 +350,7 @@ SCIP_RETCODE solUnlinkVarExact(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   SCIP_Rational* solval;
+   SCIP_RATIONAL* solval;
 
    assert(sol != NULL);
    assert(var != NULL);
@@ -1703,11 +1703,11 @@ SCIP_RETCODE SCIPsolSetValExact(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_VAR*             var,                /**< variable to add to solution */
-   SCIP_Rational*        val                 /**< solution value of variable */
+   SCIP_RATIONAL*        val                 /**< solution value of variable */
    )
 {
-   SCIP_Rational* oldval;
-   SCIP_Rational* tmp;
+   SCIP_RATIONAL* oldval;
+   SCIP_RATIONAL* tmp;
    SCIP_RETCODE retcode;
 
    assert(sol != NULL);
@@ -1734,7 +1734,7 @@ SCIP_RETCODE SCIPsolSetValExact(
 
          if( !SCIPrationalIsEqual(val, oldval) )
          {
-            SCIP_Rational* obj;
+            SCIP_RATIONAL* obj;
 
             SCIP_CALL( solSetArrayValExact(sol, set, var, val) );
             obj = SCIPvarGetObjExact(var);
@@ -1758,7 +1758,7 @@ SCIP_RETCODE SCIPsolSetValExact(
 
       if( !SCIPrationalIsEqual(val, oldval) )
       {
-         SCIP_Rational* obj;
+         SCIP_RATIONAL* obj;
          SCIP_CALL( solSetArrayValExact(sol, set, var, val) );
          obj = SCIPvarGetObjExact(var);
          SCIPrationalDiffProd(sol->valsexact->obj, obj, oldval);
@@ -2025,7 +2025,7 @@ SCIP_Real SCIPsolGetVal(
 
 /** returns value of variable in exact primal CIP solution */
 void SCIPsolGetValExact(
-   SCIP_Rational*        res,                /**< resulting rational */
+   SCIP_RATIONAL*        res,                /**< resulting rational */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -2033,8 +2033,8 @@ void SCIPsolGetValExact(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Rational** scalars;
-   SCIP_Rational* solval;
+   SCIP_RATIONAL** scalars;
+   SCIP_RATIONAL* solval;
    int nvars;
    int i;
 
@@ -2054,8 +2054,8 @@ void SCIPsolGetValExact(
    {
       SCIP_RETCODE retcode;
       SCIP_VAR* origvar;
-      SCIP_Rational* scalar;
-      SCIP_Rational* constant;
+      SCIP_RATIONAL* scalar;
+      SCIP_RATIONAL* constant;
 
       (void) SCIPrationalCreateBuffer(set->buffer, &scalar);
       (void) SCIPrationalCreateBuffer(set->buffer, &constant);
@@ -2264,7 +2264,7 @@ void SCIPsolGetObjExact(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
-   SCIP_Rational*        objval              /**< store the result here */
+   SCIP_RATIONAL*        objval              /**< store the result here */
     )
 {
    assert(sol != NULL);
@@ -2374,7 +2374,7 @@ SCIP_RETCODE solCheckExact(
    )
 {
    SCIP_RESULT result;
-   SCIP_Rational* solval;
+   SCIP_RATIONAL* solval;
    int h;
 
    assert(sol != NULL);
@@ -2409,8 +2409,8 @@ SCIP_RETCODE solCheckExact(
 
          if( !SCIPrationalIsAbsInfinity(solval) ) /*lint !e777*/
          {
-            SCIP_Rational* lb;
-            SCIP_Rational* ub;
+            SCIP_RATIONAL* lb;
+            SCIP_RATIONAL* ub;
 
             lb = SCIPvarGetLbGlobalExact(var);
             ub = SCIPvarGetUbGlobalExact(var);
@@ -2863,7 +2863,7 @@ SCIP_RETCODE SCIPsolMakeExact(
    )
 {
    int v;
-   SCIP_Rational* tmp;
+   SCIP_RATIONAL* tmp;
 
    if( SCIPsolIsExact(sol) )
       return SCIP_OKAY;
@@ -3066,10 +3066,10 @@ SCIP_RETCODE SCIPsolRetransformExact(
    SCIP_VAR** transvars;
    SCIP_VAR** vars;
    SCIP_VAR** activevars;
-   SCIP_Rational** solvals;
-   SCIP_Rational** activevals;
-   SCIP_Rational** transsolvals;
-   SCIP_Rational* constant;
+   SCIP_RATIONAL** solvals;
+   SCIP_RATIONAL** activevals;
+   SCIP_RATIONAL** transsolvals;
+   SCIP_RATIONAL* constant;
    int requiredsize;
    int ntransvars;
    int nactivevars;
@@ -3215,7 +3215,7 @@ void SCIPsolRecomputeInternObjExact(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Rational* solval;
+   SCIP_RATIONAL* solval;
    int nvars;
    int v;
 
@@ -3255,8 +3255,8 @@ SCIP_Bool solsAreEqualExact(
    )
 {
    SCIP_PROB* prob;
-   SCIP_Rational* tmp1;
-   SCIP_Rational* tmp2;
+   SCIP_RATIONAL* tmp1;
+   SCIP_RATIONAL* tmp2;
    int v;
    SCIP_Bool result = TRUE;
 
@@ -3540,7 +3540,7 @@ SCIP_RETCODE SCIPsolPrintExact(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
-   SCIP_Rational* solval;
+   SCIP_RATIONAL* solval;
    char* solvalstr;
    int solvallen;
    int solvalsize = SCIP_MAXSTRLEN;
@@ -4008,7 +4008,7 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Rational* solval;
+   SCIP_RATIONAL* solval;
    int nvars;
    int i;
 
@@ -4132,7 +4132,7 @@ SCIP_Real SCIPsolGetOrigObj(
 }
 
 /** gets objective value of primal CIP solution which lives in the original problem space */
-SCIP_Rational* SCIPsolGetOrigObjExact(
+SCIP_RATIONAL* SCIPsolGetOrigObjExact(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
@@ -4158,7 +4158,7 @@ void SCIPsolOrigAddObjval(
 /** adds value to the objective value of a given original primal CIP solution */
 void SCIPsolOrigAddObjvalExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Rational*        addval              /**< offset value to add */
+   SCIP_RATIONAL*        addval              /**< offset value to add */
    )
 {
    assert(sol != NULL);

@@ -74,7 +74,7 @@ static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are cons
 
 /** allocate and create a rational from nominator and denominator using ordinary memory */
 SCIP_RETCODE SCIPrationalCreate(
-   SCIP_Rational**       rational            /**< pointer to the rational to create */
+   SCIP_RATIONAL**       rational            /**< pointer to the rational to create */
    )
 {
    SCIP_ALLOC( BMSallocMemory(rational) );
@@ -89,7 +89,7 @@ SCIP_RETCODE SCIPrationalCreate(
 /** allocate and create a rational from nominator and denominator using block memory */
 SCIP_RETCODE SCIPrationalCreateBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational**       rational            /**< pointer to the rational to create */
+   SCIP_RATIONAL**       rational            /**< pointer to the rational to create */
    )
 {
    SCIP_ALLOC( BMSallocBlockMemory(mem, rational) );
@@ -104,7 +104,7 @@ SCIP_RETCODE SCIPrationalCreateBlock(
 /** allocate and create a rational from nominator and denominator using buffer memory */
 SCIP_RETCODE SCIPrationalCreateBuffer(
    BMS_BUFMEM*           mem,                /**< buffer memory */
-   SCIP_Rational**       rational            /**< pointer to the rational to create */
+   SCIP_RATIONAL**       rational            /**< pointer to the rational to create */
    )
 {
    BMSallocBufferMemory(mem, rational);
@@ -119,7 +119,7 @@ SCIP_RETCODE SCIPrationalCreateBuffer(
 /** allocate and create a rational from a string in the format, e.g. "12/35" */
 SCIP_RETCODE SCIPrationalCreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational**       rational,           /**< pointer to the rational to create */
+   SCIP_RATIONAL**       rational,           /**< pointer to the rational to create */
    const char*           desc                /**< the string describing the rational */
    )
 {
@@ -167,8 +167,8 @@ SCIP_RETCODE SCIPrationalCreateString(
 
 /** creates a copy of a rational using ordinary memory */
 SCIP_RETCODE SCIPrationalCopy(
-   SCIP_Rational**       result,             /**< pointer to the rational to create */
-   SCIP_Rational*        src                 /**< rational to copy */
+   SCIP_RATIONAL**       result,             /**< pointer to the rational to create */
+   SCIP_RATIONAL*        src                 /**< rational to copy */
    )
 {
    SCIP_CALL( SCIPrationalCreate(result) );
@@ -181,8 +181,8 @@ SCIP_RETCODE SCIPrationalCopy(
 /** creates a copy of a rational using block memory */
 SCIP_RETCODE SCIPrationalCopyBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational**       result,             /**< pointer to the rational to create */
-   SCIP_Rational*        src                 /**< rational to copy */
+   SCIP_RATIONAL**       result,             /**< pointer to the rational to create */
+   SCIP_RATIONAL*        src                 /**< rational to copy */
    )
 {
    SCIP_CALL( SCIPrationalCreateBlock(mem, result) );
@@ -195,8 +195,8 @@ SCIP_RETCODE SCIPrationalCopyBlock(
 /** creates a copy of a rational using buffer memory */
 SCIP_RETCODE SCIPrationalCopyBuffer(
    BMS_BUFMEM*           mem,                /**< buffer memory */
-   SCIP_Rational**       result,             /**< pointer to the rational to create */
-   SCIP_Rational*        src                 /**< rational to copy */
+   SCIP_RATIONAL**       result,             /**< pointer to the rational to create */
+   SCIP_RATIONAL*        src                 /**< rational to copy */
    )
 {
    SCIP_CALL( SCIPrationalCreateBuffer(mem, result) );
@@ -208,7 +208,7 @@ SCIP_RETCODE SCIPrationalCopyBuffer(
 
 /** create an array of rationals using ordinary memory */
 SCIP_RETCODE SCIPrationalCreateArray(
-   SCIP_Rational***      rational,           /**< pointer to the array to create */
+   SCIP_RATIONAL***      rational,           /**< pointer to the array to create */
    int                   size                /**< the size of the array */
    )
 {
@@ -226,7 +226,7 @@ SCIP_RETCODE SCIPrationalCreateArray(
 /** create an array of rationals using block memory */
 SCIP_RETCODE SCIPrationalCreateBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational***      rational,           /**< pointer to the array to create */
+   SCIP_RATIONAL***      rational,           /**< pointer to the array to create */
    int                   size                /**< the size of the array */
    )
 {
@@ -244,7 +244,7 @@ SCIP_RETCODE SCIPrationalCreateBlockArray(
 /** create an array of rationals using buffer memory */
 SCIP_RETCODE SCIPrationalCreateBufferArray(
    BMS_BUFMEM*           mem,                /**< block memory */
-   SCIP_Rational***      rational,           /**< pointer to the arrat to create */
+   SCIP_RATIONAL***      rational,           /**< pointer to the arrat to create */
    int                   size                /**< the size of the array */
    )
 {
@@ -261,8 +261,8 @@ SCIP_RETCODE SCIPrationalCreateBufferArray(
 
 /** copy an array of rationals using ordinary memory */
 SCIP_RETCODE SCIPrationalCopyArray(
-   SCIP_Rational***      result,             /**< address to copy to */
-   SCIP_Rational**       src,                /**< src array */
+   SCIP_RATIONAL***      result,             /**< address to copy to */
+   SCIP_RATIONAL**       src,                /**< src array */
    int                   len                 /**< size of src array */
    )
 {
@@ -279,8 +279,8 @@ SCIP_RETCODE SCIPrationalCopyArray(
 /** copy an array of rationals using block memory */
 SCIP_RETCODE SCIPrationalCopyBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational***      result,             /**< address to copy to */
-   SCIP_Rational**       src,                /**< src array */
+   SCIP_RATIONAL***      result,             /**< address to copy to */
+   SCIP_RATIONAL**       src,                /**< src array */
    int                   len                 /**< size of src array */
    )
 {
@@ -297,8 +297,8 @@ SCIP_RETCODE SCIPrationalCopyBlockArray(
 /** copy an array of rationals using buffer memory */
 SCIP_RETCODE SCIPrationalCopyBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
-   SCIP_Rational***      result,             /**< address to copy to */
-   SCIP_Rational**       src,                /**< src array */
+   SCIP_RATIONAL***      result,             /**< address to copy to */
+   SCIP_RATIONAL**       src,                /**< src array */
    int                   len                 /**< size of src array */
    )
 {
@@ -314,7 +314,7 @@ SCIP_RETCODE SCIPrationalCopyBufferArray(
 
 /** realloc a rational ordinary arrray */
 SCIP_RETCODE SCIPrationalReallocArray(
-   SCIP_Rational***      result,             /**< address to copy to */
+   SCIP_RATIONAL***      result,             /**< address to copy to */
    int                   oldlen,             /**< size of src array */
    int                   newlen              /**< size of src array */
    )
@@ -334,7 +334,7 @@ SCIP_RETCODE SCIPrationalReallocArray(
 /** realloc a rational buffer arrray */
 SCIP_RETCODE SCIPrationalReallocBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
-   SCIP_Rational***      result,             /**< address to copy to */
+   SCIP_RATIONAL***      result,             /**< address to copy to */
    int                   oldlen,             /**< size of src array */
    int                   newlen              /**< size of src array */
    )
@@ -354,7 +354,7 @@ SCIP_RETCODE SCIPrationalReallocBufferArray(
 /** realloc a rational block arrray */
 SCIP_RETCODE SCIPrationalReallocBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational***      result,             /**< address to copy to */
+   SCIP_RATIONAL***      result,             /**< address to copy to */
    int                   oldlen,             /**< size of src array */
    int                   newlen              /**< size of src array */
    )
@@ -384,7 +384,7 @@ SCIP_RETCODE SCIPrationalReallocBlockArray(
 #ifdef SCIP_WITH_GMP
 SCIP_RETCODE SCIPrationalCreateBlockGMP(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational**       rational,           /**< pointer to the rational to create */
+   SCIP_RATIONAL**       rational,           /**< pointer to the rational to create */
    mpq_t                 numb                /**< the gmp rational */
    )
 {
@@ -398,7 +398,7 @@ SCIP_RETCODE SCIPrationalCreateBlockGMP(
 
 /** gets the underlying mpq_t* */
 mpq_t* SCIPrationalGetGMP(
-   SCIP_Rational*        rational            /**< the rational */
+   SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
    assert(rational != nullptr);
@@ -414,7 +414,7 @@ mpq_t* SCIPrationalGetGMP(
 
 /** set value of a rational from gmp data */
 void SCIPrationalSetGMP(
-   SCIP_Rational*        rational,           /**< the rational */
+   SCIP_RATIONAL*        rational,           /**< the rational */
    const mpq_t           numb                /**< mpq_rational */
    )
 {
@@ -426,7 +426,7 @@ void SCIPrationalSetGMP(
 /** init and set value of mpq array from rational array */
 void SCIPrationalSetGMPArray(
    mpq_t*                mpqaaray,           /** mpq array */
-   SCIP_Rational**       ratarrray,          /** array of rationals */
+   SCIP_RATIONAL**       ratarrray,          /** array of rationals */
    int                   len                 /** array length */
    )
 {
@@ -439,7 +439,7 @@ void SCIPrationalSetGMPArray(
 
 /** set value of rational array from mpq array */
 void SCIPrationalSetArrayGMP(
-   SCIP_Rational**       ratarray,           /** array of rationals */
+   SCIP_RATIONAL**       ratarray,           /** array of rationals */
    mpq_t*                mpqarray,           /** mpq array */
    int                   len                 /** array length */
    )
@@ -466,7 +466,7 @@ void SCIPrationalClearArrayGMP(
 
 /** delete a rational and free the allocated ordinary memory */
 void SCIPrationalFree(
-   SCIP_Rational**       rational            /**< adress of the rational */
+   SCIP_RATIONAL**       rational            /**< adress of the rational */
    )
 {
    assert(*rational != nullptr);
@@ -478,7 +478,7 @@ void SCIPrationalFree(
 /** delete a rational and free the allocated block memory */
 void SCIPrationalFreeBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational**       rational            /**< adress of the rational */
+   SCIP_RATIONAL**       rational            /**< adress of the rational */
    )
 {
    assert(*rational != nullptr);
@@ -490,7 +490,7 @@ void SCIPrationalFreeBlock(
 /** delete a rational and free the allocated buffer memory */
 void SCIPrationalFreeBuffer(
    BMS_BUFMEM*           mem,                /**< buffer memory */
-   SCIP_Rational**       rational            /**< adress of the rational */
+   SCIP_RATIONAL**       rational            /**< adress of the rational */
    )
 {
    assert(*rational != nullptr);
@@ -501,7 +501,7 @@ void SCIPrationalFreeBuffer(
 
 /** deletes an array of rationals and frees the allocated ordinary memory */
 void SCIPrationalFreeArray(
-   SCIP_Rational***      ratarray,           /**< pointer to the array */
+   SCIP_RATIONAL***      ratarray,           /**< pointer to the array */
    int                   size                /**< size of the array */
    )
 {
@@ -518,7 +518,7 @@ void SCIPrationalFreeArray(
 /** deletes an array of rationals and frees the allocated block memory */
 void SCIPrationalFreeBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational***      ratblockarray,      /**< pointer to the array */
+   SCIP_RATIONAL***      ratblockarray,      /**< pointer to the array */
    int                   size                /**< size of the array */
    )
 {
@@ -535,7 +535,7 @@ void SCIPrationalFreeBlockArray(
 /** deletes an array of rationals and frees the allocated buffer memory */
 void SCIPrationalFreeBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
-   SCIP_Rational***      ratbufarray,        /**< pointer to the array */
+   SCIP_RATIONAL***      ratbufarray,        /**< pointer to the array */
    int                   size                /**< size of the array */
    )
 {
@@ -553,7 +553,7 @@ void SCIPrationalFreeBufferArray(
  * @todo extend this method to work with cpp_rational
 */
 void SCIPrationalCanonicalize(
-   SCIP_Rational*        rational            /**< rational to put in canonical form */
+   SCIP_RATIONAL*        rational            /**< rational to put in canonical form */
    )
 {
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_BOOST)
@@ -566,7 +566,7 @@ void SCIPrationalCanonicalize(
  * needed after underlying value was directly set, e.g. by exact lp solver
  */
 void SCIPrationalCheckInfByValue(
-   SCIP_Rational*        rational            /**< rational number */
+   SCIP_RATIONAL*        rational            /**< rational number */
    )
 {
    if( rational->val * rational->val.sign() >= infinity )
@@ -582,8 +582,8 @@ void SCIPrationalCheckInfByValue(
 
 /** set a rational to the value of another rational */
 void SCIPrationalSetRational(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        src                 /**< the src */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        src                 /**< the src */
    )
 {
    assert(res != nullptr);
@@ -595,7 +595,7 @@ void SCIPrationalSetRational(
 
 /** set a rational to a nom/denom value */
 void SCIPrationalSetInt(
-   SCIP_Rational*        res,                /**< the result */
+   SCIP_RATIONAL*        res,                /**< the result */
    SCIP_Longint          nom,                /**< the nominator */
    SCIP_Longint          denom               /**< the denominator */
    )
@@ -617,7 +617,7 @@ void SCIPrationalSetInt(
 
 /** set a rational to the value described by a string */
 void SCIPrationalSetString(
-   SCIP_Rational*        res,                /**< the result */
+   SCIP_RATIONAL*        res,                /**< the result */
    const char*           desc                /**< the string describing the rational */
    )
 {
@@ -697,7 +697,7 @@ void SCIPrationalSetString(
 
 /** set a rational to the value of another a real */
 void SCIPrationalSetReal(
-   SCIP_Rational*        res,                /**< the result */
+   SCIP_RATIONAL*        res,                /**< the result */
    SCIP_Real             real                /**< real to set from */
    )
 {
@@ -720,7 +720,7 @@ void SCIPrationalSetReal(
 
 /** sets a rational to positive infinity */
 void SCIPrationalSetInfinity(
-   SCIP_Rational*        res                 /**< the result */
+   SCIP_RATIONAL*        res                 /**< the result */
    )
 {
    assert(res != NULL);
@@ -732,7 +732,7 @@ void SCIPrationalSetInfinity(
 
 /** sets a rational to negative infinity */
 void SCIPrationalSetNegInfinity(
-   SCIP_Rational*        res                 /**< the result */
+   SCIP_RATIONAL*        res                 /**< the result */
    )
 {
    assert(res != NULL);
@@ -744,7 +744,7 @@ void SCIPrationalSetNegInfinity(
 
 /** resets the flag isfprepresentable to SCIP_ISFPREPRESENTABLE_UNKNOWN */
 void SCIPrationalResetFloatingPointRepresentable(
-   SCIP_Rational*        rat                 /**< the number to set flag for */
+   SCIP_RATIONAL*        rat                 /**< the number to set flag for */
    )
 {
    assert(rat != nullptr);
@@ -792,7 +792,7 @@ SCIP_Bool SCIPrationalIsString(
  */
 SCIP_Bool SCIPstrToRationalValue(
    char*                 str,                /**< string to search */
-   SCIP_Rational*        value,              /**< pointer to store the parsed value */
+   SCIP_RATIONAL*        value,              /**< pointer to store the parsed value */
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
@@ -839,9 +839,9 @@ SCIP_Bool SCIPstrToRationalValue(
 
 /** add two rationals and save the result in res */
 void SCIPrationalAdd(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op1,                /**< first operand */
-   SCIP_Rational*        op2                 /**< second operand */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< first operand */
+   SCIP_RATIONAL*        op2                 /**< second operand */
    )
 {
    assert(res != nullptr && op1 != nullptr && op2 != nullptr);
@@ -865,8 +865,8 @@ void SCIPrationalAdd(
 
 /** add a rational and a real and save the result in res */
 void SCIPrationalAddReal(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        rat,                /**< rational number */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        rat,                /**< rational number */
    SCIP_Real             real                /**< real number */
    )
 {
@@ -887,9 +887,9 @@ void SCIPrationalAddReal(
 
 /*** subtract two rationals and save the result in res */
 void SCIPrationalDiff(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op1,                /**< first operand */
-   SCIP_Rational*        op2                 /**< second operand */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< first operand */
+   SCIP_RATIONAL*        op2                 /**< second operand */
    )
 {
    assert(res != nullptr && op1 != nullptr && op2 != nullptr);
@@ -913,8 +913,8 @@ void SCIPrationalDiff(
 
 /** subtract a rational and a real and save the result in res */
 void SCIPrationalDiffReal(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        rat,                /**< rational number */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        rat,                /**< rational number */
    SCIP_Real             real                /**< real number */
    )
 {
@@ -928,9 +928,9 @@ void SCIPrationalDiffReal(
  *  @note this method handles infinity like finite numbers
  */
 void SCIPrationalRelDiff(
-   SCIP_Rational*        res,
-   SCIP_Rational*        val1,               /**< first value to be compared */
-   SCIP_Rational*        val2                /**< second value to be compared */
+   SCIP_RATIONAL*        res,
+   SCIP_RATIONAL*        val1,               /**< first value to be compared */
+   SCIP_RATIONAL*        val2                /**< second value to be compared */
    )
 {
    scip::Rational absval1;
@@ -970,9 +970,9 @@ void SCIPrationalRelDiff(
 
 /** multiply two rationals and save the result in res */
 void SCIPrationalMult(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op1,                /**< first operand */
-   SCIP_Rational*        op2                 /**< second operand */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< first operand */
+   SCIP_RATIONAL*        op2                 /**< second operand */
    )
 {
    assert(res != nullptr && op1 != nullptr && op2 != nullptr);
@@ -1001,8 +1001,8 @@ void SCIPrationalMult(
 
 /** multiplies a rational and a real and saves the result in res */
 void SCIPrationalMultReal(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< first operand */
    SCIP_Real             op2                 /**< second operand */
    )
 {
@@ -1036,9 +1036,9 @@ void SCIPrationalMultReal(
 
 /** divides two rationals and saves the result in res */
 void SCIPrationalDiv(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op1,                /**< first operand */
-   SCIP_Rational*        op2                 /**< second operand */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< first operand */
+   SCIP_RATIONAL*        op2                 /**< second operand */
    )
 {
    assert(res != nullptr && op1 != nullptr && op2 != nullptr);
@@ -1051,8 +1051,8 @@ void SCIPrationalDiv(
 
 /** divides a rational by a real and saves the result in res */
 void SCIPrationalDivReal(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< first operand */
    SCIP_Real             op2                 /**< second operand */
    )
 {
@@ -1077,9 +1077,9 @@ void SCIPrationalDivReal(
 
 /* Computes res += op1 * op2 and saves the result in res */
 void SCIPrationalAddProd(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op1,                /**< first operand */
-   SCIP_Rational*        op2                 /**< second operand */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< first operand */
+   SCIP_RATIONAL*        op2                 /**< second operand */
    )
 {
    assert(res != nullptr && op1 != nullptr && op2 != nullptr);
@@ -1115,8 +1115,8 @@ void SCIPrationalAddProd(
 
 /* Computes res += op1 * op2 and saves the result in res */
 void SCIPrationalAddProdReal(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< first operand */
    SCIP_Real             op2                 /**< second operand */
    )
 {
@@ -1145,9 +1145,9 @@ void SCIPrationalAddProdReal(
 
 /* Computes res -= op1 * op2 and saves the result in res */
 void SCIPrationalDiffProd(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op1,                /**< first operand */
-   SCIP_Rational*        op2                 /**< second operand */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< first operand */
+   SCIP_RATIONAL*        op2                 /**< second operand */
    )
 {
    assert(res != nullptr && op1 != nullptr && op2 != nullptr);
@@ -1175,8 +1175,8 @@ void SCIPrationalDiffProd(
 
 /* Computes res += op1 * op2 and saves the result in res */
 void SCIPrationalDiffProdReal(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< first operand */
    SCIP_Real             op2                 /**< second operand */
    )
 {
@@ -1205,8 +1205,8 @@ void SCIPrationalDiffProdReal(
 
 /** set res to -op */
 void SCIPrationalNegate(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op                  /**< operand */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op                  /**< operand */
    )
 {
    assert(res != nullptr && op != nullptr);
@@ -1218,8 +1218,8 @@ void SCIPrationalNegate(
 
 /** set res to Abs(op) */
 void SCIPrationalAbs(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op                  /**< operand */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op                  /**< operand */
    )
 {
    assert(res != nullptr && op != nullptr);
@@ -1231,8 +1231,8 @@ void SCIPrationalAbs(
 
 /** set res to 1/op */
 void SCIPrationalInvert(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op                  /**< operand */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op                  /**< operand */
    )
 {
    assert(res != nullptr && op != nullptr);
@@ -1250,9 +1250,9 @@ void SCIPrationalInvert(
 
 /** compute the minimum of two rationals */
 void SCIPrationalMin(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op1,                /**< the first rational */
-   SCIP_Rational*        op2                 /**< the second rational */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< the first rational */
+   SCIP_RATIONAL*        op2                 /**< the second rational */
    )
 {
    assert(op1 != nullptr && op2 != nullptr);
@@ -1281,9 +1281,9 @@ void SCIPrationalMin(
 
 /** compute the minimum of two rationals */
 void SCIPrationalMax(
-   SCIP_Rational*        res,                /**< the result */
-   SCIP_Rational*        op1,                /**< the first rational */
-   SCIP_Rational*        op2                 /**< the second rational */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< the first rational */
+   SCIP_RATIONAL*        op2                 /**< the second rational */
    )
 {
    assert(op1 != nullptr && op2 != nullptr);
@@ -1312,8 +1312,8 @@ void SCIPrationalMax(
 
 /** check if two rationals are equal */
 SCIP_Bool SCIPrationalIsEqual(
-   SCIP_Rational*        rat1,               /**< the first rational */
-   SCIP_Rational*        rat2                /**< the second rational */
+   SCIP_RATIONAL*        rat1,               /**< the first rational */
+   SCIP_RATIONAL*        rat2                /**< the second rational */
    )
 {
    assert(rat1 != nullptr && rat2 != nullptr);
@@ -1329,8 +1329,8 @@ SCIP_Bool SCIPrationalIsEqual(
 
 /** check if two rationals are equal */
 SCIP_Bool SCIPrationalIsAbsEqual(
-   SCIP_Rational*        rat1,               /**< the first rational */
-   SCIP_Rational*        rat2                /**< the second rational */
+   SCIP_RATIONAL*        rat1,               /**< the first rational */
+   SCIP_RATIONAL*        rat2                /**< the second rational */
    )
 {
    assert(rat1 != nullptr && rat2 != nullptr);
@@ -1345,7 +1345,7 @@ SCIP_Bool SCIPrationalIsAbsEqual(
 
 /** check if a rational and a real are equal */
 SCIP_Bool SCIPrationalIsEqualReal(
-   SCIP_Rational*        rat,                /**< the rational */
+   SCIP_RATIONAL*        rat,                /**< the rational */
    SCIP_Real             real                /**< the real */
    )
 {
@@ -1360,7 +1360,7 @@ SCIP_Bool SCIPrationalIsEqualReal(
 /** check if real approx of rational and a real are equal */
 SCIP_Bool SCIPrationalIsApproxEqualReal(
    SCIP_SET*             set,                /**< SCIP set pointer */
-   SCIP_Rational*        rat,                /**< the rational */
+   SCIP_RATIONAL*        rat,                /**< the rational */
    SCIP_Real             real,               /**< the real */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding mode to use */
    )
@@ -1382,8 +1382,8 @@ SCIP_Bool SCIPrationalIsApproxEqualReal(
 
 /** check if the first rational is greater than the second */
 SCIP_Bool SCIPrationalIsGT(
-   SCIP_Rational*        rat1,               /**< the first rational */
-   SCIP_Rational*        rat2                /**< the second rational */
+   SCIP_RATIONAL*        rat1,               /**< the first rational */
+   SCIP_RATIONAL*        rat2                /**< the second rational */
    )
 {
    assert(rat1 != nullptr && rat2 != nullptr);
@@ -1412,8 +1412,8 @@ SCIP_Bool SCIPrationalIsGT(
 
 /** check if the first rational is greater than the second */
 SCIP_Bool SCIPrationalIsAbsGT(
-   SCIP_Rational*        rat1,               /**< the first rational */
-   SCIP_Rational*        rat2                /**< the second rational */
+   SCIP_RATIONAL*        rat1,               /**< the first rational */
+   SCIP_RATIONAL*        rat2                /**< the second rational */
    )
 {
    assert(rat1 != nullptr && rat2 != nullptr);
@@ -1428,8 +1428,8 @@ SCIP_Bool SCIPrationalIsAbsGT(
 
 /** check if the first rational is smaller than the second */
 SCIP_Bool SCIPrationalIsLT(
-   SCIP_Rational*        rat1,               /**< the first rational */
-   SCIP_Rational*        rat2                /**< the second rational */
+   SCIP_RATIONAL*        rat1,               /**< the first rational */
+   SCIP_RATIONAL*        rat2                /**< the second rational */
    )
 {
    assert(rat1 != nullptr && rat2 != nullptr);
@@ -1439,8 +1439,8 @@ SCIP_Bool SCIPrationalIsLT(
 
 /** check if the first rational is greater or equal than the second */
 SCIP_Bool SCIPrationalIsGE(
-   SCIP_Rational*        rat1,               /**< the first rational */
-   SCIP_Rational*        rat2                /**< the second rational */
+   SCIP_RATIONAL*        rat1,               /**< the first rational */
+   SCIP_RATIONAL*        rat2                /**< the second rational */
    )
 {
    assert(rat1 != nullptr && rat2 != nullptr);
@@ -1453,8 +1453,8 @@ SCIP_Bool SCIPrationalIsGE(
 
 /** check if the first rational is less or equal than the second*/
 SCIP_Bool SCIPrationalIsLE(
-   SCIP_Rational*        rat1,               /**< the first rational */
-   SCIP_Rational*        rat2                /**< the second rational */
+   SCIP_RATIONAL*        rat1,               /**< the first rational */
+   SCIP_RATIONAL*        rat2                /**< the second rational */
    )
 {
    assert(rat1 != nullptr && rat2 != nullptr);
@@ -1464,7 +1464,7 @@ SCIP_Bool SCIPrationalIsLE(
 
 /** check if the rational is greater than the double */
 SCIP_Bool SCIPrationalIsGTReal(
-   SCIP_Rational*        rat,                /**< the rational */
+   SCIP_RATIONAL*        rat,                /**< the rational */
    SCIP_Real             real                /**< the real */
    )
 {
@@ -1482,7 +1482,7 @@ SCIP_Bool SCIPrationalIsGTReal(
 
 /** check if the rational is greater or equal than the double */
 SCIP_Bool SCIPrationalIsGEReal(
-   SCIP_Rational*        rat,                /**< the rational */
+   SCIP_RATIONAL*        rat,                /**< the rational */
    SCIP_Real             real                /**< the real */
    )
 {
@@ -1500,7 +1500,7 @@ SCIP_Bool SCIPrationalIsGEReal(
 
 /** check if the rational is less than the double */
 SCIP_Bool SCIPrationalIsLTReal(
-   SCIP_Rational*        rat,                /**< the rational */
+   SCIP_RATIONAL*        rat,                /**< the rational */
    SCIP_Real             real                /**< the real */
    )
 {
@@ -1518,7 +1518,7 @@ SCIP_Bool SCIPrationalIsLTReal(
 
 /** check if the rational is less or equal than the double */
 SCIP_Bool SCIPrationalIsLEReal(
-   SCIP_Rational*        rat,                /**< the rational */
+   SCIP_RATIONAL*        rat,                /**< the rational */
    SCIP_Real             real                /**< the real */
    )
 {
@@ -1536,7 +1536,7 @@ SCIP_Bool SCIPrationalIsLEReal(
 
 /** check if the rational is zero */
 SCIP_Bool SCIPrationalIsZero(
-   SCIP_Rational*        rational            /**< the rational to check */
+   SCIP_RATIONAL*        rational            /**< the rational to check */
    )
 {
    assert(rational != nullptr);
@@ -1552,7 +1552,7 @@ SCIP_Bool SCIPrationalIsZero(
 
 /** check if the rational is positive */
 SCIP_Bool SCIPrationalIsPositive(
-   SCIP_Rational*        rational            /**< the rational to check */
+   SCIP_RATIONAL*        rational            /**< the rational to check */
    )
 {
    assert(rational != nullptr);
@@ -1562,7 +1562,7 @@ SCIP_Bool SCIPrationalIsPositive(
 
 /** check if the rational is negative */
 SCIP_Bool SCIPrationalIsNegative(
-   SCIP_Rational*        rational            /**< the rational to check */
+   SCIP_RATIONAL*        rational            /**< the rational to check */
    )
 {
    assert(rational != nullptr);
@@ -1572,7 +1572,7 @@ SCIP_Bool SCIPrationalIsNegative(
 
 /** check if the rational is positive infinity */
 SCIP_Bool SCIPrationalIsInfinity(
-   SCIP_Rational*        rational            /**< the rational to check */
+   SCIP_RATIONAL*        rational            /**< the rational to check */
    )
 {
    assert(rational != nullptr);
@@ -1582,7 +1582,7 @@ SCIP_Bool SCIPrationalIsInfinity(
 
 /** check if the rational is negative infinity */
 SCIP_Bool SCIPrationalIsNegInfinity(
-   SCIP_Rational*        rational            /**< the rational to check */
+   SCIP_RATIONAL*        rational            /**< the rational to check */
    )
 {
    assert(rational != nullptr);
@@ -1592,7 +1592,7 @@ SCIP_Bool SCIPrationalIsNegInfinity(
 
 /** check if the rational is negative infinity */
 SCIP_Bool SCIPrationalIsAbsInfinity(
-   SCIP_Rational*        rational            /**< the rational to check */
+   SCIP_RATIONAL*        rational            /**< the rational to check */
    )
 {
    assert(rational != nullptr);
@@ -1603,7 +1603,7 @@ SCIP_Bool SCIPrationalIsAbsInfinity(
 
 /** check if the rational is integral*/
 SCIP_Bool SCIPrationalIsIntegral(
-   SCIP_Rational*        rational            /**< the rational to check */
+   SCIP_RATIONAL*        rational            /**< the rational to check */
    )
 {
    assert(rational != nullptr);
@@ -1622,7 +1622,7 @@ SCIP_Bool SCIPrationalIsIntegral(
 
 /** check if rational is exactly representable as double */
 SCIP_Bool SCIPrationalIsFpRepresentable(
-   SCIP_Rational*        rational            /**< the rational to check */
+   SCIP_RATIONAL*        rational            /**< the rational to check */
    )
 {
    assert(rational != nullptr);
@@ -1655,7 +1655,7 @@ SCIP_Bool SCIPrationalIsFpRepresentable(
  *  @note If return value is equal to strlen, it means the string was truncated.
  */
 int SCIPrationalToString(
-   SCIP_Rational*        rational,           /**< the rational to print */
+   SCIP_RATIONAL*        rational,           /**< the rational to print */
    char*                 str,                /**< the string to save the rational in */
    int                   strlen              /**< maximal length that can be copied to str */
    )
@@ -1686,7 +1686,7 @@ int SCIPrationalToString(
 
 /** returns the strlen of a rational number */
 int SCIPrationalStrLen(
-   SCIP_Rational*        rational            /** rational to consider */
+   SCIP_RATIONAL*        rational            /** rational to consider */
    )
 {
    /* unknown */
@@ -1704,7 +1704,7 @@ int SCIPrationalStrLen(
 void SCIPrationalMessage(
    SCIP_MESSAGEHDLR*     msg,                /**< message handler */
    FILE*                 file,               /**< file pointer */
-   SCIP_Rational*        rational            /**< the rational to print */
+   SCIP_RATIONAL*        rational            /**< the rational to print */
    )
 {
    if( rational == NULL )
@@ -1725,7 +1725,7 @@ void SCIPrationalMessage(
 
 /** print a rational to command line (for debugging) */
 void SCIPrationalPrint(
-   SCIP_Rational*        rational            /**< the rational to print */
+   SCIP_RATIONAL*        rational            /**< the rational to print */
    )
 {
    if( rational == NULL )
@@ -1736,10 +1736,10 @@ void SCIPrationalPrint(
       std::cout << rational->val << std::flush;
 }
 
-/** print SCIP_Rational to output stream */
+/** print SCIP_RATIONAL to output stream */
 std::ostream& operator<<(
    std::ostream&         os,                 /**< output stream */
-   SCIP_Rational const & r                   /**< rational to print */
+   SCIP_RATIONAL const & r                   /**< rational to print */
    )
 {
    if( r.isinf )
@@ -1757,7 +1757,7 @@ void SCIPrationalVPrintf(
    va_list               ap                  /**< variable argument list */
    )
 {
-   SCIP_Rational* rat;
+   SCIP_RATIONAL* rat;
    char* sval;
    SCIP_Real dval;
    int ival;
@@ -1774,7 +1774,7 @@ void SCIPrationalVPrintf(
          switch( *++formatstr )
          {
          case 'q':
-            rat = va_arg(arguments, SCIP_Rational*);
+            rat = va_arg(arguments, SCIP_RATIONAL*);
             SCIPrationalPrint(rat);
             break;
          case 's':
@@ -1877,7 +1877,7 @@ void SCIPrationalPrintDebugMessage(
 
 /** returns the numerator of a rational as a long */
 SCIP_Longint SCIPrationalNumerator(
-   SCIP_Rational*        rational            /**< the rational */
+   SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
    long result;
@@ -1894,7 +1894,7 @@ SCIP_Longint SCIPrationalNumerator(
 
 /** returns the denominator of a rational as a long */
 SCIP_Longint SCIPrationalDenominator(
-   SCIP_Rational*        rational            /**< the rational */
+   SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
    long result;
@@ -1911,7 +1911,7 @@ SCIP_Longint SCIPrationalDenominator(
 
 /** compares denominator of a rational to a long */
 SCIP_Bool SCIPrationalDenominatorIsLE(
-   SCIP_Rational*        rational,           /**< the rational */
+   SCIP_RATIONAL*        rational,           /**< the rational */
    SCIP_Longint          val                 /**< long value to compare to */
    )
 {
@@ -1932,7 +1932,7 @@ SCIP_Bool SCIPrationalDenominatorIsLE(
 
 /** returns the numerator of a rational as a long */
 SCIP_Longint SCIPrationalNumerator(
-   SCIP_Rational*        rational            /**< the rational */
+   SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
    return rational->val.val;
@@ -1940,7 +1940,7 @@ SCIP_Longint SCIPrationalNumerator(
 
 /** returns the denominator of a rational as a long */
 SCIP_Longint SCIPrationalDenominator(
-   SCIP_Rational*        rational            /**< the rational */
+   SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
    return 1.0;
@@ -1948,7 +1948,7 @@ SCIP_Longint SCIPrationalDenominator(
 
 /** returns the denominator of a rational as a long */
 SCIP_Bool SCIPrationalDenominatorIsLE(
-   SCIP_Rational*        rational,           /**< the rational */
+   SCIP_RATIONAL*        rational,           /**< the rational */
    SCIP_Longint          val                 /**< long value to compare to */
    )
 {
@@ -1958,7 +1958,7 @@ SCIP_Bool SCIPrationalDenominatorIsLE(
 
 /** returns the sign of the rational (1 if positive, -1 if negative, 0 if zero) */
 int SCIPrationalGetSign(
-   const SCIP_Rational*  rational            /**< the rational */
+   const SCIP_RATIONAL*  rational            /**< the rational */
    )
 {
    return rational->val.sign();
@@ -1966,8 +1966,8 @@ int SCIPrationalGetSign(
 
 /** computes fractional part of a rational */
 void SCIPrationalGetFrac(
-   SCIP_Rational*        res,                /**< rational to save the frac */
-   SCIP_Rational*        src                 /**< src rational */
+   SCIP_RATIONAL*        res,                /**< rational to save the frac */
+   SCIP_RATIONAL*        src                 /**< src rational */
    )
 {
 #ifdef SCIP_WITH_BOOST
@@ -1994,7 +1994,7 @@ void SCIPrationalGetFrac(
 
 /** returns approximation of rational as SCIP_Real */
 SCIP_Real SCIPrationalGetReal(
-   SCIP_Rational*        rational            /**< the rational */
+   SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
    SCIP_Real retval = 0.0;
@@ -2019,7 +2019,7 @@ SCIP_Real SCIPrationalGetReal(
  *  @note Requires MPFR if rational is not fp-representable and roundmode is different from SCIP_R_ROUND_NEAREST.
  */
 SCIP_Real SCIPrationalRoundReal(
-   SCIP_Rational*        rational,           /**< the rational */
+   SCIP_RATIONAL*        rational,           /**< the rational */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
@@ -2067,8 +2067,8 @@ SCIP_Real SCIPrationalRoundReal(
 
 /** rounds a rational to an integer and saves it as a rational */
 void SCIPrationalRoundInteger(
-   SCIP_Rational*        res,                /**< the resulting rounded integer */
-   SCIP_Rational*        src,                /**< the rational to round */
+   SCIP_RATIONAL*        res,                /**< the resulting rounded integer */
+   SCIP_RATIONAL*        src,                /**< the rational to round */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
@@ -2115,7 +2115,7 @@ void SCIPrationalRoundInteger(
  */
 SCIP_Bool SCIPrationalRoundLong(
    SCIP_Longint*         res,                /**< the resulting rounded long int */
-   SCIP_Rational*        src,                /**< the rational to round */
+   SCIP_RATIONAL*        src,                /**< the rational to round */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
@@ -2215,8 +2215,8 @@ void chooseSemiconvLong(
  */
 static
 void SCIPrationalComputeApproximationLong(
-   SCIP_Rational*        res,                /**< the resulting rational */
-   SCIP_Rational*        src,                /**< the source rational */
+   SCIP_RATIONAL*        res,                /**< the resulting rational */
+   SCIP_RATIONAL*        src,                /**< the source rational */
    SCIP_Longint          maxdenom,           /**< the maximal denominator */
    int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
    )
@@ -2375,8 +2375,8 @@ void SCIPrationalComputeApproximationLong(
 
 /** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
 void SCIPrationalComputeApproximation(
-   SCIP_Rational*        res,                /**< the resulting rational */
-   SCIP_Rational*        src,                /**< the rational to approximate */
+   SCIP_RATIONAL*        res,                /**< the resulting rational */
+   SCIP_RATIONAL*        src,                /**< the rational to approximate */
    SCIP_Longint          maxdenom,           /**< maximal denominator */
    int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
    )
@@ -2640,7 +2640,7 @@ SCIP_RETCODE SCIPrationalarrayFree(
 void SCIPrationalarrayGetVal(
    SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic rational array */
    int                   idx,                /**< array index to get value for */
-   SCIP_Rational*        result              /**< store the result */
+   SCIP_RATIONAL*        result              /**< store the result */
    )
 {
    assert(rationalarray != nullptr);
@@ -2657,7 +2657,7 @@ void SCIPrationalarrayGetVal(
 SCIP_RETCODE SCIPrationalarraySetVal(
    SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic rational array */
    int                   idx,                /**< array index to set value for */
-   SCIP_Rational*        val                 /**< value to set array index to */
+   SCIP_RATIONAL*        val                 /**< value to set array index to */
    )
 {
    assert(rationalarray != nullptr);
@@ -2672,7 +2672,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
    if( idx < rationalarray->firstidx )
    {
       int ninserts = rationalarray->firstidx - idx;
-      SCIP_Rational r = {};
+      SCIP_RATIONAL r = {};
       rationalarray->vals.insert(rationalarray->vals.begin(), ninserts, r);
       rationalarray->firstidx = idx;
       rationalarray->vals[0] = *val;
@@ -2680,7 +2680,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
    else if( (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
    {
       int ninserts = idx - rationalarray->vals.size() - rationalarray->firstidx + 1;
-      SCIP_Rational r = {};
+      SCIP_RATIONAL r = {};
       (void) rationalarray->vals.insert(rationalarray->vals.end(), ninserts, r);
       rationalarray->vals[rationalarray->vals.size() - 1] = *val;
    }
@@ -2696,7 +2696,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
 SCIP_RETCODE SCIPrationalarrayIncVal(
    SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic rational array */
    int                   idx,                /**< array index to increase value for */
-   SCIP_Rational*        incval              /**< value to increase array index */
+   SCIP_RATIONAL*        incval              /**< value to increase array index */
    )
 {
    assert(incval != nullptr);

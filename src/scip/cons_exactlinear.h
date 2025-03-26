@@ -142,9 +142,9 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of nonzeros in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Rational**       vals,               /**< array with coefficients of constraint entries */
-   SCIP_Rational*        lhs,                /**< left hand side of constraint */
-   SCIP_Rational*        rhs,                /**< right hand side of constraint */
+   SCIP_RATIONAL**       vals,               /**< array with coefficients of constraint entries */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of constraint */
+   SCIP_RATIONAL*        rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -185,9 +185,9 @@ SCIP_RETCODE SCIPcreateConsBasicExactLinear(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of nonzeros in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Rational**       vals,               /**< array with coefficients of constraint entries */
-   SCIP_Rational*        lhs,                /**< left hand side of constraint */
-   SCIP_Rational*        rhs                 /**< right hand side of constraint */
+   SCIP_RATIONAL**       vals,               /**< array with coefficients of constraint entries */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of constraint */
+   SCIP_RATIONAL*        rhs                 /**< right hand side of constraint */
    );
 
 /** creates a linear constraint from an exact linear constraint by rounding values to floating-point and captures it */
@@ -227,7 +227,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var,                /**< variable of constraint entry */
-   SCIP_Rational*        val                 /**< coefficient of constraint entry */
+   SCIP_RATIONAL*        val                 /**< coefficient of constraint entry */
    );
 
 /** changes coefficient of variable in linear constraint; deletes the variable if coefficient is zero; adds variable if
@@ -242,7 +242,7 @@ SCIP_RETCODE SCIPchgCoefExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var,                /**< variable of constraint entry */
-   SCIP_Rational*        val                 /**< new coefficient of constraint entry */
+   SCIP_RATIONAL*        val                 /**< new coefficient of constraint entry */
    );
 
 /** deletes variable from linear constraint
@@ -260,14 +260,14 @@ SCIP_RETCODE SCIPdelCoefExactLinear(
 
 /** gets left hand side of linear constraint */
 SCIP_EXPORT
-SCIP_Rational* SCIPgetLhsExactLinear(
+SCIP_RATIONAL* SCIPgetLhsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets right hand side of linear constraint */
 SCIP_EXPORT
-SCIP_Rational* SCIPgetRhsExactLinear(
+SCIP_RATIONAL* SCIPgetRhsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
@@ -277,7 +277,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPchgLhsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Rational*        lhs                 /**< new left hand side */
+   SCIP_RATIONAL*        lhs                 /**< new left hand side */
    );
 
 /** changes right hand side of linear constraint */
@@ -285,7 +285,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPchgRhsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Rational*        rhs                 /**< new right hand side */
+   SCIP_RATIONAL*        rhs                 /**< new right hand side */
    );
 
 /** gets the number of variables in the linear constraint */
@@ -311,7 +311,7 @@ SCIP_INTERVAL* SCIPgetValsRealExactLinear(
 
 /** gets the array of coefficient values in the linear constraint; the user must not modify this array! */
 SCIP_EXPORT
-SCIP_Rational** SCIPgetValsExactLinear(
+SCIP_RATIONAL** SCIPgetValsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
@@ -325,7 +325,7 @@ SCIP_RETCODE SCIPgetActivityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
-   SCIP_Rational*        ret                 /**< pointer to store result */
+   SCIP_RATIONAL*        ret                 /**< pointer to store result */
    );
 
 /** gets the feasibility of the linear constraint in the given solution */
@@ -334,7 +334,7 @@ SCIP_RETCODE SCIPgetFeasibilityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
-   SCIP_Rational*        ret                 /**< pointer to store the result */
+   SCIP_RATIONAL*        ret                 /**< pointer to store the result */
    );
 
 /** gets the dual solution of the linear constraint in the current LP
@@ -345,7 +345,7 @@ SCIP_EXPORT
 void SCIPgetFpDualsolExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Rational*        ret                 /**< pointer to store the result */
+   SCIP_RATIONAL*        ret                 /**< pointer to store the result */
    );
 
 /** gets the dual Farkas value of the linear constraint in the current infeasible LP
@@ -356,7 +356,7 @@ SCIP_EXPORT
 void SCIPgetFpDualfarkasExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Rational*        ret                 /**< pointer to store the result */
+   SCIP_RATIONAL*        ret                 /**< pointer to store the result */
    );
 
 /** returns the linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;

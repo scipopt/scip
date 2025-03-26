@@ -48,7 +48,7 @@ extern "C" {
 struct SCIP_Prob
 {
    SCIP_Real             objoffset;          /**< objective offset from bound shifting and fixing (fixed vars result) */
-   SCIP_Rational*        objoffsetexact;     /**< exact objective offset from bound shifting and fixing (fixed vars result) */
+   SCIP_RATIONAL*        objoffsetexact;     /**< exact objective offset from bound shifting and fixing (fixed vars result) */
    SCIP_Real             objscale;           /**< scalar applied to objective function; external objective value is
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objlim;             /**< objective limit as external value (original problem space) */

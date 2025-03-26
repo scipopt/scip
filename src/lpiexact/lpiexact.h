@@ -139,18 +139,18 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_OBJSEN           objsen,             /**< objective sense */
    int                   ncols,              /**< number of columns */
-   SCIP_Rational**       obj,                /**< objective function values of columns */
-   SCIP_Rational**       lb,                 /**< lower bounds of columns */
-   SCIP_Rational**       ub,                 /**< upper bounds of columns */
+   SCIP_RATIONAL**       obj,                /**< objective function values of columns */
+   SCIP_RATIONAL**       lb,                 /**< lower bounds of columns */
+   SCIP_RATIONAL**       ub,                 /**< upper bounds of columns */
    char**                colnames,           /**< column names, or NULL */
    int                   nrows,              /**< number of rows */
-   SCIP_Rational**       lhs,                /**< left hand sides of rows */
-   SCIP_Rational**       rhs,                /**< right hand sides of rows */
+   SCIP_RATIONAL**       lhs,                /**< left hand sides of rows */
+   SCIP_RATIONAL**       rhs,                /**< right hand sides of rows */
    char**                rownames,           /**< row names, or NULL */
    int                   nnonz,              /**< number of nonzero elements in the constraint matrix */
    int*                  beg,                /**< start index of each column in ind- and val-array */
    int*                  ind,                /**< row indices of constraint matrix entries */
-   SCIP_Rational**       val                 /**< values of constraint matrix entries */
+   SCIP_RATIONAL**       val                 /**< values of constraint matrix entries */
    );
 
 /** adds columns to the LP */
@@ -158,14 +158,14 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactAddCols(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to be added */
-   SCIP_Rational**       obj,                /**< objective function values of new columns */
-   SCIP_Rational**       lb,                 /**< lower bounds of new columns */
-   SCIP_Rational**       ub,                 /**< upper bounds of new columns */
+   SCIP_RATIONAL**       obj,                /**< objective function values of new columns */
+   SCIP_RATIONAL**       lb,                 /**< lower bounds of new columns */
+   SCIP_RATIONAL**       ub,                 /**< upper bounds of new columns */
    char**                colnames,           /**< column names, or NULL */
    int                   nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    int*                  beg,                /**< start index of each column in ind- and val-array, or NULL if nnonz == 0 */
    int*                  ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
-   SCIP_Rational**       val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
+   SCIP_RATIONAL**       val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    );
 
 /** deletes all columns in the given range from LP */
@@ -190,13 +190,13 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactAddRows(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows to be added */
-   SCIP_Rational**       lhs,                /**< left hand sides of new rows */
-   SCIP_Rational**       rhs,                /**< right hand sides of new rows */
+   SCIP_RATIONAL**       lhs,                /**< left hand sides of new rows */
+   SCIP_RATIONAL**       rhs,                /**< right hand sides of new rows */
    char**                rownames,           /**< row names, or NULL */
    int                   nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    int*                  beg,                /**< start index of each row in ind- and val-array, or NULL if nnonz == 0 */
    int*                  ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
-   SCIP_Rational**       val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
+   SCIP_RATIONAL**       val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    );
 
 /** deletes all rows in the given range from LP */
@@ -228,8 +228,8 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
    int*                  ind,                /**< column indices */
-   SCIP_Rational**       lb,                 /**< values for the new lower bounds, or NULL */
-   SCIP_Rational**       ub                  /**< values for the new upper bounds, or NULL */
+   SCIP_RATIONAL**       lb,                 /**< values for the new lower bounds, or NULL */
+   SCIP_RATIONAL**       ub                  /**< values for the new upper bounds, or NULL */
    );
 
 /** changes left and right hand sides of rows */
@@ -238,8 +238,8 @@ SCIP_RETCODE SCIPlpiExactChgSides(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows to change sides for */
    int*                  ind,                /**< row indices */
-   SCIP_Rational**       lhs,                /**< new values for left hand sides */
-   SCIP_Rational**       rhs                 /**< new values for right hand sides */
+   SCIP_RATIONAL**       lhs,                /**< new values for left hand sides */
+   SCIP_RATIONAL**       rhs                 /**< new values for right hand sides */
    );
 
 /** changes a single coefficient */
@@ -248,7 +248,7 @@ SCIP_RETCODE SCIPlpiExactChgCoef(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   row,                /**< row number of coefficient to change */
    int                   col,                /**< column number of coefficient to change */
-   SCIP_Rational*        newval              /**< new value of coefficient */
+   SCIP_RATIONAL*        newval              /**< new value of coefficient */
    );
 
 /** changes the objective sense */
@@ -264,7 +264,7 @@ SCIP_RETCODE SCIPlpiExactChgObj(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
    int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Rational**       obj                 /**< new objective values for columns */
+   SCIP_RATIONAL**       obj                 /**< new objective values for columns */
    );
 
 /** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
@@ -272,7 +272,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactScaleRow(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   row,                /**< row number to scale */
-   SCIP_Rational*        scaleval            /**< scaling multiplier */
+   SCIP_RATIONAL*        scaleval            /**< scaling multiplier */
    );
 
 /** multiplies a column with a non-zero scalar; the objective value is multiplied with the scalar, and the bounds
@@ -282,7 +282,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactScaleCol(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   col,                /**< column number to scale */
-   SCIP_Rational*        scaleval            /**< scaling multiplier */
+   SCIP_RATIONAL*        scaleval            /**< scaling multiplier */
    );
 
 /**@} */
@@ -334,12 +334,12 @@ SCIP_RETCODE SCIPlpiExactGetCols(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get from LP */
    int                   lastcol,            /**< last column to get from LP */
-   SCIP_Rational**       lb,                 /**< buffer to store the lower bound vector, or NULL */
-   SCIP_Rational**       ub,                 /**< buffer to store the upper bound vector, or NULL */
+   SCIP_RATIONAL**       lb,                 /**< buffer to store the lower bound vector, or NULL */
+   SCIP_RATIONAL**       ub,                 /**< buffer to store the upper bound vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
    int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
-   SCIP_Rational**       val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   SCIP_RATIONAL**       val                 /**< buffer to store values of constraint matrix entries, or NULL */
    );
 
 /** gets rows from LP problem object; the arrays have to be large enough to store all values.
@@ -351,12 +351,12 @@ SCIP_RETCODE SCIPlpiExactGetRows(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get from LP */
    int                   lastrow,            /**< last row to get from LP */
-   SCIP_Rational**       lhs,                /**< buffer to store left hand side vector, or NULL */
-   SCIP_Rational**       rhs,                /**< buffer to store right hand side vector, or NULL */
+   SCIP_RATIONAL**       lhs,                /**< buffer to store left hand side vector, or NULL */
+   SCIP_RATIONAL**       rhs,                /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
    int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
-   SCIP_Rational**       val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   SCIP_RATIONAL**       val                 /**< buffer to store values of constraint matrix entries, or NULL */
    );
 
 /** gets column names */
@@ -389,7 +389,7 @@ SCIP_RETCODE SCIPlpiExactGetObj(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get objective coefficient for */
    int                   lastcol,            /**< last column to get objective coefficient for */
-   SCIP_Rational**       vals                /**< array to store objective coefficients */
+   SCIP_RATIONAL**       vals                /**< array to store objective coefficients */
    );
 
 /** gets current bounds from LP problem object */
@@ -398,8 +398,8 @@ SCIP_RETCODE SCIPlpiExactGetBounds(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get bounds for */
    int                   lastcol,            /**< last column to get bounds for */
-   SCIP_Rational**       lbs,                /**< array to store lower bound values, or NULL */
-   SCIP_Rational**       ubs                 /**< array to store upper bound values, or NULL */
+   SCIP_RATIONAL**       lbs,                /**< array to store lower bound values, or NULL */
+   SCIP_RATIONAL**       ubs                 /**< array to store upper bound values, or NULL */
    );
 
 /** gets current row sides from LP problem object */
@@ -408,8 +408,8 @@ SCIP_RETCODE SCIPlpiExactGetSides(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get sides for */
    int                   lastrow,            /**< last row to get sides for */
-   SCIP_Rational**       lhss,               /**< array to store left hand side values, or NULL */
-   SCIP_Rational**       rhss                /**< array to store right hand side values, or NULL */
+   SCIP_RATIONAL**       lhss,               /**< array to store left hand side values, or NULL */
+   SCIP_RATIONAL**       rhss                /**< array to store right hand side values, or NULL */
    );
 
 /** gets a single coefficient */
@@ -418,7 +418,7 @@ SCIP_RETCODE SCIPlpiExactGetCoef(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   row,                /**< row number of coefficient */
    int                   col,                /**< column number of coefficient */
-   SCIP_Rational*        val                 /**< pointer to store the value of the coefficient */
+   SCIP_RATIONAL*        val                 /**< pointer to store the value of the coefficient */
    );
 
 /**@} */
@@ -469,10 +469,10 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactStrongbranch(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   col,                /**< column to apply strong branching on */
-   const SCIP_Rational*  psol,               /**< current primal solution value of column */
+   const SCIP_RATIONAL*  psol,               /**< current primal solution value of column */
    int                   itlim,              /**< iteration limit for strong branchings */
-   SCIP_Rational*        down,               /**< stores dual bound after branching column down */
-   SCIP_Rational*        up,                 /**< stores dual bound after branching column up */
+   SCIP_RATIONAL*        down,               /**< stores dual bound after branching column down */
+   SCIP_RATIONAL*        up,                 /**< stores dual bound after branching column up */
    SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
@@ -630,32 +630,32 @@ SCIP_RETCODE SCIPlpiExactIgnoreInstability(
 SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactGetObjval(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_Rational*        objval              /**< stores the objective value */
+   SCIP_RATIONAL*        objval              /**< stores the objective value */
    );
 
 /** gets primal and dual solution vectors for feasible LPs */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactGetSol(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_Rational*        objval,             /**< stores the objective value, may be NULL if not needed */
-   SCIP_Rational**       primsol,            /**< primal solution vector, may be NULL if not needed */
-   SCIP_Rational**       dualsol,            /**< dual solution vector, may be NULL if not needed */
-   SCIP_Rational**       activity,           /**< row activity vector, may be NULL if not needed */
-   SCIP_Rational**       redcost             /**< reduced cost vector, may be NULL if not needed */
+   SCIP_RATIONAL*        objval,             /**< stores the objective value, may be NULL if not needed */
+   SCIP_RATIONAL**       primsol,            /**< primal solution vector, may be NULL if not needed */
+   SCIP_RATIONAL**       dualsol,            /**< dual solution vector, may be NULL if not needed */
+   SCIP_RATIONAL**       activity,           /**< row activity vector, may be NULL if not needed */
+   SCIP_RATIONAL**       redcost             /**< reduced cost vector, may be NULL if not needed */
    );
 
 /** gets primal ray for unbounded LPs */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactGetPrimalRay(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_Rational**       ray                 /**< primal ray */
+   SCIP_RATIONAL**       ray                 /**< primal ray */
    );
 
 /** gets dual farkas proof for infeasibility */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactGetDualfarkas(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_Rational**       dualfarkas          /**< dual farkas row multipliers */
+   SCIP_RATIONAL**       dualfarkas          /**< dual farkas row multipliers */
    );
 
 /** gets the number of LP iterations of the last solve call */
@@ -705,7 +705,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactGetBInvRow(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
-   SCIP_Rational**       coef,               /**< pointer to store the coefficients of the row */
+   SCIP_RATIONAL**       coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -720,7 +720,7 @@ SCIP_RETCODE SCIPlpiExactGetBInvCol(
                                               *   B^-1 column numbers to the row and column numbers of the LP!
                                               *   c must be between 0 and nrows-1, since the basis has the size
                                               *   nrows * nrows */
-   SCIP_Rational**       coef,               /**< pointer to store the coefficients of the column */
+   SCIP_RATIONAL**       coef,               /**< pointer to store the coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -731,8 +731,8 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactGetBInvARow(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
-   SCIP_Rational**       binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiExactGetBInvRow(), or NULL */
-   SCIP_Rational**       coef,               /**< vector to return coefficients */
+   SCIP_RATIONAL**       binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiExactGetBInvRow(), or NULL */
+   SCIP_RATIONAL**       coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -743,7 +743,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactGetBInvACol(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Rational**       coef,               /**< vector to return coefficients */
+   SCIP_RATIONAL**       coef,               /**< vector to return coefficients */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -828,7 +828,7 @@ SCIP_RETCODE SCIPlpiExactStateDualFeasible(
    SCIP_Real*            primalsol,          /**< approximate primal solution; or NULL to compute by exact LP solver */
    SCIP_Real*            dualsol,            /**< approximate dual solution; or NULL to compute by exact LP solver */
    SCIP_Bool*            result,             /**< pointer to store whether given LPi state is dual feasible */
-   SCIP_Rational**       dualobjval          /**< pointer to store dual objective value in case of dual feasibility */
+   SCIP_RATIONAL**       dualobjval          /**< pointer to store dual objective value in case of dual feasibility */
    );
 
 /**@} */
@@ -924,28 +924,28 @@ SCIP_RETCODE SCIPlpiExactSetRealpar(
 SCIP_EXPORT
 void SCIPlpiExactPosInfinity(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_Rational*        infval              /**< pointer to store positive infinity value of LP solver */
+   SCIP_RATIONAL*        infval              /**< pointer to store positive infinity value of LP solver */
    );
 
 /** checks if given value is treated as positive infinity in the LP solver */
 SCIP_EXPORT
 SCIP_Bool SCIPlpiExactIsPosInfinity(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_Rational*        val                 /**< given value */
+   SCIP_RATIONAL*        val                 /**< given value */
    );
 
 /** returns value treated as negative infinity in the LP solver */
 SCIP_EXPORT
 void SCIPlpiExactNegInfinity(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_Rational*        infval              /**< pointer to store negative infinity value of LP solver */
+   SCIP_RATIONAL*        infval              /**< pointer to store negative infinity value of LP solver */
    );
 
 /** checks if given value is treated as negative infinity in the LP solver */
 SCIP_EXPORT
 SCIP_Bool SCIPlpiExactIsNegInfinity(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_Rational*        val                 /**< given value */
+   SCIP_RATIONAL*        val                 /**< given value */
    );
 
 /** returns value treated as infinity in the LP solver */
@@ -1016,7 +1016,7 @@ SCIP_RETCODE SCIPlpiExactCreateFactor(
    int*                  cbeg,               /**< column indices of matrix */
    int*                  clen,               /**< column lengths of matrix */
    int*                  cindx,              /**< row index of entries */
-   SCIP_Rational*        ccoef               /**< coef values of matrix */
+   SCIP_RATIONAL*        ccoef               /**< coef values of matrix */
     );
 
 
@@ -1025,8 +1025,8 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactFactorSolve(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   dim,                /**< dimension of matrix */
-   SCIP_Rational*        sol,                /**< solution to system */
-   SCIP_Rational*        rhs                 /**< rhs of system */
+   SCIP_RATIONAL*        sol,                /**< solution to system */
+   SCIP_RATIONAL*        rhs                 /**< rhs of system */
    );
 /**@} */
 

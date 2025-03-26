@@ -94,7 +94,7 @@ struct SCIP_InferenceData
 struct SCIP_BoundChg
 {
    SCIP_Real             newbound;           /**< new value for bound */
-   SCIP_Rational*        newboundexact;      /**< new value for exact bound, or NULL if not needed */
+   SCIP_RATIONAL*        newboundexact;      /**< new value for exact bound, or NULL if not needed */
    union
    {
       SCIP_BRANCHINGDATA branchingdata;      /**< data for branching decisions */
@@ -181,8 +181,8 @@ struct SCIP_Dom
 /** exact domain of a variable */
 struct SCIP_DomExact
 {
-   SCIP_Rational*        lb;                 /**< exact lower bound of variables */
-   SCIP_Rational*        ub;                 /**< exact upper bound of variables */
+   SCIP_RATIONAL*        lb;                 /**< exact lower bound of variables */
+   SCIP_RATIONAL*        ub;                 /**< exact upper bound of variables */
    SCIP_Longint          lbcertificateidx;   /**< certificate index of lower bound (-1 if not set or no certificate active) */
    SCIP_Longint          ubcertificateidx;   /**< certificate index of upper bound (-1 if not set or no certificate active) */
 };
@@ -205,8 +205,8 @@ struct SCIP_Aggregate
 /** exact aggregation information: x = a*y + c */
 struct SCIP_AggregateExact
 {
-   SCIP_Rational*        scalar;             /**< multiplier a in aggregation */
-   SCIP_Rational*        constant;           /**< constant shift c in aggregation */
+   SCIP_RATIONAL*        scalar;             /**< multiplier a in aggregation */
+   SCIP_RATIONAL*        constant;           /**< constant shift c in aggregation */
 };
 
 /** multiple aggregation information: x = a_1*y_1 + ... + a_k*y_k + c */
@@ -222,8 +222,8 @@ struct SCIP_Multaggr
 /** multiple aggregation information: x = a_1*y_1 + ... + a_k*y_k + c */
 struct SCIP_MultaggrExact
 {
-   SCIP_Rational*        constant;           /**< constant shift c in multiple aggregation */
-   SCIP_Rational**       scalars;            /**< multipliers a in multiple aggregation */
+   SCIP_RATIONAL*        constant;           /**< constant shift c in multiple aggregation */
+   SCIP_RATIONAL**       scalars;            /**< multipliers a in multiple aggregation */
 };
 
 /** negation information: x' = c - x */
@@ -235,7 +235,7 @@ struct SCIP_Negate
 /** exact variable domains and further information */
 struct SCIP_VarDataExact
 {
-   SCIP_Rational*        obj;                /**< exact rational objective */
+   SCIP_RATIONAL*        obj;                /**< exact rational objective */
    SCIP_INTERVAL         objinterval;        /**< interval approximation of obj (for faster performance) */
    SCIP_DOMEXACT         locdom;             /**< exact local bounds */
    SCIP_DOMEXACT         glbdom;             /**< exact global bound */

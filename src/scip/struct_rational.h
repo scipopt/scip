@@ -54,7 +54,7 @@ struct SCIP_Rational
 /** rational array struct, essentially a std vector with all indices offset by firstidx*/
 struct SCIP_RationalArray
 {
-   std::vector<SCIP_Rational> vals;          /**< values of the array */
+   std::vector<SCIP_RATIONAL> vals;          /**< values of the array */
    int firstidx;                             /**< first used index */
 };
 

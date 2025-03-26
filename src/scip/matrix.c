@@ -105,9 +105,9 @@ static
 SCIP_RETCODE getActiveVariablesExact(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_VAR***           vars,               /**< vars array to get active variables for */
-   SCIP_Rational**       scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   SCIP_RATIONAL**       scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
    int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
-   SCIP_Rational*        constant            /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   SCIP_RATIONAL*        constant            /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c */
    )
 {
    int requiredsize;
@@ -261,10 +261,10 @@ SCIP_RETCODE addRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MATRIX*          matrix,             /**< constraint matrix */
    SCIP_VAR**            vars,               /**< variables of this row */
-   SCIP_Rational**       vals,               /**< coefficients of this row */
+   SCIP_RATIONAL**       vals,               /**< coefficients of this row */
    int                   nvars,              /**< number of variables of this row */
-   SCIP_Rational*        lhs,                /**< left hand side */
-   SCIP_Rational*        rhs,                /**< right hand side */
+   SCIP_RATIONAL*        lhs,                /**< left hand side */
+   SCIP_RATIONAL*        rhs,                /**< right hand side */
    int                   maxnnonzsmem,       /**< maximal number of fillable elements */
    SCIP_Bool*            rowadded            /**< flag indicating if constraint was added to matrix */
    )
@@ -458,19 +458,19 @@ SCIP_RETCODE addConstraintExact(
    SCIP*                 scip,               /**< current scip instance */
    SCIP_MATRIX*          matrix,             /**< constraint matrix */
    SCIP_VAR**            vars,               /**< variables of this constraint */
-   SCIP_Rational**       vals,               /**< variable coefficients of this constraint */
+   SCIP_RATIONAL**       vals,               /**< variable coefficients of this constraint */
    int                   nvars,              /**< number of variables */
-   SCIP_Rational*        lhs,                /**< left hand side */
-   SCIP_Rational*        rhs,                /**< right hand side */
+   SCIP_RATIONAL*        lhs,                /**< left hand side */
+   SCIP_RATIONAL*        rhs,                /**< right hand side */
    int                   maxnnonzsmem,       /**< maximal number of fillable elements */
    SCIP_Bool*            rowadded            /**< flag indicating of row was added to matrix */
    )
 {
    SCIP_VAR** activevars;
-   SCIP_Rational** activevals;
-   SCIP_Rational* activeconstant;
-   SCIP_Rational* tmplhs; /* need these due to the constant */
-   SCIP_Rational* tmprhs;
+   SCIP_RATIONAL** activevals;
+   SCIP_RATIONAL* activeconstant;
+   SCIP_RATIONAL* tmplhs; /* need these due to the constant */
+   SCIP_RATIONAL* tmprhs;
    int nactivevars;
    int v;
 
@@ -549,7 +549,7 @@ SCIP_RETCODE setColumnMajorFormat(
    int* rowpnt;
    int* rowend;
    SCIP_Real* valpnt;
-   SCIP_Rational* valpntrational;
+   SCIP_RATIONAL* valpntrational;
    int* fillidx;
 
    assert(scip != NULL);
@@ -1987,7 +1987,7 @@ SCIP_Real* SCIPmatrixGetRowValPtr(
 }
 
 /** get row based start pointer of values */
-SCIP_Rational** SCIPmatrixGetRowValPtrExact(
+SCIP_RATIONAL** SCIPmatrixGetRowValPtrExact(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
@@ -2069,7 +2069,7 @@ SCIP_Real SCIPmatrixGetRowRhs(
 }
 
 /** get left-hand-side of row */
-SCIP_Rational* SCIPmatrixGetRowLhsExact(
+SCIP_RATIONAL* SCIPmatrixGetRowLhsExact(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )
@@ -2081,7 +2081,7 @@ SCIP_Rational* SCIPmatrixGetRowLhsExact(
 }
 
 /** get right-hand-side of row */
-SCIP_Rational* SCIPmatrixGetRowRhsExact(
+SCIP_RATIONAL* SCIPmatrixGetRowRhsExact(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    )

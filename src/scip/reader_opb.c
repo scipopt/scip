@@ -1289,7 +1289,7 @@ SCIP_RETCODE setObjective(
 
          if( SCIPisExact(scip) )
          {
-            SCIP_Rational* obj;
+            SCIP_RATIONAL* obj;
 
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &obj) );
 
@@ -1583,9 +1583,9 @@ SCIP_RETCODE readConstraints(
       }
       else
       {
-         SCIP_Rational** lincoefsrat;
-         SCIP_Rational* lhsrat;
-         SCIP_Rational* rhsrat;
+         SCIP_RATIONAL** lincoefsrat;
+         SCIP_RATIONAL* lhsrat;
+         SCIP_RATIONAL* rhsrat;
 
          SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &lincoefsrat, nlincoefs) );
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhsrat) );
@@ -1848,9 +1848,9 @@ SCIP_RETCODE readOPBFile(
       }
       else
       {
-         SCIP_Rational** topcostsrat;
-         SCIP_Rational* lhs;
-         SCIP_Rational* rhs;
+         SCIP_RATIONAL** topcostsrat;
+         SCIP_RATIONAL* lhs;
+         SCIP_RATIONAL* rhs;
 
          SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars) );
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );

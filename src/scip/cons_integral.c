@@ -67,7 +67,7 @@ SCIP_RETCODE checkIntegralityExact(
    SCIP_RESULT*          result              /**< pointer to store the result of the lp enforcement call */
    )
 {
-   SCIP_Rational* solval;
+   SCIP_RATIONAL* solval;
    SCIP_Bool integral;
    SCIP_VAR** vars;
    int nintegers;

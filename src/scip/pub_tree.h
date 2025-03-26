@@ -170,7 +170,7 @@ SCIP_Real SCIPnodeGetLowerbound(
 
 /** gets the rational lower bound of the node */
 SCIP_EXPORT
-SCIP_Rational* SCIPnodeGetLowerboundExact(
+SCIP_RATIONAL* SCIPnodeGetLowerboundExact(
    SCIP_NODE*            node                /**< node */
    );
 

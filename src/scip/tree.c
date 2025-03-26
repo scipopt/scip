@@ -1778,7 +1778,7 @@ SCIP_RETCODE treeAddPendingBdchg(
    SCIP_NODE*            node,               /**< node to add bound change to */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
    SCIP_Real             newbound,           /**< new value for bound */
-   SCIP_Rational*        newboundexact,      /**< new exact bound, or NULL if not needed */
+   SCIP_RATIONAL*        newboundexact,      /**< new exact bound, or NULL if not needed */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
@@ -1911,7 +1911,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    }
    if( set->exact_enabled && useglobal )
    {
-      SCIP_Rational* newboundex;
+      SCIP_RATIONAL* newboundex;
 
       SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &newboundex) );
 
@@ -2121,7 +2121,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       {
          /* we change the exact local bound here temporarily such that the correct pseudo solution gets printed to the
             certificate */
-         SCIP_Rational* bound;
+         SCIP_RATIONAL* bound;
          bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
          SCIPrationalSetReal(bound, newbound);
          SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact,
@@ -2194,7 +2194,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
-   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
@@ -2204,9 +2204,9 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
 {
    SCIP_VAR* infervar;
    SCIP_BOUNDTYPE inferboundtype;
-   SCIP_Rational* oldlb;
-   SCIP_Rational* oldub;
-   SCIP_Rational* oldbound;
+   SCIP_RATIONAL* oldlb;
+   SCIP_RATIONAL* oldub;
+   SCIP_RATIONAL* oldbound;
    SCIP_Real newboundreal;
    SCIP_Real oldboundreal;
    SCIP_Bool useglobal;
@@ -2433,7 +2433,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       {
          /* we change the exact local bound here temporarily such that the correct pseudo solution gets printed to the
             certificate */
-         SCIP_Rational* bound;
+         SCIP_RATIONAL* bound;
          bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
          SCIPrationalSetRational(bound, newbound);
          SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lpexact, node, set, transprob,
@@ -2533,7 +2533,7 @@ SCIP_RETCODE SCIPnodeAddBoundchgExact(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
-   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
    SCIP_Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    )
@@ -2862,7 +2862,7 @@ void SCIPnodeUpdateExactLowerbound(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_Rational*        newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   SCIP_RATIONAL*        newbound            /**< new lower bound for the node (if it's larger than the old one) */
    )
 {
    assert(node != NULL);
@@ -2910,7 +2910,7 @@ SCIP_RETCODE SCIPnodeUpdateExactLowerboundLP(
    SCIP_LP*              lp                  /**< LP data */
    )
 {
-   SCIP_Rational* lpobjval;
+   SCIP_RATIONAL* lpobjval;
 
    assert(set != NULL);
    assert(lp->hasprovedbound);
@@ -8303,7 +8303,7 @@ SCIP_Real SCIPnodeGetLowerbound(
 }
 
 /** gets the lower bound of the node */
-SCIP_Rational* SCIPnodeGetLowerboundExact(
+SCIP_RATIONAL* SCIPnodeGetLowerboundExact(
    SCIP_NODE*            node                /**< node */
    )
 {

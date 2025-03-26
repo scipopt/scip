@@ -101,8 +101,8 @@ extern "C" {
  */
 struct SCIP_ColExactSolVals
 {
-   SCIP_Rational*        primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
-   SCIP_Rational*        redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
+   SCIP_RATIONAL*        primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
+   SCIP_RATIONAL*        redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
    unsigned int          basisstatus:2;      /**< basis status of column in last LP solution, invalid for non-LP columns */
 };
 
@@ -113,8 +113,8 @@ struct SCIP_ColExactSolVals
  */
 struct SCIP_RowExactSolVals
 {
-   SCIP_Rational*        dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
-   SCIP_Rational*        activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
+   SCIP_RATIONAL*        dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
+   SCIP_RATIONAL*        activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
    unsigned int          basisstatus:2;      /**< basis status of row in last LP solution, invalid for non-LP rows */
 };
 
@@ -125,7 +125,7 @@ struct SCIP_RowExactSolVals
 struct SCIP_LpExactSolVals
 {
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
-   SCIP_Rational*        lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
+   SCIP_RATIONAL*        lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
    SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
    SCIP_Bool             primalchecked;      /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
@@ -145,17 +145,17 @@ struct SCIP_ColExact
 {
    SCIP_COL*             fpcol;              /**< the floating point column corresponding to this exact column */
    SCIP_ROWEXACT**       rows;               /**< the exact rows corresponding the this exact column */
-   SCIP_Rational*        obj;                /**< current objective value of column in LP (might be changed in diving or probing) */
-   SCIP_Rational*        lb;                 /**< current lower bound of column in LP */
-   SCIP_Rational*        ub;                 /**< current upper bound of column in LP */
-   SCIP_Rational*        flushedobj;         /**< objective value of column already flushed to the LP solver */
-   SCIP_Rational*        flushedlb;          /**< lower bound of column already flushed to the LP solver */
-   SCIP_Rational*        flushedub;          /**< upper bound of column already flushed to the LP solver */
-   SCIP_Rational*        primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
-   SCIP_Rational*        redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
-   SCIP_Rational*        farkascoef;         /**< coefficient in dual Farkas infeasibility proof (== dualfarkas^T A_c) */
+   SCIP_RATIONAL*        obj;                /**< current objective value of column in LP (might be changed in diving or probing) */
+   SCIP_RATIONAL*        lb;                 /**< current lower bound of column in LP */
+   SCIP_RATIONAL*        ub;                 /**< current upper bound of column in LP */
+   SCIP_RATIONAL*        flushedobj;         /**< objective value of column already flushed to the LP solver */
+   SCIP_RATIONAL*        flushedlb;          /**< lower bound of column already flushed to the LP solver */
+   SCIP_RATIONAL*        flushedub;          /**< upper bound of column already flushed to the LP solver */
+   SCIP_RATIONAL*        primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
+   SCIP_RATIONAL*        redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
+   SCIP_RATIONAL*        farkascoef;         /**< coefficient in dual Farkas infeasibility proof (== dualfarkas^T A_c) */
    SCIP_VAR*             var;                /**< variable, this column represents; there cannot be a column without variable */
-   SCIP_Rational**       vals;               /**< coefficients of column entries */
+   SCIP_RATIONAL**       vals;               /**< coefficients of column entries */
    SCIP_Longint          validredcostlp;     /**< LP number for which reduced cost value is valid */
    SCIP_Longint          validfarkaslp;      /**< LP number for which Farkas coefficient is valid */
    SCIP_COLEXACTSOLVALS* storedsolvals;      /**< values stored before entering diving or probing mode */
@@ -187,20 +187,20 @@ struct SCIP_RowExact
 {
    SCIP_ROW*             fprow;              /**< pointer to the corresponding row in the fp lp */
    SCIP_ROW*             fprowrhs;           /**< if two rows are needed to make a relaxation of this row, this saves the rhs-part */
-   SCIP_Rational*        constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
-   SCIP_Rational*        lhs;                /**< left hand side of row */
-   SCIP_Rational*        rhs;                /**< right hand side of row */
+   SCIP_RATIONAL*        constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
+   SCIP_RATIONAL*        lhs;                /**< left hand side of row */
+   SCIP_RATIONAL*        rhs;                /**< right hand side of row */
    SCIP_Real             lhsreal;            /**< fp relaxation of lhsreal */
    SCIP_Real             rhsreal;            /**< fp relaxation of rhsreal */
    SCIP_INTERVAL         constantreal;       /**< fp approximation of constant */
-   SCIP_Rational*        flushedlhs;         /**< left hand side minus constant of row already flushed to the LP solver */
-   SCIP_Rational*        flushedrhs;         /**< right hand side minus constant of row already flushed to the LP solver */
-   SCIP_Rational*        objprod;            /**< scalar product of row vector with objective function */
-   SCIP_Rational*        dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
-   SCIP_Rational*        activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
-   SCIP_Rational*        dualfarkas;         /**< multiplier value in dual Farkas infeasibility proof */
-   SCIP_Rational*        pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
-   SCIP_Rational**       vals;               /**< coefficients of row entries */
+   SCIP_RATIONAL*        flushedlhs;         /**< left hand side minus constant of row already flushed to the LP solver */
+   SCIP_RATIONAL*        flushedrhs;         /**< right hand side minus constant of row already flushed to the LP solver */
+   SCIP_RATIONAL*        objprod;            /**< scalar product of row vector with objective function */
+   SCIP_RATIONAL*        dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
+   SCIP_RATIONAL*        activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
+   SCIP_RATIONAL*        dualfarkas;         /**< multiplier value in dual Farkas infeasibility proof */
+   SCIP_RATIONAL*        pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
+   SCIP_RATIONAL**       vals;               /**< coefficients of row entries */
    SCIP_INTERVAL*        valsinterval;       /**< interval-array of coefficients rounded up and down, respectively */
    SCIP_COLEXACT**       cols;               /**< columns of row entries, that may have a nonzero primal solution value */
    SCIP_ROWEXACTSOLVALS* storedsolvals;      /**< values stored before entering diving or probing mode */
@@ -235,16 +235,16 @@ struct SCIP_ProjShiftData
    SCIP_LPIEXACT*        lpiexact;           /**< exact LP solved for computing interior ray and point */
    int*                  dvarmap;            /**< mapping between variables in lpiexact and the original problem */
    int                   ndvarmap;           /**< length of dvarmap array */
-   SCIP_Rational**       interiorpoint;      /**< stores S-interior point for root node dual problem */
-   SCIP_Rational**       interiorray;        /**< stores S-interior ray for root node dual problem */
-   SCIP_Rational**       violation;          /**< needed on every iteration, so only construct once and possibly resize */
-   SCIP_Rational**       correction;         /**< needed on every iteration, so only construct once and possibly resize */
+   SCIP_RATIONAL**       interiorpoint;      /**< stores S-interior point for root node dual problem */
+   SCIP_RATIONAL**       interiorray;        /**< stores S-interior ray for root node dual problem */
+   SCIP_RATIONAL**       violation;          /**< needed on every iteration, so only construct once and possibly resize */
+   SCIP_RATIONAL**       correction;         /**< needed on every iteration, so only construct once and possibly resize */
    int*                  includedrows;       /**< 1 if constraints (or vars) dual variable is included in original S-interior point/ray */
    int*                  projshiftbasis;     /**< mapping for basis used in factorization (maps [1,...,|includedrows|] -> 2*nrows+2*ncols) */
 #if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
    qsnum_factor_work*    rectfactor;         /**< stores factorized matrix for project-and-shift */
 #endif
-   SCIP_Rational*        commonslack;        /**< slack by which S-interior point/ray satisfies inequalities */
+   SCIP_RATIONAL*        commonslack;        /**< slack by which S-interior point/ray satisfies inequalities */
    int                   projshiftbasisdim;  /**< length of projshiftbasis */
    int                   nextendedrows;      /**< dimension of S-interior point/ray = 2*(ncols+nrows) */
    int                   violationsize;      /**< size of violation array */
@@ -263,14 +263,14 @@ struct SCIP_LpExact
 {
    SCIP_LP*              fplp;               /**< pointer to the floating point lp */
    SCIP_PROJSHIFTDATA*   projshiftdata;      /**< data stored for usage in project+shift, NULL if ps not used */
-   SCIP_Rational*        lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
-   SCIP_Rational*        looseobjval;        /**< current solution value of all loose variables set to their best bounds,
+   SCIP_RATIONAL*        lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
+   SCIP_RATIONAL*        looseobjval;        /**< current solution value of all loose variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */
-   SCIP_Rational*        glbpseudoobjval;    /**< global pseudo solution value with all variables set to their best global bounds,
+   SCIP_RATIONAL*        glbpseudoobjval;    /**< global pseudo solution value with all variables set to their best global bounds,
                                               *   ignoring variables, with infinite best bound */
-   SCIP_Rational*        pseudoobjval;       /**< current pseudo solution value with all variables set to their best bounds,
+   SCIP_RATIONAL*        pseudoobjval;       /**< current pseudo solution value with all variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */
-   SCIP_Rational**       divechgsides;       /**< stores the lhs/rhs changed in the current diving */
+   SCIP_RATIONAL**       divechgsides;       /**< stores the lhs/rhs changed in the current diving */
    SCIP_SIDETYPE*        divechgsidetypes;   /**< stores the side type of the changes done in the current diving */
    SCIP_ROWEXACT**       divechgrows;        /**< stores the rows changed in the current diving */
    SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */

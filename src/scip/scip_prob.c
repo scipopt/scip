@@ -1352,7 +1352,7 @@ SCIP_RETCODE SCIPaddOrigObjoffset(
  */
 SCIP_RETCODE SCIPaddOrigObjoffsetExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        addval              /**< value to add to objective offset */
+   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddOrigObjoffsetExact", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -1406,7 +1406,7 @@ SCIP_Real SCIPgetOrigObjoffset(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-SCIP_Rational* SCIPgetOrigObjoffsetExact(
+SCIP_RATIONAL* SCIPgetOrigObjoffsetExact(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {

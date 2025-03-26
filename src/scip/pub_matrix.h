@@ -129,7 +129,7 @@ SCIP_Real* SCIPmatrixGetRowValPtr(
 
 /** get row based start pointer of values */
 SCIP_EXPORT
-SCIP_Rational** SCIPmatrixGetRowValPtrExact(
+SCIP_RATIONAL** SCIPmatrixGetRowValPtrExact(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
@@ -177,14 +177,14 @@ SCIP_Real SCIPmatrixGetRowRhs(
 
 /** get left-hand-side of row */
 SCIP_EXPORT
-SCIP_Rational* SCIPmatrixGetRowLhsExact(
+SCIP_RATIONAL* SCIPmatrixGetRowLhsExact(
    SCIP_MATRIX*          matrix,             /**< matrix instace */
    int                   row                 /**< row index */
    );
 
 /** get right-hand-side of row */
 SCIP_EXPORT
-SCIP_Rational* SCIPmatrixGetRowRhsExact(
+SCIP_RATIONAL* SCIPmatrixGetRowRhsExact(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );

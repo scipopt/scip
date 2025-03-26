@@ -207,7 +207,7 @@ using namespace papilo;
 static
 void setRational(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        res,                /**< pointer to SCIP' rational to set */
+   SCIP_RATIONAL*        res,                /**< pointer to SCIP' rational to set */
    papilo::Rational      papiloval           /**< rational value from PaPILO */
    )
 {
@@ -242,8 +242,8 @@ Problem<papilo::Rational> buildProblemRational(
    for( int i = 0; i != ncols; ++i )
    {
       SCIP_VAR* var = SCIPmatrixGetVar(matrix, i);
-      SCIP_Rational* lb = SCIPvarGetLbGlobalExact(var);
-      SCIP_Rational* ub = SCIPvarGetUbGlobalExact(var);
+      SCIP_RATIONAL* lb = SCIPvarGetLbGlobalExact(var);
+      SCIP_RATIONAL* ub = SCIPvarGetUbGlobalExact(var);
       builder.setColLb(i, lb->val);
       builder.setColUb(i, ub->val);
       builder.setColLbInf(i, SCIPrationalIsNegInfinity(lb));
@@ -258,15 +258,15 @@ Problem<papilo::Rational> buildProblemRational(
    for( int i = 0; i != nrows; ++i )
    {
       int* rowcols = SCIPmatrixGetRowIdxPtr(matrix, i);
-      SCIP_Rational** rowvalsscip = SCIPmatrixGetRowValPtrExact(matrix, i);
+      SCIP_RATIONAL** rowvalsscip = SCIPmatrixGetRowValPtrExact(matrix, i);
       Vec<papilo::Rational> rowvals;
       int rowlen = SCIPmatrixGetRowNNonzs(matrix, i);
       for( int j = 0; j < rowlen; ++j )
          rowvals.emplace_back(rowvalsscip[j]->val);
       builder.addRowEntries(i, rowlen, rowcols, rowvals.data());
 
-      SCIP_Rational* lhs = SCIPmatrixGetRowLhsExact(matrix, i);
-      SCIP_Rational* rhs = SCIPmatrixGetRowRhsExact(matrix, i);
+      SCIP_RATIONAL* lhs = SCIPmatrixGetRowLhsExact(matrix, i);
+      SCIP_RATIONAL* rhs = SCIPmatrixGetRowRhsExact(matrix, i);
       builder.setRowLhs(i, lhs->val);
       builder.setRowRhs(i, rhs->val);
       builder.setRowLhsInf(i, SCIPrationalIsNegInfinity(lhs));
@@ -626,9 +626,9 @@ SCIP_RETCODE performRationalPresolving(
          /* create and add new constraint with name of old constraint */
          SCIP_CONS* oldcons = SCIPmatrixGetCons(matrix, res.postsolve.origrow_mapping[i]);
          SCIP_CONS* cons;
-         SCIP_Rational** tmpvals;
-         SCIP_Rational* tmplhs;
-         SCIP_Rational* tmprhs;
+         SCIP_RATIONAL** tmpvals;
+         SCIP_RATIONAL* tmplhs;
+         SCIP_RATIONAL* tmprhs;
 
          SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &tmpvals, rowlen) );
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmprhs) );
@@ -669,7 +669,7 @@ SCIP_RETCODE performRationalPresolving(
       {
       case ReductionType::kFixedCol:
       {
-         SCIP_Rational* tmpval;
+         SCIP_RATIONAL* tmpval;
          SCIP_Bool infeas;
          SCIP_Bool fixed;
          int col = res.postsolve.indices[first];
@@ -688,8 +688,8 @@ SCIP_RETCODE performRationalPresolving(
           */
          if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_AGGREGATED )
          {
-            SCIP_Rational* aggregatedScalar;
-            SCIP_Rational* aggregatedConst;
+            SCIP_RATIONAL* aggregatedScalar;
+            SCIP_RATIONAL* aggregatedConst;
 
             aggregatedScalar = SCIPvarGetAggrScalarExact(var);
             aggregatedConst = SCIPvarGetAggrConstantExact(var);
@@ -771,7 +771,7 @@ SCIP_RETCODE performRationalPresolving(
          SCIP_Bool infeas;
          SCIP_Bool aggregated;
          SCIP_Bool redundant = FALSE;
-         SCIP_Rational* constant;
+         SCIP_RATIONAL* constant;
          if( rowlen == 2 )
          {
             SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[startRowCoefficients]);
@@ -779,9 +779,9 @@ SCIP_RETCODE performRationalPresolving(
             papilo::Rational scalarx = res.postsolve.values[startRowCoefficients];
             papilo::Rational scalary = res.postsolve.values[startRowCoefficients + 1];
 
-            SCIP_Rational* tmpscalarx;
-            SCIP_Rational* tmpscalary;
-            SCIP_Rational* tmpside;
+            SCIP_RATIONAL* tmpscalarx;
+            SCIP_RATIONAL* tmpscalary;
+            SCIP_RATIONAL* tmpside;
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constant) );
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpscalarx) );
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpscalary) );
@@ -811,9 +811,9 @@ SCIP_RETCODE performRationalPresolving(
          }
          else
          {
-            SCIP_Rational* colCoef;
-            SCIP_Rational* updatedSide;
-            SCIP_Rational** tmpvals;
+            SCIP_RATIONAL* colCoef;
+            SCIP_RATIONAL* updatedSide;
+            SCIP_RATIONAL** tmpvals;
             int c = 0;
 
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constant) );
@@ -868,8 +868,8 @@ SCIP_RETCODE performRationalPresolving(
          else if( constraintsReplaced && !redundant )
          {
             /* if the constraints where replaced, we need to add the failed substitution as an equality to SCIP */
-            SCIP_Rational** tmpvals;
-            SCIP_Rational* tmpside;
+            SCIP_RATIONAL** tmpvals;
+            SCIP_RATIONAL* tmpside;
 
             SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &tmpvals, rowlen) );
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpside) );
@@ -916,7 +916,7 @@ SCIP_RETCODE performRationalPresolving(
             continue;
          SCIP_Bool infeas;
          SCIP_Bool fixed;
-         SCIP_Rational* value;
+         SCIP_RATIONAL* value;
 
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &value) );
          SCIPrationalSetInfinity(value);
@@ -967,7 +967,7 @@ SCIP_RETCODE performRationalPresolving(
    if( *result != SCIP_CUTOFF )
    {
       VariableDomains<papilo::Rational>& varDomains = problem.getVariableDomains();
-      SCIP_Rational* varbound;
+      SCIP_RATIONAL* varbound;
       SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &varbound) );
       varbound->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 

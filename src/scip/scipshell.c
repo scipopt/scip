@@ -296,8 +296,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
    SCIP_Bool onlyversion;
    SCIP_Real primalreference = SCIP_UNKNOWN;
    SCIP_Real dualreference = SCIP_UNKNOWN;
-   SCIP_Rational* primalreferencerational = NULL;
-   SCIP_Rational* dualreferencerational = NULL;
+   SCIP_RATIONAL* primalreferencerational = NULL;
+   SCIP_RATIONAL* dualreferencerational = NULL;
    const char* dualrefstring;
    const char* primalrefstring;
    int i;

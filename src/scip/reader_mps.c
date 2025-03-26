@@ -1004,8 +1004,8 @@ SCIP_RETCODE readRowsExact(
       }
       else
       {
-         SCIP_Rational* lhs;
-         SCIP_Rational* rhs;
+         SCIP_RATIONAL* lhs;
+         SCIP_RATIONAL* rhs;
          SCIP_CONS* cons;
          SCIP_Bool initial;
          SCIP_Bool separate;
@@ -1215,7 +1215,7 @@ SCIP_RETCODE readColsExact(
    char          colname[MPS_MAX_NAMELEN] = { '\0' };
    SCIP_CONS*    cons;
    SCIP_VAR*     var;
-   SCIP_Rational* val;
+   SCIP_RATIONAL* val;
    SCIP_Bool     usevartable;
 
    SCIPdebugMsg(scip, "read columns\n");
@@ -1502,9 +1502,9 @@ SCIP_RETCODE readRhsExact(
    char        rhsname[MPS_MAX_NAMELEN] = { '\0' };
    SCIP_CONS*  cons;
    SCIP_Real   val;
-   SCIP_Rational*   lhs;
-   SCIP_Rational*   rhs;
-   SCIP_Rational*   valexact;
+   SCIP_RATIONAL*   lhs;
+   SCIP_RATIONAL*   rhs;
+   SCIP_RATIONAL*   valexact;
 
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &valexact) );
 
@@ -1796,9 +1796,9 @@ SCIP_RETCODE readRangesExact(
 {
    char        rngname[MPS_MAX_NAMELEN] = { '\0' };
    SCIP_CONS*  cons;
-   SCIP_Rational*   lhs;
-   SCIP_Rational*   rhs;
-   SCIP_Rational*   val;
+   SCIP_RATIONAL*   lhs;
+   SCIP_RATIONAL*   rhs;
+   SCIP_RATIONAL*   val;
 
    SCIPdebugMsg(scip, "read ranges\n");
 
@@ -2329,7 +2329,7 @@ SCIP_RETCODE readBoundsExact(
    char        bndname[MPS_MAX_NAMELEN] = { '\0' };
    SCIP_VAR*   var;
    SCIP_RETCODE retcode;
-   SCIP_Rational*   val;
+   SCIP_RATIONAL*   val;
    SCIP_Bool   shifted;
 
    SCIP_VAR** semicont;
@@ -2478,7 +2478,7 @@ SCIP_RETCODE readBoundsExact(
             && ( mpsinputField1(mpsi)[0] != 'F' || mpsinputField1(mpsi)[1] != 'X'
             || SCIPrationalIsNegative(val) || SCIPrationalIsGTReal(val, 1.0) ) )
          {
-            SCIP_Rational* tmp;
+            SCIP_RATIONAL* tmp;
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
             assert(!infeasible);
 

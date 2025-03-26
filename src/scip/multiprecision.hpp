@@ -28,7 +28,7 @@ namespace scip
 
 namespace scip
 {
-   using sparsevec = std::vector<SCIP_Rational>;
+   using sparsevec = std::vector<SCIP_RATIONAL>;
 }
 #else
 namespace scip
@@ -79,7 +79,7 @@ namespace scip
       friend bool operator==(const Rational& r, const Rational& d){return true;};
    };
    using Integer = Rational;
-   using sparsevec = std::vector<SCIP_Rational>;
+   using sparsevec = std::vector<SCIP_RATIONAL>;
    Rational& abs(Rational& r){return r;}
    Rational& max(Rational& r1, Rational& r2){return r1;}
    Rational& min(Rational& r1, Rational& r2){return r1;}

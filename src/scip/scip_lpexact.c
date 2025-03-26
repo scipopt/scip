@@ -132,7 +132,7 @@ SCIP_RETCODE SCIPreleaseRowExact(
 SCIP_RETCODE SCIPchgRowExactLhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        lhs                 /**< new left hand side */
+   SCIP_RATIONAL*        lhs                 /**< new left hand side */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPchgRowExactLhs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -156,7 +156,7 @@ SCIP_RETCODE SCIPchgRowExactLhs(
 SCIP_RETCODE SCIPchgRowExactRhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        rhs                 /**< new right hand side */
+   SCIP_RATIONAL*        rhs                 /**< new right hand side */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPchgRowExactRhs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -185,7 +185,7 @@ SCIP_RETCODE SCIPaddVarsToRowExact(
    SCIP_ROWEXACT*        row,                /**< LP row */
    int                   nvars,              /**< number of variables to add to the row */
    SCIP_VAR**            vars,               /**< problem variables to add */
-   SCIP_Rational**       vals                /**< values of coefficients */
+   SCIP_RATIONAL**       vals                /**< values of coefficients */
    )
 {
    int v;
@@ -231,8 +231,8 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP_ROWEXACT**       rowexact,           /**< pointer to row */
    SCIP_ROW*             fprow,              /**< corresponding fp-row */
    SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
-   SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs,                /**< right hand side of row */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of row */
+   SCIP_RATIONAL*        rhs,                /**< right hand side of row */
    SCIP_Bool             isfprelaxable       /**< is it possible to create an fp relaxation of this row? */
    )
 {
@@ -260,9 +260,9 @@ SCIP_RETCODE SCIPcreateRowExact(
    SCIP_ROW*             fprow,              /**< corresponding fp approximation/relaxation */
    int                   len,                /**< number of nonzeros in the row */
    SCIP_COLEXACT**       cols,               /**< array with columns of row entries */
-   SCIP_Rational**       vals,               /**< array with coefficients of row entries */
-   SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs,                /**< right hand side of row */
+   SCIP_RATIONAL**       vals,               /**< array with coefficients of row entries */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of row */
+   SCIP_RATIONAL*        rhs,                /**< right hand side of row */
    SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    )
 {
@@ -337,7 +337,7 @@ SCIP_RETCODE SCIPgetRowSolFeasibilityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolFeasibilityExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -370,7 +370,7 @@ SCIP_RETCODE SCIPgetRowSolActivityExact(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             useexact,           /**< true if sol should be considered instead of sol */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolActivityExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -447,7 +447,7 @@ SCIP_RETCODE SCIPprintRowExact(
  */
 void SCIPgetLPExactObjval(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLPExactObjval", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -667,7 +667,7 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
                                               *   limit was reached (or NULL, if not needed) */
    )
 {
-   SCIP_Rational* objval;
+   SCIP_RATIONAL* objval;
 
    assert(scip != NULL);
 
@@ -719,7 +719,7 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
 SCIP_RETCODE SCIPchgVarLbExactDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound            /**< new value for bound */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
    )
 {
    assert(scip != NULL);
@@ -751,7 +751,7 @@ SCIP_RETCODE SCIPchgVarLbExactDive(
 SCIP_RETCODE SCIPchgVarUbExactDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound            /**< new value for bound */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
    )
 {
    assert(scip != NULL);

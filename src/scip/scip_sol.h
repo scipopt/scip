@@ -565,7 +565,7 @@ SCIP_RETCODE SCIPsetSolValExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
    SCIP_VAR*             var,                /**< variable to add to solution */
-   SCIP_Rational*        val                 /**< solution value of variable */
+   SCIP_RATIONAL*        val                 /**< solution value of variable */
    );
 
 /** sets values of multiple variables in primal CIP solution
@@ -675,7 +675,7 @@ void SCIPgetSolValExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    SCIP_VAR*             var,                /**< variable to get value for */
-   SCIP_Rational*        res                 /**< resulting rational */
+   SCIP_RATIONAL*        res                 /**< resulting rational */
    );
 
 /** gets values of multiple variables in primal CIP solution
@@ -752,7 +752,7 @@ SCIP_EXPORT
 void SCIPgetSolOrigObjExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
-   SCIP_Rational*        res                 /**< result pointer to store rational */
+   SCIP_RATIONAL*        res                 /**< result pointer to store rational */
    );
 
 /** returns transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
@@ -798,7 +798,7 @@ SCIP_Real SCIPgetSolTransObj(
 void SCIPgetSolTransObjExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
-   SCIP_Rational*        res                 /**< result pointer to store rational */
+   SCIP_RATIONAL*        res                 /**< result pointer to store rational */
    );
 
 /** recomputes the objective value of an original solution, e.g., when transferring solutions

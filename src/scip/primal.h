@@ -161,7 +161,7 @@ void SCIPprimalAddOrigObjoffset(
 void SCIPprimalAddOrigObjoffsetExact(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Rational*        addval              /**< additional objective offset in original space */
+   SCIP_RATIONAL*        addval              /**< additional objective offset in original space */
    );
 
 /** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound

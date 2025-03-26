@@ -1667,7 +1667,7 @@ void SCIPprobAddObjoffset(
 /** adds value to objective offset */
 void SCIPprobAddObjoffsetExact(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Rational*        addval              /**< value to add to objective offset */
+   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
    )
 {
    assert(prob != NULL);
@@ -1728,7 +1728,7 @@ SCIP_RETCODE probCheckObjIntegralExact(
    SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
-   SCIP_Rational* obj;
+   SCIP_RATIONAL* obj;
    int v;
 
    assert(transprob != NULL);
@@ -1935,7 +1935,7 @@ SCIP_RETCODE probScaleObjExact(
    /* scan through the continuous variables */
    for( v = nints; v < transprob->nvars; ++v )
    {
-      SCIP_Rational* obj;
+      SCIP_RATIONAL* obj;
 
       /* get objective value of variable; it it is non-zero, no scaling can be applied */
       obj = SCIPvarGetObjExact(transprob->vars[v]);
@@ -1946,8 +1946,8 @@ SCIP_RETCODE probScaleObjExact(
    /* only continue if all continuous variables have obj = 0 */
    if( v == transprob->nvars )
    {
-      SCIP_Rational** objvals;
-      SCIP_Rational* intscalar;
+      SCIP_RATIONAL** objvals;
+      SCIP_RATIONAL* intscalar;
       SCIP_Bool success;
 
       /* get temporary memory */
@@ -2521,11 +2521,11 @@ void SCIPprobExternObjvalExact(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Rational*        objval,             /**< internal objective value */
-   SCIP_Rational*        objvalext           /**< store external objective value */
+   SCIP_RATIONAL*        objval,             /**< internal objective value */
+   SCIP_RATIONAL*        objvalext           /**< store external objective value */
    )
 {
-   SCIP_Rational* tmpval;
+   SCIP_RATIONAL* tmpval;
 
    assert(set != NULL);
    assert(origprob != NULL);
@@ -2579,11 +2579,11 @@ void SCIPprobInternObjvalExact(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Rational*        objval,             /**< internal objective value */
-   SCIP_Rational*        objvalint           /**< store internal objective value */
+   SCIP_RATIONAL*        objval,             /**< internal objective value */
+   SCIP_RATIONAL*        objvalint           /**< store internal objective value */
    )
 {
-   SCIP_Rational* tmpval;
+   SCIP_RATIONAL* tmpval;
 
    assert(set != NULL);
    assert(origprob != NULL);

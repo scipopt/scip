@@ -576,7 +576,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
              */
             if( SCIPisIntegral(scip, solval) || SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK )
             {
-               SCIP_Rational* newbound;
+               SCIP_RATIONAL* newbound;
 
                SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &newbound) );
 

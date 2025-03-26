@@ -109,7 +109,7 @@ struct SCIP_Sol
  */
 struct SCIP_ValsExact
 {
-   SCIP_Rational*        obj;                /**< objective value of solution */
+   SCIP_RATIONAL*        obj;                /**< objective value of solution */
    SCIP_RATIONALARRAY*   vals;               /**< solution values for variables */
    SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from
                                               *   origin */

@@ -83,7 +83,7 @@ SCIP_Real SCIPsolGetOrigObj(
 SCIP_EXPORT
 void SCIPsolOrigAddObjvalExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Rational*        addval              /**< offset value to add */
+   SCIP_RATIONAL*        addval              /**< offset value to add */
    );
 
 /** gets clock time, when this solution was found */

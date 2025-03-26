@@ -143,7 +143,7 @@ SCIP_ReaderData
 static
 SCIP_RETCODE RcreateNumb(
    BMS_BLKMEM*           mem,
-   SCIP_Rational**       rational,
+   SCIP_RATIONAL**       rational,
    const Numb*           numb
    )
 {
@@ -164,7 +164,7 @@ SCIP_RETCODE RcreateNumb(
 static
 SCIP_RETCODE RcreateNumb(
    BMS_BLKMEM*           mem,
-   SCIP_Rational**       rational,
+   SCIP_RATIONAL**       rational,
    const Numb*           numb
    )
 {
@@ -545,8 +545,8 @@ SCIP_RETCODE addConsTerm(
    )
 {
    SCIP_CONS* cons;
-   SCIP_Rational* ratlhs = NULL;
-   SCIP_Rational* ratrhs = NULL;
+   SCIP_RATIONAL* ratlhs = NULL;
+   SCIP_RATIONAL* ratrhs = NULL;
    SCIP_Real sciplhs;
    SCIP_Real sciprhs;
    SCIP_Bool initial;
@@ -767,13 +767,13 @@ SCIP_RETCODE addConsTerm(
          if( SCIPisExact(scip) )
          {
             SCIP_VAR* scipvar;
-            SCIP_Rational* scipvalrat;
+            SCIP_RATIONAL* scipvalrat;
 
             /* due to technical reasons, we do not add singleton constraints but immediately transform them to variable bounds */
             /** @todo rework this into presolving of cons_exactlinear */
             if( term_get_elements(term) == 1 )
             {
-               SCIP_Rational* quotient;
+               SCIP_RATIONAL* quotient;
                SCIP_Bool isupper;
                SCIP_Bool consneeded;
 
@@ -958,7 +958,7 @@ SCIP_RETCODE addObjTerm(
          if( SCIPisExact(scip) )
          {
             char str[SCIP_MAXSTRLEN];
-            SCIP_Rational* scipvalrat;
+            SCIP_RATIONAL* scipvalrat;
 
             RcreateNumb(SCIPblkmem(scip), &scipvalrat, mono_get_coeff(term_get_element(term, i)));
             SCIPrationalAdd(scipvalrat, scipvalrat, SCIPvarGetObjExact(scipvar));
@@ -1070,8 +1070,8 @@ SCIP_RETCODE addVar(
    SCIP_VAR* var;
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Rational* lbrat = NULL;
-   SCIP_Rational* ubrat = NULL;
+   SCIP_RATIONAL* lbrat = NULL;
+   SCIP_RATIONAL* ubrat = NULL;
    SCIP_VARTYPE vartype;
    SCIP_IMPLINTTYPE varimpltype;
    SCIP_Bool initial;

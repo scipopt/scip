@@ -259,16 +259,16 @@ SCIP_RETCODE SCIPeventCreateUbChanged(
 SCIP_RETCODE SCIPeventAddExactBdChg(
    SCIP_EVENT*           event,              /**< the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_Rational*        oldbound,           /**< old bound before bound changed */
-   SCIP_Rational*        newbound            /**< new bound after bound changed */
+   SCIP_RATIONAL*        oldbound,           /**< old bound before bound changed */
+   SCIP_RATIONAL*        newbound            /**< new bound after bound changed */
    );
 
 /** adds the data for the exact changes to existing obj event */
 SCIP_RETCODE SCIPeventAddExactObjChg(
    SCIP_EVENT*           event,              /**< the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_Rational*        oldobj,             /**< old obj before change */
-   SCIP_Rational*        newobj              /**< new obj after change */
+   SCIP_RATIONAL*        oldobj,             /**< old obj before change */
+   SCIP_RATIONAL*        newobj              /**< new obj after change */
    );
 
 /** creates an event for an addition of a global domain hole to a variable */

@@ -2193,7 +2193,7 @@ SCIP_RETCODE displayRelevantStats(
       }
       if( scip->set->exact_enabled && scip->primal->nsolsfound > 0 )
       {
-         SCIP_Rational* objval;
+         SCIP_RATIONAL* objval;
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
          SCIPmessagePrintInfo(scip->messagehdlr, "Exact Primal Bound : ");
          SCIPgetPrimalboundExact(scip, objval);

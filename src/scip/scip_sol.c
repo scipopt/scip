@@ -262,9 +262,9 @@ SCIP_RETCODE checkSolOrigExact(
    SCIP_Bool             checkmodifiable     /**< have modifiable constraint to be checked? */
    )
 {
-   SCIP_Rational* solval;
-   SCIP_Rational* lb;
-   SCIP_Rational* ub;
+   SCIP_RATIONAL* solval;
+   SCIP_RATIONAL* lb;
+   SCIP_RATIONAL* ub;
    SCIP_RESULT result;
    int v;
    int c;
@@ -1563,7 +1563,7 @@ SCIP_RETCODE SCIPsetSolValExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
    SCIP_VAR*             var,                /**< variable to add to solution */
-   SCIP_Rational*        val                 /**< solution value of variable */
+   SCIP_RATIONAL*        val                 /**< solution value of variable */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetSolValExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
@@ -1744,7 +1744,7 @@ void SCIPgetSolValExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    SCIP_VAR*             var,                /**< variable to get value for */
-   SCIP_Rational*        res                 /**< resulting rational */
+   SCIP_RATIONAL*        res                 /**< resulting rational */
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolValExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
@@ -1879,10 +1879,10 @@ SCIP_Real SCIPgetSolOrigObj(
 void SCIPgetSolOrigObjExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
-   SCIP_Rational*        res                 /**< result pointer to store rational */
+   SCIP_RATIONAL*        res                 /**< result pointer to store rational */
    )
 {
-   SCIP_Rational* tmp;
+   SCIP_RATIONAL* tmp;
    assert(SCIPisExactSol(scip, sol));
 
    /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
@@ -1977,7 +1977,7 @@ SCIP_Real SCIPgetSolTransObj(
 void SCIPgetSolTransObjExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
-   SCIP_Rational*        res                 /**< result pointer to store rational */
+   SCIP_RATIONAL*        res                 /**< result pointer to store rational */
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolTransObjExact", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
@@ -2340,8 +2340,8 @@ SCIP_RETCODE SCIPprintSolExact(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
-   SCIP_Rational* objval;
-   SCIP_Rational* tmp;
+   SCIP_RATIONAL* objval;
+   SCIP_RATIONAL* tmp;
    SCIP_Bool currentsol;
    SCIP_Bool oldquiet = FALSE;
    char* objvalstr;

@@ -215,8 +215,8 @@ SCIP_RETCODE SCIPvalidateSolve(
  */
 SCIP_RETCODE SCIPvalidateSolveExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
-   SCIP_Rational*        dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_RATIONAL*        primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_RATIONAL*        dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
    SCIP_Bool             quiet,              /**< TRUE if no status line should be printed */
    SCIP_Bool*            feasible,           /**< pointer to store if the best solution is feasible in the original problem,
                                               *   or NULL */
@@ -229,10 +229,10 @@ SCIP_RETCODE SCIPvalidateSolveExact(
    SCIP_Bool localfeasible;
    SCIP_Bool localprimalboundcheck;
    SCIP_Bool localdualboundcheck;
-   SCIP_Rational* primviol;
-   SCIP_Rational* dualviol;
-   SCIP_Rational* pb;
-   SCIP_Rational* db;
+   SCIP_RATIONAL* primviol;
+   SCIP_RATIONAL* dualviol;
+   SCIP_RATIONAL* pb;
+   SCIP_RATIONAL* db;
    char rationalstring1[SCIP_MAXSTRLEN];
    char rationalstring2[SCIP_MAXSTRLEN];
 

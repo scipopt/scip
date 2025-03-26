@@ -987,9 +987,9 @@ SCIP_RETCODE createAndAddProofcons(
    /* in exact solving mode we don't store global dual proofs that are too long / have too many non-zeros */
    else if( !toolong )
    {
-      SCIP_Rational* lhs_exact;
-      SCIP_Rational* rhs_exact;
-      SCIP_Rational** coefs_exact;
+      SCIP_RATIONAL* lhs_exact;
+      SCIP_RATIONAL* rhs_exact;
+      SCIP_RATIONAL** coefs_exact;
       SCIP_VAR** consvars;
 
       SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &lhs_exact));

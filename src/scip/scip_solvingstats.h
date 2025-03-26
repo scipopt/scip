@@ -1094,7 +1094,7 @@ SCIP_Real SCIPgetDualbound(
 SCIP_EXPORT
 void SCIPgetDualboundExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        result              /**< the resulting obj value */
+   SCIP_RATIONAL*        result              /**< the resulting obj value */
    );
 
 /** gets global lower (dual) bound in transformed problem
@@ -1133,7 +1133,7 @@ SCIP_Real SCIPgetLowerbound(
 SCIP_EXPORT
 void SCIPgetLowerboundExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        result              /**< the resulting bound */
+   SCIP_RATIONAL*        result              /**< the resulting bound */
    );
 
 /** gets dual bound of the root node for the original problem
@@ -1252,7 +1252,7 @@ SCIP_Real SCIPgetPrimalbound(
 SCIP_EXPORT
 void SCIPgetPrimalboundExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        result              /**< the resulting obj value */
+   SCIP_RATIONAL*        result              /**< the resulting obj value */
    );
 
 /** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
@@ -1293,7 +1293,7 @@ SCIP_Real SCIPgetUpperbound(
 SCIP_EXPORT
 void SCIPgetUpperboundExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        result              /**< the resulting upper bound value */
+   SCIP_RATIONAL*        result              /**< the resulting upper bound value */
    );
 
 /** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff
@@ -1338,7 +1338,7 @@ SCIP_Real SCIPgetCutoffbound(
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
 SCIP_EXPORT
-SCIP_Rational* SCIPgetCutoffboundExact(
+SCIP_RATIONAL* SCIPgetCutoffboundExact(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

@@ -60,19 +60,19 @@ SCIP_VAR* SCIPcolExactGetVar(
 
 /** returns the left hand side of the row */
 SCIP_EXPORT
-SCIP_Rational* SCIProwExactGetLhs(
+SCIP_RATIONAL* SCIProwExactGetLhs(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
 /** returns the right hand side of the row */
 SCIP_EXPORT
-SCIP_Rational* SCIProwExactGetRhs(
+SCIP_RATIONAL* SCIProwExactGetRhs(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
 /** returns the constant of the row */
 SCIP_EXPORT
-SCIP_Rational* SCIProwExactGetConstant(
+SCIP_RATIONAL* SCIProwExactGetConstant(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
@@ -84,7 +84,7 @@ int SCIProwExactGetNNonz(
 
 /** gets array with coefficients of nonzero entries */
 SCIP_EXPORT
-SCIP_Rational** SCIProwExactGetVals(
+SCIP_RATIONAL** SCIProwExactGetVals(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 

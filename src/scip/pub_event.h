@@ -143,7 +143,7 @@ SCIP_Real SCIPeventGetOldbound(
 
 /** gets exact old bound for a bound change event */
 SCIP_EXPORT
-SCIP_Rational* SCIPeventGetOldboundExact(
+SCIP_RATIONAL* SCIPeventGetOldboundExact(
    SCIP_EVENT*           event               /**< event */
    );
 

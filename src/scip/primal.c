@@ -290,7 +290,7 @@ SCIP_RETCODE primalSetCutoffbound(
    /* possibly update the exact cutoffbound */
    if( set->exact_enabled )
    {
-      SCIP_Rational* tmp;
+      SCIP_RATIONAL* tmp;
 
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
       SCIPrationalSetReal(tmp, primal->cutoffbound);
@@ -321,7 +321,7 @@ SCIP_RETCODE primalSetCutoffboundExact(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_Rational*        cutoffbound         /**< new cutoff bound */
+   SCIP_RATIONAL*        cutoffbound         /**< new cutoff bound */
    )
 {
    assert(primal != NULL);
@@ -465,10 +465,10 @@ SCIP_RETCODE primalSetUpperboundExact(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_Rational*        upperbound          /**< new upper bound */
+   SCIP_RATIONAL*        upperbound          /**< new upper bound */
    )
 {
-   SCIP_Rational* cutoffbound;
+   SCIP_RATIONAL* cutoffbound;
 
    assert(primal != NULL);
    assert(stat != NULL);
@@ -655,9 +655,9 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
-   SCIP_Rational* upperbound;
-   SCIP_Rational* tmp;
-   SCIP_Rational* inf;
+   SCIP_RATIONAL* upperbound;
+   SCIP_RATIONAL* tmp;
+   SCIP_RATIONAL* inf;
 
    assert(primal != NULL);
    assert(SCIPsetGetStage(set) <= SCIP_STAGE_PRESOLVED);
@@ -677,7 +677,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    /* compare objective limit to currently best solution */
    if( primal->nsols > 0 )
    {
-      SCIP_Rational* obj;
+      SCIP_RATIONAL* obj;
 
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &obj) );
 
@@ -749,7 +749,7 @@ void SCIPprimalAddOrigObjoffset(
 void SCIPprimalAddOrigObjoffsetExact(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Rational*        addval              /**< additional objective offset in original space */
+   SCIP_RATIONAL*        addval              /**< additional objective offset in original space */
    )
 {
    int i;
@@ -917,7 +917,7 @@ SCIP_RETCODE primalAddSol(
       }
       else
       {
-         SCIP_Rational* objexact;
+         SCIP_RATIONAL* objexact;
 
          SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &objexact) );
          SCIPsolGetObjExact(sol, set, transprob, origprob, objexact);
@@ -1427,7 +1427,7 @@ SCIP_Bool solOfInterest(
     */
    if( set->exact_enabled && set->exact_improvingsols )
    {
-      SCIP_Rational* tmpobj;
+      SCIP_RATIONAL* tmpobj;
 
       SCIP_CALL_ABORT( SCIPrationalCreateBuffer(set->buffer, &tmpobj) );
 
@@ -2296,7 +2296,7 @@ SCIP_RETCODE primalAddSolExact(
 {
    SCIP_Bool stored;
    /* cppcheck-suppress unassignedVariable */
-   SCIP_Rational* obj;
+   SCIP_RATIONAL* obj;
    SCIP_SOL* sol;
 
    assert(primal != NULL);

@@ -147,8 +147,8 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
    int nextendedrows;
 
    /* solution information for exact root LP */
-   SCIP_Rational** rootactivity;
-   SCIP_Rational** rootprimal;
+   SCIP_RATIONAL** rootactivity;
+   SCIP_RATIONAL** rootprimal;
    SCIP_Bool lperror;
    SCIP_PROJSHIFTDATA* projshiftdata;
 
@@ -277,7 +277,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    int* projbeg;
    int* projlen;
    int* projind;
-   SCIP_Rational** projval;
+   SCIP_RATIONAL** projval;
    SCIP_PROJSHIFTDATA* projshiftdata;
 
    projshiftdata = lpexact->projshiftdata;
@@ -417,20 +417,20 @@ SCIP_RETCODE setupProjectShiftOpt(
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Rational**       psobj,              /**< obj function */
-   SCIP_Rational**       psub,               /**< upper bounds */
-   SCIP_Rational**       pslb,               /**< lower bounds */
-   SCIP_Rational**       pslhs,              /**< left hand sides */
-   SCIP_Rational**       psrhs,              /**< right hand sides */
-   SCIP_Rational**       psval,              /**< matrix values */
+   SCIP_RATIONAL**       psobj,              /**< obj function */
+   SCIP_RATIONAL**       psub,               /**< upper bounds */
+   SCIP_RATIONAL**       pslb,               /**< lower bounds */
+   SCIP_RATIONAL**       pslhs,              /**< left hand sides */
+   SCIP_RATIONAL**       psrhs,              /**< right hand sides */
+   SCIP_RATIONAL**       psval,              /**< matrix values */
    int*                  pslen,              /**< lengths of rows */
    int*                  psind,              /**< indices of vals */
    int*                  psbeg,              /**< beginning of rows in vals */
    int*                  dvarincidence,      /**< indicates cols with bounds */
    int*                  dvarmap,            /**< mapping between red-sized prob and original one */
-   SCIP_Rational*        alpha,              /**< scale obj */
-   SCIP_Rational*        beta,               /**< scale obj */
-   SCIP_Rational*        tmp,                /**< helper rational */
+   SCIP_RATIONAL*        alpha,              /**< scale obj */
+   SCIP_RATIONAL*        beta,               /**< scale obj */
+   SCIP_RATIONAL*        tmp,                /**< helper rational */
    int                   psnrows,            /**< numer of rows */
    int                   psnnonz,            /**< numer of non-zeros */
    int                   psncols,            /**< numer of columns */
@@ -674,8 +674,8 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    SCIP_LPIEXACT* pslpiexact;
    SCIP_PROJSHIFTDATA* projshiftdata;
 
-   SCIP_Rational** sol = NULL; /* either primal or dualsol */
-   SCIP_Rational* objval;
+   SCIP_RATIONAL** sol = NULL; /* either primal or dualsol */
+   SCIP_RATIONAL* objval;
 
    /* mapping between variables used in the aux. problem and the original problem */
    int ndvarmap;
@@ -714,8 +714,8 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
        * and the lower bound for d
        */
 
-      SCIP_Rational* auxval1;
-      SCIP_Rational* auxval2;
+      SCIP_RATIONAL* auxval1;
+      SCIP_RATIONAL* auxval2;
       int i;
 
       assert(projshiftdata->projshifthasray == FALSE);
@@ -880,23 +880,23 @@ SCIP_RETCODE projectShiftConstructLP(
    int ndvarmap;
    int* dvarmap;
 
-   SCIP_Rational** psobj = NULL;
-   SCIP_Rational** pslb = NULL;
-   SCIP_Rational** psub = NULL;
-   SCIP_Rational** pslhs = NULL;
-   SCIP_Rational** psrhs = NULL;
+   SCIP_RATIONAL** psobj = NULL;
+   SCIP_RATIONAL** pslb = NULL;
+   SCIP_RATIONAL** psub = NULL;
+   SCIP_RATIONAL** pslhs = NULL;
+   SCIP_RATIONAL** psrhs = NULL;
    int* psbeg;
    int* pslen;
    int* psind;
-   SCIP_Rational** psval = NULL;
+   SCIP_RATIONAL** psval = NULL;
    char ** colnames = NULL;
    int psnrows;
    int psnnonz;
    int i;
 
-   SCIP_Rational* tmp;
-   SCIP_Rational* alpha;
-   SCIP_Rational* beta;
+   SCIP_RATIONAL* tmp;
+   SCIP_RATIONAL* alpha;
+   SCIP_RATIONAL* beta;
    int* dvarincidence;
 
    assert(lpexact != NULL);
@@ -1191,16 +1191,16 @@ SCIP_RETCODE projectShift(
    )
 {
    SCIP_COL** cols;
-   SCIP_Rational** dualsol;
-   SCIP_Rational** violation;
-   SCIP_Rational** correction;
+   SCIP_RATIONAL** dualsol;
+   SCIP_RATIONAL** violation;
+   SCIP_RATIONAL** correction;
    SCIP_Bool useinteriorpoint;
-   SCIP_Rational* tmp;
-   SCIP_Rational* tmp2;
-   SCIP_Rational* lambda1;
-   SCIP_Rational* lambda2;
-   SCIP_Rational* maxv;
-   SCIP_Rational* dualbound;
+   SCIP_RATIONAL* tmp;
+   SCIP_RATIONAL* tmp2;
+   SCIP_RATIONAL* lambda1;
+   SCIP_RATIONAL* lambda2;
+   SCIP_RATIONAL* maxv;
+   SCIP_RATIONAL* dualbound;
    SCIP_PROJSHIFTDATA* projshiftdata;
    mpq_t* violationgmp = NULL;
    mpq_t* correctiongmp = NULL;
@@ -1379,7 +1379,7 @@ SCIP_RETCODE projectShift(
    /* first, fix artificial dual variables (with infinity bound) to zero */
    for( i = 0; i < nrows + ncols; i++ )
    {
-      SCIP_Rational* val;
+      SCIP_RATIONAL* val;
 
        if( !isupper[i] )
          val = i < nrows ? lpexact->rows[i]->lhs : lpexact->cols[i - nrows]->lb;
@@ -1396,7 +1396,7 @@ SCIP_RETCODE projectShift(
    SCIPrationalSetInt(dualbound, 0, 1);
    for( i = 0; i < nrows + ncols; i++ )
    {
-      SCIP_Rational* val;
+      SCIP_RATIONAL* val;
 
       if( !isupper[i] )
          val = i < nrows ? lpexact->rows[i]->lhs : lpexact->cols[i - nrows]->lb;
@@ -1736,7 +1736,7 @@ SCIP_RETCODE projectShift(
    SCIPrationalSetInt(dualbound, 0, 1);
    for( i = 0; i < nrows + ncols; i++ )
    {
-      SCIP_Rational* val;
+      SCIP_RATIONAL* val;
       if( SCIPrationalIsPositive(dualsol[i]) )
          val = i < nrows ? lpexact->rows[i]->lhs : lpexact->cols[i - nrows]->lb;
       else

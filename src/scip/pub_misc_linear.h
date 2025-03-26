@@ -71,7 +71,7 @@ SCIP_Real SCIPconsGetLhs(
  *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
  */
 SCIP_EXPORT
-SCIP_Rational* SCIPconsGetRhsExact(
+SCIP_RATIONAL* SCIPconsGetRhsExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which right-hand side is queried */
    SCIP_Bool*            success             /**< pointer to store whether a valid right-hand side was returned */
@@ -82,7 +82,7 @@ SCIP_Rational* SCIPconsGetRhsExact(
  *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
  */
 SCIP_EXPORT
-SCIP_Rational* SCIPconsGetLhsExact(
+SCIP_RATIONAL* SCIPconsGetLhsExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to get left-hand side for */
    SCIP_Bool*            success             /**< pointer to store whether a valid left-hand side was returned */
@@ -115,7 +115,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsValsExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which the coefficients are wanted */
-   SCIP_Rational**       vals,               /**< array to store the coefficients of the constraint */
+   SCIP_RATIONAL**       vals,               /**< array to store the coefficients of the constraint */
    int                   varssize,           /**< available slots in vals array needed to check if the array is large enough */
    SCIP_Bool*            success             /**< pointer to store whether the coefficients are successfully copied */
    );

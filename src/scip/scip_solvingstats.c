@@ -1405,10 +1405,10 @@ SCIP_Real SCIPgetDualbound(
  */
 void SCIPgetDualboundExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        result              /**< the resulting obj value */
+   SCIP_RATIONAL*        result              /**< the resulting obj value */
    )
 {
-   SCIP_Rational* tmpval;
+   SCIP_RATIONAL* tmpval;
    (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpval);
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDualboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
@@ -1496,7 +1496,7 @@ SCIP_Real SCIPgetLowerbound(
  */
 void SCIPgetLowerboundExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        result              /**< the resulting bound */
+   SCIP_RATIONAL*        result              /**< the resulting bound */
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLowerboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -1664,7 +1664,7 @@ SCIP_Real SCIPgetPrimalbound(
  */
 void SCIPgetPrimalboundExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        result              /**< the resulting obj value */
+   SCIP_RATIONAL*        result              /**< the resulting obj value */
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetPrimalboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
@@ -1716,7 +1716,7 @@ SCIP_Real SCIPgetUpperbound(
  */
 void SCIPgetUpperboundExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        result              /**< the resulting upper bound value */
+   SCIP_RATIONAL*        result              /**< the resulting upper bound value */
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetUpperbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
@@ -1772,7 +1772,7 @@ SCIP_Real SCIPgetCutoffbound(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_Rational* SCIPgetCutoffboundExact(
+SCIP_RATIONAL* SCIPgetCutoffboundExact(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -5040,7 +5040,7 @@ void SCIPprintSolutionStatistics(
    /* print exact bounds */
    if( SCIPisExact(scip) )
    {
-      SCIP_Rational* objval;
+      SCIP_RATIONAL* objval;
 
       SCIP_CALL_ABORT( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Exact Prim. Bound: ");
@@ -5143,7 +5143,7 @@ SCIP_RETCODE SCIPcollectSolutionStatistics(
    /* Exact bounds */
    if( SCIPisExact(scip) )
    {
-      SCIP_Rational* objval;
+      SCIP_RATIONAL* objval;
       char strbuffer[SCIP_MAXSTRLEN];
 
       SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );

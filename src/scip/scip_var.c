@@ -298,9 +298,9 @@ SCIP_RETCODE SCIPcreateVarImpl(
 SCIP_RETCODE SCIPaddVarExactData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< pointer to variable */
-   SCIP_Rational*        lb,                 /**< lower bound of variable */
-   SCIP_Rational*        ub,                 /**< upper bound of variable */
-   SCIP_Rational*        obj                 /**< objective function value */
+   SCIP_RATIONAL*        lb,                 /**< lower bound of variable */
+   SCIP_RATIONAL*        ub,                 /**< upper bound of variable */
+   SCIP_RATIONAL*        obj                 /**< objective function value */
    )
 {
    assert(var != NULL);
@@ -531,7 +531,7 @@ SCIP_RETCODE SCIPwriteVarsLinearsumExact(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
    SCIP_VAR**            vars,               /**< variable array to output */
-   SCIP_Rational**       vals,               /**< array of coefficients or NULL if all coefficients are 1.0 */
+   SCIP_RATIONAL**       vals,               /**< array of coefficients or NULL if all coefficients are 1.0 */
    int                   nvars,              /**< number of variables */
    SCIP_Bool             type                /**< should the variable type be also posted */
    )
@@ -1010,7 +1010,7 @@ SCIP_RETCODE SCIPparseVarsLinearsumExact(
    SCIP*                 scip,               /**< SCIP data structure */
    char*                 str,                /**< string to parse */
    SCIP_VAR**            vars,               /**< array to store the parsed variables */
-   SCIP_Rational**       vals,               /**< array to store the parsed coefficients */
+   SCIP_RATIONAL**       vals,               /**< array to store the parsed coefficients */
    int*                  nvars,              /**< pointer to store number of parsed variables */
    int                   varssize,           /**< size of the variable array */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
@@ -1019,7 +1019,7 @@ SCIP_RETCODE SCIPparseVarsLinearsumExact(
    )
 {
    SCIP_VAR*** monomialvars;
-   SCIP_Rational**  monomialcoefs;
+   SCIP_RATIONAL**  monomialcoefs;
    int         nmonomials;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPparseVarsLinearsumExact", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -1456,7 +1456,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
    SCIP*                 scip,               /**< SCIP data structure */
    char*                 str,                /**< string to parse */
    SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
-   SCIP_Rational***      monomialcoefs,      /**< pointer to store array with monomial coefficients */
+   SCIP_RATIONAL***      monomialcoefs,      /**< pointer to store array with monomial coefficients */
    int*                  nmonomials,         /**< pointer to store number of parsed monomials */
    char**                endptr,             /**< pointer to store the final string position if successful */
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
@@ -1480,7 +1480,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
    int varssize;
    int nvars;
    SCIP_VAR** vars;
-   SCIP_Rational* coef;
+   SCIP_RATIONAL* coef;
 
    assert(scip != NULL);
    assert(str != NULL);
@@ -1814,7 +1814,7 @@ void SCIPfreeParseVarsPolynomialData(
 void SCIPfreeParseVarsPolynomialDataExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
-   SCIP_Rational***      monomialcoefs,      /**< pointer to store array with monomial coefficients */
+   SCIP_RATIONAL***      monomialcoefs,      /**< pointer to store array with monomial coefficients */
    int                   nmonomials          /**< pointer to store number of parsed monomials */
    )
 {
@@ -2453,7 +2453,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSumExact(
    SCIP_VAR**            vars,               /**< variable array x_1, ..., x_n in the linear sum which will be
                                               *   overwritten by the variable array y_1, ..., y_m in the linear sum
                                               *   w.r.t. active variables */
-   SCIP_Rational**       scalars,            /**< scalars a_1, ..., a_n in linear sum which will be overwritten to the
+   SCIP_RATIONAL**       scalars,            /**< scalars a_1, ..., a_n in linear sum which will be overwritten to the
                                               *   scalars b_1, ..., b_m in the linear sum of the active variables  */
    int*                  nvars,              /**< pointer to number of variables in the linear sum which will be
                                               *   overwritten by the number of variables in the linear sum corresponding
@@ -2461,7 +2461,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSumExact(
    int                   varssize,           /**< available slots in vars and scalars array which is needed to check if
                                               *   the array are large enough for the linear sum w.r.t. active
                                               *   variables */
-   SCIP_Rational*        constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c which
+   SCIP_RATIONAL*        constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c which
                                               *   will chnage to constant d in the linear sum b_1*y_1 + ... + b_m*y_m +
                                               *   d w.r.t. the active variables */
    int*                  requiredsize,       /**< pointer to store the required array size for the linear sum w.r.t. the
@@ -2546,8 +2546,8 @@ SCIP_RETCODE SCIPgetProbvarSum(
 SCIP_RETCODE SCIPgetProbvarSumExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
-   SCIP_Rational*        scalar,             /**< pointer to scalar a in sum a*x + c */
-   SCIP_Rational*        constant            /**< pointer to constant c in sum a*x + c */
+   SCIP_RATIONAL*        scalar,             /**< pointer to scalar a in sum a*x + c */
+   SCIP_RATIONAL*        constant            /**< pointer to constant c in sum a*x + c */
    )
 {
    assert(scip != NULL);
@@ -5428,7 +5428,7 @@ SCIP_RETCODE SCIPchgVarObj(
 SCIP_RETCODE SCIPchgVarObjExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the objective value for */
-   SCIP_Rational*        newobj              /**< new objective value */
+   SCIP_RATIONAL*        newobj              /**< new objective value */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarObjExact", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -5475,7 +5475,7 @@ SCIP_RETCODE SCIPchgVarObjExact(
 SCIP_RETCODE SCIPchgVarUbGlobalExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound            /**< new value for bound */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarUbGlobalExact", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -5500,7 +5500,7 @@ SCIP_RETCODE SCIPchgVarUbGlobalExact(
 SCIP_RETCODE SCIPchgVarLbGlobalExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound            /**< new value for bound */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarLbGlobalExact", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -5794,7 +5794,7 @@ SCIP_RETCODE SCIPchgVarLb(
 SCIP_RETCODE SCIPchgVarLbExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound            /**< new value for bound */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarLbExact", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -5972,7 +5972,7 @@ SCIP_RETCODE SCIPchgVarUb(
 SCIP_RETCODE SCIPchgVarUbExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound            /**< new value for bound */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarUbExact", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -6526,13 +6526,13 @@ SCIP_RETCODE SCIPtightenVarLb(
 SCIP_RETCODE SCIPtightenVarLbExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    )
 {
-   SCIP_Rational* lb;
-   SCIP_Rational* ub;
+   SCIP_RATIONAL* lb;
+   SCIP_RATIONAL* ub;
 
    assert(infeasible != NULL);
    assert(SCIPisExact(scip));
@@ -6776,13 +6776,13 @@ SCIP_RETCODE SCIPtightenVarUb(
 SCIP_RETCODE SCIPtightenVarUbExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    )
 {
-   SCIP_Rational* lb;
-   SCIP_Rational* ub;
+   SCIP_RATIONAL* lb;
+   SCIP_RATIONAL* ub;
 
    assert(infeasible != NULL);
    assert(SCIPisExact(scip));
@@ -7200,16 +7200,16 @@ SCIP_RETCODE SCIPinferVarUbCons(
 SCIP_RETCODE SCIPinferVarUbConsExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    )
 {
-   SCIP_Rational* lb;
-   SCIP_Rational* ub;
-   SCIP_Rational* adjustedBound;
+   SCIP_RATIONAL* lb;
+   SCIP_RATIONAL* ub;
+   SCIP_RATIONAL* adjustedBound;
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &adjustedBound) );
    SCIPrationalSetRational(adjustedBound, newbound);
    assert(infeasible != NULL);
@@ -7322,16 +7322,16 @@ RETURN_SCIP_OKAY:
 SCIP_RETCODE SCIPinferVarLbConsExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    )
 {
-   SCIP_Rational* ub;
-   SCIP_Rational* lb;
-   SCIP_Rational* adjustedBound;
+   SCIP_RATIONAL* ub;
+   SCIP_RATIONAL* lb;
+   SCIP_RATIONAL* adjustedBound;
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &adjustedBound) );
    SCIPrationalSetRational(adjustedBound, newbound);
    assert(infeasible != NULL);
@@ -7935,7 +7935,7 @@ SCIP_RETCODE tightenVarLbGlobalSafe(
 {
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Rational* newboundexact;
+   SCIP_RATIONAL* newboundexact;
 
    assert(infeasible != NULL);
 
@@ -8167,7 +8167,7 @@ SCIP_RETCODE tightenVarUbGlobalSafe(
 {
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Rational* newboundexact;
+   SCIP_RATIONAL* newboundexact;
 
    assert(infeasible != NULL);
 
@@ -8464,7 +8464,7 @@ SCIP_Real SCIPcomputeVarLbLocal(
 SCIP_RETCODE SCIPcomputeVarLbLocalExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to compute the bound for */
-   SCIP_Rational*        result              /**< rational to store the resulting bound */
+   SCIP_RATIONAL*        result              /**< rational to store the resulting bound */
    )
 {
    assert(scip != NULL);
@@ -8509,7 +8509,7 @@ SCIP_Real SCIPcomputeVarUbLocal(
 SCIP_RETCODE SCIPcomputeVarUbLocalExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to compute the bound for */
-   SCIP_Rational*        result              /**< rational to store the resulting bound */
+   SCIP_RATIONAL*        result              /**< rational to store the resulting bound */
    )
 {
    assert(scip != NULL);
@@ -10470,7 +10470,7 @@ SCIP_RETCODE SCIPfixVar(
 SCIP_RETCODE SCIPfixVarExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to fix */
-   SCIP_Rational*        fixedval,           /**< value to fix variable to */
+   SCIP_RATIONAL*        fixedval,           /**< value to fix variable to */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
    SCIP_Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
    )
@@ -10743,16 +10743,16 @@ SCIP_RETCODE SCIPaggregateVarsExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             varx,               /**< variable x in equality a*x + b*y == c */
    SCIP_VAR*             vary,               /**< variable y in equality a*x + b*y == c */
-   SCIP_Rational*        scalarx,            /**< multiplier a in equality a*x + b*y == c */
-   SCIP_Rational*        scalary,            /**< multiplier b in equality a*x + b*y == c */
-   SCIP_Rational*        rhs,                /**< right hand side c in equality a*x + b*y == c */
+   SCIP_RATIONAL*        scalarx,            /**< multiplier a in equality a*x + b*y == c */
+   SCIP_RATIONAL*        scalary,            /**< multiplier b in equality a*x + b*y == c */
+   SCIP_RATIONAL*        rhs,                /**< right hand side c in equality a*x + b*y == c */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
    SCIP_Bool*            redundant,          /**< pointer to store whether the equality is (now) redundant */
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    )
 {
-   SCIP_Rational* constantx;
-   SCIP_Rational* constanty;
+   SCIP_RATIONAL* constantx;
+   SCIP_RATIONAL* constanty;
 
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constantx) );
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &constanty) );
@@ -10931,8 +10931,8 @@ SCIP_RETCODE SCIPmultiaggregateVarExact(
    SCIP_VAR*             var,                /**< variable x to aggregate */
    int                   naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    SCIP_VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
-   SCIP_Rational**       scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
-   SCIP_Rational*        constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_RATIONAL**       scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_RATIONAL*        constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    )

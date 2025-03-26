@@ -368,7 +368,7 @@ SCIP_RETCODE SCIPsolSetValExact(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_VAR*             var,                /**< variable to add to solution */
-   SCIP_Rational*        val                 /**< solution value of variable */
+   SCIP_RATIONAL*        val                 /**< solution value of variable */
    );
 
 /** increases value of variable in primal CIP solution */
@@ -391,7 +391,7 @@ SCIP_Real SCIPsolGetVal(
 
 /** returns value of variable in primal CIP solution */
 void SCIPsolGetValExact(
-   SCIP_Rational*        res,
+   SCIP_RATIONAL*        res,
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -421,7 +421,7 @@ void SCIPsolGetObjExact(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
-   SCIP_Rational*        objval              /**< store the result here */
+   SCIP_RATIONAL*        objval              /**< store the result here */
    );
 
 /** updates primal solutions after a change in a variable's objective value */
@@ -649,7 +649,7 @@ SCIP_Bool SCIPsolIsExact(
    );
 
 /** gets objective value of primal CIP solution which lives in the original problem space */
-SCIP_Rational* SCIPsolGetOrigObjExact(
+SCIP_RATIONAL* SCIPsolGetOrigObjExact(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 

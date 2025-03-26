@@ -115,12 +115,12 @@
 /** constraint data for linear constraints */
 struct SCIP_ConsData
 {
-   SCIP_Rational*        lhs;                /**< left hand side of row (for ranged rows) */
-   SCIP_Rational*        rhs;                /**< right hand side of row */
+   SCIP_RATIONAL*        lhs;                /**< left hand side of row (for ranged rows) */
+   SCIP_RATIONAL*        rhs;                /**< right hand side of row */
    SCIP_Real             lhsreal;            /**< real relaxation of lhs */
    SCIP_Real             rhsreal;            /**< real relaxation of rhs */
-   SCIP_Rational*        violation;          /**< used to store violation */
-   SCIP_Rational*        activity;           /**< used to store activity */
+   SCIP_RATIONAL*        violation;          /**< used to store violation */
+   SCIP_RATIONAL*        activity;           /**< used to store activity */
    SCIP_Real             maxabsval;          /**< maximum absolute value of all coefficients */
    SCIP_Real             minabsval;          /**< minimal absolute value of all coefficients */
    SCIP_Real             minactivity;        /**< minimal value w.r.t. the variable's local bounds for the constraint's
@@ -141,14 +141,14 @@ struct SCIP_ConsData
                                               *   over all contributing values */
    SCIP_Real             maxactdelta;        /**< maximal activity contribution of a single variable, or SCIP_INVALID if invalid */
    SCIP_VAR*             maxactdeltavar;     /**< variable with maximal activity contribution, or NULL if invalid */
-   SCIP_Rational*        maxabsvalexact;     /**< exact maximum absolute value of all coefficients */
-   SCIP_Rational*        minabsvalexact;     /**< exact minimal absolute value of all coefficients */
+   SCIP_RATIONAL*        maxabsvalexact;     /**< exact maximum absolute value of all coefficients */
+   SCIP_RATIONAL*        minabsvalexact;     /**< exact minimal absolute value of all coefficients */
    SCIP_ROW*             rowlhs;             /**< LP row, if constraint is already stored in LP row format; represents fp-relaxation of lhs-part of rowexact;
                                                   only this row will be added to the exact LP, rowrhs is used for safe aggregation of rows */
    SCIP_ROW*             rowrhs;             /**< LP row, if constraint is already stored in LP row format; represents fp-relaxation of rhs-part of rowexact */
    SCIP_ROWEXACT*        rowexact;           /**< Exact rational lp row */
    SCIP_VAR**            vars;               /**< variables of constraint entries */
-   SCIP_Rational**       vals;               /**< coefficients of constraint entries */
+   SCIP_RATIONAL**       vals;               /**< coefficients of constraint entries */
    SCIP_INTERVAL*        valsreal;           /**< values of val rounded up/down to closest fp-representable numbers */
    SCIP_EVENTDATA**      eventdata;          /**< event data for bound change events of the variables */
    SCIP_EVENTDATA**      roweventdata;       /**< event data for bound change events of the variables in the row */
@@ -216,12 +216,12 @@ struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    SCIP_EXLINCONSUPGRADE** linconsupgrades;    /**< linear constraint upgrade methods for specializing linear constraints */
-   SCIP_Rational*        maxaggrnormscale;   /**< maximal allowed relative gain in maximum norm for constraint aggregation
+   SCIP_RATIONAL*        maxaggrnormscale;   /**< maximal allowed relative gain in maximum norm for constraint aggregation
                                               *   (0.0: disable constraint aggregation) */
-   SCIP_Rational*        maxcardbounddist;   /**< maximal relative distance from current node's dual bound to primal bound compared
+   SCIP_RATIONAL*        maxcardbounddist;   /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for separating knapsack cardinality cuts */
-   SCIP_Rational*        mingainpernmincomp; /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
-   SCIP_Rational*        maxeasyactivitydelta;/**< maximum activity delta to run easy propagation on linear constraint
+   SCIP_RATIONAL*        mingainpernmincomp; /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
+   SCIP_RATIONAL*        maxeasyactivitydelta;/**< maximum activity delta to run easy propagation on linear constraint
                                                *   (faster, but numerically less stable) */
    int                   linconsupgradessize;/**< size of linconsupgrade array */
    int                   nlinconsupgrades;   /**< number of linear constraint upgrade methods */
@@ -427,7 +427,7 @@ SCIP_RETCODE lockRounding(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_VAR*             var,                /**< variable of constraint entry */
-   SCIP_Rational*        val                 /**< coefficient of constraint entry */
+   SCIP_RATIONAL*        val                 /**< coefficient of constraint entry */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -460,7 +460,7 @@ SCIP_RETCODE unlockRounding(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_VAR*             var,                /**< variable of constraint entry */
-   SCIP_Rational*        val                 /**< coefficient of constraint entry */
+   SCIP_RATIONAL*        val                 /**< coefficient of constraint entry */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -633,13 +633,13 @@ SCIP_RETCODE consdataCreate(
    SCIP_CONSDATA**       consdata,           /**< pointer to linear constraint data */
    int                   nvars,              /**< number of nonzeros in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Rational**       vals,               /**< array with coefficients of constraint entries */
-   SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs                 /**< right hand side of row */
+   SCIP_RATIONAL**       vals,               /**< array with coefficients of constraint entries */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of row */
+   SCIP_RATIONAL*        rhs                 /**< right hand side of row */
    )
 {
    int v;
-   SCIP_Rational* constant;
+   SCIP_RATIONAL* constant;
    SCIP_Real lhsrel;
    SCIP_Real rhsrel;
 
@@ -671,7 +671,7 @@ SCIP_RETCODE consdataCreate(
       int k;
 
       SCIP_VAR** varsbuffer;
-      SCIP_Rational** valsbuffer;
+      SCIP_RATIONAL** valsbuffer;
       SCIP_INTERVAL* valsrealbuffer;
 
       /* copy variables into temporary buffer */
@@ -998,7 +998,7 @@ SCIP_RETCODE consPrintConsSol(
                SCIPinfoMessage(scip, file, " (%+.9g)", SCIPgetSolVal(scip, sol, consdata->vars[v]));
             else
             {
-               SCIP_Rational* tmp;
+               SCIP_RATIONAL* tmp;
                SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
                SCIPgetSolValExact(scip, sol, consdata->vars[v], tmp);
                SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, tmp);
@@ -1085,14 +1085,14 @@ static
 void consdataComputePseudoActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
-   SCIP_Rational*        pseudoactivity
+   SCIP_RATIONAL*        pseudoactivity
    )
 {
    int i;
    int pseudoactivityposinf;
    int pseudoactivityneginf;
-   SCIP_Rational* bound;
-   SCIP_Rational* val;
+   SCIP_RATIONAL* bound;
+   SCIP_RATIONAL* val;
 
    SCIPrationalSetInt(pseudoactivity, 0L, 1L);
 
@@ -1128,7 +1128,7 @@ void consdataComputePseudoActivity(
    }
 
    if( pseudoactivityneginf > 0 && pseudoactivityposinf > 0 )
-      /** @todo introduce a rational equivalent of SCIP_INVALID (maybe an additional flag in SCIP_Rational) */
+      /** @todo introduce a rational equivalent of SCIP_INVALID (maybe an additional flag in SCIP_RATIONAL) */
       return;
    else if( pseudoactivityneginf > 0 )
       SCIPrationalSetNegInfinity(pseudoactivity);
@@ -1340,8 +1340,8 @@ void checkMaxActivityDelta(
       SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &maxactdelta );
       SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &domain );
       SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &delta );
-      SCIP_Rational* lb;
-      SCIP_Rational* ub;
+      SCIP_RATIONAL* lb;
+      SCIP_RATIONAL* ub;
       int v;
 
       for( v = consdata->nvars - 1; v >= 0; --v )
@@ -1913,7 +1913,7 @@ void consdataUpdateAddCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_VAR*             var,                /**< variable of constraint entry */
-   SCIP_Rational*        valExact,           /**< coefficient of constraint entry */
+   SCIP_RATIONAL*        valExact,           /**< coefficient of constraint entry */
    SCIP_INTERVAL         val                 /**< coefficient of constraint entry */
    )
 {
@@ -1983,7 +1983,7 @@ void consdataUpdateDelCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_VAR*             var,                /**< variable of constraint entry */
-   SCIP_Rational*        valExact,           /**< exact coefficient of constraint entry */
+   SCIP_RATIONAL*        valExact,           /**< exact coefficient of constraint entry */
    SCIP_INTERVAL         val                 /**< coefficient of constraint entry */
    )
 {
@@ -2056,7 +2056,7 @@ void consdataUpdateDelCoef(
 
 /** returns the minimum absolute value of all coefficients in the constraint */
 static
-SCIP_Rational* consdataGetMinAbsvalEx(
+SCIP_RATIONAL* consdataGetMinAbsvalEx(
    SCIP*                 scip,
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
@@ -2078,9 +2078,9 @@ void consdataUpdateChgCoef(
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_VAR*             var,                /**< variable of constraint entry */
    SCIP_INTERVAL         oldval,             /**< old coefficient of constraint entry */
-   SCIP_Rational*        oldvalExact,        /**< old exact coefficient of constraint entry */
+   SCIP_RATIONAL*        oldvalExact,        /**< old exact coefficient of constraint entry */
    SCIP_INTERVAL         newval,             /**< new coefficient of constraint entry */
-   SCIP_Rational*        newvalExact         /**< new coefficient of constraint entry */
+   SCIP_RATIONAL*        newvalExact         /**< new coefficient of constraint entry */
    )
 {
    assert(scip != NULL);
@@ -2208,8 +2208,8 @@ void consdataScaleMinValue(
    )
 {
    int i;
-   SCIP_Rational* scalingfactor;
-   SCIP_Rational* minabsval;
+   SCIP_RATIONAL* scalingfactor;
+   SCIP_RATIONAL* minabsval;
 
    assert(scip != NULL);
    assert(consdata != NULL);
@@ -2788,7 +2788,7 @@ void consdataGetActivity(
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_SOL*             sol,                /**< solution to get activity for, NULL to current solution */
    SCIP_Bool             useexact,           /**< should the exact solution be used */
-   SCIP_Rational*        activity            /**< pointer to store the activity */
+   SCIP_RATIONAL*        activity            /**< pointer to store the activity */
    )
 {
    assert(scip != NULL);
@@ -2798,7 +2798,7 @@ void consdataGetActivity(
       consdataComputePseudoActivity(scip, consdata, activity);
    else
    {
-      SCIP_Rational* solval;
+      SCIP_RATIONAL* solval;
       int nposinf;
       int nneginf;
       SCIP_Bool negsign;
@@ -2837,7 +2837,7 @@ void consdataGetActivity(
 
       /* check for amount of infinity values and correct the activity */
       if( nposinf > 0 && nneginf > 0 )
-         /** @todo introduce a rational equivalent of SCIP_INVALID (maybe an additional flag in SCIP_Rational) */
+         /** @todo introduce a rational equivalent of SCIP_INVALID (maybe an additional flag in SCIP_RATIONAL) */
          return;
       else if( nposinf > 0 )
          SCIPrationalSetInfinity(activity);
@@ -2855,12 +2855,12 @@ void consdataGetFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_SOL*             sol,                /**< solution to get feasibility for, NULL to current solution */
-   SCIP_Rational*        ret                 /**< pointer to store the result */
+   SCIP_RATIONAL*        ret                 /**< pointer to store the result */
    )
 {
-   SCIP_Rational* activity;
-   SCIP_Rational* op1;
-   SCIP_Rational* op2;
+   SCIP_RATIONAL* activity;
+   SCIP_RATIONAL* op1;
+   SCIP_RATIONAL* op2;
 
    assert(scip != NULL);
    assert(consdata != NULL);
@@ -3005,8 +3005,8 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
          }
          else
          {
-            SCIP_Rational* abscont1;
-            SCIP_Rational* abscont2;
+            SCIP_RATIONAL* abscont1;
+            SCIP_RATIONAL* abscont2;
 
             (void) SCIPrationalCreate(&abscont1);
 	    (void) SCIPrationalCreate(&abscont2);
@@ -3050,7 +3050,7 @@ void permSortConsdata(
    SCIP_VAR* varv;
    SCIP_EVENTDATA* eventdatav;
    SCIP_INTERVAL valrealv;
-   SCIP_Rational* valv;
+   SCIP_RATIONAL* valv;
    int v;
    int i;
    int nexti;
@@ -3191,7 +3191,7 @@ static
 SCIP_RETCODE chgLhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
-   SCIP_Rational*        lhs                 /**< new left hand side */
+   SCIP_RATIONAL*        lhs                 /**< new left hand side */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -3228,7 +3228,7 @@ SCIP_RETCODE chgLhs(
       if( SCIPrationalIsNegInfinity(consdata->lhs) && !SCIPrationalIsNegInfinity(lhs) )
       {
          SCIP_VAR** vars;
-         SCIP_Rational** vals;
+         SCIP_RATIONAL** vals;
          int v;
 
          /* the left hand side switched from -infinity to a non-infinite value -> install rounding locks */
@@ -3253,7 +3253,7 @@ SCIP_RETCODE chgLhs(
       else if( !SCIPrationalIsNegInfinity(consdata->lhs) && SCIPrationalIsNegInfinity(lhs) )
       {
          SCIP_VAR** vars;
-         SCIP_Rational** vals;
+         SCIP_RATIONAL** vals;
          int v;
 
          /* the left hand side switched from a non-infinite value to -infinity -> remove rounding locks */
@@ -3314,7 +3314,7 @@ static
 SCIP_RETCODE chgRhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
-   SCIP_Rational*        rhs                 /**< new right hand side */
+   SCIP_RATIONAL*        rhs                 /**< new right hand side */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -3353,7 +3353,7 @@ SCIP_RETCODE chgRhs(
       if( SCIPrationalIsInfinity(consdata->rhs) && !SCIPrationalIsInfinity(rhs) )
       {
          SCIP_VAR** vars;
-         SCIP_Rational** vals;
+         SCIP_RATIONAL** vals;
          int v;
 
          /* the right hand side switched from infinity to a non-infinite value -> install rounding locks */
@@ -3378,7 +3378,7 @@ SCIP_RETCODE chgRhs(
       else if( !SCIPrationalIsInfinity(consdata->rhs) && SCIPrationalIsInfinity(rhs) )
       {
          SCIP_VAR** vars;
-         SCIP_Rational** vals;
+         SCIP_RATIONAL** vals;
          int v;
 
          /* the right hand side switched from a non-infinite value to infinity -> remove rounding locks */
@@ -3440,7 +3440,7 @@ SCIP_RETCODE addCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_VAR*             var,                /**< variable of constraint entry */
-   SCIP_Rational*        val                 /**< coefficient of constraint entry */
+   SCIP_RATIONAL*        val                 /**< coefficient of constraint entry */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -3577,7 +3577,7 @@ SCIP_RETCODE delCoefPos(
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
-   SCIP_Rational* val;
+   SCIP_RATIONAL* val;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -3665,12 +3665,12 @@ SCIP_RETCODE chgCoefPos(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    int                   pos,                /**< position of coefficient to delete */
-   SCIP_Rational*        newval              /**< new value of coefficient */
+   SCIP_RATIONAL*        newval              /**< new value of coefficient */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
-   SCIP_Rational* val;
+   SCIP_RATIONAL* val;
    SCIP_Bool locked;
    SCIP_INTERVAL newvalfp;
    int i;
@@ -3787,7 +3787,7 @@ SCIP_RETCODE mergeMultiples(
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
-   SCIP_Rational* valsum;
+   SCIP_RATIONAL* valsum;
    int v;
 
    assert(scip != NULL);
@@ -3865,10 +3865,10 @@ SCIP_RETCODE applyFixings(
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
    SCIP_VAR** aggrvars;
-   SCIP_Rational* val;
-   SCIP_Rational** aggrscalars;
-   SCIP_Rational* fixedval;
-   SCIP_Rational* aggrconst;
+   SCIP_RATIONAL* val;
+   SCIP_RATIONAL** aggrscalars;
+   SCIP_RATIONAL* fixedval;
+   SCIP_RATIONAL* aggrconst;
    SCIP_Real negconst;
    int v;
    int naggrvars;
@@ -3901,9 +3901,9 @@ SCIP_RETCODE applyFixings(
 
    if( !consdata->removedfixings )
    {
-      SCIP_Rational* lhssubtrahend;
-      SCIP_Rational* rhssubtrahend;
-      SCIP_Rational* tmpval;
+      SCIP_RATIONAL* lhssubtrahend;
+      SCIP_RATIONAL* rhssubtrahend;
+      SCIP_RATIONAL* tmpval;
 
       SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhssubtrahend) );
       SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhssubtrahend) );
@@ -3993,8 +3993,8 @@ SCIP_RETCODE applyFixings(
          case SCIP_VARSTATUS_AGGREGATED:
          {
             SCIP_VAR* activevar = SCIPvarGetAggrVar(var);
-            SCIP_Rational* activescalar;
-            SCIP_Rational* activeconstant;
+            SCIP_RATIONAL* activescalar;
+            SCIP_RATIONAL* activeconstant;
 
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &activescalar) );
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &activeconstant) );
@@ -4127,9 +4127,9 @@ SCIP_RETCODE certificatePrintActivityConflict(
 {
    SCIP_Real side;
    SCIP_Real activity;
-   SCIP_Rational* diff;
+   SCIP_RATIONAL* diff;
    int nvals;
-   SCIP_Rational** vals;
+   SCIP_RATIONAL** vals;
 
    if( !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
@@ -4198,7 +4198,7 @@ SCIP_RETCODE tightenVarBounds(
    SCIP_Bool isminsettoinfinity;
    SCIP_Bool ismaxsettoinfinity;
    SCIP_ROUNDMODE prevmode;
-   SCIP_Rational* tmpbound;
+   SCIP_RATIONAL* tmpbound;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -4734,7 +4734,7 @@ SCIP_RETCODE checkCons(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Rational* activity;
+   SCIP_RATIONAL* activity;
    SCIP_Bool success;
 
    assert(scip != NULL);
@@ -5754,7 +5754,7 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
          if( printreason )
          {
             SCIP_CONSDATA* consdata;
-            SCIP_Rational* activity;
+            SCIP_RATIONAL* activity;
 
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &activity) );
 
@@ -6071,12 +6071,12 @@ static
 SCIP_DECL_CONSPARSE(consParseExactLinear)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
-   SCIP_Rational** coefs;
+   SCIP_RATIONAL** coefs;
    int        nvars;
    int        coefssize;
    int        requsize;
-   SCIP_Rational*  lhs;
-   SCIP_Rational*  rhs;
+   SCIP_RATIONAL*  lhs;
+   SCIP_RATIONAL*  rhs;
    char*      endptr;
    char*      firstop;
    char*      secondop;
@@ -6581,9 +6581,9 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of nonzeros in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Rational**       vals,               /**< array with coefficients of constraint entries */
-   SCIP_Rational*        lhs,                /**< left hand side of constraint */
-   SCIP_Rational*        rhs,                /**< right hand side of constraint */
+   SCIP_RATIONAL**       vals,               /**< array with coefficients of constraint entries */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of constraint */
+   SCIP_RATIONAL*        rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -6629,8 +6629,8 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
    if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE && nvars > 0 )
    {
       SCIP_VAR** consvars;
-      SCIP_Rational** consvals;
-      SCIP_Rational* constant;
+      SCIP_RATIONAL** consvals;
+      SCIP_RATIONAL* constant;
       int nconsvars;
       int requiredsize;
 
@@ -6746,9 +6746,9 @@ SCIP_RETCODE SCIPcreateConsBasicExactLinear(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of nonzeros in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Rational**       vals,               /**< array with coefficients of constraint entries */
-   SCIP_Rational*        lhs,                /**< left hand side of constraint */
-   SCIP_Rational*        rhs                 /**< right hand side of constraint */
+   SCIP_RATIONAL**       vals,               /**< array with coefficients of constraint entries */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of constraint */
+   SCIP_RATIONAL*        rhs                 /**< right hand side of constraint */
    )
 {
    assert(scip != NULL);
@@ -6901,7 +6901,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var,                /**< variable of constraint entry */
-   SCIP_Rational*        val                 /**< coefficient of constraint entry */
+   SCIP_RATIONAL*        val                 /**< coefficient of constraint entry */
    )
 {
    assert(scip != NULL);
@@ -6921,10 +6921,10 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
    {
       SCIP_CONSDATA* consdata;
       SCIP_VAR** consvars;
-      SCIP_Rational** consvals;
-      SCIP_Rational* constant;
-      SCIP_Rational* rhs;
-      SCIP_Rational* lhs;
+      SCIP_RATIONAL** consvals;
+      SCIP_RATIONAL* constant;
+      SCIP_RATIONAL* rhs;
+      SCIP_RATIONAL* lhs;
       int nconsvars;
       int requiredsize;
       int v;
@@ -7012,7 +7012,7 @@ SCIP_RETCODE SCIPchgCoefExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var,                /**< variable of constraint entry */
-   SCIP_Rational*        val                 /**< new coefficient of constraint entry */
+   SCIP_RATIONAL*        val                 /**< new coefficient of constraint entry */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -7082,7 +7082,7 @@ SCIP_RETCODE SCIPdelCoefExactLinear(
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
-   SCIP_Rational* temp;
+   SCIP_RATIONAL* temp;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -7098,7 +7098,7 @@ SCIP_RETCODE SCIPdelCoefExactLinear(
 }
 
 /** gets left hand side of linear constraint */
-SCIP_Rational* SCIPgetLhsExactLinear(
+SCIP_RATIONAL* SCIPgetLhsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
@@ -7121,7 +7121,7 @@ SCIP_Rational* SCIPgetLhsExactLinear(
 }
 
 /** gets right hand side of linear constraint */
-SCIP_Rational* SCIPgetRhsExactLinear(
+SCIP_RATIONAL* SCIPgetRhsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
@@ -7147,7 +7147,7 @@ SCIP_Rational* SCIPgetRhsExactLinear(
 SCIP_RETCODE SCIPchgLhsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Rational*        lhs                 /**< new left hand side */
+   SCIP_RATIONAL*        lhs                 /**< new left hand side */
    )
 {
    assert(scip != NULL);
@@ -7168,7 +7168,7 @@ SCIP_RETCODE SCIPchgLhsExactLinear(
 SCIP_RETCODE SCIPchgRhsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Rational*        rhs                 /**< new right hand side */
+   SCIP_RATIONAL*        rhs                 /**< new right hand side */
    )
 {
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -7252,7 +7252,7 @@ SCIP_INTERVAL* SCIPgetValsRealExactLinear(
 }
 
 /** gets the array of coefficient values in the linear constraint; the user must not modify this array! */
-SCIP_Rational** SCIPgetValsExactLinear(
+SCIP_RATIONAL** SCIPgetValsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
@@ -7282,7 +7282,7 @@ SCIP_RETCODE SCIPgetActivityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
-   SCIP_Rational*        ret
+   SCIP_RATIONAL*        ret
    )
 {
    SCIP_CONSDATA* consdata;
@@ -7314,7 +7314,7 @@ SCIP_RETCODE SCIPgetFeasibilityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
-   SCIP_Rational*        ret                 /**< pointer to store the result */
+   SCIP_RATIONAL*        ret                 /**< pointer to store the result */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -7345,7 +7345,7 @@ SCIP_RETCODE SCIPgetFeasibilityExactLinear(
 void SCIPgetFpDualsolExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Rational*        ret                 /**< result pointer */
+   SCIP_RATIONAL*        ret                 /**< result pointer */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -7375,7 +7375,7 @@ void SCIPgetFpDualsolExactLinear(
 void SCIPgetFpDualfarkasExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Rational*        ret                 /**< result pointer */
+   SCIP_RATIONAL*        ret                 /**< result pointer */
    )
 {
    SCIP_CONSDATA* consdata;

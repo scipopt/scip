@@ -5251,7 +5251,7 @@ SCIP_RETCODE cutsRoundMIRSafely(
 
             if( SCIPisCertificateActive(scip) && mirinfo != NULL )
             {
-               SCIP_Rational* boundval;
+               SCIP_RATIONAL* boundval;
 
                mirinfo->splitcoefficients[v] = SCIPintervalGetInf(cutaj); /*lint !e644*/
                assert(!SCIPisInfinity(scip, fabs(cutaj.inf)));
@@ -5277,7 +5277,7 @@ SCIP_RETCODE cutsRoundMIRSafely(
 
             if( SCIPisCertificateActive(scip) && mirinfo != NULL )
             {
-               SCIP_Rational* boundval;
+               SCIP_RATIONAL* boundval;
                mirinfo->splitcoefficients[v] = downaj;
                mirinfo->splitcoefficients[v] += 1.0;
                if( mirinfo->upperused[v] )
@@ -5547,11 +5547,11 @@ SCIP_RETCODE cutsRoundMIRRational(
    int*RESTRICT          nnz,                /**< number of non-zeros in cut */
    int*RESTRICT          varsign,            /**< stores the sign of the transformed variable in summation */
    int*RESTRICT          boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub) */
-   SCIP_Rational*        f0                  /**< fractional value of rhs */
+   SCIP_RATIONAL*        f0                  /**< fractional value of rhs */
    )
 {
-   SCIP_Rational* tmp;
-   SCIP_Rational* onedivoneminusf0;
+   SCIP_RATIONAL* tmp;
+   SCIP_RATIONAL* onedivoneminusf0;
    int i;
    int firstcontvar;
    SCIP_VAR** vars;
@@ -5606,7 +5606,7 @@ SCIP_RETCODE cutsRoundMIRRational(
    for( i = *nnz - 1; i >= 0 && cutinds[i] < firstcontvar; --i )
    {
       SCIP_VAR* var;
-      SCIP_Rational* cutaj;
+      SCIP_RATIONAL* cutaj;
       SCIP_Real QUAD(cutajquad);
       int v;
 
@@ -5624,7 +5624,7 @@ SCIP_RETCODE cutsRoundMIRRational(
       {
          SCIP_Real QUAD(aj);
          SCIP_Real downaj;
-         SCIP_Rational* fj;
+         SCIP_RATIONAL* fj;
 
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &fj) );
 
@@ -5641,7 +5641,7 @@ SCIP_RETCODE cutsRoundMIRRational(
 
             if( SCIPisCertificateActive(scip) )
             {
-               SCIP_Rational* boundval;
+               SCIP_RATIONAL* boundval;
 
                mirinfo->splitcoefficients[v] = downaj;
                if( mirinfo->upperused[v] )
@@ -5666,7 +5666,7 @@ SCIP_RETCODE cutsRoundMIRRational(
 
             if( SCIPisCertificateActive(scip) )
             {
-               SCIP_Rational* boundval;
+               SCIP_RATIONAL* boundval;
 
                mirinfo->splitcoefficients[v] = QUAD_TO_DBL(downaj);
                mirinfo->splitcoefficients[v] += 1.0;
@@ -5752,8 +5752,8 @@ SCIP_RETCODE cutsRoundMIRRational(
    while( i >= ndelcontvars )
    {
       SCIP_VAR* var;
-      SCIP_Rational* cutaj;
-      SCIP_Rational* tmprational;
+      SCIP_RATIONAL* cutaj;
+      SCIP_RATIONAL* tmprational;
       SCIP_Real QUAD(cutajquad);
       SCIP_Real QUAD(aj);
       int v;
@@ -6591,21 +6591,21 @@ SCIP_RETCODE cutsSubstituteMIRRational(
    QUAD(SCIP_Real*       cutrhs),            /**< pointer to right hand side of cut */
    int*                  cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
    int*                  nnz,                /**< number of non-zeros in cut */
-   SCIP_Rational*        f0                  /**< fractional value of rhs */
+   SCIP_RATIONAL*        f0                  /**< fractional value of rhs */
    )
 {  /*lint --e{715}*/
    SCIP_ROW** rows;
    SCIP_ROW* userow;
    SCIP_ROWEXACT* rowexact;
-   SCIP_Rational* onedivoneminusf0;
-   SCIP_Rational* tmprational;
+   SCIP_RATIONAL* onedivoneminusf0;
+   SCIP_RATIONAL* tmprational;
    SCIP_ROUNDMODE previousroundmode;
    SCIP_AGGREGATIONINFO* aggrinfo;
    SCIP_Real mult;
    int i;
    int currentnegslackrow;
-   SCIP_Rational* ar;
-   SCIP_Rational* cutar;
+   SCIP_RATIONAL* ar;
+   SCIP_RATIONAL* cutar;
    int r;
 
    assert(scip != NULL);

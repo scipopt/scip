@@ -4111,7 +4111,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
    {
       char *refstrs[2];
       SCIP_Real refvals[2] = {SCIP_INVALID, SCIP_INVALID};
-      SCIP_Rational** refvalsrat = NULL;
+      SCIP_RATIONAL** refvalsrat = NULL;
       const char* primaldual[] = {"primal", "dual"};
       char prompt[SCIP_MAXSTRLEN];
       int i;

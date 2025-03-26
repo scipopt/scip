@@ -342,7 +342,7 @@ void SCIPprobAddObjoffset(
 /** adds value to objective offset */
 void SCIPprobAddObjoffsetExact(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Rational*        addval              /**< value to add to objective offset */
+   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
    );
 
 /** sets the dual bound on objective function */
@@ -506,8 +506,8 @@ void SCIPprobExternObjvalExact(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Rational*        objval,             /**< internal objective value */
-   SCIP_Rational*        objvalext           /**< store external objective value */
+   SCIP_RATIONAL*        objval,             /**< internal objective value */
+   SCIP_RATIONAL*        objvalext           /**< store external objective value */
    );
 
 /** returns the internal value of the given external objective value */
@@ -523,8 +523,8 @@ void SCIPprobInternObjvalExact(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Rational*        objval,             /**< internal objective value */
-   SCIP_Rational*        objvalint           /**< store internal objective value */
+   SCIP_RATIONAL*        objval,             /**< internal objective value */
+   SCIP_RATIONAL*        objvalint           /**< store internal objective value */
    );
 
 /** returns variable of the problem with given name */

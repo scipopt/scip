@@ -260,7 +260,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
-   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
@@ -309,7 +309,7 @@ SCIP_RETCODE SCIPnodeAddBoundchgExact(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
-   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
    SCIP_Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    );
@@ -370,7 +370,7 @@ void SCIPnodeUpdateExactLowerbound(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_Rational*        newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   SCIP_RATIONAL*        newbound            /**< new lower bound for the node (if it's larger than the old one) */
    );
 
 /** updates exact lower bound of node using lower bound of exact LP */

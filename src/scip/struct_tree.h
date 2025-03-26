@@ -142,7 +142,7 @@ struct SCIP_Node
 {
    SCIP_Longint          number;             /**< successively assigned number of the node */
    SCIP_Real             lowerbound;         /**< lower (dual) bound of subtree */
-   SCIP_Rational*        lowerboundexact;    /**< lower (dual) rational bound of subtree */
+   SCIP_RATIONAL*        lowerboundexact;    /**< lower (dual) rational bound of subtree */
    SCIP_Real             estimate;           /**< estimated value of feasible solution in subtree */
    union
    {
@@ -174,7 +174,7 @@ struct SCIP_PendingBdchg
    SCIP_NODE*            node;               /**< node to add bound change to */
    SCIP_VAR*             var;                /**< variable to change the bounds for */
    SCIP_Real             newbound;           /**< new value for bound */
-   SCIP_Rational*        newboundexact;      /**< new value for exact bound, or NULL if not needed */
+   SCIP_RATIONAL*        newboundexact;      /**< new value for exact bound, or NULL if not needed */
    SCIP_BOUNDTYPE        boundtype;          /**< type of bound: lower or upper bound */
    SCIP_CONS*            infercons;          /**< constraint that deduced the bound change, or NULL */
    SCIP_PROP*            inferprop;          /**< propagator that deduced the bound change, or NULL */

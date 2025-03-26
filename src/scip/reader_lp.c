@@ -777,7 +777,7 @@ static
 SCIP_Bool isValueRational(
    SCIP*                 scip,               /**< SCIP data structure */
    LPINPUT*              lpinput,            /**< LP reading data */
-   SCIP_Rational*        value               /**< pointer to store the value (unchanged, if token is no value) */
+   SCIP_RATIONAL*        value               /**< pointer to store the value (unchanged, if token is no value) */
    )
 {
    assert(lpinput != NULL);
@@ -1334,9 +1334,9 @@ SCIP_RETCODE readCoefficientsRational(
                                               *   LP_MAX_LINELEN */
    int*                  coefssize,          /**< size of vars and coefs arrays */
    SCIP_VAR***           vars,               /**< pointer to store the array with variables (must be freed by caller) */
-   SCIP_Rational***      coefs,              /**< pointer to store the array with coefficients (must be freed by caller) */
+   SCIP_RATIONAL***      coefs,              /**< pointer to store the array with coefficients (must be freed by caller) */
    int*                  ncoefs,             /**< pointer to store the number of coefficients */
-   SCIP_Rational*        objoffset,          /**< pointer to store an objective offset (or NULL if ! isobjective) */
+   SCIP_RATIONAL*        objoffset,          /**< pointer to store an objective offset (or NULL if ! isobjective) */
    SCIP_Bool*            newsection          /**< pointer to store whether a new section was encountered */
    )
 {
@@ -1344,7 +1344,7 @@ SCIP_RETCODE readCoefficientsRational(
    SCIP_Bool havesign;
    SCIP_Bool havevalue;
    SCIP_Bool haveobjoffset = FALSE;
-   SCIP_Rational* coef;
+   SCIP_RATIONAL* coef;
    int coefsign;
    SCIP_Bool inquadpart;
    SCIP_VAR* firstquadvar;
@@ -1598,10 +1598,10 @@ SCIP_RETCODE readObjectiveRational(
 {
    char name[LP_MAX_LINELEN];
    SCIP_VAR** vars;
-   SCIP_Rational** coefs;
+   SCIP_RATIONAL** coefs;
    SCIP_Bool newsection;
-   SCIP_Rational* objoffset;
-   SCIP_Rational* tmpval;
+   SCIP_RATIONAL* objoffset;
+   SCIP_RATIONAL* tmpval;
    int ncoefs;
    int coefssize;
 
@@ -1975,12 +1975,12 @@ SCIP_RETCODE readConstraintsRational(
    char name[LP_MAX_LINELEN];
    SCIP_CONS* cons;
    SCIP_VAR** vars;
-   SCIP_Rational** coefs;
+   SCIP_RATIONAL** coefs;
    LPSENSE sense;
    SCIP_RETCODE retcode;
-   SCIP_Rational* sidevalue;
-   SCIP_Rational* lhs;
-   SCIP_Rational* rhs;
+   SCIP_RATIONAL* sidevalue;
+   SCIP_RATIONAL* lhs;
+   SCIP_RATIONAL* rhs;
    SCIP_Bool newsection;
    SCIP_Bool initial;
    SCIP_Bool separate;
@@ -2460,9 +2460,9 @@ SCIP_RETCODE readBoundsRational(
    LPINPUT*              lpinput             /**< LP reading data */
    )
 {
-   SCIP_Rational* value;
-   SCIP_Rational* lb;
-   SCIP_Rational* ub;
+   SCIP_RATIONAL* value;
+   SCIP_RATIONAL* lb;
+   SCIP_RATIONAL* ub;
 
    assert(lpinput != NULL);
 
@@ -2902,7 +2902,7 @@ SCIP_RETCODE readBinaries(
          SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
          if( SCIPisExact(scip) )
          {
-            SCIP_Rational* tmp;
+            SCIP_RATIONAL* tmp;
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
             SCIPrationalSetReal(tmp, 0.0);
             SCIP_CALL( SCIPchgVarLbExact(scip, var, tmp) );
@@ -2914,7 +2914,7 @@ SCIP_RETCODE readBinaries(
          SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
          if( SCIPisExact(scip) )
          {
-            SCIP_Rational* tmp;
+            SCIP_RATIONAL* tmp;
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
             SCIPrationalSetReal(tmp, 1.0);
             SCIP_CALL( SCIPchgVarUbExact(scip, var, tmp) );
@@ -3476,9 +3476,9 @@ SCIP_RETCODE printRowExact(
    const char*           rownameextension,   /**< row name extension */
    const char*           type,               /**< row type ("=", "<=", or ">=") */
    SCIP_VAR**            linvars,            /**< array of linear variables */
-   SCIP_Rational**       linvals,            /**< array of linear coefficient values */
+   SCIP_RATIONAL**       linvals,            /**< array of linear coefficient values */
    int                   nlinvars,           /**< number of linear variables */
-   SCIP_Rational*        rhs                 /**< right hand side */
+   SCIP_RATIONAL*        rhs                 /**< right hand side */
    )
 {
    int v;

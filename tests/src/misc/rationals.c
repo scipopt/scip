@@ -48,11 +48,11 @@ volatile double b = 2.34567;
 /* corresponds to exact rational number 6628035890302157/536870912 */
 volatile double c = 12345678.9;
 
-static SCIP_Rational* r1;
-static SCIP_Rational* r2;
-static SCIP_Rational* rbuf;
+static SCIP_RATIONAL* r1;
+static SCIP_RATIONAL* r2;
+static SCIP_RATIONAL* rbuf;
 static SCIP_RATIONALARRAY* ratar;
-static SCIP_Rational** ratpt;
+static SCIP_RATIONAL** ratpt;
 static BMS_BLKMEM* blkmem;
 static BMS_BUFMEM* buffmem;
 
@@ -90,7 +90,7 @@ TestSuite(rationals, .init = setup, .fini = teardown);
 /* TESTS  */
 Test(rationals, create_and_free)
 {
-   SCIP_Rational** buffer;
+   SCIP_RATIONAL** buffer;
    size_t nusedbuffers;
    nusedbuffers = BMSgetNUsedBufferMemory(buffmem);
 
@@ -104,7 +104,7 @@ Test(rationals, setting, .description = "tests all the different methods to set/
 {
    int testint = 100345;
    SCIP_Real testreal = 1235.235690;
-   SCIP_Rational* testr;
+   SCIP_RATIONAL* testr;
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_BOOST)
    mpq_t gmpr;
 

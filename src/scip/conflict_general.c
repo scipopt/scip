@@ -1509,9 +1509,9 @@ SCIP_RETCODE getObjectiveRow(
    SCIP_COL** cols;
    SCIP_COLEXACT** colsexact;
    int nvals;
-   SCIP_Rational** valsexact;
-   SCIP_Rational* lhsexact;
-   SCIP_Rational* rhsexact;
+   SCIP_RATIONAL** valsexact;
+   SCIP_RATIONAL* lhsexact;
+   SCIP_RATIONAL* rhsexact;
    SCIP_ROWEXACT* rowexact;
 
    assert(SCIPisExact(scip));
@@ -1535,7 +1535,7 @@ SCIP_RETCODE getObjectiveRow(
    /* add coefficients */
    for( int i = 0; i < SCIPgetNLPCols(scip); i++ )
    {
-      SCIP_Rational* val;
+      SCIP_RATIONAL* val;
 
       val = SCIPvarGetObjExact(scip->lpexact->cols[i]->var);
       if( SCIPrationalIsZero(val) )

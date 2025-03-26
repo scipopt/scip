@@ -2677,7 +2677,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
    SCIP_COL** cols;
    SCIP_VAR* var;
    SCIP_COL* col;
-   SCIP_Rational* tmp;
+   SCIP_RATIONAL* tmp;
    SCIP_Real primsol;
    SCIP_Real frac;
    SCIP_VARTYPE vartype;
@@ -2938,7 +2938,7 @@ SCIP_RETCODE SCIPbranchExecLPExact(
 
 #ifndef NDEBUG
       {
-         SCIP_Rational* tmp;
+         SCIP_RATIONAL* tmp;
          SCIP_Real branchval;
 
          SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );

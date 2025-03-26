@@ -433,7 +433,7 @@ void SCIPintervalSet(
 /** stores given value as interval */
 void SCIPintervalSetRational(
    SCIP_INTERVAL*        resultant,          /**< interval to store value into */
-   SCIP_Rational*        value               /**< value to store */
+   SCIP_RATIONAL*        value               /**< value to store */
    )
 {
    assert(resultant != NULL);

@@ -1904,10 +1904,10 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 SCIP_EXPORT
 SCIP_RETCODE SCIPcalcIntegralScalarExact(
    BMS_BUFMEM*           buffer,
-   SCIP_Rational**       vals,               /**< values to scale */
+   SCIP_RATIONAL**       vals,               /**< values to scale */
    int                   nvals,              /**< number of values to scale */
    SCIP_Real             maxscale,           /**< maximal allowed scalar */
-   SCIP_Rational*        intscalar,          /**< pointer to store scalar that would make the coefficients integral */
+   SCIP_RATIONAL*        intscalar,          /**< pointer to store scalar that would make the coefficients integral */
    SCIP_Bool*            success             /**< stores whether returned value is valid */
    );
 
