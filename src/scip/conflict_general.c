@@ -1513,6 +1513,8 @@ SCIP_RETCODE getObjectiveRow(
    SCIP_RATIONAL* lhsexact;
    SCIP_RATIONAL* rhsexact;
    SCIP_ROWEXACT* rowexact;
+   SCIP_Real rhschange;
+   SCIP_ROUNDMODE prevmode;
 
    assert(SCIPisExact(scip));
 
@@ -1522,7 +1524,12 @@ SCIP_RETCODE getObjectiveRow(
    SCIP_CALL( SCIPallocBufferArray(scip, &colsexact, SCIPgetNLPCols(scip)) );
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhsexact) );
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhsexact) );
+
+   rhschange = 0;
    nvals = 0;
+
+   prevmode = SCIPintervalGetRoundingMode();
+   SCIPintervalSetRoundingModeUpwards();
 
    SCIPrationalSetNegInfinity(lhsexact);
    SCIPrationalSetReal(rhsexact, rhs);
@@ -1533,15 +1540,44 @@ SCIP_RETCODE getObjectiveRow(
    }
 
    /* add coefficients */
-   for( int i = 0; i < SCIPgetNLPCols(scip); i++ )
+   for( int i = 0; i < SCIPgetNLPCols(scip) && (*success); i++ )
    {
       SCIP_RATIONAL* val;
+      SCIP_COLEXACT* col;
 
-      val = SCIPvarGetObjExact(scip->lpexact->cols[i]->var);
+      col = scip->lpexact->cols[i];
+      val = col->obj;
+
       if( SCIPrationalIsZero(val) )
          continue;
 
-      vals[nvals] = SCIPvarGetObj(scip->lpexact->cols[i]->var);
+      /* make the objective safe, if possible */
+      if( SCIPrationalIsFpRepresentable(col->obj) )
+         vals[nvals] = SCIPvarGetObj(col->var);
+      else if( !SCIPrationalIsNegInfinity(col->lb) )
+      {
+         vals[nvals] = SCIPrationalRoundReal(col->obj, SCIP_R_ROUND_DOWNWARDS);
+         if( SCIPvarGetLbGlobal(col->var) < 0 )
+         {
+            rhschange += (SCIPrationalRoundReal(col->obj, SCIP_R_ROUND_UPWARDS) - SCIPrationalRoundReal(col->obj, SCIP_R_ROUND_DOWNWARDS))
+               * (-SCIPvarGetLbGlobal(col->var));
+         }
+      }
+      else if( !SCIPrationalIsInfinity(col->ub) )
+      {
+         vals[nvals] = SCIPrationalRoundReal(col->obj, SCIP_R_ROUND_UPWARDS);
+         if( SCIPvarGetUbGlobal(col->var) > 0)
+         {
+            rhschange += (SCIPrationalRoundReal(col->obj, SCIP_R_ROUND_UPWARDS) - SCIPrationalRoundReal(col->obj, SCIP_R_ROUND_DOWNWARDS))
+               * SCIPvarGetUbGlobal(col->var);
+         }
+      }
+      else
+      {
+         *success = FALSE;
+         break;
+      }
+
       valsexact[nvals] = val;
       cols[nvals] = scip->lp->cols[i];
       colsexact[nvals] = scip->lpexact->cols[i];
@@ -1571,6 +1607,8 @@ SCIP_RETCODE getObjectiveRow(
    SCIPfreeBufferArray(scip, &cols);
    SCIPfreeBufferArray(scip, &colsexact);
    SCIPfreeBufferArray(scip, &valsexact);
+
+   SCIPintervalSetRoundingMode(prevmode);
 
    return SCIP_OKAY;
 }
