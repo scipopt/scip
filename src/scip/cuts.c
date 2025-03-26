@@ -2644,7 +2644,13 @@ SCIP_Bool SCIPcutsTightenCoefficients(
 /* =========================================== aggregation row =========================================== */
 
 
-/** create an empty aggregation row */
+/** create an empty aggregation row
+ *
+ *  @note By default, this data structure uses quad precision via double-double arithmetic, i.e., it allocates a
+ *        SCIP_Real array of length two times SCIPgetNVars() for storing the coefficients.  In exact solving mode, we
+ *        cannot use quad precision because we need to control the ronding mode, hence only the first SCIPgetNVars()
+ *        entries are used.
+ */
 SCIP_RETCODE SCIPaggrRowCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW**        aggrrow             /**< pointer to return aggregation row */
@@ -3177,6 +3183,9 @@ void SCIPaggrRowClearSafely(
 {
    int i;
 
+   /* in exact solving mode, we do not use quad precision, because we need to control the rounding mode; hence, we only
+    * use and clear the first SCIPgetNVars() entries
+    */
    for( i = 0; i < aggrrow->nnz; ++i )
    {
       aggrrow->vals[aggrrow->inds[i]] = 0.0;
