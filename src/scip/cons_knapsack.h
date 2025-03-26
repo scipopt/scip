@@ -202,7 +202,7 @@ SCIP_ROW* SCIPgetRowKnapsack(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** returns the row of the given knapsack constraint if no LP row was yet created */
+/** creates and returns the row of the given knapsack constraint */
 SCIP_ROW* SCIPcreateRowKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

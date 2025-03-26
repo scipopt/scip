@@ -193,7 +193,7 @@ SCIP_ROW* SCIPgetRowVarbound(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** returns the row of the given varbound constraint if no LP row was yet created */
+/** creates and returns the row of the given varbound constraint */
 SCIP_EXPORT
 SCIP_ROW* SCIPcreateRowVarbound(
    SCIP*                 scip,               /**< SCIP data structure */

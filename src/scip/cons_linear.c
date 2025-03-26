@@ -4961,12 +4961,12 @@ SCIP_RETCODE addConflictBounds(
       if( reasonisrhs == (vals[i] > 0.0) )
       {
          /* rhs is reason and coeff is positive, or lhs is reason and coeff is negative -> lower bound is responsible */
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx));
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
       }
       else
       {
          /* lhs is reason and coeff is positive, or rhs is reason and coeff is negative -> upper bound is responsible */
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx));
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
       }
    }
 
@@ -5017,13 +5017,13 @@ SCIP_RETCODE addConflictFixedVars(
 	 if( !SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[v], bdchgidx, FALSE), SCIPvarGetLbGlobal(vars[v])) )
 	 {
 	    /* @todo get boundchange index before this last boundchange and correct the index */
-	    SCIP_CALL( SCIPaddConflictLb(scip, vars[v], bdchgidx));
+	    SCIP_CALL( SCIPaddConflictLb(scip, vars[v], bdchgidx) );
 	 }
 
 	 if( !SCIPisEQ(scip, SCIPgetVarUbAtIndex(scip, vars[v], bdchgidx, FALSE), SCIPvarGetUbGlobal(vars[v])) )
 	 {
 	    /* @todo get boundchange index before this last boundchange and correct the index */
-	    SCIP_CALL( SCIPaddConflictUb(scip, vars[v], bdchgidx));
+	    SCIP_CALL( SCIPaddConflictUb(scip, vars[v], bdchgidx) );
 	 }
 
 	 continue;
@@ -5033,8 +5033,8 @@ SCIP_RETCODE addConflictFixedVars(
       if( SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[v], bdchgidx, FALSE), SCIPgetVarUbAtIndex(scip, vars[v], bdchgidx, FALSE)) )
       {
 	 /* add all bounds of fixed variables which lead to the boundchange of the given inference variable */
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[v], bdchgidx));
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[v], bdchgidx));
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[v], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[v], bdchgidx) );
       }
    }
 
@@ -5168,7 +5168,7 @@ SCIP_RETCODE resolvePropagation(
 
       /* check that we really have a ranged row here */
       assert(!SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs));
-      SCIP_CALL( addConflictFixedVars(scip, cons, infervar, bdchgidx, inferpos));
+      SCIP_CALL( addConflictFixedVars(scip, cons, infervar, bdchgidx, inferpos) );
       *result = SCIP_SUCCESS;
       break;
 
@@ -18748,7 +18748,7 @@ SCIP_ROW* SCIPgetRowLinear(
    return consdata->row;
 }
 
-/** returns the row of the given linear constraint if no LP row was yet created */
+/** creates and returns the row of the given linear constraint */
 SCIP_ROW* SCIPcreateRowLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -19059,30 +19059,5 @@ SCIP_RETCODE SCIPcleanupConssLinear(
       ++(*ndelconss);
    }
 
-   return SCIP_OKAY;
-}
-
-/** tries to simplify a linear constraint */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsimplifyConsLinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< source constraint to try to convert */
-   int*                  nchgcoefs,          /**< pointer to store the amount of changed coefficients */
-   int*                  nchgsides,          /**< pointer to store the amount of changed sides */
-   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected */
-   )
-{
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(nchgcoefs != NULL);
-   assert(nchgsides != NULL);
-   assert(infeasible != NULL);
-
-   *nchgcoefs = 0;
-   *nchgsides = 0;
-   *infeasible = FALSE;
-
-   SCIP_CALL(simplifyInequalities(scip, cons, nchgcoefs, nchgsides, infeasible));
    return SCIP_OKAY;
 }
