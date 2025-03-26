@@ -92,12 +92,10 @@
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PRESOLTIMING    (SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_EXHAUSTIVE) /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP
 
 #define EVENTHDLR_NAME         "exactlinear"
@@ -108,34 +106,10 @@
 #define DEFAULT_MAXROUNDSROOT          -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS            50 /**< maximal number of cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT       200 /**< maximal number of cuts separated per separation round in root node */
-#define DEFAULT_PRESOLPAIRWISE       TRUE /**< should pairwise constraint comparison be performed in presolving? */
-#define DEFAULT_PRESOLUSEHASHING     TRUE /**< should hash table be used for detecting redundant constraints in advance */
-#define DEFAULT_NMINCOMPARISONS    200000 /**< number for minimal pairwise presolving comparisons */
 #define DEFAULT_SORTVARS             TRUE /**< should variables be sorted after presolve w.r.t their coefficient absolute for faster
                                            *  propagation? */
 #define DEFAULT_SEPARATEALL         FALSE /**< should all constraints be subject to cardinality cut generation instead of only
                                            *   the ones with non-zero dual value? */
-#define DEFAULT_AGGREGATEVARIABLES   TRUE /**< should presolving search for redundant variables in equations */
-#define DEFAULT_SIMPLIFYINEQUALITIES TRUE /**< should presolving try to simplify inequalities */
-#define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be performed? */
-#define DEFAULT_SINGLETONSTUFFING    TRUE /**< should stuffing of singleton continuous variables be performed? */
-#define DEFAULT_SINGLEVARSTUFFING   FALSE /**< should single variable stuffing be performed, which tries to fulfill
-                                           *   constraints using the cheapest variable? */
-#define DEFAULT_DETECTCUTOFFBOUND    TRUE /**< should presolving try to detect constraints parallel to the objective
-                                           *   function defining an upper bound and prevent these constraints from
-                                           *   entering the LP */
-#define DEFAULT_DETECTLOWERBOUND     TRUE /**< should presolving try to detect constraints parallel to the objective
-                                           *   function defining a lower bound and prevent these constraints from
-                                           *   entering the LP */
-#define DEFAULT_DETECTPARTIALOBJECTIVE TRUE/**< should presolving try to detect subsets of constraints parallel to the
-                                            *   objective function */
-#define DEFAULT_RANGEDROWPROPAGATION TRUE /**< should we perform ranged row propagation */
-#define DEFAULT_RANGEDROWARTCONS     TRUE /**< should presolving and propagation extract sub-constraints from ranged rows and equations? */
-#define DEFAULT_RANGEDROWMAXDEPTH INT_MAX /**< maximum depth to apply ranged row propagation */
-#define DEFAULT_RANGEDROWFREQ           1 /**< frequency for applying ranged row propagation */
-
-#define DEFAULT_MULTAGGRREMOVE      FALSE /**< should multi-aggregations only be performed if the constraint can be
-                                           *   removed afterwards? */
 
 
 /** constraint data for linear constraints */
@@ -256,7 +230,6 @@ struct SCIP_ConshdlrData
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
-   int                   nmincomparisons;    /**< number for minimal pairwise presolving comparisons */
    int                   naddconss;          /**< number of added constraints */
    SCIP_Longint          ncheckserrorbound;  /**< number of times running error analyis activity computation was called */
    SCIP_Longint          nsuccesserrorbound; /**< number of times running error analyis activity computation could determine feasibility */
@@ -265,36 +238,12 @@ struct SCIP_ConshdlrData
    SCIP_Longint          nconspropnoninit;  /**< number of times a non-initial (conflict) constraint was propagated */
    SCIP_Longint          propnonzeros;       /**< number of nonzeros in propagated rows */
    SCIP_Longint          propnonzerosnoninit;/**< number of nonzeros in propagated rows in non-initial (conflict) propagations */
-   SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
-   SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             separateall;        /**< should all constraints be subject to cardinality cut generation instead of only
                                               *   the ones with non-zero dual value? */
-   SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
-   SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
-   SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
-   SCIP_Bool             singletonstuffing;  /**< should stuffing of singleton continuous variables be performed? */
-   SCIP_Bool             singlevarstuffing;  /**< should single variable stuffing be performed, which tries to fulfill
-                                              *   constraints using the cheapest variable? */
    SCIP_Bool             sortvars;           /**< should binary variables be sorted for faster propagation? */
-   SCIP_Bool             detectcutoffbound;  /**< should presolving try to detect constraints parallel to the objective
-                                              *   function defining an upper bound and prevent these constraints from
-                                              *   entering the LP */
-   SCIP_Bool             detectlowerbound;   /**< should presolving try to detect constraints parallel to the objective
-                                              *   function defining a lower bound and prevent these constraints from
-                                              *   entering the LP */
-   SCIP_Bool             detectpartialobjective;/**< should presolving try to detect subsets of constraints parallel to
-                                                 *   the objective function */
-   SCIP_Bool             rangedrowpropagation;/**< should presolving and propagation try to improve bounds, detect
-                                               *   infeasibility, and extract sub-constraints from ranged rows and
-                                               *   equations */
-   SCIP_Bool             rangedrowartcons;   /**< should presolving and propagation extract sub-constraints from ranged rows and equations?*/
    SCIP_Bool             propcont;           /**< should bounds on continuous variables be tightened by propagation?*/
    SCIP_Bool             limitdenom;         /**< should denominator sizes for continuous variables be controlled?*/
    SCIP_Longint          maxdenom;           /**< maximal denominator size for continuous variables */
-   int                   rangedrowmaxdepth;  /**< maximum depth to apply ranged row propagation */
-   int                   rangedrowfreq;      /**< frequency for applying ranged row propagation */
-   SCIP_Bool             multaggrremove;     /**< should multi-aggregations only be performed if the constraint can be
-                                              *   removed afterwards? */
 };
 
 
@@ -6604,60 +6553,8 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
          "should all constraints be subject to cardinality cut generation instead of only the ones with non-zero dual value?",
          &conshdlrdata->separateall, FALSE, DEFAULT_SEPARATEALL, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/aggregatevariables",
-         "should presolving search for aggregations in equations",
-         &conshdlrdata->aggregatevariables, TRUE, DEFAULT_AGGREGATEVARIABLES, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/simplifyinequalities",
-         "should presolving try to simplify inequalities",
-         &conshdlrdata->simplifyinequalities, TRUE, DEFAULT_SIMPLIFYINEQUALITIES, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/dualpresolving",
-         "should dual presolving steps be performed?",
-         &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/singletonstuffing",
-         "should stuffing of singleton continuous variables be performed?",
-         &conshdlrdata->singletonstuffing, TRUE, DEFAULT_SINGLETONSTUFFING, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/singlevarstuffing",
-         "should single variable stuffing be performed, which tries to fulfill constraints using the cheapest variable?",
-         &conshdlrdata->singlevarstuffing, TRUE, DEFAULT_SINGLEVARSTUFFING, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/sortvars", "apply binaries sorting in decr. order of coeff abs value?",
          &conshdlrdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/detectcutoffbound",
-         "should presolving try to detect constraints parallel to the objective function defining an upper bound and prevent these constraints from entering the LP?",
-         &conshdlrdata->detectcutoffbound, TRUE, DEFAULT_DETECTCUTOFFBOUND, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/detectlowerbound",
-         "should presolving try to detect constraints parallel to the objective function defining a lower bound and prevent these constraints from entering the LP?",
-         &conshdlrdata->detectlowerbound, TRUE, DEFAULT_DETECTLOWERBOUND, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/detectpartialobjective",
-         "should presolving try to detect subsets of constraints parallel to the objective function?",
-         &conshdlrdata->detectpartialobjective, TRUE, DEFAULT_DETECTPARTIALOBJECTIVE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/rangedrowpropagation",
-         "should presolving and propagation try to improve bounds, detect infeasibility, and extract sub-constraints from ranged rows and equations?",
-         &conshdlrdata->rangedrowpropagation, TRUE, DEFAULT_RANGEDROWPROPAGATION, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/rangedrowartcons",
-         "should presolving and propagation extract sub-constraints from ranged rows and equations?",
-         &conshdlrdata->rangedrowartcons, TRUE, DEFAULT_RANGEDROWARTCONS, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/" CONSHDLR_NAME "/rangedrowmaxdepth",
-         "maximum depth to apply ranged row propagation",
-         &conshdlrdata->rangedrowmaxdepth, TRUE, DEFAULT_RANGEDROWMAXDEPTH, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/" CONSHDLR_NAME "/rangedrowfreq",
-         "frequency for applying ranged row propagation",
-         &conshdlrdata->rangedrowfreq, TRUE, DEFAULT_RANGEDROWFREQ, 1, SCIP_MAXTREEDEPTH, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/multaggrremove",
-         "should multi-aggregations only be performed if the constraint can be removed afterwards?",
-         &conshdlrdata->multaggrremove, TRUE, DEFAULT_MULTAGGRREMOVE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/propcont",
          "should bounds on continuous variables be tightened by propagation?",
