@@ -681,14 +681,14 @@ void SCIPlpExactGetPseudoObjval(
    );
 
 /** removes all columns after the given number of cols from the LP */
-SCIP_RETCODE SCIPlpExactshrinkCols(
+SCIP_RETCODE SCIPlpExactShrinkCols(
    SCIP_LPEXACT*         lpexact,            /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   newncols            /**< new number of columns in the LP */
    );
 
 /** removes and releases all rows after the given number of rows from the LP */
-SCIP_RETCODE SCIPlpExactshrinkRows(
+SCIP_RETCODE SCIPlpExactShrinkRows(
    SCIP_LPEXACT*         lpexact,            /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */

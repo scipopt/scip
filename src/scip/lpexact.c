@@ -1169,8 +1169,8 @@ SCIP_RETCODE colExactDelCoefPos(
    row = col->rows[pos];
    assert((row->lppos >= 0) == (pos < col->nlprows));
 
-   SCIPrationalDebugMessage("deleting coefficient %q * <%s> at position %d from column <%s>\n",
-     col->vals[pos], row->fprow->name, pos, SCIPvarGetName(col->var));
+   SCIPrationalDebugMessage("deleting coefficient %q * <%p> at position %d from column <%s>\n",
+      col->vals[pos], (void*) row, pos, SCIPvarGetName(col->var));
 
    if( col->linkpos[pos] == -1 )
       col->nunlinked--;
@@ -1568,7 +1568,7 @@ SCIP_RETCODE rowExactUnlink(
 
    if( row->nunlinked < row->len )
    {
-      SCIPsetDebugMsg(set, "unlinking row <%s>\n", row->fprow->name);
+      SCIPsetDebugMsg(set, "unlinking exact row <%p>\n", (void*) row);
       for( i = 0; i < row->len; ++i )
       {
          if( row->linkpos[i] >= 0 )
@@ -5583,12 +5583,11 @@ SCIP_RETCODE SCIProwExactRelease(
    assert(blkmem != NULL);
    assert(row != NULL);
    assert(*row != NULL);
-   assert((*row) != NULL);
    assert((*row)->nuses >= 1);
    assert((*row)->nlocks < (unsigned int)((*row)->nuses)); /*lint !e574*/
 
-   SCIPsetDebugMsg(set, "release row <%s> with nuses=%d and nlocks=%u\n",
-      (*row)->fprow->name, (*row)->nuses, (*row)->nlocks);
+   SCIPsetDebugMsg(set, "release exact row <%p> with nuses=%d and nlocks=%u\n",
+      (void*) (*row), (*row)->nuses, (*row)->nlocks);
    (*row)->nuses--;
    if( (*row)->nuses == 0 )
    {
@@ -6788,7 +6787,7 @@ int SCIPlpExactGetNRows(
    return lp->nrows;
 }
 
-#ifdef SCIP_DISABLED_CODE
+#ifdef SCIP_DEBUG
 static
 SCIP_RETCODE lpexactComputeDualValidity(
    SCIP_LPEXACT*         lp,                 /**< current LP data */
@@ -7446,7 +7445,7 @@ void SCIPlpExactGetPseudoObjval(
 }
 
 /** removes all columns after the given number of cols from the LP */
-SCIP_RETCODE SCIPlpExactshrinkCols(
+SCIP_RETCODE SCIPlpExactShrinkCols(
    SCIP_LPEXACT*         lp,                 /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   newncols            /**< new number of columns in the LP */
@@ -7494,7 +7493,7 @@ SCIP_RETCODE SCIPlpExactshrinkCols(
 }
 
 /** removes and releases all rows after the given number of rows from the LP */
-SCIP_RETCODE SCIPlpExactshrinkRows(
+SCIP_RETCODE SCIPlpExactShrinkRows(
    SCIP_LPEXACT*         lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -7524,7 +7523,6 @@ SCIP_RETCODE SCIPlpExactshrinkRows(
 
          SCIP_CALL( rowExactUpdateDelLP(row, set) );
 
-         //SCIProwExactUnlocK(row);
          SCIP_CALL( SCIProwExactRelease(&lp->rows[r], blkmem, set, lp) );
       }
       assert(lp->nrows == newnrows);
@@ -7583,8 +7581,8 @@ SCIP_RETCODE SCIPlpExactClear(
    assert(!lp->fplp->diving);
 
    SCIPsetDebugMsg(set, "clearing LP\n");
-   SCIP_CALL( SCIPlpExactshrinkCols(lp, set, 0) );
-   SCIP_CALL( SCIPlpExactshrinkRows(lp, blkmem, set, 0) );
+   SCIP_CALL( SCIPlpExactShrinkCols(lp, set, 0) );
+   SCIP_CALL( SCIPlpExactShrinkRows(lp, blkmem, set, 0) );
 
    return SCIP_OKAY;
 }

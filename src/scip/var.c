@@ -9612,7 +9612,7 @@ void SCIPvarAdjustUbExactFloat(
    assert(var->scip == set->scip);
    assert(ub != NULL);
 
-   SCIPrationalDebugMessage("adjust upper bound %q of <%s>\n", ub, var->name);
+   SCIPsetDebugMsg(set, "adjust upper bound %g of <%s>\n", *ub, var->name);
 
    *ub = adjustedUbExactFloat(SCIPvarIsIntegral(var), *ub);
 }

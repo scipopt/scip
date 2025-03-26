@@ -1737,7 +1737,10 @@ void SCIPrationalPrint(
 }
 
 /** print SCIP_Rational to output stream */
-std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r)
+std::ostream& operator<<(
+   std::ostream&         os,                 /**< output stream */
+   SCIP_Rational const & r                   /**< rational to print */
+   )
 {
    if( r.isinf )
       os << (r.val.sign() > 0 ? "+" : "-") << "infinity";
@@ -1748,7 +1751,11 @@ std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r)
 }
 
 /** printf extension for rationals (not supporting all format options) */
-void SCIPrationalPrintf(const char *format, ...)
+static
+void SCIPrationalVPrintf(
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
+   )
 {
    SCIP_Rational* rat;
    char* sval;
@@ -1756,21 +1763,22 @@ void SCIPrationalPrintf(const char *format, ...)
    int ival;
    SCIP_Longint lval;
    char cval;
-
+   void* pval;
    va_list arguments;
-   va_start(arguments, format);
-   while( *format != '\0' )
+
+   va_copy(arguments, ap); /*lint !e838*/
+   while( *formatstr != '\0' )
    {
-      if(*format == '%' && *(format+1) != '%')
+      if( *formatstr == '%' && *(formatstr+1) != '%' )
       {
-         switch (*++format)
+         switch( *++formatstr )
          {
          case 'q':
             rat = va_arg(arguments, SCIP_Rational*);
             SCIPrationalPrint(rat);
             break;
          case 's':
-            for (sval = va_arg(arguments, char *); *sval; sval++)
+            for( sval = va_arg(arguments, char *); *sval; sval++ )
                (void) putchar(*sval);
             break;
          case 'f':
@@ -1802,19 +1810,67 @@ void SCIPrationalPrintf(const char *format, ...)
             cval = (char) va_arg(arguments, int);
             printf("%c", cval);
             break;
+         case 'p':
+            pval = va_arg(arguments, void*);
+            printf("%p", pval);
+            break;
          default:
-            (void) putchar(*format);
+            (void) putchar(*formatstr);
             break;
          }
       }
       else
       {
-         (void) putchar(*format);
+         (void) putchar(*formatstr);
       }
-      ++format;
+      ++formatstr;
    }
 
    va_end(arguments);
+}
+
+/** printf extension for rationals (does not support all format options yet) */
+void SCIPrationalPrintf(
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPrationalVPrintf(formatstr, ap);
+   va_end(ap);
+}
+
+/** prints a debug message */
+void SCIPrationalPrintDebugMessage(
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   const char* filename;
+   va_list ap;
+
+   assert(sourcefile != NULL );
+
+   /* strip directory from filename */
+#if defined(_WIN32) || defined(_WIN64)
+   filename = strrchr(sourcefile, '\\');
+#else
+   filename = strrchr(sourcefile, '/');
+#endif
+   if( filename == NULL )
+      filename = sourcefile;
+   else
+      ++filename;
+
+   printf("[%s:%d] debug: ", filename, sourceline);
+
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPrationalVPrintf(formatstr, ap);
+   va_end(ap);
 }
 
 #ifdef SCIP_WITH_BOOST
@@ -2246,7 +2302,7 @@ void SCIPrationalComputeApproximationLong(
       if( q[2] > maxdenom )
          done = 1;
 
-      while(!done && td != 0)
+      while( !done && td != 0 )
       {
          /* update everything: compute next ai, then update convergents */
 
