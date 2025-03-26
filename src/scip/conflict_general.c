@@ -1595,6 +1595,7 @@ SCIP_RETCODE getObjectiveRow(
 
    if( *success )
    {
+      rhs += rhschange;
       SCIP_CALL( SCIPcreateRowUnspec(scip, row, "objective", nvals, cols, vals, -SCIPinfinity(scip), rhs,
          FALSE, FALSE, TRUE) );
       SCIP_CALL( SCIPcreateRowExact(scip, &rowexact, *row , nvals, colsexact, valsexact, lhsexact, rhsexact, TRUE) );
