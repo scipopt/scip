@@ -802,6 +802,12 @@ SCIP_RETCODE SCIPrelaxBendersPrintStatistics(
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
 
+   /* if the decomposition has not been applied, then there are no statistics to display */
+   if( !relaxdata->decompapplied )
+      return SCIP_OKAY;
+
+   assert(relaxdata->masterprob != NULL);
+
    SCIP_CALL( SCIPprintStatistics(relaxdata->masterprob, NULL) );
 
    return SCIP_OKAY;
