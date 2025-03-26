@@ -5515,8 +5515,6 @@ SCIP_DECL_CONSTRANS(consTransExactLinear)
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* targetdata;
 
-   /*debugMsg(scip, "Trans method of linear constraints\n");*/
-
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -5618,7 +5616,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactLinear)
    /* check all useful linear constraints for feasibility */
    for( c = 0; c < nusefulconss && ncuts < maxsepacuts && !cutoff; ++c )
    {
-      /*debugMsg(scip, "separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
+      SCIPdebugMsg(scip, "separating exact linear constraint <%s>\n", SCIPconsGetName(conss[c]));
       SCIP_CALL( separateCons(scip, conss[c], conshdlrdata, NULL, separatecards, conshdlrdata->separateall, &ncuts, &cutoff) );
    }
 
@@ -5654,8 +5652,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolExactLinear)
    depth = SCIPgetDepth(scip);
    nrounds = SCIPgetNSepaRounds(scip);
 
-   /*debugMsg(scip, "Sepa method of linear constraints\n");*/
-
    *result = SCIP_DIDNOTRUN;
 
    /* only call the separator a given number of times at each node */
@@ -5673,7 +5669,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolExactLinear)
    /* check all useful linear constraints for feasibility */
    for( c = 0; c < nusefulconss && ncuts < maxsepacuts && !cutoff; ++c )
    {
-      /*debugMsg(scip, "separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
+      SCIPdebugMsg(scip, "separating exact linear constraint <%s>\n", SCIPconsGetName(conss[c]));
       SCIP_CALL( separateCons(scip, conss[c], conshdlrdata, sol, TRUE, conshdlrdata->separateall, &ncuts, &cutoff) );
    }
 
@@ -5770,8 +5766,6 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
 
    /* if the fp-solution has a stand-in exact solution we check that instead */
    checkexact = SCIPisExactSol(scip, sol);
-
-   /*debugMsg(scip, "Check method of linear constraints\n");*/
 
    /* check all linear constraints for feasibility */
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
@@ -5877,15 +5871,6 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
    else
       *result = SCIP_DIDNOTFIND;
 
-   return SCIP_OKAY;
-}
-
-
-/** presolving method of constraint handler */
-static
-SCIP_DECL_CONSPRESOL(consPresolExactLinear)
-{  /*lint --e{715}*/
-   SCIPinfoMessage(scip, NULL, "Exact presolving not implemented yet \n");
    return SCIP_OKAY;
 }
 
@@ -6329,7 +6314,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    consdata = SCIPconsGetData(cons);
    if( consdata == NULL )
       return SCIP_OKAY;
-   /* we can skip events droped for deleted constraints */
+   /* we can skip events dropped for deleted constraints */
    if( SCIPconsIsDeleted(cons) )
       return SCIP_OKAY;
 
@@ -6553,7 +6538,6 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitExactLinear) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpExactLinear) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseExactLinear) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolExactLinear, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintExactLinear) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropExactLinear, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
@@ -6562,7 +6546,7 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransExactLinear) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxExactLinear) );
 
-   /* add linear constraint handler parameters */
+   /* add constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/tightenboundsfreq",
          "multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)",
@@ -6583,34 +6567,6 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
          "constraints/" CONSHDLR_NAME "/maxsepacutsroot",
          "maximal number of cuts separated per separation round in the root node",
          &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/presolpairwise",
-         "should pairwise constraint comparison be performed in presolving?",
-         &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/presolusehashing",
-         "should hash table be used for detecting redundant constraints in advance",
-         &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/" CONSHDLR_NAME "/nmincomparisons",
-         "number for minimal pairwise presolve comparisons",
-         &conshdlrdata->nmincomparisons, TRUE, DEFAULT_NMINCOMPARISONS, 1, INT_MAX, NULL, NULL) );
-   /* SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/" CONSHDLR_NAME "/mingainpernmincomparisons",
-         "minimal gain per minimal pairwise presolve comparisons to repeat pairwise comparison round",
-         &conshdlrdata->mingainpernmincomp, TRUE, DEFAULT_MINGAINPERNMINCOMP, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/" CONSHDLR_NAME "/maxaggrnormscale",
-         "maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)",
-         &conshdlrdata->maxaggrnormscale, TRUE, DEFAULT_MAXAGGRNORMSCALE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/" CONSHDLR_NAME "/maxeasyactivitydelta",
-         "maximum activity delta to run easy propagation on linear constraint (faster, but numerically less stable)",
-         &conshdlrdata->maxeasyactivitydelta, TRUE, DEFAULT_MAXEASYACTIVITYDELTA, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/" CONSHDLR_NAME "/maxcardbounddist",
-         "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cardinality cuts",
-         &conshdlrdata->maxcardbounddist, TRUE, DEFAULT_MAXCARDBOUNDDIST, 0.0, 1.0, NULL, NULL) ); */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/separateall",
          "should all constraints be subject to cardinality cut generation instead of only the ones with non-zero dual value?",
