@@ -4807,13 +4807,13 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
    )
 {
+   SCIP_CONSDATA* consdata;
    SCIP_VAR** xorvars;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   SCIP_Real constant = 0.0;
-   SCIP_Real lrhs;
+   SCIP_Real constant;
+   int consnodeidx;
    int nlocvars;
-   int nvars;
    int i;
 
    assert(scip != NULL);
@@ -4821,35 +4821,50 @@ SCIP_RETCODE addSymmetryInformation(
    assert(graph != NULL);
    assert(success != NULL);
 
-   /* get active variables of the constraint */
-   nvars = SCIPgetNVars(scip);
-   nlocvars = SCIPgetNVarsXor(scip, cons);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+   /* create arrays to store active representation of variables */
+   nlocvars = MAX(consdata->nvars, 1);
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlocvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlocvars) );
 
-   xorvars = SCIPgetVarsXor(scip, cons);
-   for( i = 0; i < nlocvars; ++i )
+   /* add constraint node */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &consnodeidx) );
+
+   /* add intvar to symmetry detection graph */
+   if( consdata->intvar != NULL)
    {
+      int xornodeidx;
+
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int)SYM_CONSOPTYPE_XORINT, &xornodeidx) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, xornodeidx, FALSE, 0.0) );
+
+      vars[0] = consdata->intvar;
+      vals[0] = 1.0;
+      constant = 0.0;
+      nlocvars = 1;
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, xornodeidx, vars, vals, nlocvars, constant) );
+   }
+
+   /* add node modeling the XOR-part and connect it with constraint node */
+   xorvars = consdata->vars;
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      assert(xorvars[i] != NULL);
       vars[i] = xorvars[i];
       vals[i] = 1.0;
    }
-
-   if( SCIPgetIntVarXor(scip, cons) != NULL )
-   {
-      vars[nlocvars] = SCIPgetIntVarXor(scip, cons);
-      vals[nlocvars++] = 2.0;
-   }
-   assert(nlocvars <= nvars);
-
+   constant = -(SCIP_Real)SCIPgetRhsXor(scip, cons);
+   nlocvars = consdata->nvars;
    SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
-   lrhs = (SCIP_Real) SCIPgetRhsXor(scip, cons) - constant;
-
-   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
-         cons, lrhs, lrhs, success) );
+   SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, consnodeidx, vars, vals, nlocvars, constant) );
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }

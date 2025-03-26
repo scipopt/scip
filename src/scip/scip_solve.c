@@ -1153,6 +1153,7 @@ SCIP_RETCODE presolve(
    int presolstart = 0;
    int propstart = 0;
    int consstart = 0;
+   int i;
 #ifndef NDEBUG
    size_t nusedbuffers;
    size_t nusedcleanbuffers;
@@ -1311,6 +1312,15 @@ SCIP_RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, FALSE);
    }
 
+   /* flatten aggregation graph in order to avoid complicated multi-aggregated variables */
+   for( i = 0; i < scip->transprob->nfixedvars; ++i )
+   {
+      if( SCIPvarGetStatus(scip->transprob->fixedvars[i]) == SCIP_VARSTATUS_MULTAGGR )
+      {
+         SCIP_CALL( SCIPflattenVarAggregationGraph(scip, scip->transprob->fixedvars[i]) );
+      }
+   }
+
    /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
    if( *infeasible )
    {
@@ -1369,16 +1379,6 @@ SCIP_RETCODE presolve(
       SCIP_Bool approxchecknonzeros;
       SCIP_Bool approxactivenonzeros;
       SCIP_Bool infeas;
-      int j;
-
-      /* flatten aggregation graph in order to avoid complicated multi-aggregated variables */
-      for( j = 0; j < scip->transprob->nfixedvars; ++j )
-      {
-         if( SCIPvarGetStatus(scip->transprob->fixedvars[j]) == SCIP_VARSTATUS_MULTAGGR )
-         {
-            SCIP_CALL( SCIPflattenVarAggregationGraph(scip, scip->transprob->fixedvars[j]) );
-         }
-      }
 
       SCIP_CALL( exitPresolve(scip, *unbounded || *infeasible || *vanished, &infeas) );
       *infeasible = *infeasible || infeas;

@@ -501,6 +501,7 @@ set(instances_Objlim
 # Pairs of instances and settings
 #
 set(pairs_Issue
+    "instances/Issue/591_2.cip\;0\;reduced_and"
     "instances/Issue/3047.lp\;20000\;dualinfer"
     "instances/Issue/3132.lp\;0\;default"
     "instances/Issue/3499.lp\;11460\;closeobj"
@@ -535,6 +536,7 @@ set(pairs_Issue
     "instances/Issue/3832.cip\;0\;default"
     # Test currently not working since problems with the relative check for presolved problems appear: https://git.zib.de/integer/scip/-/issues/3819
     # "instances/Issue/3842.cip\;-16812.7692740365\;default"
+    "instances/Issue/3870.cip\;5133546551065818\;default"
 )
 
 #
