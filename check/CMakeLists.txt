@@ -187,6 +187,10 @@ set(settings_BendersQP
     "benders-qp"
    )
 
+set(settings_BendersDec
+    "usebenders-dec"
+)
+
 set(settings_Decomp
    "decompheurs"
    "decompheurs_dps"
@@ -488,6 +492,13 @@ set(instances_BendersQP
     "instances/Benders/classical_30_15.mps\;instances/Benders/classical_30.dec\;-7.34740783553289e-02"
    )
 
+set(instances_BendersDec
+   "instances/Benders/cap41.lp\;instances/Benders/cap41.dec\;+1.24518068000000e+06"
+   "instances/Benders/cap42.lp\;instances/Benders/cap42.dec\;+1.31282733250000e+06"
+   "instances/Benders/cap43.lp\;instances/Benders/cap43.dec\;+1.37782733250000e+06"
+   "instances/Benders/cap44.lp\;instances/Benders/cap44.dec\;+1.47532733250000e+06"
+   )
+
 set(instances_Decomp
    "instances/Decomp/exp-1-500-5-5.mps\;instances/Decomp/exp-1-500-5-5.dec\;65887"
   )
@@ -729,6 +740,7 @@ add_instancetests(instances_Benders settings_Benders "Benders")
 add_instancetests(instances_Or settings_Or "Or")
 add_instancetests(instances_BendersLB settings_BendersLB "BendersLB")
 add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
+add_decompinstancetests(instances_BendersDec settings_BendersDec "BendersDec")
 add_decompinstancetests(instances_Decomp settings_Decomp "Decomp")
 add_pairtests(pairs_Issue "Issue")
 
