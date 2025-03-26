@@ -356,6 +356,26 @@ SCIP_RETCODE resetVerbosityLevel(
    return SCIP_OKAY;
 }
 
+/** returns whether a solution exists for the master problem */
+static
+SCIP_Bool masterSolutionExists(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_RELAX*           relax               /**< the relaxator */
+   )
+{
+   SCIP_RELAXDATA* relaxdata;
+
+   assert(scip != NULL);
+   assert(relax != NULL);
+
+   relaxdata = SCIPrelaxGetData(relax);
+   assert(relaxdata != NULL);
+
+   assert(relaxdata->masterprob != NULL);
+
+   return (SCIPgetBestSol(relaxdata->masterprob) != NULL);
+}
+
 
 /** solves the Benders' decomposition subproblems using the best solution from the master problem */
 static
@@ -528,6 +548,10 @@ SCIP_RETCODE createOriginalSolution(
    assert(scip != NULL);
    assert(relax != NULL);
    assert(infeasible != NULL);
+
+   /* if there is no master solution, then no solution is copied across to the original SCIP instance */
+   if( !masterSolutionExists(scip, relax) )
+      return SCIP_OKAY;
 
    /* creating the solution for the original SCIP */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
