@@ -666,14 +666,28 @@ int SCIPrationalStrLen(
    SCIP_Rational*        r                   /** rational to consider */
    );
 
+/* if we have a C99 compiler */
+#ifdef SCIP_HAVE_VARIADIC_MACROS
+
 /** rational extension for the SCIPdebugMsg */
 /*lint -emacro(681,SCIPrationalDebugMessage) */
 /*lint -emacro(506,SCIPrationalDebugMessage) */
-/*lint -emacro(774,SCIPrationalDebugMessage) */
 #ifdef SCIP_DEBUG
-#define SCIPrationalDebugMessage                 printf("[%s:%d] debug: ", __FILE__, __LINE__), SCIPrationalPrintf
+#define SCIPrationalDebugMessage(...)            SCIPrationalPrintDebugMessage(__FILE__, __LINE__, __VA_ARGS__)
 #else
-#define SCIPrationalDebugMessage                 while( FALSE ) /*lint -e{530}*/ SCIPrationalPrintf
+#define SCIPrationalDebugMessage(...)            while ( FALSE ) SCIPrationalPrintDebugMessage(__FILE__, __LINE__, __VA_ARGS__)
+#endif
+
+#else
+/* if we do not have a C99 compiler, use a workaround that prints a message, but not the file and linenumber */
+
+/** rational extension for the SCIPdebugMsg */
+#ifdef SCIP_DEBUG
+#define SCIPrationalDebugMessage                 printf("debug: "), SCIPrationalPrintf
+#else
+#define SCIPrationalDebugMessage                 while ( FALSE ) SCIPrationalPrintf
+#endif
+
 #endif
 
 /** prints rational to file using message handler */
@@ -692,7 +706,18 @@ void SCIPrationalPrint(
 
 /** printf extension for rationals (does not support all format options yet) */
 SCIP_EXPORT
-void SCIPrationalPrintf(const char *format, ...);
+void SCIPrationalPrintf(
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints a debug message */
+void SCIPrationalPrintDebugMessage(
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
 
 /** returns the numerator of a rational as a long */
 SCIP_EXPORT

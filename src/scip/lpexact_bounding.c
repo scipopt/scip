@@ -360,7 +360,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
       }
    }
 
-#ifdef PS_OUT
+#ifdef SCIP_DEBUG_PS_OUT
    printf("factoring matrix: ncols=%d, projshiftbasisdim=%d\n", ncols, projshiftdata->projshiftbasisdim);
    for( i = 0; i < nextendedrows; i++ )
       printf("   j=%d:\t projbeg=<%d>,\t projlen=<%d>\n", i, projbeg[i], projlen[i]);
@@ -396,7 +396,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
       SCIPdebugMessage("factorization of matrix for project-and-shift method failed.\n");
    }
 
-#ifdef PS_OUT
+#ifdef SCIP_DEBUG_PS_OUT
    printf("   matrix factorization complete: %s\n", rval ? "failed" : "correct termination");
 #endif
 
@@ -1390,7 +1390,7 @@ SCIP_RETCODE projectShift(
          SCIPrationalSetInt(dualsol[i], 0, 1);
    }
 
-#ifdef PS_OUT
+#ifdef SCIP_DEBUG_PS_OUT
    printf("approximate dual solution:\n");
 
    SCIPrationalSetInt(dualbound, 0, 1);
@@ -1448,7 +1448,7 @@ SCIP_RETCODE projectShift(
    }
 
    /* project solution */
-#ifdef PS_OUT
+#ifdef SCIP_DEBUG_PS_OUT
    printf("violation of solution:\n");
    for( i = 0; i < ncols; i++ )
    {
@@ -1499,7 +1499,7 @@ SCIP_RETCODE projectShift(
 
       SCIPrationalSetArrayGMP(correction, correctiongmp, nextendedrows);
 
-#ifdef PS_OUT
+#ifdef SCIP_DEBUG_PS_OUT
       printf("correction of solution:\n");
       for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
       {
@@ -1554,7 +1554,7 @@ SCIP_RETCODE projectShift(
          }
       }
 
-#ifdef PS_OUT
+#ifdef SCIP_DEBUG_PS_OUT
       printf("updated dual solution:\n");
       for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
       {
@@ -1607,14 +1607,11 @@ SCIP_RETCODE projectShift(
          }
       }
 
-#ifdef PS_OUT
+#ifdef SCIP_DEBUG_PS_OUT
       printf("transformed projected dual solution:\n");
 
-      SCIPrationalSetInt(dualbound, 0, 1);
       for( i = 0; i < nrows + ncols; i++ )
       {
-         SCIP_Rational* val;
-
          printf("   i=%d: ", i);
          SCIPrationalPrint(dualsol[i]);
          printf("\n");
@@ -1639,14 +1636,11 @@ SCIP_RETCODE projectShift(
             SCIPrationalDiff(dualsol[map - nrowsps - ncols + shift], dualsol[map - nrowsps - ncols + shift], correction[i]);
       }
 
-#ifdef PS_OUT
+#ifdef SCIP_DEBUG_PS_OUT
       printf("transformed projected dual solution:\n");
 
-      SCIPrationalSetInt(dualbound, 0, 1);
       for( i = 0; i < nrows + ncols; i++ )
       {
-         SCIP_Rational* val;
-
          printf("   i=%d: ", i);
          SCIPrationalPrint(dualsol[i]);
          printf("\n");
@@ -1681,7 +1675,7 @@ SCIP_RETCODE projectShift(
          }
       }
 
-#ifdef PS_OUT
+#ifdef SCIP_DEBUG_PS_OUT
       printf("projected and shifted dual solution (should be an exact dual feasible solution)\n");
       for( i = 0; i < nrows+ncols; i++ )
       {
@@ -1807,7 +1801,7 @@ SCIP_RETCODE projectShift(
       }
    }
 
-#ifdef PS_OUT
+#ifdef SCIP_DEBUG_PS_OUT
    printf("   common slack=%.20f (", SCIPrationalGetReal(projshiftdata->commonslack));
    SCIPrationalPrint(projshiftdata->commonslack);
    printf(")\n");
