@@ -5427,26 +5427,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolExactLinear)
       }
    }
 
-   /* if this is a restart, convert cutpool rows into linear constraints */
-   if( restart )
-   {
-      int ncutsadded;
-
-      ncutsadded = 0;
-
-      /* create out of all active cuts in cutpool linear constraints */
-      SCIP_CALL( SCIPconvertCutsToConss(scip, NULL, NULL, TRUE, &ncutsadded) );
-
-      if( ncutsadded > 0 )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-            "(restart) converted %d cuts from the global cut pool into linear constraints\n", ncutsadded);
-         /* an extra blank line should be printed separately since the buffer message handler only handles up to one
-          * line correctly
-          */
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
-      }
-   }
+   /**@todo when enabling restarts, extend SCIPconvertCutsToConss() in order to convert exact cuts to exactlinear
+    *       constraints and call here
+    */
 
    return SCIP_OKAY;
 }
