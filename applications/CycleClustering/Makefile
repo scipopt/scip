@@ -107,7 +107,7 @@ endif
 all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 
 .PHONY: lint
-lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC)
+lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC)
 		-rm -f lint.out
 
 		@$(SHELL) -ec 'if test -e $(SCIPDIR)/lint/co-gcc.mak ; \
