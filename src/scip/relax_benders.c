@@ -81,6 +81,44 @@ struct SCIP_RelaxData
  * Local methods
  */
 
+/** adding variables from the original problem to the respective decomposed problem */
+static
+SCIP_RETCODE addVariableToBendersProblem(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 targetscip,         /**< the SCIP instance that the constraint will be copied into */
+   SCIP_HASHMAP*         varmap,             /**< the variable hash map mapping the source variables to the target variables */
+   SCIP_VAR*             sourcevar           /**< the variable to add to the problem */
+   )
+{
+   assert(scip != NULL);
+   assert(targetscip != NULL);
+   assert(varmap != NULL);
+   assert(sourcevar != NULL);
+
+   /* if the variable is not in the hashmap, then it doesn't exist in the subproblem */
+   if( !SCIPhashmapExists(varmap, sourcevar) )
+   {
+      SCIP_VAR* var;
+
+      /* creating a variable as a copy of the original variable. */
+      SCIP_CALL( SCIPcreateVarImpl(targetscip, &var, SCIPvarGetName(sourcevar), SCIPvarGetLbGlobal(sourcevar),
+            SCIPvarGetUbGlobal(sourcevar), SCIPvarGetObj(sourcevar), SCIPvarGetType(sourcevar),
+            SCIPvarGetImplType(sourcevar), SCIPvarIsInitial(sourcevar), SCIPvarIsRemovable(sourcevar),
+            NULL, NULL, NULL, NULL, NULL) );
+
+      /* adding the variable to the subproblem */
+      SCIP_CALL( SCIPaddVar(targetscip, var) );
+
+      /* adding the variable to the hash map so that it is copied correctly in the constraint */
+      SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, var) );
+
+      /* releasing the variable */
+      SCIP_CALL( SCIPreleaseVar(targetscip, &var) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /* when applying the decomposition, the constraints must be copied across from the original SCIP instance to the
  * respective Benders' problems in the relaxator. This could be either the master problem or one of the subproblems. The
  * process for performing this is the same for either problem type.
@@ -118,26 +156,7 @@ SCIP_RETCODE addConstraintToBendersProblem(
     */
    for( i = 0; i < nconsvars; i++ )
    {
-      /* if the variable is not in the hashmap, then it doesn't exist in the subproblem */
-      if( !SCIPhashmapExists(varmap, consvars[i]) )
-      {
-         SCIP_VAR* var;
-
-         /* creating a variable as a copy of the original variable. */
-         SCIP_CALL( SCIPcreateVarImpl(targetscip, &var, SCIPvarGetName(consvars[i]), SCIPvarGetLbGlobal(consvars[i]),
-               SCIPvarGetUbGlobal(consvars[i]), SCIPvarGetObj(consvars[i]), SCIPvarGetType(consvars[i]),
-               SCIPvarGetImplType(consvars[i]), SCIPvarIsInitial(consvars[i]), SCIPvarIsRemovable(consvars[i]),
-               NULL, NULL, NULL, NULL, NULL) );
-
-         /* adding the variable to the subproblem */
-         SCIP_CALL( SCIPaddVar(targetscip, var) );
-
-         /* adding the variable to the hash map so that it is copied correctly in the constraint */
-         SCIP_CALL( SCIPhashmapInsert(varmap, consvars[i], var) );
-
-         /* releasing the variable */
-         SCIP_CALL( SCIPreleaseVar(targetscip, &var) );
-      }
+      SCIP_CALL( addVariableToBendersProblem(scip, targetscip, varmap, consvars[i]) );
    }
 
    /* freeing the buffer memory for the consvars */
@@ -276,6 +295,21 @@ SCIP_RETCODE applyDecomposition(
       else
       {
          SCIP_CALL( addConstraintToBendersProblem(scip, relaxdata->masterprob, relaxdata->mastervarmap, conss[i]) );
+      }
+   }
+
+   /* copying all of the variables from the original problem to the respective decomposed problem */
+   for( i = 0; i < nvars; i++ )
+   {
+      if( varslabels[i] >= 0 )
+      {
+         assert(varslabels[i] < relaxdata->nsubproblems);
+         SCIP_CALL( addVariableToBendersProblem(scip, relaxdata->subproblems[varslabels[i]],
+               relaxdata->subvarmaps[varslabels[i]], vars[i]) );
+      }
+      else
+      {
+         SCIP_CALL( addVariableToBendersProblem(scip, relaxdata->masterprob, relaxdata->mastervarmap, vars[i]) );
       }
    }
 
@@ -430,6 +464,22 @@ SCIP_RETCODE solveBendersSubproblems(
    return SCIP_OKAY;
 }
 
+/** constructs the NLP solution and returns it */
+static
+SCIP_RETCODE getNlpSolution(
+   SCIP*                 scip,               /**< the SCIP instance for which an NLP must be constructed */
+   SCIP_SOL**            nlpsol              /**< the NLP solution that will be created */
+   )
+{
+   assert(scip != NULL);
+   assert(SCIPisNLPConstructed(scip));
+   assert(SCIPgetNNlpis(scip));
+
+   SCIP_CALL( SCIPcreateNLPSol(scip, nlpsol, NULL) );
+
+   return SCIP_OKAY;
+}
+
 /** using the stored mappings for the variables, the solution values from the master and subproblems are used to set the
  * solution values in the original SCIP solution
  */
@@ -472,11 +522,13 @@ SCIP_RETCODE setSolutionValues(
       SCIP* solscip;
       SCIP_HASHMAP* varmap;
       SCIP_SOL* bestsol;
+      SCIP_Bool subproblem;
 
       /* if the varlabel is >= 0, then the variable belongs to the subproblem. Otherwise, the variable belongs to the
        * master problem.
        */
-      if( varslabels[i] >= 0 )
+      subproblem = varslabels[i] >= 0;
+      if( subproblem )
       {
          solscip = relaxdata->subproblems[varslabels[i]];
          varmap = relaxdata->subvarmaps[varslabels[i]];
@@ -487,10 +539,28 @@ SCIP_RETCODE setSolutionValues(
          varmap = relaxdata->mastervarmap;
       }
 
-      assert(SCIPhashmapExists(varmap, vars[i]));
-      bestsol = SCIPgetBestSol(solscip);
-      SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i],
-         SCIPgetSolVal(solscip, bestsol, (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i]))) );
+      if( SCIPhashmapExists(varmap, vars[i]) )
+      {
+          SCIP_Bool nlprelaxation;
+
+          /* the subproblem could be an NLP. As such, we need to get the solution directly from the NLP */
+          nlprelaxation = subproblem && SCIPisNLPConstructed(solscip) && SCIPgetNNlpis(solscip);
+          if( nlprelaxation )
+          {
+             SCIP_CALL( getNlpSolution(solscip, &bestsol) );
+          }
+          else
+             bestsol = SCIPgetBestSol(solscip);
+
+          SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i],
+             SCIPgetSolVal(solscip, bestsol, (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i]))) );
+
+          /* if the solution is from an NLP, then we need to free it */
+          if( nlprelaxation )
+          {
+             SCIP_CALL( SCIPfreeSol(solscip, &bestsol) );
+          }
+      }
    }
 
    SCIPfreeBufferArray(scip, &varslabels);
