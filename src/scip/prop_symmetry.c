@@ -2238,7 +2238,7 @@ SCIP_Bool hasInferredBinaryVar(
 
    assert( scip != NULL );
 
-   /* check for binary or implicit binary variables */
+   /* check for variables declared binary or implied binary */
    if ( SCIPgetNBinVars(scip) > 0 || SCIPgetNBinImplVars(scip) > 0 )
       return TRUE;
 
@@ -2246,8 +2246,9 @@ SCIP_Bool hasInferredBinaryVar(
    vars = SCIPgetVars(scip);
    assert( vars != NULL );
 
-   start = SCIPgetNBinVars(scip);
-   end = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNIntImplVars(scip) + SCIPgetNContImplVars(scip);
+   start = 0;
+   end = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   assert( end >= start );
    for (i = start; i < end; ++i)
    {
       if( SCIPvarIsBinary(vars[i]) )
@@ -2271,14 +2272,10 @@ SCIP_Bool hasInferredIntVar(
 
    assert( scip != NULL );
 
-   /* check for binary or implicit binary variables */
-   if ( SCIPgetNIntVars(scip) > 0 )
-      return TRUE;
-
    vars = SCIPgetVars(scip);
    assert( vars != NULL );
 
-   /* check for proper integer variables among integer variables */
+   /* check for non-binary variables among integer variables */
    start = SCIPgetNBinVars(scip);
    end = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    for (i = start; i < end; ++i)
@@ -2287,9 +2284,10 @@ SCIP_Bool hasInferredIntVar(
          return TRUE;
    }
 
-   /* check for proper inferred integer variables among implied integer variables */
+   /* check for non-binary variables among implied integral variables */
    start = end + SCIPgetNBinImplVars(scip);
-   end = start + SCIPgetNIntImplVars(scip) + SCIPgetNContImplVars(scip);
+   end = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   assert( end >= start );
    for (i = start; i < end; ++i)
    {
       if( ! SCIPvarIsBinary(vars[i]) )
