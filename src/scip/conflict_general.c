@@ -1894,7 +1894,7 @@ SCIP_RETCODE SCIPgetDualProof(
    }
 
   TERMINATE:
-   assert((objectiverow != NULL) == set->exact_enabled);
+   assert(set->exact_enabled || objectiverow == NULL);
    if( objectiverow != NULL )
    {
       SCIP_CALL( SCIPreleaseRowExact(set->scip, &objectiverow->rowexact) );
