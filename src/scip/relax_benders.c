@@ -447,8 +447,8 @@ SCIP_RETCODE solveBendersSubproblems(
    /* solving the Benders' decomposition subproblems */
    for( i = 0; i < relaxdata->nsubproblems; i++)
    {
-      SCIP* subproblem = SCIPbendersSubproblem(benders, i);
-      assert(subproblem != NULL && SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM);
+      assert(SCIPbendersSubproblem(benders, i) != NULL
+         && SCIPgetStage(SCIPbendersSubproblem(benders, i)) >= SCIP_STAGE_PROBLEM);
 
       /* setting up the subproblem with the best solution from the master problem */
       SCIP_CALL( SCIPsetupBendersSubproblem(masterprob, benders, bestsol, i, SCIP_BENDERSENFOTYPE_CHECK) );
@@ -495,17 +495,12 @@ SCIP_RETCODE setSolutionValues(
    SCIP_VAR** vars;
    int* varslabels;
    int nvars;
-   int nblocks;
    int i;
 
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
 
    decomp = relaxdata->decomp;
-
-   /* retrieving the number of blocks for this decomposition */
-   nblocks = SCIPdecompGetNBlocks(decomp);
-   assert(nblocks > 0);
 
    /* getting the variables and constraints from the problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
