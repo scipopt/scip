@@ -704,6 +704,9 @@ SCIP_DECL_CONSINIT(consInitExactSol)
    assert(scip != NULL);
    assert(conshdlr != NULL );
 
+   if( !SCIPisExact(scip) )
+      return SCIP_OKAY;
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -734,6 +737,9 @@ SCIP_DECL_CONSEXIT(consExitExactSol)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
+
+   if( !SCIPisExact(scip) )
+      return SCIP_OKAY;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
