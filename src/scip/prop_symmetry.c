@@ -2242,7 +2242,7 @@ SCIP_Bool hasInferredBinVar(
    if ( SCIPgetNBinVars(scip) > 0 || SCIPgetNBinImplVars(scip) > 0 )
       return TRUE;
 
-   /* check for binary variables among integer and inferred binary variables among implied integer variables */
+   /* check for inferred binary variables among integers and continuous implied integral variables */
    vars = SCIPgetVars(scip);
    assert( vars != NULL );
 
