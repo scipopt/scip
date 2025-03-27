@@ -4281,9 +4281,6 @@ SCIP_RETCODE solveNode(
    SCIP_Real restartfac;
    SCIP_Longint lastlpcount;
    SCIP_HEURTIMING heurtiming;
-   int actdepth;
-   int nlperrors;
-   int nloops;
    SCIP_Bool foundsol;
    SCIP_Bool focusnodehaslp;
    SCIP_Bool lpsolved;
@@ -4297,6 +4294,10 @@ SCIP_RETCODE solveNode(
    SCIP_Bool forcedlpsolve;
    SCIP_Bool wasforcedlpsolve;
    SCIP_Bool pricingaborted;
+   int actdepth;
+   int nlperrors;
+   int nloops;
+   int nlpcands;
 
    assert(set != NULL);
    assert(stat != NULL);
@@ -4629,12 +4630,13 @@ SCIP_RETCODE solveNode(
          && !solverelaxagain && !solvelpagain && !propagateagain && !branched )
       {
          SCIP_RESULT result = SCIP_DIDNOTRUN;
-         int nlpcands = 0;
 
          if( SCIPtreeHasFocusNodeLP(tree) )
          {
             SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpcands, NULL, NULL) );
          }
+         else
+            nlpcands = 0;
 
          if ( nlpcands > 0 || SCIPbranchcandGetNExternCands(branchcand) > 0 )
          {
@@ -4883,21 +4885,20 @@ SCIP_RETCODE solveNode(
       *unbounded = FALSE;
       *infeasible = TRUE;
    }
+   /* update the regression statistic nlpbranchcands and LP objective value  */
    else if( !(*unbounded) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && lp->looseobjvalinf == 0 )
    {
-      /* update the regression statistic nlpbranchcands and LP objective value  */
-      int nlpbranchcands;
       SCIP_Real lpobjval;
 
       /* get number of LP candidate variables */
-      SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpbranchcands, NULL, NULL) );
+      SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpcands, NULL, NULL) );
 
       /* get LP objective value */
       lpobjval = SCIPlpGetObjval(lp, set, transprob);
       assert(lpobjval != SCIP_INVALID); /*lint !e777*/
 
       /* add the observation to the regression */
-      SCIPregressionAddObservation(stat->regressioncandsobjval, (SCIP_Real)nlpbranchcands, lpobjval);
+      SCIPregressionAddObservation(stat->regressioncandsobjval, (SCIP_Real)nlpcands, lpobjval);
    }
 
    /* reset LP feastol to normal value, in case someone tightened it during node solving */
