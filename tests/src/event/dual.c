@@ -179,20 +179,20 @@ Test(events, dualboundimproved, .description = "tests SCIP_EVENTTYPE_DUALBOUNDIM
    SCIP_CALL( SCIPfreeProb(scip_test) );
    SCIP_CALL( SCIPenableExactSolving(scip_test, TRUE) );
 
-   /* create the following problem with LP dual bound zero and optimal value mu = 1e-15, such that the event should
-    * only be triggered if an increase in the exact lowerbound is detected:
+   /* create the following problem with LP dual bound 1 and optimal value 1+mu with mu = 1e-15, such that the event
+    * should only be triggered if an increase in the exact lowerbound is detected:
     *
     * min   x1 s.t.
-    * s.t.  x1 >=  mu * x2 - mu * (1 - x2)  equivalent  x1 - 2mu * x2 >= mu
-    *       x1 >= -mu * x2 + mu * (1 - x2)  equivalent  x1 + 2mu * x2 >= mu
+    * s.t.  x1 >= 1 + mu * x2 - mu * (1 - x2)  equivalent  x1 - 2mu * x2 >= 1 + mu
+    *       x1 >= 1 - mu * x2 + mu * (1 - x2)  equivalent  x1 + 2mu * x2 >= 1 + mu
     *       x1 >= 0, x2 binary
     */
    {
       SCIP_VAR* vars[2];
       SCIP_CONS* cons;
       SCIP_RATIONAL* vals[2];
-      SCIP_RATIONAL* mu;
-      SCIP_RATIONAL* infrhs;
+      SCIP_RATIONAL* lhs;
+      SCIP_RATIONAL* rhs;
 
       SCIPinfoMessage(scip_test, NULL, "Creating rational test problem ...\n");
 
@@ -210,14 +210,14 @@ Test(events, dualboundimproved, .description = "tests SCIP_EVENTTYPE_DUALBOUNDIM
 
       SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip_test), &vals[0], "1") );
       SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip_test), &vals[1], "-2/1000000000000000") );
-      SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip_test), &mu, "1/1000000000000000") );
-      SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip_test), &infrhs, "inf") );
-      SCIP_CALL( SCIPcreateConsBasicExactLinear(scip_test, &cons, "c1", 2, vars, vals, mu, infrhs) );
+      SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip_test), &lhs, "1000000000000001/1000000000000000") );
+      SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip_test), &rhs, "inf") );
+      SCIP_CALL( SCIPcreateConsBasicExactLinear(scip_test, &cons, "c1", 2, vars, vals, lhs, rhs) );
       SCIP_CALL( SCIPaddCons(scip_test, cons) );
       SCIP_CALL( SCIPreleaseCons(scip_test, &cons) );
 
       SCIPrationalSetString(vals[1], "2/1000000000000000");
-      SCIP_CALL( SCIPcreateConsBasicExactLinear(scip_test, &cons, "c1", 2, vars, vals, mu, infrhs) );
+      SCIP_CALL( SCIPcreateConsBasicExactLinear(scip_test, &cons, "c1", 2, vars, vals, lhs, rhs) );
       SCIP_CALL( SCIPaddCons(scip_test, cons) );
       SCIP_CALL( SCIPreleaseCons(scip_test, &cons) );
       SCIPinfoMessage(scip_test, NULL, "... constraint created\n");
@@ -225,8 +225,8 @@ Test(events, dualboundimproved, .description = "tests SCIP_EVENTTYPE_DUALBOUNDIM
       SCIP_CALL( SCIPreleaseVar(scip_test, &vars[0]) );
       SCIP_CALL( SCIPreleaseVar(scip_test, &vars[1]) );
 
-      SCIPrationalFreeBlock(SCIPblkmem(scip_test), &infrhs);
-      SCIPrationalFreeBlock(SCIPblkmem(scip_test), &mu);
+      SCIPrationalFreeBlock(SCIPblkmem(scip_test), &rhs);
+      SCIPrationalFreeBlock(SCIPblkmem(scip_test), &lhs);
       SCIPrationalFreeBlock(SCIPblkmem(scip_test), &vals[1]);
       SCIPrationalFreeBlock(SCIPblkmem(scip_test), &vals[0]);
       SCIPinfoMessage(scip_test, NULL, "... data released and freed\n");
@@ -243,7 +243,7 @@ Test(events, dualboundimproved, .description = "tests SCIP_EVENTTYPE_DUALBOUNDIM
    SCIP_CALL( SCIPsetIntParam(scip_test, "presolving/maxrounds", 0) );
    SCIP_CALL( SCIPsolve(scip_test) );
 
-   /* we expect three updates: -1e20, 0.0, mu */
-   cr_expect(eventhdlrdata->ndualboundimprovements >= 3, "Too few dual bound improvements detected (expecting 3 updates)");
+   /* we expect at least four updates: -SCIPinfinity() after presolve, 0 as pseudo bound, 1 as LP bound, and 1+mu */
+   cr_expect(eventhdlrdata->ndualboundimprovements >= 4, "Too few dual bound improvements detected (expecting 3 updates)");
 #endif
 }
