@@ -3721,8 +3721,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    int bdchgdepth;
    int lastuipdepth;
-   int focusdepth;
-   int currentdepth;
    int maxsize;
    int nchgcoefs;
    int nressteps;
@@ -3748,10 +3746,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
    assert(nconfvars != NULL);
    assert(conflict->nconflictrows == 0);
 
-   focusdepth = SCIPtreeGetFocusDepth(tree);
-   currentdepth = SCIPtreeGetCurrentDepth(tree);
-   assert(currentdepth == tree->pathlen-1);
-   assert(focusdepth <= currentdepth);
+   assert(SCIPtreeGetCurrentDepth(tree) == tree->pathlen-1);
+   assert(SCIPtreeGetFocusDepth(tree) <= SCIPtreeGetCurrentDepth(tree));
 
    lastuipdepth = -1;
 
