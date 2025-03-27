@@ -2878,7 +2878,6 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->exact_interleavestrategy = SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY;
    (*set)->exact_lpinfo = SCIP_DEFAULT_EXACT_LPINFO;
    (*set)->exact_allownegslack = SCIP_DEFAULT_EXACT_ALLOWNEGSLACK;
-   (*set)->exact_weakencuts = SCIP_DEFAULT_EXACT_WEAKENCUTS;
    (*set)->exact_cutmaxdenom = SCIP_DEFAULT_CUTMAXDENOM;
    (*set)->exact_cutapproxmaxboundval = SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL;
    (*set)->certificate_filename = (char*)SCIP_DEFAULT_CERTIFICATE_FILENAME;
