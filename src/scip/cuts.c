@@ -45,6 +45,7 @@
 #include "scip/pub_misc_select.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_var.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_cut.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_lp.h"
@@ -1666,7 +1667,7 @@ SCIP_RETCODE cutTightenCoefsSafely(
 
    assert(SCIPisExact(scip));
 
-   if( SCIPisCertificateActive(scip)   )
+   if( SCIPisCertified(scip)   )
    {
       mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
       assert(mirinfo != NULL);
@@ -1775,7 +1776,7 @@ SCIP_RETCODE cutTightenCoefsSafely(
 
          *cutrhs *= intscalar;
 
-         if( SCIPisCertificateActive(scip) )
+         if( SCIPisCertified(scip) )
          {
             assert(mirinfo != NULL);
             mirinfo->scale = intscalar;
@@ -1824,7 +1825,7 @@ SCIP_RETCODE cutTightenCoefsSafely(
             }
          }
 
-         if( SCIPisCertificateActive(scip) )
+         if( SCIPisCertified(scip) )
          {
             assert(mirinfo != NULL);
             mirinfo->unroundedrhs = *cutrhs;
@@ -1885,7 +1886,7 @@ SCIP_RETCODE cutTightenCoefsSafely(
 
          *cutrhs *= equiscale;
          maxabsintval *= equiscale;
-         if( SCIPisCertificateActive(scip) )
+         if( SCIPisCertified(scip) )
          {
             assert(mirinfo != NULL);
             mirinfo->scale = equiscale;
@@ -1928,7 +1929,7 @@ SCIP_RETCODE cutTightenCoefsSafely(
       SCIPintervalSetRoundingModeUpwards();
       *cutrhs *= scale;
       maxabsintval *= scale;
-      if( SCIPisCertificateActive(scip) )
+      if( SCIPisCertified(scip) )
       {
          assert(mirinfo != NULL);
          mirinfo->scale = scale;
@@ -3546,7 +3547,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
 
    SCIPdebugMessage("Summing up %d rows in aggrrow \n", nrowinds);
 
-   if( SCIPisExact(scip) && SCIPisCertificateActive(scip) )
+   if( SCIPisExact(scip) && SCIPisCertified(scip) )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &usedrows, nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &usedweights, nrows) );
@@ -3568,7 +3569,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
             SCIPdebugMessage("Adding %g times row: ", weights[rowinds[k]]);
             SCIPdebug(SCIPprintRow(scip, rows[rowinds[k]], NULL));
             SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
-            if( SCIPisCertificateActive(scip) )
+            if( SCIPisCertified(scip) )
             {
                SCIP_ROW* row = rows[rowinds[k]];
                SCIP_Bool integral = FALSE;
@@ -3626,7 +3627,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                SCIPdebugMessage("Adding %g times row: ", weights[k]);
                SCIPdebug(SCIPprintRow(scip, rows[k], NULL));
                SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
-               if( SCIPisCertificateActive(scip) )
+               if( SCIPisCertified(scip) )
                {
                   SCIP_ROW* row = rows[k];
                   SCIP_Bool integral = FALSE;
@@ -3672,7 +3673,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
 
    if( *valid )
       SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, valid);
-   if( SCIPisCertificateActive(scip) )
+   if( SCIPisCertified(scip) )
    {
       SCIP_Bool validcert;
 
@@ -3682,7 +3683,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
       SCIPaggrRowRemoveZeros(scip, certificaterow, FALSE, &validcert);
       *valid = *valid && validcert;
 
-      SCIP_CALL( SCIPaddCertificateAggregation(scip, certificaterow, usedrows, usedweights, certificaterow->nrows, negslackrows, negslackweights, nnegslackrows) );
+      SCIP_CALL( SCIPaddCertificateAggrInfo(scip, certificaterow, usedrows, usedweights, certificaterow->nrows, negslackrows, negslackweights, nnegslackrows) );
       SCIPaggrRowFree(scip, &certificaterow);
 
       SCIPfreeBufferArray(scip, &negslackweights);
@@ -4619,7 +4620,7 @@ SCIP_RETCODE cutsTransformMIRSafely(
    assert(localbdsused != NULL);
    assert(SCIPisExact(scip));
 
-   if( SCIPisCertificateActive(scip)   )
+   if( SCIPisCertified(scip)   )
       mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
    previousroundmode = SCIPintervalGetRoundingMode();
    SCIPintervalSetRoundingModeUpwards();
@@ -4684,7 +4685,7 @@ SCIP_RETCODE cutsTransformMIRSafely(
          performBoundSubstitutionSafely(scip, cutcoefs, cutrhs, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
       }
 
-      if( SCIPisCertificateActive(scip) )
+      if( SCIPisCertified(scip) )
       {
          assert(mirinfo != NULL);
          if( boundtype[i] == -2 )
@@ -4745,7 +4746,7 @@ SCIP_RETCODE cutsTransformMIRSafely(
          performBoundSubstitutionSimpleSafely(scip, cutcoefs, cutrhs, boundtype[i], bestubs[i], v, localbdsused);
       }
 
-      if( SCIPisCertificateActive(scip) )
+      if( SCIPisCertified(scip) )
       {
          assert(mirinfo != NULL);
          if( boundtype[i] == -2 )
@@ -5190,7 +5191,7 @@ SCIP_RETCODE cutsRoundMIRSafely(
    /* round up at first, since we are dividing and divisor should be as large as possible,
     * then switch to down since we are working on lhs */
    /* we need to careate the split-data for certification here, since part of the f_j > f_0 variables goes into the continuous part of the split */
-   if( SCIPisCertificateActive(scip) )
+   if( SCIPisCertified(scip) )
       mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
 
    previousroundmode = SCIPintervalGetRoundingMode();
@@ -5258,7 +5259,7 @@ SCIP_RETCODE cutsRoundMIRSafely(
          {
             SCIPintervalSet(&cutaj, downaj);
 
-            if( SCIPisCertificateActive(scip) && mirinfo != NULL )
+            if( SCIPisCertified(scip) && mirinfo != NULL )
             {
                SCIP_RATIONAL* boundval;
 
@@ -5284,7 +5285,7 @@ SCIP_RETCODE cutsRoundMIRSafely(
             SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, onedivoneminusf0);
             SCIPintervalAddScalar(SCIPinfinity(scip), &cutaj, tmpinterval, downaj);
 
-            if( SCIPisCertificateActive(scip) && mirinfo != NULL )
+            if( SCIPisCertified(scip) && mirinfo != NULL )
             {
                SCIP_RATIONAL* boundval;
                mirinfo->splitcoefficients[v] = downaj;
@@ -5583,7 +5584,7 @@ SCIP_RETCODE cutsRoundMIRRational(
    /* round up at first, since we are dividing and divisor should be as large as possible,
     * then switch to down since we are working on lhs */
    /* we need to careate the split-data for certification here, since part of the f_j > f_0 variables goes into the continuous part of the split */
-   if( SCIPisCertificateActive(scip) )
+   if( SCIPisCertified(scip) )
       mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
 
    previousroundmode = SCIPintervalGetRoundingMode();
@@ -5648,7 +5649,7 @@ SCIP_RETCODE cutsRoundMIRRational(
          {
             SCIPrationalSetReal(cutaj, downaj);
 
-            if( SCIPisCertificateActive(scip) )
+            if( SCIPisCertified(scip) )
             {
                SCIP_RATIONAL* boundval;
 
@@ -5673,7 +5674,7 @@ SCIP_RETCODE cutsRoundMIRRational(
             SCIPrationalMult(tmp, tmp, onedivoneminusf0);
             SCIPrationalAddReal(cutaj, tmp, downaj);
 
-            if( SCIPisCertificateActive(scip) )
+            if( SCIPisCertified(scip) )
             {
                SCIP_RATIONAL* boundval;
 
@@ -6361,7 +6362,7 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
    SCIPintervalSet(&onedivoneminusf0, 1.0);
    SCIPintervalDiv(SCIPinfinity(scip), &onedivoneminusf0, onedivoneminusf0, tmpinterval);
 
-   if( SCIPisCertificateActive(scip)   )
+   if( SCIPisCertified(scip)   )
    {
       aggrinfo = SCIPgetCertificate(scip)->aggrinfo[SCIPgetCertificate(scip)->naggrinfos -1];
       mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
@@ -6467,7 +6468,7 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
       else
          mult = cutar.sup;
 
-      if( SCIPisCertificateActive(scip) && integralslack) /*lint --e{644}*/
+      if( SCIPisCertified(scip) && integralslack) /*lint --e{644}*/
       {
          assert(mirinfo != NULL);
          /* save the value for the split disjunction for the integer slack and the continous part (for rounded up we
@@ -6501,7 +6502,7 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
          SCIP_Bool success;
          SCIP_Real sidevalchg;
 
-         if( SCIPisCertificateActive(scip) && !integralslack )
+         if( SCIPisCertified(scip) && !integralslack )
          {
             assert(aggrinfo != NULL);
             assert(aggrinfo->negslackweights[currentnegslackrow] == -weights[i]); /*lint !e777*/
@@ -6640,7 +6641,7 @@ SCIP_RETCODE cutsSubstituteMIRRational(
    SCIPrationalAddReal(onedivoneminusf0, onedivoneminusf0, 1.0);
    SCIPrationalInvert(onedivoneminusf0, onedivoneminusf0);
 
-   if( SCIPisCertificateActive(scip)   )
+   if( SCIPisCertified(scip)   )
    {
       aggrinfo = SCIPgetCertificate(scip)->aggrinfo[SCIPgetCertificate(scip)->naggrinfos -1];
    }
@@ -6740,7 +6741,7 @@ SCIP_RETCODE cutsSubstituteMIRRational(
          else
             mult = SCIPrationalRoundReal(cutar, SCIP_R_ROUND_UPWARDS);
 
-         if( SCIPisCertificateActive(scip) )
+         if( SCIPisCertified(scip) )
          {
             assert(aggrinfo->negslackweights[currentnegslackrow] == -weights[i]);
             aggrinfo->substfactor[currentnegslackrow] = mult;
@@ -7063,7 +7064,7 @@ SCIP_RETCODE calcMIRSafely(
    previousroundmode = SCIPintervalGetRoundingMode();
    SCIPintervalSetRoundingModeUpwards();
 
-   if( SCIPisCertificateActive(scip) )
+   if( SCIPisCertified(scip) )
    {
       SCIP_CALL( SCIPaddCertificateMirInfo(scip) );
    }
@@ -7146,7 +7147,7 @@ SCIP_RETCODE calcMIRSafely(
 
    downrhs = floor(rhs);
 
-   if( SCIPisCertificateActive(scip)   )
+   if( SCIPisCertified(scip)   )
    {
       SCIP_MIRINFO* mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
       SCIPrationalSetReal(mirinfo->rhs, downrhs);

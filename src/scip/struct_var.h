@@ -121,7 +121,7 @@ struct SCIP_BdChgInfo
 {
    SCIP_Real             oldbound;           /**< old value for bound */
    SCIP_Real             newbound;           /**< new value for bound */
-   SCIP_Longint          oldcertindex;       /**< certificate line for old bound (-1 if certificate is not used) */
+   SCIP_Longint          oldcertificateindex;/**< certificate line for old bound (-1 if certificate is not used) */
    SCIP_VAR*             var;                /**< active variable that changed the bounds */
    SCIP_INFERENCEDATA    inferencedata;      /**< data for inferred bound changes */
    SCIP_BDCHGIDX         bdchgidx;           /**< bound change index in path from root to current node */

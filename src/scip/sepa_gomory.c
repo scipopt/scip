@@ -59,7 +59,6 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/cuts.h"
-#include "scip/certificate.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_lpexact.h"
 #include "scip/pub_message.h"
@@ -68,6 +67,7 @@
 #include "scip/pub_sepa.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_cut.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_general.h"
@@ -319,9 +319,9 @@ SCIP_RETCODE addCut(
           * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply this bound change automatically. */
          SCIP_CALL( SCIPaddRow(scip, cut, TRUE, cutoff) );
          ++(*naddedcuts);
-         if( SCIPisCertificateActive(scip) )
+         if( SCIPisCertified(scip) )
          {
-            SCIP_CALL( SCIPstoreCertificateActiveAggregationInfo(scip, cut) );
+            SCIP_CALL( SCIPstoreCertificateActiveAggrInfo(scip, cut) );
             SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
          }
       }
@@ -376,9 +376,9 @@ SCIP_RETCODE addCut(
                 * the floating-point coefficients can change slightly during the creation of the exact row (if rational
                 * coefficients are rounded to smaller denominators) and this may affect cut selection.
                 */
-               if( SCIPisCertificateActive(scip) )
+               if( SCIPisCertified(scip) )
                {
-                  SCIP_CALL( SCIPstoreCertificateActiveAggregationInfo(scip, cut) );
+                  SCIP_CALL( SCIPstoreCertificateActiveAggrInfo(scip, cut) );
                   SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
 
                   if( SCIProwGetRowExact(cut) == NULL )
@@ -396,7 +396,7 @@ SCIP_RETCODE addCut(
                      }
                   }
 
-                  SCIP_CALL( SCIPprintCertificateMirCut(scip, cut) );
+                  SCIP_CALL( SCIPcertifyMirCut(scip, cut) );
                }
             }
          }
@@ -751,9 +751,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             }
          }
       }
-      if( SCIPisCertificateActive(scip) )
+      if( SCIPisCertified(scip) )
       {
-         SCIP_CALL( SCIPfreeCertificateActiveAggregationInfo(scip) );
+         SCIP_CALL( SCIPfreeCertificateActiveAggrInfo(scip) );
          SCIP_CALL( SCIPfreeCertificateActiveMirInfo(scip) );
       }
    }

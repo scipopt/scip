@@ -947,7 +947,7 @@ SCIP_RETCODE nodeReleaseParent(
       /* update the effective root depth if active parent has children and neither reoptimization nor certificate
        * printing is enabled
        */
-      else if( freeParent == !parent->active && !set->reopt_enable && !SCIPcertificateIsEnabled(stat->certificate) )
+      else if( freeParent == !parent->active && !set->reopt_enable && !SCIPisCertified(set->scip) )
       {
          SCIP_Bool singleChild = FALSE;
          int focusdepth = SCIPtreeGetFocusDepth(tree);
@@ -2146,7 +2146,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
 
       /* print bound to certificate */
-      if( set->exact_enabled && SCIPcertificateIsEnabled(stat->certificate)
+      if( set->exact_enabled && SCIPisCertified(set->scip)
          && !SCIPtreeProbing(tree) && newpseudoobjval > SCIPnodeGetLowerbound(node) )
       {
          /* we change the exact local bound here temporarily such that the correct pseudo solution gets printed to the
@@ -2459,7 +2459,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lpexact->fplp, set, transprob, var, oldboundreal, newboundreal, boundtype);
 
       /* print bound to the certificate */
-      if( SCIPcertificateIsEnabled(stat->certificate) && newpseudoobjval > SCIPnodeGetLowerbound(node) )
+      if( SCIPisCertified(set->scip) && newpseudoobjval > SCIPnodeGetLowerbound(node) )
       {
          /* we change the exact local bound here temporarily such that the correct pseudo solution gets printed to the
             certificate */
@@ -2987,7 +2987,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
          SCIPlpExactGetObjval(lp->lpexact, set, lpobjvalexact);
       }
 
-      if( SCIPisCertificateActive(set->scip) )
+      if( SCIPisCertified(set->scip) )
       {
          if( lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE || lpexactsolstat == SCIP_LPSOLSTAT_INFEASIBLE )
          {
@@ -6406,7 +6406,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       {
          SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
       }
-      else if( SCIPcertificateIsEnabled(stat->certificate) )
+      else if( SCIPisCertified(set->scip) )
       {
          SCIPerrorMessage("Cannot resolve 3-way branching in certificate currently \n");
          SCIPABORT();

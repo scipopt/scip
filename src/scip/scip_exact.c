@@ -22,8 +22,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scip_sol.c
- * @brief  public methods for solutions
+/**@file   scip_exact.c
+ * @brief  public methods for exact solving
  * @author Leon Eifler
  *
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
@@ -48,7 +48,6 @@
 #include "scip/benderscut.h"
 #include "scip/branch.h"
 #include "scip/branch_nodereopt.h"
-#include "scip/certificate.h"
 #include "scip/clock.h"
 #include "scip/compr.h"
 #include "scip/concsolver.h"
@@ -111,6 +110,7 @@
 
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -130,7 +130,6 @@
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
 #include "scip/pub_lpexact.h"
-#include "scip/struct_certificate.h"
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
@@ -202,7 +201,15 @@ SCIP_Bool SCIPisExact(
    return (scip->set->exact_enabled);
 }
 
-/** returns whether aggregation is allowed to use negative slack */
+/** returns whether aggregation is allowed to use negative slack in exact solving mode
+ *
+ *  @return Returns TRUE if \SCIP is not in exact solving mode or aggregation is allowed to use negative slack
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
 SCIP_Bool SCIPallowNegSlack(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -210,96 +217,9 @@ SCIP_Bool SCIPallowNegSlack(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPallowNegSlack", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    return (!SCIPisExact(scip)) || (scip->set->exact_allownegslack);
-}
-
-/** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina,
- *  'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina,
- *  e'x'act neumaier and shcherbina, 'a'utomatic); only relevant for solving the problem provably correct
- */
-char SCIPdualBoundMethod(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return (scip->set->exact_safedbmethod);
-}
-
-/** returns whether the certificate output is activated */
-SCIP_Bool SCIPisCertificateActive(
-   SCIP*                 scip                /**< certificate information */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->stat != NULL);
-
-   return SCIPcertificateIsEnabled(scip->stat->certificate);
-}
-
-/** returns certificate data structure
- *
- *  @return certificate data structure
- */
-SCIP_CERTIFICATE* SCIPgetCertificate(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->stat != NULL);
-
-   return scip->stat->certificate;
-}
-
-/** agg aggregation information to certificate for one row */
-SCIP_RETCODE SCIPaddCertificateAggregation(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
-   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
-   SCIP_Real*            weights,            /**< array of weights */
-   int                   naggrrows,          /**< length of the arrays */
-   SCIP_ROW**            negslackrows,       /**< array of rows that are added implicitly with negative slack */
-   SCIP_Real*            negslackweights,    /**< array of negative slack weights */
-   int                   nnegslackrows       /**< length of the negative slack array */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->stat != NULL);
-
-   SCIP_CALL( SCIPcertificateNewAggrInfo(scip, aggrrow, aggrrows, weights, naggrrows, negslackrows, negslackweights, nnegslackrows) );
-
-   return SCIP_OKAY;
-}
-
-/** agg aggregation information to certificate for one row */
-SCIP_RETCODE SCIPaddCertificateMirInfo(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->stat != NULL);
-
-   SCIP_CALL( SCIPcertificateNewMirInfo(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** print MIR cut to certificate file */
-SCIP_RETCODE SCIPprintCertificateMirCut(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             row                 /**< row that needs to be certified */
-   )
-{
-   SCIP_CERTIFICATE* certificate;
-
-   if( !SCIPisExact(scip) || !SCIPisCertificateActive(scip) )
-      return SCIP_OKAY;
-
-   certificate = SCIPgetCertificate(scip);
-   SCIP_CALL( SCIPcertificatePrintMirCut(scip->set, scip->lp, certificate, scip->transprob, row, 'L') );
-
-   return SCIP_OKAY;
 }
 
 /** branches on an LP solution exactly; does not call branching rules, since fractionalities are assumed to small;

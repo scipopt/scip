@@ -1004,6 +1004,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/retcode.o \
 			scip/scip_benders.o \
 			scip/scip_branch.o \
+			scip/scip_certificate.o \
 			scip/scip_compr.o \
 			scip/scip_concurrent.o \
 			scip/scip_conflict.o \

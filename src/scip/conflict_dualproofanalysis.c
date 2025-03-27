@@ -65,6 +65,7 @@
 #include "scip/pub_prop.h"
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
@@ -305,7 +306,7 @@ SCIP_RETCODE proofsetAddAggrrow(
 
    SCIPsetFreeBufferArray(set, &vals);
 
-   if( set->exact_enabled && SCIPisCertificateActive(set->scip) )
+   if( set->exact_enabled && SCIPisCertified(set->scip) )
    {
       assert(aggrrow->certificateline != SCIP_LONGINT_MAX);
       assert(proofset->certificateline == SCIP_LONGINT_MAX);
@@ -1011,7 +1012,7 @@ SCIP_RETCODE createAndAddProofcons(
       SCIP_CALL( SCIPcreateConsExactLinear(set->scip, &cons, name, nnz, consvars, coefs_exact, lhs_exact, rhs_exact,
             FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal, FALSE, TRUE, TRUE, FALSE) );
 
-      if( SCIPisCertificateActive(set->scip) )
+      if( SCIPisCertified(set->scip) )
       {
          SCIP_CALL( SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, cons, proofset->certificateline) );
       }

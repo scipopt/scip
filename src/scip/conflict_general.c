@@ -69,6 +69,7 @@
 #include "scip/pub_prop.h"
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
@@ -1379,7 +1380,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
 
          if( !row->local )
          {
-            if( set->exact_enabled && SCIPisCertificateActive(set->scip) )
+            if( set->exact_enabled && SCIPisCertified(set->scip) )
             {
                SCIP_Longint certificate_index;
 
@@ -1473,7 +1474,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
       }
 
       /* certify final Farkas row */
-      if( SCIPisCertificateActive(set->scip) )
+      if( SCIPisCertified(set->scip) )
       {
          SCIP_ROW** usedrows;
          SCIP_CALL( SCIPallocBufferArray(set->scip, &usedrows, farkasrow->nrows) );
@@ -1859,7 +1860,7 @@ SCIP_RETCODE SCIPgetDualProof(
       }
    }
 
-   if( set->exact_enabled && SCIPisCertificateActive(set->scip) )
+   if( set->exact_enabled && SCIPisCertified(set->scip) )
    {
       SCIP_Longint certificateline;
       SCIP_ROW** usedrows;

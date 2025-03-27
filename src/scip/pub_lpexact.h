@@ -40,6 +40,7 @@
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
 #include "scip/type_lpexact.h"
+#include "scip/type_rational.h"
 #include "scip/type_sepa.h"
 #include "scip/type_var.h"
 #include "scip/type_misc.h"
