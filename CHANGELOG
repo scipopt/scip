@@ -25,6 +25,8 @@ Features
   generation of cut and setting up the subproblems.
 - adds objective types for Benders' decomposition; the choice is to sum the subproblems objectives (classical
   approach) or to use the maximum of the subproblems objectives
+- added decomposition kernel search (DKS) heuristic (disabled by default). This heuristic implements a kernel search framework and can be used
+  both as a construction heuristic as well as an improvement heuristic. In addition, existing decomposition information can be utilized by this heuristic.
 
 Performance improvements
 ------------------------
@@ -166,6 +168,11 @@ Interface changes
 - new parameter "presolving/milp/maxcliquesize" defines the maximal size of cliques considered for clique merging
 - new parameter "presolving/milp/maxgreedycalls" defines the maximal number of greedy max clique calls in a single thread
 - reading/opbreader/maxintsize to define the maximal intsize above which an OPB instance is rejected
+- new parameters "heuristics/dks/maxbucks", "heuristics/dks/kernelsizefactor", "heuristics/dks/addUseConss",
+  "heuristics/dks/linkbucksize", "heuristics/dks/translbkernel", "heuristics/dks/lesslockskernel", "heuristics/dks/usetransprob",
+  "heuristics/dks/buckmaxgap", "heuristics/dks/maxlinkscore", "heuristics/dks/maxbuckfrac", "heuristics/dks/maxnodes",
+  "heuristics/dks/usetwolevel", "heuristics/dks/usedecomp", "heuristics/dks/usebestsol", "heuristics/dks/redcostsort", "heuristics/dks/primalonly",
+  "heuristics/dks/redcostlogsort", "heuristics/dks/objcutoff", and "heuristics/dks/runbinprobsonly" to control heuristic decomposition kernel search
 
 ### Data structures
 
