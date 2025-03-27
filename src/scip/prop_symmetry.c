@@ -2227,7 +2227,7 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
 
 /** returns whether a SCIP instance has an active inferred binary variable */
 static
-SCIP_Bool hasInferredBinaryVar(
+SCIP_Bool hasInferredBinVar(
    SCIP*                 scip                /**< SCIP instance */
    )
 {
@@ -2329,7 +2329,7 @@ SCIP_Bool testSymmetryComputationRequired(
    /* for SST, matching leadervartypes */
    if ( ISSSTACTIVE(propdata->usesymmetry) )
    {
-      if ( ISSSTBINACTIVE(propdata->sstleadervartype) && hasInferredBinaryVar(scip) ) /*lint !e641*/
+      if ( ISSSTBINACTIVE(propdata->sstleadervartype) && hasInferredBinVar(scip) ) /*lint !e641*/
          return TRUE;
       if ( ISSSTINTACTIVE(propdata->sstleadervartype) && hasInferredIntVar(scip) ) /*lint !e641*/
          return TRUE;
