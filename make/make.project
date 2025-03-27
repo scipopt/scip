@@ -632,7 +632,6 @@ endif
 ifeq ($(MPFR),auto)
 MPFR     =  $(BOOST)
 ifeq ($(MPFR)-$(MAKELEVEL),false-0)
-$(warning MPFR was deactived because of missing Boost support (BOOST=false)..)
 endif
 endif
 
@@ -674,7 +673,6 @@ ifeq ($(EXACTSOLVE),auto)
    endif
    EXACTMISSING   += an exact LP-solver
   endif
-  $(warning Exact solving mode was deactivated because of missing dependencies: $(EXACTMISSING).)
  endif
 endif
 
