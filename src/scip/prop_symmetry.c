@@ -2225,6 +2225,81 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
 }
 
 
+/** returns whether a SCIP instance has an active inferred binary variable */
+static
+SCIP_Bool hasInferredBinaryVar(
+   SCIP*                 scip                /**< SCIP instance */
+   )
+{
+   SCIP_VAR** vars;
+   int start;
+   int end;
+   int i;
+
+   assert( scip != NULL );
+
+   /* check for binary or implicit binary variables */
+   if ( SCIPgetNBinVars(scip) > 0 || SCIPgetNBinImplVars(scip) > 0 )
+      return TRUE;
+
+   /* check for binary variables among integer and inferred binary variables among implied integer variables */
+   vars = SCIPgetVars(scip);
+   assert( vars != NULL );
+
+   start = SCIPgetNBinVars(scip);
+   end = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNIntImplVars(scip) + SCIPgetNContImplVars(scip);
+   for (i = start; i < end; ++i)
+   {
+      if( SCIPvarIsBinary(vars[i]) )
+         return TRUE;
+   }
+
+   return FALSE;
+}
+
+
+/** returns whether a SCIP instance has an active inferred integer variable */
+static
+SCIP_Bool hasInferredIntVar(
+   SCIP*                 scip                /**< SCIP instance */
+   )
+{
+   SCIP_VAR** vars;
+   int start;
+   int end;
+   int i;
+
+   assert( scip != NULL );
+
+   /* check for binary or implicit binary variables */
+   if ( SCIPgetNIntVars(scip) > 0 )
+      return TRUE;
+
+   vars = SCIPgetVars(scip);
+   assert( vars != NULL );
+
+   /* check for proper integer variables among integer variables */
+   start = SCIPgetNBinVars(scip);
+   end = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   for (i = start; i < end; ++i)
+   {
+      if( ! SCIPvarIsBinary(vars[i]) )
+         return TRUE;
+   }
+
+   /* check for proper inferred integer variables among implied integer variables */
+   start = end + SCIPgetNBinImplVars(scip);
+   end = start + SCIPgetNIntImplVars(scip) + SCIPgetNContImplVars(scip);
+   for (i = start; i < end; ++i)
+   {
+      if( ! SCIPvarIsBinary(vars[i]) )
+         return TRUE;
+   }
+
+   return FALSE;
+}
+
+
 /** returns whether any allowed symmetry handling method is effective for the problem instance */
 static
 SCIP_Bool testSymmetryComputationRequired(
@@ -2256,9 +2331,9 @@ SCIP_Bool testSymmetryComputationRequired(
    /* for SST, matching leadervartypes */
    if ( ISSSTACTIVE(propdata->usesymmetry) )
    {
-      if ( ISSSTBINACTIVE(propdata->sstleadervartype) && SCIPgetNBinVars(scip) > 0 ) /*lint !e641*/
+      if ( ISSSTBINACTIVE(propdata->sstleadervartype) && hasInferredBinaryVar(scip) ) /*lint !e641*/
          return TRUE;
-      if ( ISSSTINTACTIVE(propdata->sstleadervartype) && SCIPgetNIntVars(scip) > 0 ) /*lint !e641*/
+      if ( ISSSTINTACTIVE(propdata->sstleadervartype) && hasInferredIntVar(scip) ) /*lint !e641*/
          return TRUE;
       if ( ISSSTCONTACTIVE(propdata->sstleadervartype) && SCIPgetNContVars(scip) > 0 ) /*lint !e641*/
          return TRUE;
