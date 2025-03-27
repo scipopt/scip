@@ -529,6 +529,7 @@ set(scipheaders
     scip/benderscut_nogood.h
     scip/benderscut_opt.h
     scip/bendersdefcuts.h
+    scip/relax_benders.h
     scip/bitencode.h
     scip/boundstore.h
     scip/branch_allfullstrong.h
