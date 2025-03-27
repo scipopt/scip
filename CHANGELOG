@@ -80,6 +80,8 @@ Interface changes
 - deprecated SCIPsubversion(), will be removed
 - SCIPvarCalcDistributionParameters(): argument impltype added (5th position)
 - SCIPpermuteProb(): argument permuteimplvars has been replaced by new arguments permutebinimplvars, permuteintimplvars, and permutecontimplvars
+- SCIPgetLPBranchCands(): implied integral variables with integrality constraints are included in nlpcands stored in lpcands at the back
+- SCIPgetNLPBranchCands(): implied integral variables with integrality constraints are included
 - SCIPgetSolVarsData(): argument nimplvars has been replaced by new arguments nbinimplvars, nintimplvars, and ncontimplvars
 - SCIPexprSetIntegrality(): set argument generalized from SCIP_Bool integral to SCIP_IMPLINTTYPE integrality (4th position)
 - Temporarily for SCIP 10 only: Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integral type SCIP_IMPLINTTYPE_WEAK instead
@@ -118,7 +120,8 @@ Interface changes
 - added SCIPcreateVarImpl() and SCIPcreateObjVarImpl(), which behave identically to SCIPcreateVar() and SCIPcreateObjVar(), respectively, but have an additional argument for the new implied integral type flag (8th position)
 - added SCIPchgVarImplType(), SCIPvarGetImplType(), SCIPvarIsImpliedIntegral() to control and query implied integrality
 - added SCIPvarIsNonimpliedIntegral() to query if a variable is integral but not implied integral
-- added SCIPgetNBinImplVars(), SCIPgetNIntImplVars(), SCIPgetNContImplVars() to query the number of implied integral variables of every type; note that SCIPgetNBinVars(), SCIPgetNIntVars(), and SCIPgetNContVars() no longer include the implied integral variables in their counts
+- added SCIPgetNOrigBinImplVars(), SCIPgetNOrigIntImplVars(), SCIPgetNOrigContImplVars() to query the number of implied integral variables of each type in original problem; note that SCIPgetNOrigBinVars(), SCIPgetNOrigIntVars(), and SCIPgetNOrigContVars() no longer include the implied integral variables in their counts
+- added SCIPgetNBinImplVars(), SCIPgetNIntImplVars(), SCIPgetNContImplVars() to query the number of implied integral variables of each type in current problem; note that SCIPgetNBinVars(), SCIPgetNIntVars(), and SCIPgetNContVars() no longer include the implied integral variables in their counts
 - added SCIPcolIsImpliedIntegral()
 - added SCIPvarsCountTypes() to determine the variable type count distribution for an array of variables
 - added SCIPeventGetOldImplType() and SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
@@ -221,6 +224,7 @@ Fixed bugs
 - To fix a bug where duplicate cuts from different constraint handlers were not recognized, SCIPrealHash() was changed
   to be stable around shortly representable numbers, and a numerical tolerance for comparing cutting plane efficacy for the aggregation
   separator is introduced.
+- accept fractional continuous implied integral variables in heuristic completesol
 
 Miscellaneous
 -------------

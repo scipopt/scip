@@ -471,24 +471,21 @@ static
 SCIP_DECL_HEUREXEC(heurExecOneopt)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
-   SCIP_SOL* bestsol;                        /* incumbent solution                   */
-   SCIP_SOL* worksol;                        /* heuristic's working solution         */
    SCIP_VAR** vars;                          /* SCIP variables                       */
    SCIP_VAR** shiftcands;                    /* shiftable variables                  */
    SCIP_ROW** lprows;                        /* SCIP LP rows                         */
+   SCIP_SOL* bestsol;                        /* incumbent solution                   */
+   SCIP_SOL* worksol;                        /* heuristic's working solution         */
    SCIP_Real* activities;                    /* row activities for working solution  */
    SCIP_Real* shiftvals;
    SCIP_Bool shifted;
-
    SCIP_RETCODE retcode;
-
    SCIP_Real lb;
    SCIP_Real ub;
    SCIP_Bool valid;
    int nchgbound;
-   int nbinvars;
-   int nintvars;
    int nvars;
+   int nenfovars;
    int nlprows;
    int nshiftcands;
    int shiftcandssize;
@@ -515,11 +512,13 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
    /* get problem variables */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-   nintvars += nbinvars;
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   nenfovars = nvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(nenfovars >= 0);
 
    /* do not run if there are no discrete variables */
-   if( nintvars == 0 )
+   if( nenfovars == 0 )
    {
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -578,8 +577,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_CALL( SCIPflushLP(scip) );
 
       /* get problem variables again, SCIPconstructLP() might have added new variables */
-      SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-      nintvars += nbinvars;
+      vars = SCIPgetVars(scip);
+      nvars = SCIPgetNVars(scip);
+      nenfovars = nvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+      assert(nenfovars >= 0);
    }
 
    /* we need an LP */
@@ -682,7 +683,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       /* @todo if useloop=TRUE store for each variable which constraint blocked it and only iterate over those variables
        *       in the following rounds for which the constraint slack was increased by previous shifts
        */
-      for( int i = 0; i < nintvars; ++i )
+      for( int i = 0; i < nenfovars; ++i )
       {
          if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
          {
@@ -787,7 +788,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       /* if the problem is a pure IP, try to install the solution, if it is a MIP, solve LP again to set the continuous
        * variables to the best possible value
        */
-      if( nvars == nintvars || !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      if( nvars == nenfovars || !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       {
          SCIP_Bool success;
 
@@ -825,7 +826,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             }
          }
          /* apply this after global bounds to not cause an error with intermediate empty domains */
-         for( int i = 0; i < nintvars; ++i )
+         for( int i = 0; i < nenfovars; ++i )
          {
             if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
             {
