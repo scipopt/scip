@@ -244,6 +244,6 @@ Test(events, dualboundimproved, .description = "tests SCIP_EVENTTYPE_DUALBOUNDIM
    SCIP_CALL( SCIPsolve(scip_test) );
 
    /* we expect three updates: -1e20, 0.0, mu */
-   cr_expect(eventhdlrdata->ndualboundimprovements >= 43 "Too few dual bound improvements detected (expecting 3 updates)");
+   cr_expect(eventhdlrdata->ndualboundimprovements >= 3, "Too few dual bound improvements detected (expecting 3 updates)");
 #endif
 }
