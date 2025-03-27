@@ -1347,6 +1347,7 @@ void SCIPconflictRowFree(
    (*row) = NULL;
 }
 
+/** frees all conflict rows and arrays that track unresolvable (fixed) variables */
 static
 void freeConflictResources(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -1582,9 +1583,7 @@ SCIP_RETCODE MirReduction(
       }
    }
 
-   SCIP_Real cutefficacy;
-   int cutrank;
-   SCIP_Bool cutislocal;
+   SCIP_Bool cutislocal = FALSE;
    SCIP_Bool success;
 
    SCIP_CALL( SCIPaggrRowAddCustomCons(set->scip, aggrrow, rowinds, rowvals, rownnz, rowrhs, 1.0 / divisor, 1, FALSE) );
@@ -1593,10 +1592,12 @@ SCIP_RETCODE MirReduction(
 
    /* apply MIR */
    SCIP_CALL( SCIPcalcMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, FALSE, FIXINTEGRALRHS, NULL, NULL,
-         MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+         MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, NULL, NULL, &cutislocal, &success) );
+
 
    if( success )
    {
+      assert(!cutislocal);
       conflictRowClear(blkmem, reasonrow, nvars);
       reasonrow->nnz = cutnnz;
       reasonrow->lhs = -cutrhs;
