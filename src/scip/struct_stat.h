@@ -51,6 +51,7 @@
 #include "scip/type_relax.h"
 #include "scip/type_misc.h"
 #include "scip/type_certificate.h"
+#include "scip/type_rational.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -152,6 +153,7 @@ struct SCIP_Stat
    SCIP_Real             lastprimalbound;    /**< last (non-infinite) primal bound (in transformed space) for integral evaluation */
    SCIP_Real             lastdualbound;      /**< last (non-infinite) dual bound (in transformed space) for integral evaluation */
    SCIP_Real             lastlowerbound;     /**< last lower bound (in transformed space) for integral evaluation */
+   SCIP_RATIONAL*        lastlowerboundexact;/**< last lower bound (in transformed space) for integral evaluation */
    SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
    SCIP_Real             rootlpbestestimate; /**< best-estimate for final root LP solution that changes with every pseudo-cost update */
    SCIP_Real             referencebound;     /**< objective bound for reference purposes */

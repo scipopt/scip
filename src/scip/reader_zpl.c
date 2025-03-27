@@ -584,7 +584,7 @@ SCIP_RETCODE addConsTerm(
       case CON_EQUAL:
          SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratlhs, lhs) );
          SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratrhs, rhs) );
-         assert(SCIPrationalIsEqual(ratrhs, ratlhs));
+         assert(SCIPrationalIsEQ(ratrhs, ratlhs));
          break;
       default:
          SCIPwarningMessage(scip, "invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);

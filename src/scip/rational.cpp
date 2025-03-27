@@ -715,7 +715,7 @@ void SCIPrationalSetReal(
       res->val = real;
       res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
    }
-   assert(SCIPrationalIsEqualReal(res, real));
+   assert(SCIPrationalIsEQReal(res, real));
 }
 
 /** sets a rational to positive infinity */
@@ -1311,7 +1311,7 @@ void SCIPrationalMax(
 }
 
 /** check if two rationals are equal */
-SCIP_Bool SCIPrationalIsEqual(
+SCIP_Bool SCIPrationalIsEQ(
    SCIP_RATIONAL*        rat1,               /**< the first rational */
    SCIP_RATIONAL*        rat2                /**< the second rational */
    )
@@ -1328,7 +1328,7 @@ SCIP_Bool SCIPrationalIsEqual(
 }
 
 /** check if two rationals are equal */
-SCIP_Bool SCIPrationalIsAbsEqual(
+SCIP_Bool SCIPrationalIsAbsEQ(
    SCIP_RATIONAL*        rat1,               /**< the first rational */
    SCIP_RATIONAL*        rat2                /**< the second rational */
    )
@@ -1344,7 +1344,7 @@ SCIP_Bool SCIPrationalIsAbsEqual(
 }
 
 /** check if a rational and a real are equal */
-SCIP_Bool SCIPrationalIsEqualReal(
+SCIP_Bool SCIPrationalIsEQReal(
    SCIP_RATIONAL*        rat,                /**< the rational */
    SCIP_Real             real                /**< the real */
    )
@@ -1358,7 +1358,7 @@ SCIP_Bool SCIPrationalIsEqualReal(
 }
 
 /** check if real approx of rational and a real are equal */
-SCIP_Bool SCIPrationalIsApproxEqualReal(
+SCIP_Bool SCIPrationalIsApproxEQReal(
    SCIP_SET*             set,                /**< SCIP set pointer */
    SCIP_RATIONAL*        rat,                /**< the rational */
    SCIP_Real             real,               /**< the real */
@@ -1445,7 +1445,7 @@ SCIP_Bool SCIPrationalIsGE(
 {
    assert(rat1 != nullptr && rat2 != nullptr);
 
-   if( SCIPrationalIsEqual(rat1, rat2) )
+   if( SCIPrationalIsEQ(rat1, rat2) )
       return TRUE;
    else
       return SCIPrationalIsGT(rat1, rat2);

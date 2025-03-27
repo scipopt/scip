@@ -500,6 +500,8 @@ SCIP_RETCODE initPresolve(
       scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
+      if( scip->set->exact_enabled )
+         SCIPrationalSetReal(scip->tree->root->lowerboundexact, scip->tree->root->lowerbound);
 
       /* update primal-dual integrals */
       if( scip->set->misc_calcintegral )
@@ -509,6 +511,8 @@ SCIP_RETCODE initPresolve(
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
       SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
       scip->stat->lastlowerbound = scip->tree->root->lowerbound;
+      if( scip->set->exact_enabled )
+         SCIPrationalSetRational(scip->stat->lastlowerboundexact, scip->tree->root->lowerboundexact);
    }
 
    /* GCG wants to perform presolving during the reading process of a file reader;
@@ -1591,6 +1595,8 @@ SCIP_RETCODE initSolve(
       scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
+      if( scip->set->exact_enabled )
+         SCIPrationalSetReal(scip->tree->root->lowerboundexact, scip->tree->root->lowerbound);
 
       /* update primal-dual integrals */
       if( scip->set->misc_calcintegral )
@@ -1600,6 +1606,8 @@ SCIP_RETCODE initSolve(
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
       SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
       scip->stat->lastlowerbound = scip->tree->root->lowerbound;
+      if( scip->set->exact_enabled )
+         SCIPrationalSetRational(scip->stat->lastlowerboundexact, scip->tree->root->lowerboundexact);
    }
 
    /* inform the transformed problem that the branch and bound process starts now */

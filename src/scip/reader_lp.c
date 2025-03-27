@@ -2169,7 +2169,7 @@ SCIP_RETCODE readConstraintsRational(
          goto TERMINATE;
       }
       assert(coefs != NULL);
-      if( !SCIPrationalIsEqualReal(coefs[0], 1.0) )
+      if( !SCIPrationalIsEQReal(coefs[0], 1.0) )
       {
          syntaxError(scip, lpinput, "There cannot be a coefficient before the binary indicator variable.");
          goto TERMINATE;
@@ -4861,7 +4861,7 @@ SCIP_RETCODE SCIPwriteLp(
       }
       else if(strcmp(conshdlrname, "exactlinear") == 0 )
       {
-         if( SCIPrationalIsEqual(SCIPgetRhsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) )
+         if( SCIPrationalIsEQ(SCIPgetRhsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) )
          {
             SCIP_CALL( printRowExact(scip, file, consname, "_", "=",
                SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),

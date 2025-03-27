@@ -132,7 +132,7 @@ Test(rationals, setting, .description = "tests all the different methods to set/
    /* set to string rep */
    SCIPrationalSetString(r1, "1/3");
    cr_assert(!SCIPrationalIsFpRepresentable(r1), "non-fp-rep number not detected as non-representable");
-   cr_assert(!SCIPrationalIsEqualReal(r1, SCIPrationalGetReal(r1)), "approximation of 1/3 should not be the same");
+   cr_assert(!SCIPrationalIsEQReal(r1, SCIPrationalGetReal(r1)), "approximation of 1/3 should not be the same");
 
    /* test rounding */
    cr_log_info("printing test approx: %.17e \n", SCIPrationalGetReal(r1));
@@ -200,64 +200,64 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    SCIPrationalSetInfinity(r1);
    SCIPrationalAdd(rbuf, r1, r2);
    cr_assert(SCIPrationalIsInfinity(rbuf));
-   cr_assert(!SCIPrationalIsEqual(r1, r2));
+   cr_assert(!SCIPrationalIsEQ(r1, r2));
 
    /* Difference 0.5 - - 0.5 == 1*/
    SCIPrationalSetInt(r1, 1, 2);
    SCIPrationalSetInt(r2, -1, 2);
    SCIPrationalDiff(rbuf, r1, r2);
    SCIPrationalSetInt(r1, 1, 1);
-   cr_assert(SCIPrationalIsEqual(rbuf, r1));
+   cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* Diff 1 - 1.5 == -0.5 */
    SCIPrationalDiffReal(r1, r1, 1.5);
-   cr_assert(SCIPrationalIsEqual(r1, r2));
+   cr_assert(SCIPrationalIsEQ(r1, r2));
 
    /* RelDiff -5 / -0.5 == -4.5 / 5 */
    SCIPrationalMultReal(r1, r1, 10);
    SCIPrationalRelDiff(rbuf, r1, r2);
    SCIPrationalSetInt(r1, -9, 10);
-   cr_assert(SCIPrationalIsEqual(rbuf, r1));
+   cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* Division (-9/10) / (-0.5) == 18/10 */
    SCIPrationalDiv(rbuf, r1, r2);
    SCIPrationalSetInt(r1, 18, 10);
-   cr_assert(SCIPrationalIsEqual(rbuf, r1));
+   cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    SCIPrationalDivReal(rbuf, r1, 2);
    SCIPrationalSetInt(r1, 9, 10);
-   cr_assert(SCIPrationalIsEqual(rbuf, r1));
+   cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* SCIPrationalAddProd 9/10 += 9/10 * -0.5 == 9/20 */
    SCIPrationalAddProd(rbuf, r1, r2);
    SCIPrationalSetInt(r1, 9, 20);
-   cr_assert(SCIPrationalIsEqual(rbuf, r1));
+   cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* SCIPrationalDiffProd 9/20 -= 9/20 * -0.5 == 27/40 */
    SCIPrationalDiffProd(rbuf, r1, r2);
    SCIPrationalSetInt(r1, 27, 40);
-   cr_assert(SCIPrationalIsEqual(rbuf, r1));
+   cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* Negation */
    SCIPrationalNegate(rbuf, r1);
    SCIPrationalSetInt(r1, -27, 40);
-   cr_assert(SCIPrationalIsEqual(rbuf, r1));
+   cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* Abs */
    SCIPrationalAbs(rbuf, r1);
    SCIPrationalSetInt(r1, 27, 40);
-   cr_assert(SCIPrationalIsEqual(rbuf, r1));
+   cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* Invert */
    SCIPrationalInvert(rbuf, r1);
    SCIPrationalSetInt(r1, 40, 27);
-   cr_assert(SCIPrationalIsEqual(rbuf, r1));
+   cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* min/max */
    SCIPrationalMin(r2, r1, rbuf);
-   cr_assert(SCIPrationalIsEqual(rbuf, r2));
+   cr_assert(SCIPrationalIsEQ(rbuf, r2));
    SCIPrationalMax(r2, r1, rbuf);
-   cr_assert(SCIPrationalIsEqual(r1, r2));
+   cr_assert(SCIPrationalIsEQ(r1, r2));
 
    /* comparisons (GT/LT/GE/LE) (only one checed, since use each other)*/
    SCIPrationalInvert(r1, r1);
@@ -280,7 +280,7 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
 
    /* comparing fp and rat */
    SCIPrationalSetString(r2, "123646/1215977400");
-   cr_assert(!SCIPrationalIsEqualReal(r2, SCIPrationalGetReal(r2)));
+   cr_assert(!SCIPrationalIsEQReal(r2, SCIPrationalGetReal(r2)));
 
    SCIPrationalSetString(r1, "1/3");
    cr_assert(SCIPrationalIsLT(r2, r1));
@@ -373,7 +373,7 @@ Test(rationals, arrays, .description = "tests rational array methods")
    SCIPrationalSetInt(r1, 2, 5);
    SCIPrationalarraySetVal(ratar, 5, r1);
    SCIPrationalarrayGetVal(ratar, 5, r2);
-   cr_assert(SCIPrationalIsEqual(r1, r2));
+   cr_assert(SCIPrationalIsEQ(r1, r2));
 
    SCIPrationalarrayGetVal(ratar, 4, r2);
    cr_assert(SCIPrationalIsZero(r2));
@@ -387,7 +387,7 @@ Test(rationals, arrays, .description = "tests rational array methods")
    cr_log_info("Two rat");
    cr_log_info("Test arrray printing: \n ");
    // cr_assert(SCIP_OKAY == SCIPrationalarrayPrint(ratar));
-   cr_assert(SCIPrationalIsEqual(r1, r2));
+   cr_assert(SCIPrationalIsEQ(r1, r2));
 
    // test incval
    SCIPrationalSetInt(r2, 1, 5);
@@ -397,7 +397,7 @@ Test(rationals, arrays, .description = "tests rational array methods")
 
    SCIPrationalAdd(r1, r1, r2);
    SCIPrationalarrayGetVal(ratar, 7, r2);
-   cr_assert(SCIPrationalIsEqual(r1, r2));
+   cr_assert(SCIPrationalIsEQ(r1, r2));
 
    // test max/minidx
    cr_assert_eq(10, SCIPrationalarrayGetMaxIdx(ratar));
@@ -409,7 +409,7 @@ Test(rationals, arrays, .description = "tests rational array methods")
    {
       SCIPrationalarrayGetVal(ratar, i, r1);
       SCIPrationalarrayGetVal(ratar2, i, r2);
-      cr_assert(SCIPrationalIsEqual(r1, r2));
+      cr_assert(SCIPrationalIsEQ(r1, r2));
    }
 
    SCIPrationalarrayFree(&ratar2, blkmem);

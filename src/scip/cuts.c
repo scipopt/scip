@@ -5319,7 +5319,7 @@ SCIP_RETCODE cutsRoundMIRSafely(
             /* lower bound was used */
             if( boundtype[i] == -1 )
             {
-               assert(SCIPrationalIsEqualReal(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbGlobal(var)));
+               assert(SCIPrationalIsEQReal(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbGlobal(var)));
                assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
                SCIPintervalSetRational(&tmpinterval, SCIPvarGetLbGlobalExact(var));
                SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
@@ -5338,7 +5338,7 @@ SCIP_RETCODE cutsRoundMIRSafely(
             /* upper bound was used */
             if( boundtype[i] == -1 )
             {
-               assert(SCIPrationalIsEqualReal(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbGlobal(var)));
+               assert(SCIPrationalIsEQReal(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbGlobal(var)));
                assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
                SCIPintervalSetRational(&tmpinterval, SCIPvarGetUbGlobalExact(var));
                SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);

@@ -1882,7 +1882,7 @@ SCIP_RETCODE readRangesExact(
             else
             {
                /* lhs > -infinity, rhs < infinity -> equality */
-               assert(SCIPrationalIsEqual(lhs, rhs));
+               assert(SCIPrationalIsEQ(lhs, rhs));
                if( !SCIPrationalIsNegative(val) )
                {
                   SCIPrationalAdd(val, val, rhs);
@@ -1925,7 +1925,7 @@ SCIP_RETCODE readRangesExact(
                else
                {
                   /* lhs > -infinity, rhs < infinity -> equality */
-                  assert(SCIPrationalIsEqual(lhs, rhs));
+                  assert(SCIPrationalIsEQ(lhs, rhs));
                   if( !SCIPrationalIsNegative(val) )
                   {
                      SCIPrationalAdd(val, val, rhs);

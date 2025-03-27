@@ -4682,8 +4682,8 @@ SCIP_RETCODE SCIPvarFixExact(
    if( !set->exact_enabled )
       return SCIP_OKAY;
 
-   assert(SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb));
-   assert(SCIPrationalIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub));
+   assert(SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb));
+   assert(SCIPrationalIsEQ(var->exactdata->glbdom.ub, var->exactdata->locdom.ub));
    assert(infeasible != NULL);
    assert(fixed != NULL);
 
@@ -4697,7 +4697,7 @@ SCIP_RETCODE SCIPvarFixExact(
 
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_FIXED )
    {
-      *infeasible = !SCIPrationalIsEqual(fixedval, var->exactdata->locdom.lb);
+      *infeasible = !SCIPrationalIsEQ(fixedval, var->exactdata->locdom.lb);
       SCIPrationalDebugMessage(" -> variable already fixed to %q (fixedval=%q): infeasible=%u\n", var->exactdata->locdom.lb, fixedval, *infeasible);
       goto terminate;
    }
@@ -5572,7 +5572,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
             if( SCIPvarCompare(activevars[v - 1], activevars[v]) == 0 )
             {
                SCIPrationalNegate(scalar, activescalars[v]);
-               if( !SCIPrationalIsEqual(activescalars[v - 1], scalar) )
+               if( !SCIPrationalIsEQ(activescalars[v - 1], scalar) )
                {
                   SCIPrationalAdd(activescalars[v - 1], activescalars[v - 1], activescalars[v]);
                   --nactivevars;
@@ -6099,7 +6099,7 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
          *infeasible = TRUE;
          break;
       }
-      else if( SCIPrationalIsEqual(varlb, varub) )
+      else if( SCIPrationalIsEQ(varlb, varub) )
       {
          /* the aggregated variable is fixed -> fix both variables */
          SCIP_CALL( SCIPvarFixExact(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
@@ -6180,7 +6180,7 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
          *infeasible = TRUE;
          break;
       }
-      else if( SCIPrationalIsEqual(aggvarlb, aggvarub) )
+      else if( SCIPrationalIsEQ(aggvarlb, aggvarub) )
       {
          /* the aggregation variable is fixed -> fix both variables */
          SCIP_CALL( SCIPvarFixExact(aggvar, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
@@ -6205,14 +6205,14 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
          {
             SCIPrationalSetRational(varlb, aggvar->exactdata->glbdom.lb);
             SCIP_CALL( SCIPvarChgLbGlobalExact(aggvar, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, cliquetable, aggvarlb) );
-            aggvarbdschanged = !SCIPrationalIsEqual(varlb, aggvar->exactdata->glbdom.lb);
+            aggvarbdschanged = !SCIPrationalIsEQ(varlb, aggvar->exactdata->glbdom.lb);
          }
 
          if( SCIPrationalIsLT(aggvarub, aggvar->exactdata->glbdom.ub) )
          {
             SCIPrationalSetRational(varub, aggvar->exactdata->glbdom.ub);
             SCIP_CALL( SCIPvarChgUbGlobalExact(aggvar, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, cliquetable, aggvarub) );
-            aggvarbdschanged = aggvarbdschanged || !SCIPrationalIsEqual(varub, aggvar->exactdata->glbdom.ub);
+            aggvarbdschanged = aggvarbdschanged || !SCIPrationalIsEQ(varub, aggvar->exactdata->glbdom.ub);
          }
 
          /* update the hole list of the aggregation variable */
@@ -6622,7 +6622,7 @@ SCIP_RETCODE SCIPvarAggregateExact(
    /* if variable and aggregation variable are equal, the variable can be fixed: x == a*x + c  =>  x == c/(1-a) */
    if( var == aggvar )
    {
-      if( SCIPrationalIsEqualReal(scalar, 1.0) )
+      if( SCIPrationalIsEQReal(scalar, 1.0) )
          *infeasible = !SCIPrationalIsZero(constant);
       else
       {
@@ -6677,7 +6677,7 @@ SCIP_RETCODE SCIPvarAggregateExact(
    /* check, if variable should be used as NEGATED variable of the aggregation variable */
    if( SCIPvarIsBinary(var) && SCIPvarIsBinary(aggvar)
       && var->negatedvar == NULL && aggvar->negatedvar == NULL
-      && SCIPrationalIsEqualReal(scalar, -1.0) && SCIPrationalIsEqualReal(constant, 1.0) )
+      && SCIPrationalIsEQReal(scalar, -1.0) && SCIPrationalIsEQReal(constant, 1.0) )
    {
       /* link both variables as negation pair */
       var->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
@@ -8081,8 +8081,8 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
    assert(var != NULL);
    assert(var->scip == set->scip);
    assert(set->exact_enabled);
-   assert(SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb)); /*lint !e777*/
-   assert(SCIPrationalIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub)); /*lint !e777*/
+   assert(SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb)); /*lint !e777*/
+   assert(SCIPrationalIsEQ(var->exactdata->glbdom.ub, var->exactdata->locdom.ub)); /*lint !e777*/
    assert(naggvars == 0 || aggvars != NULL);
    assert(naggvars == 0 || scalars != NULL);
    assert(infeasible != NULL);
@@ -8151,7 +8151,7 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
       }
 
       /* this means that x = x + a_1*y_1 + ... + a_n*y_n + c */
-      if( SCIPrationalIsEqualReal(tmpscalar, 1.0) )
+      if( SCIPrationalIsEQReal(tmpscalar, 1.0) )
       {
          if( ntmpvars == 0 )
          {
@@ -8567,10 +8567,10 @@ SCIP_RETCODE varNegateExactData(
 
    negvar->exactdata->varstatusexact = SCIP_VARSTATUS_NEGATED;
 
-   assert(SCIPrationalIsEqualReal(negvar->exactdata->glbdom.ub, negvar->glbdom.ub));
-   assert(SCIPrationalIsEqualReal(negvar->exactdata->locdom.ub, negvar->locdom.ub));
-   assert(SCIPrationalIsEqualReal(negvar->exactdata->glbdom.lb, negvar->glbdom.lb));
-   assert(SCIPrationalIsEqualReal(negvar->exactdata->locdom.lb, negvar->locdom.lb));
+   assert(SCIPrationalIsEQReal(negvar->exactdata->glbdom.ub, negvar->glbdom.ub));
+   assert(SCIPrationalIsEQReal(negvar->exactdata->locdom.ub, negvar->locdom.ub));
+   assert(SCIPrationalIsEQReal(negvar->exactdata->glbdom.lb, negvar->glbdom.lb));
+   assert(SCIPrationalIsEQReal(negvar->exactdata->locdom.lb, negvar->locdom.lb));
 
    return SCIP_OKAY;
 }
@@ -9009,7 +9009,7 @@ SCIP_RETCODE varEventObjChangedExact(
    * Hence, we relax it by letting it pass if the variables are percieved the same and we use very large values
    * that make comparison with values close to epsilon inaccurate.
    */
-   assert(!SCIPrationalIsEqual(oldobj, newobj));
+   assert(!SCIPrationalIsEQ(oldobj, newobj));
 
    SCIP_CALL( SCIPeventCreateObjChanged(&event, blkmem, var, SCIPrationalGetReal(oldobj), SCIPrationalGetReal(newobj)) );
    SCIP_CALL( SCIPeventAddExactObjChg(event, blkmem, oldobj, newobj) );
@@ -9124,7 +9124,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
 
    SCIPrationalDebugMessage("changing exact objective value of <%s> from %q to %q\n", var->name, var->exactdata->obj, newobj);
 
-   if( !SCIPrationalIsEqual(var->exactdata->obj, newobj) )
+   if( !SCIPrationalIsEQ(var->exactdata->obj, newobj) )
    {
       switch( SCIPvarGetStatusExact(var) )
       {
@@ -9724,7 +9724,7 @@ SCIP_RETCODE SCIPvarChgLbOriginalExact(
       SCIPrationalDebugMessage("changing original lower bound of <%s> from %q to %q\n",
          var->name, var->exactdata->origdom.lb, newbound);
 
-      if( SCIPrationalIsEqual(var->exactdata->origdom.lb, newbound) )
+      if( SCIPrationalIsEQ(var->exactdata->origdom.lb, newbound) )
       {
          SCIPrationalFreeBuffer(set->buffer, &tmpval);
          return SCIP_OKAY;
@@ -9856,7 +9856,7 @@ SCIP_RETCODE SCIPvarChgUbOriginalExact(
       SCIPrationalDebugMessage("changing original upper bound of <%s> from %q to %q\n",
          var->name, var->exactdata->origdom.ub, newbound);
 
-      if( SCIPrationalIsEqual(var->exactdata->origdom.ub, newbound) )
+      if( SCIPrationalIsEQ(var->exactdata->origdom.ub, newbound) )
       {
          SCIPrationalFreeBuffer(set->buffer, &tmpval);
          return SCIP_OKAY;
@@ -9952,7 +9952,7 @@ SCIP_RETCODE varEventGlbChangedExact(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPrationalIsEqual(oldbound, newbound));
+   assert(!SCIPrationalIsEQ(oldbound, newbound));
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -10029,7 +10029,7 @@ SCIP_RETCODE varEventGubChangedExact(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPrationalIsEqual(oldbound, newbound));
+   assert(!SCIPrationalIsEQ(oldbound, newbound));
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -10538,11 +10538,11 @@ SCIP_RETCODE varProcessChgLbGlobalExact(
    }
    assert(!SCIPvarIsIntegral(var) || SCIPrationalIsIntegral(newbound));
 
-   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPrationalIsEqualReal(newbound, 0.0) || SCIPrationalIsEqualReal(newbound, 1.0)); /*lint !e641*/
+   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPrationalIsEQReal(newbound, 0.0) || SCIPrationalIsEQReal(newbound, 1.0)); /*lint !e641*/
 
    SCIPrationalDebugMessage("process changing exact global lower bound of <%s> from %q to %q\n", var->name, var->exactdata->glbdom.lb, newbound);
 
-   if( SCIPrationalIsEqual(newbound, var->exactdata->glbdom.lb) )
+   if( SCIPrationalIsEQ(newbound, var->exactdata->glbdom.lb) )
    {
       SCIPrationalFreeBuffer(set->buffer, &oldbound);
       return SCIP_OKAY;
@@ -10680,11 +10680,11 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
    }
    assert(!SCIPvarIsIntegral(var) || SCIPrationalIsIntegral(newbound));
 
-   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPrationalIsEqualReal(newbound, 0.0) || SCIPrationalIsEqualReal(newbound, 1.0)); /*lint !e641*/
+   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPrationalIsEQReal(newbound, 0.0) || SCIPrationalIsEQReal(newbound, 1.0)); /*lint !e641*/
 
    SCIPrationalDebugMessage("process changing exact global upper bound of <%s> from %q to %q\n", var->name, var->exactdata->glbdom.lb, newbound);
 
-   if( SCIPrationalIsEqual(newbound, var->exactdata->glbdom.ub) )
+   if( SCIPrationalIsEQ(newbound, var->exactdata->glbdom.ub) )
    {
       SCIPrationalFreeBuffer(set->buffer, &oldbound);
       return SCIP_OKAY;
@@ -12055,10 +12055,10 @@ SCIP_RETCODE varProcessChgLbLocalExact(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPrationalIsZero(newbound) || SCIPrationalIsEqualReal(newbound, 1.0)
-            || SCIPrationalIsEqual(newbound, var->exactdata->locdom.ub)))
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPrationalIsZero(newbound) || SCIPrationalIsEQReal(newbound, 1.0)
+            || SCIPrationalIsEQ(newbound, var->exactdata->locdom.ub)))
       || (SCIPvarIsIntegral(var) && (SCIPrationalIsIntegral(newbound)
-            || SCIPrationalIsEqual(newbound, var->exactdata->locdom.ub)))
+            || SCIPrationalIsEQ(newbound, var->exactdata->locdom.ub)))
       || !SCIPvarIsIntegral(var));
 
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldbound) );
@@ -12080,7 +12080,7 @@ SCIP_RETCODE varProcessChgLbLocalExact(
 
    SCIPrationalDebugMessage("process changing lower bound of <%s> from %q to %q\n", var->name, var->exactdata->locdom.lb, newbound);
 
-   if( SCIPrationalIsEqual(newbound, var->exactdata->glbdom.lb) && !SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) ) /*lint !e777*/
+   if( SCIPrationalIsEQ(newbound, var->exactdata->glbdom.lb) && !SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) ) /*lint !e777*/
       SCIPrationalSetRational(newbound, var->exactdata->glbdom.lb);
 
    /* change the bound */
@@ -12197,10 +12197,10 @@ SCIP_RETCODE varProcessChgUbLocalExact(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPrationalIsZero(newbound) || SCIPrationalIsEqualReal(newbound, 1.0)
-            || SCIPrationalIsEqual(newbound, var->exactdata->locdom.ub)))
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPrationalIsZero(newbound) || SCIPrationalIsEQReal(newbound, 1.0)
+            || SCIPrationalIsEQ(newbound, var->exactdata->locdom.ub)))
       || (SCIPvarIsIntegral(var) && (SCIPrationalIsIntegral(newbound)
-            || SCIPrationalIsEqual(newbound, var->exactdata->locdom.ub)))
+            || SCIPrationalIsEQ(newbound, var->exactdata->locdom.ub)))
       || !SCIPvarIsIntegral(var));
 
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldbound) );
@@ -12222,7 +12222,7 @@ SCIP_RETCODE varProcessChgUbLocalExact(
 
    SCIPrationalDebugMessage("process changing exact upper bound of <%s> from %q to %q\n", var->name, var->exactdata->locdom.ub, newbound);
 
-   if( SCIPrationalIsEqual(newbound, var->exactdata->glbdom.ub) && !SCIPrationalIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) ) /*lint !e777*/
+   if( SCIPrationalIsEQ(newbound, var->exactdata->glbdom.ub) && !SCIPrationalIsEQ(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) ) /*lint !e777*/
       SCIPrationalSetRational(newbound, var->exactdata->glbdom.ub);
 
    /* change the bound */
@@ -18341,7 +18341,7 @@ SCIP_Real SCIPvarGetLPSol_rec(
       return SCIPcolGetPrimsol(var->data.col);
 
    case SCIP_VARSTATUS_FIXED:
-      assert(var->locdom.lb == var->locdom.ub || (var->exactdata != NULL && SCIPrationalIsEqual(var->exactdata->locdom.lb, var->exactdata->locdom.ub))); /*lint !e777*/
+      assert(var->locdom.lb == var->locdom.ub || (var->exactdata != NULL && SCIPrationalIsEQ(var->exactdata->locdom.lb, var->exactdata->locdom.ub))); /*lint !e777*/
       return var->locdom.lb;
 
    case SCIP_VARSTATUS_AGGREGATED:
@@ -18418,7 +18418,7 @@ void SCIPvarGetLPSolExact_rec(
       break;
 
    case SCIP_VARSTATUS_FIXED:
-      assert(SCIPrationalIsEqual(var->exactdata->locdom.lb, var->exactdata->locdom.ub)); /*lint !e777*/
+      assert(SCIPrationalIsEQ(var->exactdata->locdom.lb, var->exactdata->locdom.ub)); /*lint !e777*/
       SCIPrationalSetRational(res, var->exactdata->locdom.lb);
       break;
 
@@ -19699,9 +19699,9 @@ SCIP_RETCODE SCIPvarAddToRow(
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
-      assert(var->glbdom.lb == var->glbdom.ub || (set->exact_enabled && SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub))); /*lint !e777*/
-      assert(var->locdom.lb == var->locdom.ub || (set->exact_enabled && SCIPrationalIsEqual(var->exactdata->locdom.lb, var->exactdata->locdom.ub))); /*lint !e777*/
-      assert(var->locdom.lb == var->glbdom.lb || (set->exact_enabled && SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb))); /*lint !e777*/
+      assert(var->glbdom.lb == var->glbdom.ub || (set->exact_enabled && SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub))); /*lint !e777*/
+      assert(var->locdom.lb == var->locdom.ub || (set->exact_enabled && SCIPrationalIsEQ(var->exactdata->locdom.lb, var->exactdata->locdom.ub))); /*lint !e777*/
+      assert(var->locdom.lb == var->glbdom.lb || (set->exact_enabled && SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb))); /*lint !e777*/
       assert(!SCIPsetIsInfinity(set, REALABS(var->locdom.lb)));
       SCIP_CALL( SCIProwAddConstant(row, blkmem, set, stat, eventqueue, lp, val * var->locdom.lb) );
       return SCIP_OKAY;
@@ -19783,7 +19783,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
 
    case SCIP_VARSTATUS_LOOSE:
       /* add globally fixed variables as constant */
-      if( SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub) )
+      if( SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub) )
       {
          SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
          SCIPrationalMult(tmp, val, var->exactdata->glbdom.lb);
@@ -19803,9 +19803,9 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       break;
 
    case SCIP_VARSTATUS_FIXED:
-      assert(SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub)); /*lint !e777*/
-      assert(SCIPrationalIsEqual(var->exactdata->locdom.lb, var->exactdata->locdom.ub)); /*lint !e777*/
-      assert(SCIPrationalIsEqual(var->exactdata->locdom.lb, var->exactdata->glbdom.lb)); /*lint !e777*/
+      assert(SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub)); /*lint !e777*/
+      assert(SCIPrationalIsEQ(var->exactdata->locdom.lb, var->exactdata->locdom.ub)); /*lint !e777*/
+      assert(SCIPrationalIsEQ(var->exactdata->locdom.lb, var->exactdata->glbdom.lb)); /*lint !e777*/
       assert(!SCIPrationalIsAbsInfinity(var->exactdata->locdom.lb));
 
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );

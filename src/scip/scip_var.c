@@ -544,12 +544,12 @@ SCIP_RETCODE SCIPwriteVarsLinearsumExact(
    {
       if( vals != NULL )
       {
-         if( SCIPrationalIsEqualReal(vals[v], 1.0) )
+         if( SCIPrationalIsEQReal(vals[v], 1.0) )
          {
             if( v > 0 )
                SCIPinfoMessage(scip, file, " +");
          }
-         else if( SCIPrationalIsEqualReal(vals[v], -1.0) )
+         else if( SCIPrationalIsEQReal(vals[v], -1.0) )
             SCIPinfoMessage(scip, file, " -");
          else
          {
@@ -10501,7 +10501,7 @@ SCIP_RETCODE SCIPfixVarExact(
       }
       else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
       {
-         *infeasible = !SCIPrationalIsEqual(fixedval, SCIPvarGetLbLocalExact(var));
+         *infeasible = !SCIPrationalIsEQ(fixedval, SCIPvarGetLbLocalExact(var));
          return SCIP_OKAY;
       }
    }
