@@ -60,12 +60,12 @@ SCIP_Real getNextNumber(
    SCIP_Real tmp;
 
    /* skip whitespaces */
-   while( isspace(**s) )
+   while( isspace((unsigned char)**s) )
       ++(*s);
    /* read number */
    tmp = atof(*s);
    /* skip whitespaces */
-   while( (**s != 0) && (!isspace(**s)) )
+   while( (**s != 0) && (!isspace((unsigned char)**s)) )
       ++(*s);
 
    return tmp;

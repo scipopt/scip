@@ -44,7 +44,7 @@ namespace tsp
 {
 
 /** SCIP file reader for TSP data files */
-class ReaderTSP : public scip::ObjReader
+class ReaderTSP : public scip::ObjReader /*lint --e{3713}*/
 {
 public:
 

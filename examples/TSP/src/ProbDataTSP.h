@@ -39,7 +39,7 @@ namespace tsp
 {
 
 /** SCIP user problem data for TSP */
-class ProbDataTSP : public scip::ObjProbData
+class ProbDataTSP : public scip::ObjProbData /*lint --e{3713}*/
 {
    GRAPH*                graph_;             /**< graph data */
 
@@ -96,7 +96,7 @@ public:
    /* get the graph */
    GRAPH* getGraph()
    {
-      return graph_;
+      return graph_; /*lint !e1535*//*lint !e1806*/
    }
 
 };/*lint !e1712*/

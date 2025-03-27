@@ -38,7 +38,7 @@ namespace tsp
 {
 
 /** C++ wrapper object for event handlers */
-class EventhdlrNewSol : public scip::ObjEventhdlr
+class EventhdlrNewSol : public scip::ObjEventhdlr /*lint --e{3713}*/
 {
 public:
    /** default constructor */

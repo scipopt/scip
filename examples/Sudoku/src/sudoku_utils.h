@@ -40,7 +40,7 @@ namespace sudoku
      * of a vector of ints. The actual number is stored as itself and the blanks are stored as -1.
      *
      */
-   inline std::vector<std::vector<int>> getSudokuPuzzle( std::string &filepath )
+   inline std::vector<std::vector<int>> getSudokuPuzzle( const std::string &filepath )
    {
       /* setting up a 9x9 grid forstoring the sudoku puzzle. */
       std::vector<std::vector<int>> puzzle(9, std::vector<int>(9));
@@ -52,7 +52,7 @@ namespace sudoku
 
       if( infile.is_open() )
       {
-         std::getline( infile, puzzledata );
+         (void) std::getline(infile, puzzledata);
          if( puzzledata.length() != 81 ) /* The puzzle should have 81 characters */
          {
             std::cerr << "Please check the puzzle file forinconsistencies"
@@ -61,11 +61,11 @@ namespace sudoku
          }
       }
 
-      int idx = 0; /* This variable will be used to access the numbers in the puzzle string */
+      size_t idx = 0; /* This variable will be used to access the numbers in the puzzle string */
 
-      for( int i = 0; i < 9; ++i )
+      for( size_t i = 0; i < 9; ++i )
       {
-         for( int j = 0; j < 9; ++j )
+         for( size_t j = 0; j < 9; ++j )
          {
             /* We will only convert the numeric string to an integer if it is not '.' or '0'. */
             if( (puzzledata.substr(idx, 1) != ".") && (puzzledata.substr(idx, 1) != "0") )
@@ -88,10 +88,10 @@ namespace sudoku
    inline void printSudoku( const std::vector<std::vector<int>> &sudokupuzzle )
    {
       std::cout << "+----------+-----------+-----------+" << "\n";
-      for( int i = 0; i < 9; ++i )
+      for( size_t i = 0; i < 9; ++i )
       {
          std::cout << "|";
-         for( int j = 0; j < 9; ++j )
+         for( size_t j = 0; j < 9; ++j )
          {
             if( sudokupuzzle[i][j] > 0 )
             {
