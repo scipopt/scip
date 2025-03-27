@@ -232,7 +232,7 @@ SCIP_RETCODE SCIProwExactCreate(
 /** creates and captures an exact LP row from a fp row
  *
  *  @note This may change the floating-point coefficients slightly if the rational representation is rounded to smaller
- *  denominators according to parameter exact/cutmaxdenomsize.
+ *  denominators according to parameter exact/cutmaxdenom.
  */
 SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_ROW*             fprow,              /**< corresponding fp row to create from */

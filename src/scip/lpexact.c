@@ -3243,7 +3243,7 @@ SCIP_RETCODE SCIProwExactCreate(
    return SCIP_OKAY;
 } /*lint !e715*/
 
-/** changes an exact row, so that all denominators are bounded by set->exact_cutmaxdenomsize */
+/** changes an exact row, so that all denominators are bounded by set->exact_cutmaxdenom */
 static
 SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    SCIP_ROW*             row,                /**< SCIP row */
@@ -3264,7 +3264,7 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    int forcegreater;
 
    assert(row != NULL);
-   assert(set->exact_cutmaxdenomsize > 0);
+   assert(set->exact_cutmaxdenom > 0);
    assert(set->exact_cutapproxmaxboundval >= 0);
 
    SCIPdebugMessage("approximating row ");
@@ -3276,7 +3276,7 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
 
    rhschange = 0;
    maxboundval = set->exact_cutapproxmaxboundval;
-   maxdenom = set->exact_cutmaxdenomsize;
+   maxdenom = set->exact_cutmaxdenom;
 
    assert(maxdenom >= 0);
    assert(maxboundval >= 0);
@@ -3361,7 +3361,7 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
 /** creates and captures an exact LP row from a fp row
  *
  *  @note This may change the floating-point coefficients slightly if the rational representation is rounded to smaller
- *  denominators according to parameter exact/cutmaxdenomsize.
+ *  denominators according to parameter exact/cutmaxdenom.
  */
 SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_ROW*             fprow,              /**< corresponding fp row to create from */
@@ -3416,7 +3416,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIPrationalSetReal(tmpval, SCIProwGetConstant(fprow));
    SCIP_CALL( SCIProwExactAddConstant(workrow, set, stat, lp, tmpval) );
 
-   if( set->exact_cutmaxdenomsize > 0 )
+   if( set->exact_cutmaxdenom > 0 )
    {
       SCIP_CALL( rowExactCreateFromRowLimitEncodingLength(fprow, workrow, set, blkmem, eventqueue, lp) );
       SCIProwRecalcNorms(fprow, set);

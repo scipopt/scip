@@ -3352,8 +3352,8 @@ SCIP_RETCODE addOneRowSafely(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_ROW*             row,                /**< the row to add */
    SCIP_Real             weight,             /**< weight of row to add */
-   SCIP_Bool             sidetypebasis,      /**< choose sidetypes of row (lhs/rhs) based on basis information? */
    SCIP_Bool             allowlocal,         /**< should local rows allowed to be used? */
+   SCIP_Bool             sidetypebasis,      /**< choose sidetypes of row (lhs/rhs) based on basis information? */
    int                   negslack,           /**< should negative slack variables allowed to be used? (0: no, 1: only for integral rows, 2: yes) */
    int                   maxaggrlen,         /**< maximal length of aggregation row */
    SCIP_Bool*            rowtoolong,         /**< is the aggregated row too long */

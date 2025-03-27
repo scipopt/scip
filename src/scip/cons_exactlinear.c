@@ -99,7 +99,7 @@
 #define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP
 
 #define EVENTHDLR_NAME         "exactlinear"
-#define EVENTHDLR_DESC         "bound change event handler for linear constraints"
+#define EVENTHDLR_DESC         "bound change event handler for exact linear constraints"
 
 #define DEFAULT_TIGHTENBOUNDSFREQ       1 /**< multiplier on propagation frequency, how often the bounds are tightened */
 #define DEFAULT_MAXROUNDS               5 /**< maximal number of separation rounds per node (-1: unlimited) */
@@ -110,6 +110,8 @@
                                            *  propagation? */
 #define DEFAULT_SEPARATEALL         FALSE /**< should all constraints be subject to cardinality cut generation instead of only
                                            *   the ones with non-zero dual value? */
+#define DEFAULT_LIMITDENOM          FALSE /**< should denominator sizes for continuous variables be controlled?*/
+#define DEFAULT_BOUNDMAXDENOM        256L /**< maximal denominator for rational bounds on continuous variables after propagation */
 
 
 /** constraint data for linear constraints */
@@ -243,7 +245,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             sortvars;           /**< should binary variables be sorted for faster propagation? */
    SCIP_Bool             propcont;           /**< should bounds on continuous variables be tightened by propagation?*/
    SCIP_Bool             limitdenom;         /**< should denominator sizes for continuous variables be controlled?*/
-   SCIP_Longint          maxdenom;           /**< maximal denominator size for continuous variables */
+   SCIP_Longint          boundmaxdenom;      /**< maximal denominator for rational bounds on continuous variables after propagation */
 };
 
 
@@ -4286,15 +4288,15 @@ SCIP_RETCODE tightenVarBounds(
 
             if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
             {
-               SCIP_Longint maxdenom;
+               SCIP_Longint boundmaxdenom;
 
                SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpbound) );
                SCIPrationalSetReal(tmpbound, newub);
 
                if( conshdlrdata->limitdenom )
                {
-                  maxdenom = conshdlrdata->maxdenom;
-                  SCIPrationalComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
+                  boundmaxdenom = conshdlrdata->boundmaxdenom;
+                  SCIPrationalComputeApproximation(tmpbound, tmpbound, boundmaxdenom, 1);
                }
 
                if( SCIPcertificateShouldTrackBounds(scip) )
@@ -4359,15 +4361,15 @@ SCIP_RETCODE tightenVarBounds(
 
             if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
             {
-               SCIP_Longint maxdenom;
+               SCIP_Longint boundmaxdenom;
 
                SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpbound) );
                SCIPrationalSetReal(tmpbound, newlb);
 
                if( conshdlrdata->limitdenom )
                {
-                  maxdenom = conshdlrdata->maxdenom;
-                  SCIPrationalComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
+                  boundmaxdenom = conshdlrdata->boundmaxdenom;
+                  SCIPrationalComputeApproximation(tmpbound, tmpbound, boundmaxdenom, -1);
                }
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
@@ -4435,15 +4437,15 @@ SCIP_RETCODE tightenVarBounds(
 
             if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
             {
-               SCIP_Longint maxdenom;
+               SCIP_Longint boundmaxdenom;
 
                SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpbound) );
                SCIPrationalSetReal(tmpbound, newlb);
 
                if( conshdlrdata->limitdenom )
                {
-                  maxdenom = conshdlrdata->maxdenom;
-                  SCIPrationalComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
+                  boundmaxdenom = conshdlrdata->boundmaxdenom;
+                  SCIPrationalComputeApproximation(tmpbound, tmpbound, boundmaxdenom, -1);
                }
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
@@ -4508,15 +4510,15 @@ SCIP_RETCODE tightenVarBounds(
 
             if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
             {
-               SCIP_Longint maxdenom;
+               SCIP_Longint boundmaxdenom;
 
                SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpbound) );
                SCIPrationalSetReal(tmpbound, newub);
 
                if( conshdlrdata->limitdenom )
                {
-                  maxdenom = conshdlrdata->maxdenom;
-                  SCIPrationalComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
+                  boundmaxdenom = conshdlrdata->boundmaxdenom;
+                  SCIPrationalComputeApproximation(tmpbound, tmpbound, boundmaxdenom, 1);
                }
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
@@ -6561,12 +6563,12 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
          &conshdlrdata->propcont, TRUE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/limitdenom",
-         "should denominators on continuous variables be controlled?",
-         &conshdlrdata->limitdenom, TRUE, FALSE, NULL, NULL) );
+         "should denominators of rational bounds on continuous variables be controlled?",
+         &conshdlrdata->limitdenom, TRUE, DEFAULT_LIMITDENOM, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip,
-         "constraints/" CONSHDLR_NAME "/maxdenom",
-         "maximal denominator on continuous variables after propagation (if limitdenom = TRUE)?",
-         &conshdlrdata->maxdenom, TRUE, 256L, 1L, SCIP_LONGINT_MAX, NULL, NULL) );
+         "constraints/" CONSHDLR_NAME "/boundmaxdenom",
+         "maximal denominator for rational bounds on continuous variables after propagation",
+         &conshdlrdata->boundmaxdenom, TRUE, DEFAULT_BOUNDMAXDENOM, 1L, SCIP_LONGINT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

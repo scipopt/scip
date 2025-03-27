@@ -524,12 +524,11 @@
                                                  *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
 #define SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY 1 /**< frequency at which safe dual bounding method is interleaved with exact LP
                                                  *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
-#define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION 1 /**< strategy to select which dual columns to use for lp to compute interior point
-                                                 *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
+#define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION 1 /**< strategy for dual column selection in project-and-shift to compute interior point
+                                                 *   (0: no sel, 1: active rows of inexact primal LP, 2: active rows of exact primal LP) */
 #define SCIP_DEFAULT_EXACT_LPINFO         FALSE /**< should the exact LP solver display status messages? */
-#define SCIP_DEFAULT_EXACT_ALLOWNEGSLACK   TRUE /**< should the exact LP solver display status messages? */
-#define SCIP_DEFAULT_EXACT_WEAKENCUTS     FALSE /**< should cuts be weakenend in exact mode? */
-#define SCIP_DEFAULT_CUTMAXDENOMSIZE     131072L /**< maximal denominator in cut coefficient, leading to slightly weaker (default is 2^17)
+#define SCIP_DEFAULT_EXACT_ALLOWNEGSLACK   TRUE /**< should negative slack variables be used for gomory cuts in exact solving mode? */
+#define SCIP_DEFAULT_CUTMAXDENOM        131072L /**< maximal denominator in cut coefficients, leading to slightly weaker (default is 2^17)
                                                  *   but numerically better cuts (0: disabled) */
 #define SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL 10000L /**< maximal absolute bound value for wich cut coefficient should
                                                  *   be approximated with bounded denominator (0: no restriction) */
@@ -2829,13 +2828,13 @@ SCIP_RETCODE SCIPsetCreate(
          "method for computing safe dual bounds ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic)",
          &(*set)->exact_safedbmethod, FALSE, SCIP_DEFAULT_EXACT_SAFEDBMETHOD, "npea",
          NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "exact/psdualcolselection",
-         "strategy to select which dual columns to use for lp to compute interior point (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP)",
+         "strategy for dual column selection in project-and-shift to compute interior point (0: no sel, 1: active rows of inexact primal LP, 2: active rows of exact primal LP)",
          &(*set)->exact_psdualcolselection, TRUE, SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION, 0, 2, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "exact/interleavedbfreq",
-         "strategy to interleave safe dual bounding with exact LP solve (0: never, 1: only close to cutoff bound, 2: only at depth lvl 4,8,16,..., 3: close to cutoff bound OR at depth lvl 4,8,16,...) ",
+         "strategy to interleave safe dual bounding with exact LP solve (0: never, 1: only close to cutoff bound, 2: only at depth lvl 4,8,16,..., 3: close to cutoff bound OR at depth lvl 4,8,16,...)",
          &(*set)->exact_interleavestrategy, FALSE, SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY, 0, 3, NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/lpinfo",
@@ -2844,20 +2843,15 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/allownegslack",
-         "should the exact LP solver display status messages?",
+         "should negative slack variables be used for gomory cuts in exact solving mode?",
          &(*set)->exact_allownegslack, FALSE, SCIP_DEFAULT_EXACT_ALLOWNEGSLACK,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "exact/weakencuts",
-         "should cuts be weakenend in exact mode?",
-         &(*set)->exact_weakencuts, FALSE, SCIP_DEFAULT_EXACT_WEAKENCUTS,
-         NULL, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
-         "exact/cutmaxdenomsize",
-         "maximal denominator in cut coefficient, leading to slightly weaker but numerically better cuts (0: disabled)",
-         &(*set)->exact_cutmaxdenomsize, FALSE, SCIP_DEFAULT_CUTMAXDENOMSIZE, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
+         "exact/cutmaxdenom",
+         "maximal denominator in cut coefficients, leading to slightly weaker but numerically better cuts (0: disabled)",
+         &(*set)->exact_cutmaxdenom, FALSE, SCIP_DEFAULT_CUTMAXDENOM, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
-         "exact/curapproxmaxboundval",
+         "exact/cutapproxmaxboundval",
          "maximal absolute bound value for wich cut coefficient should be approximated with bounded denominator (0: no restriction)",
          &(*set)->exact_cutapproxmaxboundval, FALSE, SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
 
@@ -2885,7 +2879,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->exact_lpinfo = SCIP_DEFAULT_EXACT_LPINFO;
    (*set)->exact_allownegslack = SCIP_DEFAULT_EXACT_ALLOWNEGSLACK;
    (*set)->exact_weakencuts = SCIP_DEFAULT_EXACT_WEAKENCUTS;
-   (*set)->exact_cutmaxdenomsize = SCIP_DEFAULT_CUTMAXDENOMSIZE;
+   (*set)->exact_cutmaxdenom = SCIP_DEFAULT_CUTMAXDENOM;
    (*set)->exact_cutapproxmaxboundval = SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL;
    (*set)->certificate_filename = (char*)SCIP_DEFAULT_CERTIFICATE_FILENAME;
    (*set)->certificate_maxfilesize = (SCIP_Real)SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE;
