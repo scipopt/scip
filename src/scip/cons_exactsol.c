@@ -572,7 +572,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
              * solution with integral value exist; in this case we currently round and fix its value
              */
             /**@todo once implied integrality detection is made exact, test whether it improves performance to leave
-             *       weakly implied variables unfixed or fix them only if they take a nearly integral value
+             *       continuous implied integral variables unfixed or fix them only if they take a nearly integral value
              */
             if( SCIPisIntegral(scip, solval) || SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK )
             {
