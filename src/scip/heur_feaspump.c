@@ -750,8 +750,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    SCIP_LPSOLSTAT lpsolstat;  /* status of the LP solution */
 
    int nvars;            /* number of variables  */
-   int nbinvars;         /* number of 0-1-variables */
-   int nintvars;         /* number of integer variables */
+   int nenfovars;        /* number of enforced integral variables */
    int nfracs;           /* number of fractional variables updated after each pumping round*/
    int nflipcands;       /* how many flipcands (most frac. var.) have been found */
    int npseudocands;
@@ -821,9 +820,12 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       return SCIP_OKAY;
 
    /* get all variables of LP and number of fractional variables in LP solution that should be integral */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   nenfovars = nvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(nenfovars >= 0);
    nfracs = SCIPgetNLPBranchCands(scip);
-   assert(0 <= nfracs && nfracs <= nbinvars + nintvars);
+   assert(0 <= nfracs && nfracs <= nenfovars);
    if( nfracs == 0 )
       return SCIP_OKAY;
 
@@ -959,7 +961,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    /* scale distance function and original objective to the same norm */
    objnorm = SCIPgetObjNorm(scip);
    objnorm = MAX(objnorm, 1.0);
-   scalingfactor = sqrt((SCIP_Real)(nbinvars + nintvars)) / objnorm;
+   scalingfactor = sqrt((SCIP_Real)nenfovars) / objnorm;
 
    /* data initialization */
    alpha = heurdata->alpha;
@@ -1092,7 +1094,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       }
 
       /* change objective coefficients for continuous variables */
-      for( i = nbinvars+nintvars; i < nvars; i++ )
+      for( i = nenfovars; i < nvars; i++ )
       {
          SCIP_CALL( SCIPchgVarObjDive(scip, vars[i], alpha *  SCIPvarGetObj(vars[i])) );
       }
@@ -1105,7 +1107,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          cycles[j] = (nloops > j+1) && (REALABS(lastalphas[j] - alpha) < heurdata->alphadiff);
 
       /* check for j-cycles */
-      for( i = 0; i < nbinvars+nintvars; i++ )
+      for( i = 0; i < nenfovars; i++ )
       {
          solval = SCIPgetSolVal(scip, heurdata->roundedsol, vars[i]);
 
@@ -1124,7 +1126,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       if( nloops % heurdata->perturbfreq == 0 || (heurdata->pertsolfound && SCIPgetNBestSolsFound(scip) > nbestsolsfound) )
       {
          SCIPdebugMsg(scip, " -> random perturbation\n");
-         SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha, scalingfactor) );
+         SCIP_CALL( handleCycle(scip, heurdata, vars, nenfovars, alpha, scalingfactor) );
          nbestsolsfound = SCIPgetNBestSolsFound(scip);
       }
       else
@@ -1145,7 +1147,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                else
                {
                   SCIPdebugMsg(scip, " -> avoiding %d-cycle by random flip\n", j+1);
-                  SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha, scalingfactor) );
+                  SCIP_CALL( handleCycle(scip, heurdata, vars, nenfovars, alpha, scalingfactor) );
                }
                break;
             }
@@ -1198,7 +1200,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
          /* calculate distance */
          distance = 0.0;
-         for( i = 0; i < nbinvars+nintvars; i++ )
+         for( i = 0; i < nenfovars; i++ )
          {
             SCIP_Real roundedval;
             SCIP_Real lpval;
@@ -1211,7 +1213,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          /* copy solution and update minimum distance */
          if( SCIPisLT(scip, distance, mindistance) )
          {
-            for( i = 0; i < nbinvars+nintvars; i++ )
+            for( i = 0; i < nenfovars; i++ )
             {
                assert(SCIPisIntegral(scip,SCIPgetSolVal(scip, heurdata->roundedsol, vars[i])));
                SCIP_CALL( SCIPsetSolVal(scip, closestsol, vars[i], SCIPgetSolVal(scip, heurdata->roundedsol, vars[i])) );

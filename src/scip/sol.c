@@ -697,8 +697,8 @@ SCIP_RETCODE SCIPsolTransform(
    return SCIP_OKAY;
 }
 
-/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
- *  deteriorated by this method.
+/** adjusts solution values of implied integral variables in handed solution, solution objective value is not
+ *  deteriorated by this method
  */
 SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -710,28 +710,26 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
    )
 {
    SCIP_VAR** vars;
-   int nimplvars;
-   int nbinvars;
-   int nintvars;
+   int nimplvarsbegin;
+   int nimplvarsend;
    int v;
 
    assert(sol != NULL);
    assert(prob != NULL);
 
-   /* get variable data */
-   vars = SCIPprobGetVars(prob);
-   nbinvars = SCIPprobGetNBinVars(prob);
-   nintvars = SCIPprobGetNIntVars(prob);
-   nimplvars = SCIPprobGetNImplVars(prob);
+   /* get number of implied integral variables */
+   nimplvarsend = SCIPprobGetNImplVars(prob);
 
-   if( nimplvars == 0 )
+   if( nimplvarsend == 0 )
       return SCIP_OKAY;
 
-   /* calculate the last array position of implicit integer variables */
-   nimplvars = nbinvars + nintvars + nimplvars;
+   /* get range of implied integral variables */
+   vars = SCIPprobGetVars(prob);
+   nimplvarsbegin = SCIPprobGetNBinVars(prob) + SCIPprobGetNIntVars(prob);
+   nimplvarsend += nimplvarsbegin;
 
-   /* loop over implicit integer variables and round them up or down */
-   for( v = nbinvars + nintvars; v < nimplvars; ++v )
+   /* loop over implied integral variables and round them up or down */
+   for( v = nimplvarsbegin; v < nimplvarsend; ++v )
    {
       SCIP_VAR* var;
       SCIP_Real solval;
@@ -2800,8 +2798,9 @@ SCIP_RETCODE SCIPsolRound(
    assert(prob->transformed);
    assert(success != NULL);
 
-   /* round all roundable fractional variables in the corresponding direction as long as no unroundable var was found */
-   nvars = prob->nbinvars + prob->nintvars;
+   /* round all roundable fractional enforced integral variables as long as no unroundable var was found */
+   nvars = prob->nvars - prob->ncontvars - prob->ncontimplvars;
+   assert(nvars >= 0);
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;

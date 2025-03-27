@@ -183,7 +183,7 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
    *result = SCIP_DIDNOTRUN;
 
    /* terminate if there are no integer variables (note that, e.g., SOS1 variables may be present) */
-   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
+   if( SCIPgetNContVars(scip) + SCIPgetNContImplVars(scip) == SCIPgetNVars(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, -1, -1.0, SCIP_DIVECONTEXT_SINGLE) );

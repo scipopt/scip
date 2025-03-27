@@ -188,10 +188,6 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    SCIP_Real* objchgvals;
    int* softroundings;
    int* intvalrounds;
-   int nvars;
-   int nbinvars;
-   int nintvars;
-   int nlpcands;
    SCIP_LPSOLSTAT lpsolstat;
    SCIP_Real absstartobjval;
    SCIP_Real objstep;
@@ -204,6 +200,9 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    SCIP_Longint ncalls;
    SCIP_Longint nlpiterations;
    SCIP_Longint maxnlpiterations;
+   int nvars;
+   int nenfovars;
+   int nlpcands;
    int depth;
    int maxdepth;
    int maxdivedepth;
@@ -278,22 +277,24 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    if( nlpcands == 0 )
       return SCIP_OKAY;
 
+   /* get all variables of LP */
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   nenfovars = nvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(nenfovars >= 0);
+
    /* calculate the maximal diving depth */
-   nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    if( SCIPgetNSolsFound(scip) == 0 )
-      maxdivedepth = (int)(heurdata->depthfacnosol * nvars);
+      maxdivedepth = (int)(heurdata->depthfacnosol * nenfovars);
    else
-      maxdivedepth = (int)(heurdata->depthfac * nvars);
+      maxdivedepth = (int)(heurdata->depthfac * nenfovars);
    maxdivedepth = MAX(maxdivedepth, 10);
 
    *result = SCIP_DIDNOTFIND;
 
-   /* get all variables of LP */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-
    /* get root solution value of all binary and integer variables */
-   SCIP_CALL( SCIPallocBufferArray(scip, &rootsol, nbinvars + nintvars) );
-   for( i = 0; i < nbinvars + nintvars; i++ )
+   SCIP_CALL( SCIPallocBufferArray(scip, &rootsol, nenfovars) );
+   for( i = 0; i < nenfovars; i++ )
       rootsol[i] = SCIPvarGetRootSol(vars[i]);
 
    /* get current LP objective value, and calculate length of a single step in an objective coefficient */
@@ -303,13 +304,13 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    objstep = absstartobjval / 10.0;
 
    /* initialize array storing the preferred soft rounding directions and counting the integral value rounds */
-   SCIP_CALL( SCIPallocBufferArray(scip, &softroundings, nbinvars + nintvars) );
-   BMSclearMemoryArray(softroundings, nbinvars + nintvars);
-   SCIP_CALL( SCIPallocBufferArray(scip, &intvalrounds, nbinvars + nintvars) );
-   BMSclearMemoryArray(intvalrounds, nbinvars + nintvars);
+   SCIP_CALL( SCIPallocBufferArray(scip, &softroundings, nenfovars) );
+   BMSclearMemoryArray(softroundings, nenfovars);
+   SCIP_CALL( SCIPallocBufferArray(scip, &intvalrounds, nenfovars) );
+   BMSclearMemoryArray(intvalrounds, nenfovars);
 
    /* allocate temporary memory for buffering objective changes */
-   SCIP_CALL( SCIPallocBufferArray(scip, &objchgvals, nbinvars + nintvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &objchgvals, nenfovars) );
 
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
@@ -376,7 +377,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
        *   - if x*_j is integral, or j is a continuous variable, set obj'_j = alpha * obj_j
        *   - otherwise, set obj'_j = alpha * obj_j + sign(x*_j - x~_j)
        */
-      for( i = 0; i < nbinvars + nintvars; i++ )
+      for( i = 0; i < nenfovars; i++ )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
@@ -457,7 +458,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       if( !boundschanged )
       {
          /* apply cached changes on integer variables */
-         for( i = 0; i < nbinvars + nintvars; ++i )
+         for( i = 0; i < nenfovars; ++i )
          {
             SCIP_VAR* var;
 
@@ -469,7 +470,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
          }
 
          /* fade out the objective values of the continuous variables */
-         for( i = nbinvars + nintvars; i < nvars; i++ )
+         for( i = nenfovars; i < nvars; i++ )
          {
             SCIP_VAR* var;
 

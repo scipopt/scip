@@ -111,6 +111,7 @@
 #include "scip/heur_crossover.h"
 #include "scip/heur_dins.h"
 #include "scip/heur_distributiondiving.h"
+#include "scip/heur_dks.h"
 #include "scip/heur_dps.h"
 #include "scip/heur_dualval.h"
 #include "scip/heur_farkasdiving.h"

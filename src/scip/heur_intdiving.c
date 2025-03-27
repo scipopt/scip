@@ -312,7 +312,8 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       searchbound = SCIPceil(scip, searchbound);
 
    /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
-   maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   maxdivedepth = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(maxdivedepth >= 0);
    maxdivedepth = MIN(maxdivedepth, maxdepth);
    maxdivedepth *= 10;
 

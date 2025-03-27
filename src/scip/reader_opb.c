@@ -1239,14 +1239,8 @@ SCIP_RETCODE setObjective(
             /* @todo: reuse equivalent terms */
             /* create auxiliary variable */
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, ARTIFICIALVARNAMEPREFIX"obj_%d", t);
-            SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, scale * termcoefs[t], SCIP_VARTYPE_BINARY,
-                  TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
-
-            /* @todo: check if it is better to change the branching priority for the artificial variables */
-#if 1
-            /* change branching priority of artificial variable to -1 */
-            SCIP_CALL( SCIPchgVarBranchPriority(scip, var, -1) );
-#endif
+            SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, 0.0, 1.0, scale * termcoefs[t],
+                  SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_STRONG, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
 
             /* add auxiliary variable to the problem */
             SCIP_CALL( SCIPaddVar(scip, var) );

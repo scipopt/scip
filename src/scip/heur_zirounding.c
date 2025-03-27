@@ -532,9 +532,11 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
 
    heurdata->lastlp = nlps;
 
+   /* @todo: check whether rounding continuous implied integral variables is necessary */
    /* get fractional variables */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, &nimplfracs) );
    nlpcands = nlpcands + nimplfracs;
+
    /* make sure that there is at least one fractional variable that should be integral */
    if( nlpcands == 0 )
       return SCIP_OKAY;
@@ -780,7 +782,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          up   = oldsolval + upperbound;
          down = oldsolval - lowerbound;
 
-         /* if the variable is integer or implicit binary, do not shift further than the nearest integer */
+         /* if the variable is integer or implied integral, do not shift further than the nearest integer */
          if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
          {
             SCIP_Real ceilx;

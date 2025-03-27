@@ -575,8 +575,36 @@ int SCIPpqueueFind(
 INLINE static
 uint32_t SCIPrealHashCode(double x)
 {
+   uint16_t mantissa;
+   int thenum;
    int theexp;
-   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &theexp), 15))<<16) | (uint32_t)(uint16_t)theexp;
+
+   /* hashing infinite or nan values is not supported */
+   assert(!isnan(x));
+   assert(x != INFINITY);
+   assert(x != -INFINITY);
+
+   /* get 16 digits of absolute mantissa */
+   mantissa = (uint16_t)ldexp(frexp(ABS(x), &theexp), 16) + 1;
+
+   /* pave sign bit with overflow */
+   if( mantissa == 0 )
+   {
+      /* divide overflow 2^16 by four */
+      mantissa = 1 << 14;
+
+      /* increment the exponent */
+      ++theexp;
+   }
+   /* pave sign bit without overflow */
+   else
+      /* divide mantissa by two */
+      mantissa >>= 1;
+
+   /* determine mantissa hash */
+   thenum = x < 0.0 ? -(int)mantissa : (int)mantissa;
+
+   return (((uint32_t)(uint16_t)theexp) << 16) | ((uint32_t)(uint16_t)thenum);
 }
 
 /** creates a hash table */

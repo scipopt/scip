@@ -657,8 +657,7 @@ void disposeVariable(
 static
 SCIP_RETCODE innerPresolve(
    SCIP*                 scip,               /**< current scip */
-   SCIP_VAR**            vars,               /**< problem vars */
-   SCIP_VAR***           varspointer,        /**< pointer to heuristic specific variable memory */
+   SCIP_VAR**            vars,               /**< heuristic specific variables */
    int                   nvars,              /**< the number of variables */
    int*                  nblocks,            /**< pointer to store the number of detected blocks */
    int*                  maxblocksize,       /**< maximum size of a block */
@@ -673,7 +672,7 @@ SCIP_RETCODE innerPresolve(
 
    assert(scip != NULL);
    assert(vars != NULL);
-   assert(nvars >= 2);
+   assert(nvars > 1);
    assert(nblocks != NULL);
    assert(maxblocksize != NULL);
    assert(nblockvars != NULL);
@@ -682,11 +681,8 @@ SCIP_RETCODE innerPresolve(
    assert(heur != NULL);
    assert(heurdata != NULL);
 
-   /* allocate the heuristic specific variables */
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, varspointer, vars, nvars) );
-
    /* sort the variables with respect to their columns */
-   SCIPsortPtr((void**)(*varspointer), SCIPvarcolComp, nvars);
+   SCIPsortPtr((void**)vars, SCIPvarcolComp, nvars);
 
    /* start determining blocks, i.e. a set of at least two variables which share most of their row set.
     * If there is none, heuristic does not need to be executed.
@@ -702,7 +698,7 @@ SCIP_RETCODE innerPresolve(
    /* loop over variables and compare neighbors */
    for( int v = 1; v < nvars; ++v )
    {
-      if( !checkConstraintMatching(scip, (*varspointer)[startindex], (*varspointer)[v], heurdata->matchingrate) )
+      if( !checkConstraintMatching(scip, vars[startindex], vars[v], heurdata->matchingrate) )
       {
          /* current block has its last variable at position v-1. If v differs from startindex by at least 2,
           * a block is detected. Update the data correspondingly */
@@ -761,36 +757,61 @@ SCIP_RETCODE presolveTwoOpt(
    SCIP_HEURDATA*        heurdata            /**< the heuristic data */
    )
 {
+   SCIP_VAR** vars;
    int nbinvars;
    int nintvars;
-   int nvars;
-   SCIP_VAR** vars;
+   int nbinimplvars;
+   int nintimplvars;
+   int ntotalbinvars;
+   int ntotalintvars;
    int nbinblockvars;
    int nintblockvars;
    int maxbinblocksize;
    int maxintblocksize;
+   int i;
 
    assert(scip != NULL);
    assert(heurdata != NULL);
 
-   /* ensure that method is not executed if presolving was already applied once in current branch and bound process */
-   if( heurdata->presolved )
-      return SCIP_OKAY;
+   /* initialize execution flag */
+   heurdata->execute = FALSE;
 
-   /* get necessary variable information, i.e. number of binary and integer variables */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+   /* get necessary variable information, i.e. number of binary and integer variable types */
+   vars = SCIPgetVars(scip);
+   nbinvars = SCIPgetNBinVars(scip);
+   nintvars = SCIPgetNIntVars(scip);
+   nbinimplvars = SCIPgetNBinImplVars(scip);
+   nintimplvars = SCIPgetNIntImplVars(scip);
+   ntotalbinvars = nbinvars + nbinimplvars;
+   ntotalintvars = nintvars + nintimplvars;
 
 #ifdef SCIP_STATISTIC
    /* update statistics */
-   heurdata->ntotalbinvars += nbinvars;
+   heurdata->ntotalbinvars += ntotalbinvars;
 #endif
 
-   /* if number of binary problem variables exceeds 2, they are subject to 2-optimization algorithm, hence heuristic
-    * calls innerPresolve method to detect necessary structures. */
-   if( nbinvars >= 2 )
+   /* if number of binary problem variables exceeds one, they are subject to 2-optimization algorithm, hence heuristic
+    * calls innerPresolve method to detect necessary structures */
+   if( ntotalbinvars > 1 )
    {
-      SCIP_CALL( innerPresolve(scip, vars, &(heurdata->binvars), nbinvars, &(heurdata->nbinblocks), &maxbinblocksize,
+      /* allocate the heuristic specific binary variables */
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(heurdata->binvars), ntotalbinvars) );
+
+      /* copy binary variables */
+      i = 0;
+      for(; i < nbinvars; ++i )
+         heurdata->binvars[i] = vars[i];
+      for(; i < ntotalbinvars; ++i )
+         heurdata->binvars[i] = vars[i + nintvars];
+      heurdata->nbinvars = ntotalbinvars;
+
+      /* execute block presolving */
+      SCIP_CALL( innerPresolve(scip, heurdata->binvars, heurdata->nbinvars, &(heurdata->nbinblocks), &maxbinblocksize,
             &nbinblockvars, &(heurdata->binblockstart), &(heurdata->binblockend), heur, heurdata) );
+
+      /* detect binary block */
+      if( heurdata->nbinblocks > 0 )
+         heurdata->execute = TRUE;
 
 #ifdef SCIP_STATISTIC
       /* update statistics */
@@ -803,29 +824,38 @@ SCIP_RETCODE presolveTwoOpt(
 #endif
    }
 
-   heurdata->nbinvars = nbinvars;
-   heurdata->execute = nbinvars > 1 && heurdata->nbinblocks > 0;
-
-   if( heurdata->intopt && nintvars > 1 )
+   if( heurdata->intopt && ntotalintvars > 1 )
    {
-      SCIP_CALL( innerPresolve(scip, &(vars[nbinvars]), &(heurdata->intvars), nintvars, &(heurdata->nintblocks), &maxintblocksize,
-            &nintblockvars, &(heurdata->intblockstart), &(heurdata->intblockend),
-            heur, heurdata) );
+      /* allocate the heuristic specific integer variables */
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(heurdata->intvars), ntotalintvars) );
 
-      heurdata->execute = heurdata->execute || heurdata->nintblocks > 0;
+      /* copy integer variables */
+      i = 0;
+      for(; i < nintvars; ++i )
+         heurdata->intvars[i] = vars[i + nbinvars];
+      for(; i < ntotalintvars; ++i )
+         heurdata->intvars[i] = vars[i + ntotalbinvars];
+      heurdata->nintvars = ntotalintvars;
+
+      /* execute block presolving */
+      SCIP_CALL( innerPresolve(scip, heurdata->intvars, heurdata->nintvars, &(heurdata->nintblocks), &maxintblocksize,
+            &nintblockvars, &(heurdata->intblockstart), &(heurdata->intblockend), heur, heurdata) );
+
+      /* detect integer block */
+      if( heurdata->nintblocks > 0 )
+         heurdata->execute = TRUE;
 
 #ifdef SCIP_STATISTIC
       /* update statistics */
       heurdata->intnblocks += heurdata->nintblocks;
       heurdata->intnblockvars += nintblockvars;
-      heurdata->ntotalintvars += nintvars;
+      heurdata->ntotalintvars += ntotalintvars;
       heurdata->maxintblocksize = MAX(maxintblocksize, heurdata->maxintblocksize);
      SCIPstatisticMessage("   Twoopt Integer presolving finished with <%d> blocks, <%d> block variables \n",
          heurdata->nintblocks, nintblockvars);
      SCIPstatisticMessage("   INTEGER coefficients are all equal \n");
 #endif
    }
-   heurdata->nintvars = nintvars;
 
    /* presolving is finished, heuristic data is updated*/
    heurdata->presolved = TRUE;
@@ -1069,8 +1099,7 @@ SCIP_RETCODE optimize(
             slavesolval = SCIPgetSolVal(scip, worksol, slave);
             changedobj = 0.0;
 
-            assert(SCIPvarIsImpliedIntegral(master) == SCIPvarIsImpliedIntegral(slave)
-                  && (SCIPvarIsImpliedIntegral(master) || SCIPvarGetType(master) == SCIPvarGetType(slave)));
+            assert(SCIPvarGetType(master) == SCIPvarGetType(slave));
             assert(SCIPisFeasIntegral(scip, slavesolval));
             assert(opttype == OPTTYPE_INTEGER || (SCIPisFeasLE(scip, mastersolval, 1.0) || SCIPisFeasGE(scip, mastersolval, 0.0)));
 
@@ -1490,20 +1519,18 @@ static
 SCIP_DECL_HEUREXEC(heurExecTwoopt)
 {  /*lint --e{715}*/
    SCIP_HEURDATA*  heurdata;
+   SCIP_ROW** lprows;
+   SCIP_COL** cols;
    SCIP_SOL* bestsol;
    SCIP_SOL* worksol;
-   SCIP_ROW** lprows;
    SCIP_Real* activities;
-   SCIP_COL** cols;
-   int ncols;
-   int nbinvars;
-   int nintvars;
-   int ndiscvars;
-   int nlprows;
-   int ncolsforsorting;
    SCIP_Bool improvement;
    SCIP_Bool presolthiscall;
    SCIP_Bool varboundserr;
+   int ncols;
+   int ndiscvars;
+   int nlprows;
+   int ncolsforsorting;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -1539,15 +1566,22 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    if( (SCIPgetNNodes(scip) - SCIPsolGetNodenum(bestsol)) < heurdata->waitingnodes )
       return SCIP_OKAY;
 
-   presolthiscall = FALSE;
-   SCIP_CALL( SCIPgetLPColsData(scip,&cols, &ncols) );
-   ndiscvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
-   ncolsforsorting = MIN(ncols, ndiscvars);
+   ndiscvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(ndiscvars >= 0);
+
+   /* we need to be able to start diving from current node in order to resolve the LP
+    * with continuous variables
+    */
+   if( SCIPgetNVars(scip) > ndiscvars && ( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL ) )
+      return SCIP_OKAY;
 
    /* ensure that heuristic specific presolve is applied when heuristic is executed first */
+   presolthiscall = FALSE;
+   SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
+   ncolsforsorting = MIN(ncols, ndiscvars);
    if( !heurdata->presolved )
    {
-      SCIP_CALL( SCIPgetLPColsData(scip,&cols, &ncols) );
+      SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
 
       for( int i = 0; i < ncolsforsorting; ++i )
          SCIPcolSort(cols[i]);
@@ -1555,24 +1589,16 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       SCIP_CALL( presolveTwoOpt(scip, heur, heurdata) );
       presolthiscall = TRUE;
    }
-
    assert(heurdata->presolved);
+   assert(heurdata->nbinvars + heurdata->nintvars <= ndiscvars);
 
    SCIPdebugMsg(scip, "  Twoopt heuristic is %sexecuting.\n", heurdata->execute ? "" : "not ");
+
    /* ensure that presolve has detected structures in the problem to which the 2-optimization can be applied.
     * That is if variables exist which share a common set of LP-rows. */
    if( !heurdata->execute )
       return SCIP_OKAY;
-
-   nbinvars = heurdata->nbinvars;
-   nintvars = heurdata->nintvars;
-   ndiscvars = nbinvars + nintvars;
-
-   /* we need to be able to start diving from current node in order to resolve the LP
-    * with continuous or implicit integer variables
-    */
-   if( SCIPgetNVars(scip) > ndiscvars && ( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL ) )
-      return SCIP_OKAY;
+   assert(heurdata->nbinvars + heurdata->nintvars > 1);
 
    /* problem satisfies all necessary conditions for 2-optimization heuristic, execute heuristic! */
    *result = SCIP_DIDNOTFIND;
@@ -1644,7 +1670,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 
    if( SCIPgetNVars(scip) == ndiscvars )
    {
-      /* the problem is a pure IP, hence, no continuous or implicit variables are left for diving.
+      /* the problem is a pure IP, hence, no continuous variables are left for diving.
        * try if new working solution is feasible in original problem */
       SCIP_Bool success;
 #ifndef NDEBUG

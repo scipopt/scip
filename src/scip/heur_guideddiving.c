@@ -195,7 +195,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    assert(heurdata != NULL);
 
    /* if there are no integer variables (note that, e.g., SOS1 variables may be present) */
-   if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
+   if( SCIPgetNContVars(scip) + SCIPgetNContImplVars(scip) == SCIPgetNVars(scip) )
       return SCIP_OKAY;
 
    assert(SCIPheurGetNDivesets(heur) > 0);

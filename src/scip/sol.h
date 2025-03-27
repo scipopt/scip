@@ -123,8 +123,8 @@ SCIP_RETCODE SCIPsolTransform(
    SCIP_PRIMAL*          primal              /**< primal data */
    );
 
-/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
- *  deteriorated by this method.
+/** adjusts solution values of implied integral variables in handed solution, solution objective value is not
+ *  deteriorated by this method
  */
 SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
    SCIP_SOL*             sol,                /**< primal CIP solution */

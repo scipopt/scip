@@ -375,7 +375,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       searchbound = SCIPceil(scip, searchbound);
 
    /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth}*/
-   maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   maxdivedepth = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(maxdivedepth >= 0);
    if ( sos1conshdlr != NULL )
       maxdivedepth += SCIPgetNSOS1Vars(sos1conshdlr);
    maxdivedepth = MIN(maxdivedepth, maxdepth);
@@ -815,7 +816,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
          SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
 
-         SCIPdebugMsg(scip, "   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", SCIPgetLPSolstat(scip), SCIPgetLPObjval(scip), searchbound, nlpcands);
+         SCIPdebugMsg(scip, "   -> lpsolstat=%d, objval=%g/%g, nlpcands=%d\n", SCIPgetLPSolstat(scip), SCIPgetLPObjval(scip), searchbound, nlpcands);
          /* distribute the gain equally over all variables that we rounded since the last LP */
          gain = SCIPgetLPObjval(scip) - lastlpobjval;
          gain = MAX(gain, 0.0);

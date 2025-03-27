@@ -8263,7 +8263,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       {
          mirefficacy = calcEfficacyDenseStorageQuad(scip, sol, mksetcoefs, QUAD_TO_DBL(mksetrhs), mksetinds, mksetnnz);
 
-         if( SCIPisEfficacious(scip, mirefficacy) && mirefficacy > *cutefficacy )
+         if( SCIPisEfficacious(scip, mirefficacy) && SCIPisGT(scip, mirefficacy, *cutefficacy) )
          {
             BMScopyMemoryArray(cutinds, mksetinds, mksetnnz);
             for( i = 0; i < mksetnnz; ++i )
@@ -11682,7 +11682,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
     * one stored in the cutefficacy variable by the caller
     */
    efficacy = calcEfficacyDenseStorageQuad(scip, sol, tmpcoefs, QUAD_TO_DBL(rhs), tmpinds, nnz);
-   *success = efficacy > *cutefficacy;
+   *success = SCIPisGT(scip, efficacy, *cutefficacy);
 
    SCIPdebugMsg(scip, "FINAL LCI:");
    SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, nnz, FALSE, FALSE));

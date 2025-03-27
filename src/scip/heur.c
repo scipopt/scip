@@ -1713,21 +1713,18 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    )
 {
    SCIP_VAR** vars;
-
+   SCIP_VAR** varbuffer;
    int* queue;
-   int  nvars;
-   int i;
+   SCIP_Bool localvargraph;
+   int nvars;
+   int nbinintvars;
    int currlvlidx;
    int nextlvlidx;
    int increment = 1;
    int currentdistance;
    int nbinintvarshit;
    int nvarshit;
-   int nbinvars;
-   int nintvars;
-   int nbinintvars;
-   SCIP_VAR** varbuffer;
-   SCIP_Bool localvargraph;
+   int i;
 
    assert(scip != NULL);
    assert(startvars != NULL);
@@ -1736,12 +1733,14 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    assert(maxdistance >= 0);
 
    /* get variable data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
 
    if( nvars == 0 )
       return SCIP_OKAY;
 
-   nbinintvars = nbinvars + nintvars;
+   nbinintvars = nvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(nbinintvars >= 0);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &queue, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &varbuffer, nvars) );

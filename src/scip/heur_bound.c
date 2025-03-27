@@ -98,24 +98,18 @@ SCIP_RETCODE applyBoundHeur(
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
-   SCIP_VAR** vars;
+   SCIP_VAR** vars = SCIPgetVars(scip);
    SCIP_VAR* var;
    SCIP_Bool infeasible = FALSE;
+   int nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
    int maxproprounds;
-   int nbinvars;
-   int nintvars;
-   int nvars;
    int v;
 
-   /* get variable data of original problem */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
+   assert(nvars >= 0);
 
    maxproprounds = heurdata->maxproprounds;
    if( maxproprounds == -2 )
       maxproprounds = 0;
-
-   /* only look at binary and integer variables */
-   nvars = nbinvars + nintvars;
 
    /* stop if we would have infinite fixings */
    if( lower )
@@ -141,8 +135,7 @@ SCIP_RETCODE applyBoundHeur(
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
-
-      assert(SCIPvarIsNonimpliedIntegral(var));
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
       /* skip variables which are already fixed */
       if( SCIPvarGetLbLocal(var) + 0.5 > SCIPvarGetUbLocal(var) )
