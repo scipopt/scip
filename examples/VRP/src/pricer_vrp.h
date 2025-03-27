@@ -42,7 +42,7 @@ using namespace scip;
 
 
 /** pricer class */
-class ObjPricerVRP : public ObjPricer
+class ObjPricerVRP : public ObjPricer /*lint --e{3713}*/
 {
 public:
 

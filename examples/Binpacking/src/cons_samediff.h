@@ -67,19 +67,16 @@ SCIP_RETCODE SCIPcreateConsSamediff(
 
 /** returns item id one */
 int SCIPgetItemid1Samediff(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< samediff constraint */
    );
 
 /** returns item id two */
 int SCIPgetItemid2Samediff(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< samediff constraint */
    );
 
 /** return constraint type SAME or DIFFER */
 CONSTYPE SCIPgetTypeSamediff(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< samediff constraint */
    );
 
