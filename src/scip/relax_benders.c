@@ -614,6 +614,8 @@ SCIP_RETCODE createOriginalSolution(
    assert(relax != NULL);
    assert(infeasible != NULL);
 
+   (*infeasible) = FALSE;
+
    /* if there is no master solution, then no solution is copied across to the original SCIP instance */
    if( !masterSolutionExists(scip, relax) )
       return SCIP_OKAY;
@@ -777,6 +779,7 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    assert(relax != NULL);
 
    (*result) = SCIP_DIDNOTRUN;
+   infeasible = FALSE;
 
    relaxdata = SCIPrelaxGetData(relax);
 
