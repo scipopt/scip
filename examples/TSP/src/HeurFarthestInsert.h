@@ -38,7 +38,7 @@ namespace tsp
 {
 
 /** C++ farthest insert heuristic for TSP */
-class HeurFarthestInsert : public scip::ObjHeur
+class HeurFarthestInsert : public scip::ObjHeur /*lint --e{3713}*/
 {
    GRAPH*                graph_;             /**< the underlying graph of the TSP */
 

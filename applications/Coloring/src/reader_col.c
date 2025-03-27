@@ -59,12 +59,12 @@ long getNextNumber(
 {
   long tmp;
   /* skip whitespaces */
-  while ( isspace(**s) )
+  while ( isspace((unsigned char)**s) )
     ++(*s);
   /* read number */
   tmp = atol(*s);
   /* skip whitespaces */
-  while ( (**s != 0) && (!isspace(**s)) )
+  while ( (**s != 0) && (!isspace((unsigned char)**s)) )
     ++(*s);
   return tmp;
 }
@@ -226,13 +226,13 @@ SCIP_RETCODE readCol(
          }
       }
    }
-   if( i + nduplicateedges != nedges )
+   if( i + nduplicateedges != nedges ) /*lint !e845*/
    {
-      SCIPerrorMessage("incorrect number of edges: expected %d many, but got %d many\n", nedges, i + nduplicateedges);
+      SCIPerrorMessage("incorrect number of edges: expected %d many, but got %d many\n", nedges, i + nduplicateedges); /*lint !e845*/
       return SCIP_ERROR;
    }
 
-   printf("Read graph: %d nodes, %d edges (%d duplicates)\n", nnodes, nedges, nduplicateedges);
+   printf("Read graph: %d nodes, %d edges (%d duplicates)\n", nnodes, nedges, nduplicateedges); /*lint !e845*/
 
    /* create problem data */
    SCIP_CALL( SCIPcreateProbColoring(scip, probname, nnodes, nedges-nduplicateedges, edges) );

@@ -3987,7 +3987,7 @@ SCIP_DECL_EVENTEXEC(eventExecOptcumulativeBinvars)
          consdata->propagated = FALSE;
       break;
    default:
-      SCIPerrorMessage("invalid event type %llx\n", (SCIP_Longint)eventtype);
+      SCIPerrorMessage("invalid event type %llx\n", (unsigned long long)eventtype);
       return SCIP_INVALIDDATA;
    }
 
