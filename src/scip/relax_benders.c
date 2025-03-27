@@ -792,6 +792,12 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    if( !relaxdata->decompapplied )
       return SCIP_OKAY;
 
+   /* we only run at the root node. If the decomposition was not able to solve the problem at the root node, then we
+    * fall back to solving the MIP directly.
+    */
+   if( SCIPgetDepth(scip) > 0 )
+      return SCIP_OKAY;
+
    /* checking whether there is enough time and memory to perform the decomposition solve */
    SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
    if( !success )
