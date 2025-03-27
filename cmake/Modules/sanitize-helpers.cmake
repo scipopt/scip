@@ -150,7 +150,7 @@ endfunction ()
 
 
 # Helper to assign sanitizer flags for TARGET.
-function (sanitizer_add_flags TARGET NAME PREFIX)
+function (sanitizer_add_flags TARGET NAME PREFIX EXTRA_LINK_FLAGS)
     # Get list of compilers used by target and check, if sanitizer is available
     # for this target. Other compiler checks like check for conflicting
     # compilers will be done in add_sanitizers function.
@@ -166,5 +166,7 @@ function (sanitizer_add_flags TARGET NAME PREFIX)
     set_property(TARGET ${TARGET} APPEND_STRING
         PROPERTY COMPILE_FLAGS " ${SanBlist_${TARGET_COMPILER}_FLAGS}")
     set_property(TARGET ${TARGET} APPEND_STRING
-        PROPERTY LINK_FLAGS " ${${PREFIX}_${TARGET_COMPILER}_FLAGS}")
+        PROPERTY LINK_FLAGS " ${${PREFIX}_${TARGET_COMPILER}_FLAGS} ${EXTRA_LINK_FLAGS}")
+    set_property(TARGET ${TARGET} APPEND_STRING
+        PROPERTY SANITIZE_FLAGS " ${${PREFIX}_${TARGET_COMPILER}_FLAGS}")
 endfunction ()

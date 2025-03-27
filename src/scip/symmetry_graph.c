@@ -440,6 +440,7 @@ SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
  *  Edges are colored according to the variable coefficients.
  *  For signed permutation symmetries, also edges connecting the root node and the negated variable
  *  nodes are added, these edges are colored by the negative coefficients.
+ *  If the variable is fixed, a node representing the constant value is added.
  */
 SCIP_RETCODE SCIPaddSymgraphVarAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -490,7 +491,7 @@ SCIP_RETCODE SCIPaddSymgraphVarAggregation(
    }
 
    /* possibly add node for constant */
-   if( ! SCIPisZero(scip, constant) )
+   if( nvars == 0 || !SCIPisZero(scip, constant) )
    {
       SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, constant, &nodeidx) );
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, nodeidx, FALSE, 0.0) );

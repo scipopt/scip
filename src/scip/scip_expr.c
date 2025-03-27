@@ -819,7 +819,12 @@ SCIP_RETCODE hashExpr(
 #undef SCIPgetExprhdlrPower
 #endif
 
-/** creates the handler for an expression handler and includes it into SCIP */
+/** creates the handler for an expression handler and includes it into SCIP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 SCIP_RETCODE SCIPincludeExprhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRHDLR**       exprhdlr,           /**< buffer where to store created expression handler */
@@ -833,6 +838,8 @@ SCIP_RETCODE SCIPincludeExprhdlr(
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(exprhdlr != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPincludeExprhdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPexprhdlrCreate(scip->mem->setmem, exprhdlr, name, desc, precedence, eval, data) );
    assert(*exprhdlr != NULL);

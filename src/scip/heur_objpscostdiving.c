@@ -362,7 +362,8 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* calculate the maximal diving depth */
-   nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(nvars >= 0);
    if( SCIPgetNSolsFound(scip) == 0 )
       maxdivedepth = (int)(heurdata->depthfacnosol * nvars);
    else
@@ -594,7 +595,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
          /* get new fractional variables */
          SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
       }
-      SCIPdebugMsg(scip, "   -> lpsolstat=%d, nfrac=%d\n", lpsolstat, nlpcands);
+      SCIPdebugMsg(scip, "   -> lpsolstat=%d, nlpcands=%d\n", lpsolstat, nlpcands);
    }
 
    /* check if a solution has been found */

@@ -9,12 +9,13 @@ else()
   find_package(SCIP REQUIRED)
 endif()
 
-include_directories(${SCIP_INCLUDE_DIRS})
+include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(scipmip
    src/cppmain.cpp)
 
 target_link_libraries(scipmip ${SCIP_LIBRARIES})
+target_compile_options(scipmip PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET examples )
     add_dependencies( examples scipmip )

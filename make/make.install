@@ -62,9 +62,8 @@ ifneq ($(INSTALLDIR),)
 		@-install -m 644 -p $(LPILIBFILE) $(TPILIBFILE) $(OBJSCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
 ifeq ($(SHARED),true)
 		@-install -m 644 -p $(SCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
-else
-		@-install -m 644 -p $(SCIPLIBBASEFILE) $(INSTALLDIR)/$(LIBDIR)/
 endif
+		@-install -m 644 -p $(SCIPLIBBASEFILE) $(INSTALLDIR)/$(LIBDIR)/
 ifeq ($(SHARED)$(OSTYPE),truedarwin)
 		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(LPILIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(LPILIBFILE))
 		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(TPILIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(TPILIBFILE))
@@ -76,10 +75,9 @@ endif
 ifeq ($(SHARED),true)
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBLINK)) && $(LN_s) $(notdir $(SCIPLIBFILE)) $(notdir $(SCIPLIBLINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBSHORTLINK)) && $(LN_s) $(notdir $(SCIPLIBLINK)) $(notdir $(SCIPLIBSHORTLINK)));
-else
+endif
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBBASELINK)) && $(LN_s) $(notdir $(SCIPLIBBASEFILE)) $(notdir $(SCIPLIBBASELINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBBASESHORTLINK)) && $(LN_s) $(notdir $(SCIPLIBBASELINK)) $(notdir $(SCIPLIBBASESHORTLINK)));
-endif
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(OBJSCIPLIBLINK)) && $(LN_s) $(notdir $(OBJSCIPLIBFILE)) $(notdir $(OBJSCIPLIBLINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(OBJSCIPLIBSHORTLINK)) && $(LN_s) $(notdir $(OBJSCIPLIBLINK)) $(notdir $(OBJSCIPLIBSHORTLINK)));
 endif

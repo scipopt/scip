@@ -777,7 +777,7 @@ SCIP_RETCODE SCIPsparseSolCreate(
    )
 {
    assert(sparsesol != NULL);
-   assert(vars != NULL);
+   assert(nvars == 0 || vars != NULL);
    assert(nvars >= 0);
 
    SCIP_ALLOC( BMSallocMemory(sparsesol) );
@@ -10104,8 +10104,6 @@ void SCIPrandomFree(
 
    return;
 }
-
-
 
 /** returns a random integer between minrandval and maxrandval */
 int SCIPrandomGetInt(
