@@ -24,12 +24,26 @@
 
 /**@file   conflict_resolution.c
  * @ingroup OTHER_CFILES
- * @brief  methods for cut-based conflict analysis
- * @author Gioni Mexi
+ * @brief   Methods for generalized resolution conflict analysis.
+ * @author  Gioni Mexi
  *
- * TODO fix memory issue in mixed binary reduction
+ * This file implements a conflict analysis method based on generalized resolution,
+ * as detailed in the paper:
+ *
+ * Gioni Mexi, et al. "Cut-based Conflict Analysis in Mixed Integer Programming."
+ * arXiv preprint arXiv:2410.15110 (2024).
+ *
+ * The generalized resolution conflict analysis procedure starts with an initial
+ * conflict row and it iteratively aggregates this row with a reason row—the row
+ * that propagated the bound change causing the conflict. The aggregation
+ * cancels the coefficient of the resolving variable. This process continues
+ * until a first unique implication point (FUIP) is reached. If the aggregation
+ * does not yield a valid (infeasible) row, the algorithm attempts to reduce the
+ * reason row (e.g., using MIR reduction) and retries the aggregation. Once a
+ * valid conflict row with negative slack is generated, a conflict constraint is
+ * constructed and added to the problem.
+ *
  */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 // #define SCIP_DEBUG
 // #define SCIP_MORE_DEBUG
@@ -275,7 +289,7 @@ SCIP_Longint SCIPconflictGetNResCalls(
 typedef enum {
    CONFLICT_ROWTYPE,                         /**< infeasible row at the current state */
    REASON_ROWTYPE,                           /**< reason row for the bound change that led to the infeasibility */
-   REDUCED_REASON_ROWTYPE,                   /**< reason row after applying the reason reduction algorithm */
+   REDUCED_REASON_ROWTYPE,                   /**< reason row after applying reason reduction */
    RESOLVED_CONFLICT_ROWTYPE,                /**< resolved infeasible row (after adding the conflict and reason rows) */
    CONTINUOUS_REASON_ROWTYPE                 /**< reason row for a bound change on a continuous variable */
 } ConflictRowType;
@@ -1006,7 +1020,7 @@ void linearCombRows(
 
 /** returns whether a bound change is resolvable or not */
 static
-SCIP_Bool bdchginfoIsResolvable(
+SCIP_Bool isResolvableBdchg(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change to check */
    )
 {
@@ -1110,14 +1124,14 @@ SCIP_Bool existsResolvablebdchginfo(
    for( i = 0; i < SCIPpqueueNElems(conflict->resforcedbdchgqueue); ++i )
    {
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resforcedbdchgqueue)[i]);
-      if( bdchginfoIsResolvable(bdchginfo) )
+      if( isResolvableBdchg(bdchginfo) )
          return TRUE;
    }
    /* loop through bound change and check if there exists a resolvable bound change */
    for( i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); ++i )
    {
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
-      if( bdchginfoIsResolvable(bdchginfo) )
+      if( isResolvableBdchg(bdchginfo) )
          return TRUE;
    }
    return FALSE;
@@ -1159,7 +1173,7 @@ SCIP_Bool bdchginfoUsedForConflict(
    return FALSE;
 }
 
-/** returns next conflict analysis candidate from the candidate queue without removing it */
+/** returns next conflict analysis bound change candidate from the queue without removing it */
 static
 SCIP_BDCHGINFO* conflictFirstCand(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1247,7 +1261,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
    return bdchginfo;
 }
 
-/** removes and returns next conflict analysis candidate from the candidate queue */
+/** removes and returns next conflict analysis bound change candidate from the queue */
 static
 SCIP_BDCHGINFO* conflictRemoveCand(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -1277,7 +1291,7 @@ SCIP_Bool SCIPconflictResolutionApplicable(
    )
 {
    /* check, if generalized resolution conflict analysis is enabled */
-   if( !set->conf_enable || !set->conf_usegeneralres || SCIPsetGetStage(set) != SCIP_STAGE_SOLVING )
+   if( !set->conf_enable || !set->conf_usegenres || SCIPsetGetStage(set) != SCIP_STAGE_SOLVING )
       return FALSE;
 
    return TRUE;
@@ -1311,7 +1325,6 @@ SCIP_RETCODE conflictRowCreate(
 
    return SCIP_OKAY;
 }
-
 
 /** creates conflict and reason rows */
 SCIP_RETCODE SCIPconflictInitRows(
@@ -1480,7 +1493,10 @@ SCIP_RETCODE computeSlack(
    return SCIP_OKAY;
 }
 
-
+/**
+ * reduces the reason row by applying MIR. In the reference solution, each variable is set to
+ * the value that was used for the propagation of currbdchginfo.
+ */
 static
 SCIP_RETCODE MirReduction(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2081,7 +2097,7 @@ SCIP_RETCODE createAndAddConflictCon(
    return SCIP_OKAY;
 }/*lint !e715*/
 
-/** create conflict constraints out of conflict rows and add them to the problem */
+/** create conflict constraints out of conflict row and add them to the problem */
 SCIP_RETCODE SCIPconflictAddConflictCon(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2288,7 +2304,7 @@ SCIP_RETCODE conflictRowAddSemiSparseData(
    return SCIP_OKAY;
 }
 
-/** compute scale for the reason constraint such that the resolving variable cancels */
+/** compute scale for the reason constraint such that the resolving variable cancels out */
 static
 SCIP_Real computeScaleReason(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2752,9 +2768,9 @@ SCIP_RETCODE rescaleAndResolve(
 
    scale = computeScaleReason(set, row1, row2, residx);
 
-   if( SCIPsetIsGE(set, scale, set->conf_generalresminmaxquot) )
+   if( SCIPsetIsGE(set, scale, set->conf_maxcoefquot) )
    {
-      SCIPsetDebugMsgPrint(set, "Scale %f exceeds max allowed scale %f \n", scale, set->conf_generalresminmaxquot);
+      SCIPsetDebugMsgPrint(set, "Scale %f exceeds max allowed scale %f \n", scale, set->conf_maxcoefquot);
       conflict->nreslargecoefs++;
       return SCIP_OKAY;
    }
@@ -2797,7 +2813,7 @@ SCIP_RETCODE rescaleAndResolve(
 
    /* check if the quotient of coefficients in the resolvent exceeds the max allowed quotient */
    resolvedrow->coefquotient = (resolvedrow->nnz > 0) ? fabs(largestcoef / smallestcoef) : 0.0;
-   if( SCIPsetIsGT(set, resolvedrow->coefquotient, set->conf_generalresminmaxquot) )
+   if( SCIPsetIsGT(set, resolvedrow->coefquotient, set->conf_maxcoefquot) )
    {
       conflict->nreslargecoefs++;
       SCIPsetDebugMsgPrint(set, "Quotient %f exceeds max allowed quotient", (resolvedrow->nnz > 0) ? fabs(largestcoef / smallestcoef) : 0.0);
@@ -2909,7 +2925,7 @@ SCIP_RETCODE reduceReason(
 
    coefinrow = fabs(rowtoreduce->vals[residx]);
 
-   if( set->conf_reductiontechnique == 'm' )
+   if( set->conf_reduction == 'm' )
    {
       if( isBinaryConflictRow(set, vars, rowtoreduce) )
       {
@@ -3128,7 +3144,7 @@ SCIP_RETCODE getReasonRow(
 
    *success = FALSE;
 
-   if( bdchginfoIsResolvable(currbdchginfo) && SCIPbdchginfoGetChgtype(currbdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER )
+   if( isResolvableBdchg(currbdchginfo) && SCIPbdchginfoGetChgtype(currbdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER )
    {
       SCIP_CONS* reasoncon;
       SCIP_ROW* reasonlprow;
@@ -3225,7 +3241,7 @@ SCIP_RETCODE getReasonRow(
          }
       }
    }
-   else if( bdchginfoIsResolvable(currbdchginfo) && SCIPbdchginfoGetChgtype(currbdchginfo) == SCIP_BOUNDCHGTYPE_PROPINFER )
+   else if( isResolvableBdchg(currbdchginfo) && SCIPbdchginfoGetChgtype(currbdchginfo) == SCIP_BOUNDCHGTYPE_PROPINFER )
    {
       SCIP_CALL( getReasonClause(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetNewbound(currbdchginfo), validdepth, success) );
       if( *success )
@@ -3247,14 +3263,7 @@ SCIP_RETCODE getReasonRow(
    return SCIP_OKAY;
 }
 
-/**
- * get the conflict row for the given bound change
- * - it is either an LP row
- * - or a weakened LP row (if the LP row is too long)
- * - or a clause (if no LP row is available, or if the slack of the LP row not
- *   negative. This can happen if we used some non linear argument when
- *   propagating the rows)
- */
+/** get the conflict row for the given bound change from the LP row. */
 static
 SCIP_RETCODE getConflictRow(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -3398,7 +3407,7 @@ SCIP_RETCODE executeResolutionStep(
    SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
 
    /* return if the reduction is off */
-   if( set->conf_reductiontechnique == 'o' )
+   if( set->conf_reduction == 'o' )
       return SCIP_OKAY;
 
    /* if the resolvent is not infeasible under the local domain, try to reduce the reason row */
@@ -3523,7 +3532,10 @@ SCIP_RETCODE executeResolutionStep(
    return SCIP_OKAY;
 }
 
-
+/** if we can't resolve a bound change, then we treat is as a branching decision. In this case, if the variable
+ * changes bounds again we cannot use those bounds. To remember this we save the variable index in the array fixinds
+ * and the type of the bound in fixbounds (1 for upper, -1 for lower).
+ */
 static
 SCIP_RETCODE fixBoundChangeWithoutResolving(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -3623,6 +3635,7 @@ SCIP_RETCODE fixBoundChangeWithoutResolving(
    return SCIP_OKAY;
 }
 
+/** add the conflict rows to the problem */
 static
 SCIP_RETCODE addConflictRows(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -3652,7 +3665,7 @@ SCIP_RETCODE addConflictRows(
       conflictrowtoadd = conflict->conflictrows[i];
       assert(SCIPsetIsLT(set, conflictrowtoadd->slack, 0.0));
 
-      if( SCIPsetIsLT(set, conflictrowtoadd->coefquotient, set->conf_generalresminmaxquot) )
+      if( SCIPsetIsLT(set, conflictrowtoadd->coefquotient, set->conf_maxcoefquot) )
       {
 
          SCIP_Bool success;
@@ -3676,6 +3689,9 @@ SCIP_RETCODE addConflictRows(
    return SCIP_OKAY;
 }
 
+/** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(), and on success,
+ * creates a linear constraint that explains the infeasibility.
+ */
 SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
@@ -3707,7 +3723,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    int lastuipdepth;
    int focusdepth;
    int currentdepth;
-   int maxvaliddepth;
    int maxsize;
    int nchgcoefs;
    int nressteps;
@@ -3743,12 +3758,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
    *nconss = 0;
    *nconfvars = 0;
 
-   /** check, whether local conflicts are allowed; however, don't generate
-    * conflict constraints that are only valid in the probing path and not in
-    * the problem tree (i.e. that exceed the focusdepth)
-    */
-   maxvaliddepth = (set->conf_resallowlocal ? MIN(currentdepth-1, focusdepth) : 0);
-   if( validdepth > maxvaliddepth )
+   /* todo at the moment only global resolution conflict analysis is supported */
+   if( validdepth > 0)
       return SCIP_OKAY;
 
    vars = SCIPprobGetVars(transprob);
@@ -3860,7 +3871,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
       }
 #endif
 
-      if( !bdchginfoIsResolvable(bdchginfo) )
+      if( !isResolvableBdchg(bdchginfo) )
       {
          SCIP_Bool successfixing;
 

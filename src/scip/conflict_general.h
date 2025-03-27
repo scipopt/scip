@@ -568,9 +568,8 @@ SCIP_RETCODE conflictAnalyze(
    int*                  nreconvliterals     /**< pointer to store the number of literals generated reconvergence constraints */
    );
 
-/** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound() and
- *  SCIPconflictAddRelaxedBound(), and on success, creates and possibly adds a linear constraint
- *  that explains the infeasibility; afterwards the resolution set(s) are cleared
+/** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(), and on success,
+ * creates a linear constraint that explains the infeasibility.
  */
 SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */

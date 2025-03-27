@@ -745,7 +745,7 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
       return SCIP_OKAY;
 
    /* call resolution conflict analysis */
-   if( scip->set->conf_usegeneralres )
+   if( scip->set->conf_usegenres )
    {
       SCIP_ROW* conflictrow;
 

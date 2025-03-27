@@ -24,8 +24,24 @@
 
 /**@file   conflict_resolution.h
  * @ingroup OTHER_CFILES
- * @brief  methods for cut-based conflict analysis
- * @author Gioni Mexi
+ * @brief   Methods for generalized resolution conflict analysis.
+ * @author  Gioni Mexi
+ *
+ * This file implements a conflict analysis method based on generalized resolution,
+ * as detailed in the paper:
+ *
+ * Gioni Mexi, et al. "Cut-based Conflict Analysis in Mixed Integer Programming."
+ * arXiv preprint arXiv:2410.15110 (2024).
+ *
+ * The generalized resolution conflict analysis procedure starts with an initial
+ * conflict row and it iteratively aggregates this row with a reason row—the row
+ * that propagated the bound change causing the conflict. The aggregation
+ * cancels the coefficient of the resolving variable. This process continues
+ * until a first unique implication point (FUIP) is reached. If the aggregation
+ * does not yield a valid (infeasible) row, the algorithm attempts to reduce the
+ * reason row (e.g., using MIR reduction) and retries the aggregation. Once a
+ * valid conflict row with negative slack is generated, a conflict constraint is
+ * constructed and added to the problem.
  *
  */
 
@@ -79,7 +95,7 @@ SCIP_Longint SCIPconflictGetNResCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** create resolution constraints out of resolution sets and add them to the problem */
+/** create constraints out of the conflict row and add them to the problem */
 SCIP_RETCODE SCIPconflictAddConflictCon(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -99,7 +115,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    SCIP_Bool*            mirsuccess          /**< true if the MIR conflict is added to the problem */
    );
 
-/** creates and clears the conflict rowsS */
+/** creates and clears the conflict rows */
 SCIP_RETCODE SCIPconflictInitRows(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */

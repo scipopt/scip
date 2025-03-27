@@ -108,7 +108,7 @@ SCIP_Bool SCIPconflictApplicable(
 {
    assert(set != NULL);
    /* check, if resolution or propagation conflict analysis is enabled */
-   if( !set->conf_enable || !( set->conf_useprop || set->conf_usegeneralres ) )
+   if( !set->conf_enable || !( set->conf_useprop || set->conf_usegenres ) )
       return FALSE;
 
    return TRUE;
