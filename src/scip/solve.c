@@ -66,6 +66,7 @@
 #include "scip/pub_var.h"
 #include "scip/relax.h"
 #include "scip/reopt.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_concurrent.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_lp.h"
@@ -3069,7 +3070,7 @@ SCIP_RETCODE priceAndCutLoop(
    {
       SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
 
-      if( SCIPcertificateIsEnabled(stat->certificate) )
+      if( SCIPisCertified(set->scip) )
       {
          if( !(lp->solved && lp->flushed) )
             SCIP_CALL( SCIPcertificatePrintInheritedBound(set, stat->certificate, focusnode) );
@@ -5265,7 +5266,7 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt,
                lp, branchcand, conflict, conflictstore, eventqueue, eventfilter, cliquetable, &cutoff, FALSE, FALSE) );
 
-         if( SCIPisExact(set->scip) && SCIPisCertificateActive(set->scip) )
+         if( SCIPisExact(set->scip) && SCIPisCertified(set->scip) )
          {
             SCIP_CALL( SCIPcertificateInitTransFile(set->scip) );
          }

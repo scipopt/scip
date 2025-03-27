@@ -2007,13 +2007,13 @@ void SCIPvarGetUbLocalExactMinimal(
    SCIP_RATIONAL*        output              /**< output rational */
    );
 
-/** sets index of variable in vipr-certificate */
+/** sets index of variable in certificate */
 void SCIPvarSetUbCertificateIndexLocal(
    SCIP_VAR*             var,                /**< variable to set index for */
    SCIP_Longint          index               /**< the index */
    );
 
-/** sets index of variable in vipr-certificate */
+/** sets index of variable in certificate */
 void SCIPvarSetLbCertificateIndexLocal(
    SCIP_VAR*             var,                /**< variable to set index for */
    SCIP_Longint          index               /**< the index */

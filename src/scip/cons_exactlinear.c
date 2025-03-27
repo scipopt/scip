@@ -35,7 +35,6 @@
 #include "scip/struct_stat.h"
 #include "scip/type_retcode.h"
 #include "blockmemshell/memory.h"
-#include "scip/certificate.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_exactlinear.h"
 #include "scip/cons_linear.h"
@@ -54,6 +53,7 @@
 #include "scip/pub_var.h"
 #include "scip/rational.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
@@ -2890,13 +2890,12 @@ SCIP_RETCODE createRows(
    );
 
 /** prints the certificate for a given original exact linear constraint */
-SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(
+SCIP_RETCODE SCIPcertifyConsOrigExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   SCIP_CERTIFICATE* certificate;
    SCIP_CONSDATA* consdata;
    int* varsindex;
    int i;
@@ -2907,9 +2906,8 @@ SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(
    assert(cons != NULL);
 
    /* print constraint into certificate output */
-   if( SCIPisCertificateActive(scip) )
+   if( SCIPisCertified(scip) )
    {
-      certificate = SCIPgetCertificate(scip);
       consdata = SCIPconsGetData(cons);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &varsindex, consdata->nvars) );
@@ -2920,17 +2918,17 @@ SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(
       if( SCIPrationalIsEQ(consdata->lhs, consdata->rhs) )
       {
          assert(!SCIPrationalIsAbsInfinity(consdata->lhs));
-         SCIP_CALL( SCIPcertificatePrintCons(certificate, TRUE, NULL, 'E', consdata->lhs, consdata->nvars, varsindex, consdata->vals) );
+         SCIP_CALL( SCIPcertifyCons(scip, TRUE, NULL, 'E', consdata->lhs, consdata->nvars, varsindex, consdata->vals) );
       }
       else
       {
          if( !SCIPrationalIsNegInfinity(consdata->lhs) )
          {
-            SCIP_CALL( SCIPcertificatePrintCons(certificate, TRUE, NULL, 'G', consdata->lhs, consdata->nvars, varsindex, consdata->vals) );
+            SCIP_CALL( SCIPcertifyCons(scip, TRUE, NULL, 'G', consdata->lhs, consdata->nvars, varsindex, consdata->vals) );
          }
          if( !SCIPrationalIsInfinity(consdata->rhs) )
          {
-            SCIP_CALL( SCIPcertificatePrintCons(certificate, TRUE, NULL, 'L', consdata->rhs, consdata->nvars, varsindex, consdata->vals) );
+            SCIP_CALL( SCIPcertifyCons(scip, TRUE, NULL, 'L', consdata->rhs, consdata->nvars, varsindex, consdata->vals) );
          }
       }
 
@@ -4120,7 +4118,7 @@ SCIP_RETCODE applyFixings(
 
 /** prints activity conflict to  certificate file */
 static
-SCIP_RETCODE certificatePrintActivityConflict(
+SCIP_RETCODE printActivityConflictToCertificate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
@@ -4133,7 +4131,7 @@ SCIP_RETCODE certificatePrintActivityConflict(
    int nvals;
    SCIP_RATIONAL** vals;
 
-   if( !SCIPisCertificateActive(scip) )
+   if( !SCIPisCertified(scip) )
       return SCIP_OKAY;
    SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(scip), &diff));
 
@@ -4165,7 +4163,7 @@ SCIP_RETCODE certificatePrintActivityConflict(
    SCIPrationalSetReal(diff, activity);
    SCIPrationalDiffReal(diff, diff, side);
 
-   SCIP_CALL( SCIPcertificatePrintActivityConflict(scip, cons, consdata->rowexact, consdata->lhs, consdata->rhs,
+   SCIP_CALL( SCIPcertifyActivityConflict(scip, cons, consdata->rowexact, consdata->lhs, consdata->rhs,
       nvals, vals, consdata->vars, diff, rhs) );
 
    SCIPrationalFreeBuffer(SCIPbuffer(scip), &diff);
@@ -4299,8 +4297,8 @@ SCIP_RETCODE tightenVarBounds(
                   SCIPrationalComputeApproximation(tmpbound, tmpbound, boundmaxdenom, 1);
                }
 
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
+               if( SCIPshouldCertificateTrackBounds(scip) )
+                  SCIP_CALL( SCIPcertifyActivityVarBoundExact(scip, NULL,
                      SCIP_BOUNDTYPE_UPPER, tmpbound, false, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars,  consdata->nvars) );
 
                SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos),
@@ -4309,8 +4307,8 @@ SCIP_RETCODE tightenVarBounds(
             }
             else
             {
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIP_CALL( SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL,
+               if( SCIPshouldCertificateTrackBounds(scip) )
+                  SCIP_CALL( SCIPcertifyActivityVarBound(scip, NULL,
                      SCIP_BOUNDTYPE_UPPER, newub, false, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
                newub = SCIPadjustedVarUbExactFloat(scip, var, newub);
@@ -4324,8 +4322,8 @@ SCIP_RETCODE tightenVarBounds(
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, newub);
 
                /* analyze conflict */
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, TRUE) );
+               if( SCIPshouldCertificateTrackBounds(scip) )
+                  SCIP_CALL( printActivityConflictToCertificate(scip, cons, consdata, TRUE) );
                *cutoff = TRUE;
                goto RETURN_SCIP_OKAY;
             }
@@ -4371,8 +4369,8 @@ SCIP_RETCODE tightenVarBounds(
                   boundmaxdenom = conshdlrdata->boundmaxdenom;
                   SCIPrationalComputeApproximation(tmpbound, tmpbound, boundmaxdenom, -1);
                }
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
+               if( SCIPshouldCertificateTrackBounds(scip) )
+                  SCIP_CALL( SCIPcertifyActivityVarBoundExact(scip, NULL,
                      SCIP_BOUNDTYPE_LOWER, tmpbound, true, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
                SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos),
@@ -4381,8 +4379,8 @@ SCIP_RETCODE tightenVarBounds(
             }
             else
             {
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIP_CALL( SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL,
+               if( SCIPshouldCertificateTrackBounds(scip) )
+                  SCIP_CALL( SCIPcertifyActivityVarBound(scip, NULL,
                      SCIP_BOUNDTYPE_LOWER, newlb, true, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
                newlb = SCIPadjustedVarLbExactFloat(scip, var, newlb);
@@ -4395,8 +4393,8 @@ SCIP_RETCODE tightenVarBounds(
                SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), newlb, ub);
 
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, FALSE) );
+               if( SCIPshouldCertificateTrackBounds(scip) )
+                  SCIP_CALL( printActivityConflictToCertificate(scip, cons, consdata, FALSE) );
 
                *cutoff = TRUE;
                goto RETURN_SCIP_OKAY;
@@ -4447,8 +4445,8 @@ SCIP_RETCODE tightenVarBounds(
                   boundmaxdenom = conshdlrdata->boundmaxdenom;
                   SCIPrationalComputeApproximation(tmpbound, tmpbound, boundmaxdenom, -1);
                }
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
+               if( SCIPshouldCertificateTrackBounds(scip) )
+                  SCIP_CALL( SCIPcertifyActivityVarBoundExact(scip, NULL,
                      SCIP_BOUNDTYPE_LOWER, tmpbound, false, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
                SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos),
@@ -4457,8 +4455,8 @@ SCIP_RETCODE tightenVarBounds(
             }
             else
             {
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIP_CALL( SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL,
+               if( SCIPshouldCertificateTrackBounds(scip) )
+                  SCIP_CALL( SCIPcertifyActivityVarBound(scip, NULL,
                      SCIP_BOUNDTYPE_LOWER, newlb, false, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
                newlb = SCIPadjustedVarLbExactFloat(scip, var, newlb);
@@ -4471,8 +4469,8 @@ SCIP_RETCODE tightenVarBounds(
                SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), newlb, ub);
 
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, TRUE) );
+               if( SCIPshouldCertificateTrackBounds(scip) )
+                  SCIP_CALL( printActivityConflictToCertificate(scip, cons, consdata, TRUE) );
 
                /**@todo analyze conflict detected in exactlinear constraint handler */
                *cutoff = TRUE;
@@ -4520,8 +4518,8 @@ SCIP_RETCODE tightenVarBounds(
                   boundmaxdenom = conshdlrdata->boundmaxdenom;
                   SCIPrationalComputeApproximation(tmpbound, tmpbound, boundmaxdenom, 1);
                }
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIP_CALL( SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL,
+               if( SCIPshouldCertificateTrackBounds(scip) )
+                  SCIP_CALL( SCIPcertifyActivityVarBoundExact(scip, NULL,
                      SCIP_BOUNDTYPE_UPPER, tmpbound, true, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
                SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos),
@@ -4530,8 +4528,8 @@ SCIP_RETCODE tightenVarBounds(
             }
             else
             {
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIP_CALL( SCIPcertificatePrintActivityVarBound(scip, SCIPgetCertificate(scip), NULL,
+               if( SCIPshouldCertificateTrackBounds(scip) )
+                  SCIP_CALL( SCIPcertifyActivityVarBound(scip, NULL,
                      SCIP_BOUNDTYPE_UPPER, newub, true, cons, var, consdata->rowexact, consdata->vals, consdata->lhs, consdata->rhs, consdata->vars, consdata->nvars) );
 
                newub = SCIPadjustedVarUbExactFloat(scip, var, newub);
@@ -4544,8 +4542,8 @@ SCIP_RETCODE tightenVarBounds(
                SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, newub);
 
-               if( SCIPcertificateShouldTrackBounds(scip) )
-                  SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, FALSE) );
+               if( SCIPshouldCertificateTrackBounds(scip) )
+                  SCIP_CALL( printActivityConflictToCertificate(scip, cons, consdata, FALSE) );
 
                *cutoff = TRUE;
                goto RETURN_SCIP_OKAY;
@@ -5089,7 +5087,7 @@ SCIP_RETCODE propagateCons(
          {
             SCIPrationalDebugMessage("linear constraint <%s> is infeasible (rhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-            SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, TRUE) );
+            SCIP_CALL( printActivityConflictToCertificate(scip, cons, consdata, TRUE) );
 
             /**@todo analyze conflict detected in exactlinear constraint handler */
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -5099,7 +5097,7 @@ SCIP_RETCODE propagateCons(
          {
             SCIPrationalDebugMessage("linear constraint <%s> is infeasible (lhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhsreal, consdata->rhsreal);
-            SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, FALSE) );
+            SCIP_CALL( printActivityConflictToCertificate(scip, cons, consdata, FALSE) );
 
             /**@todo analyze conflict detected in exactlinear constraint handler */
             SCIP_CALL( SCIPresetConsAge(scip, cons) );

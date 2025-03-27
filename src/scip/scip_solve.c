@@ -81,6 +81,7 @@
 #include "scip/reopt.h"
 #include "scip/scip_benders.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_concurrent.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
@@ -1568,7 +1569,7 @@ SCIP_RETCODE initSolve(
    /* possibly create visualization output file */
    SCIP_CALL( SCIPvisualInit(scip->stat->visual, scip->mem->probmem, scip->set, scip->messagehdlr) );
 
-   /* possibly create certificate output file */
+   /* possibly create certificate output files */
    SCIP_CALL( SCIPcertificateInit(scip, scip->stat->certificate, scip->mem->probmem, scip->set, scip->messagehdlr) );
 
    /* initialize solution process data structures */
@@ -3401,8 +3402,7 @@ SCIP_RETCODE SCIPfreeSolve(
    case SCIP_STAGE_PRESOLVED:
       /* switch stage to TRANSFORMED */
       scip->set->stage = SCIP_STAGE_TRANSFORMED;
-      /* possibly close CERTIFICATE output file */
-      SCIP_CALL( SCIPcertificateExit(scip) );
+      assert(!SCIPcertificateIsEnabled(SCIPgetCertificate(scip)));
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:

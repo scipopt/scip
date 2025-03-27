@@ -394,30 +394,9 @@ void SCIPgetRunningErrorStatsExactLinear(
    SCIP_Longint*         naborts             /**< stores number of times running error analysis had to abort */
    );
 
+/** prints the certificate for a given original exact linear constraint */
 SCIP_EXPORT
-void SCIPgetPropStatsExactLinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Longint*         npropagations,      /**< stores number of propagations */
-   SCIP_Longint*         npropagationsconflict, /**< stores number of conflict constraint propagations */
-   SCIP_Real*            avgnonzerosprop,    /**< stores average number of nonzeros in the propagated rows */
-   SCIP_Real*            avgnonzerospropconflict /**< stores maximum number of nonzeros in the propagated rows */
-   );
-
-/** performs linear constraint type classification as used for MIPLIB
- *
- *  iterates through all linear constraints and stores relevant statistics in the linear constraint statistics \p linconsstats.
- *
- *  @note only constraints are iterated that belong to the linear constraint handler. If the problem has been presolved already,
- *  constraints that were upgraded to more special types such as, e.g., varbound constraints, will not be shown correctly anymore.
- *  Similarly, if specialized constraints were created through the API, these are currently not present.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPclassifyConstraintTypesExactLinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint type classification */
-   );
-
-SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(
+SCIP_RETCODE SCIPcertifyConsOrigExactLinear(
    SCIP*                 scip,
    SCIP_CONSHDLR*        conshdlr,
    SCIP_CONS*            cons

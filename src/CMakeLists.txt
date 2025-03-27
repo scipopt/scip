@@ -339,6 +339,7 @@ set(scipsources
     scip/scip_bandit.c
     scip/scip_benders.c
     scip/scip_branch.c
+    scip/scip_certificate.c
     scip/scip_compr.c
     scip/scip_concurrent.c
     scip/scip_conflict.c
@@ -860,6 +861,7 @@ set(scipheaders
     scip/scip_bandit.h
     scip/scip_benders.h
     scip/scip_branch.h
+    scip/scip_certificate.h
     scip/scip_compr.h
     scip/scip_concurrent.h
     scip/scip_conflict.h

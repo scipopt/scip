@@ -43,6 +43,7 @@
 #include "scip/prob.h"
 #include "scip/reopt.h"
 #include "scip/scip.h"
+#include "scip/scip_certificate.h"
 #include "scip/def.h"
 #include "scip/cons_linear.h"
 #include "scip/struct_certificate.h"
@@ -324,7 +325,7 @@ SCIP_RETCODE removeExactConflictFromCertificateHashmap(
    assert(set->scip != NULL);
    assert(cons != NULL);
 
-   if( !SCIPisExact(set->scip) || !SCIPisCertificateActive(set->scip) || !SCIPconshdlrIsExact((SCIPconsGetHdlr(cons))) )
+   if( !SCIPisExact(set->scip) || !SCIPisCertified(set->scip) || !SCIPconshdlrIsExact((SCIPconsGetHdlr(cons))) )
       return SCIP_OKAY;
 
    certificate = SCIPgetCertificate(set->scip);

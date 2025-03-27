@@ -45,6 +45,7 @@
 #include "scip/lpexact.h"
 #include "scip/prob.h"
 #include "scip/rational.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_message.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_tree.h"
@@ -2256,7 +2257,7 @@ SCIP_RETCODE boundShift(
    }
 
    /* if certificate is active, save the corrected dual solution into the lpexact data */
-   if( SCIPisCertificateActive(set->scip) && lp->hasprovedbound )
+   if( SCIPisCertified(set->scip) && lp->hasprovedbound )
    {
       /* set up the exact lpi for the current node */
       for( j = 0; j < lpexact->nrows; j++ )

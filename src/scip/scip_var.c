@@ -51,7 +51,6 @@
 #include "scip/conflict.h"
 #include "scip/debug.h"
 #include "scip/rational.h"
-#include "scip/scip_exact.h"
 #include "scip/history.h"
 #include "scip/implics.h"
 #include "scip/lp.h"
@@ -64,6 +63,8 @@
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/relax.h"
+#include "scip/scip_certificate.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -7240,7 +7241,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    if( SCIPrationalIsLT(adjustedBound, lb) )
    {
       *infeasible = TRUE;
-      if( SCIPcertificateShouldTrackBounds(scip) )
+      if( SCIPshouldCertificateTrackBounds(scip) )
          SCIP_CALL( SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip),
             var, NULL, adjustedBound, -1L, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(scip)) - 1L) );
       goto RETURN_SCIP_OKAY;
@@ -7362,7 +7363,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    if( SCIPrationalIsGT(adjustedBound, ub) )
    {
       *infeasible = TRUE;
-      if (SCIPcertificateShouldTrackBounds(scip))
+      if (SCIPshouldCertificateTrackBounds(scip))
          SCIP_CALL( SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip),
             var, adjustedBound, NULL, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(scip)) -1L, -1L) );
       goto RETURN_SCIP_OKAY;

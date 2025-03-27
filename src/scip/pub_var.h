@@ -592,31 +592,31 @@ int SCIPvarGetProbindex(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns position of variable in vipr-certificate */
+/** returns position of variable in certificate */
 SCIP_EXPORT
 int SCIPvarGetCertificateIndex(
    SCIP_VAR*             var                 /**< variable to get index for */
    );
 
-/** sets index of variable in vipr-certificate */
+/** sets index of variable in certificate */
 SCIP_EXPORT
 void SCIPvarSetCertificateIndex(
    SCIP_VAR*             var,                /**< variable to set index for */
    int                   index               /**< the index */
    );
 
-/** sets index of variable in vipr-certificate */
+/** sets index of variable in certificate */
 SCIP_EXPORT
 void SCIPvarSetUbCertificateIndexGlobal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   int                   index               /**< the index */
+   SCIP_Longint          index               /**< the index */
    );
 
-/** sets index of variable in vipr-certificate */
+/** sets index of variable in certificate */
 SCIP_EXPORT
 void SCIPvarSetLbCertificateIndexGlobal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   int                   index               /**< the index */
+   SCIP_Longint          index               /**< the index */
    );
 
 /** returns index of variable bound in vipr certificate */

@@ -138,6 +138,7 @@
 #include "scip/scip_benders.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_datatree.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_compr.h"
 #include "scip/scip_concurrent.h"
 #include "scip/scip_conflict.h"
