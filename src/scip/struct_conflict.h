@@ -148,7 +148,6 @@ struct SCIP_Conflict
    SCIP_Longint          npropreconvconss;   /**< number of reconvergence constraints detected in propagation conflict analysis */
    SCIP_Longint          npropreconvliterals;/**< total number of literals in valid propagation reconvergence constraints */
    SCIP_Longint          nrescalls;          /**< number of calls to resolution conflict analysis */
-   SCIP_Longint          nintreductionsuccessmbred;/**< number of calls to reduction in resolution conflict analysis that succeeded after mb reduction */
    SCIP_Longint          nressuccess;        /**< number of calls yielding at least one conflict constraint */
    SCIP_Longint          nreslargecoefs;     /**< number of calls terminating because of large coefficients */
    SCIP_Longint          nreslongconfs;      /**< number of calls terminating because of long conflict rows */

@@ -3924,7 +3924,7 @@ SCIP_RETCODE SCIPcalcMIR(
 
    *success = FALSE;
 
-  /* allocate temporary memory */
+   /* allocate temporary memory */
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, nvars) );

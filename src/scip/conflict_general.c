@@ -174,16 +174,6 @@ SCIP_Longint SCIPconflictGetNAppliedGlobalConss(
    return conflict->nappliedglbconss;
 }
 
-/** returns the total number of resolution conflict constraints that were added globally to the problem */
-SCIP_Longint SCIPconflictGetNAppliedGlobalResConss(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nappliedglbresconss;
-}
-
 /** returns the total number of literals in conflict constraints that were added globally to the problem */
 SCIP_Longint SCIPconflictGetNAppliedGlobalLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -363,7 +353,6 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->ndualproofsbndsuccess = 0;
    (*conflict)->dualproofsbndnnonzeros = 0;
    (*conflict)->nrescalls = 0;
-   (*conflict)->nintreductionsuccessmbred = 0;
    (*conflict)->nressuccess = 0;
    (*conflict)->nreslargecoefs = 0;
    (*conflict)->nreslongconfs = 0;
