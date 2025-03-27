@@ -133,7 +133,6 @@ then
     echo "set certificate filename $CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.vipr" >> "${TMPFILE}"
 fi
 
-echo "set memory savefac 1.0"                                    >> "${TMPFILE}"
 echo "set save ${SETFILE}"                                       >> "${TMPFILE}"
 
 if test "${VISUALIZE}" = true
