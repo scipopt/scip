@@ -2978,6 +2978,9 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
 
       lpexactsolstat = SCIPlpExactGetSolstat(lp->lpexact);
 
+      /* if the exact LP has status objective limit, we still query the objective value and call
+       * SCIPnodeUpdateLowerbound() below; this seems necessary for correct certification
+       */
       if( lpexactsolstat == SCIP_LPSOLSTAT_OPTIMAL || lpexactsolstat == SCIP_LPSOLSTAT_OBJLIMIT )
       {
          SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lpobjvalexact) );
@@ -2999,7 +3002,8 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    }
 
    /* check for cutoff */
-   if( lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT )
+   if( lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT
+      || (set->exact_enabled && (SCIPlpExactGetSolstat(lp->lpexact) == SCIP_LPSOLSTAT_INFEASIBLE)) )
    {
       SCIP_CALL( SCIPnodeCutoff(node, set, stat, eventfilter, tree, transprob, origprob, set->scip->reopt, lp, set->scip->mem->probmem) );
    }
