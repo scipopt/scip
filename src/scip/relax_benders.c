@@ -238,7 +238,7 @@ SCIP_RETCODE applyDecomposition(
    /* copying the parameter settings from the original SCIP to the master problem */
    SCIP_CALL( SCIPcopyParamSettings(scip, relaxdata->masterprob) );
 
-   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "master_%s", SCIPgetProbName(scip), i);
+   (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "master_%s", SCIPgetProbName(scip));
    SCIP_CALL( SCIPcreateProbBasic(relaxdata->masterprob, probname) );
 
    /* creating the subproblems before adding the constraints */
@@ -362,7 +362,7 @@ SCIP_RETCODE setVerbosityLevel(
    relaxdata->origverblevel = (SCIP_VERBLEVEL)verblevel;
 
    /* setting the master problem verbosity level to the original SCIP verbosity level */
-   SCIP_CALL( SCIPsetIntParam(relaxdata->masterprob, "display/verblevel", relaxdata->origverblevel) );
+   SCIP_CALL( SCIPsetIntParam(relaxdata->masterprob, "display/verblevel", (int)relaxdata->origverblevel) );
 
    return SCIP_OKAY;
 }
@@ -385,7 +385,7 @@ SCIP_RETCODE resetVerbosityLevel(
    assert(relaxdata != NULL);
 
    /* getting the original verbosity level so that this can be reset at the end of the Benders' solve */
-   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", relaxdata->origverblevel) );
+   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", (int)relaxdata->origverblevel) );
 
    return SCIP_OKAY;
 }
@@ -686,11 +686,11 @@ SCIP_DECL_RELAXFREE(relaxFreeBenders)
       }
       SCIPhashmapFree(&relaxdata->mastervarmap);
 
-      SCIPfree(&relaxdata->masterprob);
+      SCIP_CALL( SCIPfree(&relaxdata->masterprob) );
 
       for( i = relaxdata->nsubproblems - 1; i >= 0; i-- )
       {
-         SCIPfree(&relaxdata->subproblems[i]);
+         SCIP_CALL( SCIPfree(&relaxdata->subproblems[i]) );
       }
 
       /* freeing the allocated arrays */
@@ -796,7 +796,12 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
     * fall back to solving the MIP directly.
     */
    if( SCIPgetDepth(scip) > 0 )
+   {
+      /* resetting the vebosity level, in case the problem needs to be solved by the original SCIP */
+      SCIP_CALL( resetVerbosityLevel(scip, relax) );
+
       return SCIP_OKAY;
+   }
 
    /* checking whether there is enough time and memory to perform the decomposition solve */
    SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
