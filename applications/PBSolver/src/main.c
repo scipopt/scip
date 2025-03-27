@@ -466,8 +466,8 @@ SCIP_RETCODE processShellArguments(
    SCIP_Real timelimit = -1.0;
    SCIP_Bool quiet = FALSE;
    SCIP_Bool print = FALSE;
-   SCIP_Bool paramerror = FALSE;
    SCIP_Bool interactive = FALSE;
+   SCIP_Bool paramerror = FALSE;
    char* logname = NULL;
    char* settingsname = NULL;
    char* problemname = NULL;
@@ -556,6 +556,40 @@ SCIP_RETCODE processShellArguments(
                   paramerror = TRUE;
                }
                break;
+            /* batch file input */
+            case 'b':
+               if( ++i < argc )
+               {
+                  SCIP_FILE* file;
+
+                  file = SCIPfopen(argv[i], "r");
+                  if( file == NULL )
+                  {
+                     SCIPerrorMessage("cannot read command batch file <%s>\n", argv[i]);
+                     paramerror = TRUE;
+                  }
+                  else
+                  {
+                     while( !SCIPfeof(file) )
+                     {
+                        char buffer[SCIP_MAXSTRLEN];
+
+                        (void)SCIPfgets(buffer, (int) sizeof(buffer), file);
+                        if( buffer[0] != '\0' )
+                        {
+                           SCIP_CALL_FINALLY( SCIPaddDialogInputLine(scip, buffer), SCIPfclose(file) );
+                        }
+                     }
+                     SCIPfclose(file);
+                     interactive = TRUE;
+                  }
+               }
+               else
+               {
+                  SCIPerrorMessage("missing command batch filename after parameter '-b'\n");
+                  paramerror = TRUE;
+               }
+               break;
             /* command line input */
             case 'c':
                if( ++i < argc )
@@ -587,6 +621,10 @@ SCIP_RETCODE processShellArguments(
        * Version information *
        ***********************/
 
+      /* interactive mode if no problem */
+      if( problemname == NULL )
+         interactive = TRUE;
+
       /* set attributes of message handler */
       messagehdlr = SCIPgetMessagehdlr(scip);
       assert(messagehdlr != NULL);
@@ -594,7 +632,7 @@ SCIP_RETCODE processShellArguments(
       assert(messagehdlrdata != NULL);
       SCIPsetMessagehdlrQuiet(scip, quiet);
       SCIPsetMessagehdlrLogfile(scip, logname);
-      messagehdlrdata->comment = !print;
+      messagehdlrdata->comment = print == interactive;
 
       /* print version information */
       SCIPprintVersion(scip, NULL);
@@ -611,7 +649,7 @@ SCIP_RETCODE processShellArguments(
          SCIP_CALL( SCIPreadParams(scip, defaultsetname) );
       }
 
-      if( !interactive && problemname != NULL )
+      if( !interactive )
       {
          /**************
           * Start SCIP *
@@ -626,17 +664,18 @@ SCIP_RETCODE processShellArguments(
    }
    else
    {
-      SCIPinfoMessage(scip, NULL, "syntax: %s [-q] [-p] [-l <logfile>] [-s <settings>] [-f <problem>] [-d <dispfreq>] [-t <timelimit>] [-m <memlimit>]\n", argv[0]);
+      SCIPinfoMessage(scip, NULL, "syntax: %s [-q] [-p] [-l <logfile>] [-s <settings>] [-f <problem>] [-d <dispfreq>] [-t <timelimit>] [-m <memlimit>] [-b <batchfile> ...] [-c <command> ...]\n", argv[0]);
 
       SCIPinfoMessage(scip, NULL, "   -q             : suppress screen messages\n");
-      SCIPinfoMessage(scip, NULL, "   -p             : print default messages\n");
+      SCIPinfoMessage(scip, NULL, "   -p             : toggle print mode\n");
       SCIPinfoMessage(scip, NULL, "   -l <logfile>   : copy output into log file\n");
       SCIPinfoMessage(scip, NULL, "   -s <settings>  : load settings (.set) file\n");
       SCIPinfoMessage(scip, NULL, "   -f <problem>   : solve problem (.opb or .wbo) file\n");
       SCIPinfoMessage(scip, NULL, "   -d <dispfreq>  : log display frequency\n");
       SCIPinfoMessage(scip, NULL, "   -t <timelimit> : enforce time limit\n");
       SCIPinfoMessage(scip, NULL, "   -m <memlimit>  : enforce memory limit\n");
-      SCIPinfoMessage(scip, NULL, "   -c <command>   : execute command line\n");
+      SCIPinfoMessage(scip, NULL, "   -b <batchfile> : execute batch file with default messages\n");
+      SCIPinfoMessage(scip, NULL, "   -c <command>   : execute command line with default messages\n");
    }
 
    return SCIP_OKAY;
