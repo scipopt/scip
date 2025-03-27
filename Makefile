@@ -1932,9 +1932,6 @@ endif
 ifeq ($(ZLIB),false)
 		@echo "Note: built with ZLIB=false: support for reading gzipped files is not available"
 endif
-ifeq ($(EXACTSOLVE),false)
-		@echo "Note: exact solving mode is not available (build with GMP=true BOOST=true MPFR=true LPSEXACT=spx to enable it)"
-endif
 
 .PHONY: help
 help:
