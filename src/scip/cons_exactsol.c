@@ -280,7 +280,7 @@ void checkProbHasContEqs(
       if( SCIPconsGetHdlr(conss[c]) == SCIPfindConshdlr(scip, "exactlinear") )
       {
          /* constraint is an equality constraint */
-         if( SCIPrationalIsEqual(SCIPconsGetRhsExact(scip, conss[c], &success), SCIPconsGetLhsExact(scip, conss[c], &success)) ) /*lint !e864*/
+         if( SCIPrationalIsEQ(SCIPconsGetRhsExact(scip, conss[c], &success), SCIPconsGetLhsExact(scip, conss[c], &success)) ) /*lint !e864*/
          {
             /* check if there are continuous variables involved */
             SCIP_VAR** vars = SCIPgetVarsExactLinear(scip, conss[c]);

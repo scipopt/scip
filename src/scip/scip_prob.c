@@ -4059,7 +4059,7 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
     */
    if( SCIPisLT(scip, newbound, scip->primal->cutoffbound) )
    {
-      SCIP_CALL( SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->eventfilter, scip->tree, scip->transprob, scip->origprob, newbound) );
+      SCIP_CALL( SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->eventfilter, scip->tree, scip->transprob, scip->origprob, newbound, NULL) );
    }
    else
    {

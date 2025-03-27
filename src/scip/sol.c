@@ -1732,7 +1732,7 @@ SCIP_RETCODE SCIPsolSetValExact(
 
          solGetArrayValExact(oldval, sol, var);
 
-         if( !SCIPrationalIsEqual(val, oldval) )
+         if( !SCIPrationalIsEQ(val, oldval) )
          {
             SCIP_RATIONAL* obj;
 
@@ -1756,7 +1756,7 @@ SCIP_RETCODE SCIPsolSetValExact(
 
       solGetArrayValExact(oldval, sol, var);
 
-      if( !SCIPrationalIsEqual(val, oldval) )
+      if( !SCIPrationalIsEQ(val, oldval) )
       {
          SCIP_RATIONAL* obj;
          SCIP_CALL( solSetArrayValExact(sol, set, var, val) );
@@ -1770,7 +1770,7 @@ SCIP_RETCODE SCIPsolSetValExact(
 
    case SCIP_VARSTATUS_FIXED:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
-      if( !SCIPrationalIsEqual(val, SCIPvarGetLbGlobalExact(var)) )
+      if( !SCIPrationalIsEQ(val, SCIPvarGetLbGlobalExact(var)) )
       {
          SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %.15g to different value %.15g\n",
             SCIPvarGetName(var), SCIPrationalGetReal(SCIPvarGetLbGlobalExact(var)), SCIPrationalGetReal(val));
@@ -1967,9 +1967,9 @@ SCIP_Real SCIPsolGetVal(
 
    case SCIP_VARSTATUS_FIXED:
       assert(!SCIPsolIsOriginal(sol));
-      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var) || (set->exact_enabled && SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var)))) ; /*lint !e777*/
-      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var) || (set->exact_enabled && SCIPrationalIsEqual(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var)))); /*lint !e777*/
-      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var) || (set->exact_enabled && SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var)))); /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var) || (set->exact_enabled && SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var)))) ; /*lint !e777*/
+      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var) || (set->exact_enabled && SCIPrationalIsEQ(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var)))); /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var) || (set->exact_enabled && SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var)))); /*lint !e777*/
       return SCIPvarGetLbGlobal(var);
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
@@ -2111,9 +2111,9 @@ void SCIPsolGetValExact(
 
    case SCIP_VARSTATUS_FIXED:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
-      assert(SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var))); /*lint !e777*/
-      assert(SCIPrationalIsEqual(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var))); /*lint !e777*/
-      assert(SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var))); /*lint !e777*/
+      assert(SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var))); /*lint !e777*/
+      assert(SCIPrationalIsEQ(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var))); /*lint !e777*/
+      assert(SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var))); /*lint !e777*/
       SCIPrationalSetRational(res, SCIPvarGetLbGlobalExact(var));
       break;
 
@@ -3287,7 +3287,7 @@ SCIP_Bool solsAreEqualExact(
    }
 
    /* solutions with different objective values cannot be the same */
-   if( !SCIPrationalIsEqual(tmp1, tmp2) )
+   if( !SCIPrationalIsEQ(tmp1, tmp2) )
       result = FALSE;
 
    /* if one of the solutions is defined in the original space, the comparison has to be performed in the original
@@ -3310,7 +3310,7 @@ SCIP_Bool solsAreEqualExact(
       else
          SCIPrationalSetReal(tmp2, SCIPsolGetVal(sol2, set, stat, prob->vars[v]));
 
-      if( !SCIPrationalIsEqual(tmp1, tmp2) )
+      if( !SCIPrationalIsEQ(tmp1, tmp2) )
          result = FALSE;
    }
 

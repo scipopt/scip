@@ -205,16 +205,16 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
        */
       for( i = 0; i < nrows; i++ )
       {
-         if( SCIPrationalIsEqual(rootactivity[i], lpexact->rows[i]->lhs) )
+         if( SCIPrationalIsEQ(rootactivity[i], lpexact->rows[i]->lhs) )
             projshiftdata->includedrows[i] = 1;
-         if( SCIPrationalIsEqual(rootactivity[i], lpexact->rows[i]->rhs) )
+         if( SCIPrationalIsEQ(rootactivity[i], lpexact->rows[i]->rhs) )
             projshiftdata->includedrows[nrows + i] = 1;
       }
       for( i = 0; i < ncols; i++ )
       {
-         if( SCIPrationalIsEqual(rootprimal[i], lpexact->cols[i]->lb) )
+         if( SCIPrationalIsEQ(rootprimal[i], lpexact->cols[i]->lb) )
             projshiftdata->includedrows[2*nrows + i] = 1;
-         if( SCIPrationalIsEqual(rootprimal[i], lpexact->cols[i]->ub) )
+         if( SCIPrationalIsEQ(rootprimal[i], lpexact->cols[i]->ub) )
             projshiftdata->includedrows[2*nrows + ncols + i] = 1;
       }
 

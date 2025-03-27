@@ -489,7 +489,7 @@ SCIP_RETCODE SCIPcertificateInit(
          lb = SCIPgetLhsExactLinear(scip, cons);
          ub = SCIPgetRhsExactLinear(scip, cons);
 
-         if( !SCIPrationalIsEqual(lb, ub) && !SCIPrationalIsAbsInfinity(lb) && !SCIPrationalIsAbsInfinity(ub) )
+         if( !SCIPrationalIsEQ(lb, ub) && !SCIPrationalIsAbsInfinity(lb) && !SCIPrationalIsAbsInfinity(ub) )
             ncertcons += 2;
          else
             ncertcons += 1;
@@ -650,7 +650,7 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
          lb = SCIPgetLhsExactLinear(scip, cons);
          ub = SCIPgetRhsExactLinear(scip, cons);
 
-         if( !SCIPrationalIsEqual(lb, ub) && !SCIPrationalIsAbsInfinity(lb) && !SCIPrationalIsAbsInfinity(ub) )
+         if( !SCIPrationalIsEQ(lb, ub) && !SCIPrationalIsAbsInfinity(lb) && !SCIPrationalIsAbsInfinity(ub) )
          {
             SCIPdebugMessage("constraint is a ranged constraint \n");
             ncertcons += 2;
@@ -1603,7 +1603,7 @@ SCIP_RETCODE certificatePrintIncompleteDerStart(
       size_t key = (size_t) SCIPhashmapGetImageLong(certificate->rowdatahash, (void*) rowexact);
       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
       /* for a ranged row, we need both sides to be safe */
-      if( !SCIPrationalIsAbsInfinity(rowexact->lhs) && !SCIPrationalIsAbsInfinity(rowexact->rhs) && !SCIPrationalIsEqual(rowexact->lhs, rowexact->rhs) )
+      if( !SCIPrationalIsAbsInfinity(rowexact->lhs) && !SCIPrationalIsAbsInfinity(rowexact->rhs) && !SCIPrationalIsEQ(rowexact->lhs, rowexact->rhs) )
       {
          SCIPcertificatePrintProofMessage(certificate, " %d ", key + 1);
       }
@@ -1636,13 +1636,13 @@ SCIP_RETCODE certificatePrintWeakDerStart(
    for( i = 0; i < nvars && local; i++ )
    {
       SCIP_VAR* var = vars[i];
-      if( !SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) )
+      if( !SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) )
          nboundentries++;
-      if( !SCIPrationalIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) )
+      if( !SCIPrationalIsEQ(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) )
          nboundentries++;
 
-      assert(!SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) == (var->glbdom.lb != var->locdom.lb));
-      assert(!SCIPrationalIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) == (var->glbdom.ub != var->locdom.ub));
+      assert(!SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) == (var->glbdom.lb != var->locdom.lb));
+      assert(!SCIPrationalIsEQ(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) == (var->glbdom.ub != var->locdom.ub));
    }
 
    SCIPcertificatePrintProofMessage(certificate, " { lin weak { %d", nboundentries);
@@ -1651,7 +1651,7 @@ SCIP_RETCODE certificatePrintWeakDerStart(
    {
       SCIP_VAR* var = vars[i];
 
-      if( !SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) )
+      if( !SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) )
       {
          SCIP_Longint index;
          SCIP_RATIONAL* boundval;
@@ -1661,7 +1661,7 @@ SCIP_RETCODE certificatePrintWeakDerStart(
          SCIPcertificatePrintProofMessage(certificate, " L %d %d ", SCIPvarGetCertificateIndex(var), index);
          SCIP_CALL( SCIPcertificatePrintProofRational(certificate, boundval, 10) );
       }
-      if( !SCIPrationalIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) )
+      if( !SCIPrationalIsEQ(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) )
       {
          SCIP_Longint index;
          SCIP_RATIONAL* boundval;
@@ -2242,7 +2242,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          ind[len] = key;
          /* if we have a ranged row, and the dual corresponds to the upper bound,
           * the index for the rhs-constraint is one larger in the certificate */
-         if( !SCIPrationalIsEqual(row->lhs, row->rhs) && !SCIPrationalIsAbsInfinity(row->lhs) && SCIPrationalIsNegative(val) )
+         if( !SCIPrationalIsEQ(row->lhs, row->rhs) && !SCIPrationalIsAbsInfinity(row->lhs) && SCIPrationalIsNegative(val) )
              ind[len] += 1;
 
          SCIPrationalDebugMessage("Row (index %d, %s has index %l and farkas coef %q ", row->index, row->fprow->name, ind[len], val);
@@ -2527,7 +2527,7 @@ SCIP_Longint SCIPcertificateGetRowIndex(
    assert( ret != SCIP_LONGINT_MAX );
    /* for ranged rows, the key always corresponds to the >= part of the row;
          therefore we need to increase it by one to get the correct key */
-   if( !SCIPrationalIsAbsInfinity(row->rhs) && !SCIPrationalIsAbsInfinity(row->lhs) && !SCIPrationalIsEqual(row->lhs, row->rhs) && rhs)
+   if( !SCIPrationalIsAbsInfinity(row->rhs) && !SCIPrationalIsAbsInfinity(row->lhs) && !SCIPrationalIsEQ(row->lhs, row->rhs) && rhs)
       ret += 1;
    return ret;
 }
@@ -3908,7 +3908,7 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &correctedside) );
 
    /* print constraint */
-   if( SCIPrationalIsEqual(lhs, rhs) )
+   if( SCIPrationalIsEQ(lhs, rhs) )
    {
       assert(!SCIPrationalIsAbsInfinity(lhs));
       SCIPrationalDiff(correctedside, SCIProwExactGetLhs(row), SCIProwExactGetConstant(row));
@@ -4000,7 +4000,7 @@ SCIP_Longint SCIPcertificateGetConsIndex(
    ret = SCIPhashmapGetImageLong(certificate->rowdatahash, cons);
 
    assert( ret != SCIP_LONGINT_MAX );
-   if( !SCIPrationalIsAbsInfinity(rhs) && !SCIPrationalIsAbsInfinity(lhs) && !SCIPrationalIsEqual(lhs, rhs) && useRhs)
+   if( !SCIPrationalIsAbsInfinity(rhs) && !SCIPrationalIsAbsInfinity(lhs) && !SCIPrationalIsEQ(lhs, rhs) && useRhs)
       ret += 1;
 
    assert(ret >= 0);

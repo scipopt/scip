@@ -2337,7 +2337,7 @@ SCIP_RETCODE SCIPpriceLoop(
             stoppricing = FALSE;
 
          /* update lower bound w.r.t. the lower bound given by the pricer */
-         SCIP_CALL( SCIPnodeUpdateLowerbound(currentnode, stat, set, eventfilter, tree, transprob, origprob, lb) );
+         SCIP_CALL( SCIPnodeUpdateLowerbound(currentnode, stat, set, eventfilter, tree, transprob, origprob, lb, NULL) );
          SCIPsetDebugMsg(set, " -> new lower bound given by pricer %s: %g\n", SCIPpricerGetName(set->pricers[p]), lb);
       }
 
@@ -3125,7 +3125,7 @@ SCIP_RETCODE applyBounding(
       /* update lower bound w.r.t. the pseudo solution */
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set, transprob);
       /* we don't need print the pseudoobj to certificate here (when using exact solving mode), since we have to print it immediatly when branching anyway */
-      SCIP_CALL( SCIPnodeUpdateLowerbound(focusnode, stat, set, eventfilter, tree, transprob, origprob, pseudoobjval) );
+      SCIP_CALL( SCIPnodeUpdateLowerbound(focusnode, stat, set, eventfilter, tree, transprob, origprob, pseudoobjval, NULL) );
       SCIPsetDebugMsg(set, " -> lower bound: %g [%g] (pseudoobj: %g [%g]), cutoff bound: %g [%g]\n",
          SCIPnodeGetLowerbound(focusnode), SCIPprobExternObjval(transprob, origprob, set, SCIPnodeGetLowerbound(focusnode)) + SCIPgetOrigObjoffset(set->scip),
          pseudoobjval, SCIPprobExternObjval(transprob, origprob, set, pseudoobjval) + SCIPgetOrigObjoffset(set->scip),
@@ -3135,6 +3135,12 @@ SCIP_RETCODE applyBounding(
       {
          SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set, transprob, FALSE, -1, -1L, pseudoobjval) );
       }
+
+#ifdef SCIP_DEBUG
+      if( set->exact_enabled )
+         SCIPrationalDebugMessage(" -> exact lower bound: %q, exact cutoff bound: %q\n",
+            SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact);
+#endif
 
       /* check for infeasible node by bounding */
       if( (!set->exact_enabled && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound))
@@ -3518,7 +3524,7 @@ SCIP_RETCODE solveNodeRelax(
          assert(SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
 
          /* update lower bound w.r.t. the lower bound given by the relaxator */
-         SCIP_CALL( SCIPnodeUpdateLowerbound(focusnode, stat, set, eventfilter, tree, transprob, origprob, lowerbound) );
+         SCIP_CALL( SCIPnodeUpdateLowerbound(focusnode, stat, set, eventfilter, tree, transprob, origprob, lowerbound, NULL) );
          SCIPsetDebugMsg(set, " -> new lower bound given by relaxator %s: %g\n",
             SCIPrelaxGetName(set->relaxs[r]), lowerbound);
       }

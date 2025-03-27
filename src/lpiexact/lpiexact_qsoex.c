@@ -347,7 +347,7 @@ SCIP_RETCODE convertSides(
       switch( state )
       {
       case 0:
-         if( SCIPrationalIsEqual(lhs[i], rhs[i]) )
+         if( SCIPrationalIsEQ(lhs[i], rhs[i]) )
          {
             lpi->isen[i] = 'E';
             mpq_set(lpi->irhs[i], *lhsg);

@@ -691,7 +691,7 @@ SCIP_RETCODE consdataCreate(
          if( !SCIPrationalIsZero(vals[v]) )
          {
             /* treat fixed variable as a constant if problem compression is enabled */
-            if( SCIPisConsCompressionEnabled(scip) && SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var)) )
+            if( SCIPisConsCompressionEnabled(scip) && SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var)) )
             {
                SCIPrationalAddProd(constant, vals[v], SCIPvarGetLbGlobalExact(var));
             }
@@ -895,7 +895,7 @@ SCIP_RETCODE consdataPrint(
    /* print left hand side for ranged rows */
    if( !SCIPrationalIsNegInfinity(consdata->lhs)
       && !SCIPrationalIsInfinity(consdata->rhs)
-      && !SCIPrationalIsEqual(consdata->lhs, consdata->rhs) )
+      && !SCIPrationalIsEQ(consdata->lhs, consdata->rhs) )
    {
       SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
       SCIPinfoMessage(scip, file, " <= ");
@@ -911,7 +911,7 @@ SCIP_RETCODE consdataPrint(
    }
 
    /* print right hand side */
-   if( SCIPrationalIsEqual(consdata->lhs, consdata->rhs) )
+   if( SCIPrationalIsEQ(consdata->lhs, consdata->rhs) )
    {
       SCIPinfoMessage(scip, file, " == ");
       SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
@@ -956,7 +956,7 @@ SCIP_RETCODE consPrintConsSol(
    /* print left hand side for ranged rows */
    if( !SCIPrationalIsNegInfinity(consdata->lhs)
       && !SCIPrationalIsInfinity(consdata->rhs)
-      && !SCIPrationalIsEqual(consdata->lhs, consdata->rhs) )
+      && !SCIPrationalIsEQ(consdata->lhs, consdata->rhs) )
    {
       SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
       SCIPinfoMessage(scip, file, " <= ");
@@ -974,12 +974,12 @@ SCIP_RETCODE consPrintConsSol(
       {
          if( consdata->vals != NULL )
          {
-            if( SCIPrationalIsEqualReal(consdata->vals[v], 1.0) )
+            if( SCIPrationalIsEQReal(consdata->vals[v], 1.0) )
             {
                if( v > 0 )
                   SCIPinfoMessage(scip, file, " +");
             }
-            else if( SCIPrationalIsEqualReal(consdata->vals[v], -1.0) )
+            else if( SCIPrationalIsEQReal(consdata->vals[v], -1.0) )
                SCIPinfoMessage(scip, file, " -");
             else
             {
@@ -1009,7 +1009,7 @@ SCIP_RETCODE consPrintConsSol(
    }
 
    /* print right hand side */
-   if( SCIPrationalIsEqual(consdata->lhs, consdata->rhs) )
+   if( SCIPrationalIsEQ(consdata->lhs, consdata->rhs) )
    {
       SCIPinfoMessage(scip, file, " == ");
       SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, consdata->lhs);
@@ -1364,7 +1364,7 @@ void checkMaxActivityDelta(
             SCIPrationalSetRational(maxactdelta, delta);
          }
       }
-      assert(SCIPrationalIsEqual(maxactdelta, consdata->maxactdelta));
+      assert(SCIPrationalIsEQ(maxactdelta, consdata->maxactdelta));
 
       SCIPrationalFreeBuffer(SCIPbuffer(scip), delta);
       SCIPrationalFreeBuffer(SCIPbuffer(scip), domain);
@@ -1945,7 +1945,7 @@ void consdataUpdateAddCoef(
       /* invalidate maximum absolute value, if this coefficient was the maximum */
    if( consdata->validmaxabsval )
    {
-      if( SCIPrationalIsAbsEqual(valExact, consdata->maxabsvalexact) )
+      if( SCIPrationalIsAbsEQ(valExact, consdata->maxabsvalexact) )
       {
          consdata->validmaxabsval = FALSE;
          SCIPrationalSetInfinity(consdata->maxabsvalexact);
@@ -1955,7 +1955,7 @@ void consdataUpdateAddCoef(
    /* invalidate minimum absolute value, if this coefficient was the minimum */
    if( consdata->validminabsval )
    {
-      if( SCIPrationalIsAbsEqual(valExact, consdata->minabsvalexact) )
+      if( SCIPrationalIsAbsEQ(valExact, consdata->minabsvalexact) )
       {
          consdata->validminabsval = FALSE;
          SCIPrationalSetInfinity(consdata->minabsvalexact);
@@ -2022,7 +2022,7 @@ void consdataUpdateDelCoef(
    /* invalidate maximum absolute value, if this coefficient was the maximum */
    if( consdata->validmaxabsval )
    {
-      if( SCIPrationalIsAbsEqual(valExact, consdata->maxabsvalexact) )
+      if( SCIPrationalIsAbsEQ(valExact, consdata->maxabsvalexact) )
       {
          consdata->validmaxabsval = FALSE;
          SCIPrationalSetInfinity(consdata->maxabsvalexact);
@@ -2032,7 +2032,7 @@ void consdataUpdateDelCoef(
    /* invalidate minimum absolute value, if this coefficient was the minimum */
    if( consdata->validminabsval )
    {
-      if( SCIPrationalIsAbsEqual(valExact, consdata->minabsvalexact) )
+      if( SCIPrationalIsAbsEQ(valExact, consdata->minabsvalexact) )
       {
          consdata->validminabsval = FALSE;
          SCIPrationalSetInfinity(consdata->minabsvalexact);
@@ -2144,7 +2144,7 @@ void consdataUpdateChgCoef(
       else
       {
          /* invalidate maximum absolute value */
-         if( SCIPrationalIsAbsEqual(oldvalExact, consdata->maxabsvalexact) )
+         if( SCIPrationalIsAbsEQ(oldvalExact, consdata->maxabsvalexact) )
          {
             consdata->validmaxabsval = FALSE;
             SCIPrationalSetInfinity(consdata->maxabsvalexact);
@@ -2161,7 +2161,7 @@ void consdataUpdateChgCoef(
       else
       {
          /* invalidate minimum absolute value */
-         if( SCIPrationalIsAbsEqual(oldvalExact, consdata->minabsvalexact) )
+         if( SCIPrationalIsAbsEQ(oldvalExact, consdata->minabsvalexact) )
          {
             consdata->validminabsval = FALSE;
             SCIPrationalSetInfinity(consdata->minabsvalexact);
@@ -2915,7 +2915,7 @@ SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(
          varsindex[i] = SCIPvarGetCertificateIndex(consdata->vars[i]);
 
       /* print constraint */
-      if( SCIPrationalIsEqual(consdata->lhs, consdata->rhs) )
+      if( SCIPrationalIsEQ(consdata->lhs, consdata->rhs) )
       {
          assert(!SCIPrationalIsAbsInfinity(consdata->lhs));
          SCIP_CALL( SCIPcertificatePrintCons(certificate, TRUE, NULL, 'E', consdata->lhs, consdata->nvars, varsindex, consdata->vals) );
@@ -2974,7 +2974,7 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
    /* both variables are binary */
    else if( SCIPvarIsBinary(var1) )
    {
-      if( SCIPrationalIsAbsEqual(consdata->vals[ind1], consdata->vals[ind2]) ) {
+      if( SCIPrationalIsAbsEQ(consdata->vals[ind1], consdata->vals[ind2]) ) {
          return (SCIPvarGetProbindex(var1) - SCIPvarGetProbindex(var2));
       }
       if( SCIPrationalIsAbsGT(consdata->vals[ind1], consdata->vals[ind2]) )
@@ -3017,7 +3017,7 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
             SCIPrationalDiff(abscont2, SCIPvarGetUbGlobalExact(var2), SCIPvarGetLbGlobalExact(var2));
             SCIPrationalMult(abscont2, consdata->vals[ind2], abscont2);
 
-            if( SCIPrationalIsAbsEqual(abscont1, abscont2) ) {
+            if( SCIPrationalIsAbsEQ(abscont1, abscont2) ) {
                SCIPrationalFree(&abscont1);
                SCIPrationalFree(&abscont2);
                return (SCIPvarGetProbindex(var1) - SCIPvarGetProbindex(var2));
@@ -3208,11 +3208,11 @@ SCIP_RETCODE chgLhs(
    assert(!SCIPrationalIsInfinity(consdata->lhs));
 
    /* check whether the side is not changed */
-   if( SCIPrationalIsEqual(consdata->lhs, lhs) )
+   if( SCIPrationalIsEQ(consdata->lhs, lhs) )
       return SCIP_OKAY;
 
    /* ensure that rhs >= lhs is satisfied without numerical tolerance */
-   if( SCIPrationalIsEqual(lhs, consdata->rhs) )
+   if( SCIPrationalIsEQ(lhs, consdata->rhs) )
    {
       SCIPrationalSetRational(consdata->rhs, lhs);
       assert(consdata->rowlhs == NULL);
@@ -3331,11 +3331,11 @@ SCIP_RETCODE chgRhs(
    assert(!SCIPrationalIsNegInfinity(consdata->rhs));
 
    /* check whether the side is not changed */
-   if( SCIPrationalIsEqual(consdata->rhs, rhs) )
+   if( SCIPrationalIsEQ(consdata->rhs, rhs) )
       return SCIP_OKAY;
 
    /* ensure that rhs >= lhs is satisfied without numerical tolerance */
-   if( SCIPrationalIsEqual(rhs, consdata->lhs) )
+   if( SCIPrationalIsEQ(rhs, consdata->lhs) )
    {
       SCIPrationalSetRational(consdata->rhs, rhs);
       assert(consdata->rowlhs == NULL);
@@ -4751,7 +4751,7 @@ SCIP_RETCODE checkCons(
    activity = consdata->activity;
 
    /* only check exact constraint if fp cons is feasible enough */
-   if( (consdata->rowexact == NULL || checklprows) && !SCIPrationalIsEqual(consdata->lhs, consdata->rhs) )
+   if( (consdata->rowexact == NULL || checklprows) && !SCIPrationalIsEQ(consdata->lhs, consdata->rhs) )
    {
       SCIP_Real activityfp;
       SCIP_Real mu;
