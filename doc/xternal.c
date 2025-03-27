@@ -387,7 +387,6 @@
  * - @subpage TRAINESTIMATION "How to train custom tree size estimation for SCIP"
  * - @subpage SYMMETRY "How to use symmetry handling in SCIP"
  * - @subpage PROBINGDIVING "How to use probing and diving mode"
- * - @subpage EXACTSOLVE "How to use exact solving mode"
  */
 
 /**@page AUTHORS SCIP Authors
@@ -7785,39 +7784,6 @@
  * Finally, during probing, global variable statistics can be collected by calling SCIPenableVarHistory() after starting probing.
  * Since these statistics can be used for decision-making in SCIP, enabling their collection can have an effect on the solving process after probing ends.
  *
- */
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-/**@page EXACTSOLVE How to use exact solving mode
- *
- * SCIP is the only MIP solver that can solve problems exactly, i.e., without any numerical inaccuracies or errror tolerances.
- * 
- * @section Building SCIP for exact solving
- * 
- * Currently the exact solving mode is only supported if SCIP is built using cmake. In order to properly utilize exact solving mode, the following additional dependencies are required:
- * - GMP: The GNU Multiple Precision Arithmetic Library is required to perform exact arithmetic.
- *   Set GMP_DIR to its installation directory if it is not found automatically.
- * - MPFR: The GNU Multiple Precision Floating-Point Reliable Library is required to correctly round rational numbers to floating-point numbers
- *   Set MPFR_DIR to its installation directory if it is not found automatically.
- * - Boost: The Boost Multiprecision Library acts as a wrapper for GMP.
- *   Set BOOST_DIR to its installation directory if it is not found automatically.
- * 
- * When configuring with cmake, exact solving mode is enabled automatically if all dependencies are found.
- * To explictly disable it, EXACTSOLVE=off can be set, while EXACTSOLVE=on aborts in case a dependency is missing.
- * A particular exact LP solver can be selected by setting LPSEXACT to one of the the following values, which the
- * default tries to enable in that order:
- * - LPSEXACT=spx uses SoPlex as the exact LP solver.
-     For this, SoPlex needs to be built with GMP and preferably also with MPFR support.
- *   Set SOPLEX_DIR to its installation directory if it is not found automatically.
- * - LPSEXACT=qsoex uses the QSopt_ex LP solver, which in turn requires EGlib.
- *   Set QSOEX_DIR and EGLIB_DIR to their respective installation directories if either is not found automatically.
- * - SOPLEX_DIR to the directory where SoPlex is installed (only necessary when no global SoPlex install is available)
- * 
- * We further strongly recommend building SCIP with PaPILO, as it is the only presolver available in exact solving mode.
- * 
- * @section Running SCIP in exact solving mode
- * 
- * To run SCIP in exact solving mode, 
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
