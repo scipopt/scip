@@ -6926,7 +6926,7 @@ SCIP_RETCODE tryAggregateIntVars(
    }
 
    /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
-   if( (a == 1 || a == -1) && !SCIPvarIsImpliedIntegral(vary) )
+   if( ( a == 1 || a == -1 ) && !SCIPvarIsImpliedIntegral(vary) )
    {
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
@@ -6935,7 +6935,7 @@ SCIP_RETCODE tryAggregateIntVars(
       assert(*aggregated);
       return SCIP_OKAY;
    }
-   if( (b == 1 || b == -1) && !SCIPvarIsImpliedIntegral(vary) )
+   if( ( b == 1 || b == -1 ) && !SCIPvarIsImpliedIntegral(varx) )
    {
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
@@ -7166,7 +7166,7 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    }
 
    /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
-   if( (a == 1 || a == -1) && !SCIPvarIsImpliedIntegral(vary) )
+   if( ( a == 1 || a == -1 ) && !SCIPvarIsImpliedIntegral(vary) )
    {
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
@@ -7177,8 +7177,7 @@ SCIP_RETCODE tryAggregateIntVarsExact(
       assert(*aggregated);
       goto FREE;
    }
-
-   if( (b == 1 || b == -1) && !SCIPvarIsImpliedIntegral(varx) )
+   if( ( b == 1 || b == -1 ) && !SCIPvarIsImpliedIntegral(varx) )
    {
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
