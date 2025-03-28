@@ -1634,8 +1634,6 @@ SCIP_RETCODE tightenDualproof(
       }
    }
 
-   redundant = FALSE;
-
    /* apply coefficient tightening to initial proof */
    if( !set->exact_enabled )
       tightenCoefficients(set, proofset, &nchgcoefs, &redundant);
