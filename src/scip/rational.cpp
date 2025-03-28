@@ -1125,12 +1125,12 @@ void SCIPrationalAddProdReal(
 
    if( op1->isinf )
    {
-      if( op2 == 0 )
+      if( op2 == 0.0 )
          return;
       else
       {
          SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
-         res->val = op1->val.sign() * (op2 > 0);
+         res->val = (op2 > 0) ? op1->val.sign() : -op1->val.sign();
          res->isinf = TRUE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
       }
@@ -1190,7 +1190,7 @@ void SCIPrationalDiffProdReal(
       else
       {
          SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
-         res->val = op1->val.sign() * (op2 > 0);
+         res->val = (op2 > 0) ? op1->val.sign() : -op1->val.sign();
          res->isinf = TRUE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
       }
@@ -1638,7 +1638,7 @@ SCIP_Bool SCIPrationalIsFpRepresentable(
    else
    {
       rational->isfprepresentable = (SCIPrationalRoundReal(rational, SCIP_R_ROUND_DOWNWARDS)
-         == SCIPrationalRoundReal(rational, SCIP_R_ROUND_UPWARDS)) ? SCIP_ISFPREPRESENTABLE_TRUE : SCIP_ISFPREPRESENTABLE_FALSE;
+         == SCIPrationalRoundReal(rational, SCIP_R_ROUND_UPWARDS)) ? SCIP_ISFPREPRESENTABLE_TRUE : SCIP_ISFPREPRESENTABLE_FALSE; /*lint !e777*/
    }
 
    return rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE ? TRUE : FALSE;
@@ -2006,9 +2006,9 @@ SCIP_Real SCIPrationalGetReal(
 
 #ifdef SCIP_WITH_GMP
    /* mpq_get_d is faster than the boost internal implementation */
-   retval = mpq_get_d(rational->val.backend().data());
+   retval = mpq_get_d(rational->val.backend().data()); /*lint !e838*/
 #else
-   retval = rational->val.convert_to<SCIP_Real>();
+   retval = rational->val.convert_to<SCIP_Real>(); /*lint !e838*/
 #endif
 #endif
    return retval;
@@ -2040,15 +2040,15 @@ SCIP_Real SCIPrationalRoundReal(
       switch(roundmode)
       {
          case SCIP_R_ROUND_DOWNWARDS:
-            mpfr_init_set_q(valmpfr, *val, MPFR_RNDD);
+            (void) mpfr_init_set_q(valmpfr, *val, MPFR_RNDD);
             realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDD);
             break;
          case SCIP_R_ROUND_UPWARDS:
-            mpfr_init_set_q(valmpfr, *val, MPFR_RNDU);
+            (void) mpfr_init_set_q(valmpfr, *val, MPFR_RNDU);
             realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDU);
             break;
          case SCIP_R_ROUND_NEAREST:
-            mpfr_init_set_q(valmpfr, *val, MPFR_RNDN);
+            (void) mpfr_init_set_q(valmpfr, *val, MPFR_RNDN);
             realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDN);
             break;
          default:
@@ -2159,16 +2159,14 @@ SCIP_Bool SCIPrationalRoundLong(
 /** choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
 static
 void chooseSemiconv(
-   scip::Integer& resnum,           /**< the resulting numerator */
-   scip::Integer& resden,           /**< the resulting denominator */
-   scip::Integer* p,                /**< the last 3 numerators of convergents */
-   scip::Integer* q,                /**< the last 3 denominators of convergents */
-   scip::Integer ai,                /**< the coefficient in the continuous fraction */
-   long                  maxdenom            /**< the maximal denominator */
+   scip::Integer&        resnum,            /**< the resulting numerator */
+   scip::Integer&        resden,            /**< the resulting denominator */
+   scip::Integer*        p,                 /**< the last 3 numerators of convergents */
+   scip::Integer*        q,                 /**< the last 3 denominators of convergents */
+   const scip::Integer&  ai,                /**< the coefficient in the continuous fraction */
+   long                  maxdenom           /**< the maximal denominator */
    )
 {
-   scip::Integer resnumerator, resdenominator;
-
    scip::Integer j = (scip::Integer(maxdenom) - q[0]) / q[1];
 
    if( j >= ai / 2 )
@@ -2240,7 +2238,7 @@ void SCIPrationalComputeApproximationLong(
    tn *= sign;
 
    assert(td >= 0);
-   assert(tn >= 0);
+   assert(tn > 0);
 
    if( td <= maxdenom )
    {
@@ -2599,7 +2597,7 @@ SCIP_RETCODE SCIPrationalarrayResize(
 {
    assert(rationalarray != nullptr);
 
-   rationalarray->vals.resize(newsize);
+   rationalarray->vals.resize((size_t)newsize);
 
    return SCIP_OKAY;
 }
@@ -2647,10 +2645,10 @@ void SCIPrationalarrayGetVal(
    assert(idx >= 0);
 
    if( rationalarray->firstidx == -1 || idx < rationalarray->firstidx
-      || (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
+      || (size_t) idx >= rationalarray->vals.size() + (size_t) rationalarray->firstidx )
       SCIPrationalSetInt(result, 0, 1);
    else
-      SCIPrationalSetRational(result, &rationalarray->vals[idx - rationalarray->firstidx]);
+      SCIPrationalSetRational(result, &rationalarray->vals[(size_t) (idx - rationalarray->firstidx)]);
 }
 
 /** sets value of entry in dynamic array */
@@ -2673,15 +2671,15 @@ SCIP_RETCODE SCIPrationalarraySetVal(
    {
       int ninserts = rationalarray->firstidx - idx;
       SCIP_RATIONAL r = {};
-      rationalarray->vals.insert(rationalarray->vals.begin(), ninserts, r);
+      (void) rationalarray->vals.insert(rationalarray->vals.begin(), ninserts, r);
       rationalarray->firstidx = idx;
       rationalarray->vals[0] = *val;
    }
    else if( (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
    {
-      int ninserts = idx - rationalarray->vals.size() - rationalarray->firstidx + 1;
+      int ninserts = idx - (int) rationalarray->vals.size() - rationalarray->firstidx + 1;
       SCIP_RATIONAL r = {};
-      (void) rationalarray->vals.insert(rationalarray->vals.end(), ninserts, r);
+      (void) rationalarray->vals.insert(rationalarray->vals.end(), (size_t) ninserts, r);
       rationalarray->vals[rationalarray->vals.size() - 1] = *val;
    }
    else
@@ -2704,12 +2702,13 @@ SCIP_RETCODE SCIPrationalarrayIncVal(
 
    if( SCIPrationalIsZero(incval) )
       return SCIP_OKAY;
-   else if( idx < rationalarray->firstidx || (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
+   else if( idx < rationalarray->firstidx || (size_t) idx >= rationalarray->vals.size() + (size_t) rationalarray->firstidx )
       SCIP_CALL( SCIPrationalarraySetVal(rationalarray, idx, incval) );
    else
    {
-      rationalarray->vals[idx - rationalarray->firstidx].val += incval->val;
-      rationalarray->vals[idx - rationalarray->firstidx].isfprepresentable = FALSE;
+      assert(idx >= rationalarray->firstidx);
+      rationalarray->vals[(size_t) (idx - rationalarray->firstidx)].val += incval->val;
+      rationalarray->vals[(size_t) (idx - rationalarray->firstidx)].isfprepresentable = FALSE;
    }
 
    return SCIP_OKAY;
@@ -2747,7 +2746,7 @@ int SCIPrationalarrayGetMaxIdx(
 {
    assert(rationalarray != nullptr);
 
-   return rationalarray->firstidx + rationalarray->vals.size() - 1;
+   return rationalarray->firstidx + (int) rationalarray->vals.size() - 1;
 }
 
 /** changes the infinity threshold to new value */

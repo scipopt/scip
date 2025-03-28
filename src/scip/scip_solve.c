@@ -2942,7 +2942,7 @@ SCIP_RETCODE SCIPsolve(
    }
 
    /* we can't call SCIPgetDualbound after exitsolve, so we save the final dual bound here */
-   SCIP_CALL( SCIPcertificateSaveFinalbound(scip, scip->set, SCIPgetCertificate(scip)) );
+   SCIP_CALL( SCIPcertificateSaveFinalbound(scip, SCIPgetCertificate(scip)) );
 
    return SCIP_OKAY;
 }

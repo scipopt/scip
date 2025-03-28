@@ -717,8 +717,7 @@ SCIP_RETCODE boundchgApplyExact(
             {
                assert( var->exactdata->locdom.lbcertificateidx != -1 || SCIPsetIsInfinity(set, -var->locdom.lb) );
                var->lbchginfos[var->nlbchginfos - 1].oldcertificateindex = var->exactdata->locdom.lbcertificateidx;
-               SCIP_CALL( SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip),
-                  boundchg->certificateindex) );
+               SCIP_CALL( SCIPcertificateSetLastBoundIndex(SCIPgetCertificate(set->scip), boundchg->certificateindex) );
             }
             /* change local bound of variable */
             SCIP_CALL( SCIPvarChgLbLocalExact(var, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, boundchg->newboundexact) );
@@ -791,8 +790,7 @@ SCIP_RETCODE boundchgApplyExact(
             {
                assert( var->exactdata->locdom.ubcertificateidx != -1 || SCIPsetIsInfinity(set, var->locdom.ub) );
                var->ubchginfos[var->nubchginfos - 1].oldcertificateindex = var->exactdata->locdom.ubcertificateidx;
-               SCIP_CALL( SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip),
-                     boundchg->certificateindex) );
+               SCIP_CALL( SCIPcertificateSetLastBoundIndex(SCIPgetCertificate(set->scip), boundchg->certificateindex) );
             }
             /* change local bound of variable */
             SCIP_CALL( SCIPvarChgUbLocalExact(var, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, boundchg->newboundexact) );
@@ -932,8 +930,7 @@ SCIP_RETCODE SCIPboundchgApply(
             {
                assert( var->exactdata->locdom.lbcertificateidx != -1 || SCIPsetIsInfinity(set, -var->locdom.lb) );
                var->lbchginfos[var->nlbchginfos - 1].oldcertificateindex = var->exactdata->locdom.lbcertificateidx;
-               SCIP_CALL( SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip),
-                     boundchg->certificateindex) );
+               SCIP_CALL( SCIPcertificateSetLastBoundIndex(SCIPgetCertificate(set->scip), boundchg->certificateindex) );
             }
 
             /* change local bound of variable */
@@ -1007,8 +1004,7 @@ SCIP_RETCODE SCIPboundchgApply(
             {
                assert( var->exactdata->locdom.ubcertificateidx != -1 || SCIPsetIsInfinity(set, var->locdom.ub) );
                var->ubchginfos[var->nubchginfos - 1].oldcertificateindex = var->exactdata->locdom.ubcertificateidx;
-               SCIP_CALL( SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip),
-                     boundchg->certificateindex) );
+               SCIP_CALL( SCIPcertificateSetLastBoundIndex(SCIPgetCertificate(set->scip), boundchg->certificateindex) );
             }
 
             /* change local bound of variable */
@@ -1099,10 +1095,10 @@ SCIP_RETCODE SCIPboundchgUndo(
          var->lbchginfos[var->nlbchginfos].oldbound, var->lbchginfos[var->nlbchginfos].newbound);
 
       /* in case certificate is used, set back the certificate line index */
-      if ( SCIPshouldCertificateTrackBounds(set->scip) )
+      if( SCIPshouldCertificateTrackBounds(set->scip)
+         && !SCIPsetIsInfinity(set, -var->lbchginfos[var->nlbchginfos].oldbound) )
       {
-         if (!SCIPsetIsInfinity(set, -var->lbchginfos[var->nlbchginfos].oldbound))
-            SCIP_CALL( SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip),
+         SCIP_CALL( SCIPcertificateSetLastBoundIndex(SCIPgetCertificate(set->scip),
                var->lbchginfos[var->nlbchginfos].oldcertificateindex) );
       }
 
@@ -1141,11 +1137,11 @@ SCIP_RETCODE SCIPboundchgUndo(
          var->ubchginfos[var->nubchginfos].bdchgidx.depth, var->ubchginfos[var->nubchginfos].bdchgidx.pos,
          var->ubchginfos[var->nubchginfos].oldbound, var->ubchginfos[var->nubchginfos].newbound);
 
-      if( SCIPshouldCertificateTrackBounds(set->scip) )
+      if( SCIPshouldCertificateTrackBounds(set->scip)
+         && !SCIPsetIsInfinity(set, var->ubchginfos[var->nubchginfos].oldbound) )
       {
-         if (!SCIPsetIsInfinity(set, var->ubchginfos[var->nubchginfos].oldbound))
-            SCIP_CALL( SCIPcertificateSetLastBoundIndex(set->scip,
-               SCIPgetCertificate(set->scip), var->ubchginfos[var->nubchginfos].oldcertificateindex) );
+         SCIP_CALL( SCIPcertificateSetLastBoundIndex(SCIPgetCertificate(set->scip),
+               var->ubchginfos[var->nubchginfos].oldcertificateindex) );
       }
 
       if( set->exact_enabled && !SCIPrationalIsFpRepresentable(SCIPvarGetUbGlobalExact(boundchg->var))
@@ -11720,7 +11716,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    }
 
    if( SCIPisCertified(set->scip) && SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && !SCIPinProbing(set->scip) )
-      SCIPvarSetLbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
+      SCIPvarSetLbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(SCIPgetCertificate(set->scip)));
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
@@ -11907,7 +11903,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    }
 
    if( SCIPisCertified(set->scip) && SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && !SCIPinProbing(set->scip) )
-      SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
+      SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(SCIPgetCertificate(set->scip)));
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
@@ -12363,7 +12359,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
       return SCIP_OKAY;
 
    if( SCIPshouldCertificateTrackBounds(set->scip) )
-      SCIPvarSetLbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
+      SCIPvarSetLbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(SCIPgetCertificate(set->scip)));
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatus(var) )
@@ -12489,7 +12485,7 @@ SCIP_RETCODE SCIPvarChgLbLocalExact(
    SCIPrationalDebugMessage("changing lower bound of <%s>[%q,%q] to %q\n", var->name, var->exactdata->locdom.lb, var->exactdata->locdom.ub, newbound);
 
    if( SCIPshouldCertificateTrackBounds(set->scip) )
-      SCIPvarSetLbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
+      SCIPvarSetLbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(SCIPgetCertificate(set->scip)));
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatusExact(var) )
@@ -12631,7 +12627,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
       return SCIP_OKAY;
 
    if( SCIPshouldCertificateTrackBounds(set->scip) )
-      SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
+      SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(SCIPgetCertificate(set->scip)));
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatus(var) )
@@ -12756,7 +12752,7 @@ SCIP_RETCODE SCIPvarChgUbLocalExact(
    SCIPrationalDebugMessage("changing upper bound of <%s>[%q,%q] to %q\n", var->name, var->exactdata->locdom.lb, var->exactdata->locdom.ub, newbound);
 
    if( SCIPshouldCertificateTrackBounds(set->scip) )
-      SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
+      SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(SCIPgetCertificate(set->scip)));
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatusExact(var) )

@@ -251,7 +251,6 @@ SCIP_RETCODE SCIPcertificatePrintCutoffBound(
 /** create a new node data structure for the current node */
 SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_SET*             set,                /**< general SCIP settings */
-   SCIP_LP*              lp,                 /**< SCIP lp data structure */
    SCIP_PROB*            prob,               /**< SCIP problem data */
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
@@ -319,9 +318,7 @@ SCIP_RETCODE SCIPcertificateUpdateBranchingData(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP informations */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR*             branchvar,          /**< the variable that gets branched on */
    SCIP_BOUNDTYPE        boundtype,          /**< the bounding type */
@@ -330,7 +327,6 @@ SCIP_RETCODE SCIPcertificateUpdateBranchingData(
 
 /** create a new node data structure for the current node */
 SCIP_RETCODE SCIPcertificateNewNodeData(
-   SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
@@ -413,7 +409,6 @@ SCIP_RETCODE SCIPcertificatePrintResult(
 /** prints the last part of the certificate header (RTP range/sol, ...) */
 SCIP_RETCODE SCIPcertificateSaveFinalbound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
@@ -440,14 +435,12 @@ SCIP_RETCODE SCIPcertificateUpdateBoundData(
 
 /** sets the last bound index for the certificate */
 SCIP_RETCODE SCIPcertificateSetLastBoundIndex(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP_Longint          index               /**< index of new bound */
    );
 
 /** returns the last bound index for the certificate */
 SCIP_Longint SCIPcertificateGetLastBoundIndex(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CERTIFICATE*     certificate         /**< certificate data structure */
    );
 

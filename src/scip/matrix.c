@@ -258,7 +258,6 @@ SCIP_RETCODE addRow(
 /** add one row to the constraint matrix */
 static
 SCIP_RETCODE addRowExact(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MATRIX*          matrix,             /**< constraint matrix */
    SCIP_VAR**            vars,               /**< variables of this row */
    SCIP_RATIONAL**       vals,               /**< coefficients of this row */
@@ -523,7 +522,7 @@ SCIP_RETCODE addConstraintExact(
    /* add single row to matrix */
    if( nactivevars > 0 )
    {
-      SCIP_CALL( addRowExact(scip, matrix, activevars, activevals, nactivevars, tmplhs, tmprhs, maxnnonzsmem, rowadded) );
+      SCIP_CALL( addRowExact(matrix, activevars, activevals, nactivevars, tmplhs, tmprhs, maxnnonzsmem, rowadded) );
    }
 
    /* free buffer arrays */

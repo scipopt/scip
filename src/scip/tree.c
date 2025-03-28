@@ -1095,7 +1095,7 @@ SCIP_RETCODE SCIPnodeCreateChild(
    SCIP_CALL( SCIPvisualNewChild(stat->visual, set, stat, *node) );
 
    /* create certificate data for this node */
-   SCIP_CALL( SCIPcertificateNewNodeData(set, stat->certificate, stat, *node) );
+   SCIP_CALL( SCIPcertificateNewNodeData(stat->certificate, stat, *node) );
 
    SCIPsetDebugMsg(set, "created child node #%" SCIP_LONGINT_FORMAT " at depth %u (prio: %g)\n", SCIPnodeGetNumber(*node), (*node)->depth, nodeselprio);
 
@@ -1300,7 +1300,7 @@ SCIP_RETCODE SCIPnodeCutoff(
    node->estimate = SCIPsetInfinity(set);
 
    if( node->active && tree->cutoffdepth > node->depth )
-      tree->cutoffdepth = node->depth;
+      tree->cutoffdepth = (int) node->depth;
 
    if( node->depth == 0 )
       stat->rootlowerbound = SCIPsetInfinity(set);
@@ -6377,7 +6377,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
 
       /* update branching information in certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
+      SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, lp, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
 
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
             eventfilter, NULL, var, downub, SCIP_BOUNDTYPE_UPPER, FALSE) );
@@ -6400,11 +6400,11 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* update branching information in certificate, if certificate is active */
       if( downub == SCIP_INVALID ) /*lint !e777*/
       {
-         SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
+         SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, lp, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
       }
       else if( uplb == SCIP_INVALID ) /*lint !e777*/
       {
-         SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
+         SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, lp, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
       }
       else if( SCIPisCertified(set->scip) )
       {
@@ -6442,7 +6442,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
 
       /* update branching information in certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, uplb) );
+      SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, lp, node, var, SCIP_BOUNDTYPE_LOWER, uplb) );
 
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
             eventfilter, NULL, var, uplb, SCIP_BOUNDTYPE_LOWER, FALSE) );
@@ -6574,7 +6574,7 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
 
       /* update branching information in certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
+      SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, lp, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
 
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
             eventqueue, eventfilter, NULL, var, downub, SCIP_BOUNDTYPE_UPPER, FALSE) );
@@ -6598,7 +6598,7 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
 
       /* update branching information in certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, uplb) );
+      SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, lp, node, var, SCIP_BOUNDTYPE_LOWER, uplb) );
 
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
             eventqueue, eventfilter, NULL, var, uplb, SCIP_BOUNDTYPE_LOWER, FALSE) );

@@ -126,7 +126,6 @@ SCIP_Bool certificateIsLeftNode(
  */
 static
 SCIP_Longint printBoundAssumption(
-   SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_VAR*             var,                /**< variable to print assumption for */
    SCIP_RATIONAL*        boundval,           /**< value of the bound */
@@ -635,7 +634,7 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
 
    certificate = SCIPgetCertificate(scip);
    blkmem = SCIPblkmem(scip);
-   cutoff = false;
+   cutoff = FALSE;
 
    assert(certificate != NULL);
 
@@ -780,8 +779,7 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
 /** concatenates the certificate and the _der file and deletes the _der file */
 static
 void concatenateCertificate(
-   SCIP_CERTIFICATE*     certificate,        /**< the certificate pointer */
-   const char*           certificatefilename /**< the name of the certificate file */
+   SCIP_CERTIFICATE*     certificate         /**< the certificate pointer */
    )
 {
    SCIP_FILE* derivationfile;
@@ -835,12 +833,12 @@ SCIP_RETCODE SCIPcertificateExit(
       {
          SCIPfclose(certificate->derivationfile);
          certificate->derivationfile = NULL;
-         concatenateCertificate(certificate, set->certificate_filename);
+         concatenateCertificate(certificate);
          /* if the file is empty (e.g. because we detected infeasibility in presolving) we delete it */
          if( certificate->indexcounter == 0 )
          {
             SCIPdebugMessage("derivation file is empty; deleting it");
-            remove(set->certificate_filename);
+            (void) remove(set->certificate_filename);
          }
       }
       SCIPfclose(certificate->origfile);
@@ -1120,7 +1118,6 @@ SCIP_RETCODE SCIPcertificatePrintResult(
 /** prints the last part of the certificate header (RTP range/sol, ...) */
 SCIP_RETCODE SCIPcertificateSaveFinalbound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    )
 {
@@ -1177,7 +1174,7 @@ void SCIPcertificatePrintProofMessage(
       return;
 
    va_start(ap, formatstr);
-   vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
+   (void) vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
    if( checkAndUpdateFilesize(certificate, strlen(buffer)) )
       (void) SCIPfprintf(certificate->derivationfile, "%s", buffer);
@@ -1193,23 +1190,21 @@ SCIP_RETCODE SCIPcertificatePrintProblemRational(
    SCIP_RATIONAL*        val                 /**< rational number to print */
    )
 {
-   SCIP_Longint len = SCIPrationalStrLen(val) + 1;
+   int len = SCIPrationalStrLen(val) + 1;
    char* buffer = NULL;
-
-   assert(len <= INT_MAX);
 
    /* check whether certificate output should be created */
    if( !SCIPcertificateIsEnabled(certificate) )
      return SCIP_OKAY;
 
    SCIP_ALLOC( BMSallocMemoryArray(&buffer, len) );
-   SCIPrationalToString(val, buffer, len);
+   (void) SCIPrationalToString(val, buffer, len);
    if( checkAndUpdateFilesize(certificate, strlen(buffer)) )
    {
       if( isorigfile )
-         SCIPfputs(buffer, certificate->origfile);
+         (void) SCIPfputs(buffer, certificate->origfile);
       else
-         SCIPfputs(buffer, certificate->transfile);
+         (void) SCIPfputs(buffer, certificate->transfile);
    }
    BMSfreeMemoryArray(&buffer);
 
@@ -1223,7 +1218,7 @@ SCIP_RETCODE SCIPcertificatePrintProofRational(
    SCIP_RATIONAL*        val                 /**< rational number to print */
    )
 {
-   SCIP_Longint len = SCIPrationalStrLen(val) + 1;
+   int len = SCIPrationalStrLen(val) + 1;
    char* buffer = NULL;
 
    assert(len <= INT_MAX);
@@ -1233,10 +1228,10 @@ SCIP_RETCODE SCIPcertificatePrintProofRational(
      return SCIP_OKAY;;
 
    SCIP_ALLOC( BMSallocMemoryArray(&buffer, len) );
-   SCIPrationalToString(val, buffer, len);
+   (void) SCIPrationalToString(val, buffer, len);
 
    if( checkAndUpdateFilesize(certificate, strlen(buffer)) )
-      SCIPfputs(buffer, certificate->derivationfile);
+      (void) SCIPfputs(buffer, certificate->derivationfile);
 
    BMSfreeMemoryArray(&buffer);
 
@@ -1634,11 +1629,11 @@ SCIP_RETCODE certificatePrintMirSplit(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** prints all local bounds that differ from their global bounds as the bounds to take into account */
 static
 SCIP_RETCODE certificatePrintIncompleteDerStart(
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
-   SCIP_LP*              lp,                 /**< LP data structure */
    SCIP_ROW**            rows,               /**< rows to be considered */
    int                   nrows,              /**< number of rows to be considered */
    SCIP_PROB*            prob,               /**< SCIP problem data */
@@ -1680,6 +1675,7 @@ SCIP_RETCODE certificatePrintIncompleteDerStart(
    for( i = 0; i < nrows; ++i )
    {
       SCIP_ROWEXACT* rowexact = SCIProwGetRowExact(rows[i]);
+      SCIP_Longint key;
 
       if( !local && SCIProwIsLocal(rows[i]) )
          continue;
@@ -1689,7 +1685,7 @@ SCIP_RETCODE certificatePrintIncompleteDerStart(
 
       assert(rowexact != NULL);
       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) rowexact));
-      size_t key = (size_t) SCIPhashmapGetImageLong(certificate->rowdatahash, (void*) rowexact);
+      key = SCIPhashmapGetImageLong(certificate->rowdatahash, (void*) rowexact);
       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
       /* for a ranged row, we need both sides to be safe */
       if( !SCIPrationalIsAbsInfinity(rowexact->lhs) && !SCIPrationalIsAbsInfinity(rowexact->rhs) && !SCIPrationalIsEQ(rowexact->lhs, rowexact->rhs) )
@@ -1700,6 +1696,7 @@ SCIP_RETCODE certificatePrintIncompleteDerStart(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** prints all local bounds that differ from their global bounds as the bounds to take into account */
 static
@@ -1857,7 +1854,6 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    /* print the mir cut with proof 1 * (\xi \le \lfloor \beta \rfloor) - (1/1-f)(\nu \ge 0) */
    /* we dont need the \nu \ge 0 part since it will be taken care of by the vipr completion part */
    assert(rowexact != NULL);
-   if( TRUE )
    {
       SCIP_CALL( certificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs) );
 
@@ -2049,16 +2045,18 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
       SCIPcertificatePrintProofMessage(certificate, " } -1\n");
    }
-   else
+#ifdef SCIP_DISABLED_CODE
+   /* this was an alternative piece of code to the block right above */
    {
       SCIP_CALL( certificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs) );
-      SCIP_CALL( certificatePrintIncompleteDerStart(certificate, lp, SCIPlpGetRows(lp), SCIPlpGetNRows(lp), prob, SCIProwIsLocal(row)) );
+      SCIP_CALL( certificatePrintIncompleteDerStart(certificate, SCIPlpGetRows(lp), SCIPlpGetNRows(lp), prob, SCIProwIsLocal(row)) );
       SCIPcertificatePrintProofMessage(certificate, " %d } -1\n", leftdisjunctionindex);
 
       SCIP_CALL( certificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs) );
-      SCIP_CALL( certificatePrintIncompleteDerStart(certificate, lp, SCIPlpGetRows(lp), SCIPlpGetNRows(lp), prob, SCIProwIsLocal(row)) );
+      SCIP_CALL( certificatePrintIncompleteDerStart(certificate, SCIPlpGetRows(lp), SCIPlpGetNRows(lp), prob, SCIProwIsLocal(row)) );
       SCIPcertificatePrintProofMessage(certificate, " %d } -1\n", rightdisjunctionindex);
    }
+#endif
 
    /* print the unsplitting of the split disjunction */
    SCIP_CALL( certificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs) );
@@ -2231,7 +2229,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_Longint* ind = NULL;
    int len;
    int i;
-   unsigned long key;
+   SCIP_Longint key;
 
    /* check whether certificate output should be created */
    if( !SCIPcertificateIsEnabled(certificate) )
@@ -2323,7 +2321,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          else if( key == SCIP_LONGINT_MAX && SCIProwExactGetNNonz(row) == 1 )
          {
             SCIP_VAR* var = SCIPcolExactGetVar(SCIProwExactGetCols(row)[0]);
-            key = ind[len] = SCIPrationalIsNegative(val) ? SCIPvarGetUbCertificateIndexLocal(var) : SCIPvarGetLbCertificateIndexLocal(var);
+            key = SCIPrationalIsNegative(val) ? SCIPvarGetUbCertificateIndexLocal(var) : SCIPvarGetLbCertificateIndexLocal(var);
          }
 
          assert(key != SCIP_LONGINT_MAX);
@@ -2551,9 +2549,7 @@ SCIP_RETCODE SCIPcertificateUpdateBranchingData(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP informations */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR*             branchvar,          /**< the variable that gets branched on */
    SCIP_BOUNDTYPE        boundtype,          /**< the bounding type */
@@ -2584,7 +2580,7 @@ SCIP_RETCODE SCIPcertificateUpdateBranchingData(
 
    if( branchvar != NULL )
    {
-      nodedata->assumptionindex_self = printBoundAssumption(set, certificate, branchvar,
+      nodedata->assumptionindex_self = printBoundAssumption(certificate, branchvar,
          branchbound, boundtype);
    }
 
@@ -2608,7 +2604,6 @@ SCIP_RETCODE SCIPcertificateUpdateBranchingData(
 
 /** create a new node data structure for the current node */
 SCIP_RETCODE SCIPcertificateNewNodeData(
-   SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
@@ -2695,7 +2690,6 @@ SCIP_RETCODE SCIPcertificatePrintCutoffBound(
 /** create a new node data structure for the current node */
 SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_SET*             set,                /**< general SCIP settings */
-   SCIP_LP*              lp,                 /**< SCIP lp data structure */
    SCIP_PROB*            prob,               /**< SCIP problem data */
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
@@ -2763,7 +2757,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
 
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
 
-   if (certificateline != NULL)
+   if( certificateline != NULL )
       *certificateline = certificate->indexcounter;
    certificate->indexcounter++;
    certificate->lastinfo->isbound = FALSE;
@@ -2798,7 +2792,7 @@ SCIP_RETCODE SCIPcertificateClearAggrinfo(
    }
 
    BMSfreeBlockMemoryArray(certificate->blkmem, &certificate->aggrinfo, certificate->aggrinfosize);
-   SCIPhashmapRemoveAll(certificate->aggrinfohash);
+   SCIP_CALL( SCIPhashmapRemoveAll(certificate->aggrinfohash) );
    SCIPhashmapFree(&certificate->aggrinfohash);
    certificate->naggrinfos = 0;
    certificate->aggrinfohash = NULL;
@@ -3278,7 +3272,6 @@ void SCIPcertificatePrintRtpInfeas(
 
 /** sets the last bound index for the certificate */
 SCIP_RETCODE SCIPcertificateSetLastBoundIndex(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP_Longint          index               /**< index of new bound */
    )
@@ -3293,7 +3286,6 @@ SCIP_RETCODE SCIPcertificateSetLastBoundIndex(
 
 /** returns the last bound index for the certificate */
 SCIP_Longint SCIPcertificateGetLastBoundIndex(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CERTIFICATE*     certificate         /**< certificate data structure */
    )
 {
@@ -3318,30 +3310,33 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
 
    assert(certificate != NULL);
 
-   switch (var->varstatus)
+   switch( var->varstatus )
    {
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_ORIGINAL:
-         assert(false);
          SCIPABORT();
          return SCIP_ERROR;
       case SCIP_VARSTATUS_NEGATED:
-         if (lb != NULL) {
+         if( lb != NULL )
+         {
             SCIPrationalMultReal(lb, lb, -1);
             SCIPrationalAddReal(lb, lb, 1.0);
          }
-         if (ub != NULL) {
+         if( ub != NULL )
+         {
             SCIPrationalMultReal(ub, ub, -1);
             SCIPrationalAddReal(ub, ub, 1.0);
          }
          assert( SCIPvarGetNegationConstant(var) == 1 );
          SCIP_CALL( SCIPcertificatePrintCutoffConflictingBounds(scip, certificate, var->negatedvar, ub, lb, ubindex, lbindex) );
-         if (lb != NULL) {
+         if( lb != NULL )
+         {
             SCIPrationalAddReal(lb, lb, -1.0);
             SCIPrationalMultReal(lb, lb, -1);
          }
-         if (ub != NULL) {
+         if( ub != NULL )
+         {
             SCIPrationalAddReal(ub, ub, -1.0);
             SCIPrationalMultReal(ub, ub, -1);
          }
@@ -3349,17 +3344,17 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
          break;
       case SCIP_VARSTATUS_AGGREGATED:
          {
-            if (lb != NULL)
+            if( lb != NULL )
                SCIPrationalDiv(lb, lb, var->exactdata->aggregate.scalar);
-            if (ub != NULL)
+            if( ub != NULL )
                SCIPrationalDiv(ub, ub, var->exactdata->aggregate.scalar);
 
             assert(SCIPrationalIsZero(var->exactdata->aggregate.constant));
             SCIP_Bool swapBounds = !SCIPrationalIsPositive(var->exactdata->aggregate.scalar);
             SCIP_CALL( SCIPcertificatePrintCutoffConflictingBounds(scip, certificate, var->data.aggregate.var, swapBounds ? ub : lb, swapBounds ? lb : ub,  swapBounds ? ubindex : lbindex, swapBounds ? lbindex : ubindex) );
-            if (lb != NULL)
+            if( lb != NULL )
                SCIPrationalMult(lb, lb, var->exactdata->aggregate.scalar);
-            if (ub != NULL)
+            if( ub != NULL )
                SCIPrationalMult(ub, ub, var->exactdata->aggregate.scalar);
             return SCIP_OKAY;
          }
@@ -3367,7 +3362,6 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
       case SCIP_VARSTATUS_COLUMN:
          break;
       default:
-         assert(false);
          SCIPABORT();
          return SCIP_ERROR;
    }
@@ -3416,12 +3410,11 @@ SCIP_RETCODE SCIPcertificatePrintGlobalBound(
 
    assert(certificate != NULL);
 
-   switch (var->varstatus)
+   switch( var->varstatus )
    {
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_ORIGINAL:
-         assert(false);
          SCIPABORT();
          return SCIP_ERROR;
       case SCIP_VARSTATUS_NEGATED:
@@ -3443,7 +3436,6 @@ SCIP_RETCODE SCIPcertificatePrintGlobalBound(
       case SCIP_VARSTATUS_COLUMN:
          break;
       default:
-         assert(false);
          SCIPABORT();
          return SCIP_ERROR;
    }
