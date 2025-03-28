@@ -1137,17 +1137,13 @@ SCIP_Bool existsResolvablebdchginfo(
    return FALSE;
 }
 
-/** returns whether the bound change contributes to the conflict row being infeasible
-
- * It contributes if:
- *  - the bound change is on an upper bound and the coefficient of the variable in the conflict row is
- *    greater than zero
- *  - the bound change is on a lower bound and the coefficient of the variable in the conflict row
- *    is less than zero.
- *  - the row does not exist yet (e.g. in the initialization of conflict analysis)
+/** returns whether a bound change is relevant for the infeasibility of the conflict row.
+ * A bound change is relevant if:
+ * - It is an upper bound change with a positive row coefficient,
+ * - It is a lower bound change with a negative row coefficient
  */
 static
-SCIP_Bool bdchginfoUsedForConflict(
+SCIP_Bool isBdchgConflictRelevant(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_BDCHGINFO*       bdchginfo,          /**< bound change to check */
    int                   initial             /**< whether we are in the initialization of conflict analysis */
@@ -1159,10 +1155,13 @@ SCIP_Bool bdchginfoUsedForConflict(
 
    conflictrow = conflict->conflictrow;
 
+   /* the initial bound change is always relevant */
    if( initial )
       return TRUE;
+   /* if the conflict row is empty, we have a global infeasibility */
    else if( conflictrow->nnz == 0 )
       return FALSE;
+
    var = SCIPbdchginfoGetVar(bdchginfo);
    idx = SCIPvarGetProbindex(var);
 
@@ -1191,7 +1190,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->resforcedbdchgqueue));
 
       /* check if this candidate is valid */
-      if( bdchginfoIsInvalid(conflict, bdchginfo) || !bdchginfoUsedForConflict(conflict, bdchginfo, initial) )
+      if( bdchginfoIsInvalid(conflict, bdchginfo) || !isBdchgConflictRelevant(conflict, bdchginfo, initial) )
       {
          SCIP_VAR* var;
 
@@ -1208,14 +1207,10 @@ SCIP_BDCHGINFO* conflictFirstCand(
          (void)(SCIPpqueueRemove(conflict->resforcedbdchgqueue));
 
          if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
-         {
             var->conflictreslb = SCIP_REAL_MIN;
-         }
          else
-         {
-            assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
             var->conflictresub = SCIP_REAL_MAX;
-         }
+
          /* call method recursively to get next conflict analysis candidate */
          bdchginfo = conflictFirstCand(set, conflict, initial);
       }
@@ -1226,7 +1221,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->resbdchgqueue));
 
       /* check if this candidate is valid */
-      if( bdchginfo != NULL && !bdchginfoUsedForConflict(conflict, bdchginfo, initial) )
+      if( bdchginfo != NULL && !isBdchgConflictRelevant(conflict, bdchginfo, initial) )
       {
          SCIP_VAR* var;
 
@@ -1243,14 +1238,9 @@ SCIP_BDCHGINFO* conflictFirstCand(
          (void)(SCIPpqueueRemove(conflict->resbdchgqueue));
 
          if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
-         {
             var->conflictreslb = SCIP_REAL_MIN;
-         }
          else
-         {
-            assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
             var->conflictresub = SCIP_REAL_MAX;
-         }
 
          /* call method recursively to get next conflict analysis candidate */
          bdchginfo = conflictFirstCand(set, conflict, initial);
@@ -1280,7 +1270,7 @@ SCIP_BDCHGINFO* conflictRemoveCand(
    assert(!SCIPbdchginfoIsRedundant(bdchginfo));
 
    /* if we have a candidate this one should be valid for the current conflict analysis */
-   assert(bdchginfoUsedForConflict(conflict, bdchginfo, initial));
+   assert(isBdchgConflictRelevant(conflict, bdchginfo, initial));
 
    return bdchginfo;
 }
@@ -2374,7 +2364,7 @@ SCIP_RETCODE getConflictClause(
       {
          SCIP_BDCHGINFO* bdchginfo;
          bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
-         if( initial || bdchginfoUsedForConflict(conflict, bdchginfo, FALSE) )
+         if( initial || isBdchgConflictRelevant(conflict, bdchginfo, FALSE) )
          {
             includeinconflict[i] = 1;
             if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)) )
@@ -3532,12 +3522,12 @@ SCIP_RETCODE executeResolutionStep(
    return SCIP_OKAY;
 }
 
-/** if we can't resolve a bound change, then we treat is as a branching decision. In this case, if the variable
- * changes bounds again we cannot use those bounds. To remember this we save the variable index in the array fixinds
- * and the type of the bound in fixbounds (1 for upper, -1 for lower).
+/** If a bound change cannot be resolved, it is treated as a branching decision.
+ * Subsequent bound changes for that variable are ignored by recording the variable's
+ * index in fixinds and its bound type in fixbounds (1 for upper, -1 for lower).
  */
 static
-SCIP_RETCODE fixBoundChangeWithoutResolving(
+SCIP_RETCODE markBdchgAsFixed(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< array of variables */
@@ -3546,9 +3536,14 @@ SCIP_RETCODE fixBoundChangeWithoutResolving(
    int                   nressteps,          /**< number of bound changes that have been resolved so far */
    SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
    int*                  fixinds,            /**< dense array of indices of fixed variables */
-   SCIP_Bool*            success             /**< pointer to store whether we could get a conflict row */
+   SCIP_Bool*            success             /**< pointer to store whether the bound change was ignored */
    )
 {
+   SCIP_VAR* var;
+   int varidx;
+   SCIP_BOUNDTYPE boundtype;
+   SCIP_BOUNDCHGTYPE bdchgtype;
+
    assert(conflict != NULL);
    assert(set != NULL);
    assert(vars != NULL);
@@ -3558,78 +3553,62 @@ SCIP_RETCODE fixBoundChangeWithoutResolving(
    assert(fixinds != NULL);
 
    *success = FALSE;
+
+   /* If the bound change is due to constraint inference, ensure it comes from a global constraint */
    if( SCIPbdchginfoGetChgtype(*currbdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER )
    {
-      SCIP_CONS* reasoncon;
-
-      reasoncon = SCIPbdchginfoGetInferCons(*currbdchginfo);
-      /* we resolve only with globally valid constraints */
+      SCIP_CONS* reasoncon = SCIPbdchginfoGetInferCons(*currbdchginfo);
       if( !SCIPconsIsGlobal(reasoncon) )
          return SCIP_OKAY;
    }
-   if( existsResolvablebdchginfo(conflict) )
-   {
-      SCIP_BOUNDTYPE boundtype;
-      SCIP_BOUNDCHGTYPE bdchgtype;
 
-#ifndef SCIP_DEBUG
-      SCIP_CALL( computeSlack(set, vars, conflict->conflictrow, *currbdchginfo, fixbounds, fixinds) );
-      assert(SCIPsetIsLT(set, conflict->conflictrow->slack, 0.0));
-#endif
-
-      /* if a bound for the variable has already been ignored then abort */
-      if( fixinds[SCIPvarGetProbindex(SCIPbdchginfoGetVar(*currbdchginfo))] != 0 )
-         return SCIP_OKAY;
-
-      boundtype = SCIPbdchginfoGetBoundtype(*currbdchginfo);
-      bdchgtype = SCIPbdchginfoGetChgtype(*currbdchginfo);
-      /* ignore the bound change and continue */
-      fixinds[SCIPvarGetProbindex(SCIPbdchginfoGetVar(*currbdchginfo))] = boundtype == SCIP_BOUNDTYPE_UPPER ? 1 : -1;
-      fixbounds[SCIPvarGetProbindex(SCIPbdchginfoGetVar(*currbdchginfo))] = SCIPbdchginfoGetNewbound(*currbdchginfo);
-      /* we must reset the conflict lower and upper bound to be able to add weaker bounds later */
-      if( SCIPbdchginfoGetBoundtype(*currbdchginfo) == SCIP_BOUNDTYPE_LOWER )
-      {
-         vars[SCIPvarGetProbindex(SCIPbdchginfoGetVar(*currbdchginfo))]->conflictreslb = SCIP_REAL_MIN;
-      }
-      else
-      {
-         assert(SCIPbdchginfoGetBoundtype(*currbdchginfo) == SCIP_BOUNDTYPE_UPPER);
-         vars[SCIPvarGetProbindex(SCIPbdchginfoGetVar(*currbdchginfo))]->conflictresub = SCIP_REAL_MAX;
-      }
-
-      SCIPsetDebugMsgPrint(set, "ignoring the latest bound change of variable %s to %f \n", SCIPvarGetName(SCIPbdchginfoGetVar(*currbdchginfo)),
-            SCIPbdchginfoGetNewbound(*currbdchginfo));
-
-
-      if( nressteps == 0 )
-         SCIP_CALL( updateBdchgQueue(set, vars, conflict->conflictrow, SCIPbdchginfoGetIdx(*currbdchginfo)) );
-
-      *currbdchginfo = conflictFirstCand(set, conflict, FALSE);
-
-      assert(*currbdchginfo != NULL);
-
-      /* extract latest bound change from queue */
-      *currbdchginfo = conflictRemoveCand(conflict, FALSE);
-
-      /* if no resolution has been applied yet, and the bound change is a
-      branching decision, we can ignore it and continue with the next
-      bound change. Here we have to update the last bound change depth */
-      if( nressteps == 0 && bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
-      {
-         *currbdchgdepth = SCIPbdchginfoGetDepth(*currbdchginfo);
-      }
-      /* In case we apply fix and continue */
-      else if( !set->conf_fixandcontinue )
-         return SCIP_OKAY;
-
-#ifndef SCIP_DEBUG
-      SCIP_CALL( computeSlack(set, vars, conflict->conflictrow, *currbdchginfo, fixbounds, fixinds) );
-      assert(SCIPsetIsLT(set, conflict->conflictrow->slack, 0.0));
-#endif
-
-   }
-   else
+   if( !existsResolvablebdchginfo(conflict) )
       return SCIP_OKAY;
+
+   var = SCIPbdchginfoGetVar(*currbdchginfo);
+   varidx = SCIPvarGetProbindex(var);
+
+   /* If a bound for this variable has already been ignored, abort */
+   if( fixinds[varidx] != 0 )
+      return SCIP_OKAY;
+
+   boundtype = SCIPbdchginfoGetBoundtype(*currbdchginfo);
+   bdchgtype = SCIPbdchginfoGetChgtype(*currbdchginfo);
+
+   /* Record the ignored bound change: 1 for upper, -1 for lower */
+   fixinds[varidx] = (boundtype == SCIP_BOUNDTYPE_UPPER) ? 1 : -1;
+   fixbounds[varidx] = SCIPbdchginfoGetNewbound(*currbdchginfo);
+
+   /* Reset conflict bounds to allow weaker bounds to be added later */
+   if( boundtype == SCIP_BOUNDTYPE_LOWER )
+      vars[varidx]->conflictreslb = SCIP_REAL_MIN;
+   else
+      vars[varidx]->conflictresub = SCIP_REAL_MAX;
+
+   SCIPsetDebugMsgPrint(set, "ignoring the latest bound change of variable %s to %f\n",
+         SCIPvarGetName(var), SCIPbdchginfoGetNewbound(*currbdchginfo));
+
+   if( nressteps == 0 )
+      SCIP_CALL( updateBdchgQueue(set, vars, conflict->conflictrow, SCIPbdchginfoGetIdx(*currbdchginfo)) );
+
+   *currbdchginfo = conflictFirstCand(set, conflict, FALSE);
+   assert(*currbdchginfo != NULL);
+
+   /* Extract the latest bound change from the candidate queue */
+   *currbdchginfo = conflictRemoveCand(conflict, FALSE);
+
+   /* If no resolution step has been applied and the bound change is a branching decision,
+    * update the last bound change depth.
+    */
+   if( nressteps == 0 && bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+      *currbdchgdepth = SCIPbdchginfoGetDepth(*currbdchginfo);
+   else if( !set->conf_fixandcontinue )
+      return SCIP_OKAY;
+
+#ifndef SCIP_DEBUG
+   SCIP_CALL( computeSlack(set, vars, conflict->conflictrow, *currbdchginfo, fixbounds, fixinds) );
+   assert(SCIPsetIsLT(set, conflict->conflictrow->slack, 0.0));
+#endif
 
    *success = TRUE;
    return SCIP_OKAY;
@@ -3874,7 +3853,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 #ifdef SCIP_DEBUG
          printNonResolvableReasonType(set, bdchginfo);
 #endif
-         SCIP_CALL( fixBoundChangeWithoutResolving(conflict, set, vars, &bdchginfo, &bdchgdepth, nressteps,
+         SCIP_CALL( markBdchgAsFixed(conflict, set, vars, &bdchginfo, &bdchgdepth, nressteps,
                         fixbounds, fixinds, &successfixing) );
          if( !successfixing )
             goto TERMINATE_RESOLUTION_LOOP;
@@ -3929,14 +3908,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          /* we must reset the conflict lower and upper bound to be able to add weaker bounds later */
          if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
-         {
             vars[residx]->conflictreslb = SCIP_REAL_MIN;
-         }
          else
-         {
-            assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
             vars[residx]->conflictresub = SCIP_REAL_MAX;
-         }
 
          if( conflictrow->nnz > maxsize )
          {
