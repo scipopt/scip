@@ -153,6 +153,7 @@ Interface changes
 - removed parameters "constraints/orbitope/checkpporbitope", "constraints/orbitope/sepafullorbitope", "constraints/orbitope/forceconscopy", which became superfluous
 - removed reading/gmsreader/signpower
 - removed benders/default/numthreads, multi-threading support for Benders' decomposition has been temporarily disabled.
+- restricted range of parameter propagating/symmetry/sstleadervartype to [1,7]; its new default value is 6
 
 ### New parameters
 
