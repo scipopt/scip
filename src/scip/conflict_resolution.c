@@ -3668,8 +3668,13 @@ SCIP_RETCODE addConflictRows(
    return SCIP_OKAY;
 }
 
-/** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(), and on success,
- * creates a linear constraint that explains the infeasibility.
+/** Analyzes conflicting bound changes added via SCIPconflictAddBound().
+ * This function performs generalized resolution conflict analysis by iteratively aggregating the
+ * infeasible conflict row (conflictrow) with the reason row (reasonrow) that propagated the bound change.
+ * In each iteration, the coefficient of the resolving variable is cancelled. If the aggregation does not
+ * yield an infeasible row, MIR reduction is applied to the reason row and the aggregation is retried,
+ * continuing until a first unique implication point (FUIP) is reached. On success, a linear conflict
+ * constraint that explains the infeasibility is added to the problem.
  */
 SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
