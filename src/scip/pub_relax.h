@@ -70,6 +70,12 @@ void SCIPrelaxSetData(
    SCIP_RELAXDATA*       relaxdata           /**< new relaxation handler user data */
    );
 
+/** marks the relaxator as safe to use in exact solving mode */
+SCIP_EXPORT
+void SCIPrelaxMarkExact(
+   SCIP_RELAX*           relax               /**< relaxation handler  */
+   );
+
 /** gets name of relaxation handler */
 SCIP_EXPORT
 const char* SCIPrelaxGetName(

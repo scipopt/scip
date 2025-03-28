@@ -66,6 +66,7 @@
 #include "scip/reader.h"
 #include "scip/reopt.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -1341,6 +1342,27 @@ SCIP_RETCODE SCIPaddOrigObjoffset(
    return SCIP_OKAY;
 }
 
+/** adds offset of objective function to original problem and to all existing solution in original space
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_RETCODE SCIPaddOrigObjoffsetExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddOrigObjoffsetExact", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobAddObjoffsetExact(scip->origprob, addval);
+   SCIPprimalAddOrigObjoffsetExact(scip->origprimal, scip->set, addval);
+
+   return SCIP_OKAY;
+}
+
 /** returns the objective offset of the original problem
  *
  *  @return the objective offset of the original problem
@@ -1364,6 +1386,35 @@ SCIP_Real SCIPgetOrigObjoffset(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetOrigObjoffset", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->origprob->objoffset;
+}
+
+/** returns the exact objective offset of the original problem
+ *
+ *  DO NOT MODIFY THE POINTER RETURNED BY THIS METHOD
+ *
+ *  @return the exact objective offset of the original problem
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RATIONAL* SCIPgetOrigObjoffsetExact(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetOrigObjoffsetExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert(SCIPisExact(scip));
+
+   return scip->origprob->objoffsetexact;
 }
 
 /** returns the objective scale of the original problem
@@ -1723,6 +1774,18 @@ SCIP_RETCODE SCIPaddVar(
       assert(SCIPvarGetNegationVar(var) != NULL);
       SCIP_CALL( SCIPaddVar(scip, SCIPvarGetNegationVar(var)) );
       return SCIP_OKAY;
+   }
+
+   /* exact variable data should be available if and only if exact solving is turned on */
+   if( SCIPisExact(scip) && !SCIPvarIsExact(var) )
+   {
+      SCIPerrorMessage("cannot add variable without exact data while exact solving is enabled\n");
+      return SCIP_INVALIDDATA;
+   }
+   else if( !SCIPisExact(scip) && SCIPvarIsExact(var) )
+   {
+      SCIPerrorMessage("cannot add variable with exact data while exact solving is disabled\n");
+      return SCIP_INVALIDDATA;
    }
 
    switch( scip->set->stage )
@@ -3066,9 +3129,24 @@ SCIP_RETCODE SCIPaddCons(
    SCIP_CONS*            cons                /**< constraint to add */
    )
 {
+   SCIP_Bool isconsexact;
+
    assert(cons != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+
+   /* exact constraints should be added if and only if exact solving is turned on */
+   isconsexact = SCIPconshdlrIsExact((SCIPconsGetHdlr(cons)));
+   if( SCIPisExact(scip) && !isconsexact )
+   {
+      SCIPerrorMessage("cannot add inexact constraint while exact solving is enabled\n");
+      return SCIP_INVALIDDATA;
+   }
+   else if( !SCIPisExact(scip) && isconsexact )
+   {
+      SCIPerrorMessage("cannot add exact constraint while exact solving is disabled\n");
+      return SCIP_INVALIDDATA;
+   }
 
    switch( scip->set->stage )
    {
@@ -3622,10 +3700,25 @@ SCIP_RETCODE SCIPaddConsNode(
    SCIP_NODE*            validnode           /**< node at which the constraint is valid, or NULL */
    )
 {
+   SCIP_Bool isconsexact;
+
    assert(cons != NULL);
    assert(node != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConsNode", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* exact constraints should be added if and only if exact solving is turned on */
+   isconsexact = SCIPconshdlrIsExact((SCIPconsGetHdlr(cons)));
+   if( SCIPisExact(scip) && !isconsexact )
+   {
+      SCIPerrorMessage("cannot add inexact constraint while exact solving is enabled\n");
+      return SCIP_INVALIDDATA;
+   }
+   else if( !SCIPisExact(scip) && isconsexact )
+   {
+      SCIPerrorMessage("cannot add exact constraint while exact solving is disabled\n");
+      return SCIP_INVALIDDATA;
+   }
 
    if( validnode != NULL )
    {
@@ -4069,7 +4162,7 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
     */
    if( SCIPisLT(scip, newbound, scip->primal->cutoffbound) )
    {
-      SCIP_CALL( SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->eventfilter, scip->tree, scip->transprob, scip->origprob, newbound) );
+      SCIP_CALL( SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->eventfilter, scip->tree, scip->transprob, scip->origprob, newbound, NULL) );
    }
    else
    {

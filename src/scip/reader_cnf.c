@@ -403,6 +403,8 @@ SCIP_DECL_READERREAD(readerReadCnf)
    assert(filename != NULL);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
    /* open file */
    f = SCIPfopen(filename, "r");
    if( f == NULL )

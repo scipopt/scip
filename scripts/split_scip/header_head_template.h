@@ -76,7 +76,7 @@
 #include "scip/type_sepa.h"
 #include "scip/type_table.h"
 #include "scip/type_prop.h"
-#include "nlpi/type_nlpi.h"
+#include "scip/type_nlpi.h"
 #include "scip/type_concsolver.h"
 #include "scip/type_syncstore.h"
 #include "scip/type_benders.h"

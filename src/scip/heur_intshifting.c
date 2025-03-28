@@ -39,6 +39,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -1121,6 +1122,13 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          /* copy the current LP solution to the working solution */
          SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
+         /* in exact mode we have to end diving prior to trying the solution */
+         if( SCIPisExact(scip) )
+         {
+            SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
+            SCIP_CALL( SCIPendDive(scip) );
+         }
+
          /* check solution for feasibility, and add it to solution store if possible
           * neither integrality nor feasibility of LP rows has to be checked, because this is already
           * done in the intshifting heuristic itself and due to the LP resolve
@@ -1136,7 +1144,10 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       }
 
       /* terminate the diving */
-      SCIP_CALL( SCIPendDive(scip) );
+      if( SCIPinDive(scip) )
+      {
+         SCIP_CALL( SCIPendDive(scip) );
+      }
    }
 
    /* free memory buffers */
@@ -1169,6 +1180,9 @@ SCIP_RETCODE SCIPincludeHeurIntshifting(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecIntshifting, NULL) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIntshifting) );

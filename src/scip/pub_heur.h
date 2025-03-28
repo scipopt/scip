@@ -78,6 +78,12 @@ void SCIPheurSetData(
    SCIP_HEURDATA*        heurdata            /**< new primal heuristic user data */
    );
 
+/** marks the primal heuristic as safe to use in exact solving mode */
+SCIP_EXPORT
+void SCIPheurMarkExact(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
 /** gets name of primal heuristic */
 SCIP_EXPORT
 const char* SCIPheurGetName(

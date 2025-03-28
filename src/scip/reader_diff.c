@@ -1021,6 +1021,9 @@ SCIP_RETCODE SCIPreadDiff(
 
    assert(scip != NULL);
    assert(reader != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    /* initialize LP input data */
    lpinput.file = NULL;

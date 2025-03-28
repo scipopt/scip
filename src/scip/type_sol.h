@@ -70,6 +70,8 @@ enum SCIP_SolType
 };
 typedef enum SCIP_SolType SCIP_SOLTYPE;
 
+typedef struct SCIP_ValsExact SCIP_VALSEXACT;             /**< exact primal CIP solution */
+
 #ifdef __cplusplus
 }
 #endif

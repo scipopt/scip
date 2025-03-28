@@ -85,6 +85,7 @@
 #include "scip/reopt.h"
 #include "scip/scip_benders.h"
 #include "scip/scip_datatree.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -433,6 +434,33 @@ SCIP_Longint SCIPgetNLPs(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNLPs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->nlps;
+}
+
+/** gets number of calls to the exact LP solver
+ *
+ *  @return the number of calls to the exact LP solver
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_Longint SCIPgetNExactLPs(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNExactLPs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->nexlpinf + scip->stat->nexlp;
 }
 
 /** gets total number of iterations used so far in primal and dual simplex and barrier algorithm
@@ -1359,6 +1387,44 @@ SCIP_Real SCIPgetDualbound(
    return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPgetLowerbound(scip));
 }
 
+/** gets global exact dual bound
+ *
+ *  @return the exact global dual bound
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+void SCIPgetDualboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RATIONAL*        result              /**< the resulting obj value */
+   )
+{
+   SCIP_RATIONAL* tmpval;
+   (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpval);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDualboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   /* in case we are in presolving we use the stored dual bound if it exits */
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE && scip->transprob->dualbound < SCIP_INVALID )
+      SCIPrationalSetReal(result, scip->transprob->dualbound);
+   else
+   {
+      /* all the lower bounds should be proved bounds, so SCIPgetLowerbound should be safe */
+      SCIPgetLowerboundExact(scip, tmpval);
+      SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmpval, result);
+   }
+
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpval);
+}
+
 /** gets global lower (dual) bound in transformed problem
  *
  *  @return the global lower (dual) bound in transformed problem
@@ -1410,6 +1476,51 @@ SCIP_Real SCIPgetLowerbound(
          return treelowerbound;
       else
          return scip->primal->upperbound;
+   }
+}
+
+/** gets global exact lower (dual) bound in transformed problem
+ *
+ *  @return the global exact lower (dual) bound in transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPgetLowerboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RATIONAL*        result              /**< the resulting bound */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLowerboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->set->stage <= SCIP_STAGE_INITSOLVE )
+      SCIPrationalSetNegInfinity(result);
+   else if( SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
+   {
+      /* in case we could not prove whether the problem is unbounded or infeasible, we want to terminate with lower
+       * bound = -inf instead of lower bound = upper bound = +inf also in case we prove that the problem is unbounded,
+       * it seems to make sense to return with lower bound = -inf, since -infinity is the only valid lower bound
+       */
+      SCIPrationalSetNegInfinity(result);
+   }
+   else
+   {
+      SCIP_Real treelowerbound;
+
+      /* it may happen that the remaining tree is empty or all open nodes have a lower bound above the cutoff bound, but
+       * have not yet been cut off, e.g., when the user calls SCIPgetDualbound() in some event handler; in this case,
+       * the global lower bound is given by the upper bound value
+       */
+      treelowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
+      SCIPrationalSetReal(result, treelowerbound);
+      SCIPrationalMin(result, result, scip->primal->upperboundexact);
    }
 }
 
@@ -1535,6 +1646,31 @@ SCIP_Real SCIPgetPrimalbound(
    return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPgetUpperbound(scip));
 }
 
+/** gets global primal bound (objective value of best solution or user objective limit) for the original problem
+ *
+ *  @return the global primal bound (objective value of best solution or user objective limit) for the original problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+void SCIPgetPrimalboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RATIONAL*        result              /**< the resulting obj value */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetPrimalboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, scip->primal->upperboundexact, result);
+}
+
 /** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
  *
  *  @return the global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
@@ -1562,6 +1698,34 @@ SCIP_Real SCIPgetUpperbound(
       return scip->primal->upperbound;
 }
 
+/** gets global exact upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
+ *
+ *  @return the global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+void SCIPgetUpperboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RATIONAL*        result              /**< the resulting upper bound value */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetUpperbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   if( SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
+      SCIPrationalSetNegInfinity(result);
+   else
+      SCIPrationalSetRational(result, scip->primal->upperboundexact);
+}
+
 /** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff
  *  cannot contain a better feasible solution; usually, this bound is equal to the upper bound, but if the
  *  objective value is always integral, the cutoff bound is (nearly) one less than the upper bound;
@@ -1587,6 +1751,33 @@ SCIP_Real SCIPgetCutoffbound(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetCutoffbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    return scip->primal->cutoffbound;
+}
+
+/** gets exact global cutoff bound of transformed problem: a sub problem with lower bound larger than the cutoff
+ *  cannot contain a better feasible solution; usually, this bound is equal to the upper bound, but if the
+ *  objective value is always integral, the cutoff bound is (nearly) one less than the upper bound;
+ *  additionally, due to objective function domain propagation, the cutoff bound can be further reduced
+ *
+ *  @return exact global cutoff bound in transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_RATIONAL* SCIPgetCutoffboundExact(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetCutoffbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->primal->cutoffboundexact;
 }
 
 /** updates the cutoff bound
@@ -4252,6 +4443,66 @@ void SCIPprintLPStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f\n", (SCIP_Real)scip->stat->nconflictlpiterations/SCIPclockGetTime(scip->stat->conflictlptime));
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -\n");
+
+   if( scip->set->exact_enable )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Safe Bounding      :       Time      Calls Iterations  Iter/call   Iter/sec     Nfails   AvgError   NObjlim  NObjlimF \n");
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp feas    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
+         SCIPclockGetTime(scip->stat->provedfeaslptime),
+         scip->stat->nexlp,
+         scip->stat->niterationsexlp,
+         scip->stat->niterationsexlp > 0 ? (SCIP_Real)scip->stat->niterationsexlp/(SCIP_Real)scip->stat->nexlp : 0.0);
+      if( SCIPclockGetTime(scip->stat->provedfeaslptime) >= 0.01 )
+      {
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10" SCIP_LONGINT_FORMAT " %.4e\n",
+            (SCIP_Real)scip->stat->niterationsexlp/SCIPclockGetTime(scip->stat->provedfeaslptime),
+            scip->stat->nfailexlp, scip->stat->boundingerrorexlp/scip->stat->nexlp);
+      }
+      else
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT "          - %10.2f\n", scip->stat->nfailexlp, scip->stat->boundingerrorexlp/scip->stat->nexlp);
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  feas failed      : %10.2f %10" SCIP_LONGINT_FORMAT " \n",
+         scip->stat->timefailexlp, scip->stat->nfailexlp);
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp infeas  : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
+         SCIPclockGetTime(scip->stat->provedinfeaslptime),
+         scip->stat->nexlpinf,
+         scip->stat->niterationsexlpinf,
+         scip->stat->niterationsexlpinf > 0 ? (SCIP_Real)scip->stat->niterationsexlpinf/(SCIP_Real)scip->stat->nexlpinf : 0.0);
+      if( SCIPclockGetTime(scip->stat->provedinfeaslptime) >= 0.01 )
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10" SCIP_LONGINT_FORMAT "          -\n", (SCIP_Real)scip->stat->niterationsexlpinf/SCIPclockGetTime(scip->stat->provedinfeaslptime), scip->stat->nfailexlpinf);
+      else
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT "          -          -\n", scip->stat->nfailexlpinf);
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  inf failed       : %10.2f %10" SCIP_LONGINT_FORMAT " \n",
+         scip->stat->timefailexlpinf, scip->stat->nfailexlpinf);
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  boundshift feas  : %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT " %.4e %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+         SCIPclockGetTime(scip->stat->provedfeasbstime),
+         scip->stat->nboundshift,
+         scip->stat->nfailboundshift,
+         scip->stat->boundingerrorbs/scip->stat->nboundshift,
+         scip->stat->nboundshiftobjlim,
+         scip->stat->nboundshiftobjlimfail);
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  boundshift infeas: %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT "          -\n",
+         SCIPclockGetTime(scip->stat->provedinfeasbstime),
+         scip->stat->nboundshiftinf,
+         scip->stat->nfailboundshiftinf);
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  projshift  feas  : %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT " %.4e %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+         SCIPclockGetTime(scip->stat->provedfeaspstime),
+         scip->stat->nprojshift,
+         scip->stat->nfailprojshift,
+         scip->stat->nprojshift > 0 ? scip->stat->boundingerrorps/scip->stat->nprojshift : 0,
+         scip->stat->nprojshiftobjlim,
+         scip->stat->nprojshiftobjlimfail);
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  projshift  infeas: %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT "          -\n",
+         SCIPclockGetTime(scip->stat->provedinfeaspstime),
+         scip->stat->nprojshiftinf,
+         scip->stat->nfailprojshiftinf);
+   }
 }
 
 /** collects LP statistics in a SCIP_DATATREE object */
@@ -4785,6 +5036,23 @@ void SCIPprintSolutionStatistics(
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap              : %10.2f %%\n", 100.0 * gap);
 
+   /* print exact bounds */
+   if( SCIPisExact(scip) )
+   {
+      SCIP_RATIONAL* objval;
+
+      SCIP_CALL_ABORT( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Exact Prim. Bound: ");
+      SCIPgetPrimalboundExact(scip, objval);
+      SCIPrationalMessage(scip->messagehdlr, file, objval);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Exact Dual Bound : ");
+      SCIPgetDualboundExact(scip, objval);
+      SCIPrationalMessage(scip->messagehdlr, file, objval);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &objval);
+   }
+
    if( scip->set->misc_calcintegral )
    {
       int s;
@@ -4870,6 +5138,27 @@ SCIP_RETCODE SCIPcollectSolutionStatistics(
    SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "primal_bound", primalbound) );
    SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "dual_bound", dualbound) );
    SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "gap", gap) );
+
+   /* Exact bounds */
+   if( SCIPisExact(scip) )
+   {
+      SCIP_RATIONAL* objval;
+      char strbuffer[SCIP_MAXSTRLEN];
+
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
+
+      SCIPgetPrimalboundExact(scip, objval);
+      if( SCIPrationalToString(objval, strbuffer, SCIP_MAXSTRLEN) >= SCIP_MAXSTRLEN )
+         SCIPwarningMessage(scip, "string encoding of exact primal bound too long: printing \"unknown\" into JSON\n");
+      SCIP_CALL( SCIPinsertDatatreeString(scip, datatree, "exact_primal_bound", strbuffer) );
+
+      SCIPgetDualboundExact(scip, objval);
+      if( SCIPrationalToString(objval, strbuffer, SCIP_MAXSTRLEN) >= SCIP_MAXSTRLEN )
+         SCIPwarningMessage(scip, "string encoding of exact dual bound too long: printing \"unknown\" into JSON\n");
+      SCIP_CALL( SCIPinsertDatatreeString(scip, datatree, "exact_dual_bound", strbuffer) );
+
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &objval);
+   }
 
    /* Objective limit reached */
    objlimitreached = (SCIPgetStage(scip) == SCIP_STAGE_SOLVED) && (scip->primal->nlimsolsfound == 0) &&

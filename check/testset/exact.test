@@ -1,0 +1,10 @@
+instances/MIPEX/egout.zpl
+instances/MIP/enigma.mps
+instances/MIPEX/flugpl_rational.mps
+instances/MIPEX/misc03.zpl
+instances/MIPEX/rgn.zpl
+instances/MIPEX/stein27.zpl
+instances/MIP/stein27_inf.lp
+instances/MIP/Side.lp
+instances/MIPEX/Side-coeftest.lp
+instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb

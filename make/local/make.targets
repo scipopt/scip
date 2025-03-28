@@ -74,7 +74,7 @@ testcluster: check/check_cluster.sh check/configuration_cluster.sh check/configu
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
 		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) \
                 $(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(EXCLUDENODES) $(SLURMACCOUNT) $(PYTHON) \
-		$(EMPHBENCHMARK) $(CLOCKTYPE);
+		$(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE);
 
 .PHONY: testclusterfscip
 testclusterfscip: check/check_cluster_fscip.sh check/configuration_cluster.sh check/configuration_set.sh check/configuration_logfiles.sh check/evalcheck_cluster.sh check/check.awk

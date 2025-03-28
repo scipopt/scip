@@ -42,6 +42,7 @@
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -157,6 +158,7 @@ SCIP_RETCODE setupProbingSCIP(
    /* copy SCIP instance */
    SCIP_CALL( SCIPcopyConsCompression(scip, *probingscip, *varmapfw, NULL, "feaspump", NULL, NULL, 0, FALSE, FALSE,
          FALSE, TRUE, success) );
+   assert(!SCIPisExact(*probingscip));
 
    if( copycuts )
    {
@@ -218,7 +220,12 @@ SCIP_RETCODE setupSCIPparamsStage3(
    SCIP*                 probingscip         /**< sub-SCIP data structure  */
    )
 {
+   /**@todo restore the copied settings that were changed in setupSCIPparamsFP2() without copying all parameters, since
+    *       this triggers an error message that exact solving cannot be enabled/disabled in or after problem creation stage
+    */
    SCIP_CALL( SCIPcopyParamSettings(scip, probingscip) );
+   assert(!SCIPisExact(probingscip));
+
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
 
@@ -1247,6 +1254,14 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       success = FALSE;
 
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
+
+      /* in exact mode we have to end diving prior to trying the solution */
+      if( SCIPisExact(scip) )
+      {
+         SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
+         SCIP_CALL( SCIPendDive(scip) );
+      }
+
       SCIPdebugMsg(scip, "feasibility pump found solution (%d fractional variables)\n", nfracs);
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
@@ -1254,7 +1269,10 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    }
 
    /* end diving */
-   SCIP_CALL( SCIPendDive(scip) );
+   if( SCIPinDive(scip) )
+   {
+      SCIP_CALL( SCIPendDive(scip) );
+   }
 
    /* end probing in order to be able to apply stage 3 */
    if( heurdata->usefp20 )
@@ -1386,6 +1404,9 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecFeaspump, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyFeaspump) );

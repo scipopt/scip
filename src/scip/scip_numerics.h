@@ -42,6 +42,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_rational.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 
@@ -869,6 +870,14 @@ SCIP_Bool SCIPparseReal(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to search */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   );
+
+/** parse a rational value */
+SCIP_Bool SCIPparseRational(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< string to search */
+   SCIP_RATIONAL*        value,              /**< pointer to store the parsed value */
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 

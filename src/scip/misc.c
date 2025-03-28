@@ -54,6 +54,7 @@
 #include "scip/misc.h"
 #include "scip/intervalarith.h"
 #include "scip/pub_misc.h"
+#include "scip/rational.h"
 
 #ifndef NDEBUG
 #include "scip/struct_misc.h"
@@ -3228,6 +3229,42 @@ SCIP_RETCODE SCIPhashmapInsertInt(
  *
  *  @note multiple insertion of same element is checked and results in an error
  */
+SCIP_RETCODE SCIPhashmapInsertLong(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   SCIP_Longint          image               /**< new image for origin */
+   )
+{
+   uint32_t hashval;
+   SCIP_HASHMAPIMAGE img;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_LONG);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_LONG;
+#endif
+
+   SCIP_CALL( hashmapCheckLoad(hashmap) );
+
+   /* get the hash value */
+   hashval = hashvalue((size_t)origin);
+
+   /* append origin->image pair to hash map */
+   img.longint = image;
+   SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** inserts new origin->image pair in hash map
+ *
+ *  @note multiple insertion of same element is checked and results in an error
+ */
 SCIP_RETCODE SCIPhashmapInsertReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -3298,6 +3335,26 @@ int SCIPhashmapGetImageInt(
       return hashmap->slots[pos].image.integer;
 
    return INT_MAX;
+}
+
+/** retrieves image of given origin from the hash map, or SCIP_LONGINT_MAX if no image exists */
+long SCIPhashmapGetImageLong(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to retrieve image for */
+   )
+{
+   uint32_t pos;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_LONG);
+
+   if( hashmapLookup(hashmap, origin, &pos) )
+      return hashmap->slots[pos].image.longint;
+
+   return SCIP_LONGINT_MAX;
 }
 
 /** retrieves image of given origin from the hash map, or SCIP_INVALID if no image exists */
@@ -4799,8 +4856,8 @@ SCIP_RETCODE SCIPboolarrayCopy(
    SCIP_CALL( SCIPboolarrayCreate(boolarray, blkmem) );
    if( sourceboolarray->valssize > 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals, \
-                     sourceboolarray->valssize) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals,
+            sourceboolarray->valssize) );
    }
    (*boolarray)->valssize = sourceboolarray->valssize;
    (*boolarray)->firstidx = sourceboolarray->firstidx;
@@ -5970,6 +6027,22 @@ void SCIPsort(
 #define SORTTPL_FIELD3TYPE  SCIP_Real
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortIntIntPtrPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntIntPtrPtr
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  void*
+#include "scip/sorttpl.c" /*lint !e451*/
+
+/* SCIPsortIntIntPtrPtrInterval(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntIntPtrPtrInterval
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  void*
+#define SORTTPL_FIELD4TYPE  SCIP_INTERVAL
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     Long
@@ -9527,6 +9600,14 @@ SCIP_Bool SCIPrealToRational(
    return TRUE;
 }
 
+/** checks, if value is integral without any tolerances */
+SCIP_Bool SCIPrealIsExactlyIntegral(
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   return floor(val) == val; /*lint !e777*/
+}
+
 /** checks, whether the given scalar scales the given value to an integral number with error in the given bounds */
 static
 SCIP_Bool isIntegralScalar(
@@ -9753,6 +9834,139 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 
       SCIPdebugMessage(" -> smallest value to achieve integrality is %g \n", bestscalar);
    }
+
+   return SCIP_OKAY;
+}
+
+/** tries to find a value, such that all given values, if scaled with this value become integral */
+SCIP_RETCODE SCIPcalcIntegralScalarExact(
+   BMS_BUFMEM*           buffer,
+   SCIP_RATIONAL**       vals,               /**< values to scale */
+   int                   nvals,              /**< number of values to scale */
+   SCIP_Real             maxscale,           /**< maximal allowed scalar */
+   SCIP_RATIONAL*        intscalar,          /**< pointer to store scalar that would make the coefficients integral */
+   SCIP_Bool*            success             /**< stores whether returned value is valid */
+   )
+{
+   SCIP_Longint gcd;
+   SCIP_Longint scm;
+   SCIP_Longint numerator;
+   SCIP_Longint denominator;
+   SCIP_Longint updatemultiplier;
+   SCIP_RATIONAL* ratupdate;
+   SCIP_RATIONAL* ratscm;
+   SCIP_Bool scalable;
+   int c;
+
+   assert(vals != NULL);
+   assert(nvals >= 0);
+   assert(success != NULL);
+
+   SCIPdebugMessage("trying to find rational representation for given rational values\n");
+
+   *success = FALSE;
+
+   /** @todo test whether it is faster to compute scm and gcd via mpz_scm() and mpz_gcd() in
+    *        SCIPcalcIntegralScalarExact(); even if we stay with the SCIP_Longint conversion, we could use the other way
+    *        to check the correctness of our result
+    */
+   /* calculate the greatest common divisor of the numerators and the smallest common multiple of the denominators */
+   gcd = 1;
+   scm = 1;
+   scalable = TRUE;
+
+   SCIP_CALL( SCIPrationalCreateBuffer(buffer, &ratupdate) );
+   SCIP_CALL( SCIPrationalCreateBuffer(buffer, &ratscm) );
+
+   /* first value (to initialize gcd) */
+   for( c = 0; c < nvals && scalable; ++c )
+   {
+      if( SCIPrationalIsZero(vals[c]) ) /* zeros are allowed in the vals array */
+         continue;
+
+      /* get numerator and check whether it fits into SCIP_Longint */
+      numerator = SCIPrationalNumerator(vals[c]);
+      if( numerator == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      /* get numerator and check whether it fits into SCIP_Longint */
+      denominator = SCIPrationalDenominator(vals[c]);
+      if( denominator == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      assert(denominator > 0);
+      gcd = ABS(numerator);
+      scm = denominator;
+
+      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale); /*lint !e838*/
+
+      break;
+   }
+
+   /* remaining values */
+   for( ++c; c < nvals && scalable; ++c )
+   {
+      if( SCIPrationalIsZero(vals[c]) ) /* zeros are allowed in the vals array */
+         continue;
+
+      /* get numerator and check whether it fits into SCIP_Longint */
+      numerator = SCIPrationalNumerator(vals[c]);
+      if( numerator == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      /* get denom and check whether it fits into SCIP_Longint */
+      denominator = SCIPrationalDenominator(vals[c]);
+      if( denominator == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      assert(denominator > 0);
+
+      gcd = SCIPcalcGreComDiv(gcd, ABS(numerator));
+
+      /* update scm via newscm = scm * denominator / gcd(scm, denominator) and check whether it fits into SCIP_Longint */
+      updatemultiplier = denominator / SCIPcalcGreComDiv(scm, denominator);
+      SCIPrationalSetInt(ratupdate, updatemultiplier, 1L);
+      SCIPrationalSetInt(ratscm, scm, 1L);
+      SCIPrationalMult(ratscm, ratscm, ratupdate);
+      SCIPrationalCanonicalize(ratscm);
+
+      scm = SCIPrationalNumerator(ratscm);
+
+      if( scm == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+   }
+
+   if( scalable )
+   {
+      /* make values integral by multiplying them with the smallest common multiple of the denominators */
+      assert((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+
+      SCIPrationalSetInt(intscalar, scm, gcd);
+      SCIPrationalCanonicalize(intscalar);
+
+      *success = TRUE;
+
+   }
+
+   SCIPrationalFreeBuffer(buffer, &ratscm);
+   SCIPrationalFreeBuffer(buffer, &ratupdate);
 
    return SCIP_OKAY;
 }
