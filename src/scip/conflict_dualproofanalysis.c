@@ -1505,8 +1505,7 @@ SCIP_RETCODE tightenDualproof(
    SCIP_Real* vals;
    int* inds;
    SCIP_PROOFSET* proofset;
-   SCIP_Bool valid;
-   SCIP_Bool redundant;
+   SCIP_Bool redundant = FALSE;
    int nnz;
    int nchgcoefs;
    int nbinvars;
@@ -1611,6 +1610,7 @@ SCIP_RETCODE tightenDualproof(
          {
             SCIP_Real glbbd;
             SCIP_Real locbd;
+            SCIP_Bool valid;
 
             /* get appropriate global and local bounds */
             glbbd = (val < 0.0 ? SCIPvarGetUbGlobal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]));
