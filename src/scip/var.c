@@ -1116,10 +1116,6 @@ SCIP_RETCODE SCIPboundchgUndo(
                var->lbchginfos[var->nlbchginfos].oldbound) );
       }
 
-      /* reinstall the previous local bound */
-      SCIP_CALL( SCIPvarChgLbLocal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue,
-            var->lbchginfos[var->nlbchginfos].oldbound) );
-
       /* in case all bound changes are removed the local bound should match the global bound */
       assert(var->nlbchginfos > 0 || SCIPsetIsFeasEQ(set, var->locdom.lb, var->glbdom.lb));
 
