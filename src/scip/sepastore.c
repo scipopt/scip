@@ -199,7 +199,7 @@ SCIP_Bool sepastoreIsCutRedundant(
       return FALSE;
 
    /** @todo implement a safe redundancy check for cuts in exact solving mode */
-   if( set->exact_enabled )
+   if( set->exact_enable )
       return FALSE;
 
    /* check for activity redundancy */
@@ -242,7 +242,7 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
    *infeasible = FALSE;
 
    /** @todo implement a safe redundancy or infeasibility check for cuts in exact solving mode */
-   if( set->exact_enabled )
+   if( set->exact_enable )
       return FALSE;
 
    /* modifiable cuts cannot be declared redundant or infeasible, since we don't know all coefficients */
@@ -1013,7 +1013,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          SCIP_Bool applied = FALSE;
 
          /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP row */
-         if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 && !set->exact_enabled )
+         if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 && !set->exact_enable )
          {
             SCIPsetDebugMsg(set, " -> applying forced cut <%s> as boundchange\n", SCIProwGetName(cut));
             SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
@@ -1026,7 +1026,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
             /* create rational representation of the cut; note that this may slightly change the floating-point
              * coefficients
              */
-            if( set->exact_enabled && SCIProwGetRowExact(cut) == NULL )
+            if( set->exact_enable && SCIProwGetRowExact(cut) == NULL )
             {
                SCIP_Bool poolcut = FALSE;
                if( !SCIProwIsLocal(cut) && !(SCIPisCutNew(set->scip, cut)) )

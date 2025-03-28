@@ -2313,7 +2313,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    int nattempts;
 
    /* if we are not in exact solving mode, just return */
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    if( !lpexact->forcesafebound && (lp->diving || lp->probing || lp->strongbranchprobing) )
@@ -2323,7 +2323,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    shouldabort = FALSE;
    nattempts = 0;
 
-   assert(set->exact_enabled);
+   assert(set->exact_enable);
    assert(!lp->hasprovedbound);
 
    /* we need to construct projshiftdata at the root node */

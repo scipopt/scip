@@ -528,7 +528,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
          pricestore->bdviolvarslb[v], pricestore->bdviolvarsub[v]);
       SCIP_CALL( SCIPlpAddCol(lp, set, col, SCIPtreeGetCurrentDepth(tree)) );
 
-      SCIP_CALL( SCIPlpExactAddCol(lp->lpexact, set, set->exact_enabled ? var->exactdata->colexact : NULL) );
+      SCIP_CALL( SCIPlpExactAddCol(lp->lpexact, set, set->exact_enable ? var->exactdata->colexact : NULL) );
 
       if( !pricestore->initiallp )
          pricestore->nvarsapplied++;
@@ -558,7 +558,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       SCIPsetDebugMsg(set, "adding priced variable <%s> (score=%g)\n", SCIPvarGetName(var), pricestore->scores[v]);
       SCIP_CALL( SCIPlpAddCol(lp, set, col, SCIPtreeGetCurrentDepth(tree)) );
 
-      SCIP_CALL( SCIPlpExactAddCol(lp->lpexact, set, set->exact_enabled ? var->exactdata->colexact : NULL) );
+      SCIP_CALL( SCIPlpExactAddCol(lp->lpexact, set, set->exact_enable ? var->exactdata->colexact : NULL) );
 
       /* release the variable */
       SCIP_CALL( SCIPvarRelease(&pricestore->vars[v], blkmem, set, eventqueue, lp) );

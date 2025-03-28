@@ -166,7 +166,7 @@ SCIP_Bool SCIPisCertified(
    assert(scip->set != NULL);
    assert(scip->stat != NULL);
 
-   if( !(scip->set->exact_enabled) )
+   if( !(scip->set->exact_enable) )
       return FALSE;
    else if( scip->set->stage == SCIP_STAGE_SOLVING )
       return SCIPcertificateIsEnabled(scip->stat->certificate);

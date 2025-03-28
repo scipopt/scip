@@ -288,7 +288,7 @@ SCIP_RETCODE primalSetCutoffbound(
    primal->cutoffbound = MIN(cutoffbound, primal->upperbound); /* get rid of numerical issues */
 
    /* possibly update the exact cutoffbound */
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       SCIP_RATIONAL* tmp;
 
@@ -327,7 +327,7 @@ SCIP_RETCODE primalSetCutoffboundExact(
    assert(primal != NULL);
    assert(SCIPrationalIsLEReal(cutoffbound, SCIPsetInfinity(set)));
    assert(!SCIPtreeInRepropagation(tree));
-   assert(set->exact_enabled);
+   assert(set->exact_enable);
 
    SCIPrationalDebugMessage("changing exact cutoff bound from %q to %q\n", primal->cutoffboundexact, cutoffbound);
 
@@ -472,7 +472,7 @@ SCIP_RETCODE primalSetUpperboundExact(
 
    assert(primal != NULL);
    assert(stat != NULL);
-   assert(set->exact_enabled);
+   assert(set->exact_enable);
    assert(SCIPrationalIsLEReal(upperbound, SCIPsetInfinity(set)));
    assert(SCIPrationalIsLEReal(upperbound, primal->upperbound) || stat->nnodes == 0);
 
@@ -901,7 +901,7 @@ SCIP_RETCODE primalAddSol(
 
    obj = SCIPsolGetObj(sol, set, transprob, origprob);
 
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       if( !SCIPsolIsExact(sol) )
       {
@@ -1425,7 +1425,7 @@ SCIP_Bool solOfInterest(
    /* in exact solving mode, we need to compare the exact objective value with the exact cutoff bound in order to
     * determine whether a solution is improving
     */
-   if( set->exact_enabled && set->exact_improvingsols )
+   if( set->exact_enable && set->exact_improvingsols )
    {
       SCIP_RATIONAL* tmpobj;
 
@@ -1443,8 +1443,8 @@ SCIP_Bool solOfInterest(
    /* check if we are willing to check worse solutions; a solution is better if the objective is smaller than the
     * current cutoff bound; solutions with infinite objective value are never accepted
     */
-   if( !SCIPsetIsInfinity(set, obj) && (!set->exact_enabled || !set->exact_improvingsols || solisbetterexact)
-      && (set->exact_enabled || !set->misc_improvingsols || obj < primal->cutoffbound) )
+   if( !SCIPsetIsInfinity(set, obj) && (!set->exact_enable || !set->exact_improvingsols || solisbetterexact)
+      && (set->exact_enable || !set->misc_improvingsols || obj < primal->cutoffbound) )
    {
       /* find insert position for the solution */
       (*insertpos) = primalSearchSolPos(primal, set, transprob, origprob, sol);
@@ -1811,7 +1811,7 @@ SCIP_RETCODE SCIPprimalTrySol(
    assert(stored != NULL);
 
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
-   checklprows = checklprows || set->exact_enabled;
+   checklprows = checklprows || set->exact_enable;
 
    insertpos = -1;
 
@@ -1883,7 +1883,7 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    *stored = FALSE;
 
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
-   checklprows = checklprows || set->exact_enabled;
+   checklprows = checklprows || set->exact_enable;
 
    insertpos = -1;
 

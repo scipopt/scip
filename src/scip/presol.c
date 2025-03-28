@@ -433,7 +433,7 @@ SCIP_RETCODE SCIPpresolExec(
    *result = SCIP_DIDNOTRUN;
 
    /* do not execute if in exact solving mode and presolver is not safe */
-   if( set->exact_enabled && !presol->exact )
+   if( set->exact_enable && !presol->exact )
       return SCIP_OKAY;
 
    /* check number of presolving rounds */

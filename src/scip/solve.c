@@ -122,9 +122,9 @@ SCIP_Bool SCIPsolveIsStopped(
    /* in case lowerbound >= upperbound, we do not want to terminate with SCIP_STATUS_GAPLIMIT but with the ordinary
     * SCIP_STATUS_OPTIMAL/INFEASIBLE/...
     */
-   if( !set->exact_enabled && set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLE(set, SCIPgetUpperbound(set->scip), SCIPgetLowerbound(set->scip)) )
+   if( !set->exact_enable && set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLE(set, SCIPgetUpperbound(set->scip), SCIPgetLowerbound(set->scip)) )
       return TRUE;
-   if( set->exact_enabled && set->stage >= SCIP_STAGE_SOLVING && SCIPgetUpperbound(set->scip) <= SCIPgetLowerbound(set->scip) )
+   if( set->exact_enable && set->stage >= SCIP_STAGE_SOLVING && SCIPgetUpperbound(set->scip) <= SCIPgetLowerbound(set->scip) )
       return TRUE;
 
    /* if some limit has been changed since the last call, we reset the status */
@@ -3002,7 +3002,7 @@ SCIP_RETCODE priceAndCutLoop(
        * LP solve if desired (solving the LP exactly after each separation round can be prohibitively slow and is
        * therefore disabled)
        */
-      if( set->exact_enabled && !mustsepa )
+      if( set->exact_enable && !mustsepa )
       {
          lp->solved = FALSE;
          SCIPlpExactAllowExactSolve(lp->lpexact, set, TRUE);
@@ -3138,14 +3138,14 @@ SCIP_RETCODE applyBounding(
       }
 
 #ifdef SCIP_DEBUG
-      if( set->exact_enabled )
+      if( set->exact_enable )
          SCIPrationalDebugMessage(" -> exact lower bound: %q, exact cutoff bound: %q\n",
             SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact);
 #endif
 
       /* check for infeasible node by bounding */
-      if( (!set->exact_enabled && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound))
-         || (set->exact_enabled && SCIPrationalIsGE(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact)) )
+      if( (!set->exact_enable && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound))
+         || (set->exact_enable && SCIPrationalIsGE(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact)) )
       {
          *cutoff = TRUE;
 
@@ -3261,7 +3261,7 @@ SCIP_RETCODE solveNodeLP(
          SCIP_SOL* sol;
          SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
 
-         if( set->exact_enabled && lp->lpexact->solved )
+         if( set->exact_enable && lp->lpexact->solved )
          {
             SCIP_CALL( SCIPsolCreateLPSolExact(&sol, blkmem, set, stat, primal, tree, lp->lpexact, NULL) );
 
@@ -3408,7 +3408,7 @@ SCIP_RETCODE solveNodeLP(
       assert(primal->primalray == NULL);
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
       {
-         if( !set->exact_enabled || lp->hasprovedbound )
+         if( !set->exact_enable || lp->hasprovedbound )
             *cutoff = TRUE;
       }
    }
@@ -4224,13 +4224,13 @@ SCIP_RETCODE propAndSolve(
        * we have to forget about the LP and use the pseudo solution instead.
        * this "not proved" condition is monitored by the last check. normally if the LP is infeasible, the lowerbound would be infinity
        */
-      if( !(*cutoff) && !(*lperror) && (set->exact_enabled || *pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
+      if( !(*cutoff) && !(*lperror) && (set->exact_enable || *pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
          && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
       {
          if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 && transprob->ncontvars > 0 )
          {
             SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") could not prove infeasibility of LP %" SCIP_LONGINT_FORMAT " (exactsolve=%u, pricingaborted=%u), all variables are fixed, %d continuous vars\n",
-               stat->nnodes, stat->nlps, set->exact_enabled, *pricingaborted, transprob->ncontvars);
+               stat->nnodes, stat->nlps, set->exact_enable, *pricingaborted, transprob->ncontvars);
             return SCIP_LPERROR;
          }
          else
@@ -4240,7 +4240,7 @@ SCIP_RETCODE propAndSolve(
 
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "(node %" SCIP_LONGINT_FORMAT ") could not prove infeasibility of LP %" SCIP_LONGINT_FORMAT " (exactsolve=%u, pricingaborted=%u) -- using pseudo solution (%d unfixed vars) instead\n",
-               stat->nnodes, stat->nlps, set->exact_enabled, *pricingaborted, SCIPbranchcandGetNPseudoCands(branchcand));
+               stat->nnodes, stat->nlps, set->exact_enable, *pricingaborted, SCIPbranchcandGetNPseudoCands(branchcand));
          }
       }
 
@@ -4295,12 +4295,12 @@ SCIP_Bool restartAllowed(
    /**@todo enable certification for restarts */
    return set->nactivepricers == 0 && !set->reopt_enable
       && ( set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts )
-      && !(set->exact_enabled);
+      && !(set->exact_enable);
 }
 #else
 #define restartAllowed(set,stat)             ((set)->nactivepricers == 0 && !set->reopt_enable \
                                                 && ((set)->presol_maxrestarts == -1 || (stat)->nruns <= (set)->presol_maxrestarts)) \
-                                                && (!set->exact_enabled)
+                                                && (!set->exact_enable)
 #endif
 
 /** solves the focus node */
@@ -4474,7 +4474,7 @@ SCIP_RETCODE solveNode(
          SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue,
                eventfilter, conflict, cliquetable, cutoff) );
 
-         if( set->exact_enabled && *cutoff && !SCIPsetIsInfinity(set, -SCIPlpGetPseudoObjval(lp, set, transprob)) )
+         if( set->exact_enable && *cutoff && !SCIPsetIsInfinity(set, -SCIPlpGetPseudoObjval(lp, set, transprob)) )
          {
             SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set,
                         transprob, FALSE, -1, -1L, SCIPsetInfinity(set)) );
@@ -5023,7 +5023,7 @@ SCIP_RETCODE addCurrentSolution(
 
       SCIPsetDebugMsg(set, "found relaxation solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 
-      if( checksol || set->exact_enabled )
+      if( checksol || set->exact_enable )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
@@ -5057,7 +5057,7 @@ SCIP_RETCODE addCurrentSolution(
       SCIPclockStart(stat->lpsoltime, set);
 
       /* add solution to storage */
-      if( set->exact_enabled && lp->lpexact->solved )
+      if( set->exact_enable && lp->lpexact->solved )
       {
          SCIP_CALL( SCIPsolCreateLPSolExact(&sol, blkmem, set, stat, set->scip->primal, tree, lp->lpexact, NULL) );
 
@@ -5069,7 +5069,7 @@ SCIP_RETCODE addCurrentSolution(
          SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
          SCIPsetDebugMsg(set, "found lp solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 
-         if( checksol || set->exact_enabled )
+         if( checksol || set->exact_enable )
          {
             /* if we want to solve exactly, we have to check the solution exactly again */
             SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
@@ -5106,7 +5106,7 @@ SCIP_RETCODE addCurrentSolution(
 
       SCIPsetDebugMsg(set, "found pseudo solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 
-      if( checksol || set->exact_enabled )
+      if( checksol || set->exact_enable )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,

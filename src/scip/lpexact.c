@@ -4037,7 +4037,7 @@ SCIP_RETCODE SCIPlpExactFree(
 {
    int i;
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(lp != NULL);
@@ -4087,7 +4087,7 @@ SCIP_RETCODE SCIPlpExactAddCol(
    SCIP_COLEXACT*        col                 /**< LP column */
    )
 {
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(lp != NULL);
@@ -4178,7 +4178,7 @@ SCIP_RETCODE SCIPlpExactSetCutoffbound(
 {
    SCIP_RATIONAL* tmpobj;
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(lpexact != NULL);
@@ -4306,7 +4306,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
    assert(lpexact->fplp != NULL);
    assert(set != NULL);
    assert(lperror != NULL);
-   assert(set->exact_enabled);
+   assert(set->exact_enable);
 
    SCIP_CALL( SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_LPINFO, (int) set->exact_lpinfo) );
    algo = set->lp_initalgorithm;
@@ -6602,7 +6602,7 @@ SCIP_RETCODE SCIPlpExactUpdateAddVar(
 {
    SCIP_RATIONAL* tmp;
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(lpexact != NULL);
@@ -7549,7 +7549,7 @@ SCIP_RETCODE SCIPlpExactReset(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(stat != NULL);
@@ -7596,7 +7596,7 @@ void SCIPlpExactForceExactSolve(
 {
    assert(set != NULL);
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return;
 
    assert(lpexact != NULL);
@@ -7612,7 +7612,7 @@ void SCIPlpExactForceSafeBound(
 {
    assert(set != NULL);
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return;
 
    assert(lpexact != NULL);
@@ -7629,7 +7629,7 @@ void SCIPlpExactAllowExactSolve(
 {
    assert(set != NULL);
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return;
 
    assert(lpexact != NULL);
@@ -8479,7 +8479,7 @@ SCIP_RETCODE SCIPlpExactSyncLPs(
    int i;
    SCIP_Bool removecut;
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    fplp = lpexact->fplp;

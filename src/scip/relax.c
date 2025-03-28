@@ -372,7 +372,7 @@ SCIP_RETCODE SCIPrelaxExec(
    *result = SCIP_DIDNOTRUN;
 
    /* check, if the relaxator is compatible with exact solving mode */
-   if( set->exact_enabled && !relax->exact )
+   if( set->exact_enable && !relax->exact )
       return SCIP_OKAY;
 
    /* check, if the relaxation is already solved */

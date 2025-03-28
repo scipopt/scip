@@ -413,7 +413,7 @@ SCIP_RETCODE SCIPpricerRedcost(
    assert(result != NULL);
 
    /* check, if the pricer is compatible with exact solving mode */
-   if( set->exact_enabled && !pricer->exact )
+   if( set->exact_enable && !pricer->exact )
       return SCIP_OKAY;
 
    SCIPsetDebugMsg(set, "executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
@@ -456,7 +456,7 @@ SCIP_RETCODE SCIPpricerFarkas(
       return SCIP_OKAY;
 
    /* check, if the pricer is compatible with exact solving mode */
-   if( set->exact_enabled && !pricer->exact )
+   if( set->exact_enable && !pricer->exact )
       return SCIP_OKAY;
 
    SCIPsetDebugMsg(set, "executing Farkas pricing of variable pricer <%s>\n", pricer->name);

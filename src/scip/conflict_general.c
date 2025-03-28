@@ -818,7 +818,7 @@ SCIP_RETCODE addRowToAggrRow(
    assert(set != NULL);
    assert(row != NULL);
    assert(weight != 0.0);
-   assert(safely == set->exact_enabled);
+   assert(safely == set->exact_enable);
 
    /* add minimal value to dual row's left hand side: y_i < 0 -> lhs, y_i > 0 -> rhs */
    negated = weight < 0.0;
@@ -997,7 +997,7 @@ SCIP_Real SCIPaggrRowGetMinActivity(
    int nnz;
    int i;
 
-   if( set->exact_enabled )
+   if( set->exact_enable )
       return aggrRowGetMinActivitySafely(set, transprob, aggrrow, curvarlbs, curvarubs, infdelta);
 
    vars = SCIPprobGetVars(transprob);
@@ -1218,7 +1218,7 @@ SCIP_RETCODE addLocalRows(
             continue;
 
          /* add row to dual proof */
-         SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], proofrow, set->exact_enabled, valid) );
+         SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], proofrow, set->exact_enable, valid) );
          if( !(*valid) )
             goto TERMINATE;
 
@@ -1380,7 +1380,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
 
          if( !row->local )
          {
-            if( set->exact_enabled && SCIPisCertified(set->scip) )
+            if( set->exact_enable && SCIPisCertified(set->scip) )
             {
                SCIP_Longint certificate_index;
 
@@ -1394,7 +1394,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
                assert(certificate_index != LONG_MAX);
             }
 
-            SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow, set->exact_enabled, valid) );
+            SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow, set->exact_enable, valid) );
             if( !(*valid) )
                goto TERMINATE;
 
@@ -1462,7 +1462,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
       }
    }
 
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       for( int i = 0; i < farkasrow->nnz; i++ )
       {
@@ -1699,7 +1699,7 @@ SCIP_RETCODE SCIPgetDualProof(
       }
    }
 
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       SCIP_COL** cols = SCIPgetLPCols(set->scip);
       for( int i = 0; i < SCIPgetNLPCols(set->scip); i++ )
@@ -1714,7 +1714,7 @@ SCIP_RETCODE SCIPgetDualProof(
    }
 
    /* clear the proof */
-   if( set->exact_enabled )
+   if( set->exact_enable )
       SCIPaggrRowClearSafely(farkasrow);
    else
       SCIPaggrRowClear(farkasrow);
@@ -1741,7 +1741,7 @@ SCIP_RETCODE SCIPgetDualProof(
     * possible objective value below the cutoff bound
     */
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
    {
       SCIP_CALL( SCIPaggrRowAddObjectiveFunction(set->scip, farkasrow, lp->cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0), 1.0) );
    }
@@ -1792,7 +1792,7 @@ SCIP_RETCODE SCIPgetDualProof(
          /* skip local row */
          if( !row->local )
          {
-            SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], farkasrow, set->exact_enabled, valid) );
+            SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], farkasrow, set->exact_enable, valid) );
             if( !(*valid) )
                goto TERMINATE;
 
@@ -1860,7 +1860,7 @@ SCIP_RETCODE SCIPgetDualProof(
       }
    }
 
-   if( set->exact_enabled && SCIPisCertified(set->scip) )
+   if( set->exact_enable && SCIPisCertified(set->scip) )
    {
       SCIP_Longint certificateline;
       SCIP_ROW** usedrows;
@@ -1895,7 +1895,7 @@ SCIP_RETCODE SCIPgetDualProof(
    }
 
   TERMINATE:
-   assert(set->exact_enabled || objectiverow == NULL);
+   assert(set->exact_enable || objectiverow == NULL);
    if( objectiverow != NULL )
    {
       SCIP_CALL( SCIPreleaseRowExact(set->scip, &objectiverow->rowexact) );
@@ -1950,7 +1950,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    int nvars;
    int v;
 
-   if( set->exact_enabled )
+   if( set->exact_enable )
       return SCIP_OKAY;
 
    assert(conflict != NULL);
@@ -2388,7 +2388,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    /* todo: in theory, we could apply conflict graph analysis for locally valid proofs, too, but this needs to be
     * implemented; also conflict graph analysis is not implemented in exact solving mode, yet
     */
-   if( !set->exact_enabled && !globalinfeasible && validdepth <= SCIPtreeGetEffectiveRootDepth(tree)
+   if( !set->exact_enable && !globalinfeasible && validdepth <= SCIPtreeGetEffectiveRootDepth(tree)
       && (((set->conf_useinflp == 'b' || set->conf_useinflp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP)
       || ((set->conf_useboundlp == 'b' || set->conf_useboundlp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING)) )
    {
@@ -2921,7 +2921,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
     * the optimal objective value can be bound exceeding, and we can arrive here even if LP status is optimal
     */
    assert( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT
-      || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && (set->lp_disablecutoff == 1 || set->exact_enabled)) );
+      || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && (set->lp_disablecutoff == 1 || set->exact_enable)) );
 
    /* save status */
    storedsolvals.lpsolstat = lp->lpsolstat;

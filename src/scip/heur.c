@@ -1290,7 +1290,7 @@ SCIP_RETCODE SCIPheurExec(
 
    *result = SCIP_DIDNOTRUN;
 
-   if( set->exact_enabled && !heur->exact )
+   if( set->exact_enable && !heur->exact )
       return SCIP_OKAY;
 
    delayed = FALSE;

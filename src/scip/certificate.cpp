@@ -443,7 +443,7 @@ SCIP_RETCODE SCIPcertificateInit(
    assert(certificate->nodedatahash == NULL);
    assert(certificate->rowdatahash == NULL);
 
-   if( !(set->exact_enabled) || (set->certificate_filename[0] == '-' && set->certificate_filename[1] == '\0') )
+   if( !(set->exact_enable) || (set->certificate_filename[0] == '-' && set->certificate_filename[1] == '\0') )
       return SCIP_OKAY;
 
    filenamelen = (int) strlen(set->certificate_filename);

@@ -7009,7 +7009,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   if( SCIPsetIsFeasGT(scip->set, newbound, ub) || (scip->set->exact_enabled && ub < newbound))
+   if( SCIPsetIsFeasGT(scip->set, newbound, ub) || (scip->set->exact_enable && ub < newbound))
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
@@ -7123,7 +7123,7 @@ SCIP_RETCODE SCIPinferVarUbCons(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   if( SCIPsetIsFeasLT(scip->set, newbound, lb) || (scip->set->exact_enabled && lb > newbound) )
+   if( SCIPsetIsFeasLT(scip->set, newbound, lb) || (scip->set->exact_enable && lb > newbound) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;

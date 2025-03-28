@@ -518,7 +518,7 @@
 #define SCIP_DEFAULT_VISUAL_OBJEXTERN      TRUE /**< should be output the external value of the objective? */
 
 /* exact SCIP parameters */
-#define SCIP_DEFAULT_EXACT_ENABLED        FALSE /**< should the problem be solved exactly (without numerical tolerances)? */
+#define SCIP_DEFAULT_EXACT_ENABLE         FALSE /**< should the problem be solved exactly (without numerical tolerances)? */
 #define SCIP_DEFAULT_EXACT_IMPROVINGSOLS   TRUE /**< should only exact solutions be checked which improve the primal bound? */
 #define SCIP_DEFAULT_EXACT_SAFEDBMETHOD     'a' /**< method for computing safe dual bounds
                                                  *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
@@ -2814,9 +2814,9 @@ SCIP_RETCODE SCIPsetCreate(
 #ifdef SCIP_WITH_EXACTSOLVE
    /* exact SCIP parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "exact/enabled",
+         "exact/enable",
          "should the problem be solved exactly (without numerical tolerances)?",
-         &(*set)->exact_enabled, FALSE, SCIP_DEFAULT_EXACT_ENABLED,
+         &(*set)->exact_enable, FALSE, SCIP_DEFAULT_EXACT_ENABLE,
          paramChgdExactSolve, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/improvingsols",
@@ -2870,8 +2870,8 @@ SCIP_RETCODE SCIPsetCreate(
    /* if SCIP is built without support for exact solving, we initialize the values of the exact parameters, but do not
     * display the parameters to the SCIP user
     */
-   (*set)->exact_enabled = SCIP_DEFAULT_EXACT_ENABLED;
-   assert((*set)->exact_enabled == FALSE);
+   (*set)->exact_enable = SCIP_DEFAULT_EXACT_ENABLE;
+   assert((*set)->exact_enable == FALSE);
    (*set)->exact_improvingsols = SCIP_DEFAULT_EXACT_IMPROVINGSOLS;
    (*set)->exact_safedbmethod = SCIP_DEFAULT_EXACT_SAFEDBMETHOD;
    (*set)->exact_psdualcolselection = SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION;

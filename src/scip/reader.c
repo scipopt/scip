@@ -202,7 +202,7 @@ SCIP_RETCODE SCIPreaderRead(
       SCIP_CLOCK* readingtime;
 
       /* only readers marked as exact can read and write in exact solving mode */
-      if( set->exact_enabled && !reader->exact )
+      if( set->exact_enable && !reader->exact )
       {
          SCIPerrorMessage("reader %s cannot read problems exactly\n", SCIPreaderGetName(reader));
          return SCIP_READERROR;
@@ -312,7 +312,7 @@ SCIP_RETCODE SCIPreaderWrite(
       int i;
 
       /* only readers marked as exact can read and write in exact solving mode */
-      if( set->exact_enabled && !reader->exact )
+      if( set->exact_enable && !reader->exact )
       {
          SCIPerrorMessage("reader %s cannot write problems exactly\n", SCIPreaderGetName(reader));
          return SCIP_READERROR;

@@ -89,7 +89,7 @@ SCIP_RETCODE updateLpExactBoundChange(
    )
 {
    /* do nothing if not in exact solving mode */
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
     return SCIP_OKAY;
 
    assert(var != NULL);
@@ -1888,7 +1888,7 @@ SCIP_RETCODE SCIPeventProcess(
       }
 
       /* if in exact solving mode, adjust rational lp data */
-      if( set->exact_enabled )
+      if( set->exact_enable )
       {
          SCIP_RATIONAL* newobj;
          SCIP_RATIONAL* oldobj;

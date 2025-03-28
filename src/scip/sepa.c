@@ -428,7 +428,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          (sepa->freq > 0 && depth % sepa->freq == 0 &&
             (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, LOG2(depth * (1.0 / sepa->freq)) / LOG2((SCIP_Real)sepa->expbackoff)))) ||
          sepa->lpwasdelayed) &&
-         (!set->exact_enabled || sepa->exact)
+         (!set->exact_enable || sepa->exact)
      )
    {
       if( (!sepa->delay && !sepa->lpwasdelayed) || execdelayed )
@@ -545,7 +545,7 @@ SCIP_RETCODE SCIPsepaExecSol(
          (sepa->freq > 0 && depth % sepa->freq == 0 &&
             (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, LOG2(depth * (1.0 / sepa->freq) / LOG2((SCIP_Real)sepa->expbackoff))))) ||
          sepa->solwasdelayed ) &&
-         (!set->exact_enabled || sepa->exact)
+         (!set->exact_enable || sepa->exact)
      )
    {
       if( (!sepa->delay && !sepa->solwasdelayed) || execdelayed )

@@ -1102,7 +1102,7 @@ SCIP_RETCODE SCIPboundchgUndo(
                var->lbchginfos[var->nlbchginfos].oldcertificateindex) );
       }
 
-      if( set->exact_enabled && !SCIPrationalIsFpRepresentable(SCIPvarGetLbGlobalExact(boundchg->var))
+      if( set->exact_enable && !SCIPrationalIsFpRepresentable(SCIPvarGetLbGlobalExact(boundchg->var))
             && SCIPsetIsEQ(set, var->lbchginfos[var->nlbchginfos].oldbound, SCIPvarGetLbGlobal(boundchg->var) ) )
       {
          /* reinstall the exact global bound, if necessary */
@@ -1140,7 +1140,7 @@ SCIP_RETCODE SCIPboundchgUndo(
                var->ubchginfos[var->nubchginfos].oldcertificateindex) );
       }
 
-      if( set->exact_enabled && !SCIPrationalIsFpRepresentable(SCIPvarGetUbGlobalExact(boundchg->var))
+      if( set->exact_enable && !SCIPrationalIsFpRepresentable(SCIPvarGetUbGlobalExact(boundchg->var))
             && SCIPsetIsEQ(set, var->ubchginfos[var->nubchginfos].oldbound, SCIPvarGetUbGlobal(boundchg->var) ) )
       {
          /* reinstall the exact global bound, if necessary */
@@ -1990,7 +1990,7 @@ void overwriteMultAggrWithExactData(
 {
    int i;
 
-   if( !set->exact_enabled || SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+   if( !set->exact_enable || SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
       return;
 
    var->data.multaggr.constant = SCIPrationalGetReal(var->exactdata->multaggr.constant);
@@ -3358,7 +3358,7 @@ SCIP_RETCODE varFreeExactData(
    assert(blkmem != NULL);
    assert(var != NULL);
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
    {
       assert( var->exactdata == NULL );
       return SCIP_OKAY;
@@ -4310,7 +4310,7 @@ SCIP_RETCODE SCIPvarColumnExact(
    SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(var != NULL);
@@ -4667,12 +4667,12 @@ SCIP_RETCODE SCIPvarFixExact(
 
    assert(var != NULL);
    assert(var->scip == set->scip);
-   assert(set->exact_enabled);
+   assert(set->exact_enable);
 
    *infeasible = FALSE;
    *fixed = FALSE;
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb));
@@ -5694,7 +5694,7 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    nmultvars = var->data.multaggr.nvars;
    multvarssize = var->data.multaggr.varssize;
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
    {
       SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
 
@@ -8072,7 +8072,7 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
 
    assert(var != NULL);
    assert(var->scip == set->scip);
-   assert(set->exact_enabled);
+   assert(set->exact_enable);
    assert(SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb)); /*lint !e777*/
    assert(SCIPrationalIsEQ(var->exactdata->glbdom.ub, var->exactdata->locdom.ub)); /*lint !e777*/
    assert(naggvars == 0 || aggvars != NULL);
@@ -8967,7 +8967,7 @@ SCIP_RETCODE varEventObjChanged(
    */
    assert(!SCIPsetIsEQ(set, oldobj, newobj) ||
           (SCIPsetIsEQ(set, oldobj, newobj) && REALABS(newobj) > 1e+15 * SCIPsetEpsilon(set)) ||
-          (set->exact_enabled && oldobj != newobj)); /*lint !e777*/
+          (set->exact_enable && oldobj != newobj)); /*lint !e777*/
 
    SCIP_CALL( SCIPeventCreateObjChanged(&event, blkmem, var, oldobj, newobj) );
    SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
@@ -9104,7 +9104,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
    assert(var != NULL);
    assert(set != NULL);
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(var->exactdata != NULL);
@@ -10170,7 +10170,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
    oldbound = var->glbdom.lb;
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
    var->glbdom.lb = newbound;
-   if( set->exact_enabled && SCIPrationalIsLTReal(SCIPvarGetLbGlobalExact(var), newbound) )
+   if( set->exact_enable && SCIPrationalIsLTReal(SCIPvarGetLbGlobalExact(var), newbound) )
       SCIPrationalSetReal(var->exactdata->glbdom.lb, newbound);
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
    assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
@@ -10349,7 +10349,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
    oldbound = var->glbdom.ub;
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
    var->glbdom.ub = newbound;
-   if( set->exact_enabled && SCIPrationalIsGTReal(SCIPvarGetUbGlobalExact(var), newbound) )
+   if( set->exact_enable && SCIPrationalIsGTReal(SCIPvarGetUbGlobalExact(var), newbound) )
       SCIPrationalSetReal(var->exactdata->glbdom.ub, newbound);
 
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
@@ -11692,7 +11692,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
    var->locdom.lb = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       SCIPrationalSetReal(var->exactdata->locdom.lb, var->locdom.lb);
       SCIPrationalMax(var->exactdata->locdom.lb, var->exactdata->locdom.lb, var->exactdata->glbdom.lb);
@@ -11745,7 +11745,7 @@ SCIP_RETCODE varProcessChgLbLocal(
             SCIP_Real parentnewbound;
             assert(parentvar->data.aggregate.var == var);
 
-            if (!set->exact_enabled)
+            if (!set->exact_enable)
             {
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
             }
@@ -11879,7 +11879,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
    var->locdom.ub = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       SCIPrationalSetReal(var->exactdata->locdom.ub, var->locdom.ub);
       SCIPrationalMin(var->exactdata->locdom.ub, var->exactdata->locdom.ub, var->exactdata->glbdom.ub);
@@ -11932,7 +11932,7 @@ SCIP_RETCODE varProcessChgUbLocal(
             SCIP_Real parentnewbound;
             assert(parentvar->data.aggregate.var == var);
 
-            if( !set->exact_enabled )
+            if( !set->exact_enable )
             {
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
             }
@@ -18808,10 +18808,10 @@ SCIP_Real getImplVarRedcost(
       {
          SCIP_Real redcost = SCIPcolGetRedcost(col, stat, lp);
 
-         assert(set->exact_enabled || (((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol)) ||
+         assert(set->exact_enable || (((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol)) ||
                (lpissolbasic && basestat == SCIP_BASESTAT_LOWER)) ? (!SCIPsetIsDualfeasNegative(set, redcost) ||
                SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))) : TRUE));
-         assert(set->exact_enabled || (((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol)) ||
+         assert(set->exact_enable || (((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol)) ||
                (lpissolbasic && basestat == SCIP_BASESTAT_UPPER)) ? (!SCIPsetIsDualfeasPositive(set, redcost) ||
                SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))) : TRUE));
 
@@ -19691,9 +19691,9 @@ SCIP_RETCODE SCIPvarAddToRow(
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
-      assert(var->glbdom.lb == var->glbdom.ub || (set->exact_enabled && SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub))); /*lint !e777*/
-      assert(var->locdom.lb == var->locdom.ub || (set->exact_enabled && SCIPrationalIsEQ(var->exactdata->locdom.lb, var->exactdata->locdom.ub))); /*lint !e777*/
-      assert(var->locdom.lb == var->glbdom.lb || (set->exact_enabled && SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb))); /*lint !e777*/
+      assert(var->glbdom.lb == var->glbdom.ub || (set->exact_enable && SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub))); /*lint !e777*/
+      assert(var->locdom.lb == var->locdom.ub || (set->exact_enable && SCIPrationalIsEQ(var->exactdata->locdom.lb, var->exactdata->locdom.ub))); /*lint !e777*/
+      assert(var->locdom.lb == var->glbdom.lb || (set->exact_enable && SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb))); /*lint !e777*/
       assert(!SCIPsetIsInfinity(set, REALABS(var->locdom.lb)));
       SCIP_CALL( SCIProwAddConstant(row, blkmem, set, stat, eventqueue, lp, val * var->locdom.lb) );
       return SCIP_OKAY;

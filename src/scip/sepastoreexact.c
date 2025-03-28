@@ -81,7 +81,7 @@ SCIP_RETCODE SCIPsepastoreExactCreate(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(sepastoreexact != NULL);
@@ -196,7 +196,7 @@ SCIP_RETCODE SCIPsepastoreExactClearCuts(
 {
    int c;
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(sepastoreexact != NULL);

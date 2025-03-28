@@ -104,7 +104,7 @@ SCIP_RETCODE SCIPstatCreate(
 
    SCIP_CALL( SCIPregressionCreate(&(*stat)->regressioncandsobjval) );
 
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       SCIP_CALL( SCIPrationalCreate(&(*stat)->lastlowerboundexact) );
       SCIPrationalSetNegInfinity((*stat)->lastlowerboundexact);

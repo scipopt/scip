@@ -551,7 +551,7 @@ SCIP_RETCODE SCIPpropPresol(
 
    *result = SCIP_DIDNOTRUN;
 
-   if( prop->proppresol == NULL || (set->exact_enabled && !prop->exact) )
+   if( prop->proppresol == NULL || (set->exact_enable && !prop->exact) )
       return SCIP_OKAY;
 
    /* check number of presolving rounds */
@@ -664,7 +664,7 @@ SCIP_RETCODE SCIPpropExec(
    assert(result != NULL);
 
    if( ((depth == 0 && prop->freq == 0) || (prop->freq > 0 && depth % prop->freq == 0))
-         && (!set->exact_enabled || prop->exact) )
+         && (!set->exact_enable || prop->exact) )
    {
       if( !prop->delay || execdelayed )
       {

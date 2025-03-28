@@ -296,7 +296,7 @@ SCIP_RETCODE proofsetAddAggrrow(
 
    for( i = 0; i < nnz; i++ )
    {
-      if( !set->exact_enabled )
+      if( !set->exact_enable )
          vals[i] = SCIPaggrRowGetProbvarValue(aggrrow, inds[i]);
       else
          vals[i] = aggrrow->vals[inds[i]];
@@ -306,7 +306,7 @@ SCIP_RETCODE proofsetAddAggrrow(
 
    SCIPsetFreeBufferArray(set, &vals);
 
-   if( set->exact_enabled && SCIPisCertified(set->scip) )
+   if( set->exact_enable && SCIPisCertified(set->scip) )
    {
       assert(aggrrow->certificateline != SCIP_LONGINT_MAX);
       assert(proofset->certificateline == SCIP_LONGINT_MAX);
@@ -940,7 +940,7 @@ SCIP_RETCODE createAndAddProofcons(
    }
 
    /* don't store global dual proofs that are too long / have too many non-zeros */
-   if( !set->exact_enabled && toolong )
+   if( !set->exact_enable && toolong )
    {
       if( applyglobal )
       {
@@ -973,7 +973,7 @@ SCIP_RETCODE createAndAddProofcons(
 
    SCIPdebugMessage("Create constraint from dual ray analysis\n");
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
    {
       SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, -SCIPsetInfinity(set), rhs,
             FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
@@ -1024,12 +1024,12 @@ SCIP_RETCODE createAndAddProofcons(
    }
    else
    {
-      assert(set->exact_enabled && toolong);
+      assert(set->exact_enable && toolong);
       return SCIP_OKAY;
    }
 
    /* do not upgrade linear constraints of size 1 */
-   if( !set->exact_enabled && nnz > 1 )
+   if( !set->exact_enable && nnz > 1 )
    {
       upgdcons = NULL;
       /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
@@ -1087,10 +1087,10 @@ SCIP_RETCODE createAndAddProofcons(
          SCIP_CONSHDLR* conshdlr = SCIPconsGetHdlr(cons);
 
          assert(conshdlr != NULL);
-         assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 || set->exact_enabled );
-         assert(strcmp(SCIPconshdlrGetName(conshdlr), "exactlinear") == 0 || !set->exact_enabled );
+         assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 || set->exact_enable );
+         assert(strcmp(SCIPconshdlrGetName(conshdlr), "exactlinear") == 0 || !set->exact_enable );
 #endif
-         side = set->exact_enabled ? SCIPrationalRoundReal(SCIPgetLhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST) : SCIPgetLhsLinear(set->scip, cons);
+         side = set->exact_enable ? SCIPrationalRoundReal(SCIPgetLhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST) : SCIPgetLhsLinear(set->scip, cons);
 
          if( !SCIPsetIsInfinity(set, -side) )
          {
@@ -1106,7 +1106,7 @@ SCIP_RETCODE createAndAddProofcons(
          }
          else
          {
-            side = set->exact_enabled ? SCIPrationalRoundReal(SCIPgetRhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST) : SCIPgetRhsLinear(set->scip, cons);
+            side = set->exact_enable ? SCIPrationalRoundReal(SCIPgetRhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST) : SCIPgetRhsLinear(set->scip, cons);
             assert(!SCIPsetIsInfinity(set, side));
 
             if( SCIPsetIsZero(set, side) )
@@ -1194,7 +1194,7 @@ SCIP_RETCODE SCIPconflictFlushProofset(
    {
       /**@todo implement special handling of conflicts with one variable also for exact solving mode */
       /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
-      if( !set->exact_enabled && SCIPproofsetGetNVars(conflict->proofset) == 1 )
+      if( !set->exact_enable && SCIPproofsetGetNVars(conflict->proofset) == 1 )
       {
          SCIP_VAR** vars;
          SCIP_Real* coefs;
@@ -1256,7 +1256,7 @@ SCIP_RETCODE SCIPconflictFlushProofset(
 
          /**@todo implement special handling of conflicts with one variable also for exact solving mode */
          /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
-         if( !set->exact_enabled && SCIPproofsetGetNVars(conflict->proofsets[i]) == 1 )
+         if( !set->exact_enable && SCIPproofsetGetNVars(conflict->proofsets[i]) == 1 )
          {
             SCIP_VAR** vars;
             SCIP_Real* coefs;
@@ -1545,7 +1545,7 @@ SCIP_RETCODE tightenDualproof(
    debugPrintViolationInfo(set, SCIPaggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, NULL), SCIPaggrRowGetRhs(proofrow), NULL);
 
    /* try to find an alternative proof of local infeasibility that is stronger */
-   if( !set->exact_enabled && set->conf_sepaaltproofs )
+   if( !set->exact_enable && set->conf_sepaaltproofs )
    {
       SCIP_CALL( separateAlternativeProofs(conflict, set, stat, transprob, tree, blkmem, proofrow, curvarlbs, curvarubs,
             conflict->conflictset->conflicttype) );
@@ -1584,7 +1584,7 @@ SCIP_RETCODE tightenDualproof(
     * todo: check whether we also want to do that for bound exceeding proofs, but then we cannot update the
     *       conflict anymore
     */
-   if( !set->exact_enabled && proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
+   if( !set->exact_enable && proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
    {
       /* remove all continuous variables that have equal global and local bounds (ub or lb depend on the sign)
        * from the proof
@@ -1635,13 +1635,13 @@ SCIP_RETCODE tightenDualproof(
    }
 
    /* apply coefficient tightening to initial proof */
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       tightenCoefficients(set, proofset, &nchgcoefs, &redundant);
 
    /* it can happen that the constraints is almost globally redundant w.r.t to the maximal activity,
     * e.g., due to numerics. in this case, we want to discard the proof
     */
-   if( !set->exact_enabled && redundant )
+   if( !set->exact_enable && redundant )
    {
 #ifndef NDEBUG
       SCIP_Real eps = MIN(0.01, 10.0*set->num_feastol);

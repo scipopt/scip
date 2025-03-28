@@ -321,7 +321,7 @@ SCIP_RETCODE SCIPnodepqInsert(
 
    /* insert the final position into the bfs index queue */
    bfspos = nodepq->len-1;
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       SCIP_RATIONAL* lowerbound = SCIPnodeGetLowerboundExact(node);
       while( bfspos > 0 && SCIPrationalIsLT(lowerbound, SCIPnodeGetLowerboundExact(slots[bfsqueue[PQ_PARENT(bfspos)]])) )
@@ -466,7 +466,7 @@ SCIP_Bool nodepqDelPos(
 
       /* try to move parents downwards to insert last queue index */
       parentpos = PQ_PARENT(freebfspos);
-      if( set->exact_enabled )
+      if( set->exact_enable )
       {
          SCIP_RATIONAL* lastlowerbound = SCIPnodeGetLowerboundExact(slots[lastbfsqueueidx]);
          while( freebfspos > 0 && SCIPrationalIsLT(lastlowerbound, SCIPnodeGetLowerboundExact(slots[bfsqueue[parentpos]])) )
@@ -746,7 +746,7 @@ SCIP_RETCODE SCIPnodepqBound(
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
 
       /* cut off node */
-      if( set->exact_enabled ? SCIPrationalIsGEReal(SCIPnodeGetLowerboundExact(node), cutoffbound)
+      if( set->exact_enable ? SCIPrationalIsGEReal(SCIPnodeGetLowerboundExact(node), cutoffbound)
                              : SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
       {
          /* because we loop from back to front, the existing children of the node must have a smaller lower bound
@@ -756,10 +756,10 @@ SCIP_RETCODE SCIPnodepqBound(
          assert(node->depth != 0 || tree->focusnode == NULL);
          assert(PQ_LEFTCHILD(pos) >= nodepq->len
             || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]), cutoffbound)
-            || (set->exact_enabled && SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]) < cutoffbound));
+            || (set->exact_enable && SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]) < cutoffbound));
          assert(PQ_RIGHTCHILD(pos) >= nodepq->len
             || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]), cutoffbound)
-            || (set->exact_enabled && SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]) < cutoffbound));
+            || (set->exact_enable && SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]) < cutoffbound));
 
          SCIPsetDebugMsg(set, "cutting off leaf node in slot %d (queuelen=%d) at depth %d with lowerbound=%g\n",
             pos, SCIPnodepqLen(nodepq), SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
@@ -781,7 +781,7 @@ SCIP_RETCODE SCIPnodepqBound(
             --pos;
 
          node->cutoff = TRUE;
-         if( set->exact_enabled )
+         if( set->exact_enable )
             SCIPrationalSetInfinity(node->lowerboundexact);
          node->lowerbound = SCIPsetInfinity(set);
          node->estimate = SCIPsetInfinity(set);
@@ -789,7 +789,7 @@ SCIP_RETCODE SCIPnodepqBound(
          if( node->depth == 0 )
             stat->rootlowerbound = SCIPsetInfinity(set);
 
-         if( set->exact_enabled )
+         if( set->exact_enable )
          {
             SCIP_RATIONAL* lowerboundexact = SCIPtreeGetLowerboundExact(tree, set);
 
@@ -819,7 +819,7 @@ SCIP_RETCODE SCIPnodepqBound(
                SCIPstatUpdatePrimalDualIntegrals(stat, set, set->scip->transprob, set->scip->origprob, SCIPsetInfinity(set), lowerbound);
 
             /* throw improvement event if not already done exactly */
-            if( !set->exact_enabled )
+            if( !set->exact_enable )
             {
                SCIP_EVENT event;
 

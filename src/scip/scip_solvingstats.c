@@ -4444,7 +4444,7 @@ void SCIPprintLPStatistics(
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -\n");
 
-   if( scip->set->exact_enabled )
+   if( scip->set->exact_enable )
    {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Safe Bounding      :       Time      Calls Iterations  Iter/call   Iter/sec     Nfails   AvgError   NObjlim  NObjlimF \n");
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp feas    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",

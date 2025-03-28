@@ -2,7 +2,7 @@
 
 # should the problem be solved exactly (with proven dual bounds)? (Only possible if no problem has been read in yet)
 # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
-exact/enabled = TRUE
+exact/enable = TRUE
 
 # exip: method for computing safe dual bounds ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic)
 # [type: char, advanced: FALSE, range: {npea}, default: a]

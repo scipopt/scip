@@ -501,7 +501,7 @@ SCIP_RETCODE initPresolve(
       scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
-      if( scip->set->exact_enabled )
+      if( scip->set->exact_enable )
          SCIPrationalSetReal(scip->tree->root->lowerboundexact, scip->tree->root->lowerbound);
 
       /* update primal-dual integrals */
@@ -512,7 +512,7 @@ SCIP_RETCODE initPresolve(
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
       SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
       scip->stat->lastlowerbound = scip->tree->root->lowerbound;
-      if( scip->set->exact_enabled )
+      if( scip->set->exact_enable )
          SCIPrationalSetRational(scip->stat->lastlowerboundexact, scip->tree->root->lowerboundexact);
    }
 
@@ -1596,7 +1596,7 @@ SCIP_RETCODE initSolve(
       scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
-      if( scip->set->exact_enabled )
+      if( scip->set->exact_enable )
          SCIPrationalSetReal(scip->tree->root->lowerboundexact, scip->tree->root->lowerbound);
 
       /* update primal-dual integrals */
@@ -1607,7 +1607,7 @@ SCIP_RETCODE initSolve(
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
       SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
       scip->stat->lastlowerbound = scip->tree->root->lowerbound;
-      if( scip->set->exact_enabled )
+      if( scip->set->exact_enable )
          SCIPrationalSetRational(scip->stat->lastlowerboundexact, scip->tree->root->lowerboundexact);
    }
 
@@ -2200,7 +2200,7 @@ SCIP_RETCODE displayRelevantStats(
          else
             SCIPmessagePrintInfo(scip->messagehdlr, "%.2f %%\n", 100.0*SCIPgetGap(scip));
       }
-      if( scip->set->exact_enabled && scip->primal->nsolsfound > 0 )
+      if( scip->set->exact_enable && scip->primal->nsolsfound > 0 )
       {
          SCIP_RATIONAL* objval;
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
@@ -2601,7 +2601,7 @@ SCIP_RETCODE SCIPpresolve(
       SCIP_CALL( displayRelevantStats(scip) );
    }
 
-   if( scip->set->exact_enabled && !(scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0') && hasPresolveModifiedProblem(scip) )
+   if( scip->set->exact_enable && !(scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0') && hasPresolveModifiedProblem(scip) )
    {
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_DIALOG, "\n");
       SCIPwarningMessage(scip, "Certificate is printed for presolved problem. "
@@ -3219,7 +3219,7 @@ SCIP_RETCODE SCIPenableReoptimization(
    }
 
    /* reoptimization in combination with exact solving has not been implemented */
-   if( scip->set->exact_enabled )
+   if( scip->set->exact_enable )
    {
       SCIPerrorMessage("Reoptimization cannot (yet) be started in exact solving mode.\n");
       return SCIP_INVALIDCALL;

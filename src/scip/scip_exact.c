@@ -164,7 +164,7 @@ SCIP_RETCODE SCIPenableExactSolving(
    }
 #else
    /* skip if nothing has changed */
-   if( enable == scip->set->exact_enabled )
+   if( enable == scip->set->exact_enable )
       return SCIP_OKAY;
 
    /* check stage and throw an error */
@@ -181,7 +181,7 @@ SCIP_RETCODE SCIPenableExactSolving(
       return SCIP_INVALIDCALL;
    }
 
-   scip->set->exact_enabled = enable;
+   scip->set->exact_enable = enable;
 #endif
 
    return SCIP_OKAY;
@@ -198,7 +198,7 @@ SCIP_Bool SCIPisExact(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return (scip->set->exact_enabled);
+   return (scip->set->exact_enable);
 }
 
 /** returns whether aggregation is allowed to use negative slack in exact solving mode
