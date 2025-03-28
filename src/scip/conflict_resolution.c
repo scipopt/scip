@@ -848,7 +848,7 @@ SCIP_RETCODE ComplementedMirLhs(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_CONFLICTROW*     reasonrow,          /**< reason row */
-   int*                  fixinds,             /**< dense array of indices of fixed variables */
+   int*                  fixinds,            /**< dense array of indices of fixed variables */
    SCIP_BDCHGIDX*        currbdchgidx,       /**< current bound change index */
    int                   idxreason,          /**< index in the reason */
    SCIP_Real             divisor             /**< the divisor of the row */
@@ -2904,12 +2904,12 @@ SCIP_RETCODE resolveClauses(
 /** reduce the reason constraint */
 static
 SCIP_RETCODE reduceReason(
-   SCIP_CONFLICT*       conflict,           /**< conflict analysis data */
+   SCIP_CONFLICT*       conflict,            /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_VAR**            vars,               /**< array of variables */
    int                   nvars,              /**< number of variables */
-   SCIP_CONFLICTROW*     rowtoreduce,         /**< the row to reduce */
+   SCIP_CONFLICTROW*     rowtoreduce,        /**< the row to reduce */
    SCIP_BDCHGINFO*       currbdchginfo,      /**< current bound change to resolve */
    int                   residx,             /**< index of variable to resolve */
    SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
