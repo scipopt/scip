@@ -312,7 +312,8 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       searchbound = SCIPceil(scip, searchbound);
 
    /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
-   maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   maxdivedepth = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(maxdivedepth >= 0);
    maxdivedepth = MIN(maxdivedepth, maxdepth);
    maxdivedepth *= 10;
 
@@ -684,6 +685,9 @@ SCIP_RETCODE SCIPincludeHeurIntdiving(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecIntdiving, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIntdiving) );

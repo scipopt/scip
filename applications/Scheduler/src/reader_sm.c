@@ -296,7 +296,7 @@ SCIP_RETCODE getResourcesNames(
 
    do
    {
-      while(isspace(*name))
+      while(isspace((unsigned char)*name))
          name++;
 
       SCIP_CALL( SCIPduplicateBufferArray(scip, &rcpspdata->resourcenames[r], name, strlen(name) + 1) ); /*lint !e866*/
@@ -542,7 +542,7 @@ SCIP_RETCODE readFile(
       s = buf;
 
       /* remove white space */
-      while(isspace(*s))
+      while(isspace((unsigned char)*s))
          s++;
 
       /* skip empty lines */

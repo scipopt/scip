@@ -37,6 +37,7 @@
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -97,24 +98,18 @@ SCIP_RETCODE applyBoundHeur(
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
-   SCIP_VAR** vars;
+   SCIP_VAR** vars = SCIPgetVars(scip);
    SCIP_VAR* var;
    SCIP_Bool infeasible = FALSE;
+   int nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
    int maxproprounds;
-   int nbinvars;
-   int nintvars;
-   int nvars;
    int v;
 
-   /* get variable data of original problem */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
+   assert(nvars >= 0);
 
    maxproprounds = heurdata->maxproprounds;
    if( maxproprounds == -2 )
       maxproprounds = 0;
-
-   /* only look at binary and integer variables */
-   nvars = nbinvars + nintvars;
 
    /* stop if we would have infinite fixings */
    if( lower )
@@ -140,8 +135,7 @@ SCIP_RETCODE applyBoundHeur(
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
-
-      assert(SCIPvarIsNonimpliedIntegral(var));
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
       /* skip variables which are already fixed */
       if( SCIPvarGetLbLocal(var) + 0.5 > SCIPvarGetUbLocal(var) )
@@ -350,8 +344,10 @@ SCIP_DECL_HEUREXEC(heurExecBound)
 
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
-      if( cutoff )
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result)
+       * if we are not in exact solving mode
+       */
+      if( cutoff && !SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
@@ -393,6 +389,9 @@ SCIP_RETCODE SCIPincludeHeurBound(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecBound, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyBound) );

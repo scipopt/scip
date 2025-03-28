@@ -422,7 +422,6 @@ struct SCIP_Set
    SCIP_Bool             misc_usevartable;   /**< should a hashtable be used to map from variable names to variables? */
    SCIP_Bool             misc_useconstable;  /**< should a hashtable be used to map from constraint names to constraints? */
    SCIP_Bool             misc_usesmalltables;/**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
-   SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
    SCIP_Bool             misc_resetstat;     /**< should the statistics be reset if the transformed problem is freed
                                               *   otherwise the statistics get reset after original problem is freed (in
                                               *   case of bender decomposition this parameter should be set to FALSE and
@@ -644,6 +643,27 @@ struct SCIP_Set
    SCIP_Bool             visual_dispsols;    /**< should the node where solutions are found be visualized? */
    SCIP_Bool             visual_displb;      /**< should lower bound information be visualized? */
    SCIP_Bool             visual_objextern;   /**< should be output the external value of the objective? */
+
+   /* exact SCIP settings */
+   SCIP_Bool             exact_enable;       /**< should the problem be solved exactly (without numerical tolerances)? */
+   SCIP_Bool             exact_improvingsols; /**< should only exact solutions be checked which improve the primal bound? */
+   int                   exact_interleavestrategy; /**< strategy to interleave safe dual bounding with exact LP
+                                              *   solve (0: never, 1: only close to cutoff bound, 2: only at depth lvl 4,8,16,...,
+                                              *   3: close to cutoff bound OR at depth lvl 4,8,16,...) */
+   char                  exact_safedbmethod; /**< method for computing safe dual bounds
+                                              *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
+   int                   exact_psdualcolselection; /**< strategy for dual column selection in project-and-shift to compute interior point
+                                              *   (0: no sel, 1: active rows of inexact primal LP, 2: active rows of exact primal LP) */
+   SCIP_Bool             exact_lpinfo;       /**< should exact the LP solver display status messages? */
+   SCIP_Bool             exact_allownegslack;/**< should negative slack variables be used for gomory cuts in exact solving mode? */
+   SCIP_Longint          exact_cutmaxdenom;  /**< maximal denominator in cut coefficients, leading to slightly
+                                              *   weaker but numerically better cuts (0: disabled) */
+   SCIP_Longint          exact_cutapproxmaxboundval; /**< maximal absolute bound value for wich cut coefficient should
+                                              *   be approximated with bounded denominator (0: no restriction) */
+
+   /* certificate settings */
+   char*                 certificate_filename;/**< name of the certificate file, or "-" if no output should be created */
+   SCIP_Real             certificate_maxfilesize;/**< maximum size of the certificate file in MB (stop printing when reached) */
 
    /* Reading */
    SCIP_Bool             read_initialconss;  /**< should model constraints be marked as initial? */

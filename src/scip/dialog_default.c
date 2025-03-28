@@ -68,6 +68,7 @@
 #include "scip/scip_dialog.h"
 #include "scip/scip_disp.h"
 #include "scip/scip_expr.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_iisfinder.h"
@@ -92,6 +93,7 @@
 #include "scip/scip_validation.h"
 #include "scip/scip_var.h"
 #include "scip/prop_symmetry.h"
+#include "scip/rational.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -4109,9 +4111,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
    {
       char *refstrs[2];
       SCIP_Real refvals[2] = {SCIP_INVALID, SCIP_INVALID};
+      SCIP_RATIONAL** refvalsrat = NULL;
       const char* primaldual[] = {"primal", "dual"};
       char prompt[SCIP_MAXSTRLEN];
       int i;
+
+      if( SCIPisExact(scip) )
+      {
+         SCIP_CALL( SCIPrationalCreateArray(&refvalsrat, 2) );
+      }
 
       /* read in primal and dual reference values */
       for( i = 0; i < 2; ++i )
@@ -4129,6 +4137,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
          }
          else if( strncmp(refstrs[i], "q", 1) == 0 )
             break;
+         else if( SCIPisExact(scip) )
+         {
+            assert(refvalsrat != NULL);
+            if( !SCIPparseRational(scip, refstrs[i], refvalsrat[i], &endptr) ) /*lint !e644*/
+            {
+               SCIPdialogMessage(scip, NULL, "Could not parse value '%s', please try again or type 'q' to quit\n", refstrs[i]);
+               --i; /*lint !e850*/
+            }
+         }
          else if( ! SCIPparseReal(scip, refstrs[i], &refvals[i], &endptr) )
          {
             SCIPdialogMessage(scip, NULL, "Could not parse value '%s', please try again or type 'q' to quit\n", refstrs[i]);
@@ -4139,9 +4156,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
       /* check if the loop finished by checking the value of 'i'. Do not validate if user input is missing */
       if( i == 2 ) /*lint !e850*/
       {
-         assert(refvals[0] != SCIP_INVALID); /*lint !e777*/
-         assert(refvals[1] != SCIP_INVALID); /*lint !e777*/
-         SCIP_CALL( SCIPvalidateSolve(scip, refvals[0], refvals[1], SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
+         if( SCIPisExact(scip) )
+         {
+            assert(refvalsrat != NULL);
+            SCIP_CALL( SCIPvalidateSolveExact(scip, refvalsrat[0], refvalsrat[1], FALSE, NULL, NULL, NULL) );
+            SCIPrationalFreeArray(&refvalsrat, 2);
+         }
+         else
+         {
+            assert(refvals[0] != SCIP_INVALID); /*lint !e777*/
+            assert(refvals[1] != SCIP_INVALID); /*lint !e777*/
+            SCIP_CALL( SCIPvalidateSolve(scip, refvals[0], refvals[1], SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
+         }
       }
    }
 

@@ -2741,6 +2741,9 @@ SCIP_DECL_READERREAD(readerReadSto)
 
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    correader = SCIPfindReader(scip, "correader");
    timreader = SCIPfindReader(scip, "timreader");

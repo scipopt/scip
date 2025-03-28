@@ -42,6 +42,9 @@
 #include "scip/type_cons.h"
 #include "scip/type_prop.h"
 #include "scip/type_lp.h"
+#include "scip/rational.h"
+#include "scip/type_lpexact.h"
+#include "scip/intervalarith.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -91,11 +94,13 @@ struct SCIP_InferenceData
 struct SCIP_BoundChg
 {
    SCIP_Real             newbound;           /**< new value for bound */
+   SCIP_RATIONAL*        newboundexact;      /**< new value for exact bound, or NULL if not needed */
    union
    {
       SCIP_BRANCHINGDATA branchingdata;      /**< data for branching decisions */
       SCIP_INFERENCEDATA inferencedata;      /**< data for inferred bound changes */
    } data;
+   SCIP_Longint          certificateindex;   /**< line in certificate for this bound change (-1 if not used) */
    SCIP_VAR*             var;                /**< active variable to change the bounds for */
    unsigned int          boundchgtype:2;     /**< bound change type: branching decision or inferred bound change */
    unsigned int          boundtype:1;        /**< type of bound for var: lower or upper bound */
@@ -116,6 +121,7 @@ struct SCIP_BdChgInfo
 {
    SCIP_Real             oldbound;           /**< old value for bound */
    SCIP_Real             newbound;           /**< new value for bound */
+   SCIP_Longint          oldcertificateindex;/**< certificate line for old bound (-1 if certificate is not used) */
    SCIP_VAR*             var;                /**< active variable that changed the bounds */
    SCIP_INFERENCEDATA    inferencedata;      /**< data for inferred bound changes */
    SCIP_BDCHGIDX         bdchgidx;           /**< bound change index in path from root to current node */
@@ -172,6 +178,15 @@ struct SCIP_Dom
    SCIP_HOLELIST*        holelist;           /**< list of holes */
 };
 
+/** exact domain of a variable */
+struct SCIP_DomExact
+{
+   SCIP_RATIONAL*        lb;                 /**< exact lower bound of variables */
+   SCIP_RATIONAL*        ub;                 /**< exact upper bound of variables */
+   SCIP_Longint          lbcertificateidx;   /**< certificate index of lower bound (-1 if not set or no certificate active) */
+   SCIP_Longint          ubcertificateidx;   /**< certificate index of upper bound (-1 if not set or no certificate active) */
+};
+
 /** original variable information */
 struct SCIP_Original
 {
@@ -187,6 +202,13 @@ struct SCIP_Aggregate
    SCIP_VAR*             var;                /**< variable y in aggregation */
 };
 
+/** exact aggregation information: x = a*y + c */
+struct SCIP_AggregateExact
+{
+   SCIP_RATIONAL*        scalar;             /**< multiplier a in aggregation */
+   SCIP_RATIONAL*        constant;           /**< constant shift c in aggregation */
+};
+
 /** multiple aggregation information: x = a_1*y_1 + ... + a_k*y_k + c */
 struct SCIP_Multaggr
 {
@@ -197,10 +219,32 @@ struct SCIP_Multaggr
    int                   varssize;           /**< size of vars and scalars arrays */
 };
 
+/** multiple aggregation information: x = a_1*y_1 + ... + a_k*y_k + c */
+struct SCIP_MultaggrExact
+{
+   SCIP_RATIONAL*        constant;           /**< constant shift c in multiple aggregation */
+   SCIP_RATIONAL**       scalars;            /**< multipliers a in multiple aggregation */
+};
+
 /** negation information: x' = c - x */
 struct SCIP_Negate
 {
    SCIP_Real             constant;           /**< constant shift c in negation */
+};
+
+/** exact variable domains and further information */
+struct SCIP_VarDataExact
+{
+   SCIP_RATIONAL*        obj;                /**< exact rational objective */
+   SCIP_INTERVAL         objinterval;        /**< interval approximation of obj (for faster performance) */
+   SCIP_DOMEXACT         locdom;             /**< exact local bounds */
+   SCIP_DOMEXACT         glbdom;             /**< exact global bound */
+   SCIP_DOMEXACT         origdom;            /**< original domain */
+   SCIP_AGGREGATEEXACT   aggregate;          /**< exact aggregation data */
+   SCIP_MULTAGGREXACT    multaggr;           /**< exact aggregation data */
+   SCIP_COLEXACT*        colexact;           /**< column in exact lp */
+   SCIP_VARSTATUS        varstatusexact;     /**< status in exact lp */
+   int                   certificateindex;   /**< original probindex (needed for certificate), or -1 */
 };
 
 /** variable of the problem */
@@ -234,6 +278,7 @@ struct SCIP_Var
       SCIP_MULTAGGR      multaggr;           /**< multiple aggregation information (for multiple aggregated variables) */
       SCIP_NEGATE        negate;             /**< negation information (for negated variables) */
    } data;
+   SCIP_VARDATAEXACT*    exactdata;          /**< exact variable data (obj, lb, ub, ...) */
    char*                 name;               /**< name of the variable */
    SCIP_DECL_VARCOPY     ((*varcopy));       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_DECL_VARDELORIG  ((*vardelorig));    /**< frees user data of original variable */

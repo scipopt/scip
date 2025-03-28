@@ -4393,11 +4393,11 @@ SCIP_RETCODE SCIPparamsetCopyParams(
          break;
 
       case SCIP_PARAMTYPE_STRING:
-         /* the visualization parameters are explicitly not copied to avoid that the visualization file of the original SCIP is overwritten;
-          * to avoid a hard coded comparison, each parameter could get a Bool flag which tells if the value
-          * of that parameter can be copied
+         /* the visualization and certificate parameters are explicitly not copied to avoid that these files of the
+          * original SCIP are overwritten; to avoid a hard coded comparison, each parameter could get a Bool flag which
+          * tells if the value of that parameter can be copied
           */
-         if( strncmp(sourceparam->name, "visual/", 7) != 0 )
+         if( strncmp(sourceparam->name, "visual/", 7) != 0 && strncmp(sourceparam->name, "certificate/", 12) != 0 )
          {
             SCIP_CALL( paramCopyString(sourceparam, targetparam, set, messagehdlr) );
          }

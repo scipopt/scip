@@ -293,7 +293,7 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
    *result = SCIP_DIDNOTRUN;
 
    /* if there are no integer variables, stop execution */
-   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
+   if( SCIPgetNContVars(scip) + SCIPgetNContImplVars(scip) == SCIPgetNVars(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, -1, -1.0, SCIP_DIVECONTEXT_SINGLE) );
@@ -384,6 +384,9 @@ SCIP_RETCODE SCIPincludeHeurActconsdiving(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecActconsdiving, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyActconsdiving) );

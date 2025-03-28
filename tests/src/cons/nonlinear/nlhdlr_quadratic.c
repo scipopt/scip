@@ -381,7 +381,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_assert_str_eq(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "sum", "expecting sum got %s\n",
          SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* it should be identified that child should not have aux vars because of locks */
    for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
    {

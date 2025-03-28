@@ -50,6 +50,7 @@ struct SCIP_AggrRow
    int                   rowssize;           /**< size of the row and slacksign array */
    int                   rank;               /**< rank of the cut row */
    SCIP_Bool             local;              /**< is the cut row only valid locally? */
+   SCIP_Longint          certificateline;    /**< proof index in certificate or SCIP_LONGINT_MAX */
 };
 
 #endif

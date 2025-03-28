@@ -55,6 +55,7 @@
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/relax.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -589,6 +590,9 @@ SCIP_RETCODE SCIPpropagateProbing(
    SCIP_Bool changedobj;
    int nobjchg;
 
+   if( SCIPisExact(scip) )
+      return SCIP_OKAY;
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpropagateProbing", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeProbing(scip->tree) )
@@ -791,7 +795,7 @@ SCIP_RETCODE solveProbingLP(
             && SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))) )
    {
       /* analyze the infeasible LP (only if all columns are in the LP and no external pricers exist) */
-      if( !scip->set->misc_exactsolve && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->tree->probingobjchanged )
+      if( SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->tree->probingobjchanged )
       {
          SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
                scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable, NULL) );

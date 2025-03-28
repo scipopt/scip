@@ -225,14 +225,12 @@ SCIP_RETCODE createInitialColumns(
    char name[SCIP_MAXSTRLEN];
 
    int* ids;
-   SCIP_Longint* weights;
    int nitems;
 
    int i;
 
    conss = probdata->conss;
    ids = probdata->ids;
-   weights = probdata->weights;
    nitems = probdata->nitems;
 
    /* create start solution each item in exactly one bin */
@@ -242,7 +240,7 @@ SCIP_RETCODE createInitialColumns(
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "item_%d", ids[i]);
 
-      SCIPdebugMsg(scip, "create variable for item %d with weight = %"SCIP_LONGINT_FORMAT"\n", ids[i], weights[i]);
+      SCIPdebugMsg(scip, "create variable for item %d with weight = %"SCIP_LONGINT_FORMAT"\n", ids[i], probdata->weights[i]);
 
       /* create variable for the packing pattern which contains only this item */
       SCIP_CALL( SCIPcreateVarBinpacking(scip, &var, name, 1.0, TRUE, TRUE, NULL) );

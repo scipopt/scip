@@ -857,7 +857,9 @@ SCIP_RETCODE setupAndSolve(
    if( SCIPgetStage(subscip) == SCIP_STAGE_PRESOLVED )
    {
       SCIPdebugMsg(scip, "presolved instance has bin=%d, int=%d, cont=%d variables\n",
-            SCIPgetNBinVars(subscip), SCIPgetNIntVars(subscip), SCIPgetNContVars(subscip));
+            SCIPgetNBinVars(subscip) + SCIPgetNBinImplVars(subscip),
+            SCIPgetNIntVars(subscip) + SCIPgetNIntImplVars(subscip),
+            SCIPgetNContVars(subscip) + SCIPgetNContImplVars(subscip));
 
       /* check whether the presolved instance is small enough */
       if( heurdata->maxcontvars >= 0 && SCIPgetNContVars(subscip) > heurdata->maxcontvars )
@@ -1104,6 +1106,9 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
    /* get variable data and return of no variables are left in the problem */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
+   if( heurdata->ignorecont )
+      nvars -= SCIPgetNContVars(scip) + SCIPgetNContImplVars(scip);
+   assert(nvars >= 0);
 
    if( nvars == 0 )
       return SCIP_OKAY;
@@ -1151,23 +1156,17 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
       {
          assert(SCIPvarIsActive(vars[v]));
 
-         /* skip continuous variables if they should ignored */
-         if( !SCIPvarIsIntegral(vars[v]) && heurdata->ignorecont )
-            continue;
-
          solval = SCIPgetSolVal(scip, sol, vars[v]);
 
          /* we only want to count variables that are unfixed after the presolving */
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/
             ++nunknown;
-         else if( SCIPvarIsIntegral(vars[v]) && !SCIPisIntegral(scip, solval) )
+         else if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS && !SCIPisIntegral(scip, solval) )
             ++nfracints;
       }
 
-      if( heurdata->ignorecont )
-         unknownrate = nunknown/((SCIP_Real)SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip));
-      else
-         unknownrate = nunknown/((SCIP_Real)nvars);
+      unknownrate = nunknown / ((SCIP_Real)nvars);
+
       SCIPdebugMsg(scip, "%d (rate %.4f) unknown solution values\n", nunknown, unknownrate);
 
       /* run the heuristic, if not too many unknown variables exist */
@@ -1182,7 +1181,7 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
        * and there are no continuous variables
        * in the sub-SCIP, all variables would be fixed, so create a new solution without solving a sub-SCIP
        */
-      if( nunknown == 0 && nfracints == 0 && SCIPgetNContVars(scip) == 0 && SCIPgetNImplVars(scip) == 0 )
+      if( nunknown == 0 && nfracints == 0 && nvars == SCIPgetNVars(scip) )
       {
          SCIP_SOL* newsol;
          SCIP_Bool stored;
@@ -1237,6 +1236,9 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecCompletesol, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyCompletesol) );

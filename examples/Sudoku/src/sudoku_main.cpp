@@ -38,13 +38,6 @@
 
 int main(int argc, char *argv[])
 {
-   /* declaration of variables used in forloops later on */
-   int i = 0;
-   int j = 0;
-   int k = 0;
-   int p = 0;
-   int q = 0;
-
    if( argc < 2 )
    {
       std::cerr << "call " << argv[0] << " <puzzle file> " << "\n";
@@ -76,11 +69,11 @@ int main(int argc, char *argv[])
    std::vector<std::vector<std::vector< SCIP_VAR* >>> xvars(9, std::vector<std::vector< SCIP_VAR* >>(9, std::vector< SCIP_VAR* >(9)));
    std::ostringstream namebuf;
 
-   for( i = 0; i < 9; ++i )
+   for( size_t i = 0; i < 9; ++i )
    {
-      for( j = 0; j < 9; ++j )
+      for( size_t j = 0; j < 9; ++j )
       {
-         for( k = 0; k < 9; ++k )
+         for( size_t k = 0; k < 9; ++k )
          {
             SCIP_VAR* var = nullptr;
             namebuf.str("");
@@ -106,9 +99,9 @@ int main(int argc, char *argv[])
     *             x_1jk + x_2jk + x_3jk + ... + x_9jk = 1 for each j and k
     */
    std::vector< SCIP_CONS* > columnconstraints;
-   for( j = 0; j < 9; ++j )
+   for( size_t j = 0; j < 9; ++j )
    {
-      for( k = 0; k < 9; ++k )
+      for( size_t k = 0; k < 9; ++k )
       {
          SCIP_CONS* cons = nullptr;
          namebuf.str("");
@@ -126,7 +119,7 @@ int main(int argc, char *argv[])
                                                nullptr,               /* array with coefficients of constraint entries */
                                                1.0,                   /* left hand side of constraint */
                                                1.0) );                /* right hand side of constraint */
-         for( i = 0; i < 9; ++i )
+         for( size_t i = 0; i < 9; ++i )
          {
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, xvars[i][j][k], 1.0) );
          }
@@ -141,9 +134,9 @@ int main(int argc, char *argv[])
     *             x_i1k + x_i2k + x_i3k + ... + x_i9k = 1 for each i and k
     */
    std::vector< SCIP_CONS* > rowconstraints;
-   for( i = 0; i < 9; ++i )
+   for( size_t i = 0; i < 9; ++i )
    {
-      for( k = 0; k < 9; ++k )
+      for( size_t k = 0; k < 9; ++k )
       {
          SCIP_CONS* cons = nullptr;
 
@@ -162,7 +155,7 @@ int main(int argc, char *argv[])
                                                 nullptr,               /* array with coefficients of constraint entries */
                                                 1.0,                   /* left hand side of constraint */
                                                 1.0) );                /* right hand side of constraint */
-         for( j = 0; j < 9; ++j )
+         for( size_t j = 0; j < 9; ++j )
          {
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, xvars[i][j][k], 1.0) );
          }
@@ -179,11 +172,11 @@ int main(int argc, char *argv[])
     *             sum_{i in [p, p + 2], j in [q, q + 2]} x_ijk = 1 for each k
     */
    std::vector< SCIP_CONS* > subgridconstraints;
-   for( k = 0; k < 9; ++k )
+   for( size_t k = 0; k < 9; ++k )
    {
-      for( p = 0; p < 3; ++p )
+      for( size_t p = 0; p < 3; ++p )
       {
-         for( q = 0; q < 3; ++q )
+         for( size_t q = 0; q < 3; ++q )
          {
             SCIP_CONS* cons = nullptr;
 
@@ -204,9 +197,9 @@ int main(int argc, char *argv[])
                                                   1.0) );                /* right hand side of constraint */
 
             /* since we are using 0 based indexing we should be careful with the loop indices. */
-            for( j = 3 * (p + 1) - 3; j < 3 * (p + 1); ++j )
+            for( size_t j = 3 * (p + 1) - 3; j < 3 * (p + 1); ++j )
             {
-               for( i = 3 * (q + 1) - 3; i < 3 * (q + 1); ++i )
+               for( size_t i = 3 * (q + 1) - 3; i < 3 * (q + 1); ++i )
                {
                   SCIP_CALL( SCIPaddCoefLinear(scip, cons, xvars[i][j][k], 1.0) );
                }
@@ -228,9 +221,9 @@ int main(int argc, char *argv[])
     *
     */
    std::vector< SCIP_CONS* > fillgridconstraints;
-   for( i = 0; i < 9; ++i )
+   for( size_t i = 0; i < 9; ++i )
    {
-      for( j = 0; j < 9; ++j )
+      for( size_t j = 0; j < 9; ++j )
       {
          SCIP_CONS* cons = nullptr;
 
@@ -250,7 +243,7 @@ int main(int argc, char *argv[])
                                                1.0,                   /* left hand side of constraint */
                                                1.0) );                /* right hand side of constraint */
 
-         for( k = 0; k < 9; ++k )
+         for( size_t k = 0; k < 9; ++k )
          {
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, xvars[i][j][k], 1.0) );
          }
@@ -265,9 +258,9 @@ int main(int argc, char *argv[])
     * see https://www.scipopt.org/doc-7.0.1/html/group__PublicVariableMethods.php#ga7965b16efcb2f8cdf7e289198c5cbe16
     * for more info
     */
-   for( i = 0; i < 9; ++i )
+   for( size_t i = 0; i < 9; ++i )
    {
-      for( j = 0; j < 9; ++j )
+      for( size_t j = 0; j < 9; ++j )
       {
          /* The unsolved puzzle where there are blanks are represented by -1 in the puzzle datastructure */
          if( puzzle[i][j] > 0 )
@@ -300,11 +293,11 @@ int main(int argc, char *argv[])
       SCIP_SOL* sol;
       sol = SCIPgetBestSol( scip );
 
-      for( i = 0; i < 9; ++i )
+      for( size_t i = 0; i < 9; ++i )
       {
-         for( j = 0; j < 9; ++j )
+         for( size_t j = 0; j < 9; ++j )
          {
-            for( k = 0; k < 9; ++k )
+            for( size_t k = 0; k < 9; ++k )
             {
                if( SCIPgetSolVal(scip, sol, xvars[i][j][k]) > 0 )
                {
@@ -331,11 +324,11 @@ int main(int argc, char *argv[])
    }
 
    /*freeing the variables */
-   for( i = 0; i < 9; ++i )
+   for( size_t i = 0; i < 9; ++i )
    {
-      for( j = 0; j < 9; ++j )
+      for( size_t j = 0; j < 9; ++j )
       {
-         for( k = 0; k < 9; ++k )
+         for( size_t k = 0; k < 9; ++k )
          {
             SCIP_CALL( SCIPreleaseVar(scip, &xvars[i][j][k]) );
          }

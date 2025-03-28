@@ -206,6 +206,10 @@ SCIP_RETCODE SCIPreadCor(
    SCIP_READER* reader;
    SCIP_READERDATA* readerdata;
 
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
    reader = SCIPfindReader(scip, READER_NAME);
    assert(reader != NULL);
 

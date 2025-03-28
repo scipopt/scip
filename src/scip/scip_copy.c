@@ -65,6 +65,7 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
 #include "scip/scip_cut.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -1042,6 +1043,11 @@ SCIP_RETCODE copyVars(
 
       /* copy variable and add this copy to the target SCIP if the copying was valid */
       SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevars[i], &targetvar, localvarmap, localconsmap, global, &success) );
+      /* copy exact data, if solving exactly */
+      if( SCIPisExact(targetscip) && SCIPisExact(sourcescip) )
+      {
+         SCIP_CALL( SCIPvarCopyExactData(targetscip->mem->probmem, targetvar, sourcevars[i], FALSE) );
+      }
       assert(success);
       assert(targetvar != NULL);
    }
@@ -1643,9 +1649,6 @@ SCIP_RETCODE SCIPgetConsCopy(
       SCIP_CALL( SCIPconsCopy(targetcons, targetscip->set, name, sourcescip, sourceconshdlr, sourcecons, localvarmap, localconsmap,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
 
-      /* it is possible for the constraint handler to declare the copy valid although no target constraint was created */
-      assert(*targetcons == NULL || *valid);
-
       /* if a target constraint was created */
       if( *targetcons != NULL && !uselocalconsmap )
       {
@@ -1823,9 +1826,6 @@ SCIP_RETCODE SCIPcopyConss(
                SCIPconsIsEnforced(sourceconss[c]), SCIPconsIsChecked(sourceconss[c]),
                SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsModifiable(sourceconss[c]),
                SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &singlevalid) );
-
-         /* it is possible for a constraint handler to declare the copy valid, although no target constraint was created */
-         assert(targetcons == NULL || singlevalid);
 
          /* add the copied constraint to target SCIP if the copying process created a constraint */
          if( targetcons != NULL )
@@ -2722,6 +2722,11 @@ SCIP_RETCODE doCopy(
    /* copy all settings */
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
 
+   /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+    * handler is in place to perform a final repair step
+    */
+   SCIP_CALL( SCIPenableExactSolving(targetscip, FALSE) );
+
    /* restore original quiet state */
    SCIPsetMessagehdlrQuiet(targetscip, msghdlrquiet);
 
@@ -2829,6 +2834,8 @@ SCIP_RETCODE doCopy(
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -2923,6 +2930,8 @@ SCIP_RETCODE SCIPcopy(
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -3007,6 +3016,8 @@ SCIP_RETCODE SCIPcopyConsCompression(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -3090,6 +3101,8 @@ SCIP_RETCODE SCIPcopyOrig(
  *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
