@@ -672,6 +672,7 @@ int SCIPrationalStrLen(
 /** rational extension for the SCIPdebugMsg */
 /*lint -emacro(681,SCIPrationalDebugMessage) */
 /*lint -emacro(506,SCIPrationalDebugMessage) */
+/*lint -emacro(774,SCIPrationalDebugMessage) */
 #ifdef SCIP_DEBUG
 #define SCIPrationalDebugMessage(...)            SCIPrationalPrintDebugMessage(__FILE__, __LINE__, __VA_ARGS__)
 #else

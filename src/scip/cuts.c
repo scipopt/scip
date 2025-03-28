@@ -3547,7 +3547,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
 
    SCIPdebugMessage("Summing up %d rows in aggrrow \n", nrowinds);
 
-   if( SCIPisExact(scip) && SCIPisCertified(scip) )
+   if( SCIPisCertified(scip) )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &usedrows, nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &usedweights, nrows) );

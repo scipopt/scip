@@ -337,7 +337,6 @@ SCIP_RETCODE SCIPcertifyActivityVarBoundExact(
       case SCIP_VARSTATUS_COLUMN:
          break;
       default:
-         assert(false);
          SCIPABORT();
          return SCIP_ERROR;
    }
@@ -455,7 +454,7 @@ SCIP_RETCODE SCIPcertifyActivityVarBoundExact(
    certificate->lastinfo->certificateindex = certificate->indexcounter - 1;
    SCIPrationalSetRational(certificate->lastinfo->boundval, newbound);
 #endif
-   (void) SCIPcertificateSetLastBoundIndex(scip, certificate, certificate->indexcounter - 1);
+   (void) SCIPcertificateSetLastBoundIndex(certificate, certificate->indexcounter - 1);
 
    return SCIP_OKAY;
 }

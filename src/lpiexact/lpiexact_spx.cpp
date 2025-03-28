@@ -41,11 +41,6 @@
 #include "lpiexact/lpiexact.h"
 #include "scip/rational.h"
 
-#define STRONGBRANCH_RESTOREBASIS            /**< if defined then in SCIPlpiStrongbranch() we restore the basis after the
-                                              *   down branch and after the up branch; if false only after the end of a
-                                              *   strong branching phase, which however seems to mostly increase strong
-                                              *   branching time and iterations */
-
 /* check the return value of setParam methods */
 #define CHECK_SOPLEX_PARAM(x)                                                           \
    if( !x )                                                                             \
@@ -215,7 +210,7 @@ static void RsetSpxR(
 #else
       r->val = (double) spxr;
 #endif
-      r->isinf = false;
+      r->isinf = FALSE;
       r->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
 }
@@ -287,7 +282,7 @@ public:
          SOPLEX_TRY_ABORT( setProbname(probname) );
 
 #if SOPLEX_APIVERSION >= 2
-      setBoolParam(SoPlex::ENSURERAY, true);
+      (void) setBoolParam(SoPlex::ENSURERAY, true);
 #endif
    }
 
@@ -339,21 +334,21 @@ public:
          spx_free(_probname);
 
       len = strlen(probname);
-      spx_alloc(_probname, len + 1);
+      spx_alloc(_probname, (int) len + 1);
       memcpy(_probname, probname, len + 1);
    }
 
    void setRep(SPxSolver::Representation p_rep)
    {
-      if( p_rep == SPxSolver::COLUMN && intParam(REPRESENTATION) == REPRESENTATION_ROW )
+      if( p_rep == SPxSolver::COLUMN && intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_ROW )
       {
          SCIPdebugMessage("switching to column representation of the basis\n");
-         CHECK_SOPLEX_PARAM(setIntParam(REPRESENTATION, REPRESENTATION_COLUMN));
+         CHECK_SOPLEX_PARAM(setIntParam(SoPlex::REPRESENTATION, (int) SoPlex::REPRESENTATION_COLUMN));
       }
-      else if( (p_rep == SPxSolver::ROW && intParam(REPRESENTATION) == REPRESENTATION_COLUMN) )
+      else if( (p_rep == SPxSolver::ROW && intParam(SoPlex::REPRESENTATION) == SoPlex::REPRESENTATION_COLUMN) )
       {
          SCIPdebugMessage("switching to row representation of the basis\n");
-         CHECK_SOPLEX_PARAM(setIntParam(REPRESENTATION, REPRESENTATION_ROW));
+         CHECK_SOPLEX_PARAM(setIntParam(SoPlex::REPRESENTATION, (int) SoPlex::REPRESENTATION_ROW));
       }
    }
 
@@ -575,15 +570,6 @@ struct SCIP_LPiState
    COLPACKET*            packcstat;          /**< column basis status in compressed form */
    ROWPACKET*            packrstat;          /**< row basis status in compressed form */
 };
-
-/** LPi norms to store dual steepest edge */
-struct SCIP_LPiNorms
-{
-   int                   nrows;              /**< number of stored norms corresponding to rows */
-   int                   ncols;              /**< number of stored norms corresponding to cols */
-   SCIP_RATIONAL**       norms;              /**< norms to be (re)stored */
-};
-
 
 
 /*
@@ -866,11 +852,11 @@ SCIP_RETCODE SCIPlpiExactCreate(
    /* we use this construction to allocate the memory for the SoPlex class also via the blockmemshell */
    (*lpi)->spx = static_cast<SPxexSCIP*>(BMSallocMemoryCPP(sizeof(SPxexSCIP)));
    SOPLEX_TRY( messagehdlr, (*lpi)->spx = new ((*lpi)->spx) SPxexSCIP(messagehdlr, name) );
-   (void) (*lpi)->spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
-   (void) (*lpi)->spx->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
-   (void) (*lpi)->spx->setRealParam(SoPlex::FEASTOL, 0.0, TRUE);
-   (void) (*lpi)->spx->setRealParam(SoPlex::OPTTOL, 0.0, TRUE);
-   (void) (*lpi)->spx->setBoolParam(SoPlex::FORCEBASIC, TRUE);
+   (void) (*lpi)->spx->setIntParam(SoPlex::SYNCMODE, (int) SoPlex::SYNCMODE_AUTO);
+   (void) (*lpi)->spx->setIntParam(SoPlex::SOLVEMODE, (int) SoPlex::SOLVEMODE_RATIONAL);
+   (void) (*lpi)->spx->setRealParam(SoPlex::FEASTOL, 0.0, true);
+   (void) (*lpi)->spx->setRealParam(SoPlex::OPTTOL, 0.0, true);
+   (void) (*lpi)->spx->setBoolParam(SoPlex::FORCEBASIC, true);
 
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
@@ -986,7 +972,7 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
       spx->clearLPRational();
 
       /* set objective sense */
-      (void) spx->setIntParam(SoPlex::OBJSENSE, (objsen == SCIP_OBJSEN_MINIMIZE ? SoPlex::OBJSENSE_MINIMIZE : SoPlex::OBJSENSE_MAXIMIZE));
+      (void) spx->setIntParam(SoPlex::OBJSENSE, (int) (objsen == SCIP_OBJSEN_MINIMIZE ? SoPlex::OBJSENSE_MINIMIZE : SoPlex::OBJSENSE_MAXIMIZE));
 
       /* create empty rows with given sides */
       for( i = 0; i < nrows; ++i )
@@ -1031,7 +1017,7 @@ SCIP_RETCODE SCIPlpiExactAddCols(
    int*                  ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
    SCIP_RATIONAL**       val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
-{
+{  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiAddCols()\n");
 
    assert(lpi != NULL);
@@ -1092,11 +1078,11 @@ SCIP_RETCODE SCIPlpiExactAddCols(
 
             start = beg[i];
             last = (i == ncols-1 ? nnonz : beg[i+1]);
-            spxval.reserve(last - start);
+            spxval.reserve((size_t) (last - start));
             for( j = start; j < last; ++j )
             {
                spxval.push_back(tmp);
-               SpxRSetRat(lpi, spxval[j - start], val[j]);
+               SpxRSetRat(lpi, spxval[(size_t) (j - start)], val[j]);
             }
             colVector.add(last - start, ind + start, spxval.data());
          }
@@ -1185,7 +1171,7 @@ SCIP_RETCODE SCIPlpiExactAddRows(
    int*                  ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
    SCIP_RATIONAL**       val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
-{
+{  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiAddRows()\n");
 
    assert(lpi != NULL);
@@ -1237,13 +1223,13 @@ SCIP_RETCODE SCIPlpiExactAddRows(
          {
             start = beg[i];
             last = (i == nrows-1 ? nnonz : beg[i+1]);
-            spxval.reserve(last - start);
+            spxval.reserve((size_t) (last - start));
 
             for( int j = start; j < last; ++j )
             {
                soplex::Rational tmp;
                spxval.push_back(tmp);
-               SpxRSetRat(lpi, spxval[j - start], val[j]);
+               SpxRSetRat(lpi, spxval[(size_t) (j - start)], val[j]);
             }
             rowVector.add(last - start, ind + start, spxval.data());
          }
@@ -1501,7 +1487,7 @@ SCIP_RETCODE SCIPlpiExactChgObjsen(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRY( lpi->messagehdlr, (void) lpi->spx->setIntParam(SoPlex::OBJSENSE, objsen == SCIP_OBJSEN_MINIMIZE ? SoPlex::OBJSENSE_MINIMIZE : SoPlex::OBJSENSE_MAXIMIZE ) );
+   SOPLEX_TRY( lpi->messagehdlr, (void) lpi->spx->setIntParam(SoPlex::OBJSENSE, (int) (objsen == SCIP_OBJSEN_MINIMIZE ? SoPlex::OBJSENSE_MINIMIZE : SoPlex::OBJSENSE_MAXIMIZE) ) );
 
    return SCIP_OKAY;
 }
@@ -1684,20 +1670,14 @@ SCIP_RETCODE SCIPlpiExactGetCols(
       *nnonz = 0;
       for( i = firstcol; i <= lastcol; ++i )
       {
+         const SVectorRational& cvec = lpi->spx->colVectorRational(i);
          beg[i-firstcol] = *nnonz;
 
-         if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) && FALSE )
+         for( j = 0; j < cvec.size(); ++j )
          {
-         }
-         else
-         {
-            const SVectorRational& cvec = lpi->spx->colVectorRational(i);
-            for( j = 0; j < cvec.size(); ++j )
-            {
-               ind[*nnonz] = cvec.index(j);
-               RsetSpxR(lpi, val[*nnonz], cvec.value(j));
-               (*nnonz)++;
-            }
+            ind[*nnonz] = cvec.index(j);
+            RsetSpxR(lpi, val[*nnonz], cvec.value(j));
+            (*nnonz)++;
          }
       }
    }
@@ -2051,7 +2031,7 @@ SCIP_RETCODE SCIPlpiExactSolvePrimal(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   (void) lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_PRIMAL);
+   (void) lpi->spx->setIntParam(SoPlex::ALGORITHM, (int) SoPlex::ALGORITHM_PRIMAL);
    return spxSolve(lpi);
 }
 
@@ -2065,7 +2045,7 @@ SCIP_RETCODE SCIPlpiExactSolveDual(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   (void) lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_DUAL);
+   (void) lpi->spx->setIntParam(SoPlex::ALGORITHM, (int) SoPlex::ALGORITHM_DUAL);
    return spxSolve(lpi);
 }
 
@@ -2527,6 +2507,7 @@ SCIP_RETCODE SCIPlpiExactGetPrimalRay(
    catch( const SPxException& )
    {
 #endif
+      delete tmpvec;
       return SCIP_LPERROR;
    }
 
@@ -2936,7 +2917,7 @@ SCIP_RETCODE SCIPlpiExactSetState(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information), or NULL */
    )
-{
+{  /*lint --e{715}*/
    int lpncols;
    int lpnrows;
    int i;
@@ -3116,10 +3097,10 @@ SCIP_RETCODE SCIPlpiExactGetIntpar(
    switch( type )
    {
    case SCIP_LPPAR_FROMSCRATCH:
-      *ival = lpi->spx->getFromScratch();
+      *ival = (int) lpi->spx->getFromScratch();
       break;
    case SCIP_LPPAR_LPINFO:
-      *ival = lpi->spx->getLpInfo();
+      *ival = (int) lpi->spx->getLpInfo();
       break;
    case SCIP_LPPAR_LPITLIM:
       *ival = lpi->spx->intParam(SoPlex::ITERLIMIT);
@@ -3127,7 +3108,7 @@ SCIP_RETCODE SCIPlpiExactGetIntpar(
           *ival = INT_MAX;
       break;
    case SCIP_LPPAR_PRESOLVING:
-      *ival = lpi->spx->intParam(SoPlex::SIMPLIFIER) == SoPlex::SIMPLIFIER_AUTO;
+      *ival = lpi->spx->intParam(SoPlex::SIMPLIFIER) == (int) SoPlex::SIMPLIFIER_AUTO;
       break;
    case SCIP_LPPAR_PRICING:
       *ival = (int) lpi->pricing;
@@ -3206,7 +3187,7 @@ SCIP_RETCODE SCIPlpiExactSetIntpar(
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);
-      (void) lpi->spx->setIntParam(SoPlex::SIMPLIFIER, (ival ? SoPlex::SIMPLIFIER_AUTO : SoPlex::SIMPLIFIER_OFF));
+      (void) lpi->spx->setIntParam(SoPlex::SIMPLIFIER, (int) (ival ? SoPlex::SIMPLIFIER_AUTO : SoPlex::SIMPLIFIER_OFF));
       break;
    case SCIP_LPPAR_PRICING:
       lpi->pricing = (SCIP_PRICING)ival;
@@ -3214,22 +3195,22 @@ SCIP_RETCODE SCIPlpiExactSetIntpar(
       {
       case SCIP_PRICING_LPIDEFAULT:
       case SCIP_PRICING_AUTO:
-         (void) lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_AUTO);
+         (void) lpi->spx->setIntParam(SoPlex::PRICER, (int) SoPlex::PRICER_AUTO);
          break;
       case SCIP_PRICING_FULL:
-         (void) lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_STEEP);
+         (void) lpi->spx->setIntParam(SoPlex::PRICER, (int) SoPlex::PRICER_STEEP);
          break;
       case SCIP_PRICING_PARTIAL:
-         (void) lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_PARMULT);
+         (void) lpi->spx->setIntParam(SoPlex::PRICER, (int) SoPlex::PRICER_PARMULT);
          break;
       case SCIP_PRICING_STEEP:
-         (void) lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_STEEP);
+         (void) lpi->spx->setIntParam(SoPlex::PRICER, (int) SoPlex::PRICER_STEEP);
          break;
       case SCIP_PRICING_STEEPQSTART:
-         (void) lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_QUICKSTEEP);
+         (void) lpi->spx->setIntParam(SoPlex::PRICER, (int) SoPlex::PRICER_QUICKSTEEP);
          break;
       case SCIP_PRICING_DEVEX:
-         (void) lpi->spx->setIntParam(SoPlex::PRICER, SoPlex::PRICER_DEVEX);
+         (void) lpi->spx->setIntParam(SoPlex::PRICER, (int) SoPlex::PRICER_DEVEX);
          break;
       default:
          return SCIP_LPERROR;
@@ -3238,14 +3219,14 @@ SCIP_RETCODE SCIPlpiExactSetIntpar(
    case SCIP_LPPAR_SCALING:
       assert(ival >= 0 && ival <= 2);
       if( ival == 0 )
-         (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_OFF);
+         (void) lpi->spx->setIntParam(SoPlex::SCALER, (int) SoPlex::SCALER_OFF);
       else if( ival == 1 )
-         (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_BIEQUI);
+         (void) lpi->spx->setIntParam(SoPlex::SCALER, (int) SoPlex::SCALER_BIEQUI);
       else
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 2)
-         (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_LEASTSQ);
+         (void) lpi->spx->setIntParam(SoPlex::SCALER, (int) SoPlex::SCALER_LEASTSQ);
 #else
-         (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_GEO8);
+         (void) lpi->spx->setIntParam(SoPlex::SCALER, (int) SoPlex::SCALER_GEO8);
 #endif
 
       break;

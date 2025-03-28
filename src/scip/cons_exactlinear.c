@@ -108,8 +108,6 @@
 #define DEFAULT_MAXSEPACUTSROOT       200 /**< maximal number of cuts separated per separation round in root node */
 #define DEFAULT_SORTVARS             TRUE /**< should variables be sorted after presolve w.r.t their coefficient absolute for faster
                                            *  propagation? */
-#define DEFAULT_SEPARATEALL         FALSE /**< should all constraints be subject to cardinality cut generation instead of only
-                                           *   the ones with non-zero dual value? */
 #define DEFAULT_LIMITDENOM          FALSE /**< should denominator sizes for continuous variables be controlled?*/
 #define DEFAULT_BOUNDMAXDENOM        256L /**< maximal denominator for rational bounds on continuous variables after propagation */
 
@@ -240,8 +238,6 @@ struct SCIP_ConshdlrData
    SCIP_Longint          nconspropnoninit;  /**< number of times a non-initial (conflict) constraint was propagated */
    SCIP_Longint          propnonzeros;       /**< number of nonzeros in propagated rows */
    SCIP_Longint          propnonzerosnoninit;/**< number of nonzeros in propagated rows in non-initial (conflict) propagations */
-   SCIP_Bool             separateall;        /**< should all constraints be subject to cardinality cut generation instead of only
-                                              *   the ones with non-zero dual value? */
    SCIP_Bool             sortvars;           /**< should binary variables be sorted for faster propagation? */
    SCIP_Bool             propcont;           /**< should bounds on continuous variables be tightened by propagation?*/
    SCIP_Bool             limitdenom;         /**< should denominator sizes for continuous variables be controlled?*/
@@ -1085,7 +1081,6 @@ void consdataInvalidateActivities(
 /** computes the pseudo activity of a constraint */
 static
 void consdataComputePseudoActivity(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_RATIONAL*        pseudoactivity
    )
@@ -1270,7 +1265,6 @@ void consdataRecomputeGlbMaxactivity(
 /** calculates minimum absolute value of coefficients */
 static
 void consdataCalcMinAbsvalEx(
-   SCIP*                 scip,
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
 {
@@ -2066,7 +2060,7 @@ SCIP_RATIONAL* consdataGetMinAbsvalEx(
    assert(consdata != NULL);
 
    if( !consdata->validminabsval )
-      consdataCalcMinAbsvalEx(scip, consdata);
+      consdataCalcMinAbsvalEx(consdata);
    assert(consdata->validminabsval);
 
    return consdata->minabsvalexact;
@@ -2797,7 +2791,7 @@ void consdataGetActivity(
    assert(consdata != NULL);
 
    if( (sol == NULL) && !SCIPhasCurrentNodeLP(scip) )
-      consdataComputePseudoActivity(scip, consdata, activity);
+      consdataComputePseudoActivity(consdata, activity);
    else
    {
       SCIP_RATIONAL* solval;
@@ -4794,7 +4788,7 @@ SCIP_RETCODE checkCons(
       if( !checklprows && SCIProwExactIsInLP(consdata->rowexact) && SCIPlpExactIsSolved(scip) )
          return SCIP_OKAY;
       else if( sol == NULL && !SCIPhasCurrentNodeLP(scip) )
-         consdataComputePseudoActivity(scip, consdata, activity);
+         consdataComputePseudoActivity(consdata, activity);
       else
       {
          SCIP_CALL( SCIPgetRowSolActivityExact(scip, consdata->rowexact, sol, useexactsol, activity) );
@@ -4949,9 +4943,6 @@ SCIP_RETCODE separateCons(
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   SCIP_Bool             separatecards,      /**< should knapsack cardinality cuts be generated? */
-   SCIP_Bool             separateall,        /**< should all constraints be subject to cardinality cut generation instead of only
-                                              *   the ones with non-zero dual value? */
    int*                  ncuts,              /**< pointer to add up the number of found cuts */
    SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
    )
@@ -5511,11 +5502,6 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpExactLinear)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Real loclowerbound;
-   SCIP_Real glblowerbound;
-   SCIP_Real cutoffbound;
-   SCIP_Real maxbound;
-   SCIP_Bool separatecards;
    SCIP_Bool cutoff;
    int c;
    int depth;
@@ -5547,15 +5533,6 @@ SCIP_DECL_CONSSEPALP(consSepalpExactLinear)
    /* get the maximal number of cuts allowed in a separation round */
    maxsepacuts = (depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
 
-   /* check if we want to produce knapsack cardinality cuts at this node */
-   loclowerbound = SCIPgetLocalLowerbound(scip);
-   glblowerbound = SCIPgetLowerbound(scip);
-   cutoffbound = SCIPgetCutoffbound(scip);
-   maxbound = glblowerbound + SCIPrationalGetReal(conshdlrdata->maxcardbounddist) * (cutoffbound - glblowerbound);
-
-   separatecards = SCIPisLE(scip, loclowerbound, maxbound);
-   separatecards = separatecards && (SCIPgetNLPBranchCands(scip) > 0);
-
    *result = SCIP_DIDNOTFIND;
    ncuts = 0;
    cutoff = FALSE;
@@ -5564,7 +5541,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactLinear)
    for( c = 0; c < nusefulconss && ncuts < maxsepacuts && !cutoff; ++c )
    {
       SCIPdebugMsg(scip, "separating exact linear constraint <%s>\n", SCIPconsGetName(conss[c]));
-      SCIP_CALL( separateCons(scip, conss[c], conshdlrdata, NULL, separatecards, conshdlrdata->separateall, &ncuts, &cutoff) );
+      SCIP_CALL( separateCons(scip, conss[c], conshdlrdata, NULL, &ncuts, &cutoff) );
    }
 
    /* adjust return value */
@@ -5621,7 +5598,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolExactLinear)
    for( c = 0; c < nusefulconss && ncuts < maxsepacuts && !cutoff; ++c )
    {
       SCIPdebugMsg(scip, "separating exact linear constraint <%s>\n", SCIPconsGetName(conss[c]));
-      SCIP_CALL( separateCons(scip, conss[c], conshdlrdata, sol, TRUE, conshdlrdata->separateall, &ncuts, &cutoff) );
+      SCIP_CALL( separateCons(scip, conss[c], conshdlrdata, sol, &ncuts, &cutoff) );
    }
 
    /* adjust return value */
@@ -6549,10 +6526,6 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
          "maximal number of cuts separated per separation round in the root node",
          &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/separateall",
-         "should all constraints be subject to cardinality cut generation instead of only the ones with non-zero dual value?",
-         &conshdlrdata->separateall, FALSE, DEFAULT_SEPARATEALL, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/sortvars", "apply binaries sorting in decr. order of coeff abs value?",
          &conshdlrdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -7105,6 +7078,7 @@ SCIP_RATIONAL* SCIPgetLhsExactLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -7128,6 +7102,7 @@ SCIP_RATIONAL* SCIPgetRhsExactLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -7190,6 +7165,7 @@ int SCIPgetNVarsExactLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -7213,6 +7189,7 @@ SCIP_VAR** SCIPgetVarsExactLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -7236,6 +7213,7 @@ SCIP_INTERVAL* SCIPgetValsRealExactLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -7259,6 +7237,7 @@ SCIP_RATIONAL** SCIPgetValsExactLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -7287,6 +7266,7 @@ SCIP_RETCODE SCIPgetActivityExactLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -7319,6 +7299,7 @@ SCIP_RETCODE SCIPgetFeasibilityExactLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -7350,6 +7331,7 @@ void SCIPgetFpDualsolExactLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(!SCIPconsIsOriginal(cons)); /* original constraints would always return 0 */
 
@@ -7380,6 +7362,7 @@ void SCIPgetFpDualfarkasExactLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(!SCIPconsIsOriginal(cons)); /* original constraints would always return 0 */
 
@@ -7408,6 +7391,7 @@ SCIP_ROW* SCIPgetRowExactLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -7433,6 +7417,7 @@ SCIP_ROWEXACT* SCIPgetRowExactExactLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )

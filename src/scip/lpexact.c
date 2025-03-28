@@ -201,7 +201,7 @@ static
 SCIP_Bool rowExactInSync(
    SCIP_ROWEXACT*        rowexact,           /**< exact row */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     msg                 /**< message handler */
+   SCIP_MESSAGEHDLR*     msg                 /**< message handler for debug output */ /*lint !e204*/
    )
 {
    SCIP_ROW* fprow;
@@ -235,12 +235,13 @@ static
 SCIP_Bool lpExactInSync(
    SCIP_LPEXACT*         lpexact,            /**< exact lp */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     msg                 /**< message handler */
+   SCIP_MESSAGEHDLR*     msg                 /**< message handler for debug output */
    )
 {
 #ifndef NDEBUG
    int i;
    SCIP_LP* fplp;
+
    assert(lpexact != NULL);
 
    fplp = lpexact->fplp;
@@ -3912,7 +3913,7 @@ SCIP_Bool SCIPlpExactProjectShiftPossible(
 SCIP_Bool SCIPlpExactIsSynced(
    SCIP_LPEXACT*         lp,                 /**< pointer to LP data object */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     msg                 /**< message handler */
+   SCIP_MESSAGEHDLR*     msg                 /**< message handler for debug output */
    )
 {
    assert(lp != NULL);
@@ -7120,11 +7121,11 @@ SCIP_RETCODE SCIPlpExactGetUnboundedSol(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            rayfeasible         /**< pointer to store whether the primal ray is a feasible unboundedness proof, or NULL */
-   )
+   )  /*lint --e{715}*/
 {
    SCIPerrorMessage("Unbounded solution not implemented in exact solving mode.\n");
    return SCIP_ERROR;
-} /*lint !e715*/
+}
 
 /** returns primal ray proving the unboundedness of the current LP */
 SCIP_RETCODE SCIPlpExactGetPrimalRay(
@@ -7280,7 +7281,7 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
                SCIProwGetName(lpirows[r]->fprow), lpirows[r]->lhs, lpirows[r]->rhs,
                lpirows[r]->constant, dualfarkas[r]);
 
-            *valid = FALSE; /*lint !e613*/
+               *valid = FALSE; /*lint --e{413,613}*/
 
             goto TERMINATE;
          }
@@ -7371,7 +7372,7 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
    {
       SCIPrationalDebugMessage("farkas proof is invalid: maxactivity=%q, lhs=%q\n", maxactivity, farkaslhs);
 
-      *valid = FALSE; /*lint !e613*/
+      *valid = FALSE; /*lint --e{413,613}*/
    }
 
   TERMINATE:

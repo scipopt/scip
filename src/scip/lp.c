@@ -12767,7 +12767,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
          }
 
-         SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+         SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue,
                prob, lperror, SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE, &(lp->lpobjval), &primalfeasible, &dualfeasible ) );
 
          /* handle error case in objlimit */

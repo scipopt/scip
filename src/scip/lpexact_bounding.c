@@ -118,17 +118,18 @@ int getNNonz(
    )
 {
    int ret = 0;
-   int i = 0;
 
    assert(lpexact != NULL);
 
-   for( i = 0; i < lpexact->nrows; ++i )
+   for( int i = 0; i < lpexact->nrows; ++i )
       ret+= lpexact->rows[i]->len;
 
    return ret;
 }
 
-/** subroutine of constructProjectShiftData(); chooses which columns of the dual matrix are designated as set S, used for projections */
+/** subroutine of constructProjectShiftData(); chooses which columns of the dual matrix are designated as set S, used
+ *  for projections
+ */
 static
 SCIP_RETCODE projectShiftChooseDualSubmatrix(
    SCIP_LP*              lp,                 /**< LP data */
@@ -137,7 +138,6 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
    SCIP_STAT*            stat,               /**< statistics pointer */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem              /**< block memory struct */
    )
@@ -256,12 +256,9 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
 /** subroutine of constructProjectShiftData(); computes the LU factorization used by the project-and-shift method */
 static
 SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
-   SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
-   SCIP_PROB*            prob,               /**< problem data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_Bool             findintpoint        /**< TRUE, if we search int point, FALSE if we search for ray */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    int i;
@@ -657,11 +654,9 @@ int computeProjectShiftNnonz(
 /** subroutine of constructProjectShiftData(); computes S-interior point or ray which is used to do the shifting step */
 static
 SCIP_RETCODE projectShiftComputeSintPointRay(
-   SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_STAT*            stat,               /**< statistics pointer */
-   SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Bool             findintpoint        /**< TRUE, if we search int point, FALSE if we search for ray */
    )
@@ -744,7 +739,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    }
 
    /* set the display informatino */
-   SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
+   SCIP_CALL( SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, (int) set->exact_lpinfo) );
    /* check if a time limit is set, and set time limit for LP solver accordingly */
    lptimelimit = SCIPlpiExactInfinity(pslpiexact);
    if( set->istimelimitfinite )
@@ -845,10 +840,8 @@ SCIP_RETCODE projectShiftConstructLP(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
-   SCIP_STAT*            stat,               /**< statistics pointer */
    SCIP_PROB*            prob,               /**< problem data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_Bool             findintpoint        /**< TRUE, if we search int point, FALSE if we search for ray */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    /* we will find an optimized interior point for which we will try to push it interior and
@@ -1051,7 +1044,6 @@ SCIP_RETCODE constructProjectShiftDataLPIExact(
    SCIP_STAT*            stat,               /**< statistics pointer */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem
    )
@@ -1082,12 +1074,12 @@ SCIP_RETCODE constructProjectShiftDataLPIExact(
    projshiftdata->nextendedrows = 2*lpexact->nrows + 2*lpexact->ncols;
 
    /* call function to select the set S */
-   SCIP_CALL( projectShiftChooseDualSubmatrix(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob, blkmem) );
+   SCIP_CALL( projectShiftChooseDualSubmatrix(lp, lpexact, set, stat, messagehdlr, eventqueue, prob, blkmem) );
 
    /* compute LU factorization of D == A|_S */
-   SCIP_CALL( projectShiftFactorizeDualSubmatrix(lp, lpexact, set, prob, blkmem, projshiftdata->projshiftuseintpoint) );
+   SCIP_CALL( projectShiftFactorizeDualSubmatrix(lpexact, set, blkmem) );
 
-   SCIP_CALL( projectShiftConstructLP(lp, lpexact, set, stat, prob, blkmem, TRUE) );
+   SCIP_CALL( projectShiftConstructLP(lp, lpexact, set, prob, blkmem) );
 
    SCIPclockStop(stat->provedfeaspstime, set);
    SCIPdebugMessage("exiting constructProjectShiftDataLPIExact()\n");
@@ -1102,9 +1094,6 @@ SCIP_RETCODE constructProjectShiftData(
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_STAT*            stat,               /**< statistics pointer */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem
    )
@@ -1151,12 +1140,12 @@ SCIP_RETCODE constructProjectShiftData(
       {
          /* compute S-interior point if we need it */
          SCIP_CALL( SCIPrationalCreateBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows) );
-         SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, TRUE) );
+         SCIP_CALL( projectShiftComputeSintPointRay(lpexact, set, stat, blkmem, TRUE) );
       }
 
       /* always try to compute the S-interior ray (for infeasibility proofs) */
       SCIP_CALL( SCIPrationalCreateBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
-      SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, FALSE) );
+      SCIP_CALL( projectShiftComputeSintPointRay(lpexact, set, stat, blkmem, FALSE) );
    }
 
    /* if construction of both point and ray has failed, mark projshiftdatafail as true. */
@@ -1184,7 +1173,6 @@ SCIP_RETCODE projectShift(
    SCIP_STAT*            stat,               /**< statistics pointer */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Bool             usefarkas,          /**< do we aim to prove infeasibility? */
@@ -1232,8 +1220,7 @@ SCIP_RETCODE projectShift(
    /* if data has not been constructed, construct it */
    if( !projshiftdata->projshiftdatacon )
    {
-      SCIP_CALL( constructProjectShiftData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
-                     prob, blkmem) );
+      SCIP_CALL( constructProjectShiftData(lp, lpexact, set, stat, prob, blkmem) );
    }
 
    assert(projshiftdata->projshiftdatacon);
@@ -1997,11 +1984,9 @@ SCIP_RETCODE boundShift(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Bool             usefarkas,          /**< should an infeasibility proof be computed? */
    SCIP_Real*            safebound           /**< pointer to store the computed safe bound (usually lpobj) */
@@ -2313,7 +2298,6 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
    SCIP_Bool             usefarkas,          /**< should infeasibility be proven? */
@@ -2347,7 +2331,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       && !lpexact->projshiftdata->projshiftdatacon && !lpexact->projshiftdata->projshiftdatafail )
    {
 #ifdef SCIP_WITH_GMP
-      SCIP_CALL( constructProjectShiftDataLPIExact(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob,
+      SCIP_CALL( constructProjectShiftDataLPIExact(lp, lpexact, set, stat, messagehdlr, eventqueue, prob,
             blkmem) );
 #endif
    }
@@ -2371,14 +2355,14 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
          case 'n':
             /* Safe Bounding introduced by Neumaier and Shcherbina (Chapter 2)*/
             *lperror = FALSE;
-            SCIP_CALL( boundShift(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+            SCIP_CALL( boundShift(lp, lpexact, set, blkmem, stat, eventqueue,
                   prob, usefarkas, safebound) );
             break;
       #ifdef SCIP_WITH_GMP
          case 'p':
             /* Project-and-Shift (Chapter 3)*/
             *lperror = FALSE;
-            SCIP_CALL( projectShift(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
+            SCIP_CALL( projectShift(lp, lpexact, set, stat, messagehdlr, eventqueue,
                   prob, blkmem, usefarkas, safebound) );
             break;
       #endif

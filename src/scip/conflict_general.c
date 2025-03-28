@@ -1482,7 +1482,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
          {
             usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
          }
-         SCIP_CALL( SCIPcertificatePrintAggrrow(set, lp, prob, SCIPgetCertificate(set->scip),
+         SCIP_CALL( SCIPcertificatePrintAggrrow(set, prob, SCIPgetCertificate(set->scip),
             farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, FALSE, &farkasrow->certificateline) );
          SCIPfreeBufferArray(set->scip, &usedrows);
       }
@@ -1888,7 +1888,7 @@ SCIP_RETCODE SCIPgetDualProof(
             assert(certificate_index != SCIP_LONGINT_MAX);
          }
       }
-      SCIP_CALL( SCIPcertificatePrintAggrrow(set, lp, transprob, SCIPgetCertificate(set->scip), farkasrow, usedrows,
+      SCIP_CALL( SCIPcertificatePrintAggrrow(set, transprob, SCIPgetCertificate(set->scip), farkasrow, usedrows,
             farkasrow->rowweights, farkasrow->nrows, false, &farkasrow->certificateline) );
       SCIP_CALL( SCIPhashmapRemove(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact) );
       SCIPfreeBufferArray(set->scip, &usedrows);

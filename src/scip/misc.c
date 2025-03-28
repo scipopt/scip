@@ -9904,7 +9904,7 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
       gcd = ABS(numerator);
       scm = denominator;
 
-      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale); /*lint !e838*/
 
       break;
    }
