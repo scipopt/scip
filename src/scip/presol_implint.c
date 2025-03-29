@@ -1422,7 +1422,6 @@ static
 SCIP_RETCODE computeMatrixStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    IMPLINT_MATRIX*       matrix,             /**< The constraint matrix to compute the statistics for */
-   MATRIX_COMPONENTS*    comp,               /**< Datastructure that contains the components of the matrix */
    MATRIX_STATISTICS**   pstats,             /**< Pointer to allocate the statistics data structure at */
    SCIP_Real             numericslimit       /**< The limit beyond which we consider integrality of coefficients
                                               *   to be unreliable */
@@ -2007,7 +2006,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    MATRIX_COMPONENTS* comp = NULL;
    MATRIX_STATISTICS* stats = NULL;
    SCIP_CALL( createMatrixComponents(scip, matrix, &comp) );
-   SCIP_CALL( computeMatrixStatistics(scip, matrix, comp, &stats, presoldata->numericslimit) );
+   SCIP_CALL( computeMatrixStatistics(scip, matrix, &stats, presoldata->numericslimit) );
    SCIP_CALL( computeContinuousComponents(scip, matrix, comp) );
    SCIP_CALL( findImpliedIntegers(scip, presoldata, matrix, comp, stats, nchgvartypes) );
    int afterchanged = *nchgvartypes;
