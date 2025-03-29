@@ -327,7 +327,7 @@ list(APPEND
 endif()
 
 # exact ip instances
-if(EXACTSOLVE)
+if(SCIP_WITH_EXACTSOLVE)
 set(instances_MIPEX
     "instances/MIPEX/egout.zpl\;568.1007"
     "instances/MIP/enigma.mps\;0"
@@ -1208,7 +1208,7 @@ endif (UNIX)
 endif()
 
 # @todo exip: this assumes you have vipr on your path, needs to be fixed eventually
-if(EXACTSOLVE)
+if(SCIP_WITH_EXACTSOLVE)
     foreach(instance ${instances_MIPEX})
         split_instance(instance)
         #
