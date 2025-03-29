@@ -1984,7 +1984,8 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    *result = SCIP_DIDNOTFIND;
 
    /* Exit early if there are no variables to upgrade */
-   if( !presoldata->convertintegers && SCIPgetNContVars(scip) == 0 )
+   if( SCIPgetNContVars(scip) == 0
+      && ( !presoldata->convertintegers || SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 ) )
       return SCIP_OKAY;
 
    SCIP_Real starttime = SCIPgetSolvingTime(scip);
