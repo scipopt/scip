@@ -1914,12 +1914,22 @@ SCIP_RETCODE findImpliedIntegers(
 static
 SCIP_DECL_PRESOLCOPY(presolCopyImplint)
 {  /*lint --e{715}*/
+   SCIP_PRESOLDATA* sourcepresoldata;
+   SCIP_PRESOLDATA* targetpresoldata;
+
    assert(scip != NULL);
    assert(presol != NULL);
    assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolImplint(scip) );
+
+   /* copy computedimplints flag */
+   sourcepresoldata = SCIPpresolGetData(presol);
+   assert(sourcepresoldata != NULL);
+   targetpresoldata = SCIPpresolGetData(SCIPfindPresol(scip, PRESOL_NAME));
+   assert(targetpresoldata != NULL);
+   targetpresoldata->computedimplints = sourcepresoldata->computedimplints;
 
    return SCIP_OKAY;
 }
@@ -1962,20 +1972,20 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    if( !SCIPisPresolveFinished(scip) )
       return SCIP_OKAY;
 
-   /* For now, we don't re-run detection for primal heuristics / subscips */
-   if( SCIPgetSubscipDepth(scip) > 0 )
-      return SCIP_OKAY;
-
-   /* Exit early if we already ran or if there are no variables to upgrade */
    SCIP_PRESOLDATA* presoldata = SCIPpresolGetData(presol);
-   if( presoldata->computedimplints || (!presoldata->convertintegers && SCIPgetNContVars(scip) == 0) )
-   {
+   assert(presoldata != NULL);
+
+   /* Terminate if we already ran */
+   if( presoldata->computedimplints )
       return SCIP_OKAY;
-   }
 
    presoldata->computedimplints = TRUE;
 
    *result = SCIP_DIDNOTFIND;
+
+   /* Exit early if there are no variables to upgrade */
+   if( !presoldata->convertintegers && SCIPgetNContVars(scip) == 0 )
+      return SCIP_OKAY;
 
    SCIP_Real starttime = SCIPgetSolvingTime(scip);
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
@@ -2040,8 +2050,6 @@ SCIP_RETCODE SCIPincludePresolImplint(
    /* create implint presolver data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
 
-   presoldata->computedimplints = FALSE;
-
    /* include implint presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
                                      PRESOL_TIMING, presolExecImplint, presoldata) );
@@ -2051,6 +2059,8 @@ SCIP_RETCODE SCIPincludePresolImplint(
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyImplint) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeImplint) );
+
+   presoldata->computedimplints = FALSE;
 
    SCIP_CALL( SCIPaddRealParam(scip,
                                "presolving/implint/columnrowratio",
