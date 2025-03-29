@@ -502,7 +502,7 @@ SCIP_RETCODE addXorLinearization(
 {
    SCIP_VAR** operands = SCIPgetVarsXor(scip, cons);
    SCIP_VAR* intvar = SCIPgetIntVarXor(scip, cons);
-   SCIP_Bool rhs = SCIPgetRhsXor(scip, cons);
+   SCIP_Real rhs = (SCIP_Real)SCIPgetRhsXor(scip, cons);
    int noperands = SCIPgetNVarsXor(scip, cons);
    assert(noperands >= 0);
    SCIP_VAR** vars;
@@ -542,7 +542,7 @@ SCIP_RETCODE addXorLinearization(
        *    + x + y - z <= 1
        *    - x - y - z <= -1
        */
-      SCIP_Real scale = rhs == 0 ? -1.0 : 1.0;
+      SCIP_Real scale = rhs == 0.0 ? -1.0 : 1.0; /*lint !e777*/
 
       for( i = 0; i < noperands; ++i )
       {
@@ -563,7 +563,7 @@ SCIP_RETCODE addXorLinearization(
       assert(noperands < 3);
 
       for( j = 0; j < noperands; ++j )
-         vals[j] = (j <= (int)rhs) ? 1.0 : -1.0;
+         vals[j] = (j <= rhs) ? 1.0 : -1.0;
 
       SCIP_CALL( addLinearConstraint(scip, matrix, operands, vals, noperands, rhs, rhs, cons) );
    }
