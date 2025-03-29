@@ -500,16 +500,37 @@ SCIP_RETCODE addXorLinearization(
    SCIP_CONS*            cons                /**< The constraint that is linearized */
 )
 {
-   SCIP_Real* vals;
-   SCIP_VAR** vars;
    SCIP_VAR** operands = SCIPgetVarsXor(scip, cons);
+   SCIP_VAR* intvar = SCIPgetIntVarXor(scip, cons);
+   SCIP_Bool rhs = SCIPgetRhsXor(scip, cons);
    int noperands = SCIPgetNVarsXor(scip, cons);
-   assert(noperands > 0);
+   assert(noperands >= 0);
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   int i;
+   int j;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, noperands + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, noperands + 1) );
-   if( noperands == 3)
+
+   if( intvar != NULL )
    {
-      assert(SCIPgetIntVarXor(scip, cons) == NULL);
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, noperands + 1) );
+
+      /* add intvar constraint */
+      for( j = 0; j < noperands; ++j )
+      {
+         vars[j] = operands[j];
+         vals[j] = 1.0;
+      }
+      vars[noperands] = intvar;
+      vals[noperands] = -2.0;
+
+      SCIP_CALL( addLinearConstraint(scip, matrix, vars, vals, noperands + 1, rhs, rhs, cons) );
+
+      SCIPfreeBufferArray(scip, &vars);
+   }
+   else if( noperands == 3 )
+   {
       /** in the special case of 3 variables and c = 0, the following linear system is created:
        *    + x - y - z <= 0
        *    - x + y - z <= 0
@@ -521,46 +542,34 @@ SCIP_RETCODE addXorLinearization(
        *    + x + y - z <= 1
        *    - x - y - z <= -1
        */
-      SCIP_Bool rhs = SCIPgetRhsXor(scip, cons);
       SCIP_Real scale = rhs == 0 ? -1.0 : 1.0;
-      SCIP_Real rhsVal = rhs;
 
-      for( int i = 0; i < 3; ++i )
+      for( i = 0; i < noperands; ++i )
       {
-         for( int j = 0; j < 3; ++j )
-         {
-            vals[j] = (i == j ) ? -scale : scale;
-         }
+         for( j = 0; j < noperands; ++j )
+            vals[j] = (i == j) ? -scale : scale;
 
-         SCIP_CALL( addLinearConstraint(scip, matrix, operands, vals, 3, -SCIPinfinity(scip), rhsVal, cons) );
+         SCIP_CALL( addLinearConstraint(scip, matrix, operands, vals, noperands, -SCIPinfinity(scip), rhs, cons) );
       }
-      for( int j = 0; j < 3; ++j )
-      {
+
+      for( j = 0; j < noperands; ++j )
          vals[j] = -scale;
-      }
 
-      rhsVal = 2.0 - 3 * rhs;
-      SCIP_CALL( addLinearConstraint(scip, matrix, operands, vals, 3, -SCIPinfinity(scip), rhsVal, cons) );
+      rhs = 2.0 - noperands * rhs;
+      SCIP_CALL( addLinearConstraint(scip, matrix, operands, vals, noperands, -SCIPinfinity(scip), rhs, cons) );
    }
    else
    {
-      /* First, add all the constraints of the form resultant <= operand */
-      for( int i = 0; i < noperands; ++i )
-      {
-         vars[i] = operands[i];
-         vals[i] = 1.0;
-      }
-      vars[noperands] = SCIPgetIntVarXor(scip, cons);
-      vals[noperands] = -2.0;
-      assert(vars[noperands] != NULL);
+      assert(noperands < 3);
 
-      SCIP_Bool rhs = SCIPgetRhsXor(scip, cons);
+      for( j = 0; j < noperands; ++j )
+         vals[j] = (j <= (int)rhs) ? 1.0 : -1.0;
 
-      SCIP_CALL( addLinearConstraint(scip, matrix, vars, vals, noperands + 1, rhs, rhs, cons) );
+      SCIP_CALL( addLinearConstraint(scip, matrix, operands, vals, noperands, rhs, rhs, cons) );
    }
 
-   SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &vals);
+
    return SCIP_OKAY;
 }
 
@@ -705,20 +714,36 @@ SCIP_RETCODE matrixCreate(
          }
          else if( strcmp(conshdlrname, "xor") == 0 )
          {
-            /* The relaxation of XOR constraints is handled differently depending on their size
-             * For 3 variables, the integer hull of the constraint is added as it is only 4 rows.
-             * For more variables, the LP only has a single row. */
+            /* the relaxation of XOR constraints is handled differently depending on the integer variable and size:
+             * with integer variable or less than three variables, the representation is a single row;
+             * without integer variable and three variables, the convex hull of the constraint is added with four rows;
+             * otherwise, the constraint is considered nonlinear because the convex hull representation is exponential
+             */
             SCIP_CONS** checked = SCIPconshdlrGetCheckConss(conshdlrs[i]);
             for( j = 0; j < nconshdlrconss; ++j )
             {
+               SCIP_VAR* intvar = SCIPgetIntVarXor(scip, checked[j]);
                int nxorvars = SCIPgetNVarsXor(scip, checked[j]);
-               if( nxorvars == 3 )
+               if( intvar != NULL )
+               {
+                  nmatrixrows += 1;
+                  nnonzstmp += nxorvars + 1;
+               }
+               else if( nxorvars == 3 )
                {
                   nmatrixrows += 4;
                   nnonzstmp += 12;
                }
-               else
+               else if( nxorvars < 3 )
+               {
                   nmatrixrows += 1;
+                  nnonzstmp += nxorvars;
+               }
+               else
+               {
+                  /* TODO: treat xor constraint with intvar == NULL and nxorvars > 3 nonlinear */
+                  return SCIP_OKAY;
+               }
             }
          }
          else if( strcmp(conshdlrname, "orbitope_pp") == 0 || strcmp(conshdlrname, "orbitope_full") == 0
