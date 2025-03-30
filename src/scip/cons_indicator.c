@@ -4144,7 +4144,7 @@ SCIP_RETCODE propIndicator(
     * But do not tighten it if slackvar is locked down by other constraints,
     * or if it has a nonzero coefficient in the objective function (not implemented).
     *
-    * ax - s <= rhs  ->  s <= maxActivity(ax) - rhs
+    * ax - c * s <= rhs  ->  s <= (maxActivity(ax) - rhs) / c;
     */
    if ( (SCIPvarGetUbLocal(consdata->slackvar) > conshdlrdata->maxcouplingvalue
          || SCIPvarGetUbLocal(consdata->slackvar) > conshdlrdata->sepacouplingvalue)
@@ -4154,14 +4154,13 @@ SCIP_RETCODE propIndicator(
       SCIP_VAR** consvars;
       SCIP_Real* consvals;
       SCIP_Real maxactivity;
+      SCIP_Real coeffslack = SCIP_INVALID;
       SCIP_Real newub;
       SCIP_Real rhs;
-      SCIP_Real coeffslack;
       int nlinconsvars;
       int j;
 
       maxactivity = 0.0;
-      coeffslack = -1.0;
 
       nlinconsvars = SCIPgetNVarsLinear(scip, consdata->lincons);
       consvars = SCIPgetVarsLinear(scip, consdata->lincons);
@@ -4180,7 +4179,7 @@ SCIP_RETCODE propIndicator(
          var = consvars[j];
          assert( var != NULL );
 
-         /* skip slackvar */
+         /* store slackvar coefficient */
          if ( var == consdata->slackvar )
          {
             coeffslack = val;
@@ -4202,7 +4201,7 @@ SCIP_RETCODE propIndicator(
       }
 
       /* continue only if maxactivity is not infinity */
-      if ( !SCIPisInfinity(scip, maxactivity) )
+      if ( !SCIPisInfinity(scip, maxactivity) && coeffslack != SCIP_INVALID && coeffslack < 0.0 )  /*lint !e777*/
       {
          /* substract rhs */
          rhs = SCIPgetRhsLinear(scip, consdata->lincons);
