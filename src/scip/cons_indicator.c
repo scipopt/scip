@@ -4201,7 +4201,6 @@ SCIP_RETCODE propIndicator(
       /* continue only if maxactivity is not infinity */
       if ( !SCIPisInfinity(scip, maxactivity) && coeffslack != SCIP_INVALID && coeffslack < 0.0 )  /*lint !e777*/
       {
-         /* substract rhs */
          rhs = SCIPgetRhsLinear(scip, consdata->lincons);
 
          /* continue if rhs is not finite; happens, e.g., if variables are multiaggregated; we would need the minimal activity in this case */
@@ -4213,12 +4212,8 @@ SCIP_RETCODE propIndicator(
             /* divide by coeff of slackvar */
             newub = newub / (-1.0 * coeffslack);
 
-            /* round if slackvar is (implicit) integer */
-            if ( SCIPvarGetType(consdata->slackvar) <= SCIP_VARTYPE_IMPLINT )
-            {
-               if ( !SCIPisIntegral(scip, newub) )
-                  newub = SCIPceil(scip, newub);
-            }
+            /* adjust bound if slackvar is (implicit) integer */
+            newub = SCIPadjustedVarUb(scip, consdata->slackvar, newub);
 
             if ( SCIPisFeasLT(scip, newub, SCIPvarGetUbLocal(consdata->slackvar))
                   && newub > SCIPvarGetLbLocal(consdata->slackvar) )
