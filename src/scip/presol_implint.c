@@ -764,10 +764,7 @@ SCIP_RETCODE matrixCreate(
     * this counts nonzeros in equalities twice, but can be at most two times as high as the exact number
     */
    for( i = 0; i < nvars; ++i )
-   {
-      nnonzstmp += SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL);
-      nnonzstmp += SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL);
-   }
+      nnonzstmp += SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL);
 
    if( nnonzstmp == 0 )
       return SCIP_OKAY;
@@ -810,7 +807,7 @@ SCIP_RETCODE matrixCreate(
 
 
    /* loop a second time over constraints handlers and add supported constraints to the matrix */
-   for( i = 0; i < nconshdlrs && *success; ++i)
+   for( i = 0; i < nconshdlrs; ++i )
    {
       SCIP_CONS** conshdlrconss;
       int c;
