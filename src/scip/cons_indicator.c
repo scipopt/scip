@@ -4151,20 +4151,18 @@ SCIP_RETCODE propIndicator(
       && SCIPvarGetNLocksDownType(consdata->slackvar, SCIP_LOCKTYPE_MODEL) <= 1
       && SCIPvarGetObj(consdata->slackvar) == 0.0 && SCIPconsIsActive(consdata->lincons) )
    {
-      SCIP_VAR** consvars;
-      SCIP_Real* consvals;
-      SCIP_Real maxactivity;
+      SCIP_VAR** linconsvars;
+      SCIP_Real* linconsvals;
+      SCIP_Real maxactivity = 0.0;
       SCIP_Real coeffslack = SCIP_INVALID;
       SCIP_Real newub;
       SCIP_Real rhs;
       int nlinconsvars;
       int j;
 
-      maxactivity = 0.0;
-
       nlinconsvars = SCIPgetNVarsLinear(scip, consdata->lincons);
-      consvars = SCIPgetVarsLinear(scip, consdata->lincons);
-      consvals = SCIPgetValsLinear(scip, consdata->lincons);
+      linconsvars = SCIPgetVarsLinear(scip, consdata->lincons);
+      linconsvals = SCIPgetValsLinear(scip, consdata->lincons);
 
       /* calculate maximal activity of linear constraint without slackvar */
       for (j = 0; j < nlinconsvars; ++j)
@@ -4173,10 +4171,10 @@ SCIP_RETCODE propIndicator(
          SCIP_Real val;
          SCIP_Real bound;
 
-         val = consvals[j];
+         val = linconsvals[j];
          assert( ! SCIPisZero(scip, val) );
 
-         var = consvars[j];
+         var = linconsvars[j];
          assert( var != NULL );
 
          /* store slackvar coefficient */
