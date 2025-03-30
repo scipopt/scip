@@ -3193,11 +3193,11 @@ void permSortConsdata(
 
 /** sorts linear constraint's variables depending on the stage of the solving process:
  * - during PRESOLVING
- *       sorts variables by binaries, integers, implicit integers, and continuous variables,
+ *       sorts variables by binary, integer, implied integral, and continuous variables,
  *       and the variables of the same type by non-decreasing variable index
  *
  * - during SOLVING
- *       sorts variables of the remaining problem by binaries, integers, implicit integers, and continuous variables,
+ *       sorts variables of the remaining problem by binary, integer, implied integral, and continuous variables,
  *       and binary and integer variables by their global max activity delta (within each group),
  *       ties within a group are broken by problem index of the variable.
  *
