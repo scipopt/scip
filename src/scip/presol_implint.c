@@ -384,11 +384,7 @@ SCIP_RETCODE addLinearConstraint(
    assert(nvars >= 1 || (!SCIPisPositive(scip, lhs) && !SCIPisNegative(scip, rhs)));
 
    /* constraint is redundant */
-   if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
-      return SCIP_OKAY;
-
-   /* we do not add empty constraints to the matrix */
-   if( nvars == 0 )
+   if( nvars == 0 || ( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) ) )
       return SCIP_OKAY;
 
    activevars = NULL;
@@ -422,7 +418,7 @@ SCIP_RETCODE addLinearConstraint(
    assert(nactivevars >= 1 || (!SCIPisPositive(scip, lhs) && !SCIPisNegative(scip, rhs)));
 
    /* add single row to matrix */
-   if( nactivevars > 0 )
+   if( nactivevars >= 1 )
    {
       SCIP_CALL( matrixAddRow(scip, matrix, activevars, activevals, nactivevars, lhs, rhs, cons) );
    }
