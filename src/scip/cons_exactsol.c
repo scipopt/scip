@@ -208,6 +208,7 @@ SCIP_RETCODE solCreateSolAssignment(
 { /*lint --e{522, 776}*/
    SCIP_VAR** vars;
    int nvars;
+   int ncontimplvars;
    int ncontvars;
    int nintegers;
    int i;
@@ -215,9 +216,9 @@ SCIP_RETCODE solCreateSolAssignment(
    assert(sol != NULL);
    assert(scip != NULL);
 
-   /* get all problem variables and integer region in vars array */
-   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nvars, NULL, NULL, NULL, NULL, NULL, &ncontvars) );
-   nintegers = nvars - ncontvars;
+   /* get all problem variables and enforced integral region in vars array */
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nvars, NULL, NULL, NULL, NULL, &ncontimplvars, &ncontvars) );
+   nintegers = nvars - ncontvars - ncontimplvars;
    assert(nintegers >= 0);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, assignment) );
@@ -538,7 +539,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   nintegers = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   nintegers = nvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
    for( i = nintegers; i < nvars; ++i )
    {
       if( SCIPvarGetStatusExact(vars[i]) == SCIP_VARSTATUS_COLUMN )
@@ -588,9 +589,9 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
              * solution with integral value exist; in this case we currently round and fix its value
              */
             /**@todo once implied integrality detection is made exact, test whether it improves performance to leave
-             *       continuous implied integral variables unfixed or fix them only if they take a nearly integral value
+             *       continuous implied integral variables unfixed
              */
-            if( SCIPisIntegral(scip, solval) || SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK )
+            if( SCIPisIntegral(scip, solval) )
             {
                SCIP_RATIONAL* newbound;
 
