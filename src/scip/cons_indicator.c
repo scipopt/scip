@@ -4206,18 +4206,19 @@ SCIP_RETCODE propIndicator(
          /* continue if rhs is not finite; happens, e.g., if variables are multiaggregated; we would need the minimal activity in this case */
          if ( !SCIPisInfinity(scip, rhs) )
          {
-            newub = maxactivity - rhs;
-            assert( !SCIPisInfinity(scip, newub) );
-
             /* divide by coeff of slackvar */
-            newub = newub / (-1.0 * coeffslack);
+            newub = (maxactivity - rhs) / (-1.0 * coeffslack);
+            assert( !SCIPisInfinity(scip, newub) );
 
             /* adjust bound if slackvar is (implicit) integer */
             newub = SCIPadjustedVarUb(scip, consdata->slackvar, newub);
 
             if ( SCIPisFeasLT(scip, newub, SCIPvarGetUbLocal(consdata->slackvar))
-                  && newub > SCIPvarGetLbLocal(consdata->slackvar) )
+               && newub > SCIPvarGetLbLocal(consdata->slackvar) )
             {
+               SCIPdebugMsg(scip, "Adjusting upper bound of slack variable <%s> to %g for indicator constraint <%s>.\n",
+                  SCIPvarGetName(consdata->slackvar), newub, SCIPconsGetName(cons));
+
                /* propagate bound */
                SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, newub, cons, 3, FALSE, &infeasible, &tightened) );
                assert( !infeasible );
