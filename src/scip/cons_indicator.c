@@ -4172,7 +4172,7 @@ SCIP_RETCODE propIndicator(
       {
          SCIP_VAR* var;
          SCIP_Real val;
-         SCIP_Real ub;
+         SCIP_Real bound;
 
          val = consvals[j];
          assert( ! SCIPisZero(scip, val) );
@@ -4188,17 +4188,17 @@ SCIP_RETCODE propIndicator(
          }
 
          if ( val > 0.0 )
-            ub = SCIPvarGetUbLocal(var);
+            bound = SCIPvarGetUbLocal(var);
          else
-            ub = SCIPvarGetLbLocal(var);
+            bound = SCIPvarGetLbLocal(var);
 
-         if ( SCIPisInfinity(scip, ub) )
+         if ( SCIPisInfinity(scip, REALABS(bound)) )
          {
             maxactivity = SCIPinfinity(scip);
             break;
          }
          else
-            maxactivity += val * ub;
+            maxactivity += val * bound;
       }
 
       /* continue only if maxactivity is not infinity */
