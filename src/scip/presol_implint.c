@@ -698,8 +698,10 @@ SCIP_RETCODE matrixCreate(
             SCIP_CONS** checked = SCIPconshdlrGetCheckConss(conshdlrs[i]);
             for( j = 0; j < nconshdlrconss; ++j )
             {
-               nmatrixrows = nmatrixrows + SCIPgetNVarsAnd(scip, checked[j]) + 1;
-               nnonzstmp += SCIPgetNVarsAnd(scip, checked[j]);
+               int nandvars = SCIPgetNVarsAnd(scip, checked[j]);
+               nmatrixrows += nandvars + 1;
+               if( nandvars > 1 )
+                  nnonzstmp += nandvars - 1;
             }
          }
          else if( strcmp(conshdlrname, "or") == 0 )
@@ -708,8 +710,10 @@ SCIP_RETCODE matrixCreate(
             SCIP_CONS** checked = SCIPconshdlrGetCheckConss(conshdlrs[i]);
             for( j = 0; j < nconshdlrconss; ++j )
             {
-               nmatrixrows = nmatrixrows + SCIPgetNVarsOr(scip, checked[j]) + 1;
-               nnonzstmp += SCIPgetNVarsOr(scip, checked[j]);
+               int norvars = SCIPgetNVarsOr(scip, checked[j]);
+               nmatrixrows += norvars + 1;
+               if( norvars > 1 )
+                  nnonzstmp += norvars - 1;
             }
          }
          else if( strcmp(conshdlrname, "xor") == 0 )
@@ -722,22 +726,13 @@ SCIP_RETCODE matrixCreate(
             SCIP_CONS** checked = SCIPconshdlrGetCheckConss(conshdlrs[i]);
             for( j = 0; j < nconshdlrconss; ++j )
             {
-               SCIP_VAR* intvar = SCIPgetIntVarXor(scip, checked[j]);
                int nxorvars = SCIPgetNVarsXor(scip, checked[j]);
-               if( intvar != NULL )
-               {
+               if( SCIPgetIntVarXor(scip, checked[j]) != NULL || nxorvars < 3 )
                   nmatrixrows += 1;
-                  nnonzstmp += nxorvars + 1;
-               }
                else if( nxorvars == 3 )
                {
                   nmatrixrows += 4;
-                  nnonzstmp += 12;
-               }
-               else if( nxorvars < 3 )
-               {
-                  nmatrixrows += 1;
-                  nnonzstmp += nxorvars;
+                  nnonzstmp += 6;
                }
                else
                {
