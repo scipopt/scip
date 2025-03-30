@@ -208,7 +208,6 @@ SCIP_RETCODE solCreateSolAssignment(
 { /*lint --e{522, 776}*/
    SCIP_VAR** vars;
    int nvars;
-   int ncontimplvars;
    int ncontvars;
    int nintegers;
    int i;
@@ -216,9 +215,9 @@ SCIP_RETCODE solCreateSolAssignment(
    assert(sol != NULL);
    assert(scip != NULL);
 
-   /* get all problem variables and enforced integral region in vars array */
-   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nvars, NULL, NULL, NULL, NULL, &ncontimplvars, &ncontvars) );
-   nintegers = nvars - ncontvars - ncontimplvars;
+   /* get all problem variables and integer region in vars array */
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nvars, NULL, NULL, NULL, NULL, NULL, &ncontvars) );
+   nintegers = nvars - ncontvars;
    assert(nintegers >= 0);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, assignment) );
@@ -539,7 +538,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   nintegers = nvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   nintegers = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    for( i = nintegers; i < nvars; ++i )
    {
       if( SCIPvarGetStatusExact(vars[i]) == SCIP_VARSTATUS_COLUMN )
@@ -584,14 +583,18 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
             assert(SCIPrationalIsLE(SCIPvarGetLbLocalExact(vars[i]), SCIPvarGetUbLocalExact(vars[i])));
 
-            /* check if solution value is integral and abort if not, except if integrality is weakly implied: then the
-             * solution value could be fractional in a floating-point feasible solution and we know that an optimal
-             * solution with integral value exist; in this case we currently round and fix its value
+            /* for all integer and implied integer variables we check if their solution value is near-integral and abort
+             * if not, except for continuous variables whose integrality is weakly implied: then the solution value
+             * could be fractional in a floating-point feasible solution and we only know that a feasible solution with
+             * integral value exists; in this case we currently round and fix its value, which may lead to infeasibility
              */
             /**@todo once implied integrality detection is made exact, test whether it improves performance to leave
-             *       continuous implied integral variables unfixed
+             *       continuous variables that are weakly implied integral unfixed: strongly implied ones should be
+             *       near-integral anyway, but for weakly implied ones, the rounding step can introduce infeasibility,
+             *       so it may be beneficial to not fix it at the cost of a more expensive exact LP solve
              */
-            if( SCIPisIntegral(scip, solval) )
+            if( SCIPisIntegral(scip, solval) || (SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS
+                  && SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK) )
             {
                SCIP_RATIONAL* newbound;
 
