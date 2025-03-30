@@ -640,9 +640,9 @@ SCIP_RETCODE matrixSetColumnMajor(
    return SCIP_OKAY;
 }
 
-/* @todo; use symmetry constraints to guide variable ordering for integral columns.
+/* @todo: use symmetry constraints to guide variable ordering for integral columns
  * Symmetric variables should always all be either network or non-network */
-/* @todo optionally skip construction of integral constraints if we do not run detection on integer variables */
+/* @todo: skip construction of integral constraints if we do not run detection on integer variables */
 static
 SCIP_RETCODE matrixCreate(
    SCIP* scip,
@@ -736,7 +736,7 @@ SCIP_RETCODE matrixCreate(
                }
                else
                {
-                  /* TODO: treat xor constraint with intvar == NULL and nxorvars > 3 nonlinear */
+                  /* @todo: treat xor constraint without integer variable and more than three variables nonlinear */
                   return SCIP_OKAY;
                }
             }
@@ -748,7 +748,7 @@ SCIP_RETCODE matrixCreate(
          }
          else
          {
-            /* TODO: support indicator, nonlinear, superindicator, sos1, sos2, bounddisjunction, linking conshdlrs */
+            /* @todo: support linking, sos1, sos2, bounddisjunction, nonlinear, indicator, superindicator conshdlrs */
             return SCIP_OKAY;
          }
       }
