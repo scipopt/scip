@@ -446,9 +446,9 @@ SCIP_RETCODE addAndOrLinearization(
    SCIP_Real lhs;
    SCIP_Real rhs;
    int i;
-   assert(noperands > 0);
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, noperands + 1) );
+
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, noperands + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, noperands + 1) );
    /* First, add all the constraints of the form resultant <= operand */
 
    if( isAndCons )
@@ -487,8 +487,10 @@ SCIP_RETCODE addAndOrLinearization(
       rhs = 0.0;
    }
    SCIP_CALL( addLinearConstraint(scip, matrix, vars, vals, noperands + 1, lhs, rhs, cons) );
-   SCIPfreeBufferArray(scip, &vars);
+
    SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
    return SCIP_OKAY;
 }
 
