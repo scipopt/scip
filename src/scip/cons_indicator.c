@@ -6978,8 +6978,31 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
    }
    else
    {
+      SCIP_VAR** linconsvars;
+      SCIP_Real* linconsvals;
+      int nlinconsvars;
+      int j;
+
       assert( inferinfo == 3 );
-      SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx) );
+
+      /* mark variables in linear constraint */
+      nlinconsvars = SCIPgetNVarsLinear(scip, consdata->lincons);
+      linconsvars = SCIPgetVarsLinear(scip, consdata->lincons);
+      linconsvals = SCIPgetValsLinear(scip, consdata->lincons);
+
+      for (j = 0; j < nlinconsvars; ++j)
+      {
+         if ( linconsvals[j] > 0.0 )
+         {
+            assert( ! SCIPisInfinity(scip, SCIPgetVarUbAtIndex(scip, linconsvars[j], bdchgidx, FALSE)) );
+            SCIP_CALL( SCIPaddConflictUb(scip, linconsvars[j], bdchgidx) );
+         }
+         else
+         {
+            assert( ! SCIPisInfinity(scip, -SCIPgetVarLbAtIndex(scip, linconsvars[j], bdchgidx, FALSE)) );
+            SCIP_CALL( SCIPaddConflictLb(scip, linconsvars[j], bdchgidx) );
+         }
+      }
    }
 
    *result = SCIP_SUCCESS;
