@@ -449,8 +449,8 @@ SCIP_RETCODE addAndOrLinearization(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, noperands + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, noperands + 1) );
-   /* First, add all the constraints of the form resultant <= operand */
 
+   /* add all the constraints of the form resultant <= operand */
    if( isAndCons )
    {
       lhs = -SCIPinfinity(scip);
@@ -461,24 +461,22 @@ SCIP_RETCODE addAndOrLinearization(
       lhs = 0.0;
       rhs = SCIPinfinity(scip);
    }
+
+   vars[0] = resultant;
    vals[0] = 1.0;
    vals[1] = -1.0;
-   vars[0] = resultant;
-   for( i = 0; i < noperands ; ++i )
+
+   for( i = 0; i < noperands; ++i )
    {
       vars[1] = operands[i];
 
       SCIP_CALL( addLinearConstraint(scip, matrix, vars, vals, 2, lhs, rhs, cons) );
    }
-   for( i = 0; i < noperands ; ++i )
-   {
-      vars[i+1] = operands[i];
-      vals[i+1] = -1.0;
-   }
 
+   /* add the constraint of the form noperands - 1 + resultant >= sum operands */
    if( isAndCons )
    {
-      lhs = 1 - noperands;
+      lhs = 1.0 - noperands;
       rhs = SCIPinfinity(scip);
    }
    else
@@ -486,6 +484,13 @@ SCIP_RETCODE addAndOrLinearization(
       lhs = -SCIPinfinity(scip);
       rhs = 0.0;
    }
+
+   for( i = 0; i < noperands; ++i )
+   {
+      vars[i + 1] = operands[i];
+      vals[i + 1] = -1.0;
+   }
+
    SCIP_CALL( addLinearConstraint(scip, matrix, vars, vals, noperands + 1, lhs, rhs, cons) );
 
    SCIPfreeBufferArray(scip, &vals);
