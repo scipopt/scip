@@ -4148,8 +4148,8 @@ SCIP_RETCODE propIndicator(
     */
    if ( (SCIPvarGetUbLocal(consdata->slackvar) > conshdlrdata->maxcouplingvalue
          || SCIPvarGetUbLocal(consdata->slackvar) > conshdlrdata->sepacouplingvalue)
-         && SCIPvarGetNLocksDownType(consdata->slackvar, SCIP_LOCKTYPE_MODEL) <= 1
-         && SCIPvarGetObj(consdata->slackvar) == 0.0 )
+      && SCIPvarGetNLocksDownType(consdata->slackvar, SCIP_LOCKTYPE_MODEL) <= 1
+      && SCIPvarGetObj(consdata->slackvar) == 0.0 && SCIPconsIsActive(consdata->lincons) )
    {
       SCIP_VAR** consvars;
       SCIP_Real* consvals;
