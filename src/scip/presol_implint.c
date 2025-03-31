@@ -535,15 +535,15 @@ static
 SCIP_RETCODE addXorLinearization(
    SCIP*                 scip,               /**< current scip instance */
    IMPLINT_MATRIX*       matrix,             /**< constraint matrix */
-   SCIP_CONS*            cons                /**< The constraint that is linearized */
+   SCIP_CONS*            cons,               /**< The constraint that is linearized */
+   SCIP_VAR**            operands,           /**< variables of this constraint */
+   int                   noperands,          /**< number of operands */
+   SCIP_VAR*             intvar,             /**< the intvar of the xor constraint */
+   SCIP_Real             rhs                 /**< the right hand side of the xor constraint */
 )
 {
-   SCIP_VAR** operands = SCIPgetVarsXor(scip, cons);
    SCIP_VAR** vars;
-   SCIP_VAR* intvar = SCIPgetIntVarXor(scip, cons);
    SCIP_Real* vals;
-   SCIP_Real rhs = (SCIP_Real)SCIPgetRhsXor(scip, cons);
-   int noperands = SCIPgetNVarsXor(scip, cons);
    int i;
    int j;
 
@@ -1037,7 +1037,8 @@ SCIP_RETCODE matrixCreate(
                break;
             }
 
-            SCIP_CALL( addXorLinearization(scip, matrix, cons) );
+            SCIP_CALL( addXorLinearization(scip, matrix, cons, SCIPgetVarsXor(scip, cons), SCIPgetNVarsXor(scip, cons),
+                                           SCIPgetIntVarXor(scip, cons), (SCIP_Real) SCIPgetRhsXor(scip, cons)) );
          }
       }
    }
