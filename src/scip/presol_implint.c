@@ -113,7 +113,7 @@ struct ImplintMatrix
     * nconstraints (different from nnonz because of multiple row constraints)
     * npmonenonzeros in integral equality rows */
 
-   SCIP_VAR**            vars;
+   SCIP_VAR**            colvar;             /**< variable described by column */
 
    SCIP_Real*            rowmatval;          /**< coefficients in row major format */
    int*                  rowmatind;          /**< column indexed in row major format */
@@ -239,7 +239,7 @@ SCIP_VAR* matrixGetVar(
    assert(column >= 0);
    assert(column < matrix->ncols);
 
-   return matrix->vars[column];
+   return matrix->colvar[column];
 }
 
 static
@@ -811,7 +811,7 @@ SCIP_RETCODE matrixCreate(
    SCIP_CALL( SCIPallocBuffer(scip, pmatrix) );
    matrix = *pmatrix;
 
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &matrix->vars, vars, nvars) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &matrix->colvar, vars, nvars) );
    matrix->ncols = nvars;
    matrix->memnonz = nnonzstmp;
    matrix->nnonzs = 0;
@@ -1067,7 +1067,7 @@ SCIP_RETCODE matrixCreate(
       SCIPfreeBufferArray(scip, &matrix->colmatbeg);
       SCIPfreeBufferArray(scip, &matrix->colmatind);
       SCIPfreeBufferArray(scip, &matrix->colmatval);
-      SCIPfreeBufferArrayNull(scip, &matrix->vars);
+      SCIPfreeBufferArrayNull(scip, &matrix->colvar);
 
       SCIPfreeBuffer(scip, pmatrix);
    }
@@ -1121,7 +1121,7 @@ void matrixFree(
       matrix->ncols = 0;
       matrix->nnonzs = 0;
 
-      SCIPfreeBufferArrayNull(scip, &(matrix->vars));
+      SCIPfreeBufferArrayNull(scip, &(matrix->colvar));
 
       SCIPfreeBuffer(scip, &matrix);
    }
