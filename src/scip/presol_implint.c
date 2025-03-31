@@ -679,9 +679,8 @@ SCIP_RETCODE matrixSetColumnMajor(
 /* @todo: skip construction of integral constraints if we do not run detection on integer variables */
 static
 SCIP_RETCODE matrixCreate(
-   SCIP* scip,
-   IMPLINT_MATRIX** pmatrix,
-   SCIP_Bool* success
+   SCIP*                 scip,               /**< the scip data structure */
+   IMPLINT_MATRIX**      pmatrix             /**< pointer to create the matrix at */
    )
 {
    int nconshdlrs;
@@ -695,8 +694,9 @@ SCIP_RETCODE matrixCreate(
    SCIP_VAR** vars;
    int nvars;
    int nnonzstmp;
+   SCIP_Bool success;
 
-   *success = FALSE;
+   *pmatrix = NULL;
 
    /* return if no variables or constraints are present */
    if( SCIPgetNVars(scip) == 0 || SCIPgetNConss(scip) == 0 )
@@ -798,7 +798,7 @@ SCIP_RETCODE matrixCreate(
    if( nnonzstmp == 0 )
       return SCIP_OKAY;
 
-   *success = TRUE;
+   success = TRUE;
 
    /* build the matrix structure */
    SCIP_CALL( SCIPallocBuffer(scip, pmatrix) );
@@ -854,7 +854,7 @@ SCIP_RETCODE matrixCreate(
 
             if( SCIPconsIsModifiable(cons) )
             {
-               *success = FALSE;
+               success = FALSE;
                break;
             }
 
@@ -880,7 +880,7 @@ SCIP_RETCODE matrixCreate(
 
                if( SCIPconsIsModifiable(cons) )
                {
-                  *success = FALSE;
+                  success = FALSE;
                   break;
                }
                weights = SCIPgetWeightsKnapsack(scip, cons);
@@ -909,7 +909,7 @@ SCIP_RETCODE matrixCreate(
             /* do not include constraints that can be altered due to column generation */
             if( SCIPconsIsModifiable(cons) )
             {
-               *success = FALSE;
+               success = FALSE;
                break;
             }
 
@@ -944,7 +944,7 @@ SCIP_RETCODE matrixCreate(
 
             if( SCIPconsIsModifiable(cons) )
             {
-               *success = FALSE;
+               success = FALSE;
                break;
             }
 
@@ -969,7 +969,7 @@ SCIP_RETCODE matrixCreate(
 
                if( SCIPconsIsModifiable(cons) )
                {
-                  *success = FALSE;
+                  success = FALSE;
                   break;
                }
 
@@ -994,7 +994,7 @@ SCIP_RETCODE matrixCreate(
 
             if( SCIPconsIsModifiable(cons) )
             {
-               *success = FALSE;
+               success = FALSE;
                break;
             }
 
@@ -1011,7 +1011,7 @@ SCIP_RETCODE matrixCreate(
 
             if( SCIPconsIsModifiable(cons) )
             {
-               *success = FALSE;
+               success = FALSE;
                break;
             }
 
@@ -1028,7 +1028,7 @@ SCIP_RETCODE matrixCreate(
 
             if( SCIPconsIsModifiable(cons) )
             {
-               *success = FALSE;
+               success = FALSE;
                break;
             }
 
@@ -1038,7 +1038,7 @@ SCIP_RETCODE matrixCreate(
       }
    }
 
-   if( *success )
+   if( success )
    {
       SCIP_CALL( matrixSetColumnMajor(scip, matrix) );
    }
@@ -1064,6 +1064,7 @@ SCIP_RETCODE matrixCreate(
       SCIPfreeBufferArrayNull(scip, &matrix->colvar);
 
       SCIPfreeBuffer(scip, pmatrix);
+      *pmatrix = NULL;
    }
    return SCIP_OKAY;
 }
@@ -2022,10 +2023,9 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                    "   (%.1fs) implied integrality detection started\n", starttime);
 
-   SCIP_Bool success = TRUE;
    IMPLINT_MATRIX* matrix = NULL;
-   SCIP_CALL( matrixCreate(scip, &matrix, &success) );
-   if( !success )
+   SCIP_CALL( matrixCreate(scip, &matrix) );
+   if( matrix == NULL )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
                       "   (%.1fs) implied integrality detection stopped because problem is not an MILP\n",
