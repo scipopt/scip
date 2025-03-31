@@ -85,14 +85,14 @@
 /** presolver data */
 struct SCIP_PresolData
 {
-   SCIP_Bool             computedimplints;   /**< Were implied integers already computed? */
+   SCIP_Bool             computedimplints;   /**< were implied integers already computed? */
 
-   SCIP_Real             columnrowratio;     /**< Use the network row addition algorithm when the column to row ratio
-                                               * becomes larger than this threshold. Otherwise, use column addition. */
-   SCIP_Real             numericslimit;      /**< A row that contains variables with coefficients that are greater in
-                                                * absolute value than this limit is not considered for
-                                                * implied integrality detection. */
-   SCIP_Bool             convertintegers;    /**< Controls whether implied integrality is inferred for integer variables */
+   SCIP_Real             columnrowratio;     /**< use the network row addition algorithm when the column to row ratio
+                                              *   becomes larger than this threshold. Otherwise, use column addition. */
+   SCIP_Real             numericslimit;      /**< a row that contains variables with coefficients that are greater in
+                                              *   absolute value than this limit is not considered for
+                                              *   implied integrality detection. */
+   SCIP_Bool             convertintegers;    /**< should implied integrality also be detected for enforced integral variables? */
 };
 
 /** constraint matrix data structure in column and row major format.
@@ -106,7 +106,7 @@ struct ImplintMatrix
    int                   ncols;              /**< complete number of columns */
    SCIP_Real*            lb;                 /**< lower bound per variable */
    SCIP_Real*            ub;                 /**< upper bound per variable */
-   SCIP_Bool*            colintegral;
+   SCIP_Bool*            colintegral;        /**< whether column is integral */
    /* TODO: fields for more involved detection and scoring:
     * implied integral? bounds integral? number of +-1 nonzeros?
     * contained in nonlinear term? ntimes operand / resultant in logical constraints?
@@ -124,7 +124,7 @@ struct ImplintMatrix
    SCIP_Real*            lhs;                /**< left hand side per row */
    SCIP_Real*            rhs;                /**< right hand side per row */
 
-   SCIP_CONS**           rowcons;            /**< Constraint where the row originated from */
+   SCIP_CONS**           rowcons;            /**< constraint described by row */
 
    int                   nnonzs;             /**< sparsity counter */
    int                   memnonz;
@@ -137,7 +137,10 @@ SCIP_Real* matrixGetColumnValues(
    int column
    )
 {
-   assert(matrix);
+   assert(matrix != NULL);
+   assert(column >= 0);
+   assert(column < matrix->ncols);
+
    return matrix->colmatval + matrix->colmatbeg[column];
 }
 
@@ -147,7 +150,10 @@ int* matrixGetColumnIndices(
    int column
    )
 {
-   assert(matrix);
+   assert(matrix != NULL);
+   assert(column >= 0);
+   assert(column < matrix->ncols);
+
    return matrix->colmatind + matrix->colmatbeg[column];
 }
 
@@ -157,7 +163,10 @@ int matrixGetColumnNNonz(
    int column
    )
 {
-   assert(matrix);
+   assert(matrix != NULL);
+   assert(column >= 0);
+   assert(column < matrix->ncols);
+
    return matrix->colmatcnt[column];
 }
 
@@ -167,7 +176,10 @@ SCIP_Real* matrixGetRowValues(
    int row
 )
 {
-   assert(matrix);
+   assert(matrix != NULL);
+   assert(row >= 0);
+   assert(row < matrix->nrows);
+
    return matrix->rowmatval + matrix->rowmatbeg[row];
 }
 
@@ -177,7 +189,10 @@ int* matrixGetRowIndices(
    int row
 )
 {
-   assert(matrix);
+   assert(matrix != NULL);
+   assert(row >= 0);
+   assert(row < matrix->nrows);
+
    return matrix->rowmatind + matrix->rowmatbeg[row];
 }
 
@@ -187,7 +202,10 @@ int matrixGetRowNNonz(
    int row
 )
 {
-   assert(matrix);
+   assert(matrix != NULL);
+   assert(row >= 0);
+   assert(row < matrix->nrows);
+
    return matrix->rowmatcnt[row];
 }
 
@@ -196,7 +214,8 @@ int matrixGetNRows(
    IMPLINT_MATRIX* matrix
    )
 {
-   assert(matrix);
+   assert(matrix != NULL);
+
    return matrix->nrows;
 }
 
@@ -205,7 +224,8 @@ int matrixGetNCols(
    IMPLINT_MATRIX* matrix
    )
 {
-   assert(matrix);
+   assert(matrix != NULL);
+
    return matrix->ncols;
 }
 
@@ -215,8 +235,10 @@ SCIP_VAR* matrixGetVar(
    int column
    )
 {
-   assert(matrix);
-   assert(column >= 0 && column < matrix->ncols);
+   assert(matrix != NULL);
+   assert(column >= 0);
+   assert(column < matrix->ncols);
+
    return matrix->vars[column];
 }
 
@@ -226,8 +248,10 @@ SCIP_Bool matrixColIsIntegral(
    int column
    )
 {
-   assert(matrix);
-   assert(column >= 0 && column < matrix->ncols);
+   assert(matrix != NULL);
+   assert(column >= 0);
+   assert(column < matrix->ncols);
+
    return matrix->colintegral[column];
 }
 
@@ -237,8 +261,10 @@ SCIP_Real matrixGetColLb(
    int column
    )
 {
-   assert(matrix);
-   assert(column >= 0 && column < matrix->ncols);
+   assert(matrix != NULL);
+   assert(column >= 0);
+   assert(column < matrix->ncols);
+
    return matrix->lb[column];
 }
 
@@ -248,8 +274,10 @@ SCIP_Real matrixGetColUb(
    int column
    )
 {
-   assert(matrix);
-   assert(column >= 0 && column < matrix->ncols);
+   assert(matrix != NULL);
+   assert(column >= 0);
+   assert(column < matrix->ncols);
+
    return matrix->ub[column];
 }
 
@@ -259,8 +287,10 @@ SCIP_Real matrixGetRowLhs(
    int row
    )
 {
-   assert(matrix);
-   assert(row >= 0 && row < matrix->nrows);
+   assert(matrix != NULL);
+   assert(row >= 0);
+   assert(row < matrix->nrows);
+
    return matrix->lhs[row];
 }
 
@@ -270,8 +300,10 @@ SCIP_Real matrixGetRowRhs(
    int row
    )
 {
-   assert(matrix);
-   assert(row >= 0 && row < matrix->nrows);
+   assert(matrix != NULL);
+   assert(row >= 0);
+   assert(row < matrix->nrows);
+
    return matrix->rhs[row];
 }
 
