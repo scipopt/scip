@@ -127,7 +127,7 @@ struct ImplintMatrix
    SCIP_CONS**           rowcons;            /**< constraint described by row */
 
    int                   nnonzs;             /**< sparsity counter */
-   int                   memnonz;
+   int                   nnonzssize;         /**< size of the nonzero arrays */
 };
 typedef struct ImplintMatrix IMPLINT_MATRIX;
 
@@ -374,7 +374,7 @@ SCIP_RETCODE matrixAddRow(
       if( SCIPisZero(scip, vals[j]) )
          continue;
 
-      assert(matrix->nnonzs < matrix->memnonz);
+      assert(matrix->nnonzs < matrix->nnonzssize);
       matrix->rowmatval[matrix->nnonzs] = vals[j];
       probindex = SCIPvarGetProbindex(vars[j]);
       assert(0 <= probindex && probindex < matrix->ncols);
@@ -813,7 +813,7 @@ SCIP_RETCODE matrixCreate(
 
    SCIP_CALL( SCIPduplicateBufferArray(scip, &matrix->colvar, vars, nvars) );
    matrix->ncols = nvars;
-   matrix->memnonz = nnonzstmp;
+   matrix->nnonzssize = nnonzstmp;
    matrix->nnonzs = 0;
    matrix->nrows = 0;
 
