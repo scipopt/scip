@@ -34,15 +34,6 @@
 
 #include <assert.h>
 
-#include "scip/cons_and.h"
-#include "scip/cons_linear.h"
-#include "scip/cons_logicor.h"
-#include "scip/cons_knapsack.h"
-#include "scip/cons_or.h"
-#include "scip/cons_setppc.h"
-#include "scip/cons_varbound.h"
-#include "scip/cons_xor.h"
-
 #include "scip/presol_implint.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
@@ -65,6 +56,15 @@
 #include "scip/scip_probing.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_var.h"
+
+#include "scip/cons_and.h"
+#include "scip/cons_linear.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_knapsack.h"
+#include "scip/cons_or.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_varbound.h"
+#include "scip/cons_xor.h"
 
 #define PRESOL_NAME             "implint"
 #define PRESOL_DESC             "detects implicit integer variables"
