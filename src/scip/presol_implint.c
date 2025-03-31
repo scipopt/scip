@@ -2097,7 +2097,6 @@ SCIP_RETCODE SCIPincludePresolImplint(
 
    presoldata->computedimplints = FALSE;
 
-
    SCIP_CALL( SCIPaddBoolParam(scip,
                                "presolving/implint/convertintegers",
                                "should implied integrality be detected for enforced integer variables?",
