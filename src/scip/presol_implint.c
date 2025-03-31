@@ -80,7 +80,7 @@
 
 #define DEFAULT_COLUMNROWRATIO  50.0     /**< use the network row addition algorithm when the column to row ratio becomes larger than this threshold */
 #define DEFAULT_NUMERICSLIMIT   1e8      /**< rows that contain variables with coefficients that are greater in absolute value than this limit are not considered for implied integrality detection */
-#define DEFAULT_CONVERTINTEGERS FALSE    /**< should implied integrality be inferred for integer variables? */
+#define DEFAULT_CONVERTINTEGERS FALSE    /**< should implied integrality be detected for enforced integer variables? */
 
 /** presolver data */
 struct SCIP_PresolData
@@ -1595,21 +1595,24 @@ SCIP_RETCODE findImpliedIntegers(
       for( int i = startrow; i < startrow + nrows; ++i )
       {
          int row = comp->componentrows[i];
-         if( stats->rowncontinuous[row] != stats->rowncontinuouspmone[row] || !stats->rowintegral[row] )
-         {
-            componentokay = FALSE;
-            break;
-         }
-         if( stats->rowbadnumerics[row] )
+         if( stats->rowncontinuous[row] != stats->rowncontinuouspmone[row] || !stats->rowintegral[row] || stats->rowbadnumerics[row] )
          {
             componentokay = FALSE;
             break;
          }
       }
+
+      if( !componentokay )
+      {
+         compNetworkValid[component] = FALSE;
+         compTransNetworkValid[component] = FALSE;
+         continue;
+      }
+
       int startcol = ( component == 0 ) ? 0 : comp->componentcolend[component-1];
       int ncols = comp->componentcolend[component] - startcol;
 
-      for( int i = startcol; i < startcol + ncols && componentokay; ++i )
+      for( int i = startcol; i < startcol + ncols; ++i )
       {
          int col = comp->componentcols[i];
          if( !stats->colintegralbounds[col] )
@@ -1638,23 +1641,23 @@ SCIP_RETCODE findImpliedIntegers(
          for( int i = startrow; i < startrow + nrows && componentnetwork; ++i )
          {
             int row = comp->componentrows[i];
-            int nrownnoz = matrixGetRowNNonzs(matrix, row);
+            int nrownnonzs = matrixGetRowNNonzs(matrix, row);
             int* rowcols = matrixGetRowInds(matrix, row);
             SCIP_Real* rowvals = matrixGetRowVals(matrix, row);
-            int ncontnonz = 0;
-            for( int j = 0; j < nrownnoz; ++j )
+            int ncontnonzs = 0;
+            for( int j = 0; j < nrownnonzs; ++j )
             {
                int col = rowcols[j];
                if( !matrixColIsIntegral(matrix, col) )
                {
-                  tempIdxArray[ncontnonz] = col;
-                  tempValArray[ncontnonz] = rowvals[j];
-                  ++ncontnonz;
+                  tempIdxArray[ncontnonzs] = col;
+                  tempValArray[ncontnonzs] = rowvals[j];
+                  ++ncontnonzs;
                   assert(SCIPisEQ(scip, ABS(rowvals[j]), 1.0));
                }
             }
 
-            SCIP_CALL( SCIPnetmatdecTryAddRow(dec, row, tempIdxArray, tempValArray, ncontnonz, &componentnetwork) );
+            SCIP_CALL( SCIPnetmatdecTryAddRow(dec, row, tempIdxArray, tempValArray, ncontnonzs, &componentnetwork) );
          }
       }
       else
@@ -1662,10 +1665,10 @@ SCIP_RETCODE findImpliedIntegers(
          for( int i = startcol; i < startcol + ncols && componentnetwork; ++i )
          {
             int col = comp->componentcols[i];
-            int ncolnnonz = matrixGetColumnNNonzs(matrix, col);
+            int ncolnnonzs = matrixGetColumnNNonzs(matrix, col);
             int* colrows = matrixGetColumnInds(matrix, col);
             SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
-            SCIP_CALL( SCIPnetmatdecTryAddCol(dec, col, colrows, colvals, ncolnnonz, &componentnetwork) );
+            SCIP_CALL( SCIPnetmatdecTryAddCol(dec, col, colrows, colvals, ncolnnonzs, &componentnetwork) );
          }
       }
 
@@ -1678,7 +1681,8 @@ SCIP_RETCODE findImpliedIntegers(
 
       /* Avoid redundant work; we don't need to check if component is both network and transposed network in the case
        * where do not want to extend implied integrality to the integers */
-      if( !presoldata->convertintegers && componentnetwork ){
+      if( componentnetwork && !presoldata->convertintegers ){
+         compTransNetworkValid[component] = FALSE;
          continue;
       }
 
@@ -1690,23 +1694,23 @@ SCIP_RETCODE findImpliedIntegers(
          for( int i = startrow; i < startrow + nrows && componenttransnetwork; ++i )
          {
             int row = comp->componentrows[i];
-            int nrownnoz = matrixGetRowNNonzs(matrix, row);
+            int nrownnonzs = matrixGetRowNNonzs(matrix, row);
             int* rowcols = matrixGetRowInds(matrix, row);
             SCIP_Real* rowvals = matrixGetRowVals(matrix, row);
-            int ncontnonz = 0;
-            for( int j = 0; j < nrownnoz; ++j )
+            int ncontnonzs = 0;
+            for( int j = 0; j < nrownnonzs; ++j )
             {
                int col = rowcols[j];
                if( !matrixColIsIntegral(matrix, col) )
                {
-                  tempIdxArray[ncontnonz] = col;
-                  tempValArray[ncontnonz] = rowvals[j];
-                  ++ncontnonz;
+                  tempIdxArray[ncontnonzs] = col;
+                  tempValArray[ncontnonzs] = rowvals[j];
+                  ++ncontnonzs;
                   assert(SCIPisEQ(scip, ABS(rowvals[j]), 1.0));
                }
             }
 
-            SCIP_CALL( SCIPnetmatdecTryAddCol(transdec, row, tempIdxArray, tempValArray, ncontnonz,
+            SCIP_CALL( SCIPnetmatdecTryAddCol(transdec, row, tempIdxArray, tempValArray, ncontnonzs,
                                               &componenttransnetwork) );
          }
       }
@@ -1715,10 +1719,10 @@ SCIP_RETCODE findImpliedIntegers(
          for( int i = startcol; i < startcol + ncols && componenttransnetwork; ++i )
          {
             int col = comp->componentcols[i];
-            int ncolnnonz = matrixGetColumnNNonzs(matrix, col);
+            int ncolnnonzs = matrixGetColumnNNonzs(matrix, col);
             int* colrows = matrixGetColumnInds(matrix, col);
             SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
-            SCIP_CALL( SCIPnetmatdecTryAddRow(transdec, col, colrows, colvals, ncolnnonz, &componenttransnetwork) );
+            SCIP_CALL( SCIPnetmatdecTryAddRow(transdec, col, colrows, colvals, ncolnnonzs, &componenttransnetwork) );
          }
       }
 
@@ -1905,17 +1909,22 @@ SCIP_RETCODE findImpliedIntegers(
    {
       if( !compNetworkValid[component] && !compTransNetworkValid[component] )
          continue;
+
       int startcol = ( component == 0 ) ? 0 : comp->componentcolend[component - 1];
-      int ncols = comp->componentcolend[component] - startcol;
-      for( int i = startcol; i < startcol + ncols; ++i )
+      int endcol = comp->componentcolend[component];
+
+      for( int i = startcol; i < endcol; ++i )
       {
          int col = comp->componentcols[i];
          assert(SCIPnetmatdecContainsColumn(dec, col) || SCIPnetmatdecContainsRow(transdec, col));
          SCIP_VAR* var = matrixGetVar(matrix, col);
-         SCIP_Bool infeasible = FALSE;
+
+         assert(!SCIPvarIsIntegral(var));
+         SCIP_Bool infeasible;
+
          SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
-         (*nchgvartypes)++;
          assert(!infeasible);
+         ++(*nchgvartypes);
       }
    }
 
@@ -2049,7 +2058,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "   (%.1fs) %d implied integral variables detected (time: %.2fs)\n",
-            endtime, afterchanged-beforechanged,endtime-starttime);
+            endtime, afterchanged - beforechanged, endtime - starttime);
 
       *result = SCIP_SUCCESS;
    }
@@ -2099,7 +2108,7 @@ SCIP_RETCODE SCIPincludePresolImplint(
                                &presoldata->numericslimit, TRUE, DEFAULT_NUMERICSLIMIT, 1.0, 1e98, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
                                "presolving/implint/convertintegers",
-                               "Controls whether implied integrality is inferred for integer variables",
+                               "should implied integrality be detected for enforced integer variables?",
                                &presoldata->convertintegers, FALSE, DEFAULT_CONVERTINTEGERS, NULL, NULL) );
    return SCIP_OKAY;
 }
