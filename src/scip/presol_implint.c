@@ -2097,6 +2097,12 @@ SCIP_RETCODE SCIPincludePresolImplint(
 
    presoldata->computedimplints = FALSE;
 
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+                               "presolving/implint/convertintegers",
+                               "should implied integrality be detected for enforced integer variables?",
+                               &presoldata->convertintegers, FALSE, DEFAULT_CONVERTINTEGERS, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip,
                                "presolving/implint/columnrowratio",
                                "use the network row addition algorithm when the column to row ratio becomes larger than this threshold",
@@ -2106,9 +2112,5 @@ SCIP_RETCODE SCIPincludePresolImplint(
                                "presolving/implint/numericslimit",
                                "a row that contains variables with coefficients that are greater in absolute value than this limit is not considered for implied integrality detection",
                                &presoldata->numericslimit, TRUE, DEFAULT_NUMERICSLIMIT, 1.0, 1e98, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-                               "presolving/implint/convertintegers",
-                               "should implied integrality be detected for enforced integer variables?",
-                               &presoldata->convertintegers, FALSE, DEFAULT_CONVERTINTEGERS, NULL, NULL) );
    return SCIP_OKAY;
 }
