@@ -74,13 +74,13 @@
  * Also, symmetry methods rely on the fact that each variable in an orbit is integral,
  * as otherwise certain reductions may break. So it is currently not safe to run implied integrality detection
  * after symmetry methods are applied. */
-#define PRESOL_PRIORITY         (-900000) /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
-#define PRESOL_MAXROUNDS        0 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_PRIORITY         -900000  /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
+#define PRESOL_MAXROUNDS        0        /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
-#define DEFAULT_COLUMNROWRATIO  50.0
-#define DEFAULT_NUMERICSLIMIT   1e6
-#define DEFAULT_CONVERTINTEGERS FALSE
+#define DEFAULT_COLUMNROWRATIO  50.0     /**< use the network row addition algorithm when the column to row ratio becomes larger than this threshold */
+#define DEFAULT_NUMERICSLIMIT   1e8      /**< rows that contain variables with coefficients that are greater in absolute value than this limit are not considered for implied integrality detection */
+#define DEFAULT_CONVERTINTEGERS FALSE    /**< should implied integrality be inferred for integer variables? */
 
 /** presolver data */
 struct SCIP_PresolData
