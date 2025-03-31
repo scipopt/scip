@@ -775,14 +775,9 @@ SCIP_RETCODE matrixCreate(
                }
             }
          }
-         else if( strcmp(conshdlrname, "orbitope_pp") == 0 || strcmp(conshdlrname, "orbitope_full") == 0
-               || strcmp(conshdlrname, "orbisack") == 0 || strcmp(conshdlrname, "symresack") == 0 )
-         {
-
-         }
          else
          {
-            /* @todo: support linking, sos1, sos2, bounddisjunction, nonlinear, indicator, superindicator conshdlrs */
+            /* @todo: support symmetry, linking, sos1, sos2, bounddisjunction, nonlinear, indicator, superindicator conshdlrs */
             return SCIP_OKAY;
          }
       }
@@ -1998,7 +1993,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
       return SCIP_OKAY;
    }
    /* Since implied integrality detection relies on rows being static, we disable it for branch-and-price applications*/
-   if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
+   if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 || !SCIPallowWeakDualReds(scip) )
    {
       return SCIP_OKAY;
    }
