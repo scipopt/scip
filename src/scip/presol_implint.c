@@ -645,29 +645,27 @@ SCIP_RETCODE matrixSetColumnMajor(
       for( ; rowpnt < rowend; rowpnt++ )
       {
          colidx = *rowpnt;
-         (matrix->colmatcnt[colidx])++;
+         ++matrix->colmatcnt[colidx];
       }
    }
 
    matrix->colmatbeg[0] = 0;
-   for( i = 0; i < matrix->ncols-1; i++ )
-   {
+   for( i = 0; i < matrix->ncols-1; ++i )
       matrix->colmatbeg[i+1] = matrix->colmatbeg[i] + matrix->colmatcnt[i];
-   }
 
-   for( i = 0; i < matrix->nrows; i++ )
+   for( i = 0; i < matrix->nrows; ++i )
    {
       rowpnt = matrix->rowmatind + matrix->rowmatbeg[i];
       rowend = rowpnt + matrix->rowmatcnt[i];
       valpnt = matrix->rowmatval + matrix->rowmatbeg[i];
 
-      for( ; rowpnt < rowend; rowpnt++, valpnt++ )
+      for( ; rowpnt != rowend; ++rowpnt, ++valpnt )
       {
-         assert(*rowpnt < matrix->ncols);
          colidx = *rowpnt;
-         matrix->colmatval[matrix->colmatbeg[colidx] + fillidx[colidx]] = *valpnt;
+         assert(colidx < matrix->ncols);
          matrix->colmatind[matrix->colmatbeg[colidx] + fillidx[colidx]] = i;
-         fillidx[colidx]++;
+         matrix->colmatval[matrix->colmatbeg[colidx] + fillidx[colidx]] = *valpnt;
+         ++fillidx[colidx];
       }
    }
 
