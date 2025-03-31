@@ -132,7 +132,7 @@ struct ImplintMatrix
 typedef struct ImplintMatrix IMPLINT_MATRIX;
 
 static
-SCIP_Real* matrixGetColumnValues(
+SCIP_Real* matrixGetColumnVals(
    IMPLINT_MATRIX* matrix,
    int column
    )
@@ -145,7 +145,7 @@ SCIP_Real* matrixGetColumnValues(
 }
 
 static
-int* matrixGetColumnIndices(
+int* matrixGetColumnInds(
    IMPLINT_MATRIX* matrix,
    int column
    )
@@ -158,7 +158,7 @@ int* matrixGetColumnIndices(
 }
 
 static
-int matrixGetColumnNNonz(
+int matrixGetColumnNNonzs(
    IMPLINT_MATRIX* matrix,
    int column
    )
@@ -171,7 +171,7 @@ int matrixGetColumnNNonz(
 }
 
 static
-SCIP_Real* matrixGetRowValues(
+SCIP_Real* matrixGetRowVals(
    IMPLINT_MATRIX* matrix,
    int row
 )
@@ -184,7 +184,7 @@ SCIP_Real* matrixGetRowValues(
 }
 
 static
-int* matrixGetRowIndices(
+int* matrixGetRowInds(
    IMPLINT_MATRIX* matrix,
    int row
 )
@@ -197,7 +197,7 @@ int* matrixGetRowIndices(
 }
 
 static
-int matrixGetRowNNonz(
+int matrixGetRowNNonzs(
    IMPLINT_MATRIX* matrix,
    int row
 )
@@ -1321,8 +1321,8 @@ SCIP_RETCODE computeContinuousComponents(
       if( matrixColIsIntegral(matrix, col) )
          continue;
 
-      int colnnonzs = matrixGetColumnNNonz(matrix, col);
-      int* colrows = matrixGetColumnIndices(matrix, col);
+      int colnnonzs = matrixGetColumnNNonzs(matrix, col);
+      int* colrows = matrixGetColumnInds(matrix, col);
 
       int colrep = disjointSetFind(disjointset, col);
       for( int i = 0; i < colnnonzs; ++i )
@@ -1473,9 +1473,9 @@ SCIP_RETCODE computeMatrixStatistics(
    {
       SCIP_Real lhs = matrixGetRowLhs(matrix, i);
       SCIP_Real rhs = matrixGetRowRhs(matrix, i);
-      int* cols = matrixGetRowIndices(matrix, i);
-      SCIP_Real* vals = matrixGetRowValues(matrix, i);
-      int nnonz = matrixGetRowNNonz(matrix, i);
+      int* cols = matrixGetRowInds(matrix, i);
+      SCIP_Real* vals = matrixGetRowVals(matrix, i);
+      int nnonz = matrixGetRowNNonzs(matrix, i);
       stats->rownnonz[i] = nnonz;
       stats->rowequality[i] = !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && SCIPisEQ(scip, lhs, rhs);
 
@@ -1638,9 +1638,9 @@ SCIP_RETCODE findImpliedIntegers(
          for( int i = startrow; i < startrow + nrows && componentnetwork; ++i )
          {
             int row = comp->componentrows[i];
-            int nrownnoz = matrixGetRowNNonz(matrix, row);
-            int* rowcols = matrixGetRowIndices(matrix, row);
-            SCIP_Real* rowvals = matrixGetRowValues(matrix, row);
+            int nrownnoz = matrixGetRowNNonzs(matrix, row);
+            int* rowcols = matrixGetRowInds(matrix, row);
+            SCIP_Real* rowvals = matrixGetRowVals(matrix, row);
             int ncontnonz = 0;
             for( int j = 0; j < nrownnoz; ++j )
             {
@@ -1662,9 +1662,9 @@ SCIP_RETCODE findImpliedIntegers(
          for( int i = startcol; i < startcol + ncols && componentnetwork; ++i )
          {
             int col = comp->componentcols[i];
-            int ncolnnonz = matrixGetColumnNNonz(matrix, col);
-            int* colrows = matrixGetColumnIndices(matrix, col);
-            SCIP_Real* colvals = matrixGetColumnValues(matrix, col);
+            int ncolnnonz = matrixGetColumnNNonzs(matrix, col);
+            int* colrows = matrixGetColumnInds(matrix, col);
+            SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
             SCIP_CALL( SCIPnetmatdecTryAddCol(dec, col, colrows, colvals, ncolnnonz, &componentnetwork) );
          }
       }
@@ -1690,9 +1690,9 @@ SCIP_RETCODE findImpliedIntegers(
          for( int i = startrow; i < startrow + nrows && componenttransnetwork; ++i )
          {
             int row = comp->componentrows[i];
-            int nrownnoz = matrixGetRowNNonz(matrix, row);
-            int* rowcols = matrixGetRowIndices(matrix, row);
-            SCIP_Real* rowvals = matrixGetRowValues(matrix, row);
+            int nrownnoz = matrixGetRowNNonzs(matrix, row);
+            int* rowcols = matrixGetRowInds(matrix, row);
+            SCIP_Real* rowvals = matrixGetRowVals(matrix, row);
             int ncontnonz = 0;
             for( int j = 0; j < nrownnoz; ++j )
             {
@@ -1715,9 +1715,9 @@ SCIP_RETCODE findImpliedIntegers(
          for( int i = startcol; i < startcol + ncols && componenttransnetwork; ++i )
          {
             int col = comp->componentcols[i];
-            int ncolnnonz = matrixGetColumnNNonz(matrix, col);
-            int* colrows = matrixGetColumnIndices(matrix, col);
-            SCIP_Real* colvals = matrixGetColumnValues(matrix, col);
+            int ncolnnonz = matrixGetColumnNNonzs(matrix, col);
+            int* colrows = matrixGetColumnInds(matrix, col);
+            SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
             SCIP_CALL( SCIPnetmatdecTryAddRow(transdec, col, colrows, colvals, ncolnnonz, &componenttransnetwork) );
          }
       }
@@ -1744,9 +1744,9 @@ SCIP_RETCODE findImpliedIntegers(
          if( !matrixColIsIntegral(matrix, col) )
             continue;
 
-         int ncolnnonz = matrixGetColumnNNonz(matrix, col);
-         int* colrows = matrixGetColumnIndices(matrix, col);
-         SCIP_Real* colvals = matrixGetColumnValues(matrix, col);
+         int ncolnnonz = matrixGetColumnNNonzs(matrix, col);
+         int* colrows = matrixGetColumnInds(matrix, col);
+         SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
          SCIP_Bool badColumn = FALSE;
          INTEGER_CANDIDATE_DATA* data = &candidates[numCandidates];
          data->numContNetworkEntries = 0;
@@ -1797,7 +1797,7 @@ SCIP_RETCODE findImpliedIntegers(
       for( int i = 0; i < numCandidates; ++i )
       {
          int col = candidates[i].column;
-         int nnonzs = matrixGetColumnNNonz(matrix, col);
+         int nnonzs = matrixGetColumnNNonzs(matrix, col);
 
          /* Higher score; we prefer to pick this variable first. We generally prefer to detect implied integrality of
           * general integer variables over binary variables. We break ties using the number of nonzeros in the column
@@ -1838,9 +1838,9 @@ SCIP_RETCODE findImpliedIntegers(
          if( candidate->numContTransNetworkEntries == 0 )
          {
             int col = candidate->column;
-            int* colrows = matrixGetColumnIndices(matrix, col);
-            SCIP_Real* colvals = matrixGetColumnValues(matrix, col);
-            int ncolnnonz = matrixGetColumnNNonz(matrix, col);
+            int* colrows = matrixGetColumnInds(matrix, col);
+            SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
+            int ncolnnonz = matrixGetColumnNNonzs(matrix, col);
             SCIP_Bool success;
             SCIP_CALL(SCIPnetmatdecTryAddCol(dec, col, colrows, colvals, ncolnnonz, &success));
             if( success )
@@ -1850,9 +1850,9 @@ SCIP_RETCODE findImpliedIntegers(
          if( candidate->numContNetworkEntries == 0 )
          {
             int col = candidate->column;
-            int* colrows = matrixGetColumnIndices(matrix, col);
-            SCIP_Real* colvals = matrixGetColumnValues(matrix, col);
-            int ncolnnonz = matrixGetColumnNNonz(matrix, col);
+            int* colrows = matrixGetColumnInds(matrix, col);
+            SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
+            int ncolnnonz = matrixGetColumnNNonzs(matrix, col);
             SCIP_Bool success;
             SCIP_CALL(SCIPnetmatdecTryAddRow(transdec, col, colrows, colvals, ncolnnonz, &success));
             if( success )
