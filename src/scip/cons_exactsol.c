@@ -71,6 +71,7 @@
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define DEFAULT_CHECKFPFEASIBILITY TRUE /**< should a solution be checked in floating-point arithmetic prior to being processed? */
+#define DEFAULT_CHECKCONTIMPLINT   TRUE /**< should integrality of continuous implied integral variables be ensured? */
 #define DEFAULT_MAXSTALLS          1000 /**< maximal number of consecutive repair calls without success */
 #define DEFAULT_SOLBUFSIZE           10 /**< size of solution buffer */
 #define DEFAULT_MINIMPROVE          0.2 /**< minimal percentage of primal improvement to trigger solution processing */
@@ -96,6 +97,7 @@ struct SCIP_ConshdlrData
    int                   probhasconteqs;     /**< does the problem have equations with continuous variables? (-1 unknown, 0 no, 1 yes) */
    int                   ncurrentstalls;     /**< number of times the exact lp was solved unsuccessfully in a row */
    SCIP_Bool             checkfpfeasibility; /**< should a solution be checked in floating-point arithmetic prior to being processed? */
+   SCIP_Bool             checkcontimplint;   /**< should integrality of continuous implied integral variables be ensured? */
    int                   maxstalls;          /**< maximal number of consecutive repair calls without success */
    int                   solbufsize;         /**< size of solution buffer */
    SCIP_Real             minimprove;         /**< minimal percentage of primal improvement to trigger solution processing */
@@ -203,12 +205,11 @@ static
 SCIP_RETCODE solCreateSolAssignment(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution to create assignment for */
+   SCIP_Bool             checkcontimplint,   /**< whether continuous implied integral variables should be included */
    SOLINTASSIGNMENT**    assignment          /**< address of assignment */
    )
 { /*lint --e{522, 776}*/
    SCIP_VAR** vars;
-   int nvars;
-   int ncontvars;
    int nintegers;
    int i;
 
@@ -216,8 +217,21 @@ SCIP_RETCODE solCreateSolAssignment(
    assert(scip != NULL);
 
    /* get all problem variables and integer region in vars array */
-   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nvars, NULL, NULL, NULL, NULL, NULL, &ncontvars) );
-   nintegers = nvars - ncontvars;
+   if( checkcontimplint )
+   {
+      int nvars;
+      int ncontvars;
+      SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nvars, NULL, NULL, NULL, NULL, NULL, &ncontvars) );
+      nintegers = nvars - ncontvars;
+   }
+   else
+   {
+      int nvars;
+      int ncontimplvars;
+      int ncontvars;
+      SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nvars, NULL, NULL, NULL, NULL, &ncontimplvars, &ncontvars) );
+      nintegers = nvars - ncontvars - ncontimplvars;
+   }
    assert(nintegers >= 0);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, assignment) );
@@ -479,7 +493,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    }
 
    /* first, check if we already tried a solution with this integer assignment */
-   SCIP_CALL( solCreateSolAssignment(scip, sol, &assignment) );
+   SCIP_CALL( solCreateSolAssignment(scip, sol, conshdlrdata->checkcontimplint, &assignment) );
    if( assignment != NULL && SCIPhashtableExists(conshdlrdata->solhash, (void*) assignment) )
    {
       SCIPdebugMessage("rejecting solution that was already checked\n");
@@ -536,9 +550,14 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    /* start exact diving and set global bounds of continuous variables */
    SCIP_CALL( SCIPstartExactDive(scip) );
 
+   /* get all problem variables and integer region in vars array */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   nintegers = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   nintegers = nvars - SCIPgetNContVars(scip);
+   if( !conshdlrdata->checkcontimplint )
+      nintegers -= SCIPgetNContImplVars(scip);
+   assert(nintegers >= 0);
+
    for( i = nintegers; i < nvars; ++i )
    {
       if( SCIPvarGetStatusExact(vars[i]) == SCIP_VARSTATUS_COLUMN )
@@ -850,6 +869,10 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
          "constraints/" CONSHDLR_NAME "/checkfpfeasibility",
          "should a solution be checked in floating-point arithmetic prior to being processed?",
          &conshdlrdata->checkfpfeasibility, TRUE, DEFAULT_CHECKFPFEASIBILITY, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/checkimpliedintegrality",
+         "should integrality of continuous implied integral variables be ensured?",
+         &conshdlrdata->checkcontimplint, TRUE, DEFAULT_CHECKCONTIMPLINT, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/maxstalls",
          "maximal number of consecutive repair calls without success",
