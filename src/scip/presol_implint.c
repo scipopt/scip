@@ -1496,6 +1496,7 @@ SCIP_RETCODE computeMatrixStatistics(
          }
          else
          {
+            /* @todo for exact version of plugin, adjust to tighter check */
             integral = integral && SCIPisIntegral(scip, value);
          }
          if( ABS(value) > numericslimit )
@@ -1514,6 +1515,7 @@ SCIP_RETCODE computeMatrixStatistics(
    {
       SCIP_Real lb = matrixGetColLb(matrix, i);
       SCIP_Real ub = matrixGetColUb(matrix, i);
+      /* @todo for exact version of plugin, adjust to tighter check */
       stats->colintegralbounds[i] = ( SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip, lb) )
                                  && ( SCIPisInfinity(scip, ub) || SCIPisIntegral(scip, ub) );
 
@@ -2020,16 +2022,15 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
       return SCIP_OKAY;
 
    SCIP_Real starttime = SCIPgetSolvingTime(scip);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                   "   (%.1fs) implied integrality detection started\n", starttime);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) implied integrality detection started\n", starttime);
 
    IMPLINT_MATRIX* matrix = NULL;
    SCIP_CALL( matrixCreate(scip, &matrix) );
    if( matrix == NULL )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-                      "   (%.1fs) implied integrality detection stopped because problem is not an MILP\n",
-                      SCIPgetSolvingTime(scip));
+            "   (%.1fs) implied integrality detection stopped because problem contains unsuitable constraints\n",
+            SCIPgetSolvingTime(scip));
       return SCIP_OKAY;
    }
 
