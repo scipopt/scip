@@ -588,13 +588,14 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
              * could be fractional in a floating-point feasible solution and we only know that a feasible solution with
              * integral value exists; in this case we currently round and fix its value, which may lead to infeasibility
              */
-            /**@todo once implied integrality detection is made exact, test whether it improves performance to leave
-             *       continuous variables that are weakly implied integral unfixed: strongly implied ones should be
-             *       near-integral anyway, but for weakly implied ones, the rounding step can introduce infeasibility,
-             *       so it may be beneficial to not fix it at the cost of a more expensive exact LP solve
+            /**@todo test whether it improves performance to leave continuous implied integral variables unfixed:
+             *       strongly implied ones should be near-integral but only indirectly enforced,
+             *       while for weakly implied ones, rounding can even introduce structural infeasibilities,
+             *       so it can be more effective to not fix it at the cost of a less efficient exact LP solve
              */
-            if( SCIPisIntegral(scip, solval) || (SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS
-                  && SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK) )
+            if( SCIPisIntegral(scip, solval)
+               || ( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS
+               && SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK ) )
             {
                SCIP_RATIONAL* newbound;
 
