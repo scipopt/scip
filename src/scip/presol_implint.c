@@ -107,6 +107,7 @@ struct ImplintMatrix
    SCIP_Real*            lb;                 /**< lower bound per variable */
    SCIP_Real*            ub;                 /**< upper bound per variable */
    SCIP_Bool*            colintegral;        /**< whether column is integral */
+   SCIP_Bool*            colinnonlinterm;    /**< is the column involved in some nonlinear term? */
    /* TODO: fields for more involved detection and scoring:
     * implied integral? bounds integral? number of +-1 nonzeros?
     * contained in nonlinear term? ntimes operand / resultant in logical constraints?
@@ -253,6 +254,19 @@ SCIP_Bool matrixColIsIntegral(
    assert(column < matrix->ncols);
 
    return matrix->colintegral[column];
+}
+
+static
+SCIP_Bool matrixColInNonlinearTerm(
+   IMPLINT_MATRIX* matrix,
+   int column
+)
+{
+   assert(matrix != NULL);
+   assert(column >= 0);
+   assert(column < matrix->ncols);
+
+   return matrix->colinnonlinterm[column];
 }
 
 static
@@ -594,14 +608,42 @@ SCIP_RETCODE addXorLinearization(
 
       SCIP_CALL( addLinearConstraint(scip, matrix, operands, vals, noperands, -SCIPinfinity(scip), 2.0 - rhs * noperands, cons) );
    }
-   else
+   else if( noperands < 3)
    {
-      assert(noperands < 3);
-
       for( j = 0; j < noperands; ++j )
          vals[j] = (j <= rhs) ? 1.0 : -1.0;
 
       SCIP_CALL( addLinearConstraint(scip, matrix, operands, vals, noperands, rhs, rhs, cons) );
+   }
+   else
+   {
+      /* The XOR constraint is represented nonlinearly; mark the relevant active variables to be in some nonlinear term */
+      SCIP_Real* scalars;
+      SCIP_VAR** aggrvars;
+      int naggrvars;
+      int requiredsize;
+      SCIP_Real constant;
+      SCIP_CALL( SCIPallocBufferArray(scip, &scalars, matrix->ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &aggrvars, matrix->ncols) );
+      /* We need to transform each variable separately to their active variables, as otherwise we may accidentally
+       * perform cancellations. */
+      for( j = 0; j < noperands; ++j )
+      {
+         scalars[0] = 1.0;
+         aggrvars[0] = operands[j];
+         naggrvars = 1;
+
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, aggrvars, scalars, &naggrvars, 1, &constant, &requiredsize) );
+         assert(requiredsize <= matrix->ncols);
+         for( int k = 0; k < naggrvars; ++k )
+         {
+            int col = SCIPvarGetProbindex(aggrvars[k]);
+            matrix->colinnonlinterm[col] = TRUE;
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &aggrvars);
+      SCIPfreeBufferArray(scip, &scalars);
    }
 
    SCIPfreeBufferArray(scip, &vals);
@@ -817,6 +859,7 @@ SCIP_RETCODE matrixCreate(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->lb, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->ub, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colintegral, matrix->ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix->colinnonlinterm, matrix->ncols) );
 
    /* init bounds */
    for( i = 0; i < matrix->ncols; ++i )
@@ -824,6 +867,7 @@ SCIP_RETCODE matrixCreate(
       matrix->lb[i] = SCIPvarGetLbGlobal(vars[i]);
       matrix->ub[i] = SCIPvarGetUbGlobal(vars[i]);
       matrix->colintegral[i] = SCIPvarIsIntegral(vars[i]);
+      matrix->colinnonlinterm[i] = FALSE;
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->rowmatval, nnonzstmp) );
@@ -1054,6 +1098,7 @@ SCIP_RETCODE matrixCreate(
       SCIPfreeBufferArray(scip, &matrix->rowmatind);
       SCIPfreeBufferArray(scip, &matrix->rowmatval);
 
+      SCIPfreeBufferArray(scip, &matrix->colinnonlinterm);
       SCIPfreeBufferArray(scip, &matrix->colintegral);
       SCIPfreeBufferArray(scip, &matrix->ub);
       SCIPfreeBufferArray(scip, &matrix->lb);
@@ -1104,6 +1149,7 @@ void matrixFree(
       SCIPfreeBufferArray(scip, &(matrix->rowmatind));
       SCIPfreeBufferArray(scip, &(matrix->rowmatval));
 
+      SCIPfreeBufferArray(scip, &(matrix->colinnonlinterm));
       SCIPfreeBufferArray(scip, &(matrix->colintegral));
       SCIPfreeBufferArray(scip, &(matrix->ub));
       SCIPfreeBufferArray(scip, &(matrix->lb));
@@ -1614,7 +1660,7 @@ SCIP_RETCODE findImpliedIntegers(
       for( int i = startcol; i < startcol + ncols; ++i )
       {
          int col = comp->componentcols[i];
-         if( !stats->colintegralbounds[col] )
+         if( !stats->colintegralbounds[col] || matrixColInNonlinearTerm(matrix, col) )
          {
             componentokay = FALSE;
             break;
@@ -1746,7 +1792,7 @@ SCIP_RETCODE findImpliedIntegers(
       /* Integer columns that are +- 1 and do not have any nonzero entries in bad rows are candidates */
       for( int col = 0; col < comp->nmatrixcols; ++col )
       {
-         if( !matrixColIsIntegral(matrix, col) )
+         if( !matrixColIsIntegral(matrix, col) || matrixColInNonlinearTerm(matrix, col) )
             continue;
 
          int ncolnnonz = matrixGetColumnNNonzs(matrix, col);
