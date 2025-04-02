@@ -1612,6 +1612,7 @@ SCIP_RETCODE findImpliedIntegers(
    int*                  nchgvartypes        /**< Pointer to count the number of changed variable types */
    )
 {
+   SCIP_Bool runintdetection = presoldata->convertintegers && SCIPgetNVars(scip) != SCIPgetNContVars(scip);
    /* TODO: some checks to prevent expensive memory initialization if not necessary (e.g. there must be some candidates) */
    SCIP_NETMATDEC* dec = NULL;
    SCIP_CALL( SCIPnetmatdecCreate(SCIPblkmem(scip), &dec, comp->nmatrixrows, comp->nmatrixcols) );
@@ -1726,7 +1727,7 @@ SCIP_RETCODE findImpliedIntegers(
 
       /* Avoid redundant work; we don't need to check if component is both network and transposed network in the case
        * where do not want to extend implied integrality to the integers */
-      if( componentnetwork && !presoldata->convertintegers ){
+      if( componentnetwork && !runintdetection ){
          compTransNetworkValid[component] = FALSE;
          continue;
       }
@@ -1782,7 +1783,7 @@ SCIP_RETCODE findImpliedIntegers(
 
    /* Detect implied integrality for integer columns. First, we compute valid columns that have only +-1 entries in rows
     * that are integral. Then, we sort these and greedily attempt to add them to the (transposed) network matrix.*/
-   if( presoldata->convertintegers )
+   if( runintdetection )
    {
 
       int numCandidates = 0;
