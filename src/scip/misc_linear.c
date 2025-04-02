@@ -160,6 +160,11 @@ SCIP_Real SCIPconsGetLhs(
    {
       lhs = SCIPgetLhsVarbound(scip, cons);
    }
+   else
+   {
+      SCIPwarningMessage(scip, "Cannot return lhs for constraint of type <%s>\n", conshdlrname);
+      *success = FALSE;
+   }
 
    return lhs;
 }
