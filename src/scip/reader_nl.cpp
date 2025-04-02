@@ -1759,6 +1759,8 @@ SCIP_DECL_READERREAD(readerReadNl)
    assert(filename != NULL);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
    try
    {
       // try to read the .nl file and setup SCIP problem

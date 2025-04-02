@@ -53,6 +53,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNlhdlrSoc(scip) );
    /* linear must be before its specializations due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) );
+   SCIP_CALL( SCIPincludeConshdlrExactLinear(scip) );
+   SCIP_CALL( SCIPincludeConshdlrExactSol(scip) );
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrCardinality(scip) );

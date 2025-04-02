@@ -40,6 +40,7 @@
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
 #include "scip/scip_copy.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -504,7 +505,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    /* we only want to process each solution once */
    bestsol = SCIPgetBestSol(scip);
-   if( bestsol == NULL || heurdata->lastsolindex == SCIPsolGetIndex(bestsol) )
+   if( bestsol == NULL || heurdata->lastsolindex == SCIPsolGetIndex(bestsol) || SCIPisExactSol(scip, bestsol) )
       return SCIP_OKAY;
 
    /* reset the timing mask to its default value (at the root node it could be different) */
@@ -567,8 +568,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
-      if( cutoff )
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result)
+       * if we are not in exact solving mode
+       */
+      if( cutoff && !SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
@@ -864,6 +867,14 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
             /* copy the current LP solution to the working solution */
             SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
+
+            /* in exact mode we have to end diving prior to trying the solution */
+            if( SCIPisExact(scip) )
+            {
+               SCIP_CALL( SCIPunlinkSol(scip, worksol) );
+               SCIP_CALL( SCIPendDive(scip) );
+            }
+
             SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
 
             /* check solution for feasibility */
@@ -876,7 +887,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          }
 
          /* terminate the diving */
-         SCIP_CALL( SCIPendDive(scip) );
+         if( SCIPinDive(scip) )
+         {
+            SCIP_CALL( SCIPendDive(scip) );
+         }
       }
    }
 
@@ -918,6 +932,9 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecOneopt, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyOneopt) );

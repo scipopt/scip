@@ -56,18 +56,18 @@ string getToken(char*& str)
    string token;
 
    // skip spaces and ':'
-   while( *str != '\0' && ( isspace(*str) || *str == ':') )
+   while( *str != '\0' && ( isspace((unsigned char)*str) || *str == ':') )
       ++str;
 
    // collect token
-   while( *str != '\0' && *str != ':' && ! isspace(*str) )
+   while( *str != '\0' && *str != ':' && ! isspace((unsigned char)*str) )
    {
       token += *str;
       ++str;
    }
 
    // skip spaces and ':'
-   while( *str != '\0' && ( isspace(*str) || *str == ':') )
+   while( *str != '\0' && ( isspace((unsigned char)*str) || *str == ':') )
       ++str;
 
    return token;

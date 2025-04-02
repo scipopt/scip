@@ -44,6 +44,7 @@
 #include "scip/def.h"
 #include "scip/type_cons.h"
 #include "scip/type_heur.h"
+#include "scip/type_rational.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
@@ -81,6 +82,29 @@ SCIP_RETCODE SCIPcreateSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates an exact primal solution, initialized to zero
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** creates a primal solution, initialized to the current LP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -91,6 +115,21 @@ SCIP_RETCODE SCIPcreateSol(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateLPSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
+/** creates an exact primal solution, initialized to the current exact LP solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateLPSolExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -336,6 +375,19 @@ SCIP_RETCODE SCIPlinkLPSol(
    SCIP_SOL*             sol                 /**< primal solution */
    );
 
+/** links a primal solution to the current exact LP solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPlinkLPSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   );
+
 /** links a primal solution to the current NLP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -440,6 +492,28 @@ SCIP_RETCODE SCIPunlinkSol(
    SCIP_SOL*             sol                 /**< primal solution */
    );
 
+/** stores exact solution values of variables in solution's own array
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPunlinkSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   );
+
 /** sets value of variable in primal CIP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -465,6 +539,33 @@ SCIP_RETCODE SCIPsetSolVal(
    SCIP_SOL*             sol,                /**< primal solution */
    SCIP_VAR*             var,                /**< variable to add to solution */
    SCIP_Real             val                 /**< solution value of variable */
+   );
+
+/** sets exact value of variable in primal CIP solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSolValExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution */
+   SCIP_VAR*             var,                /**< variable to add to solution */
+   SCIP_RATIONAL*        val                 /**< solution value of variable */
    );
 
 /** sets values of multiple variables in primal CIP solution
@@ -549,6 +650,34 @@ SCIP_Real SCIPgetSolVal(
    SCIP_VAR*             var                 /**< variable to get value for */
    );
 
+/** returns value of variable in primal CIP solution, or in current LP/pseudo solution
+ *
+ *  @return value of variable in primal CIP solution, or in current LP/pseudo solution
+ *
+ *  @pre In case the solution pointer @p sol is @b NULL, that means it is asked for the LP or pseudo solution, this method
+ *       can only be called if @p scip is in the solving stage \ref SCIP_STAGE_SOLVING. In any other case, this method
+ *       can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+void SCIPgetSolValExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   SCIP_VAR*             var,                /**< variable to get value for */
+   SCIP_RATIONAL*        res                 /**< resulting rational */
+   );
+
 /** gets values of multiple variables in primal CIP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -601,6 +730,31 @@ SCIP_Real SCIPgetSolOrigObj(
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    );
 
+/** returns exact objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
+ *
+ *  @return exact objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+void SCIPgetSolOrigObjExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
+   SCIP_RATIONAL*        res                 /**< result pointer to store rational */
+   );
+
 /** returns transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
  *
  *  @return transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
@@ -622,6 +776,29 @@ SCIP_EXPORT
 SCIP_Real SCIPgetSolTransObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
+   );
+
+/** returns transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
+ *
+ *  @return transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+void SCIPgetSolTransObjExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
+   SCIP_RATIONAL*        res                 /**< result pointer to store rational */
    );
 
 /** recomputes the objective value of an original solution, e.g., when transferring solutions
@@ -846,6 +1023,15 @@ SCIP_RETCODE SCIPadjustImplicitSolVals(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPprintSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   );
+
+/** print a rational solution */
+SCIP_EXPORT
+SCIP_RETCODE SCIPprintSolExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -1106,6 +1292,13 @@ SCIP_RETCODE SCIProundSol(
    SCIP_Bool*            success             /**< pointer to store whether rounding was successful */
    );
 
+/** copy the fp values to the exact arrays of the solution */
+SCIP_EXPORT
+SCIP_RETCODE SCIPmakeSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   );
+
 /** retransforms solution to original problem space
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1127,6 +1320,31 @@ SCIP_RETCODE SCIProundSol(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPretransformSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** retransforms exact solution to original problem space
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPretransformSolExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
@@ -1501,6 +1719,46 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPupdatePrimalRay(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             primalray           /**< the new primal ray */
+   );
+
+/** overwrite the fp-values in a solution with the rounded exact ones */
+SCIP_EXPORT
+SCIP_RETCODE SCIPoverwriteFPsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** returns TRUE if the solution is an exact rational solution */
+SCIP_EXPORT
+SCIP_Bool SCIPisExactSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** checks exact primal solution; if feasible, adds it to storage; solution is freed afterwards
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note Do not call during propagation, use heur_trysol instead.
+ */
+SCIP_RETCODE SCIPtrySolFreeExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed */
+   SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    );
 
 /**@} */

@@ -4032,6 +4032,9 @@ SCIP_RETCODE SCIPincludeHeurAlns(
 
    assert(heur != NULL);
 
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
+
    /* include all neighborhoods */
    SCIP_CALL( includeNeighborhoods(scip, heurdata) );
 

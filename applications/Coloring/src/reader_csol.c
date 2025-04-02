@@ -66,12 +66,12 @@ long getNextNumber(
 {
   long tmp;
   /* skip whitespaces */
-  while ( isspace(**s) )
+  while ( isspace((unsigned char)**s) )
     ++(*s);
   /* read number */
   tmp = atol(*s);
   /* skip whitespaces */
-  while ( (**s != 0) && (!isspace(**s)) )
+  while ( (**s != 0) && (!isspace((unsigned char)**s)) )
     ++(*s);
   return tmp;
 }
@@ -141,12 +141,12 @@ SCIP_DECL_READERREAD(readerReadCsol)
       return SCIP_READERROR;
 
    i = 1;
-   while ( !isspace(buf[i]) )
+   while ( !isspace((unsigned char)buf[i]) )
    {
       i++;
    }
    SCIP_CALL( SCIPallocBufferArray(scip, &solprobname, i+2) );
-   SCIPstrncpy(solprobname, buf, i);
+   (void) SCIPstrncpy(solprobname, buf, i);
 
    printf("Reading solution for %s...\n", solprobname);
 

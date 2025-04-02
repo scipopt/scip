@@ -67,6 +67,7 @@
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -2583,7 +2584,7 @@ SCIP_RETCODE branchOnVar(
 
    /* update the lower bounds in the children; we must not do this if columns are missing in the LP
     * (e.g., because we are doing branch-and-price) or the problem should be solved exactly */
-   if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
+   if( SCIPallColsInLP(scip) && !SCIPisExact(scip) )
    {
       /* update the lower bound for the LPs for further children of both created nodes */
       if( decision->downdbvalid )
@@ -6087,7 +6088,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          }
 #endif
          /* update lower bound of current node */
-         if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
+         if( SCIPallColsInLP(scip) && !SCIPisExact(scip) )
          {
             SCIP_CALL( SCIPupdateLocalLowerbound(scip, decision->proveddb) );
          }

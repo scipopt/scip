@@ -47,10 +47,13 @@
 #include "scip/conflict.h"
 #include "scip/debug.h"
 #include "scip/lp.h"
+#include "scip/lpexact.h"
 #include "scip/prob.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_tree.h"
+#include "scip/scip_exact.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
@@ -2307,7 +2310,8 @@ SCIP_RETCODE SCIPendDive(
          scip->transprob, scip->transprob->vars, scip->transprob->nvars) );
 
    /* the lower bound may have changed slightly due to LP resolve in SCIPlpEndDive() */
-   if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL && SCIPlpIsRelax(scip->lp) && SCIPlpIsSolved(scip->lp) )
+   if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL && SCIPlpIsRelax(scip->lp) && SCIPlpIsSolved(scip->lp)
+       && !SCIPlpExactDiving(scip->lpexact) && !SCIPisExact(scip) )
    {
       assert(SCIPtreeIsFocusNodeLPConstructed(scip->tree));
       SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->eventfilter, scip->tree, scip->transprob,
@@ -2707,7 +2711,7 @@ SCIP_RETCODE SCIPsolveDiveLP(
    {
       /* analyze the infeasible LP (only if the objective was not changed, all columns are in the LP, and no external
        * pricers exist) */
-      if( !scip->set->misc_exactsolve && !(SCIPlpDivingObjChanged(scip->lp) || SCIPlpDivingRowsChanged(scip->lp))
+      if( !(SCIPlpDivingObjChanged(scip->lp) || SCIPlpDivingRowsChanged(scip->lp))
          && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
       {
          SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->transprob,

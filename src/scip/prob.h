@@ -46,6 +46,7 @@
 #include "scip/type_prob.h"
 #include "scip/type_primal.h"
 #include "scip/type_tree.h"
+#include "scip/type_rational.h"
 #include "scip/type_reopt.h"
 #include "scip/type_branch.h"
 #include "scip/type_cons.h"
@@ -338,6 +339,12 @@ void SCIPprobAddObjoffset(
    SCIP_Real             addval              /**< value to add to objective offset */
    );
 
+/** adds value to objective offset */
+void SCIPprobAddObjoffsetExact(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
+   );
+
 /** sets the dual bound on objective function */
 void SCIPprobSetDualbound(
    SCIP_PROB*            prob,               /**< problem data */
@@ -494,12 +501,30 @@ SCIP_Real SCIPprobExternObjval(
    SCIP_Real             objval              /**< internal objective value */
    );
 
+/** computes the exact external value of the given internal objective value */
+void SCIPprobExternObjvalExact(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RATIONAL*        objval,             /**< internal objective value */
+   SCIP_RATIONAL*        objvalext           /**< store external objective value */
+   );
+
 /** returns the internal value of the given external objective value */
 SCIP_Real SCIPprobInternObjval(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             objval              /**< external objective value */
+   );
+
+/** returns the internal value of the given external objective value */
+void SCIPprobInternObjvalExact(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RATIONAL*        objval,             /**< internal objective value */
+   SCIP_RATIONAL*        objvalint           /**< store internal objective value */
    );
 
 /** returns variable of the problem with given name */
@@ -714,7 +739,6 @@ void SCIPprobEnableConsCompression(
 #define SCIPprobIsConsCompressionEnabled(prob)  ((prob)->conscompression)
 #define SCIPprobEnableConsCompression(prob)  ((prob)->conscompression = TRUE)
 #endif
-
 
 #ifdef __cplusplus
 }

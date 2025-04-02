@@ -46,6 +46,7 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
 #include "scip/scip_event.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -761,7 +762,16 @@ SCIP_RETCODE setupSubscipLpface(
 
       /* copy all plugins */
       SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-            TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+
+      /* copy parameter settings */
+      SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
+
+      /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+       * handler is in place to perform a final repair step
+       */
+      SCIP_CALL( SCIPenableExactSolving(subscip, FALSE) );
+
       /* get name of the original problem and add the string "_lpfacesub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_lpfacesub", SCIPgetProbName(scip));
 
@@ -771,9 +781,6 @@ SCIP_RETCODE setupSubscipLpface(
 
       /* copy all variables */
       SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, fixvars, fixvals, nfixvars, TRUE) );
-
-      /* copy parameter settings */
-      SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
    }
    else
    {
@@ -785,6 +792,7 @@ SCIP_RETCODE setupSubscipLpface(
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
       }
    }
+   assert(!SCIPisExact(subscip));
 
    /* fill subvars array with mapping from original variables and set the objective coefficient to the desired value */
    for( i = 0; i < nvars; i++ )
@@ -1326,6 +1334,9 @@ SCIP_RETCODE SCIPincludeHeurLpface(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecLpface, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyLpface) );

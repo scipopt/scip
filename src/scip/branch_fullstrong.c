@@ -38,6 +38,7 @@
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -241,7 +242,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
     * for cutting off sub problems and improving lower bounds of children
     */
-   exactsolve = SCIPisExactSolve(scip);
+   exactsolve = SCIPisExact(scip);
 
    /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
    allcolsinlp = SCIPallColsInLP(scip);
@@ -608,7 +609,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
       /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
        * for cutting off sub problems and improving lower bounds of children
        */
-      exactsolve = SCIPisExactSolve(scip);
+      exactsolve = SCIPisExact(scip);
 
       /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
       allcolsinlp = SCIPallColsInLP(scip);

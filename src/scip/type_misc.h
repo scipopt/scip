@@ -58,7 +58,8 @@ enum SCIP_Hashmaptype
    SCIP_HASHMAPTYPE_UNKNOWN = 0,    /**< the hashmap did not store a single element yet, type unknown */
    SCIP_HASHMAPTYPE_POINTER = 1,    /**< the hashmap stores pointers % */
    SCIP_HASHMAPTYPE_REAL    = 2,    /**< the hashmap stores reals */
-   SCIP_HASHMAPTYPE_INT     = 3     /**< the hashmap stores ints */
+   SCIP_HASHMAPTYPE_INT     = 3,    /**< the hashmap stores ints */
+   SCIP_HASHMAPTYPE_LONG    = 4     /**< the hashmap stores long ints */
 };
 typedef enum SCIP_Hashmaptype SCIP_HASHMAPTYPE;
 

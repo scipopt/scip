@@ -38,7 +38,7 @@ namespace tsp
 {
 
 /** C++ wrapper */
-class Heur2opt : public scip::ObjHeur
+class Heur2opt : public scip::ObjHeur /*lint --e{3713}*/
 {
    GRAPH*                graph_;             /**< the underlying graph of the TSP */
    int                   ncalls_;            /**< number of calls of the heuristic since the last solution was found */

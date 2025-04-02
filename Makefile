@@ -45,6 +45,7 @@ INSTALLDIR	=
 ifeq ($(OPENSOURCE),false)
 	override EXPRINT	=	none
 	override GMP		=	false
+	override BOOST		=	false
 	override MPFR		=	false
 	override READLINE	=	false
 	override ZLIB		=	false
@@ -85,7 +86,9 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		DEBUGSOL=$(DEBUGSOL)\\n\
 		EXPRINT=$(EXPRINT)\\n\
 		GMP=$(GMP)\\n\
+		BOOST=$(BOOST)\\n\
 		MPFR=$(MPFR)\\n\
+		EXACTSOLVE=$(EXACTSOLVE)\\n\
 		IPOPTOPT=$(IPOPTOPT)\\n\
 		LAPACK=$(LAPACK)\\n\
 		LPSCHECK=$(LPSCHECK)\\n\
@@ -199,6 +202,9 @@ LPSOPTIONS	+=	spx ( = spx2)
 ifeq ($(LPS),spx2)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
+ifeq ($(MPFR),true)
+LPSLDFLAGS	+=	$(MPFR_LDFLAGS)
+endif
 LPILIBOBJ	=	lpi/lpi_spx2.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx2.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
@@ -292,6 +298,60 @@ ifeq ($(SHARED),true)
 LPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LPSLDFLAGS)
 ifneq ($(LINKRPATH),)
 LPILIBEXTLIBS	+=	$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
+endif
+endif
+
+#-----------------------------------------------------------------------------
+# exact LP solver interface
+#-----------------------------------------------------------------------------
+
+LPIEXLIBOBJ	=
+LPSEXACTOPTIONS	=
+
+LPSEXACTOPTIONS	+=	spx
+ifeq ($(LPSEXACT),spx)
+ifeq ($(EXACTSOLVE),false)
+$(error Building with SoPlex as exact LP solver requires GMP, MPFR, and Boost to be available. Use either LPSEXACT=none or all of GMP,BOOST,MPFR=true.)
+endif
+LINKER		=	CPP
+FLAGS		+=	-I$(LIBDIR)/include/spxinc
+ifeq ($(MPFR),true)
+LPSEXLDFLAGS	+=	$(MPFR_LDFLAGS)
+endif
+LPIEXLIBOBJ	+=	lpiexact/lpiexact_spx.o
+LPIEXLIBSRC	+=	$(SRCDIR)/lpiexact/lpiexact_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
+ifneq ($(LPS),spx)
+ifneq ($(LPS),spx1)
+ifneq ($(LPS),spx2)
+SOFTLINKS	+=	$(LIBDIR)/include/spxinc
+ifeq ($(SHARED),true)
+SOFTLINKS	+=	$(LIBDIR)/shared/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
+else
+SOFTLINKS	+=	$(LIBDIR)/static/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
+endif
+endif
+endif
+endif
+LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"<SoPlex-path>/src\".\n"
+LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"<SoPlex-path>/lib/libsoplex.linux.x86.gnu.opt.a\""
+endif
+
+LPSEXACTOPTIONS	+=	none
+ifeq ($(LPSEXACT),none)
+LPIEXLIBOBJ	+=	lpiexact/lpiexact_none.o
+endif
+
+LPIEXLIB		=	$(LPIEXLIBNAME).$(BASE)
+LPIEXLIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPIEXLIB).$(LIBEXT)
+LPIEXLIBOBJFILES= 	$(addprefix $(LIBOBJDIR)/,$(LPIEXLIBOBJ))
+LPIEXLIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPIEXLIBSHORTNAME).$(BASE).$(LIBEXT)
+LPIEXLIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(LPIEXLIBSHORTNAME).$(LIBEXT)
+ALLSRC		+= 	$(LPIEXLIBSRC)
+
+ifeq ($(SHARED),true)
+LPIEXLIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LPSEXLDFLAGS)
+ifneq ($(LINKRPATH),)
+LPIEXLIBEXTLIBS	+=	$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
 endif
 endif
 
@@ -459,15 +519,45 @@ ALLSRC		+=	$(SYMSRC)
 endif
 
 #-----------------------------------------------------------------------------
+# Boost
+#-----------------------------------------------------------------------------
+
+ifeq ($(BOOST),true)
+SOFTLINKS    +=    $(LIBDIR)/include/boost
+LPIINSTMSG    +=    "\n  -> \"boost\" is the path to the boost include folder\n"
+endif
+
+#-----------------------------------------------------------------------------
 # PaPILO Library
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
+ifeq ($(BOOST),false)
+$(error PaPILO requires Boost to be available. Use either PAPILO=false or BOOST=true.)
+endif
 FLAGS        +=    -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/papilo -I$(LIBDIR)/include/papilo/src # the last include is for backwards compatibility or if users link to the PaPILO repo
 SOFTLINKS    +=    $(LIBDIR)/include/papilo
 LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO source directory, i.e., \"<papilo>/papilo/Config.hpp\" should exist.\n"
-SOFTLINKS    +=    $(LIBDIR)/include/boost
-LPIINSTMSG    +=    "\n  -> \"boost\" is the path to the boost include folder\n"
+endif
+
+#-----------------------------------------------------------------------------
+# exact solving mode
+#-----------------------------------------------------------------------------
+
+ifeq ($(EXACTSOLVE),true)
+ifeq ($(GMP),false)
+$(error Exact solving mode requires the GMP library to be linked. Use either EXACTSOLVE=false or GMP=true.)
+endif
+ifeq ($(MPFR),false)
+$(error Exact solving mode requires the MPFR library to be linked. Use either EXACTSOLVE=false or MPFR=true.)
+endif
+ifeq ($(BOOST),false)
+$(error Exact solving mode requires the Boost library to be linked. Use either EXACTSOLVE=false or BOOST=true.)
+endif
+ifeq ($(LPSEXACT),none)
+$(error Exact solving mode requires an exact LP solver to be linked. Use either EXACTSOLVE=false or LPSEXACT=spx.)
+endif
+LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/rectlu
 endif
 
 #-----------------------------------------------------------------------------
@@ -541,6 +631,9 @@ endif
 ifeq ($(GMP),true)
 SCIPLIBEXTLIBS	+=	$(GMP_LDFLAGS)
 endif
+ifeq ($(MPFR),true)
+SCIPLIBEXTLIBS	+=	$(MPFR_LDFLAGS)
+endif
 ifeq ($(READLINE_LDFLAGS),true)
 SCIPLIBEXTLIBS	+=	$(READLINE_LDFLAGS)
 endif
@@ -604,6 +697,8 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_cumulative.o \
 			scip/cons_disjunction.o \
 			scip/cons_fixedvar.o \
+			scip/cons_exactlinear.o \
+			scip/cons_exactsol.o \
 			scip/cons_indicator.o \
 			scip/cons_integral.o \
 			scip/cons_knapsack.o \
@@ -807,7 +902,9 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/table_default.o
 
 
-SCIPPLUGINLIBCPPOBJ =	scip/presol_milp.o
+SCIPPLUGINLIBCPPOBJ =	scip/presol_milp.o \
+			scip/certificate.o \
+			scip/rational.o
 
 ifeq ($(EXPRINT),none)
 SCIPPLUGINLIBOBJ 	+=	scip/exprinterpret_none.o
@@ -880,6 +977,8 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/intervalarith.o \
 			scip/lapack_calls.o \
 			scip/lp.o \
+			scip/lpexact.o \
+			scip/lpexact_bounding.o \
 			scip/matrix.o \
 			scip/mem.o \
 			scip/misc.o \
@@ -905,6 +1004,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/retcode.o \
 			scip/scip_benders.o \
 			scip/scip_branch.o \
+			scip/scip_certificate.o \
 			scip/scip_compr.o \
 			scip/scip_concurrent.o \
 			scip/scip_conflict.o \
@@ -919,11 +1019,13 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_dialog.o \
 			scip/scip_disp.o \
 			scip/scip_event.o \
+			scip/scip_exact.o \
 			scip/scip_expr.o \
 			scip/scip_general.o \
 			scip/scip_heur.o \
 			scip/scip_iisfinder.o \
 			scip/scip_lp.o \
+			scip/scip_lpexact.o \
 			scip/scip_mem.o \
 			scip/scip_message.o \
 			scip/scip_nlp.o \
@@ -957,6 +1059,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scipshell.o \
 			scip/sepa.o \
 			scip/sepastore.o \
+			scip/sepastoreexact.o \
 			scip/set.o \
 			scip/sol.o \
 			scip/solve.o \
@@ -977,6 +1080,10 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			tclique/tclique_graph.o \
 			dijkstra/dijkstra.o \
 			xml/xmlparse.o
+
+ifeq ($(EXACTSOLVE),true)
+SCIPLIBOBJ	+=	rectlu/rectlu_factor.o rectlu/rectlu_num.o
+endif
 
 SCIPLIBBASE	=	$(SCIPLIBBASENAME).$(BASE)
 SCIPLIBBASEFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBBASE).$(LIBEXT)
@@ -1075,12 +1182,12 @@ LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 # Rules
 #-----------------------------------------------------------------------------
 
-ifeq ($(VERBOSE),false)
-.SILENT:	$(MAINFILE) $(SCIPLIBBASEFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) \
-		$(LPILIBLINK) $(LPILIBSHORTLINK) $(TPILIBLINK) $(TPILIBSHORTLINK) $(SCIPLIBBASELINK) $(SCIPLIBBASESHORTLINK) \
+ifeq ($(VERBOSE),false)	
+.SILENT:	$(MAINFILE) $(SCIPLIBBASEFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(LPIEXLIBFILE) $(TPILIBFILE) \
+		$(LPILIBLINK) $(LPIEXLIBLINK) $(LPILIBSHORTLINK) $(LPIEXLIBSHORTLINK) $(TPILIBLINK) $(TPILIBSHORTLINK) $(SCIPLIBBASELINK) $(SCIPLIBBASESHORTLINK) \
 		$(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) \
 		$(MAINLINK) $(MAINSHORTLINK) \
-		$(LPILIBOBJFILES) $(TPILIBOBJFILES) $(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES) $(SYMOBJFILES) \
+		$(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) $(TPILIBOBJFILES) $(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES) $(SYMOBJFILES) \
 		$(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK)
 MAKE		+= -s
 endif
@@ -1090,7 +1197,7 @@ all:		libs
 		@$(MAKE) $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: libs
-libs:		libscipbase libobjscip liblpi libtpi
+libs:		libscipbase libobjscip liblpi liblpiexact libtpi
 ifeq ($(SHARED),true)
 		@$(MAKE) libscip
 endif
@@ -1106,7 +1213,7 @@ preprocess:     checkdefines
 		@$(MAKE) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE)
 
 .PHONY: lint
-lint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(LINTSYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE) githash
+lint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(LINTSYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE) githash
 		-rm -f lint.out
 
 		@$(SHELL) -ec 'if test -e lint/co-gcc.mak ; \
@@ -1133,7 +1240,7 @@ else
 endif
 
 .PHONY: pclint
-pclint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(LINTSYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
+pclint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(LINTSYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
 		-rm -f pclint.out
 
 		@$(SHELL) -ec 'if ! test -e pclint/co-gcc.h ; \
@@ -1156,7 +1263,7 @@ else
 endif
 
 .PHONY: splint
-splint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(LINTSYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
+splint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(LINTSYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
 		-rm -f splint.out
 ifeq ($(FILES),)
 		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$^) >> splint.out;'
@@ -1225,6 +1332,16 @@ $(LPILIBLINK):	$(LPILIBFILE)
 $(LPILIBSHORTLINK):	$(LPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $@)
+
+$(LPIEXLIBLINK):	$(LPIEXLIBFILE)
+		@rm -f $@
+		cd $(dir $@) && $(LN_s) $(notdir $(LPIEXLIBFILE)) $(notdir $@)
+
+# the short link targets should be phony such that they are always updated and point to the files with last make options, even if nothing needed to be rebuilt
+.PHONY: $(LPIEXLIBSHORTLINK)
+$(LPIEXLIBSHORTLINK):	$(LPIEXLIBFILE)
+		@rm -f $@
+		cd $(dir $@) && $(LN_s) $(notdir $(LPIEXLIBFILE)) $(notdir $@)
 
 $(TPILIBLINK):	$(TPILIBFILE)
 		@rm -f $@
@@ -1335,6 +1452,8 @@ cleanlibs:      | $(LIBDIR)/$(LIBTYPE)
 		@-rm -f $(OBJSCIPLIBFILE) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
 		@echo "-> remove library $(LPILIBFILE)"
 		@-rm -f $(LPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK)
+		@echo "-> remove library $(LPIEXLIBFILE)"
+		@-rm -f $(LPIEXLIBFILE) $(LPIEXLIBLINK) $(LPIEXLIBSHORTLINK)
 		@echo "-> remove library $(TPILIBFILE)"
 		@-rm -f $(TPILIBFILE) $(TPILIBLINK) $(TPILIBSHORTLINK)
 		@echo "-> remove library $(SCIPLIBFILE)"
@@ -1354,6 +1473,7 @@ ifneq ($(DFLAGS),)
 -include $(SCIPLIBBASEOBJFILES:.o=.d)
 -include $(OBJSCIPOBJFILES:.o=.d)
 -include $(LPILIBOBJFILES:.o=.d)
+-include $(LPIEXLIBOBJFILES:.o=.d)
 -include $(TPILIBOBJFILES:.o=.d)
 -include $(SYMOBJFILES:.o=.d)
 else
@@ -1363,7 +1483,7 @@ endif
 endif
 
 # make binary
-$(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBBASEFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
+$(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBBASEFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(LPIEXLIBFILE) $(TPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		($(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCC_o)$@ \
@@ -1410,6 +1530,18 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
+.PHONY: liblpiexact
+liblpiexact:		preprocess
+		@$(MAKE) $(LPIEXLIBFILE) $(LPIEXLIBLINK) $(LPIEXLIBSHORTLINK)
+
+$(LPIEXLIBFILE):	$(LPIEXLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
+		@echo "-> generating library $@"
+		-rm -f $@
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(LPIEXLIBOBJFILES) $(LPIEXLIBEXTLIBS)
+ifneq ($(RANLIB),)
+		$(RANLIB) $@
+endif
+
 .PHONY: libtpi
 libtpi:		preprocess
 		@$(MAKE) $(TPILIBFILE) $(TPILIBLINK) $(TPILIBSHORTLINK)
@@ -1430,16 +1562,16 @@ endif
 libscip:	preprocess
 		@$(MAKE) $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK)
 
-$(SCIPLIBFILE): $(SCIPLIBBASEOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES) | $(LIBDIR)/$(LIBTYPE) $(LIBOBJSUBDIRS)
+$(SCIPLIBFILE): $(SCIPLIBBASEOBJFILES) $(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES) | $(LIBDIR)/$(LIBTYPE) $(LIBOBJSUBDIRS)
 		@echo "-> generating library $@"
 		-rm -f $@
 ifeq ($(SHARED),false)
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBBASEOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES)
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBBASEOBJFILES) $(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 else
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBBASEOBJFILES) $(LPILIBOBJFILES) $(LPILIBEXTLIBS) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES) $(SCIPLIBEXTLIBS) \
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBBASEOBJFILES) $(LPILIBOBJFILES) $(LPILIBEXTLIBS) $(LPIEXLIBOBJFILES) $(LPIEXLIBEXTLIBS) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES) $(SCIPLIBEXTLIBS) \
 		$(LPSLDFLAGS) $(LDFLAGS) $(LIBSCIPRPATHARG)
 endif
 
@@ -1466,15 +1598,15 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cc | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 -include $(LASTSETTINGS)
 
 .PHONY: windowslib
-windowslib: $(SCIPLIBBASEOBJFILES) $(MAINOBJFILES) $(LPILIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
+windowslib: $(SCIPLIBBASEOBJFILES) $(MAINOBJFILES) $(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
 		@echo "-> generating Windows library $@"
 ifeq ($(SHARED),true)
 		$(LINKCC) $(LIBBUILDFLAGS) $(LINKCC_L)$(LIBDIR)/$(LIBTYPE) $(LIBBUILD_o)$(LIBDIR)/$(LIBTYPE)/$(WINLIBFILENAME) \
-			$(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) \
+			$(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) \
 			$(LPSLDFLAGS) $(LDFLAGS)
 else
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LINKCC_L)$(LIBDIR)/$(LIBTYPE) $(LIBBUILD_o)$(LIBDIR)/$(LIBTYPE)/$(WINLIBFILENAME) \
-			$(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) \
+			$(SCIPLIBBASEOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) \
 			$(LPSLDFLAGS) $(LDFLAGS)
 endif
 
@@ -1492,6 +1624,7 @@ ifneq ($(subst \\n,\n,$(BUILDFLAGS)$(LPS)$(IPOPT)),$(LAST_BUILDFLAGS)$(LAST_LPS)
 		@mkdir -p $(OBJDIR)/include/scip
 		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $(SCIPBUILDFLAGSFILE)
 		@echo "#define SCIP_LPS \"$(LPS)\"" >> $(SCIPBUILDFLAGSFILE)
+		@echo "#define SCIP_LPSEXACT \"$(LPSEXACT)\"" >> $(SCIPBUILDFLAGSFILE)
 		@echo "#define SCIP_IPOPT \"$(IPOPT)\"" >> $(SCIPBUILDFLAGSFILE)
 endif
 ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
@@ -1505,6 +1638,7 @@ endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_LPS=\"$(LPS)\"" >> $(LASTSETTINGS)
+		@echo "LAST_LPSEXACT=\"$(LPSEXACT)\"" >> $(LASTSETTINGS)
 		@echo "LAST_IPOPT=\"$(IPOPT)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SANITIZE=$(SANITIZE)" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
@@ -1513,6 +1647,7 @@ $(SCIPBUILDFLAGSFILE) :
 		@mkdir -p $(@D)
 		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $@
 		@echo "#define SCIP_LPS \"$(LPS)\"" >> $(SCIPBUILDFLAGSFILE)
+		@echo "#define SCIP_LPSEXACT \"$(LPSEXACT)\"" >> $(SCIPBUILDFLAGSFILE)
 		@echo "#define SCIP_IPOPT \"$(IPOPT)\"" >> $(SCIPBUILDFLAGSFILE)
 
 $(SCIPCONFIGHFILE) :
@@ -1557,6 +1692,9 @@ ifeq ($(LAPACK),true)
 endif
 ifeq ($(PAPILO),true)
 		@echo "#define SCIP_WITH_PAPILO" >> $@
+ifeq ($(GMP),true)
+		@echo "#define PAPILO_HAVE_GMP" >> $@
+endif
 endif
 ifeq ($(ZLIB),true)
 		@echo "#define SCIP_WITH_ZLIB" >> $@
@@ -1566,6 +1704,15 @@ ifeq ($(READLINE),true)
 endif
 ifeq ($(GMP),true)
 		@echo "#define SCIP_WITH_GMP" >> $@
+endif
+ifeq ($(MPFR),true)
+		@echo "#define SCIP_WITH_MPFR" >> $@
+endif
+ifeq ($(BOOST),true)
+		@echo "#define SCIP_WITH_BOOST" >> $@
+endif
+ifeq ($(EXACTSOLVE),true)
+		@echo "#define SCIP_WITH_EXACTSOLVE" >> $@
 endif
 ifeq ($(LPSCHECK),true)
 		@echo "#define SCIP_WITH_LPSCHECK" >> $@
@@ -1655,6 +1802,9 @@ checkdefines:
 ifeq ($(LPILIBOBJ),)
 		$(error invalid LP solver selected: LPS=$(LPS). Possible options are: $(LPSOPTIONS))
 endif
+ifeq ($(LPIEXLIBOBJ),)
+		$(error invalid exact LP solver selected: LPSEXACT=$(LPSEXACT). Possible options are: $(LPSEXACTOPTIONS))
+endif
 ifneq ($(TPI),none)
 ifneq ($(TPI),omp)
 ifneq ($(TPI),tny)
@@ -1665,6 +1815,13 @@ endif
 ifneq ($(GMP),true)
 ifneq ($(GMP),false)
 		$(error invalid GMP flag selected: GMP=$(GMP). Possible options are: true false)
+endif
+endif
+ifneq ($(MPFR),auto)
+ifneq ($(MPFR),true)
+ifneq ($(MPFR),false)
+		$(error invalid MPFR flag selected: MPFR=$(MPFR). Possible options are: true false auto)
+endif
 endif
 endif
 ifneq ($(ZIMPL),true)
@@ -1752,6 +1909,12 @@ ifeq ($(LPS),spx2)
 		@echo "build failed with GMP=false and LPS=spx2: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
 endif
 endif
+ifeq ($(BOOST),true)
+		@echo "build failed with BOOST=true: if BOOST is not available, try building with BOOST=false (note that this will deactivate exact solving support)"
+endif
+ifeq ($(MPFR),true)
+		@echo "build failed with MPFR=true: if MPFR is not available, try building with MPFR=false (note that this will deactivate exact solving support)"
+endif
 ifeq ($(MPFR),false)
 ifeq ($(LPS),spx2)
 		@echo "build failed with MPFR=false and LPS=spx2: use MPFR=true or make sure that SoPlex is also built without MPFR support (make MPFR=false)"
@@ -1762,14 +1925,13 @@ endif
 .PHONY: successwarnings
 successwarnings:
 ifeq ($(READLINE),false)
-		@echo "WARNING: built with READLINE=false: interactive shell misses tab completion, history capability, and in-line editing"
+		@echo "Note: built with READLINE=false: interactive shell misses tab completion, history capability, and in-line editing"
 endif
 ifeq ($(GMP),false)
-		@echo "WARNING: built with GMP=false: ZIMPL support and solution counting feature is not available"
-else
-ifeq ($(ZLIB),false)
-		@echo "WARNING: built with ZLIB=false: support for reading gzipped files is not available"
+		@echo "Note: built with GMP=false: ZIMPL support and solution counting feature are not available"
 endif
+ifeq ($(ZLIB),false)
+		@echo "Note: built with ZLIB=false: support for reading gzipped files is not available"
 endif
 
 .PHONY: help
@@ -1791,6 +1953,10 @@ help:
 		@echo "      spx1: old SoPlex LP-solver (for versions < 2)"
 		@echo "      xprs: XPress LP-solver"
 		@echo "      none: no LP-solver"
+		@echo "  - LPSEXACT={spx|none|auto}: Determine exact LP-solver (default is auto)."
+		@echo "      spx: SoPlex LP-solver"
+		@echo "      none: no exact LP-solver"
+		@echo "      auto: set to spx if and only if LPS=spx and Boost is available"
 		@echo "  - COMP={clang|gnu|intel}: Determine compiler."
 		@echo "  - TPI={none|omp|tny}: Determine parallel interface for concurrent solve (default: none)."
 		@echo "  - SHARED={true|false}: Build shared libraries or not (default)."
@@ -1801,6 +1967,10 @@ help:
 		@echo "  - AMPL=<true|false>: Turn AMPL .nl support on (default) or off."
 		@echo "  - LPSOPT=<dbg|opt>: Use debug or optimized (default) mode for LP-solver (SoPlex and Clp only)."
 		@echo "  - READLINE=<true|false>: Turns support via the readline library on (default) or off."
+		@echo "  - GMP=<true|false>: Turns GMP on (default) or off."
+		@echo "  - BOOST=<true|false>: Turns Boost on or off (default)."
+		@echo "  - MPFR=<true|false|auto>: Turns MPFR on (required for exact solving mode and if SoPlex is built with MPFR; must be installed on the system), off, or to the same value as BOOST (default)."
+		@echo "  - EXACTSOLVE=<true|false|auto>: Turns exact solving mode on, off, or turns it on if all necessary dependencies are available (default)."
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
 		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
@@ -1808,7 +1978,6 @@ help:
 		@echo "  - SYM=<none|bliss|nauty|sbliss|snauty|dejavu>: To choose type of symmetry handling."
 		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP (deprecated, use THREADSAFE)."
 		@echo "  - THREADSAFE=<true|false>: Build thread safe."
-		@echo "  - MPFR=<true|false>: Link with MPFR (required if SoPlex is built with MPFR; must be installed on the system; default: false)."
 		@echo "  - NOBLKMEM=<true|false>: Turn off block memory or on (default)."
 		@echo "  - NOBUFMEM=<true|false>>: Turn off buffer memory or on (default)."
 		@echo "  - NOBLKBUFMEM=<true|false>: Turn usage of internal memory functions off or on (default)."

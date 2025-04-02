@@ -1024,7 +1024,7 @@ void updateBestCandidate(
    isoverthreshold = (ncalls % 2) == 1 && SCIPisGT(scip, *bestx, threshold) && SCIPisGT(scip, x, threshold);
 
    /* check whether the candidate is better than the best known candidate */
-   if( *bestx == SCIP_INVALID || *besty == SCIP_INVALID
+   if( *bestx == SCIP_INVALID || *besty == SCIP_INVALID /*lint !e777*/
       || ((!isoverthreshold || SCIPisEQ(scip, y, *besty)) && SCIPisLT(scip, x, *bestx)) /*lint !e777*/
       || ((isoverthreshold || SCIPisEQ(scip, x, *bestx)) && SCIPisLT(scip, y, *besty)) ) /*lint !e777*/
    {

@@ -38,6 +38,7 @@
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -211,8 +212,8 @@ SCIP_RETCODE runVanillaStrongBranching(
       downgain = down - lpobjval;
       upgain = up - lpobjval;
 
-      assert(!SCIPallColsInLP(scip) || SCIPisExactSolve(scip) || !downvalid || downinf == SCIPisGE(scip, down, SCIPgetCutoffbound(scip)));
-      assert(!SCIPallColsInLP(scip) || SCIPisExactSolve(scip) || !upvalid || upinf == SCIPisGE(scip, up, SCIPgetCutoffbound(scip)));
+      assert(!SCIPallColsInLP(scip) || SCIPisExact(scip) || !downvalid || downinf == SCIPisGE(scip, down, SCIPgetCutoffbound(scip)));
+      assert(!SCIPallColsInLP(scip) || SCIPisExact(scip) || !upvalid || upinf == SCIPisGE(scip, up, SCIPgetCutoffbound(scip)));
       assert(downinf || !downconflict);
       assert(upinf || !upconflict);
 
@@ -264,7 +265,7 @@ SCIP_RETCODE runVanillaStrongBranching(
       {
          /* we should only detect infeasibility if the LP is a valid relaxation */
          assert(SCIPallColsInLP(scip));
-         assert(!SCIPisExactSolve(scip));
+         assert(!SCIPisExact(scip));
          assert(*bestcand == c);
 
          SCIPdebugMsg(scip, " -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(var));
@@ -473,7 +474,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpVanillafullstrong)
          /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
           * for cutting off sub problems and improving lower bounds of children
           */
-         exactsolve = SCIPisExactSolve(scip);
+         exactsolve = SCIPisExact(scip);
 
          /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
          allcolsinlp = SCIPallColsInLP(scip);

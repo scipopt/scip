@@ -40,6 +40,7 @@
 #include "scip/cons_and.h"
 #include "scip/pub_branch.h"
 #include "scip/pub_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_sol.h"
@@ -86,7 +87,7 @@
 #define DEFAULT_INITCAND         100         /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0           /**< iteration limit for strong branching initialization of pseudo cost entries (0: auto) */
 #define DEFAULT_MAXBDCHGS        5           /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
-#define DEFAULT_MAXPROPROUNDS   -2           /**< maximum number of propagation rounds to be performed during strong branching
+#define DEFAULT_MAXPROPROUNDS    -2          /**< maximum number of propagation rounds to be performed during strong branching
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
 #define DEFAULT_PROBINGBOUNDS    TRUE        /**< should valid bounds be identified in a probing-like fashion during strong
                                               *   branching (only with propagation)? */
@@ -878,7 +879,7 @@ SCIP_RETCODE execRelpscost(
    /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
     * for cutting off sub problems and improving lower bounds of children
     */
-   exactsolve = SCIPisExactSolve(scip);
+   exactsolve = SCIPisExact(scip);
 
    /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
    allcolsinlp = SCIPallColsInLP(scip);
@@ -1020,7 +1021,7 @@ SCIP_RETCODE execRelpscost(
       initstrongbranching = FALSE;
 
       /* check whether propagation should be performed */
-      propagate = (branchruledata->maxproprounds != 0);
+      propagate = (branchruledata->maxproprounds != 0) && !SCIPisExact(scip);
 
       /* check whether valid bounds should be identified in probing-like fashion */
       probingbounds = propagate && branchruledata->probingbounds;
@@ -1218,8 +1219,8 @@ SCIP_RETCODE execRelpscost(
          SCIP_Real fracpart;
 
          assert(branchcands[c] != NULL);
-         assert(!SCIPisFeasIntegral(scip, branchcandssol[c]));
-         assert(!SCIPisFeasIntegral(scip, SCIPvarGetLPSol(branchcands[c])));
+         assert(!SCIPisFeasIntegral(scip, branchcandssol[c]) || SCIPisExact(scip));
+         assert(!SCIPisFeasIntegral(scip, SCIPvarGetLPSol(branchcands[c])) || SCIPisExact(scip));
 
          /* Record the variables current pseudocosts. These may be overwritten if
           * strong branching is performed.
@@ -1430,7 +1431,7 @@ SCIP_RETCODE execRelpscost(
 
          /* get candidate number to initialize */
          c = initcands[i];
-         assert(!SCIPisFeasIntegral(scip, branchcandssol[c]));
+         assert(!SCIPisFeasIntegral(scip, branchcandssol[c]) || SCIPisExact(scip));
 
          if( branchruledata->skipbadinitcands )
          {
@@ -1680,10 +1681,9 @@ SCIP_RETCODE execRelpscost(
          }
 
          /* check if there are infeasible roundings */
-         if( downinf || upinf )
+         if( (downinf || upinf) && !exactsolve )
          {
             assert(allcolsinlp || propagate);
-            assert(!exactsolve);
 
             if( downinf && upinf )
             {
@@ -1935,7 +1935,7 @@ SCIP_RETCODE execRelpscost(
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nbranchcands);
       assert(!SCIPisFeasIntegral(scip, branchcandssol[bestcand]));
-      assert(!allcolsinlp || SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
+      assert(!allcolsinlp || SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)) || exactsolve);
       assert(!bestsbdowncutoff && !bestsbupcutoff);
 
       var = branchcands[bestcand];
@@ -2258,7 +2258,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/maxproprounds",
          "maximum number of propagation rounds to be performed during strong branching before solving the LP (-1: no limit, -2: parameter settings)",
-         &branchruledata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -2, INT_MAX, NULL, NULL) );
+         &branchruledata->maxproprounds, TRUE, SCIPisExact(scip) ? 0 : DEFAULT_MAXPROPROUNDS, -2, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/relpscost/probingbounds",
          "should valid bounds be identified in a probing-like fashion during strong branching (only with propagation)?",
@@ -2327,7 +2327,6 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
-
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/filtercandssym",
          "Use symmetry to filter branching candidates?",
          &branchruledata->filtercandssym, TRUE, DEFAULT_FILTERCANDSSYM, NULL, NULL) );
@@ -2339,6 +2338,9 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/discountfactor",
          "discount factor for ancestral pseudo costs (0.0: disable discounted pseudo costs)",
          &branchruledata->discountfactor, FALSE, BRANCHRULE_DISCOUNTFACTOR, 0.0, 1.0, NULL, NULL) );
+
+   /* relpcost is safe to use in exact solving mode */
+   SCIPbranchruleMarkExact(branchrule);
 
    /* initialise the Treemodel parameters */
    SCIP_CALL( SCIPtreemodelInit(scip, &branchruledata->treemodel) );

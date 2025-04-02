@@ -171,10 +171,9 @@ bool Rational::isZero() const
 
 bool Rational::fromString(const char* num)
 {
-   char* tmp = &buffer[0];
-   int exponent = 0;
-   int fraction = 0;
-   int k = 0;
+   int exponent;
+   int fraction;
+   int k;
 
    assert(num != NULL);
 
@@ -182,17 +181,29 @@ bool Rational::fromString(const char* num)
    while( isspace(*num) )
       num++;
 
+   // string is given in rational format
+   if( strpbrk(num, "eE.") == NULL )
+   {
+      k = mpq_set_str(number, num, 10);
+      mpq_canonicalize(number);
+      return k == 0;
+   }
+
+   exponent = 0;
+   fraction = 0;
+   k = 0;
+
    // skip initial sign
    if( *num == '+' )
       num++;
    else if( *num == '-' )
-      tmp[k++] = *num++;
+      buffer[k++] = *num++;
 
    for( int i = 0; num[i] != '\0'; ++i )
    {
       if( isdigit(num[i]) )
       {
-         tmp[k++]  = num[i];
+         buffer[k++]  = num[i];
          exponent -= fraction;
       }
       else if( num[i] == '.' )
@@ -207,23 +218,23 @@ bool Rational::fromString(const char* num)
    }
    while( exponent > 0 )
    {
-      tmp[k++] = '0';
+      buffer[k++] = '0';
       exponent--;
    }
-   tmp[k++] = '/';
-   tmp[k++] = '1';
+   buffer[k++] = '/';
+   buffer[k++] = '1';
 
    while( exponent < 0 )
    {
-      tmp[k++] = '0';
+      buffer[k++] = '0';
       exponent++;
    }
-   tmp[k] = '\0';
+   buffer[k] = '\0';
 
-   mpq_set_str(number, tmp, 10);
+   k = mpq_set_str(number, buffer, 10);
    mpq_canonicalize(number);
 
-   return true;
+   return k == 0;
 }
 
 std::string Rational::toString() const

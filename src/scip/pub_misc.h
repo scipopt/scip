@@ -892,6 +892,14 @@ SCIP_RETCODE SCIPhashmapInsert(
 
 /** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
 SCIP_EXPORT
+SCIP_RETCODE SCIPhashmapInsertLong(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   SCIP_Longint          image               /**< new image for origin */
+   );
+
+/** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
+SCIP_EXPORT
 SCIP_RETCODE SCIPhashmapInsertInt(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -916,6 +924,13 @@ void* SCIPhashmapGetImage(
 /** retrieves image of given origin from the hash map, or INT_MAX if no image exists */
 SCIP_EXPORT
 int SCIPhashmapGetImageInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to retrieve image for */
+   );
+
+/** retrieves image of given origin from the hash map, or SCIP_LONGINT_MAX if no image exists */
+SCIP_EXPORT
+long SCIPhashmapGetImageLong(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
    );
@@ -1892,6 +1907,12 @@ SCIP_Bool SCIPrealToRational(
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    );
 
+/** checks, if value is integral without any tolerances */
+SCIP_EXPORT
+SCIP_Bool SCIPrealIsExactlyIntegral(
+   SCIP_Real             val                 /**< value to process */
+   );
+
 /** tries to find a value, such that all given values, if scaled with this value become integral in relative allowed
  *  difference in between mindelta and maxdelta
  */
@@ -1904,6 +1925,17 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    SCIP_Real             maxscale,           /**< maximal allowed scalar */
    SCIP_Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
+   SCIP_Bool*            success             /**< stores whether returned value is valid */
+   );
+
+/** tries to find a value, such that all given values, if scaled with this value become integral */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcalcIntegralScalarExact(
+   BMS_BUFMEM*           buffer,
+   SCIP_RATIONAL**       vals,               /**< values to scale */
+   int                   nvals,              /**< number of values to scale */
+   SCIP_Real             maxscale,           /**< maximal allowed scalar */
+   SCIP_RATIONAL*        intscalar,          /**< pointer to store scalar that would make the coefficients integral */
    SCIP_Bool*            success             /**< stores whether returned value is valid */
    );
 

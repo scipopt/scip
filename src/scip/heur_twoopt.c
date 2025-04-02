@@ -40,6 +40,7 @@
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -1771,6 +1772,13 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
          /* copy the current LP solution to the working solution */
          SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
 
+         /* in exact mode we have to end diving prior to trying the solution */
+         if( SCIPisExact(scip) )
+         {
+            SCIP_CALL( SCIPunlinkSol(scip, worksol) );
+            SCIP_CALL( SCIPendDive(scip) );
+         }
+
          /* check solution for feasibility */
 #ifndef NDEBUG
          SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
@@ -1793,7 +1801,10 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       }
 
       /* terminate the diving */
-      SCIP_CALL( SCIPendDive(scip) );
+      if( SCIPinDive(scip) )
+      {
+         SCIP_CALL( SCIPendDive(scip) );
+      }
    }
 
  TERMINATE:
@@ -1825,6 +1836,9 @@ SCIP_RETCODE SCIPincludeHeurTwoopt(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTwoopt, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTwoopt) );

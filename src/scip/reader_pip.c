@@ -3266,6 +3266,9 @@ SCIP_RETCODE SCIPreadPip(
 
    assert(scip != NULL);  /* for lint */
    assert(reader != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    /* initialize PIP input data */
    pipinput.file = NULL;

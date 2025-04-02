@@ -686,6 +686,9 @@ SCIP_RETCODE SCIPincludeHeurIntdiving(
 
    assert(heur != NULL);
 
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
+
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIntdiving) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeIntdiving) );

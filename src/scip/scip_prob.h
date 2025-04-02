@@ -47,6 +47,7 @@
 #include "scip/type_event.h"
 #include "scip/type_misc.h"
 #include "scip/type_prob.h"
+#include "scip/type_rational.h"
 #include "scip/type_result.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
@@ -522,6 +523,20 @@ SCIP_RETCODE SCIPaddOrigObjoffset(
    SCIP_Real             addval              /**< value to add to objective offset */
    );
 
+/** adds offset of objective function to original problem and to all existing solution in original space
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddOrigObjoffsetExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
+   );
+
 /** returns the objective offset of the original problem
  *
  *  @return the objective offset of the original problem
@@ -540,6 +555,29 @@ SCIP_RETCODE SCIPaddOrigObjoffset(
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetOrigObjoffset(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the exact objective offset of the original problem
+ *
+ *  DO NOT MODIFY THE POINTER RETURNED BY THIS METHOD
+ *
+ *  @return the exact objective offset of the original problem
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RATIONAL* SCIPgetOrigObjoffsetExact(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

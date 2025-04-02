@@ -547,7 +547,10 @@ SCIP_RETCODE SCIPgetDualProof(
    SCIP_Bool*            valid               /**< pointer store whether the proof constraint is valid */
    );
 
-/** calculates the minimal activity of a given aggregation row */
+/** calculates the minimal activity of a given aggregation row
+ *
+ *  @note in exact solving mode, this returns a safe underestimation of the minimal activity
+ */
 SCIP_Real SCIPaggrRowGetMinActivity(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem data */
