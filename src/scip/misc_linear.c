@@ -585,10 +585,12 @@ SCIP_ROW* SCIPconsGetRow(
    {
       return SCIPgetRowExactLinear(scip, cons);
    }
+#ifdef SCIP_DEBUG
    else
    {
-      SCIPwarningMessage(scip, "Cannot return row for constraint of type <%s>\n", conshdlrname);
+      SCIPdebugMsg(scip, "Cannot return row for constraint of type <%s>\n", conshdlrname);
    }
+#endif
 
    return NULL;
 }
