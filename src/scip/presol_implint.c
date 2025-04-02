@@ -1734,6 +1734,8 @@ SCIP_RETCODE findImpliedIntegers(
       compTransNetworkValid[component] = componenttransnetwork;
    }
 
+   /* Detect implied integrality for integer columns. First, we compute valid columns that have only +-1 entries in rows
+    * that are integral. Then, we sort these and greedily attempt to add them to the (transposed) network matrix.*/
    if( presoldata->convertintegers )
    {
 
