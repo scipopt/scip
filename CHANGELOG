@@ -25,8 +25,6 @@ Features
   generation of cut and setting up the subproblems.
 - adds objective types for Benders' decomposition; the choice is to sum the subproblems objectives (classical
   approach) or to use the maximum of the subproblems objectives
-- added decomposition kernel search (DKS) heuristic (disabled by default). This heuristic implements a kernel search framework and can be used
-  both as a construction heuristic as well as an improvement heuristic. In addition, existing decomposition information can be utilized by this heuristic.
 - symmetry detection does not treat implicit integer variables separately anymore, but computes symmetries based on the variable type inferred from the implicit integer variable
 
 Performance improvements
