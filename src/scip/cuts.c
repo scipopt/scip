@@ -4352,6 +4352,7 @@ SCIP_RETCODE determineBestBounds(
 }
 
 /** performs the bound substitution step with the given variable or simple bounds for the variable with the given problem index
+ *
  *  @note this method is safe for usage in exact solving mode
  */
 static
@@ -4396,8 +4397,9 @@ void performBoundSubstitutionSafely(
 }
 
 /** performs the bound substitution step with the simple bound for the variable with the given problem index
+ *
  *  @note this method is safe for usage in exact solving mode
-*/
+ */
 static
 void performBoundSubstitutionSimpleSafely(
    SCIP*                 scip,               /**< SCIP datastructure */
@@ -4431,9 +4433,7 @@ void performBoundSubstitutionSimpleSafely(
    SCIPintervalSetRoundingMode(previousroundmode); /*lint !e644*/
 }
 
-/** performs the bound substitution step with the given variable or simple bounds for the variable with the given problem index
- *  @note this method is safe for usage in exact solving mode
- */
+/** performs the bound substitution step with the given variable or simple bounds for the variable with the given problem index */
 static
 void performBoundSubstitution(
    SCIP*                 scip,               /**< SCIP datastructure */
@@ -4514,10 +4514,7 @@ void performBoundSubstitution(
    }
 }
 
-/** performs the bound substitution step with the simple bound for the variable with the given problem index
- *
- *  @note this method is safe for usage in exact solving mode
- */
+/** performs the bound substitution step with the simple bound for the variable with the given problem index */
 static
 void performBoundSubstitutionSimple(
    SCIP*                 scip,               /**< SCIP datastructure */
