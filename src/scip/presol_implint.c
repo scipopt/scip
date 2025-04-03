@@ -626,21 +626,24 @@ SCIP_RETCODE addXorLinearization(
       SCIP_Real constant;
       SCIP_CALL( SCIPallocBufferArray(scip, &scalars, matrix->ncols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &aggrvars, matrix->ncols) );
-      /* We need to transform each variable separately to their active variables, as otherwise we may accidentally
-       * perform cancellations. */
+      /* We can transform each variable together in the sum, because the constraint can be interpreted as a nonlinear
+       * constraint of the form sum(operands) % 2 = rhs. Thus, it is okay if we have cancellations that occur because
+       * of the variable transformation. */
       for( j = 0; j < noperands; ++j )
       {
-         scalars[0] = 1.0;
-         aggrvars[0] = operands[j];
-         naggrvars = 1;
+         scalars[j] = 1.0;
+         aggrvars[j] = operands[j];
+      }
+      naggrvars = noperands;
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, aggrvars, scalars, &naggrvars, 1, &constant, &requiredsize) );
-         assert(requiredsize <= matrix->ncols);
-         for( int k = 0; k < naggrvars; ++k )
-         {
-            int col = SCIPvarGetProbindex(aggrvars[k]);
-            matrix->colinnonlinterm[col] = TRUE;
-         }
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, aggrvars, scalars, &naggrvars, matrix->ncols, &constant, &requiredsize) );
+      assert(requiredsize <= matrix->ncols);
+      for( int k = 0; k < naggrvars; ++k )
+      {
+         int col = SCIPvarGetProbindex(aggrvars[k]);
+         assert(col >= 0);
+         assert(col < matrix->ncols);
+         matrix->colinnonlinterm[col] = TRUE;
       }
 
       SCIPfreeBufferArray(scip, &aggrvars);
