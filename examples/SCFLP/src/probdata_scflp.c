@@ -306,7 +306,7 @@ SCIP_RETCODE createOriginalproblem(
                if( quadcosts )
                {
                   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customersqr(%d,%d,%d)", i, j, k);
-                  SCIP_CALL( SCIPcreateVarBasic(scip, &sqrvar, name, 0.0, SCIPinfinity(scip), coeff, SCIP_VARTYPE_CONTINUOUS) );
+                  SCIP_CALL( SCIPcreateVarBasic(scip, &sqrvar, name, 0.0, SCIPinfinity(scip), coeff, SCIP_VARTYPE_CONTINUOUS) ); /*lint !e644*/
 
                   SCIP_CALL( SCIPaddVar(scip, sqrvar) );
 

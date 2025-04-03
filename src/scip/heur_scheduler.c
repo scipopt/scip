@@ -4499,6 +4499,9 @@ SCIP_RETCODE SCIPincludeHeurScheduler(
 
    assert(heur != NULL);
 
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
+
    /* include all neighborhoods */
    /* note: diving heuristics will be included when executing the scheduler heuristic for
     * the first time, because it relies on all heuristics being already added to SCIP

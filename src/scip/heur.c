@@ -959,6 +959,7 @@ SCIP_RETCODE doHeurCreate(
    (*heur)->ncalls = 0;
    (*heur)->nsolsfound = 0;
    (*heur)->nbestsolsfound = 0;
+   (*heur)->exact = FALSE;
    (*heur)->initialized = FALSE;
    (*heur)->divesets = NULL;
    (*heur)->ndivesets = 0;
@@ -1289,6 +1290,9 @@ SCIP_RETCODE SCIPheurExec(
 
    *result = SCIP_DIDNOTRUN;
 
+   if( set->exact_enable && !heur->exact )
+      return SCIP_OKAY;
+
    delayed = FALSE;
    execute = SCIPheurShouldBeExecuted(heur, depth, lpstateforkdepth, heurtiming, &delayed);
 
@@ -1447,6 +1451,16 @@ void SCIPheurSetExitsol(
    assert(heur != NULL);
 
    heur->heurexitsol = heurexitsol;
+}
+
+/** marks the primal heuristic as safe to use in exact solving mode */
+void SCIPheurMarkExact(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   heur->exact = TRUE;
 }
 
 /** gets name of primal heuristic */
@@ -1699,21 +1713,18 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    )
 {
    SCIP_VAR** vars;
-
+   SCIP_VAR** varbuffer;
    int* queue;
-   int  nvars;
-   int i;
+   SCIP_Bool localvargraph;
+   int nvars;
+   int nbinintvars;
    int currlvlidx;
    int nextlvlidx;
    int increment = 1;
    int currentdistance;
    int nbinintvarshit;
    int nvarshit;
-   int nbinvars;
-   int nintvars;
-   int nbinintvars;
-   SCIP_VAR** varbuffer;
-   SCIP_Bool localvargraph;
+   int i;
 
    assert(scip != NULL);
    assert(startvars != NULL);
@@ -1722,12 +1733,14 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    assert(maxdistance >= 0);
 
    /* get variable data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
 
    if( nvars == 0 )
       return SCIP_OKAY;
 
-   nbinintvars = nbinvars + nintvars;
+   nbinintvars = nvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(nbinintvars >= 0);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &queue, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &varbuffer, nvars) );
@@ -2057,4 +2070,14 @@ void SCIPvariableGraphFree(
    SCIPhashtableFree(&(*vargraph)->visitedconss);
 
    SCIPfreeBlockMemory(scip, vargraph);
+}
+
+/** returns TRUE if the heuristic is safe to be executed in exact solving mode */
+SCIP_Bool SCIPheurIsExact(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return heur->exact;
 }

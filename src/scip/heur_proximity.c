@@ -46,6 +46,7 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
 #include "scip/scip_event.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -213,11 +214,22 @@ SCIP_RETCODE solveLp(
    if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIP_CALL( SCIPlinkLPSol(scip, sol) );
+
+      /* in exact mode we have to end diving prior to trying the solution */
+      if( SCIPisExact(scip) )
+      {
+         SCIP_CALL( SCIPunlinkSol(scip, sol) );
+         SCIP_CALL( SCIPendDive(scip) );
+      }
+
       SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
    }
 
    /* terminate diving mode */
-   SCIP_CALL( SCIPendDive(scip) );
+   if( SCIPinDive(scip) )
+   {
+      SCIP_CALL( SCIPendDive(scip) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1032,6 +1044,9 @@ SCIP_RETCODE SCIPincludeHeurProximity(
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecProximity, heurdata) );
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyProximity) );

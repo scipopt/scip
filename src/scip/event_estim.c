@@ -2749,6 +2749,9 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
    eventtype = SCIPeventGetType(event);
    treedata = eventhdlrdata->treedata;
 
+   if( SCIPisExact(scip) )
+      return SCIP_OKAY;
+
    /* actual leaf nodes for our tree data are children/siblings/leaves or the focus node itself (deadend)
     * if it has not been branched on
     */
@@ -2812,7 +2815,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       if( eventhdlrdata->restarthitcounter >= eventhdlrdata->hitcounterlim )
       {
          /* safe that we triggered a restart at this run */
-         if( SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun )
+         if( !SCIPisExact(scip) && SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun )
          {
             eventhdlrdata->nrestartsperformed++;
 

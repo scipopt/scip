@@ -45,6 +45,7 @@
 #include "scip/type_mem.h"
 #include "scip/type_message.h"
 #include "scip/type_lp.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_nlp.h"
 #include "scip/type_implics.h"
 #include "scip/type_prob.h"
@@ -91,6 +92,7 @@ struct Scip
    SCIP_EVENTFILTER*     eventfilter;        /**< global event filter */
    SCIP_BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    SCIP_LP*              lp;                 /**< LP data */
+   SCIP_LPEXACT*         lpexact;            /**< exact LP data */
    SCIP_NLP*             nlp;                /**< NLP data */
    SCIP_RELAXATION*      relaxation;         /**< global relaxation data */
    SCIP_PRIMAL*          primal;             /**< primal data and solution storage */
@@ -103,6 +105,7 @@ struct Scip
    SCIP_PRICESTORE*      pricestore;         /**< storage for priced variables */
    SCIP_SEPASTORE*       sepastore;          /**< storage for separated cuts */
    SCIP_SEPASTORE*       sepastoreprobing;   /**< storage for separated cuts during probing mode */
+   SCIP_SEPASTOREEXACT*  sepastoreexact;     /**< storage for exact cuts */
    SCIP_CONFLICTSTORE*   conflictstore;      /**< storage for conflicts */
    SCIP_CUTPOOL*         cutpool;            /**< global cut pool */
    SCIP_CUTPOOL*         delayedcutpool;     /**< global delayed cut pool */
@@ -110,7 +113,7 @@ struct Scip
    /* PARALLEL */
    SCIP_SYNCSTORE*       syncstore;          /**< the data structure for storing synchronization information */
    SCIP_CONCURRENT*      concurrent;         /**< data required for concurrent solve */
-   
+
    /* IIS */
    SCIP_IIS*             iis;                /**< the data structure for storing IIS information */
 };

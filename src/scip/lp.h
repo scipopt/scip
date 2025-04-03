@@ -535,6 +535,12 @@ SCIP_RETCODE SCIProwMakeIntegral(
    SCIP_Bool*            success             /**< stores whether row could be made rational */
    );
 
+/** recalculates norms of a row */
+void SCIProwRecalcNorms(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** recalculates the current activity of a row */
 void SCIProwRecalcLPActivity(
    SCIP_ROW*             row,                /**< LP row */
@@ -1130,18 +1136,6 @@ SCIP_Real SCIPlpGetModifiedPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Real             oldbound,           /**< old value for bound */
-   SCIP_Real             newbound,           /**< new value for bound */
-   SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
-   );
-
-/** gets pseudo objective value, if a bound of the given variable would be modified in the given way;
- *  perform calculations with interval arithmetic to get an exact lower bound
- */
-SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             oldbound,           /**< old value for bound */
    SCIP_Real             newbound,           /**< new value for bound */

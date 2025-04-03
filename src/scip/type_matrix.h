@@ -37,6 +37,8 @@
 extern "C" {
 #endif
 
+typedef struct SCIP_MatrixValsExact SCIP_MATRIXVALSEXACT;
+
 typedef struct SCIP_Matrix SCIP_MATRIX;
 
 #ifdef __cplusplus

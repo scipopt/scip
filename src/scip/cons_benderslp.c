@@ -143,6 +143,15 @@ SCIP_DECL_CONSENFOLP(consEnfolpBenderslp)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
+   /* the result is initially set to FEASIBLE. If the two-phase method is not executed, then the result will remain as
+    * FEASIBLE. The actual feasibility of the Benders' decomposition subproblems is checked in cons_benders.
+   */
+   (*result) = SCIP_FEASIBLE;
+
+   /* only check the Benders' decomposition subproblems for fractional LP solutions if the two-phase method is activated */
+   if( !conshdlrdata->active )
+      return SCIP_OKAY;
+
    /* updating the stall count. If the bound has improved since the last call, then the stall count is set to zero */
    conshdlrdata->stallcount++;
    if( SCIPisLT(scip, conshdlrdata->prevbound, SCIPgetLowerbound(scip)) )
@@ -157,15 +166,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpBenderslp)
       conshdlrdata->currnode = SCIPgetCurrentNode(scip);
       conshdlrdata->ncallsnode = 0;
    }
-
-   /* the result is initially set to FEASIBLE. If the two-phase method is not executed, then the result will remain as
-    * FEASIBLE. The actual feasibility of the Benders' decomposition subproblems is checked in cons_benders.
-   */
-   (*result) = SCIP_FEASIBLE;
-
-   /* only check the Benders' decomposition subproblems for fractional LP solutions if the two-phase method is activated */
-   if( !conshdlrdata->active )
-      return SCIP_OKAY;
 
    /* checking whether the two-phase method is performed.
     * - If a maxdepth is specified

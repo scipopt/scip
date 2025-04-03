@@ -127,7 +127,7 @@ void visualizeSolutionMatplotlib(
    fputs("plt.gca().set_aspect(1)\n", stream);
    fputs("plt.show()\n", stream);
 
-   pclose(stream);
+   (void)pclose(stream);
 #endif
 }
 
@@ -185,7 +185,7 @@ void visualizeSolutionGnuplot(
    }
    fputs("e\n", stream);
 
-   pclose(stream);
+   (void)pclose(stream);
 #endif
 }
 
@@ -217,8 +217,8 @@ SCIP_RETCODE visualizeSolutionAscii(
    scalex = (dispwidth-3) / wval;
    scaley = scalex / 2.0;  /* this gives almost round looking circles on my (SV) terminal */
 
-   width = SCIPceil(scip, scalex*wval)+3;  /* +2 for left and right border and +1 for \n */
-   height = SCIPceil(scip, scaley*hval)+2; /* +2 for top and bottom border */
+   width = (int)SCIPceil(scip, scalex*wval)+3;  /* +2 for left and right border and +1 for \n */
+   height = (int)SCIPceil(scip, scaley*hval)+2; /* +2 for top and bottom border */
 
    SCIP_CALL( SCIPallocBufferArray(scip, &picture, width * height + 1) );
 
@@ -253,8 +253,8 @@ SCIP_RETCODE visualizeSolutionAscii(
 
       for( phi = 0.0; phi < 6.283 /* 2*pi */; phi += 0.01 )
       {
-         xcoord = SCIPround(scip, scalex * (xval + radius * cos(phi))) + 1; /* +1 for border */
-         ycoord = SCIPround(scip, scaley * (yval + radius * sin(phi))) + 1; /* +1 for border */
+         xcoord = (int)SCIPround(scip, scalex * (xval + radius * cos(phi))) + 1; /* +1 for border */
+         ycoord = (int)SCIPround(scip, scaley * (yval + radius * sin(phi))) + 1; /* +1 for border */
 
          /* feasible solutions should be within box
           * due to rounding, they can be on the border
@@ -349,7 +349,7 @@ static SCIP_RETCODE setupProblem(
    int i, j;
 
    /* if both width and height are fixed, then we don't optimize the area anymore, but the number of circles */
-   minarea = (fixwidth == SCIP_INVALID || fixheight == SCIP_INVALID);
+   minarea = (fixwidth == SCIP_INVALID || fixheight == SCIP_INVALID); /*lint !e777*/
 
    /* create empty problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "Packing circles") );
@@ -404,7 +404,7 @@ static SCIP_RETCODE setupProblem(
    SCIP_CALL( SCIPaddVar(scip, h) );
 
    /* fix width if a valid value for fixwidth is given */
-   if( fixwidth != SCIP_INVALID )
+   if( fixwidth != SCIP_INVALID ) /*lint !e777*/
    {
       SCIP_Bool infeas;
       SCIP_Bool fixed;
@@ -416,7 +416,7 @@ static SCIP_RETCODE setupProblem(
    }
 
    /* fix height if a valid value for fixheight is given */
-   if( fixheight != SCIP_INVALID )
+   if( fixheight != SCIP_INVALID ) /*lint !e777*/
    {
       SCIP_Bool infeas;
       SCIP_Bool fixed;
@@ -651,16 +651,16 @@ int main(
 #if _POSIX_C_SOURCE >= 2
          printf(" [-g] [-m]");
 #endif
-         puts(" { <radius> }");
-         puts("  --help shows this help and exits");
-         puts("  -w <width> fix rectangle width to given value");
-         puts("  -h <height> fix rectangle height to given value");
+         (void)puts(" { <radius> }");
+         (void)puts("  --help shows this help and exits");
+         (void)puts("  -w <width> fix rectangle width to given value");
+         (void)puts("  -h <height> fix rectangle height to given value");
 #if _POSIX_C_SOURCE >= 2
-         puts("  -g show final solution with gnuplot");
-         puts("  -m show final solution with matplotlib");
+         (void)puts("  -g show final solution with gnuplot");
+         (void)puts("  -m show final solution with matplotlib");
 #endif
-         puts("If no radii are given, then 5 circles with radii 0.25, 0.25, 0.4, 0.7, and 0.1 used.");
-         puts("If both width and height are fixed, then the number of circles that fit into the rectangle is maximized.");
+         (void)puts("If no radii are given, then 5 circles with radii 0.25, 0.25, 0.4, 0.7, and 0.1 used.");
+         (void)puts("If both width and height are fixed, then the number of circles that fit into the rectangle is maximized.");
 
          return EXIT_SUCCESS;
       }

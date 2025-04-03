@@ -40,6 +40,7 @@
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
 #include "scip/scip_copy.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -471,24 +472,21 @@ static
 SCIP_DECL_HEUREXEC(heurExecOneopt)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
-   SCIP_SOL* bestsol;                        /* incumbent solution                   */
-   SCIP_SOL* worksol;                        /* heuristic's working solution         */
    SCIP_VAR** vars;                          /* SCIP variables                       */
    SCIP_VAR** shiftcands;                    /* shiftable variables                  */
    SCIP_ROW** lprows;                        /* SCIP LP rows                         */
+   SCIP_SOL* bestsol;                        /* incumbent solution                   */
+   SCIP_SOL* worksol;                        /* heuristic's working solution         */
    SCIP_Real* activities;                    /* row activities for working solution  */
    SCIP_Real* shiftvals;
    SCIP_Bool shifted;
-
    SCIP_RETCODE retcode;
-
    SCIP_Real lb;
    SCIP_Real ub;
    SCIP_Bool valid;
    int nchgbound;
-   int nbinvars;
-   int nintvars;
    int nvars;
+   int nenfovars;
    int nlprows;
    int nshiftcands;
    int shiftcandssize;
@@ -507,7 +505,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    /* we only want to process each solution once */
    bestsol = SCIPgetBestSol(scip);
-   if( bestsol == NULL || heurdata->lastsolindex == SCIPsolGetIndex(bestsol) )
+   if( bestsol == NULL || heurdata->lastsolindex == SCIPsolGetIndex(bestsol) || SCIPisExactSol(scip, bestsol) )
       return SCIP_OKAY;
 
    /* reset the timing mask to its default value (at the root node it could be different) */
@@ -515,11 +513,13 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
    /* get problem variables */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-   nintvars += nbinvars;
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   nenfovars = nvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(nenfovars >= 0);
 
    /* do not run if there are no discrete variables */
-   if( nintvars == 0 )
+   if( nenfovars == 0 )
    {
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -568,8 +568,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
-      if( cutoff )
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result)
+       * if we are not in exact solving mode
+       */
+      if( cutoff && !SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
@@ -578,8 +580,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_CALL( SCIPflushLP(scip) );
 
       /* get problem variables again, SCIPconstructLP() might have added new variables */
-      SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-      nintvars += nbinvars;
+      vars = SCIPgetVars(scip);
+      nvars = SCIPgetNVars(scip);
+      nenfovars = nvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+      assert(nenfovars >= 0);
    }
 
    /* we need an LP */
@@ -682,7 +686,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       /* @todo if useloop=TRUE store for each variable which constraint blocked it and only iterate over those variables
        *       in the following rounds for which the constraint slack was increased by previous shifts
        */
-      for( int i = 0; i < nintvars; ++i )
+      for( int i = 0; i < nenfovars; ++i )
       {
          if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
          {
@@ -787,7 +791,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       /* if the problem is a pure IP, try to install the solution, if it is a MIP, solve LP again to set the continuous
        * variables to the best possible value
        */
-      if( nvars == nintvars || !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      if( nvars == nenfovars || !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       {
          SCIP_Bool success;
 
@@ -825,7 +829,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             }
          }
          /* apply this after global bounds to not cause an error with intermediate empty domains */
-         for( int i = 0; i < nintvars; ++i )
+         for( int i = 0; i < nenfovars; ++i )
          {
             if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
             {
@@ -863,6 +867,14 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
             /* copy the current LP solution to the working solution */
             SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
+
+            /* in exact mode we have to end diving prior to trying the solution */
+            if( SCIPisExact(scip) )
+            {
+               SCIP_CALL( SCIPunlinkSol(scip, worksol) );
+               SCIP_CALL( SCIPendDive(scip) );
+            }
+
             SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
 
             /* check solution for feasibility */
@@ -875,7 +887,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          }
 
          /* terminate the diving */
-         SCIP_CALL( SCIPendDive(scip) );
+         if( SCIPinDive(scip) )
+         {
+            SCIP_CALL( SCIPendDive(scip) );
+         }
       }
    }
 
@@ -917,6 +932,9 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecOneopt, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyOneopt) );

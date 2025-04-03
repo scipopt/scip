@@ -12,8 +12,8 @@
 #endif
 
 #include "lpi/lpi.h"
-#include "nlpi/exprinterpret.h"
-#include "nlpi/nlpi.h"
+#include "scip/exprinterpret.h"
+#include "scip/nlpi.h"
 #include "scip/benders.h"
 #include "scip/benderscut.h"
 #include "scip/branch.h"
@@ -154,7 +154,7 @@
 #include "scip/pub_table.h"
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
-#include "nlpi/pub_expr.h"
+#include "scip/pub_expr.h"
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access

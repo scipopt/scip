@@ -3,7 +3,7 @@
   variables:
     GIT_STRATEGY: none
   script:
-    - apt-get update && apt-get install -y gfortran
+    - apt-get update && apt-get install -y gfortran && apt-get install -y libgmp-dev
     - ./SCIP-*-Linux*.sh --skip-license
     - bin/scip -v
 

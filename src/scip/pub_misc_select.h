@@ -36,7 +36,8 @@
 #define __SCIP_PUB_MISC_SELECT_H__
 
 #include "scip/def.h"
-#include "type_misc.h"
+#include "scip/type_misc.h"
+#include "scip/intervalarith.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1384,6 +1385,32 @@ void SCIPselectIntIntPtr(
    int                   len                 /**< length of arrays */
    );
 
+/** partial sort of four joint arrays of ints/ints/pointers/pointers, sorted by first array in non-decreasing order around the \p k-th element,
+ *  see \ref SelectionAlgorithms for more information.
+ */
+SCIP_EXPORT
+void SCIPselectIntIntPtrPtr(
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   int                   k,                  /**< the index of the desired element, must be between 0 (search for maximum/minimum) and len - 1 */
+   int                   len                 /**< length of arrays */
+   );
+
+/** partial sort of five joint arrays of ints/ints/pointers/pointers/interval, sorted by first array in non-decreasing order around the \p k-th element,
+ *  see \ref SelectionAlgorithms for more information.
+ */
+SCIP_EXPORT
+void SCIPselectIntIntPtrPtrInterval(
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   SCIP_INTERVAL*        intervalarray,      /**< interval array where an element is to be deleted */
+   int                   k,                  /**< the index of the desired element, must be between 0 (search for maximum/minimum) and len - 1 */
+   int                   len                 /**< length of arrays */
+   );
 
 /** partial sort of three joint arrays of ints/ints/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
@@ -1393,6 +1420,37 @@ void SCIPselectWeightedIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   int                   len,                /**< length of arrays */
+   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   );
+
+/** partial sort of four joint arrays of ints/ints/pointers/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+ *  see \ref SelectionAlgorithms for more information.
+ */
+SCIP_EXPORT
+void SCIPselectWeightedIntIntPtrPtr(
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   int                   len,                /**< length of arrays */
+   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   );
+
+/** partial sort of five joint arrays of ints/ints/pointers/pointers/interval, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+ *  see \ref SelectionAlgorithms for more information.
+ */
+SCIP_EXPORT
+void SCIPselectWeightedIntIntPtrPtrInterval(
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   SCIP_INTERVAL*        intervalarray,      /**< interval array where an element is to be deleted */
    SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
    SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
    int                   len,                /**< length of arrays */

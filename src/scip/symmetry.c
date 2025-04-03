@@ -41,6 +41,21 @@
 #include "symmetry/type_symmetry.h"
 
 
+/** returns inferred type of variable used for symmetry handling */
+SCIP_VARTYPE SCIPgetSymInferredVarType(
+   SCIP_VAR*             var                 /**< variable whose inferred type has to be returned */
+   )
+{
+   assert(var != NULL);
+
+   if( SCIPvarIsBinary(var) )
+      return SCIP_VARTYPE_BINARY;
+   if( SCIPvarIsIntegral(var) )
+      return SCIP_VARTYPE_INTEGER;
+
+   return SCIP_VARTYPE_CONTINUOUS;
+}
+
 /** compute non-trivial orbits of symmetry group
  *
  *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains

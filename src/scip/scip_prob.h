@@ -47,6 +47,7 @@
 #include "scip/type_event.h"
 #include "scip/type_misc.h"
 #include "scip/type_prob.h"
+#include "scip/type_rational.h"
 #include "scip/type_result.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
@@ -522,6 +523,20 @@ SCIP_RETCODE SCIPaddOrigObjoffset(
    SCIP_Real             addval              /**< value to add to objective offset */
    );
 
+/** adds offset of objective function to original problem and to all existing solution in original space
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddOrigObjoffsetExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
+   );
+
 /** returns the objective offset of the original problem
  *
  *  @return the objective offset of the original problem
@@ -540,6 +555,29 @@ SCIP_RETCODE SCIPaddOrigObjoffset(
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetOrigObjoffset(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the exact objective offset of the original problem
+ *
+ *  DO NOT MODIFY THE POINTER RETURNED BY THIS METHOD
+ *
+ *  @return the exact objective offset of the original problem
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RATIONAL* SCIPgetOrigObjoffsetExact(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -757,6 +795,10 @@ SCIP_RETCODE SCIPaddPricedVar(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
+ *  @warning The variable is not deleted from the constraints when in SCIP_STAGE_PROBLEM.  In this stage, it is the
+ *           user's responsibility to ensure the variable has been removed from all constraints or the constraints
+ *           deleted.
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -768,7 +810,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPdelVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to delete */
-   SCIP_Bool*            deleted             /**< pointer to store whether variable was successfully marked to be deleted */
+   SCIP_Bool*            deleted             /**< pointer to store whether marking variable to be deleted was successful */
    );
 
 /** gets variables of the problem along with the numbers of different variable types; data may become invalid after
@@ -788,8 +830,6 @@ SCIP_RETCODE SCIPdelVar(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
- *
- *  @note Variables in the vars array are ordered: binaries first, then integers, implicit integers and continuous last.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetVarsData(
@@ -798,13 +838,25 @@ SCIP_RETCODE SCIPgetVarsData(
    int*                  nvars,              /**< pointer to store number of variables or NULL if not needed */
    int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
    int*                  nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
-   int*                  nimplvars,          /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*                  nimplvars,          /**< pointer to store number of implied integral vars or NULL if not needed */
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    );
 
 /** gets array with active problem variables
  *
  *  @return array with active problem variables
+ *
+ *  @note Variables in the array are grouped in following order:
+ *        - binaries
+ *        - integers
+ *        - implied integral binaries
+ *        - implied integral integers
+ *        - implied integral continuous
+ *        - continuous
+ *
+ *  @warning Modifying a variable status (e.g. with SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar())
+ *           or a variable type (e.g. with SCIPchgVarType() and SCIPchgVarImplType())
+ *           may invalidate or resort the data array.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -817,13 +869,6 @@ SCIP_RETCODE SCIPgetVarsData(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
- *
- *  @warning If your are using the methods which add or change bound of variables (e.g., SCIPchgVarType(),
- *           SCIPchgVarImplType(), SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar()), it can happen that
- *           the internal variable array (which is accessed via this method) gets resized and/or resorted. This can
- *           invalidate the data pointer which is returned by this method.
- *
- *  @note Variables in the array are ordered: binaries first, then integers, implicit integers and continuous last.
  */
 SCIP_EXPORT
 SCIP_VAR** SCIPgetVars(
@@ -855,6 +900,8 @@ int SCIPgetNVars(
  *
  *  @return the number of binary active problem variables
  *
+ *  @note This function does not count binary variables which are implied integral.
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -876,6 +923,8 @@ int SCIPgetNBinVars(
  *
  *  @return the number of integer active problem variables
  *
+ *  @note This function does not count integer variables which are implied integral.
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -893,9 +942,11 @@ int SCIPgetNIntVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of implicit integer active problem variables
+/** gets number of implied integral active problem variables
  *
- *  @return the number of implicit integer active problem variables
+ *  @return the number of implied integral active problem variables
+ *
+ *  @note This function counts binary, integer, and continuous variables which are implied integral.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -914,11 +965,9 @@ int SCIPgetNImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of enforced binary implicit integer active problem variables
+/** gets number of binary implied integral active problem variables
  *
- *  @return the number of enforced binary implicit integer active problem variables
- *
- *  @note This function does not count the binary variables that are implied integral
+ *  @return the number of binary implied integral active problem variables
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -937,11 +986,9 @@ int SCIPgetNBinImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of enforced integer implicit integer active problem variables
+/** gets number of integer implied integral active problem variables
  *
- *  @return the number of enforced integer implicit integer active problem variables
- *
- *  @note This function does not count the integer variables that are implied integral
+ *  @return the number of integer implied integral active problem variables
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -960,11 +1007,9 @@ int SCIPgetNIntImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of continuous implicit integer active problem variables
+/** gets number of continuous implied integral active problem variables
  *
- *  @return the number of continuous implicit integer active problem variables
- *
- *  @note This function does not count the continuous variables that are implied integral
+ *  @return the number of continuous implied integral active problem variables
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -986,6 +1031,8 @@ int SCIPgetNContImplVars(
 /** gets number of continuous active problem variables
  *
  *  @return the number of continuous active problem variables
+ *
+ *  @note This function does not count continuous variables which are implied integral.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -1096,15 +1143,25 @@ SCIP_RETCODE SCIPgetOrigVarsData(
    int*                  nvars,              /**< pointer to store number of variables or NULL if not needed */
    int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
    int*                  nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
-   int*                  nimplvars,          /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*                  nimplvars,          /**< pointer to store number of implied integral vars or NULL if not needed */
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    );
 
-/** gets array with original problem variables; data may become invalid after
- *  a call to SCIPchgVarType()
+/** gets array with original problem variables
  *
- *  @return an array with original problem variables; data may become invalid after
- *          a call to SCIPchgVarType()
+ *  @return array with original problem variables
+ *
+ *  @note Variables in the array are grouped in following order:
+ *        - binaries
+ *        - integers
+ *        - implied integral binaries
+ *        - implied integral integers
+ *        - implied integral continuous
+ *        - continuous
+ *
+ *  @warning Modifying the variable number (e.g. with SCIPaddVar() and SCIPdelVar())
+ *           or a variable type (e.g. with SCIPchgVarType() and SCIPchgVarImplType())
+ *           may invalidate or resort the data array.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -1152,6 +1209,8 @@ int SCIPgetNOrigVars(
  *
  *  @return the number of binary variables in the original problem
  *
+ *  @note This function does not count binary variables which are implied integral.
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -1175,6 +1234,8 @@ int SCIPgetNOrigBinVars(
  *
  *  @return the number of integer variables in the original problem
  *
+ *  @note This function does not count integer variables which are implied integral.
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -1194,9 +1255,11 @@ int SCIPgetNOrigIntVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of implicit integer variables in the original problem
+/** gets number of implied integral variables in the original problem
  *
- *  @return the number of implicit integer variables in the original problem
+ *  @return the number of implied integral variables in the original problem
+ *
+ *  @note This function counts binary, integer, and continuous variables which are implied integral.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -1217,9 +1280,80 @@ int SCIPgetNOrigImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets number of binary implied integral variables in the original problem
+ *
+ *  @return the number of binary implied integral variables in the original problem
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+int SCIPgetNOrigBinImplVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of integer implied integral variables in the original problem
+ *
+ *  @return the number of integer implied integral variables in the original problem
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+int SCIPgetNOrigIntImplVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of continuous implied integral variables in the original problem
+ *
+ *  @return the number of continuous implied integral variables in the original problem
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+int SCIPgetNOrigContImplVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets number of continuous variables in the original problem
  *
  *  @return the number of continuous variables in the original problem
+ *
+ *  @note This function does not count continuous variables which are implied integral.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -1292,9 +1426,9 @@ SCIP_RETCODE SCIPgetSolVarsData(
    int*                  nvars,              /**< pointer to store number of variables or NULL if not needed */
    int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
    int*                  nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
-   int*                  nbinimplvars,       /**< pointer to store number of implied binary vars or NULL if not needed */
-   int*                  nintimplvars,       /**< pointer to store number of implied integral vars or NULL if not needed */
-   int*                  ncontimplvars,      /**< pointer to store number of implied continuous vars or NULL if not needed */
+   int*                  nbinimplvars,       /**< pointer to store number of binary implied integral vars or NULL if not needed */
+   int*                  nintimplvars,       /**< pointer to store number of integer implied integral vars or NULL if not needed */
+   int*                  ncontimplvars,      /**< pointer to store number of continuous implied integral vars or NULL if not needed */
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    );
 

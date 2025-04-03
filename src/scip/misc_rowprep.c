@@ -1286,7 +1286,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-#if !1
+#ifdef SCIP_DISABLED_CODE
    /* compute final coefrange, if requested by caller */
    if( coefrange != NULL )
    {

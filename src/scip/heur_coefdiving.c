@@ -297,6 +297,9 @@ SCIP_RETCODE SCIPincludeHeurCoefdiving(
 
    assert(heur != NULL);
 
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
+
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyCoefdiving) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeCoefdiving) );

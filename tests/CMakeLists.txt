@@ -62,11 +62,15 @@ if( CRITERION_FOUND )
     # and the source directory of the parent SCIP directory to be able to include C-sources of SCIP
     # into our unittests
     #
-    include_directories(${CRITERION_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+    include_directories(BEFORE PUBLIC ${CRITERION_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 
     if(SANITIZE)
         find_package(Sanitizers)
     endif(SANITIZE)
+
+    if(TEST_EXACTSOLVE)
+        include_directories(${GMP_INCLUDE_DIRS})
+    endif()
 
     #
     # Prepare unit test executable for every source file
@@ -100,6 +104,9 @@ if( CRITERION_FOUND )
         # link the executable against both criterion and the SCIP library target
         #
         target_link_libraries(${testName} ${CRITERION_LIBRARIES} libscip m)
+        if(TEST_EXACTSOLVE) # TODO: Check why libscip does not pull in GMP automatically. There should be a CMake way.
+            target_link_libraries(${testName} gmp)
+        endif()
 
         if(SANITIZE)
             add_sanitizers(${testName})

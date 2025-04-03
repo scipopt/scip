@@ -104,6 +104,19 @@ lint:		$(MAINSRC)
 			$(FLAGS) -UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE $$i; \
 			done'
 
+.PHONY: pclint
+pclint:		$(MAINSRC)
+		-rm -f pclint.out
+ifeq ($(FILES),)
+		@$(SHELL) -ec 'echo "-> running pclint on $^..."; \
+			$(PCLINT) -I$(SCIPDIR) -I$(SCIPDIR)/pclint main-gcc.lnt +os\(pclint.out\) -u -zero -max_threads=$(MAXJOBS) \
+			$(USRFLAGS) $(FLAGS) -uNDEBUG -uSCIP_WITH_READLINE -uSCIP_ROUNDING_FE -D_BSD_SOURCE $^;'
+else
+		@$(SHELL) -ec  'echo "-> running pclint on files $(FILES) ..."; \
+			$(PCLINT) -I$(SCIPDIR) -I$(SCIPDIR)/pclint main-gcc.lnt +os\(pclint.out\) -u -zero -max_threads=$(MAXJOBS) \
+			$(USRFLAGS) $(FLAGS) -uNDEBUG -uSCIP_WITH_READLINE -uSCIP_ROUNDING_FE -D_BSD_SOURCE $(FILES);'
+endif
+
 .PHONY: scip
 scip:
 		@$(MAKE) -C $(SCIPDIR) libs $^

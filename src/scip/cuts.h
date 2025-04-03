@@ -70,7 +70,13 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    int*                  nchgcoefs           /**< number of changed coefficients */
    );
 
-/** create an empty the aggregation row */
+/** create an empty aggregation row
+ *
+ *  @note By default, this data structure uses quad precision via double-double arithmetic, i.e., it allocates a
+ *        SCIP_Real array of length two times SCIPgetNVars() for storing the coefficients.  In exact solving mode, we
+ *        cannot use quad precision because we need to control the ronding mode, hence only the first SCIPgetNVars()
+ *        entries are used.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -110,6 +116,19 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
    );
 
+/** add weighted row to aggregation row
+ * @note this method is the variant of SCIPaggrRowAddRow that is safe to use in exact solving mode
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaggrRowAddRowSafely(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   SCIP_ROW*             row,                /**< row to add to aggregation row */
+   SCIP_Real             weight,             /**< scale for adding given row to aggregation row */
+   int                   sidetype,           /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
+   SCIP_Bool*            success             /**< was the row added successfully */
+   );
+
 /** Removes a given variable @p var from position @p pos the aggregation row and updates the right-hand side according
  *  to sign of the coefficient, i.e., rhs -= coef * bound, where bound = lb if coef >= 0 and bound = ub, otherwise.
  *
@@ -129,6 +148,16 @@ void SCIPaggrRowCancelVarWithBound(
 /** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real             rhs,                /**< right-hand side of the artificial row */
+   SCIP_Real             scale               /**< scalar */
+   );
+
+/** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row
+ *  variant of SCIPaggrRowAddObjectiveFunction that is safe to use in exact mode */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaggrRowAddObjectiveFunctionSafely(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_Real             rhs,                /**< right-hand side of the artificial row */
@@ -162,6 +191,12 @@ SCIP_Real SCIPaggrRowCalcEfficacyNorm(
 /** clear all entries in the aggregation row but do not free the internal memory */
 SCIP_EXPORT
 void SCIPaggrRowClear(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** version for use in exact solving mode of SCIPaggrRowClear() */
+SCIP_EXPORT
+void SCIPaggrRowClearSafely(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
@@ -244,6 +279,16 @@ SCIP_Real SCIPaggrRowGetValue(
    QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
 
    return QUAD_TO_DBL(val);
+}
+
+/** gets the non-zero value for the given non-zero index */
+static INLINE
+SCIP_Real SCIPaggrRowGetValueSafely(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   int                   i                   /**< non-zero index; must be between 0 and SCIPaggrRowGetNNz(aggrrow) - 1 */
+   )
+{
+   return aggrrow->vals[aggrrow->inds[i]];
 }
 
 /** gets the non-zero value for the given problem index of a variable */

@@ -525,9 +525,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
       node = SCIPgetCurrentNode(scip);
 #endif
       currentcons = COLORconsGetActiveStoreGraphCons(scip);
-       
+
       start = TRUE;
-      for ( i = SCIPgetDepth(scip)%nnodes; (start || (i != SCIPgetDepth(scip)%nnodes)); i=((i+1)%nnodes) )
+      for ( i = SCIPgetDepth(scip)%nnodes; (start || (i != SCIPgetDepth(scip)%nnodes)); i=((i+1)%nnodes) ) /*lint !e2840*/
       {
          start = FALSE;
          node1 = COLORconsGetRepresentative(scip, i);

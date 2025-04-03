@@ -79,9 +79,10 @@ SLURMACCOUNT="${31}"
 PYTHON="${32}"
 EMPHBENCHMARK="${33}"
 CLOCKTYPE="${34}"
+WITHCERTIFICATE="${35}"
 
 # check if all variables defined (by checking the last one)
-if test -z "${CLOCKTYPE}"
+if test -z "${WITHCERTIFICATE}"
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = ${TSTNAME}"
@@ -118,6 +119,7 @@ then
     echo "PYTHON        = ${PYTHON}"
     echo "EMPHBENCHMARK = ${EMPHBENCHMARK}"
     echo "CLOCKTYPE     = ${CLOCKTYPE}"
+    echo "WITHCERTIFICATE = ${WITHCERTIFICATE}"
     exit 1;
 fi
 
@@ -222,7 +224,7 @@ do
                 # this may modify the EXECNAME environment variable
                 . ./"${CONFFILE}" "${INSTANCE}" "${SCIPPATH}" "${TMPFILE}" "${SETNAME}" "${SETFILE}" "${THREADS}" "${SETCUTOFF}" \
                             "${FEASTOL}" "${TIMELIMIT}" "${MEMLIMIT}" "${NODELIMIT}" "${LPS}" "${DISPFREQ}" "${REOPT}" "${OPTCOMMAND}" \
-                            "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}" "${CLOCKTYPE}"
+                            "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}" "${CLOCKTYPE}" "${WITHCERTIFICATE}"
 
                 JOBNAME="$(capitalize ${SOLVER})${SHORTPROBNAME}"
                 # additional environment variables needed by run.sh
@@ -238,6 +240,9 @@ do
                 export SETFILE
                 export TIMELIMIT
                 export EXECNAME
+                export VIPRCHECKNAME=viprchk
+                export VIPRCOMPNAME=viprcomp
+                export VIPRCOMPRESSNAME=viprttn
 
                 if test "${SLURMACCOUNT}" == "default"
                 then
@@ -260,7 +265,7 @@ do
                     if test "${CLUSTERQUEUE}" != "moskito" && test "${CLUSTERQUEUE}" != "prio"
                     then
                         # the space at the end is necessary
-                        export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
+                        export SRUN="srun --propagate=STACK --cpu_bind=cores ${SRUN_FLAGS} "
                     fi
 
                     if test "${WRITESETTINGS}" = "true"

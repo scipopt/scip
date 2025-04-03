@@ -25,6 +25,9 @@ Features
   generation of cut and setting up the subproblems.
 - adds objective types for Benders' decomposition; the choice is to sum the subproblems objectives (classical
   approach) or to use the maximum of the subproblems objectives
+- added decomposition kernel search (DKS) heuristic (disabled by default). This heuristic implements a kernel search framework and can be used
+  both as a construction heuristic as well as an improvement heuristic. In addition, existing decomposition information can be utilized by this heuristic.
+- symmetry detection does not treat implicit integer variables separately anymore, but computes symmetries based on the variable type inferred from variable bounds and implied integrality
 
 Performance improvements
 ------------------------
@@ -34,6 +37,7 @@ Performance improvements
 Examples and applications
 -------------------------
 
+- Add PBSolver application to solve pseudoboolean instances in OPB and WBO format while complying with PB competition rules
 - Coloring: new parameter branching/coloring/strategy to choose the least/most fractional variable for branching
 
 Interface changes
@@ -77,6 +81,8 @@ Interface changes
 - deprecated SCIPsubversion(), will be removed
 - SCIPvarCalcDistributionParameters(): argument impltype added (5th position)
 - SCIPpermuteProb(): argument permuteimplvars has been replaced by new arguments permutebinimplvars, permuteintimplvars, and permutecontimplvars
+- SCIPgetLPBranchCands(): implied integral variables with integrality constraints are included in nlpcands stored in lpcands at the back
+- SCIPgetNLPBranchCands(): implied integral variables with integrality constraints are included
 - SCIPgetSolVarsData(): argument nimplvars has been replaced by new arguments nbinimplvars, nintimplvars, and ncontimplvars
 - SCIPexprSetIntegrality(): set argument generalized from SCIP_Bool integral to SCIP_IMPLINTTYPE integrality (4th position)
 - Temporarily for SCIP 10 only: Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integral type SCIP_IMPLINTTYPE_WEAK instead
@@ -115,7 +121,8 @@ Interface changes
 - added SCIPcreateVarImpl() and SCIPcreateObjVarImpl(), which behave identically to SCIPcreateVar() and SCIPcreateObjVar(), respectively, but have an additional argument for the new implied integral type flag (8th position)
 - added SCIPchgVarImplType(), SCIPvarGetImplType(), SCIPvarIsImpliedIntegral() to control and query implied integrality
 - added SCIPvarIsNonimpliedIntegral() to query if a variable is integral but not implied integral
-- added SCIPgetNBinImplVars(), SCIPgetNIntImplVars(), SCIPgetNContImplVars() to query the number of implied integral variables of every type; note that SCIPgetNBinVars(), SCIPgetNIntVars(), and SCIPgetNContVars() no longer include the implied integral variables in their counts
+- added SCIPgetNOrigBinImplVars(), SCIPgetNOrigIntImplVars(), SCIPgetNOrigContImplVars() to query the number of implied integral variables of each type in original problem; note that SCIPgetNOrigBinVars(), SCIPgetNOrigIntVars(), and SCIPgetNOrigContVars() no longer include the implied integral variables in their counts
+- added SCIPgetNBinImplVars(), SCIPgetNIntImplVars(), SCIPgetNContImplVars() to query the number of implied integral variables of each type in current problem; note that SCIPgetNBinVars(), SCIPgetNIntVars(), and SCIPgetNContVars() no longer include the implied integral variables in their counts
 - added SCIPcolIsImpliedIntegral()
 - added SCIPvarsCountTypes() to determine the variable type count distribution for an array of variables
 - added SCIPeventGetOldImplType() and SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
@@ -145,6 +152,8 @@ Interface changes
 - heuristics/scheduler/heurtimelimit removed to avoid indeterministic behavior of scheduler heuristic, uses main time limit instead
 - removed parameters "constraints/orbitope/checkpporbitope", "constraints/orbitope/sepafullorbitope", "constraints/orbitope/forceconscopy", which became superfluous
 - removed reading/gmsreader/signpower
+- removed benders/default/numthreads, multi-threading support for Benders' decomposition has been temporarily disabled.
+- restricted range of parameter propagating/symmetry/sstleadervartype to [1,7]; its new default value is 6
 
 ### New parameters
 
@@ -163,6 +172,12 @@ Interface changes
 - new parameter "presolving/milp/maxedgessequential" defines the maximal amount of edges in the sequential clique merging graph
 - new parameter "presolving/milp/maxcliquesize" defines the maximal size of cliques considered for clique merging
 - new parameter "presolving/milp/maxgreedycalls" defines the maximal number of greedy max clique calls in a single thread
+- reading/opbreader/maxintsize to define the maximal intsize above which an OPB instance is rejected
+- new parameters "heuristics/dks/maxbucks", "heuristics/dks/kernelsizefactor", "heuristics/dks/addUseConss",
+  "heuristics/dks/linkbucksize", "heuristics/dks/translbkernel", "heuristics/dks/lesslockskernel", "heuristics/dks/usetransprob",
+  "heuristics/dks/buckmaxgap", "heuristics/dks/maxlinkscore", "heuristics/dks/maxbuckfrac", "heuristics/dks/maxnodes",
+  "heuristics/dks/usetwolevel", "heuristics/dks/usedecomp", "heuristics/dks/usebestsol", "heuristics/dks/redcostsort", "heuristics/dks/primalonly",
+  "heuristics/dks/redcostlogsort", "heuristics/dks/objcutoff", and "heuristics/dks/runbinprobsonly" to control heuristic decomposition kernel search
 
 ### Data structures
 
@@ -185,6 +200,12 @@ Build system
 - revised SANITIZE options: removed SANITIZE=full, added SANITIZE=thread, SANITIZE=address, and SANITIZE=memory to enable
   thread, address, and memory sanitizers, respectively, in addition to undefined behavior sanitizer;
   changed default to SANITIZE=false
+- added build flag MPFR (default: false) to link with the multiprecision floating-point library, needed when SoPlex is also
+  built with MPFR=true for precision boosting in rational solving mode
+- the symlink $(LIBDIR)/include/papilo should now point to the `src` subdirectory of a PaPILO repository or the headers directory
+  of a PaPILO installation without TBB; pointing to the directory of a PaPILO repository still works, but is deprecated
+- removed option to link TBB library, as this is not used by default when PaPILO has not been built via cmake
+  (use USRCXXFLAGS=-DPAPILO_TBB USRLDFLAGS=-ltbb to enable TBB for PaPILO)
 
 ### Cmake
 
@@ -202,12 +223,17 @@ Fixed bugs
 - fixed bug related to unreleased data for the Benders' decomposition framework. When reading an SMPS file and applying
   Benders' decomposition, data is created that was not correctly released. Also, data within the Benders' decomposition
   framework was not appropriately reset. The data is now released/reset as expected.
+- To fix a bug where duplicate cuts from different constraint handlers were not recognized, SCIPrealHash() was changed
+  to be stable around shortly representable numbers, and a numerical tolerance for comparing cutting plane efficacy for the aggregation
+  separator is introduced.
+- accept fractional continuous implied integral variables in heuristic completesol
 
 Miscellaneous
 -------------
 - We now use sassy as shipped with dejavu.
 
 - add objective offset instead of objective offset variable in cip reader
+- the solchecker tool is extended for rational values
 - updated ampl/mp to v4.0.0
 - removed 4th number in SCIP version; new format is major.minor.patch
 
@@ -226,6 +252,8 @@ Features
 
 Performance improvements
 ------------------------
+
+- extended SOC detection to simple bilinear constraints, e.g., x*y >= 1
 
 Examples and applications
 -------------------------
@@ -271,6 +299,13 @@ Fixed bugs
 - fixed reading mps files with short row and column names and some fixed-form mps files with spaces in row names
 - force local bounds to adjusted value when fixing variable
 - adds missing NULL check for Benders' subproblems in feasalt cut
+- apply objective scale to pseudoboolean non-linear terms
+- impose pseudoboolean cost bound without intermediate casting
+- flatten aggregation graph before finishing presolving to accelerate evaluating an empty solution
+- respect fixed resultants in binvarGetActiveProbindex() of branch_relpscost.c
+- drop fixed resultants when copying pseudoboolean constraint to avert segmentation fault
+- correct matrix entry when resolving aggregated variables in checkSystemGF2() of cons_xor.c
+- corrected symmetry detection graph of cons_and.c, cons_or.c, and cons_xor.c
 
 Build system
 ------------
@@ -280,7 +315,8 @@ Build system
 - allow to set HIGHS_DIR via -D flag as well
 - reenable building and testing of SCFLP example
 - fixed that compiler flags for sanitizers were not used for compiling objects of SCIP library
-- prioritize local includes in applications and examples to link the intended SCIP version to them
+- prioritize local includes for unittests, examples, and applications to link the intended SCIP version
+- fix detection of Gurobi 11 and 12 libs on Linux
 
 ### Makefile
 

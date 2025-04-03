@@ -173,7 +173,7 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type, SCIP_EX
    SCIP_CALL( SCIPevalExpr(scip, expr, sol2, 0) );
    values[1] = SCIPexprGetEvalValue(expr);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    SCIP_CALL( SCIPshowExpr(scip, expr) );
    fprintf(stderr, " simplifying!\n");
 #else
@@ -184,7 +184,7 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type, SCIP_EX
    SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
    cr_assert_not(infeasible);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    fprintf(stderr,"done simplifying!\n");
    printf("original\n");
    SCIP_CALL( SCIPprintExpr(scip, expr, 0) );

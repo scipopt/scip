@@ -94,6 +94,7 @@
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_setppc.h"
@@ -107,7 +108,9 @@
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/reader_opb.h"
+#include "scip/rational.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -134,6 +137,18 @@
 #define OPB_MAX_LINELEN        65536  /**< size of the line buffer for reading or writing */
 #define OPB_MAX_PUSHEDTOKENS   2
 #define OPB_INIT_COEFSSIZE     8192
+#define OPB_MAX_INTSIZE        -1     /**< maximum allowed "intsize" (i.e. the number of bits required to represent the
+                                       *   sum of absolute values of all integers that appear in a constraint or objective
+                                       *   function) or -1 for unlimited */
+
+/** OPB reader data */
+struct SCIP_ReaderData
+{
+   int                   maxintsize;                  /**< maximum allowed "intsize" (i.e., the number of bits required
+                                                       *   to represent the sum of absolute values of all integers that
+                                                       *   appear in a constraint or objective function) or -1 for
+                                                       *   unlimited */
+};
 
 /** Section in OPB File */
 enum OpbExpType
@@ -165,6 +180,7 @@ struct OpbInput
    int                   linenumber;
    int                   linepos;
    int                   linebufsize;
+   int                   intsize;
    SCIP_OBJSENSE         objsense;
    SCIP_Bool             eof;
    SCIP_Bool             haserror;
@@ -674,6 +690,10 @@ SCIP_RETCODE createVariable(
 
    SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
          initial, removable, NULL, NULL, NULL, NULL, NULL) );
+   if( SCIPisExact(scip) )
+   {
+      SCIP_CALL( SCIPaddVarExactData(scip, newvar, NULL, NULL, NULL) );
+   }
    SCIP_CALL( SCIPaddVar(scip, newvar) );
    *var = newvar;
 
@@ -1150,8 +1170,43 @@ SCIP_RETCODE setObjective(
    if( !hasError(opbinput) )
    {
       SCIP_VAR* var;
-      int v;
       char name[SCIP_MAXSTRLEN];
+      int v;
+
+#ifndef NDEBUG
+      /* check intsize validity for small int instances */
+      if( opbinput->intsize >= 0 && opbinput->intsize <= CHAR_BIT * (int)sizeof(unsigned long long) )
+      {
+         SCIP_Real summand = SCIPgetOrigObjoffset(scip);
+         summand = SCIPceil(scip, ABS(summand));
+         assert(summand <= (SCIP_Real)ULLONG_MAX);
+         unsigned long long presum;
+         unsigned long long intsum = (unsigned long long)summand;
+
+         for( v = 0; v < ncoefs; ++v )
+         {
+            summand = scale * coefs[v];
+            summand = SCIPceil(scip, ABS(summand));
+            assert(summand <= (SCIP_Real)ULLONG_MAX);
+            presum = intsum;
+            intsum += (unsigned long long)summand;
+            assert(intsum > presum);
+         }
+
+         for( v = 0; v < ntermcoefs; ++v )
+         {
+            summand = scale * termcoefs[v];
+            summand = SCIPceil(scip, ABS(summand));
+            assert(summand <= (SCIP_Real)ULLONG_MAX);
+            presum = intsum;
+            intsum += (unsigned long long)summand;
+            assert(intsum > presum);
+         }
+
+         intsum >>= opbinput->intsize;
+         assert(intsum == 0);
+      }
+#endif
 
       if( strcmp(sense, "max" ) == 0 )
          opbinput->objsense = SCIP_OBJSENSE_MAXIMIZE;
@@ -1159,6 +1214,12 @@ SCIP_RETCODE setObjective(
       /* handle non-linear terms by and-constraints */
       if( ntermcoefs > 0 )
       {
+         if( SCIPisExact(scip) )
+         {
+            SCIPerrorMessage("Non-linear objectives are not supported in exact solving mode.\n");
+            return SCIP_READERROR;
+         }
+
          SCIP_VAR** vars;
          int nvars;
          int t;
@@ -1178,14 +1239,8 @@ SCIP_RETCODE setObjective(
             /* @todo: reuse equivalent terms */
             /* create auxiliary variable */
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, ARTIFICIALVARNAMEPREFIX"obj_%d", t);
-            SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, termcoefs[t], SCIP_VARTYPE_BINARY,
-                  TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
-
-            /* @todo: check if it is better to change the branching priority for the artificial variables */
-#if 1
-            /* change branching priority of artificial variable to -1 */
-            SCIP_CALL( SCIPchgVarBranchPriority(scip, var, -1) );
-#endif
+            SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, 0.0, 1.0, scale * termcoefs[t],
+                  SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_STRONG, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
 
             /* add auxiliary variable to the problem */
             SCIP_CALL( SCIPaddVar(scip, var) );
@@ -1226,16 +1281,46 @@ SCIP_RETCODE setObjective(
          assert(linvars != NULL); /* for lint */
          assert(coefs != NULL);
 
-         if( SCIPvarIsNegated(linvars[v]) )
+         if( SCIPisExact(scip) )
          {
-            SCIP_VAR* negvar = SCIPvarGetNegationVar(linvars[v]);
+            SCIP_RATIONAL* obj;
 
-            SCIP_CALL( SCIPaddOrigObjoffset(scip, coefs[v]) );
-            SCIP_CALL( SCIPaddVarObj(scip, negvar, -scale * coefs[v]) );
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &obj) );
+
+            if( SCIPvarIsNegated(linvars[v]) )
+            {
+               SCIP_VAR* negvar = SCIPvarGetNegationVar(linvars[v]);
+
+               SCIPrationalSetReal(obj, coefs[v]);
+               SCIP_CALL( SCIPaddOrigObjoffsetExact(scip, obj) );
+
+               SCIPrationalMultReal(obj, obj, -scale);
+               SCIPrationalAdd(obj, obj, SCIPvarGetObjExact(negvar));
+               SCIP_CALL( SCIPchgVarObjExact(scip, negvar, obj) );
+            }
+            else
+            {
+               SCIPrationalSetReal(obj, coefs[v]);
+               SCIPrationalMultReal(obj, obj, scale);
+               SCIPrationalAdd(obj, obj, SCIPvarGetObjExact(linvars[v]));
+               SCIP_CALL( SCIPchgVarObjExact(scip, linvars[v], obj) );
+            }
+
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &obj);
          }
          else
          {
-            SCIP_CALL( SCIPaddVarObj(scip, linvars[v], scale * coefs[v]) );
+            if( SCIPvarIsNegated(linvars[v]) )
+            {
+               SCIP_VAR* negvar = SCIPvarGetNegationVar(linvars[v]);
+
+               SCIP_CALL( SCIPaddOrigObjoffset(scip, coefs[v]) );
+               SCIP_CALL( SCIPaddVarObj(scip, negvar, -scale * coefs[v]) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPaddVarObj(scip, linvars[v], scale * coefs[v]) );
+            }
          }
       }
    }
@@ -1313,7 +1398,7 @@ SCIP_RETCODE readConstraints(
          }
 
          /* set objective function  */
-         SCIP_CALL( setObjective(scip, opbinput, name, objscale, linvars, lincoefs, nlincoefs, terms, termcoefs, ntermvars, ntermcoefs) );
+         SCIP_CALL_TERMINATE( retcode, setObjective(scip, opbinput, name, objscale, linvars, lincoefs, nlincoefs, terms, termcoefs, ntermvars, ntermcoefs), TERMINATE );
       }
       else if( strcmp(name, "soft") == 0 )
       {
@@ -1393,8 +1478,41 @@ SCIP_RETCODE readConstraints(
    case OPB_SENSE_NOTHING:
    default:
       SCIPerrorMessage("invalid constraint sense <%d>\n", sense);
-      return SCIP_INVALIDDATA;
+      retcode = SCIP_INVALIDDATA;
+      goto TERMINATE;
    }
+
+#ifndef NDEBUG
+   /* check intsize validity for small int instances */
+   if( opbinput->intsize >= 0 && opbinput->intsize <= CHAR_BIT * (int)sizeof(unsigned long long) )
+   {
+      SCIP_Real summand = SCIPceil(scip, ABS(sidevalue));
+      assert(summand <= (SCIP_Real)ULLONG_MAX);
+      unsigned long long presum;
+      unsigned long long intsum = (unsigned long long)summand;
+
+      for( t = 0; t < nlincoefs; ++t )
+      {
+         summand = SCIPceil(scip, ABS(lincoefs[t]));
+         assert(summand <= (SCIP_Real)ULLONG_MAX);
+         presum = intsum;
+         intsum += (unsigned long long)summand;
+         assert(intsum > presum);
+      }
+
+      for( t = 0; t < ntermcoefs; ++t )
+      {
+         summand = SCIPceil(scip, ABS(termcoefs[t]));
+         assert(summand <= (SCIP_Real)ULLONG_MAX);
+         presum = intsum;
+         intsum += (unsigned long long)summand;
+         assert(intsum > presum);
+      }
+
+      intsum >>= opbinput->intsize;
+      assert(intsum == 0);
+   }
+#endif
 
    /* create and add the linear constraint */
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initialconss) );
@@ -1426,6 +1544,12 @@ SCIP_RETCODE readConstraints(
 
    if( ntermcoefs > 0 || issoftcons )
    {
+      if( SCIPisExact(scip) )
+      {
+         SCIPerrorMessage("Non-linear constraints are not supported in exact solving mode.\n");
+         retcode = SCIP_READERROR;
+         goto TERMINATE;
+      }
 #if GENCONSNAMES == TRUE
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean%d", opbinput->consnumber);
       ++(opbinput->consnumber);
@@ -1446,8 +1570,31 @@ SCIP_RETCODE readConstraints(
 #else
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "linear");
 #endif
-      retcode = SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs,
+      if( !SCIPisExact(scip) )
+      {
+         retcode = SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
+      }
+      else
+      {
+         SCIP_RATIONAL** lincoefsrat;
+         SCIP_RATIONAL* lhsrat;
+         SCIP_RATIONAL* rhsrat;
+
+         SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &lincoefsrat, nlincoefs) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhsrat) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhsrat) );
+         SCIPrationalSetReal(lhsrat, lhs);
+         SCIPrationalSetReal(rhsrat, rhs);
+         for( int i = 0; i < nlincoefs; ++i )
+            SCIPrationalSetReal(lincoefsrat[i], lincoefs[i]);
+         retcode = SCIPcreateConsExactLinear(scip, &cons, name, nlincoefs, linvars, lincoefsrat, lhsrat, rhsrat,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhsrat);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhsrat);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &lincoefsrat, nlincoefs);
+      }
+
       if( retcode != SCIP_OKAY )
          goto TERMINATE;
    }
@@ -1480,39 +1627,30 @@ SCIP_RETCODE readConstraints(
    return SCIP_OKAY;
 }
 
-/** tries to read the first comment line which usually contains information about the max size of "and" products */
+/** read the first comment line which usually contains information about (1) the max size of "and" products and (2) the
+ *  "intsize" which represents the number of bits required to represent the sum of the absolute values of all integers
+ *  that appear in any constraint or the objective */
 static
-SCIP_RETCODE getMaxAndConsDim(
+SCIP_RETCODE getCommentLineData(
    SCIP*                 scip,               /**< SCIP data structure */
    OPBINPUT*             opbinput,           /**< OPB reading data */
    SCIP_Real*            objscale,           /**< pointer to store objective scale */
    SCIP_Real*            objoffset           /**< pointer to store objective offset */
    )
 {
-   SCIP_Bool stop;
-   char* commentstart;
-   char* nproducts;
-   char* str;
-   int i;
-
    assert(scip != NULL);
    assert(opbinput != NULL);
    assert(objoffset != NULL);
 
-   stop = FALSE;
-   commentstart = NULL;
-   nproducts = NULL;
    *objscale = 1.0;
    *objoffset = 0.0;
    opbinput->linebuf[opbinput->linebufsize - 2] = '\0';
+   opbinput->intsize = -1;
 
-   do
+   while( SCIPfgets(opbinput->linebuf, opbinput->linebufsize, opbinput->file) != NULL )
    {
-      if( SCIPfgets(opbinput->linebuf, opbinput->linebufsize, opbinput->file) == NULL )
-      {
-         assert( SCIPfeof(opbinput->file) );
-         break;
-      }
+      char* commentstart;
+      char* str;
 
       /* if line is too long for our buffer reallocate buffer */
       while( opbinput->linebuf[opbinput->linebufsize - 2] != '\0' )
@@ -1529,70 +1667,80 @@ SCIP_RETCODE getMaxAndConsDim(
       }
       opbinput->linebuf[opbinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
-      /* read characters after comment symbol */
-      for( i = 0; commentchars[i] != '\0'; ++i )
+      /* locate comment character */
+      commentstart = strpbrk(opbinput->linebuf, commentchars);
+
+      /* no comment line */
+      if( commentstart == NULL )
+         break;
+
+#ifdef SCIP_DISABLED_CODE
+      /* search for "#product= xyz" in comment line, where xyz represents the number of and constraints */
+      str = strstr(opbinput->linebuf, "#product= ");
+      if( str != NULL )
       {
-         commentstart = strchr(opbinput->linebuf, commentchars[i]);
+         const char delimchars[] = " \t";
+         char* pos;
 
-         /* found a comment line */
-         if( commentstart != NULL )
+         str += strlen("#product= ");
+
+         pos = strtok(str, delimchars);
+
+         if( pos != NULL )
          {
-            /* search for "#product= xyz" in comment line, where xyz represents the number of and constraints */
-            nproducts = strstr(opbinput->linebuf, "#product= ");
-            if( nproducts != NULL )
+            SCIPdebugMsg(scip, "%d products supposed to be in file.\n", atoi(pos));
+         }
+
+         pos = strtok (NULL, delimchars);
+
+         if( pos != NULL && strcmp(pos, "sizeproduct=") == 0 )
+         {
+            pos = strtok (NULL, delimchars);
+            if( pos != NULL )
             {
-               const char delimchars[] = " \t";
-               char* pos;
-
-               nproducts += strlen("#product= ");
-
-               pos = strtok(nproducts, delimchars);
-
-               if( pos != NULL )
-               {
-                  SCIPdebugMsg(scip, "%d products supposed to be in file.\n", atoi(pos));
-               }
-
-               pos = strtok (NULL, delimchars);
-
-               if( pos != NULL && strcmp(pos, "sizeproduct=") == 0 )
-               {
-                  pos = strtok (NULL, delimchars);
-                  if( pos != NULL )
-                  {
-                     SCIPdebugMsg(scip, "sizeproducts = %d\n", atoi(pos));
-                  }
-               }
-
-               stop = TRUE;
+               SCIPdebugMsg(scip, "sizeproducts = %d\n", atoi(pos));
             }
-
-            /* search for "Obj. scale       : <number>" in comment line */
-            str = strstr(opbinput->linebuf, "Obj. scale       : ");
-            if( str != NULL )
-            {
-               str += strlen("Obj. scale       : ");
-               *objscale = atof(str);
-               break;
-            }
-
-            /* search for "Obj. offset      : <number>" in comment line */
-            str = strstr(opbinput->linebuf, "Obj. offset      : ");
-            if( str != NULL )
-            {
-               str += strlen("Obj. offset      : ");
-               *objoffset = atof(str);
-               break;
-            }
-
-            /* make sure that comment vanishes */
-            *commentstart = '\0';
-
-            break;
          }
       }
+#endif
+
+      /* search for "intsize= xyz" in comment line */
+      str = strstr(opbinput->linebuf, "intsize= ");
+      if( str != NULL )
+      {
+         const char delimchars[] = " \t";
+         char* pos;
+
+         str += strlen("intsize= ");
+
+         pos = strtok(str, delimchars);
+
+         if( pos != NULL )
+         {
+            opbinput->intsize = atoi(pos);
+            SCIPdebugMsg(scip, "number of bits required to represent sum of the absolute values of all integers appearing in a constraint or objective function = %d\n", opbinput->intsize);
+         }
+      }
+
+      /* search for "Obj. scale       : <number>" in comment line */
+      str = strstr(opbinput->linebuf, "Obj. scale       : ");
+      if( str != NULL )
+      {
+         str += strlen("Obj. scale       : ");
+         *objscale = atof(str);
+      }
+
+      /* search for "Obj. offset      : <number>" in comment line */
+      str = strstr(opbinput->linebuf, "Obj. offset      : ");
+      if( str != NULL )
+      {
+         str += strlen("Obj. offset      : ");
+         *objoffset = atof(str);
+      }
+
+      /* make sure that comment vanishes */
+      *commentstart = '\0';
    }
-   while(commentstart != NULL && !stop);
 
    return SCIP_OKAY;
 }
@@ -1601,16 +1749,19 @@ SCIP_RETCODE getMaxAndConsDim(
 static
 SCIP_RETCODE readOPBFile(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< the file reader itself */
    OPBINPUT*             opbinput,           /**< OPB reading data */
    const char*           filename            /**< name of the input file */
    )
 {
+   SCIP_READERDATA* readerdata = SCIPreaderGetData(reader);
    SCIP_Real objscale;
    SCIP_Real objoffset;
    int nNonlinearConss;
    int i;
 
    assert(scip != NULL);
+   assert(readerdata != NULL);
    assert(opbinput != NULL);
 
    /* open file */
@@ -1626,8 +1777,14 @@ SCIP_RETCODE readOPBFile(
     * "opbinput.andconss"
     */
 
-   /* tries to read the first comment line which usually contains information about the max size of "and" products */
-   SCIP_CALL( getMaxAndConsDim(scip, opbinput, &objscale, &objoffset) );
+   /* read the first comment line which contains information about size of products and coefficients */
+   SCIP_CALL( getCommentLineData(scip, opbinput, &objscale, &objoffset) );
+
+   if( readerdata->maxintsize >= 0 && opbinput->intsize > readerdata->maxintsize )
+   {
+      SCIPinfoMessage(scip, NULL, "Intsize %d exceeds %d maximum.\n", opbinput->intsize, readerdata->maxintsize);
+      return SCIP_INVALIDDATA;
+   }
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -1651,13 +1808,13 @@ SCIP_RETCODE readOPBFile(
    /* if we read a wbo file we need to make sure that the top cost won't be exceeded */
    if( opbinput->wbo )
    {
-      SCIP_VAR** topcostvars;
-      SCIP_Real* topcosts;
       SCIP_VAR** vars;
+      SCIP_VAR** topcostvars;
+      SCIP_CONS* topcostcons;
+      SCIP_Real* topcosts;
+      SCIP_Real topcostrhs;
       int nvars;
       int ntopcostvars;
-      SCIP_Longint topcostrhs;
-      SCIP_CONS* topcostcons;
 
       nvars = SCIPgetNVars(scip);
       vars = SCIPgetVars(scip);
@@ -1668,20 +1825,40 @@ SCIP_RETCODE readOPBFile(
 
       ntopcostvars = 0;
       for( i = nvars - 1; i >= 0; --i )
+      {
          if( !SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
          {
             topcostvars[ntopcostvars] = vars[i];
             topcosts[ntopcostvars] = SCIPvarGetObj(vars[i]);
             ++ntopcostvars;
          }
+      }
+      topcostrhs = SCIPceil(scip, opbinput->topcost - 1.0);
 
-      if( SCIPisIntegral(scip, opbinput->topcost) )
-         topcostrhs = (SCIP_Longint) SCIPfloor(scip, opbinput->topcost - 1);
+      if( !SCIPisExact(scip) )
+      {
+         SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcosts,
+               -SCIPinfinity(scip), topcostrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      }
       else
-         topcostrhs = (SCIP_Longint) SCIPfloor(scip, opbinput->topcost);
+      {
+         SCIP_RATIONAL** topcostsrat;
+         SCIP_RATIONAL* lhs;
+         SCIP_RATIONAL* rhs;
 
-      SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcosts, -SCIPinfinity(scip),
-            (SCIP_Real) topcostrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
+         SCIPrationalSetNegInfinity(lhs);
+         SCIPrationalSetReal(rhs, topcostrhs);
+         for( int j = 0; j < ntopcostvars; ++j )
+            SCIPrationalSetReal(topcostsrat[j], topcosts[j]);
+         SCIP_CALL( SCIPcreateConsExactLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcostsrat, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhs);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars);
+      }
+
       SCIP_CALL( SCIPaddCons(scip, topcostcons) );
       SCIPdebugPrintCons(scip, topcostcons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &topcostcons) );
@@ -3915,6 +4092,9 @@ SCIP_RETCODE SCIPreadOpb(
 
    assert(scip != NULL);  /* for lint */
    assert(reader != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    /* initialize OPB input data (use block memory because order can change during execution) */
    opbinput.file = NULL;
@@ -3945,7 +4125,7 @@ SCIP_RETCODE SCIPreadOpb(
 #endif
 
    /* read the file */
-   retcode = readOPBFile(scip, &opbinput, filename);
+   retcode = readOPBFile(scip, reader, &opbinput, filename);
 
    /* free dynamically allocated memory */
    for( i = OPB_MAX_PUSHEDTOKENS - 1; i >= 0; --i )
@@ -4174,6 +4354,20 @@ SCIP_DECL_READERCOPY(readerCopyOpb)
 }
 
 
+/** destructor of reader to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_READERFREE(readerFreeOpb)
+{
+   SCIP_READERDATA* readerdata;
+
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   readerdata = SCIPreaderGetData(reader);
+   SCIPfreeBlockMemory(scip, &readerdata);
+
+   return SCIP_OKAY;
+}
+
+
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadOpb)
@@ -4205,13 +4399,21 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
 
+   /* create reader data */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
+
    /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyOpb) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeOpb) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadOpb) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteOpb) );
 
@@ -4222,6 +4424,10 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/" READER_NAME "/multisymbol", "use '*' between coefficients and variables by writing to problem?",
          NULL, TRUE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "reading/" READER_NAME "/maxintsize", "maximum allowed 'intsize' (i.e. the number of "
+         "bits required to represent the sum of absolute values of all integers that appear in a constraint or "
+         "objective function) or -1 for unlimited",
+         &readerdata->maxintsize, TRUE, OPB_MAX_INTSIZE, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

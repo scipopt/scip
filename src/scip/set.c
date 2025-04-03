@@ -58,6 +58,7 @@
 #include "scip/nodesel.h"
 #include "scip/presol.h"
 #include "scip/pricer.h"
+#include "scip/rational.h"
 #include "scip/reader.h"
 #include "scip/relax.h"
 #include "scip/sepa.h"
@@ -298,7 +299,6 @@
 #define SCIP_DEFAULT_MISC_USEVARTABLE      TRUE /**< should a hashtable be used to map from variable names to variables? */
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
-#define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
 #define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reset if the transformed problem is
                                                  *   freed otherwise the statistics get reset after original problem is
                                                  *   freed (in case of Benders' decomposition this parameter should be set
@@ -517,6 +517,25 @@
 #define SCIP_DEFAULT_VISUAL_DISPLB        FALSE /**< should lower bound information be visualized? */
 #define SCIP_DEFAULT_VISUAL_OBJEXTERN      TRUE /**< should be output the external value of the objective? */
 
+/* exact SCIP parameters */
+#define SCIP_DEFAULT_EXACT_ENABLE         FALSE /**< should the problem be solved exactly (without numerical tolerances)? */
+#define SCIP_DEFAULT_EXACT_IMPROVINGSOLS   TRUE /**< should only exact solutions be checked which improve the primal bound? */
+#define SCIP_DEFAULT_EXACT_SAFEDBMETHOD     'a' /**< method for computing safe dual bounds
+                                                 *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
+#define SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY 1 /**< frequency at which safe dual bounding method is interleaved with exact LP
+                                                 *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
+#define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION 1 /**< strategy for dual column selection in project-and-shift to compute interior point
+                                                 *   (0: no sel, 1: active rows of inexact primal LP, 2: active rows of exact primal LP) */
+#define SCIP_DEFAULT_EXACT_LPINFO         FALSE /**< should the exact LP solver display status messages? */
+#define SCIP_DEFAULT_EXACT_ALLOWNEGSLACK   TRUE /**< should negative slack variables be used for gomory cuts in exact solving mode? */
+#define SCIP_DEFAULT_CUTMAXDENOM        131072L /**< maximal denominator in cut coefficients, leading to slightly weaker (default is 2^17)
+                                                 *   but numerically better cuts (0: disabled) */
+#define SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL 10000L /**< maximal absolute bound value for wich cut coefficient should
+                                                 *   be approximated with bounded denominator (0: no restriction) */
+
+/* certificate settings */
+static const char SCIP_DEFAULT_CERTIFICATE_FILENAME[2] = {'-', '\0'}; /**< name of the certificate file, or "-" if no output should be created */
+#define SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE SCIP_MEM_NOLIMIT /**< maximum size of the certificate file in MB (stop printing when reached) */
 
 /* Reading */
 
@@ -653,6 +672,7 @@ SCIP_DECL_PARAMCHGD(paramChgdInfinity)
    SCIP_Real infinity;
 
    infinity = SCIPparamGetReal(param);
+   SCIPrationalChgInfinity(infinity);
 
    /* Check that infinity value of LP-solver is at least as large as the one used in SCIP. This is necessary, because we
     * transfer SCIP infinity values to the ones by the LPI, but not the converse. */
@@ -729,7 +749,7 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
    if( retcode == SCIP_INVALIDCALL )
       return SCIP_PARAMETERWRONGVAL;
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** information method for a parameter change of usesymmetry */
@@ -750,6 +770,26 @@ SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
 
    return SCIP_OKAY;
 }
+
+#ifdef SCIP_WITH_EXACTSOLVE
+/** information method for a parameter change of exact solving mode */
+static
+SCIP_DECL_PARAMCHGD(paramChgdExactSolve)
+{  /*lint --e{715}*/
+   SCIP_RETCODE retcode;
+
+   assert( scip != NULL );
+   assert( param != NULL );
+
+   retcode = SCIPenableExactSolving(scip, SCIPparamGetBool(param));
+
+   /* an appropriate error message is already printed in the above method */
+   if( retcode == SCIP_INVALIDCALL )
+      return SCIP_PARAMETERWRONGVAL;
+
+   return retcode;
+}
+#endif
 
 /** set parameters for reoptimization */
 SCIP_RETCODE SCIPsetSetReoptimizationParams(
@@ -1271,6 +1311,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->extcodessize = 0;
    (*set)->visual_vbcfilename = NULL;
    (*set)->visual_bakfilename = NULL;
+   (*set)->certificate_filename = NULL;
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
    (*set)->num_relaxfeastol = SCIP_INVALID;
@@ -2033,22 +2074,11 @@ SCIP_RETCODE SCIPsetCreate(
          "should smaller hashtables be used? yields better performance for small problems with about 100 variables",
          &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
-#if 0 /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "misc/exactsolve",
-         "should the problem be solved exactly (with proven dual bounds)?",
-         &(*set)->misc_exactsolve, FALSE, SCIP_DEFAULT_MISC_EXACTSOLVE,
-         NULL, NULL) );
-#else
-   (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
-#endif
-
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/resetstat",
          "should the statistics be reset if the transformed problem is freed (in case of a Benders' decomposition this parameter should be set to FALSE)",
          &(*set)->misc_resetstat, FALSE, SCIP_DEFAULT_MISC_RESETSTAT,
          NULL, NULL) );
-
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/improvingsols",
          "should only solutions be checked which improve the primal bound",
@@ -2780,6 +2810,79 @@ SCIP_RETCODE SCIPsetCreate(
          "should be output the external value of the objective?",
          &(*set)->visual_objextern, FALSE, SCIP_DEFAULT_VISUAL_OBJEXTERN,
          NULL, NULL) );
+
+#ifdef SCIP_WITH_EXACTSOLVE
+   /* exact SCIP parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "exact/enable",
+         "should the problem be solved exactly (without numerical tolerances)?",
+         &(*set)->exact_enable, FALSE, SCIP_DEFAULT_EXACT_ENABLE,
+         paramChgdExactSolve, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "exact/improvingsols",
+         "should only exact solutions be checked which improve the primal bound?",
+         &(*set)->exact_improvingsols, TRUE, SCIP_DEFAULT_EXACT_IMPROVINGSOLS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
+         "exact/safedbmethod",
+         "method for computing safe dual bounds ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic)",
+         &(*set)->exact_safedbmethod, FALSE, SCIP_DEFAULT_EXACT_SAFEDBMETHOD, "npea",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "exact/psdualcolselection",
+         "strategy for dual column selection in project-and-shift to compute interior point (0: no sel, 1: active rows of inexact primal LP, 2: active rows of exact primal LP)",
+         &(*set)->exact_psdualcolselection, TRUE, SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION, 0, 2, NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "exact/interleavedbfreq",
+         "strategy to interleave safe dual bounding with exact LP solve (0: never, 1: only close to cutoff bound, 2: only at depth lvl 4,8,16,..., 3: close to cutoff bound OR at depth lvl 4,8,16,...)",
+         &(*set)->exact_interleavestrategy, FALSE, SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY, 0, 3, NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "exact/lpinfo",
+         "should the exact LP solver display status messages?",
+         &(*set)->exact_lpinfo, FALSE, SCIP_DEFAULT_EXACT_LPINFO,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "exact/allownegslack",
+         "should negative slack variables be used for gomory cuts in exact solving mode?",
+         &(*set)->exact_allownegslack, FALSE, SCIP_DEFAULT_EXACT_ALLOWNEGSLACK,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "exact/cutmaxdenom",
+         "maximal denominator in cut coefficients, leading to slightly weaker but numerically better cuts (0: disabled)",
+         &(*set)->exact_cutmaxdenom, FALSE, SCIP_DEFAULT_CUTMAXDENOM, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "exact/cutapproxmaxboundval",
+         "maximal absolute bound value for wich cut coefficient should be approximated with bounded denominator (0: no restriction)",
+         &(*set)->exact_cutapproxmaxboundval, FALSE, SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   /* certificate settings */
+   SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
+         "certificate/filename",
+         "name of the certificate file, or \"-\" if no output should be created",
+         &(*set)->certificate_filename, FALSE, SCIP_DEFAULT_CERTIFICATE_FILENAME,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "certificate/maxfilesize",
+         "maximum size of the certificate file in MB (stop printing when reached)",
+         &(*set)->certificate_maxfilesize, FALSE, (SCIP_Real)SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE, 0.0, (SCIP_Real)SCIP_MEM_NOLIMIT,
+         NULL, NULL) );
+#else
+   /* if SCIP is built without support for exact solving, we initialize the values of the exact parameters, but do not
+    * display the parameters to the SCIP user
+    */
+   (*set)->exact_enable = SCIP_DEFAULT_EXACT_ENABLE;
+   assert((*set)->exact_enable == FALSE);
+   (*set)->exact_improvingsols = SCIP_DEFAULT_EXACT_IMPROVINGSOLS;
+   (*set)->exact_safedbmethod = SCIP_DEFAULT_EXACT_SAFEDBMETHOD;
+   (*set)->exact_psdualcolselection = SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION;
+   (*set)->exact_interleavestrategy = SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY;
+   (*set)->exact_lpinfo = SCIP_DEFAULT_EXACT_LPINFO;
+   (*set)->exact_allownegslack = SCIP_DEFAULT_EXACT_ALLOWNEGSLACK;
+   (*set)->exact_cutmaxdenom = SCIP_DEFAULT_CUTMAXDENOM;
+   (*set)->exact_cutapproxmaxboundval = SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL;
+   (*set)->certificate_filename = (char*)SCIP_DEFAULT_CERTIFICATE_FILENAME;
+   (*set)->certificate_maxfilesize = (SCIP_Real)SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE;
+#endif
 
    /* Reading parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
