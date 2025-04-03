@@ -810,11 +810,6 @@ SCIP_RETCODE matrixCreate(
                   nmatrixrows += 4;
                   nnonzstmp += 6;
                }
-               else
-               {
-                  /* @todo: treat xor constraint without integer variable and more than three variables nonlinear */
-                  return SCIP_OKAY;
-               }
             }
          }
          else
@@ -1612,7 +1607,8 @@ SCIP_RETCODE findImpliedIntegers(
    int*                  nchgvartypes        /**< Pointer to count the number of changed variable types */
    )
 {
-   SCIP_Bool runintdetection = presoldata->convertintegers && SCIPgetNVars(scip) != SCIPgetNContVars(scip);
+   SCIP_Bool runintdetection = presoldata->convertintegers && SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) >= 1;
+
    /* TODO: some checks to prevent expensive memory initialization if not necessary (e.g. there must be some candidates) */
    SCIP_NETMATDEC* dec = NULL;
    SCIP_CALL( SCIPnetmatdecCreate(SCIPblkmem(scip), &dec, comp->nmatrixrows, comp->nmatrixcols) );
