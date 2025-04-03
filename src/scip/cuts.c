@@ -2949,7 +2949,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       SCIPintervalSetRoundingModeDownwards();
       sideval = userow->lhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafe() */
+      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafely() */
       /* row is integral? round left hand side up */
       if( userow->integral )
          sideval = ceil(sideval)
@@ -2960,7 +2960,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       SCIPintervalSetRoundingModeUpwards();
       sideval = userow->rhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafe() */
+      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafely() */
       /* row is integral? round right hand side down */
       if( userow->integral )
          sideval = floor(sideval);
@@ -3430,7 +3430,7 @@ SCIP_RETCODE addOneRowSafely(
 
       sideval = userow->lhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafe() */
+      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafely() */
       /* row is integral? round left hand side up */
       if( userow->integral )
          sideval = ceil(sideval);
@@ -3448,7 +3448,7 @@ SCIP_RETCODE addOneRowSafely(
 
       sideval = userow->rhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafe() */
+      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafely() */
       /* row is integral? round right hand side down */
       if( userow->integral )
          sideval = floor(sideval);
@@ -6926,7 +6926,7 @@ SCIP_RETCODE cutsSubstituteMIR(
       }
 
       /* if the coefficient was reduced to zero, ignore the slack variable */
-      if( EPSZ(QUAD_TO_DBL(cutar), QUAD_EPSILON) && (!SCIPisExact(scip) || (QUAD_TO_DBL(cutar) == 0)) )
+      if( EPSZ(QUAD_TO_DBL(cutar), QUAD_EPSILON) )
          continue;
 
       /* depending on the slack's sign, we have
