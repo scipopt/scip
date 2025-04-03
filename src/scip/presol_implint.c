@@ -44,6 +44,7 @@
 
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_mem.h"
@@ -2036,7 +2037,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
 
    /* TODO: re-check these conditions again */
    /* Disable implicit integer detection if we are probing or in NLP context */
-   if( ( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING ) || SCIPinProbing(scip) || SCIPisNLPEnabled(scip) )
+   if( ( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING ) || SCIPinProbing(scip) || SCIPisNLPEnabled(scip) || SCIPisExact(scip) )
    {
       return SCIP_OKAY;
    }
