@@ -5640,7 +5640,7 @@ SCIP_RETCODE cutsTransformMIR(
       i = 0;
       while( i < data->secnnz[s] )
       {
-         int index = data->ncutinds;
+         int cutindex = data->ncutinds;
          int v = indices[i];
 
          /* due to variable bound usage, cancellation may have occurred */
@@ -5657,11 +5657,11 @@ SCIP_RETCODE cutsTransformMIR(
          }
 
          SCIP_CALL( determineBestBounds(scip, data->vars[v], sol, data, boundswitch, usevbds, allowlocal, fixintegralrhs,
-               ignoresol, boundsfortrans, boundtypesfortrans,
-               bestlbs + index, bestubs + index, bestlbtypes + index, bestubtypes + index,
-               selectedbounds + index, freevariable) );
+                                        ignoresol, boundsfortrans, boundtypesfortrans,
+                                        bestlbs + cutindex, bestubs + cutindex, bestlbtypes + cutindex, bestubtypes + cutindex,
+                                        selectedbounds + cutindex, freevariable) );
 
-         data->cutinds[index] = v;
+         data->cutinds[cutindex] = v;
          ++data->ncutinds;
 
          ++i;
@@ -12509,7 +12509,7 @@ SCIP_RETCODE cutsTransformStrongCG(
       while( i < data->secnnz[s] )
       {
          SCIP_Real QUAD(coef);
-         int index = data->ncutinds;
+         int cutindex = data->ncutinds;
          int v = indices[i];
 
          /* due to variable bound usage, cancellation may have occurred */
@@ -12533,17 +12533,17 @@ SCIP_RETCODE cutsTransformStrongCG(
                SCIP_Real simplelb;
                /* find closest lower bound in standard lower bound or variable lower bound for continuous variable so that it will have a positive coefficient */
                SCIP_CALL( findMIRBestLb(scip, data->vars[v], sol, data, usevbds, allowlocal,
-                     bestlbs + index, &simplelb, bestlbtypes + index) );
+                                        bestlbs + cutindex, &simplelb, bestlbtypes + cutindex) );
 
                /* cannot create transformation for strongcg cut */
-               if( SCIPisInfinity(scip, -bestlbs[index]) )
+               if( SCIPisInfinity(scip, -bestlbs[cutindex]) )
                {
                   *freevariable = TRUE;
                   goto TERMINATE;
                }
 
-               varsign[index] = +1;
-               selectedbounds[index] = SCIP_BOUNDTYPE_LOWER;
+               varsign[cutindex] = +1;
+               selectedbounds[cutindex] = SCIP_BOUNDTYPE_LOWER;
             }
             else
             {
@@ -12552,17 +12552,17 @@ SCIP_RETCODE cutsTransformStrongCG(
 
                /* find closest upper bound in standard upper bound or variable upper bound for continuous variable so that it will have a positive coefficient */
                SCIP_CALL( findMIRBestUb(scip, data->vars[v], sol, data, usevbds, allowlocal,
-                     bestubs + index, &simpleub, bestubtypes + index) );
+                                        bestubs + cutindex, &simpleub, bestubtypes + cutindex) );
 
                /* cannot create transformation for strongcg cut */
-               if( SCIPisInfinity(scip, bestubs[index]) )
+               if( SCIPisInfinity(scip, bestubs[cutindex]) )
                {
                   *freevariable = TRUE;
                   goto TERMINATE;
                }
 
-               varsign[index] = -1;
-               selectedbounds[index] = SCIP_BOUNDTYPE_UPPER;
+               varsign[cutindex] = -1;
+               selectedbounds[cutindex] = SCIP_BOUNDTYPE_UPPER;
             }
          }
          else if( data->isimplint[s] )
@@ -12577,14 +12577,14 @@ SCIP_RETCODE cutsTransformStrongCG(
 
             /* find closest lower bound in standard lower bound or variable lower bound for continuous variable so that it will have a positive coefficient */
             SCIP_CALL( findMIRBestLb(scip, data->vars[v], sol, data, usevbds, allowlocal,
-                  bestlbs + index, &simplelb, bestlbtypes + index) );
+                                     bestlbs + cutindex, &simplelb, bestlbtypes + cutindex) );
 
             /* find closest upper bound in standard upper bound or variable upper bound for continuous variable so that it will have a positive coefficient */
             SCIP_CALL( findMIRBestUb(scip, data->vars[v], sol, data, usevbds, allowlocal,
-                  bestubs + index, &simpleub, bestubtypes + index) );
+                                     bestubs + cutindex, &simpleub, bestubtypes + cutindex) );
 
-            lowerinf = SCIPisInfinity(scip, -bestlbs[index]);
-            upperinf = SCIPisInfinity(scip, bestubs[index]);
+            lowerinf = SCIPisInfinity(scip, -bestlbs[cutindex]);
+            upperinf = SCIPisInfinity(scip, bestubs[cutindex]);
             positive = QUAD_TO_DBL(coef) > 0.0;
 
             if( (lowerinf && upperinf) )
@@ -12599,27 +12599,27 @@ SCIP_RETCODE cutsTransformStrongCG(
             /* preferably, choose bound that makes value positive */
             if( (positive && lowerinf) || (!positive && !upperinf) )
             {
-               varsign[index] = -1;
-               selectedbounds[index] = SCIP_BOUNDTYPE_UPPER;
+               varsign[cutindex] = -1;
+               selectedbounds[cutindex] = SCIP_BOUNDTYPE_UPPER;
             }
             else
             {
-               varsign[index] = +1;
-               selectedbounds[index] = SCIP_BOUNDTYPE_LOWER;
+               varsign[cutindex] = +1;
+               selectedbounds[cutindex] = SCIP_BOUNDTYPE_LOWER;
             }
          }
          else
          {
             /* For explicit integers, we have no restrictions. */
             SCIP_CALL( determineBestBounds(scip, data->vars[v], sol, data, boundswitch, usevbds, allowlocal, FALSE, FALSE,
-                  NULL, NULL, bestlbs + index, bestubs + index,
-                  bestlbtypes + index, bestubtypes + index, selectedbounds + index, freevariable) );
+                                           NULL, NULL, bestlbs + cutindex, bestubs + cutindex,
+                                           bestlbtypes + cutindex, bestubtypes + cutindex, selectedbounds + cutindex, freevariable) );
 
             if( *freevariable)
                goto TERMINATE;
          }
 
-         data->cutinds[index] = v;
+         data->cutinds[cutindex] = v;
          ++data->ncutinds;
 
          ++i;
