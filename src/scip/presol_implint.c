@@ -2041,7 +2041,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
 
    /* TODO: re-check these conditions again */
    /* Disable implicit integer detection if we are probing or in NLP context */
-   if( ( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING ) || SCIPinProbing(scip) || SCIPisNLPEnabled(scip) || SCIPisExact(scip) )
+   if( ( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING ) || SCIPinProbing(scip) || SCIPisNLPEnabled(scip) )
    {
       return SCIP_OKAY;
    }
