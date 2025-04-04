@@ -45,23 +45,9 @@
 #include <string>
 #include <vector>
 
-/* undefine CMAKE_BUILD_TYPE in case it conflicts with HiGHS */
-#ifdef CMAKE_BUILD_TYPE
-#define SCIP_CMAKE_BUILD_TYPE (CMAKE_BUILD_TYPE)
-#undef CMAKE_BUILD_TYPE
-#endif
-
-
 #include <Highs.h>
 
 #include <lp_data/HighsLpUtils.h>
-
-/* reset CMAKE_BUILD_TYPE to its original SCIP value */
-#undef CMAKE_BUILD_TYPE
-#ifdef SCIP_CMAKE_BUILD_TYPE
-#define CMAKE_BUILD_TYPE (SCIP_CMAKE_BUILD_TYPE)
-#undef SCIP_CMAKE_BUILD_TYPE
-#endif
 
 #include "lpi/lpi.h"
 #include "scip/bitencode.h"
