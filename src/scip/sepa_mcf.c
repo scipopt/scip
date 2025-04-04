@@ -108,7 +108,8 @@
 /* fixed parameters */
 #define BOUNDSWITCH                         0.5
 #define POSTPROCESS                        TRUE
-#define USEVBDS                             2
+#define VARTYPEUSEVBDS                        2 /**< We allow variable bound substitution for variables with continuous vartype only.
+                                                 *   See cuts.c for more information. */
 #define MINFRAC                            0.05
 #define MAXFRAC                           0.999
 
@@ -6407,7 +6408,7 @@ SCIP_RETCODE generateClusterCuts(
                assert( !SCIPisZero(scip, 1.0/deltas[d]) );
 
                SCIPdebugMsg(scip, "applying MIR with delta = %g\n", deltas[d]);
-               SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
+               SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, VARTYPEUSEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
                      1.0/deltas[d], aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
                assert(allowlocal || !cutislocal);
 
@@ -6595,7 +6596,7 @@ SCIP_RETCODE generateClusterCuts(
 
                   if( success )
                   {
-                     SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
+                     SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, VARTYPEUSEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
                                             1.0/bestdelta, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
                      assert(allowlocal || !cutislocal);

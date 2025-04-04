@@ -4947,13 +4947,15 @@ SCIP_RETCODE createMIRData(
    MIR_DATA**            pdata,              /**< buffer to store the MIR data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the row aggregation to initialize the cut with */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
-   int                   sectionusevbds      /**< Parameter that indicates until what section variable bound substitution
-                                              *   should be done. */
+   int                   vartypeusevbds      /**< for all variable types with index smaller than this number, variable
+                                              *   type substitution is allowed. The indices are: 0: continuous,
+                                              *   1: continuous implint., 2: integer implint, 3: binary implint,
+                                              *   4: integer, 5: binary */
    )
 {
    int i;
    int nnz;
-   assert(sectionusevbds >= 0 && sectionusevbds < NSECTIONS);
+   assert(vartypeusevbds >= 0 && vartypeusevbds < NSECTIONS);
 
    assert(pdata != NULL);
    SCIP_CALL( SCIPallocBuffer(scip, pdata) );
@@ -4971,7 +4973,7 @@ SCIP_RETCODE createMIRData(
       data->isenfint[i] = i >= 2 ? TRUE : FALSE;
       data->isimplint[i] = i >= 1 && i <= 3 ? TRUE : FALSE;
       /* Use variable bounds for the sections specified by the user */
-      data->usevbds[i] = i < sectionusevbds ? 2 : 0;
+      data->usevbds[i] = i < vartypeusevbds ? 2 : 0;
    }
 
    /* Problem data needs to be initialized before cut data as it is used to partition the variables into the sections */
@@ -7955,7 +7957,10 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             postprocess,        /**< apply a post-processing step to the resulting cut? */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
-   int                   sectionusevbds,     /**< until what section number should we use variable bounds? */
+   int                   vartypeusevbds,     /**< for all variable types with index smaller than this number, variable
+                                              *   type substitution is allowed. The indices are: 0: continuous,
+                                              *   1: continuous implint., 2: integer implint, 3: binary implint,
+                                              *   4: integer, 5: binary */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
    int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
@@ -7992,7 +7997,8 @@ SCIP_RETCODE SCIPcalcMIR(
 
    if( SCIPisExact(scip) )
    {
-      return calcMIRSafely(scip, sol, postprocess, boundswitch, sectionusevbds > 0 ? TRUE : FALSE, allowlocal, fixintegralrhs,
+      /* TODO: update exactSCIP cuts to behave identically with respect to implied integrality */
+      return calcMIRSafely(scip, sol, postprocess, boundswitch, vartypeusevbds > 0 ? TRUE : FALSE, allowlocal, fixintegralrhs,
                            boundsfortrans, boundtypesfortrans, minfrac, maxfrac, scale, aggrrow, cutcoefs, cutrhs,
                            cutinds, cutnnz, cutefficacy, cutrank, cutislocal, success);
    }
@@ -8001,7 +8007,7 @@ SCIP_RETCODE SCIPcalcMIR(
    *success = FALSE;
 
    /* Setup data to track cut and initialize the cut with aggregation */
-   SCIP_CALL( createMIRData(scip, &data, aggrrow, scale, sectionusevbds) );
+   SCIP_CALL( createMIRData(scip, &data, aggrrow, scale, vartypeusevbds) );
    tmpislocal = aggrrow->local;
 
    /* allocate temporary memory */
@@ -8280,7 +8286,10 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             postprocess,        /**< apply a post-processing step to the resulting cut? */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
-   int                   sectionusevbds,     /**< until what section number should we use variable bounds? */
+   int                   vartypeusevbds,     /**< for all variable types with index smaller than this number, variable
+                                              *   type substitution is allowed. The indices are: 0: continuous,
+                                              *   1: continuous implint., 2: integer implint, 3: binary implint,
+                                              *   4: integer, 5: binary */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    int                   maxtestdelta,       /**< maximum number of deltas to test */
    int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
@@ -8356,7 +8365,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_CALL( SCIPallocBufferArray(scip, &bounddistpos, aggrrow->nnz) );
 
    /* initialize mkset with the unscaled aggregation */
-   SCIP_CALL( createMIRData(scip, &data, aggrrow, 1.0, sectionusevbds) );
+   SCIP_CALL( createMIRData(scip, &data, aggrrow, 1.0, vartypeusevbds) );
    *cutislocal = aggrrow->local;
 
    /* Transform equation  a*x == b, lb <= x <= ub  into standard form
@@ -13131,7 +13140,10 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             postprocess,        /**< apply a post-processing step to the resulting cut? */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
-   int                   sectionusevbds,     /**< until what section number should we use variable bounds? */
+   int                   vartypeusevbds,     /**< for all variable types with index smaller than this number, variable
+                                              *   type substitution is allowed. The indices are: 0: continuous,
+                                              *   1: continuous implint., 2: integer implint, 3: binary implint,
+                                              *   4: integer, 5: binary */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
@@ -13188,7 +13200,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, nvars) );
 
    /* Initialize cut data */
-   SCIP_CALL( createMIRData(scip, &data, aggrrow, scale, sectionusevbds) );
+   SCIP_CALL( createMIRData(scip, &data, aggrrow, scale, vartypeusevbds) );
    *cutislocal = aggrrow->local;
 
    if( data->totalnnz > 0 )
