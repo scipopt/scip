@@ -783,6 +783,7 @@ if(SCIP_WITH_EXACTSOLVE)
     if(SCIP_WITH_LPSEXACT STREQUAL "SoPlex")
         include_directories(${SOPLEX_INCLUDE_DIRS})
         set(lpiexact lpiexact/lpiexact_spx.cpp)
+        set(LPS_LIBRARIES ${SOPLEX_LIBRARIES})
     endif()
 
     if(SCIP_WITH_LPSEXACT STREQUAL "none")
