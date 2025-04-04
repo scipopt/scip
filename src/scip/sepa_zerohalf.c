@@ -659,7 +659,7 @@ SCIP_RETCODE mod2MatrixTransformContRows(
       SCIP_COL** rowcols;
 
       /* skip integral rows and rows not suitable for generating cuts */
-      if( SCIProwIsModifiable(rows[i]) || (SCIProwIsIntegral(rows[i]) ) || (SCIProwIsLocal(rows[i]) && !allowlocal) || SCIProwGetNNonz(rows[i]) > maxnonzeros )
+      if( SCIProwIsModifiable(rows[i]) || SCIProwIsIntegral(rows[i]) || (SCIProwIsLocal(rows[i]) && !allowlocal) || SCIProwGetNNonz(rows[i]) > maxnonzeros )
          continue;
 
       lhs = SCIProwGetLhs(rows[i]) - SCIProwGetConstant(rows[i]);
