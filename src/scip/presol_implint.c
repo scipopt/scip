@@ -1613,7 +1613,8 @@ SCIP_RETCODE findImpliedIntegers(
 {
    SCIP_Bool runintdetection = presoldata->convertintegers && SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) >= 1;
 
-   /* TODO: some checks to prevent expensive memory initialization if not necessary (e.g. there must be some candidates) */
+   /* TODO: some checks to prevent expensive memory initialization if not necessary.
+    * For example, make sure that there exist some +-1 candidate columns exist before performing these allocations. */
    SCIP_NETMATDEC* dec = NULL;
    SCIP_CALL( SCIPnetmatdecCreate(SCIPblkmem(scip), &dec, comp->nmatrixrows, comp->nmatrixcols) );
 
