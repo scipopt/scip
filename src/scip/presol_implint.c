@@ -640,10 +640,13 @@ SCIP_RETCODE addXorLinearization(
       assert(requiredsize <= matrix->ncols);
       for( int k = 0; k < naggrvars; ++k )
       {
-         int col = SCIPvarGetProbindex(aggrvars[k]);
-         assert(col >= 0);
-         assert(col < matrix->ncols);
-         matrix->colinnonlinterm[col] = TRUE;
+         if( !SCIPisIntegral(scip, 0.5 * scalars[k]) )
+         {
+            int col = SCIPvarGetProbindex(aggrvars[k]);
+            assert(col >= 0);
+            assert(col < matrix->ncols);
+            matrix->colinnonlinterm[col] = TRUE;
+         }
       }
 
       SCIPfreeBufferArray(scip, &aggrvars);
@@ -2046,7 +2049,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
       return SCIP_OKAY;
    }
    /* Since implied integrality detection relies on rows being static, we disable it for branch-and-price applications*/
-   if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 || !SCIPallowWeakDualReds(scip) )
+   if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 || !SCIPallowStrongDualReds(scip) )
    {
       return SCIP_OKAY;
    }
