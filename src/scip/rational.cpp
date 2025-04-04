@@ -379,13 +379,12 @@ SCIP_RETCODE SCIPrationalReallocBlockArray(
    return SCIP_OKAY;
 }
 
-#ifdef SCIP_WITH_BOOST
-/** creates a rational from an mpq_t */
-#ifdef SCIP_WITH_GMP
+#if defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
+/** creates rational from gmp rational */
 SCIP_RETCODE SCIPrationalCreateBlockGMP(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_RATIONAL**       rational,           /**< pointer to the rational to create */
-   mpq_t                 numb                /**< the gmp rational */
+   mpq_t                 numb                /**< gmp rational to set */
    )
 {
    BMSallocBlockMemory(mem, rational);
@@ -396,9 +395,9 @@ SCIP_RETCODE SCIPrationalCreateBlockGMP(
    return SCIP_OKAY;
 }
 
-/** gets the underlying mpq_t* */
+/** gets the underlying gmp rational pointer */
 mpq_t* SCIPrationalGetGMP(
-   SCIP_RATIONAL*        rational            /**< the rational */
+   SCIP_RATIONAL*        rational            /**< rational to access */
    )
 {
    assert(rational != nullptr);
@@ -412,10 +411,10 @@ mpq_t* SCIPrationalGetGMP(
    return &(rational->val.backend().data());
 }
 
-/** set value of a rational from gmp data */
+/** sets rational to gmp rational */
 void SCIPrationalSetGMP(
-   SCIP_RATIONAL*        rational,           /**< the rational */
-   const mpq_t           numb                /**< mpq_rational */
+   SCIP_RATIONAL*        rational,           /**< rational to define */
+   const mpq_t           numb                /**< gmp rational to set */
    )
 {
    rational->val = numb;
@@ -423,11 +422,11 @@ void SCIPrationalSetGMP(
    rational->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
-/** init and set value of mpq array from rational array */
+/** sets gmp rational array to values of rational array */
 void SCIPrationalSetGMPArray(
-   mpq_t*                mpqaaray,           /** mpq array */
-   SCIP_RATIONAL**       ratarrray,          /** array of rationals */
-   int                   len                 /** array length */
+   mpq_t*                mpqaaray,           /**< gmp rational array */
+   SCIP_RATIONAL**       ratarrray,          /**< rational array */
+   int                   len                 /**< array length */
    )
 {
    for( int i = 0; i < len; i++ )
@@ -437,11 +436,11 @@ void SCIPrationalSetGMPArray(
    }
 }
 
-/** set value of rational array from mpq array */
+/** sets rational array to values of gmp rational array */
 void SCIPrationalSetArrayGMP(
-   SCIP_RATIONAL**       ratarray,           /** array of rationals */
-   mpq_t*                mpqarray,           /** mpq array */
-   int                   len                 /** array length */
+   SCIP_RATIONAL**       ratarray,           /**< rational array */
+   mpq_t*                mpqarray,           /**< gmp rational array */
+   int                   len                 /**< array length */
    )
 {
    for( int i = 0; i < len; i++ )
@@ -450,10 +449,10 @@ void SCIPrationalSetArrayGMP(
    }
 }
 
-/** clear array of mpqs */
+/** clears gmp rational array */
 void SCIPrationalClearArrayGMP(
-   mpq_t*                mpqarray,           /** mpq array */
-   int                   len                 /** array length */
+   mpq_t*                mpqarray,           /**< gmp rational array */
+   int                   len                 /**< array length */
    )
 {
    for( int i = 0; i < len; i++ )
@@ -461,7 +460,6 @@ void SCIPrationalClearArrayGMP(
       mpq_clear(mpqarray[i]);
    }
 }
-#endif
 #endif
 
 /** delete a rational and free the allocated ordinary memory */
@@ -1310,7 +1308,7 @@ void SCIPrationalMax(
    }
 }
 
-/** check if two rationals are equal */
+/** checks if two rationals are equal */
 SCIP_Bool SCIPrationalIsEQ(
    SCIP_RATIONAL*        rat1,               /**< the first rational */
    SCIP_RATIONAL*        rat2                /**< the second rational */
@@ -1327,7 +1325,7 @@ SCIP_Bool SCIPrationalIsEQ(
    return FALSE;
 }
 
-/** check if two rationals are equal */
+/** checks if two rationals are equal */
 SCIP_Bool SCIPrationalIsAbsEQ(
    SCIP_RATIONAL*        rat1,               /**< the first rational */
    SCIP_RATIONAL*        rat2                /**< the second rational */
@@ -1343,7 +1341,7 @@ SCIP_Bool SCIPrationalIsAbsEQ(
    return FALSE;
 }
 
-/** check if a rational and a real are equal */
+/** checks if rational and real are equal */
 SCIP_Bool SCIPrationalIsEQReal(
    SCIP_RATIONAL*        rat,                /**< the rational */
    SCIP_Real             real                /**< the real */
@@ -1357,7 +1355,7 @@ SCIP_Bool SCIPrationalIsEQReal(
    return !rat->isinf && rat->val == scip::Rational(real);
 }
 
-/** check if real approx of rational and a real are equal */
+/** checks if real approx of rational and real are equal */
 SCIP_Bool SCIPrationalIsApproxEQReal(
    SCIP_SET*             set,                /**< SCIP set pointer */
    SCIP_RATIONAL*        rat,                /**< the rational */
@@ -1380,19 +1378,18 @@ SCIP_Bool SCIPrationalIsApproxEQReal(
    }
 }
 
-/** check if the first rational is greater than the second */
+/** checks if first rational is greater than second rational */
 SCIP_Bool SCIPrationalIsGT(
    SCIP_RATIONAL*        rat1,               /**< the first rational */
    SCIP_RATIONAL*        rat2                /**< the second rational */
    )
 {
-   assert(rat1 != nullptr && rat2 != nullptr);
+   assert(rat1 != nullptr);
+   assert(rat2 != nullptr);
 
    if( rat1->isinf )
    {
-      if( rat1->val < 0 )
-         return FALSE;
-      else if( rat2->isinf && rat2->val > 0 )
+      if( rat1->val < 0 || ( rat2->isinf && rat2->val > 0 ) )
          return FALSE;
       else
          return TRUE;
@@ -1410,7 +1407,34 @@ SCIP_Bool SCIPrationalIsGT(
    }
 }
 
-/** check if the first rational is greater than the second */
+/** checks if first rational is smaller than second rational */
+SCIP_Bool SCIPrationalIsLT(
+   SCIP_RATIONAL*        rat1,               /**< the first rational */
+   SCIP_RATIONAL*        rat2                /**< the second rational */
+   )
+{
+   return SCIPrationalIsGT(rat2, rat1);
+}
+
+/** checks if first rational is greater or equal than second rational */
+SCIP_Bool SCIPrationalIsGE(
+   SCIP_RATIONAL*        rat1,               /**< the first rational */
+   SCIP_RATIONAL*        rat2                /**< the second rational */
+   )
+{
+   return !SCIPrationalIsGT(rat2, rat1);
+}
+
+/** checks if first rational is less or equal than second rational */
+SCIP_Bool SCIPrationalIsLE(
+   SCIP_RATIONAL*        rat1,               /**< the first rational */
+   SCIP_RATIONAL*        rat2                /**< the second rational */
+   )
+{
+   return !SCIPrationalIsGT(rat1, rat2);
+}
+
+/** checks if first rational is greater than second rational */
 SCIP_Bool SCIPrationalIsAbsGT(
    SCIP_RATIONAL*        rat1,               /**< the first rational */
    SCIP_RATIONAL*        rat2                /**< the second rational */
@@ -1426,43 +1450,7 @@ SCIP_Bool SCIPrationalIsAbsGT(
       return abs(rat1->val) > abs(rat2->val);
 }
 
-/** check if the first rational is smaller than the second */
-SCIP_Bool SCIPrationalIsLT(
-   SCIP_RATIONAL*        rat1,               /**< the first rational */
-   SCIP_RATIONAL*        rat2                /**< the second rational */
-   )
-{
-   assert(rat1 != nullptr && rat2 != nullptr);
-
-   return SCIPrationalIsGT(rat2, rat1);
-}
-
-/** check if the first rational is greater or equal than the second */
-SCIP_Bool SCIPrationalIsGE(
-   SCIP_RATIONAL*        rat1,               /**< the first rational */
-   SCIP_RATIONAL*        rat2                /**< the second rational */
-   )
-{
-   assert(rat1 != nullptr && rat2 != nullptr);
-
-   if( SCIPrationalIsEQ(rat1, rat2) )
-      return TRUE;
-   else
-      return SCIPrationalIsGT(rat1, rat2);
-}
-
-/** check if the first rational is less or equal than the second*/
-SCIP_Bool SCIPrationalIsLE(
-   SCIP_RATIONAL*        rat1,               /**< the first rational */
-   SCIP_RATIONAL*        rat2                /**< the second rational */
-   )
-{
-   assert(rat1 != nullptr && rat2 != nullptr);
-
-   return SCIPrationalIsGE(rat2, rat1);
-}
-
-/** check if the rational is greater than the double */
+/** checks if rational is greater than real */
 SCIP_Bool SCIPrationalIsGTReal(
    SCIP_RATIONAL*        rat,                /**< the rational */
    SCIP_Real             real                /**< the real */
@@ -1470,9 +1458,21 @@ SCIP_Bool SCIPrationalIsGTReal(
 {
    assert(rat != nullptr);
 
-   if( rat->isinf )
+   if( real >= infinity )
+      return FALSE;
+   else if( real <= -infinity )
    {
-      return (rat->val > 0) && (real < infinity);
+      if( rat->isinf && rat->val < 0 )
+         return FALSE;
+      else
+         return TRUE;
+   }
+   else if( rat->isinf )
+   {
+      if( rat->val < 0 )
+         return FALSE;
+      else
+         return TRUE;
    }
    else
    {
@@ -1480,25 +1480,7 @@ SCIP_Bool SCIPrationalIsGTReal(
    }
 }
 
-/** check if the rational is greater or equal than the double */
-SCIP_Bool SCIPrationalIsGEReal(
-   SCIP_RATIONAL*        rat,                /**< the rational */
-   SCIP_Real             real                /**< the real */
-   )
-{
-   assert(rat != nullptr);
-
-   if( rat->isinf )
-   {
-      return SCIPrationalGetReal(rat) >= real;
-   }
-   else
-   {
-      return rat->val >= real;
-   }
-}
-
-/** check if the rational is less than the double */
+/** checks if rational is less than real */
 SCIP_Bool SCIPrationalIsLTReal(
    SCIP_RATIONAL*        rat,                /**< the rational */
    SCIP_Real             real                /**< the real */
@@ -1506,9 +1488,21 @@ SCIP_Bool SCIPrationalIsLTReal(
 {
    assert(rat != nullptr);
 
-   if( rat->isinf )
+   if( real <= -infinity )
+      return FALSE;
+   else if( real >= infinity )
    {
-      return (rat->val < 0) && (real > -infinity);
+      if( rat->isinf && rat->val > 0 )
+         return FALSE;
+      else
+         return TRUE;
+   }
+   else if( rat->isinf )
+   {
+      if( rat->val > 0 )
+         return FALSE;
+      else
+         return TRUE;
    }
    else
    {
@@ -1516,25 +1510,25 @@ SCIP_Bool SCIPrationalIsLTReal(
    }
 }
 
-/** check if the rational is less or equal than the double */
+/** checks if rational is greater or equal than real */
+SCIP_Bool SCIPrationalIsGEReal(
+   SCIP_RATIONAL*        rat,                /**< the rational */
+   SCIP_Real             real                /**< the real */
+   )
+{
+   return !SCIPrationalIsLTReal(rat, real);
+}
+
+/** checks if rational is less or equal than real */
 SCIP_Bool SCIPrationalIsLEReal(
    SCIP_RATIONAL*        rat,                /**< the rational */
    SCIP_Real             real                /**< the real */
    )
 {
-   assert(rat != nullptr);
-
-   if( rat->isinf )
-   {
-      return SCIPrationalGetReal(rat) <= real;
-   }
-   else
-   {
-      return rat->val <= real;
-   }
+   return !SCIPrationalIsGTReal(rat, real);
 }
 
-/** check if the rational is zero */
+/** checks if rational is zero */
 SCIP_Bool SCIPrationalIsZero(
    SCIP_RATIONAL*        rational            /**< the rational to check */
    )
@@ -1550,7 +1544,7 @@ SCIP_Bool SCIPrationalIsZero(
       return FALSE;
 }
 
-/** check if the rational is positive */
+/** checks if rational is positive */
 SCIP_Bool SCIPrationalIsPositive(
    SCIP_RATIONAL*        rational            /**< the rational to check */
    )
@@ -1560,7 +1554,7 @@ SCIP_Bool SCIPrationalIsPositive(
    return rational->val.sign() > 0;
 }
 
-/** check if the rational is negative */
+/** checks if rational is negative */
 SCIP_Bool SCIPrationalIsNegative(
    SCIP_RATIONAL*        rational            /**< the rational to check */
    )
@@ -1570,7 +1564,7 @@ SCIP_Bool SCIPrationalIsNegative(
    return rational->val.sign() < 0;
 }
 
-/** check if the rational is positive infinity */
+/** checks if rational is positive infinity */
 SCIP_Bool SCIPrationalIsInfinity(
    SCIP_RATIONAL*        rational            /**< the rational to check */
    )
@@ -1580,7 +1574,7 @@ SCIP_Bool SCIPrationalIsInfinity(
    return rational->isinf && rational->val.sign() > 0;
 }
 
-/** check if the rational is negative infinity */
+/** checks if rational is negative infinity */
 SCIP_Bool SCIPrationalIsNegInfinity(
    SCIP_RATIONAL*        rational            /**< the rational to check */
    )
@@ -1590,7 +1584,7 @@ SCIP_Bool SCIPrationalIsNegInfinity(
    return rational->isinf && rational->val.sign() < 0;
 }
 
-/** check if the rational is negative infinity */
+/** checks if rational is negative infinity */
 SCIP_Bool SCIPrationalIsAbsInfinity(
    SCIP_RATIONAL*        rational            /**< the rational to check */
    )
@@ -1601,7 +1595,7 @@ SCIP_Bool SCIPrationalIsAbsInfinity(
    return rational->isinf;
 }
 
-/** check if the rational is integral*/
+/** checks if rational is integral */
 SCIP_Bool SCIPrationalIsIntegral(
    SCIP_RATIONAL*        rational            /**< the rational to check */
    )
@@ -1620,7 +1614,7 @@ SCIP_Bool SCIPrationalIsIntegral(
    }
 }
 
-/** check if rational is exactly representable as double */
+/** checks if rational is exactly representable as real */
 SCIP_Bool SCIPrationalIsFpRepresentable(
    SCIP_RATIONAL*        rational            /**< the rational to check */
    )
