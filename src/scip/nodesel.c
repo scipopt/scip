@@ -43,6 +43,7 @@
 #include "scip/tree.h"
 #include "scip/reopt.h"
 #include "scip/lp.h"
+#include "scip/primal.h"
 #include "scip/scip.h"
 #include "scip/nodesel.h"
 #include "scip/pub_message.h"
@@ -798,11 +799,16 @@ SCIP_RETCODE SCIPnodepqBound(
             /* exact lower bound improved */
             if( SCIPrationalIsLT(stat->lastlowerboundexact, lowerboundexact) )
             {
-               SCIP_EVENT event;
+               /* throw improvement event if upper bound not already exceeded */
+               if( SCIPrationalIsLT(stat->lastlowerboundexact, set->scip->primal->upperboundexact) )
+               {
+                  SCIP_EVENT event;
 
-               /* throw improvement event */
-               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
-               SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+                  SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
+                  SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+               }
+
+               /* update exact last lower bound */
                SCIPrationalSetRational(stat->lastlowerboundexact, lowerboundexact);
             }
          }
@@ -814,12 +820,8 @@ SCIP_RETCODE SCIPnodepqBound(
          /* lower bound improved */
          if( stat->lastlowerbound < lowerbound )
          {
-            /* update primal-dual integrals */
-            if( set->misc_calcintegral )
-               SCIPstatUpdatePrimalDualIntegrals(stat, set, set->scip->transprob, set->scip->origprob, SCIPsetInfinity(set), lowerbound);
-
             /* throw improvement event if not already done exactly */
-            if( !set->exact_enable )
+            if( !set->exact_enable && stat->lastlowerbound < set->scip->primal->upperbound )
             {
                SCIP_EVENT event;
 
@@ -827,7 +829,14 @@ SCIP_RETCODE SCIPnodepqBound(
                SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
             }
 
-            stat->lastlowerbound = lowerbound;
+            /* update primal-dual integrals */
+            if( set->misc_calcintegral )
+            {
+               SCIPstatUpdatePrimalDualIntegrals(stat, set, set->scip->transprob, set->scip->origprob, SCIPsetInfinity(set), lowerbound);
+               assert(stat->lastlowerbound == lowerbound); /*lint !e777*/
+            }
+            else
+               stat->lastlowerbound = lowerbound;
          }
 
          SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);

@@ -489,7 +489,8 @@ SCIP_RETCODE primalSetUpperboundExact(
 
       delta = SCIPsetCutoffbounddelta(set);
 
-      SCIPrationalRoundInteger(cutoffbound, primal->upperboundexact, SCIP_R_ROUND_DOWNWARDS);
+      SCIPrationalRoundInteger(cutoffbound, primal->upperboundexact, SCIP_R_ROUND_UPWARDS);
+      SCIPrationalDiffReal(cutoffbound, cutoffbound, 1.0);
       SCIPrationalAddReal(cutoffbound, cutoffbound, delta);
    }
    else
