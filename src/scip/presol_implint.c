@@ -1799,7 +1799,6 @@ SCIP_RETCODE findImpliedIntegers(
          int col = comp->componentcols[i];
          assert(SCIPnetmatdecContainsColumn(dec, col) || SCIPnetmatdecContainsRow(transdec, col));
          SCIP_VAR* var = matrixGetVar(matrix, col);
-
          assert(!SCIPvarIsIntegral(var));
          SCIP_Bool infeasible;
 
@@ -1813,16 +1812,51 @@ SCIP_RETCODE findImpliedIntegers(
     * that are integral. Then, we sort these and greedily attempt to add them to the (transposed) network matrix.*/
    if( runintdetection )
    {
+      /* try to add implied integral columns to network and transnetwork */
+      for( int col = 0; col < comp->nmatrixcols; ++col )
+      {
+         if( !matrixColIsIntegral(matrix, col) || !SCIPvarIsImpliedIntegral(matrixGetVar(matrix, col)) )
+            continue;
+
+         int* colrows = matrixGetColumnInds(matrix, col);
+         SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
+         int ncolnnonz = matrixGetColumnNNonzs(matrix, col);
+         SCIP_Bool stillnetwork = FALSE;
+         SCIP_Bool stilltransnetwork = FALSE;
+
+         if( !matrixColInNonlinearTerm(matrix, col) )
+         {
+            SCIP_CALL( SCIPnetmatdecTryAddCol(dec, col, colrows, colvals, ncolnnonz, &stillnetwork) );
+            SCIP_CALL( SCIPnetmatdecTryAddRow(transdec, col, colrows, colvals, ncolnnonz, &stilltransnetwork) );
+         }
+
+         if( !stillnetwork || !stilltransnetwork )
+         {
+            for( int i = 0; i < ncolnnonz; ++i )
+            {
+               int rowcomponent = comp->rowcomponent[colrows[i]];
+
+               if( rowcomponent != -1 )
+               {
+                  if( !stillnetwork )
+                     compNetworkValid[rowcomponent] = FALSE;
+                  if( !stilltransnetwork )
+                     compTransNetworkValid[rowcomponent] = FALSE;
+               }
+            }
+         }
+      }
 
       int numCandidates = 0;
       INTEGER_CANDIDATE_DATA* candidates;
       SCIP_CALL(SCIPallocBufferArray(scip, &candidates, comp->nmatrixcols));
 
-      /* Integer columns that are +- 1 and do not have any nonzero entries in bad rows are candidates */
+      /* non-implied integral columns that are +- 1 and do not have any nonzero entries in bad rows are candidates */
       for( int col = 0; col < comp->nmatrixcols; ++col )
       {
-         if( !matrixColIsIntegral(matrix, col) || matrixColInNonlinearTerm(matrix, col) )
+         if( !SCIPvarIsNonimpliedIntegral(matrixGetVar(matrix, col)) || matrixColInNonlinearTerm(matrix, col) )
             continue;
+         assert(matrixColIsIntegral(matrix, col));
 
          int ncolnnonz = matrixGetColumnNNonzs(matrix, col);
          int* colrows = matrixGetColumnInds(matrix, col);
@@ -1947,6 +1981,7 @@ SCIP_RETCODE findImpliedIntegers(
             if( SCIPnetmatdecContainsColumn(dec, col))
             {
                SCIP_VAR* var = matrixGetVar(matrix, col);
+               assert(SCIPvarIsNonimpliedIntegral(var));
                SCIP_Bool infeasible = FALSE;
                SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
 
@@ -1965,6 +2000,7 @@ SCIP_RETCODE findImpliedIntegers(
             if( SCIPnetmatdecContainsRow(transdec, col))
             {
                SCIP_VAR* var = matrixGetVar(matrix, col);
+               assert(SCIPvarIsNonimpliedIntegral(var));
                SCIP_Bool infeasible = FALSE;
                SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
 
