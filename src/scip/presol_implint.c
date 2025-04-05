@@ -1785,6 +1785,30 @@ SCIP_RETCODE findImpliedIntegers(
       compTransNetworkValid[component] = componenttransnetwork;
    }
 
+   /* Add continuous columns; here we can take both normal and transposed components at the same time. */
+   for( int component = 0; component < comp->ncomponents; ++component )
+   {
+      if( !compNetworkValid[component] && !compTransNetworkValid[component] )
+         continue;
+
+      int startcol = ( component == 0 ) ? 0 : comp->componentcolend[component - 1];
+      int endcol = comp->componentcolend[component];
+
+      for( int i = startcol; i < endcol; ++i )
+      {
+         int col = comp->componentcols[i];
+         assert(SCIPnetmatdecContainsColumn(dec, col) || SCIPnetmatdecContainsRow(transdec, col));
+         SCIP_VAR* var = matrixGetVar(matrix, col);
+
+         assert(!SCIPvarIsIntegral(var));
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
+         assert(!infeasible);
+         ++(*nchgvartypes);
+      }
+   }
+
    /* Detect implied integrality for integer columns. First, we compute valid columns that have only +-1 entries in rows
     * that are integral. Then, we sort these and greedily attempt to add them to the (transposed) network matrix.*/
    if( runintdetection )
@@ -1954,29 +1978,6 @@ SCIP_RETCODE findImpliedIntegers(
       SCIPfreeBufferArray(scip, &candidateScores);
       SCIPfreeBufferArray(scip, &candidates);
 
-   }
-   /* Add continuous columns; here we can take both normal and transposed components at the same time. */
-   for( int component = 0; component < comp->ncomponents; ++component )
-   {
-      if( !compNetworkValid[component] && !compTransNetworkValid[component] )
-         continue;
-
-      int startcol = ( component == 0 ) ? 0 : comp->componentcolend[component - 1];
-      int endcol = comp->componentcolend[component];
-
-      for( int i = startcol; i < endcol; ++i )
-      {
-         int col = comp->componentcols[i];
-         assert(SCIPnetmatdecContainsColumn(dec, col) || SCIPnetmatdecContainsRow(transdec, col));
-         SCIP_VAR* var = matrixGetVar(matrix, col);
-
-         assert(!SCIPvarIsIntegral(var));
-         SCIP_Bool infeasible;
-
-         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
-         assert(!infeasible);
-         ++(*nchgvartypes);
-      }
    }
 
    SCIPfreeBufferArray(scip, &compTransNetworkValid);
