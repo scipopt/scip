@@ -1859,22 +1859,21 @@ SCIP_RETCODE findImpliedIntegers(
           * general integer variables over binary variables. We break ties using the number of nonzeros in the column
           * @TODO; test different scores / alternatives
           * @TODO; detect when we only have columns that  extend the network / co-network portions. In this case, we can take both at the same time.*/
-         double score = 0.0;
+         SCIP_Real score;
          switch( SCIPvarGetType(matrixGetVar(matrix, col)) )
          {
             case SCIP_VARTYPE_BINARY:
-               score += 10.0;
+               score = 10.0;
                break;
             case SCIP_VARTYPE_INTEGER:
-               score += 100.0;
+               score = 100.0;
                break;
             case SCIP_VARTYPE_CONTINUOUS:
-               break;
             default:
                SCIPerrorMessage("unknown variable type\n");
                return SCIP_INVALIDDATA;
          } /*lint !e788*/
-         score += nnonzs * 0.1;
+         score -= 0.001 * nnonzs;
          candidateScores[i] = -score;
       }
       INTEGER_CANDIDATE_DATA** ptrArray;
