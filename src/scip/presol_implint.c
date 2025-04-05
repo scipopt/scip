@@ -1940,7 +1940,7 @@ SCIP_RETCODE findImpliedIntegers(
       {
          ptrArray[i] = candidates + i;
       }
-      SCIPsortRealPtr(candidateScores, (void**) ptrArray, numCandidates);
+      SCIPsortDownRealPtr(candidateScores, (void**) ptrArray, numCandidates);
 
       int integerNetwork = 0;
       int integerTransNetwork = 0;
