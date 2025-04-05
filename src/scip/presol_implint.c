@@ -1804,7 +1804,7 @@ SCIP_RETCODE findImpliedIntegers(
          int* colrows = matrixGetColumnInds(matrix, col);
          SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
          SCIP_Bool badColumn = FALSE;
-         INTEGER_CANDIDATE_DATA* data = &candidates[numCandidates];
+         INTEGER_CANDIDATE_DATA* data = candidates + numCandidates;
          data->numContNetworkEntries = 0;
          data->numContPlanarEntries = 0;
          data->numContTransNetworkEntries = 0;
@@ -1881,7 +1881,7 @@ SCIP_RETCODE findImpliedIntegers(
       SCIP_CALL(SCIPallocBufferArray(scip, &ptrArray, numCandidates));
       for( int i = 0; i < numCandidates; ++i )
       {
-         ptrArray[i] = &candidates[i];
+         ptrArray[i] = candidates + i;
       }
       SCIPsortDownRealPtr(candidateScores, (void**) ptrArray, numCandidates);
 
