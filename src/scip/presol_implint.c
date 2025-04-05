@@ -1932,7 +1932,7 @@ SCIP_RETCODE findImpliedIntegers(
                return SCIP_INVALIDDATA;
          } /*lint !e788*/
          score -= 0.001 * nnonzs;
-         candidateScores[i] = -score;
+         candidateScores[i] = score;
       }
       INTEGER_CANDIDATE_DATA** ptrArray;
       SCIP_CALL(SCIPallocBufferArray(scip, &ptrArray, numCandidates));
@@ -1940,7 +1940,7 @@ SCIP_RETCODE findImpliedIntegers(
       {
          ptrArray[i] = candidates + i;
       }
-      SCIPsortDownRealPtr(candidateScores, (void**) ptrArray, numCandidates);
+      SCIPsortRealPtr(candidateScores, (void**) ptrArray, numCandidates);
 
       int integerNetwork = 0;
       int integerTransNetwork = 0;
