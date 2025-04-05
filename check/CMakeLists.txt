@@ -310,11 +310,11 @@ set(instances_fastMIP
 #
 # add additional ZIMPL instances if the configuration uses ZIMPL
 #
-if(ZIMPL AND ZIMPL_FOUND)
-list(APPEND
-    instances_Indicator
-    "instances/Indicator/indicatortest.zpl\;-2"
-    "instances/Indicator/mcf64-4-1.zpl\;10"
+if(SCIP_WITH_ZIMPL)
+    list(APPEND
+        instances_Indicator
+        "instances/Indicator/indicatortest.zpl\;-2"
+        "instances/Indicator/mcf64-4-1.zpl\;10"
     )
 #
 # this instance was part of the original coverage tests. However, it causes
@@ -328,18 +328,23 @@ endif()
 
 # exact ip instances
 if(SCIP_WITH_EXACTSOLVE)
-set(instances_MIPEX
-    "instances/MIPEX/egout.zpl\;568.1007"
-    "instances/MIP/enigma.mps\;0"
-    "instances/MIPEX/flugpl_rational.mps\;1201500"
-    "instances/MIPEX/misc03.zpl\;3360"
-    "instances/MIPEX/rgn.zpl\;2054999981/25000000"
-    "instances/MIPEX/stein27.zpl\;18"
-    "instances/MIP/stein27_inf.lp\;+infinity"
-    "instances/MIP/Side.lp\;2"
-    "instances/MIPEX/Side-coeftest.lp\;2"
-    "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
+    set(instances_MIPEX
+        "instances/MIP/enigma.mps\;0"
+        "instances/MIPEX/flugpl_rational.mps\;1201500"
+        "instances/MIP/stein27_inf.lp\;+infinity"
+        "instances/MIP/Side.lp\;2"
+        "instances/MIPEX/Side-coeftest.lp\;2"
+        "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
     )
+    if(SCIP_WITH_ZIMPL)
+        list(APPEND
+            instances_MIPEX
+            "instances/MIPEX/egout.zpl\;568.1007"
+            "instances/MIPEX/misc03.zpl\;3360"
+            "instances/MIPEX/rgn.zpl\;2054999981/25000000"
+            "instances/MIPEX/stein27.zpl\;18"
+        )
+    endif()
 endif()
 
 #
