@@ -163,24 +163,21 @@ struct SCIP_OrbitopalReductionData
 /** gets whether a variable type is a branchrow-type */
 static
 SCIP_Bool vartypeIsBranchRowType(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< pointer to the dynamic orbitopal reduction data */
-   SCIP_VARTYPE          vartype,            /**< var type */
-   SCIP_IMPLINTTYPE      impltype            /**< is the variable implied integral? */
+   SCIP_VAR*              var                /**< variable whose type is checked */
 )
 {
-   assert( scip != NULL );
    assert( orbireddata != NULL );
    assert( orbireddata->conshdlr_nonlinear_checked );
 
-   if( impltype != SCIP_IMPLINTTYPE_NONE || vartype == SCIP_VARTYPE_CONTINUOUS )
-   {
-      /* potential branching variables if nonlinear constraints exist */
-      assert( orbireddata->conshdlr_nonlinear_checked );
-      return orbireddata->conshdlr_nonlinear == NULL ? FALSE :
-             SCIPconshdlrGetNActiveConss(orbireddata->conshdlr_nonlinear) > 0;
-   }
-   assert(vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER);
+   /* if nonlinear constraints are present, also continuous variables can be branching variables */
+   if ( orbireddata->conshdlr_nonlinear != NULL && SCIPconshdlrGetNActiveConss(orbireddata->conshdlr_nonlinear) > 0 )
+      return TRUE;
+
+   if ( SCIPgetSymInferredVarType(var) == SCIP_VARTYPE_CONTINUOUS )
+      return FALSE;
+   assert( SCIPgetSymInferredVarType(var) == SCIP_VARTYPE_BINARY
+      || SCIPgetSymInferredVarType(var) == SCIP_VARTYPE_INTEGER );
    return TRUE;
 }
 
@@ -986,7 +983,6 @@ SCIP_Bool rowIsBranchRow(
    int                   rowid               /**< row id for which to check */
    )
 {
-   SCIP_VAR* var;
 #ifndef NDEBUG
    int c;
 #endif
@@ -1001,9 +997,6 @@ SCIP_Bool rowIsBranchRow(
    assert( orbidata->vars != NULL );
    assert( orbidata->vars[rowid * orbidata->ncols] );  /* variable in first column must be set */
 
-   /* get the first variable from the row */
-   var = orbidata->vars[rowid * orbidata->ncols];
-
    /* debugging: the variable types in a row should all be the same */
 #ifndef NDEBUG
    for (c = 1; c < orbidata->ncols; ++c)
@@ -1011,13 +1004,13 @@ SCIP_Bool rowIsBranchRow(
       /* the actual vartypes can be different,
        * for example when an INTEGER vartype turns into BINARY due to bound changes
        */
-      assert( vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var), SCIPvarGetImplType(var)) ==
-         vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(orbidata->vars[rowid * orbidata->ncols + c]),
-                                SCIPvarGetImplType(orbidata->vars[rowid * orbidata->ncols + c])) );
+      assert( SCIPgetSymInferredVarType(orbidata->vars[rowid * orbidata->ncols])
+         == SCIPgetSymInferredVarType(orbidata->vars[rowid * orbidata->ncols + c]) );
    }
 #endif
 
-   return vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var), SCIPvarGetImplType(var));
+   /* check whether the row contains a potential branching variable (all variables within a row are symmetric) */
+   return vartypeIsBranchRowType(orbireddata, orbidata->vars[rowid * orbidata->ncols]);
 }
 
 
