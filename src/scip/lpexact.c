@@ -8392,6 +8392,7 @@ SCIP_RETCODE SCIPlpExactEndDive(
          SCIPrationalSetRational(lpexact->lpobjval, lpexact->storedsolvals->lpobjval);
 
       lpexact->solved = FALSE;
+      lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
 #ifdef SCIP_MORE_DEBUG

@@ -1212,8 +1212,10 @@ if (UNIX)
 endif (UNIX)
 endif()
 
-# @todo exip: this assumes you have vipr on your path, needs to be fixed eventually
 if(SCIP_WITH_EXACTSOLVE)
+    #
+    # first test without certification
+    #
     foreach(instance ${instances_MIPEX})
         split_instance(instance)
         #
@@ -1224,6 +1226,32 @@ if(SCIP_WITH_EXACTSOLVE)
             # treat the instance as a tuple (list) of two values
             #
             add_test(NAME MIPEX-${setting}-${basename}
+                    COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set
+                        read ${PROJECT_SOURCE_DIR}/check/${path}
+                        o validatesolve ${optval} ${optval} q"
+                    )
+            set_tests_properties(MIPEX-${setting}-${basename}
+                                PROPERTIES
+                                    PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
+                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                    DEPENDS scip-build
+                                )
+        endforeach(setting)
+    endforeach(instance ${instances_MIPEX})
+    #
+    # second test with certification, even if VIPR is not available, because it leads to SCIP running differently
+    #
+    foreach(instance ${instances_MIPEX})
+        split_instance(instance)
+        #
+        # loop over all settings
+        #
+        foreach(setting ${settings_MIPEX})
+            #
+            # treat the instance as a tuple (list) of two values
+            #
+            add_test(NAME MIPEX-${setting}-${basename}-certified
                     COMMAND $<TARGET_FILE:scip> -c "set certificate filename ${basename}.${setting}.vipr
                         set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set
                         read ${PROJECT_SOURCE_DIR}/check/${path}
