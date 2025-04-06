@@ -6803,6 +6803,7 @@ SCIP_RETCODE cutsRoundMIR(
          int type;
          SCIP_Real QUAD(cutaj);
          SCIP_Real QUAD(aj);
+         SCIP_VAR* var;
 
          v = indices[i];
          assert(0 <= v && v < data->nvars);
@@ -6814,7 +6815,7 @@ SCIP_RETCODE cutsRoundMIR(
 
          --cutindex;
 
-         SCIP_VAR* var = data->vars[v];
+         var = data->vars[v];
          assert(var != NULL);
          assert(SCIPvarGetProbindex(var) == v );
 
@@ -12561,8 +12562,9 @@ SCIP_RETCODE cutsTransformStrongCG(
             }
             else
             {
-               assert(QUAD_TO_DBL(coef) < 0.0);
                SCIP_Real simpleub;
+
+               assert(QUAD_TO_DBL(coef) < 0.0);
 
                /* find closest upper bound in standard upper bound or variable upper bound for continuous variable so that it will have a positive coefficient */
                SCIP_CALL( findMIRBestUb(scip, data->vars[v], sol, data, usevbds, allowlocal,
@@ -12787,27 +12789,30 @@ SCIP_RETCODE cutsRoundStrongCG(
    {
       int* indices = data->secindices[s];
       int nnz = data->secnnz[s];
-
       SCIP_Bool enfintegral = data->isenfint[s];
       SCIP_Bool implintegral = data->isimplint[s];
+
       /* iterate backwards over indices in section, so we can easily shrink the section if we find zeros */
       for( i = nnz - 1; i >= 0 ; --i )
       {
+         SCIP_Real QUAD(cutaj);
+         SCIP_Real QUAD(aj);
+         SCIP_VAR* var;
          int v = indices[i];
+         int sign;
+         int type;
+
          assert(0 <= v && v < data->nvars);
          assert(data->cutinds[cutindex] == v);
-         int sign = varsign[cutindex];
+         sign = varsign[cutindex];
          assert(sign == +1 || sign == -1);
-         int type = boundtype[cutindex];
+         type = boundtype[cutindex];
 
          --cutindex;
 
-         SCIP_VAR* var = data->vars[v];
+         var = data->vars[v];
          assert(var != NULL);
          assert(SCIPvarGetProbindex(var) == v );
-
-         SCIP_Real QUAD(cutaj);
-         SCIP_Real QUAD(aj);
 
          QUAD_ARRAY_LOAD(aj, data->cutcoefs, v);
 
