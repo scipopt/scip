@@ -4145,6 +4145,7 @@ SCIP_RETCODE findBestLbSafely(
       if( bestvlbidx >= 0 && (bestvlb > *bestlb || (*bestlbtype < 0 && SCIPisGE(scip, bestvlb, *bestlb))) )
       {
          SCIP_VAR** vlbvars;
+         SCIP_VAR* vlbvar;
 
          /* we have to avoid cyclic variable bound usage, so we enforce to use only variable bounds variables of smaller index */
          /**@todo this check is not needed for continuous variables; but allowing all but binary variables
@@ -4152,9 +4153,11 @@ SCIP_RETCODE findBestLbSafely(
           */
          vlbvars = SCIPvarGetVlbVars(var);
          assert(vlbvars != NULL);
-         if( ( usevbds == 2 || ( SCIPvarGetType(vlbvars[bestvlbidx]) == SCIP_VARTYPE_BINARY
-            && !SCIPvarIsImpliedIntegral(vlbvars[bestvlbidx]) ) )
-            && SCIPvarGetProbindex(vlbvars[bestvlbidx]) < SCIPvarGetProbindex(var) )
+         vlbvar = vlbvars[bestvlbidx];
+         assert(vlbvar != NULL);
+         if( ( usevbds == 2 || ( SCIPvarGetType(vlbvar) == SCIP_VARTYPE_BINARY
+            && !SCIPvarIsImpliedIntegral(vlbvar) ) )
+            && SCIPvarGetProbindex(vlbvar) < SCIPvarGetProbindex(var) )
          {
             *bestlb = bestvlb;
             *bestlbtype = bestvlbidx;
@@ -4207,6 +4210,7 @@ SCIP_RETCODE findBestUbSafely(
       if( bestvubidx >= 0 && (bestvub < *bestub || (*bestubtype < 0 && SCIPisLE(scip, bestvub, *bestub))) )
       {
          SCIP_VAR** vubvars;
+         SCIP_VAR* vubvar;
 
          /* we have to avoid cyclic variable bound usage, so we enforce to use only variable bounds variables of smaller index */
          /**@todo this check is not needed for continuous variables; but allowing all but binary variables
@@ -4214,9 +4218,11 @@ SCIP_RETCODE findBestUbSafely(
           */
          vubvars = SCIPvarGetVubVars(var);
          assert(vubvars != NULL);
-         if( ( usevbds == 2 || ( SCIPvarGetType(vubvars[bestvubidx]) == SCIP_VARTYPE_BINARY
-            && !SCIPvarIsImpliedIntegral(vubvars[bestvubidx]) ) )
-            && SCIPvarGetProbindex(vubvars[bestvubidx]) < SCIPvarGetProbindex(var) )
+         vubvar = vubvars[bestvubidx];
+         assert(vubvar != NULL);
+         if( ( usevbds == 2 || ( SCIPvarGetType(vubvar) == SCIP_VARTYPE_BINARY
+            && !SCIPvarIsImpliedIntegral(vubvar) ) )
+            && SCIPvarGetProbindex(vubvar) < SCIPvarGetProbindex(var) )
          {
             *bestub = bestvub;
             *bestubtype = bestvubidx;
@@ -4466,6 +4472,7 @@ SCIP_RETCODE findBestLb(
       if( bestvlbidx >= 0 && (bestvlb > *bestlb || (*bestlbtype < 0 && SCIPisGE(scip, bestvlb, *bestlb))) )
       {
          SCIP_VAR** vlbvars;
+         SCIP_VAR* vlbvar;
 
          /* we have to avoid cyclic variable bound usage, so we enforce to use only variable bounds variables of smaller index */
          /**@todo this check is not needed for continuous variables; but allowing all but binary variables
@@ -4473,10 +4480,12 @@ SCIP_RETCODE findBestLb(
           */
          vlbvars = SCIPvarGetVlbVars(var);
          assert(vlbvars != NULL);
-         if( ( usevbds == 2 || ( SCIPvarGetType(vlbvars[bestvlbidx]) == SCIP_VARTYPE_BINARY
-            && !SCIPvarIsImpliedIntegral(vlbvars[bestvlbidx]) ) ) )
+         vlbvar = vlbvars[bestvlbidx];
+         assert(vlbvar != NULL);
+         if( ( usevbds == 2 || ( SCIPvarGetType(vlbvar) == SCIP_VARTYPE_BINARY
+            && !SCIPvarIsImpliedIntegral(vlbvar) ) ) )
          {
-            assert(SCIPvarGetProbindex(vlbvars[bestvlbidx]) < SCIPvarGetProbindex(var));
+            assert(SCIPvarGetProbindex(vlbvar) < SCIPvarGetProbindex(var));
             *bestlb = bestvlb;
             *bestlbtype = bestvlbidx;
          }
@@ -4526,6 +4535,7 @@ SCIP_RETCODE findBestUb(
       if( bestvubidx >= 0 && (bestvub < *bestub || (*bestubtype < 0 && SCIPisLE(scip, bestvub, *bestub))) )
       {
          SCIP_VAR** vubvars;
+         SCIP_VAR* vubvar;
 
          /* we have to avoid cyclic variable bound usage, so we enforce to use only variable bounds variables of smaller index */
          /**@todo this check is not needed for continuous variables; but allowing all but binary variables
@@ -4533,10 +4543,12 @@ SCIP_RETCODE findBestUb(
           */
          vubvars = SCIPvarGetVubVars(var);
          assert(vubvars != NULL);
-         if( ( usevbds == 2 || ( SCIPvarGetType(vubvars[bestvubidx]) == SCIP_VARTYPE_BINARY
-            && !SCIPvarIsImpliedIntegral(vubvars[bestvubidx]) ) ) )
+         vubvar = vubvars[bestvubidx];
+         assert(vubvar != NULL);
+         if( ( usevbds == 2 || ( SCIPvarGetType(vubvar) == SCIP_VARTYPE_BINARY
+            && !SCIPvarIsImpliedIntegral(vubvar) ) ) )
          {
-            assert( SCIPvarGetProbindex(vubvars[bestvubidx]) < SCIPvarGetProbindex(var) );
+            assert( SCIPvarGetProbindex(vubvar) < SCIPvarGetProbindex(var) );
             *bestub = bestvub;
             *bestubtype = bestvubidx;
          }
