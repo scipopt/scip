@@ -65,6 +65,7 @@ Fixed bugs
 - correct matrix entry when resolving aggregated variables in checkSystemGF2() of cons_xor.c
 - corrected symmetry detection graph of cons_and.c, cons_or.c, and cons_xor.c
 - correct redundancy filter in consdataCreateRedundant() of cons_bounddisjunction.c
+- replaced unreliable comparison of node pointers by node numbers in prop_genvbounds.c
 
 Build system
 ------------
