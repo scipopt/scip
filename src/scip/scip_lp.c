@@ -1904,7 +1904,6 @@ int SCIPgetRowNumIntCols(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT
 int SCIPgetRowNumImpliedIntCols(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
