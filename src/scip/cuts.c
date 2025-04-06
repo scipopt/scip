@@ -5675,9 +5675,9 @@ SCIP_RETCODE cutsTransformMIR(
          }
 
          SCIP_CALL( determineBestBounds(scip, data->vars[v], sol, data, boundswitch, usevbds, allowlocal, fixintegralrhs,
-                                        ignoresol, boundsfortrans, boundtypesfortrans,
-                                        bestlbs + cutindex, bestubs + cutindex, bestlbtypes + cutindex, bestubtypes + cutindex,
-                                        selectedbounds + cutindex, freevariable) );
+               ignoresol, boundsfortrans, boundtypesfortrans,
+               bestlbs + cutindex, bestubs + cutindex, bestlbtypes + cutindex, bestubtypes + cutindex,
+               selectedbounds + cutindex, freevariable) );
 
          data->cutinds[cutindex] = v;
          ++data->ncutinds;
@@ -8012,8 +8012,8 @@ SCIP_RETCODE SCIPcalcMIR(
    {
       /* TODO: update exactSCIP cuts to behave identically with respect to implied integrality */
       return calcMIRSafely(scip, sol, postprocess, boundswitch, vartypeusevbds > 0 ? TRUE : FALSE, allowlocal, fixintegralrhs,
-                           boundsfortrans, boundtypesfortrans, minfrac, maxfrac, scale, aggrrow, cutcoefs, cutrhs,
-                           cutinds, cutnnz, cutefficacy, cutrank, cutislocal, success);
+         boundsfortrans, boundtypesfortrans, minfrac, maxfrac, scale, aggrrow, cutcoefs, cutrhs,
+         cutinds, cutnnz, cutefficacy, cutrank, cutislocal, success);
    }
    SCIPdebugMsg(scip, "calculating MIR cut (scale: %g)\n", scale);
 
@@ -12544,9 +12544,10 @@ SCIP_RETCODE cutsTransformStrongCG(
             if( QUAD_TO_DBL(coef) > 0.0 )
             {
                SCIP_Real simplelb;
+
                /* find closest lower bound in standard lower bound or variable lower bound for continuous variable so that it will have a positive coefficient */
                SCIP_CALL( findMIRBestLb(scip, data->vars[v], sol, data, usevbds, allowlocal,
-                                        bestlbs + cutindex, &simplelb, bestlbtypes + cutindex) );
+                     bestlbs + cutindex, &simplelb, bestlbtypes + cutindex) );
 
                /* cannot create transformation for strongcg cut */
                if( SCIPisInfinity(scip, -bestlbs[cutindex]) )
@@ -12565,7 +12566,7 @@ SCIP_RETCODE cutsTransformStrongCG(
 
                /* find closest upper bound in standard upper bound or variable upper bound for continuous variable so that it will have a positive coefficient */
                SCIP_CALL( findMIRBestUb(scip, data->vars[v], sol, data, usevbds, allowlocal,
-                                        bestubs + cutindex, &simpleub, bestubtypes + cutindex) );
+                     bestubs + cutindex, &simpleub, bestubtypes + cutindex) );
 
                /* cannot create transformation for strongcg cut */
                if( SCIPisInfinity(scip, bestubs[cutindex]) )
@@ -12590,11 +12591,11 @@ SCIP_RETCODE cutsTransformStrongCG(
 
             /* find closest lower bound in standard lower bound or variable lower bound for continuous variable so that it will have a positive coefficient */
             SCIP_CALL( findMIRBestLb(scip, data->vars[v], sol, data, usevbds, allowlocal,
-                                     bestlbs + cutindex, &simplelb, bestlbtypes + cutindex) );
+                  bestlbs + cutindex, &simplelb, bestlbtypes + cutindex) );
 
             /* find closest upper bound in standard upper bound or variable upper bound for continuous variable so that it will have a positive coefficient */
             SCIP_CALL( findMIRBestUb(scip, data->vars[v], sol, data, usevbds, allowlocal,
-                                     bestubs + cutindex, &simpleub, bestubtypes + cutindex) );
+                  bestubs + cutindex, &simpleub, bestubtypes + cutindex) );
 
             lowerinf = SCIPisInfinity(scip, -bestlbs[cutindex]);
             upperinf = SCIPisInfinity(scip, bestubs[cutindex]);
@@ -12625,8 +12626,8 @@ SCIP_RETCODE cutsTransformStrongCG(
          {
             /* For explicit integers, we have no restrictions. */
             SCIP_CALL( determineBestBounds(scip, data->vars[v], sol, data, boundswitch, usevbds, allowlocal, FALSE, FALSE,
-                                           NULL, NULL, bestlbs + cutindex, bestubs + cutindex,
-                                           bestlbtypes + cutindex, bestubtypes + cutindex, selectedbounds + cutindex, freevariable) );
+                  NULL, NULL, bestlbs + cutindex, bestubs + cutindex,
+                  bestlbtypes + cutindex, bestubtypes + cutindex, selectedbounds + cutindex, freevariable) );
 
             if( *freevariable)
                goto TERMINATE;
