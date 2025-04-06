@@ -37,6 +37,7 @@
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
@@ -344,10 +345,11 @@ SCIP_DECL_HEUREXEC(heurExecBound)
 
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result)
-       * if we are not in exact solving mode
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a
+       * result); the cutoff result is safe to use in exact solving mode, but we don't have enough information to
+       * give a certificate for the cutoff
        */
-      if( cutoff && !SCIPisExact(scip) )
+      if( cutoff && !SCIPisCertified(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
