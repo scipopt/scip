@@ -4766,10 +4766,11 @@ SCIP_RETCODE determineBestBounds(
    SCIP_Bool*            freevariable        /**< pointer to store if this is a free variable */
    )
 {
-   assert(usevbds >= 0 && usevbds <= 2);
    SCIP_Real simplelb;
    SCIP_Real simpleub;
    int v;
+
+   assert(usevbds >= 0 && usevbds <= 2);
 
    v = SCIPvarGetProbindex(var);
 
@@ -4968,11 +4969,13 @@ SCIP_RETCODE createMIRData(
 {
    int i;
    int nnz;
+   MIR_DATA* data;
+
    assert(vartypeusevbds >= 0 && vartypeusevbds < NSECTIONS);
 
    assert(pdata != NULL);
    SCIP_CALL( SCIPallocBuffer(scip, pdata) );
-   MIR_DATA* data = *pdata;
+   data = *pdata;
 
    nnz = aggrrow->nnz;
    data->totalnnz = nnz;
@@ -5045,8 +5048,10 @@ void freeMIRData(
    MIR_DATA**            pdata               /**< MIR data structure to be freed */
    )
 {
+   MIR_DATA* data;
+
    assert(pdata != NULL);
-   MIR_DATA* data = *pdata;
+   data = *pdata;
 
    if( data->cutinds != NULL )
       SCIPfreeBufferArray(scip, &data->cutinds);
