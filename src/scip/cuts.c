@@ -1134,10 +1134,10 @@ static
 SCIP_Bool chgCoeffWithBoundSafely(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable the coefficient belongs to */
-   SCIP_Real             oldcoeff,          /**< old coefficient value */
+   SCIP_Real             oldcoeff,           /**< old coefficient value */
    SCIP_Real             newcoeff,           /**< new coefficient value */
    SCIP_Bool             cutislocal,         /**< is the cut local? */
-   SCIP_Real*            cutrhs             /**< pointer to adjust right hand side of cut */
+   SCIP_Real*            cutrhs              /**< pointer to adjust right hand side of cut */
    )
 {
    SCIP_INTERVAL delta;
@@ -4068,7 +4068,8 @@ typedef struct MIR_Data
 
 /** Returns the section of a variable.
  *
- *  For now, this is equal to the variable type section of the variable in the problem. */
+ *  For now, this is equal to the variable type section of the variable in the problem.
+ */
 static
 int varSection(
    MIR_DATA*             data,               /**< The MIR separation data */
@@ -5142,7 +5143,7 @@ static
 void performBoundSubstitutionSafely(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_Real*            cutcoefs,           /**< array of cut coefficients */
-   SCIP_Real*            cutrhs,            /**< pointer to right hand side of the cut */
+   SCIP_Real*            cutrhs,             /**< pointer to right hand side of the cut */
    int                   varsign,            /**< stores the sign of the transformed variable in summation */
    int                   boundtype,          /**< stores the bound used for transformed variable:
                                               *   vlb/vub_idx, or -1 for global lb/ub, or -2 for local lb/ub */
@@ -6455,7 +6456,6 @@ SCIP_RETCODE cutsRoundMIRRational(
          continue;
       }
 
-
       QUAD_ASSIGN(cutajquad, SCIPrationalRoundReal(cutaj, SCIP_R_ROUND_DOWNWARDS));
 
       QUAD_ARRAY_STORE(cutcoefs, v, cutajquad);
@@ -6513,7 +6513,6 @@ SCIP_RETCODE cutsRoundMIRRational(
       SCIP_Real QUAD(cutajquad);
       SCIP_Real QUAD(aj);
       int v;
-
 
       /* adapt lhs -> round down */
       SCIPintervalSetRoundingModeDownwards();
@@ -7303,7 +7302,6 @@ SCIP_RETCODE cutsSubstituteMIRRational(
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &ar) );
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &cutar) );
 
-
    /* compute 1/(1-f0) in interval arithmetic */
    previousroundmode = SCIPintervalGetRoundingMode();
    SCIPrationalMultReal(onedivoneminusf0, f0, -1);
@@ -7729,7 +7727,6 @@ SCIP_RETCODE calcMIRSafely(
    tmpnnz = aggrrow->nnz;
    tmpislocal = aggrrow->local;
 
-
    previousroundmode = SCIPintervalGetRoundingMode();
    SCIPintervalSetRoundingModeUpwards();
 
@@ -7841,7 +7838,6 @@ SCIP_RETCODE calcMIRSafely(
 
    if( tmpnnz > 0 )
    {
-
       SCIP_CALL( cutsRoundMIRSafely(scip, tmpcoefs, &rhs, tmpinds, &tmpnnz, varsign, boundtype, f0interval) ); /*lint !e644*/
 
       SCIPdebugMsg(scip, "After MIR rounding:\n");
