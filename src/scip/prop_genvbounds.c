@@ -44,6 +44,7 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_prop.h"
+#include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
@@ -136,7 +137,7 @@ struct SCIP_PropData
    SCIP_HASHMAP*         ubeventsmap;        /**< hashmap to provide fast access to ubevents array */
    SCIP_HASHMAP*         startmap;           /**< hashmap to provide fast access to startindices array */
    SCIP_PROP*            prop;               /**< pointer to genvbounds propagator */
-   SCIP_NODE*            lastnodecaught;     /**< last node where events for starting indices were caught */
+   SCIP_Longint          lastnodenumber;     /**< last node number where events for starting indices were caught */
    SCIP_VAR*             cutoffboundvar;     /**< artificial variable representing primal cutoff bound */
    int*                  componentsstart;    /**< stores the components starting indices in genvboundstore array; the
                                               *   entry componentsstart[ncomponents] is equal to ngenvbounds, which
@@ -1991,7 +1992,8 @@ SCIP_RETCODE execGenVBounds(
       if( SCIPgetDepth(scip) > 0 || propdata->propinrootnode )
       {
          /* if genvbounds are already sorted, check if bound change events were caught; otherwise apply all genvbounds */
-         if( !propdata->issorted || ( SCIPgetCurrentNode(scip) == propdata->lastnodecaught && propdata->nindices > 0 ) )
+         if( !propdata->issorted
+            || ( SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) == propdata->lastnodenumber && propdata->nindices > 0 ) )
          {
             SCIP_CALL( applyGenVBounds(scip, propdata->prop, FALSE, result, nchgbds) );
             assert(*result != SCIP_DIDNOTRUN);
@@ -2357,7 +2359,7 @@ SCIP_DECL_PROPINIT(propInitGenvbounds)
    propdata->gstartindices = NULL;
    propdata->gstartcomponents = NULL;
    propdata->lastcutoff = SCIPinfinity(scip);
-   propdata->lastnodecaught = NULL;
+   propdata->lastnodenumber = -1;
    propdata->cutoffboundvar = NULL;
    propdata->ngenvbounds = -1;
    propdata->ncomponents = -1;
@@ -2780,18 +2782,20 @@ static
 SCIP_DECL_EVENTEXEC(eventExecGenvbounds)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
+   SCIP_NODE* node = SCIPgetCurrentNode(scip);
    int i;
 
-   assert(scip != NULL);
+   assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_LBTIGHTENED
+         || SCIPeventGetType(event) == SCIP_EVENTTYPE_UBTIGHTENED);
    assert(eventdata != NULL);
-
-   assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_LBTIGHTENED || SCIPeventGetType(event) ==
-      SCIP_EVENTTYPE_UBTIGHTENED);
-
    assert(eventdata->startcomponents != NULL);
    assert(eventdata->startindices != NULL);
    assert(eventdata->nstarts > 0);
    assert(eventdata->prop != NULL);
+
+   /* ignore final events */
+   if( node == NULL )
+      return SCIP_OKAY;
 
    propdata = SCIPpropGetData(eventdata->prop);
    assert(propdata != NULL);
@@ -2804,11 +2808,14 @@ SCIP_DECL_EVENTEXEC(eventExecGenvbounds)
    SCIPdebug( printEventData(eventdata, SCIPeventGetType(event) == SCIP_EVENTTYPE_LBTIGHTENED ?
          SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER) );
 
+   /**@todo find a way to identify when we are at a new probing node; in probing mode, the node number is always zero,
+    *       so we may miss resetting the starting data and may propagate more than necessary
+    */
    /* check if we need to reset old local starting indices data */
-   if( SCIPgetCurrentNode(scip) != propdata->lastnodecaught )
+   if( SCIPnodeGetNumber(node) != propdata->lastnodenumber )
    {
       SCIP_CALL( resetLocalStartingData(scip, propdata) );
-      propdata->lastnodecaught = SCIPgetCurrentNode(scip);
+      propdata->lastnodenumber = SCIPnodeGetNumber(node);
    }
 
    for( i = 0; i < eventdata->nstarts; i++ )
