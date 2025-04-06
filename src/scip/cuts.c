@@ -4039,31 +4039,31 @@ SCIP_Real SCIPaggrRowGetRhs(
 
 typedef struct MIR_Data
 {
-   int totalnnz;
-   int* secindices[NSECTIONS];
-   int secnnz[NSECTIONS];
+   int                   totalnnz;
+   int*                  secindices[NSECTIONS];
+   int                   secnnz[NSECTIONS];
 
-   SCIP_Bool isenfint[NSECTIONS];            /**< Does the section have an integrality constraint? */
-   SCIP_Bool isimplint[NSECTIONS];           /**< Is the section implied integer variables? */
+   SCIP_Bool             isenfint[NSECTIONS];/**< Does the section have an integrality constraint? */
+   SCIP_Bool             isimplint[NSECTIONS];/**< Is the section implied integer variables? */
 
    /* Settings for cut derivation, per section */
-   int usevbds[NSECTIONS];                   /**< Should variable bound substitution be done for this section? */
+   int                   usevbds[NSECTIONS]; /**< Should variable bound substitution be done for this section? */
 
    /* Problem data that we reuse often */
-   SCIP_VAR** vars;
-   int nvars;
-   int nbinvars;
-   int nintvars;
-   int nbinimplvars;
-   int nintimplvars;
-   int ncontimplvars;
-   int ncontvars;
+   SCIP_VAR**            vars;
+   int                   nvars;
+   int                   nbinvars;
+   int                   nintvars;
+   int                   nbinimplvars;
+   int                   nintimplvars;
+   int                   ncontimplvars;
+   int                   ncontvars;
 
-   SCIP_Real* cutcoefs;                      /**< Working cut indices value array */
-   SCIP_Real QUAD(cutrhs);
+   SCIP_Real*            cutcoefs;           /**< working cut indices value array */
+   SCIP_Real             QUAD(cutrhs);
 
-   int* cutinds;                             /**< Working cut variable problem index array */
-   int ncutinds;
+   int*                  cutinds;            /**< working cut variable problem index array */
+   int                   ncutinds;
 } MIR_DATA;
 
 /** Returns the section of a variable.
