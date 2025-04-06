@@ -1257,7 +1257,7 @@ if(SCIP_WITH_EXACTSOLVE)
                         read ${PROJECT_SOURCE_DIR}/check/${path}
                         o validatesolve ${optval} ${optval} q"
                     )
-            set_tests_properties(MIPEX-${setting}-${basename}
+            set_tests_properties(MIPEX-${setting}-${basename}-certified
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
                                     FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
@@ -1270,7 +1270,7 @@ if(SCIP_WITH_EXACTSOLVE)
                      COMMAND ${VIPRCOMP} ${basename}.${setting}.vipr)
                set_tests_properties(MIPEX-${setting}-${basename}-viprcomp
                                  PROPERTIES
-                                 DEPENDS MIPEX-${setting}-${basename}
+                                 DEPENDS MIPEX-${setting}-${basename}-certified
                                  PASS_REGULAR_EXPRESSION "Completion of File successful!"
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
@@ -1288,7 +1288,7 @@ if(SCIP_WITH_EXACTSOLVE)
                      COMMAND ${VIPRCHK} ${basename}.${setting}.vipr_ori)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr_ori
                                  PROPERTIES
-                                 DEPENDS MIPEX-${setting}-${basename}
+                                 DEPENDS MIPEX-${setting}-${basename}-certified
                                  PASS_REGULAR_EXPRESSION "Successfully checked solution for feasibility"
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
