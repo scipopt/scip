@@ -174,11 +174,14 @@ SCIP_Bool vartypeIsBranchRowType(
    if ( orbireddata->conshdlr_nonlinear != NULL && SCIPconshdlrGetNActiveConss(orbireddata->conshdlr_nonlinear) > 0 )
       return TRUE;
 
-   if ( SCIPgetSymInferredVarType(var) == SCIP_VARTYPE_CONTINUOUS )
-      return FALSE;
-   assert( SCIPgetSymInferredVarType(var) == SCIP_VARTYPE_BINARY
+   /* otherwise, only integral variables are used for branching */
+   if ( SCIPvarIsIntegral(var) )
+   {
+      assert( SCIPgetSymInferredVarType(var) == SCIP_VARTYPE_BINARY
       || SCIPgetSymInferredVarType(var) == SCIP_VARTYPE_INTEGER );
-   return TRUE;
+      return TRUE;
+   }
+   return FALSE;
 }
 
 
@@ -1001,9 +1004,6 @@ SCIP_Bool rowIsBranchRow(
 #ifndef NDEBUG
    for (c = 1; c < orbidata->ncols; ++c)
    {
-      /* the actual vartypes can be different,
-       * for example when an INTEGER vartype turns into BINARY due to bound changes
-       */
       assert( SCIPgetSymInferredVarType(orbidata->vars[rowid * orbidata->ncols])
          == SCIPgetSymInferredVarType(orbidata->vars[rowid * orbidata->ncols + c]) );
    }
