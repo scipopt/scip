@@ -2512,7 +2512,7 @@ SCIP_RETCODE SCIPcertificatePrintInheritedBound(
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &val) );
 
       SCIPrationalSetRational(lowerbound, nodedata->derbound_self);
-      SCIPrationalSetInt(val, 1, 1);
+      SCIPrationalSetFraction(val, 1LL, 1LL);
 
       SCIP_CALL( certificatePrintDualbound(certificate, NULL, lowerbound, 1, ind, &val) );
       SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound) );
@@ -3205,7 +3205,7 @@ SCIP_RETCODE SCIPcertificatePrintUnsplitting(
          (void) SCIPrationalCreateBuffer(set->buffer, &val);
 
          SCIPrationalSetRational(lowerbound, nodedata->derbound_self);
-         SCIPrationalSetInt(val, 1, 1);
+         SCIPrationalSetFraction(val, 1LL, 1LL);
 
          SCIP_CALL( certificatePrintDualbound(certificate, NULL, lowerbound, 1, ind, &val) );
          SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound) );

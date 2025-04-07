@@ -1091,7 +1091,7 @@ void consdataComputePseudoActivity(
    SCIP_RATIONAL* bound;
    SCIP_RATIONAL* val;
 
-   SCIPrationalSetInt(pseudoactivity, 0L, 1L);
+   SCIPrationalSetFraction(pseudoactivity, 0LL, 1LL);
 
    pseudoactivityposinf = 0;
    pseudoactivityneginf = 0;
@@ -2802,7 +2802,7 @@ void consdataGetActivity(
 
       (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &solval);
 
-      SCIPrationalSetInt(activity, 0L, 1L);
+      SCIPrationalSetFraction(activity, 0LL, 1LL);
       nposinf = 0;
       nneginf = 0;
 

@@ -280,7 +280,7 @@ void SCIPrationalSetRational(
 
 /** sets a rational to a nom/denom value */
 SCIP_EXPORT
-void SCIPrationalSetInt(
+void SCIPrationalSetFraction(
    SCIP_RATIONAL*        res,                /**< the result */
    SCIP_Longint          nom,                /**< the nominator */
    SCIP_Longint          denom               /**< the denominator */

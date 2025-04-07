@@ -25,8 +25,9 @@
 /**@file   lpexact_bounding.c
  * @brief  safe exact rational bounding methods
  * @author Leon Eifler
- *
+ * @author Kati Wolter
  */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include <stdio.h>
 #include <assert.h>
@@ -59,7 +60,7 @@
 
 #ifdef SCIP_WITH_BOOST
 
-#define PSBIGM                      100
+#define PSBIGM                      100LL
 
 /** checks if number is a power of two (negative numbers are reported as false);
  *
@@ -344,7 +345,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
          projbeg[i] = pos;
          projlen[i] = 1;
          projind[pos] = i - 2*nrows;
-         SCIPrationalSetInt(projval[pos], 1, 1);
+         SCIPrationalSetFraction(projval[pos], 1LL, 1LL);
          pos ++;
       }
       /* -I part (ub constraints) */
@@ -353,7 +354,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
          projbeg[i] = pos;
          projlen[i] = 1;
          projind[pos] = i - (2*nrows + ncols);
-         SCIPrationalSetInt(projval[pos], -1, 1);
+         SCIPrationalSetFraction(projval[pos], -1LL, 1LL);
          pos ++;
       }
    }
@@ -483,7 +484,7 @@ SCIP_RETCODE setupProjectShiftOpt(
 
    /* set alpha and beta. */
    SCIPrationalSetReal(alpha, projshiftdata->projshiftobjweight);
-   SCIPrationalSetInt(beta, 1, 1);
+   SCIPrationalSetFraction(beta, 1LL, 1LL);
 
    if( SCIPrationalIsPositive(alpha) )
    {
@@ -497,7 +498,7 @@ SCIP_RETCODE setupProjectShiftOpt(
       }
       /* divide through by alpha and round beta to be a power of 2 */
       SCIPrationalDiv(beta, beta, alpha);
-      SCIPrationalSetInt(alpha, 1, 1);
+      SCIPrationalSetFraction(alpha, 1LL, 1LL);
       SCIPrationalSetReal(beta, pow(2, (int) (log(SCIPrationalGetReal(beta))/log(2))));
    }
 
@@ -510,10 +511,10 @@ SCIP_RETCODE setupProjectShiftOpt(
    for( i = 0; i < ndvarmap; i++ )
    {
       SCIPrationalSetInfinity(psub[i]);
-      SCIPrationalSetInt(pslb[i], 0, 1);
+      SCIPrationalSetFraction(pslb[i], 0LL, 1LL);
    }
-   SCIPrationalSetInt(psub[ndvarmap], PSBIGM, 1);
-   SCIPrationalSetInt(pslb[ndvarmap], 0 ,1);
+   SCIPrationalSetFraction(psub[ndvarmap], PSBIGM, 1LL);
+   SCIPrationalSetFraction(pslb[ndvarmap], 0LL, 1LL);
 
    /* set up constraint bounds */
    for( i = 0; i < ncols; i++ )
@@ -523,7 +524,7 @@ SCIP_RETCODE setupProjectShiftOpt(
    }
    for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
    {
-      SCIPrationalSetInt(pslhs[ncols + i], 0, 1);
+      SCIPrationalSetFraction(pslhs[ncols + i], 0LL, 1LL);
       SCIPrationalSetInfinity(psrhs[ncols + i]);
    }
 
@@ -596,9 +597,9 @@ SCIP_RETCODE setupProjectShiftOpt(
          pos = psbeg[indx] + pslen[indx];
          psind[pos] = i;
          if( dvarmap[i] < 2*nrows + ncols)
-            SCIPrationalSetInt(psval[pos], 1, 1);
+            SCIPrationalSetFraction(psval[pos], 1LL, 1LL);
          else
-            SCIPrationalSetInt(psval[pos], -1, 1);
+            SCIPrationalSetFraction(psval[pos], -1LL, 1LL);
          pslen[indx]++;
       }
    }
@@ -610,9 +611,9 @@ SCIP_RETCODE setupProjectShiftOpt(
       if( projshiftdata->includedrows[indx] )
       {
          psind[psbeg[pos]] = i;
-         SCIPrationalSetInt(psval[psbeg[pos]], 1, 1);
+         SCIPrationalSetFraction(psval[psbeg[pos]], 1LL, 1LL);
          psind[psbeg[pos] + 1] = psncols - 1;
-         SCIPrationalSetInt(psval[psbeg[pos] + 1], -1, 1);
+         SCIPrationalSetFraction(psval[psbeg[pos] + 1], -1LL, 1LL);
          pos++;
       }
    }
@@ -720,7 +721,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &auxval2) );
 
       /* update the objective on d */
-      SCIPrationalSetInt(auxval1, 0, 1);
+      SCIPrationalSetFraction(auxval1, 0LL, 1LL);
       SCIP_CALL( SCIPlpiExactChgObj(pslpiexact, 1, &ndvarmap, &auxval1) );
 
       /* update the rhs/lhs */
@@ -730,7 +731,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       }
 
       /* update bounds on d */
-      SCIPrationalSetInt(auxval1, 1 ,1);
+      SCIPrationalSetFraction(auxval1, 1LL, 1LL);
       SCIPrationalSetInfinity(auxval2);
       SCIP_CALL( SCIPlpiExactChgBounds(pslpiexact, 1, &ndvarmap, &auxval1, &auxval2) );
 
@@ -1294,13 +1295,13 @@ SCIP_RETCODE projectShift(
       else
          dualsol[i] = usefarkas ? lpexact->cols[i - nrows]->farkascoef : lpexact->cols[i - nrows]->redcost;
 
-      SCIPrationalSetInt(dualsol[i], 0, 1);
+      SCIPrationalSetFraction(dualsol[i], 0LL, 1LL);
       if( i < ncols )
-         SCIPrationalSetInt(violation[i], 0, 1);
+         SCIPrationalSetFraction(violation[i], 0LL, 1LL);
    }
    for( i = 0; i < nextendedrows; ++i )
    {
-      SCIPrationalSetInt(correction[i], 0, 1);
+      SCIPrationalSetFraction(correction[i], 0LL, 1LL);
    }
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &isupper, nrows + ncols) );
@@ -1375,13 +1376,13 @@ SCIP_RETCODE projectShift(
          val = i < nrows ? lpexact->rows[i]->rhs : lpexact->cols[i - nrows]->ub;
 
       if( SCIPrationalIsAbsInfinity(val) )
-         SCIPrationalSetInt(dualsol[i], 0, 1);
+         SCIPrationalSetFraction(dualsol[i], 0LL, 1LL);
    }
 
 #ifdef SCIP_DEBUG_PS_OUT
    printf("approximate dual solution:\n");
 
-   SCIPrationalSetInt(dualbound, 0, 1);
+   SCIPrationalSetFraction(dualbound, 0LL, 1LL);
    for( i = 0; i < nrows + ncols; i++ )
    {
       SCIP_RATIONAL* val;
@@ -1510,7 +1511,7 @@ SCIP_RETCODE projectShift(
             if( !isupper[map] )
             {
                SCIPrationalAdd(correction[i], correction[i], dualsol[map]);
-               SCIPrationalSetInt(dualsol[map], 0, 1);
+               SCIPrationalSetFraction(dualsol[map], 0LL, 1LL);
             }
          }
          /* [nrows, ..., 2*nrows] is a rhs-row of A */
@@ -1519,7 +1520,7 @@ SCIP_RETCODE projectShift(
             if( isupper[map - nrowsps] )
             {
                SCIPrationalDiff(correction[i], correction[i], dualsol[map - nrowsps]);
-               SCIPrationalSetInt(dualsol[map - nrowsps], 0, 1);
+               SCIPrationalSetFraction(dualsol[map - nrowsps], 0LL, 1LL);
             }
          }
          /* [2*nrows, ..., 2*nrows+ncols] is a lb-col */
@@ -1528,7 +1529,7 @@ SCIP_RETCODE projectShift(
             if( !isupper[map - nrowsps + shift] )
             {
                SCIPrationalAdd(correction[i], correction[i], dualsol[map - nrowsps + shift]);
-               SCIPrationalSetInt(dualsol[map - nrowsps + shift], 0, 1);
+               SCIPrationalSetFraction(dualsol[map - nrowsps + shift], 0LL, 1LL);
             }
          }
          /* [2*nrows+ncols, ..., 2*nrows+2*ncols] is a ub-col */
@@ -1537,7 +1538,7 @@ SCIP_RETCODE projectShift(
             if( isupper[map - nrowsps - ncols  + shift] )
             {
                SCIPrationalDiff(correction[i], correction[i], dualsol[map - nrowsps - ncols + shift]);
-               SCIPrationalSetInt(dualsol[map - nrowsps - ncols + shift], 0, 1);
+               SCIPrationalSetFraction(dualsol[map - nrowsps - ncols + shift], 0LL, 1LL);
             }
          }
       }
@@ -1562,7 +1563,7 @@ SCIP_RETCODE projectShift(
          */
 
          /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-         SCIPrationalSetInt(lambda1, 1, 1);
+         SCIPrationalSetFraction(lambda1, 1LL, 1LL);
          for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
          {
             if( SCIPrationalIsNegative(correction[i]) )
@@ -1575,14 +1576,14 @@ SCIP_RETCODE projectShift(
                SCIPrationalMin(lambda1, lambda1, tmp2);
             }
          }
-         SCIPrationalSetInt(lambda2, 1, 1);
+         SCIPrationalSetFraction(lambda2, 1LL, 1LL);
          SCIPrationalDiff(lambda2, lambda2, lambda1);
       }
       else
       {
          /* in this case we are using an interior ray that can be added freely to the solution */
          /* compute lambda values: compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-         SCIPrationalSetInt(lambda1, 1, 1);
+         SCIPrationalSetFraction(lambda1, 1LL, 1LL);
          for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
          {
             int map = projshiftdata->projshiftbasis[i];
@@ -1682,7 +1683,7 @@ SCIP_RETCODE projectShift(
       if( !usefarkas )
         SCIPrationalSetRational(violation[i], lpexact->cols[i]->obj);
       else
-         SCIPrationalSetInt(violation[i], 0, 1);
+         SCIPrationalSetFraction(violation[i], 0LL, 1LL);
    }
    for( i = 0; i < nrows; i++ )
    {
@@ -1721,7 +1722,7 @@ SCIP_RETCODE projectShift(
    assert(!rval);
 #endif
 
-   SCIPrationalSetInt(dualbound, 0, 1);
+   SCIPrationalSetFraction(dualbound, 0LL, 1LL);
    for( i = 0; i < nrows + ncols; i++ )
    {
       SCIP_RATIONAL* val;

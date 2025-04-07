@@ -2062,7 +2062,7 @@ void SCIPsolGetValExact(
        * -> get the corresponding original variable first
        */
       origvar = var;
-      SCIPrationalSetInt(scalar, 1L, 1L);
+      SCIPrationalSetFraction(scalar, 1LL, 1LL);
       SCIPrationalSetReal(constant, 0.0);
       retcode = SCIPvarGetOrigvarSumExact(&origvar, scalar, constant);
       if ( retcode != SCIP_OKAY )
@@ -3226,7 +3226,7 @@ void SCIPsolRecomputeInternObjExact(
    nvars = prob->nvars;
    (void) SCIPrationalCreateBuffer(set->buffer, &solval);
 
-   SCIPrationalSetInt(sol->valsexact->obj, 0L, 1L);
+   SCIPrationalSetFraction(sol->valsexact->obj, 0LL, 1LL);
 
    /* recompute the objective value */
    for( v = 0; v < nvars; ++v )

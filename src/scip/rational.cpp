@@ -592,7 +592,7 @@ void SCIPrationalSetRational(
 }
 
 /** set a rational to a nom/denom value */
-void SCIPrationalSetInt(
+void SCIPrationalSetFraction(
    SCIP_RATIONAL*        res,                /**< the result */
    SCIP_Longint          nom,                /**< the nominator */
    SCIP_Longint          denom               /**< the denominator */
@@ -2404,7 +2404,7 @@ void SCIPrationalComputeApproximation(
    else if( src->val.sign() == 1 && SCIPrationalGetReal(src) < (1.0 / maxdenom) )
    {
       if( forcegreater == 1 )
-         SCIPrationalSetInt(res, 1, maxdenom);
+         SCIPrationalSetFraction(res, 1LL, maxdenom);
       else
          SCIPrationalSetReal(res, 0.0);
 
@@ -2413,7 +2413,7 @@ void SCIPrationalComputeApproximation(
    else if( src->val.sign() == -1 && SCIPrationalGetReal(src) > (-1.0 / maxdenom) )
    {
       if( forcegreater == -1 )
-         SCIPrationalSetInt(res, -1, maxdenom);
+         SCIPrationalSetFraction(res, -1LL, maxdenom);
       else
          SCIPrationalSetReal(res, 0.0);
 
@@ -2640,7 +2640,7 @@ void SCIPrationalarrayGetVal(
 
    if( rationalarray->firstidx == -1 || idx < rationalarray->firstidx
       || (size_t) idx >= rationalarray->vals.size() + (size_t) rationalarray->firstidx )
-      SCIPrationalSetInt(result, 0, 1);
+      SCIPrationalSetFraction(result, 0LL, 1LL);
    else
       SCIPrationalSetRational(result, &rationalarray->vals[(size_t) (idx - rationalarray->firstidx)]);
 }

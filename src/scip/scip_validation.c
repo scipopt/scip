@@ -275,8 +275,8 @@ SCIP_RETCODE SCIPvalidateSolveExact(
       localfeasible = TRUE;
    }
 
-   SCIPrationalSetInt(primviol, 0L, 1L);
-   SCIPrationalSetInt(dualviol, 0L, 1L);
+   SCIPrationalSetFraction(primviol, 0LL, 1LL);
+   SCIPrationalSetFraction(dualviol, 0LL, 1LL);
 
    /* check the primal and dual bounds computed by SCIP against the external reference values within reference tolerance */
    /* solution for an infeasible problem */
