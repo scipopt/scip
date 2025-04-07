@@ -66,7 +66,6 @@ struct SCIP_ConflictStore
    int                   conflictsize;       /**< size of conflict array (bounded by conflict->maxpoolsize) */
    int                   origconflictsize;   /**< size of origconfs array */
    int                   nconflicts;         /**< number of stored conflicts */
-   int                   nresconflicts;      /**< number of stored resolution conflicts */
    int                   ndualrayconfs;      /**< number of stored proofs based on dual rays */
    int                   ndualsolconfs;      /**< number of stored proofs based on dual solutions */
    int                   norigconfs;         /**< number of original conflicts */

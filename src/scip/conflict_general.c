@@ -297,9 +297,7 @@ SCIP_RETCODE SCIPconflictCreate(
          conflictBdchginfoComp, NULL) );
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->resbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
          conflictBdchginfoComp, NULL) );
-   SCIP_CALL( SCIPpqueueCreate(&(*conflict)->resforcedbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
-         conflictBdchginfoComp, NULL) );
-   SCIP_CALL( SCIPpqueueCreate(&(*conflict)->separatebdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
+   SCIP_CALL( SCIPpqueueCreate(&(*conflict)->reasonbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
          conflictBdchginfoComp, NULL) );
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->continuousbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
          conflictBdchginfoComp, NULL) );
@@ -408,8 +406,7 @@ SCIP_RETCODE SCIPconflictFree(
    SCIPpqueueFree(&(*conflict)->bdchgqueue);
    SCIPpqueueFree(&(*conflict)->forcedbdchgqueue);
    SCIPpqueueFree(&(*conflict)->resbdchgqueue);
-   SCIPpqueueFree(&(*conflict)->resforcedbdchgqueue);
-   SCIPpqueueFree(&(*conflict)->separatebdchgqueue);
+   SCIPpqueueFree(&(*conflict)->reasonbdchgqueue);
    SCIPpqueueFree(&(*conflict)->continuousbdchgqueue);
    SCIPconflictsetFree(&(*conflict)->conflictset, blkmem);
    SCIPconflictRowFree(&(*conflict)->conflictrow, blkmem);

@@ -1120,13 +1120,7 @@ SCIP_Bool existsResolvablebdchginfo(
 {
    SCIP_BDCHGINFO* bdchginfo;
    int i;
-   /* loop through forced to resolve bound changes and check if there exists a resolvable bound change */
-   for( i = 0; i < SCIPpqueueNElems(conflict->resforcedbdchgqueue); ++i )
-   {
-      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resforcedbdchgqueue)[i]);
-      if( isResolvableBdchg(bdchginfo) )
-         return TRUE;
-   }
+
    /* loop through bound change and check if there exists a resolvable bound change */
    for( i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); ++i )
    {
@@ -1184,68 +1178,35 @@ SCIP_BDCHGINFO* conflictFirstCand(
 
    assert(conflict != NULL);
 
-   if( SCIPpqueueNElems(conflict->resforcedbdchgqueue) > 0 )
+   /* get next potential candidate */
+   bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->resbdchgqueue));
+
+   /* check if this candidate is valid */
+   if( bdchginfo != NULL && !isBdchgConflictRelevant(conflict, bdchginfo, initial) )
    {
-      /* get next potential candidate */
-      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->resforcedbdchgqueue));
+      SCIP_VAR* var;
 
-      /* check if this candidate is valid */
-      if( bdchginfoIsInvalid(conflict, bdchginfo) || !isBdchgConflictRelevant(conflict, bdchginfo, initial) )
-      {
-         SCIP_VAR* var;
+      var = SCIPbdchginfoGetVar(bdchginfo);
 
-         var = SCIPbdchginfoGetVar(bdchginfo);
+      SCIPsetDebugMsgPrint(set, "\t -> bound change info [%d:%d<%s> %s %g] is invalid -> pop it from the queue\n",
+         SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPbdchginfoGetPos(bdchginfo),
+         SCIPvarGetName(var),
+         SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+         SCIPbdchginfoGetNewbound(bdchginfo));
 
-         SCIPsetDebugMsgPrint(set, " \t -> bound change info [%d:%d<%s> %s %g] is invalid -> pop it from the queue\n",
-            SCIPbdchginfoGetDepth(bdchginfo),
-            SCIPbdchginfoGetPos(bdchginfo),
-            SCIPvarGetName(var),
-            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            SCIPbdchginfoGetNewbound(bdchginfo));
+      /* pop the invalid bound change info from the queue */
+      (void)(SCIPpqueueRemove(conflict->resbdchgqueue));
 
-         /* pop the invalid bound change info from the queue */
-         (void)(SCIPpqueueRemove(conflict->resforcedbdchgqueue));
+      if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
+         var->conflictreslb = SCIP_REAL_MIN;
+      else
+         var->conflictresub = SCIP_REAL_MAX;
 
-         if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
-            var->conflictreslb = SCIP_REAL_MIN;
-         else
-            var->conflictresub = SCIP_REAL_MAX;
-
-         /* call method recursively to get next conflict analysis candidate */
-         bdchginfo = conflictFirstCand(set, conflict, initial);
-      }
+      /* call method recursively to get next conflict analysis candidate */
+      bdchginfo = conflictFirstCand(set, conflict, initial);
    }
-   else
-   {
-      /* get next potential candidate */
-      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->resbdchgqueue));
 
-      /* check if this candidate is valid */
-      if( bdchginfo != NULL && !isBdchgConflictRelevant(conflict, bdchginfo, initial) )
-      {
-         SCIP_VAR* var;
-
-         var = SCIPbdchginfoGetVar(bdchginfo);
-
-         SCIPsetDebugMsgPrint(set, "\t -> bound change info [%d:%d<%s> %s %g] is invalid -> pop it from the queue\n",
-            SCIPbdchginfoGetDepth(bdchginfo),
-            SCIPbdchginfoGetPos(bdchginfo),
-            SCIPvarGetName(var),
-            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            SCIPbdchginfoGetNewbound(bdchginfo));
-
-         /* pop the invalid bound change info from the queue */
-         (void)(SCIPpqueueRemove(conflict->resbdchgqueue));
-
-         if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
-            var->conflictreslb = SCIP_REAL_MIN;
-         else
-            var->conflictresub = SCIP_REAL_MAX;
-
-         /* call method recursively to get next conflict analysis candidate */
-         bdchginfo = conflictFirstCand(set, conflict, initial);
-      }
-   }
    assert(bdchginfo == NULL || !SCIPbdchginfoIsRedundant(bdchginfo));
 
    return bdchginfo;
@@ -1262,10 +1223,7 @@ SCIP_BDCHGINFO* conflictRemoveCand(
 
    assert(conflict != NULL);
 
-   if( SCIPpqueueNElems(conflict->resforcedbdchgqueue) > 0 )
-      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueRemove(conflict->resforcedbdchgqueue));
-   else
-      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueRemove(conflict->resbdchgqueue));
+   bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueRemove(conflict->resbdchgqueue));
 
    assert(!SCIPbdchginfoIsRedundant(bdchginfo));
 
@@ -2608,8 +2566,8 @@ SCIP_RETCODE reasonBoundChanges(
 
    SCIPsetDebugMsgPrint(set, " \t -> resolving status: %u\n", *resolved);
 
-   /* in case the bound change was not resolved, the separate conflict queue should have zero elements */
-   assert((*resolved) || (SCIPpqueueNElems(conflict->separatebdchgqueue) == 0));
+   /* in case the bound change was not resolved, the reason bound change queue should have zero elements */
+   assert((*resolved) || (SCIPpqueueNElems(conflict->reasonbdchgqueue) == 0));
 
    return SCIP_OKAY;
 }
@@ -2639,12 +2597,12 @@ SCIP_RETCODE getReasonClause(
       SCIPsetDebugMsgPrint(set, " \t -> cannot create clause because of non-binary variable \n");
       return SCIP_OKAY;
    }
-   /* make sure that the separate bound change queue is empty */
-   if( SCIPpqueueNElems(conflict->separatebdchgqueue) != 0 )
-      SCIPpqueueClear(conflict->separatebdchgqueue);
+   /* make sure that the reason bound change queue is empty */
+   if( SCIPpqueueNElems(conflict->reasonbdchgqueue) != 0 )
+      SCIPpqueueClear(conflict->reasonbdchgqueue);
 
    SCIP_CALL( reasonBoundChanges(conflict, set, currbdchginfo, relaxedbd, validdepth, success) );
-   if( !(*success) || SCIPpqueueNElems(conflict->separatebdchgqueue) == 0 )
+   if( !(*success) || SCIPpqueueNElems(conflict->reasonbdchgqueue) == 0 )
    {
       *success = FALSE;
       SCIPsetDebugMsgPrint(set, " \t -> cannot create clause because of unresolvable bound change \n");
@@ -2666,10 +2624,10 @@ SCIP_RETCODE getReasonClause(
        *  E.g. if x = 1, y = 1, leads to z = 0 then the reason
        *  constraint is (1 - x) + (1 - y) + (1 - z) >= 1
        */
-      for( int i = 0; i < SCIPpqueueNElems(conflict->separatebdchgqueue); i++ )
+      for( int i = 0; i < SCIPpqueueNElems(conflict->reasonbdchgqueue); i++ )
       {
          SCIP_BDCHGINFO* bdchginfo;
-         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->separatebdchgqueue)[i]);
+         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->reasonbdchgqueue)[i]);
 
          if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)) )
          {
@@ -2687,7 +2645,7 @@ SCIP_RETCODE getReasonClause(
          for( int i = 0; i < reasonrow->nnz; i++ )
             reasonrow->vals[reasonrow->inds[i]] = 0.0;
 
-         reasonrow->nnz = SCIPpqueueNElems(conflict->separatebdchgqueue) + 1;
+         reasonrow->nnz = SCIPpqueueNElems(conflict->reasonbdchgqueue) + 1;
          reasonrow->lhs = lhs;
 
          if( reasonrow->size == 0 )
@@ -2713,7 +2671,7 @@ SCIP_RETCODE getReasonClause(
          for( int i = 0; i < reasonrow->nnz - 1; i++ )
          {
             SCIP_BDCHGINFO* bdchginfo;
-            bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->separatebdchgqueue)[i]);
+            bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->reasonbdchgqueue)[i]);
             reasonrow->inds[i+1] = SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo));
             idx = reasonrow->inds[i+1];
             reasonrow->vals[idx] = SCIPbdchginfoGetNewbound(bdchginfo) > 0.5 ? -1.0 : 1.0;
@@ -4125,8 +4083,7 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
 
    /* clear the bound change queues */
    SCIPpqueueClear(conflict->resbdchgqueue);
-   SCIPpqueueClear(conflict->resforcedbdchgqueue);
-   SCIPpqueueClear(conflict->separatebdchgqueue);
+   SCIPpqueueClear(conflict->reasonbdchgqueue);
    SCIPpqueueClear(conflict->continuousbdchgqueue);
 
    /* stop timing */

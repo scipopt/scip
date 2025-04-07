@@ -209,8 +209,7 @@ struct SCIP_Conflict
    SCIP_PQUEUE*          bdchgqueue;         /**< unprocessed conflict bound changes */
    SCIP_PQUEUE*          forcedbdchgqueue;   /**< unprocessed conflict bound changes that must be resolved */
    SCIP_PQUEUE*          resbdchgqueue;      /**< unprocessed conflict bound changes used in generalized resolution*/
-   SCIP_PQUEUE*          resforcedbdchgqueue;/**< unprocessed conflict bound changes used in generalized resolution that must be resolved */
-   SCIP_PQUEUE*          separatebdchgqueue; /**< separate unprocessed conflict bound changes from reason */
+   SCIP_PQUEUE*          reasonbdchgqueue;   /**< unprocessed bound changes that are the reason for the current bound change */
    SCIP_PQUEUE*          continuousbdchgqueue;/**< unprocessed bound changes that are continuous */
    SCIP_PROOFSET*        proofset;           /**< proof sets found at the current node */
    SCIP_PROOFSET**       proofsets;          /**< proof sets found at the current node */
