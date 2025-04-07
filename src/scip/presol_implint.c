@@ -1916,21 +1916,16 @@ SCIP_RETCODE findImpliedIntegers(
          /* Higher score; we prefer to pick this variable first. We generally prefer to detect implied integrality of
           * general integer variables over binary variables. We break ties using the number of nonzeros in the column
           * @TODO; test different scores / alternatives
-          * @TODO; detect when we only have columns that  extend the network / co-network portions. In this case, we can take both at the same time.*/
+          * @TODO; detect when we only have columns that  extend the network / co-network portions.
+          * In this case, we can take both sets into the network matrix at the same time.*/
          SCIP_Real score;
-         switch( SCIPvarGetType(matrixGetVar(matrix, col)) )
+         if( SCIPvarGetType(matrixGetVar(matrix, col)) == SCIP_VARTYPE_BINARY )
+            score = 10.0;
+         else
          {
-            case SCIP_VARTYPE_BINARY:
-               score = 10.0;
-               break;
-            case SCIP_VARTYPE_INTEGER:
-               score = 100.0;
-               break;
-            case SCIP_VARTYPE_CONTINUOUS:
-            default:
-               SCIPerrorMessage("unknown variable type\n");
-               return SCIP_INVALIDDATA;
-         } /*lint !e788*/
+            assert( SCIPvarGetType(matrixGetVar(matrix, col)) == SCIP_VARTYPE_INTEGER );
+            score = 100.0;
+         }
          score -= 0.001 * nnonzs;
          candidateScores[i] = score;
       }
