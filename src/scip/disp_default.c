@@ -258,14 +258,6 @@
 #define DISP_POSI_CONFLICTS     4000
 #define DISP_STRI_CONFLICTS     TRUE
 
-#define DISP_NAME_RESCONFLICTS     "resolutionconfs"
-#define DISP_DESC_RESCONFLICTS     "total number of resolution conflicts found in conflict analysis"
-#define DISP_HEAD_RESCONFLICTS     "resconfs"
-#define DISP_WIDT_RESCONFLICTS     8
-#define DISP_PRIO_RESCONFLICTS     2000
-#define DISP_POSI_RESCONFLICTS     4000
-#define DISP_STRI_RESCONFLICTS     TRUE
-
 #define DISP_NAME_STRONGBRANCHS "strongbranchs"
 #define DISP_DESC_STRONGBRANCHS "total number of strong branching calls"
 #define DISP_HEAD_STRONGBRANCHS "strbr"
@@ -977,21 +969,6 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNConflicts)
    return SCIP_OKAY;
 }
 
-/** output method of display column to output file stream 'file' for number of resolution conflicts */
-static
-SCIP_DECL_DISPOUTPUT(SCIPdispOutputNResConflicts)
-{  /*lint --e{715}*/
-   SCIP_Longint applied;
-
-   assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_RESCONFLICTS) == 0);
-   assert(scip != NULL);
-
-   applied = SCIPgetNResConflictConssApplied(scip);
-   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, applied, DISP_WIDT_RESCONFLICTS);
-
-   return SCIP_OKAY;
-}
 /** output method of display column to output file stream 'file' for number of strong branchings */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNStrongbranchs)
@@ -1357,7 +1334,6 @@ SCIP_RETCODE SCIPincludeDispDefault(
       assert(SCIPfindDisp(scip, DISP_NAME_SEPAROUNDS) != NULL );
       assert(SCIPfindDisp(scip, DISP_NAME_POOLSIZE) != NULL );
       assert(SCIPfindDisp(scip, DISP_NAME_CONFLICTS) != NULL );
-      assert(SCIPfindDisp(scip, DISP_NAME_RESCONFLICTS) != NULL );
       assert(SCIPfindDisp(scip, DISP_NAME_STRONGBRANCHS) != NULL );
       assert(SCIPfindDisp(scip, DISP_NAME_PSEUDOOBJ) != NULL );
       assert(SCIPfindDisp(scip, DISP_NAME_LPOBJ) != NULL );
@@ -1570,13 +1546,6 @@ SCIP_RETCODE SCIPincludeDispDefault(
          dispCopyDefault,
          NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNConflicts, NULL,
          DISP_WIDT_CONFLICTS, DISP_PRIO_CONFLICTS, DISP_POSI_CONFLICTS, DISP_STRI_CONFLICTS) );
-
-   assert(SCIPfindDisp(scip,DISP_NAME_RESCONFLICTS) == NULL);
-   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_RESCONFLICTS, DISP_DESC_RESCONFLICTS, DISP_HEAD_RESCONFLICTS,
-         SCIP_DISPSTATUS_AUTO,
-         dispCopyDefault,
-         NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNResConflicts, NULL,
-         DISP_WIDT_RESCONFLICTS, DISP_PRIO_RESCONFLICTS, DISP_POSI_RESCONFLICTS, DISP_STRI_RESCONFLICTS) );
 
    assert(SCIPfindDisp(scip, DISP_NAME_STRONGBRANCHS) == NULL);
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_STRONGBRANCHS, DISP_DESC_STRONGBRANCHS, DISP_HEAD_STRONGBRANCHS,
