@@ -728,7 +728,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       /* update the rhs/lhs */
       for( i = 0; i < ncols; i++ )
       {
-         SCIP_CALL( SCIPlpiExactChgSides(pslpiexact, 1, &i, &auxval1, &auxval1) ); /*lint --e{850}*/
+         SCIP_CALL( SCIPlpiExactChgSides(pslpiexact, 1, &i, &auxval1, &auxval1) ); /*lint !e850*/
       }
 
       /* update bounds on d */
@@ -982,7 +982,7 @@ SCIP_RETCODE projectShiftConstructLP(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &colnames, psncols) );
    for( i = 0; i < psncols; i++ )
    {
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &(colnames[i]), SCIP_MAXSTRLEN) ); /*lint --e{866}*/
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &colnames[i], SCIP_MAXSTRLEN) ); /*lint !e866*/
       (void) SCIPsnprintf( (colnames)[i] , SCIP_MAXSTRLEN, "var%d", i);
    }
 
