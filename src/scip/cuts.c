@@ -3571,6 +3571,11 @@ SCIP_RETCODE SCIPaggrRowSumRows(
             SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
             if( SCIPisCertified(scip) )
             {
+               assert(usedrows != NULL);
+               assert(usedweights != NULL);
+               assert(negslackrows != NULL);
+               assert(negslackweights != NULL);
+
                SCIP_ROW* row = rows[rowinds[k]];
                SCIP_Bool integral = FALSE;
                /* just exclude the negative continuous slacks for the certificate rows */
@@ -3629,6 +3634,11 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
                if( SCIPisCertified(scip) )
                {
+                  assert(usedrows != NULL);
+                  assert(usedweights != NULL);
+                  assert(negslackrows != NULL);
+                  assert(negslackweights != NULL);
+
                   SCIP_ROW* row = rows[k];
                   SCIP_Bool integral = FALSE;
                   /* just exclude the negative continuous slacks for the certificate rows */
