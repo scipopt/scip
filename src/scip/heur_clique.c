@@ -309,6 +309,7 @@ SCIP_RETCODE applyCliqueFixings(
             /* variable is not the best one in the clique anymore, fix it to 0 */
             if( bestpos >= 0 )
             {
+               assert(bestpos < ncliquevars);
                if( cliquevals[bestpos] )
                {
                   SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 0.0) );
@@ -347,6 +348,7 @@ SCIP_RETCODE applyCliqueFixings(
          /* fix (so far) best candidate to 0 */
          if( bestpos >= 0 )
          {
+            assert(bestpos < ncliquevars);
             if( cliquevals[bestpos] )
             {
                SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 0.0) );
@@ -382,21 +384,20 @@ SCIP_RETCODE applyCliqueFixings(
       /* fix the best variable to 1 */
       else if( bestpos >= 0 )
       {
-         assert(bestpos <= ncliquevars);
-
+         assert(bestpos < ncliquevars);
+         onefixvars[*nonefixvars] = cliquevars[bestpos];
          probingdepthofonefix = SCIPgetProbingDepth(scip);
-         onefixvars[(*nonefixvars)] = cliquevars[bestpos];
 
          /* @todo should we even fix the best candidate to 1? */
          if( cliquevals[bestpos] )
          {
             SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 1.0) );
-            onefixvals[(*nonefixvars)] = 1;
+            onefixvals[*nonefixvars] = 1;
          }
          else
          {
             SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 0.0) );
-            onefixvals[(*nonefixvars)] = 0;
+            onefixvals[*nonefixvars] = 0;
          }
          SCIPdebugMsg(scip, "fixed <%s> to %g*\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
          ++(*nonefixvars);
@@ -500,7 +501,7 @@ SCIP_RETCODE applyCliqueFixings(
    SCIPfreeBufferArray(scip, &permutation);
    SCIPfreeBufferArray(scip, &cliquesizes);
 
-   SCIPdebugMsg(scip, "fixed %d of %d variables in probing\n", v, SCIPgetNBinVars(scip));
+   SCIPdebugMsg(scip, "fixed %d of %d variables in probing\n", v, SCIPgetNVars(scip) - SCIPgetNContVars(scip));
    SCIPdebugMsg(scip, "applied %d of %d cliques in probing\n", c, ncliques);
    SCIPdebugMsg(scip, "probing was %sfeasible\n", (*cutoff) ? "in" : "");
 
@@ -660,8 +661,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_CALL( SCIPflushLP(scip) );
    }
 
-   /* refresh nbinvars in case constructLP suddenly added new ones */
-   nbinvars = SCIPgetNBinVars(scip);
+   /* get number of possible binary variables */
+   nbinvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    assert(nbinvars >= 2);
 
    *result = SCIP_DIDNOTFIND;
