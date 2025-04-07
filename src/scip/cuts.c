@@ -4624,16 +4624,17 @@ SCIP_RETCODE findMIRBestLb(
                   (usevbds == 2 || SCIPvarIsBinary(vlbvars[i])) )
             {
                SCIP_Real vlbsol;
+               SCIP_Real vlbbnd;
 
                if( sol == NULL )
                   vlbsol = SCIPvarGetLPSol(vlbvars[i]);
                else
                   vlbsol = SCIPgetSolVal(scip, sol, vlbvars[i]);
-               vlbsol = vlbcoefs[i] * vlbsol + vlbconsts[i];
+               vlbbnd = vlbcoefs[i] * vlbsol + vlbconsts[i];
 
-               if( vlbsol > bestvlb )
+               if( vlbbnd > bestvlb )
                {
-                  bestvlb = vlbsol;
+                  bestvlb = vlbbnd;
                   bestvlbtype = i;
                }
             }
@@ -4715,16 +4716,17 @@ SCIP_RETCODE findMIRBestUb(
                (usevbds == 2 || SCIPvarIsBinary(vubvars[i])) )
             {
                SCIP_Real vubsol;
+               SCIP_Real vubbnd;
 
                if( sol == NULL )
                   vubsol = SCIPvarGetLPSol(vubvars[i]);
                else
                   vubsol = SCIPgetSolVal(scip, sol, vubvars[i]);
-               vubsol = vubcoefs[i] * vubsol + vubconsts[i];
+               vubbnd = vubcoefs[i] * vubsol + vubconsts[i];
 
-               if( vubsol < bestvub )
+               if( vubbnd < bestvub )
                {
-                  bestvub = vubsol;
+                  bestvub = vubbnd;
                   bestvubtype = i;
                }
             }
