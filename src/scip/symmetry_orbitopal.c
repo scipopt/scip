@@ -989,6 +989,7 @@ SCIP_Bool rowIsBranchRow(
 #ifndef NDEBUG
    int c;
 #endif
+   SCIP_VAR* var;
 
    assert( scip != NULL );
    assert( orbireddata != NULL );
@@ -1000,17 +1001,19 @@ SCIP_Bool rowIsBranchRow(
    assert( orbidata->vars != NULL );
    assert( orbidata->vars[rowid * orbidata->ncols] );  /* variable in first column must be set */
 
+   var = orbidata->vars[rowid * orbidata->ncols];
+
    /* debugging: the variable types in a row should all be the same */
 #ifndef NDEBUG
    for (c = 1; c < orbidata->ncols; ++c)
    {
-      assert( SCIPgetSymInferredVarType(orbidata->vars[rowid * orbidata->ncols])
+      assert( SCIPgetSymInferredVarType(var)
          == SCIPgetSymInferredVarType(orbidata->vars[rowid * orbidata->ncols + c]) );
    }
 #endif
 
    /* check whether the row contains a potential branching variable (all variables within a row are symmetric) */
-   return vartypeIsBranchRowType(orbireddata, orbidata->vars[rowid * orbidata->ncols]);
+   return vartypeIsBranchRowType(orbireddata, var);
 }
 
 
