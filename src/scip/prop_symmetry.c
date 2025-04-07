@@ -5336,7 +5336,7 @@ SCIP_RETCODE addSSTConss(
          {
             if ( perm[i] == i )
                continue;
-            vartype = SCIPgetSymInferredVarType(propdata->permvars[i]);
+            vartype = SCIPvarGetType(propdata->permvars[i]);
             if ( vartype == SCIP_VARTYPE_CONTINUOUS )
                goto COMPONENTOK;
          }
