@@ -27,6 +27,7 @@ Features
   approach) or to use the maximum of the subproblems objectives
 - added decomposition kernel search (DKS) heuristic (disabled by default). This heuristic implements a kernel search framework and can be used
   both as a construction heuristic as well as an improvement heuristic. In addition, existing decomposition information can be utilized by this heuristic.
+- symmetry detection does not treat implicit integer variables separately anymore, but computes symmetries based on the variable type inferred from variable bounds and implied integrality
 
 Performance improvements
 ------------------------
@@ -152,6 +153,7 @@ Interface changes
 - removed parameters "constraints/orbitope/checkpporbitope", "constraints/orbitope/sepafullorbitope", "constraints/orbitope/forceconscopy", which became superfluous
 - removed reading/gmsreader/signpower
 - removed benders/default/numthreads, multi-threading support for Benders' decomposition has been temporarily disabled.
+- restricted range of parameter propagating/symmetry/sstleadervartype to [1,7]; its new default value is 6
 
 ### New parameters
 
@@ -304,6 +306,8 @@ Fixed bugs
 - drop fixed resultants when copying pseudoboolean constraint to avert segmentation fault
 - correct matrix entry when resolving aggregated variables in checkSystemGF2() of cons_xor.c
 - corrected symmetry detection graph of cons_and.c, cons_or.c, and cons_xor.c
+- correct redundancy filter in consdataCreateRedundant() of cons_bounddisjunction.c
+- replaced unreliable comparison of node pointers by node numbers in prop_genvbounds.c
 
 Build system
 ------------

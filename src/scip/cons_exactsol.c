@@ -45,6 +45,7 @@
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
 #include "scip/rational.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_lp.h"
@@ -426,6 +427,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       return SCIP_OKAY;
    }
 
+   /* construct the LP; we ignore the (local) cutoff result, because we relax bounds later */
    if( !SCIPisLPConstructed(scip) )
    {
       SCIP_Bool cutoff = FALSE;

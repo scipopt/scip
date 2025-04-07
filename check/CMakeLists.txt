@@ -310,11 +310,11 @@ set(instances_fastMIP
 #
 # add additional ZIMPL instances if the configuration uses ZIMPL
 #
-if(ZIMPL AND ZIMPL_FOUND)
-list(APPEND
-    instances_Indicator
-    "instances/Indicator/indicatortest.zpl\;-2"
-    "instances/Indicator/mcf64-4-1.zpl\;10"
+if(SCIP_WITH_ZIMPL)
+    list(APPEND
+        instances_Indicator
+        "instances/Indicator/indicatortest.zpl\;-2"
+        "instances/Indicator/mcf64-4-1.zpl\;10"
     )
 #
 # this instance was part of the original coverage tests. However, it causes
@@ -327,19 +327,24 @@ list(APPEND
 endif()
 
 # exact ip instances
-if(EXACTSOLVE)
-set(instances_MIPEX
-    "instances/MIPEX/egout.zpl\;568.1007"
-    "instances/MIP/enigma.mps\;0"
-    "instances/MIPEX/flugpl_rational.mps\;1201500"
-    "instances/MIPEX/misc03.zpl\;3360"
-    "instances/MIPEX/rgn.zpl\;2054999981/25000000"
-    "instances/MIPEX/stein27.zpl\;18"
-    "instances/MIP/stein27_inf.lp\;+infinity"
-    "instances/MIP/Side.lp\;2"
-    "instances/MIPEX/Side-coeftest.lp\;2"
-    "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
+if(SCIP_WITH_EXACTSOLVE)
+    set(instances_MIPEX
+        "instances/MIP/enigma.mps\;0"
+        "instances/MIPEX/flugpl_rational.mps\;1201500"
+        "instances/MIP/stein27_inf.lp\;+infinity"
+        "instances/MIP/Side.lp\;2"
+        "instances/MIPEX/Side-coeftest.lp\;2"
+        "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
     )
+    if(SCIP_WITH_ZIMPL)
+        list(APPEND
+            instances_MIPEX
+            "instances/MIPEX/egout.zpl\;568.1007"
+            "instances/MIPEX/misc03.zpl\;3360"
+            "instances/MIPEX/rgn.zpl\;2054999981/25000000"
+            "instances/MIPEX/stein27.zpl\;18"
+        )
+    endif()
 endif()
 
 #
@@ -1207,8 +1212,10 @@ if (UNIX)
 endif (UNIX)
 endif()
 
-# @todo exip: this assumes you have vipr on your path, needs to be fixed eventually
-if(EXACTSOLVE)
+if(SCIP_WITH_EXACTSOLVE)
+    #
+    # first test without certification
+    #
     foreach(instance ${instances_MIPEX})
         split_instance(instance)
         #
@@ -1219,12 +1226,38 @@ if(EXACTSOLVE)
             # treat the instance as a tuple (list) of two values
             #
             add_test(NAME MIPEX-${setting}-${basename}
+                    COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set
+                        read ${PROJECT_SOURCE_DIR}/check/${path}
+                        o validatesolve ${optval} ${optval} q"
+                    )
+            set_tests_properties(MIPEX-${setting}-${basename}
+                                PROPERTIES
+                                    PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
+                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                    DEPENDS scip-build
+                                )
+        endforeach(setting)
+    endforeach(instance ${instances_MIPEX})
+    #
+    # second test with certification, even if VIPR is not available, because it leads to SCIP running differently
+    #
+    foreach(instance ${instances_MIPEX})
+        split_instance(instance)
+        #
+        # loop over all settings
+        #
+        foreach(setting ${settings_MIPEX})
+            #
+            # treat the instance as a tuple (list) of two values
+            #
+            add_test(NAME MIPEX-${setting}-${basename}-certified
                     COMMAND $<TARGET_FILE:scip> -c "set certificate filename ${basename}.${setting}.vipr
                         set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set
                         read ${PROJECT_SOURCE_DIR}/check/${path}
                         o validatesolve ${optval} ${optval} q"
                     )
-            set_tests_properties(MIPEX-${setting}-${basename}
+            set_tests_properties(MIPEX-${setting}-${basename}-certified
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
                                     FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
@@ -1237,7 +1270,7 @@ if(EXACTSOLVE)
                      COMMAND ${VIPRCOMP} ${basename}.${setting}.vipr)
                set_tests_properties(MIPEX-${setting}-${basename}-viprcomp
                                  PROPERTIES
-                                 DEPENDS MIPEX-${setting}-${basename}
+                                 DEPENDS MIPEX-${setting}-${basename}-certified
                                  PASS_REGULAR_EXPRESSION "Completion of File successful!"
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
@@ -1255,7 +1288,7 @@ if(EXACTSOLVE)
                      COMMAND ${VIPRCHK} ${basename}.${setting}.vipr_ori)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr_ori
                                  PROPERTIES
-                                 DEPENDS MIPEX-${setting}-${basename}
+                                 DEPENDS MIPEX-${setting}-${basename}-certified
                                  PASS_REGULAR_EXPRESSION "Successfully checked solution for feasibility"
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")

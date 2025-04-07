@@ -2949,7 +2949,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       SCIPintervalSetRoundingModeDownwards();
       sideval = userow->lhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafe() */
+      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafely() */
       /* row is integral? round left hand side up */
       if( userow->integral )
          sideval = ceil(sideval)
@@ -2960,7 +2960,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       SCIPintervalSetRoundingModeUpwards();
       sideval = userow->rhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafe() */
+      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafely() */
       /* row is integral? round right hand side down */
       if( userow->integral )
          sideval = floor(sideval);
@@ -3345,7 +3345,8 @@ SCIP_RETCODE addOneRow(
 
 /** Adds one row to the aggregation row. Differs from SCIPaggrRowAddRow() by providing some additional
  *  parameters required for SCIPaggrRowSumRows()
- *  @note this method is the variant of SCIPaggrRowAddRow that is safe to use in exact solving mode
+ *
+ *  @note this method is the variant of addOneRow() that is safe to use in exact solving mode
  */
 static
 SCIP_RETCODE addOneRowSafely(
@@ -3353,8 +3354,8 @@ SCIP_RETCODE addOneRowSafely(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_ROW*             row,                /**< the row to add */
    SCIP_Real             weight,             /**< weight of row to add */
-   SCIP_Bool             allowlocal,         /**< should local rows allowed to be used? */
    SCIP_Bool             sidetypebasis,      /**< choose sidetypes of row (lhs/rhs) based on basis information? */
+   SCIP_Bool             allowlocal,         /**< should local rows allowed to be used? */
    int                   negslack,           /**< should negative slack variables allowed to be used? (0: no, 1: only for integral rows, 2: yes) */
    int                   maxaggrlen,         /**< maximal length of aggregation row */
    SCIP_Bool*            rowtoolong,         /**< is the aggregated row too long */
@@ -3430,7 +3431,7 @@ SCIP_RETCODE addOneRowSafely(
 
       sideval = userow->lhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafe() */
+      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafely() */
       /* row is integral? round left hand side up */
       if( userow->integral )
          sideval = ceil(sideval);
@@ -3448,7 +3449,7 @@ SCIP_RETCODE addOneRowSafely(
 
       sideval = userow->rhs - userow->constant;
 #ifdef SCIP_DISABLED_CODE
-      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafe() */
+      /* this is disabled because we can't certify it yet in exact solving mode; if enabled change also in cutsSubstituteMIRSafely() */
       /* row is integral? round right hand side down */
       if( userow->integral )
          sideval = floor(sideval);
@@ -3568,11 +3569,14 @@ SCIP_RETCODE SCIPaggrRowSumRows(
          {
             SCIPdebugMessage("Adding %g times row: ", weights[rowinds[k]]);
             SCIPdebug(SCIPprintRow(scip, rows[rowinds[k]], NULL));
-            SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
+            SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal,
+                  negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
+
             if( SCIPisCertified(scip) )
             {
                SCIP_ROW* row = rows[rowinds[k]];
                SCIP_Bool integral = FALSE;
+
                /* just exclude the negative continuous slacks for the certificate rows */
                if( row->integral &&
                   ((!lhsused && SCIPrealIsExactlyIntegral(row->rhs) &&  SCIPrealIsExactlyIntegral(row->constant)) ||
@@ -3626,11 +3630,14 @@ SCIP_RETCODE SCIPaggrRowSumRows(
             {
                SCIPdebugMessage("Adding %g times row: ", weights[k]);
                SCIPdebug(SCIPprintRow(scip, rows[k], NULL));
-               SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
+               SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack,
+                     maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
+
                if( SCIPisCertified(scip) )
                {
                   SCIP_ROW* row = rows[k];
                   SCIP_Bool integral = FALSE;
+
                   /* just exclude the negative continuous slacks for the certificate rows */
                   if( row->integral &&
                      ((!lhsused && SCIPrealIsExactlyIntegral(row->rhs) &&  SCIPrealIsExactlyIntegral(row->constant)) ||
@@ -3643,7 +3650,8 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   else
                   {
                      assert(certificaterow != NULL);
-                     SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[k], weights[k], sidetypebasis, allowlocal, 0, maxaggrlen, &rowtoolongcert, &rowusedcert, valid, &lhsused) );
+                     SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[k], weights[k], sidetypebasis, allowlocal, 0,
+                           maxaggrlen, &rowtoolongcert, &rowusedcert, valid, &lhsused) );
                   }
                   if( rowusedcert )
                   {
@@ -4352,6 +4360,7 @@ SCIP_RETCODE determineBestBounds(
 }
 
 /** performs the bound substitution step with the given variable or simple bounds for the variable with the given problem index
+ *
  *  @note this method is safe for usage in exact solving mode
  */
 static
@@ -4396,8 +4405,9 @@ void performBoundSubstitutionSafely(
 }
 
 /** performs the bound substitution step with the simple bound for the variable with the given problem index
+ *
  *  @note this method is safe for usage in exact solving mode
-*/
+ */
 static
 void performBoundSubstitutionSimpleSafely(
    SCIP*                 scip,               /**< SCIP datastructure */
@@ -4431,9 +4441,7 @@ void performBoundSubstitutionSimpleSafely(
    SCIPintervalSetRoundingMode(previousroundmode); /*lint !e644*/
 }
 
-/** performs the bound substitution step with the given variable or simple bounds for the variable with the given problem index
- *  @note this method is safe for usage in exact solving mode
- */
+/** performs the bound substitution step with the given variable or simple bounds for the variable with the given problem index */
 static
 void performBoundSubstitution(
    SCIP*                 scip,               /**< SCIP datastructure */
@@ -4514,10 +4522,7 @@ void performBoundSubstitution(
    }
 }
 
-/** performs the bound substitution step with the simple bound for the variable with the given problem index
- *
- *  @note this method is safe for usage in exact solving mode
- */
+/** performs the bound substitution step with the simple bound for the variable with the given problem index */
 static
 void performBoundSubstitutionSimple(
    SCIP*                 scip,               /**< SCIP datastructure */
@@ -6929,7 +6934,7 @@ SCIP_RETCODE cutsSubstituteMIR(
       }
 
       /* if the coefficient was reduced to zero, ignore the slack variable */
-      if( EPSZ(QUAD_TO_DBL(cutar), QUAD_EPSILON) && (!SCIPisExact(scip) || (QUAD_TO_DBL(cutar) == 0)) )
+      if( EPSZ(QUAD_TO_DBL(cutar), QUAD_EPSILON) )
          continue;
 
       /* depending on the slack's sign, we have

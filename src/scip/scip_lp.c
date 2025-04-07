@@ -122,6 +122,8 @@ SCIP_Bool SCIPisLPConstructed(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *
+ *  @note The result stored in @p cutoff is safe to use in exact solving mode.
+ *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 SCIP_RETCODE SCIPconstructLP(

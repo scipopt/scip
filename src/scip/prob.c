@@ -1760,7 +1760,7 @@ SCIP_RETCODE probCheckObjIntegralExact(
             break;
 
          /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
-         if( SCIPvarGetType(transprob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+         if( !SCIPvarIsIntegral(transprob->vars[v]) )
             break;
       }
    }

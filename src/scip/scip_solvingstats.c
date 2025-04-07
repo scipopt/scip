@@ -1536,15 +1536,15 @@ void SCIPgetLowerboundExact(
    }
    else
    {
-      SCIP_Real treelowerbound;
+      SCIP_RATIONAL* treelowerbound = SCIPtreeGetLowerboundExact(scip->tree, scip->set);
 
       /* it may happen that the remaining tree is empty or all open nodes have a lower bound above the cutoff bound, but
        * have not yet been cut off, e.g., when the user calls SCIPgetDualbound() in some event handler; in this case,
        * the global lower bound is given by the upper bound value
        */
-      treelowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
-      SCIPrationalSetReal(result, treelowerbound);
-      SCIPrationalMin(result, result, scip->primal->upperboundexact);
+      SCIPrationalSetRational(result,
+            treelowerbound != NULL && SCIPrationalIsLE(treelowerbound, scip->primal->upperboundexact)
+            ? treelowerbound : scip->primal->upperboundexact);
    }
 }
 
