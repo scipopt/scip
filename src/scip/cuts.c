@@ -4122,7 +4122,7 @@ SCIP_RETCODE findBestLbSafely(
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real*            bestlb,             /**< pointer to store best bound value */
    SCIP_Real*            simplebound,        /**< pointer to store simple bound value */
-   int*                  bestlbtype          /**< pointer to store best bound type */
+   int*                  bestlbtype          /**< pointer to store best bound type (-2: local bound, -1: global bound, >= 0 variable bound index) */
    )
 {
    assert(bestlb != NULL);
@@ -4188,7 +4188,7 @@ SCIP_RETCODE findBestUbSafely(
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real*            bestub,             /**< pointer to store best bound value */
    SCIP_Real*            simplebound,        /**< pointer to store simple bound */
-   int*                  bestubtype          /**< pointer to store best bound type */
+   int*                  bestubtype          /**< pointer to store best bound type (-2: local bound, -1: global bound, >= 0 variable bound index) */
    )
 {
    assert(bestub != NULL);
@@ -4261,8 +4261,8 @@ SCIP_RETCODE determineBestBoundsSafely(
                                               *   NULL for using closest bound for all variables */
    SCIP_Real*            bestlb,             /**< pointer to store best lower bound of variable */
    SCIP_Real*            bestub,             /**< pointer to store best upper bound of variable */
-   int*                  bestlbtype,         /**< pointer to store type of best lower bound of variable */
-   int*                  bestubtype,         /**< pointer to store type of best upper bound of variable */
+   int*                  bestlbtype,         /**< pointer to store type of the best lower bound of variable (-2: local bound, -1: global bound, >= 0 variable bound index) */
+   int*                  bestubtype,         /**< pointer to store type of best upper bound of variable (-2: local bound, -1: global bound, >= 0 variable bound index) */
    SCIP_BOUNDTYPE*       selectedbound,      /**< pointer to store whether the lower bound or the upper bound should be preferred */
    SCIP_Bool*            freevariable        /**< pointer to store if this is a free variable */
    )
@@ -4451,7 +4451,7 @@ SCIP_RETCODE findBestLb(
    int                   usevbds,            /**< should variable bounds be used in bound transformation? (0: no, 1: only binary, 2: all) */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real*            bestlb,             /**< pointer to store best bound value */
-   int*                  bestlbtype          /**< pointer to store best bound type */
+   int*                  bestlbtype          /**< pointer to store best bound type (-2: local bound, -1: global bound, >= 0 variable bound index) */
    )
 {
    assert(bestlb != NULL);
@@ -4514,7 +4514,7 @@ SCIP_RETCODE findBestUb(
    int                   usevbds,            /**< should variable bounds be used in bound transformation? (0: no, 1: only binary, 2: all) */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real*            bestub,             /**< pointer to store best bound value */
-   int*                  bestubtype          /**< pointer to store best bound type */
+   int*                  bestubtype          /**< pointer to store best bound type (-2: local bound, -1: global bound, >= 0 variable bound index) */
    )
 {
    assert(bestub != NULL);
@@ -4581,7 +4581,7 @@ SCIP_RETCODE findMIRBestLb(
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real*            bestlb,             /**< pointer to store best bound value */
    SCIP_Real*            simplebound,        /**< pointer to store simple bound value */
-   int*                  bestlbtype          /**< pointer to store best bound type */
+   int*                  bestlbtype          /**< pointer to store best bound type (-2: local bound, -1: global bound, >= 0 variable bound index) */
    )
 {
    assert(bestlb != NULL);
@@ -4673,7 +4673,7 @@ SCIP_RETCODE findMIRBestUb(
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real*            bestub,             /**< pointer to store best bound value */
    SCIP_Real*            simplebound,        /**< pointer to store simple bound */
-   int*                  bestubtype          /**< pointer to store best bound type */
+   int*                  bestubtype          /**< pointer to store best bound type (-2: local bound, -1: global bound, >= 0 variable bound index) */
    )
 {
    assert(bestub != NULL);
@@ -4772,8 +4772,8 @@ SCIP_RETCODE determineBestBounds(
                                               *   NULL for using closest bound for all variables */
    SCIP_Real*            bestlb,             /**< pointer to store best lower bound of variable */
    SCIP_Real*            bestub,             /**< pointer to store best upper bound of variable */
-   int*                  bestlbtype,         /**< pointer to store type of best lower bound of variable */
-   int*                  bestubtype,         /**< pointer to store type of best upper bound of variable */
+   int*                  bestlbtype,         /**< pointer to store type of best lower bound of variable (-2: local bound, -1: global bound, >= 0 variable bound index) */
+   int*                  bestubtype,         /**< pointer to store type of best upper bound of variable (-2: local bound, -1: global bound, >= 0 variable bound index) */
    SCIP_BOUNDTYPE*       selectedbound,      /**< pointer to store whether the lower bound or the upper bound should be preferred */
    SCIP_Bool*            freevariable        /**< pointer to store if this is a free variable */
    )
@@ -9353,8 +9353,8 @@ SCIP_RETCODE determineBoundForSNF(
    SCIP_Real*            bestub,             /**< pointer to store best upper bound for transformation */
    SCIP_Real*            bestslb,            /**< pointer to store best simple lower bound for transformation */
    SCIP_Real*            bestsub,            /**< pointer to store best simple upper bound for transformation */
-   int*                  bestlbtype,         /**< pointer to store type of best lower bound */
-   int*                  bestubtype,         /**< pointer to store type of best upper bound */
+   int*                  bestlbtype,         /**< pointer to store type of best lower bound (-2: local bound, -1: global bound, >= 0 variable bound index) */
+   int*                  bestubtype,         /**< pointer to store type of best upper bound (-2: local bound, -1: global bound, >= 0 variable bound index) */
    int*                  bestslbtype,        /**< pointer to store type of best simple lower bound */
    int*                  bestsubtype,        /**< pointer to store type of best simple upper bound */
    SCIP_BOUNDTYPE*       selectedbounds,     /**< pointer to store the preferred bound for the transformation */
