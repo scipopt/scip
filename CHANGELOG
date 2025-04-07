@@ -24,6 +24,7 @@ Fixed bugs
 - corrected symmetry detection graph of cons_and.c, cons_or.c, and cons_xor.c
 - correct redundancy filter in consdataCreateRedundant() of cons_bounddisjunction.c
 - replaced unreliable comparison of node pointers by node numbers in prop_genvbounds.c
+- allocate memory for all integral variables to avoid segmentation faults in applyCliqueFixings() of heur_clique.c
 
 Build system
 ------------
