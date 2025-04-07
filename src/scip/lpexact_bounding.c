@@ -70,7 +70,7 @@
  */
 static
 bool isPowerOfTwo(
-   SCIP_Longint          n                   /**< the number to check */
+   int                   n                   /**< the number to check */
    )
 {
     return (n > 0) && ((n & (n - 1)) == 0);
@@ -712,7 +712,6 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
        * the parts that change are the objective function, the RHS/LHS of the first constraint set
        * and the lower bound for d
        */
-
       SCIP_RATIONAL* auxval1;
       SCIP_RATIONAL* auxval2;
       int i;
@@ -729,7 +728,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       /* update the rhs/lhs */
       for( i = 0; i < ncols; i++ )
       {
-         SCIP_CALL( SCIPlpiExactChgSides(pslpiexact, 1, &i, &auxval1, &auxval1) );
+         SCIP_CALL( SCIPlpiExactChgSides(pslpiexact, 1, &i, &auxval1, &auxval1) ); /*lint --e{850}*/
       }
 
       /* update bounds on d */
@@ -983,7 +982,7 @@ SCIP_RETCODE projectShiftConstructLP(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &colnames, psncols) );
    for( i = 0; i < psncols; i++ )
    {
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &(colnames[i]), SCIP_MAXSTRLEN) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &(colnames[i]), SCIP_MAXSTRLEN) ); /*lint --e{866}*/
       (void) SCIPsnprintf( (colnames)[i] , SCIP_MAXSTRLEN, "var%d", i);
    }
 
@@ -1285,7 +1284,7 @@ SCIP_RETCODE projectShift(
    assert(ncols == projshiftdata->violationsize);
 
    /* allocate memory for approximate dual solution, dual cost vector, violation and correction */
-   SCIPsetAllocBufferArray(set, &dualsol, nrows + ncols);
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &dualsol, nrows + ncols) );
    violation = projshiftdata->violation;
    correction = projshiftdata->correction;
 
@@ -1878,10 +1877,11 @@ char chooseInitialBoundingMethod(
    /* select automatically which bounding method to apply */
    else
    {
-      /* decide whether we want to interleave with exact LP call given freq
-       * we do this if a) at depth-levels 4,8,16,...
-       * b) if we are almost at cutoffbound */
-      interleavedepth = (set->exact_interleavestrategy >= 2) && (SCIPgetDepth(set->scip) > 0) && isPowerOfTwo(SCIPgetDepth(set->scip) - 1);
+      /* decide whether we want to interleave with exact LP call given freq: we do this if we are
+       * a) at depth levels 4, 8, 16, ..., or
+       * b) almost at cutoffbound
+       */
+      interleavedepth = set->exact_interleavestrategy >= 2 && SCIPgetDepth(set->scip) > 0 && isPowerOfTwo(SCIPgetDepth(set->scip) - 1);
       interleavecutoff = (set->exact_interleavestrategy == 1 || set->exact_interleavestrategy == 3)
          && SCIPsetIsGE(set, SCIPlpGetObjval(lpexact->fplp, set, prob), SCIPlpGetCutoffbound(lpexact->fplp))
          && SCIPlpGetObjval(lpexact->fplp, set, prob) < SCIPlpGetCutoffbound(lpexact->fplp);
