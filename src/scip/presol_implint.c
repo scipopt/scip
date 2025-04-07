@@ -467,6 +467,7 @@ SCIP_RETCODE addLinearConstraint(
    /* add single row to matrix */
    if( nactivevars >= 1 )
    {
+      /**@todo normalize by greatest common divisor of coefficients for integral columns */
       SCIP_CALL( matrixAddRow(scip, matrix, activevars, activevals, nactivevars, lhs, rhs, cons) );
    }
 
@@ -1087,6 +1088,7 @@ SCIP_RETCODE matrixCreate(
    if( success )
    {
       SCIP_CALL( matrixSetColumnMajor(scip, matrix) );
+      /**@todo scale continuous columns by least common multiple of coefficients */
    }
    else
    {
