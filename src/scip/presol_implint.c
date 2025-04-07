@@ -622,7 +622,6 @@ SCIP_RETCODE addXorLinearization(
       SCIP_Real* scalars;
       SCIP_VAR** aggrvars;
       int naggrvars;
-      int requiredsize;
       SCIP_Real constant;
       SCIP_CALL( SCIPallocBufferArray(scip, &scalars, matrix->ncols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &aggrvars, matrix->ncols) );
@@ -636,10 +635,11 @@ SCIP_RETCODE addXorLinearization(
       }
       naggrvars = noperands;
 
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, aggrvars, scalars, &naggrvars, matrix->ncols, &constant, &requiredsize) );
-      assert(requiredsize <= matrix->ncols);
+      SCIP_CALL( getActiveVariables(scip, &aggrvars, &scalars, &naggrvars, &constant) );
+
       for( int k = 0; k < naggrvars; ++k )
       {
+         /* if the variable has an even coefficient, it does not contribute to the modulo constraint */
          if( !SCIPisIntegral(scip, 0.5 * scalars[k]) )
          {
             int col = SCIPvarGetProbindex(aggrvars[k]);
