@@ -7138,7 +7138,7 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    gcd = SCIPcalcGreComDiv(ABS(a), ABS(b));
    a /= gcd;
    b /= gcd;
-   SCIPrationalSetInt(tmprat1, scm, gcd);
+   SCIPrationalSetFraction(tmprat1, scm, gcd);
    SCIPrationalMult(rhs, rhs, tmprat1);
    assert(a != 0);
    assert(b != 0);
@@ -7170,8 +7170,8 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    {
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
-      SCIPrationalSetInt(tmprat1, -b, a);
-      SCIPrationalSetInt(tmprat2, c, a);
+      SCIPrationalSetFraction(tmprat1, -b, a);
+      SCIPrationalSetFraction(tmprat2, c, a);
       SCIP_CALL( SCIPvarAggregateExact(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
             branchcand, eventqueue, eventfilter, vary, tmprat1, tmprat2, infeasible, aggregated) );
       assert(*aggregated);
@@ -7181,8 +7181,8 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    {
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
-      SCIPrationalSetInt(tmprat1, -a, b);
-      SCIPrationalSetInt(tmprat2, c, b);
+      SCIPrationalSetFraction(tmprat1, -a, b);
+      SCIPrationalSetFraction(tmprat2, c, b);
       SCIP_CALL( SCIPvarAggregateExact(vary, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
             branchcand, eventqueue, eventfilter, varx, tmprat1, tmprat2, infeasible, aggregated) );
       assert(*aggregated);
@@ -7265,14 +7265,14 @@ SCIP_RETCODE tryAggregateIntVarsExact(
 
    SCIPrationalSetNegInfinity(tmprat1);
    SCIPrationalSetInfinity(tmprat2);
-   SCIPrationalSetInt(tmprat3, 0L, 0L);
+   SCIPrationalSetFraction(tmprat3, 0LL, 0LL);
 
    SCIP_CALL( SCIPvarAddExactData(aggvar, blkmem, tmprat1, tmprat2, tmprat3) );
 
    SCIP_CALL( SCIPprobAddVar(transprob, blkmem, set, lp, branchcand, eventqueue, eventfilter, aggvar) );
 
-   SCIPrationalSetInt(tmprat1, -b, 1L);
-   SCIPrationalSetInt(tmprat2, xsol, 1L);
+   SCIPrationalSetFraction(tmprat1, -b, 1LL);
+   SCIPrationalSetFraction(tmprat2, xsol, 1LL);
 
    SCIP_CALL( SCIPvarAggregateExact(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
          branchcand, eventqueue, eventfilter, aggvar, tmprat1, tmprat2, infeasible, aggregated) );
@@ -7280,8 +7280,8 @@ SCIP_RETCODE tryAggregateIntVarsExact(
 
    if( !(*infeasible) )
    {
-      SCIPrationalSetInt(tmprat1, a, 1L);
-      SCIPrationalSetInt(tmprat2, ysol, 1L);
+      SCIPrationalSetFraction(tmprat1, a, 1LL);
+      SCIPrationalSetFraction(tmprat2, ysol, 1LL);
 
       SCIP_CALL( SCIPvarAggregateExact(vary, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
             branchcand, eventqueue, eventfilter, aggvar, tmprat1, tmprat2, infeasible, aggregated) );
@@ -24122,7 +24122,7 @@ void SCIPvarGetLbLocalExactMaximal(
    assert(var != NULL);
    assert(var->exactdata != NULL);
    assert(var->exactdata->locdom.lb != NULL);
-   SCIPrationalSetInt(output, (SCIP_Longint) (floor(var->locdom.lb)), 1LL);
+   SCIPrationalSetFraction(output, (SCIP_Longint) (floor(var->locdom.lb)), 1LL);
    SCIPrationalMax(output, output, var->exactdata->locdom.lb);
 }
 
@@ -24156,7 +24156,7 @@ void SCIPvarGetUbLocalExactMinimal(
    assert(var != NULL);
    assert(var->exactdata != NULL);
    assert(var->exactdata->locdom.ub != NULL);
-   SCIPrationalSetInt(output, (SCIP_Longint) (ceil(var->locdom.ub)), 1LL);
+   SCIPrationalSetFraction(output, (SCIP_Longint) (ceil(var->locdom.ub)), 1LL);
    SCIPrationalMin(output, output, var->exactdata->locdom.ub);
 }
 
