@@ -6848,6 +6848,8 @@ SCIP_RETCODE cutsRoundMIR(
          else
          {
             /* variable is continuous */
+            assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+
             if( QUAD_TO_DBL(aj) * sign >= 0.0 )
                QUAD_ASSIGN(cutaj, 0.0);
             else
@@ -12850,6 +12852,7 @@ SCIP_RETCODE cutsRoundStrongCG(
          else
          {
             /* Variable is continuous; must always be positive in strongcg cut. It will be automatically deleted. */
+            assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
             assert(QUAD_TO_DBL(aj) * sign >= 0.0);
             QUAD_ASSIGN(cutaj, 0.0);
          }
