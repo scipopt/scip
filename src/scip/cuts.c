@@ -3345,7 +3345,8 @@ SCIP_RETCODE addOneRow(
 
 /** Adds one row to the aggregation row. Differs from SCIPaggrRowAddRow() by providing some additional
  *  parameters required for SCIPaggrRowSumRows()
- *  @note this method is the variant of SCIPaggrRowAddRow that is safe to use in exact solving mode
+ *
+ *  @note this method is the variant of addOneRow() that is safe to use in exact solving mode
  */
 static
 SCIP_RETCODE addOneRowSafely(
@@ -3353,8 +3354,8 @@ SCIP_RETCODE addOneRowSafely(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_ROW*             row,                /**< the row to add */
    SCIP_Real             weight,             /**< weight of row to add */
-   SCIP_Bool             allowlocal,         /**< should local rows allowed to be used? */
    SCIP_Bool             sidetypebasis,      /**< choose sidetypes of row (lhs/rhs) based on basis information? */
+   SCIP_Bool             allowlocal,         /**< should local rows allowed to be used? */
    int                   negslack,           /**< should negative slack variables allowed to be used? (0: no, 1: only for integral rows, 2: yes) */
    int                   maxaggrlen,         /**< maximal length of aggregation row */
    SCIP_Bool*            rowtoolong,         /**< is the aggregated row too long */
@@ -3568,11 +3569,14 @@ SCIP_RETCODE SCIPaggrRowSumRows(
          {
             SCIPdebugMessage("Adding %g times row: ", weights[rowinds[k]]);
             SCIPdebug(SCIPprintRow(scip, rows[rowinds[k]], NULL));
-            SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
+            SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal,
+                  negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
+
             if( SCIPisCertified(scip) )
             {
                SCIP_ROW* row = rows[rowinds[k]];
                SCIP_Bool integral = FALSE;
+
                /* just exclude the negative continuous slacks for the certificate rows */
                if( row->integral &&
                   ((!lhsused && SCIPrealIsExactlyIntegral(row->rhs) &&  SCIPrealIsExactlyIntegral(row->constant)) ||
@@ -3626,11 +3630,14 @@ SCIP_RETCODE SCIPaggrRowSumRows(
             {
                SCIPdebugMessage("Adding %g times row: ", weights[k]);
                SCIPdebug(SCIPprintRow(scip, rows[k], NULL));
-               SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
+               SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack,
+                     maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
+
                if( SCIPisCertified(scip) )
                {
                   SCIP_ROW* row = rows[k];
                   SCIP_Bool integral = FALSE;
+
                   /* just exclude the negative continuous slacks for the certificate rows */
                   if( row->integral &&
                      ((!lhsused && SCIPrealIsExactlyIntegral(row->rhs) &&  SCIPrealIsExactlyIntegral(row->constant)) ||
@@ -3643,7 +3650,8 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   else
                   {
                      assert(certificaterow != NULL);
-                     SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[k], weights[k], sidetypebasis, allowlocal, 0, maxaggrlen, &rowtoolongcert, &rowusedcert, valid, &lhsused) );
+                     SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[k], weights[k], sidetypebasis, allowlocal, 0,
+                           maxaggrlen, &rowtoolongcert, &rowusedcert, valid, &lhsused) );
                   }
                   if( rowusedcert )
                   {
