@@ -5658,7 +5658,6 @@ SCIP_RETCODE cutsTransformMIR(
       i = 0;
       while( i < data->secnnz[s] )
       {
-         int cutindex = data->ncutinds;
          int v = indices[i];
 
          /* due to variable bound usage, cancellation may have occurred */
@@ -5673,6 +5672,8 @@ SCIP_RETCODE cutsTransformMIR(
             /* do not increase the index */
             continue;
          }
+
+         int cutindex = data->ncutinds;
 
          SCIP_CALL( determineBestBounds(scip, data->vars[v], sol, data, boundswitch, usevbds, allowlocal, fixintegralrhs,
                ignoresol, boundsfortrans, boundtypesfortrans,
@@ -12525,7 +12526,6 @@ SCIP_RETCODE cutsTransformStrongCG(
       while( i < data->secnnz[s] )
       {
          SCIP_Real QUAD(coef);
-         int cutindex = data->ncutinds;
          int v = indices[i];
 
          /* due to variable bound usage, cancellation may have occurred */
@@ -12541,6 +12541,7 @@ SCIP_RETCODE cutsTransformStrongCG(
             continue;
          }
 
+         int cutindex = data->ncutinds;
          /* For continuous variables, we must choose the bound substitution so that they become positive in the cut */
          if( !data->isenfint[s] && !data->isimplint[s] )
          {
