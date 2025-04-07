@@ -177,8 +177,7 @@ SCIP_Bool vartypeIsBranchRowType(
    /* otherwise, only integral variables are used for branching */
    if ( SCIPvarIsIntegral(var) )
    {
-      assert( SCIPgetSymInferredVarType(var) == SCIP_VARTYPE_BINARY
-      || SCIPgetSymInferredVarType(var) == SCIP_VARTYPE_INTEGER );
+      assert( SCIPgetSymInferredVarType(var) != SCIP_VARTYPE_CONTINUOUS );
       return TRUE;
    }
    return FALSE;
@@ -999,9 +998,10 @@ SCIP_Bool rowIsBranchRow(
    assert( rowid >= 0 );
    assert( rowid < orbidata->nrows );
    assert( orbidata->vars != NULL );
-   assert( orbidata->vars[rowid * orbidata->ncols] );  /* variable in first column must be set */
 
+   /* get the first variable from the row */
    var = orbidata->vars[rowid * orbidata->ncols];
+   assert( var != NULL );
 
    /* debugging: the variable types in a row should all be the same */
 #ifndef NDEBUG
