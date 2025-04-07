@@ -1929,20 +1929,20 @@ SCIP_RETCODE findImpliedIntegers(
          score -= 0.001 * nnonzs;
          candidateScores[i] = score;
       }
-      INTEGER_CANDIDATE_DATA** ptrArray;
-      SCIP_CALL(SCIPallocBufferArray(scip, &ptrArray, numCandidates));
+      int* indArray;
+      SCIP_CALL(SCIPallocBufferArray(scip, &indArray, numCandidates));
       for( int i = 0; i < numCandidates; ++i )
       {
-         ptrArray[i] = candidates + i;
+         indArray[i] = i;
       }
-      SCIPsortDownRealPtr(candidateScores, (void**) ptrArray, numCandidates);
+      SCIPsortDownRealInt(candidateScores, indArray, numCandidates);
 
       int integerNetwork = 0;
       int integerTransNetwork = 0;
 
       for( int i = 0; i < numCandidates; ++i )
       {
-         INTEGER_CANDIDATE_DATA* candidate = ptrArray[i];
+         INTEGER_CANDIDATE_DATA* candidate = candidates + indArray[i];
          if( candidate->numContTransNetworkEntries == 0 )
          {
             int col = candidate->column;
@@ -1972,7 +1972,7 @@ SCIP_RETCODE findImpliedIntegers(
          /* We add all integer columns from the network matrix */
          for( int i = 0; i < numCandidates; ++i )
          {
-            int col = ptrArray[i]->column;
+            int col = candidates[indArray[i]].column;
             if( SCIPnetmatdecContainsColumn(dec, col))
             {
                SCIP_VAR* var = matrixGetVar(matrix, col);
@@ -1991,7 +1991,7 @@ SCIP_RETCODE findImpliedIntegers(
          /* We add all integer columns from the transposed network matrix */
          for( int i = 0; i < numCandidates; ++i )
          {
-            int col = ptrArray[i]->column;
+            int col = candidates[indArray[i]].column;
             if( SCIPnetmatdecContainsRow(transdec, col))
             {
                SCIP_VAR* var = matrixGetVar(matrix, col);
@@ -2005,7 +2005,7 @@ SCIP_RETCODE findImpliedIntegers(
          }
       }
 
-      SCIPfreeBufferArray(scip, &ptrArray);
+      SCIPfreeBufferArray(scip, &indArray);
       SCIPfreeBufferArray(scip, &candidateScores);
       SCIPfreeBufferArray(scip, &candidates);
 
