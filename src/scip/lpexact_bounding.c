@@ -728,11 +728,11 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       /* update the rhs/lhs */
       for( i = 0; i < ncols; i++ )
       {
-         SCIP_CALL( SCIPlpiExactChgSides(pslpiexact, 1, &i, &auxval1, &auxval1) ); /*lint !e850*/
+         SCIP_CALL( SCIPlpiExactChgSides(pslpiexact, 1, &i, &auxval1, &auxval1) );
       }
 
       /* update bounds on d */
-      SCIPrationalSetFraction(auxval1, 1LL, 1LL);
+      SCIPrationalSetFraction(auxval1, 1LL, 1LL); /*lint !e850*/ /* lint exception for &i in above for loop */
       SCIPrationalSetInfinity(auxval2);
       SCIP_CALL( SCIPlpiExactChgBounds(pslpiexact, 1, &ndvarmap, &auxval1, &auxval2) );
 
