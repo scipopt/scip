@@ -3516,11 +3516,11 @@ SCIP_RETCODE SCIPaggrRowSumRows(
 {
    SCIP_AGGRROW* certificaterow = NULL;
    SCIP_ROW** rows;
-   SCIP_ROW** usedrows;
-   SCIP_ROW** negslackrows;
+   SCIP_ROW** usedrows = NULL;
+   SCIP_ROW** negslackrows = NULL;
    SCIP_VAR** vars;
-   SCIP_Real* usedweights;
-   SCIP_Real* negslackweights;
+   SCIP_Real* usedweights = NULL;
+   SCIP_Real* negslackweights = NULL;
    int nrows;
    int nvars;
    int k;
