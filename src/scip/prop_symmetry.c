@@ -2202,7 +2202,7 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
          {
             ++propdata->nmovedpermvars;
 
-            switch ( SCIPgetSymInferredVarType(propdata->permvars[v]) )
+            switch ( SCIPvarGetType(propdata->permvars[v]) )
             {
             case SCIP_VARTYPE_BINARY:
                ++propdata->nmovedbinpermvars;
@@ -2222,79 +2222,6 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
    }
 
    return SCIP_OKAY;
-}
-
-
-/** returns whether a SCIP instance has an active inferred binary variable */
-static
-SCIP_Bool hasInferredBinVar(
-   SCIP*                 scip                /**< SCIP instance */
-   )
-{
-   SCIP_VAR** vars;
-   int start;
-   int end;
-   int i;
-
-   assert( scip != NULL );
-
-   /* check for variables declared binary or implied binary */
-   if ( SCIPgetNBinVars(scip) > 0 || SCIPgetNBinImplVars(scip) > 0 )
-      return TRUE;
-
-   /* check for inferred binary variables among integers and continuous implied integral variables */
-   vars = SCIPgetVars(scip);
-   assert( vars != NULL );
-
-   start = 0;
-   end = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
-   assert( end >= start );
-   for (i = start; i < end; ++i)
-   {
-      if( SCIPvarIsBinary(vars[i]) )
-         return TRUE;
-   }
-
-   return FALSE;
-}
-
-
-/** returns whether a SCIP instance has an active inferred integer variable */
-static
-SCIP_Bool hasInferredIntVar(
-   SCIP*                 scip                /**< SCIP instance */
-   )
-{
-   SCIP_VAR** vars;
-   int start;
-   int end;
-   int i;
-
-   assert( scip != NULL );
-
-   vars = SCIPgetVars(scip);
-   assert( vars != NULL );
-
-   /* check for non-binary variables among integer variables */
-   start = SCIPgetNBinVars(scip);
-   end = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
-   for (i = start; i < end; ++i)
-   {
-      if( ! SCIPvarIsBinary(vars[i]) )
-         return TRUE;
-   }
-
-   /* check for non-binary variables among implied integral variables */
-   start = end + SCIPgetNBinImplVars(scip);
-   end = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
-   assert( end >= start );
-   for (i = start; i < end; ++i)
-   {
-      if( ! SCIPvarIsBinary(vars[i]) )
-         return TRUE;
-   }
-
-   return FALSE;
 }
 
 
@@ -2329,9 +2256,9 @@ SCIP_Bool testSymmetryComputationRequired(
    /* for SST, matching leadervartypes */
    if ( ISSSTACTIVE(propdata->usesymmetry) )
    {
-      if ( ISSSTBINACTIVE(propdata->sstleadervartype) && hasInferredBinVar(scip) ) /*lint !e641*/
+      if ( ISSSTBINACTIVE(propdata->sstleadervartype) && SCIPgetNBinVars(scip) ) /*lint !e641*/
          return TRUE;
-      if ( ISSSTINTACTIVE(propdata->sstleadervartype) && hasInferredIntVar(scip) ) /*lint !e641*/
+      if ( ISSSTINTACTIVE(propdata->sstleadervartype) && SCIPgetNIntVars(scip) ) /*lint !e641*/
          return TRUE;
       if ( ISSSTCONTACTIVE(propdata->sstleadervartype) && SCIPgetNContVars(scip) > 0 ) /*lint !e641*/
          return TRUE;
@@ -4838,7 +4765,7 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
       leadervar = permvars[orbits[orbitbegins[orbitidx] + orbitleaderidx]];
 
       SCIPinfoMessage(scip, NULL, "  use %d SST cuts for leader %s of type ", orbitsize - 1, SCIPvarGetName(leadervar));
-      switch ( SCIPgetSymInferredVarType(leadervar) )
+      switch ( SCIPvarGetType(leadervar) )
       {
       case SCIP_VARTYPE_BINARY:
          SCIPinfoMessage(scip, NULL, "BINARY\n");
@@ -4979,6 +4906,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
    int curcriterion = INT_MIN;
    int orbitsize;
    int i;
+   int j;
    int leader = -1;
 
    assert( scip != NULL );
@@ -5013,7 +4941,12 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       {
          /* skip orbits containing vars different to the leader's vartype */
          /* Conflictvars is permvars! */
-         if ( SCIPgetSymInferredVarType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype )
+         for (j = orbitbegins[i]; j < orbitbegins[i + 1]; ++j)
+         {
+            if ( SCIPvarGetType(conflictvars[orbits[j]]) != leadervartype )
+               break;
+         }
+         if ( j < orbitbegins[i + 1] )
             continue;
 
          if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MINORBIT )
@@ -5133,7 +5066,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       for (i = 0; i < nconflictvars; ++i)
       {
          /* skip vars different to the leader's vartype */
-         if ( SCIPgetSymInferredVarType(conflictvars[i]) != leadervartype )
+         if ( SCIPvarGetType(conflictvars[i]) != leadervartype )
             continue;
 
          /* skip variables not affected by symmetry */
@@ -5326,7 +5259,12 @@ SCIP_RETCODE addSSTConss(
    if ( nvarsselectedtype == 0 )
       return SCIP_OKAY;
 
-   /* ignore this component if no continuous variables are contained */
+   /* ignore this component if no continuous variables are contained
+    *
+    * In the SST code, we use the variable type reported by SCIPvarGetType() rather
+    * than SCIPgetSymInferredVarType(), because empircally it seems beneficial to
+    * handle variables on their variable type and not their inferred type.
+    */
    if ( onlywithcontvars )
    {
       for (p = componentbegins[cidx]; p < componentbegins[cidx + 1]; ++p)
@@ -5412,11 +5350,18 @@ SCIP_RETCODE addSSTConss(
       {
          for (p = 0; p < norbits; ++p)
          {
-            /* stop if the first element of an orbits has the wrong vartype */
-            if ( SCIPgetSymInferredVarType(permvars[orbits[orbitbegins[p]]]) != selectedtype )
+            /* stop if an orbit contains a variable of the wrong type
+             *
+             * We check the entire orbit rather than the first element, because permutations
+             * preserve the type reported by SCIPgetSymInferredVarType() and not SCIPvarGetType().
+             */
+            for (i = orbitbegins[p]; i < orbitbegins[p + 1]; ++i )
             {
-               success = FALSE;
-               break;
+               if ( SCIPvarGetType(permvars[orbits[i]]) != selectedtype )
+               {
+                  success = FALSE;
+                  break;
+               }
             }
          }
       }
