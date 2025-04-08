@@ -1378,7 +1378,7 @@ SCIP_RETCODE computeContinuousComponents(
 
    for( int col = 0; col < comp->nmatrixcols; ++col )
    {
-      if( matrixColIsIntegral(matrix, col) || ( includeimplints && !matrixColIsImpliedIntegral(matrix, col) ) )
+      if( matrixColIsIntegral(matrix, col) && (!includeimplints || !matrixColIsImpliedIntegral(matrix, col) ) )
          continue;
 
       int colnnonzs = matrixGetColumnNNonzs(matrix, col);
@@ -1408,7 +1408,7 @@ SCIP_RETCODE computeContinuousComponents(
    comp->ncomponents = 0;
    for( int col = 0; col < comp->nmatrixcols; ++col )
    {
-      if( matrixColIsIntegral(matrix, col) )
+      if( matrixColIsIntegral(matrix,col) && (!includeimplints || !matrixColIsImpliedIntegral(matrix, col) ) )
          continue;
 
       int colroot = disjointSetFind(disjointset, col);
@@ -1920,7 +1920,6 @@ SCIP_RETCODE findImpliedIntegers(
                continue;
             }
             assert(matrixColIsImpliedIntegral(matrix, col));
-            assert(SCIPvarGetType(matrixGetVar(matrix,col)) != SCIP_VARTYPE_CONTINUOUS);
             SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
             int* colrows = matrixGetColumnInds(matrix, col);
             int colnnonz = matrixGetColumnNNonzs(matrix, col);
