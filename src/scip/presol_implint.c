@@ -1818,32 +1818,57 @@ SCIP_RETCODE findImpliedIntegers(
       {
          if( !matrixColIsIntegral(matrix, col) || !SCIPvarIsImpliedIntegral(matrixGetVar(matrix, col)) )
             continue;
+         assert(comp->colcomponent[col] == -1);
 
          SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
          int* colrows = matrixGetColumnInds(matrix, col);
-         int ncolnnonz = matrixGetColumnNNonzs(matrix, col);
+         int colnnonz = matrixGetColumnNNonzs(matrix, col);
+         int colcomponent = -1;
          SCIP_Bool stillnetwork = FALSE;
          SCIP_Bool stilltransnetwork = FALSE;
 
          if( !matrixColInNonlinearTerm(matrix, col) )
          {
-            SCIP_CALL( SCIPnetmatdecTryAddCol(dec, col, colrows, colvals, ncolnnonz, &stillnetwork) );
-            SCIP_CALL( SCIPnetmatdecTryAddRow(transdec, col, colrows, colvals, ncolnnonz, &stilltransnetwork) );
+            SCIP_CALL( SCIPnetmatdecTryAddCol(dec, col, colrows, colvals, colnnonz, &stillnetwork) );
+            SCIP_CALL( SCIPnetmatdecTryAddRow(transdec, col, colrows, colvals, colnnonz, &stilltransnetwork) );
          }
 
-         if( !stillnetwork || !stilltransnetwork )
+         for( int i = 0; i < colnnonz; ++i )
          {
-            for( int i = 0; i < ncolnnonz; ++i )
-            {
-               int rowcomponent = comp->rowcomponent[colrows[i]];
+            int rowcomponent = comp->rowcomponent[colrows[i]];
 
-               if( rowcomponent != -1 )
-               {
-                  if( !stillnetwork )
-                     compNetworkValid[rowcomponent] = FALSE;
-                  if( !stilltransnetwork )
-                     compTransNetworkValid[rowcomponent] = FALSE;
-               }
+            if( rowcomponent != -1 )
+            {
+               if( colcomponent == -1 )
+                  colcomponent = rowcomponent;
+               if( !compNetworkValid[rowcomponent] )
+                  stillnetwork = FALSE;
+               if( !compTransNetworkValid[rowcomponent] )
+                  stilltransnetwork = FALSE;
+            }
+         }
+
+         if( colcomponent == -1 )
+         {
+            colcomponent = comp->ncomponents;
+            compNetworkValid[colcomponent] = stillnetwork;
+            compTransNetworkValid[colcomponent] = stilltransnetwork;
+            ++comp->ncomponents;
+         }
+
+         comp->colcomponent[col] = colcomponent;
+
+         for( int i = 0; i < colnnonz; ++i )
+         {
+            int colrow = colrows[i];
+            int rowcomponent = comp->rowcomponent[colrow];
+
+            if( rowcomponent == -1 )
+               comp->rowcomponent[colrow] = colcomponent;
+            else
+            {
+               compNetworkValid[rowcomponent] = stillnetwork;
+               compTransNetworkValid[rowcomponent] = stilltransnetwork;
             }
          }
       }
