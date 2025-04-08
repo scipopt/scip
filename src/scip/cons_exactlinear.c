@@ -69,7 +69,6 @@
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
-#include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
@@ -5145,7 +5144,7 @@ SCIP_RETCODE enforceConstraint(
    if( sol == NULL )
       checkexact =  SCIPlpExactIsSolved(scip);
    else
-      checkexact = SCIPisExactSol(scip, sol);
+      checkexact = SCIPsolIsExact(sol);
 
    SCIPdebugMsg(scip, "Enforcement method of linear constraints for %s solution\n", sol == NULL ? "LP" : "relaxation");
    SCIPdebug( SCIPprintSol(scip, sol, NULL, FALSE));
@@ -5716,7 +5715,7 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
    assert(conshdlrdata != NULL);
 
    /* if the fp-solution has a stand-in exact solution we check that instead */
-   checkexact = SCIPisExactSol(scip, sol);
+   checkexact = SCIPsolIsExact(sol);
 
    /* check all linear constraints for feasibility */
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )

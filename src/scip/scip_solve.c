@@ -370,7 +370,7 @@ SCIP_RETCODE SCIPtransformProb(
    {
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
          "%d/%d feasible solution%s given by solution candidate storage, new primal bound %.6e\n\n",
-         nfeassols, ncandsols, (nfeassols > 1 ? "s" : ""), SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
+         nfeassols, ncandsols, (nfeassols > 1 ? "s" : ""), SCIPgetPrimalbound(scip));
    }
    else if( ncandsols > 0 && !scip->set->reopt_enable )
    {

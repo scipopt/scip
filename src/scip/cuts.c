@@ -5581,7 +5581,7 @@ SCIP_RETCODE cutsRoundMIRRational(
    assert(boundtype != NULL);
    assert(varsign != NULL);
    assert(SCIPrationalIsPositive(f0) && SCIPrationalIsLTReal(f0, 1.0));
-   assert(SCIPisExactSolve(scip));
+   assert(SCIPisExact(scip));
 
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &onedivoneminusf0) );
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );

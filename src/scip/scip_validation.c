@@ -44,6 +44,7 @@
 
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_sol.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -264,7 +265,7 @@ SCIP_RETCODE SCIPvalidateSolveExact(
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_SOL* bestsol = SCIPgetBestSol(scip);
-      assert(SCIPisExactSol(scip, bestsol));
+      assert(SCIPsolIsExact(bestsol));
 
       assert(bestsol != NULL);
 

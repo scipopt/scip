@@ -41,6 +41,7 @@
 #include "scip/pub_sol.h"
 #include "scip/reader_sol.h"
 #include "scip/scip_general.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_message.h"
 #include "scip/scip_param.h"
 #include "scip/scip_reader.h"
@@ -82,9 +83,17 @@ SCIP_RETCODE readSol(
    }
 
    /* create zero solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   if( SCIPisExact(scip) )
+   {
+      SCIP_CALL( SCIPcreateSolExact(scip, &sol, NULL) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   }
 
    SCIP_CALL( SCIPreadSolFile(scip, fname, sol, xml, &partial, &error) );
+   assert(!SCIPsolIsExact(sol) || !SCIPsolIsPartial(sol));
 
    if( !error )
    {
@@ -228,7 +237,8 @@ SCIP_RETCODE SCIPincludeReaderSol(
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
 
-   assert(reader != NULL);
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopySol) );
