@@ -1847,8 +1847,8 @@ SCIP_RETCODE findImpliedIntegers(
        * but possibly not all of them. We need to extend them. */
       for( int component = 0; component < implintcomp->ncomponents; ++component )
       {
-         SCIP_Bool okayNetwork = TRUE;
-         SCIP_Bool okayTransNetwork = TRUE;
+         SCIP_Bool componentnetwork = TRUE;
+         SCIP_Bool componenttransnetwork = TRUE;
 
          int startrow = (component == 0) ? 0 : implintcomp->componentrowend[component - 1];
          int nrows = implintcomp->componentrowend[component] - startrow;
@@ -1862,13 +1862,13 @@ SCIP_RETCODE findImpliedIntegers(
             /* If the row was already in the old component, then it was already checked for numerics and integrality */
             if( contcomponent != -1 )
             {
-               okayNetwork = okayNetwork && compNetworkValid[contcomponent];
-               okayTransNetwork =  okayTransNetwork && compTransNetworkValid[contcomponent];
+               componentnetwork = componentnetwork && compNetworkValid[contcomponent];
+               componenttransnetwork =  componenttransnetwork && compTransNetworkValid[contcomponent];
             }
             else if( !stats->rowintegral[row] || stats->rowbadnumerics[row] )
             {
-               okayNetwork = FALSE;
-               okayTransNetwork = FALSE;
+               componentnetwork = FALSE;
+               componenttransnetwork = FALSE;
                break;
             }
          }
@@ -1879,29 +1879,29 @@ SCIP_RETCODE findImpliedIntegers(
             /* If the row was already in the old component, then it was already checked for numerics and integrality */
             if( contcomponent != -1 )
             {
-               okayNetwork = okayNetwork && compNetworkValid[contcomponent];
-               okayTransNetwork =  okayTransNetwork && compTransNetworkValid[contcomponent];
+               componentnetwork = componentnetwork && compNetworkValid[contcomponent];
+               componenttransnetwork =  componenttransnetwork && compTransNetworkValid[contcomponent];
             }
             else
             {
                assert(stats->colintegralbounds[col]);
 
-               SCIP_Bool plusminusone = TRUE;
+               SCIP_Bool implpmone = TRUE;
                SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
                int colnnonz = matrixGetColumnNNonzs(matrix, col);
-               for( int j = 0; j < colnnonz && plusminusone; ++j )
+               for( int j = 0; j < colnnonz && implpmone; ++j )
                {
-                  plusminusone = plusminusone && SCIPisEQ(scip, ABS(colvals[j]), 1.0);
+                  implpmone = implpmone && SCIPisEQ(scip, ABS(colvals[j]), 1.0);
                }
-               if( !plusminusone || matrixColInNonlinearTerm(matrix, col) )
+               if( !implpmone || matrixColInNonlinearTerm(matrix, col) )
                {
-                  okayNetwork = FALSE;
-                  okayTransNetwork = FALSE;
+                  componentnetwork = FALSE;
+                  componenttransnetwork = FALSE;
                   break;
                }
             }
          }
-         if( !okayNetwork && !okayTransNetwork )
+         if( !componentnetwork && !componenttransnetwork )
          {
             implCompNetworkValid[component] = FALSE;
             implCompTransNetworkValid[component] = FALSE;
@@ -1927,19 +1927,19 @@ SCIP_RETCODE findImpliedIntegers(
              * implied integrality of the columns that we are now adding is somehow necessary for the implication of the
              * continuous columns, which prohibits further deductions on variables that are adjacent to this component.'
              * Thus, we don't need to remove components here altogether, like we did before. */
-            if( okayNetwork )
+            if( componentnetwork )
             {
                assert(!SCIPnetmatdecContainsColumn(dec, col));
-               SCIP_CALL( SCIPnetmatdecTryAddCol(dec, col, colrows, colvals, colnnonz, &okayNetwork) );
+               SCIP_CALL( SCIPnetmatdecTryAddCol(dec, col, colrows, colvals, colnnonz, &componentnetwork) );
             }
-            if( okayTransNetwork )
+            if( componenttransnetwork )
             {
                assert(!SCIPnetmatdecContainsRow(transdec, col));
-               SCIP_CALL( SCIPnetmatdecTryAddRow(transdec, col, colrows, colvals, colnnonz, &okayTransNetwork) );
+               SCIP_CALL( SCIPnetmatdecTryAddRow(transdec, col, colrows, colvals, colnnonz, &componenttransnetwork) );
             }
          }
-         implCompNetworkValid[component] = okayNetwork;
-         implCompTransNetworkValid[component] = okayTransNetwork;
+         implCompNetworkValid[component] = componentnetwork;
+         implCompTransNetworkValid[component] = componenttransnetwork;
       }
 
       INTEGER_CANDIDATE_DATA* candidates;
