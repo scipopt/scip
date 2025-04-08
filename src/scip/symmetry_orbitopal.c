@@ -177,7 +177,8 @@ SCIP_Bool vartypeIsBranchRowType(
    /* otherwise, only integral variables are used for branching */
    if ( SCIPvarIsIntegral(var) )
    {
-      assert( SCIPgetSymInferredVarType(var) != SCIP_VARTYPE_CONTINUOUS );
+      assert( SCIPgetSymInferredVarType(var) == SCIP_VARTYPE_BINARY
+         || SCIPgetSymInferredVarType(var) == SCIP_VARTYPE_INTEGER );
       return TRUE;
    }
    return FALSE;
