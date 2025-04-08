@@ -1853,6 +1853,7 @@ SCIP_RETCODE findImpliedIntegers(
       MATRIX_COMPONENTS* implintcomp;
       SCIP_Bool* implCompNetworkValid;
       SCIP_Bool* implCompTransNetworkValid;
+
       /**@todo avoid work when there is no implied integer variables by taking the original components instead */
       SCIP_CALL( createMatrixComponents(scip, matrix, &implintcomp) );
       SCIP_CALL( computeContinuousComponents(scip, matrix, implintcomp, TRUE) );
@@ -1860,27 +1861,25 @@ SCIP_RETCODE findImpliedIntegers(
       SCIP_CALL( SCIPallocBufferArray(scip, &implCompNetworkValid, implintcomp->ncomponents) );
       SCIP_CALL( SCIPallocBufferArray(scip, &implCompTransNetworkValid, implintcomp->ncomponents) );
 
-      /* The network and transposed network decomposition already contain some of the columns for each component,
-       * but possibly not all of them. We need to extend them. */
+      /* extend network and transposed network decomposition by missing implied integral columns */
       for( component = 0; component < implintcomp->ncomponents; ++component )
       {
          SCIP_Bool componentnetwork = TRUE;
          SCIP_Bool componenttransnetwork = TRUE;
 
          int startrow = (component == 0) ? 0 : implintcomp->componentrowend[component - 1];
-         int nrows = implintcomp->componentrowend[component] - startrow;
-         int startcol = (component == 0) ? 0 : implintcomp->componentcolend[component - 1];
-         int ncols = implintcomp->componentcolend[component] - startcol;
+         int endrow = implintcomp->componentrowend[component];
 
-         for( i = startrow; i < startrow + nrows; ++i )
+         for( i = startrow; i < endrow; ++i )
          {
             int row = implintcomp->componentrows[i];
             int contcomponent = comp->rowcomponent[row];
-            /* If the row was already in the old component, then it was already checked for numerics and integrality */
+
+            /* integrality and numerics of rows in continuous components is already checked */
             if( contcomponent != -1 )
             {
                componentnetwork = componentnetwork && compNetworkValid[contcomponent];
-               componenttransnetwork =  componenttransnetwork && compTransNetworkValid[contcomponent];
+               componenttransnetwork = componenttransnetwork && compTransNetworkValid[contcomponent];
             }
             else if( !stats->rowintegral[row] || stats->rowbadnumerics[row] )
             {
@@ -1889,23 +1888,29 @@ SCIP_RETCODE findImpliedIntegers(
                break;
             }
          }
-         for( i = startcol; i < startcol + ncols; ++i )
+
+         int startcol = (component == 0) ? 0 : implintcomp->componentcolend[component - 1];
+         int endcol = implintcomp->componentcolend[component];
+
+         for( i = startcol; i < endcol; ++i )
          {
             int col = implintcomp->componentcols[i];
             int contcomponent = comp->colcomponent[col];
-            /* If the row was already in the old component, then it was already checked for numerics and integrality */
+
+            /* unity and linearity of columns in continuous components is already checked */
             if( contcomponent != -1 )
             {
                componentnetwork = componentnetwork && compNetworkValid[contcomponent];
-               componenttransnetwork =  componenttransnetwork && compTransNetworkValid[contcomponent];
+               componenttransnetwork = componenttransnetwork && compTransNetworkValid[contcomponent];
             }
             else
             {
                assert(stats->colintegralbounds[col]);
 
-               SCIP_Bool implpmone = TRUE;
                SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
                int colnnonz = matrixGetColumnNNonzs(matrix, col);
+               SCIP_Bool implpmone = TRUE;
+
                for( j = 0; j < colnnonz; ++j )
                {
                   if( !SCIPisEQ(scip, ABS(colvals[j]), 1.0) )
@@ -1914,6 +1919,7 @@ SCIP_RETCODE findImpliedIntegers(
                      break;
                   }
                }
+
                if( !implpmone || matrixColInNonlinearTerm(matrix, col) )
                {
                   componentnetwork = FALSE;
@@ -1922,6 +1928,7 @@ SCIP_RETCODE findImpliedIntegers(
                }
             }
          }
+
          if( !componentnetwork && !componenttransnetwork )
          {
             implCompNetworkValid[component] = FALSE;
@@ -1929,36 +1936,40 @@ SCIP_RETCODE findImpliedIntegers(
             continue;
          }
 
-         /* Try extending the network and transposed network by the implied integral columns of the component */
-         for( i = startcol; i < startcol + ncols; ++i )
+         /* try extending the network and transposed network by the implied integral columns of the component */
+         for( i = startcol; i < endcol; ++i )
          {
             int col = implintcomp->componentcols[i];
             int contcomponent = comp->colcomponent[col];
+
             if( contcomponent != -1 )
             {
                assert(!matrixColIsIntegral(matrix, col));
                continue;
             }
             assert(matrixColIsImpliedIntegral(matrix, col));
+
             SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
             int* colrows = matrixGetColumnInds(matrix, col);
             int colnnonz = matrixGetColumnNNonzs(matrix, col);
 
-            /* If a column does not extend this does not invalidate implied integrality, but this means that the
-             * implied integrality of the columns that we are now adding is somehow necessary for the implication of the
-             * continuous columns, which prohibits further deductions on variables that are adjacent to this component.'
-             * Thus, we don't need to remove components here altogether, like we did before. */
+            /* If a column can not be added, this does not invalidate implied integrality but means that the
+             * integrality constraints of adjacent columns may be required for a differnt reason. Thus, we do not need
+             * to remove components here altogether, like we did before.
+             */
             if( componentnetwork )
             {
                assert(!SCIPnetmatdecContainsColumn(dec, col));
                SCIP_CALL( SCIPnetmatdecTryAddCol(dec, col, colrows, colvals, colnnonz, &componentnetwork) );
             }
+
             if( componenttransnetwork )
             {
                assert(!SCIPnetmatdecContainsRow(transdec, col));
                SCIP_CALL( SCIPnetmatdecTryAddRow(transdec, col, colrows, colvals, colnnonz, &componenttransnetwork) );
             }
          }
+
          implCompNetworkValid[component] = componentnetwork;
          implCompTransNetworkValid[component] = componenttransnetwork;
       }
