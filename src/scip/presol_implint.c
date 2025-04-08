@@ -1889,6 +1889,13 @@ SCIP_RETCODE findImpliedIntegers(
             }
          }
 
+         if( !componentnetwork && !componenttransnetwork )
+         {
+            implCompNetworkValid[component] = FALSE;
+            implCompTransNetworkValid[component] = FALSE;
+            continue;
+         }
+
          int startcol = (component == 0) ? 0 : implintcomp->componentcolend[component - 1];
          int endcol = implintcomp->componentcolend[component];
 
@@ -1909,18 +1916,15 @@ SCIP_RETCODE findImpliedIntegers(
 
                SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
                int colnnonz = matrixGetColumnNNonzs(matrix, col);
-               SCIP_Bool implpmone = TRUE;
+               SCIP_Bool implpmone = !matrixColInNonlinearTerm(matrix, col);
 
-               for( j = 0; j < colnnonz; ++j )
+               for( j = 0; j < colnnonz && implpmone; ++j )
                {
                   if( !SCIPisEQ(scip, ABS(colvals[j]), 1.0) )
-                  {
                      implpmone = FALSE;
-                     break;
-                  }
                }
 
-               if( !implpmone || matrixColInNonlinearTerm(matrix, col) )
+               if( !implpmone )
                {
                   componentnetwork = FALSE;
                   componenttransnetwork = FALSE;
@@ -1968,6 +1972,9 @@ SCIP_RETCODE findImpliedIntegers(
                assert(!SCIPnetmatdecContainsRow(transdec, col));
                SCIP_CALL( SCIPnetmatdecTryAddRow(transdec, col, colrows, colvals, colnnonz, &componenttransnetwork) );
             }
+
+            if( !componentnetwork && !componenttransnetwork )
+               break;
          }
 
          implCompNetworkValid[component] = componentnetwork;
