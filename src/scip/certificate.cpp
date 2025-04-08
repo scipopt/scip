@@ -1039,7 +1039,7 @@ SCIP_RETCODE SCIPcertificatePrintResult(
    {
       bestsol = SCIPgetBestSol(scip);
 
-      if( !SCIPisExactSol(scip, bestsol) )
+      if( !SCIPsolIsExact(bestsol) )
       {
          SCIP_CALL( SCIPmakeSolExact(scip, bestsol) );
       }

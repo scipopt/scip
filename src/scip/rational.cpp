@@ -116,55 +116,6 @@ SCIP_RETCODE SCIPrationalCreateBuffer(
    return SCIP_OKAY;
 }
 
-/** allocate and create a rational from a string in the format, e.g. "12/35" */
-SCIP_RETCODE SCIPrationalCreateString(
-   BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_RATIONAL**       rational,           /**< pointer to the rational to create */
-   const char*           desc                /**< the string describing the rational */
-   )
-{
-   bool negative;
-
-   assert(desc != NULL);
-
-   if( SCIPstrncasecmp(desc, "unk", 3) == 0 )
-   {
-      *rational = NULL;
-      return SCIP_OKAY;
-   }
-
-   SCIP_CALL( SCIPrationalCreateBlock(mem, rational) );
-
-   switch( *desc )
-   {
-   case '-':
-      ++desc;
-      negative = true;
-      break;
-   case '+':
-      ++desc;
-      /*lint -fallthrough*/
-   default:
-      negative = false;
-      break;
-   }
-
-   if( SCIPstrncasecmp(desc, "inf", 3) == 0 )
-   {
-      (*rational)->val = negative ? -1 : 1;
-      (*rational)->isinf = TRUE;
-      (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
-   }
-   else
-   {
-      (*rational)->val = negative ? -scip::Rational(desc) : scip::Rational(desc);
-      (*rational)->isinf = FALSE;
-      (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** creates a copy of a rational using ordinary memory */
 SCIP_RETCODE SCIPrationalCopy(
    SCIP_RATIONAL**       result,             /**< pointer to the rational to create */
@@ -548,8 +499,9 @@ void SCIPrationalFreeBufferArray(
 }
 
 /** transforms rational into canonical form
- * @todo extend this method to work with cpp_rational
-*/
+ *
+ *  @todo extend this method to work with cpp_rational
+ */
 void SCIPrationalCanonicalize(
    SCIP_RATIONAL*        rational            /**< rational to put in canonical form */
    )
@@ -611,86 +563,6 @@ void SCIPrationalSetFraction(
 
    res->isinf = FALSE;
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-}
-
-/** set a rational to the value described by a string */
-void SCIPrationalSetString(
-   SCIP_RATIONAL*        res,                /**< the result */
-   const char*           desc                /**< the string describing the rational */
-   )
-{
-   bool negative;
-
-   assert(res != NULL);
-   assert(desc != NULL);
-
-   switch( *desc )
-   {
-   case '-':
-      ++desc;
-      negative = true;
-      break;
-   case '+':
-      ++desc;
-      /*lint -fallthrough*/
-   default:
-      negative = false;
-      break;
-   }
-
-   if( SCIPstrncasecmp(desc, "inf", 3) == 0 )
-   {
-      res->val = negative ? -1 : 1;
-      res->isinf = TRUE;
-      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
-   }
-   else
-   {
-      std::string s(desc);
-      size_t exponentidx = s.find_first_of("eE");
-      int exponent = 0;
-
-      /* split into decimal and power */
-      if( exponentidx != std::string::npos )
-      {
-         exponent = std::stoi(s.substr(exponentidx + 1, s.length()));
-         s = s.substr(0, exponentidx);
-      }
-
-      /* convert decimal into fraction */
-      if( s.find('.') != std::string::npos )
-      {
-         SCIPdebug(std::cout << s << std::endl);
-
-         if( s[0] == '.' )
-            (void) s.insert(0, "0");
-
-         /* transform decimal into fraction */
-         size_t decimalpos = s.find('.');
-         size_t exponentpos = s.length() - 1 - decimalpos;
-         std::string denominator("1");
-
-         if( decimalpos != std::string::npos )
-         {
-            for( size_t i = 0; i < exponentpos; ++i )
-               (void) denominator.append("0");
-
-            (void) s.erase(decimalpos, 1);
-         }
-         assert(std::all_of(s.begin()+1, s.end(), ::isdigit));
-
-         if( s[0] == '+' )
-            s = s.substr(1);
-
-         (void) s.append("/");
-         (void) s.append(denominator);
-      }
-
-      res->val = negative ? -scip::Rational(s) : scip::Rational(s);
-      res->val *= pow(10, exponent);
-      res->isinf = FALSE;
-      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-   }
 }
 
 /** set a rational to the value of another a real */
@@ -771,17 +643,150 @@ SCIP_Bool SCIPrationalIsString(
    if( *desc == '\0' )
       return TRUE;
 
-   if( *desc != '/' )
-      return FALSE;
+   /* parse rational format */
+   if( *desc == '/' )
+   {
+      ++desc;
 
-   ++desc;
+      if( *desc == '\0' )
+         return FALSE;
 
-   if( *desc == '\0' )
-      return FALSE;
+      desc += strspn(desc, "0123456789");
+   }
+   /* parse real format */
+   else
+   {
+      if( *desc == '.' )
+      {
+         int mantissalen;
 
-   desc += strspn(desc, "0123456789");
+         ++desc;
+         mantissalen = strspn(desc, "0123456789");
+
+         if( mantissalen == 0 )
+            return FALSE;
+
+         desc += mantissalen;
+      }
+
+      if( *desc == 'e' || *desc == 'E' )
+      {
+         ++desc;
+
+         if( *desc == '-' || *desc == '+' )
+            ++desc;
+
+         if( *desc == '\0' )
+            return FALSE;
+
+         desc += strspn(desc, "0123456789");
+      }
+   }
 
    return *desc == '\0';
+}
+
+/** sets a rational to the value described by a string */
+void SCIPrationalSetString(
+   SCIP_RATIONAL*        res,                /**< the result */
+   const char*           desc                /**< the string describing the rational */
+   )
+{
+   bool negative;
+
+   assert(res != NULL);
+   assert(desc != NULL);
+
+   switch( *desc )
+   {
+   case '-':
+      ++desc;
+      negative = true;
+      break;
+   case '+':
+      ++desc;
+      /*lint -fallthrough*/
+   default:
+      negative = false;
+      break;
+   }
+
+   if( SCIPstrncasecmp(desc, "inf", 3) == 0 )
+   {
+      res->val = negative ? -1 : 1;
+      res->isinf = TRUE;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
+   }
+   else
+   {
+      std::string s(desc);
+      size_t exponentidx = s.find_first_of("eE");
+      int exponent = 0;
+
+      /* split into decimal and power */
+      if( exponentidx != std::string::npos )
+      {
+         exponent = std::stoi(s.substr(exponentidx + 1, s.length()));
+         s = s.substr(0, exponentidx);
+      }
+
+      /* convert decimal into fraction */
+      if( s.find('.') != std::string::npos )
+      {
+         SCIPdebug(std::cout << s << std::endl);
+
+         if( s[0] == '.' )
+            (void) s.insert(0, "0");
+
+         /* transform decimal into fraction */
+         size_t decimalpos = s.find('.');
+         size_t exponentpos = s.length() - 1 - decimalpos;
+         std::string denominator("1");
+
+         if( decimalpos != std::string::npos )
+         {
+            for( size_t i = 0; i < exponentpos; ++i )
+               (void) denominator.append("0");
+
+            (void) s.erase(decimalpos, 1);
+         }
+         assert(std::all_of(s.begin()+1, s.end(), ::isdigit));
+
+         if( s[0] == '+' )
+            s = s.substr(1);
+
+         (void) s.append("/");
+         (void) s.append(denominator);
+      }
+
+      res->val = negative ? -scip::Rational(s) : scip::Rational(s);
+      res->val *= pow(10, exponent);
+      res->isinf = FALSE;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+   }
+}
+
+/** allocates and creates a rational from a string if known, otherwise assigns a null pointer */
+SCIP_RETCODE SCIPrationalCreateString(
+   BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_RATIONAL**       rational,           /**< pointer to the rational to create */
+   const char*           desc                /**< the string describing the rational */
+   )
+{
+   assert(rational != NULL);
+   assert(desc != NULL);
+
+   if( SCIPstrncasecmp(desc, "unk", 3) == 0 )
+   {
+      *rational = NULL;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPrationalCreateBlock(mem, rational) );
+
+   SCIPrationalSetString(*rational, desc);
+
+   return SCIP_OKAY;
 }
 
 /** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p str
