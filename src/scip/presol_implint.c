@@ -1364,7 +1364,7 @@ SCIP_RETCODE computeContinuousComponents(
    SCIP*                 scip,               /**< SCIP data structure */
    IMPLINT_MATRIX*       matrix,             /**< The constraint matrix to compute the components for */
    MATRIX_COMPONENTS*    comp,               /**< The connected components data structure to store the components in */
-   SCIP_Bool             includeimplints     /**< Should implied integers be treated as continuous variables? */
+   SCIP_Bool             includeimplints     /**< Should implied integral variables be treated continuous? */
    )
 {
    /* We let rows and columns share an index by mapping row index i to artificial column index i + nmatrixcols */
@@ -1836,7 +1836,7 @@ SCIP_RETCODE findImpliedIntegers(
       MATRIX_COMPONENTS* implintcomp;
       SCIP_Bool* implCompNetworkValid;
       SCIP_Bool* implCompTransNetworkValid;
-      /* @todo avoid work when there is no implied integer variables, and take above data instead. */
+      /**@todo avoid work when there is no implied integer variables by taking the original components instead */
       SCIP_CALL( createMatrixComponents(scip, matrix, &implintcomp) );
       SCIP_CALL( computeContinuousComponents(scip, matrix, implintcomp, TRUE) );
 
@@ -1908,8 +1908,7 @@ SCIP_RETCODE findImpliedIntegers(
             continue;
          }
 
-         /* Try extending the components with the implied integer columns that are not yet in the
-          * network matrix decompositions */
+         /* Try extending the network and transposed network by the implied integral columns of the component */
          for( int i = startcol; i < startcol + ncols; ++i )
          {
             int col = implintcomp->componentcols[i];
