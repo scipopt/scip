@@ -1889,9 +1889,13 @@ SCIP_RETCODE findImpliedIntegers(
                SCIP_Bool implpmone = TRUE;
                SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
                int colnnonz = matrixGetColumnNNonzs(matrix, col);
-               for( int j = 0; j < colnnonz && implpmone; ++j )
+               for( int j = 0; j < colnnonz; ++j )
                {
-                  implpmone = implpmone && SCIPisEQ(scip, ABS(colvals[j]), 1.0);
+                  if( !SCIPisEQ(scip, ABS(colvals[j]), 1.0) )
+                  {
+                     implpmone = FALSE;
+                     break;
+                  }
                }
                if( !implpmone || matrixColInNonlinearTerm(matrix, col) )
                {
