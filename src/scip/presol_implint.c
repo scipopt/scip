@@ -93,7 +93,7 @@ struct SCIP_PresolData
 };
 
 /** constraint matrix data structure in column and row major format
- *  Contains only the linear terms, and marks the presence of non-linear terms
+ *  Contains only the linear terms, and marks the presence of non-linear terms.
  */
 struct ImplintMatrix
 {
@@ -130,6 +130,46 @@ struct ImplintMatrix
    int                   nnonzssize;         /**< size of the nonzero arrays */
 };
 typedef struct ImplintMatrix IMPLINT_MATRIX;
+
+/** struct that contains information about the blocks/components of the submatrix given by the continuous columns */
+struct MatrixComponents
+{
+   int nmatrixrows;                          /**< Number of rows in the matrix for the linear part of the problem */
+   int nmatrixcols;                          /**< Number of columns in the matrix for the linear part of the problem */
+
+   int* rowcomponent;                        /**< Maps a row to the index of the component it belongs to */
+   int* colcomponent;                        /**< Maps a column to the index of the component it belongs to */
+
+   int* componentrows;                       /**< Flattened array of arrays of rows that are in a given component. */
+   int* componentcols;                       /**< Flattened array of arrays of columns that are in a given component. */
+   int* componentrowend;                     /**< The index of componentrows where the given component ends. */
+   int* componentcolend;                     /**< The index of componentcols where the given component ends. */
+   int ncomponents;                          /**< The number of components. */
+};
+typedef struct MatrixComponents MATRIX_COMPONENTS;
+
+/** a temporary data structure that stores some statistics/data on the rows and columns */
+struct MatrixStatistics
+{
+   SCIP_Bool* rowintegral;                   /**< Are all row entries of non-continuous columns and the row sides integral? */
+   SCIP_Bool* rowequality;                   /**< Is the row an equality? */
+   SCIP_Bool* rowbadnumerics;                /**< Does the row contain large entries that make numerics difficult? */
+   int* rownnonz;                            /**< Number of nonzeros in the row */
+   int* rowncontinuous;                      /**< The number of those nonzeros that are in continuous columns */
+   int* rowncontinuouspmone;                 /**< The number of +-1 entries in continuous columns */
+   SCIP_Bool* colintegralbounds;             /**< Does the column have integral bounds? */
+};
+typedef struct MatrixStatistics MATRIX_STATISTICS;
+
+/** struct that contains some information for each integer variable that is a candidate for implied integrality detection */
+struct IntegerCandidateData
+{
+   int column;                               /**< The candidate column to make implied integer */
+   int numContPlanarEntries;                 /**< The number of nonzeros that have a row in a planar component */
+   int numContNetworkEntries;                /**< The number of nonzeros that have a row in a pure network component */
+   int numContTransNetworkEntries;           /**< The number of nonzeroes that have a row in a pure transposed network component */
+};
+typedef struct IntegerCandidateData INTEGER_CANDIDATE_DATA;
 
 /** gets a pointer to the array of nonzero values for the nonzeros in the given column */
 static
@@ -1206,46 +1246,6 @@ void matrixFree(
       SCIPfreeBuffer(scip, &matrix);
    }
 }
-
-/** struct that contains information about the blocks/components of the submatrix given by the continuous columns */
-struct MatrixComponents
-{
-   int nmatrixrows;                          /**< Number of rows in the matrix for the linear part of the problem */
-   int nmatrixcols;                          /**< Number of columns in the matrix for the linear part of the problem */
-
-   int* rowcomponent;                        /**< Maps a row to the index of the component it belongs to */
-   int* colcomponent;                        /**< Maps a column to the index of the component it belongs to */
-
-   int* componentrows;                       /**< Flattened array of arrays of rows that are in a given component. */
-   int* componentcols;                       /**< Flattened array of arrays of columns that are in a given component. */
-   int* componentrowend;                     /**< The index of componentrows where the given component ends. */
-   int* componentcolend;                     /**< The index of componentcols where the given component ends. */
-   int ncomponents;                          /**< The number of components. */
-};
-typedef struct MatrixComponents MATRIX_COMPONENTS;
-
-/** a temporary data structure that stores some statistics/data on the rows and columns */
-struct MatrixStatistics
-{
-   SCIP_Bool* rowintegral;                   /**< Are all row entries of non-continuous columns and the row sides integral? */
-   SCIP_Bool* rowequality;                   /**< Is the row an equality? */
-   SCIP_Bool* rowbadnumerics;                /**< Does the row contain large entries that make numerics difficult? */
-   int* rownnonz;                            /**< Number of nonzeros in the row */
-   int* rowncontinuous;                      /**< The number of those nonzeros that are in continuous columns */
-   int* rowncontinuouspmone;                 /**< The number of +-1 entries in continuous columns */
-   SCIP_Bool* colintegralbounds;             /**< Does the column have integral bounds? */
-};
-typedef struct MatrixStatistics MATRIX_STATISTICS;
-
-/** struct that contains some information for each integer variable that is a candidate for implied integrality detection */
-struct IntegerCandidateData
-{
-   int column;                               /**< The candidate column to make implied integer */
-   int numContPlanarEntries;                 /**< The number of nonzeros that have a row in a planar component */
-   int numContNetworkEntries;                /**< The number of nonzeros that have a row in a pure network component */
-   int numContTransNetworkEntries;           /**< The number of nonzeroes that have a row in a pure transposed network component */
-};
-typedef struct IntegerCandidateData INTEGER_CANDIDATE_DATA;
 
 /** creates the matrix components data structure */
 static
