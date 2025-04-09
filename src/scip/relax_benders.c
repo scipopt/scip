@@ -32,18 +32,11 @@
 
 #include <assert.h>
 
-#include "scip/benders.h"
-#include "scip/bendersdefcuts.h"
-#include "scip/pub_relax.h"
 #include "scip/scip.h"
-#include "scip/relax_benders.h"
 #include "scip/benders_default.h"
-#include "scip/scip_benders.h"
-#include "scip/scip_copy.h"
-#include "scip/scip_message.h"
-#include "scip/scip_sol.h"
-#include "scip/scip_solvingstats.h"
-#include "scip/scip_timing.h"
+#include "scip/pub_benders.h"
+#include "scip/pub_relax.h"
+#include "scip/relax_benders.h"
 #include "scip/type_benders.h"
 #include "scip/type_message.h"
 #include "scip/type_relax.h"
