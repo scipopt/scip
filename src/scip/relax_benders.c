@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   relax_benders.c
- * @ingroup OTHER_CFILES
+ * @ingroup DEFPLUGINS_RELAX
  * @brief  benders relaxator
  * @author Stephen J. Maher
  */
