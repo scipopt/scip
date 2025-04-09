@@ -432,6 +432,8 @@ SCIP_RETCODE matrixAddRow(
    return SCIP_OKAY;
 }
 
+/** transforms all variables to their corresponding active variables and then
+ * adds the given linear constraint to the matrix, */
 static
 SCIP_RETCODE addLinearConstraint(
    SCIP*                 scip,               /**< current scip instance */
@@ -505,6 +507,7 @@ SCIP_RETCODE addLinearConstraint(
    return SCIP_OKAY;
 }
 
+/**< adds the linearization of a given AND constraint or OR constraint to the constraint matrix */
 static
 SCIP_RETCODE addAndOrLinearization(
    SCIP*                 scip,               /**< current scip instance */
@@ -574,6 +577,7 @@ SCIP_RETCODE addAndOrLinearization(
    return SCIP_OKAY;
 }
 
+/**< adds the linearization of a given XOR constraint to the constraint matrix */
 static
 SCIP_RETCODE addXorLinearization(
    SCIP*                 scip,               /**< current scip instance */
@@ -758,6 +762,7 @@ SCIP_RETCODE matrixSetColumnMajor(
 /* @todo: use symmetry constraints to guide variable ordering for integral columns because
  *        symmetric variables should always all be either network or non-network
  */
+/**< create the matrix from the current transformed problem */
 static
 SCIP_RETCODE matrixCreate(
    SCIP*                 scip,               /**< the scip data structure */
@@ -1147,10 +1152,11 @@ SCIP_RETCODE matrixCreate(
    return SCIP_OKAY;
 }
 
+/**< frees the matrix from memory */
 static
 void matrixFree(
-   SCIP* scip,
-   IMPLINT_MATRIX** pmatrix
+   SCIP*                 scip,               /**< the scip data structure */
+   IMPLINT_MATRIX**      pmatrix             /**< pointer to the allocated matrix */
    )
 {
    assert(scip != NULL);
@@ -1201,10 +1207,7 @@ void matrixFree(
    }
 }
 
-/** Struct that contains information about the blocks/components of the submatrix given by the continuous columns.
- *
- *  @todo extend the plugin to also work for MINLP problems
- */
+/** Struct that contains information about the blocks/components of the submatrix given by the continuous columns. */
 struct MatrixComponents
 {
    int nmatrixrows;                          /**< Number of rows in the matrix for the linear part of the problem */
@@ -1237,6 +1240,7 @@ struct MatrixStatistics
 };
 typedef struct MatrixStatistics MATRIX_STATISTICS;
 
+/**< struct that contains some information for each integer variable that is a candidate for implied integrality detection */
 struct IntegerCandidateData{
    int column;                               /**< The candidate column to make implied integer */
    int numContPlanarEntries;                 /**< The number of nonzeros that have a row in a planar component */
