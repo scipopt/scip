@@ -76,12 +76,13 @@ struct NAUTY_Data
    int                   maxncells;          /**< maximum number of cells in nauty's search tree */
    int                   maxnnodes;          /**< maximum number of nodes in nauty's search tree */
 };
+typedef struct NAUTY_Data NAUTY_DATA;
 
 /** static data for nauty callback */
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201102L
-static thread_local struct NAUTY_Data data_;
+static thread_local NAUTY_DATA data_;
 #else
-static _Thread_local struct NAUTY_Data data_;
+static _Thread_local NAUTY_DATA data_;
 #endif
 
 /* ------------------- hook functions ------------------- */
