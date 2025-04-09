@@ -79,10 +79,10 @@ struct NAUTY_Data
 typedef struct NAUTY_Data NAUTY_DATA;
 
 /** static data for nauty callback */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201102L
-static thread_local NAUTY_DATA data_;
-#else
+#if defined(_Thread_local)
 static _Thread_local NAUTY_DATA data_;
+#else
+static NAUTY_DATA data_;
 #endif
 
 /* ------------------- hook functions ------------------- */
