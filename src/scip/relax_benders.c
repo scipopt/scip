@@ -817,7 +817,7 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    if( !success )
       return SCIP_OKAY;
 
-   SCIPverbMessage(relaxdata->masterprob, SCIP_VERBLEVEL_NORMAL, NULL,
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
       "\nApplying Benders' decomposition and solving the decomposed problem.\n\n");
 
    /* copying the time and memory limits from the original SCIP to the master problem */
@@ -869,8 +869,7 @@ SCIP_RETCODE SCIPincludeRelaxBenders(
 
    /* create benders relaxator data */
    relaxdata = NULL;
-   SCIP_CALL( SCIPallocBlockMemory(scip, &relaxdata) );
-   BMSclearMemory(relaxdata);
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &relaxdata) );
 
    /* include relaxator */
    SCIP_CALL( SCIPincludeRelax(scip, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ,
