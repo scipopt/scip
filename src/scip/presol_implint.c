@@ -28,8 +28,7 @@
  * @author Rolf van der Hulst
  */
 
-/* TODO: explore integer to implicit integer conversion */
-/* TODO: fix to work in MINLP context */
+/* TODO: support more constraint types: cons_nonlinear, cons_indicator and symmetry constraints */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
