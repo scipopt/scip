@@ -2050,7 +2050,7 @@ SCIP_RETCODE findImpliedIntegers(
       /* higher score: pick this variable first */
       for( i = 0; i < numCandidates; ++i )
       {
-         int col = candidates[i].column;
+         col = candidates[i].column;
          int nnonzs = matrixGetColumnNNonzs(matrix, col);
 
          /* @TODO test different scores / alternatives */
@@ -2086,7 +2086,7 @@ SCIP_RETCODE findImpliedIntegers(
 
          if( candidate->numContTransNetworkEntries == 0 )
          {
-            int col = candidate->column;
+            col = candidate->column;
             SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
             int* colrows = matrixGetColumnInds(matrix, col);
             int ncolnnonz = matrixGetColumnNNonzs(matrix, col);
@@ -2100,7 +2100,7 @@ SCIP_RETCODE findImpliedIntegers(
 
          if( candidate->numContNetworkEntries == 0 )
          {
-            int col = candidate->column;
+            col = candidate->column;
             SCIP_Real* colvals = matrixGetColumnVals(matrix, col);
             int* colrows = matrixGetColumnInds(matrix, col);
             int ncolnnonz = matrixGetColumnNNonzs(matrix, col);
@@ -2118,7 +2118,7 @@ SCIP_RETCODE findImpliedIntegers(
       {
          for( i = 0; i < numCandidates; ++i )
          {
-            int col = candidates[indArray[i]].column;
+            col = candidates[indArray[i]].column;
 
             if( SCIPnetmatdecContainsColumn(dec, col) )
             {
@@ -2137,7 +2137,7 @@ SCIP_RETCODE findImpliedIntegers(
       {
          for( i = 0; i < numCandidates; ++i )
          {
-            int col = candidates[indArray[i]].column;
+            col = candidates[indArray[i]].column;
 
             if( SCIPnetmatdecContainsRow(transdec, col) )
             {
