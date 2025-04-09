@@ -92,8 +92,9 @@ struct SCIP_PresolData
                                               *   implied integrality detection */
 };
 
-/** constraint matrix data structure in column and row major format.
- *  Contains only the linear terms, and marks the presence of non-linear terms */
+/** constraint matrix data structure in column and row major format
+ *  Contains only the linear terms, and marks the presence of non-linear terms
+ */
 struct ImplintMatrix
 {
    SCIP_Real*            colmatval;          /**< coefficients in column major format */
@@ -130,7 +131,7 @@ struct ImplintMatrix
 };
 typedef struct ImplintMatrix IMPLINT_MATRIX;
 
-/**< gets a pointer to the array of nonzero values for the nonzeros in the given column */
+/** gets a pointer to the array of nonzero values for the nonzeros in the given column */
 static
 SCIP_Real* matrixGetColumnVals(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -144,7 +145,7 @@ SCIP_Real* matrixGetColumnVals(
    return matrix->colmatval + matrix->colmatbeg[column];
 }
 
-/**< gets a pointer to the array of row indices for the nonzeros in the given column */
+/** gets a pointer to the array of row indices for the nonzeros in the given column */
 static
 int* matrixGetColumnInds(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -158,7 +159,7 @@ int* matrixGetColumnInds(
    return matrix->colmatind + matrix->colmatbeg[column];
 }
 
-/**< gets the number of nonzeros in the given column */
+/** gets the number of nonzeros in the given column */
 static
 int matrixGetColumnNNonzs(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -172,7 +173,7 @@ int matrixGetColumnNNonzs(
    return matrix->colmatcnt[column];
 }
 
-/**< gets a pointer to the array of nonzero values for the nonzeros in the given row */
+/** gets a pointer to the array of nonzero values for the nonzeros in the given row */
 static
 SCIP_Real* matrixGetRowVals(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -186,7 +187,7 @@ SCIP_Real* matrixGetRowVals(
    return matrix->rowmatval + matrix->rowmatbeg[row];
 }
 
-/**< gets a pointer to the array of column indices for the nonzeros in the given row */
+/** gets a pointer to the array of column indices for the nonzeros in the given row */
 static
 int* matrixGetRowInds(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -200,7 +201,7 @@ int* matrixGetRowInds(
    return matrix->rowmatind + matrix->rowmatbeg[row];
 }
 
-/**< gets the number of nonzeros in the given row */
+/** gets the number of nonzeros in the given row */
 static
 int matrixGetRowNNonzs(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -214,7 +215,7 @@ int matrixGetRowNNonzs(
    return matrix->rowmatcnt[row];
 }
 
-/**< returns the number of rows in the matrix */
+/** returns the number of rows in the matrix */
 static
 int matrixGetNRows(
    IMPLINT_MATRIX*       matrix              /**< the matrix data structure */
@@ -225,7 +226,7 @@ int matrixGetNRows(
    return matrix->nrows;
 }
 
-/**< returns the number of columns in the matrix */
+/** returns the number of columns in the matrix */
 static
 int matrixGetNCols(
    IMPLINT_MATRIX*       matrix              /**< the matrix data structure */
@@ -236,7 +237,7 @@ int matrixGetNCols(
    return matrix->ncols;
 }
 
-/**< returns the variable associated with the column */
+/** returns the variable associated with the column */
 static
 SCIP_VAR* matrixGetVar(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -250,7 +251,7 @@ SCIP_VAR* matrixGetVar(
    return matrix->colvar[column];
 }
 
-/**< returns TRUE if the given column originates from an integral variable */
+/** returns TRUE if the given column originates from an integral variable */
 static
 SCIP_Bool matrixColIsIntegral(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -264,7 +265,7 @@ SCIP_Bool matrixColIsIntegral(
    return matrix->colintegral[column];
 }
 
-/**< returns TRUE if the given column originates from an implied integral variable */
+/** returns TRUE if the given column originates from an implied integral variable */
 static
 SCIP_Bool matrixColIsImpliedIntegral(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -278,7 +279,7 @@ SCIP_Bool matrixColIsImpliedIntegral(
    return matrix->colimplintegral[column];
 }
 
-/**< returns TRUE if the given column occurs in a nonlinear expression in some constraint */
+/** returns TRUE if the given column occurs in a nonlinear expression in some constraint */
 static
 SCIP_Bool matrixColInNonlinearTerm(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -292,7 +293,7 @@ SCIP_Bool matrixColInNonlinearTerm(
    return matrix->colinnonlinterm[column];
 }
 
-/**< returns the lower bound of the given column */
+/** returns the lower bound of the given column */
 static
 SCIP_Real matrixGetColLb(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -306,7 +307,7 @@ SCIP_Real matrixGetColLb(
    return matrix->lb[column];
 }
 
-/**< returns the upper bound of the given column */
+/** returns the upper bound of the given column */
 static
 SCIP_Real matrixGetColUb(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -320,7 +321,7 @@ SCIP_Real matrixGetColUb(
    return matrix->ub[column];
 }
 
-/**< returns the left hand side of the given row */
+/** returns the left hand side of the given row */
 static
 SCIP_Real matrixGetRowLhs(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -334,7 +335,7 @@ SCIP_Real matrixGetRowLhs(
    return matrix->lhs[row];
 }
 
-/**< returns the right hand side of the given row */
+/** returns the right hand side of the given row */
 static
 SCIP_Real matrixGetRowRhs(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
@@ -431,8 +432,7 @@ SCIP_RETCODE matrixAddRow(
    return SCIP_OKAY;
 }
 
-/** transforms all variables to their corresponding active variables and then
- * adds the given linear constraint to the matrix, */
+/** transforms the weighted sum to active variables and then adds the given linear constraint to the matrix */
 static
 SCIP_RETCODE addLinearConstraint(
    SCIP*                 scip,               /**< current scip instance */
@@ -506,7 +506,7 @@ SCIP_RETCODE addLinearConstraint(
    return SCIP_OKAY;
 }
 
-/**< adds the linearization of a given AND constraint or OR constraint to the constraint matrix */
+/** adds the linearization of a given AND constraint or OR constraint to the constraint matrix */
 static
 SCIP_RETCODE addAndOrLinearization(
    SCIP*                 scip,               /**< current scip instance */
@@ -576,7 +576,7 @@ SCIP_RETCODE addAndOrLinearization(
    return SCIP_OKAY;
 }
 
-/**< adds the linearization of a given XOR constraint to the constraint matrix */
+/** adds the linearization of a given XOR constraint to the constraint matrix */
 static
 SCIP_RETCODE addXorLinearization(
    SCIP*                 scip,               /**< current scip instance */
@@ -762,7 +762,7 @@ SCIP_RETCODE matrixSetColumnMajor(
 /* @todo: use symmetry constraints to guide variable ordering for integral columns because
  *        symmetric variables should always all be either network or non-network
  */
-/**< create the matrix from the current transformed problem */
+/** create the matrix from the current transformed problem */
 static
 SCIP_RETCODE matrixCreate(
    SCIP*                 scip,               /**< the scip data structure */
@@ -1152,7 +1152,7 @@ SCIP_RETCODE matrixCreate(
    return SCIP_OKAY;
 }
 
-/**< frees the matrix from memory */
+/** frees the matrix from memory */
 static
 void matrixFree(
    SCIP*                 scip,               /**< the scip data structure */
@@ -1207,7 +1207,7 @@ void matrixFree(
    }
 }
 
-/** Struct that contains information about the blocks/components of the submatrix given by the continuous columns. */
+/** struct that contains information about the blocks/components of the submatrix given by the continuous columns */
 struct MatrixComponents
 {
    int nmatrixrows;                          /**< Number of rows in the matrix for the linear part of the problem */
@@ -1224,10 +1224,7 @@ struct MatrixComponents
 };
 typedef struct MatrixComponents MATRIX_COMPONENTS;
 
-/** A temporary data structure that stores some statistics/data on the rows and columns.
- *
- * This is freed again after implied integral detection is finished.
- */
+/** a temporary data structure that stores some statistics/data on the rows and columns */
 struct MatrixStatistics
 {
    SCIP_Bool* rowintegral;                   /**< Are all row entries of non-continuous columns and the row sides integral? */
@@ -1240,8 +1237,9 @@ struct MatrixStatistics
 };
 typedef struct MatrixStatistics MATRIX_STATISTICS;
 
-/**< struct that contains some information for each integer variable that is a candidate for implied integrality detection */
-struct IntegerCandidateData{
+/** struct that contains some information for each integer variable that is a candidate for implied integrality detection */
+struct IntegerCandidateData
+{
    int column;                               /**< The candidate column to make implied integer */
    int numContPlanarEntries;                 /**< The number of nonzeros that have a row in a planar component */
    int numContNetworkEntries;                /**< The number of nonzeros that have a row in a pure network component */
@@ -1249,7 +1247,7 @@ struct IntegerCandidateData{
 };
 typedef struct IntegerCandidateData INTEGER_CANDIDATE_DATA;
 
-/** Creates the matrix components data structure */
+/** creates the matrix components data structure */
 static
 SCIP_RETCODE createMatrixComponents(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1290,7 +1288,7 @@ SCIP_RETCODE createMatrixComponents(
    return SCIP_OKAY;
 }
 
-/** Frees the matrix components data structure */
+/** frees the matrix components data structure */
 static
 void freeMatrixComponents(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1310,9 +1308,8 @@ void freeMatrixComponents(
    SCIPfreeBuffer(scip, pmatrixcomponents);
 }
 
-/** Finds the representative of an element in the disjoint set datastructure.
- *
- * Afterwards compresses the path to speed up subsequent queries.
+/** finds the representative of an element in the disjoint set datastructure
+ *  Afterwards compresses the path to speed up subsequent queries.
  */
 static
 int disjointSetFind(
@@ -1342,9 +1339,8 @@ int disjointSetFind(
    return root;
 }
 
-/** Merges two sets/elements into one set. Returns the index of the merged element.
- *
- * The provided elements to be merged must be representative (i.e. returned by disjointSetFind()).
+/** merges two sets/elements into one set. Returns the index of the merged element
+ *  The provided elements to be merged must be representative (i.e. returned by disjointSetFind()).
  */
 static
 int disjointSetMerge(
@@ -1532,7 +1528,7 @@ SCIP_RETCODE computeContinuousComponents(
    return SCIP_OKAY;
 }
 
-/** Creates the matrix statistics data structure */
+/** creates the matrix statistics data structure */
 static
 SCIP_RETCODE computeMatrixStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1621,7 +1617,7 @@ SCIP_RETCODE computeMatrixStatistics(
    return SCIP_OKAY;
 }
 
-/** Frees the matrix statistics data structure */
+/** frees the matrix statistics data structure */
 static
 void freeMatrixStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1642,11 +1638,10 @@ void freeMatrixStatistics(
    SCIPfreeBuffer(scip, pstats);
 }
 
-/** Given the continuous components and statistics on the matrix, detect components that have implied integral variables
- *  by checking if the component is a (transposed) network matrix and if all the bounds/sides/coefficients are integral.
- *
- *  For every component, we detect if the associated matrix is either a network matrix or a transposed network matrix
- *  (or both, in which case it represents a planar graph).
+/** detects components of implied integral variables
+ *  Given the continuous components and statistics on the matrix, each component is checked if the associated matrix
+ *  describes either a network or a transposed network (or both, in which case it is represented by a planar graph) and
+ *  whether bounds/sides/coefficients are integral.
  *  We choose to check if it is a (transposed) network matrix either in a row-wise or in a column-wise fashion,
  *  depending on the size of the component. Finally, every variable that is in a network matrix or transposed network
  *  matrix is derived to be weakly implied integral.
