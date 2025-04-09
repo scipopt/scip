@@ -294,21 +294,6 @@ SCIP_RETCODE applyDecomposition(
       }
    }
 
-   /* copying all of the variables from the original problem to the respective decomposed problem */
-   for( i = 0; i < nvars; i++ )
-   {
-      if( varslabels[i] >= 0 )
-      {
-         assert(varslabels[i] < relaxdata->nsubproblems);
-         SCIP_CALL( addVariableToBendersProblem(scip, relaxdata->subproblems[varslabels[i]],
-               relaxdata->subvarmaps[varslabels[i]], vars[i]) );
-      }
-      else
-      {
-         SCIP_CALL( addVariableToBendersProblem(scip, relaxdata->masterprob, relaxdata->mastervarmap, vars[i]) );
-      }
-   }
-
    /* creating the Benders' decomposition my calling the default plugin */
    SCIP_CALL( SCIPcreateBendersDefault(relaxdata->masterprob, relaxdata->subproblems, nblocks) );
 
