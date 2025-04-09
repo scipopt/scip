@@ -1895,7 +1895,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 
    /* displaying the Benders' decomposition statistics */
    bendersrelax = SCIPfindRelax(scip, "benders");
-   if( SCIPrelaxGetNCalls(bendersrelax) )
+   if( bendersrelax != NULL && SCIPrelaxGetNCalls(bendersrelax) )
    {
       SCIPdialogMessage(scip, NULL, "Benders' Decomposition Statistics:\n");
       SCIP_CALL( SCIPrelaxBendersPrintStatistics(bendersrelax) );
