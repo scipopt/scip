@@ -694,10 +694,7 @@ SCIP_DECL_RELAXFREE(relaxFreeBenders)
    assert(relax != NULL);
 
    relaxdata = SCIPrelaxGetData(relax);
-
-   /* it is possible that the relaxation data is not created. In this case, nothing needs to be freed */
-   if( relaxdata == NULL )
-      return SCIP_OKAY;
+   assert(relaxdata != NULL);
 
    /* if the decomposition has been applied, then the corresponding SCIP instances need to be freed */
    if( relaxdata->decompapplied )
@@ -810,9 +807,7 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    infeasible = FALSE;
 
    relaxdata = SCIPrelaxGetData(relax);
-
-   if( relaxdata == NULL)
-      return SCIP_OKAY;
+   assert(relaxdata != NULL);
 
    /* the relaxator is only executed if the Benders decomposition is applied */
    if( !relaxdata->decompapplied )
