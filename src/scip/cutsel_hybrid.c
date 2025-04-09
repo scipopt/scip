@@ -111,7 +111,7 @@ SCIP_Real scoring(
          SCIP_Real efficacy;
 
          if( intsupportweight > 0.0 )
-            intsupport = intsupportweight * (SCIPgetRowNumIntCols(scip, cuts[i]) - SCIPgetRowNumImpliedIntCols(scip, cuts[i])) / (SCIP_Real) SCIProwGetNNonz(cuts[i]);
+            intsupport = intsupportweight * SCIPgetRowNumIntCols(scip, cuts[i])  / (SCIP_Real) SCIProwGetNNonz(cuts[i]);
          else
             intsupport = 0.0;
 
@@ -164,7 +164,7 @@ SCIP_Real scoring(
          SCIP_Real efficacy;
 
          if( intsupportweight > 0.0 )
-            intsupport = intsupportweight * (SCIPgetRowNumIntCols(scip, cuts[i]) - SCIPgetRowNumImpliedIntCols(scip, cuts[i])) / (SCIP_Real) SCIProwGetNNonz(cuts[i]);
+            intsupport = intsupportweight * SCIPgetRowNumIntCols(scip, cuts[i]) / (SCIP_Real) SCIProwGetNNonz(cuts[i]);
          else
             intsupport = 0.0;
 
