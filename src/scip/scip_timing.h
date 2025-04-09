@@ -232,49 +232,6 @@ SCIP_RETCODE SCIPstopSolvingTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** copies the solving time from the source SCIP to the target SCIP
- *
- *  This can be useful if you want a sub-SCIP to display the same solving time as the main SCIP.
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if the source SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- *
- *  @pre This method can be called if the target SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPcopySolvingTime(
-   SCIP*                 sourcescip,         /**< SCIP data structure */
-   SCIP*                 targetscip          /**< the target SCIP data structure */
-   );
-
 /** gets the measured time of a clock in seconds
  *
  *  @return the measured time of a clock in seconds.
