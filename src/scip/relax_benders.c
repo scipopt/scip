@@ -474,12 +474,41 @@ SCIP_RETCODE setSolutionValues(
    SCIP_RELAXDATA* relaxdata;
    SCIP_DECOMP* decomp;
    SCIP_VAR** vars;
+   SCIP_SOL** nlpsols;
    int* varslabels;
    int nvars;
    int i;
+   SCIP_Bool nlpsubprob;
 
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
+
+   /* checking whether the NLP solutions should be collected. */
+   for( i = 0; i < relaxdata->nsubproblems; i++ )
+   {
+      if( SCIPisNLPConstructed(relaxdata->subproblems[i]) && SCIPgetNNlpis(relaxdata->subproblems[i]) )
+      {
+         nlpsubprob = TRUE;
+         break;
+      }
+   }
+
+   /* if there are NLP subproblems, then we need to allocate the nlpsols array and collect the NLP subproblems */
+   if( nlpsubprob )
+   {
+      SCIP* subproblem;
+
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &nlpsols, relaxdata->nsubproblems) );
+
+      for( i = 0; i < relaxdata->nsubproblems; i++ )
+      {
+         subproblem = relaxdata->subproblems[i];
+         if( SCIPisNLPConstructed(relaxdata->subproblems[i]) && SCIPgetNNlpis(relaxdata->subproblems[i]) )
+         {
+            SCIP_CALL( getNlpSolution(subproblem, &(nlpsols[i])) );
+         }
+      }
+   }
 
    decomp = relaxdata->decomp;
 
@@ -517,29 +546,42 @@ SCIP_RETCODE setSolutionValues(
 
       if( SCIPhashmapExists(varmap, vars[i]) )
       {
-          SCIP_Bool nlprelaxation;
+         SCIP_VAR* mappedvar;
+         SCIP_Bool nlprelaxation;
 
-          /* the subproblem could be an NLP. As such, we need to get the solution directly from the NLP */
-          nlprelaxation = subproblem && SCIPisNLPConstructed(solscip) && SCIPgetNNlpis(solscip);
-          if( nlprelaxation )
-          {
-             SCIP_CALL( getNlpSolution(solscip, &bestsol) );
-          }
-          else
-             bestsol = SCIPgetBestSol(solscip);
+         /* the subproblem could be an NLP. As such, we need to get the solution directly from the NLP */
+         nlprelaxation = subproblem && SCIPisNLPConstructed(solscip) && SCIPgetNNlpis(solscip);
+         if( nlprelaxation )
+         {
+            bestsol = nlpsols[varslabels[i]];
+         }
+         else
+            bestsol = SCIPgetBestSol(solscip);
 
-          SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i],
-             SCIPgetSolVal(solscip, bestsol, (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i]))) );
-
-          /* if the solution is from an NLP, then we need to free it */
-          if( nlprelaxation )
-          {
-             SCIP_CALL( SCIPfreeSol(solscip, &bestsol) );
-          }
+         mappedvar = (SCIP_VAR*)SCIPhashmapGetImage(varmap, vars[i]);
+         if( mappedvar != NULL )
+         {
+            SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i],
+                  SCIPgetSolVal(solscip, bestsol, mappedvar)) );
+         }
       }
    }
 
    SCIPfreeBufferArray(scip, &varslabels);
+
+   /* if there were NLP subproblems, then the solutions and storage array must be freed */
+   if( nlpsubprob )
+   {
+      for( i = relaxdata->nsubproblems - 1; i >= 0; i-- )
+      {
+         if( nlpsols[i] != NULL )
+         {
+            SCIP_CALL( SCIPfreeSol(relaxdata->subproblems[i], &(nlpsols[i])) );
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &nlpsols);
+   }
 
    return SCIP_OKAY;
 }
