@@ -4142,7 +4142,7 @@ SCIP_RETCODE propIndicator(
     *
     * It is especially worth to tighten the upper bound if it is greater than maxcouplingvalue or sepacouplingvalue.
     * But do not tighten it if slackvar is locked down by other constraints,
-    * or if it has a nonzero coefficient in the objective function (not implemented).
+    * or if it has a nonzero coefficient in the objective function.
     *
     * ax - c * s <= rhs  ->  s <= (maxActivity(ax) - rhs) / c;
     */
@@ -4154,7 +4154,7 @@ SCIP_RETCODE propIndicator(
       SCIP_VAR** linconsvars;
       SCIP_Real* linconsvals;
       SCIP_Real maxactivity = 0.0;
-      SCIP_Real coeffslack = SCIP_INVALID;
+      SCIP_Real coeffslack = SCIP_INVALID;   /* -c */
       SCIP_Real newub;
       SCIP_Real rhs;
       int nlinconsvars;
