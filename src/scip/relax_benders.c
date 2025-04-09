@@ -659,6 +659,11 @@ SCIP_RETCODE createOriginalSolution(
       SCIP_Bool stored;
       SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
    }
+   else
+   {
+      SCIPinfoMessage(scip, NULL, "The solution found by the Benders' decomposition algorithm is not valid "
+            "for the original problem.\n");
+   }
 
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
