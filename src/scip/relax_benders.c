@@ -46,7 +46,7 @@
 #define RELAX_NAME             "benders"
 #define RELAX_DESC             "applies Benders' decomposition and solves the problem"
 #define RELAX_PRIORITY         1
-#define RELAX_FREQ             1
+#define RELAX_FREQ             0
 
 
 
@@ -812,17 +812,6 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    /* the relaxator is only executed if the Benders decomposition is applied */
    if( !relaxdata->decompapplied )
       return SCIP_OKAY;
-
-   /* we only run at the root node. If the decomposition was not able to solve the problem at the root node, then we
-    * fall back to solving the MIP directly.
-    */
-   if( SCIPgetDepth(scip) > 0 )
-   {
-      /* resetting the vebosity level, in case the problem needs to be solved by the original SCIP */
-      SCIP_CALL( resetVerbosityLevel(scip, relax) );
-
-      return SCIP_OKAY;
-   }
 
    /* checking whether there is enough time and memory to perform the decomposition solve */
    SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
