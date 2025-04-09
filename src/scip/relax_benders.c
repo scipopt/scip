@@ -53,7 +53,6 @@
 /*
  * Data structures
  */
-/* TODO: fill in the necessary relaxator data */
 
 /** relaxator data */
 struct SCIP_RelaxData
