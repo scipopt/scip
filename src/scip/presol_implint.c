@@ -131,10 +131,11 @@ struct ImplintMatrix
 };
 typedef struct ImplintMatrix IMPLINT_MATRIX;
 
+/**< gets a pointer to the array of nonzero values for the nonzeros in the given column */
 static
 SCIP_Real* matrixGetColumnVals(
-   IMPLINT_MATRIX* matrix,
-   int column
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   column              /**< the column */
    )
 {
    assert(matrix != NULL);
@@ -144,10 +145,11 @@ SCIP_Real* matrixGetColumnVals(
    return matrix->colmatval + matrix->colmatbeg[column];
 }
 
+/**< gets a pointer to the array of row indices for the nonzeros in the given column */
 static
 int* matrixGetColumnInds(
-   IMPLINT_MATRIX* matrix,
-   int column
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   column              /**< the column */
    )
 {
    assert(matrix != NULL);
@@ -157,10 +159,11 @@ int* matrixGetColumnInds(
    return matrix->colmatind + matrix->colmatbeg[column];
 }
 
+/**< gets the number of nonzeros in the given column */
 static
 int matrixGetColumnNNonzs(
-   IMPLINT_MATRIX* matrix,
-   int column
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   column              /**< the column */
    )
 {
    assert(matrix != NULL);
@@ -170,10 +173,11 @@ int matrixGetColumnNNonzs(
    return matrix->colmatcnt[column];
 }
 
+/**< gets a pointer to the array of nonzero values for the nonzeros in the given row */
 static
 SCIP_Real* matrixGetRowVals(
-   IMPLINT_MATRIX* matrix,
-   int row
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   row                 /**< the row */
    )
 {
    assert(matrix != NULL);
@@ -183,10 +187,11 @@ SCIP_Real* matrixGetRowVals(
    return matrix->rowmatval + matrix->rowmatbeg[row];
 }
 
+/**< gets a pointer to the array of column indices for the nonzeros in the given row */
 static
 int* matrixGetRowInds(
-   IMPLINT_MATRIX* matrix,
-   int row
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   row                 /**< the row */
    )
 {
    assert(matrix != NULL);
@@ -196,10 +201,11 @@ int* matrixGetRowInds(
    return matrix->rowmatind + matrix->rowmatbeg[row];
 }
 
+/**< gets the number of nonzeros in the given row */
 static
 int matrixGetRowNNonzs(
-   IMPLINT_MATRIX* matrix,
-   int row
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   row                 /**< the row */
    )
 {
    assert(matrix != NULL);
@@ -209,9 +215,10 @@ int matrixGetRowNNonzs(
    return matrix->rowmatcnt[row];
 }
 
+/**< returns the number of rows in the matrix */
 static
 int matrixGetNRows(
-   IMPLINT_MATRIX* matrix
+   IMPLINT_MATRIX*       matrix              /**< the matrix data structure */
    )
 {
    assert(matrix != NULL);
@@ -219,9 +226,10 @@ int matrixGetNRows(
    return matrix->nrows;
 }
 
+/**< returns the number of columns in the matrix */
 static
 int matrixGetNCols(
-   IMPLINT_MATRIX* matrix
+   IMPLINT_MATRIX*       matrix              /**< the matrix data structure */
    )
 {
    assert(matrix != NULL);
@@ -229,10 +237,11 @@ int matrixGetNCols(
    return matrix->ncols;
 }
 
+/**< returns the variable associated with the column */
 static
 SCIP_VAR* matrixGetVar(
-   IMPLINT_MATRIX* matrix,
-   int column
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   column              /**< the column */
    )
 {
    assert(matrix != NULL);
@@ -242,10 +251,11 @@ SCIP_VAR* matrixGetVar(
    return matrix->colvar[column];
 }
 
+/**< returns TRUE if the given column originates from an integral variable */
 static
 SCIP_Bool matrixColIsIntegral(
-   IMPLINT_MATRIX* matrix,
-   int column
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   column              /**< the column */
    )
 {
    assert(matrix != NULL);
@@ -255,10 +265,11 @@ SCIP_Bool matrixColIsIntegral(
    return matrix->colintegral[column];
 }
 
+/**< returns TRUE if the given column originates from an implied integral variable */
 static
 SCIP_Bool matrixColIsImpliedIntegral(
-   IMPLINT_MATRIX* matrix,
-   int column
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   column              /**< the column */
 )
 {
    assert(matrix != NULL);
@@ -268,10 +279,11 @@ SCIP_Bool matrixColIsImpliedIntegral(
    return matrix->colimplintegral[column];
 }
 
+/**< returns TRUE if the given column occurs in a nonlinear expression in some constraint */
 static
 SCIP_Bool matrixColInNonlinearTerm(
-   IMPLINT_MATRIX* matrix,
-   int column
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   column              /**< the column */
    )
 {
    assert(matrix != NULL);
@@ -281,10 +293,11 @@ SCIP_Bool matrixColInNonlinearTerm(
    return matrix->colinnonlinterm[column];
 }
 
+/**< returns the lower bound of the given column */
 static
 SCIP_Real matrixGetColLb(
-   IMPLINT_MATRIX* matrix,
-   int column
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   column              /**< the column */
    )
 {
    assert(matrix != NULL);
@@ -294,10 +307,11 @@ SCIP_Real matrixGetColLb(
    return matrix->lb[column];
 }
 
+/**< returns the upper bound of the given column */
 static
 SCIP_Real matrixGetColUb(
-   IMPLINT_MATRIX* matrix,
-   int column
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   column              /**< the column */
    )
 {
    assert(matrix != NULL);
@@ -307,10 +321,11 @@ SCIP_Real matrixGetColUb(
    return matrix->ub[column];
 }
 
+/**< returns the left hand side of the given row */
 static
 SCIP_Real matrixGetRowLhs(
-   IMPLINT_MATRIX* matrix,
-   int row
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   row                 /**< the row */
    )
 {
    assert(matrix != NULL);
@@ -320,10 +335,11 @@ SCIP_Real matrixGetRowLhs(
    return matrix->lhs[row];
 }
 
+/**< returns the right hand side of the given row */
 static
 SCIP_Real matrixGetRowRhs(
-   IMPLINT_MATRIX* matrix,
-   int row
+   IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
+   int                   row                 /**< the row */
    )
 {
    assert(matrix != NULL);
