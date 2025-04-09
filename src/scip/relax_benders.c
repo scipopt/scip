@@ -44,7 +44,7 @@
 #include "scip/type_stat.h"
 
 #define RELAX_NAME             "benders"
-#define RELAX_DESC             "applies Benders' decomposition and solves the problem"
+#define RELAX_DESC             "applies default Benders' decomposition and solves the problem"
 #define RELAX_PRIORITY         1
 #define RELAX_FREQ             0
 
@@ -294,7 +294,7 @@ SCIP_RETCODE applyDecomposition(
       }
    }
 
-   /* creating the Benders' decomposition my calling the default plugin */
+   /* creating the Benders' decomposition by calling the default plugin */
    SCIP_CALL( SCIPcreateBendersDefault(relaxdata->masterprob, relaxdata->subproblems, nblocks) );
 
    /* activating the Benders' constraint handler for the scenario stages.
@@ -333,7 +333,6 @@ SCIP_RETCODE setVerbosityLevel(
    assert(scip != NULL);
    assert(relax != NULL);
 
-   /* updating the verbosity level of the  */
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
 
@@ -881,7 +880,7 @@ SCIP_RETCODE SCIPincludeRelaxBenders(
    return SCIP_OKAY;
 }
 
-/** returns the master problem SCIP instance */
+/** prints the statistics for the Benders' master problem */
 SCIP_RETCODE SCIPrelaxBendersPrintStatistics(
    SCIP_RELAX*           relax               /**< the Benders' decomposition relaxator */
    )
