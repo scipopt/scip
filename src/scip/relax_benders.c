@@ -61,8 +61,8 @@ struct SCIP_RelaxData
    SCIP*                 masterprob;         /**< the SCIP instance of the master problem */
    SCIP**                subproblems;        /**< an array of SCIP instances for the subproblems */
    SCIP_DECOMP*          decomp;             /**< the structure used for the decomposition */
-   SCIP_HASHMAP*         mastervarmap;       /**< mapping between the original SCIP and the master problem */
-   SCIP_HASHMAP**        subvarmaps;         /**< mapping between the original SCIP and the subproblems */
+   SCIP_HASHMAP*         mastervarmap;       /**< variables mapping between the original SCIP and the master problem */
+   SCIP_HASHMAP**        subvarmaps;         /**< variables mapping between the original SCIP and the subproblems */
    int                   nsubproblems;       /**< the number of subproblems */
    SCIP_Bool             decompapplied;      /**< indicates whether the decomposition was applied */
    SCIP_VERBLEVEL        origverblevel;      /**< the verbosity level of the original SCIP instance */
