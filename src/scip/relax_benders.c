@@ -139,10 +139,14 @@ SCIP_RETCODE addConstraintToBendersProblem(
 
    /* getting the variables that are in the constraint */
    SCIP_CALL( SCIPgetConsNVars(scip, sourcecons, &nconsvars, &success) );
+   if( !success )
+      return SCIP_ERROR;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
 
    SCIP_CALL( SCIPgetConsVars(scip, sourcecons, consvars, nconsvars, &success) );
-   assert(success);
+   if( !success )
+      return SCIP_ERROR;
 
    /* checking all variables to see whether they already exist in the subproblem. If they don't exist, then the variable
     * is created
