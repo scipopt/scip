@@ -88,7 +88,7 @@
 #include "scip/cons_linear.h"
 #include "scip/scip_mem.h"
 #include "scip/symmetry_graph.h"
-
+#include "tinycthread/tinycthread.h"
 
 /** struct for symmetry callback */
 struct SYMMETRY_Data
@@ -114,7 +114,12 @@ struct NAUTY_Data
 };
 
 /** static data for nauty callback */
-static struct NAUTY_Data nautydata_;
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201102L
+static thread_local struct NAUTY_Data nautydata_;
+#else
+static _Thread_local struct NAUTY_Data nautydata_;
+#endif
+
 #endif
 
 /* ------------------- hook functions ------------------- */

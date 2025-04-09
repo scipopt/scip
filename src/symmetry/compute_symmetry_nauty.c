@@ -59,7 +59,7 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/scip_mem.h"
-
+#include "tinycthread/tinycthread.h"
 
 /** struct for nauty callback */
 struct NAUTY_Data
@@ -77,8 +77,12 @@ struct NAUTY_Data
    int                   maxnnodes;          /**< maximum number of nodes in nauty's search tree */
 };
 
-/* static data for nauty callback */
-static struct NAUTY_Data data_;
+/** static data for nauty callback */
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201102L
+static thread_local struct NAUTY_Data data_;
+#else
+static _Thread_local struct NAUTY_Data data_;
+#endif
 
 /* ------------------- hook functions ------------------- */
 
