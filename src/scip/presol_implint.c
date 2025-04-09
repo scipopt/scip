@@ -43,8 +43,6 @@
 #include "scip/pub_var.h"
 
 #include "scip/scip_cons.h"
-#include "scip/scip_copy.h"
-#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_mem.h"
