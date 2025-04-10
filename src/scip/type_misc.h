@@ -107,7 +107,7 @@ typedef struct SCIP_HashMap SCIP_HASHMAP;
 
 /** Hash set data structure
  *
- *  - \ref HashMap "List of all available methods"
+ *  - \ref HashSet "List of all available methods"
  */
 typedef struct SCIP_HashSet SCIP_HASHSET;
 

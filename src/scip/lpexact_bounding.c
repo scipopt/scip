@@ -25,8 +25,9 @@
 /**@file   lpexact_bounding.c
  * @brief  safe exact rational bounding methods
  * @author Leon Eifler
- *
+ * @author Kati Wolter
  */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include <stdio.h>
 #include <assert.h>
@@ -59,7 +60,7 @@
 
 #ifdef SCIP_WITH_BOOST
 
-#define PSBIGM                      100
+#define PSBIGM                      100LL
 
 /** checks if number is a power of two (negative numbers are reported as false);
  *
@@ -69,7 +70,7 @@
  */
 static
 bool isPowerOfTwo(
-   SCIP_Longint          n                   /**< the number to check */
+   int                   n                   /**< the number to check */
    )
 {
     return (n > 0) && ((n & (n - 1)) == 0);
@@ -166,7 +167,7 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
    for( i = 0; i < nextendedrows; i++ )
       projshiftdata->includedrows[i] = 0;
    /* no selection -> include all possible dual columns */
-   if( set->exact_psdualcolselection == PS_DUALCOSTSEL_NO || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+   if( set->exact_psdualcolselection == (int) PS_DUALCOSTSEL_NO || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
       /* determine which dual variables to included in the problem
        * (ones with finite dual objective coef. in [lhs',-rhs',lb',-ub'])
@@ -186,13 +187,13 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
             projshiftdata->includedrows[2*nrows + ncols + i] = 1;
       }
    }
-   else if( set->exact_psdualcolselection == PS_DUALCOSTSEL_ACTIVE_EXLP )
+   else if( set->exact_psdualcolselection == (int) PS_DUALCOSTSEL_ACTIVE_EXLP )
    {
       /* determone which dual variables to include in the problem (in this case we choose dual variables whose primal
        * constraints are active at the solution of the exact LP at the root node)
        */
 
-      SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, prob, 100,
+      SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, prob, 100LL,
                &lperror, FALSE) );
 
       SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &rootprimal, ncols) );
@@ -222,7 +223,7 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
       SCIPrationalFreeBufferArray(set->buffer, &rootactivity, nrows);
       SCIPrationalFreeBufferArray(set->buffer, &rootprimal, ncols);
    }
-   else if( set->exact_psdualcolselection == PS_DUALCOSTSEL_ACTIVE_FPLP )
+   else if( set->exact_psdualcolselection == (int) PS_DUALCOSTSEL_ACTIVE_FPLP )
    {
       /* determine which dual variables to include in the problem (in this case we choose dual variables whose primal
        * constraints are active at the solution of the exact LP at the root node)
@@ -277,6 +278,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    int* projind;
    SCIP_RATIONAL** projval;
    SCIP_PROJSHIFTDATA* projshiftdata;
+   int projindsize;
 
    projshiftdata = lpexact->projshiftdata;
 
@@ -284,14 +286,15 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    ncols = lpexact->ncols;
    nextendedrows = projshiftdata->nextendedrows;
    nnonz = getNNonz(lpexact);
+   projindsize = 2*nnonz + 2*ncols;
 
    /* allocate memory for the projection factorization */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projbeg, nextendedrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projlen, nextendedrows) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &projind, 2*nnonz + 2*ncols) );
-   BMSclearMemoryArray(projind, 2*nnonz + 2*ncols);
-   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &projval, 2*nnonz + 2*ncols) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &projvalgmp, 2*nnonz + 2*ncols) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &projind, projindsize) );
+   BMSclearMemoryArray(projind, projindsize);
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &projval, projindsize) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &projvalgmp, projindsize) );
 
    /* allocate memory for the basis mapping */
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &projshiftdata->projshiftbasis, nextendedrows) );
@@ -344,7 +347,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
          projbeg[i] = pos;
          projlen[i] = 1;
          projind[pos] = i - 2*nrows;
-         SCIPrationalSetInt(projval[pos], 1, 1);
+         SCIPrationalSetFraction(projval[pos], 1LL, 1LL);
          pos ++;
       }
       /* -I part (ub constraints) */
@@ -353,7 +356,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
          projbeg[i] = pos;
          projlen[i] = 1;
          projind[pos] = i - (2*nrows + ncols);
-         SCIPrationalSetInt(projval[pos], -1, 1);
+         SCIPrationalSetFraction(projval[pos], -1LL, 1LL);
          pos ++;
       }
    }
@@ -363,7 +366,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    for( i = 0; i < nextendedrows; i++ )
       printf("   j=%d:\t projbeg=<%d>,\t projlen=<%d>\n", i, projbeg[i], projlen[i]);
 
-   for( i = 0; i < 2*nnonz + 2*ncols; i++ )
+   for( i = 0; i < projindsize; i++ )
    {
       printf("   i=%d:\t projind=<%d>,\t projval=<", i, projind[i]);
       SCIPrationalPrint(projval[i]);
@@ -376,7 +379,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
     *   strictly positive value in the relative interior point
     * - D is equal to a subset of [A',-A',I,-I] and is given to the factor code in sparse column representation
     */
-   SCIPrationalSetGMPArray(projvalgmp, projval, 2 * nnonz + 2 * ncols);
+   SCIPrationalSetGMPArray(projvalgmp, projval, projindsize);
 
 #if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
    rval = RECTLUbuildFactorization(&projshiftdata->rectfactor, ncols, projshiftdata->projshiftbasisdim,
@@ -398,9 +401,9 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    printf("   matrix factorization complete: %s\n", rval ? "failed" : "correct termination");
 #endif
 
-   SCIPrationalClearArrayGMP(projvalgmp, 2 * nnonz+ 2 * ncols);
+   SCIPrationalClearArrayGMP(projvalgmp, projindsize);
    SCIPsetFreeBufferArray(set, &projvalgmp);
-   SCIPrationalFreeBufferArray(set->buffer, &projval, 2*nnonz + 2*ncols);
+   SCIPrationalFreeBufferArray(set->buffer, &projval, projindsize);
    SCIPsetFreeBufferArray(set, &projind);
    SCIPsetFreeBufferArray(set, &projlen);
    SCIPsetFreeBufferArray(set, &projbeg);
@@ -481,9 +484,9 @@ SCIP_RETCODE setupProjectShiftOpt(
    }
    assert(pos == ndvarmap);
 
-   /* set alpha and beta. */
-   SCIPrationalSetReal(alpha, projshiftdata->projshiftobjweight);
-   SCIPrationalSetInt(beta, 1, 1);
+   /* set alpha and beta; note that in the current implementation projshiftobjweight can only be 0 or 1 */
+   SCIPrationalSetFraction(alpha, (SCIP_Longint) projshiftdata->projshiftobjweight, 1LL);
+   SCIPrationalSetFraction(beta, 1LL, 1LL);
 
    if( SCIPrationalIsPositive(alpha) )
    {
@@ -497,8 +500,8 @@ SCIP_RETCODE setupProjectShiftOpt(
       }
       /* divide through by alpha and round beta to be a power of 2 */
       SCIPrationalDiv(beta, beta, alpha);
-      SCIPrationalSetInt(alpha, 1, 1);
-      SCIPrationalSetReal(beta, pow(2, (int) (log(SCIPrationalGetReal(beta))/log(2))));
+      SCIPrationalSetFraction(alpha, 1LL, 1LL);
+      SCIPrationalSetReal(beta, pow(2.0, log(SCIPrationalGetReal(beta))/log(2.0)));
    }
 
    /* set objective to normalized value */
@@ -510,10 +513,10 @@ SCIP_RETCODE setupProjectShiftOpt(
    for( i = 0; i < ndvarmap; i++ )
    {
       SCIPrationalSetInfinity(psub[i]);
-      SCIPrationalSetInt(pslb[i], 0, 1);
+      SCIPrationalSetFraction(pslb[i], 0LL, 1LL);
    }
-   SCIPrationalSetInt(psub[ndvarmap], PSBIGM, 1);
-   SCIPrationalSetInt(pslb[ndvarmap], 0 ,1);
+   SCIPrationalSetFraction(psub[ndvarmap], PSBIGM, 1LL);
+   SCIPrationalSetFraction(pslb[ndvarmap], 0LL, 1LL);
 
    /* set up constraint bounds */
    for( i = 0; i < ncols; i++ )
@@ -523,7 +526,7 @@ SCIP_RETCODE setupProjectShiftOpt(
    }
    for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
    {
-      SCIPrationalSetInt(pslhs[ncols + i], 0, 1);
+      SCIPrationalSetFraction(pslhs[ncols + i], 0LL, 1LL);
       SCIPrationalSetInfinity(psrhs[ncols + i]);
    }
 
@@ -596,9 +599,9 @@ SCIP_RETCODE setupProjectShiftOpt(
          pos = psbeg[indx] + pslen[indx];
          psind[pos] = i;
          if( dvarmap[i] < 2*nrows + ncols)
-            SCIPrationalSetInt(psval[pos], 1, 1);
+            SCIPrationalSetFraction(psval[pos], 1LL, 1LL);
          else
-            SCIPrationalSetInt(psval[pos], -1, 1);
+            SCIPrationalSetFraction(psval[pos], -1LL, 1LL);
          pslen[indx]++;
       }
    }
@@ -610,9 +613,9 @@ SCIP_RETCODE setupProjectShiftOpt(
       if( projshiftdata->includedrows[indx] )
       {
          psind[psbeg[pos]] = i;
-         SCIPrationalSetInt(psval[psbeg[pos]], 1, 1);
+         SCIPrationalSetFraction(psval[psbeg[pos]], 1LL, 1LL);
          psind[psbeg[pos] + 1] = psncols - 1;
-         SCIPrationalSetInt(psval[psbeg[pos] + 1], -1, 1);
+         SCIPrationalSetFraction(psval[psbeg[pos] + 1], -1LL, 1LL);
          pos++;
       }
    }
@@ -709,7 +712,6 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
        * the parts that change are the objective function, the RHS/LHS of the first constraint set
        * and the lower bound for d
        */
-
       SCIP_RATIONAL* auxval1;
       SCIP_RATIONAL* auxval2;
       int i;
@@ -720,7 +722,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &auxval2) );
 
       /* update the objective on d */
-      SCIPrationalSetInt(auxval1, 0, 1);
+      SCIPrationalSetFraction(auxval1, 0LL, 1LL);
       SCIP_CALL( SCIPlpiExactChgObj(pslpiexact, 1, &ndvarmap, &auxval1) );
 
       /* update the rhs/lhs */
@@ -730,7 +732,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       }
 
       /* update bounds on d */
-      SCIPrationalSetInt(auxval1, 1 ,1);
+      SCIPrationalSetFraction(auxval1, 1LL, 1LL); /*lint !e850*/ /* lint exception for &i in above for loop */
       SCIPrationalSetInfinity(auxval2);
       SCIP_CALL( SCIPlpiExactChgBounds(pslpiexact, 1, &ndvarmap, &auxval1, &auxval2) );
 
@@ -812,10 +814,12 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    }
 
    /* free memory for exact LPI if not needed anymore */
-   if( pslpiexact != NULL
-      && (projshiftdata->projshiftdatafail || (projshiftdata->projshifthaspoint && projshiftdata->projshifthasray)) )
+   assert(pslpiexact != NULL);
+   if( projshiftdata->projshiftdatafail || (projshiftdata->projshifthaspoint && projshiftdata->projshifthasray) )
    {
-      int nlpirows, nlpicols;
+      int nlpirows;
+      int nlpicols;
+
       SCIP_CALL( SCIPlpiExactGetNRows(pslpiexact, &nlpirows) );
       SCIP_CALL( SCIPlpiExactDelRows(pslpiexact, 0, nlpirows - 1) );
 
@@ -978,7 +982,7 @@ SCIP_RETCODE projectShiftConstructLP(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &colnames, psncols) );
    for( i = 0; i < psncols; i++ )
    {
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &((colnames)[i]), SCIP_MAXSTRLEN ) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &colnames[i], SCIP_MAXSTRLEN) ); /*lint !e866*/
       (void) SCIPsnprintf( (colnames)[i] , SCIP_MAXSTRLEN, "var%d", i);
    }
 
@@ -992,10 +996,9 @@ SCIP_RETCODE projectShiftConstructLP(
     * and A~ is the submatrix of [A',-A',I,-I] using columns in dvarmap
     * and OBJ is the subvector of [lhs,-rhs,lb,-ub] using columns in dvarmap
     *
-    * beta is set equal to the param projshiftobjweight and alpha is set equal to
-    * alpha := (1-beta)/||OBJ||
+    * alpha is set equal to the param projshiftobjweight and beta is set equal to
+    * beta := 1-alpha
     */
-
    SCIP_CALL( setupProjectShiftOpt(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,
          psncols, ndvarmap, nrows, ncols) );
@@ -1090,11 +1093,9 @@ SCIP_RETCODE constructProjectShiftDataLPIExact(
 /** constructs data used to compute dual bounds by the project-and-shift method */
 static
 SCIP_RETCODE constructProjectShiftData(
-   SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_STAT*            stat,               /**< statistics pointer */
-   SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem
    )
 {
@@ -1178,7 +1179,7 @@ SCIP_RETCODE projectShift(
    SCIP_Bool             usefarkas,          /**< do we aim to prove infeasibility? */
    SCIP_Real*            safebound           /**< store the calculated safebound here */
    )
-{
+{  /*lint --e{715}*/
    SCIP_COL** cols;
    SCIP_RATIONAL** dualsol;
    SCIP_RATIONAL** violation;
@@ -1220,7 +1221,7 @@ SCIP_RETCODE projectShift(
    /* if data has not been constructed, construct it */
    if( !projshiftdata->projshiftdatacon )
    {
-      SCIP_CALL( constructProjectShiftData(lp, lpexact, set, stat, prob, blkmem) );
+      SCIP_CALL( constructProjectShiftData(lpexact, set, stat, blkmem) );
    }
 
    assert(projshiftdata->projshiftdatacon);
@@ -1283,7 +1284,7 @@ SCIP_RETCODE projectShift(
    assert(ncols == projshiftdata->violationsize);
 
    /* allocate memory for approximate dual solution, dual cost vector, violation and correction */
-   SCIPsetAllocBufferArray(set, &dualsol, nrows + ncols);
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &dualsol, nrows + ncols) );
    violation = projshiftdata->violation;
    correction = projshiftdata->correction;
 
@@ -1294,13 +1295,13 @@ SCIP_RETCODE projectShift(
       else
          dualsol[i] = usefarkas ? lpexact->cols[i - nrows]->farkascoef : lpexact->cols[i - nrows]->redcost;
 
-      SCIPrationalSetInt(dualsol[i], 0, 1);
+      SCIPrationalSetFraction(dualsol[i], 0LL, 1LL);
       if( i < ncols )
-         SCIPrationalSetInt(violation[i], 0, 1);
+         SCIPrationalSetFraction(violation[i], 0LL, 1LL);
    }
    for( i = 0; i < nextendedrows; ++i )
    {
-      SCIPrationalSetInt(correction[i], 0, 1);
+      SCIPrationalSetFraction(correction[i], 0LL, 1LL);
    }
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &isupper, nrows + ncols) );
@@ -1369,19 +1370,19 @@ SCIP_RETCODE projectShift(
    {
       SCIP_RATIONAL* val;
 
-       if( !isupper[i] )
+      if( !isupper[i] )
          val = i < nrows ? lpexact->rows[i]->lhs : lpexact->cols[i - nrows]->lb;
       else
          val = i < nrows ? lpexact->rows[i]->rhs : lpexact->cols[i - nrows]->ub;
 
       if( SCIPrationalIsAbsInfinity(val) )
-         SCIPrationalSetInt(dualsol[i], 0, 1);
+         SCIPrationalSetFraction(dualsol[i], 0LL, 1LL);
    }
 
 #ifdef SCIP_DEBUG_PS_OUT
    printf("approximate dual solution:\n");
 
-   SCIPrationalSetInt(dualbound, 0, 1);
+   SCIPrationalSetFraction(dualbound, 0LL, 1LL);
    for( i = 0; i < nrows + ncols; i++ )
    {
       SCIP_RATIONAL* val;
@@ -1510,7 +1511,7 @@ SCIP_RETCODE projectShift(
             if( !isupper[map] )
             {
                SCIPrationalAdd(correction[i], correction[i], dualsol[map]);
-               SCIPrationalSetInt(dualsol[map], 0, 1);
+               SCIPrationalSetFraction(dualsol[map], 0LL, 1LL);
             }
          }
          /* [nrows, ..., 2*nrows] is a rhs-row of A */
@@ -1519,7 +1520,7 @@ SCIP_RETCODE projectShift(
             if( isupper[map - nrowsps] )
             {
                SCIPrationalDiff(correction[i], correction[i], dualsol[map - nrowsps]);
-               SCIPrationalSetInt(dualsol[map - nrowsps], 0, 1);
+               SCIPrationalSetFraction(dualsol[map - nrowsps], 0LL, 1LL);
             }
          }
          /* [2*nrows, ..., 2*nrows+ncols] is a lb-col */
@@ -1528,7 +1529,7 @@ SCIP_RETCODE projectShift(
             if( !isupper[map - nrowsps + shift] )
             {
                SCIPrationalAdd(correction[i], correction[i], dualsol[map - nrowsps + shift]);
-               SCIPrationalSetInt(dualsol[map - nrowsps + shift], 0, 1);
+               SCIPrationalSetFraction(dualsol[map - nrowsps + shift], 0LL, 1LL);
             }
          }
          /* [2*nrows+ncols, ..., 2*nrows+2*ncols] is a ub-col */
@@ -1537,7 +1538,7 @@ SCIP_RETCODE projectShift(
             if( isupper[map - nrowsps - ncols  + shift] )
             {
                SCIPrationalDiff(correction[i], correction[i], dualsol[map - nrowsps - ncols + shift]);
-               SCIPrationalSetInt(dualsol[map - nrowsps - ncols + shift], 0, 1);
+               SCIPrationalSetFraction(dualsol[map - nrowsps - ncols + shift], 0LL, 1LL);
             }
          }
       }
@@ -1562,7 +1563,7 @@ SCIP_RETCODE projectShift(
          */
 
          /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-         SCIPrationalSetInt(lambda1, 1, 1);
+         SCIPrationalSetFraction(lambda1, 1LL, 1LL);
          for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
          {
             if( SCIPrationalIsNegative(correction[i]) )
@@ -1575,14 +1576,14 @@ SCIP_RETCODE projectShift(
                SCIPrationalMin(lambda1, lambda1, tmp2);
             }
          }
-         SCIPrationalSetInt(lambda2, 1, 1);
+         SCIPrationalSetFraction(lambda2, 1LL, 1LL);
          SCIPrationalDiff(lambda2, lambda2, lambda1);
       }
       else
       {
          /* in this case we are using an interior ray that can be added freely to the solution */
          /* compute lambda values: compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-         SCIPrationalSetInt(lambda1, 1, 1);
+         SCIPrationalSetFraction(lambda1, 1LL, 1LL);
          for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
          {
             int map = projshiftdata->projshiftbasis[i];
@@ -1682,7 +1683,7 @@ SCIP_RETCODE projectShift(
       if( !usefarkas )
         SCIPrationalSetRational(violation[i], lpexact->cols[i]->obj);
       else
-         SCIPrationalSetInt(violation[i], 0, 1);
+         SCIPrationalSetFraction(violation[i], 0LL, 1LL);
    }
    for( i = 0; i < nrows; i++ )
    {
@@ -1721,7 +1722,7 @@ SCIP_RETCODE projectShift(
    assert(!rval);
 #endif
 
-   SCIPrationalSetInt(dualbound, 0, 1);
+   SCIPrationalSetFraction(dualbound, 0LL, 1LL);
    for( i = 0; i < nrows + ncols; i++ )
    {
       SCIP_RATIONAL* val;
@@ -1876,9 +1877,10 @@ char chooseInitialBoundingMethod(
    /* select automatically which bounding method to apply */
    else
    {
-      /* decide whether we want to interleave with exact LP call given freq
-       * we do this if a) at depth-levels 4,8,16,...
-       * b) if we are almost at cutoffbound */
+      /* decide whether we want to interleave with exact LP call given freq: we do this if we are
+       * a) at depth levels 4, 8, 16, ..., or
+       * b) almost at cutoffbound
+       */
       interleavedepth = set->exact_interleavestrategy >= 2 && SCIPgetDepth(set->scip) > 0 && isPowerOfTwo(SCIPgetDepth(set->scip) - 1);
       interleavecutoff = (set->exact_interleavestrategy == 1 || set->exact_interleavestrategy == 3)
          && SCIPsetIsGE(set, SCIPlpGetObjval(lpexact->fplp, set, prob), SCIPlpGetCutoffbound(lpexact->fplp))
@@ -2145,7 +2147,7 @@ SCIP_RETCODE boundShift(
       assert(col->nunlinked == 0);
 
       if( usefarkas )
-         SCIPintervalSet(&obj[j], 0);
+         SCIPintervalSet(&obj[j], 0.0);
       else
       {
          obj[j] = SCIPvarGetObjInterval(SCIPcolGetVar(col));

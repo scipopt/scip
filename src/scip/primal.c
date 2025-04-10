@@ -489,7 +489,8 @@ SCIP_RETCODE primalSetUpperboundExact(
 
       delta = SCIPsetCutoffbounddelta(set);
 
-      SCIPrationalRoundInteger(cutoffbound, primal->upperboundexact, SCIP_R_ROUND_DOWNWARDS);
+      SCIPrationalRoundInteger(cutoffbound, primal->upperboundexact, SCIP_R_ROUND_UPWARDS);
+      SCIPrationalDiffReal(cutoffbound, cutoffbound, 1.0);
       SCIPrationalAddReal(cutoffbound, cutoffbound, delta);
    }
    else
@@ -920,10 +921,13 @@ SCIP_RETCODE primalAddSol(
          SCIP_RATIONAL* objexact;
 
          SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &objexact) );
+
          SCIPsolGetObjExact(sol, set, transprob, origprob, objexact);
 
-         SCIPrationalMin(primal->cutoffboundexact, primal->cutoffboundexact, objexact);
-         SCIPrationalMin(primal->upperboundexact, primal->upperboundexact, objexact);
+         if( SCIPrationalIsLT(objexact, primal->upperboundexact) )
+         {
+            SCIP_CALL( primalSetUpperboundExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, tree, reopt, lp, objexact) );
+         }
 
          SCIPrationalFreeBuffer(set->buffer, &objexact);
       }
@@ -1535,8 +1539,16 @@ SCIP_RETCODE SCIPprimalAddSol(
       SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
 
       /* insert copied solution into solution storage */
-      SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-            tree, reopt, lp, eventqueue, eventfilter, &solcopy, insertpos, replace) );
+      if( SCIPsolIsExact(sol) )
+      {
+         SCIP_CALL( primalAddSolExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
+               tree, reopt, lp->lpexact, eventqueue, eventfilter, &solcopy, insertpos, replace) );
+      }
+      else
+      {
+         SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
+               tree, reopt, lp, eventqueue, eventfilter, &solcopy, insertpos, replace) );
+      }
 #ifdef SCIP_MORE_DEBUG
       for( i = 0; i < primal->nsols - 1; ++i )
       {

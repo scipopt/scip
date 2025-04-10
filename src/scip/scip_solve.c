@@ -370,7 +370,7 @@ SCIP_RETCODE SCIPtransformProb(
    {
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
          "%d/%d feasible solution%s given by solution candidate storage, new primal bound %.6e\n\n",
-         nfeassols, ncandsols, (nfeassols > 1 ? "s" : ""), SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
+         nfeassols, ncandsols, (nfeassols > 1 ? "s" : ""), SCIPgetPrimalbound(scip));
    }
    else if( ncandsols > 0 && !scip->set->reopt_enable )
    {
@@ -504,14 +504,18 @@ SCIP_RETCODE initPresolve(
       if( scip->set->exact_enable )
          SCIPrationalSetReal(scip->tree->root->lowerboundexact, scip->tree->root->lowerbound);
 
-      /* update primal-dual integrals */
-      if( scip->set->misc_calcintegral )
-         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
-
       /* throw improvement event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
       SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
-      scip->stat->lastlowerbound = scip->tree->root->lowerbound;
+
+      /* update primal-dual integrals */
+      if( scip->set->misc_calcintegral )
+      {
+         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
+         assert(scip->stat->lastlowerbound == scip->tree->root->lowerbound); /*lint !e777*/
+      }
+      else
+         scip->stat->lastlowerbound = scip->tree->root->lowerbound;
       if( scip->set->exact_enable )
          SCIPrationalSetRational(scip->stat->lastlowerboundexact, scip->tree->root->lowerboundexact);
    }
@@ -1599,14 +1603,18 @@ SCIP_RETCODE initSolve(
       if( scip->set->exact_enable )
          SCIPrationalSetReal(scip->tree->root->lowerboundexact, scip->tree->root->lowerbound);
 
-      /* update primal-dual integrals */
-      if( scip->set->misc_calcintegral )
-         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
-
       /* throw improvement event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
       SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
-      scip->stat->lastlowerbound = scip->tree->root->lowerbound;
+
+      /* update primal-dual integrals */
+      if( scip->set->misc_calcintegral )
+      {
+         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
+         assert(scip->stat->lastlowerbound == scip->tree->root->lowerbound); /*lint !e777*/
+      }
+      else
+         scip->stat->lastlowerbound = scip->tree->root->lowerbound;
       if( scip->set->exact_enable )
          SCIPrationalSetRational(scip->stat->lastlowerboundexact, scip->tree->root->lowerboundexact);
    }

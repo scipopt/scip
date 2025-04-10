@@ -9937,8 +9937,8 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
 
       /* update scm via newscm = scm * denominator / gcd(scm, denominator) and check whether it fits into SCIP_Longint */
       updatemultiplier = denominator / SCIPcalcGreComDiv(scm, denominator);
-      SCIPrationalSetInt(ratupdate, updatemultiplier, 1L);
-      SCIPrationalSetInt(ratscm, scm, 1L);
+      SCIPrationalSetFraction(ratupdate, updatemultiplier, 1LL);
+      SCIPrationalSetFraction(ratscm, scm, 1LL);
       SCIPrationalMult(ratscm, ratscm, ratupdate);
       SCIPrationalCanonicalize(ratscm);
 
@@ -9958,7 +9958,7 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
       /* make values integral by multiplying them with the smallest common multiple of the denominators */
       assert((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
 
-      SCIPrationalSetInt(intscalar, scm, gcd);
+      SCIPrationalSetFraction(intscalar, scm, gcd);
       SCIPrationalCanonicalize(intscalar);
 
       *success = TRUE;

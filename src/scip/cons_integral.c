@@ -34,6 +34,7 @@
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/pub_sol.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
@@ -92,7 +93,7 @@ SCIP_RETCODE checkIntegralityExact(
    for( v = 0; v < nintegers && integral; ++v )
    {
       /* if the solution is exact we check the exact data, otherwise we check the fp data */
-      if( SCIPisExactSol(scip, sol) )
+      if( SCIPsolIsExact(sol) )
          SCIPgetSolValExact(scip, sol, vars[v], solval);
       else
          SCIPrationalSetReal(solval, SCIPgetSolVal(scip, sol, vars[v]));

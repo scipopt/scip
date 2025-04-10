@@ -4139,45 +4139,42 @@ SCIP_RETCODE propIndicator(
     *
     * It is especially worth to tighten the upper bound if it is greater than maxcouplingvalue or sepacouplingvalue.
     * But do not tighten it if slackvar is locked down by other constraints,
-    * or if it has a nonzero coefficient in the objective function (not implemented).
+    * or if it has a nonzero coefficient in the objective function.
     *
-    * ax - s <= rhs  ->  s <= maxActivity(ax) - rhs
+    * ax - c * s <= rhs  ->  s <= (maxActivity(ax) - rhs) / c;
     */
    if ( (SCIPvarGetUbLocal(consdata->slackvar) > conshdlrdata->maxcouplingvalue
          || SCIPvarGetUbLocal(consdata->slackvar) > conshdlrdata->sepacouplingvalue)
-         && SCIPvarGetNLocksDownType(consdata->slackvar, SCIP_LOCKTYPE_MODEL) <= 1
-         && SCIPvarGetObj(consdata->slackvar) == 0.0 )
+      && SCIPvarGetNLocksDownType(consdata->slackvar, SCIP_LOCKTYPE_MODEL) <= 1
+      && SCIPvarGetObj(consdata->slackvar) == 0.0 && SCIPconsIsActive(consdata->lincons) )
    {
-      SCIP_VAR** consvars;
-      SCIP_Real* consvals;
-      SCIP_Real maxactivity;
+      SCIP_VAR** linconsvars;
+      SCIP_Real* linconsvals;
+      SCIP_Real maxactivity = 0.0;
+      SCIP_Real coeffslack = SCIP_INVALID;   /* -c */
       SCIP_Real newub;
       SCIP_Real rhs;
-      SCIP_Real coeffslack;
       int nlinconsvars;
       int j;
 
-      maxactivity = 0.0;
-      coeffslack = -1.0;
-
       nlinconsvars = SCIPgetNVarsLinear(scip, consdata->lincons);
-      consvars = SCIPgetVarsLinear(scip, consdata->lincons);
-      consvals = SCIPgetValsLinear(scip, consdata->lincons);
+      linconsvars = SCIPgetVarsLinear(scip, consdata->lincons);
+      linconsvals = SCIPgetValsLinear(scip, consdata->lincons);
 
       /* calculate maximal activity of linear constraint without slackvar */
       for (j = 0; j < nlinconsvars; ++j)
       {
          SCIP_VAR* var;
          SCIP_Real val;
-         SCIP_Real ub;
+         SCIP_Real bound;
 
-         val = consvals[j];
+         val = linconsvals[j];
          assert( ! SCIPisZero(scip, val) );
 
-         var = consvars[j];
+         var = linconsvars[j];
          assert( var != NULL );
 
-         /* skip slackvar */
+         /* store slackvar coefficient */
          if ( var == consdata->slackvar )
          {
             coeffslack = val;
@@ -4185,44 +4182,40 @@ SCIP_RETCODE propIndicator(
          }
 
          if ( val > 0.0 )
-            ub = SCIPvarGetUbLocal(var);
+            bound = SCIPvarGetUbLocal(var);
          else
-            ub = SCIPvarGetLbLocal(var);
+            bound = SCIPvarGetLbLocal(var);
 
-         if ( SCIPisInfinity(scip, ub) )
+         if ( SCIPisInfinity(scip, REALABS(bound)) )
          {
             maxactivity = SCIPinfinity(scip);
             break;
          }
          else
-            maxactivity += val * ub;
+            maxactivity += val * bound;
       }
 
       /* continue only if maxactivity is not infinity */
-      if ( !SCIPisInfinity(scip, maxactivity) )
+      if ( !SCIPisInfinity(scip, maxactivity) && coeffslack != SCIP_INVALID && coeffslack < 0.0 )  /*lint !e777*/
       {
-         /* substract rhs */
          rhs = SCIPgetRhsLinear(scip, consdata->lincons);
 
          /* continue if rhs is not finite; happens, e.g., if variables are multiaggregated; we would need the minimal activity in this case */
          if ( !SCIPisInfinity(scip, rhs) )
          {
-            newub = maxactivity - rhs;
+            /* divide by coeff of slackvar */
+            newub = (maxactivity - rhs) / (-1.0 * coeffslack);
             assert( !SCIPisInfinity(scip, newub) );
 
-            /* divide by coeff of slackvar */
-            newub = newub / (-1.0 * coeffslack);
-
-            /* round if slackvar is integral */
-            if ( SCIPvarIsIntegral(consdata->slackvar) )
-            {
-               if ( !SCIPisIntegral(scip, newub) )
-                  newub = SCIPceil(scip, newub);
-            }
+            /* adjust bound if slackvar is (implicit) integer */
+            newub = SCIPadjustedVarUb(scip, consdata->slackvar, newub);
 
             if ( SCIPisFeasLT(scip, newub, SCIPvarGetUbLocal(consdata->slackvar))
-                  && newub > SCIPvarGetLbLocal(consdata->slackvar) )
+               && newub > SCIPvarGetLbLocal(consdata->slackvar) )
             {
+               SCIPdebugMsg(scip, "Adjusting upper bound of slack variable <%s> to %g for indicator constraint <%s>.\n",
+                  SCIPvarGetName(consdata->slackvar), newub, SCIPconsGetName(cons));
+
                /* propagate bound */
                SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, newub, cons, 3, FALSE, &infeasible, &tightened) );
                assert( !infeasible );
@@ -6982,8 +6975,31 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
    }
    else
    {
+      SCIP_VAR** linconsvars;
+      SCIP_Real* linconsvals;
+      int nlinconsvars;
+      int j;
+
       assert( inferinfo == 3 );
-      SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx) );
+
+      /* mark variables in linear constraint */
+      nlinconsvars = SCIPgetNVarsLinear(scip, consdata->lincons);
+      linconsvars = SCIPgetVarsLinear(scip, consdata->lincons);
+      linconsvals = SCIPgetValsLinear(scip, consdata->lincons);
+
+      for (j = 0; j < nlinconsvars; ++j)
+      {
+         if ( linconsvals[j] > 0.0 )
+         {
+            assert( ! SCIPisInfinity(scip, SCIPgetVarUbAtIndex(scip, linconsvars[j], bdchgidx, FALSE)) );
+            SCIP_CALL( SCIPaddConflictUb(scip, linconsvars[j], bdchgidx) );
+         }
+         else
+         {
+            assert( ! SCIPisInfinity(scip, -SCIPgetVarLbAtIndex(scip, linconsvars[j], bdchgidx, FALSE)) );
+            SCIP_CALL( SCIPaddConflictLb(scip, linconsvars[j], bdchgidx) );
+         }
+      }
    }
 
    *result = SCIP_SUCCESS;

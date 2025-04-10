@@ -1271,7 +1271,7 @@ SCIP_RETCODE SCIPnodeCutoff(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_NODETYPE nodetype = SCIPnodeGetType(node);
+   SCIP_NODETYPE nodetype;
 
    assert(set != NULL);
    assert(stat != NULL);
@@ -1291,6 +1291,7 @@ SCIP_RETCODE SCIPnodeCutoff(
          tree->effectiverootdepth) );
    }
 
+   nodetype = SCIPnodeGetType(node);
    assert(nodetype != SCIP_NODETYPE_LEAF);
 
    node->cutoff = TRUE;
@@ -1312,34 +1313,33 @@ SCIP_RETCODE SCIPnodeCutoff(
       if( set->exact_enable )
       {
          SCIP_RATIONAL* lowerboundexact = SCIPtreeGetLowerboundExact(tree, set);
-
          assert(SCIPrationalIsGEReal(lowerboundexact, SCIPtreeGetLowerbound(tree, set)));
 
          /* exact lower bound improved */
          if( SCIPrationalIsLT(stat->lastlowerboundexact, lowerboundexact) )
          {
-            SCIP_EVENT event;
+            /* throw improvement event if upper bound not already exceeded */
+            if( SCIPrationalIsLT(stat->lastlowerboundexact, set->scip->primal->upperboundexact) )
+            {
+               SCIP_EVENT event;
 
-            /* throw improvement event */
-            SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
-            SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
+               SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+            }
+
+            /* update exact last lower bound */
             SCIPrationalSetRational(stat->lastlowerboundexact, lowerboundexact);
          }
       }
 
       lowerbound = SCIPtreeGetLowerbound(tree, set);
-
       assert(lowerbound <= SCIPsetInfinity(set));
 
       /* lower bound improved */
       if( stat->lastlowerbound < lowerbound )
       {
-         /* update primal-dual integrals */
-         if( set->misc_calcintegral )
-            SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
-
          /* throw improvement event if not already done exactly */
-         if( !set->exact_enable )
+         if( !set->exact_enable && stat->lastlowerbound < set->scip->primal->upperbound )
          {
             SCIP_EVENT event;
 
@@ -1347,7 +1347,14 @@ SCIP_RETCODE SCIPnodeCutoff(
             SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
          }
 
-         stat->lastlowerbound = lowerbound;
+         /* update primal-dual integrals */
+         if( set->misc_calcintegral )
+         {
+            SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
+            assert(stat->lastlowerbound == lowerbound); /*lint !e777*/
+         }
+         else
+            stat->lastlowerbound = lowerbound;
       }
 
       SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
@@ -2845,7 +2852,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
 
    if( set->exact_enable )
    {
-      SCIP_NODETYPE nodetype = SCIPnodeGetType(node);
+      SCIP_NODETYPE nodetype;
 
       if( newboundexact != NULL )
       {
@@ -2867,12 +2874,12 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
          SCIPrationalSetReal(node->lowerboundexact, newbound);
       }
 
+      nodetype = SCIPnodeGetType(node);
       assert(nodetype != SCIP_NODETYPE_LEAF);
 
       if( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING )
       {
          SCIP_RATIONAL* lowerboundexact = SCIPtreeGetLowerboundExact(tree, set);
-
          assert(SCIPrationalIsGEReal(lowerboundexact, SCIPtreeGetLowerbound(tree, set)));
 
          /* exact lower bound improved */
@@ -2883,6 +2890,8 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
             /* throw improvement event */
             SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
             SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+
+            /* update exact last lower bound */
             SCIPrationalSetRational(stat->lastlowerboundexact, lowerboundexact);
          }
       }
@@ -2893,7 +2902,6 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
    if( SCIPnodeGetLowerbound(node) < newbound )
    {
       SCIP_NODETYPE nodetype = SCIPnodeGetType(node);
-
       assert(nodetype != SCIP_NODETYPE_LEAF);
 
       node->lowerbound = newbound;
@@ -2907,16 +2915,11 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
       if( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING )
       {
          SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
-
          assert(lowerbound <= newbound);
 
          /* lower bound improved */
          if( stat->lastlowerbound < lowerbound )
          {
-            /* update primal-dual integrals */
-            if( set->misc_calcintegral )
-               SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
-
             /* throw improvement event if not already done exactly */
             if( !set->exact_enable )
             {
@@ -2926,7 +2929,14 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
                SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
             }
 
-            stat->lastlowerbound = lowerbound;
+            /* update primal-dual integrals */
+            if( set->misc_calcintegral )
+            {
+               SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
+               assert(stat->lastlowerbound == lowerbound); /*lint !e777*/
+            }
+            else
+               stat->lastlowerbound = lowerbound;
          }
 
          SCIPvisualLowerbound(stat->visual, set, stat, lowerbound);
@@ -3670,8 +3680,8 @@ SCIP_RETCODE treeSwitchPath(
    )
 {
    int newappliedeffectiverootdepth;
-   int focusnodedepth;  /* depth of the new focus node, or -1 if focusnode == NULL */
-   int forkdepth;       /* depth of the common subroot/fork/pseudofork/junction node, or -1 if no common fork exists */
+   int forklen;        /* length of the path to subroot/fork/pseudofork/junction node, or 0 if no fork */
+   int focusnodedepth; /* depth of the new focus node, or -1 if focusnode == NULL */
    int i;
    SCIP_NODE* oldfocusnode;
 
@@ -3690,19 +3700,19 @@ SCIP_RETCODE treeSwitchPath(
 
    /* get the nodes' depths */
    focusnodedepth = (focusnode != NULL ? (int)focusnode->depth : -1);
-   forkdepth = (fork != NULL ? (int)fork->depth : -1);
-   assert(forkdepth <= focusnodedepth);
-   assert(forkdepth < tree->pathlen);
+   forklen = (fork != NULL ? (int)fork->depth + 1 : 0);
+   assert(forklen <= focusnodedepth + 1);
 
    /* delay events in node deactivations to fork and node activations to parent of new focus node */
    SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
 
    /* undo the domain and constraint set changes of the old active path by deactivating the path's nodes */
-   for( i = tree->pathlen-1; i > forkdepth; --i )
+   while( tree->pathlen > forklen )
    {
-      SCIP_CALL( nodeDeactivate(tree->path[i], blkmem, set, stat, tree, lp, branchcand, eventqueue) );
+      SCIP_CALL( nodeDeactivate(tree->path[tree->pathlen - 1], blkmem, set, stat, tree, lp, branchcand, eventqueue) );
+      --tree->pathlen;
    }
-   tree->pathlen = forkdepth+1;
+   assert(tree->pathlen == forklen);
 
    /* apply the pending bound changes */
    SCIP_CALL( treeApplyPendingBdchgs(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, eventfilter, cliquetable) );
@@ -3802,12 +3812,12 @@ SCIP_RETCODE treeSwitchPath(
    else if( fork != NULL && fork->reprop && !(*cutoff) )
    {
      /* propagate common fork again, if the reprop flag is set */
-      assert(tree->path[forkdepth] == fork);
+      assert(fork == tree->path[tree->pathlen - 1]);
       assert(fork->active);
       assert(!fork->cutoff);
 
-      SCIP_CALL( nodeRepropagate(fork, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, conflict,
-            eventqueue, eventfilter, cliquetable, cutoff) );
+      SCIP_CALL( nodeRepropagate(fork, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
+            conflict, eventqueue, eventfilter, cliquetable, cutoff) );
    }
    assert(fork != NULL || !(*cutoff));
 
@@ -3822,30 +3832,26 @@ SCIP_RETCODE treeSwitchPath(
     * Bound change events on the new focus node, however, must not be cancelled out, since they need to be propagated
     * and thus, the event must be thrown and catched by the constraint handlers to mark constraints for propagation.
     */
-   for( i = forkdepth+1; i < focusnodedepth && !(*cutoff); ++i )
+   while( tree->pathlen < focusnodedepth && !(*cutoff) )
    {
-      assert(!tree->path[i]->cutoff);
-      assert(tree->pathlen == i);
-
       /* activate the node, and apply domain propagation if the reprop flag is set */
-      tree->pathlen++;
-      SCIP_CALL( nodeActivate(tree->path[i], blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
-            conflict, eventqueue, eventfilter, cliquetable, cutoff) );
+      ++tree->pathlen;
+      assert(!tree->path[tree->pathlen - 1]->cutoff);
+      SCIP_CALL( nodeActivate(tree->path[tree->pathlen - 1], blkmem, set, stat, transprob, origprob, primal, tree, reopt,
+            lp, branchcand, conflict, eventqueue, eventfilter, cliquetable, cutoff) );
    }
 
    /* process the delayed events */
    SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, primal, lp, branchcand, eventfilter) );
 
    /* activate the new focus node; there is no need to delay these events */
-   if( !(*cutoff) && (i == focusnodedepth) )
+   if( tree->pathlen == focusnodedepth && !(*cutoff) )
    {
-      assert(!tree->path[focusnodedepth]->cutoff);
-      assert(tree->pathlen == focusnodedepth);
-
       /* activate the node, and apply domain propagation if the reprop flag is set */
-      tree->pathlen++;
-      SCIP_CALL( nodeActivate(tree->path[focusnodedepth], blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
-            conflict, eventqueue, eventfilter, cliquetable, cutoff) );
+      ++tree->pathlen;
+      assert(!tree->path[tree->pathlen - 1]->cutoff);
+      SCIP_CALL( nodeActivate(tree->path[tree->pathlen - 1], blkmem, set, stat, transprob, origprob, primal, tree, reopt,
+            lp, branchcand, conflict, eventqueue, eventfilter, cliquetable, cutoff) );
    }
 
    /* mark new focus node to be cut off, if a cutoff was found */
@@ -3855,7 +3861,7 @@ SCIP_RETCODE treeSwitchPath(
    }
 
    /* count the new LP sizes of the path */
-   SCIP_CALL( treeUpdatePathLPSize(tree, forkdepth+1) );
+   SCIP_CALL( treeUpdatePathLPSize(tree, forklen) );
 
    SCIPsetDebugMsg(set, "switch path: new pathlen=%d\n", tree->pathlen);
 
@@ -5005,6 +5011,7 @@ SCIP_RETCODE SCIPnodeFocus(
       || SCIPnodeGetType(*node) == SCIP_NODETYPE_LEAF);
    assert(*node == NULL || !(*node)->active);
    assert(stat != NULL);
+   assert(primal != NULL);
    assert(tree != NULL);
    assert(!SCIPtreeProbing(tree));
    assert(lp != NULL);
@@ -5078,11 +5085,16 @@ SCIP_RETCODE SCIPnodeFocus(
             /* exact lower bound improved */
             if( SCIPrationalIsLT(stat->lastlowerboundexact, lowerboundexact) )
             {
-               SCIP_EVENT event;
+               /* throw improvement event if upper bound not already exceeded */
+               if( SCIPrationalIsLT(stat->lastlowerboundexact, primal->upperboundexact) )
+               {
+                  SCIP_EVENT event;
 
-               /* throw improvement event */
-               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
-               SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+                  SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
+                  SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+               }
+
+               /* update exact last lower bound */
                SCIPrationalSetRational(stat->lastlowerboundexact, lowerboundexact);
             }
          }
@@ -5093,12 +5105,8 @@ SCIP_RETCODE SCIPnodeFocus(
          /* lower bound improved */
          if( stat->lastlowerbound < lowerbound )
          {
-            /* update primal-dual integrals */
-            if( set->misc_calcintegral )
-               SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
-
             /* throw improvement event if not already done exactly */
-            if( !set->exact_enable )
+            if( !set->exact_enable && stat->lastlowerbound < primal->upperbound )
             {
                SCIP_EVENT event;
 
@@ -5106,7 +5114,14 @@ SCIP_RETCODE SCIPnodeFocus(
                SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
             }
 
-            stat->lastlowerbound = lowerbound;
+            /* update primal-dual integrals */
+            if( set->misc_calcintegral )
+            {
+               SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
+               assert(stat->lastlowerbound == lowerbound); /*lint !e777*/
+            }
+            else
+               stat->lastlowerbound = lowerbound;
          }
 
          SCIPvisualCutoffNode(stat->visual, set, stat, *node, TRUE);

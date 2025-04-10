@@ -2723,6 +2723,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
       branchcand->npriolpcands = 0;
       branchcand->npriolpbins = 0;
       branchcand->nimpllpfracs = 0;
+      branchcand->nenfoimpllpfracs = 0;
       branchcand->validlpcandslp = stat->lpcount;
 
       SCIPsetDebugMsg(set, " LP is unbounded -> no branching candidates\n");
@@ -2743,6 +2744,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
    branchcand->nimpllpfracs = 0;
    branchcand->npriolpcands = 0;
    branchcand->npriolpbins = 0;
+   branchcand->nenfoimpllpfracs = 0;
 
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
@@ -2795,16 +2797,24 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
          branchpriority = INT_MIN;
 
       assert(impltype != SCIP_IMPLINTTYPE_NONE || branchpriority >= INT_MIN/2);
-      /* ensure that implicit variables are stored at the end of the array */
-      if( impltype == SCIP_IMPLINTTYPE_NONE && branchcand->nimpllpfracs > 0 )
-      {
-         assert(branchcand->lpcands[branchcand->nlpcands] != NULL
-               && SCIPvarIsImpliedIntegral(branchcand->lpcands[branchcand->nlpcands]));
 
+      /* ensure that unenforced implied integral variables are stored at the end of the array */
+      if( branchcand->nimpllpfracs > branchcand->nenfoimpllpfracs && vartype != SCIP_VARTYPE_CONTINUOUS )
+      {
+         branchcand->lpcands[insertpos] = branchcand->lpcands[branchcand->nlpcands + branchcand->nenfoimpllpfracs];
+         branchcand->lpcandssol[insertpos] = branchcand->lpcandssol[branchcand->nlpcands + branchcand->nenfoimpllpfracs];
+         branchcand->lpcandsfrac[insertpos] = branchcand->lpcandsfrac[branchcand->nlpcands + branchcand->nenfoimpllpfracs];
+         assert(SCIPvarIsImpliedIntegral(branchcand->lpcands[insertpos]));
+         insertpos = branchcand->nlpcands + branchcand->nenfoimpllpfracs;
+      }
+
+      /* ensure that enforced implied integral variables are stored before the end of the array */
+      if( branchcand->nenfoimpllpfracs > 0 && impltype == SCIP_IMPLINTTYPE_NONE )
+      {
          branchcand->lpcands[insertpos] = branchcand->lpcands[branchcand->nlpcands];
          branchcand->lpcandssol[insertpos] = branchcand->lpcandssol[branchcand->nlpcands];
          branchcand->lpcandsfrac[insertpos] = branchcand->lpcandsfrac[branchcand->nlpcands];
-
+         assert(SCIPvarIsImpliedIntegral(branchcand->lpcands[insertpos]));
          insertpos = branchcand->nlpcands;
       }
 
@@ -2838,7 +2848,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
             branchcand->lpcandsfrac[insertpos] = branchcand->lpcandsfrac[branchcand->npriolpcands];
             insertpos = branchcand->npriolpcands;
          }
-         branchcand->npriolpcands++;
+         ++branchcand->npriolpcands;
 
          assert(!SCIPvarIsImpliedIntegral(var));
          if( vartype == SCIP_VARTYPE_BINARY )
@@ -2850,7 +2860,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
                branchcand->lpcandsfrac[insertpos] = branchcand->lpcandsfrac[branchcand->npriolpbins];
                insertpos = branchcand->npriolpbins;
             }
-            branchcand->npriolpbins++;
+            ++branchcand->npriolpbins;
          }
       }
       /* insert variable at the correct position of the candidates storage */
@@ -2860,9 +2870,14 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
 
       /* increase the counter depending on the variable type */
       if( impltype == SCIP_IMPLINTTYPE_NONE )
-         branchcand->nlpcands++;
+         ++branchcand->nlpcands;
       else
-         branchcand->nimpllpfracs++;
+      {
+         ++branchcand->nimpllpfracs;
+
+         if( vartype != SCIP_VARTYPE_CONTINUOUS )
+            ++branchcand->nenfoimpllpfracs;
+      }
 
       SCIPsetDebugMsg(set, " -> candidate %d: var=<%s>, sol=%g, frac=%g, prio=%d (max: %d) -> pos %d\n",
          branchcand->nlpcands, SCIPvarGetName(var), primsol, frac, branchpriority, branchcand->lpmaxpriority,
@@ -2876,6 +2891,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
    for( c = 0; c < branchcand->nlpcands + branchcand->nimpllpfracs; ++c )
    {
       assert(SCIPvarIsImpliedIntegral(branchcand->lpcands[c]) == (c >= branchcand->nlpcands));
+      assert((SCIPvarGetType(branchcand->lpcands[c]) == SCIP_VARTYPE_CONTINUOUS) == (c >= branchcand->nlpcands + branchcand->nenfoimpllpfracs));
    }
 #endif
 
@@ -2912,7 +2928,7 @@ SCIP_RETCODE SCIPbranchExecLPExact(
    )
 {
    int i;
-   int nalllpcands;  /* sum of binary, integer, and implicit branching candidates */
+   int nalllpcands;  /* sum of binary and integer branching candidates */
 
    assert(branchcand != NULL);
    assert(result != NULL);
@@ -2925,9 +2941,9 @@ SCIP_RETCODE SCIPbranchExecLPExact(
    assert((branchcand->npriolpcands == 0) == (branchcand->nlpcands == 0));
 
    SCIPsetDebugMsg(set, "branching on LP solution with %d (+%d) fractional (+implicit fractional) variables (%d of maximal priority)\n",
-      branchcand->nlpcands, branchcand->nimpllpfracs, branchcand->npriolpcands);
+      branchcand->nlpcands, branchcand->nenfoimpllpfracs, branchcand->npriolpcands);
 
-   nalllpcands = branchcand->nlpcands + branchcand->nimpllpfracs;
+   nalllpcands = branchcand->nlpcands + branchcand->nenfoimpllpfracs;
    /* do nothing, if no fractional variables exist */
    if( nalllpcands == 0 )
       return SCIP_OKAY;

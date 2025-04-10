@@ -162,6 +162,7 @@ Interface changes
 - new parameter "propagating/symmetry/handlesignedorbitopes" to control whether special symmetry handling techniques for orbitopes whose columns can be (partially) reflected shall be applied
 - new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
 - new parameter "propagating/symmetry/dispsyminfo" to control whether information about which symmetry handling methods are applied are printed
+- new parameter "presolving/implint/convertintegers" to control whether implied integrality should also be detected for enforced integral variables
 - new parameter "presolving/implint/columnrowratio" indicates the ratio of rows/columns where the row-wise network matrix detection algorithm is used instead of the column-wise network matrix detection algorithm
 - new parameter "presolving/implint/numericslimit" determines the limit for absolute integral coefficients beyond which the corresponding rows and variables are excluded from implied integrality detection
 - iis/minimal, iis/nodes, iis/removedbounds, iis/removeunusedvars, iis/silent, iis/stopafterone, iis/time, iis/greedy/additive, iis/greedy/conservative, iis/greedy/delafteradd, iis/greedy/dynamicreordering, iis/greedy/maxbatchsize, iis/greedy/maxrelbatchsize, iis/greedy/nodelimperiter, iis/greedy/priority, iis/greedy/timelimperiter
@@ -306,6 +307,11 @@ Fixed bugs
 - drop fixed resultants when copying pseudoboolean constraint to avert segmentation fault
 - correct matrix entry when resolving aggregated variables in checkSystemGF2() of cons_xor.c
 - corrected symmetry detection graph of cons_and.c, cons_or.c, and cons_xor.c
+- correct redundancy filter in consdataCreateRedundant() of cons_bounddisjunction.c
+- replaced unreliable comparison of node pointers by node numbers in prop_genvbounds.c
+- allocate memory for all integral variables to avoid segmentation faults in applyCliqueFixings() of heur_clique.c
+- fix conflict resolution for one particular case in cons_indicator
+- make interface to nauty thread safe
 
 Build system
 ------------
