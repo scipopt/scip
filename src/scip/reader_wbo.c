@@ -95,10 +95,13 @@ SCIP_RETCODE SCIPincludeReaderWbo(
 {
    SCIP_READER* reader;
 
-   /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
+   /* include reader with opb data */
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, SCIPreaderGetData(SCIPfindReader(scip, "opbreader"))) );
 
    assert(reader != NULL);
+
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyWbo) );

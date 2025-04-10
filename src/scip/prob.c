@@ -36,6 +36,7 @@
 #include "scip/datatree.h"
 #include "scip/event.h"
 #include "scip/lp.h"
+#include "scip/lpexact.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
 #include "scip/pub_cons.h"
@@ -44,6 +45,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_var.h"
+#include "scip/rational.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/struct_cons.h"
@@ -54,7 +56,6 @@
 #include "scip/struct_var.h"
 #include "scip/var.h"
 #include <string.h>
-
 
 #define OBJSCALE_MAXDNOM          1000000LL  /**< maximal denominator in objective integral scaling */
 #define OBJSCALE_MAXSCALE         1000000.0  /**< maximal scalar to reach objective integrality */
@@ -308,7 +309,9 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->nvars = 0;
    (*prob)->nbinvars = 0;
    (*prob)->nintvars = 0;
-   (*prob)->nimplvars = 0;
+   (*prob)->nbinimplvars = 0;
+   (*prob)->nintimplvars = 0;
+   (*prob)->ncontimplvars = 0;
    (*prob)->ncontvars = 0;
    (*prob)->ncolvars = 0;
    (*prob)->fixedvars = NULL;
@@ -344,6 +347,11 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->permuted = FALSE;
    (*prob)->consschecksorted = FALSE;
    (*prob)->conscompression = FALSE;
+   (*prob)->objoffsetexact = NULL;
+   if( set->exact_enable )
+   {
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*prob)->objoffsetexact) );
+   }
 
    return SCIP_OKAY;
 }
@@ -527,6 +535,10 @@ SCIP_RETCODE SCIPprobFree(
    {
       SCIPhashtableFree(&(*prob)->consnames);
    }
+   if( (*prob)->objoffsetexact != NULL )
+   {
+      SCIPrationalFreeBlock(blkmem, &(*prob)->objoffsetexact);
+   }
    BMSfreeMemoryArray(&(*prob)->name);
    BMSfreeMemory(prob);
 
@@ -544,8 +556,8 @@ SCIP_RETCODE SCIPprobTransform(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_PROB**           target              /**< pointer to target problem data structure */
    )
@@ -566,7 +578,7 @@ SCIP_RETCODE SCIPprobTransform(
 
    /* create target problem data (probdelorig and probtrans are not needed, probdata is set later) */
    (void) SCIPsnprintf(transname, SCIP_MAXSTRLEN, "t_%s", source->name);
-   SCIP_CALL( SCIPprobCreate(target, blkmem, set, transname, source->probdelorig, source->probtrans, source->probdeltrans, 
+   SCIP_CALL( SCIPprobCreate(target, blkmem, set, transname, source->probdelorig, source->probtrans, source->probdeltrans,
          source->probinitsol, source->probexitsol, source->probcopy, NULL, TRUE) );
    SCIPprobSetObjsense(*target, source->objsense);
 
@@ -583,7 +595,11 @@ SCIP_RETCODE SCIPprobTransform(
    for( v = 0; v < source->nvars; ++v )
    {
       SCIP_CALL( SCIPvarTransform(source->vars[v], blkmem, set, stat, source->objsense, &targetvar) );
-      SCIP_CALL( SCIPprobAddVar(*target, blkmem, set, lp, branchcand, eventfilter, eventqueue, targetvar) );
+
+      /* if in exact mode copy the exact data */
+      SCIP_CALL( SCIPvarCopyExactData(blkmem, targetvar, source->vars[v], source->objsense == SCIP_OBJSENSE_MAXIMIZE) );
+
+      SCIP_CALL( SCIPprobAddVar(*target, blkmem, set, lp, branchcand, eventqueue, eventfilter, targetvar) );
       SCIP_CALL( SCIPvarRelease(&targetvar, blkmem, set, eventqueue, NULL) );
    }
    assert((*target)->nvars == source->nvars);
@@ -618,9 +634,9 @@ SCIP_RETCODE SCIPprobTransform(
    (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
 
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
-    * cutoff bound if primal solution is already known 
+    * cutoff bound if primal solution is already known
     */
-   SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventfilter, eventqueue) );
+   SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventqueue, eventfilter) );
 
    /* copy the nlpenabled flag */
    (*target)->nlpenabled = source->nlpenabled;
@@ -668,7 +684,9 @@ void SCIPprobResortVars(
    SCIP_VAR** vars;
    int nbinvars;
    int nintvars;
-   int nimplvars;
+   int nbinimplvars;
+   int nintimplvars;
+   int ncontimplvars;
    int ncontvars;
    int nvars;
    int v;
@@ -677,14 +695,16 @@ void SCIPprobResortVars(
    nvars = prob->nvars;
    nbinvars = prob->nbinvars;
    nintvars = prob->nintvars;
-   nimplvars = prob->nimplvars;
+   nbinimplvars = prob->nbinimplvars;
+   nintimplvars = prob->nintimplvars;
+   ncontimplvars = prob->ncontimplvars;
    ncontvars = prob->ncontvars;
 
    if( nvars == 0 )
       return;
 
    assert(vars != NULL);
-   assert(nbinvars + nintvars + nimplvars + ncontvars == nvars);
+   assert(nbinvars + nintvars + nbinimplvars + nintimplvars + ncontimplvars + ncontvars == nvars);
 
    SCIPdebugMessage("entering sorting with respect to original block structure! \n");
 
@@ -696,13 +716,21 @@ void SCIPprobResortVars(
    if( nintvars > 0 )
       SCIPsortPtr((void**)&vars[nbinvars], SCIPvarComp, nintvars);
 
-   /* sort implicit variables */
-   if( nimplvars > 0 )
-      SCIPsortPtr((void**)&vars[nbinvars + nintvars], SCIPvarComp, nimplvars);
+   /* sort binary implicit variables */
+   if( nbinimplvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars], SCIPvarComp, nbinimplvars);
 
-   /* sort continuous variables*/
+   /* sort integer implicit variables */
+   if( nintimplvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars + nbinimplvars], SCIPvarComp, nintimplvars);
+
+   /* sort continuous implicit integer variables */
+   if( ncontimplvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars + nbinimplvars + nintimplvars], SCIPvarComp, ncontimplvars);
+
+   /* sort continuous variables */
    if( ncontvars > 0 )
-      SCIPsortPtr((void**)&vars[nbinvars + nintvars + nimplvars], SCIPvarComp, ncontvars);
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars + nbinimplvars + nintimplvars + ncontimplvars], SCIPvarComp, ncontvars);
 
    /* after sorting, the problem index of each variable has to be adjusted */
    for( v = 0; v < nvars; ++v )
@@ -753,18 +781,110 @@ void SCIPprobSetData(
    prob->probdata = probdata;
 }
 
-/** inserts variable at the correct position in vars array, depending on its type */
+/** moves the first behind the last variable for each extended variable type in reverse order until the given one and
+ *  returns the cleared variable position in the given problem
+ */
+static
+int probProvidePos(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_VARTYPE          vartype,            /**< type of the variable to be inserted */
+   SCIP_IMPLINTTYPE      impltype            /**< implied type of the variable to be inserted */
+   )
+{
+   int insertpos = prob->nvars;
+   int intstart = prob->nbinvars;
+   int binimplstart = intstart + prob->nintvars;
+   int intimplstart = binimplstart + prob->nbinimplvars;
+   int contimplstart = intimplstart + prob->nintimplvars;
+   int contstart = contimplstart + prob->ncontimplvars;
+
+   /* non-implied continuous variable */
+   if( vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_IMPLINTTYPE_NONE )
+   {
+      ++prob->ncontvars;
+      return insertpos;
+   }
+   if( insertpos > contstart )
+   {
+      prob->vars[insertpos] = prob->vars[contstart];
+      SCIPvarSetProbindex(prob->vars[insertpos], insertpos);
+      insertpos = contstart;
+   }
+   assert(insertpos == contstart);
+
+   /* implied continuous variable */
+   if( vartype == SCIP_VARTYPE_CONTINUOUS )
+   {
+      assert(impltype != SCIP_IMPLINTTYPE_NONE);
+      ++prob->ncontimplvars;
+      return insertpos;
+   }
+   if( insertpos > contimplstart )
+   {
+      prob->vars[insertpos] = prob->vars[contimplstart];
+      SCIPvarSetProbindex(prob->vars[insertpos], insertpos);
+      insertpos = contimplstart;
+   }
+   assert(insertpos == contimplstart);
+
+   /* implied integral variable */
+   if( vartype == SCIP_VARTYPE_INTEGER && impltype != SCIP_IMPLINTTYPE_NONE )
+   {
+      ++prob->nintimplvars;
+      return insertpos;
+   }
+   if( insertpos > intimplstart )
+   {
+      prob->vars[insertpos] = prob->vars[intimplstart];
+      SCIPvarSetProbindex(prob->vars[insertpos], insertpos);
+      insertpos = intimplstart;
+   }
+   assert(insertpos == intimplstart);
+
+   /* implied binary variable */
+   if( vartype == SCIP_VARTYPE_BINARY && impltype != SCIP_IMPLINTTYPE_NONE )
+   {
+      ++prob->nbinimplvars;
+      return insertpos;
+   }
+   if( insertpos > binimplstart )
+   {
+      prob->vars[insertpos] = prob->vars[binimplstart];
+      SCIPvarSetProbindex(prob->vars[insertpos], insertpos);
+      insertpos = binimplstart;
+   }
+   assert(insertpos == binimplstart);
+
+   /* non-implied integral variable */
+   if( vartype == SCIP_VARTYPE_INTEGER )
+   {
+      assert(impltype == SCIP_IMPLINTTYPE_NONE);
+      ++prob->nintvars;
+      return insertpos;
+   }
+   if( insertpos > intstart )
+   {
+      prob->vars[insertpos] = prob->vars[intstart];
+      SCIPvarSetProbindex(prob->vars[insertpos], insertpos);
+      insertpos = intstart;
+   }
+   assert(insertpos == intstart);
+
+   /* non-implied binary variable */
+   assert(vartype == SCIP_VARTYPE_BINARY);
+   assert(impltype == SCIP_IMPLINTTYPE_NONE);
+   ++prob->nbinvars;
+
+   return insertpos;
+}
+
+/** inserts variable at the correct position in vars array, depending on its extended variable type */
 static
 void probInsertVar(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var                 /**< variable to insert */
    )
 {
-   int insertpos;
-   int intstart;
-   int implstart;
-   int contstart;
-
    assert(prob != NULL);
    assert(prob->vars != NULL);
    assert(prob->nvars < prob->varssize);
@@ -776,69 +896,28 @@ void probInsertVar(
    /* original variables cannot go into transformed problem and transformed variables cannot go into original problem */
    assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
 
-   /* insert variable in array */
-   insertpos = prob->nvars;
-   intstart = prob->nbinvars;
-   implstart = intstart + prob->nintvars;
-   contstart = implstart + prob->nimplvars;
+   /* get insert position */
+   SCIP_VARTYPE vartype = SCIPvarGetType(var);
+   SCIP_IMPLINTTYPE impltype = SCIPvarGetImplType(var);
+   int insertpos = probProvidePos(prob, vartype, impltype);
+   assert((vartype == SCIP_VARTYPE_BINARY && impltype == SCIP_IMPLINTTYPE_NONE && insertpos == prob->nbinvars - 1)
+      || (vartype == SCIP_VARTYPE_INTEGER && impltype == SCIP_IMPLINTTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars - 1)
+      || (vartype == SCIP_VARTYPE_BINARY && impltype != SCIP_IMPLINTTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars - 1)
+      || (vartype == SCIP_VARTYPE_INTEGER && impltype != SCIP_IMPLINTTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars - 1)
+      || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype != SCIP_IMPLINTTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars - 1)
+      || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_IMPLINTTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars + prob->ncontvars - 1));
 
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-      prob->ncontvars++;
-   else
-   {
-      if( insertpos > contstart )
-      {
-         prob->vars[insertpos] = prob->vars[contstart];
-         SCIPvarSetProbindex(prob->vars[insertpos], insertpos);
-         insertpos = contstart;
-      }
-      assert(insertpos == contstart);
-
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
-         prob->nimplvars++;
-      else
-      {
-         if( insertpos > implstart )
-         {
-            prob->vars[insertpos] = prob->vars[implstart];
-            SCIPvarSetProbindex(prob->vars[insertpos], insertpos);
-            insertpos = implstart;
-         }
-         assert(insertpos == implstart);
-
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
-            prob->nintvars++;
-         else
-         {
-            assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-            if( insertpos > intstart )
-            {
-               prob->vars[insertpos] = prob->vars[intstart];
-               SCIPvarSetProbindex(prob->vars[insertpos], insertpos);
-               insertpos = intstart;
-            }
-            assert(insertpos == intstart);
-
-            prob->nbinvars++;
-         }
-      }
-   }
-   prob->nvars++;
-
-   assert(prob->nvars == prob->nbinvars + prob->nintvars + prob->nimplvars + prob->ncontvars);
-   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && insertpos == prob->nbinvars - 1)
-      || (SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && insertpos == prob->nbinvars + prob->nintvars - 1)
-      || (SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT && insertpos == prob->nbinvars + prob->nintvars + prob->nimplvars - 1)
-      || (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
-         && insertpos == prob->nbinvars + prob->nintvars + prob->nimplvars + prob->ncontvars - 1));
-
+   /* fill insert position */
    prob->vars[insertpos] = var;
    SCIPvarSetProbindex(var, insertpos);
+   ++prob->nvars;
+   assert(prob->nvars == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars + prob->ncontvars);
 
    /* update number of column variables in problem */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-      prob->ncolvars++;
-   assert(0 <= prob->ncolvars && prob->ncolvars <= prob->nvars);
+      ++prob->ncolvars;
+   assert(prob->ncolvars >= 0);
+   assert(prob->ncolvars <= prob->nvars);
 }
 
 /** removes variable from vars array */
@@ -853,8 +932,12 @@ SCIP_RETCODE probRemoveVar(
 {
    int freepos;
    int intstart;
-   int implstart;
+   int binimplstart;
+   int intimplstart;
+   int contimplstart;
    int contstart;
+   SCIP_VARTYPE vartype;
+   SCIP_IMPLINTTYPE impltype;
 
    assert(prob != NULL);
    assert(var != NULL);
@@ -863,31 +946,54 @@ SCIP_RETCODE probRemoveVar(
    assert(prob->vars[SCIPvarGetProbindex(var)] == var);
 
    intstart = prob->nbinvars;
-   implstart = intstart + prob->nintvars;
-   contstart = implstart + prob->nimplvars;
+   binimplstart = intstart + prob->nintvars;
+   intimplstart = binimplstart + prob->nbinimplvars;
+   contimplstart = intimplstart + prob->nintimplvars;
+   contstart = contimplstart + prob->ncontimplvars;
+   vartype = SCIPvarGetType(var);
+   impltype = SCIPvarGetImplType(var);
 
-   switch( SCIPvarGetType(var) )
+   if( impltype != SCIP_IMPLINTTYPE_NONE )
    {
-   case SCIP_VARTYPE_BINARY:
-      assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < intstart);
-      prob->nbinvars--;
-      break;
-   case SCIP_VARTYPE_INTEGER:
-      assert(intstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < implstart);
-      prob->nintvars--;
-      break;
-   case SCIP_VARTYPE_IMPLINT:
-      assert(implstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < contstart);
-      prob->nimplvars--;
-      break;
-   case SCIP_VARTYPE_CONTINUOUS:
-      assert(contstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < prob->nvars);
-      prob->ncontvars--;
-      break;
-   default:
-      SCIPerrorMessage("unknown variable type\n");
-      SCIPABORT();
-      return SCIP_INVALIDDATA;  /*lint !e527*/
+      switch( vartype )
+      {
+         case SCIP_VARTYPE_BINARY:
+            assert(binimplstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < intimplstart);
+            --prob->nbinimplvars;
+            break;
+         case SCIP_VARTYPE_INTEGER:
+            assert(intimplstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < contimplstart);
+            --prob->nintimplvars;
+            break;
+         case SCIP_VARTYPE_CONTINUOUS:
+            assert(contimplstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < contstart);
+            --prob->ncontimplvars;
+            break;
+         default:
+            SCIPerrorMessage("unknown variable type\n");
+            return SCIP_INVALIDDATA;
+      } /*lint !e788*/
+   }
+   else
+   {
+      switch( vartype )
+      {
+         case SCIP_VARTYPE_BINARY:
+            assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < intstart);
+            --prob->nbinvars;
+            break;
+         case SCIP_VARTYPE_INTEGER:
+            assert(intstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < binimplstart);
+            --prob->nintvars;
+            break;
+         case SCIP_VARTYPE_CONTINUOUS:
+            assert(contstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < prob->nvars);
+            --prob->ncontvars;
+            break;
+         default:
+            SCIPerrorMessage("unknown variable type\n");
+            return SCIP_INVALIDDATA;
+      } /*lint !e788*/
    }
 
    /* move last binary, last integer, last implicit, and last continuous variable forward to fill the free slot */
@@ -899,31 +1005,45 @@ SCIP_RETCODE probRemoveVar(
       SCIPvarSetProbindex(prob->vars[freepos], freepos);
       freepos = intstart-1;
    }
-   if( freepos < implstart-1 )
+   if( freepos < binimplstart-1 )
    {
       /* move last integer variable to free slot */
-      prob->vars[freepos] = prob->vars[implstart-1];
+      prob->vars[freepos] = prob->vars[binimplstart-1];
       SCIPvarSetProbindex(prob->vars[freepos], freepos);
-      freepos = implstart-1;
+      freepos = binimplstart-1;
+   }
+   if( freepos < intimplstart-1 )
+   {
+      /* move last binary implied integral variable to free slot */
+      prob->vars[freepos] = prob->vars[intimplstart-1];
+      SCIPvarSetProbindex(prob->vars[freepos], freepos);
+      freepos = intimplstart-1;
+   }
+   if( freepos < contimplstart-1 )
+   {
+      /* move last integer implied integral variable to free slot */
+      prob->vars[freepos] = prob->vars[contimplstart-1];
+      SCIPvarSetProbindex(prob->vars[freepos], freepos);
+      freepos = contimplstart-1;
    }
    if( freepos < contstart-1 )
    {
-      /* move last implicit integer variable to free slot */
+      /* move last continuous implicit integer variable to free slot */
       prob->vars[freepos] = prob->vars[contstart-1];
       SCIPvarSetProbindex(prob->vars[freepos], freepos);
       freepos = contstart-1;
    }
    if( freepos < prob->nvars-1 )
    {
-      /* move last implicit integer variable to free slot */
+      /* move last continuous variable to free slot */
       prob->vars[freepos] = prob->vars[prob->nvars-1];
       SCIPvarSetProbindex(prob->vars[freepos], freepos);
       freepos = prob->nvars-1;
    }
    assert(freepos == prob->nvars-1);
 
-   prob->nvars--;
-   assert(prob->nvars == prob->nbinvars + prob->nintvars + prob->nimplvars + prob->ncontvars);
+   --prob->nvars;
+   assert(prob->nvars == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars + prob->ncontvars);
 
    /* update number of column variables in problem */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -974,8 +1094,8 @@ SCIP_RETCODE SCIPprobAddVar(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR*             var                 /**< variable to add */
    )
 {
@@ -1015,10 +1135,12 @@ SCIP_RETCODE SCIPprobAddVar(
    {
       SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       SCIP_CALL( SCIPlpUpdateAddVar(lp, set, var) );
+      SCIP_CALL( SCIPlpExactUpdateAddVar(lp->lpexact, set, var) );
    }
 
-   SCIPsetDebugMsg(set, "added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
-      SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
+   SCIPsetDebugMsg(set, "added variable <%s> to problem (%d variables: %d binary, %d integer, %d continuous; %d implied)\n",
+      SCIPvarGetName(var), prob->nvars, prob->nbinvars + prob->nbinimplvars, prob->nintvars + prob->nintimplvars,
+      prob->ncontvars+ prob->ncontimplvars, SCIPprobGetNImplVars(prob));
 
    if( prob->transformed )
    {
@@ -1074,8 +1196,9 @@ SCIP_RETCODE SCIPprobDelVar(
 
    assert(SCIPvarGetNegatedVar(var) == NULL);
 
-   SCIPsetDebugMsg(set, "deleting variable <%s> from problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
-      SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
+   SCIPsetDebugMsg(set, "deleting variable <%s> from problem (%d variables: %d binary, %d integer, %d continuous; %d implied)\n",
+                   SCIPvarGetName(var), prob->nvars, prob->nbinvars + prob->nbinimplvars, prob->nintvars + prob->nintimplvars,
+                   prob->ncontvars+ prob->ncontimplvars, SCIPprobGetNImplVars(prob));
 
    /* mark variable to be deleted from the problem */
    SCIPvarMarkDeleted(var);
@@ -1182,7 +1305,7 @@ SCIP_RETCODE SCIPprobChgVarType(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_VAR*             var,                /**< variable to add */
+   SCIP_VAR*             var,                /**< variable to change type of */
    SCIP_VARTYPE          vartype             /**< new type of variable */
    )
 {
@@ -1208,6 +1331,55 @@ SCIP_RETCODE SCIPprobChgVarType(
 
    /* change the type of the variable */
    SCIP_CALL( SCIPvarChgType(var, blkmem, set, primal, lp, eventqueue, vartype) );
+
+   /* reinsert variable into problem */
+   probInsertVar(prob, var);
+
+   /* update branching candidates */
+   if( branchcand != NULL )
+   {
+      SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes the implied integral type of a variable in the problem */
+SCIP_RETCODE SCIPprobChgVarImplType(
+   SCIP_PROB*            prob,               /**< problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_VAR*             var,                /**< variable to change implied integral type of */
+   SCIP_IMPLINTTYPE      impltype            /**< new implied integral type of variable */
+   )
+{
+   assert(prob != NULL);
+   assert(var != NULL);
+   assert(SCIPvarGetProbindex(var) >= 0);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(branchcand != NULL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL);
+
+   if( SCIPvarGetImplType(var) == impltype )
+      return SCIP_OKAY;
+
+   /* temporarily remove variable from branching candidates */
+   if( branchcand != NULL )
+   {
+      SCIP_CALL( SCIPbranchcandRemoveVar(branchcand, var) );
+   }
+
+   /* temporarily remove variable from problem */
+   SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var) );
+
+   /* change the type of the variable */
+   SCIP_CALL( SCIPvarChgImplType(var, blkmem, set, primal, lp, eventqueue, impltype) );
 
    /* reinsert variable into problem */
    probInsertVar(prob, var);
@@ -1491,6 +1663,20 @@ void SCIPprobAddObjoffset(
    prob->objoffset += addval;
 }
 
+/** adds value to objective offset */
+void SCIPprobAddObjoffsetExact(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
+   )
+{
+   assert(prob != NULL);
+   assert(prob->transformed);
+   assert(prob->objoffsetexact != NULL);
+
+   SCIPrationalDebugMessage("adding %q to objective offset %q \n", addval, prob->objoffsetexact);
+   SCIPrationalAdd(prob->objoffsetexact, prob->objoffsetexact, addval);
+}
+
 /** sets the dual bound on objective function */
 void SCIPprobSetDualbound(
    SCIP_PROB*            prob,               /**< problem data */
@@ -1523,7 +1709,75 @@ void SCIPprobSetObjIntegral(
    prob->objisintegral = TRUE;
 }
 
-/** sets integral objective value flag, if all variables with non-zero objective values are integral and have 
+/** sets integral objective value flag, if all variables with non-zero objective values are integral and have
+ *  integral objective value and also updates the cutoff bound if primal solution is already known
+ */
+static
+SCIP_RETCODE probCheckObjIntegralExact(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
+   )
+{
+   SCIP_RATIONAL* obj;
+   int v;
+
+   assert(transprob != NULL);
+   assert(origprob != NULL);
+   assert(set->exact_enable);
+
+   /* if we know already, that the objective value is integral, nothing has to be done */
+   if( transprob->objisintegral )
+      return SCIP_OKAY;
+
+   /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
+   if( set->nactivepricers != 0 || set->nactivebenders != 0 )
+      return SCIP_OKAY;
+
+   /* if the objective value offset is fractional, the value itself is possibly fractional */
+   if( !EPSISINT(transprob->objoffset, 0.0) ) /*lint !e835*/
+      return SCIP_OKAY;
+
+   /* scan through the variables */
+   for( v = 0; v < transprob->nvars; ++v )
+   {
+      /* get objective value of variable */
+      obj = SCIPvarGetObjExact(transprob->vars[v]);
+
+      /* check, if objective value is non-zero */
+      if( !SCIPrationalIsZero(obj) )
+      {
+         /* if variable's objective value is fractional, the problem's objective value may also be fractional */
+         if( !SCIPrationalIsIntegral(obj) )
+            break;
+
+         /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
+         if( !SCIPvarIsIntegral(transprob->vars[v]) )
+            break;
+      }
+   }
+
+   /* objective value is integral, if the variable loop scanned all variables */
+   if( v == transprob->nvars )
+   {
+      transprob->objisintegral = TRUE;
+
+      /* update upper bound and cutoff bound in primal data structure due to new internality information */
+      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets integral objective value flag, if all variables with non-zero objective values are integral and have
  *  integral objective value and also updates the cutoff bound if primal solution is already known
  */
 SCIP_RETCODE SCIPprobCheckObjIntegral(
@@ -1536,8 +1790,8 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    SCIP_Real obj;
@@ -1545,6 +1799,10 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
 
    assert(transprob != NULL);
    assert(origprob != NULL);
+
+   if( set->exact_enable )
+      return probCheckObjIntegralExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventqueue,
+            eventfilter);
 
    /* if we know already, that the objective value is integral, nothing has to be done */
    if( transprob->objisintegral )
@@ -1572,7 +1830,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
             break;
 
          /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
-         if( SCIPvarGetType(transprob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+         if( !SCIPvarIsIntegral(transprob->vars[v]) )
             break;
       }
    }
@@ -1583,11 +1841,13 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
       transprob->objisintegral = TRUE;
 
       /* update upper bound and cutoff bound in primal data structure due to new internality information */
-      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
    }
 
    return SCIP_OKAY;
 }
+
+
 
 /** update the number of variables with non-zero objective coefficient */
 void SCIPprobUpdateNObjVars(
@@ -1644,7 +1904,8 @@ void SCIPprobInvalidateDualbound(
 }
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */
-SCIP_RETCODE SCIPprobScaleObj(
+static
+SCIP_RETCODE probScaleObjExact(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1654,8 +1915,8 @@ SCIP_RETCODE SCIPprobScaleObj(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
    int v;
@@ -1667,6 +1928,108 @@ SCIP_RETCODE SCIPprobScaleObj(
    /* do not change objective if there are pricers involved */
    if( set->nactivepricers != 0 || set->nactivebenders != 0 || !set->misc_scaleobj )
       return SCIP_OKAY;
+
+   nints = transprob->nvars - transprob->ncontvars;
+
+   /* scan through the continuous variables */
+   for( v = nints; v < transprob->nvars; ++v )
+   {
+      SCIP_RATIONAL* obj;
+
+      /* get objective value of variable; it it is non-zero, no scaling can be applied */
+      obj = SCIPvarGetObjExact(transprob->vars[v]);
+      if( !SCIPrationalIsZero(obj) )
+         break;
+   }
+
+   /* only continue if all continuous variables have obj = 0 */
+   if( v == transprob->nvars )
+   {
+      SCIP_RATIONAL** objvals;
+      SCIP_RATIONAL* intscalar;
+      SCIP_Bool success;
+
+      /* get temporary memory */
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &intscalar) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &objvals, nints) );
+
+      /* get objective values of integer variables */
+      for( v = 0; v < nints; ++v )
+         SCIPrationalSetRational(objvals[v], SCIPvarGetObjExact(transprob->vars[v]));
+
+      /* calculate integral scalar */
+      SCIP_CALL( SCIPcalcIntegralScalarExact(set->buffer, objvals, nints, OBJSCALE_MAXFINALSCALE,
+         intscalar, &success) );
+
+      SCIPrationalDebugMessage("integral objective scalar: success=%u, intscalar=%q\n", success, intscalar);
+
+      /* apply scaling */
+      if( success && !SCIPrationalIsEQReal(intscalar, 1.0) )
+      {
+         /* calculate scaled objective values */
+         for( v = 0; v < nints; ++v )
+         {
+            SCIPrationalMult(objvals[v], objvals[v], intscalar);
+            assert(SCIPrationalIsIntegral(objvals[v]));
+         }
+
+         /* change the variables' objective values and adjust objscale and objoffset */
+         if( v == nints )
+         {
+            for( v = 0; v < nints; ++v )
+            {
+               SCIPrationalDebugMessage(" -> var <%s>: newobj = %q\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
+               SCIP_CALL( SCIPvarChgObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpexact, eventqueue, objvals[v]) );
+            }
+            transprob->objoffset *= SCIPrationalGetReal(intscalar);
+            transprob->objscale /= SCIPrationalGetReal(intscalar);
+            transprob->objisintegral = TRUE;
+            SCIPsetDebugMsg(set, "integral objective scalar: objscale=%g\n", transprob->objscale);
+
+            /* update upperbound and cutoffbound in primal data structure */
+            SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+         }
+      }
+
+      /* free temporary memory */
+      SCIPrationalFreeBuffer(set->buffer, &intscalar);
+      SCIPrationalFreeBufferArray(set->buffer, &objvals, nints);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** if possible, scales objective function such that it is integral with gcd = 1 */
+SCIP_RETCODE SCIPprobScaleObj(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
+   )
+{
+   int v;
+   int nints;
+
+   assert(transprob != NULL);
+   assert(set != NULL);
+
+   /* do not change objective if there are pricers involved */
+   if( set->nactivepricers != 0 || set->nactivebenders != 0 || !set->misc_scaleobj )
+      return SCIP_OKAY;
+
+   if( set->exact_enable )
+   {
+      SCIP_CALL( probScaleObjExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventqueue,
+            eventfilter) );
+      return SCIP_OKAY;
+   }
 
    nints = transprob->nvars - transprob->ncontvars;
 
@@ -1762,7 +2125,7 @@ SCIP_RETCODE SCIPprobScaleObj(
                   SCIPsetDebugMsg(set, "integral objective scalar: objscale=%g\n", transprob->objscale);
 
                   /* update upperbound and cutoffbound in primal data structure */
-                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
                }
             }
          }
@@ -1798,7 +2161,7 @@ void SCIPprobStoreRootSol(
       SCIPlpStoreRootObjval(lp, set, prob);
 
       /* compute root LP best-estimate */
-      SCIPstatComputeRootLPBestEstimate(stat, set, SCIPlpGetColumnObjval(lp), prob->vars, prob->nbinvars + prob->nintvars + prob->nimplvars);
+      SCIPstatComputeRootLPBestEstimate(stat, set, SCIPlpGetColumnObjval(lp), prob->vars, prob->nvars - prob->ncontvars);
    }
 }
 
@@ -1879,7 +2242,7 @@ void SCIPprobUpdateBestRootSol(
 
             /* get reduced cost if the variable gets fixed to one */
             ubrootredcost = SCIPvarGetImplRedcost(var, set, TRUE, stat, prob, lp);
-            assert( !SCIPsetIsDualfeasNegative(set, ubrootredcost)
+            assert( set->exact_enable || !SCIPsetIsDualfeasNegative(set, ubrootredcost)
                || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
             if( -lbrootredcost > ubrootredcost )
@@ -2033,30 +2396,6 @@ SCIP_RETCODE SCIPprobSetName(
    return SCIP_OKAY;
 }
 
-/** returns the number of implicit binary variables, meaning variable of vartype != SCIP_VARTYPE_BINARY and !=
- *  SCIP_VARTYPE_CONTINUOUS but with global bounds [0,1]
- *
- *  @note this number needs to be computed, because it cannot be updated like the other counters for binary and integer
- *        variables, each time the variable type changes(, we would need to update this counter each time a global bound
- *        changes), even at the end of presolving this cannot be computed, because some variable can change to an
- *        implicit binary status
- */
-int SCIPprobGetNImplBinVars(
-   SCIP_PROB*            prob                /**< problem data */
-   )
-{
-   int v;
-   int nimplbinvars = 0;
-
-   for( v = prob->nbinvars + prob->nintvars + prob->nimplvars - 1; v >= prob->nbinvars; --v )
-   {
-      if( SCIPvarIsBinary(prob->vars[v]) )
-         ++nimplbinvars;
-   }
-
-   return nimplbinvars;
-}
-
 /** returns the number of variables with non-zero objective coefficient */
 int SCIPprobGetNObjVars(
    SCIP_PROB*            prob,               /**< problem data */
@@ -2176,6 +2515,42 @@ SCIP_Real SCIPprobExternObjval(
       return (SCIP_Real)transprob->objsense * transprob->objscale * (objval + transprob->objoffset) + origprob->objoffset;
 }
 
+/** returns the external value of the given internal objective value */
+void SCIPprobExternObjvalExact(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RATIONAL*        objval,             /**< internal objective value */
+   SCIP_RATIONAL*        objvalext           /**< store external objective value */
+   )
+{
+   SCIP_RATIONAL* tmpval;
+
+   assert(set != NULL);
+   assert(origprob != NULL);
+   assert(transprob != NULL);
+   assert(transprob->transformed);
+   assert(transprob->objscale > 0.0);
+   assert(set->exact_enable);
+
+   (void) SCIPrationalCreateBuffer(set->buffer, &tmpval);
+
+   if( SCIPrationalIsAbsInfinity(objval) )
+   {
+      SCIPrationalSetReal(tmpval, (SCIP_Real) transprob->objsense);
+      SCIPrationalMult(objvalext, tmpval, objval);
+   }
+   else
+   {
+      SCIPrationalAdd(objvalext, objval, transprob->objoffsetexact);
+      SCIPrationalMultReal(objvalext, objvalext, transprob->objscale);
+      SCIPrationalMultReal(objvalext, objvalext, (SCIP_Real) transprob->objsense);
+      SCIPrationalAdd(objvalext, objvalext, origprob->objoffsetexact);
+   }
+
+   SCIPrationalFreeBuffer(set->buffer, &tmpval);
+}
+
 /** returns the internal value of the given external objective value */
 SCIP_Real SCIPprobInternObjval(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
@@ -2196,6 +2571,42 @@ SCIP_Real SCIPprobInternObjval(
       return -(SCIP_Real)transprob->objsense * SCIPsetInfinity(set);
    else
       return (SCIP_Real)transprob->objsense * (objval - origprob->objoffset)/transprob->objscale - transprob->objoffset;
+}
+
+/** returns the internal value of the given external objective value */
+void SCIPprobInternObjvalExact(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RATIONAL*        objval,             /**< internal objective value */
+   SCIP_RATIONAL*        objvalint           /**< store internal objective value */
+   )
+{
+   SCIP_RATIONAL* tmpval;
+
+   assert(set != NULL);
+   assert(origprob != NULL);
+   assert(transprob != NULL);
+   assert(transprob->transformed);
+   assert(transprob->objscale > 0.0);
+   assert(set->exact_enable);
+
+   (void) SCIPrationalCreateBuffer(set->buffer, &tmpval);
+
+   if( SCIPrationalIsAbsInfinity(objval) )
+   {
+      SCIPrationalSetReal(tmpval, (SCIP_Real) transprob->objsense);
+      SCIPrationalMult(objvalint, tmpval, objval);
+   }
+   else
+   {
+      SCIPrationalDiff(objvalint, objval, origprob->objoffsetexact);
+      SCIPrationalDivReal(objvalint, objvalint, transprob->objscale);
+      SCIPrationalMultReal(objvalint, objvalint, (SCIP_Real) transprob->objsense);
+      SCIPrationalDiff(objvalint, objvalint, transprob->objoffsetexact);
+   }
+
+   SCIPrationalFreeBuffer(set->buffer, &tmpval);
 }
 
 /** returns variable of the problem with given name */
@@ -2269,8 +2680,10 @@ void SCIPprobPrintStatistics(
    assert(prob != NULL);
 
    SCIPmessageFPrintInfo(messagehdlr, file, "  Problem name     : %s\n", prob->name);
-   SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
-      prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d continuous)\n",
+         prob->nvars, prob->nbinvars + prob->nbinimplvars, prob->nintvars + prob->nintimplvars, prob->ncontvars + prob->ncontimplvars);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  implied integral : %d (%d binary, %d integer, %d continuous)\n",
+         SCIPprobGetNImplVars(prob), prob->nbinimplvars, prob->nintimplvars, prob->ncontimplvars);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Objective        : %s, %d non-zeros (abs.min = %g, abs.max = %g)\n",
          !prob->transformed ? (prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize") : "minimize",
@@ -2289,21 +2702,23 @@ SCIP_RETCODE SCIPprobCollectStatistics(
    assert(prob != NULL);
    assert(datatree != NULL);
 
-   /* Collect problem name */
+   /* collect problem name */
    SCIP_CALL( SCIPdatatreeInsertString(datatree, set, blkmem, "problem_name", prob->name) );
 
-   /* Collect variables information */
+   /* collect variables information */
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_variables", (SCIP_Longint)prob->nvars) );
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_binary_variables", (SCIP_Longint)prob->nbinvars) );
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_integer_variables", (SCIP_Longint)prob->nintvars) );
-   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_implicit_integer_variables", (SCIP_Longint)prob->nimplvars) );
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_implied_binary_variables", (SCIP_Longint)prob->nbinimplvars) );
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_implied_integer_variables", (SCIP_Longint)prob->nintimplvars) );
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_implied_continuous_variables", (SCIP_Longint)prob->ncontimplvars) );
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_continuous_variables", (SCIP_Longint)prob->ncontvars) );
 
-   /* Collect constraints information */
+   /* collect constraints information */
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_initial_constraints", (SCIP_Longint)prob->startnconss) );
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_maximal_constraints", (SCIP_Longint)prob->maxnconss) );
 
-   /* Collect objective information */
+   /* collect objective information */
    SCIP_CALL( SCIPdatatreeInsertString(datatree, set, blkmem, "objective_sense",
       !prob->transformed ? (prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize") : "minimize") );
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "objective_non_zeros", (SCIP_Longint)SCIPprobGetNObjVars(prob, set)) );
@@ -2461,13 +2876,13 @@ int SCIPprobGetNIntVars(
    return prob->nintvars;
 }
 
-/** gets number of implicit integer problem variables */
+/** gets number of implied integral problem variables of any type */
 int SCIPprobGetNImplVars(
    SCIP_PROB*            prob                /**< problem data */
    )
 {
    assert(prob != NULL);
-   return prob->nimplvars;
+   return prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars;
 }
 
 /** gets number of continuous problem variables */

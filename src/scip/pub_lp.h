@@ -38,6 +38,7 @@
 #include "scip/def.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_sepa.h"
 #include "scip/type_var.h"
 #include "scip/type_misc.h"
@@ -131,9 +132,15 @@ int SCIPcolGetVarProbindex(
    SCIP_COL*             col                 /**< LP col */
    );
 
-/** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
+/** returns whether the associated variable is of integral type (binary, integer, or implied integral) */
 SCIP_EXPORT
 SCIP_Bool SCIPcolIsIntegral(
+   SCIP_COL*             col                 /**< LP column */
+   );
+
+/** returns whether the associated variable is implied integral */
+SCIP_EXPORT
+SCIP_Bool SCIPcolIsImpliedIntegral(
    SCIP_COL*             col                 /**< LP column */
    );
 
@@ -412,7 +419,7 @@ int SCIProwGetRank(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
+/** returns TRUE if the activity of the row (without the row's constant) is integral for an optimal solution */
 SCIP_EXPORT
 SCIP_Bool SCIProwIsIntegral(
    SCIP_ROW*             row                 /**< LP row */
@@ -503,6 +510,12 @@ void SCIProwChgRank(
    int                   rank                /**< new value for rank */
    );
 
+/** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
+SCIP_EXPORT
+SCIP_ROWEXACT* SCIProwGetRowExact(
+   SCIP_ROW*             row                 /**< SCIP row */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -539,6 +552,7 @@ void SCIProwChgRank(
 #define SCIProwGetActiveLPCount(row)    ((row)->activeinlpcounter)
 #define SCIProwGetNLPsAfterCreation(row) ((row)->nlpsaftercreation)
 #define SCIProwChgRank(row, cutrank)    ((row)->rank = (cutrank))
+#define SCIProwGetRowExact(row)         (row)->rowexact
 
 #endif
 

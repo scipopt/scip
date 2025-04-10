@@ -42,6 +42,7 @@
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -157,6 +158,7 @@ SCIP_RETCODE setupProbingSCIP(
    /* copy SCIP instance */
    SCIP_CALL( SCIPcopyConsCompression(scip, *probingscip, *varmapfw, NULL, "feaspump", NULL, NULL, 0, FALSE, FALSE,
          FALSE, TRUE, success) );
+   assert(!SCIPisExact(*probingscip));
 
    if( copycuts )
    {
@@ -218,7 +220,12 @@ SCIP_RETCODE setupSCIPparamsStage3(
    SCIP*                 probingscip         /**< sub-SCIP data structure  */
    )
 {
+   /**@todo restore the copied settings that were changed in setupSCIPparamsFP2() without copying all parameters, since
+    *       this triggers an error message that exact solving cannot be enabled/disabled in or after problem creation stage
+    */
    SCIP_CALL( SCIPcopyParamSettings(scip, probingscip) );
+   assert(!SCIPisExact(probingscip));
+
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
 
@@ -523,7 +530,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
       if( consvars[nconsvars] == NULL )
          continue;
       SCIP_CALL( SCIPchgVarObj(probingscip, consvars[nconsvars], consvals[nconsvars]) );
-      assert( SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY );
+      assert( SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(consvars[nconsvars]) );
       ++nconsvars;
    }
 
@@ -743,8 +750,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    SCIP_LPSOLSTAT lpsolstat;  /* status of the LP solution */
 
    int nvars;            /* number of variables  */
-   int nbinvars;         /* number of 0-1-variables */
-   int nintvars;         /* number of integer variables */
+   int nenfovars;        /* number of enforced integral variables */
    int nfracs;           /* number of fractional variables updated after each pumping round*/
    int nflipcands;       /* how many flipcands (most frac. var.) have been found */
    int npseudocands;
@@ -814,9 +820,12 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       return SCIP_OKAY;
 
    /* get all variables of LP and number of fractional variables in LP solution that should be integral */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   nenfovars = nvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(nenfovars >= 0);
    nfracs = SCIPgetNLPBranchCands(scip);
-   assert(0 <= nfracs && nfracs <= nbinvars + nintvars);
+   assert(0 <= nfracs && nfracs <= nenfovars);
    if( nfracs == 0 )
       return SCIP_OKAY;
 
@@ -952,7 +961,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    /* scale distance function and original objective to the same norm */
    objnorm = SCIPgetObjNorm(scip);
    objnorm = MAX(objnorm, 1.0);
-   scalingfactor = sqrt((SCIP_Real)(nbinvars + nintvars)) / objnorm;
+   scalingfactor = sqrt((SCIP_Real)nenfovars) / objnorm;
 
    /* data initialization */
    alpha = heurdata->alpha;
@@ -1001,7 +1010,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          {
             frac = SCIPfeasFrac(scip, SCIPvarGetLPSol(pseudocands[i]));
             pseudocandsfrac[i] = MIN(frac, 1.0-frac); /* always a number between 0 and 0.5 */
-            if( SCIPvarGetType(pseudocands[i]) == SCIP_VARTYPE_BINARY )
+            if( SCIPvarGetType(pseudocands[i]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(pseudocands[i]) )
                pseudocandsfrac[i] -= 10.0; /* binaries always come first */
          }
          SCIPsortRealPtr(pseudocandsfrac, (void**)pseudocands, npseudocands);
@@ -1085,7 +1094,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       }
 
       /* change objective coefficients for continuous variables */
-      for( i = nbinvars+nintvars; i < nvars; i++ )
+      for( i = nenfovars; i < nvars; i++ )
       {
          SCIP_CALL( SCIPchgVarObjDive(scip, vars[i], alpha *  SCIPvarGetObj(vars[i])) );
       }
@@ -1098,7 +1107,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          cycles[j] = (nloops > j+1) && (REALABS(lastalphas[j] - alpha) < heurdata->alphadiff);
 
       /* check for j-cycles */
-      for( i = 0; i < nbinvars+nintvars; i++ )
+      for( i = 0; i < nenfovars; i++ )
       {
          solval = SCIPgetSolVal(scip, heurdata->roundedsol, vars[i]);
 
@@ -1117,7 +1126,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       if( nloops % heurdata->perturbfreq == 0 || (heurdata->pertsolfound && SCIPgetNBestSolsFound(scip) > nbestsolsfound) )
       {
          SCIPdebugMsg(scip, " -> random perturbation\n");
-         SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha, scalingfactor) );
+         SCIP_CALL( handleCycle(scip, heurdata, vars, nenfovars, alpha, scalingfactor) );
          nbestsolsfound = SCIPgetNBestSolsFound(scip);
       }
       else
@@ -1138,7 +1147,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                else
                {
                   SCIPdebugMsg(scip, " -> avoiding %d-cycle by random flip\n", j+1);
-                  SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha, scalingfactor) );
+                  SCIP_CALL( handleCycle(scip, heurdata, vars, nenfovars, alpha, scalingfactor) );
                }
                break;
             }
@@ -1191,7 +1200,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
          /* calculate distance */
          distance = 0.0;
-         for( i = 0; i < nbinvars+nintvars; i++ )
+         for( i = 0; i < nenfovars; i++ )
          {
             SCIP_Real roundedval;
             SCIP_Real lpval;
@@ -1204,7 +1213,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          /* copy solution and update minimum distance */
          if( SCIPisLT(scip, distance, mindistance) )
          {
-            for( i = 0; i < nbinvars+nintvars; i++ )
+            for( i = 0; i < nenfovars; i++ )
             {
                assert(SCIPisIntegral(scip,SCIPgetSolVal(scip, heurdata->roundedsol, vars[i])));
                SCIP_CALL( SCIPsetSolVal(scip, closestsol, vars[i], SCIPgetSolVal(scip, heurdata->roundedsol, vars[i])) );
@@ -1245,6 +1254,14 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       success = FALSE;
 
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
+
+      /* in exact mode we have to end diving prior to trying the solution */
+      if( SCIPisExact(scip) )
+      {
+         SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
+         SCIP_CALL( SCIPendDive(scip) );
+      }
+
       SCIPdebugMsg(scip, "feasibility pump found solution (%d fractional variables)\n", nfracs);
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
@@ -1252,7 +1269,10 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    }
 
    /* end diving */
-   SCIP_CALL( SCIPendDive(scip) );
+   if( SCIPinDive(scip) )
+   {
+      SCIP_CALL( SCIPendDive(scip) );
+   }
 
    /* end probing in order to be able to apply stage 3 */
    if( heurdata->usefp20 )
@@ -1384,6 +1404,9 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecFeaspump, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyFeaspump) );

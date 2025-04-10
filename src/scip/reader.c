@@ -102,6 +102,7 @@ SCIP_RETCODE doReaderCreate(
    (*reader)->readerread = readerread;
    (*reader)->readerwrite = readerwrite;
    (*reader)->readerdata = readerdata;
+   (*reader)->exact = FALSE;
 
    /* create reading clock */
    SCIP_CALL( SCIPclockCreate(&(*reader)->readingtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -200,6 +201,13 @@ SCIP_RETCODE SCIPreaderRead(
    {
       SCIP_CLOCK* readingtime;
 
+      /* only readers marked as exact can read and write in exact solving mode */
+      if( set->exact_enable && !reader->exact )
+      {
+         SCIPerrorMessage("reader %s cannot read problems exactly\n", SCIPreaderGetName(reader));
+         return SCIP_READERROR;
+      }
+
       /**@note we need temporary clock to measure the reading time correctly since in case of creating a new problem
        *       within the reader all clocks are reset (including the reader clocks); this resetting is necessary for
        *       example for those case we people solve several problems using the (same) interactive shell
@@ -236,7 +244,7 @@ SCIP_RETCODE SCIPreaderRead(
       return retcode;
 
    /* check if the result code is valid in case no reader error occurred */
-   assert( *result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS );
+   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS);
 
    SCIP_CALL( retcode );
 
@@ -302,6 +310,13 @@ SCIP_RETCODE SCIPreaderWrite(
       int nconss;
       int nvars;
       int i;
+
+      /* only readers marked as exact can read and write in exact solving mode */
+      if( set->exact_enable && !reader->exact )
+      {
+         SCIPerrorMessage("reader %s cannot write problems exactly\n", SCIPreaderGetName(reader));
+         return SCIP_READERROR;
+      }
 
       vars = SCIPprobGetVars(prob);
       nvars = SCIPprobGetNVars(prob);
@@ -384,7 +399,7 @@ SCIP_RETCODE SCIPreaderWrite(
          /* compute length of the generic variable names:
           * - nvars + 1 to avoid log of zero
           * - +3 (zero at end + 'x' + 1 because we round down)
-          * Example: 10 -> need 4 chars ("x10\0") 
+          * Example: 10 -> needs 4 chars ("x10\0")
           */
          size = (int) log10(nvars+1.0) + 3;
 
@@ -396,7 +411,7 @@ SCIP_RETCODE SCIPreaderWrite(
             SCIP_CALL( SCIPsetAllocBufferArray(set, &name, size) );
             (void) SCIPsnprintf(name, size, "x%d", i + set->write_genoffset);
             SCIPvarSetNamePointer(var, name);
-         }  
+         }
 
          /* compute length of the generic variable names */
          size = (int) log10(nfixedvars+1.0) + 3;
@@ -439,7 +454,7 @@ SCIP_RETCODE SCIPreaderWrite(
 
       /* reset variable and constraint names to original names */
       if( genericnames )
-      {  
+      {
          assert(varnames != NULL);
          assert(fixedvarnames != NULL);
          assert(consnames != NULL);
@@ -551,6 +566,16 @@ void SCIPreaderSetWrite(
    assert(reader != NULL);
 
    reader->readerwrite = readerwrite;
+}
+
+/** marks the reader as safe to use in exact solving mode */
+void SCIPreaderMarkExact(
+   SCIP_READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+
+   reader->exact = TRUE;
 }
 
 /** gets name of reader */

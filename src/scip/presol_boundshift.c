@@ -167,7 +167,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
       SCIP_Real lb;
       SCIP_Real ub;
 
-      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var));
 
       /* do not shift non-active (fixed or (multi-)aggregated) variables */
       if( !SCIPvarIsActive(var) )
@@ -214,7 +214,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 
          /* create new variable */
          (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "%s_shift", SCIPvarGetName(var));
-         SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, 0.0, (ub - lb), 0.0, SCIPvarGetType(var),
+         SCIP_CALL( SCIPcreateVarImpl(scip, &newvar, newvarname, 0.0, (ub - lb), 0.0, SCIPvarGetType(var), SCIPvarGetImplType(var),
                SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, newvar) );
 

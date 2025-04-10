@@ -67,6 +67,7 @@
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -896,7 +897,8 @@ SCIP_RETCODE level2dataGetResult(
    /* we branched twice on the same variable; the result cannot be stored already */
    if( data->branchvar1 == data->branchvar2 )
    {
-      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY
+            || SCIPvarIsImpliedIntegral(SCIPgetVars(scip)[data->branchvar1]));
       return SCIP_OKAY;
    }
 
@@ -940,7 +942,8 @@ SCIP_RETCODE level2dataStoreResult(
    /* we branched twice on the same variable; the result cannot be re-used lated */
    if( data->branchvar1 == data->branchvar2 )
    {
-      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY
+            || SCIPvarIsImpliedIntegral(SCIPgetVars(scip)[data->branchvar1]));
       return SCIP_OKAY;
    }
 
@@ -1859,7 +1862,7 @@ SCIP_RETCODE scoreContainerCreate(
    )
 {
    int ntotalvars;
-   int ncands = config->maxncands;
+   int maxncands;
    int i;
 
    assert(scip != NULL);
@@ -1868,17 +1871,17 @@ SCIP_RETCODE scoreContainerCreate(
 
    /* the container saves the score for all variables in the problem via the ProbIndex, see SCIPvarGetProbindex() */
    ntotalvars = SCIPgetNVars(scip);
-
-   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < ncands )
-      ncands = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   maxncands = ntotalvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   if( maxncands > config->maxncands )
+      maxncands = config->maxncands;
 
    SCIP_CALL( SCIPallocBuffer(scip, scorecontainer) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->scores, ntotalvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->downgains, ntotalvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->upgains, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->bestsortedcands, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->bestsortedcands, maxncands) );
 
-   (*scorecontainer)->nbestsortedcands = ncands;
+   (*scorecontainer)->nbestsortedcands = maxncands;
    (*scorecontainer)->scoresum = 0.0;
    (*scorecontainer)->nsetscores = 0;
 
@@ -2581,7 +2584,7 @@ SCIP_RETCODE branchOnVar(
 
    /* update the lower bounds in the children; we must not do this if columns are missing in the LP
     * (e.g., because we are doing branch-and-price) or the problem should be solved exactly */
-   if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
+   if( SCIPallColsInLP(scip) && !SCIPisExact(scip) )
    {
       /* update the lower bound for the LPs for further children of both created nodes */
       if( decision->downdbvalid )
@@ -3187,7 +3190,7 @@ SCIP_Bool areBoundsChanged(
    assert(SCIPisFeasIntegral(scip, lowerbound));
    assert(SCIPisFeasIntegral(scip, upperbound));
    assert(!SCIPisEQ(scip, lowerbound, upperbound));
-   assert(SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(var));
 
    /* due to roundings the value might have changed slightly without an actual influence on the integral value */
    return SCIPvarGetLbLocal(var) > lowerbound + 0.5 || SCIPvarGetUbLocal(var) < upperbound - 0.5;
@@ -5772,22 +5775,19 @@ SCIP_RETCODE initBranchruleData(
    assert(scip != NULL);
    assert(branchruledata != NULL);
 
+   /* with the SCIPvarGetProbindex() method we can access the index of a given variable in the SCIPgetVars() array and
+    * as such we can use it to access our arrays which should only contain binary and integer variables
+    */
+   nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+
    /* the branching rule data is already initialized and no new variables have been added in the meantime */
-   if( branchruledata->isinitialized &&
-      (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == branchruledata->persistent->nvars) )
+   if( branchruledata->isinitialized && nvars == branchruledata->persistent->nvars )
       return SCIP_OKAY;
 
    if( branchruledata->isinitialized )
    {
       SCIP_CALL( freePersistent(scip, branchruledata) );
    }
-
-   /* The variables given by the SCIPgetVars() array are sorted with the binaries at first and the integer variables
-    * directly afterwards. With the SCIPvarGetProbindex() method we can access the index of a given variable in the
-    * SCIPgetVars() array and as such we can use it to access our arrays which should only contain binary and integer
-    * variables.
-    */
-   nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchid, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->persistent->lastbranchnlps, nvars) );
@@ -5880,8 +5880,9 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Allocating space for the statistics struct.\n");
 
       recursiondepth = branchruledata->config->recursiondepth;
-      maxncands = branchruledata->config->maxncands;
-      maxncands = MIN(maxncands, SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip));
+      maxncands = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+      if( maxncands > branchruledata->config->maxncands )
+         maxncands = branchruledata->config->maxncands;
 
       SCIP_CALL( SCIPallocMemory(scip, &branchruledata->statistics) );
       /* RESULT enum is 1 based, so use MAXRESULT + 1 as array size with unused 0 element */
@@ -6087,7 +6088,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          }
 #endif
          /* update lower bound of current node */
-         if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
+         if( SCIPallColsInLP(scip) && !SCIPisExact(scip) )
          {
             SCIP_CALL( SCIPupdateLocalLowerbound(scip, decision->proveddb) );
          }

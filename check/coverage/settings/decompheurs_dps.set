@@ -19,4 +19,3 @@ heuristics/dps/reoptlimits = FALSE
 # should the heuristic run before or after the processing of the node? (0: before, 1: after, 2: both)
 # [type: int, advanced: FALSE, range: [0,2], default: 0]
 heuristics/dps/timing = 1
-

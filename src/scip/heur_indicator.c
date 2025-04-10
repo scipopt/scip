@@ -458,7 +458,8 @@ SCIP_DECL_HEUREXEC(heurExecIndicator)
 
       /* The heuristic will only be successful if there are no integral variables and no binary variables except the
        * indicator variables. */
-      if ( SCIPgetNIntVars(scip) > 0 || heurdata->nindconss < SCIPgetNBinVars(scip) )
+      if ( SCIPgetNIntVars(scip) + SCIPgetNIntImplVars(scip) > 0
+         || SCIPgetNBinVars(scip) + SCIPgetNBinImplVars(scip) > heurdata->nindconss )
          return SCIP_OKAY;
 
       SCIP_CALL( trySolCandidate(scip, heur, heurdata, heurdata->nindconss, heurdata->indconss, heurdata->solcand, &nfoundsols) );
@@ -498,10 +499,9 @@ SCIP_DECL_HEUREXEC(heurExecIndicator)
       /* The heuristic will only be successful if there are no integral variables and no binary variables except the
        * indicator variables. */
       nindconss = SCIPconshdlrGetNConss(heurdata->indicatorconshdlr);
-      if ( SCIPgetNIntVars(scip) > 0 || nindconss < SCIPgetNBinVars(scip) )
-         return SCIP_OKAY;
-
-      if ( nindconss == 0 )
+      if ( nindconss == 0
+         || SCIPgetNIntVars(scip) + SCIPgetNIntImplVars(scip) > 0
+         || SCIPgetNBinVars(scip) + SCIPgetNBinImplVars(scip) > nindconss )
          return SCIP_OKAY;
 
       indconss = SCIPconshdlrGetConss(heurdata->indicatorconshdlr);
@@ -571,6 +571,9 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecIndicator, heurdata) );
 
    assert( heur != NULL );
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIndicator) );

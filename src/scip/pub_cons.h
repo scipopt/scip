@@ -96,6 +96,21 @@ void SCIPconshdlrSetData(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< new constraint handler user data */
    );
 
+/** is constraint handler safe to use in exact solving mode? */
+SCIP_EXPORT
+SCIP_Bool SCIPconshdlrIsExact(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** marks the constraint handler as safe to use in exact solving mode
+ *
+ *  @note Constraint handlers that are not marked as exact are skipped during exact solving mode.
+ */
+SCIP_EXPORT
+void SCIPconshdlrMarkExact(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** sets all separation related callbacks of the constraint handler */
 SCIP_EXPORT
 void SCIPconshdlrSetSepa(
@@ -448,7 +463,7 @@ int SCIPconshdlrGetEagerFreq(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** needs constraint handler a constraint to be called? */
+/** does the constraint handler need a constraint in order to be called? */
 SCIP_EXPORT
 SCIP_Bool SCIPconshdlrNeedsCons(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -511,6 +526,7 @@ SCIP_PROPTIMING SCIPconshdlrGetPropTiming(
 /*
  * Methods for constraint change sets
  */
+
 /** gets added constraints data for a constraint set change */
 SCIP_EXPORT
 void SCIPconssetchgGetAddedConsData(

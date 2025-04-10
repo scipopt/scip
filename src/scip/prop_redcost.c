@@ -44,6 +44,7 @@
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -596,7 +597,7 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
 
    /* we cannot apply reduced cost fixing, if we want to solve exactly */
    /**@todo implement reduced cost fixing with interval arithmetics */
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
       return SCIP_OKAY;
 
    /* only call propagator, if the current node has an LP */

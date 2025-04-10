@@ -258,6 +258,11 @@ void SCIPheurEnableOrDisableClocks(
    SCIP_Bool             enable              /**< should the clocks of the heuristic be enabled? */
    );
 
+/** returns TRUE if the heuristic is safe to be executed in exact solving mode */
+SCIP_Bool SCIPheurIsExact(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
 #ifdef __cplusplus
 }
 #endif

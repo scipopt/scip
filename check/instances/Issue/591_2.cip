@@ -1,0 +1,17 @@
+STATISTICS
+  Problem name     : prob-tasca_1-infeasible
+  Variables        : 6 (3 binary, 0 integer, 3 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 2 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <k_rcon_0_0>: obj=0, original bounds=[1,1]
+  [binary] <rk_0_a_0_0>: obj=0, original bounds=[1,1]
+  [binary] <k_0_0>: obj=0, original bounds=[0,0]
+  [implicit] <andresultant_1020>: obj=0, original bounds=[0,1]
+  [implicit] <andresultant_1021>: obj=0, original bounds=[0,1]
+  [implicit] <andresultant_7031>: obj=0, original bounds=[0,1]
+CONSTRAINTS
+  [and] <andcons_1020>: <andresultant_1020>[M] == and(<k_rcon_0_0>[B],<rk_0_a_0_0>[B],<k_0_0>[B]);
+  [and] <andcons_1021>: <andresultant_1021>[M] == and(<k_rcon_0_0>[B],<rk_0_a_0_0>[B]);
+END

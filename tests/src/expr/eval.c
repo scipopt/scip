@@ -560,7 +560,7 @@ Test(evalexprInterval, complicated_interval, .description = "Tests expression in
    SCIP_EXPR* sqrtexpr;
    SCIP_Real xlb, xub, ylb, yub;
    SCIP_Real exponent;
-#if 0
+#ifdef SCIP_DISABLED_CODE
    int i;
    SCIP_INTERVAL interval;
 #endif
@@ -705,7 +705,7 @@ Test(evalexprInterval, complicated_interval, .description = "Tests expression in
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
    checkExprIntEval(sqrtexpr, 0.0, 1.0, FALSE);
 
-#if 0  /* TODO: what should be kept? */
+#ifdef SCIP_DISABLED_CODE  /* TODO: what should be kept? */
    /*
     * check interval evaluation tags
     */

@@ -39,6 +39,8 @@
 #ifndef __SCIP_TYPE_VAR_H__
 #define __SCIP_TYPE_VAR_H__
 
+#include "scip/def.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -59,18 +61,60 @@ typedef enum SCIP_Varstatus SCIP_VARSTATUS;
 /** variable type */
 enum SCIP_Vartype
 {
-   SCIP_VARTYPE_BINARY     = 0,         /**< binary variable: \f$ x \in \{0,1\} \f$ */
-   SCIP_VARTYPE_INTEGER    = 1,         /**< integer variable: \f$ x in \{lb, \dots, ub\} \f$ */
-   SCIP_VARTYPE_IMPLINT    = 2,         /**< continuous variable with optional integrality restriction:
-                                             assigning a fractional value for the variable is feasible and the solver will not enforce
-                                             integrality for this variable, but it may treat the variable as if an additional integrality
-                                             restriction exists in certain cases, e.g., during boundtightening;
-                                             typically, this variable type is used for implicit integer variables, that is, variables which
-                                             are known to take an integral value in a feasible or optimal solution due to other constraints or
-                                             optimality conditions */
-   SCIP_VARTYPE_CONTINUOUS = 3          /**< continuous variable: \f$ lb \leq x \leq ub \f$ */
+   SCIP_VARTYPE_BINARY     = 0,              /**< binary variable: \f$ x \in \{0,1\} \f$ */
+   SCIP_VARTYPE_INTEGER    = 1,              /**< integer variable: \f$ x \in \{lb, \dots, ub\} \f$ */
+#if defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 6) /* _attribute__ ((deprecated)) within enums only supported by selected compilers */
+   SCIP_VARTYPE_IMPLINT SCIP_DEPRECATED = 2, /**< @deprecated use `SCIPcreateVarImpl()` or `SCIPvarChgImplType()` to control implied integrality */
+#else
+   SCIP_VARTYPE_IMPLINT    = 2,              /**< @deprecated use `SCIPcreateVarImpl()` or `SCIPvarChgImplType()` to control implied integrality */
+#endif
+   SCIP_VARTYPE_CONTINUOUS = 3               /**< continuous variable: \f$ lb \leq x \leq ub \f$ */
 };
 typedef enum SCIP_Vartype SCIP_VARTYPE;
+
+/** alternative to `SCIP_VARTYPE_IMPLINT` that comes without SCIP_DEPRECATED attribute
+ * @deprecated still, the use of an implicit integral variable type is deprecated
+ */
+/** @todo remove / refactor usages of this macro */
+#define SCIP_DEPRECATED_VARTYPE_IMPLINT ((SCIP_VARTYPE) 2)
+
+/* CIP format variable characters */
+#define SCIP_VARTYPE_BINARY_CHAR 'B'
+#define SCIP_VARTYPE_INTEGER_CHAR 'I'
+#define SCIP_VARTYPE_CONTINUOUS_CHAR 'C'
+#define SCIP_DEPRECATED_VARTYPE_IMPLINT_CHAR 'M'
+
+/** implied integral type */
+enum SCIP_ImplintType
+{
+  SCIP_IMPLINTTYPE_NONE   = 0,               /**< The variable is not implied integral by other variables */
+  SCIP_IMPLINTTYPE_WEAK   = 1,               /**< The constraint handlers enforce that if the problem is relaxed
+                                              *   to have integrality constraints for the non-implied integral variables
+                                              *   only, there exists an optimal solution where all weakly and strongly
+                                              *   implied integral variables have integer solution values.
+                                              *   For infeasible problems, when relaxing integrality of all implied
+                                              *   integer variables, the problem remains infeasible.
+                                              *   For unbounded problems, when enforcing integrality of all implied
+                                              *   integer variables, the problem remains unbounded.
+                                              *
+                                              *   @note This notion of implied integrality is fragile and may break
+                                              *   if extra constraints are added.
+                                              *
+                                              *   Example: The variable z is a weakly implied integral if it only occurs
+                                              *   in the constraint 4x + 3y + z <= 10, where x and y are integer and
+                                              *   z has objective 0. */
+  SCIP_IMPLINTTYPE_STRONG = 2                /**< The constraint handlers enforce that if the problem is relaxed
+                                              *   to have integrality constraints for the non-implied integral variables
+                                              *   only, in every feasible solution all strongly implied integral
+                                              *   variables have integer solution values.
+                                              *
+                                              *   @note This notion of implied integrality remains intact under the
+                                              *   addition of additional constraints to the problem.
+                                              *
+                                              *   Example: The variable z is strongly implied integral if we have the
+                                              *   constraint: 4x + 3y + z = 10, where x and y are integer variables. */
+};
+typedef enum SCIP_ImplintType SCIP_IMPLINTTYPE;
 
 /** domain change data type */
 enum SCIP_DomchgType
@@ -114,10 +158,14 @@ typedef struct SCIP_Holelist SCIP_HOLELIST;       /**< list of holes in a domain
 typedef struct SCIP_Dom SCIP_DOM;                 /**< datastructures for storing domains of variables */
 typedef struct SCIP_Original SCIP_ORIGINAL;       /**< original variable information */
 typedef struct SCIP_Aggregate SCIP_AGGREGATE;     /**< aggregation information */
+typedef struct SCIP_AggregateExact SCIP_AGGREGATEEXACT; /**< exact aggregation information */
 typedef struct SCIP_Multaggr SCIP_MULTAGGR;       /**< multiple aggregation information */
+typedef struct SCIP_MultaggrExact SCIP_MULTAGGREXACT; /**< exact multiple aggregation information */
 typedef struct SCIP_Negate SCIP_NEGATE;           /**< negation information */
 typedef struct SCIP_Var SCIP_VAR;                 /**< variable of the problem */
 typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
+typedef struct SCIP_VarDataExact SCIP_VARDATAEXACT;/**< exact data (obj, bounds, ...) */
+typedef struct SCIP_DomExact SCIP_DOMEXACT;       /**< exact domain (using rationals) */
 
 /** frees user data of original variable (called when the original variable is freed)
  *

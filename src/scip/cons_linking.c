@@ -542,7 +542,7 @@ SCIP_RETCODE consdataCreate(
    assert(consdata != NULL);
    assert(linkvar != NULL);
    assert(binvars != NULL || nbinvars == 0);
-   assert(SCIPvarGetType(linkvar) != SCIP_VARTYPE_CONTINUOUS || nbinvars > 0);
+   assert(SCIPvarIsIntegral(linkvar) || nbinvars > 0);
 
    /* allocate memory for consdata */
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );

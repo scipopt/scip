@@ -30,11 +30,13 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/symmetry.h"
 #include "scip/symmetry_graph.h"
 #include "scip/scip.h"
 #include "scip/misc.h"
 #include "symmetry/struct_symmetry.h"
 #include "symmetry/type_symmetry.h"
+
 
 
 /** creates and initializes a symmetry detection graph with memory for the given number of nodes and edges
@@ -438,6 +440,7 @@ SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
  *  Edges are colored according to the variable coefficients.
  *  For signed permutation symmetries, also edges connecting the root node and the negated variable
  *  nodes are added, these edges are colored by the negative coefficients.
+ *  If the variable is fixed, a node representing the constant value is added.
  */
 SCIP_RETCODE SCIPaddSymgraphVarAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -488,7 +491,7 @@ SCIP_RETCODE SCIPaddSymgraphVarAggregation(
    }
 
    /* possibly add node for constant */
-   if( ! SCIPisZero(scip, constant) )
+   if( nvars == 0 || !SCIPisZero(scip, constant) )
    {
       SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, constant, &nodeidx) );
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, nodeidx, FALSE, 0.0) );
@@ -833,12 +836,18 @@ int compareVars(
    SCIP_VAR*             var2                /**< second variable for comparison */
    )
 {
+   SCIP_VARTYPE type1;
+   SCIP_VARTYPE type2;
+
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
+   type1 = SCIPgetSymInferredVarType(var1);
+   type2 = SCIPgetSymInferredVarType(var2);
+
+   if( type1 < type2 )
       return -1;
-   if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
+   if( type1 > type2 )
       return 1;
 
    /* use SCIP's comparison functions if available */
@@ -968,13 +977,18 @@ int compareVarsSignedPerm(
    SCIP_Real obj1;
    SCIP_Real obj2;
    SCIP_Real mid;
+   SCIP_VARTYPE type1;
+   SCIP_VARTYPE type2;
 
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
+   type1 = SCIPgetSymInferredVarType(var1);
+   type2 = SCIPgetSymInferredVarType(var2);
+
+   if( type1 < type2 )
       return -1;
-   if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
+   if( type1 > type2 )
       return 1;
 
    obj1 = isneg1 ? -SCIPvarGetObj(var1) : SCIPvarGetObj(var1);
@@ -1315,12 +1329,11 @@ SCIP_Bool isFixedVar(
 {
    assert(var != NULL);
 
-   if ( (fixedtype & SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+   if( (fixedtype & SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(var) )
       return TRUE;
-   if ( (fixedtype & SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+   if( (fixedtype & SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var) )
       return TRUE;
-   if ( (fixedtype & SYM_SPEC_REAL) &&
-      (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT) )
+   if( (fixedtype & SYM_SPEC_REAL) && ( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(var) ) )
       return TRUE;
    return FALSE;
 }

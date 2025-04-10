@@ -440,7 +440,7 @@ SCIP_RETCODE SCIPcutoffNode(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcutoffNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree, scip->transprob, scip->origprob, scip->reopt,
+   SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->eventfilter, scip->tree, scip->transprob, scip->origprob, scip->reopt,
          scip->lp, scip->mem->probmem) );
 
    return SCIP_OKAY;
@@ -462,8 +462,8 @@ SCIP_RETCODE SCIPpruneTree(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpruneTree", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-         scip->eventqueue, scip->lp, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+         scip->eventfilter, scip->lp, SCIPinfinity(scip)) );
 
    return SCIP_OKAY;
 }

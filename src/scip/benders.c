@@ -71,7 +71,9 @@
 #define SCIP_DEFAULT_STRENGTHENPERTURB    1e-06  /** the amount by which the cut strengthening solution is perturbed */
 #define SCIP_DEFAULT_STRENGTHENENABLED    FALSE  /** enable the core point cut strengthening approach */
 #define SCIP_DEFAULT_STRENGTHENINTPOINT     'r'  /** where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros) */
+#ifdef SCIP_DISABLED_CODE /* temporarily disabling support for multiple threads in Benders' decomposition */
 #define SCIP_DEFAULT_NUMTHREADS               1  /** the number of parallel threads to use when solving the subproblems */
+#endif
 #define SCIP_DEFAULT_EXECFEASPHASE        FALSE  /** should a feasibility phase be executed during the root node processing */
 #define SCIP_DEFAULT_SLACKVARCOEF          1e+6  /** the initial objective coefficient of the slack variables in the subproblem */
 #define SCIP_DEFAULT_MAXSLACKVARCOEF       1e+9  /** the maximal objective coefficient of the slack variables in the subproblem */
@@ -686,6 +688,7 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
    char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
    char consname[SCIP_MAXSTRLEN];   /* the name of the auxiliary variable constraint */
    SCIP_Bool shareauxvars;
+   SCIP_Bool allsubprobintegralobj;
    int i;
 
    /* this is a workaround for GCG. GCG expects that the variable has vardata when added. So a dummy vardata is created */
@@ -747,6 +750,8 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       }
    }
 
+   allsubprobintegralobj = TRUE;
+
    for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
    {
       /* if the auxiliary variables are shared, then a pointer to the variable is retrieved from topbenders,
@@ -767,22 +772,25 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       }
       else
       {
-         SCIP_VARTYPE vartype;
+         SCIP_IMPLINTTYPE impltype;
 
-         /* set the variable type of the auxiliary variables to implicit integer if the objective function of the
-          * subproblem is guaranteed to be integer. This behaviour is controlled through a user parameter.
+         /* declare an auxiliary variable implied integral if the objective function of the
+          * subproblem is guaranteed to be integral and this is desired
           * NOTE: It is only possible to determine if the objective function is integral if the subproblem is defined as
           * a SCIP instance, i.e. not NULL.
           */
          if( benders->auxvarsimplint && SCIPbendersSubproblem(benders, i) != NULL
             && SCIPisObjIntegral(SCIPbendersSubproblem(benders, i)) )
-            vartype = SCIP_VARTYPE_IMPLINT;
+            impltype = SCIP_IMPLINTTYPE_WEAK;
          else
-            vartype = SCIP_VARTYPE_CONTINUOUS;
+         {
+            impltype = SCIP_IMPLINTTYPE_NONE;
+            allsubprobintegralobj = FALSE;
+         }
 
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
-         SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip),
-               0.0, vartype) );
+         SCIP_CALL( SCIPcreateVarImpl(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip), 0.0,
+               SCIP_VARTYPE_CONTINUOUS, impltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
          SCIPvarSetData(auxiliaryvar, vardata);
 
@@ -816,6 +824,13 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       }
 
       benders->auxiliaryvars[i] = auxiliaryvar;
+   }
+
+   if( !shareauxvars && allsubprobintegralobj )
+   {
+      SCIP_Bool infeasible;
+      SCIP_CALL( SCIPchgVarImplType(scip, benders->masterauxvar, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
+      assert(!infeasible);
    }
 
    SCIPfreeBlockMemory(scip, &vardata);
@@ -919,9 +934,7 @@ SCIP_RETCODE assignAuxiliaryVariables(
       SCIP_CALL( SCIPcaptureVar(scip, benders->masterauxvar) );
    }
    else
-   {
-      SCIPABORT();
-   }
+      benders->masterauxvar = NULL;
 
    /* storing the auxiliary variable in the target Benders' implementation */
    for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
@@ -1288,10 +1301,12 @@ SCIP_RETCODE doBendersCreate(
          "where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros)",
          &(*benders)->strengthenintpoint, FALSE, SCIP_DEFAULT_STRENGTHENINTPOINT, "lfiroz", NULL, NULL) ); /*lint !e740*/
 
+#ifdef SCIP_DISABLED_CODE /* temporarily disabling support for multiple threads in Benders' decomposition */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/numthreads", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "the number of threads to use when solving the subproblems", &(*benders)->numthreads, TRUE,
          SCIP_DEFAULT_NUMTHREADS, 1, INT_MAX, NULL, NULL) );
+#endif
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/execfeasphase", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
@@ -2524,6 +2539,8 @@ SCIP_RETCODE SCIPbendersExit(
       SCIP_CALL( SCIPreleaseVar(set->scip, &benders->masterauxvar) );
    }
 
+   BMSfreeMemoryArrayNull(&benders->auxiliaryvarcons);
+
    /* if a corepoint has been used for cut strengthening, then this needs to be freed */
    if( benders->corepoint != NULL )
    {
@@ -2613,6 +2630,21 @@ SCIP_RETCODE SCIPbendersInitpre(
    assert(set != NULL);
    assert(stat != NULL);
 
+   /* the arrays for the auxiliary variables and constraints are not allocated at the activate stage. This is because
+    * SCIPbendersActivate can be called during SCIP_STAGE_PROBLEM. As such, the user may still change the objective type
+    * after the Benders' decomposition has been activated. The memory allocation occurs immediately before the variables
+    * are created, then freed in SCIPbendersExit.
+    */
+   if( benders->objectivetype == SCIP_BENDERSOBJTYPE_SUM )
+   {
+      SCIP_ALLOC( BMSallocClearMemoryArray(&benders->auxiliaryvarcons, 1) );
+   }
+   else
+   {
+      assert(benders->objectivetype == SCIP_BENDERSOBJTYPE_MAX);
+      SCIP_ALLOC( BMSallocClearMemoryArray(&benders->auxiliaryvarcons, benders->nsubproblems) );
+   }
+
    /* if the Benders' decomposition is the original, then the auxiliary variables need to be created. If the Benders'
     * decomposition is a copy, then the auxiliary variables already exist. The assignment of the auxiliary variables
     * occurs in bendersInit
@@ -2645,7 +2677,7 @@ SCIP_RETCODE SCIPbendersInitpre(
 }
 
 
-/** informs the Benders' decomposition that the presolving process has completed */
+/** informs the Benders ' decomposition that the presolving process has completed */
 SCIP_RETCODE SCIPbendersExitpre(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2794,14 +2826,6 @@ SCIP_RETCODE SCIPbendersActivate(
       SCIP_ALLOC( BMSallocMemoryArray(&benders->nsubmastervars, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->nsubmasterbinvars, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->nsubmasterintvars, benders->nsubproblems) );
-      if( benders->objectivetype == SCIP_BENDERSOBJTYPE_SUM )
-      {
-         SCIP_ALLOC( BMSallocMemoryArray(&benders->auxiliaryvarcons, 1) );
-      }
-      else
-      {
-         SCIP_ALLOC( BMSallocMemoryArray(&benders->auxiliaryvarcons, benders->nsubproblems) );
-      }
       SCIP_ALLOC( BMSallocMemoryArray(&benders->solvestat, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobobjval, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->bestsubprobobjval, benders->nsubproblems) );
@@ -2826,8 +2850,6 @@ SCIP_RETCODE SCIPbendersActivate(
 
          benders->subproblems[i] = NULL;
          benders->auxiliaryvars[i] = NULL;
-         if( benders->objectivetype == SCIP_BENDERSOBJTYPE_MAX )
-            benders->auxiliaryvarcons[i] = NULL;
          benders->submastervarssize[i] = BENDERS_MASTERVARARRAYSIZE;
          benders->nsubmastervars[i] = 0;
          benders->nsubmasterbinvars[i] = 0;
@@ -2854,8 +2876,6 @@ SCIP_RETCODE SCIPbendersActivate(
          SCIP_CALL( SCIPpqueueInsert(benders->subprobqueue, benders->solvestat[i]) );
       }
 
-      if( benders->objectivetype == SCIP_BENDERSOBJTYPE_SUM )
-         benders->auxiliaryvarcons[0] = NULL;
 
       if( SCIPsetFindEventhdlr(set, NODESOLVED_EVENTHDLR_NAME) == NULL )
       {
@@ -2933,7 +2953,6 @@ SCIP_RETCODE SCIPbendersDeactivate(
       BMSfreeMemoryArray(&benders->subproblowerbound);
       BMSfreeMemoryArray(&benders->bestsubprobobjval);
       BMSfreeMemoryArray(&benders->subprobobjval);
-      BMSfreeMemoryArray(&benders->auxiliaryvarcons);
       BMSfreeMemoryArray(&benders->solvestat);
       BMSfreeMemoryArray(&benders->nsubmasterintvars);
       BMSfreeMemoryArray(&benders->nsubmasterbinvars);
@@ -3429,33 +3448,13 @@ SCIP_RETCODE solveBendersSubproblems(
    )
 {
    SCIP_Bool onlyconvexcheck;
-#ifdef _OPENMP
-   int numthreads;
-   int maxnthreads;
-#endif
    int i;
    int j;
-
-   /* local variables for parallelisation of the solving loop */
-   int locnverified = *nverified;
-   SCIP_Bool locinfeasible = *infeasible;
-   SCIP_Bool locoptimal = *optimal;
-   SCIP_Bool locstopped = *stopped;
 
    SCIP_RETCODE retcode = SCIP_OKAY;
 
    assert(benders != NULL);
    assert(set != NULL);
-
-   /* getting the number of threads to use when solving the subproblems. This will be either be
-    * min(numthreads, maxnthreads).
-    * NOTE: This may not be correct. The Benders' decomposition parallelisation should not take all minimum threads if
-    * they are specified. The number of threads should be specified with the Benders' decomposition parameters.
-    */
-#ifdef _OPENMP
-   SCIP_CALL( SCIPsetGetIntParam(set, "parallel/maxnthreads", &maxnthreads) );
-   numthreads = MIN(benders->numthreads, maxnthreads);
-#endif
 
    /* in the case of an LNS check, only the convex relaxations of the subproblems will be solved. This is a performance
     * feature, since solving the convex relaxation is typically much faster than solving the corresponding CIP. While
@@ -3471,16 +3470,13 @@ SCIP_RETCODE solveBendersSubproblems(
    if( type == SCIP_BENDERSENFOTYPE_CHECK && sol == NULL )
    {
       /* TODO: Check whether this is absolutely necessary. I think that this if statment can be removed. */
-      locinfeasible = TRUE;
+      (*infeasible) = TRUE;
    }
    else
    {
       /* solving each of the subproblems for Benders' decomposition */
       /* TODO: ensure that the each of the subproblems solve and update the parameters with the correct return values
        */
-#ifndef __INTEL_COMPILER
-      #pragma omp parallel for num_threads(numthreads) private(i) reduction(&&:locoptimal) reduction(||:locinfeasible) reduction(+:locnverified) reduction(||:locstopped) reduction(min:retcode)
-#endif
       for( j = 0; j < nsolveidx; j++ )
       {
          SCIP_Bool subinfeas = FALSE;
@@ -3532,7 +3528,7 @@ SCIP_RETCODE solveBendersSubproblems(
                   SCIPinfinity(SCIPbendersSubproblem(benders, i)) : SCIPsetInfinity(set));
 
                (*substatus)[i] = SCIP_BENDERSSUBSTATUS_UNKNOWN;
-               locoptimal = FALSE;
+               (*optimal) = FALSE;
 
                SCIPsetDebugMsg(set, "Benders' decomposition: subproblem %d is not active, but has not been solved."
                  " setting status to UNKNOWN\n", i);
@@ -3558,7 +3554,7 @@ SCIP_RETCODE solveBendersSubproblems(
 
             /* the nverified counter is only increased in the convex solving loop */
             if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX || solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX )
-               locnverified++;
+               (*nverified)++;
          }
          else if( solvesub )
          {
@@ -3577,7 +3573,7 @@ SCIP_RETCODE solveBendersSubproblems(
 #endif
                (*subprobsolved)[i] = solved;
 
-               locinfeasible = locinfeasible || subinfeas;
+               (*infeasible) = (*infeasible) || subinfeas;
                if( subinfeas )
                   (*substatus)[i] = SCIP_BENDERSSUBSTATUS_INFEAS;
 
@@ -3612,7 +3608,7 @@ SCIP_RETCODE solveBendersSubproblems(
                      if( convexsub || onlyconvexcheck
                         || solveloop == SCIP_BENDERSSOLVELOOP_CIP
                         || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP )
-                        locoptimal = locoptimal && subproboptimal;
+                        (*optimal) = (*optimal) && subproboptimal;
 
 #ifdef SCIP_DEBUG
                      if( convexsub || solveloop >= SCIP_BENDERSSOLVELOOP_CIP )
@@ -3645,24 +3641,16 @@ SCIP_RETCODE solveBendersSubproblems(
                         || ((solveloop == SCIP_BENDERSSOLVELOOP_CIP || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP)
                            && !convexsub)
                         || onlyconvexcheck )
-                        locnverified++;
+                        (*nverified)++;
                   }
                }
             }
          }
 
          /* checking whether the limits have been exceeded in the master problem */
-         locstopped = SCIPisStopped(set->scip);
+         (*stopped) = SCIPisStopped(set->scip);
       }
    }
-
-   /* setting the input parameters to the local variables */
-   SCIPsetDebugMsg(set, "Local variable values: nverified %d infeasible %u optimal %u stopped %u\n", locnverified,
-      locinfeasible, locoptimal, locstopped);
-   *nverified = locnverified;
-   *infeasible = locinfeasible;
-   *optimal = locoptimal;
-   *stopped = locstopped;
 
    return retcode;
 }
@@ -5825,9 +5813,10 @@ SCIP_RETCODE addConstraintToBendersSubproblem(
          SCIP_VAR* var;
 
          /* creating a variable as a copy of the original variable. */
-         SCIP_CALL( SCIPcreateVar(subproblem, &var, SCIPvarGetName(consvars[i]), SCIPvarGetLbGlobal(consvars[i]),
+         SCIP_CALL( SCIPcreateVarImpl(subproblem, &var, SCIPvarGetName(consvars[i]), SCIPvarGetLbGlobal(consvars[i]),
                SCIPvarGetUbGlobal(consvars[i]), SCIPvarGetObj(consvars[i]), SCIPvarGetType(consvars[i]),
-               SCIPvarIsInitial(consvars[i]), SCIPvarIsRemovable(consvars[i]), NULL, NULL, NULL, NULL, NULL) );
+               SCIPvarGetImplType(consvars[i]), SCIPvarIsInitial(consvars[i]), SCIPvarIsRemovable(consvars[i]),
+               NULL, NULL, NULL, NULL, NULL) );
 
          /* adding the variable to the subproblem */
          SCIP_CALL( SCIPaddVar(subproblem, var) );
@@ -6893,11 +6882,12 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
       {
          SCIP_CALL( SCIPbendersGetVar(benders, set, vars[i], &mastervar, -1) );
 
-         if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS && mastervar != NULL )
+         if( SCIPvarIsIntegral(vars[i]) && mastervar != NULL )
          {
-            /* changing the type of the subproblem variable corresponding to mastervar to CONTINUOUS */
+            /* remove integrality of the subproblem variable corresponding to mastervar */
             SCIP_CALL( SCIPchgVarType(subproblem, vars[i], SCIP_VARTYPE_CONTINUOUS, &infeasible) );
-
+            assert(!infeasible);
+            SCIP_CALL( SCIPchgVarImplType(subproblem, vars[i], SCIP_IMPLINTTYPE_NONE, &infeasible) );
             assert(!infeasible);
 
             chgvarscount++;

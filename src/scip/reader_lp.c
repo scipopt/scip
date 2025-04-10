@@ -45,6 +45,7 @@
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
@@ -56,8 +57,10 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
+#include "scip/rational.h"
 #include "scip/reader_lp.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -67,7 +70,6 @@
 #include "scip/scip_var.h"
 #include <stdlib.h>
 #include <string.h>
-
 
 #define READER_NAME             "lpreader"
 #define READER_DESC             "file reader for MIPs in IBM CPLEX's LP file format"
@@ -270,6 +272,16 @@ SCIP_Bool isValueChar(
       *exptype = LP_EXP_UNSIGNED;
       return TRUE;
    }
+   else if( c == '/' && isdigit((unsigned char)nextc) )
+   {
+      return TRUE;
+   }
+   else if( (*exptype == LP_EXP_UNSIGNED) && isdigit((unsigned char)c) )
+   {
+      return TRUE;
+   }
+   else
+      return FALSE;
 
    return FALSE;
 }
@@ -760,6 +772,36 @@ SCIP_Bool isValue(
    return FALSE;
 }
 
+/** returns whether the current token is a value */
+static
+SCIP_Bool isValueRational(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LPINPUT*              lpinput,            /**< LP reading data */
+   SCIP_RATIONAL*        value               /**< pointer to store the value (unchanged, if token is no value) */
+   )
+{
+   assert(lpinput != NULL);
+   assert(value != NULL);
+
+   if( SCIPstrcasecmp(lpinput->token, "INFINITY") == 0 || SCIPstrcasecmp(lpinput->token, "INF") == 0 )
+   {
+      SCIPrationalSetInfinity(value);
+      return TRUE;
+   }
+   else
+   {
+      double val;
+
+      if( isValue(scip, lpinput, &val) || SCIPrationalIsString(lpinput->token) )
+      {
+         SCIPrationalSetString(value, lpinput->token);
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
 /** returns whether the current token is an equation sense */
 static
 SCIP_Bool isSense(
@@ -819,6 +861,10 @@ SCIP_RETCODE getVariable(
       SCIPdebugMsg(scip, "creating new variable: <%s>\n", name);
       SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
             initial, removable, NULL, NULL, NULL, NULL, NULL) );
+      if( SCIPisExact(scip) )
+      {
+         SCIP_CALL( SCIPaddVarExactData(scip, newvar, NULL, NULL, NULL) );
+      }
       SCIP_CALL( SCIPaddVar(scip, newvar) );
       *var = newvar;
 
@@ -1278,6 +1324,326 @@ SCIP_RETCODE readCoefficients(
    return SCIP_OKAY;
 }
 
+/** reads an objective or constraint with name and coefficients */
+static
+SCIP_RETCODE readCoefficientsRational(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LPINPUT*              lpinput,            /**< LP reading data */
+   SCIP_Bool             isobjective,        /**< indicates whether we are currently reading the coefficients of the objective */
+   char*                 name,               /**< pointer to store the name of the line; must be at least of size
+                                              *   LP_MAX_LINELEN */
+   int*                  coefssize,          /**< size of vars and coefs arrays */
+   SCIP_VAR***           vars,               /**< pointer to store the array with variables (must be freed by caller) */
+   SCIP_RATIONAL***      coefs,              /**< pointer to store the array with coefficients (must be freed by caller) */
+   int*                  ncoefs,             /**< pointer to store the number of coefficients */
+   SCIP_RATIONAL*        objoffset,          /**< pointer to store an objective offset (or NULL if ! isobjective) */
+   SCIP_Bool*            newsection          /**< pointer to store whether a new section was encountered */
+   )
+{
+   SCIP_VAR* var = NULL;
+   SCIP_Bool havesign;
+   SCIP_Bool havevalue;
+   SCIP_Bool haveobjoffset = FALSE;
+   SCIP_RATIONAL* coef;
+   int coefsign;
+   SCIP_Bool inquadpart;
+   SCIP_VAR* firstquadvar;
+
+   assert(lpinput != NULL);
+   assert(name != NULL);
+   assert(coefssize != NULL);
+   assert(vars != NULL);
+   assert(coefs != NULL);
+   assert(ncoefs != NULL);
+   assert(!isobjective || objoffset != NULL);
+   assert(newsection != NULL);
+
+   *coefssize = 0;
+   *vars = NULL;
+   *coefs = NULL;
+   *name = '\0';
+   *ncoefs = 0;
+   *newsection = FALSE;
+   inquadpart = FALSE;
+
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &coef) );
+
+   if( isobjective )
+   {
+      assert(objoffset != NULL);
+      SCIPrationalSetReal(objoffset, 0.0);
+   }
+
+   /* read the first token, which may be the name of the line */
+   if( getNextToken(scip, lpinput) )
+   {
+      /* check if we reached a new section */
+      if( isNewSection(scip, lpinput) )
+      {
+         *newsection = TRUE;
+         goto TERMINATE;
+      }
+
+      /* remember the token in the token buffer */
+      swapTokenBuffer(lpinput);
+
+      /* get the next token and check, whether it is a colon */
+      if( getNextToken(scip, lpinput) )
+      {
+         if( strcmp(lpinput->token, ":") == 0 )
+         {
+            /* the second token was a colon: the first token is the line name */
+            (void)SCIPmemccpy(name, lpinput->tokenbuf, '\0', LP_MAX_LINELEN);
+
+            name[LP_MAX_LINELEN - 1] = '\0';
+            SCIPdebugMsg(scip, "(line %d) read constraint name: '%s'\n", lpinput->linenumber, name);
+         }
+         else
+         {
+            /* the second token was no colon: push the tokens back onto the token stack and parse them as coefficients */
+            pushToken(lpinput);
+            pushBufferToken(lpinput);
+         }
+      }
+      else
+      {
+         /* there was only one token left: push it back onto the token stack and parse it as coefficient */
+         pushBufferToken(lpinput);
+      }
+   }
+
+   /* initialize buffers for storing the coefficients */
+   *coefssize = LP_INIT_COEFSSIZE;
+
+   SCIP_CALL( SCIPrationalCreateBlockArray(SCIPblkmem(scip), coefs, *coefssize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, vars, *coefssize) );
+
+   /* read the coefficients */
+   coefsign = +1;
+   SCIPrationalSetReal(coef, 1.0);
+   havesign = FALSE;
+   havevalue = FALSE;
+   firstquadvar = NULL;
+   *ncoefs = 0;
+   while( getNextToken(scip, lpinput) )
+   {
+      /* check whether we reached a new sign token */
+      if( lpinput->token[1] == '\0' && ( *lpinput->token == '+' || *lpinput->token == '-' ) )
+      {
+         /* check whether we found an objective offset */
+         if( isobjective && havevalue && var == NULL )
+         {
+            assert( objoffset != NULL );
+            if( haveobjoffset )
+            {
+               syntaxError(scip, lpinput, "two objective offsets.");
+               goto TERMINATE;
+            }
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * SCIPrationalGetReal(coef));
+            haveobjoffset = TRUE;
+            SCIPrationalMultReal(objoffset, coef, (double) coefsign);
+         }
+      }
+
+      /* check if we read a sign */
+      if( isSign(lpinput, &coefsign) )
+      {
+         SCIPdebugMsg(scip, "(line %d) read coefficient sign: %+d\n", lpinput->linenumber, coefsign);
+         havesign = TRUE;
+         continue;
+      }
+
+      /* check if we read a value */
+      if( isValueRational(scip, lpinput, coef) )
+      {
+         SCIPdebugMsg(scip, "(line %d) read coefficient value: %g with sign %+d\n", lpinput->linenumber, SCIPrationalGetReal(coef), coefsign);
+         if( havevalue )
+         {
+            syntaxError(scip, lpinput, "two consecutive values.");
+            goto TERMINATE;
+         }
+         havevalue = TRUE;
+         continue;
+      }
+
+      /* check if we reached an equation sense */
+      if( isSense(lpinput, NULL) )
+      {
+         if( isobjective )
+         {
+            syntaxError(scip, lpinput, "no sense allowed in objective");
+            goto TERMINATE;
+         }
+
+         /* put the sense back onto the token stack */
+         pushToken(lpinput);
+         break;
+      }
+
+      /* check if we reached a new section, that will be only allowed when having no current sign and value and if we
+       * are not in the qudratic part
+       */
+      if( (isobjective || (!havevalue && !havesign)) && !inquadpart && isNewSection(scip, lpinput) )
+      {
+         if( havesign && !havevalue )
+         {
+            SCIPwarningMessage(scip, "skipped single sign %c without value or variable in objective\n", coefsign == 1 ? '+' : '-');
+         }
+         else if( isobjective && havevalue && !SCIPrationalIsZero(coef) )
+         {
+            assert( objoffset != NULL );
+            /* check whether we found an objective offset */
+            if( haveobjoffset )
+            {
+               syntaxError(scip, lpinput, "two objective offsets.");
+               goto TERMINATE;
+            }
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * SCIPrationalGetReal(coef));
+            SCIPrationalMultReal(objoffset, coef, (double) coefsign);
+         }
+
+         *newsection = TRUE;
+         goto TERMINATE;
+      }
+
+      /* check if we start a quadratic part */
+      if( *lpinput->token ==  '[' )
+      {
+         syntaxError(scip, lpinput, "cannot start quadratic part while in exact solving mode.");
+         goto TERMINATE;
+      }
+
+      /* check if we end a quadratic part */
+      if( *lpinput->token == ']' )
+      {
+         syntaxError(scip, lpinput, "cannot end quadratic part while in exact solving mode.");
+         goto TERMINATE;
+      }
+
+      /* all but the first coefficient need a sign */
+      if( !inquadpart && *ncoefs > 0 && !havesign )
+      {
+         syntaxError(scip, lpinput, "expected sign ('+' or '-') or sense ('<' or '>').");
+         goto TERMINATE;
+      }
+
+      /* check if the last variable should be squared */
+      var = NULL;
+      if( *lpinput->token == '^' )
+      {
+         if( !inquadpart )
+         {
+            syntaxError(scip, lpinput, "cannot have squares ('^2') outside of quadratic part.");
+            goto TERMINATE;
+         }
+         if( firstquadvar == NULL )
+         {
+            syntaxError(scip, lpinput, "cannot have square '^2' before variable.");
+            goto TERMINATE;
+         }
+
+         var = firstquadvar;
+      }
+      else
+      {
+         /* the token is a variable name: get the corresponding variable (or create a new one) */
+         SCIP_CALL( getVariable(scip, lpinput->token, &var, NULL) );
+      }
+
+      if( !inquadpart )
+      {
+         /* insert the linear coefficient */
+         SCIPdebugMsg(scip, "(line %d) read linear coefficient: %+g<%s>\n", lpinput->linenumber, coefsign * SCIPrationalGetReal(coef), SCIPvarGetName(var));
+         if( !SCIPrationalIsZero(coef) )
+         {
+            /* resize the vars and coefs array if needed */
+            if( *ncoefs >= *coefssize )
+            {
+               int oldcoefssize;
+               oldcoefssize = *coefssize;
+               *coefssize *= 2;
+               *coefssize = MAX(*coefssize, (*ncoefs)+1);
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, vars, oldcoefssize, *coefssize) );
+               SCIP_CALL( SCIPrationalReallocBlockArray(SCIPblkmem(scip), coefs, oldcoefssize, *coefssize) );
+            }
+            assert(*ncoefs < *coefssize);
+
+            /* add coefficient */
+            (*vars)[*ncoefs] = var;
+            SCIPrationalMultReal((*coefs)[*ncoefs], coef, (double) coefsign);
+            (*ncoefs)++;
+         }
+      }
+
+      /* reset the flags and coefficient value for the next coefficient */
+      coefsign = +1;
+      SCIPrationalSetReal(coef, 1.0);
+      havesign = FALSE;
+      havevalue = FALSE;
+      firstquadvar = NULL;
+   }
+
+TERMINATE:
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &coef);
+
+   return SCIP_OKAY;
+}
+
+/** reads the objective section */
+static
+SCIP_RETCODE readObjectiveRational(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LPINPUT*              lpinput             /**< LP reading data */
+   )
+{
+   char name[LP_MAX_LINELEN];
+   SCIP_VAR** vars;
+   SCIP_RATIONAL** coefs;
+   SCIP_Bool newsection;
+   SCIP_RATIONAL* objoffset;
+   SCIP_RATIONAL* tmpval;
+   int ncoefs;
+   int coefssize;
+
+   assert(lpinput != NULL);
+
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objoffset) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpval) );
+
+   /* read the objective coefficients */
+   SCIP_CALL( readCoefficientsRational(scip, lpinput, TRUE, name, &coefssize, &vars, &coefs, &ncoefs,
+         objoffset, &newsection) );
+
+   if( !SCIPrationalIsZero(objoffset) )
+   {
+      SCIP_CALL( SCIPaddOrigObjoffsetExact(scip, objoffset) );
+   }
+
+   if( !hasError(lpinput) )
+   {
+      int i;
+
+      /* set the linear objective values */
+      for( i = 0; i < ncoefs; ++i )
+      {
+         assert(vars != NULL);  /* for lint */
+         assert(coefs != NULL);
+         SCIPrationalAdd(tmpval, SCIPvarGetObjExact(vars[i]), coefs[i]);
+         SCIP_CALL( SCIPchgVarObjExact(scip, vars[i], tmpval) );
+      }
+   }
+
+   /* free memory */
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
+   SCIPrationalFreeBlockArray(SCIPblkmem(scip), &coefs, coefssize);
+
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpval);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &objoffset);
+
+   return SCIP_OKAY; /*lint !e438*/
+}
+
+
 /** reads the objective section */
 static
 SCIP_RETCODE readObjective(
@@ -1299,6 +1665,12 @@ SCIP_RETCODE readObjective(
    int nquadcoefs;
 
    assert(lpinput != NULL);
+
+   if( SCIPisExact(scip) )
+   {
+      SCIP_CALL( readObjectiveRational(scip, lpinput) );
+      return SCIP_OKAY;
+   }
 
    /* read the objective coefficients */
    SCIP_CALL( readCoefficients(scip, lpinput, TRUE, name, &coefssize, &vars, &coefs, &ncoefs,
@@ -1429,7 +1801,7 @@ SCIP_RETCODE createIndicatorConstraint(
       SCIP_Bool infeasible;
 
       /* At this point we force the variable binvar to be binary, since we need the negated variable. We have to check
-       * later whether the type of the variable specified in the file agrees with this specification. 
+       * later whether the type of the variable specified in the file agrees with this specification.
        */
       /* check whether bounds are correct - might already been set if variable is used in another indicator constraint */
       if( SCIPvarGetLbGlobal(binvar) < 0.0 )
@@ -1584,7 +1956,249 @@ SCIP_RETCODE createIndicatorConstraint(
    return SCIP_OKAY;
 }
 
-/** reads the constraints section 
+/** reads the constraints section
+ *
+ *  Read linear and indicator constraints.
+ *
+ *  The CPLEX manual says that indicator constraints are of the following form:
+ *
+ *  [constraintname:]  binaryvariable = value  ->  linear constraint
+ *
+ *  We also accept "<->".
+ */
+static
+SCIP_RETCODE readConstraintsRational(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LPINPUT*              lpinput             /**< LP reading data */
+   )
+{
+   char name[LP_MAX_LINELEN];
+   SCIP_CONS* cons;
+   SCIP_VAR** vars;
+   SCIP_RATIONAL** coefs;
+   LPSENSE sense;
+   SCIP_RETCODE retcode;
+   SCIP_RATIONAL* sidevalue;
+   SCIP_RATIONAL* lhs;
+   SCIP_RATIONAL* rhs;
+   SCIP_Bool newsection;
+   SCIP_Bool initial;
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool local;
+   SCIP_Bool modifiable;
+   SCIP_Bool dynamic;
+   SCIP_Bool removable;
+   SCIP_Bool isIndicatorCons;
+   int ncoefs;
+   int sidesign;
+   int coefssize;
+
+   assert(lpinput != NULL);
+
+   retcode = SCIP_OKAY;
+
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &sidevalue) );
+
+   /* read coefficients */
+   SCIP_CALL( readCoefficientsRational(scip, lpinput, FALSE, name, &coefssize, &vars, &coefs, &ncoefs,
+         NULL, &newsection) );
+
+   if( hasError(lpinput) )
+      goto TERMINATE;
+   if( newsection )
+   {
+      if( ncoefs > 0 )
+         syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
+      goto TERMINATE;
+   }
+
+   /* read the constraint sense */
+   if( !getNextToken(scip, lpinput) )
+   {
+      syntaxError(scip, lpinput, "missing constraint sense.");
+      goto TERMINATE;
+   }
+   if( !isSense(lpinput, &sense) )
+   {
+      syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
+      goto TERMINATE;
+   }
+   assert(sense == LP_SENSE_GE || sense == LP_SENSE_LE || sense == LP_SENSE_EQ); /*lint !e530*/
+
+   /* read the right hand side */
+   sidesign = +1;
+   if( !getNextToken(scip, lpinput) )
+   {
+      syntaxError(scip, lpinput, "missing right hand side.");
+      goto TERMINATE;
+   }
+   if( isSign(lpinput, &sidesign) )
+   {
+      if( !getNextToken(scip, lpinput) )
+      {
+         syntaxError(scip, lpinput, "missing value of right hand side.");
+         goto TERMINATE;
+      }
+   }
+   if( !isValueRational(scip, lpinput, sidevalue) )
+   {
+      syntaxError(scip, lpinput, "expected value as right hand side.");
+      goto TERMINATE;
+   }
+   SCIPrationalMultReal(sidevalue, sidevalue, (double) sidesign);
+
+   /* assign the left and right hand side, depending on the constraint sense */
+   switch( sense ) /*lint !e530*/
+   {
+   case LP_SENSE_GE:
+      SCIPrationalSetRational(lhs, sidevalue);
+      SCIPrationalSetInfinity(rhs);
+      break;
+   case LP_SENSE_LE:
+      SCIPrationalSetNegInfinity(lhs);
+      SCIPrationalSetRational(rhs, sidevalue);
+      break;
+   case LP_SENSE_EQ:
+      SCIPrationalSetRational(lhs, sidevalue);
+      SCIPrationalSetRational(rhs, sidevalue);
+      break;
+   case LP_SENSE_NOTHING:
+   default:
+      /* this case cannot occur because it is caught by the syntax check method isSense() above */
+      SCIPerrorMessage("invalid constraint sense <%d>.\n", sense);
+      return SCIP_INVALIDDATA;
+   }
+
+   /* check whether we read the first part of an indicator constraint */
+   isIndicatorCons = FALSE;
+   if ( getNextToken(scip, lpinput) && !isNewSection(scip, lpinput) )
+   {
+      /* check whether we have '<' from a "<->" string */
+      if ( *lpinput->token == '<' )
+      {
+         int linepos = lpinput->linepos-1;
+
+         /* check next token - cannot be a new section */
+         if ( getNextToken(scip, lpinput) )
+         {
+            /* check for "<-" */
+            if ( *lpinput->token == '-' )
+            {
+               /* check next token - cannot be a new section */
+               if ( getNextToken(scip, lpinput) )
+               {
+                  /* check for "<->" */
+                  if ( *lpinput->token == '>' )
+                  {
+                     lpinput->linepos = linepos;
+                     (void) SCIPsnprintf(lpinput->token, 2, "<");
+                     syntaxError(scip, lpinput,
+                        "SCIP does not support equivalence (<->) indicator constraints; consider using the \"->\" form.");
+                     goto TERMINATE;
+                  }
+               }
+            }
+         }
+         /* reset the lpinput for further usage as we have no indicator constraint */
+         lpinput->linepos = linepos;
+         (void) SCIPsnprintf(lpinput->token, 2, "<");
+      }
+
+      /* check for "->" */
+      if ( *lpinput->token == '-' )
+      {
+         /* remember '-' in token buffer */
+         swapTokenBuffer(lpinput);
+
+         /* check next token - cannot be a new section */
+         if( getNextToken(scip, lpinput) )
+         {
+            /* check for "->" */
+            if ( *lpinput->token == '>' )
+               isIndicatorCons = TRUE;
+            else
+            {
+               /* push back last token and '-' */
+               pushToken(lpinput);
+               pushBufferToken(lpinput);
+            }
+         }
+         else
+            pushBufferToken(lpinput);
+      }
+      else
+         pushToken(lpinput);
+   }
+
+   if( !isIndicatorCons )
+   {
+      /* create and add the linear constraint */
+      initial = lpinput->initialconss && !lpinput->inlazyconstraints && !lpinput->inusercuts;
+      separate = TRUE;
+      enforce = !lpinput->inusercuts;
+      check = !lpinput->inusercuts;
+      propagate = TRUE;
+      local = FALSE;
+      modifiable = FALSE;
+      dynamic = lpinput->dynamicconss;
+      removable = lpinput->dynamicrows || lpinput->inusercuts;
+
+      retcode = SCIPcreateConsExactLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
+
+      if( retcode != SCIP_OKAY )
+         goto TERMINATE;
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIPdebugMsg(scip, "(line %d) created constraint%s: ", lpinput->linenumber,
+         lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
+      SCIPdebugPrintCons(scip, cons, NULL);
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+   else
+   {
+      /* now we should have an indicator constraint */
+      if( ncoefs != 1 )
+      {
+         syntaxError(scip, lpinput, "Indicator part can only consist of one binary variable.");
+         goto TERMINATE;
+      }
+      assert(coefs != NULL);
+      if( !SCIPrationalIsEQReal(coefs[0], 1.0) )
+      {
+         syntaxError(scip, lpinput, "There cannot be a coefficient before the binary indicator variable.");
+         goto TERMINATE;
+      }
+      if( sense != LP_SENSE_EQ )
+      {
+         syntaxError(scip, lpinput, "Indicator part cannot handle equations.");
+         goto TERMINATE;
+      }
+      assert(vars != NULL);
+      retcode = createIndicatorConstraint(scip, lpinput, name, vars[0], SCIPrationalGetReal(lhs));
+   }
+
+ TERMINATE:
+   /* free memory */
+   SCIPrationalFreeBlockArray(SCIPblkmem(scip), &coefs, coefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
+
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &sidevalue);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhs);
+
+   SCIP_CALL( retcode );
+
+   return SCIP_OKAY;
+}
+
+
+/** reads the constraints section
  *
  *  Read linear and indicator constraints.
  *
@@ -1624,14 +2238,20 @@ SCIP_RETCODE readConstraints(
    SCIP_Bool removable;
    SCIP_Bool isIndicatorCons;
    int ncoefs;
-   int nquadcoefs;
    int sidesign;
+   int nquadcoefs;
    int quadcoefssize;
    int coefssize;
 
    assert(lpinput != NULL);
 
    retcode = SCIP_OKAY;
+
+   if( SCIPisExact(scip) )
+   {
+      SCIP_CALL( readConstraintsRational(scip, lpinput) );
+      return SCIP_OKAY;
+   }
 
    /* read coefficients */
    SCIP_CALL( readCoefficients(scip, lpinput, FALSE, name, &coefssize, &vars, &coefs, &ncoefs,
@@ -1835,12 +2455,201 @@ SCIP_RETCODE readConstraints(
 
 /** reads the bounds section */
 static
+SCIP_RETCODE readBoundsRational(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LPINPUT*              lpinput             /**< LP reading data */
+   )
+{
+   SCIP_RATIONAL* value;
+   SCIP_RATIONAL* lb;
+   SCIP_RATIONAL* ub;
+
+   assert(lpinput != NULL);
+
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &value) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lb) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &ub) );
+
+   while( getNextToken(scip, lpinput) )
+   {
+      SCIP_VAR* var;
+
+      int sign;
+      SCIP_Bool hassign;
+      LPSENSE leftsense;
+
+      /* check if we reached a new section */
+      if( isNewSection(scip, lpinput) )
+         goto TERMINATE;
+
+      /* default bounds are [0,+inf] */
+      SCIPrationalSetReal(lb, 0.0);
+      SCIPrationalSetInfinity(ub);
+      leftsense = LP_SENSE_NOTHING;
+
+      /* check if the first token is a sign */
+      sign = +1;
+      hassign = isSign(lpinput, &sign);
+      if( hassign && !getNextToken(scip, lpinput) )
+      {
+         syntaxError(scip, lpinput, "expected value.");
+         goto TERMINATE;
+      }
+
+      /* the first token must be either a value or a variable name */
+      if( isValueRational(scip, lpinput, value) )
+      {
+         /* first token is a value: the second token must be a sense */
+         if( !getNextToken(scip, lpinput) || !isSense(lpinput, &leftsense) )
+         {
+            syntaxError(scip, lpinput, "expected bound sense '<=', '=', or '>='.");
+            goto TERMINATE;
+         }
+
+         /* update the bound corresponding to the sense */
+         switch( leftsense )
+         {
+         case LP_SENSE_GE:
+            SCIPrationalMultReal(ub, value, (double) sign);
+            break;
+         case LP_SENSE_LE:
+            SCIPrationalMultReal(lb, value, (double) sign);
+            break;
+         case LP_SENSE_EQ:
+            SCIPrationalMultReal(lb, value, (double) sign);
+            SCIPrationalMultReal(ub, value, (double) sign);
+            break;
+         case LP_SENSE_NOTHING:
+         default:
+            SCIPerrorMessage("invalid bound sense <%d>\n", leftsense);
+            return SCIP_INVALIDDATA;
+         }
+      }
+      else if( hassign )
+      {
+         syntaxError(scip, lpinput, "expected value.");
+         goto TERMINATE;
+      }
+      else
+         pushToken(lpinput);
+
+      /* the next token must be a variable name */
+      if( !getNextToken(scip, lpinput) )
+      {
+         syntaxError(scip, lpinput, "expected variable name.");
+         goto TERMINATE;
+      }
+      SCIP_CALL( getVariable(scip, lpinput->token, &var, NULL) );
+
+      /* the next token might be another sense, or the word "free" */
+      if( getNextToken(scip, lpinput) )
+      {
+         LPSENSE rightsense;
+
+         if( isSense(lpinput, &rightsense) )
+         {
+            /* check, if the senses fit */
+            if( leftsense == LP_SENSE_NOTHING
+               || (leftsense == LP_SENSE_LE && rightsense == LP_SENSE_LE)
+               || (leftsense == LP_SENSE_GE && rightsense == LP_SENSE_GE) )
+            {
+               if( !getNextToken(scip, lpinput) )
+               {
+                  syntaxError(scip, lpinput, "expected value or sign.");
+                  goto TERMINATE;
+               }
+
+               /* check if the next token is a sign */
+               sign = +1;
+               hassign = isSign(lpinput, &sign);
+               if( hassign && !getNextToken(scip, lpinput) )
+               {
+                  syntaxError(scip, lpinput, "expected value.");
+                  goto TERMINATE;
+               }
+
+               /* the next token must be a value */
+               if( !isValueRational(scip, lpinput, value) )
+               {
+                  syntaxError(scip, lpinput, "expected value.");
+                  goto TERMINATE;
+               }
+
+               /* update the bound corresponding to the sense */
+               switch( rightsense )
+               {
+               case LP_SENSE_GE:
+                  SCIPrationalMultReal(lb, value, (double) sign);
+                  break;
+               case LP_SENSE_LE:
+                  SCIPrationalMultReal(ub, value, (double) sign);
+                  break;
+               case LP_SENSE_EQ:
+                  SCIPrationalMultReal(lb, value, (double) sign);
+                  SCIPrationalMultReal(ub, value, (double) sign);
+                  break;
+               case LP_SENSE_NOTHING:
+               default:
+                  SCIPerrorMessage("invalid bound sense <%d>\n", leftsense);
+                  return SCIP_INVALIDDATA;
+               }
+            }
+            else
+            {
+               syntaxError(scip, lpinput, "the two bound senses do not fit.");
+               goto TERMINATE;
+            }
+         }
+         else if( SCIPstrcasecmp(lpinput->token, "FREE") == 0 )
+         {
+            if( leftsense != LP_SENSE_NOTHING )
+            {
+               syntaxError(scip, lpinput, "variable with bound is marked as 'free'.");
+               goto TERMINATE;
+            }
+            SCIPrationalSetNegInfinity(lb);
+            SCIPrationalSetInfinity(ub);
+         }
+         else
+         {
+            /* the token was no sense: push it back to the token stack */
+            pushToken(lpinput);
+         }
+      }
+
+      /* change the bounds of the variable if bounds have been given (do not destroy earlier specification of bounds) */
+      if( !SCIPrationalIsZero(lb) )
+         SCIP_CALL( SCIPchgVarLbExact(scip, var, lb) );
+      /*lint --e{777}*/
+      if( !SCIPrationalIsInfinity(ub) )
+         SCIP_CALL( SCIPchgVarUbExact(scip, var, ub) );
+      SCIPdebugMsg(scip, "(line %d) new bounds: <%s>[%g,%g]\n", lpinput->linenumber, SCIPvarGetName(var),
+         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+   }
+
+TERMINATE:
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &value);
+
+   return SCIP_OKAY;
+}
+
+
+/** reads the bounds section */
+static
 SCIP_RETCODE readBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    LPINPUT*              lpinput             /**< LP reading data */
    )
 {
    assert(lpinput != NULL);
+
+   if( SCIPisExact(scip) )
+   {
+      SCIP_CALL( readBoundsRational(scip, lpinput) );
+      return SCIP_OKAY;
+   }
 
    while( getNextToken(scip, lpinput) )
    {
@@ -2091,10 +2900,26 @@ SCIP_RETCODE readBinaries(
       if( SCIPvarGetLbGlobal(var) < 0.0 )
       {
          SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
+         if( SCIPisExact(scip) )
+         {
+            SCIP_RATIONAL* tmp;
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
+            SCIPrationalSetReal(tmp, 0.0);
+            SCIP_CALL( SCIPchgVarLbExact(scip, var, tmp) );
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
+         }
       }
       if( SCIPvarGetUbGlobal(var) > 1.0 )
       {
          SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
+         if( SCIPisExact(scip) )
+         {
+            SCIP_RATIONAL* tmp;
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
+            SCIPrationalSetReal(tmp, 1.0);
+            SCIP_CALL( SCIPchgVarUbExact(scip, var, tmp) );
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
+         }
       }
       SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
       /* don't assert feasibility here because the presolver will and should detect a infeasibility */
@@ -2380,13 +3205,13 @@ SCIP_RETCODE readSos(
                   /* we now know that we have a variable/weight pair -> add variable*/
                   switch( type )
                   {
-                  case 1: 
+                  case 1:
                      SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, sign * weight) );
                      break;
-                  case 2: 
+                  case 2:
                      SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, sign * weight) );
                      break;
-                  default: 
+                  default:
                      SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
                      SCIPABORT();
                      return SCIP_INVALIDDATA;  /*lint !e527*/
@@ -2629,7 +3454,7 @@ void appendLine(
    assert( strlen(linebuffer) + strlen(extension) < LP_MAX_PRINTLEN );
 
    /* NOTE: avoid
-    *   sprintf(linebuffer, "%s%s", linebuffer, extension); 
+    *   sprintf(linebuffer, "%s%s", linebuffer, extension);
     * because of overlapping memory areas in memcpy used in sprintf.
     */
    (void) strncat(linebuffer, extension, LP_MAX_PRINTLEN - strlen(linebuffer));
@@ -2640,6 +3465,83 @@ void appendLine(
 
    if( (*linecnt) > LP_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
+}
+
+/* print row in LP format to file stream */
+static
+SCIP_RETCODE printRowExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< row name */
+   const char*           rownameextension,   /**< row name extension */
+   const char*           type,               /**< row type ("=", "<=", or ">=") */
+   SCIP_VAR**            linvars,            /**< array of linear variables */
+   SCIP_RATIONAL**       linvals,            /**< array of linear coefficient values */
+   int                   nlinvars,           /**< number of linear variables */
+   SCIP_RATIONAL*        rhs                 /**< right hand side */
+   )
+{
+   int v;
+   char linebuffer[LP_MAX_PRINTLEN+1] = { '\0' };
+   char ratbuffer[LP_MAX_PRINTLEN+1] = { '\0' };
+   int linecnt;
+
+   char varname[LP_MAX_NAMELEN];
+   char consname[LP_MAX_NAMELEN + 1]; /* an extra character for ':' */
+   char buffer[LP_MAX_PRINTLEN];
+
+   assert( scip != NULL );
+   assert( strcmp(type, "=") == 0 || strcmp(type, "<=") == 0 || strcmp(type, ">=") == 0 );
+   assert( nlinvars == 0 || (linvars != NULL && linvals != NULL) );
+
+   clearLine(linebuffer, &linecnt);
+
+   /* start each line with a space */
+   appendLine(scip, file, linebuffer, &linecnt, " ");
+
+   /* print row name */
+   if( strlen(rowname) > 0 || strlen(rownameextension) > 0 )
+   {
+      (void) SCIPsnprintf(consname, LP_MAX_NAMELEN + 1, "%s%s:", rowname, rownameextension);
+      appendLine(scip, file, linebuffer, &linecnt, consname);
+   }
+
+   /* print coefficients */
+   for( v = 0; v < nlinvars; ++v )
+   {
+      SCIP_VAR* var;
+
+      assert(linvars != NULL);  /* for lint */
+      assert(linvals != NULL);
+
+      var = linvars[v];
+      assert( var != NULL );
+
+      /* we start a new line; therefore we tab this line */
+      if( linecnt == 0 )
+         appendLine(scip, file, linebuffer, &linecnt, " ");
+
+      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+      (void) SCIPrationalToString(linvals[v], ratbuffer, LP_MAX_PRINTLEN);
+      if( !SCIPrationalIsNegative(linvals[v]) )
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, "+%s %s", ratbuffer, varname);
+      else
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, "%s %s", ratbuffer, varname);
+
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
+   }
+
+   (void) SCIPrationalToString(rhs, ratbuffer, LP_MAX_PRINTLEN);
+   (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %s", type, ratbuffer);
+
+   /* we start a new line; therefore we tab this line */
+   if( linecnt == 0 )
+      appendLine(scip, file, linebuffer, &linecnt, " ");
+   appendLine(scip, file, linebuffer, &linecnt, buffer);
+
+   endLine(scip, file, linebuffer, &linecnt);
+
+   return SCIP_OKAY;
 }
 
 
@@ -3246,7 +4148,7 @@ void checkVarnames(
    {
       if( strlen(SCIPvarGetName(vars[v])) > LP_MAX_NAMELEN )  /*lint !e613*/
       {
-         SCIPwarningMessage(scip, "there is a variable name which has to be cut down to %d characters; LP might be corrupted\n", 
+         SCIPwarningMessage(scip, "there is a variable name which has to be cut down to %d characters; LP might be corrupted\n",
             LP_MAX_NAMELEN - 1);
          return;
       }
@@ -3401,6 +4303,9 @@ SCIP_RETCODE SCIPincludeReaderLp(
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyLp) );
@@ -3564,8 +4469,9 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_Real ub;
 
    SCIP_Bool zeroobj;
-
-   assert(scip != NULL);
+   int implintlevel;
+   int nintegers = nvars - ncontvars;
+   assert(nintegers >= 0);
 
    /* find indicator constraint handler */
    conshdlrInd = SCIPfindConshdlr(scip, "indicator");
@@ -3628,6 +4534,11 @@ SCIP_RETCODE SCIPwriteLp(
    checkVarnames(scip, vars, nvars);
    /* check if the constraint names are to long */
    checkConsnames(scip, conss, nconss, transformed);
+
+   /* adjust written integrality constraints on implied integral variables based on the implied integral level */
+   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
+   assert(implintlevel >= -2);
+   assert(implintlevel <= 2);
 
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "\\ SCIP STATISTICS\n");
@@ -3948,6 +4859,30 @@ SCIP_RETCODE SCIPwriteLp(
             SCIPinfoMessage(scip, file, ";\n");
          }
       }
+      else if(strcmp(conshdlrname, "exactlinear") == 0 )
+      {
+         if( SCIPrationalIsEQ(SCIPgetRhsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) )
+         {
+            SCIP_CALL( printRowExact(scip, file, consname, "_", "=",
+               SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
+               SCIPgetNVarsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) );
+         }
+         else
+         {
+            if( !SCIPrationalIsNegInfinity(SCIPgetLhsExactLinear(scip, cons)) )
+            {
+               SCIP_CALL( printRowExact(scip, file, consname, "_lhs", ">=",
+                  SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
+                  SCIPgetNVarsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) );
+            }
+            if( !SCIPrationalIsInfinity(SCIPgetRhsExactLinear(scip, cons)) )
+            {
+               SCIP_CALL( printRowExact(scip, file, consname,  "_rhs", "<=",
+                  SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
+                  SCIPgetNVarsExactLinear(scip, cons), SCIPgetRhsExactLinear(scip, cons)) );
+            }
+         }
+      }
       else
       {
          SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
@@ -4082,74 +5017,118 @@ SCIP_RETCODE SCIPwriteLp(
    }
 
    /* print binaries section */
-   if( nbinvars > 0 )
    {
-      SCIPinfoMessage(scip, file, "Binaries\n");
-
-      clearLine(linebuffer, &linecnt);
+      SCIP_Bool initial = TRUE;
 
       /* output active variables */
-      for( v = 0; v < nvars; ++v )
+      for( v = 0; v < nintegers; ++v )
       {
          var = vars[v];
-         assert( var != NULL );
 
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+            continue;
+
+         if( initial )
          {
-            (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIPinfoMessage(scip, file, "Binaries\n");
+            initial = FALSE;
          }
+
+         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
       /* possibly output aggregated variables */
       for( v = 0; v < naggvars; ++v )
       {
          var = aggvars[v];
-         assert( var != NULL );
 
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+            continue;
+
+         if( initial )
          {
-            (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIPinfoMessage(scip, file, "Binaries\n");
+            initial = FALSE;
          }
+
+         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
       endLine(scip, file, linebuffer, &linecnt);
    }
 
    /* print generals section */
-   if( nintvars > 0 )
    {
-      SCIPinfoMessage(scip, file, "Generals\n");
+      SCIP_Bool initial = TRUE;
 
       /* output active variables */
-      for( v = 0; v < nvars; ++v )
+      for( v = nbinvars; v < nintegers; ++v )
       {
          var = vars[v];
-         assert( var != NULL );
 
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+         switch( SCIPvarGetType(var) )
          {
-            (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            case SCIP_VARTYPE_BINARY:
+               continue;
+            case SCIP_VARTYPE_INTEGER:
+               if( (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+                  continue;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               if( (int)SCIPvarGetImplType(var) <= 2 - implintlevel )
+                  continue;
+               break;
+            default:
+               SCIPerrorMessage("unknown variable type\n");
+               return SCIP_INVALIDDATA;
+         } /*lint !e788*/
+
+         if( initial )
+         {
+            SCIPinfoMessage(scip, file, "Generals\n");
+            initial = FALSE;
          }
+
+         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
       /* possibly output aggregated variables */
       for( v = 0; v < naggvars; ++v )
       {
          var = aggvars[v];
-         assert( var != NULL );
 
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+         switch( SCIPvarGetType(var) )
          {
-            (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            case SCIP_VARTYPE_BINARY:
+               continue;
+            case SCIP_VARTYPE_INTEGER:
+               if( (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+                  continue;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               if( (int)SCIPvarGetImplType(var) <= 2 - implintlevel )
+                  continue;
+               break;
+            default:
+               SCIPerrorMessage("unknown variable type\n");
+               return SCIP_INVALIDDATA;
+         } /*lint !e788*/
+
+         if( initial )
+         {
+            SCIPinfoMessage(scip, file, "Generals\n");
+            initial = FALSE;
          }
+
+         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
       endLine(scip, file, linebuffer, &linecnt);

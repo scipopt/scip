@@ -3419,7 +3419,7 @@ void computeIntegerVariableBoundsDins(
    lbglobal = SCIPvarGetLbGlobal(var);
    ubglobal = SCIPvarGetUbGlobal(var);
 
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(var));
    /* get the current LP solution for each variable */
    lpsol = SCIPvarGetLPSol(var);
 
@@ -4031,6 +4031,9 @@ SCIP_RETCODE SCIPincludeHeurAlns(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecAlns, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* include all neighborhoods */
    SCIP_CALL( includeNeighborhoods(scip, heurdata) );

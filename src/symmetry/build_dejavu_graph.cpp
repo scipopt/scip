@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   build_dejavu_graph.c
+/**@file   build_dejavu_graph.cpp
  * @brief  methods to build dejavu graph for symmetry detection
  * @author Christopher Hojny
  * @author Marc Pfetsch

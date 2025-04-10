@@ -721,7 +721,8 @@ SCIP_RETCODE setupAndSolveSubscipCrossover(
    /* permute the subproblem to increase diversification */
    if( heurdata->permute )
    {
-      SCIP_CALL( SCIPpermuteProb(subscip, SCIPinitializeRandomSeed(scip, (unsigned) SCIPheurGetNCalls(heur)), TRUE, TRUE, TRUE, TRUE, TRUE) );
+      SCIP_CALL( SCIPpermuteProb(subscip, SCIPinitializeRandomSeed(scip, (unsigned) SCIPheurGetNCalls(heur)), TRUE,
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    }
 
    /* catch LP events of sub-SCIP */
@@ -1057,6 +1058,9 @@ SCIP_RETCODE SCIPincludeHeurCrossover(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecCrossover, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyCrossover) );

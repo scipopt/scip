@@ -857,9 +857,7 @@ SCIP_RETCODE transformAndSolve(
             {
                if( SCIPisPositive(scip, row1valptr[i]) )
                {
-                  if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
-                      || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
-                      || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_IMPLINT )
+                  if( SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, idx1)) )
                      newbnd = SCIPceil(scip, (activity + row1valptr[i] * ubs[idx1]) / row1valptr[i]);
                   else
                      newbnd = (activity + row1valptr[i] * ubs[idx1]) / row1valptr[i];
@@ -877,9 +875,7 @@ SCIP_RETCODE transformAndSolve(
                else
                {
                   assert(SCIPisNegative(scip, row1valptr[i]));
-                  if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
-                      || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
-                      || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_IMPLINT )
+                  if( SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, idx1)) )
                      newbnd = SCIPfloor(scip, (activity + row1valptr[i] * lbs[idx1]) / row1valptr[i]);
                   else
                      newbnd = (activity + row1valptr[i] * lbs[idx1]) / row1valptr[i];
@@ -908,9 +904,7 @@ SCIP_RETCODE transformAndSolve(
             {
                if( SCIPisPositive(scip, row1valptr[i]) && SCIPisInfinity(scip, ubs[idx1]) )
                {
-                  if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
-                      || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
-                      || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_IMPLINT )
+                  if( SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, idx1)) )
                      newbnd = SCIPceil(scip, activity / row1valptr[i]);
                   else
                      newbnd = activity / row1valptr[i];
@@ -928,9 +922,7 @@ SCIP_RETCODE transformAndSolve(
                else if( SCIPisInfinity(scip, -lbs[idx1]) )
                {
                   assert(SCIPisNegative(scip, row1valptr[i]));
-                  if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
-                      || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
-                      || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_IMPLINT )
+                  if( SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, idx1)) )
                      newbnd = SCIPfloor(scip, activity / row1valptr[i]);
                   else
                      newbnd = activity / row1valptr[i];
@@ -983,9 +975,7 @@ SCIP_RETCODE transformAndSolve(
                {
                   if( SCIPisNegative(scip, row1valptr[i]) ) /* since we look at the swapped case, this represents a positive coefficient */
                   {
-                     if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
-                         || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
-                         || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_IMPLINT )
+                     if( SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, idx1)) )
                         newbnd = SCIPceil(scip, (activity - row1valptr[i] * ubs[idx1]) / (-row1valptr[i]));
                      else
                         newbnd = (activity - row1valptr[i] * ubs[idx1]) / (-row1valptr[i]);
@@ -1004,9 +994,7 @@ SCIP_RETCODE transformAndSolve(
                   {
                      /* since we look at the swapped case, this represents a negative coefficient */
                      assert(SCIPisPositive(scip, row1valptr[i]));
-                     if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
-                         || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
-                         || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_IMPLINT )
+                     if( SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, idx1)) )
                         newbnd = SCIPfloor(scip, (activity - row1valptr[i] * lbs[idx1]) / (-row1valptr[i]));
                      else
                         newbnd = (activity - row1valptr[i] * lbs[idx1]) / (-row1valptr[i]);
@@ -1036,9 +1024,7 @@ SCIP_RETCODE transformAndSolve(
                   /* since we look at the swapped case, this represents a positive coefficient */
                   if( SCIPisNegative(scip, row1valptr[i]) && SCIPisInfinity(scip, ubs[idx1]) )
                   {
-                     if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
-                         || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
-                         || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_IMPLINT )
+                     if( SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, idx1)) )
                         newbnd = SCIPceil(scip, activity / (-row1valptr[i]));
                      else
                         newbnd = activity / (-row1valptr[i]);
@@ -1056,9 +1042,7 @@ SCIP_RETCODE transformAndSolve(
                   {
                      /* since we look at the swapped case, this represents a negative coefficient */
                      assert(SCIPisPositive(scip, row1valptr[i]));
-                     if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
-                         || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
-                         || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_IMPLINT )
+                     if( SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, idx1)) )
                         newbnd = SCIPfloor(scip, activity / (-row1valptr[i]));
                      else
                         newbnd = activity / (-row1valptr[i]);
@@ -1576,8 +1560,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
 
       var = SCIPmatrixGetVar(matrix, i);
 
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT
-         || (SCIPisEQ(scip, newlbs[i], SCIPceil(scip, newlbs[i])) && (SCIPisEQ(scip, newubs[i], SCIPfloor(scip, newubs[i])))));
+      assert(!SCIPvarIsNonimpliedIntegral(var)
+            || (SCIPisEQ(scip, newlbs[i], SCIPceil(scip, newlbs[i])) && SCIPisEQ(scip, newubs[i], SCIPfloor(scip, newubs[i]))));
 
       if( SCIPisEQ(scip, newlbs[i], newubs[i]) )
       {

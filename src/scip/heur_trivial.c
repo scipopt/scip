@@ -142,7 +142,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
          solval = (lb+ub)/2.0;
 
          /* if a tie occurs, roughly every third integer variable will be rounded up */
-         if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(vars[i]) )
             solval = i % 3 == 0 ? SCIPceil(scip,solval) : SCIPfloor(scip,solval);
 
          assert(SCIPisFeasLE(scip,SCIPvarGetLbLocal(vars[i]),solval) && SCIPisFeasLE(scip,solval,SCIPvarGetUbLocal(vars[i])));
@@ -249,6 +249,9 @@ SCIP_RETCODE SCIPincludeHeurTrivial(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTrivial, NULL) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTrivial) );

@@ -296,7 +296,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityXyz)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(isintegral != NULL);
+   assert(integrality != NULL);
 
    SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/

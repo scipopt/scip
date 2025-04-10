@@ -2078,7 +2078,7 @@ SCIP_RETCODE generateGMICuts(
 
          var = SCIPcolGetVar(cols[c]);
          /* if the column is non-continuous one */
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
          {
             frac = SCIPfeasFrac(scip, solvals[c]);
             frac = MIN(frac, 1.0 - frac);

@@ -230,7 +230,6 @@ SCIP_RETCODE selectRounding(
    SCIP_Real obj;
    SCIP_Real deltaobj;
    SCIP_Real bestdeltaobj;
-   SCIP_VARTYPE vartype;
    int nrowcols;
    int nlocks;
    int minnlocks;
@@ -255,8 +254,7 @@ SCIP_RETCODE selectRounding(
       col = rowcols[c];
       var = SCIPcolGetVar(col);
 
-      vartype = SCIPvarGetType(var);
-      if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
+      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
       {
          solval = SCIPgetSolVal(scip, sol, var);
 
@@ -377,7 +375,7 @@ SCIP_RETCODE selectEssentialRounding(
    for( v = 0; v < nlpcands; ++v )
    {
       var = lpcands[v];
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
       solval = SCIPgetSolVal(scip, sol, var);
       if( !SCIPisFeasIntegral(scip, solval) )
@@ -538,9 +536,9 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    SCIP_Real obj;
    SCIP_Real bestroundval;
    SCIP_Real minobj;
+   int nfrac;
    int nlpcands;
    int nlprows;
-   int nfrac;
    int nviolrows;
    int c;
    int r;
@@ -583,10 +581,9 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
 
    /* get fractional variables, that should be integral */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
-   nfrac = nlpcands;
 
    /* only call heuristic, if LP solution is fractional */
-   if( nfrac == 0 )
+   if( nlpcands == 0 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -594,9 +591,10 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    /* get LP rows */
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
 
-   SCIPdebugMsg(scip, "executing rounding heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
+   SCIPdebugMsg(scip, "executing rounding heuristic: %d LP rows, %d LP candidates\n", nlprows, nlpcands);
 
    /* get memory for activities, violated rows, and row violation positions */
+   nfrac = nlpcands;
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &violrows, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &violrowpos, nlprows) );
@@ -773,6 +771,9 @@ SCIP_RETCODE SCIPincludeHeurRounding(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecRounding, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyRounding) );

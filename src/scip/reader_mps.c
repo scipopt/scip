@@ -47,6 +47,7 @@
 #include "scip/cons_and.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_nonlinear.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -63,7 +64,9 @@
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/reader_mps.h"
+#include "scip/rational.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -154,7 +157,7 @@ struct SparseMatrix
 {
    SCIP_Real*            values;             /**< matrix element */
    SCIP_VAR**            columns;            /**< corresponding variables */
-   const char**          rows;               /**< corresponding constraint names */ 
+   const char**          rows;               /**< corresponding constraint names */
    int                   nentries;           /**< number of elements in the arrays */
    int                   sentries;           /**< number of slots in the arrays */
 };
@@ -494,6 +497,10 @@ SCIP_Bool mpsinputReadLine(
          if( (mpsi->buf[i] == '\t') || (mpsi->buf[i] == '\n') || (mpsi->buf[i] == '\r') )
             mpsi->buf[i] = BLANK;
 
+      /* remove trailing whitespace, for len < 14 check to succeed on forplan.mps again */
+      while( len > 0 && mpsi->buf[len-1] == BLANK )
+         --len;
+
       if( len < 80 )
          clearFrom(mpsi->buf, len);
 
@@ -544,10 +551,10 @@ SCIP_Bool mpsinputReadLine(
                || isdigit((unsigned char)mpsi->buf[32]) || isdigit((unsigned char)mpsi->buf[33])
                || isdigit((unsigned char)mpsi->buf[34]) || isdigit((unsigned char)mpsi->buf[35]);
 
-            /* len < 14 is handle ROW lines with embedded spaces
+            /* len < 14 is to handle ROW lines with embedded spaces
              * in the names correctly
              */
-            if( number || len < 14 )
+            if( number || (len < 14 && mpsi->section == MPS_ROWS) )
             {
                /* We assume fixed format, so we patch possible embedded spaces. */
                patchField(mpsi->buf,  4, 12);
@@ -897,7 +904,8 @@ SCIP_RETCODE readRows(
       {
          if( *mpsinputObjname(mpsi) == '\0' )
             mpsinputSetObjname(mpsi, mpsinputField2(mpsi));
-         else
+         else if( strcmp(mpsinputObjname(mpsi), mpsinputField2(mpsi)) != 0 )
+            /* if OBJNAME was given and N-row is named differently, then warn that the N-row is not used as objective (OBJNAME takes precedence) */
             mpsinputEntryIgnored(scip, mpsi, "row", mpsinputField2(mpsi), "objective function", "N", SCIP_VERBLEVEL_NORMAL);
       }
       else
@@ -947,6 +955,112 @@ SCIP_RETCODE readRows(
          }
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+         /* if the file is of type cor, then the constraint names must be stored */
+         SCIP_CALL( addConsNameToStorage(scip, consnames, consnamessize, nconsnames, mpsinputField2(mpsi)) );
+      }
+   }
+   mpsinputSyntaxerror(mpsi);
+
+   return SCIP_OKAY;
+}
+
+/** Process ROWS, USERCUTS, or LAZYCONS section. (exact version) */
+static
+SCIP_RETCODE readRowsExact(
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char***         consnames,          /**< storage for the constraint names, or NULL */
+   int*                  consnamessize,      /**< the size of the constraint names storage, or NULL */
+   int*                  nconsnames          /**< the number of stored constraint names, or NULL */
+   )
+{
+   SCIPdebugMsg(scip, "read rows\n");
+
+   while( mpsinputReadLine(mpsi) )
+   {
+      if( mpsinputField0(mpsi) != NULL )
+      {
+         if( !strcmp(mpsinputField0(mpsi), "ROWS") )
+            mpsinputSetSection(mpsi, MPS_ROWS);
+         else if( !strcmp(mpsinputField0(mpsi), "USERCUTS") )
+            mpsinputSetSection(mpsi, MPS_USERCUTS);
+         else if( !strcmp(mpsinputField0(mpsi), "LAZYCONS") )
+            mpsinputSetSection(mpsi, MPS_LAZYCONS);
+         else if( !strcmp(mpsinputField0(mpsi), "COLUMNS") )
+            mpsinputSetSection(mpsi, MPS_COLUMNS);
+         else
+            mpsinputSyntaxerror(mpsi);
+
+         return SCIP_OKAY;
+      }
+
+      if( *mpsinputField1(mpsi) == 'N' )
+      {
+         if( *mpsinputObjname(mpsi) == '\0' )
+            mpsinputSetObjname(mpsi, mpsinputField2(mpsi));
+         else
+            mpsinputEntryIgnored(scip, mpsi, "row", mpsinputField2(mpsi), "objective function", "N", SCIP_VERBLEVEL_NORMAL);
+      }
+      else
+      {
+         SCIP_RATIONAL* lhs;
+         SCIP_RATIONAL* rhs;
+         SCIP_CONS* cons;
+         SCIP_Bool initial;
+         SCIP_Bool separate;
+         SCIP_Bool enforce;
+         SCIP_Bool check;
+         SCIP_Bool propagate;
+         SCIP_Bool local;
+         SCIP_Bool modifiable;
+         SCIP_Bool dynamic;
+         SCIP_Bool removable;
+
+         cons = SCIPfindCons(scip, mpsinputField2(mpsi));
+         if( cons != NULL )
+            break;
+
+         initial = mpsi->initialconss && (mpsinputSection(mpsi) == MPS_ROWS);
+         separate = TRUE;
+         enforce = (mpsinputSection(mpsi) != MPS_USERCUTS);
+         check = (mpsinputSection(mpsi) != MPS_USERCUTS);
+         propagate = TRUE;
+         local = FALSE;
+         modifiable = FALSE;
+         dynamic = mpsi->dynamicconss;
+         removable = mpsi->dynamicrows || (mpsinputSection(mpsi) == MPS_USERCUTS);
+
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
+
+         switch(*mpsinputField1(mpsi))
+         {
+         case 'G' :
+            SCIPrationalSetInfinity(rhs);
+            SCIPrationalSetReal(lhs, 0.0);
+            break;
+         case 'E' :
+            SCIPrationalSetReal(rhs, 0.0);
+            SCIPrationalSetReal(lhs, 0.0);
+            break;
+         case 'L' :
+            SCIPrationalSetNegInfinity(lhs);
+            SCIPrationalSetReal(rhs, 0.0);
+            break;
+         default :
+            mpsinputSyntaxerror(mpsi);
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( SCIPcreateConsExactLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, lhs, rhs,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhs);
 
          /* if the file is of type cor, then the constraint names must be stored */
          SCIP_CALL( addConsNameToStorage(scip, consnames, consnamessize, nconsnames, mpsinputField2(mpsi)) );
@@ -1082,6 +1196,149 @@ SCIP_RETCODE readCols(
             }
          }
       }
+   }
+   mpsinputSyntaxerror(mpsi);
+
+   return SCIP_OKAY;
+}
+
+/** Process COLUMNS section. (exact version) */
+static
+SCIP_RETCODE readColsExact(
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char***         varnames,           /**< storage for the variable names, or NULL */
+   int*                  varnamessize,       /**< the size of the variable names storage, or NULL */
+   int*                  nvarnames           /**< the number of stored variable names, or NULL */
+   )
+{
+   char          colname[MPS_MAX_NAMELEN] = { '\0' };
+   SCIP_CONS*    cons;
+   SCIP_VAR*     var;
+   SCIP_RATIONAL* val;
+   SCIP_Bool     usevartable;
+
+   SCIPdebugMsg(scip, "read columns\n");
+
+   var = NULL;
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/usevartable", &usevartable) );
+
+   while( mpsinputReadLine(mpsi) )
+   {
+      if( mpsinputField0(mpsi) != 0 )
+      {
+         if( strcmp(mpsinputField0(mpsi), "RHS") )
+            break;
+
+         /* add the last variable to the problem */
+         if( var != NULL )
+         {
+            SCIP_CALL( SCIPaddVar(scip, var) );
+            SCIP_CALL( SCIPreleaseVar(scip, &var) );
+         }
+         assert(var == NULL);
+
+         mpsinputSetSection(mpsi, MPS_RHS);
+         return SCIP_OKAY;
+      }
+      if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL )
+         break;
+
+      /* new column? */
+      if( strcmp(colname, mpsinputField1(mpsi)) )
+      {
+         /* add the last variable to the problem */
+         if( var != NULL )
+         {
+            SCIP_CALL( SCIPaddVar(scip, var) );
+            SCIP_CALL( SCIPreleaseVar(scip, &var) );
+         }
+         assert(var == NULL);
+
+         (void)SCIPmemccpy(colname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+
+         /* check whether we have seen this variable before, this would not allowed */
+         if( usevartable && SCIPfindVar(scip, colname) != NULL )
+         {
+            SCIPerrorMessage("Coeffients of column <%s> don't appear consecutively (line: %d)\n",
+               colname, mpsi->lineno);
+
+            return SCIP_READERROR;
+         }
+
+         /* if the file type is a cor file, the the variable name must be stored */
+         SCIP_CALL( addVarNameToStorage(scip, varnames, varnamessize, nvarnames, colname) );
+
+         if( mpsinputIsInteger(mpsi) )
+         {
+            /* for integer variables, default bounds are 0 <= x < 1(not +infinity, like it is for continuous variables), and default cost is 0 */
+            SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
+                  !mpsi->dynamiccols, mpsi->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+         }
+         else
+         {
+            /* for continuous variables, default bounds are 0 <= x, and default cost is 0 */
+            SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
+                  !mpsi->dynamiccols, mpsi->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+         }
+         /* create exact data if we are in exact solving mode */
+         if( SCIPisExact(scip) )
+         {
+            SCIP_CALL( SCIPaddVarExactData(scip, var, NULL, NULL, NULL) );
+         }
+      }
+      assert(var != NULL);
+
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &val) );
+      SCIPrationalSetString(val, mpsinputField3(mpsi));
+      SCIPrationalCanonicalize(val);
+
+      if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
+      {
+         SCIP_CALL( SCIPchgVarObjExact(scip, var, val) );
+      }
+      else
+      {
+         cons = SCIPfindCons(scip, mpsinputField2(mpsi));
+         if( cons == NULL )
+            mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_FULL);
+         else if( !SCIPrationalIsZero(val) )
+         {
+            /* warn the user in case the coefficient is infinite */
+            if( SCIPrationalIsAbsInfinity(val) )
+            {
+               SCIPwarningMessage(scip, "Coefficient of variable <%s> in constraint <%s> contains infinite value <%e>,"
+                  " consider adjusting SCIP infinity.\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPrationalGetReal(val));
+            }
+            SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, var, val) );
+         }
+      }
+      if( mpsinputField5(mpsi) != NULL )
+      {
+         assert(mpsinputField4(mpsi) != NULL);
+
+         SCIPrationalSetString(val, mpsinputField5(mpsi));
+         SCIPrationalCanonicalize(val);
+
+         if( !strcmp(mpsinputField4(mpsi), mpsinputObjname(mpsi)) )
+         {
+            SCIP_CALL( SCIPchgVarObjExact(scip, var, val) );
+         }
+         else
+         {
+            cons = SCIPfindCons(scip, mpsinputField4(mpsi));
+            if( cons == NULL )
+            {
+               mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField4(mpsi), SCIP_VERBLEVEL_FULL);
+            }
+            else if( !SCIPrationalIsZero(val) )
+            {
+               SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, var, val) );
+            }
+         }
+      }
+      /* free rational buffer */
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &val);
    }
    mpsinputSyntaxerror(mpsi);
 
@@ -1235,6 +1492,161 @@ SCIP_RETCODE readRhs(
    return SCIP_OKAY;
 }
 
+/** Process RHS section (exact version). */
+static
+SCIP_RETCODE readRhsExact(
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   char        rhsname[MPS_MAX_NAMELEN] = { '\0' };
+   SCIP_CONS*  cons;
+   SCIP_Real   val;
+   SCIP_RATIONAL*   lhs;
+   SCIP_RATIONAL*   rhs;
+   SCIP_RATIONAL*   valexact;
+
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &valexact) );
+
+   SCIPdebugMsg(scip, "read right hand sides\n");
+
+   while( mpsinputReadLine(mpsi) )
+   {
+      if( mpsinputField0(mpsi) != NULL )
+      {
+         if( !strcmp(mpsinputField0(mpsi), "RANGES") )
+            mpsinputSetSection(mpsi, MPS_RANGES);
+         else if( !strcmp(mpsinputField0(mpsi), "BOUNDS") )
+            mpsinputSetSection(mpsi, MPS_BOUNDS);
+         else if( !strcmp(mpsinputField0(mpsi), "SOS") )
+            mpsinputSetSection(mpsi, MPS_SOS);
+         else if( !strcmp(mpsinputField0(mpsi), "QMATRIX") )
+            mpsinputSetSection(mpsi, MPS_QMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "QUADOBJ") )
+            mpsinputSetSection(mpsi, MPS_QUADOBJ);
+         else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
+            mpsinputSetSection(mpsi, MPS_QCMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+            mpsinputSetSection(mpsi, MPS_INDICATORS);
+         else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
+            mpsinputSetSection(mpsi, MPS_ENDATA);
+         else
+            break;
+
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &valexact);
+
+         return SCIP_OKAY;
+      }
+      if( (mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL)
+         || (mpsinputField4(mpsi) != NULL && mpsinputField5(mpsi) == NULL) )
+      {
+         SCIPwarningMessage(scip, "reading rhs section, a field is missing, assuming that the vector name is the missing one(, row identfier <%s>)\n", mpsinputField2(mpsi));
+
+         mpsinputInsertName(mpsi, "_RHS_", FALSE);
+      }
+
+      if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL )
+         break;
+
+      if( *rhsname == '\0' )
+	 (void)SCIPmemccpy(rhsname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+
+      if( !strcmp(rhsname, mpsinputField1(mpsi)) )
+      {
+         cons = SCIPfindCons(scip, mpsinputField2(mpsi));
+         if( cons == NULL )
+         {
+            /* the rhs of the objective row is treated as objective constant */
+            if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
+            {
+               val = atof(mpsinputField3(mpsi));
+               SCIP_CALL( SCIPaddOrigObjoffset(scip, -val) );
+            }
+            else
+               mpsinputEntryIgnored(scip, mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_NORMAL);
+         }
+         else
+         {
+            SCIPrationalSetString(valexact, mpsinputField3(mpsi));
+            SCIPrationalCanonicalize(valexact);
+
+            /* find out the row sense */
+            lhs = SCIPgetLhsExactLinear(scip, cons);
+            rhs = SCIPgetRhsExactLinear(scip, cons);
+            if( SCIPrationalIsNegInfinity(lhs) )
+            {
+               /* lhs = -infinity -> lower or equal */
+               assert(SCIPrationalIsZero(rhs));
+               SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, valexact) );
+            }
+            else if( SCIPrationalIsInfinity(rhs) )
+            {
+               /* rhs = +infinity -> greater or equal */
+               assert(SCIPrationalIsZero(lhs));
+               SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, valexact) );
+            }
+            else
+            {
+               /* lhs > -infinity, rhs < infinity -> equality */
+               assert(SCIPrationalIsZero(lhs));
+               assert(SCIPrationalIsZero(rhs));
+               SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, valexact) );
+               SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, valexact) );
+            }
+            SCIPrationalDebugMessage("RHS <%s> lhs: %q  rhs: %q  val: <%q>\n", mpsinputField2(mpsi), lhs, rhs, valexact);
+         }
+         if( mpsinputField5(mpsi) != NULL )
+         {
+            cons = SCIPfindCons(scip, mpsinputField4(mpsi));
+            if( cons == NULL )
+            {
+               /* the rhs of the objective row is treated as objective constant */
+               if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
+               {
+                  val = atof(mpsinputField3(mpsi));
+                  SCIP_CALL( SCIPaddOrigObjoffset(scip, -val) );
+               }
+               else
+                  mpsinputEntryIgnored(scip, mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField4(mpsi), SCIP_VERBLEVEL_NORMAL);
+            }
+            else
+            {
+               SCIPrationalSetString(valexact, mpsinputField5(mpsi));
+               SCIPrationalCanonicalize(valexact);
+
+               /* find out the row sense */
+               lhs = SCIPgetLhsExactLinear(scip, cons);
+               rhs = SCIPgetRhsExactLinear(scip, cons);
+               if( SCIPrationalIsNegInfinity(lhs) )
+               {
+                  /* lhs = -infinity -> lower or equal */
+                  assert(SCIPrationalIsZero(rhs));
+                  SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, valexact) );
+               }
+               else if( SCIPrationalIsInfinity(rhs) )
+               {
+                  /* rhs = +infinity -> greater or equal */
+                  assert(SCIPrationalIsZero(lhs));
+                  SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, valexact) );
+               }
+               else
+               {
+                  /* lhs > -infinity, rhs < infinity -> equality */
+                  assert(SCIPrationalIsZero(lhs));
+                  assert(SCIPrationalIsZero(rhs));
+                  SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, valexact) );
+                  SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, valexact) );
+               }
+               SCIPrationalDebugMessage("RHS <%s> lhs: %q  rhs: %q  val: <%q>\n", mpsinputField4(mpsi), lhs, rhs, valexact);
+            }
+         }
+      }
+   }
+   mpsinputSyntaxerror(mpsi);
+
+   return SCIP_OKAY;
+}
+
 /** Process RANGES section */
 static
 SCIP_RETCODE readRanges(
@@ -1375,6 +1787,165 @@ SCIP_RETCODE readRanges(
    return SCIP_OKAY;
 }
 
+/** Process RANGES section (exact version) */
+static
+SCIP_RETCODE readRangesExact(
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   char        rngname[MPS_MAX_NAMELEN] = { '\0' };
+   SCIP_CONS*  cons;
+   SCIP_RATIONAL*   lhs;
+   SCIP_RATIONAL*   rhs;
+   SCIP_RATIONAL*   val;
+
+   SCIPdebugMsg(scip, "read ranges\n");
+
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &val) );
+
+   while( mpsinputReadLine(mpsi) )
+   {
+      if( mpsinputField0(mpsi) != NULL )
+      {
+         if( !strcmp(mpsinputField0(mpsi), "BOUNDS") )
+            mpsinputSetSection(mpsi, MPS_BOUNDS);
+         else if( !strcmp(mpsinputField0(mpsi), "SOS") )
+            mpsinputSetSection(mpsi, MPS_SOS);
+         else if( !strcmp(mpsinputField0(mpsi), "QMATRIX") )
+            mpsinputSetSection(mpsi, MPS_QMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "QUADOBJ") )
+            mpsinputSetSection(mpsi, MPS_QUADOBJ);
+         else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
+            mpsinputSetSection(mpsi, MPS_QCMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+            mpsinputSetSection(mpsi, MPS_INDICATORS);
+         else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
+            mpsinputSetSection(mpsi, MPS_ENDATA);
+         else
+            break;
+
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &val);
+
+         return SCIP_OKAY;
+      }
+      if( (mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL)
+         || (mpsinputField4(mpsi) != NULL && mpsinputField5(mpsi) == NULL) )
+      {
+         SCIPwarningMessage(scip, "reading ranged section, a field is missing, assuming that the vector name is the missing one(, row identfier <%s>)\n", mpsinputField2(mpsi));
+
+         mpsinputInsertName(mpsi, "_RNG_", FALSE);
+      }
+
+      if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL )
+         break;
+
+      if( *rngname == '\0' )
+	 (void)SCIPmemccpy(rngname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+
+      /* The rules are:
+       * Row Sign   LHS             RHS
+       * ----------------------------------------
+       *  G   +/-   rhs             rhs + |range|
+       *  L   +/-   rhs - |range|   rhs
+       *  E   +     rhs             rhs + range
+       *  E   -     rhs + range     rhs
+       * ----------------------------------------
+       */
+      if( !strcmp(rngname, mpsinputField1(mpsi)) )
+      {
+         cons = SCIPfindCons(scip, mpsinputField2(mpsi));
+         if( cons == NULL )
+            mpsinputEntryIgnored(scip, mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_NORMAL);
+         else
+         {
+            SCIPrationalSetString(val, mpsinputField3(mpsi));
+            SCIPrationalCanonicalize(val);
+
+            /* find out the row sense */
+            lhs = SCIPgetLhsExactLinear(scip, cons);
+            rhs = SCIPgetRhsExactLinear(scip, cons);
+            if( SCIPrationalIsNegInfinity(lhs) )
+            {
+               /* lhs = -infinity -> lower or equal */
+               SCIPrationalAbs(val, val);
+               SCIPrationalDiff(val, rhs, val);
+               SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, val) );
+            }
+            else if( SCIPrationalIsInfinity(rhs) )
+            {
+               /* rhs = +infinity -> greater or equal */
+               SCIPrationalAbs(val, val);
+               SCIPrationalAdd(val, val, lhs);
+               SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, val) );
+            }
+            else
+            {
+               /* lhs > -infinity, rhs < infinity -> equality */
+               assert(SCIPrationalIsEQ(lhs, rhs));
+               if( !SCIPrationalIsNegative(val) )
+               {
+                  SCIPrationalAdd(val, val, rhs);
+                  SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, val) );
+               }
+               else
+               {
+                  SCIPrationalAdd(val, val, lhs);
+                  SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, val) );
+               }
+            }
+         }
+         if( mpsinputField5(mpsi) != NULL )
+         {
+            cons = SCIPfindCons(scip, mpsinputField4(mpsi));
+            if( cons == NULL )
+               mpsinputEntryIgnored(scip, mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField4(mpsi), SCIP_VERBLEVEL_NORMAL);
+            else
+            {
+               SCIPrationalSetString(val, mpsinputField5(mpsi));
+               SCIPrationalCanonicalize(val);
+
+               /* find out the row sense */
+               lhs = SCIPgetLhsExactLinear(scip, cons);
+               rhs = SCIPgetRhsExactLinear(scip, cons);
+               if( SCIPrationalIsNegInfinity(lhs) )
+               {
+                  /* lhs = -infinity -> lower or equal */
+                  SCIPrationalAbs(val, val);
+                  SCIPrationalDiff(val, rhs, val);
+                  SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, val) );
+               }
+               else if( SCIPrationalIsInfinity(rhs) )
+               {
+                  /* rhs = +infinity -> greater or equal */
+                  SCIPrationalAbs(val, val);
+                  SCIPrationalAdd(val, lhs, val);
+                  SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, val) );
+               }
+               else
+               {
+                  /* lhs > -infinity, rhs < infinity -> equality */
+                  assert(SCIPrationalIsEQ(lhs, rhs));
+                  if( !SCIPrationalIsNegative(val) )
+                  {
+                     SCIPrationalAdd(val, val, rhs);
+                     SCIP_CALL( SCIPchgRhsExactLinear(scip, cons, val) );
+                  }
+                  else
+                  {
+                     SCIPrationalAdd(val, val, lhs);
+                     SCIP_CALL( SCIPchgLhsExactLinear(scip, cons, val) );
+                  }
+               }
+            }
+         }
+      }
+   }
+   mpsinputSyntaxerror(mpsi);
+
+   return SCIP_OKAY;
+}
+
 /** Process BOUNDS section. */
 static
 SCIP_RETCODE readBounds(
@@ -1499,7 +2070,7 @@ SCIP_RETCODE readBounds(
          {
             SCIP_VAR* varcpy;
 
-            SCIP_CALL( SCIPcreateVar(scip, &var, mpsinputField3(mpsi), 0.0, SCIPinfinity(scip), 0.0, 
+            SCIP_CALL( SCIPcreateVar(scip, &var, mpsinputField3(mpsi), 0.0, SCIPinfinity(scip), 0.0,
                   SCIP_VARTYPE_CONTINUOUS, !mpsi->dynamiccols, mpsi->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
 
             SCIP_CALL( SCIPaddVar(scip, var) );
@@ -1516,15 +2087,16 @@ SCIP_RETCODE readBounds(
 
          /* remember variable type */
          oldvartype = SCIPvarGetType(var);
+         assert(!SCIPvarIsImpliedIntegral(var));
 
-         /* If a bound of a binary variable is given, the variable is converted into an integer variable
-          * with default bounds 0 <= x <= infinity before applying the bound. Note that integer variables
-          * are by default assumed to be binary, but an explicit lower bound of 0 turns them into integer variables.
-          * Only if the upper bound is explicitly set to 1, we leave the variable as a binary one.
+         /* convert into an integer variable with default bounds 0 <= x <= infinity if binary variable is not declared
+          * binary and not equipped with binary bounds, note that the default integer type is binary
           */
-         if( oldvartype == SCIP_VARTYPE_BINARY && !((mpsinputField1(mpsi)[0] == 'U' ||
-                  (mpsinputField1(mpsi)[0] == 'F' && mpsinputField1(mpsi)[1] == 'X')) && SCIPisFeasEQ(scip, val, 1.0))
-            && !(mpsinputField1(mpsi)[0] == 'F' && mpsinputField1(mpsi)[1] == 'X'&& SCIPisFeasEQ(scip, val, 0.0)) )
+         if( oldvartype == SCIP_VARTYPE_BINARY
+            && ( mpsinputField1(mpsi)[0] != 'B' || mpsinputField1(mpsi)[1] != 'V' )
+            && ( mpsinputField1(mpsi)[0] != 'U' || SCIPisFeasGT(scip, val, 1.0) )
+            && ( mpsinputField1(mpsi)[0] != 'F' || mpsinputField1(mpsi)[1] != 'X'
+            || SCIPisFeasNegative(scip, val) || SCIPisFeasGT(scip, val, 1.0) ) )
          {
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
             assert(!infeasible);
@@ -1538,7 +2110,6 @@ SCIP_RETCODE readBounds(
           */
          if( oldvartype != SCIP_VARTYPE_CONTINUOUS )
          {
-            assert(SCIP_VARTYPE_CONTINUOUS >= SCIP_VARTYPE_IMPLINT && SCIP_VARTYPE_IMPLINT >= SCIP_VARTYPE_INTEGER && SCIP_VARTYPE_INTEGER >= SCIP_VARTYPE_BINARY); /*lint !e506*//*lint !e1564*/
             /* relaxing variable type */
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
          }
@@ -1651,11 +2222,14 @@ SCIP_RETCODE readBounds(
          case 'P':
             SCIP_CALL( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
             break;
-         case 'B' : /* CPLEX extension (Binary) */
-            SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
-            SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
-            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
-            /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+         case 'B':
+            if( oldvartype != SCIP_VARTYPE_BINARY )
+            {
+               SCIP_CALL( SCIPtightenVarLb(scip, var, 0.0, TRUE, &infeasible, NULL) );
+               SCIP_CALL( SCIPtightenVarUb(scip, var, 1.0, TRUE, &infeasible, NULL) );
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
+               /* presolving detects infeasibility */
+            }
             break;
          default:
             mpsinputSyntaxerror(mpsi);
@@ -1745,6 +2319,351 @@ SCIP_RETCODE readBounds(
    return SCIP_OKAY;
 }
 
+/** Process BOUNDS section. */
+static
+SCIP_RETCODE readBoundsExact(
+   MPSINPUT*             mpsi,               /**< mps input structure */
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   char        bndname[MPS_MAX_NAMELEN] = { '\0' };
+   SCIP_VAR*   var;
+   SCIP_RETCODE retcode;
+   SCIP_RATIONAL*   val;
+   SCIP_Bool   shifted;
+
+   SCIP_VAR** semicont;
+   int nsemicont;
+   int semicontsize;
+
+   retcode = SCIP_OKAY;
+
+   semicont = NULL;
+   nsemicont = 0;
+   semicontsize = 0;
+
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &val) );
+
+   SCIPdebugMsg(scip, "read bounds\n");
+
+   while( mpsinputReadLine(mpsi) )
+   {
+      if( mpsinputField0(mpsi) != 0 )
+      {
+         if( !strcmp(mpsinputField0(mpsi), "SOS") )
+            mpsinputSetSection(mpsi, MPS_SOS);
+         else if( !strcmp(mpsinputField0(mpsi), "QMATRIX") )
+            mpsinputSetSection(mpsi, MPS_QMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "QUADOBJ") )
+            mpsinputSetSection(mpsi, MPS_QUADOBJ);
+         else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
+            mpsinputSetSection(mpsi, MPS_QCMATRIX);
+         else if( !strcmp(mpsinputField0(mpsi), "INDICATORS") )
+            mpsinputSetSection(mpsi, MPS_INDICATORS);
+         else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
+            mpsinputSetSection(mpsi, MPS_ENDATA);
+         else
+            break;
+         goto READBOUNDS_FINISH;
+      }
+
+      shifted = FALSE;
+
+      /* Is the value field used ? */
+      if( !strcmp(mpsinputField1(mpsi), "LO")  /* lower bound given in field 4 */
+         || !strcmp(mpsinputField1(mpsi), "UP")  /* upper bound given in field 4 */
+         || !strcmp(mpsinputField1(mpsi), "FX")  /* fixed value given in field 4 */
+         || !strcmp(mpsinputField1(mpsi), "LI")  /* CPLEX extension: lower bound of integer variable given in field 4 */
+         || !strcmp(mpsinputField1(mpsi), "UI")  /* CPLEX extension: upper bound of integer variable given in field 4 */
+         || !strcmp(mpsinputField1(mpsi), "SC")  /* CPLEX extension: semi-continuous variable, upper bound given in field 4 */
+         || !strcmp(mpsinputField1(mpsi), "SI") )/* CPLEX extension: semi-integer variable, upper bound given in field 4 */
+      {
+         if( mpsinputField3(mpsi) != NULL && mpsinputField4(mpsi) == NULL )
+         {
+            int l;
+
+            /* check what might be missing, if field 3 is a number the bound name might be missing */
+            for( l = (int) strlen(mpsinputField3(mpsi)) - 1; l >= 0; --l )
+            {
+               if( mpsinputField3(mpsi)[l] != '.' && !isdigit(mpsinputField3(mpsi)[l]) )
+                  break;
+            }
+
+            /* the bound name?! is missing */
+            if( l < 0 )
+            {
+               SCIPwarningMessage(scip, "in bound section a name for value <%s> might be missing\n", mpsinputField3(mpsi));
+
+               mpsinputInsertName(mpsi, "_BND_", TRUE);
+               shifted = TRUE;
+            }
+            /* the bound is be missing */
+            else
+            {
+               SCIPwarningMessage(scip, "in bound section a value for column <%s> is missing, assuming 0.0\n", mpsinputField3(mpsi));
+
+               mpsinputInsertField4(mpsi, "0.0");
+               shifted = TRUE;
+            }
+         }
+      }
+      else if( !strcmp(mpsinputField1(mpsi), "FR") /* free variable */
+         || !strcmp(mpsinputField1(mpsi), "MI")    /* lower bound is minus infinity */
+         || !strcmp(mpsinputField1(mpsi), "PL")    /* upper bound is plus infinity */
+         || !strcmp(mpsinputField1(mpsi), "BV") )  /* CPLEX extension: binary variable */
+      {
+         if( mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL )
+         {
+            SCIPwarningMessage(scip, "in bound section a name for a column is missing\n");
+
+            mpsinputInsertName(mpsi, "_BND_", TRUE);
+            shifted = TRUE;
+         }
+      }
+      else
+      {
+         mpsinputSyntaxerror(mpsi);
+         return SCIP_OKAY;
+      }
+
+      if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL )
+         break;
+
+      if( *bndname == '\0' )
+	 (void)SCIPmemccpy(bndname, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+
+      /* Only read the first Bound in section */
+      if( !strcmp(bndname, mpsinputField2(mpsi)) )
+      {
+         SCIP_VARTYPE oldvartype;
+         SCIP_Bool infeasible;
+
+         var = SCIPfindVar(scip, mpsinputField3(mpsi));
+         /* if variable did not appear in columns section before, then it may still come in later sections (QCMATRIX, QMATRIX, SOS, ...)
+          * thus add it as continuous variables, which has default bounds 0.0 <= x, and default cost 0.0 */
+         if( var == NULL )
+         {
+            SCIP_VAR* varcpy;
+
+            SCIP_CALL( SCIPcreateVar(scip, &var, mpsinputField3(mpsi), 0.0, SCIPinfinity(scip), 0.0,
+                  SCIP_VARTYPE_CONTINUOUS, !mpsi->dynamiccols, mpsi->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+
+            SCIP_CALL( SCIPaddVarExactData(scip, var, NULL, NULL, NULL) );
+
+            SCIP_CALL( SCIPaddVar(scip, var) );
+            varcpy = var;
+            SCIP_CALL( SCIPreleaseVar(scip, &varcpy) );
+            /* mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField3(mpsi), "bound", bndname, SCIP_VERBLEVEL_NORMAL); */
+         }
+         assert(var != NULL);
+
+         if( mpsinputField4(mpsi) == NULL )
+            SCIPrationalSetReal(val, 0.0);
+         else
+         {
+            SCIPrationalSetString(val, mpsinputField4(mpsi));
+            SCIPrationalCanonicalize(val);
+         }
+
+         /* remember variable type */
+         oldvartype = SCIPvarGetType(var);
+         assert(!SCIPvarIsImpliedIntegral(var));
+
+         /* convert into an integer variable with default bounds 0 <= x <= infinity if binary variable is not declared
+          * binary and not equipped with binary bounds, note that the default integer type is binary
+          */
+         if( oldvartype == SCIP_VARTYPE_BINARY
+            && ( mpsinputField1(mpsi)[0] != 'B' || mpsinputField1(mpsi)[1] != 'V' )
+            && ( mpsinputField1(mpsi)[0] != 'U' || SCIPrationalIsGTReal(val, 1.0) )
+            && ( mpsinputField1(mpsi)[0] != 'F' || mpsinputField1(mpsi)[1] != 'X'
+            || SCIPrationalIsNegative(val) || SCIPrationalIsGTReal(val, 1.0) ) )
+         {
+            SCIP_RATIONAL* tmp;
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+            assert(!infeasible);
+
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
+            SCIPrationalSetInfinity(tmp);
+
+            oldvartype =  SCIP_VARTYPE_INTEGER;
+
+            SCIP_CALL( SCIPchgVarUbExact(scip, var, tmp) );
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
+         }
+
+         /* switch variable type to continuous before applying the bound, this is necessary for stupid non-integral
+          * bounds on general variables, which even might lead to infeasibility
+          */
+         if( oldvartype != SCIP_VARTYPE_CONTINUOUS )
+         {
+            /* relaxing variable type */
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+         }
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+
+         switch( mpsinputField1(mpsi)[0] )
+         {
+         case 'L':
+            if( !SCIPrationalIsZero(SCIPvarGetLbGlobalExact(var)) && SCIPrationalIsLT(val, SCIPvarGetLbGlobalExact(var)) )
+            {
+               SCIPwarningMessage(scip, "Relaxing already defined lower bound (%.14g) of variable <%s> to (%.14g) not allowed.\n", SCIPvarGetLbGlobal(var), SCIPvarGetName(var), SCIPrationalGetReal(val));
+            }
+
+            SCIP_CALL( SCIPchgVarLbExact(scip, var, val) );
+
+            if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
+            {
+               if( !SCIPrationalIsIntegral(val) )
+               {
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalGetReal(val));
+               }
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+               /* don't assert feasibility here because the presolver will and should detect a infeasibility */
+            }
+            else if( oldvartype < SCIP_VARTYPE_CONTINUOUS )
+            {
+               if( !SCIPrationalIsIntegral(val) )
+               {
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral lower bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalGetReal(val));
+               }
+            }
+
+            break;
+         case 'U':
+            if( SCIPrationalIsGT(val, SCIPvarGetUbGlobalExact(var)) )
+            {
+               SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), SCIPrationalGetReal(val));
+            }
+
+            SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
+            if( mpsinputField1(mpsi)[1] == 'I' ) /* CPLEX extension (Integer Bound) */
+            {
+               if( !SCIPrationalIsIntegral(val) )
+               {
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalGetReal(val));
+               }
+
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+               /* don't assert feasibility here because the presolver will and should detect an infeasibility */
+            }
+            else if( oldvartype < SCIP_VARTYPE_CONTINUOUS )
+            {
+               if( !SCIPrationalIsIntegral(val) )
+               {
+                  SCIPwarningMessage(scip, "variable <%s> declared as integral has a non-integral upper bound (%.14g) -> if feasible, bounds will be adjusted\n", SCIPvarGetName(var), SCIPrationalGetReal(val));
+               }
+            }
+            break;
+         case 'S':
+            assert(mpsinputField1(mpsi)[1] == 'C' || mpsinputField1(mpsi)[1] == 'I'); /* semi-continuous or semi-integer (CPLEX extension) */
+            /* remember that variable is semi-continuous/-integer */
+            if( semicontsize <= nsemicont )
+            {
+               semicontsize = SCIPcalcMemGrowSize(scip, nsemicont+1);
+               if( semicont == NULL )
+               {
+                  SCIP_CALL( SCIPallocBufferArray(scip, &semicont, semicontsize) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &semicont, semicontsize) );
+               }
+            }
+            assert(semicont != NULL);
+            semicont[nsemicont] = var;
+            ++nsemicont;
+
+            if( mpsinputField1(mpsi)[1] == 'I' ) /* variable is semi-integer, hence change its type to integer (the "semi" part will be handled below) */
+            {
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+               /* don't assert feasibility here because the presolver will and should detect an infeasibility */
+            }
+
+            /* if both bounds are infinite anyway, we do not need to print a warning or change the bound */
+            if( !SCIPrationalIsInfinity(val) || !SCIPrationalIsInfinity(SCIPvarGetUbGlobalExact(var)) )
+            {
+               if( SCIPrationalIsGT(val, SCIPvarGetUbGlobalExact(var)) )
+               {
+                  SCIPwarningMessage(scip, "Relaxing already defined upper bound %g of variable <%s> to %g not allowed.\n", SCIPvarGetUbGlobal(var), SCIPvarGetName(var), SCIPrationalGetReal(val));
+               }
+
+               SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
+            }
+            break;
+         case 'F':
+            if( mpsinputField1(mpsi)[1] == 'X' )
+            {
+               SCIP_CALL( SCIPchgVarLbExact(scip, var, val) );
+               SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
+            }
+            else
+            {
+               SCIPrationalSetNegInfinity(val);
+               SCIP_CALL( SCIPchgVarLbExact(scip, var, val) );
+               SCIPrationalSetInfinity(val);
+               SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
+            }
+            break;
+         case 'M':
+            SCIPrationalSetNegInfinity(val);
+            SCIP_CALL( SCIPchgVarLbExact(scip, var, val) );
+            break;
+         case 'P':
+            SCIPrationalSetInfinity(val);
+            SCIP_CALL( SCIPchgVarUbExact(scip, var, val) );
+            break;
+         case 'B':
+            if( oldvartype != SCIP_VARTYPE_BINARY )
+            {
+               SCIPrationalSetReal(val, 0.0);
+               SCIP_CALL( SCIPtightenVarLbExact(scip, var, val, &infeasible, NULL) );
+               SCIPrationalSetReal(val, 1.0);
+               SCIP_CALL( SCIPtightenVarUbExact(scip, var, val, &infeasible, NULL) );
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
+               /* presolving detects infeasibility */
+            }
+            break;
+         default:
+            mpsinputSyntaxerror(mpsi);
+            return SCIP_OKAY;
+         }
+
+         /* switch variable type back to old type if necessary */
+         if( oldvartype < SCIPvarGetType(var) )
+         {
+            SCIP_CALL( SCIPchgVarType(scip, var, oldvartype, &infeasible) );
+         }
+      }
+      else
+      {
+         /* check for syntax error */
+         assert(*bndname != '\0');
+         if( strcmp(bndname, mpsinputField3(mpsi)) == 0 && shifted )
+         {
+            mpsinputSyntaxerror(mpsi);
+            return SCIP_OKAY;
+         }
+
+         mpsinputEntryIgnored(scip, mpsi, "bound", mpsinputField2(mpsi), "variable", mpsinputField3(mpsi), SCIP_VERBLEVEL_NORMAL);
+      }
+   }
+   mpsinputSyntaxerror(mpsi);
+
+ READBOUNDS_FINISH:
+   if( nsemicont > 0 )
+   {
+      SCIPerrorMessage("Exact solving mode cannot handle semicontinous variables at the moment \n");
+      SCIPABORT();
+   }
+
+   SCIPfreeBufferArrayNull(scip, &semicont);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &val);
+
+   SCIP_CALL( retcode );
+
+   return SCIP_OKAY;
+}
+
 
 /** Process SOS section.
  *
@@ -1782,6 +2701,12 @@ SCIP_RETCODE readSOS(
    local = FALSE;
    dynamic = mpsi->dynamicconss;
    removable = mpsi->dynamicrows;
+
+   if( SCIPisExact(scip) )
+   {
+      SCIPerrorMessage("Exact solving mode cannot handle SOS constraints currently \n");
+      return SCIP_READERROR;
+   }
 
    /* loop through section */
    while( mpsinputReadLine(mpsi) )
@@ -1898,14 +2823,14 @@ SCIP_RETCODE readSOS(
             assert( consType == 1 || consType == 2 );
             switch( consType )
             {
-            case 1: 
+            case 1:
                SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) );
                break;
-            case 2: 
+            case 2:
                SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) );
                break;
             /* coverity[dead_error_begin] */
-            default: 
+            default:
                SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
                SCIPABORT();
                return SCIP_INVALIDDATA;  /*lint !e527*/
@@ -1961,6 +2886,12 @@ SCIP_RETCODE readQMatrix(
    int size;     /* size of quad* arrays */
 
    SCIPdebugMsg(scip, "read %s objective\n", isQuadObj ? "QUADOBJ" : "QMATRIX");
+
+   if( SCIPisExact(scip) )
+   {
+      SCIPerrorMessage("Exact solving mode cannot handle QMatrix constraints currently \n");
+      return SCIP_READERROR;
+   }
 
    retcode = SCIP_OKAY;
 
@@ -2180,6 +3111,12 @@ SCIP_RETCODE readQCMatrix(
       return SCIP_OKAY;
    }
 
+   if( SCIPisExact(scip) )
+   {
+      SCIPerrorMessage("Exact solving mode cannot handle QCMatrix constraints currently \n");
+      return SCIP_READERROR;
+   }
+
    retcode = SCIP_OKAY;
 
    SCIPdebugMsg(scip, "read QCMATRIX section for row <%s>\n", mpsinputField1(mpsi));
@@ -2361,6 +3298,12 @@ SCIP_RETCODE readIndicators(
    char name[MPS_MAX_NAMELEN] = { '\0' };
 
    SCIPdebugMsg(scip, "read INDICATORS constraints\n");
+
+   if( SCIPisExact(scip) )
+   {
+      SCIPerrorMessage("Exact solving mode cannot handle indicator constraints currently \n");
+      return SCIP_READERROR;
+   }
 
    /* standard settings for indicator constraints: */
    initial = mpsi->initialconss;
@@ -2615,6 +3558,131 @@ SCIP_RETCODE readMps(
    if( mpsinputSection(mpsi) == MPS_BOUNDS )
    {
       SCIP_CALL_TERMINATE( retcode, readBounds(mpsi, scip), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_SOS )
+   {
+      SCIP_CALL_TERMINATE( retcode, readSOS(mpsi, scip), TERMINATE );
+   }
+   while( mpsinputSection(mpsi) == MPS_QCMATRIX )
+   {
+      SCIP_CALL_TERMINATE( retcode, readQCMatrix(mpsi, scip), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_QMATRIX )
+   {
+      SCIP_CALL_TERMINATE( retcode, readQMatrix(mpsi, FALSE, scip), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_QUADOBJ )
+   {
+      SCIP_CALL_TERMINATE( retcode, readQMatrix(mpsi, TRUE, scip), TERMINATE );
+   }
+   while( mpsinputSection(mpsi) == MPS_QCMATRIX )
+   {
+      SCIP_CALL_TERMINATE( retcode, readQCMatrix(mpsi, scip), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_INDICATORS )
+   {
+      SCIP_CALL_TERMINATE( retcode, readIndicators(mpsi, scip), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) != MPS_ENDATA )
+      mpsinputSyntaxerror(mpsi);
+
+   SCIPfclose(fp);
+
+   error = mpsinputHasError(mpsi);
+
+   if( !error )
+   {
+      SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
+   }
+
+ TERMINATE:
+   mpsinputFree(scip, &mpsi);
+
+   if( error )
+      return SCIP_READERROR;
+   else
+      return SCIP_OKAY;
+}
+
+/** Read LP in "MPS File Format" (version for exact solving mode, numbers can also be rationals).
+ *
+ *  A specification of the MPS format can be found at
+ *
+ *  http://plato.asu.edu/ftp/mps_format.txt,
+ *  ftp://ftp.caam.rice.edu/pub/people/bixby/miplib/mps_format,
+ *
+ *  and in the
+ *
+ *  CPLEX Reference Manual
+ *
+ *  This routine should read all valid MPS format files.
+ *  What it will not do, is to find all cases where a file is ill formed.
+ *  If this happens it may complain and read nothing or read "something".
+ */
+static
+SCIP_RETCODE readMpsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< name of the input file */
+   const char***         varnames,           /**< storage for the variable names, or NULL */
+   const char***         consnames,          /**< storage for the constraint names, or NULL */
+   int*                  varnamessize,       /**< the size of the variable names storage, or NULL */
+   int*                  consnamessize,      /**< the size of the constraint names storage, or NULL */
+   int*                  nvarnames,          /**< the number of stored variable names, or NULL */
+   int*                  nconsnames          /**< the number of stored constraint names, or NULL */
+   )
+{
+   SCIP_FILE* fp;
+   MPSINPUT* mpsi;
+   SCIP_RETCODE retcode;
+   SCIP_Bool error = TRUE;
+
+   assert(scip != NULL);
+   assert(filename != NULL);
+   assert(SCIPisExact(scip));
+
+   fp = SCIPfopen(filename, "r");
+   if( fp == NULL )
+   {
+      SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
+      SCIPprintSysError(filename);
+      return SCIP_NOFILE;
+   }
+
+   SCIP_CALL( mpsinputCreate(scip, &mpsi, fp) );
+
+   SCIP_CALL_TERMINATE( retcode, readName(scip, mpsi), TERMINATE );
+
+   SCIP_CALL_TERMINATE( retcode, SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL), TERMINATE );
+
+   if( mpsinputSection(mpsi) == MPS_OBJSEN )
+   {
+      SCIP_CALL_TERMINATE( retcode, readObjsen(scip, mpsi), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_OBJNAME )
+   {
+      SCIP_CALL_TERMINATE( retcode, readObjname(scip, mpsi), TERMINATE );
+   }
+   while( mpsinputSection(mpsi) == MPS_ROWS
+      || mpsinputSection(mpsi) == MPS_USERCUTS
+      || mpsinputSection(mpsi) == MPS_LAZYCONS )
+   {
+      SCIP_CALL_TERMINATE( retcode, readRowsExact(mpsi, scip, consnames, consnamessize, nconsnames), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_COLUMNS )
+   {
+      SCIP_CALL_TERMINATE( retcode, readColsExact(mpsi, scip, varnames, varnamessize, nvarnames), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_RHS )
+   {
+      SCIP_CALL_TERMINATE( retcode, readRhsExact(mpsi, scip), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_RANGES )
+   {
+      SCIP_CALL_TERMINATE( retcode, readRangesExact(mpsi, scip), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_BOUNDS )
+   {
+      SCIP_CALL_TERMINATE( retcode, readBoundsExact(mpsi, scip), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_SOS )
    {
@@ -2939,7 +4007,7 @@ SCIP_RETCODE getLinearCoeffs(
    /* if the variables array contains no variables, then return without
     * doing any thing; The MPS format and LP format do not forbid this
     * situation */
-   if( nvars == 0 ) 
+   if( nvars == 0 )
       return SCIP_OKAY;
 
    /* duplicate variable and value array */
@@ -3078,7 +4146,7 @@ SCIP_RETCODE checkVarnames(
    int                   nvars,              /**< number of variables */
    unsigned int*         maxnamelen,         /**< pointer to store the maximum name length */
    const char***         varnames,           /**< pointer to array of variable names */
-   SCIP_HASHMAP**        varnameHashmap      /**< pointer to hash map storing variable, variable name mapping */      
+   SCIP_HASHMAP**        varnameHashmap      /**< pointer to hash map storing variable, variable name mapping */
    )
 {
    int v;
@@ -3239,6 +4307,40 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** returns whether to print an integrality constraint for the given variable */
+static
+SCIP_Bool writeVarIsIntegral(
+   SCIP_VAR*             var,                /**< variable to check */
+   int                   implintlevel        /**< implied integral level */
+   )
+{
+   assert(implintlevel >= -2);
+   assert(implintlevel <= 2);
+
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      return (int)SCIPvarGetImplType(var) > 2 - implintlevel;
+   else
+      return (int)SCIPvarGetImplType(var) <= 2 + implintlevel;
+}
+
+/** template implementation of mpsIntComp for given implied integral level */
+#define MPSINTCOMP_LEVEL(IMPLINTLEVEL) \
+{ \
+   SCIP_Bool integral1 = writeVarIsIntegral((SCIP_VAR*)elem1, IMPLINTLEVEL); \
+   SCIP_Bool integral2 = writeVarIsIntegral((SCIP_VAR*)elem2, IMPLINTLEVEL); \
+   \
+   if( integral1 != integral2 ) \
+      return integral1 ? -1 : +1; \
+   \
+   return SCIPvarComp(elem1, elem2); \
+}
+
+/* comparison methods for sorting variables along their original indices grouping integer variables at the front */
+static SCIP_DECL_SORTPTRCOMP(mpsIntCompM2) MPSINTCOMP_LEVEL(-2)
+static SCIP_DECL_SORTPTRCOMP(mpsIntCompM1) MPSINTCOMP_LEVEL(-1)
+static SCIP_DECL_SORTPTRCOMP(mpsIntCompZ)  MPSINTCOMP_LEVEL(0)
+static SCIP_DECL_SORTPTRCOMP(mpsIntCompP1) MPSINTCOMP_LEVEL(1)
+static SCIP_DECL_SORTPTRCOMP(mpsIntCompP2) MPSINTCOMP_LEVEL(2)
 
 /** outputs the COLUMNS section of the MPS format */
 static
@@ -3248,7 +4350,8 @@ void printColumnSection(
    SPARSEMATRIX*         matrix,             /**< sparse matrix containing the entries */
    SCIP_HASHMAP*         varnameHashmap,     /**< map from SCIP_VAR* to variable name */
    SCIP_HASHTABLE*       indicatorSlackHash, /**< hashtable containing slack variables from indicators (or NULL) */
-   unsigned int          maxnamelen          /**< maximum name length */
+   unsigned int          maxnamelen,         /**< maximum name length */
+   int                   implintlevel        /**< implied integral level */
    )
 {
    SCIP_Bool intSection;
@@ -3258,8 +4361,29 @@ void printColumnSection(
    int v;
    int recordcnt;
 
-   /* sort sparse matrix w.r.t. the variable indices */
-   SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, SCIPvarComp, matrix->nentries);
+   /* @todo: create column matrix instead of sort sparse entries */
+   /* sort sparse matrix w.r.t. the written integralities and variable indices */
+   switch( implintlevel )
+   {
+      case -2:
+         SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, mpsIntCompM2, matrix->nentries);
+         break;
+      case -1:
+         SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, mpsIntCompM1, matrix->nentries);
+         break;
+      case 0:
+         SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, mpsIntCompZ, matrix->nentries);
+         break;
+      case 1:
+         SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, mpsIntCompP1, matrix->nentries);
+         break;
+      case 2:
+         SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, mpsIntCompP2, matrix->nentries);
+         break;
+      default:
+         SCIPerrorMessage("invalid implintlevel\n");
+         SCIPABORT();
+   }
 
    /* print COLUMNS section */
    SCIPinfoMessage(scip, file, "COLUMNS\n");
@@ -3278,23 +4402,27 @@ void printColumnSection(
          continue;
       }
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && intSection )
+      /* section integer variables */
+      if( writeVarIsIntegral(var, implintlevel) != intSection )
       {
          /* end integer section in MPS format */
-         printStart(scip, file, "", "INTEND", (int) maxnamelen);
-         printRecord(scip, file, "'MARKER'", "", maxnamelen);
-         printRecord(scip, file, "'INTEND'", "", maxnamelen);
-         SCIPinfoMessage(scip, file, "\n");
-         intSection = FALSE;
-      }
-      else if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !intSection )
-      {
+         if( intSection )
+         {
+            printStart(scip, file, "", "INTEND", (int) maxnamelen);
+            printRecord(scip, file, "'MARKER'", "", maxnamelen);
+            printRecord(scip, file, "'INTEND'", "", maxnamelen);
+            SCIPinfoMessage(scip, file, "\n");
+            intSection = FALSE;
+         }
          /* start integer section in MPS format */
-         printStart(scip, file, "", "INTSTART", (int) maxnamelen);
-         printRecord(scip, file, "'MARKER'", "", maxnamelen);
-         printRecord(scip, file, "'INTORG'", "", maxnamelen);
-         SCIPinfoMessage(scip, file, "\n");
-         intSection = TRUE;
+         else
+         {
+            printStart(scip, file, "", "INTSTART", (int) maxnamelen);
+            printRecord(scip, file, "'MARKER'", "", maxnamelen);
+            printRecord(scip, file, "'INTORG'", "", maxnamelen);
+            SCIPinfoMessage(scip, file, "\n");
+            intSection = TRUE;
+         }
       }
 
       SCIPdebugMsg(scip, "create entries for variable <%s>\n", SCIPvarGetName(var));
@@ -3330,7 +4458,6 @@ void printColumnSection(
       SCIPinfoMessage(scip, file, "\n");
    }
 }
-
 
 /** outputs the right hand side section */
 static
@@ -3373,7 +4500,6 @@ void printRhsSection(
    if( recordcnt == 1 )
       SCIPinfoMessage(scip, file, "\n");
 }
-
 
 /** outputs the range section */
 static
@@ -3790,6 +4916,9 @@ SCIP_RETCODE SCIPincludeReaderMps(
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
 
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
+
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyMps) );
    SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeMps) );
@@ -3830,7 +4959,10 @@ SCIP_RETCODE SCIPreadMps(
    assert(scip != NULL);
    assert(result != NULL);
 
-   retcode = readMps(scip, filename, varnames, consnames, varnamessize, consnamessize, nvarnames, nconsnames);
+   if( !SCIPisExact(scip) )
+      retcode = readMps(scip, filename, varnames, consnames, varnamessize, consnamessize, nvarnames, nconsnames);
+   else
+      retcode = readMpsExact(scip, filename, varnames, consnames, varnamessize, consnamessize, nvarnames, nconsnames);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;
@@ -3925,6 +5057,7 @@ SCIP_RETCODE SCIPwriteMps(
 
    SCIP_Bool needRANGES;
    unsigned int maxnamelen;
+   int implintlevel;
 
    SCIP_Bool error;
 
@@ -3932,6 +5065,9 @@ SCIP_RETCODE SCIPwriteMps(
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   /* get implied integral level for writeVarIsIntegral() and printColumnSection() */
+   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
 
    needRANGES = FALSE;
    maxnamelen = 0;
@@ -4063,11 +5199,12 @@ SCIP_RETCODE SCIPwriteMps(
       var = vars[v];
       value = SCIPvarGetObj(var);
 
+      /* @todo: only add entry for empty column */
       /* we also want to add integer variables to the columns section, even if the objective value is 0, because it
        * might happen that they only exist in non-linear constraints, which leads to no other line in the column section
        * and therefore do not mark the variable as an integer
        */
-      if( !SCIPisZero(scip, value) || SCIPvarGetType(var) < SCIP_VARTYPE_IMPLINT
+      if( !SCIPisZero(scip, value) || writeVarIsIntegral(var, implintlevel)
          || ((SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0)
             && (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0)) )
       {
@@ -4673,7 +5810,7 @@ SCIP_RETCODE SCIPwriteMps(
    }
 
    /* output COLUMNS section */
-   printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen);
+   printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen, implintlevel);
 
    /* output RHS section */
    printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen, objscale * objoffset);

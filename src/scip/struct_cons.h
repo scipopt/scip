@@ -280,6 +280,7 @@ struct SCIP_Conshdlr
    SCIP_Bool             sepalpwasdelayed;   /**< was the LP separation method delayed at the last call? */
    SCIP_Bool             sepasolwasdelayed;  /**< was the SOL separation method delayed at the last call? */
    SCIP_Bool             propwasdelayed;     /**< was the propagation method delayed at the last call? */
+   SCIP_Bool             exact;              /**< is constraint handler safe to be used in exact solving mode? */
    SCIP_Bool             initialized;        /**< is constraint handler initialized? */
    SCIP_Bool             duringsepa;         /**< is the constraint handler currently performing separation? */
    SCIP_Bool             duringprop;         /**< is the constraint handler currently performing propagation? */

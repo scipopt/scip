@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   compute_symmetry_dejavu.c
+/**@file   compute_symmetry_dejavu.cpp
  * @brief  interface for symmetry computations to dejavu
  * @author Marc Pfetsch
  */

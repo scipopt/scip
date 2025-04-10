@@ -347,6 +347,8 @@ BEGIN {
    infeasobjlimit = 0;
    reoptimization = 0;
    niter = 0;
+   certified = 0;
+   certified_ori = 0;
 }
 
 /@03/ {
@@ -533,15 +535,28 @@ BEGIN {
    inoriginalprob = 0;
 }
 /^  Variables        :/ {
+   #With SCIP 10, the print changed to reflect the new variable types.
+   #We accept both logs from before and after
    if( inoriginalprob )
       origvars = $3;
    else
    {
-      vars = $3;
-      intvars = $6;
-      implvars = $8;
-      contvars = $11;
-      binvars = vars - intvars - implvars - contvars;
+      if( $9 == "continuous)" )
+      {
+         vars = $3;
+         intvars = $6;
+         contvars = $8;
+         implvars = 0;
+         binvars = vars - intvars - contvars;
+      }
+      else
+      {
+         vars = $3;
+         intvars = $6;
+         implvars = $8;
+         contvars = $11;
+         binvars = vars - intvars - implvars - contvars;
+      }
    }
 }
 /^  Constraints      :/ {
@@ -790,6 +805,18 @@ BEGIN {
 }
 /^==[0-9]*==    possibly lost:/    {
    valgrindleaks += $4
+}
+#
+# vipr check
+#
+/^(Successfully verified|Infeasibility verified.)/           {
+   certified = 1;
+}
+/^presolving detected infeasibility/           {
+   certified = 1;
+}
+/^Successfully checked solution for feasibility/           {
+   certified_ori = 1;
 }
 #
 # solver status overview (in order of priority):
@@ -1089,6 +1116,11 @@ BEGIN {
       {
          setStatusToFail("fail (solution infeasible)");
       }
+      else if( certified && certified_ori )
+      {
+         status = "ok (vipr-verified)";
+         pass++;
+      }
       else if( !feasible && !isLimitReached() && solstatus[prob] != "inf" && solstatus[prob] != "unkn" )
       {
          # SCIP terminated properly but could not find a feasible solution -> assume that it proved infeasibility
@@ -1336,7 +1368,7 @@ BEGIN {
             modelstat = 8;
             solverstat = 1;
          }
-         else if( status == "ok" || status == "solved not verified" )
+         else if( status == "ok" || status == "solved not verified" || status == "ok (vipr-verified)" )
          {
             modelstat = 1;
             solverstat = 1;

@@ -42,6 +42,7 @@
 #include "scip/intervalarith.h"
 #include "scip/pub_message.h"
 #include "scip/misc.h"
+#include "scip/rational.h"
 
 /* Inform compiler that this code accesses the floating-point environment, so that
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
@@ -427,6 +428,18 @@ void SCIPintervalSet(
 
    resultant->inf = value;
    resultant->sup = value;
+}
+
+/** stores given value as interval */
+void SCIPintervalSetRational(
+   SCIP_INTERVAL*        resultant,          /**< interval to store value into */
+   SCIP_RATIONAL*        value               /**< value to store */
+   )
+{
+   assert(resultant != NULL);
+
+   resultant->inf = SCIPrationalRoundReal(value, SCIP_R_ROUND_DOWNWARDS);
+   resultant->sup = SCIPrationalRoundReal(value, SCIP_R_ROUND_UPWARDS);
 }
 
 /** stores given infimum and supremum as interval */
@@ -2656,6 +2669,14 @@ void SCIPintervalMax(
 
    resultant->inf = MAX(operand1.inf, operand2.inf);
    resultant->sup = MAX(operand1.sup, operand2.sup);
+}
+
+/** returns the maximum of the absolute values of the infimum and supremum of the interval */
+SCIP_Real SCIPintervalAbsMax(
+   SCIP_INTERVAL         interval            /**< interval */
+   )
+{
+   return MAX(ABS(interval.sup), ABS(interval.inf));
 }
 
 /** stores absolute value of operand in resultant */

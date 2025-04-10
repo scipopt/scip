@@ -40,16 +40,19 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-
 #include "lpi/lpi.h"
+#include "lpiexact/lpiexact.h"
 #include "scip/clock.h"
+#include "scip/certificate.h"
 #include "scip/cons.h"
 #include "scip/event.h"
 #include "scip/intervalarith.h"
 #include "scip/lp.h"
+#include "scip/lpexact_bounding.h"
 #include "scip/misc.h"
 #include "scip/prob.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_lpexact.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
@@ -60,6 +63,7 @@
 #include "scip/stat.h"
 #include "scip/struct_event.h"
 #include "scip/struct_lp.h"
+#include "scip/struct_lpexact.h"
 #include "scip/struct_prob.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
@@ -401,6 +405,7 @@ SCIP_RETCODE lpStoreSolVals(
    storedsolvals->dualchecked = lp->dualchecked;
    storedsolvals->solisbasic = lp->solisbasic;
    storedsolvals->lpissolved = lp->solved;
+   storedsolvals->hasprovedboundexact = lp->hasprovedbound;
 
    return SCIP_OKAY;
 }
@@ -432,8 +437,9 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->dualfeasible = storedsolvals->dualfeasible;
       lp->dualchecked = storedsolvals->dualchecked;
       lp->solisbasic = storedsolvals->solisbasic;
+      lp->hasprovedbound = storedsolvals->hasprovedboundexact;
 
-      /* solution values are stored only for LPs solved to optimality or unboundedness */
+      /* solution values are stored only for LPs solved without error */
       assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||
          lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY ||
          lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
@@ -774,7 +780,65 @@ void checkRowObjprod(
  * Local methods for pseudo and loose objective values
  */
 
-/* recompute the loose objective value from scratch, if it was marked to be unreliable before */
+/** recompute the pseudo solution value from scratch, if it was marked to be unreliable before
+ *
+ *  Safe version for use in exact SCIP.
+ */
+static
+void recomputeSafeLooseObjectiveValue(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_INTERVAL obj;
+   SCIP_INTERVAL bnd;
+   SCIP_INTERVAL res;
+   SCIP_INTERVAL prod;
+   int nvars;
+   int v;
+
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(set->exact_enable);
+
+   vars = prob->vars;
+   nvars = prob->nvars;
+
+   SCIPintervalSet(&res, 0.0);
+
+   /* iterate over all variables in the problem */
+   for( v = 0; v < nvars; ++v )
+   {
+      if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_LOOSE )
+      {
+         SCIPintervalSetRational(&obj, SCIPvarGetObjExact(vars[v]));
+
+         /* we are only interested in variables with a finite impact, because the infinity counters should be correct */
+         if( obj.sup > 0 && !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
+         {
+            SCIPintervalSet(&bnd, SCIPvarGetLbLocal(vars[v]));
+            SCIPintervalMul(SCIPsetInfinity(set), &prod, obj, bnd);
+            SCIPintervalAdd(SCIPsetInfinity(set), &res, res, prod);
+         }
+         else if( obj.inf < 0 && !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
+         {
+            SCIPintervalSet(&bnd, SCIPvarGetUbLocal(vars[v]));
+            SCIPintervalMul(SCIPsetInfinity(set), &prod, obj, bnd);
+            SCIPintervalAdd(SCIPsetInfinity(set), &res, res, prod);
+         }
+      }
+   }
+
+   /* the recomputed value is reliable */
+   lp->looseobjval = SCIPintervalGetInf(res);
+   lp->rellooseobjval = lp->looseobjval;
+   lp->looseobjvalid = TRUE;
+}
+
+/** recompute the loose objective value from scratch, if it was marked to be unreliable before */
 static
 void recomputeLooseObjectiveValue(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -796,6 +860,12 @@ void recomputeLooseObjectiveValue(
    nvars = prob->nvars;
    lp->looseobjval = 0.0;
 
+   if( set->exact_enable )
+   {
+      recomputeSafeLooseObjectiveValue(lp, set, prob);
+      return;
+   }
+
    /* iterate over all variables in the problem */
    for( v = 0; v < nvars; ++v )
    {
@@ -816,7 +886,63 @@ void recomputeLooseObjectiveValue(
    lp->looseobjvalid = TRUE;
 }
 
-/* recompute the pseudo solution value from scratch, if it was marked to be unreliable before */
+/** recompute the pseudo solution value from scratch, if it was marked to be unreliable before
+ *
+ *  Safe version for use in exact SCIP.
+ */
+static
+void recomputeSafePseudoObjectiveValue(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_INTERVAL obj;
+   SCIP_INTERVAL bnd;
+   SCIP_INTERVAL res;
+   SCIP_INTERVAL prod;
+   int nvars;
+   int v;
+
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(!lp->pseudoobjvalid);
+   assert(set->exact_enable);
+
+   vars = prob->vars;
+   nvars = prob->nvars;
+
+   SCIPintervalSet(&res, 0.0);
+
+   /* iterate over all variables in the problem */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIPintervalSetRational(&obj, SCIPvarGetObjExact(vars[v]));
+
+      /* we are only interested in variables with a finite impact, because the infinity counters should be correct */
+      if( obj.sup > 0 && !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
+      {
+         SCIPintervalSet(&bnd, SCIPvarGetLbLocal(vars[v]));
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, obj, bnd);
+         SCIPintervalAdd(SCIPsetInfinity(set), &res, res, prod);
+      }
+      else if( obj.inf < 0 && !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
+      {
+         SCIPintervalSet(&bnd, SCIPvarGetUbLocal(vars[v]));
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, obj, bnd);
+         SCIPintervalAdd(SCIPsetInfinity(set), &res, res, prod);
+      }
+   }
+
+   /* the recomputed value is reliable */
+   lp->pseudoobjval = SCIPintervalGetInf(res);
+   lp->relpseudoobjval = lp->pseudoobjval;
+   lp->pseudoobjvalid = TRUE;
+}
+
+/** recompute the pseudo solution value from scratch, if it was marked to be unreliable before */
 static
 void recomputePseudoObjectiveValue(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -837,17 +963,21 @@ void recomputePseudoObjectiveValue(
    nvars = prob->nvars;
    lp->pseudoobjval = 0.0;
 
+   if( set->exact_enable )
+   {
+      recomputeSafePseudoObjectiveValue(lp, set, prob);
+      return;
+   }
+
    /* iterate over all variables in the problem */
    for( v = 0; v < nvars; ++v )
    {
       /* we are only interested in variables with a finite impact, because the infinity counters should be correct */
-      if( SCIPsetIsPositive(set, SCIPvarGetObj(vars[v])) &&
-         !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
+      if( SCIPsetIsPositive(set, SCIPvarGetObj(vars[v])) && !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
       {
          lp->pseudoobjval += SCIPvarGetObj(vars[v]) * SCIPvarGetLbLocal(vars[v]);
       }
-      else if( SCIPsetIsNegative(set, SCIPvarGetObj(vars[v])) &&
-         !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
+      else if( SCIPsetIsNegative(set, SCIPvarGetObj(vars[v])) && !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
       {
          lp->pseudoobjval += SCIPvarGetObj(vars[v]) * SCIPvarGetUbLocal(vars[v]);
       }
@@ -858,7 +988,7 @@ void recomputePseudoObjectiveValue(
    lp->pseudoobjvalid = TRUE;
 }
 
-/* recompute the global pseudo solution value from scratch, if it was marked to be unreliable before */
+/** recompute the global pseudo solution value from scratch, if it was marked to be unreliable before */
 static
 void recomputeGlbPseudoObjectiveValue(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -883,13 +1013,11 @@ void recomputeGlbPseudoObjectiveValue(
    for( v = 0; v < nvars; ++v )
    {
       /* we are only interested in variables with a finite impact, because the infinity counters should be correct */
-      if( SCIPsetIsPositive(set, SCIPvarGetObj(vars[v])) &&
-         !SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(vars[v])) )
+      if( SCIPsetIsPositive(set, SCIPvarGetObj(vars[v])) && !SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(vars[v])) )
       {
          lp->glbpseudoobjval += SCIPvarGetObj(vars[v]) * SCIPvarGetLbGlobal(vars[v]);
       }
-      else if( SCIPsetIsNegative(set, SCIPvarGetObj(vars[v])) &&
-         !SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(vars[v])) )
+      else if( SCIPsetIsNegative(set, SCIPvarGetObj(vars[v])) && !SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(vars[v])) )
       {
          lp->glbpseudoobjval += SCIPvarGetObj(vars[v]) * SCIPvarGetUbGlobal(vars[v]);
       }
@@ -1480,7 +1608,7 @@ SCIP_RETCODE rowEventCoefChanged(
    /* check, if the row is being tracked for coefficient changes
     * if so, issue ROWCOEFCHANGED event
     */
-   if( (row->eventfilter->len > 0 && (row->eventfilter->eventmask & SCIP_EVENTTYPE_ROWCOEFCHANGED) != 0) )
+   if( (row->eventfilter->len > 0 && (row->eventfilter->eventmask & SCIP_EVENTTYPE_ROWCOEFCHANGED) != 0) ) /*lint !e587*/
    {
       SCIP_EVENT* event;
 
@@ -1739,7 +1867,8 @@ SCIP_RETCODE colAddCoef(
    }
 
    /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
-   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+   if( !set->exact_enable )
+      val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
 
    /* insert the row at the correct position and update the links */
    col->rows[pos] = row;
@@ -1879,7 +2008,8 @@ SCIP_RETCODE colChgCoefPos(
      col->vals[pos], col->rows[pos]->name, pos, SCIPvarGetName(col->var), val);*/
 
    /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
-   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+   if( !set->exact_enable )
+      val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
 
    if( SCIPsetIsZero(set, val) )
    {
@@ -2090,7 +2220,8 @@ SCIP_RETCODE rowAddCoef(
    }
 
    /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
-   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+   if( !set->exact_enable )
+      val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
 
    /* insert the column at the correct position and update the links */
    row->cols[pos] = col;
@@ -2098,6 +2229,8 @@ SCIP_RETCODE rowAddCoef(
    row->vals[pos] = val;
    row->linkpos[pos] = linkpos;
    row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
+   if( set->exact_enable )
+      row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPrealIsExactlyIntegral(val);
    if( linkpos == -1 )
    {
       row->nunlinked++;
@@ -2219,7 +2352,6 @@ SCIP_RETCODE rowDelCoefPos(
    if( pos < row->nlpcols )
    {
       rowMoveCoef(row, row->nlpcols-1, pos);
-      assert(!row->lpcolssorted);
       row->nlpcols--;
       pos = row->nlpcols;
    }
@@ -2266,7 +2398,8 @@ SCIP_RETCODE rowChgCoefPos(
    }
 
    /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
-   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+   if( !set->exact_enable )
+      val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
    col = row->cols[pos];
    assert(row->cols[pos] != NULL);
 
@@ -2275,7 +2408,7 @@ SCIP_RETCODE rowChgCoefPos(
       /* delete existing coefficient */
       SCIP_CALL( rowDelCoefPos(row, blkmem, set, eventqueue, lp, pos) );
    }
-   else if( !SCIPsetIsEQ(set, row->vals[pos], val) )
+   else if( !SCIPsetIsEQ(set, row->vals[pos], val) || (set->exact_enable && row->vals[pos] != val) ) /*lint !e777*/
    {
       SCIP_Real oldval;
 
@@ -2285,6 +2418,8 @@ SCIP_RETCODE rowChgCoefPos(
       rowDelNorms(row, set, col, row->vals[pos], FALSE, FALSE, TRUE);
       row->vals[pos] = val;
       row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
+      if( set->exact_enable )
+         row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPrealIsExactlyIntegral(val);
       rowAddNorms(row, set, col, row->vals[pos], TRUE);
       coefChanged(row, col, lp);
 
@@ -2643,7 +2778,7 @@ SCIP_RETCODE lpCheckRealpar(
 #endif
 
 /** should the objective limit of the LP solver be disabled */
-#define lpCutoffDisabled(set, prob, lp) (set->lp_disablecutoff == 1 || (set->lp_disablecutoff == 2 && !SCIPprobAllColsInLP(prob, set, lp)) || set->misc_exactsolve)
+#define lpCutoffDisabled(set, prob, lp) (set->lp_disablecutoff == 1 || (set->lp_disablecutoff == 2 && !SCIPprobAllColsInLP(prob, set, lp)))
 
 /** sets the objective limit of the LP solver
  *
@@ -2665,7 +2800,7 @@ SCIP_RETCODE lpSetObjlim(
    *success = FALSE;
 
    /* if the objective limit is disabled or SCIP infinity, make sure that the LP objective limit is deactivated by
-    * setting it to the LP-solver infinity
+    * setting it to the LP solver's infinity
     */
    if( lpCutoffDisabled(set, prob, lp) || SCIPsetIsInfinity(set, objlim) )
       objlim = SCIPlpiInfinity(lp->lpi);
@@ -2696,6 +2831,67 @@ SCIP_RETCODE lpSetObjlim(
 
    return SCIP_OKAY;
 }
+
+/** adjust the objective limit of the lp solver to make safe dual bounding possible
+ *
+ *  Note that we are always minimizing.
+ */
+static
+SCIP_RETCODE lpAdjustObjlimForExactSolve(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was actually changed */
+   )
+{
+   SCIP_Real adjustedobjlim;
+   SCIP_Real avgboundingerror;
+
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* we disabled the objective limit in the LP solver or we are not in exact solving mode */
+   if( !set->exact_enable || lpCutoffDisabled(set, prob, lp) )
+      return SCIP_OKAY;
+
+   /* no need to adjust in infinity case */
+   if( SCIPsetIsInfinity(set, lp->lpiobjlim) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( lpCheckRealpar(lp, SCIP_LPPAR_OBJLIM, lp->lpiobjlim) );
+
+   if( stat->nboundshift + stat->nprojshift + stat->nexlp == 0 )
+      avgboundingerror = 1.0;
+   else
+      avgboundingerror = (stat->boundingerrorbs + stat->boundingerrorps + stat->boundingerrorexlp) / (stat->nboundshift + stat->nprojshift + stat->nexlp);
+   adjustedobjlim = lp->lpiobjlim + MAX(avgboundingerror, 1e-6);
+
+   SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_OBJLIM, adjustedobjlim, success) );
+   if( *success )
+   {
+      SCIP_Real actualobjlim;
+
+      /* check whether the parameter was actually changed or already was at the boundary of the LP solver's parameter range */
+      SCIP_CALL( SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_OBJLIM, &actualobjlim) );
+      if( actualobjlim != lp->lpiobjlim ) /*lint !e777*/
+      {
+         /* mark the current solution invalid */
+         lp->solved = FALSE;
+         lp->primalfeasible = FALSE;
+         lp->primalchecked = FALSE;
+         lp->lpobjval = SCIP_INVALID;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      }
+      lp->lpiobjlim = actualobjlim;
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** sets the feasibility tolerance of the LP solver */
 static
@@ -3360,6 +3556,7 @@ SCIP_RETCODE SCIPcolCreate(
    (*col)->ubchanged = FALSE;
    (*col)->coefchanged = FALSE;
    (*col)->integral = SCIPvarIsIntegral(var);
+   (*col)->impliedintegral = SCIPvarIsImpliedIntegral(var);
    (*col)->removable = removable;
    (*col)->sbdownvalid = FALSE;
    (*col)->sbupvalid = FALSE;
@@ -5050,7 +5247,11 @@ SCIP_RETCODE rowScale(
          }
       }
       else
+      {
          row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
+         if( set->exact_enable )
+            row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPrealIsExactlyIntegral(val);
+      }
 
       ++c;
    }
@@ -5154,7 +5355,7 @@ SCIP_RETCODE SCIProwCreate(
          var = cols[i]->var;
          (*row)->cols_index[i] = cols[i]->index;
          (*row)->linkpos[i] = -1;
-         if( SCIPsetIsIntegral(set, (*row)->vals[i]) )
+         if( SCIPsetIsIntegral(set, (*row)->vals[i]) && !set->exact_enable )
          {
             (*row)->vals[i] = SCIPsetRound(set, (*row)->vals[i]);
             (*row)->integral = (*row)->integral && SCIPvarIsIntegral(var);
@@ -5231,6 +5432,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->removable = removable;
    (*row)->inglobalcutpool = FALSE;
    (*row)->storedsolvals = NULL;
+   (*row)->rowexact = NULL;
 
    /* calculate row norms and min/maxidx, and check if row is sorted */
    rowCalcNorms(*row, set);
@@ -5287,6 +5489,16 @@ SCIP_RETCODE SCIProwFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->cols_index, (*row)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->vals, (*row)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->linkpos, (*row)->size);
+
+   if( (*row)->rowexact != NULL )
+   {
+      if( *row == (*row)->rowexact->fprow )
+         (*row)->rowexact->fprow = NULL;
+      else
+         (*row)->rowexact->fprowrhs = NULL;
+      SCIP_CALL( SCIProwExactRelease(&(*row)->rowexact, blkmem, set, lp->lpexact) );
+   }
+
    BMSfreeBlockMemory(blkmem, row);
 
    return SCIP_OKAY;
@@ -5363,6 +5575,7 @@ SCIP_RETCODE SCIProwRelease(
    (*row)->nuses--;
    if( (*row)->nuses == 0 )
    {
+      SCIP_CALL( SCIPcertificateFreeRowInfo(set->scip, (*row)) );
       SCIP_CALL( SCIProwFree(row, blkmem, set, lp) );
    }
 
@@ -5672,7 +5885,7 @@ SCIP_RETCODE SCIProwChgLhs(
    assert(row != NULL);
    assert(lp != NULL);
 
-   if( !SCIPsetIsEQ(set, row->lhs, lhs) )
+   if( !SCIPsetIsEQ(set, row->lhs, lhs) || (set->exact_enable && row->lhs != lhs) ) /*lint !e777*/
    {
       SCIP_Real oldlhs;
 
@@ -5704,7 +5917,7 @@ SCIP_RETCODE SCIProwChgRhs(
    assert(row != NULL);
    assert(lp != NULL);
 
-   if( !SCIPsetIsEQ(set, row->rhs, rhs) )
+   if( !SCIPsetIsEQ(set, row->rhs, rhs) || (set->exact_enable && row->rhs != rhs) ) /*lint !e777*/
    {
       SCIP_Real oldrhs;
 
@@ -6098,9 +6311,12 @@ void rowMerge(
             if( !SCIPsetIsZero(set, vals[t]) )
             {
                /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
-               vals[t] = SCIPsetIsIntegral(set, vals[t]) ? SCIPsetRound(set, vals[t]) : vals[t];
+               if( !set->exact_enable )
+                  vals[t] = SCIPsetIsIntegral(set, vals[t]) ? SCIPsetRound(set, vals[t]) : vals[t];
 
                row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
+               if( set->exact_enable )
+                  row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPrealIsExactlyIntegral(vals[t]);
                t++;
             }
             cols[t] = cols[s];
@@ -6111,6 +6327,8 @@ void rowMerge(
       if( !SCIPsetIsZero(set, vals[t]) )
       {
          row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
+         if( set->exact_enable )
+            row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPrealIsExactlyIntegral(vals[t]);
          t++;
       }
       assert(s == row->len);
@@ -6163,6 +6381,15 @@ void SCIProwForceSort(
 
    row->delaysort = FALSE;
    rowMerge(row, set);
+}
+
+/** recalculates norms of a row */
+void SCIProwRecalcNorms(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   rowCalcNorms(row, set);
 }
 
 /** recalculates the current activity of a row */
@@ -9176,6 +9403,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->divelpwasprimchecked = TRUE;
    (*lp)->divelpwasdualfeas = TRUE;
    (*lp)->divelpwasdualchecked = TRUE;
+   (*lp)->hasprovedbound = FALSE;
    (*lp)->divechgsides = NULL;
    (*lp)->divechgsidetypes = NULL;
    (*lp)->divechgrows = NULL;
@@ -9207,6 +9435,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpitiming = (int) set->time_clocktype;
    (*lp)->lpirandomseed = set->random_randomseed;
    (*lp)->storedsolvals = NULL;
+   (*lp)->lpexact = NULL;
 
    /* allocate arrays for diving */
    SCIP_CALL( allocDiveChgSideArrays(*lp, DIVESTACKINITSIZE) );
@@ -9461,6 +9690,7 @@ SCIP_RETCODE SCIPlpAddCol(
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
    assert(SCIPvarIsIntegral(col->var) == col->integral);
+   assert(SCIPvarIsImpliedIntegral(col->var) == col->impliedintegral);
 
    SCIPsetDebugMsg(set, "adding column <%s> to LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
 #ifdef SCIP_DEBUG
@@ -9742,7 +9972,7 @@ SCIP_RETCODE SCIPlpShrinkRows(
          /* check, if row deletion events are tracked
           * if so, issue ROWDELETEDLP event
           */
-         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )
+         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )  /*lint !e587*/
          {
             SCIP_EVENT* event;
 
@@ -10234,6 +10464,9 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
       assert(lp->solved);
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
    }
+
+   if( !lp->diving && !lp->probing )
+      SCIP_CALL( SCIPlpExactSetCutoffbound(lp->lpexact, set, cutoffbound) );
 
    lp->cutoffbound = cutoffbound;
 
@@ -11648,6 +11881,7 @@ SCIP_RETCODE lpSolveStable(
    else
    {
       SCIP_CALL( lpSetObjlim(lp, set, prob, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob), &success) );
+      SCIP_CALL( lpAdjustObjlimForExactSolve(lp, set, prob, stat, &success) );
    }
    SCIP_CALL( lpSetIterationLimit(lp, itlim) );
    SCIP_CALL( lpSetFeastol(lp, tightprimfeastol ? FEASTOLTIGHTFAC * lp->feastol : lp->feastol, &success) );
@@ -12112,7 +12346,7 @@ SCIP_RETCODE lpSolve(
       /* if we did not disable the cutoff bound in the LP solver, the LP solution status should be objective limit
        * reached if the LP objective value is greater than the cutoff bound
        */
-      assert(lpCutoffDisabled(set, prob, lp) || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT
+      assert(lpCutoffDisabled(set, prob, lp) || set->exact_enable || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT
          || SCIPsetIsInfinity(set, lp->cutoffbound)
          || SCIPsetIsLE(set, lp->lpobjval + getFiniteLooseObjval(lp, set, prob), lp->cutoffbound));
    }
@@ -12245,6 +12479,7 @@ SCIP_RETCODE lpFlushAndSolve(
    /* select LP algorithm to apply */
    resolve = lp->solisbasic && (lp->dualfeasible || lp->primalfeasible) && !fromscratch;
    algo = resolve ? set->lp_resolvealgorithm : set->lp_initalgorithm;
+   lp->hasprovedbound = FALSE;
 
    switch( algo )
    {
@@ -12451,8 +12686,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
    /* check whether we need a proof of unboundedness or infeasibility by a primal or dual ray */
    needprimalray = TRUE;
-   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve
-      || (set->conf_enable && set->conf_useinflp != 'o'));
+   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->exact_enable || (set->conf_enable && set->conf_useinflp != 'o'));
 
    /* compute the limit for the number of LP resolving iterations, if needed (i.e. if limitresolveiters == TRUE) */
    harditlim = (int) MIN(itlim, INT_MAX);
@@ -12519,6 +12753,47 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          goto TERMINATE;
       }
 
+      /* compute safe bound might change the solstat so we have to compute it before we evaluate the solution status */
+      if( lp->solved && set->exact_enable && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_TIMELIMIT && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_ITERLIMIT )
+      {
+         if( SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE )
+            SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
+         else
+            SCIP_CALL( SCIPlpGetSol(lp, set, stat, &primalfeasible, &dualfeasible) );
+
+         /* in objlimit case, the lp objval is set to infinity, get the real objval to correct */
+         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+         {
+            SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
+         }
+
+         SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue,
+               prob, lperror, SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE, &(lp->lpobjval), &primalfeasible, &dualfeasible ) );
+
+         /* handle error case in objlimit */
+         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && !lp->hasprovedbound && !(lp->probing || lp->diving) )
+         {
+            /* if safe bounding did fail, we have not managed to get a dual bound exceeding the cutoffbound, therefore just disable cutoffbound
+             * and resolve the lp with another bounding step */
+            lp->lpexact->oldcutoffbound = lp->cutoffbound;
+            lp->cutoffbound = SCIPlpiInfinity(lp->lpi);
+            goto SOLVEAGAIN;
+         }
+         /* restore the old cutoffbound if it was disabled prior and reset the saved value to inf */
+         if( lp->lpexact->oldcutoffbound < SCIPsetInfinity(set) )
+         {
+            lp->cutoffbound = lp->lpexact->oldcutoffbound;
+            lp->lpexact->oldcutoffbound = SCIPsetInfinity(set);
+         }
+
+         /* check for error */
+         if( *lperror )
+         {
+            retcode = SCIP_OKAY;
+            goto TERMINATE;
+         }
+      }
+
       /* evaluate solution status */
       switch( SCIPlpGetSolstat(lp) )
       {
@@ -12549,7 +12824,10 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             lp->dualchecked = FALSE;
          }
 
-         SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
+         if( !set->exact_enable )
+         {
+            SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
+         }
 
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
@@ -12574,6 +12852,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          if( !primalfeasible || !dualfeasible )
          {
             SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
+
+            if( set->exact_enable && lp->lpexact->wasforcedsafebound )
+               SCIPlpExactForceSafeBound(lp->lpexact, set);
 
             if( (fastmip > 0) && simplex )
             {
@@ -12620,9 +12901,11 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
          SCIPsetDebugMsg(set, " -> LP infeasible\n");
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve || set->lp_alwaysgetduals )
+         if( set->lp_checkfarkas || set->exact_enable || set->lp_alwaysgetduals || !SCIPprobAllColsInLP(prob, set, lp) )
          {
-            if( SCIPlpiHasDualRay(lp->lpi) )
+            if( set->exact_enable && SCIPlpiExactHasDualRay(lp->lpexact->lpiexact) )
+               farkasvalid = TRUE;
+            else if( SCIPlpiHasDualRay(lp->lpi) )
             {
                SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
             }
@@ -12783,7 +13066,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
           * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable
           * FASTMIP and solve again.
           */
-         if( !SCIPprobAllColsInLP(prob, set, lp) )
+         if( !set->exact_enable && !SCIPprobAllColsInLP(prob, set, lp) )
          {
             SCIP_LPI* lpi;
             SCIP_Real objval;
@@ -12942,7 +13225,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                {
                   SCIPsetDebugMsg(set, " -> LP infeasible\n");
 
-                  if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas )
+                  if( set->lp_checkfarkas || set->exact_enable || !SCIPprobAllColsInLP(prob, set, lp) )
                   {
                      if( SCIPlpiHasDualRay(lp->lpi) )
                      {
@@ -13328,8 +13611,11 @@ SCIP_Real SCIPlpGetPseudoObjval(
    }
 }
 
-/** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
-SCIP_Real SCIPlpGetModifiedPseudoObjval(
+/** gets safe pseudo objective value, if a bound of the given variable would be modified in the given way;
+ *  perform calculations with interval arithmetic to get an exact lower bound
+ */
+static
+SCIP_Real lpGetModifiedPseudoObjvalExact(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
@@ -13348,54 +13634,16 @@ SCIP_Real SCIPlpGetModifiedPseudoObjval(
    obj = SCIPvarGetObj(var);
    if( !SCIPsetIsZero(set, obj) && boundtype == SCIPvarGetBestBoundType(var) )
    {
-      if( SCIPsetIsInfinity(set, REALABS(oldbound)) )
-         pseudoobjvalinf--;
-      else
-         pseudoobjval -= oldbound * obj;
-      assert(pseudoobjvalinf >= 0);
-      if( SCIPsetIsInfinity(set, REALABS(newbound)) )
-         pseudoobjvalinf++;
-      else
-         pseudoobjval += newbound * obj;
-   }
-   assert(pseudoobjvalinf >= 0);
-
-   if( pseudoobjvalinf > 0 || set->nactivepricers > 0 )
-      return -SCIPsetInfinity(set);
-   else
-      return pseudoobjval;
-}
-
-/** gets pseudo objective value, if a bound of the given variable would be modified in the given way;
- *  perform calculations with interval arithmetic to get an exact lower bound
- */
-SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Real             oldbound,           /**< old value for bound */
-   SCIP_Real             newbound,           /**< new value for bound */
-   SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
-   )
-{
-   SCIP_Real pseudoobjval;
-   int pseudoobjvalinf;
-   SCIP_Real obj;
-
-   assert(lp->pseudoobjvalid);
-
-   pseudoobjval = lp->pseudoobjval;
-   pseudoobjvalinf = lp->pseudoobjvalinf;
-   obj = SCIPvarGetObj(var);
-   if( !SCIPsetIsZero(set, obj) && boundtype == SCIPvarGetBestBoundType(var) )
-   {
       SCIP_INTERVAL objint;
       SCIP_INTERVAL bd;
       SCIP_INTERVAL prod;
       SCIP_INTERVAL psval;
 
       SCIPintervalSet(&psval, pseudoobjval);
-      SCIPintervalSet(&objint, SCIPvarGetObj(var));
+      if( SCIPrationalIsFpRepresentable(SCIPvarGetObjExact(var)) )
+         SCIPintervalSet(&objint, SCIPvarGetObj(var));
+      else
+         SCIPintervalSetRational(&objint, SCIPvarGetObjExact(var));
 
       if( SCIPsetIsInfinity(set, REALABS(oldbound)) )
          pseudoobjvalinf--;
@@ -13416,6 +13664,47 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
       }
 
       pseudoobjval = SCIPintervalGetInf(psval);
+   }
+   assert(pseudoobjvalinf >= 0);
+
+   if( pseudoobjvalinf > 0 || set->nactivepricers > 0 )
+      return -SCIPsetInfinity(set);
+   else
+      return pseudoobjval;
+}
+
+/** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
+SCIP_Real SCIPlpGetModifiedPseudoObjval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             oldbound,           /**< old value for bound */
+   SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   )
+{
+   SCIP_Real pseudoobjval;
+   int pseudoobjvalinf;
+   SCIP_Real obj;
+
+   if( set->exact_enable )
+      return lpGetModifiedPseudoObjvalExact(lp, set, prob, var, oldbound, newbound, boundtype);
+
+   pseudoobjval = getFinitePseudoObjval(lp, set, prob);
+   pseudoobjvalinf = lp->pseudoobjvalinf;
+   obj = SCIPvarGetObj(var);
+   if( !SCIPsetIsZero(set, obj) && boundtype == SCIPvarGetBestBoundType(var) )
+   {
+      if( SCIPsetIsInfinity(set, REALABS(oldbound)) )
+         pseudoobjvalinf--;
+      else
+         pseudoobjval -= oldbound * obj;
+      assert(pseudoobjvalinf >= 0);
+      if( SCIPsetIsInfinity(set, REALABS(newbound)) )
+         pseudoobjvalinf++;
+      else
+         pseudoobjval += newbound * obj;
    }
    assert(pseudoobjvalinf >= 0);
 
@@ -13731,7 +14020,8 @@ SCIP_RETCODE lpUpdateVarProved(
    SCIP_Real             oldub,              /**< old objective value of variable */
    SCIP_Real             newobj,             /**< new objective value of variable */
    SCIP_Real             newlb,              /**< new objective value of variable */
-   SCIP_Real             newub               /**< new objective value of variable */
+   SCIP_Real             newub,              /**< new objective value of variable */
+   SCIP_Bool             global              /**< is the change global? */
    )
 {
    SCIP_INTERVAL deltaval;
@@ -13816,20 +14106,30 @@ SCIP_RETCODE lpUpdateVarProved(
    }
 
    /* update the pseudo and loose objective values */
-   SCIPintervalSet(&psval, lp->pseudoobjval);
-   SCIPintervalAdd(SCIPsetInfinity(set), &psval, psval, deltaval);
-   lp->pseudoobjval = SCIPintervalGetInf(psval);
-   lp->pseudoobjvalinf += deltainf;
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   if( global )
    {
-      SCIPintervalSet(&psval, lp->looseobjval);
+      SCIPintervalSet(&psval, lp->glbpseudoobjval);
       SCIPintervalAdd(SCIPsetInfinity(set), &psval, psval, deltaval);
-      lp->looseobjval = SCIPintervalGetInf(psval);
-      lp->looseobjvalinf += deltainf;
+      lp->glbpseudoobjval = SCIPintervalGetInf(psval);
+      lp->glbpseudoobjvalinf += deltainf;
    }
+   else
+   {
+      SCIPintervalSet(&psval, lp->pseudoobjval);
+      SCIPintervalAdd(SCIPsetInfinity(set), &psval, psval, deltaval);
+      lp->pseudoobjval = SCIPintervalGetInf(psval);
+      lp->pseudoobjvalinf += deltainf;
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+      {
+         SCIPintervalSet(&psval, lp->looseobjval);
+         SCIPintervalAdd(SCIPsetInfinity(set), &psval, psval, deltaval);
+         lp->looseobjval = SCIPintervalGetInf(psval);
+         lp->looseobjvalinf += deltainf;
+      }
 
-   assert(lp->pseudoobjvalinf >= 0);
-   assert(lp->looseobjvalinf >= 0);
+      assert(lp->pseudoobjvalinf >= 0);
+      assert(lp->looseobjvalinf >= 0);
+   }
 
    return SCIP_OKAY;
 }
@@ -13846,12 +14146,18 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->exact_enable )
    {
       if( oldobj != newobj ) /*lint !e777*/
       {
          SCIP_CALL( lpUpdateVarProved(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-               newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+               newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), FALSE) );
+         /* the global ps objval can be set directly because the global and local bounds have to be the same here (see below) */
+         assert(SCIPsetIsEQ(set, SCIPvarGetLbGlobal(var), SCIPvarGetLbLocal(var)));
+         assert(SCIPsetIsEQ(set, SCIPvarGetUbGlobal(var), SCIPvarGetUbLocal(var)));
+
+         lp->glbpseudoobjval = lp->pseudoobjval;
+         lp->glbpseudoobjvalinf = lp->pseudoobjvalinf;
       }
    }
    else
@@ -13900,16 +14206,27 @@ SCIP_RETCODE SCIPlpUpdateVarLbGlobal(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( !SCIPsetIsEQ(set, oldlb, newlb) && SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
+   if( set->exact_enable )
    {
-      SCIP_Real deltaval;
-      int deltainf;
+      if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 ) /*lint !e777*/
+      {
+         SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbGlobal(var),
+               SCIPvarGetObj(var), newlb, SCIPvarGetUbGlobal(var), TRUE) );
+      }
+   }
+   else
+   {
+      if( !SCIPsetIsEQ(set, oldlb, newlb) && SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
+      {
+         SCIP_Real deltaval;
+         int deltainf;
 
-      /* compute the pseudo objective delta due the new lower bound */
-      getObjvalDeltaLb(set, SCIPvarGetObj(var), oldlb, newlb, &deltaval, &deltainf);
+         /* compute the pseudo objective delta due the new lower bound */
+         getObjvalDeltaLb(set, SCIPvarGetObj(var), oldlb, newlb, &deltaval, &deltainf);
 
-      /* update the root pseudo objective values */
-      lpUpdateObjval(lp, set, var, deltaval, deltainf, FALSE, FALSE, TRUE);
+         /* update the root pseudo objective values */
+         lpUpdateObjval(lp, set, var, deltaval, deltainf, FALSE, FALSE, TRUE);
+      }
    }
 
    return SCIP_OKAY;
@@ -13927,12 +14244,12 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->exact_enable )
    {
       if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 ) /*lint !e777*/
       {
          SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var),
-               SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+               SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var), FALSE) );
       }
    }
    else
@@ -13968,16 +14285,27 @@ SCIP_RETCODE SCIPlpUpdateVarUbGlobal(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( !SCIPsetIsEQ(set, oldub, newub) && SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
+   if( set->exact_enable )
    {
-      SCIP_Real deltaval;
-      int deltainf;
+      if( oldub != newub && SCIPvarGetObj(var) < 0.0 ) /*lint !e777*/
+      {
+         SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbGlobal(var), oldub,
+               SCIPvarGetObj(var), SCIPvarGetLbGlobal(var), newub, TRUE) );
+      }
+   }
+   else
+   {
+      if( !SCIPsetIsEQ(set, oldub, newub) && SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
+      {
+         SCIP_Real deltaval;
+         int deltainf;
 
-      /* compute the pseudo objective delta due the new upper bound */
-      getObjvalDeltaUb(set, SCIPvarGetObj(var), oldub, newub, &deltaval, &deltainf);
+         /* compute the pseudo objective delta due the new upper bound */
+         getObjvalDeltaUb(set, SCIPvarGetObj(var), oldub, newub, &deltaval, &deltainf);
 
-      /* update the root pseudo objective values */
-      lpUpdateObjval(lp, set, var, deltaval, deltainf, FALSE, FALSE, TRUE);
+         /* update the root pseudo objective values */
+         lpUpdateObjval(lp, set, var, deltaval, deltainf, FALSE, FALSE, TRUE);
+      }
    }
 
    return SCIP_OKAY;
@@ -13995,12 +14323,12 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->exact_enable )
    {
       if( oldub != newub && SCIPvarGetObj(var) < 0.0 ) /*lint !e777*/
       {
          SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub,
-               SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+               SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub, FALSE) );
       }
    }
    else
@@ -14154,7 +14482,7 @@ SCIP_RETCODE lpUpdateVarColumnProved(
          SCIPintervalSub(SCIPsetInfinity(set), &loose, loose, prod);  /* lp->looseobjval -= lb * obj; */
       }
    }
-   else if( SCIPsetIsNegative(set, obj) )
+   else if( obj < 0.0 )
    {
       ub = SCIPvarGetUbLocal(var);
       if( SCIPsetIsInfinity(set, ub) )
@@ -14190,7 +14518,7 @@ SCIP_RETCODE SCIPlpUpdateVarColumn(
 {
    assert(set != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->exact_enable )
    {
       SCIP_CALL( lpUpdateVarColumnProved(lp, set, var) );
    }
@@ -14314,7 +14642,7 @@ SCIP_RETCODE SCIPlpUpdateVarLoose(
 {
    assert(set != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->exact_enable )
    {
       SCIP_CALL( lpUpdateVarLooseProved(lp, set, var) );
    }
@@ -14377,8 +14705,6 @@ SCIP_RETCODE SCIPlpGetSol(
    assert(set != NULL);
    assert(stat != NULL);
    assert(lp->validsollp <= stat->lpcount);
-
-   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* initialize return and feasibility flags; if primal oder dual feasibility shall not be checked, we set the
     * corresponding flag immediately to FALSE to skip all checks
@@ -15443,7 +15769,7 @@ SCIP_RETCODE lpDelRowset(
          /* check, if row deletion events are tracked
           * if so, issue ROWDELETEDLP event
           */
-         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )
+         if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )  /*lint !e587*/
          {
             SCIP_EVENT* event;
 
@@ -16193,7 +16519,7 @@ SCIP_RETCODE SCIPlpEndDive(
     * restoring an unbounded ray after solve does not seem to work currently (bug 631), so we resolve also in this case
     */
    assert(lp->storedsolvals != NULL);
-   if( lp->storedsolvals->lpissolved
+   if( lp->storedsolvals->lpissolved && !set->exact_enable
       && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || lp->divenolddomchgs < stat->domchgcount) )
    {
       SCIP_Bool lperror;
@@ -16236,8 +16562,12 @@ SCIP_RETCODE SCIPlpEndDive(
          SCIP_CALL( SCIPlpFlush(lp, blkmem, set, prob, eventqueue) );
       }
 
-      /* increment lp counter to ensure that we do not use solution values from the last solved diving lp */
-      SCIPstatIncrement(stat, set, lpcount);
+      /* increment lp counter to ensure that we do not use solution values from the last solved diving lp; only when we
+       * are in exact diving mode, we do not want to increase it since we want to use the exact diving solution added
+       * by the exactsol constraint handler
+       */
+      if( !SCIPlpExactDiving(lp->lpexact) )
+         SCIPstatIncrement(stat, set, lpcount);
 
       /* restore LP solution values in lp data, columns and rows */
       if( lp->storedsolvals->lpissolved &&
@@ -16918,6 +17248,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIProwGetActiveLPCount
 #undef SCIProwGetNLPsAfterCreation
 #undef SCIProwChgRank
+#undef SCIProwGetRowExact
 #undef SCIPlpGetCols
 #undef SCIPlpGetNCols
 #undef SCIPlpGetRows
@@ -17068,7 +17399,7 @@ int SCIPcolGetVarProbindex(
    return col->var_probindex;
 }
 
-/** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
+/** returns whether the associated variable is of integral type (binary, integer, or implied integral) */
 SCIP_Bool SCIPcolIsIntegral(
    SCIP_COL*             col                 /**< LP column */
    )
@@ -17077,6 +17408,17 @@ SCIP_Bool SCIPcolIsIntegral(
    assert(SCIPvarIsIntegral(col->var) == col->integral);
 
    return col->integral;
+}
+
+/** returns whether the associated variable is implied integral */
+SCIP_Bool SCIPcolIsImpliedIntegral(
+   SCIP_COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+   assert(SCIPvarIsImpliedIntegral(col->var) == col->impliedintegral);
+
+   return col->impliedintegral;
 }
 
 /** returns TRUE iff column is removable from the LP (due to aging or cleanup) */
@@ -17387,7 +17729,7 @@ int SCIProwGetRank(
    return row->rank;
 }
 
-/** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
+/** returns TRUE if the activity of the row (without the row's constant) is integral for an optimal solution */
 SCIP_Bool SCIProwIsIntegral(
    SCIP_ROW*             row                 /**< LP row */
    )
@@ -17559,6 +17901,16 @@ SCIP_Longint SCIProwGetNLPsAfterCreation(
    assert(row != NULL);
 
    return row->nlpsaftercreation;
+}
+
+/** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
+SCIP_ROWEXACT* SCIProwGetRowExact(
+   SCIP_ROW*             row                 /**< SCIP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->rowexact;
 }
 
 /** gets array with columns of the LP */
@@ -18751,12 +19103,12 @@ SCIP_RETCODE SCIPlpGetDualDegeneracy(
                   {
                      if( SCIPsetIsEQ(set, SCIProwGetLhs(row), SCIProwGetLPActivity(row, set, stat, lp)) )
                      {
-                        assert(!SCIPlpIsDualReliable(lp) || !SCIPsetIsDualfeasNegative(set, dualsol));
+                        assert(!SCIPlpIsDualReliable(lp) || !SCIPsetIsDualfeasNegative(set, dualsol) || set->exact_enable);
                         ++nfixedrows;
                      }
                      else if( SCIPsetIsEQ(set, SCIProwGetRhs(row), SCIProwGetLPActivity(row, set, stat, lp)) )
                      {
-                        assert(!SCIPlpIsDualReliable(lp) || !SCIPsetIsDualfeasPositive(set, dualsol));
+                        assert(!SCIPlpIsDualReliable(lp) || !SCIPsetIsDualfeasPositive(set, dualsol)|| set->exact_enable);
                         ++nfixedrows;
                      }
                   }

@@ -104,7 +104,12 @@ SCIP_DECL_EXPR_MAPEXPR(mapvar2varidx)
    return SCIP_OKAY;
 }
 
-/** creates an NLPI and includes it into SCIP */
+/** creates an NLPI and includes it into SCIP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 SCIP_RETCODE SCIPincludeNlpi(
    SCIP*                           scip,                        /**< SCIP data structure */
    const char*                     name,                        /**< name of NLP interface */

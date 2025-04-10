@@ -39,7 +39,7 @@ namespace tsp
 {
 
 /** C++ constraint handler for TSP subtour elimination constraints */
-class ConshdlrSubtour : public scip::ObjConshdlr
+class ConshdlrSubtour : public scip::ObjConshdlr /*lint --e{3713}*/
 {
 public:
    /** default constructor */

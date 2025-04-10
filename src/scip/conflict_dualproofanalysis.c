@@ -27,6 +27,7 @@
  * @brief  internal methods for dual proof conflict analysis
  * @author Timo Berthold
  * @author Jakob Witzig
+ * @autor  Sander Borst
  *
  * In dual proof analysis, an infeasible LP relaxation is analysed.
  * Using the dual solution, a valid constraint is derived that is violated
@@ -40,12 +41,14 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "lpi/lpi.h"
+#include "scip/certificate.h"
 #include "scip/clock.h"
 #include "scip/conflict_general.h"
 #include "scip/conflict_dualproofanalysis.h"
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/cuts.h"
 #include "scip/history.h"
 #include "scip/lp.h"
@@ -62,8 +65,10 @@
 #include "scip/pub_prop.h"
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
@@ -76,6 +81,7 @@
 #include "scip/struct_stat.h"
 #include "scip/struct_tree.h"
 #include "scip/struct_var.h"
+#include "scip/struct_certificate.h"
 #include "scip/tree.h"
 #include "scip/var.h"
 #include "scip/visual.h"
@@ -117,6 +123,7 @@ void proofsetClear(
    proofset->rhs = 0.0;
    proofset->validdepth = 0;
    proofset->conflicttype = SCIP_CONFTYPE_UNKNOWN;
+   proofset->certificateline = SCIP_LONGINT_MAX;
 }
 
 /** creates a proofset */
@@ -136,6 +143,7 @@ SCIP_RETCODE proofsetCreate(
    (*proofset)->size = 0;
    (*proofset)->validdepth = 0;
    (*proofset)->conflicttype = SCIP_CONFTYPE_UNKNOWN;
+   (*proofset)->certificateline = SCIP_LONGINT_MAX;
 
    return SCIP_OKAY;
 }
@@ -288,12 +296,23 @@ SCIP_RETCODE proofsetAddAggrrow(
 
    for( i = 0; i < nnz; i++ )
    {
-      vals[i] = SCIPaggrRowGetProbvarValue(aggrrow, inds[i]);
+      if( !set->exact_enable )
+         vals[i] = SCIPaggrRowGetProbvarValue(aggrrow, inds[i]);
+      else
+         vals[i] = aggrrow->vals[inds[i]];
    }
 
    SCIP_CALL( proofsetAddSparseData(proofset, blkmem, vals, inds, nnz, SCIPaggrRowGetRhs(aggrrow)) );
 
    SCIPsetFreeBufferArray(set, &vals);
+
+   if( set->exact_enable && SCIPisCertified(set->scip) )
+   {
+      assert(aggrrow->certificateline != SCIP_LONGINT_MAX);
+      assert(proofset->certificateline == SCIP_LONGINT_MAX);
+      proofset->certificateline = (SCIP_Longint)aggrrow->certificateline;
+   }
+
 
    return SCIP_OKAY;
 }
@@ -419,6 +438,7 @@ SCIP_RETCODE tightenSingleVar(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidates */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             val,                /**< coefficient of the variable */
@@ -462,7 +482,7 @@ SCIP_RETCODE tightenSingleVar(
             SCIPvarGetName(var), SCIPvarGetLbLocal(var),
             SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
             (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"), newbound);
-      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
    }
    else
    {
@@ -516,8 +536,8 @@ SCIP_RETCODE tightenSingleVar(
                (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var)),
                newbound);
 
-         SCIP_CALL( SCIPnodeAddBoundchg(tree->path[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
-               eventqueue, cliquetable, var, newbound, boundtype, FALSE) );
+         SCIP_CALL( SCIPnodeAddBoundchg(tree->path[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
+               eventqueue, eventfilter, cliquetable, var, newbound, boundtype, FALSE) );
 
          /* mark the node in the validdepth to be propagated again */
          SCIPnodePropagateAgain(tree->path[0], set, stat, tree);
@@ -717,6 +737,7 @@ SCIP_RETCODE propagateLongProof(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Real*            coefs,              /**< coefficients in sparse representation */
    int*                  inds,               /**< non-zero indices */
@@ -775,8 +796,8 @@ SCIP_RETCODE propagateLongProof(
          if( SCIPsetIsGE(set, newub, ub) )
             continue;
 
-         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand, \
-               eventqueue, cliquetable, var, val, rhs-resminact, conflicttype, validdepth) );
+         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand,
+               eventqueue, eventfilter, cliquetable, var, val, rhs-resminact, conflicttype, validdepth) );
       }
       /* we got a potential new lower bound */
       else
@@ -793,8 +814,8 @@ SCIP_RETCODE propagateLongProof(
          if( SCIPsetIsLE(set, newlb, lb) )
             continue;
 
-         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand, \
-               eventqueue, cliquetable, var, val, rhs-resminact, conflicttype, validdepth) );
+         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand,
+               eventqueue, eventfilter, cliquetable, var, val, rhs-resminact, conflicttype, validdepth) );
       }
 
       /* the minimal activity should stay unchanged because we tightened the bound that doesn't contribute to the
@@ -821,6 +842,7 @@ SCIP_RETCODE createAndAddProofcons(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
@@ -881,7 +903,7 @@ SCIP_RETCODE createAndAddProofcons(
       {
          SCIPsetDebugMsg(set, "detect global infeasibility: minactivity=%g, rhs=%g\n", globalminactivity, rhs);
 
-         SCIP_CALL( SCIPnodeCutoff(tree->path[proofset->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+         SCIP_CALL( SCIPnodeCutoff(tree->path[proofset->validdepth], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
 
          goto UPDATESTATISTICS;
       }
@@ -918,12 +940,12 @@ SCIP_RETCODE createAndAddProofcons(
    }
 
    /* don't store global dual proofs that are too long / have too many non-zeros */
-   if( toolong )
+   if( !set->exact_enable && toolong )
    {
       if( applyglobal )
       {
          SCIP_CALL( propagateLongProof(conflict, set, stat, reopt, tree, blkmem, origprob, transprob, lp, branchcand,
-               eventqueue, cliquetable, coefs, inds, nnz, rhs, conflicttype, proofset->validdepth) );
+               eventqueue, eventfilter, cliquetable, coefs, inds, nnz, rhs, conflicttype, proofset->validdepth) );
       }
       return SCIP_OKAY;
    }
@@ -949,18 +971,65 @@ SCIP_RETCODE createAndAddProofcons(
    else
       return SCIP_INVALIDCALL;
 
-   SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, -SCIPsetInfinity(set), rhs,
-         FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
-         FALSE, TRUE, TRUE, FALSE) );
+   SCIPdebugMessage("Create constraint from dual ray analysis\n");
 
-   for( i = 0; i < nnz; i++ )
+   if( !set->exact_enable )
    {
-      int v = inds[i];
-      SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, vars[v], coefs[i]) );
+      SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, -SCIPsetInfinity(set), rhs,
+            FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
+            FALSE, TRUE, TRUE, FALSE) );
+
+      for( i = 0; i < nnz; i++ )
+      {
+         int v = inds[i];
+         SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, vars[v], coefs[i]) );
+      }
+   }
+   /* in exact solving mode we don't store global dual proofs that are too long / have too many non-zeros */
+   else if( !toolong )
+   {
+      SCIP_RATIONAL* lhs_exact;
+      SCIP_RATIONAL* rhs_exact;
+      SCIP_RATIONAL** coefs_exact;
+      SCIP_VAR** consvars;
+
+      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &lhs_exact));
+      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &rhs_exact));
+      SCIPrationalSetNegInfinity(lhs_exact);
+      SCIPrationalSetReal(rhs_exact, rhs);
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz) );
+      SCIP_CALL( SCIPallocBufferArray(set->scip, &consvars, nnz) );
+
+      assert(nnz > 0);
+
+      for( i = 0; i < nnz; i++ )
+      {
+         consvars[i] = vars[inds[i]];
+         SCIPrationalSetReal(coefs_exact[i], coefs[i]);
+         assert(!SCIPrationalIsAbsInfinity(coefs_exact[i]));
+      }
+
+      SCIP_CALL( SCIPcreateConsExactLinear(set->scip, &cons, name, nnz, consvars, coefs_exact, lhs_exact, rhs_exact,
+            FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal, FALSE, TRUE, TRUE, FALSE) );
+
+      if( SCIPisCertified(set->scip) )
+      {
+         SCIP_CALL( SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, cons, proofset->certificateline) );
+      }
+
+      SCIPfreeBufferArray(set->scip, &consvars);
+      SCIPrationalFreeBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz);
+      SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &rhs_exact);
+      SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &lhs_exact);
+   }
+   else
+   {
+      assert(set->exact_enable && toolong);
+      return SCIP_OKAY;
    }
 
    /* do not upgrade linear constraints of size 1 */
-   if( nnz > 1 )
+   if( !set->exact_enable && nnz > 1 )
    {
       upgdcons = NULL;
       /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
@@ -1018,9 +1087,10 @@ SCIP_RETCODE createAndAddProofcons(
          SCIP_CONSHDLR* conshdlr = SCIPconsGetHdlr(cons);
 
          assert(conshdlr != NULL);
-         assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0);
+         assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 || set->exact_enable );
+         assert(strcmp(SCIPconshdlrGetName(conshdlr), "exactlinear") == 0 || !set->exact_enable );
 #endif
-         side = SCIPgetLhsLinear(set->scip, cons);
+         side = set->exact_enable ? SCIPrationalRoundReal(SCIPgetLhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST) : SCIPgetLhsLinear(set->scip, cons);
 
          if( !SCIPsetIsInfinity(set, -side) )
          {
@@ -1036,7 +1106,7 @@ SCIP_RETCODE createAndAddProofcons(
          }
          else
          {
-            side = SCIPgetRhsLinear(set->scip, cons);
+            side = set->exact_enable ? SCIPrationalRoundReal(SCIPgetRhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST) : SCIPgetRhsLinear(set->scip, cons);
             assert(!SCIPsetIsInfinity(set, side));
 
             if( SCIPsetIsZero(set, side) )
@@ -1114,6 +1184,7 @@ SCIP_RETCODE SCIPconflictFlushProofset(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    )
 {
@@ -1121,8 +1192,9 @@ SCIP_RETCODE SCIPconflictFlushProofset(
 
    if( proofsetGetConftype(conflict->proofset) != SCIP_CONFTYPE_UNKNOWN )
    {
+      /**@todo implement special handling of conflicts with one variable also for exact solving mode */
       /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
-      if( SCIPproofsetGetNVars(conflict->proofset) == 1 )
+      if( !set->exact_enable && SCIPproofsetGetNVars(conflict->proofset) == 1 )
       {
          SCIP_VAR** vars;
          SCIP_Real* coefs;
@@ -1135,9 +1207,9 @@ SCIP_RETCODE SCIPconflictFlushProofset(
          inds = proofsetGetInds(conflict->proofset);
          rhs = proofsetGetRhs(conflict->proofset);
 
-         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, \
-               branchcand, eventqueue, cliquetable, vars[inds[0]], coefs[0], rhs, conflict->proofset->conflicttype,
-               conflict->proofset->validdepth) );
+         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
+               branchcand, eventqueue, eventfilter, cliquetable, vars[inds[0]], coefs[0], rhs,
+               conflict->proofset->conflicttype, conflict->proofset->validdepth) );
       }
       else
       {
@@ -1164,8 +1236,8 @@ SCIP_RETCODE SCIPconflictFlushProofset(
          if( !skipinitialproof )
          {
             /* create and add the original proof */
-            SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofset, set, stat, origprob, transprob, \
-                  tree, reopt, lp, branchcand, eventqueue, cliquetable, blkmem) );
+            SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofset, set, stat, origprob, transprob,
+                  tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, blkmem) );
          }
       }
 
@@ -1182,8 +1254,9 @@ SCIP_RETCODE SCIPconflictFlushProofset(
          assert(conflict->proofsets[i] != NULL);
          assert(proofsetGetConftype(conflict->proofsets[i]) != SCIP_CONFTYPE_UNKNOWN);
 
+         /**@todo implement special handling of conflicts with one variable also for exact solving mode */
          /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
-         if( SCIPproofsetGetNVars(conflict->proofsets[i]) == 1 )
+         if( !set->exact_enable && SCIPproofsetGetNVars(conflict->proofsets[i]) == 1 )
          {
             SCIP_VAR** vars;
             SCIP_Real* coefs;
@@ -1197,14 +1270,14 @@ SCIP_RETCODE SCIPconflictFlushProofset(
             rhs = proofsetGetRhs(conflict->proofsets[i]);
 
             SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
-                  branchcand, eventqueue, cliquetable, vars[inds[0]], coefs[0], rhs,
+                  branchcand, eventqueue, eventfilter, cliquetable, vars[inds[0]], coefs[0], rhs,
                   conflict->proofsets[i]->conflicttype, conflict->proofsets[i]->validdepth) );
          }
          else
          {
             /* create and add proof constraint */
-            SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofsets[i], set, stat, origprob, \
-                  transprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, blkmem) );
+            SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofsets[i], set, stat, origprob,
+                  transprob, tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, blkmem) );
          }
       }
 
@@ -1236,7 +1309,10 @@ void debugPrintViolationInfo(
 #define debugPrintViolationInfo(...) /**/
 #endif
 
-/** apply coefficient tightening */
+/** apply coefficient tightening
+ *
+ *  @todo implement coefficient tightening for conflicts in exact solving mode
+ */
 static
 void tightenCoefficients(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1429,8 +1505,7 @@ SCIP_RETCODE tightenDualproof(
    SCIP_Real* vals;
    int* inds;
    SCIP_PROOFSET* proofset;
-   SCIP_Bool valid;
-   SCIP_Bool redundant;
+   SCIP_Bool redundant = FALSE;
    int nnz;
    int nchgcoefs;
    int nbinvars;
@@ -1446,6 +1521,7 @@ SCIP_RETCODE tightenDualproof(
    nbinvars = 0;
    nintvars = 0;
    ncontvars = 0;
+   nchgcoefs = 0;
 
    inds = SCIPaggrRowGetInds(proofrow);
    nnz = SCIPaggrRowGetNNz(proofrow);
@@ -1469,7 +1545,7 @@ SCIP_RETCODE tightenDualproof(
    debugPrintViolationInfo(set, SCIPaggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, NULL), SCIPaggrRowGetRhs(proofrow), NULL);
 
    /* try to find an alternative proof of local infeasibility that is stronger */
-   if( set->conf_sepaaltproofs )
+   if( !set->exact_enable && set->conf_sepaaltproofs )
    {
       SCIP_CALL( separateAlternativeProofs(conflict, set, stat, transprob, tree, blkmem, proofrow, curvarlbs, curvarubs,
             conflict->conflictset->conflicttype) );
@@ -1508,7 +1584,7 @@ SCIP_RETCODE tightenDualproof(
     * todo: check whether we also want to do that for bound exceeding proofs, but then we cannot update the
     *       conflict anymore
     */
-   if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
+   if( !set->exact_enable && proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
    {
       /* remove all continuous variables that have equal global and local bounds (ub or lb depend on the sign)
        * from the proof
@@ -1525,7 +1601,7 @@ SCIP_RETCODE tightenDualproof(
          assert(!SCIPsetIsZero(set, val));
 
          /* skip integral variables */
-         if( SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_IMPLINT )
+         if( SCIPvarIsNonimpliedIntegral(vars[idx]) )
          {
             i++;
             continue;
@@ -1534,6 +1610,7 @@ SCIP_RETCODE tightenDualproof(
          {
             SCIP_Real glbbd;
             SCIP_Real locbd;
+            SCIP_Bool valid;
 
             /* get appropriate global and local bounds */
             glbbd = (val < 0.0 ? SCIPvarGetUbGlobal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]));
@@ -1558,12 +1635,13 @@ SCIP_RETCODE tightenDualproof(
    }
 
    /* apply coefficient tightening to initial proof */
-   tightenCoefficients(set, proofset, &nchgcoefs, &redundant);
+   if( !set->exact_enable )
+      tightenCoefficients(set, proofset, &nchgcoefs, &redundant);
 
    /* it can happen that the constraints is almost globally redundant w.r.t to the maximal activity,
     * e.g., due to numerics. in this case, we want to discard the proof
     */
-   if( redundant )
+   if( !set->exact_enable && redundant )
    {
 #ifndef NDEBUG
       SCIP_Real eps = MIN(0.01, 10.0*set->num_feastol);
@@ -1606,6 +1684,7 @@ SCIP_RETCODE SCIPconflictAnalyzeDualProof(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem */
@@ -1653,7 +1732,7 @@ SCIP_RETCODE SCIPconflictAnalyzeDualProof(
    {
       SCIPsetDebugMsg(set, " -> empty farkas-proof in depth %d cuts off sub tree at depth %d\n", SCIPtreeGetFocusDepth(tree), validdepth);
 
-      SCIP_CALL( SCIPnodeCutoff(tree->path[validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[validdepth], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
 
       *globalinfeasible = TRUE;
       *success = TRUE;
@@ -1670,7 +1749,7 @@ SCIP_RETCODE SCIPconflictAnalyzeDualProof(
    if( *globalinfeasible )
    {
       SCIPsetDebugMsg(set, "detect global: cutoff root node\n");
-      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
       *success = TRUE;
 
       ++conflict->ndualproofsinfsuccess;

@@ -80,6 +80,7 @@
 #include "scip/type_var.h"
 #include "scip/type_event.h"
 #include "lpi/type_lpi.h"
+#include "scip/type_lpexact.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -123,6 +124,7 @@ struct SCIP_LpSolVals
    SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             lpissolved;         /**< is current LP solved? */
+   SCIP_Bool             hasprovedboundexact;     /**< is the current LP provably dual feasible (in exact mode) */
 };
 
 /** LP column;
@@ -184,6 +186,7 @@ struct SCIP_Col
    unsigned int          ubchanged:1;        /**< has upper bound changed, and has data of LP solver to be updated? */
    unsigned int          coefchanged:1;      /**< has the coefficient vector changed, and has LP solver to be updated? */
    unsigned int          integral:1;         /**< is associated variable of integral type? */
+   unsigned int          impliedintegral:1;  /**< is associated variable implied integral? */
    unsigned int          removable:1;        /**< is column removable from the LP (due to aging or cleanup)? */
    unsigned int          sbdownvalid:1;      /**< stores whether the stored strong branching down value is a valid dual bound;
                                               *   otherwise, it can only be used as an estimate value */
@@ -229,6 +232,7 @@ struct SCIP_Row
    SCIP_Real*            vals;               /**< coefficients of row entries */
    int*                  linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
    SCIP_EVENTFILTER*     eventfilter;        /**< event filter for events concerning this row */
+   SCIP_ROWEXACT*        rowexact;           /**< pointer to exact row if it exists, or NULL in fp-scip */
    SCIP_Longint          validactivitylp;    /**< LP number for which activity value is valid */
    int                   index;              /**< consecutively numbered row identifier */
    int                   size;               /**< size of the col- and val-arrays */
@@ -301,6 +305,7 @@ struct SCIP_Lp
    SCIP_COL**            cols;               /**< array with current LP columns in correct order */
    SCIP_COL**            lazycols;           /**< array with current LP lazy columns */
    SCIP_ROW**            rows;               /**< array with current LP rows in correct order */
+   SCIP_LPEXACT*         lpexact;            /**< pointer to exact rational lp, or null if in normal fp soliving mode */
    SCIP_Real*            soldirection;       /**< normalized vector in direction of primal solution from current LP solution */
    SCIP_LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
    SCIP_Real*            divechgsides;       /**< stores the lhs/rhs changed in the current diving */
@@ -400,6 +405,7 @@ struct SCIP_Lp
    SCIP_Bool             divelpwasprimchecked;/**< primal feasibility was checked when diving started */
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
    SCIP_Bool             divelpwasdualchecked;/**< dual feasibility was checked when diving started */
+   SCIP_Bool             hasprovedbound;      /**< is the bound of the lp proved to be exactly dual feasible */
 };
 
 #ifdef __cplusplus

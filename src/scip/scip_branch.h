@@ -223,7 +223,7 @@ SCIP_RETCODE SCIPsetBranchruleMaxbounddist(
    SCIP_Real             maxbounddist        /**< new maxbounddist of the branching rule */
    );
 
-/** @} */
+/* @} */
 
 /**@addtogroup PublicBranchingMethods
  *
@@ -231,10 +231,10 @@ SCIP_RETCODE SCIPsetBranchruleMaxbounddist(
  */
 
 /** gets branching candidates for LP solution branching (fractional variables) along with solution values,
- *  fractionalities, and number of branching candidates; The number of branching candidates does NOT
- *  account for fractional implicit integer variables which should not be used for branching decisions.
+ *  fractionalities, and number of branching candidates; the number of branching candidates does not
+ *  account for fractional continuous implied integral variables, which should not be used for branching
  *
- *  Fractional implicit integer variables are stored at the positions *nlpcands to *nlpcands + *nfracimplvars - 1
+ *  fractional continuous implied integral variables are stored from *nlpcands to *nlpcands + *nfracimplvars - 1
  *
  *  branching rules should always select the branching candidate among the first npriolpcands of the candidate
  *  list
@@ -255,10 +255,11 @@ SCIP_RETCODE SCIPgetLPBranchCands(
    SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*                  nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
    int*                  npriolpcands,       /**< pointer to store the number of candidates with maximal priority, or NULL */
-   int*                  nfracimplvars       /**< pointer to store the number of fractional implicit integer variables, or NULL */
+   int*                  nfracimplvars       /**< pointer to store the number of fractional continuous implied integral variables, or NULL */
    );
 
-/** gets number of branching candidates for LP solution branching (number of fractional variables)
+/** gets number of branching candidates for LP solution branching (number of fractional variables); implied integral
+ *  variables with integrality constraints are included
  *
  *  @return the number of branching candidates for LP solution branching (number of fractional variables).
  *

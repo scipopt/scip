@@ -679,7 +679,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
          assert(c < ncols);
          assert(cols[c] != NULL);
          var = SCIPcolGetVar(cols[c]);
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
          {
             primsol = SCIPcolGetPrimsol(cols[c]);
             assert(SCIPgetVarSol(scip, var) == primsol); /*lint !e777*/

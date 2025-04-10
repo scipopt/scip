@@ -47,10 +47,13 @@
 #include "scip/conflict.h"
 #include "scip/debug.h"
 #include "scip/lp.h"
+#include "scip/lpexact.h"
 #include "scip/prob.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_tree.h"
+#include "scip/scip_exact.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
@@ -118,6 +121,8 @@ SCIP_Bool SCIPisLPConstructed(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note The result stored in @p cutoff is safe to use in exact solving mode.
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -2307,10 +2312,11 @@ SCIP_RETCODE SCIPendDive(
          scip->transprob, scip->transprob->vars, scip->transprob->nvars) );
 
    /* the lower bound may have changed slightly due to LP resolve in SCIPlpEndDive() */
-   if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL && SCIPlpIsRelax(scip->lp) && SCIPlpIsSolved(scip->lp) )
+   if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL && SCIPlpIsRelax(scip->lp) && SCIPlpIsSolved(scip->lp)
+       && !SCIPlpExactDiving(scip->lpexact) && !SCIPisExact(scip) )
    {
       assert(SCIPtreeIsFocusNodeLPConstructed(scip->tree));
-      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->tree, scip->transprob,
+      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->eventfilter, scip->tree, scip->transprob,
             scip->origprob, scip->lp) );
    }
    /* reset the probably changed LP's cutoff bound */
@@ -2322,8 +2328,8 @@ SCIP_RETCODE SCIPendDive(
     */
    if( scip->tree->cutoffdelayed )
    {
-      SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-            scip->eventqueue, scip->lp, scip->primal->cutoffbound) );
+      SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+            scip->eventfilter, scip->lp, scip->primal->cutoffbound) );
    }
 
    /* if a relaxation was stored before diving, restore it now */
@@ -2707,11 +2713,11 @@ SCIP_RETCODE SCIPsolveDiveLP(
    {
       /* analyze the infeasible LP (only if the objective was not changed, all columns are in the LP, and no external
        * pricers exist) */
-      if( !scip->set->misc_exactsolve && !(SCIPlpDivingObjChanged(scip->lp) || SCIPlpDivingRowsChanged(scip->lp))
+      if( !(SCIPlpDivingObjChanged(scip->lp) || SCIPlpDivingRowsChanged(scip->lp))
          && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
       {
          SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, NULL) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable, NULL) );
       }
 
       if( cutoff != NULL )

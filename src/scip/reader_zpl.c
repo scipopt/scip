@@ -44,6 +44,7 @@
 #define getcwd _getcwd
 #endif
 
+#include "scip/cons_exactlinear.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_sos1.h"
@@ -53,6 +54,7 @@
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -80,6 +82,9 @@ extern "C" {
 
 /* @Note: Due to dependencies we need the following order. */
 /* include the ZIMPL headers necessary to define the LP and MINLP construction interface */
+#ifdef SCIP_WITH_GMP
+#include <gmp.h>
+#endif
 #include "zimpl/attribute.h"
 #include "zimpl/ratlptypes.h"
 #include "zimpl/lint.h"
@@ -92,6 +97,7 @@ extern "C" {
 
 #include "zimpl/xlpglue.h"
 #include "zimpl/zimpllib.h"
+#include "scip/rational.h"
 
 #ifdef __cplusplus
 }
@@ -131,6 +137,63 @@ SCIP_ReaderData
    SCIP_Bool             readerror;          /**< was a reading error be discovered */
    SCIP_RETCODE          retcode;            /**< store a none SCIP_OKAY return code if an error occurred */
 };
+
+#if defined(SCIP_WITH_GMP) &&  defined(SCIP_WITH_BOOST)
+/** convert between scips_rational and zimpl's numb type */
+static
+SCIP_RETCODE RcreateNumb(
+   BMS_BLKMEM*           mem,
+   SCIP_RATIONAL**       rational,
+   const Numb*           numb
+   )
+{
+   mpq_t temp;
+
+   mpq_init(temp);
+   numb_get_mpq(numb, temp);
+
+   SCIPdebug(gmp_printf("the rational is: %Qd\n",temp));
+
+   SCIP_CALL( SCIPrationalCreateBlockGMP(mem, rational, temp) );
+   mpq_clear(temp);
+
+   return SCIP_OKAY;
+}
+#else
+/** convert between scips_rational and zimpl's numb type */
+static
+SCIP_RETCODE RcreateNumb(
+   BMS_BLKMEM*           mem,
+   SCIP_RATIONAL**       rational,
+   const Numb*           numb
+   )
+{
+   SCIP_CALL( SCIPrationalCreateBlock(mem, rational) );
+   SCIPrationalSetReal(*rational, numb_todbl(numb));
+   return SCIP_OKAY;
+}
+#endif
+
+/** abort the reading with an errormessage; this type of constraint is not supported
+ *  in exact solving
+ */
+static
+SCIP_RETCODE abortReadIfExact(
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_Bool*            created,            /**< store if a cons was created or NULL */
+   const char*           errmsg              /**< Error Message */
+   )
+{
+   if( SCIPisExact(scip) )
+   {
+      SCIPerrorMessage("%s\n",errmsg);
+      if( created != NULL )
+         (*created) = FALSE;
+      return SCIP_ERROR;
+   }
+   else
+      return SCIP_OKAY;
+}
 
 /** create problem */
 static
@@ -482,6 +545,8 @@ SCIP_RETCODE addConsTerm(
    )
 {
    SCIP_CONS* cons;
+   SCIP_RATIONAL* ratlhs = NULL;
+   SCIP_RATIONAL* ratrhs = NULL;
    SCIP_Real sciplhs;
    SCIP_Real sciprhs;
    SCIP_Bool initial;
@@ -495,35 +560,67 @@ SCIP_RETCODE addConsTerm(
    SCIP_Bool lazycut;
    int i;
 
+   if( SCIPisExact(scip) )
+   {
+      /* get exact lhs and rhs */
+      switch( type )
+      {
+      case CON_FREE:
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ratlhs, "-inf") );
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ratrhs, "inf") );
+         break;
+      case CON_LHS:
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratlhs, lhs) );
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ratrhs, "inf") );
+         break;
+      case CON_RHS:
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratrhs, rhs) );
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ratlhs, "-inf") );
+         break;
+      case CON_RANGE:
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratlhs, lhs) );
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratrhs, rhs) );
+         break;
+      case CON_EQUAL:
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratlhs, lhs) );
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratrhs, rhs) );
+         assert(SCIPrationalIsEQ(ratrhs, ratlhs));
+         break;
+      default:
+         SCIPwarningMessage(scip, "invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
+         readerdata->readerror = TRUE;
+         break;
+      }
+   }
    switch( type )
    {
-   case CON_FREE:
-      sciplhs = -SCIPinfinity(scip);
-      sciprhs = SCIPinfinity(scip);
-      break;
-   case CON_LHS:
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = SCIPinfinity(scip);
-      break;
-   case CON_RHS:
-      sciplhs = -SCIPinfinity(scip);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      break;
-   case CON_RANGE:
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      break;
-   case CON_EQUAL:
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      assert(sciplhs == sciprhs);  /*lint !e777*/
-      break;
-   default:
-      SCIPwarningMessage(scip, "invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      readerdata->readerror = TRUE;
-      break;
+      case CON_FREE:
+         sciplhs = -SCIPinfinity(scip);
+         sciprhs = SCIPinfinity(scip);
+         break;
+      case CON_LHS:
+         sciplhs = (SCIP_Real)numb_todbl(lhs);
+         sciprhs = SCIPinfinity(scip);
+         break;
+      case CON_RHS:
+         sciplhs = -SCIPinfinity(scip);
+         sciprhs = (SCIP_Real)numb_todbl(rhs);
+         break;
+      case CON_RANGE:
+         sciplhs = (SCIP_Real)numb_todbl(lhs);
+         sciprhs = (SCIP_Real)numb_todbl(rhs);
+         break;
+      case CON_EQUAL:
+         sciplhs = (SCIP_Real)numb_todbl(lhs);
+         sciprhs = (SCIP_Real)numb_todbl(rhs);
+         assert(sciplhs == sciprhs);  /*lint !e777*/
+         break;
+      default:
+         SCIPwarningMessage(scip, "invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
+         sciplhs = (SCIP_Real)numb_todbl(lhs);
+         sciprhs = (SCIP_Real)numb_todbl(rhs);
+         readerdata->readerror = TRUE;
+         break;
    }
 
    cons = NULL;
@@ -567,6 +664,9 @@ SCIP_RETCODE addConsTerm(
       {
          bool lhsIndCons = FALSE;  /* generate lhs form for indicator constraints */
          bool rhsIndCons = FALSE;  /* generate rhs form for indicator constraints */
+
+         SCIP_CALL( abortReadIfExact(scip, created,
+            "xpl_addcon_term: exact version for indicator constraints not supported\n") );
 
          /* currently indicator constraints can only handle "<=" constraints */
          switch( type )
@@ -664,30 +764,136 @@ SCIP_RETCODE addConsTerm(
       }
       else
       {
-         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
-               initial, separate, enforce, check, propagate, local, modifiable, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
-         SCIP_CALL( SCIPaddCons(scip, cons) );
-
-         for( i = 0; i < term_get_elements(term); i++ )
+         if( SCIPisExact(scip) )
          {
             SCIP_VAR* scipvar;
-            SCIP_Real scipval;
+            SCIP_RATIONAL* scipvalrat;
 
-            assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
-            assert(mono_is_linear(term_get_element(term, i)));
+            /* due to technical reasons, we do not add singleton constraints but immediately transform them to variable bounds */
+            /** @todo rework this into presolving of cons_exactlinear */
+            if( term_get_elements(term) == 1 )
+            {
+               SCIP_RATIONAL* quotient;
+               SCIP_Bool isupper;
+               SCIP_Bool consneeded;
 
-            scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
-            scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
+               consneeded = FALSE;
 
-            SCIP_CALL( SCIPaddCoefLinear(scip, cons, scipvar, scipval) );
+               assert(!numb_equal(mono_get_coeff(term_get_element(term, 0)), numb_zero()));
+               assert(mono_is_linear(term_get_element(term, 0)));
+
+               scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, 0), 0);
+               SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &scipvalrat, mono_get_coeff(term_get_element(term, 0))) );
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &quotient) );
+
+               if( !SCIPrationalIsInfinity(ratrhs) )
+               {
+                  isupper = SCIPrationalIsPositive(scipvalrat);
+                  SCIPrationalDiv(quotient, ratrhs, scipvalrat);
+
+                  if( isupper && SCIPrationalIsLT(quotient, SCIPvarGetUbGlobalExact(scipvar)) )
+                  {
+                     if( SCIPrationalIsGE(quotient, SCIPvarGetLbGlobalExact(scipvar)) )
+                     {
+                        SCIP_CALL( SCIPchgVarUbGlobalExact(scip, scipvar, quotient) );
+                     }
+                     else
+                        consneeded = TRUE;
+                  }
+                  else if( !isupper && SCIPrationalIsGT(quotient, SCIPvarGetLbGlobalExact(scipvar)) )
+                  {
+                     if( SCIPrationalIsLE(quotient, SCIPvarGetUbGlobalExact(scipvar)) )
+                     {
+                        SCIP_CALL( SCIPchgVarLbGlobalExact(scip, scipvar, quotient) );
+                     }
+                     else
+                        consneeded = TRUE;
+                  }
+               }
+               if( !SCIPrationalIsNegInfinity(ratlhs) )
+               {
+                  isupper = !SCIPrationalIsPositive(scipvalrat);
+                  SCIPrationalDiv(quotient, ratlhs, scipvalrat);
+
+                  if( isupper && SCIPrationalIsLT(quotient, SCIPvarGetUbGlobalExact(scipvar)) )
+                  {
+                     if( SCIPrationalIsGE(quotient, SCIPvarGetLbGlobalExact(scipvar)) )
+                     {
+                        SCIP_CALL( SCIPchgVarUbGlobalExact(scip, scipvar, quotient) );
+                     }
+                     else
+                        consneeded = TRUE;
+                  }
+                  else if( !isupper && SCIPrationalIsGT(quotient, SCIPvarGetLbGlobalExact(scipvar)) )
+                  {
+                     if( SCIPrationalIsLE(quotient, SCIPvarGetUbGlobalExact(scipvar)) )
+                     {
+                        SCIP_CALL( SCIPchgVarLbGlobalExact(scip, scipvar, quotient) );
+                     }
+                     else
+                        consneeded = TRUE;
+                  }
+               }
+
+               if( consneeded )
+               {
+                  SCIP_CALL( SCIPcreateConsExactLinear(scip, &cons, name, 0, NULL, NULL, ratlhs, ratrhs,
+                  initial, separate, enforce, check, propagate, local, modifiable, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
+                  SCIP_CALL( SCIPaddCons(scip, cons) );
+                  SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, scipvar, scipvalrat) );
+               }
+
+               SCIPrationalFreeBlock(SCIPblkmem(scip), &scipvalrat);
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &quotient);
+            }
+            else
+            {
+               SCIP_CALL( SCIPcreateConsExactLinear(scip, &cons, name, 0, NULL, NULL, ratlhs, ratrhs,
+                  initial, separate, enforce, check, propagate, local, modifiable, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+
+               for( i = 0; i < term_get_elements(term); i++ )
+               {
+                  assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
+                  assert(mono_is_linear(term_get_element(term, i)));
+
+                  scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
+                  SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &scipvalrat, mono_get_coeff(term_get_element(term, i))) );
+
+                  SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, scipvar, scipvalrat) );
+                  SCIPrationalFreeBlock(SCIPblkmem(scip), &scipvalrat);
+               }
+            }
          }
+         else
+         {
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
+                  initial, separate, enforce, check, propagate, local, modifiable, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );
 
+            for( i = 0; i < term_get_elements(term); i++ )
+            {
+               SCIP_VAR* scipvar;
+               SCIP_Real scipval;
+
+               assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
+               assert(mono_is_linear(term_get_element(term, i)));
+
+               scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
+               scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
+
+               SCIP_CALL( SCIPaddCoefLinear(scip, cons, scipvar, scipval) );
+            }
+         }
          (*created) = TRUE;
       }
    }
    else
    {
       SCIP_EXPR* expr;
+
+      SCIP_CALL( abortReadIfExact(scip, created,
+         "xpl_addcon_term: exact version for degree == 2 not supported\n") );
 
       /* convert term into expression */
       SCIP_CALL( createExpr(scip, readerdata, &expr, term) );
@@ -713,6 +919,12 @@ SCIP_RETCODE addConsTerm(
    if( cons != NULL )
    {
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   if( SCIPisExact(scip) )
+   {
+      SCIPrationalFreeBlock(SCIPblkmem(scip), &ratlhs);
+      SCIPrationalFreeBlock(SCIPblkmem(scip), &ratrhs);
    }
 
    return SCIP_OKAY;
@@ -743,9 +955,33 @@ SCIP_RETCODE addObjTerm(
          assert(mono_is_linear(term_get_element(term, i)));
 
          scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
-         scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
+         if( SCIPisExact(scip) )
+         {
+            char str[SCIP_MAXSTRLEN];
+            SCIP_RATIONAL* scipvalrat;
 
-         SCIP_CALL( SCIPaddVarObj(scip, scipvar, scipval) );
+            RcreateNumb(SCIPblkmem(scip), &scipvalrat, mono_get_coeff(term_get_element(term, i)));
+            SCIPrationalAdd(scipvalrat, scipvalrat, SCIPvarGetObjExact(scipvar));
+
+            SCIPdebugMessage("zimpl reader: change obj<%g> of var: add<%g> as approx", SCIPvarGetObj(scipvar),
+               SCIPrationalGetReal(scipvalrat) );
+            SCIPdebug(SCIPrationalToString(scipvalrat, str));
+            SCIPdebugMessage(" (<%s> as exact) \n", str);
+
+            readerdata->retcode = SCIPchgVarObjExact(scip, scipvar, scipvalrat);
+            SCIPchgVarObj(scip, scipvar, SCIPrationalGetReal(scipvalrat));
+
+            SCIPrationalFreeBlock(SCIPblkmem(scip), &scipvalrat);
+         }
+         else
+         {
+            SCIP_CALL( abortReadIfExact(scip, &(readerdata->readerror),
+                  "xlp_addobj_termr: exact version not supported.\n") );
+
+            scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
+
+            SCIP_CALL( SCIPaddVarObj(scip, scipvar, scipval) );
+         }
       }
    }
    else
@@ -834,57 +1070,114 @@ SCIP_RETCODE addVar(
    SCIP_VAR* var;
    SCIP_Real lb;
    SCIP_Real ub;
+   SCIP_RATIONAL* lbrat = NULL;
+   SCIP_RATIONAL* ubrat = NULL;
    SCIP_VARTYPE vartype;
+   SCIP_IMPLINTTYPE varimpltype;
    SCIP_Bool initial;
    SCIP_Bool removable;
    int branchpriority;
 
-   switch( bound_get_type(lower) )
+   if( SCIPisExact(scip) )
    {
-   case BOUND_VALUE:
-      lb = (SCIP_Real)numb_todbl(bound_get_value(lower));
-      break;
-   case BOUND_INFTY:
-      lb = SCIPinfinity(scip);
-      break;
-   case BOUND_MINUS_INFTY:
-      lb = -SCIPinfinity(scip);
-      break;
-   case BOUND_ERROR:
-   default:
-      SCIPerrorMessage("invalid lower bound type <%d> in ZIMPL reader\n", bound_get_type(lower));
-      lb = 0.0;
-      break;
-   }
+      /* get exact lower bounds for exactlinear constraint handler and safe FP-values for FP-problem */
+      switch( bound_get_type(lower) )
+      {
+      case BOUND_VALUE:
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &lbrat, bound_get_value(lower)) );
+         lb = SCIPrationalRoundReal(lbrat, SCIP_R_ROUND_DOWNWARDS);
+         break;
+      case BOUND_INFTY:
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &lbrat, "inf") );
+         lb = SCIPinfinity(scip);
+         break;
+      case BOUND_MINUS_INFTY:
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &lbrat, "-inf") );
+         lb = -SCIPinfinity(scip);
+         break;
+      case BOUND_ERROR:
+      default:
+         SCIPerrorMessage("invalid lower bound type <%d> in ZIMPL reader\n", bound_get_type(lower));
+         SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &lbrat) );
+         lb = 0.0;
+         break;
+      }
 
-   switch( bound_get_type(upper) )
+      /* get exact upper bounds for exactlinear constraint handler and safe FP-values for FP-problem */
+      switch( bound_get_type(upper) )
+      {
+      case BOUND_VALUE:
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ubrat, bound_get_value(upper)) );
+         ub = SCIPrationalRoundReal(ubrat, SCIP_R_ROUND_UPWARDS);
+         break;
+      case BOUND_INFTY:
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ubrat, "inf") );
+         ub = SCIPinfinity(scip);
+         break;
+      case BOUND_MINUS_INFTY:
+         SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &ubrat, "-inf") );
+         ub = -SCIPinfinity(scip);
+         break;
+      case BOUND_ERROR:
+      default:
+         SCIPerrorMessage("invalid upper bound type <%d> in ZIMPL reader\n", bound_get_type(upper));
+         SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &ubrat) );
+         ub = 0.0;
+         break;
+      }
+   }
+   else
    {
-   case BOUND_VALUE:
-      ub = (SCIP_Real)numb_todbl(bound_get_value(upper));
-      break;
-   case BOUND_INFTY:
-      ub = SCIPinfinity(scip);
-      break;
-   case BOUND_MINUS_INFTY:
-      ub = -SCIPinfinity(scip);
-      break;
-   case BOUND_ERROR:
-   default:
-      SCIPerrorMessage("invalid upper bound type <%d> in ZIMPL reader\n", bound_get_type(upper));
-      ub = 0.0;
-      break;
+      switch( bound_get_type(lower) )
+      {
+      case BOUND_VALUE:
+         lb = (SCIP_Real)numb_todbl(bound_get_value(lower));
+         break;
+      case BOUND_INFTY:
+         lb = SCIPinfinity(scip);
+         break;
+      case BOUND_MINUS_INFTY:
+         lb = -SCIPinfinity(scip);
+         break;
+      case BOUND_ERROR:
+      default:
+         SCIPerrorMessage("invalid lower bound type <%d> in ZIMPL reader\n", bound_get_type(lower));
+         lb = 0.0;
+         break;
+      }
+
+      switch( bound_get_type(upper) )
+      {
+      case BOUND_VALUE:
+         ub = (SCIP_Real)numb_todbl(bound_get_value(upper));
+         break;
+      case BOUND_INFTY:
+         ub = SCIPinfinity(scip);
+         break;
+      case BOUND_MINUS_INFTY:
+         ub = -SCIPinfinity(scip);
+         break;
+      case BOUND_ERROR:
+      default:
+         SCIPerrorMessage("invalid upper bound type <%d> in ZIMPL reader\n", bound_get_type(upper));
+         ub = 0.0;
+         break;
+      }
    }
 
    switch( usevarclass )
    {
-   case VAR_CON:
-      vartype = SCIP_VARTYPE_CONTINUOUS;
-      break;
    case VAR_INT:
       vartype = SCIP_VARTYPE_INTEGER;
+      varimpltype = SCIP_IMPLINTTYPE_NONE;
       break;
    case VAR_IMP:
-      vartype = SCIP_VARTYPE_IMPLINT;
+      vartype = SCIP_VARTYPE_CONTINUOUS;
+      varimpltype = SCIP_IMPLINTTYPE_WEAK;
+      break;
+   case VAR_CON:
+      vartype = SCIP_VARTYPE_CONTINUOUS;
+      varimpltype = SCIP_IMPLINTTYPE_NONE;
       break;
    default:
       SCIPwarningMessage(scip, "invalid variable class <%d> in ZIMPL callback xlp_addvar()\n", usevarclass);
@@ -896,7 +1189,22 @@ SCIP_RETCODE addVar(
    removable = readerdata->dynamiccols;
 
    /* create variable */
-   SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL, NULL) );
+   SCIPdebugMessage("zimpl reader: added new variable");
+   SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, lb, ub, 0.0, vartype, varimpltype, initial, removable,
+         NULL, NULL, NULL, NULL, NULL) );
+
+   if( SCIPisExact(scip) )
+   {
+      SCIP_CALL( SCIPaddVarExactData(scip, var, lbrat, ubrat, NULL) );
+#ifdef SCIP_MORE_DEBUG
+      SCIPdebug(SCIPprintVar(scip, var, NULL));
+      SCIPrationalToString(lbrat, strlb);
+      SCIPrationalToString(ubrat, strub);
+      SCIPdebugMessage("exact bounds are [%s,%s]\n", strlb, strub);
+#endif
+      SCIPrationalFreeBlock(SCIPblkmem(scip), &lbrat);
+      SCIPrationalFreeBlock(SCIPblkmem(scip), &ubrat);
+   }
 
    /* add variable to the problem; we are releasing the variable later */
    SCIP_CALL( SCIPaddVar(scip, var) );
@@ -998,6 +1306,9 @@ SCIP_RETCODE addSOS(
    SCIP_Bool propagate;
    SCIP_Bool local;
    int i;
+
+   SCIP_CALL( abortReadIfExact(scip, &(readerdata->readerror),
+      "xlp_addsos_termr: exact version not supported.\n") );
 
    switch( type )
    {
@@ -1114,22 +1425,25 @@ VarClass xlp_getclass(
    const Var*            var                 /**< variable */
    )
 {
-   SCIP_READERDATA* readerdata;
-   SCIP_VAR* scipvar;
+   SCIP_READERDATA* readerdata = (SCIP_READERDATA*)data;
+   SCIP_VAR* scipvar = (SCIP_VAR*)var;
+   int implintlevel;
 
-   readerdata = (SCIP_READERDATA*)data;
+   /* adjust border between int and imp based on the implied integral level */
    assert(readerdata != NULL);
+   SCIPgetIntParam(readerdata->scip, "write/implintlevel", &implintlevel);
+   assert(implintlevel >= -2);
+   assert(implintlevel <= 2);
 
-   scipvar = (SCIP_VAR*)var;
    switch( SCIPvarGetType(scipvar) )
    {
    case SCIP_VARTYPE_BINARY:
    case SCIP_VARTYPE_INTEGER:
-      return VAR_INT;
-   case SCIP_VARTYPE_IMPLINT:
-      return VAR_IMP;
+      return (int)SCIPvarGetImplType(scipvar) <= 2 + implintlevel ? VAR_INT : VAR_IMP;
    case SCIP_VARTYPE_CONTINUOUS:
-      return VAR_CON;
+      if( SCIPvarIsImpliedIntegral(scipvar) )
+         return (int)SCIPvarGetImplType(scipvar) > 2 - implintlevel ? VAR_INT : VAR_IMP;
+      break;
    default:
       SCIPerrorMessage("invalid SCIP variable type <%d> in ZIMPL callback xlp_getclass()\n", SCIPvarGetType(scipvar));
       readerdata->readerror = TRUE;
@@ -1159,6 +1473,12 @@ Bound* xlp_getlower(
 
    scip = readerdata->scip;
    assert(scip != NULL);
+
+   if( SCIP_ERROR == abortReadIfExact(scip, NULL, "xlp_getlower: exact version not supported.\n") )
+   {
+      readerdata->readerror = TRUE;
+      return NULL;
+   }
 
    scipvar = (SCIP_VAR*)var;
    assert(scipvar != NULL);
@@ -1210,6 +1530,12 @@ Bound* xlp_getupper(
 
    scip = readerdata->scip;
    assert(scip != NULL);
+
+   if( SCIP_ERROR == abortReadIfExact(scip, NULL, "xlp_getupper: exact version not supported.\n") )
+   {
+      readerdata->readerror = TRUE;
+      return NULL;
+   }
 
    scipvar = (SCIP_VAR*)var;
    assert(scipvar != NULL);
@@ -1395,7 +1721,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    if( strcmp(paramstr, "-") == 0 )
    {
       /* call ZIMPL parser without arguments */
-      if( !zpl_read(filename, TRUE, (void*)readerdata) )
+      if( !zpl_read(filename, FALSE, (void*)readerdata) )
          readerdata->readerror = TRUE;
       else
       {
@@ -1488,7 +1814,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       }
 
       /* call ZIMPL parser with arguments */
-      if( !zpl_read_with_args(argv, argc, TRUE, (void*)readerdata) )
+      if( !zpl_read_with_args(argv, argc, FALSE, (void*)readerdata) )
          readerdata->readerror = TRUE;
 
       /* free argument memory */
@@ -1583,6 +1909,10 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
    assert(reader != NULL);
 
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
+
+   /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyZpl) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadZpl) );
 

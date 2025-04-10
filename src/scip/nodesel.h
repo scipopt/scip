@@ -45,12 +45,13 @@
 #include "scip/type_reopt.h"
 #include "scip/type_message.h"
 #include "scip/pub_nodesel.h"
+#include "scip/type_rational.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* 
+/*
  * node priority queue methods
  */
 
@@ -72,8 +73,8 @@ SCIP_RETCODE SCIPnodepqFree(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -84,8 +85,8 @@ SCIP_RETCODE SCIPnodepqClear(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -145,6 +146,12 @@ SCIP_Real SCIPnodepqGetLowerbound(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** gets the minimal exact lower bound of all nodes in the queue or NULL if empty */
+SCIP_RATIONAL* SCIPnodepqGetLowerboundExact(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** gets the node with minimal lower bound of all nodes in the queue */
 SCIP_NODE* SCIPnodepqGetLowerboundNode(
    SCIP_NODEPQ*          nodepq,             /**< node priority queue */
@@ -162,8 +169,8 @@ SCIP_RETCODE SCIPnodepqBound(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */

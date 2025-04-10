@@ -76,8 +76,10 @@ extern "C" {
  *@{
  */
 
-/** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded;
- *  an integer variable with bounds zero and one is automatically converted into a binary variable;
+/** creates and captures problem variable
+ *
+ *  If variable is of integral type, fractional bounds are automatically rounded.
+ *  An integer variable with bounds zero and one is automatically converted into a binary variable.
  *
  *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
  *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
@@ -116,12 +118,15 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable, or NULL */
    );
 
-/** creates and captures problem variable with optional callbacks and variable data set to NULL, which can be set
- *  afterwards using SCIPvarSetDelorigData(), SCIPvarSetTransData(),
- *  SCIPvarSetDeltransData(), SCIPvarSetCopy(), and SCIPvarSetData(); sets variable flags initial=TRUE
- *  and removable = FALSE, which can be adjusted by using SCIPvarSetInitial() and SCIPvarSetRemovable(), resp.;
- *  if variable is of integral type, fractional bounds are automatically rounded;
- *  an integer variable with bounds zero and one is automatically converted into a binary variable;
+/** creates and captures problem variable without setting optional callbacks and variable data.
+ *
+ *  Callbacks and variable data can be set in the following using SCIPvarSetDelorigData(), SCIPvarSetTransData(),
+ *  SCIPvarSetDeltransData(), SCIPvarSetCopy(), and SCIPvarSetData().
+ *
+ *  Variable flags are set as initial = TRUE and removable = FALSE, and can be adjusted by using SCIPvarSetInitial() and SCIPvarSetRemovable(), resp.
+ *
+ *  If variable is of integral type, fractional bounds are automatically rounded.
+ *  An integer variable with bounds zero and one is automatically converted into a binary variable.
  *
  *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
  *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
@@ -151,6 +156,72 @@ SCIP_RETCODE SCIPcreateVarBasic(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype             /**< type of variable */
+   );
+
+/** creates and captures problem variable that may be implied integral
+ *
+ *  If variable is of integral type, fractional bounds are automatically rounded.
+ *  An integer variable with bounds zero and one is automatically converted into a binary variable.
+ *
+ *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
+ *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
+ *           original objective function value of variables created during the solving process has to be multiplied by
+ *           -1, too.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note the variable gets captured, hence at one point you have to release it using the method SCIPreleaseVar()
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateVarImpl(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to variable object */
+   const char*           name,               /**< name of variable, or NULL for automatic name creation */
+   SCIP_Real             lb,                 /**< lower bound of variable */
+   SCIP_Real             ub,                 /**< upper bound of variable */
+   SCIP_Real             obj,                /**< objective function value */
+   SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_IMPLINTTYPE      impltype,           /**< implied integral type of the variable (none, weak or strong) */
+   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
+   SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
+   SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
+   SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
+   SCIP_VARDATA*         vardata             /**< user data for this specific variable, or NULL */
+);
+
+/** adds exact data to variable
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddVarExactData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< pointer to variable */
+   SCIP_RATIONAL*        lb,                 /**< lower bounf of variable */
+   SCIP_RATIONAL*        ub,                 /**< upper bound of variable */
+   SCIP_RATIONAL*        obj                 /** < objective function value */
    );
 
 /** outputs the variable name to the file stream
@@ -249,7 +320,8 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
    SCIP_Bool             type                /**< should the variable type be also posted */
    );
 
-/** print the given terms as signomial in the following form
+
+/** print the given monomials as polynomial in the following form
  *  c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...
  *
  *  This string can be parsed by the method SCIPparseVarsPolynomial().
@@ -410,6 +482,41 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
    );
 
+/** parse the given string as linear sum of variables and coefficients (c1 \<x1\> + c2 \<x2\> + ... + cn \<xn\>)
+ *  (see SCIPwriteVarsLinearsum() ); if it was successful, the pointer success is set to TRUE
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note The pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist.
+ *
+ *  @note If the number of (parsed) variables is greater than the available slots in the variable array, nothing happens
+ *        except that the required size is stored in the corresponding integer; the reason for this approach is that we
+ *        cannot reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP
+ *        memory functions).
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPparseVarsLinearsumExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 str,                /**< string to parse */
+   SCIP_VAR**            vars,               /**< array to store the parsed variables */
+   SCIP_RATIONAL**       vals,               /**< array to store the parsed coefficients */
+   int*                  nvars,              /**< pointer to store number of parsed variables */
+   int                   varssize,           /**< size of the variable array */
+   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
+   char**                endptr,             /**< pointer to store the final string position if successful */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
+   );
+
 /** parse the given string as signomial of variables and coefficients
  *  (c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...)
  *  (see SCIPwriteVarsPolynomial()); if it was successful, the pointer success is set to TRUE
@@ -448,6 +555,62 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    );
 
 /** frees memory allocated when parsing a signomial from a string
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+void SCIPfreeParseVarsPolynomialDataExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
+   SCIP_RATIONAL***      monomialcoefs,      /**< pointer to store array with monomial coefficients */
+   int                   nmonomials          /**< pointer to store number of parsed monomials */
+   );
+
+/** parse the given string as signomial of variables and coefficients
+ *  (c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...)
+ *  (see SCIPwriteVarsPolynomial()); if it was successful, the pointer success is set to TRUE
+ *
+ *  The user has to call SCIPfreeParseVarsPolynomialData(scip, monomialvars, monomialexps,
+ *  monomialcoefs, monomialnvars, *nmonomials) short after SCIPparseVarsPolynomial to free all the
+ *  allocated memory again.
+ *
+ *  Parsing is stopped at the end of string (indicated by the \\0-character) or when no more monomials
+ *  are recognized.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPparseVarsPolynomialExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 str,                /**< string to parse */
+   SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
+   SCIP_RATIONAL***      monomialcoefs,      /**< pointer to store array with monomial coefficients */
+   int*                  nmonomials,         /**< pointer to store number of parsed monomials */
+   char**                endptr,             /**< pointer to store the final string position if successful */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
+   );
+
+/** frees memory allocated when parsing a signomial from a string
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -845,6 +1008,35 @@ SCIP_RETCODE SCIPgetProbvarSum(
    SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
    SCIP_Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
    SCIP_Real*            constant            /**< pointer to constant c in sum a*x + c */
+   );
+
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or
+ *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"; a multi-aggregation
+ *  with only one active variable (this can happen due to fixings after the multi-aggregation),
+ *  is treated like an aggregation; if the multi-aggregation constant is infinite, "scalar" will be 0.0
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetProbvarSumExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   SCIP_RATIONAL*        scalar,             /**< pointer to scalar a in sum a*x + c */
+   SCIP_RATIONAL*        constant            /**< pointer to constant c in sum a*x + c */
    );
 
 /** return for given variables all their active counterparts; all active variables will be pairwise different
@@ -1684,6 +1876,32 @@ SCIP_Real SCIPadjustedVarLb(
    SCIP_Real             lb                  /**< lower bound value to adjust */
    );
 
+/** returns the adjusted (i.e. rounded, if the given variable is of integral type) lower bound value;
+ *  does not change the bounds of the variable
+ *
+ *  @return adjusted lower bound for the given variable; the bound of the variable is not changed
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+SCIP_Real SCIPadjustedVarLbExactFloat(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to adjust the bound for */
+   SCIP_Real             lb                  /**< lower bound value to adjust */
+   );
+
 /** returns the adjusted (i.e. rounded, if the given variable is of integral type) upper bound value;
  *  does not change the bounds of the variable
  *
@@ -1705,6 +1923,32 @@ SCIP_Real SCIPadjustedVarLb(
  */
 SCIP_EXPORT
 SCIP_Real SCIPadjustedVarUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to adjust the bound for */
+   SCIP_Real             ub                  /**< upper bound value to adjust */
+   );
+
+/** returns the adjusted (i.e. rounded, if the given variable is of integral type) upper bound value;
+ *  does not change the bounds of the variable
+ *
+ *  @return adjusted upper bound for the given variable; the bound of the variable is not changed
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+SCIP_Real SCIPadjustedVarUbExactFloat(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to adjust the bound for */
    SCIP_Real             ub                  /**< upper bound value to adjust */
@@ -1735,6 +1979,31 @@ SCIP_RETCODE SCIPchgVarLb(
    SCIP_Real             newbound            /**< new value for bound */
    );
 
+/** depending on SCIP's stage, changes exact lower bound of variable in the problem, in preprocessing, or in current node;
+ *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
+ *  that in conflict analysis, this change is treated like a branching decision
+ *
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
+ *           SCIPgetVars()) gets resorted.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPchgVarLbExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
+   );
+
 /** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in current node;
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
@@ -1758,6 +2027,31 @@ SCIP_RETCODE SCIPchgVarUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound            /**< new value for bound */
+   );
+
+/** depending on SCIP's stage, changes exact upper bound of variable in the problem, in preprocessing, or in current node;
+ *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
+ *  that in conflict analysis, this change is treated like a branching decision
+ *
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
+ *           SCIPgetVars()) gets resorted.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPchgVarUbExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
    );
 
 /** changes lower bound of variable in the given node; if possible, adjust bound to integral value; doesn't store any
@@ -1926,6 +2220,33 @@ SCIP_RETCODE SCIPtightenVarLb(
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
+/** changes exact lower bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
+ *  is treated like a branching decision
+ *
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
+ *           SCIPgetVars()) gets resorted.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPtightenVarLbExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
 /** changes upper bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
@@ -1950,6 +2271,33 @@ SCIP_RETCODE SCIPtightenVarUb(
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound,           /**< new value for bound */
    SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
+/** changes exact upper bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
+ *  is treated like a branching decision
+ *
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
+ *           SCIPgetVars()) gets resorted.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPtightenVarUbExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
@@ -2060,6 +2408,62 @@ SCIP_RETCODE SCIPinferBinvarCons(
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
    SCIP_Bool*            tightened           /**< pointer to store whether the fixing tightened the local bounds, or NULL */
+   );
+
+/** changes upper bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  than the current bound; if possible, adjusts bound to integral value;
+ *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
+ *  for the deduction of the bound change
+ *
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
+ *           SCIPgetVars()) gets resorted.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_RETCODE SCIPinferVarUbConsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
+   SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
+/** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  than the current bound; if possible, adjusts bound to integral value;
+ *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
+ *  for the deduction of the bound change
+ *
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
+ *           SCIPgetVars()) gets resorted.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_RETCODE SCIPinferVarLbConsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
+   SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
 /** fixes variable in preprocessing or in the current node, if the new bound is tighter (w.r.t. bound strengthening
@@ -2266,6 +2670,20 @@ SCIP_Real SCIPcomputeVarLbLocal(
    SCIP_VAR*             var                 /**< variable to compute the bound for */
    );
 
+/** for a multi-aggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
+ *
+ *  This local bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbLocal.
+ *
+ *  @return the local lower bound computed by adding the global bounds from all aggregation variables
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcomputeVarLbLocalExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to compute the bound for */
+   SCIP_RATIONAL*        result              /**< rational to store the resulting bound */
+   );
+
 /** for a multi-aggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
  *
  *  This local bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
@@ -2277,6 +2695,20 @@ SCIP_EXPORT
 SCIP_Real SCIPcomputeVarUbLocal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to compute the bound for */
+   );
+
+/** for a multi-aggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
+ *
+ *  This local bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbLocal.
+ *
+ *  @return the local upper bound computed by adding the global bounds from all aggregation variables
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcomputeVarUbLocalExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to compute the bound for */
+   SCIP_RATIONAL*        result              /**< rational to store the resulting bound */
    );
 
 /** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all
@@ -2878,10 +3310,37 @@ SCIP_RETCODE SCIPchgVarBranchDirection(
 SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarType(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_VAR*             var,                /**< variable to change the type for */
    SCIP_VARTYPE          vartype,            /**< new type of variable */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected (, due to
                                               *   integrality condition of the new variable type) */
+   );
+
+/** changes implied integral type of variable in the problem
+ *
+ *  @warning This type change might change the variable array returned from SCIPgetVars() and SCIPgetVarsData();
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *
+ *  @note If SCIP is already beyond the SCIP_STAGE_PROBLEM and a original variable is passed, the implied integral type of the
+ *        corresponding transformed variable is changed; the type of the original variable does not change
+ *
+ *  @note If the implied integral type is adjusted to weak or strong for a continuous variable, the bounds of the variable get
+ *        adjusted w.r.t. to integrality information
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPchgVarImplType(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the type for */
+   SCIP_IMPLINTTYPE      impltype,           /**< New implied integral type of the variable */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected (due to
+                                              *   integrality condition for the new variable type) */
    );
 
 /** in problem creation and solving stage, both bounds of the variable are set to the given value;
@@ -2902,6 +3361,28 @@ SCIP_RETCODE SCIPfixVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to fix */
    SCIP_Real             fixedval,           /**< value to fix variable to */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
+   SCIP_Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
+   );
+
+/** in problem creation and solving stage, both bounds of the variable are set to the given value;
+ *  in presolving stage, the variable is converted into a fixed variable, and bounds are changed respectively;
+ *  conversion into a fixed variable changes the vars array returned from SCIPgetVars() and SCIPgetVarsData(),
+ *  and also renders arrays returned from the SCIPvarGetImpl...() methods invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPfixVarExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to fix */
+   SCIP_RATIONAL*        fixedval,           /**< value to fix variable to */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
    SCIP_Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
    );
@@ -2943,6 +3424,43 @@ SCIP_RETCODE SCIPaggregateVars(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
 
+/** From a given equality a*x + b*y == c, aggregates one of the variables and removes it from the set of
+ *  active problem variables. This changes the vars array returned from SCIPgetVars() and SCIPgetVarsData(),
+ *  and also renders the arrays returned from the SCIPvarGetImpl...() methods for the two variables invalid.
+ *  In the first step, the equality is transformed into an equality with active problem variables
+ *  a'*x' + b'*y' == c'. If x' == y', this leads to the detection of redundancy if a' == -b' and c' == 0,
+ *  of infeasibility, if a' == -b' and c' != 0, or to a variable fixing x' == c'/(a'+b') (and possible
+ *  infeasibility) otherwise.
+ *  In the second step, the variable to be aggregated is chosen among x' and y', prefering a less strict variable
+ *  type as aggregation variable (i.e. continuous variables are preferred over implicit integers, implicit integers
+ *  over integers, and integers over binaries). If none of the variables is continuous, it is tried to find an integer
+ *  aggregation (i.e. integral coefficients a'' and b'', such that a''*x' + b''*y' == c''). This can lead to
+ *  the detection of infeasibility (e.g. if c'' is fractional), or to a rejection of the aggregation (denoted by
+ *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
+ *
+ *  The output flags have the following meaning:
+ *  - infeasible: the problem is infeasible
+ *  - redundant:  the equality can be deleted from the constraint set
+ *  - aggregated: the aggregation was successfully performed (the variables were not aggregated before)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_PRESOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaggregateVarsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             varx,               /**< variable x in equality a*x + b*y == c */
+   SCIP_VAR*             vary,               /**< variable y in equality a*x + b*y == c */
+   SCIP_RATIONAL*        scalarx,            /**< multiplier a in equality a*x + b*y == c */
+   SCIP_RATIONAL*        scalary,            /**< multiplier b in equality a*x + b*y == c */
+   SCIP_RATIONAL*        rhs,                /**< right hand side c in equality a*x + b*y == c */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   SCIP_Bool*            redundant,          /**< pointer to store whether the equality is (now) redundant */
+   SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   );
+
 /** converts variable into multi-aggregated variable; this changes the variable array returned from
  *  SCIPgetVars() and SCIPgetVarsData();
  *
@@ -2967,6 +3485,34 @@ SCIP_RETCODE SCIPmultiaggregateVar(
    SCIP_VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    SCIP_Real*            scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    SCIP_Real             constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   );
+
+/** converts variable into exact multi-aggregated variable; this changes the variable array returned from
+ *  SCIPgetVars() and SCIPgetVarsData();
+ *
+ *  @warning The integrality condition is not checked anymore on the multi-aggregated variable. You must not
+ *           multi-aggregate an integer variable without being sure, that integrality on the aggregation variables
+ *           implies integrality on the aggregated variable.
+ *
+ *  The output flags have the following meaning:
+ *  - infeasible: the problem is infeasible
+ *  - aggregated: the aggregation was successfully performed (the variables were not aggregated before)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_PRESOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPmultiaggregateVarExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable x to aggregate */
+   int                   naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_RATIONAL**       scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_RATIONAL*        constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
@@ -4022,6 +4568,143 @@ SCIP_RETCODE SCIPprintVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** changes variable's exact objective value
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPchgVarObjExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the objective value for */
+   SCIP_RATIONAL*        newobj              /**< new objective value */
+   );
+
+/** changes exact global upper bound of variable;
+ *
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ */
+SCIP_RETCODE SCIPchgVarUbGlobalExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
+   );
+
+/** changes exact global lower bound of variable;
+ *
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ */
+SCIP_RETCODE SCIPchgVarLbGlobalExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
+   );
+
+/** print the given variables and rational coefficients as linear sum in the following form
+ *  c1 \<x1\> + c2 \<x2\>   ... + cn \<xn\>
+ *
+ *  This string can be parsed by the method SCIPparseVarsLinearsum().
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note The printing process is done via the message handler system.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPwriteVarsLinearsumExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file, or NULL for stdout */
+   SCIP_VAR**            vars,               /**< variable array to output */
+   SCIP_RATIONAL**       vals,               /**< array of coefficients or NULL if all coefficients are 1.0 */
+   int                   nvars,              /**< number of variables */
+   SCIP_Bool             type                /**< should the variable type be also posted */
+   );
+
+/** Transforms a given linear sum of variables, that is a_1*x_1 + ... + a_n*x_n + c into a corresponding linear sum of
+ *  active variables, that is b_1*y_1 + ... + b_m*y_m + d.
+ *
+ *  If the number of needed active variables is greater than the available slots in the variable array, nothing happens
+ *  except that the required size is stored in the corresponding variable (requiredsize). Otherwise, the active variable
+ *  representation is stored in the variable array, scalar array and constant.
+ *
+ *  The reason for this approach is that we cannot reallocate memory, since we do not know how the memory has been
+ *  allocated (e.g., by a C++ 'new' or SCIP functions).
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note The resulting linear sum is stored into the given variable array, scalar array, and constant. That means the
+ *        given entries are overwritten.
+ *
+ *  @note That method can be used to convert a single variables into variable space of active variables. Therefore call
+ *        the method with the linear sum 1.0*x + 0.0.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetProbvarLinearSumExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variable array x_1, ..., x_n in the linear sum which will be
+                                              *   overwritten by the variable array y_1, ..., y_m in the linear sum
+                                              *   w.r.t. active variables */
+   SCIP_RATIONAL**       scalars,            /**< scalars a_1, ..., a_n in linear sum which will be overwritten to the
+                                              *   scalars b_1, ..., b_m in the linear sum of the active variables  */
+   int*                  nvars,              /**< pointer to number of variables in the linear sum which will be
+                                              *   overwritten by the number of variables in the linear sum corresponding
+                                              *   to the active variables */
+   int                   varssize,           /**< available slots in vars and scalars array which is needed to check if
+                                              *   the array are large enough for the linear sum w.r.t. active
+                                              *   variables */
+   SCIP_RATIONAL*        constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c which
+                                              *   will chnage to constant d in the linear sum b_1*y_1 + ... + b_m*y_m +
+                                              *   d w.r.t. the active variables */
+   int*                  requiredsize,       /**< pointer to store the required array size for the linear sum w.r.t. the
+                                              *   active variables */
+   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
 
 /**@} */

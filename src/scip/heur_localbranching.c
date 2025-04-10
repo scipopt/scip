@@ -197,7 +197,7 @@ SCIP_RETCODE addLocalbranchingConstraintAndObjcutoff(
          consvals[nconsvars] = 1.0;
 
       consvars[nconsvars] = subvars[i];
-      assert( SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY );
+      assert( SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(consvars[nconsvars]) );
 
       ++nconsvars;
    }
@@ -622,6 +622,9 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecLocalbranching, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyLocalbranching) );

@@ -69,7 +69,6 @@ struct SCIP_DebugSolData
    SCIP_Bool             solisachieved;      /**< means if current best solution is better than the given debug solution */
    SCIP_Real             debugsolval;        /**< objective value for debug solution */
    SCIP_Bool             debugsoldisabled;   /**< flag indicating if debugging of solution was disabled or not */
-   SCIP_Bool             warningprinted;     /**< flag indicating if a warning was already printed */
 };
 
 
@@ -94,7 +93,6 @@ SCIP_RETCODE SCIPdebugSolDataCreate(
    (*debugsoldata)->solisachieved = FALSE;
    (*debugsoldata)->debugsolval = 0.0;
    (*debugsoldata)->debugsoldisabled = TRUE;
-   (*debugsoldata)->warningprinted = FALSE;
 
    return SCIP_OKAY;
 }
@@ -114,28 +112,22 @@ SCIP_Bool debugSolutionAvailable(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   SCIP_DEBUGSOLDATA* debugsoldata;
-
    assert(set != NULL);
-
-   debugsoldata = SCIPsetGetDebugSolData(set);
 
    /* check whether a debug solution is specified */
    if( strcmp(set->misc_debugsol, "-") == 0 )
    {
-      if( !debugsoldata->warningprinted )
+      if( SCIPdebugSolIsEnabled(set->scip) )
       {
-         SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "SCIP is compiled with 'DEBUGSOL=true' but no debug solution is given:\n");
-         SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "*** Please set the parameter 'misc/debugsol' and reload the problem again to use the debugging-mechanism ***\n\n");
-         debugsoldata->warningprinted = TRUE;
+         SCIPdebugSolDisable(set->scip);
+         SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip),
+               "SCIP is compiled with 'DEBUGSOL=true' but no debug solution is given:\n");
+         SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip),
+               "*** Please set the parameter 'misc/debugsol' and reload the problem again to use the debugging-mechanism ***\n\n");
       }
       return FALSE;
    }
-   else
-   {
-      debugsoldata->warningprinted = FALSE;
-      return TRUE;
-   }
+   return TRUE;
 }
 
 /** reads solution from given file into given arrays */
@@ -348,13 +340,15 @@ SCIP_RETCODE readSolution(
 
    assert(set != NULL);
 
-   debugsoldata = SCIPsetGetDebugSolData(set);
-
    /* check whether a debug solution is available */
    if( !debugSolutionAvailable(set) )
       return SCIP_OKAY;
 
-   if( debugsoldata == NULL || debugsoldata->nsolvals > 0 )
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   /* check whether no debug solution is read */
+   if( debugsoldata->debugsol != NULL )
       return SCIP_OKAY;
 
    SCIP_CALL( readSolfile(set, set->misc_debugsol, &debugsoldata->debugsol, &debugsoldata->debugsolval,

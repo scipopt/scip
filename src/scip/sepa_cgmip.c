@@ -2247,7 +2247,7 @@ SCIP_RETCODE createCGMIPprimalsols(
 
          var = SCIPcolGetVar(cols[c]);
 
-         if ( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
          {
             primsol = SCIPcolGetPrimsol(cols[c]);
             assert( SCIPgetVarSol(scip, var) == primsol ); /*lint !e777*/

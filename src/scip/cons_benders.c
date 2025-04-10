@@ -454,20 +454,28 @@ SCIP_DECL_CONSEXIT(consExitBenders)
 static
 SCIP_DECL_CONSINITLP(consInitlpBenders)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_BENDERS** benders;
    int nactivebenders;
    int i;
 
    assert(scip != NULL);
+   assert(conshdlr != NULL);
 
-   benders = SCIPgetBenders(scip);
-   nactivebenders = SCIPgetNActiveBenders(scip);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
-   (*infeasible) = FALSE;
+   if( conshdlrdata->active )
+   {
+      benders = SCIPgetBenders(scip);
+      nactivebenders = SCIPgetNActiveBenders(scip);
 
-   /* checking all Benders' decomposition implementations to see if any subproblems have been declared as infeasible */
-   for( i = 0; i < nactivebenders && !(*infeasible); i++ )
-      (*infeasible) = SCIPbendersSubproblemsAreInfeasible(benders[i]);
+      (*infeasible) = FALSE;
+
+      /* checking all Benders' decomposition implementations to see if any subproblems have been declared as infeasible */
+      for( i = 0; i < nactivebenders && !(*infeasible); i++ )
+         (*infeasible) = SCIPbendersSubproblemsAreInfeasible(benders[i]);
+   }
 
    return SCIP_OKAY;
 }

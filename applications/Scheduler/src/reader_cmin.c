@@ -168,7 +168,7 @@ SCIP_Bool getNextToken(
 
    /* read value token */
    tokenlen = 0;
-   while( isdigit(buf[cmininput->linepos]) )
+   while( isdigit((unsigned char)buf[cmininput->linepos]) )
    {
       assert(tokenlen < SCIP_MAXSTRLEN);
       assert(!isDelimChar(buf[cmininput->linepos]));
@@ -902,7 +902,7 @@ SCIP_RETCODE createMipCpFormulation(
          /* construct variable name */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_starts_%d", idx, i);
 
-         SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, (SCIP_Real)lst, 0.0, SCIP_VARTYPE_IMPLINT,
+         SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, 0.0, (SCIP_Real)lst, 0.0, SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_STRONG,
                TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
          SCIP_CALL( SCIPaddVar(scip, var) );

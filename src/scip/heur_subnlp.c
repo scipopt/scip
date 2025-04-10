@@ -397,7 +397,8 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/dual") );
 
    /* we remember here which way (continuous or not) we went, in case all binary and integer vars get fixed in root */
-   heurdata->continuous = SCIPgetNBinVars(heurdata->subscip) == 0 && SCIPgetNIntVars(heurdata->subscip) == 0;
+   heurdata->continuous = (SCIPgetNContVars(heurdata->subscip) + SCIPgetNContImplVars(heurdata->subscip)
+         == SCIPgetNVars(heurdata->subscip));
    if( !heurdata->continuous )
    {
       /* set presolve maxrounds and emphasis; always disable components presolver
@@ -1374,7 +1375,8 @@ SCIP_RETCODE forbidFixation(
          fixval = SCIPvarGetLbGlobal(subvar);
          assert(fixval == SCIPvarGetUbGlobal(subvar)); /* variable should be fixed in sub-SCIP */   /*lint !e777*/
          assert(SCIPceil(scip, fixval - 0.5) == fixval); /* we have rounded values before fixing */ /*lint !e777*/
-         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetLbGlobal(var) == fixval || SCIPvarGetUbGlobal(var) == fixval); /* for binaries, the fixval should be either 0.0 or 1.0 */  /*lint !e777*/
+         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var)
+               || SCIPvarGetLbGlobal(var) == fixval || SCIPvarGetUbGlobal(var) == fixval); /* for binaries, the fixval should be either 0.0 or 1.0 */  /*lint !e777*/
 
          if( SCIPvarGetLbGlobal(var) < fixval )
          {

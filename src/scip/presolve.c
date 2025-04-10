@@ -107,7 +107,7 @@ void collectNonBinaryVBoundData(
 
    assert(scip != NULL);
    assert(var != NULL);
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var));
    assert(varidx >= 0);
    assert(pos >= 0);
    assert(bounds != NULL);
@@ -639,7 +639,7 @@ void collectNonBinaryImplicationData(
 {
    assert(scip != NULL);
    assert(var != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var));
    assert(varidx >= 0);
    assert(pos >= 0);
    assert(bounds != NULL);
@@ -1034,6 +1034,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                           */
    int* countnonzeros;
 
+   SCIP_VAR** probvars;
    SCIP_VAR* var;
    SCIP_Bool usebin = TRUE;
    SCIP_Bool usenonbin = TRUE;
@@ -1047,6 +1048,8 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    int foundnonbin;
    int varidx;
    int nprobvars;
+   int nbinvars;
+   int nintegers;
    int ncountnonzeros;
    int maxcountnonzeros;
    int w;
@@ -1097,7 +1100,21 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    /* check if implicit binary variables exist, because for these variables the implications can be stored in the
     * variable bounds instead of the 'normal' implications
     */
-   implbinvarsexist = (SCIPprobGetNImplBinVars(scip->transprob) > 0);
+   probvars = SCIPprobGetVars(scip->transprob);
+   assert(probvars != NULL);
+   nbinvars = SCIPprobGetNBinVars(scip->transprob);
+   nintegers = SCIPprobGetNVars(scip->transprob) - SCIPprobGetNContVars(scip->transprob);
+   assert(nintegers >= nbinvars);
+   implbinvarsexist = FALSE;
+
+   for( v = nintegers - 1; v >= nbinvars; --v )
+   {
+      if( SCIPvarIsBinary(probvars[v]) )
+      {
+         implbinvarsexist = TRUE;
+         break;
+      }
+   }
 
 #ifdef SCIP_DISABLED_CODE
    /* @todo do the cleanup here rather than before calling SCIPshrinkDisjunctiveVarSet()? */
@@ -1143,7 +1160,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
        * we only check binary to non-binary implications if we can detect further implications which either lead to
        * global reductions or to redundant set variables
        */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && ((usebin && implbinvarsexist) || usenonbin) )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var) && ( usenonbin || ( usebin && implbinvarsexist ) ) )
       {
          collectNonBinaryImplicationData(scip, var, varidx, v, *nredvars, value, bounds, boundtypes, newbounds, counts,
             countnonzeros, &ncountnonzeros, issetvar, nprobvars, &foundbin, &foundnonbin, implidx, &nimplidx, lastbounds);
@@ -1153,7 +1170,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
        * we only check the variable bounds if we can detect further implications which either lead to global reductions
        * or to redundant set variables
        */
-      else if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && ((usebin && implbinvarsexist) || usenonbin) )
+      else if( ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) ) && ( usenonbin || ( usebin && implbinvarsexist ) ) )
       {
          collectNonBinaryVBoundData(scip, var, varidx, v, *nredvars, bounds, boundtypes, newbounds, counts, countnonzeros,
             &ncountnonzeros, issetvar, nprobvars, &foundbin, &foundnonbin, implidx, &nimplidx, lastbounds);
@@ -1162,13 +1179,9 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
       /* reduce implication counters on all variables which are implied by a variable now marked as redundant */
       if( issetvar[varidx] < 0 )
       {
-         SCIP_VAR** probvars;
          int probidx;
 
          SCIPdebugMsg(scip, "marked variable <%s> as redundant variable in variable set\n", SCIPvarGetName(var));
-
-         probvars = SCIPprobGetVars(scip->transprob);
-         assert(probvars != NULL);
 
          /* correct implication counters and bounds, if the redundant variable implies other variables we need to reduce
           * the counter and get the last bounds before this implication
@@ -1268,39 +1281,34 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    /* if we found some global boundchanges, we perform then now */
    if( globalred )
    {
-      SCIP_VAR** probvars;
-      SCIP_VAR* probvar;
-
       SCIPdebugMsg(scip, "variable set led to global reductions (in %s)\n", SCIPprobGetName(scip->transprob));
-
-      probvars = SCIPprobGetVars(scip->transprob);
-      assert(probvars != NULL);
 
       assert(start < nprobvars);
 
       /* check for same implicit binary variables */
       for( v = start; v < nprobvars; ++v )
       {
-         probvar = probvars[v];
-         assert(probvar != NULL);
+         var = probvars[v];
+         assert(var != NULL);
 
          assert(counts[v] <= nvars);
          assert(counts[nprobvars + v] <= nvars);
 
          if( counts[v] + (*nredvars) == nvars )
          {
-            if( SCIPvarIsBinary(probvar) )
+            if( SCIPvarIsBinary(var) )
             {
-               SCIPdebugMsg(scip, "can fix variable %s [%g, %g] to 1.0\n", SCIPvarGetName(probvar),
-                  SCIPvarGetLbGlobal(probvar), SCIPvarGetUbGlobal(probvar));
+               SCIPdebugMsg(scip, "can fix variable %s [%g, %g] to 1.0\n", SCIPvarGetName(var),
+                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
 
-               if( SCIPvarGetLbGlobal(probvar) < 0.5 )
+               if( SCIPvarGetLbGlobal(var) < 0.5 )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
                         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand,
-                        scip->eventqueue, scip->cliquetable, probvar, 1.0, SCIP_BOUNDTYPE_LOWER, FALSE) );
+                        scip->eventqueue, scip->eventfilter, scip->cliquetable, var, 1.0, SCIP_BOUNDTYPE_LOWER,
+                        FALSE) );
 
-                  assert(SCIPvarGetLbGlobal(probvar) > 0.5 || scip->tree->npendingbdchgs > 0);
+                  assert(SCIPvarGetLbGlobal(var) > 0.5 || scip->tree->npendingbdchgs > 0);
 
                   ++(*nglobalred);
 
@@ -1310,11 +1318,11 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
             }
             else
             {
-               SCIPdebugMsg(scip, "can tighten lower bound variable %s [%g, %g] to %g\n", SCIPvarGetName(probvar),
-                  SCIPvarGetLbGlobal(probvar), SCIPvarGetUbGlobal(probvar), newbounds[v]);
+               SCIPdebugMsg(scip, "can tighten lower bound variable %s [%g, %g] to %g\n", SCIPvarGetName(var),
+                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), newbounds[v]);
 
                /* the new lower bound is greater than the global upper bound => the problem is global infeasible */
-               if( SCIPisLT(scip, SCIPvarGetUbGlobal(probvar), newbounds[v]) )
+               if( SCIPisLT(scip, SCIPvarGetUbGlobal(var), newbounds[v]) )
                {
                   SCIPdebugMsg(scip, "-> global infeasibility proven.\n");
 
@@ -1322,11 +1330,12 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                   break;
                }
 
-               if( SCIPisLT(scip, SCIPvarGetLbGlobal(probvar), newbounds[v]) )
+               if( SCIPisLT(scip, SCIPvarGetLbGlobal(var), newbounds[v]) )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
                         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand,
-                        scip->eventqueue, scip->cliquetable, probvar, newbounds[v], SCIP_BOUNDTYPE_LOWER, FALSE) );
+                        scip->eventqueue, scip->eventfilter, scip->cliquetable, var, newbounds[v],
+                        SCIP_BOUNDTYPE_LOWER, FALSE) );
 
                   ++(*nglobalred);
 
@@ -1337,18 +1346,18 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
          }
          else if( counts[nprobvars + v] + (*nredvars) == nvars )
          {
-            if( SCIPvarIsBinary(probvar) )
+            if( SCIPvarIsBinary(var) )
             {
-               SCIPdebugMsg(scip, "can fix variable %s [%g, %g] to 0.0\n", SCIPvarGetName(probvar),
-                  SCIPvarGetLbGlobal(probvar), SCIPvarGetUbGlobal(probvar));
+               SCIPdebugMsg(scip, "can fix variable %s [%g, %g] to 0.0\n", SCIPvarGetName(var),
+                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
 
-               if( SCIPvarGetUbGlobal(probvar) > 0.5 )
+               if( SCIPvarGetUbGlobal(var) > 0.5 )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
                         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-                        scip->cliquetable, probvar, 0.0, SCIP_BOUNDTYPE_UPPER, FALSE) );
+                        scip->eventfilter, scip->cliquetable, var, 0.0, SCIP_BOUNDTYPE_UPPER, FALSE) );
 
-                  assert(SCIPvarGetUbGlobal(probvar) < 0.5 || scip->tree->npendingbdchgs > 0);
+                  assert(SCIPvarGetUbGlobal(var) < 0.5 || scip->tree->npendingbdchgs > 0);
 
                   ++(*nglobalred);
 
@@ -1360,11 +1369,11 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
             {
                int idx = nprobvars + v;
 
-               SCIPdebugMsg(scip, "can tighten upper bound variable %s [%g, %g] to %g\n", SCIPvarGetName(probvar),
-                  SCIPvarGetLbGlobal(probvar), SCIPvarGetUbGlobal(probvar), newbounds[idx]);
+               SCIPdebugMsg(scip, "can tighten upper bound variable %s [%g, %g] to %g\n", SCIPvarGetName(var),
+                  SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), newbounds[idx]);
 
                /* the new upper bound is small than the global upper bound => the problem is global infeasible */
-               if( SCIPisGT(scip, SCIPvarGetLbGlobal(probvar), newbounds[idx]) )
+               if( SCIPisGT(scip, SCIPvarGetLbGlobal(var), newbounds[idx]) )
                {
                   SCIPdebugMsg(scip, "-> global infeasibility proven.\n");
 
@@ -1372,11 +1381,11 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                   break;
                }
 
-               if( SCIPisGT(scip, SCIPvarGetUbGlobal(probvar), newbounds[idx]) )
+               if( SCIPisGT(scip, SCIPvarGetUbGlobal(var), newbounds[idx]) )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
                         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-                        scip->cliquetable, probvar, newbounds[idx], SCIP_BOUNDTYPE_UPPER, FALSE) );
+                        scip->eventfilter, scip->cliquetable, var, newbounds[idx], SCIP_BOUNDTYPE_UPPER, FALSE) );
 
                   ++(*nglobalred);
 

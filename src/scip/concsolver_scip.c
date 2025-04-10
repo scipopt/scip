@@ -742,7 +742,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
       /* bound is better so incremented counters for statistics and pass it to the sync propagator */
       ++(*ntighterbnds);
 
-      if( SCIPvarGetType(var) <= SCIP_VARTYPE_INTEGER )
+      if( SCIPvarIsNonimpliedIntegral(var) )
          ++(*ntighterintbnds);
 
       SCIP_CALL( SCIPaddConcurrentBndchg(data->solverscip, var, newbound, boundtype) );

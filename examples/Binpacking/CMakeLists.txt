@@ -9,7 +9,7 @@ else()
   find_package(SCIP REQUIRED)
 endif()
 
-include_directories(${SCIP_INCLUDE_DIRS})
+include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(binpacking
    src/branch_ryanfoster.c
@@ -27,6 +27,8 @@ if(NOT LIBM)
 endif()
 
 target_link_libraries(binpacking ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(binpacking PRIVATE ${SCIP_COMPILE_FLAGS})
+
 if( TARGET examples )
     add_dependencies( examples binpacking )
 endif()

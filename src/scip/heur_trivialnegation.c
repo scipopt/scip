@@ -133,7 +133,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
 
       transvar = vars[i];
 
-      if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vars[i]) )
       {
          SCIP_Real obj;
          SCIP_Real newcoef;
@@ -267,6 +267,9 @@ SCIP_RETCODE SCIPincludeHeurTrivialnegation(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTrivialnegation, NULL) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTrivialnegation) );

@@ -130,15 +130,6 @@
 
 
 /*
- * CIP format variable characters
- */
-
-#define SCIP_VARTYPE_BINARY_CHAR 'B'
-#define SCIP_VARTYPE_INTEGER_CHAR 'I'
-#define SCIP_VARTYPE_IMPLINT_CHAR 'M'
-#define SCIP_VARTYPE_CONTINUOUS_CHAR 'C'
-
-/*
  * Long Integer values
  */
 
@@ -163,8 +154,10 @@
  */
 
 #define SCIP_Real double                               /**< type used for floating point values */
+
 #define SCIP_REAL_MAX         (SCIP_Real)DBL_MAX
 #define SCIP_REAL_MIN        -(SCIP_Real)DBL_MAX
+#define SCIP_REAL_UNITROUNDOFF        (1.0 / 9007199254740992)
 #define SCIP_REAL_FORMAT               "lf"
 
 #define SCIP_DEFAULT_INFINITY         1e+20  /**< default value considered to be infinity */

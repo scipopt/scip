@@ -52,6 +52,11 @@ extern "C" {
  * @{
  */
 
+/** returns inferred type of variable used for symmetry handling */
+SCIP_EXPORT
+SCIP_VARTYPE SCIPgetSymInferredVarType(
+   SCIP_VAR*             var                 /**< variable whose inferred type has to be returned */
+   );
 
 /** compute non-trivial orbits of symmetry group
  *

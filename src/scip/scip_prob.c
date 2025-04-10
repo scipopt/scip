@@ -66,6 +66,7 @@
 #include "scip/reader.h"
 #include "scip/reopt.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -400,10 +401,16 @@ SCIP_RETCODE SCIPreadProb(
          SCIP_Real readingtime;
 
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-            "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
-            scip->origprob->nvars, scip->origprob->nbinvars, scip->origprob->nintvars,
-            scip->origprob->nimplvars, scip->origprob->ncontvars,
-            scip->origprob->nconss);
+               "original problem has %d variables (%d bin, %d int, %d cont) and %d constraints\n",
+               scip->origprob->nvars, scip->origprob->nbinvars + scip->origprob->nbinimplvars, scip->origprob->nintvars
+               + scip->origprob->nintimplvars, scip->origprob->ncontvars + scip->origprob->ncontimplvars,
+               scip->origprob->nconss);
+
+         if( scip->origprob->nbinimplvars > 0 || scip->origprob->nintimplvars > 0 || scip->origprob->ncontimplvars > 0 )
+            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+               "original problem has %d implied integral variables (%d bin, %d int, %d cont)\n",
+               SCIPprobGetNImplVars(scip->origprob), scip->origprob->nbinimplvars, scip->origprob->nintimplvars,
+               scip->origprob->ncontimplvars);
 
          /* in full verbose mode we will also print the number of constraints per constraint handler */
          if( scip->set->disp_verblevel == SCIP_VERBLEVEL_FULL )
@@ -455,7 +462,8 @@ SCIP_RETCODE SCIPreadProb(
             permutevars = scip->set->random_permutevars;
             permutationseed = scip->set->random_permutationseed;
 
-            SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
+            SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss,
+                  permutevars, permutevars, permutevars, permutevars, permutevars, permutevars) );
          }
 
          /* get reading time */
@@ -784,8 +792,10 @@ SCIP_RETCODE SCIPpermuteProb(
    SCIP_Bool             permuteconss,       /**< should the list of constraints in each constraint handler be permuted? */
    SCIP_Bool             permutebinvars,     /**< should the list of binary variables be permuted? */
    SCIP_Bool             permuteintvars,     /**< should the list of integer variables be permuted? */
-   SCIP_Bool             permuteimplvars,    /**< should the list of implicit integer variables be permuted? */
-   SCIP_Bool             permutecontvars     /**< should the list of continuous integer variables be permuted? */
+   SCIP_Bool             permutebinimplvars, /**< should the list of binary implied integral vars be permuted? */
+   SCIP_Bool             permuteintimplvars, /**< should the list of integer implied integral vars be permuted? */
+   SCIP_Bool             permutecontimplvars, /**< should the list of continuous implied integral vars be permuted? */
+   SCIP_Bool             permutecontvars     /**< should the list of continuous variables be permuted? */
    )
 {
    SCIP_VAR** vars;
@@ -793,23 +803,31 @@ SCIP_RETCODE SCIPpermuteProb(
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_Bool permuted;
    int nconshdlrs;
-   int nbinvars;
-   int nintvars;
-   int nimplvars;
    int nvars;
+   int intstart;
+   int binimplstart;
+   int intimplstart;
+   int contimplstart;
+   int contstart;
    int j;
 
    assert(scip != NULL);
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpermuteProb", FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, &nimplvars, NULL) );
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   assert(vars != NULL || nvars == 0);
 
-   assert(nvars == 0 || vars != NULL);
-   assert(nvars == nbinvars+nintvars+nimplvars+SCIPgetNContVars(scip));
+   intstart = SCIPgetNBinVars(scip);
+   binimplstart = intstart + SCIPgetNIntVars(scip);
+   intimplstart = binimplstart + SCIPgetNBinImplVars(scip);
+   contimplstart = intimplstart + SCIPgetNIntImplVars(scip);
+   contstart = contimplstart + SCIPgetNContImplVars(scip);
+   assert(nvars == contstart + SCIPgetNContVars(scip));
 
    conshdlrs = SCIPgetConshdlrs(scip);
    nconshdlrs = SCIPgetNConshdlrs(scip);
-   assert(nconshdlrs == 0 || conshdlrs != NULL);
+   assert(conshdlrs != NULL || nconshdlrs == 0);
 
    /* create a random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, randseed, TRUE) );
@@ -871,46 +889,70 @@ SCIP_RETCODE SCIPpermuteProb(
    /* permute binary variables */
    if( permutebinvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPrandomPermuteArray(randnumgen, (void**)vars, 0, nbinvars);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, 0, intstart);
 
       /* readjust the mapping of variables to array positions */
-      for( j = 0; j < nbinvars; ++j )
+      for( j = 0; j < intstart; ++j )
          vars[j]->probindex = j;
 
       permuted = TRUE;
    }
 
-   /* permute general integer variables */
+   /* permute integer variables */
    if( permuteintvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPrandomPermuteArray(randnumgen, (void**)vars, nbinvars, nbinvars+nintvars);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, intstart, binimplstart);
 
       /* readjust the mapping of variables to array positions */
-      for( j = nbinvars; j < nbinvars+nintvars; ++j )
+      for( j = intstart; j < binimplstart; ++j )
          vars[j]->probindex = j;
 
       permuted = TRUE;
    }
 
-   /* permute general integer variables */
-   if( permuteimplvars && !SCIPprobIsPermuted(scip->origprob) )
+   /* permute binary implied integral variables */
+   if( permutebinimplvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPrandomPermuteArray(randnumgen, (void**)vars, nbinvars+nintvars, nbinvars+nintvars+nimplvars);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, binimplstart, intimplstart);
 
       /* readjust the mapping of variables to array positions */
-      for( j = nbinvars+nintvars; j < nbinvars+nintvars+nimplvars; ++j )
+      for( j = binimplstart; j < intimplstart; ++j )
          vars[j]->probindex = j;
 
       permuted = TRUE;
    }
 
-   /* permute general integer variables */
+   /* permute integer implied integral variables */
+   if( permuteintimplvars && !SCIPprobIsPermuted(scip->origprob) )
+   {
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, intimplstart, contimplstart);
+
+      /* readjust the mapping of variables to array positions */
+      for( j = intimplstart; j < contimplstart; ++j )
+         vars[j]->probindex = j;
+
+      permuted = TRUE;
+   }
+
+   /* permute continuous implied integral variables */
+   if( permutecontimplvars && !SCIPprobIsPermuted(scip->origprob) )
+   {
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, contimplstart, contstart);
+
+      /* readjust the mapping of variables to array positions */
+      for( j = contimplstart; j < contstart; ++j )
+         vars[j]->probindex = j;
+
+      permuted = TRUE;
+   }
+
+   /* permute continuous variables */
    if( permutecontvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPrandomPermuteArray(randnumgen, (void**)vars, nbinvars+nintvars+nimplvars, nvars);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, contstart, nvars);
 
       /* readjust the mapping of variables to array positions */
-      for( j = nbinvars+nintvars+nimplvars; j < nvars; ++j )
+      for( j = contstart; j < nvars; ++j )
          vars[j]->probindex = j;
 
       permuted = TRUE;
@@ -1273,8 +1315,8 @@ SCIP_RETCODE SCIPaddObjoffset(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddObjoffset", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPprobAddObjoffset(scip->transprob, addval);
-   SCIP_CALL( SCIPprimalUpdateObjoffset(scip->primal, SCIPblkmem(scip), scip->set, scip->stat, scip->eventfilter,
-         scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+   SCIP_CALL( SCIPprimalUpdateObjoffset(scip->primal, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue,
+         scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
 
    return SCIP_OKAY;
 }
@@ -1296,6 +1338,27 @@ SCIP_RETCODE SCIPaddOrigObjoffset(
 
    scip->origprob->objoffset += addval;
    SCIPprimalAddOrigObjoffset(scip->origprimal, scip->set, addval);
+
+   return SCIP_OKAY;
+}
+
+/** adds offset of objective function to original problem and to all existing solution in original space
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_RETCODE SCIPaddOrigObjoffsetExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddOrigObjoffsetExact", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPprobAddObjoffsetExact(scip->origprob, addval);
+   SCIPprimalAddOrigObjoffsetExact(scip->origprimal, scip->set, addval);
 
    return SCIP_OKAY;
 }
@@ -1323,6 +1386,35 @@ SCIP_Real SCIPgetOrigObjoffset(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetOrigObjoffset", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->origprob->objoffset;
+}
+
+/** returns the exact objective offset of the original problem
+ *
+ *  DO NOT MODIFY THE POINTER RETURNED BY THIS METHOD
+ *
+ *  @return the exact objective offset of the original problem
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RATIONAL* SCIPgetOrigObjoffsetExact(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetOrigObjoffsetExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert(SCIPisExact(scip));
+
+   return scip->origprob->objoffsetexact;
 }
 
 /** returns the objective scale of the original problem
@@ -1443,8 +1535,8 @@ SCIP_RETCODE SCIPsetObjlimit(
       }
       SCIPprobSetObjlim(scip->origprob, objlimit);
       SCIPprobSetObjlim(scip->transprob, objlimit);
-      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-            scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+            scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
       break;
 
    case SCIP_STAGE_TRANSFORMED:
@@ -1461,8 +1553,8 @@ SCIP_RETCODE SCIPsetObjlimit(
       }
       SCIPprobSetObjlim(scip->origprob, objlimit);
       SCIPprobSetObjlim(scip->transprob, objlimit);
-      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-            scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+            scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
       break;
 
    default:
@@ -1598,7 +1690,7 @@ SCIP_Bool SCIPisObjIntegral(
                break;
 
             /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
-            if ( SCIPvarGetType(scip->origprob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+            if ( !SCIPvarIsIntegral(scip->origprob->vars[v]) )
                break;
          }
       }
@@ -1684,6 +1776,18 @@ SCIP_RETCODE SCIPaddVar(
       return SCIP_OKAY;
    }
 
+   /* exact variable data should be available if and only if exact solving is turned on */
+   if( SCIPisExact(scip) && !SCIPvarIsExact(var) )
+   {
+      SCIPerrorMessage("cannot add variable without exact data while exact solving is enabled\n");
+      return SCIP_INVALIDDATA;
+   }
+   else if( !SCIPisExact(scip) && SCIPvarIsExact(var) )
+   {
+      SCIPerrorMessage("cannot add variable with exact data while exact solving is disabled\n");
+      return SCIP_INVALIDDATA;
+   }
+
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -1693,7 +1797,7 @@ SCIP_RETCODE SCIPaddVar(
          return SCIP_INVALIDDATA;
       }
       SCIP_CALL( SCIPprobAddVar(scip->origprob, scip->mem->probmem, scip->set, scip->lp, scip->branchcand,
-            scip->eventfilter, scip->eventqueue, var) );
+            scip->eventqueue, scip->eventfilter, var) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -1714,7 +1818,7 @@ SCIP_RETCODE SCIPaddVar(
          return SCIP_INVALIDDATA;
       }
       SCIP_CALL( SCIPprobAddVar(scip->transprob, scip->mem->probmem, scip->set, scip->lp,
-            scip->branchcand, scip->eventfilter, scip->eventqueue, var) );
+            scip->branchcand, scip->eventqueue, scip->eventfilter, var) );
       return SCIP_OKAY;
 
    default:
@@ -1761,7 +1865,7 @@ SCIP_RETCODE SCIPaddPricedVar(
          return SCIP_INVALIDDATA;
       }
       SCIP_CALL( SCIPprobAddVar(scip->transprob, scip->mem->probmem, scip->set, scip->lp,
-            scip->branchcand, scip->eventfilter, scip->eventqueue, var) );
+            scip->branchcand, scip->eventqueue, scip->eventfilter, var) );
    }
 
    /* add variable to pricing storage */
@@ -1776,16 +1880,16 @@ SCIP_RETCODE SCIPaddPricedVar(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
+ *  @warning The variable is not deleted from the constraints when in SCIP_STAGE_PROBLEM.  In this stage, it is the
+ *           user's responsibility to ensure the variable has been removed from all constraints or the constraints
+ *           deleted.
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_FREETRANS
- *
- *  @warning The variable is not deleted from the constraints when in SCIP_STAGE_PROBLEM.  In this stage, it is the
- *           user's responsibility to ensure the variable has been removed from all constraints or the constraints
- *           deleted.
  */
 SCIP_RETCODE SCIPdelVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1860,8 +1964,6 @@ SCIP_RETCODE SCIPdelVar(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
- *
- *  @note Variables in the vars array are ordered: binaries first, then integers, implicit integers and continuous last.
  */
 SCIP_RETCODE SCIPgetVarsData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1869,7 +1971,7 @@ SCIP_RETCODE SCIPgetVarsData(
    int*                  nvars,              /**< pointer to store number of variables or NULL if not needed */
    int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
    int*                  nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
-   int*                  nimplvars,          /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*                  nimplvars,          /**< pointer to store number of implied integral vars or NULL if not needed */
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
@@ -1887,7 +1989,7 @@ SCIP_RETCODE SCIPgetVarsData(
       if( nintvars != NULL )
          *nintvars = scip->origprob->nintvars;
       if( nimplvars != NULL )
-         *nimplvars = scip->origprob->nimplvars;
+         *nimplvars = SCIPprobGetNImplVars(scip->origprob);
       if( ncontvars != NULL )
          *ncontvars = scip->origprob->ncontvars;
       return SCIP_OKAY;
@@ -1910,7 +2012,7 @@ SCIP_RETCODE SCIPgetVarsData(
       if( nintvars != NULL )
          *nintvars = scip->transprob->nintvars;
       if( nimplvars != NULL )
-         *nimplvars = scip->transprob->nimplvars;
+         *nimplvars = SCIPprobGetNImplVars(scip->transprob);
       if( ncontvars != NULL )
          *ncontvars = scip->transprob->ncontvars;
       return SCIP_OKAY;
@@ -1925,6 +2027,18 @@ SCIP_RETCODE SCIPgetVarsData(
  *
  *  @return array with active problem variables
  *
+ *  @note Variables in the array are grouped in following order:
+ *        - binaries
+ *        - integers
+ *        - implied integral binaries
+ *        - implied integral integers
+ *        - implied integral continuous
+ *        - continuous
+ *
+ *  @warning Modifying a variable status (e.g. with SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar())
+ *           or a variable type (e.g. with SCIPchgVarType() and SCIPchgVarImplType())
+ *           may invalidate or resort the data array.
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -1936,13 +2050,6 @@ SCIP_RETCODE SCIPgetVarsData(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
- *
- *  @note Variables in the array are ordered: binaries first, then integers, implicit integers and continuous last.
- *
- *  @warning If your are using the methods which add or change bound of variables (e.g., SCIPchgVarType(), SCIPfixVar(),
- *           SCIPaggregateVars(), and SCIPmultiaggregateVar()), it can happen that the internal variable array (which is
- *           accessed via this method) gets resized and/or resorted. This can invalid the data pointer which is returned
- *           by this method.
  */
 SCIP_VAR** SCIPgetVars(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2022,6 +2129,8 @@ int SCIPgetNVars(
  *
  *  @return the number of binary active problem variables
  *
+ *  @note This function does not count binary variables which are implied integral.
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -2067,6 +2176,8 @@ int SCIPgetNBinVars(
  *
  *  @return the number of integer active problem variables
  *
+ *  @note This function does not count integer variables which are implied integral.
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -2108,9 +2219,11 @@ int SCIPgetNIntVars(
    }  /*lint !e788*/
 }
 
-/** gets number of implicit integer active problem variables
+/** gets number of implied integral active problem variables
  *
- *  @return the number of implicit integer active problem variables
+ *  @return the number of implied integral active problem variables
+ *
+ *  @note This function counts binary, integer, and continuous variables which are implied integral.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -2133,7 +2246,7 @@ int SCIPgetNImplVars(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      return scip->origprob->nimplvars;
+      return SCIPprobGetNImplVars(scip->origprob);
 
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
@@ -2144,7 +2257,7 @@ int SCIPgetNImplVars(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
    case SCIP_STAGE_EXITSOLVE:
-      return scip->transprob->nimplvars;
+      return SCIPprobGetNImplVars(scip->transprob);
 
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
@@ -2153,9 +2266,146 @@ int SCIPgetNImplVars(
    }  /*lint !e788*/
 }
 
+/** gets number of binary implied integral active problem variables
+ *
+ *  @return the number of binary implied integral active problem variables
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+int SCIPgetNBinImplVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNBinImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+      case SCIP_STAGE_PROBLEM:
+         return scip->origprob->nbinimplvars;
+
+      case SCIP_STAGE_TRANSFORMED:
+      case SCIP_STAGE_INITPRESOLVE:
+      case SCIP_STAGE_PRESOLVING:
+      case SCIP_STAGE_EXITPRESOLVE:
+      case SCIP_STAGE_PRESOLVED:
+      case SCIP_STAGE_INITSOLVE:
+      case SCIP_STAGE_SOLVING:
+      case SCIP_STAGE_SOLVED:
+      case SCIP_STAGE_EXITSOLVE:
+         return scip->transprob->nbinimplvars;
+
+      default:
+         SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+         SCIPABORT();
+         return 0; /*lint !e527*/
+   }  /*lint !e788*/
+}
+
+/** gets number of integer implied integral active problem variables
+ *
+ *  @return the number of integer implied integral active problem variables
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+int SCIPgetNIntImplVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNIntImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+      case SCIP_STAGE_PROBLEM:
+         return scip->origprob->nintimplvars;
+
+      case SCIP_STAGE_TRANSFORMED:
+      case SCIP_STAGE_INITPRESOLVE:
+      case SCIP_STAGE_PRESOLVING:
+      case SCIP_STAGE_EXITPRESOLVE:
+      case SCIP_STAGE_PRESOLVED:
+      case SCIP_STAGE_INITSOLVE:
+      case SCIP_STAGE_SOLVING:
+      case SCIP_STAGE_SOLVED:
+      case SCIP_STAGE_EXITSOLVE:
+         return scip->transprob->nintimplvars;
+
+      default:
+         SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+         SCIPABORT();
+         return 0; /*lint !e527*/
+   }  /*lint !e788*/
+}
+
+/** gets number of continuous implied integral active problem variables
+ *
+ *  @return the number of continuous implied integral active problem variables
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+int SCIPgetNContImplVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNContImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+      case SCIP_STAGE_PROBLEM:
+         return scip->origprob->ncontimplvars;
+
+      case SCIP_STAGE_TRANSFORMED:
+      case SCIP_STAGE_INITPRESOLVE:
+      case SCIP_STAGE_PRESOLVING:
+      case SCIP_STAGE_EXITPRESOLVE:
+      case SCIP_STAGE_PRESOLVED:
+      case SCIP_STAGE_INITSOLVE:
+      case SCIP_STAGE_SOLVING:
+      case SCIP_STAGE_SOLVED:
+      case SCIP_STAGE_EXITSOLVE:
+         return scip->transprob->ncontimplvars;
+
+      default:
+         SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+         SCIPABORT();
+         return 0; /*lint !e527*/
+   }  /*lint !e788*/
+}
+
 /** gets number of continuous active problem variables
  *
  *  @return the number of continuous active problem variables
+ *
+ *  @note This function does not count continuous variables which are implied integral.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -2197,7 +2447,6 @@ int SCIPgetNContVars(
       return 0; /*lint !e527*/
    }  /*lint !e788*/
 }
-
 
 /** gets number of active problem variables with a non-zero objective coefficient
  *
@@ -2360,7 +2609,7 @@ SCIP_RETCODE SCIPgetOrigVarsData(
    int*                  nvars,              /**< pointer to store number of variables or NULL if not needed */
    int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
    int*                  nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
-   int*                  nimplvars,          /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*                  nimplvars,          /**< pointer to store number of implied integral vars or NULL if not needed */
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
@@ -2375,18 +2624,28 @@ SCIP_RETCODE SCIPgetOrigVarsData(
    if( nintvars != NULL )
       *nintvars = scip->origprob->nintvars;
    if( nimplvars != NULL )
-      *nimplvars = scip->origprob->nimplvars;
+      *nimplvars = SCIPprobGetNImplVars(scip->origprob);
    if( ncontvars != NULL )
       *ncontvars = scip->origprob->ncontvars;
 
    return SCIP_OKAY;
 }
 
-/** gets array with original problem variables; data may become invalid after
- *  a call to SCIPchgVarType()
+/** gets array with original problem variables
  *
- *  @return an array with original problem variables; data may become invalid after
- *          a call to SCIPchgVarType()
+ *  @return array with original problem variables
+ *
+ *  @note Variables in the array are grouped in following order:
+ *        - binaries
+ *        - integers
+ *        - implied integral binaries
+ *        - implied integral integers
+ *        - implied integral continuous
+ *        - continuous
+ *
+ *  @warning Modifying the variable number (e.g. with SCIPaddVar() and SCIPdelVar())
+ *           or a variable type (e.g. with SCIPchgVarType() and SCIPchgVarImplType())
+ *           may invalidate or resort the data array.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -2442,6 +2701,8 @@ int SCIPgetNOrigVars(
  *
  *  @return the number of binary variables in the original problem
  *
+ *  @note This function does not count binary variables which are implied integral.
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -2469,6 +2730,8 @@ int SCIPgetNOrigBinVars(
  *
  *  @return the number of integer variables in the original problem
  *
+ *  @note This function does not count integer variables which are implied integral.
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -2492,9 +2755,11 @@ int SCIPgetNOrigIntVars(
    return scip->origprob->nintvars;
 }
 
-/** gets number of implicit integer variables in the original problem
+/** gets number of implied integral variables in the original problem
  *
- *  @return the number of implicit integer variables in the original problem
+ *  @return the number of implied integral variables in the original problem
+ *
+ *  @note This function counts binary, integer, and continuous variables which are implied integral.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -2516,12 +2781,95 @@ int SCIPgetNOrigImplVars(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNOrigImplVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   return scip->origprob->nimplvars;
+   return SCIPprobGetNImplVars(scip->origprob);
+}
+
+/** gets number of binary implied integral variables in the original problem
+ *
+ *  @return the number of binary implied integral variables in the original problem
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+int SCIPgetNOrigBinImplVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNOrigBinImplVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->origprob->nbinimplvars;
+}
+
+/** gets number of integer implied integral variables in the original problem
+ *
+ *  @return the number of integer implied integral variables in the original problem
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+int SCIPgetNOrigIntImplVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNOrigIntImplVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->origprob->nintimplvars;
+}
+
+/** gets number of continuous implied integral variables in the original problem
+ *
+ *  @return the number of continuous implied integral variables in the original problem
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+int SCIPgetNOrigContImplVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNOrigContImplVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->origprob->ncontimplvars;
 }
 
 /** gets number of continuous variables in the original problem
  *
  *  @return the number of continuous variables in the original problem
+ *
+ *  @note This function does not count continuous variables which are implied integral.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -2597,7 +2945,6 @@ int SCIPgetNTotalVars(
    }  /*lint !e788*/
 }
 
-
 /** gets variables of the original or transformed problem along with the numbers of different variable types;
  *  the returned problem space (original or transformed) corresponds to the given solution;
  *  data may become invalid after calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and
@@ -2624,7 +2971,9 @@ SCIP_RETCODE SCIPgetSolVarsData(
    int*                  nvars,              /**< pointer to store number of variables or NULL if not needed */
    int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
    int*                  nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
-   int*                  nimplvars,          /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*                  nbinimplvars,       /**< pointer to store number of binary implied integral vars or NULL if not needed */
+   int*                  nintimplvars,       /**< pointer to store number of integer implied integral vars or NULL if not needed */
+   int*                  ncontimplvars,      /**< pointer to store number of continuous implied integral vars or NULL if not needed */
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
@@ -2640,8 +2989,12 @@ SCIP_RETCODE SCIPgetSolVarsData(
          *nbinvars = scip->origprob->nbinvars;
       if( nintvars != NULL )
          *nintvars = scip->origprob->nintvars;
-      if( nimplvars != NULL )
-         *nimplvars = scip->origprob->nimplvars;
+      if( nbinimplvars != NULL )
+         *nbinimplvars = scip->origprob->nbinimplvars;
+      if( nintimplvars != NULL )
+         *nintimplvars = scip->origprob->nintimplvars;
+      if( ncontimplvars != NULL )
+         *ncontimplvars = scip->origprob->ncontimplvars;
       if( ncontvars != NULL )
          *ncontvars = scip->origprob->ncontvars;
    }
@@ -2655,8 +3008,12 @@ SCIP_RETCODE SCIPgetSolVarsData(
          *nbinvars = scip->transprob->nbinvars;
       if( nintvars != NULL )
          *nintvars = scip->transprob->nintvars;
-      if( nimplvars != NULL )
-         *nimplvars = scip->transprob->nimplvars;
+      if( nbinimplvars != NULL )
+         *nbinimplvars = scip->transprob->nbinimplvars;
+      if( nintimplvars != NULL )
+         *nintimplvars = scip->transprob->nintimplvars;
+      if( ncontimplvars != NULL )
+         *ncontimplvars = scip->transprob->ncontimplvars;
       if( ncontvars != NULL )
          *ncontvars = scip->transprob->ncontvars;
    }
@@ -2772,9 +3129,24 @@ SCIP_RETCODE SCIPaddCons(
    SCIP_CONS*            cons                /**< constraint to add */
    )
 {
+   SCIP_Bool isconsexact;
+
    assert(cons != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+
+   /* exact constraints should be added if and only if exact solving is turned on */
+   isconsexact = SCIPconshdlrIsExact((SCIPconsGetHdlr(cons)));
+   if( SCIPisExact(scip) && !isconsexact )
+   {
+      SCIPerrorMessage("cannot add inexact constraint while exact solving is enabled\n");
+      return SCIP_INVALIDDATA;
+   }
+   else if( !SCIPisExact(scip) && isconsexact )
+   {
+      SCIPerrorMessage("cannot add exact constraint while exact solving is disabled\n");
+      return SCIP_INVALIDDATA;
+   }
 
    switch( scip->set->stage )
    {
@@ -3328,10 +3700,25 @@ SCIP_RETCODE SCIPaddConsNode(
    SCIP_NODE*            validnode           /**< node at which the constraint is valid, or NULL */
    )
 {
+   SCIP_Bool isconsexact;
+
    assert(cons != NULL);
    assert(node != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConsNode", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* exact constraints should be added if and only if exact solving is turned on */
+   isconsexact = SCIPconshdlrIsExact((SCIPconsGetHdlr(cons)));
+   if( SCIPisExact(scip) && !isconsexact )
+   {
+      SCIPerrorMessage("cannot add inexact constraint while exact solving is enabled\n");
+      return SCIP_INVALIDDATA;
+   }
+   else if( !SCIPisExact(scip) && isconsexact )
+   {
+      SCIPerrorMessage("cannot add exact constraint while exact solving is disabled\n");
+      return SCIP_INVALIDDATA;
+   }
 
    if( validnode != NULL )
    {
@@ -3774,10 +4161,12 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
     * function instead of in SCIPnodeUpdateLowerbound().
     */
    if( SCIPisLT(scip, newbound, scip->primal->cutoffbound) )
-      SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->tree, scip->transprob, scip->origprob, newbound);
+   {
+      SCIP_CALL( SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->eventfilter, scip->tree, scip->transprob, scip->origprob, newbound, NULL) );
+   }
    else
    {
-      SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree, scip->transprob, scip->origprob, scip->reopt, scip->lp, scip->mem->probmem) );
+      SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->eventfilter, scip->tree, scip->transprob, scip->origprob, scip->reopt, scip->lp, scip->mem->probmem) );
    }
 
    return SCIP_OKAY;

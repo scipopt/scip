@@ -1062,20 +1062,23 @@ SCIP_DECL_EXPRINTEGRALITY(integralitySum)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(isintegral != NULL);
+   assert(integrality != NULL);
 
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
    /**! [SnippetExprIntegralitySum] */
-   *isintegral = EPSISINT(exprdata->constant, 0.0); /*lint !e835*/
+   *integrality = EPSISINT(exprdata->constant, 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE; /*lint !e835 */
 
-   for( i = 0; i < SCIPexprGetNChildren(expr) && *isintegral; ++i )
+   for( i = 0; i < SCIPexprGetNChildren(expr) && *integrality != SCIP_IMPLINTTYPE_NONE; ++i )
    {
       SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
       assert(child != NULL);
 
-      *isintegral = EPSISINT(exprdata->coefficients[i], 0.0) && SCIPexprIsIntegral(child); /*lint !e835*/
+      if( EPSISINT(exprdata->coefficients[i], 0.0) ) /*lint !e835*/
+         *integrality = MIN(*integrality, SCIPexprGetIntegrality(child)); /*lint !e666*/
+      else
+         *integrality = SCIP_IMPLINTTYPE_NONE;
    }
    /**! [SnippetExprIntegralitySum] */
 
@@ -1309,7 +1312,6 @@ SCIP_RETCODE SCIPmultiplyBySumExprSum(
  *
  * @attention The number of terms in the expansion grows exponential with the exponent. Be aware of what you wish for.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPpowerExprSum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           result,             /**< buffer where to store expanded power of sum */
