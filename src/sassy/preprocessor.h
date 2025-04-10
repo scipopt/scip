@@ -12,17 +12,22 @@
 #include <iomanip>
 #include <stdlib.h>
 #include <ctime>
+#include "tinycthread/tinycthread.h"
 
 namespace sassy {
     class preprocessor;
 
-    /** 
-     * Used to make preprocessor object available from nauty/saucy/Traces hook. 
+    /**
+     * Used to make preprocessor object available from nauty/saucy/Traces hook.
      */
     inline preprocessor*& save_preprocessor() {
+#if defined(_Thread_local)
+        static _Thread_local preprocessor* p = nullptr;
+#else
         static preprocessor* p = nullptr;
+#endif
         return p;
-    } 
+    }
 
     enum preop {
         deg01, deg2ue, deg2ma, qcedgeflip, probeqc, probe2qc, probeflat, redloop
