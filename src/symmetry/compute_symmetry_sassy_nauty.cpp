@@ -114,10 +114,10 @@ struct NAUTY_Data
 };
 
 /** static data for nauty callback */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201102L
-static thread_local struct NAUTY_Data nautydata_;
-#else
+#if defined(_Thread_local)
 static _Thread_local struct NAUTY_Data nautydata_;
+#else
+static struct NAUTY_Data nautydata_;
 #endif
 
 #endif

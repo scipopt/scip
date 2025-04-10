@@ -21,10 +21,10 @@ namespace sassy {
      * Used to make preprocessor object available from nauty/saucy/Traces hook.
      */
     inline preprocessor*& save_preprocessor() {
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201102L
-        static thread_local preprocessor* p = nullptr;
-#else
+#if defined(_Thread_local)
         static _Thread_local preprocessor* p = nullptr;
+#else
+        static preprocessor* p = nullptr;
 #endif
         return p;
     }
