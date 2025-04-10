@@ -823,7 +823,7 @@ SECTION: Using SCIP included in another source code
         In cases where this overrides the signal handling of a surrounding application,
         this may be undesirable.
         As a remedy, the parameter misc/catchctrlc can be set to FALSE or the SCIP library can be
-        compiled with the special C compiler flag "-DNO_SIGACTION", both disabling SCIP's internal
+        compiled with the special C compiler flag "-DSCIP_NO_SIGACTION", both disabling SCIP's internal
         signal handling.
     </p>
 
