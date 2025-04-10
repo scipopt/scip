@@ -48,6 +48,9 @@
 #define RELAX_PRIORITY         1
 #define RELAX_FREQ             0
 
+#define DEFAULT_CONTORIG       FALSE   /**< continue solving the original SCIP instance if optimal solution is not found */
+#define DEFAULT_NODELIMIT      -1      /**< node limit for the Benders' decomposition solve, -1 indicates original SCIP limit is used. */
+
 
 /*
  * Data structures
@@ -63,6 +66,10 @@ struct SCIP_RelaxData
    SCIP_HASHMAP**        subvarmaps;         /**< variables mapping between the original SCIP and the subproblems */
    int                   nsubproblems;       /**< the number of subproblems */
    SCIP_Bool             decompapplied;      /**< indicates whether the decomposition was applied */
+
+   /* parameters */
+   SCIP_Longint          nodelimit;          /**< the node limit for the Benders' decomposition solve */
+   SCIP_Bool             contorig;           /**< continue solving the original SCIP instance if optimal solution is not found */
 };
 
 /*
@@ -829,6 +836,10 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    /* copying the time and memory limits from the original SCIP to the master problem */
    SCIP_CALL( SCIPcopyLimits(scip, relaxdata->masterprob) );
 
+   /* is a Benders' decomposition node limit is set, then it is applied to the master problem */
+   if( relaxdata->nodelimit >= 0 )
+      SCIP_CALL( SCIPsetLongintParam(relaxdata->masterprob, "limits/totalnodes", relaxdata->nodelimit) );
+
    SCIP_CALL( SCIPcopySolvingTime(scip, relaxdata->masterprob) );
 
    /* presolving the master problem to initialise the Benders' decomposition data structures. This will allow us to
@@ -852,7 +863,7 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
       return SCIP_OKAY;
    }
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Copying the solution to the original problem variables\n\n");
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, " Copying the solution to the original problem variables\n\n");
 
    /* a solution for the original SCIP needs to be created. This will transfer the best found solution from the
     * Benders decomposition solve back to the original SCIP instance.
@@ -867,6 +878,14 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    {
       (*lowerbound) = SCIPgetDualbound(relaxdata->masterprob);
       (*result) = SCIP_SUCCESS;
+   }
+
+   /* if only the Benders' decomposition solve is executed, then the original SCIP instance needs to be terminated. This
+    * is achieved by setting the node limit to 1.
+    */
+   if( !relaxdata->contorig )
+   {
+      SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
    return SCIP_OKAY;
@@ -895,6 +914,15 @@ SCIP_RETCODE SCIPincludeRelaxBenders(
    SCIP_CALL( SCIPincludeRelax(scip, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ,
          relaxCopyBenders, relaxFreeBenders, relaxInitBenders, relaxExitBenders, relaxInitsolBenders,
          relaxExitsolBenders, relaxExecBenders, relaxdata) );
+
+   /* adding parameters for the Benders' relaxator */
+   SCIP_CALL( SCIPaddBoolParam(scip, "relax/" RELAX_NAME "/continueorig",
+         "continue solving the original SCIP instance if the optimal solution is not found by Benders' decomposition",
+         &relaxdata->contorig, FALSE, DEFAULT_CONTORIG, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip, "relax/" RELAX_NAME "/nodelimit",
+         "the node limit applied only to the Benders' decomposition solve (-1 indicates that the original SCIP node limit is used).",
+         &relaxdata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
