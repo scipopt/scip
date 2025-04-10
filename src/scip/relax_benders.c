@@ -320,56 +320,6 @@ SCIP_RETCODE applyDecomposition(
    return SCIP_OKAY;
 }
 
-/** sets the verbosity level of the decomposed problem and disables verbosity of the original SCIP */
-static
-SCIP_RETCODE setVerbosityLevel(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_RELAX*           relax               /**< the relaxator */
-)
-{
-   SCIP_RELAXDATA* relaxdata;
-   int verblevel;
-
-   assert(scip != NULL);
-   assert(relax != NULL);
-
-   relaxdata = SCIPrelaxGetData(relax);
-   assert(relaxdata != NULL);
-
-   /* getting the original verbosity level so that this can be reset at the end of the Benders' solve */
-   SCIP_CALL( SCIPgetIntParam(scip, "display/verblevel", &verblevel) );
-   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
-   relaxdata->origverblevel = (SCIP_VERBLEVEL)verblevel;
-
-   /* setting the master problem verbosity level to the original SCIP verbosity level */
-   SCIP_CALL( SCIPsetIntParam(relaxdata->masterprob, "display/verblevel", (int)relaxdata->origverblevel) );
-
-   return SCIP_OKAY;
-}
-
-
-/** resets the verbosity level of the original SCIP instance */
-static
-SCIP_RETCODE resetVerbosityLevel(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_RELAX*           relax               /**< the relaxator */
-)
-{
-   SCIP_RELAXDATA* relaxdata;
-
-   assert(scip != NULL);
-   assert(relax != NULL);
-
-   /* updating the verbosity level of the  */
-   relaxdata = SCIPrelaxGetData(relax);
-   assert(relaxdata != NULL);
-
-   /* getting the original verbosity level so that this can be reset at the end of the Benders' solve */
-   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", (int)relaxdata->origverblevel) );
-
-   return SCIP_OKAY;
-}
-
 /** returns whether a solution exists for the master problem */
 static
 SCIP_Bool masterSolutionExists(
@@ -660,8 +610,8 @@ SCIP_RETCODE createOriginalSolution(
    }
    else
    {
-      SCIPinfoMessage(scip, NULL, "The solution found by the Benders' decomposition algorithm is not valid "
-            "for the original problem.\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+            "The solution found by the Benders' decomposition algorithm is not valid for the original problem.\n");
    }
 
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
@@ -772,9 +722,6 @@ SCIP_DECL_RELAXINITSOL(relaxInitsolBenders)
     */
    SCIP_CALL( applyDecomposition(scip, relax, decomps[0]) );
 
-   /* setting the verbosity level of the original SCIP instance and the master problem */
-   SCIP_CALL( setVerbosityLevel(scip, relax) );
-
    return SCIP_OKAY;
 }
 
@@ -785,8 +732,6 @@ SCIP_DECL_RELAXEXITSOL(relaxExitsolBenders)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(relax != NULL);
-
-   SCIP_CALL( resetVerbosityLevel(scip, relax) );
 
    return SCIP_OKAY;
 }
@@ -827,12 +772,18 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
 
    SCIP_CALL( SCIPsolve(relaxdata->masterprob) );
 
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+      "\nBenders' decomposition solve has completed.");
+
    /* if the problem is solved to be infeasible, then the result needs to be set to CUTOFF. */
    if( SCIPgetStatus(relaxdata->masterprob) == SCIP_STATUS_INFEASIBLE )
    {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n\n");
       (*result) = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Copying the solution to the original problem variables\n\n");
 
    /* a solution for the original SCIP needs to be created. This will transfer the best found solution from the
     * Benders decomposition solve back to the original SCIP instance.
