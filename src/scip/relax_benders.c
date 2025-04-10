@@ -597,8 +597,10 @@ SCIP_RETCODE setSolutionValues(
 
          /* the subproblem could be an NLP. As such, we need to get the solution directly from the NLP */
          nlprelaxation = subproblem && SCIPisNLPConstructed(solscip) && SCIPgetNNlpis(solscip);
-         if( nlprelaxation )
+         assert(!nlprelaxation || nlpsols != NULL);
+         if( nlprelaxation && nlpsols != NULL )
          {
+            assert(nlpsols[varslabels[i]] != NULL);
             bestsol = nlpsols[varslabels[i]];
          }
          else
