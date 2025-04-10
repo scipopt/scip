@@ -190,6 +190,11 @@ Interface changes
   "heuristics/dks/buckmaxgap", "heuristics/dks/maxlinkscore", "heuristics/dks/maxbuckfrac", "heuristics/dks/maxnodes",
   "heuristics/dks/usetwolevel", "heuristics/dks/usedecomp", "heuristics/dks/usebestsol", "heuristics/dks/redcostsort", "heuristics/dks/primalonly",
   "heuristics/dks/redcostlogsort", "heuristics/dks/objcutoff", and "heuristics/dks/runbinprobsonly" to control heuristic decomposition kernel search
+- new parameters "relaxing/benders/continueorig" and "relaxing/benders/nodelimit" for controlling the behaviour of the
+  Benders' decomposition relaxator. The "continueorig" parameter indicates whether the original problem should continue
+  solving after the completion of the Benders' decomposition algorithm if the problem is not solved to optimality. The
+  "nodelimit" parameter allows the user to provide a node limit for the Benders' decomposition master problem (by
+  default the limits from the original SCIP instance are copied to the master problem).
 
 ### Data structures
 
