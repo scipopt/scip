@@ -75,7 +75,7 @@
 #define RELAX_FREQ             0
 
 #define DEFAULT_CONTORIG       FALSE   /**< continue solving the original SCIP instance if optimal solution is not found */
-#define DEFAULT_NODELIMIT      -1      /**< node limit for the Benders' decomposition solve, -1 indicates original SCIP limit is used. */
+#define DEFAULT_NODELIMIT      -1LL    /**< node limit for the Benders' decomposition solve, -1 indicates original SCIP limit is used. */
 
 
 /*
@@ -527,6 +527,8 @@ SCIP_RETCODE setSolutionValues(
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
 
+   nlpsols = NULL;
+   nlpsubprob = FALSE;
    /* checking whether the NLP solutions should be collected. */
    for( i = 0; i < relaxdata->nsubproblems; i++ )
    {
@@ -948,7 +950,7 @@ SCIP_RETCODE SCIPincludeRelaxBenders(
 
    SCIP_CALL( SCIPaddLongintParam(scip, "relax/" RELAX_NAME "/nodelimit",
          "the node limit applied only to the Benders' decomposition solve (-1 indicates that the original SCIP node limit is used).",
-         &relaxdata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1, INT_MAX, NULL, NULL) );
+         &relaxdata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
