@@ -91,6 +91,8 @@ Interface changes
 - SCIPexprSetIntegrality(): set argument generalized from SCIP_Bool integral to SCIP_IMPLINTTYPE integrality (4th position)
 - Temporarily for SCIP 10 only: Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integral type SCIP_IMPLINTTYPE_WEAK instead
 - Temporarily for SCIP 10 only: SCIPchgVarType() converts a call with type SCIP_VARTYPE_IMPLINT into a call of SCIPchgVarImplType() with type SCIP_IMPLINTTYPE_WEAK
+- SCIPapplyBendersDecomposition has been removed. This was originally used to apply Benders' decomposition from a
+  supplied decomposition structure. The application of Benders' decomposition now occurs in benders_relax.
 
 ### New API functions
 
