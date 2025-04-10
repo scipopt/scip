@@ -44,11 +44,11 @@
  * decomposition algorithm) or terminate with a "user interrupt" status. The user interrupt is triggered to prevent the
  * original SCIP instance to continue solving the problem if the Benders' decomposition algorithm fails to find the
  * optimality solution. If the user wishes for the original SCIP instance to continue solving after the conclusion of
- * the Benders' decomposition algorithm, this can be achieved by setting "relax/benders/continueorig" to TRUE.
+ * the Benders' decomposition algorithm, this can be achieved by setting "relaxing/benders/continueorig" to TRUE.
  *
  * The working limits from the original SCIP instance are copied across to the master problem SCIP instance. However, if
  * the user desires to have a different node limit for the master problem, for example if they wish to use
- * Benders' decomposition as a start heuristic, then this can be set with the parameter "relax/benders/nodelimit".
+ * Benders' decomposition as a start heuristic, then this can be set with the parameter "relaxing/benders/nodelimit".
  *
  * If the Benders' decomposition relaxator is used, then statistics for both the original SCIP instance and the master
  * problem SCIP instance are displayed when the statistics are requested by the user.
@@ -944,11 +944,11 @@ SCIP_RETCODE SCIPincludeRelaxBenders(
          relaxExitsolBenders, relaxExecBenders, relaxdata) );
 
    /* adding parameters for the Benders' relaxator */
-   SCIP_CALL( SCIPaddBoolParam(scip, "relax/" RELAX_NAME "/continueorig",
+   SCIP_CALL( SCIPaddBoolParam(scip, "relaxing/" RELAX_NAME "/continueorig",
          "continue solving the original SCIP instance if the optimal solution is not found by Benders' decomposition",
          &relaxdata->contorig, FALSE, DEFAULT_CONTORIG, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddLongintParam(scip, "relax/" RELAX_NAME "/nodelimit",
+   SCIP_CALL( SCIPaddLongintParam(scip, "relaxing/" RELAX_NAME "/nodelimit",
          "the node limit applied only to the Benders' decomposition solve (-1 indicates that the original SCIP node limit is used).",
          &relaxdata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
