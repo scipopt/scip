@@ -162,6 +162,7 @@ Interface changes
 - new parameter "propagating/symmetry/handlesignedorbitopes" to control whether special symmetry handling techniques for orbitopes whose columns can be (partially) reflected shall be applied
 - new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
 - new parameter "propagating/symmetry/dispsyminfo" to control whether information about which symmetry handling methods are applied are printed
+- new parameter "presolving/implint/convertintegers" to control whether implied integrality should also be detected for enforced integral variables
 - new parameter "presolving/implint/columnrowratio" indicates the ratio of rows/columns where the row-wise network matrix detection algorithm is used instead of the column-wise network matrix detection algorithm
 - new parameter "presolving/implint/numericslimit" determines the limit for absolute integral coefficients beyond which the corresponding rows and variables are excluded from implied integrality detection
 - iis/minimal, iis/nodes, iis/removedbounds, iis/removeunusedvars, iis/silent, iis/stopafterone, iis/time, iis/greedy/additive, iis/greedy/conservative, iis/greedy/delafteradd, iis/greedy/dynamicreordering, iis/greedy/maxbatchsize, iis/greedy/maxrelbatchsize, iis/greedy/nodelimperiter, iis/greedy/priority, iis/greedy/timelimperiter
