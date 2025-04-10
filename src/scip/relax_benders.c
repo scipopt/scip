@@ -26,6 +26,32 @@
  * @ingroup DEFPLUGINS_RELAX
  * @brief  benders relaxator
  * @author Stephen J. Maher
+ *
+ * This relaxator is provided to apply Benders' decomposition to a supplied decomposition structure. The relaxator is
+ * invoked if the user supplies a decomposition structure and sets the parameter "decomposition/applybenders" to TRUE.
+ * In addition, it is recommended that the parameter "decomposition/benderslabels" is set to TRUE to ensure that the
+ * block labelling of the variables and constraints is correct for applying Benders' decomposition.
+ *
+ * Given a decomposition structure, the relaxator will create a number of SCIP instances: one for the master problem and
+ * one for each subproblems. These SCIP instances are supplied to the default Benders' decomposition plugin to trigger
+ * the execution of the Benders' decomposition algorithm. The original SCIP instance will execute presolving and start
+ * the solving process. When the root node starts solving, this relaxator will be called first. The Benders'
+ * decomposition algorithm attempts to solve the problem to optimality. At the completion of the Benders' decomposition
+ * algorithm, the best found primal and dual bounds are returned to the original SCIP instance. The solution from the
+ * decomposed problem is mapped back to the original instance variables.
+ *
+ * By default, the original SCIP instance will either terminate with the optimal solution (if found by the Benders'
+ * decomposition algorithm) or terminate with a "user interrupt" status. The user interrupt is triggered to prevent the
+ * original SCIP instance to continue solving the problem if the Benders' decomposition algorithm fails to find the
+ * optimality solution. If the user wishes for the original SCIP instance to continue solving after the conclusion of
+ * the Benders' decomposition algorithm, this can be achieved by setting "relax/benders/continueorig" to TRUE.
+ *
+ * The working limits from the original SCIP instance are copied across to the master problem SCIP instance. However, if
+ * the user desires to have a different node limit for the master problem, for example if they wish to use
+ * Benders' decomposition as a start heuristic, then this can be set with the parameter "relax/benders/nodelimit".
+ *
+ * If the Benders' decomposition relaxator is used, then statistics for both the original SCIP instance and the master
+ * problem SCIP instance are displayed when the statistics are requested by the user.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
