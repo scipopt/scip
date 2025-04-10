@@ -49,7 +49,6 @@
 #define RELAX_FREQ             0
 
 
-
 /*
  * Data structures
  */
@@ -64,10 +63,7 @@ struct SCIP_RelaxData
    SCIP_HASHMAP**        subvarmaps;         /**< variables mapping between the original SCIP and the subproblems */
    int                   nsubproblems;       /**< the number of subproblems */
    SCIP_Bool             decompapplied;      /**< indicates whether the decomposition was applied */
-   SCIP_VERBLEVEL        origverblevel;      /**< the verbosity level of the original SCIP instance */
 };
-
-
 
 /*
  * Local methods
@@ -316,6 +312,72 @@ SCIP_RETCODE applyDecomposition(
    SCIPfreeBufferArray(scip, &varslabels);
 
    relaxdata->decompapplied = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** copies the best solution from the original SCIP instance and adds it to the master problem of the decomposed problem */
+static
+SCIP_RETCODE addInitialSolution(
+   SCIP*                 scip,               /**< the SCIP instance */
+   SCIP_RELAXDATA*       relaxdata           /**< the relaxator data */
+)
+{
+   SCIP* masterprob;
+   SCIP_SOL* sol;
+   SCIP_SOL* bestsol;
+   SCIP_DECOMP* decomp;
+   SCIP_VAR** vars;
+   int* varslabels;
+   int nvars;
+   int i;
+   SCIP_Bool stored;
+
+   assert(scip != NULL);
+   assert(relaxdata != NULL);
+   assert(relaxdata->masterprob != NULL);
+
+   masterprob = relaxdata->masterprob;
+
+   bestsol = SCIPgetBestSol(scip);
+
+   /* if the best solution doesn't exist, then there is no solution to copy */
+   if( bestsol == NULL )
+      return SCIP_OKAY;
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   SCIP_CALL( SCIPcreateSol(masterprob, &sol, NULL) );
+
+   decomp = relaxdata->decomp;
+
+   /* allocating buffer memory for the labels arrays */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, nvars) );
+
+   /* getting the labels for the variables and constraints from the decomposition */
+   SCIPdecompGetVarsLabels(decomp, vars, varslabels, nvars);
+
+   /* setting the value of the variables that are in the master problem */
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_VAR* mappedvar;
+
+      /* we are only interested in the master problem variables */
+      if( varslabels[i] < 0 )
+      {
+         mappedvar = (SCIP_VAR*)SCIPhashmapGetImage(relaxdata->mastervarmap, vars[i]);
+         if( mappedvar != NULL )
+         {
+            SCIP_CALL( SCIPsetSolVal(masterprob, sol, mappedvar,
+                  SCIPgetSolVal(scip, bestsol, vars[i])) );
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &varslabels);
+
+   SCIP_CALL( SCIPtrySolFree(relaxdata->masterprob, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
 
    return SCIP_OKAY;
 }
@@ -623,7 +685,6 @@ SCIP_RETCODE createOriginalSolution(
 }
 
 
-
 /*
  * Callback methods of relaxator
  */
@@ -769,6 +830,14 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    SCIP_CALL( SCIPcopyLimits(scip, relaxdata->masterprob) );
 
    SCIP_CALL( SCIPcopySolvingTime(scip, relaxdata->masterprob) );
+
+   /* presolving the master problem to initialise the Benders' decomposition data structures. This will allow us to
+    * supply an initial solution coming from the original SCIP instance.
+    */
+   SCIP_CALL( SCIPpresolve(relaxdata->masterprob) );
+
+   /* adding an initial solution from the original SCIP instance */
+   SCIP_CALL( addInitialSolution(scip, relaxdata) );
 
    SCIP_CALL( SCIPsolve(relaxdata->masterprob) );
 
