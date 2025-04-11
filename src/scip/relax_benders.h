@@ -49,8 +49,8 @@ SCIP_RETCODE SCIPincludeRelaxBenders(
 
 /** returns the master problem SCIP instance */
 SCIP_EXPORT
-SCIP_RETCODE SCIPrelaxBendersPrintStatistics(
-   SCIP_RELAX*           relax               /**< the Benders' decomposition relaxator */
+SCIP* SCIPgetMasterProblemRelaxBenders(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

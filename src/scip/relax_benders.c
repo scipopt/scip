@@ -900,20 +900,25 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
     */
    SCIP_CALL( createOriginalSolution(scip, relax, &infeasible) );
 
-   if( infeasible )
+   (*lowerbound) = SCIPgetDualbound(relaxdata->masterprob);
+   (*result) = SCIP_SUCCESS;
+
+   /* if only the Benders' decomposition algorithm should be executed, then there we need to stop the original SCIP
+    * instance. This is achieved by calling SCIPinterruptSolve. However, it is not necessary to interrupt the solve if
+    * the time, gap, primal or dual limits are reached in the Benders' decomposition algorithm.
+    */
+   if( !relaxdata->contorig &&
+      SCIPgetStatus(relaxdata->masterprob) != SCIP_STATUS_TIMELIMIT &&
+      SCIPgetStatus(relaxdata->masterprob) != SCIP_STATUS_GAPLIMIT &&
+      SCIPgetStatus(relaxdata->masterprob) != SCIP_STATUS_PRIMALLIMIT &&
+      SCIPgetStatus(relaxdata->masterprob) != SCIP_STATUS_DUALLIMIT
+   )
    {
-      (*result) = SCIP_CUTOFF;
-   }
-   else
-   {
-      (*lowerbound) = SCIPgetDualbound(relaxdata->masterprob);
-      (*result) = SCIP_SUCCESS;
+      SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
-   /* if only the Benders' decomposition solve is executed, then the original SCIP instance needs to be terminated. This
-    * is achieved by setting the node limit to 1.
-    */
-   if( !relaxdata->contorig )
+   /* if the user interrupted the Benders' decomposition algorithm, then the main SCIP should be interrupted too */
+   if( SCIPgetStatus(relaxdata->masterprob) == SCIP_STATUS_USERINTERRUPT )
    {
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
@@ -957,25 +962,26 @@ SCIP_RETCODE SCIPincludeRelaxBenders(
    return SCIP_OKAY;
 }
 
-/** prints the statistics for the Benders' master problem */
-SCIP_RETCODE SCIPrelaxBendersPrintStatistics(
-   SCIP_RELAX*           relax               /**< the Benders' decomposition relaxator */
+/** returns the master problem SCIP instance */
+SCIP* SCIPgetMasterProblemRelaxBenders(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_RELAX* relax;
    SCIP_RELAXDATA* relaxdata;
 
-   assert(relax != NULL);
+   assert(scip != NULL);
+
+   relax = SCIPfindRelax(scip, RELAX_NAME);
+   if( relax == NULL )
+      return NULL;
 
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
 
    /* if the decomposition has not been applied, then there are no statistics to display */
    if( !relaxdata->decompapplied )
-      return SCIP_OKAY;
+      return NULL;
 
-   assert(relaxdata->masterprob != NULL);
-
-   SCIP_CALL( SCIPprintStatistics(relaxdata->masterprob, NULL) );
-
-   return SCIP_OKAY;
+   return relaxdata->masterprob;
 }
