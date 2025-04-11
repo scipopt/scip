@@ -9275,6 +9275,7 @@ SCIP_RETCODE constructSNFRelaxation(
 
       probidx = rowinds[i];
       /* variable should be binary */
+      assert(probidx >= 0);
       assert(probidx < nbinvars);
 
       /* binary variable was processed together with a non-binary variable */
