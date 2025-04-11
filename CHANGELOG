@@ -136,8 +136,7 @@ Interface changes
 - added SCIPcopySolvingTime() to copying the current solving time from a source SCIP to a target SCIP. This is currently
   used in the Benders' decomposition relaxator to display the total solving time in the Benders' sub-SCIP solve.
 - added SCIPincludeRelaxBenders(), which is used to include the Benders' decomposition relaxator.
-- added SCIPrelaxBendersPrintStatistics() for printing the statistics from the Benders' decomposition solve in the
-  Benders' relaxator.
+- added SCIPgetMasterProblemRelaxBenders() for retrieving the master problem SCIP instance from the Benders' decomposition relaxator.
 
 ### Changes in preprocessor macros
 
