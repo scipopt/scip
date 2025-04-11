@@ -762,6 +762,8 @@ SCIP_RETCODE freeDecomposition(
       /* freeing the allocated arrays */
       SCIPfreeBlockMemoryArray(scip, &relaxdata->subvarmaps, relaxdata->nsubproblems);
       SCIPfreeBlockMemoryArray(scip, &relaxdata->subproblems, relaxdata->nsubproblems);
+
+      relaxdata->decompapplied = FALSE;
    }
 
    return SCIP_OKAY;
@@ -810,6 +812,9 @@ SCIP_DECL_RELAXINITSOL(relaxInitsolBenders)
 
    assert(scip != NULL);
 
+   /* if a decomposition has been previously applied, then it must be freed first */
+   SCIP_CALL( freeDecomposition(scip, relax) );
+
    SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/applybenders", &applybenders) );
    if( !applybenders )
       return SCIP_OKAY;
@@ -838,9 +843,6 @@ SCIP_DECL_RELAXINITSOL(relaxInitsolBenders)
       SCIPerrorMessage("The default Benders' decomposition plugin is required to apply Benders' decomposition using the input decomposition.");
       return SCIP_ERROR;
    }
-
-   /* if a decomposition has been previously applied, then it must be freed first */
-   SCIP_CALL( freeDecomposition(scip, relax) );
 
    /* applying the Benders' decomposition */
    SCIP_CALL( applyDecomposition(scip, relax, decomps[0]) );
