@@ -892,8 +892,6 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    if( relaxdata->nodelimit >= 0 )
       SCIP_CALL( SCIPsetLongintParam(relaxdata->masterprob, "limits/totalnodes", relaxdata->nodelimit) );
 
-   SCIP_CALL( SCIPcopySolvingTime(scip, relaxdata->masterprob) );
-
    /* presolving the master problem to initialise the Benders' decomposition data structures. This will allow us to
     * supply an initial solution coming from the original SCIP instance.
     */
