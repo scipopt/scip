@@ -776,7 +776,7 @@ SCIP_RETCODE freeDecomposition(
 #define relaxCopyBenders NULL
 #define relaxInitBenders NULL
 #define relaxExitBenders NULL
-
+#define relaxExitsolBenders NULL
 
 /** destructor of relaxator to free user data (called when SCIP is exiting) */
 static
@@ -846,17 +846,6 @@ SCIP_DECL_RELAXINITSOL(relaxInitsolBenders)
 
    /* applying the Benders' decomposition */
    SCIP_CALL( applyDecomposition(scip, relax, decomps[0]) );
-
-   return SCIP_OKAY;
-}
-
-
-/** solving process deinitialization method of relaxator (called before branch and bound process data is freed) */
-static
-SCIP_DECL_RELAXEXITSOL(relaxExitsolBenders)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(relax != NULL);
 
    return SCIP_OKAY;
 }
