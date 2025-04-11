@@ -721,21 +721,15 @@ SCIP_RETCODE createOriginalSolution(
    return SCIP_OKAY;
 }
 
-
-/*
- * Callback methods of relaxator
- */
-
-#define relaxCopyBenders NULL
-#define relaxInitBenders NULL
-#define relaxExitBenders NULL
-
-
-/** destructor of relaxator to free user data (called when SCIP is exiting) */
+/* frees all of the data structures used to apply the decomposition */
 static
-SCIP_DECL_RELAXFREE(relaxFreeBenders)
-{  /*lint --e{715}*/
+SCIP_RETCODE freeDecomposition(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_RELAX*           relax               /**< the relaxator */
+)
+{
    SCIP_RELAXDATA* relaxdata;
+   int i;
 
    assert(scip != NULL);
    assert(relax != NULL);
@@ -746,8 +740,6 @@ SCIP_DECL_RELAXFREE(relaxFreeBenders)
    /* if the decomposition has been applied, then the corresponding SCIP instances need to be freed */
    if( relaxdata->decompapplied )
    {
-      int i;
-
       /* freeing the variable hash maps */
       for( i = relaxdata->nsubproblems - 1; i >= 0; i-- )
       {
@@ -766,6 +758,33 @@ SCIP_DECL_RELAXFREE(relaxFreeBenders)
       SCIPfreeBlockMemoryArray(scip, &relaxdata->subvarmaps, relaxdata->nsubproblems);
       SCIPfreeBlockMemoryArray(scip, &relaxdata->subproblems, relaxdata->nsubproblems);
    }
+
+   return SCIP_OKAY;
+}
+
+/*
+ * Callback methods of relaxator
+ */
+
+#define relaxCopyBenders NULL
+#define relaxInitBenders NULL
+#define relaxExitBenders NULL
+
+
+/** destructor of relaxator to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_RELAXFREE(relaxFreeBenders)
+{  /*lint --e{715}*/
+SCIP_RELAXDATA* relaxdata;
+
+   assert(scip != NULL);
+   assert(relax != NULL);
+
+   relaxdata = SCIPrelaxGetData(relax);
+   assert(relaxdata != NULL);
+
+   /* freeing the decomposition information */
+   SCIP_CALL( freeDecomposition(scip, relax) );
 
    SCIPfreeBlockMemory(scip, &relaxdata);
 
@@ -814,6 +833,9 @@ SCIP_DECL_RELAXINITSOL(relaxInitsolBenders)
       SCIPerrorMessage("The default Benders' decomposition plugin is required to apply Benders' decomposition using the input decomposition.");
       return SCIP_ERROR;
    }
+
+   /* if a decomposition has been previously applied, then it must be freed first */
+   SCIP_CALL( freeDecomposition(scip, relax) );
 
    /* applying the Benders' decomposition. If SCIP is in the PROBLEM stage, then the auxiliary variables don't need to
     * be added. However, in any other stage, then the auxiliary variables must be added to the problem.
