@@ -146,7 +146,7 @@ SCIP_RETCODE constructValidSolution(
    for( i = 0; i < nactivebenders; i++ )
    {
       SCIP_BENDERSOBJTYPE objtype;
-      SCIP_Real masterauxvarval = 0;
+      SCIP_Real masterauxvarval = 0.0;
 
       /* getting the objective type for the subproblems */
       objtype = SCIPbendersGetObjectiveType(benders[i]);
@@ -174,7 +174,9 @@ SCIP_RETCODE constructValidSolution(
          }
 
          if( objtype == SCIP_BENDERSOBJTYPE_SUM )
+         {
             masterauxvarval += objval;
+         }
          else
          {
             assert(objtype == SCIP_BENDERSOBJTYPE_MAX);

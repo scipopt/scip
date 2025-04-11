@@ -40,18 +40,20 @@
  * algorithm, the best found primal and dual bounds are returned to the original SCIP instance. The solution from the
  * decomposed problem is mapped back to the original instance variables.
  *
- * By default, the original SCIP instance will either terminate with the optimal solution (if found by the Benders'
- * decomposition algorithm) or terminate with a "user interrupt" status. The user interrupt is triggered to prevent the
- * original SCIP instance to continue solving the problem if the Benders' decomposition algorithm fails to find the
- * optimality solution. If the user wishes for the original SCIP instance to continue solving after the conclusion of
- * the Benders' decomposition algorithm, this can be achieved by setting "relaxing/benders/continueorig" to TRUE.
+ * By default, the original SCIP instance will terminate with an optimal solution or infeasible status (if found or
+ * proven by the Benders' decomposition algorithm, resp.), or a status indicating a time, gap, or bound limit, or a
+ * "user interrupt". To prevent the original SCIP instance to continue solving if the Benders' decomposition algorithm
+ * fails to solve the problem, the user interrupt is also triggered if the Benders' decomposition algorithm stopped due
+ * to a node, restart, or solution limit, or when transferring the solution to the original SCIP instance fails.
+ * To continue solving the original SCIP instance after the conclusion of the Benders' decomposition algorithm,
+ * parameter "relaxing/benders/continueorig" can be set to TRUE.
  *
  * The working limits from the original SCIP instance are copied across to the master problem SCIP instance. However, if
  * the user desires to have a different node limit for the master problem, for example if they wish to use
  * Benders' decomposition as a start heuristic, then this can be set with the parameter "relaxing/benders/nodelimit".
  *
  * If the Benders' decomposition relaxator is used, then statistics for both the original SCIP instance and the master
- * problem SCIP instance are displayed when the statistics are requested by the user.
+ * problem SCIP instance are displayed when the statistics are requested by via the SCIP shell dialog.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -174,7 +176,10 @@ SCIP_RETCODE addConstraintToBendersProblem(
 
    SCIP_CALL( SCIPgetConsVars(scip, sourcecons, consvars, nconsvars, &success) );
    if( !success )
+   {
+      SCIPfreeBufferArray(scip, &consvars);
       return SCIP_ERROR;
+   }
 
    /* checking all variables to see whether they already exist in the subproblem. If they don't exist, then the variable
     * is created
@@ -837,9 +842,7 @@ SCIP_DECL_RELAXINITSOL(relaxInitsolBenders)
    /* if a decomposition has been previously applied, then it must be freed first */
    SCIP_CALL( freeDecomposition(scip, relax) );
 
-   /* applying the Benders' decomposition. If SCIP is in the PROBLEM stage, then the auxiliary variables don't need to
-    * be added. However, in any other stage, then the auxiliary variables must be added to the problem.
-    */
+   /* applying the Benders' decomposition */
    SCIP_CALL( applyDecomposition(scip, relax, decomps[0]) );
 
    return SCIP_OKAY;
@@ -863,6 +866,7 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    SCIP_RELAXDATA* relaxdata;
    SCIP_Bool success;
    SCIP_Bool infeasible;
+   SCIP_STATUS masterstatus;
 
    assert(scip != NULL);
    assert(relax != NULL);
@@ -902,11 +906,13 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
 
    SCIP_CALL( SCIPsolve(relaxdata->masterprob) );
 
+   masterstatus = SCIPgetStatus(relaxdata->masterprob);
+
    SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-      "\nBenders' decomposition solve has completed.");
+      "\nBenders' decomposition solve has completed with status %s.", SCIPstatusName(masterstatus));
 
    /* if the problem is solved to be infeasible, then the result needs to be set to CUTOFF. */
-   if( SCIPgetStatus(relaxdata->masterprob) == SCIP_STATUS_INFEASIBLE )
+   if( masterstatus == SCIP_STATUS_INFEASIBLE )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n\n");
       (*result) = SCIP_CUTOFF;
@@ -928,17 +934,17 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
     * the time, gap, primal or dual limits are reached in the Benders' decomposition algorithm.
     */
    if( !relaxdata->contorig &&
-      SCIPgetStatus(relaxdata->masterprob) != SCIP_STATUS_TIMELIMIT &&
-      SCIPgetStatus(relaxdata->masterprob) != SCIP_STATUS_GAPLIMIT &&
-      SCIPgetStatus(relaxdata->masterprob) != SCIP_STATUS_PRIMALLIMIT &&
-      SCIPgetStatus(relaxdata->masterprob) != SCIP_STATUS_DUALLIMIT
+      masterstatus != SCIP_STATUS_TIMELIMIT &&
+      masterstatus != SCIP_STATUS_GAPLIMIT &&
+      masterstatus != SCIP_STATUS_PRIMALLIMIT &&
+      masterstatus != SCIP_STATUS_DUALLIMIT
    )
    {
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
    /* if the user interrupted the Benders' decomposition algorithm, then the main SCIP should be interrupted too */
-   if( SCIPgetStatus(relaxdata->masterprob) == SCIP_STATUS_USERINTERRUPT )
+   if( masterstatus == SCIP_STATUS_USERINTERRUPT )
    {
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
