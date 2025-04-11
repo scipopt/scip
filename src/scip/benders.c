@@ -2090,7 +2090,7 @@ SCIP_RETCODE createSubproblems(
             if( objchanged )
             {
                SCIPverbMessage(subproblem, SCIP_VERBLEVEL_HIGH, NULL, "Benders' decomposition: Objective coefficients of "
-                  "copied of master problem variables has been changed to zero.\n");
+                  "copy of master problem variables in a subproblem have been changed to zero.\n");
             }
          }
 
