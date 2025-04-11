@@ -145,6 +145,7 @@ SCIP_RETCODE constructValidSolution(
    /* looping through all Benders' decompositions to construct the new solution */
    for( i = 0; i < nactivebenders; i++ )
    {
+      SCIP_VAR* masterauxvar;
       SCIP_BENDERSOBJTYPE objtype;
       SCIP_Real masterauxvarval = 0.0;
 
@@ -152,6 +153,7 @@ SCIP_RETCODE constructValidSolution(
       objtype = SCIPbendersGetObjectiveType(benders[i]);
 
       /* getting the auxiliary variables and the number of subproblems from the Benders' decomposition structure */
+      masterauxvar = SCIPbenderGetMasterAuxiliaryVar(benders[i]);
       auxiliaryvars = SCIPbendersGetAuxiliaryVars(benders[i]);
       nsubproblems = SCIPbendersGetNSubproblems(benders[i]);
 
@@ -184,8 +186,13 @@ SCIP_RETCODE constructValidSolution(
          }
       }
 
-      /* setting the value of the master auxiliary variable */
-      SCIP_CALL( SCIPsetSolVal(scip, newsol, SCIPbenderGetMasterAuxiliaryVar(benders[i]), masterauxvarval) );
+      /* setting the value of the master auxiliary variable. It is possible that the master auxiliary variable is
+       * removed during presolve. As such, it could be NULL in sub-SCIPs or inactive in the original SCIP.
+       */
+      if( masterauxvar != NULL && SCIPvarIsActive(masterauxvar) )
+      {
+         SCIP_CALL( SCIPsetSolVal(scip, newsol, SCIPbenderGetMasterAuxiliaryVar(benders[i]), masterauxvarval) );
+      }
 
       if( !success )
          break;
