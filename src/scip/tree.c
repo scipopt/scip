@@ -4712,7 +4712,7 @@ SCIP_RETCODE focusnodeToFork(
 
       /* resolve LP after cleaning up */
       SCIPsetDebugMsg(set, "resolving LP after cleanup\n");
-      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, &lperror) );
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, FALSE, &lperror) );
    }
    assert(lp->flushed);
    assert(lp->solved || lperror || lp->resolvelperror);
@@ -4833,7 +4833,7 @@ SCIP_RETCODE focusnodeToSubroot(
 
       /* resolve LP after cleaning up */
       SCIPsetDebugMsg(set, "resolving LP after cleanup\n");
-      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, &lperror) );
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, FALSE, &lperror) );
    }
    assert(lp->flushed);
    assert(lp->solved || lperror);
@@ -7822,7 +7822,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          SCIPlpSetIsRelax(lp, tree->probinglpwasrelax);
 
          /* resolve LP to reset solution */
-         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, &lperror) );
+         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, FALSE, &lperror) );
 
          if( set->exact_enable )
          {
@@ -7830,7 +7830,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
             {
                lp->solved = FALSE;
                SCIPlpExactForceSafeBound(lp->lpexact, set);
-               SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, &lperror) );
+               SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, FALSE, &lperror) );
             }
             /* here we always set this, or the lpobjval would not longer be safe */
             lp->lpobjval = tree->probinglpobjval;
