@@ -1623,7 +1623,7 @@ SCIP_RETCODE solveNodeInitialLP(
    /* solve initial LP */
    SCIPsetDebugMsg(set, "node: solve initial LP\n");
    SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
-         SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) == 0 ? set->lp_rootiterlim : set->lp_iterlim, TRUE, TRUE, FALSE, lperror) );
+         SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) == 0 ? set->lp_rootiterlim : set->lp_iterlim, TRUE, TRUE, FALSE, FALSE, lperror) );
    assert(lp->flushed);
    assert(lp->solved || *lperror);
 
@@ -1706,7 +1706,7 @@ SCIP_RETCODE separationRoundResolveLP(
    {
       /* solve LP (with dual simplex) */
       SCIPsetDebugMsg(set, "separation: resolve LP\n");
-      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, set->lp_iterlim, FALSE, TRUE, FALSE, FALSE, lperror) );
       assert(lp->flushed);
       assert(lp->solved || *lperror);
       *mustsepa = TRUE;
@@ -2353,7 +2353,7 @@ SCIP_RETCODE SCIPpriceLoop(
        * if LP was infeasible, we have to use dual simplex
        */
       SCIPsetDebugMsg(set, "pricing: solve LP\n");
-      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, TRUE, FALSE, lperror) );
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, TRUE, FALSE, FALSE, lperror) );
       assert(lp->flushed);
       assert(lp->solved || *lperror);
 
@@ -2382,7 +2382,7 @@ SCIP_RETCODE SCIPpriceLoop(
 
       /* solve LP again after resetting bounds and adding new initial constraints (with dual simplex) */
       SCIPsetDebugMsg(set, "pricing: solve LP after resetting bounds and adding new initial constraints\n");
-      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, lperror) );
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, FALSE, lperror) );
       assert(lp->flushed);
       assert(lp->solved || *lperror);
 
@@ -2489,6 +2489,7 @@ SCIP_RETCODE priceAndCutLoop(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             fullseparation,     /**< are we in the first prop-and-cut-and-price loop? */
+   SCIP_Bool             forcedlpsolve,      /**< would SCIP abort if the LP is not solved? */
    SCIP_Bool*            propagateagain,     /**< pointer to store whether we want to propagate again */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    SCIP_Bool*            unbounded,          /**< pointer to store whether an unbounded ray was found in the LP */
@@ -2568,7 +2569,7 @@ SCIP_RETCODE priceAndCutLoop(
    /* solve initial LP of price-and-cut loop */
    SCIPsetDebugMsg(set, "node: solve LP with price and cut\n");
    SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem,  stat, eventqueue, eventfilter, transprob,
-         set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
+         set->lp_iterlim, FALSE, TRUE, FALSE, forcedlpsolve, lperror) );
    assert(lp->flushed);
    assert(lp->solved || *lperror);
 
@@ -2672,7 +2673,7 @@ SCIP_RETCODE priceAndCutLoop(
 
                      /* resolve LP */
                      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
-                           set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
+                           set->lp_iterlim, FALSE, TRUE, FALSE, FALSE, lperror) );
                      assert(lp->flushed);
                      assert(lp->solved || *lperror);
 
@@ -2908,7 +2909,7 @@ SCIP_RETCODE priceAndCutLoop(
                   /* solve LP (with dual simplex) */
                   SCIPsetDebugMsg(set, "separation: solve LP\n");
                   SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
-                        set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
+                        set->lp_iterlim, FALSE, TRUE, FALSE, FALSE, lperror) );
                   assert(lp->flushed);
                   assert(lp->solved || *lperror);
 
@@ -3007,7 +3008,7 @@ SCIP_RETCODE priceAndCutLoop(
          lp->solved = FALSE;
          SCIPlpExactAllowExactSolve(lp->lpexact, set, TRUE);
          SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
-            set->lp_iterlim, FALSE, FALSE, FALSE, lperror) );
+            set->lp_iterlim, FALSE, FALSE, FALSE, FALSE, lperror) );
          if( !(*lperror) )
             SCIPtreeSetFocusNodeLP(tree, TRUE);
       }
@@ -3206,6 +3207,7 @@ SCIP_RETCODE solveNodeLP(
    SCIP_Bool             initiallpsolved,    /**< was the initial LP already solved? */
    SCIP_Bool             fullseparation,     /**< are we in the first prop-and-cut-and-price loop? */
    SCIP_Bool             newinitconss,       /**< do we have to add new initial constraints? */
+   SCIP_Bool             forcedlpsolve,      /**< would SCIP abort if the LP is not solved? */
    SCIP_Bool*            propagateagain,     /**< pointer to store whether we want to propagate again */
    SCIP_Bool*            solverelaxagain,    /**< pointer to store TRUE, if the external relaxators should be called again */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
@@ -3361,7 +3363,7 @@ SCIP_RETCODE solveNodeLP(
       /* solve the LP with price-and-cut*/
       SCIP_CALL( priceAndCutLoop(blkmem, set, messagehdlr, stat, mem, transprob, origprob,  primal, tree, reopt, lp,
             pricestore, sepastore, cutpool, delayedcutpool, branchcand, conflict, conflictstore, eventqueue,
-            eventfilter, cliquetable, fullseparation, propagateagain, cutoff, unbounded, lperror, pricingaborted) );
+            eventfilter, cliquetable, fullseparation, forcedlpsolve, propagateagain, cutoff, unbounded, lperror, pricingaborted) );
 
       /* check if the problem was changed and the relaxation needs to be resolved */
       if( (transprob->ncolvars != oldnpricedvars) || (stat->ninitconssadded != oldninitconssadded) ||
@@ -3392,7 +3394,7 @@ SCIP_RETCODE solveNodeLP(
       lp->cutoffbound = SCIPlpiInfinity(SCIPlpGetLPI(lp));
 
       lp->solved = FALSE;
-      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, lperror) );
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, forcedlpsolve, lperror) );
 
       /* reinstall old cutoff bound */
       lp->cutoffbound = tmpcutoff;
@@ -3954,7 +3956,7 @@ SCIP_RETCODE propAndSolve(
    SCIP_Bool             propagate,          /**< should we propagate */
    SCIP_Bool             solvelp,            /**< should we solve the lp */
    SCIP_Bool             solverelax,         /**< should we solve the relaxation */
-   SCIP_Bool             forcedlpsolve,      /**< is there a need for a solve lp */
+   SCIP_Bool             forcedlpsolve,      /**< would SCIP abort if the LP is not solved? */
    SCIP_Bool             initiallpsolved,    /**< was the initial LP already solved? */
    SCIP_Bool             fullseparation,     /**< are we in the first prop-and-cut-and-price loop? */
    SCIP_Longint*         afterlpproplps,     /**< pointer to store the last LP count for which AFTERLP propagation was performed */
@@ -4170,7 +4172,7 @@ SCIP_RETCODE propAndSolve(
       /* solve the node's LP */
       SCIP_CALL( solveNodeLP(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp, relaxation, pricestore,
             sepastore, cutpool, delayedcutpool, branchcand, conflict, conflictstore, eventqueue, eventfilter, cliquetable,
-            initiallpsolved, fullseparation, newinitconss, propagateagain, solverelaxagain, cutoff, unbounded, lperror, pricingaborted) );
+            initiallpsolved, fullseparation, newinitconss, forcedlpsolve, propagateagain, solverelaxagain, cutoff, unbounded, lperror, pricingaborted) );
 
       if( focusnode->parent == NULL )
       {

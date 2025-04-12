@@ -1045,6 +1045,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                                               *   (limit is computed within the method w.r.t. the average LP iterations) */
    SCIP_Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool             forcedlpsolve,      /**< would SCIP abort if the LP is not solved? */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    );
 
@@ -1250,6 +1251,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Bool             forcedlpsolve,      /**< would SCIP abort if the LP is not solved? */
    SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid  or NULL */
    );
 
