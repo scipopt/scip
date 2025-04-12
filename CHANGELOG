@@ -27,6 +27,7 @@ Fixed bugs
 - allocate memory for all integral variables to avoid segmentation faults in applyCliqueFixings() of heur_clique.c
 - fix conflict resolution for one particular case in cons_indicator
 - make interface to nauty thread safe
+- use relative epsilon tolerance to check farkas row in SCIPlpGetDualfarkas() to avoid invalid cutoff
 
 Build system
 ------------
