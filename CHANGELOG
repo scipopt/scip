@@ -28,6 +28,10 @@ Features
 - added decomposition kernel search (DKS) heuristic (disabled by default). This heuristic implements a kernel search framework and can be used
   both as a construction heuristic as well as an improvement heuristic. In addition, existing decomposition information can be utilized by this heuristic.
 - symmetry detection does not treat implicit integer variables separately anymore, but computes symmetries based on the variable type inferred from variable bounds and implied integrality
+- when solving a SCIP problem with additional decomposition information (for example, when reading a DEC file) and enabling decomposition/applybenders,
+  the problem is now solved in a Benders' decomposition relaxator; instead of decomposing the original SCIP instance, the relaxator builds the decomposed problem in
+  sub-SCIPs and solves it via default Benders' Decomposition; a solution to the original (undecomposed) problem is now made available by the relaxator;
+  the SCIP shell dialog "display statistics" now also prints the statistics from solving the Benders' decomposition in the relaxator
 
 Performance improvements
 ------------------------
@@ -87,6 +91,8 @@ Interface changes
 - SCIPexprSetIntegrality(): set argument generalized from SCIP_Bool integral to SCIP_IMPLINTTYPE integrality (4th position)
 - Temporarily for SCIP 10 only: Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integral type SCIP_IMPLINTTYPE_WEAK instead
 - Temporarily for SCIP 10 only: SCIPchgVarType() converts a call with type SCIP_VARTYPE_IMPLINT into a call of SCIPchgVarImplType() with type SCIP_IMPLINTTYPE_WEAK
+- SCIPapplyBendersDecomposition has been removed. This was originally used to apply Benders' decomposition from a
+  supplied decomposition structure. The application of Benders' decomposition now occurs in benders_relax.
 
 ### New API functions
 
@@ -127,6 +133,8 @@ Interface changes
 - added SCIPvarsCountTypes() to determine the variable type count distribution for an array of variables
 - added SCIPeventGetOldImplType() and SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
 - added SCIPexprGetIntegrality(), which in addition to the existing function SCIPexprIsIntegral() provides information about the presence of weakly implied integral variables
+- added SCIPincludeRelaxBenders(), which is used to include the Benders' decomposition relaxator.
+- added SCIPgetMasterProblemRelaxBenders() for retrieving the master problem SCIP instance from the Benders' decomposition relaxator.
 
 ### Changes in preprocessor macros
 
@@ -179,6 +187,11 @@ Interface changes
   "heuristics/dks/buckmaxgap", "heuristics/dks/maxlinkscore", "heuristics/dks/maxbuckfrac", "heuristics/dks/maxnodes",
   "heuristics/dks/usetwolevel", "heuristics/dks/usedecomp", "heuristics/dks/usebestsol", "heuristics/dks/redcostsort", "heuristics/dks/primalonly",
   "heuristics/dks/redcostlogsort", "heuristics/dks/objcutoff", and "heuristics/dks/runbinprobsonly" to control heuristic decomposition kernel search
+- new parameters "relaxing/benders/continueorig" and "relaxing/benders/nodelimit" for controlling the behaviour of the
+  Benders' decomposition relaxator. The "continueorig" parameter indicates whether the original problem should continue
+  solving after the completion of the Benders' decomposition algorithm if the problem is not solved to optimality. The
+  "nodelimit" parameter allows the user to provide a node limit for the Benders' decomposition master problem (by
+  default the limits from the original SCIP instance are copied to the master problem).
 
 ### Data structures
 
