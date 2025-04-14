@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -408,12 +408,14 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/minimal", &minimal) );
    if( !iis->irreducible && minimal && !(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) && !trivial )
    {
+
       SCIPdebugMsg(set->scip, "----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
 
       if( !iis->infeasible )
          SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
 
-      SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, 1e+20, FALSE, TRUE, TRUE, TRUE, -1L, 1, 1.0, &result) );
+      /*                                 iis, timelim, nodelim, removebounds, silent, timelimperiter, nodelimperiter, additive, conservative, delafteradd, dynamicreordering, batchingrule, initbatchsize, maxbatchsize, maxrelbatchsize, batchingcoeff, result */
+      SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, 1e+20,          -1L,            FALSE,    TRUE,         TRUE,        TRUE,              0,            1,             1,            1.0,             1.0,           &result) );
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
    }
 
@@ -747,7 +749,7 @@ SCIP_RETCODE SCIPiisFree(
 
 /** reset an IIS (in case one exists from a previous solve) */
 SCIP_RETCODE SCIPiisReset(
-   SCIP_IIS**            iis                 /**< pointer to the IIS */
+   SCIP_IIS**           iis                  /**< pointer to the IIS */
    )
 {
    assert(iis != NULL);
@@ -853,7 +855,7 @@ void SCIPiisAddNNodes(
 
 /** get the randnumgen of the IIS */
 SCIP_RANDNUMGEN* SCIPiisGetRandnumgen(
-   SCIP_IIS*             iis                 /**< pointer to the IIS */
+   SCIP_IIS*            iis                  /**< pointer to the IIS */
    )
 {
    assert( iis != NULL );
@@ -862,7 +864,7 @@ SCIP_RANDNUMGEN* SCIPiisGetRandnumgen(
 
 /** get the subscip of an IIS */
 SCIP* SCIPiisGetSubscip(
-   SCIP_IIS*             iis                 /**< pointer to the IIS */
+   SCIP_IIS*            iis                  /**< pointer to the IIS */
    )
 {
    assert( iis != NULL );

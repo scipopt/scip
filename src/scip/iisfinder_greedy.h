@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -25,6 +25,7 @@
 /**@file   iisfinder_greedy.h
  * @ingroup IISFINDERS
  * @brief  greedy deletion and addition filter heuristic to compute IISs
+ * @author Paul Meinhold
  * @author Marc Pfetsch
  * @author Mark Turner
  *
@@ -88,14 +89,20 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_Longint          nodelim,            /**< The global node limit on the IIS call */
    SCIP_Bool             removebounds,       /**< Whether the algorithm should remove bounds as well as constraints */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
+
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
+   SCIP_Longint          nodelimperiter,     /**< maximum number of nodes per individual solve call */
    SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
    SCIP_Bool             conservative,       /**< should a hit limit (e.g. node / time) solve be counted as feasible when deleting constraints */
-   SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
    SCIP_Bool             delafteradd,        /**< should the deletion routine be performed after the addition routine (in the case of additive) */
-   SCIP_Longint          maxnnodesperiter,   /**< maximum number of nodes per individual solve call */
-   int                   maxbatchsize,       /**< the maximum number of constraints to delete or add per iteration */
-   SCIP_Real             maxrelbatchsize,    /**< the maximum number of constraints relative to the original problem to delete or add per iteration */
+   SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
+
+   int                   batchingrule,       /**< how the batchsize (the number of constraints or bounds that are added / deleted per iteration) should be updated: 0=constant, 1=linear, 2=exponential */
+   int                   initbatchsize,      /**< the initial batchsize for the first iteration */
+   int                   maxbatchsize,       /**< the maximum batchsize per iteration */
+   SCIP_Real             maxrelbatchsize,    /**< the maximum batchsize relative to the original problem per iteration */
+   SCIP_Real             batchingcoeff,      /**< the coefficient with which the batchsize is summed / multiplied each iteration if batchingrule != 0 */
+
    SCIP_RESULT*          result              /**< pointer to store the result of the IIS run */
    );
 
