@@ -48,9 +48,9 @@ Miscellaneous
 Fixed bugs
 ----------
 
-- fixed definition of slack variables of >= constraints and ranged rows in LP interface to Gurobi (lpi_grb.c)
+- fixed definition of slack variables of >= constraints and ranged rows in LP interface to Gurobi
 - free memory leaking singleton arrays for ignored variables in SCIPapplyHeurDualval()
-- use epsilon tolerance for bound implications of dual substitutions in dualPresolve() of cons_linear.c
+- use epsilon tolerance for bound implications of dual substitutions in dualPresolve() of cons_linear
 - fixed timeouts due to race conditions when using TPI=omp
 - fixed issues with indexing of concurrent solvers when a solver finishes (because SCIP is too fast) before others have been created when using TPI=tny
 - respect fixing if variable is declared binary in bounds section of mps file
@@ -59,17 +59,18 @@ Fixed bugs
 - adds missing NULL check for Benders' subproblems in feasalt cut
 - apply objective scale to pseudoboolean non-linear terms
 - impose pseudoboolean cost bound without intermediate casting
-- flatten aggregation graph before finishing presolving to accelerate evaluating an empty solution
-- respect fixed resultants in binvarGetActiveProbindex() of branch_relpscost.c
-- drop fixed resultants when copying pseudoboolean constraint to avert segmentation fault
-- correct matrix entry when resolving aggregated variables in checkSystemGF2() of cons_xor.c
+- flatten aggregation graph before finishing presolve to accelerate evaluating an empty solution
+- respect fixed resultants in binvarGetActiveProbindex() of branch_relpscost
+- drop fixed resultants when copying pseudoboolean constraint
+- correct matrix entry when resolving aggregated variables in checkSystemGF2() of cons_xor
 - corrected symmetry detection graph of cons_and, cons_or, cons_xor, and cons_indicator
-- correct redundancy filter in consdataCreateRedundant() of cons_bounddisjunction.c
-- replaced unreliable comparison of node pointers by node numbers in prop_genvbounds.c
-- allocate memory for all integral variables to avoid segmentation faults in applyCliqueFixings() of heur_clique.c
+- correct redundancy filter in consdataCreateRedundant() of cons_bounddisjunction
+- replaced unreliable comparison of node pointers by node numbers in prop_genvbounds
+- allocate memory for all integral variables in applyCliqueFixings() of heur_clique
 - fix conflict resolution for one particular case in cons_indicator
 - make interface to nauty thread safe
-- use relative epsilon tolerance to check farkas row in SCIPlpGetDualfarkas() to avoid invalid cutoff
+- use relative epsilon tolerance to check Farkas row in SCIPlpGetDualfarkas() to avoid invalid cutoff
+- fixed bug with SOS2 constraints of size that avoided a correct enforcing
 
 Build system
 ------------
@@ -87,9 +88,6 @@ Build system
 - fix use of SANITIZE=full for debug builds with GCC on Linux: removed -fsanitize=leak because it cannot be used together with -fsanitize=address
 - fix that make install SHARED=true missed to install libscipbase
 
-Miscellaneous
--------------
-
 @section RN921 SCIP 9.2.1
 *************************
 
@@ -104,7 +102,6 @@ Fixed bugs
 - added copy callbacks for presolvers dualagg and redvub, branching rules lookahead and cloud, primal heuristics dualval and repair, propagator nlobbt, and separators gauge and convexproj
 - respect maximal separation rounds setting by running remaining delayed separators in last round
 - replace terms consistently in applyFixings() of cons_linear to handle infinite aggregations
-- fixed bug with SOS2 constraints of size that avoided a correct enforcing
 
 Build system
 ------------
