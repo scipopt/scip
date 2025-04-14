@@ -678,7 +678,7 @@ if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQU
             #
             # treat the instance as a tuple (list) of two values
             #
-            if(NOT ((${basename} STREQUAL "classical_30_0.mps") AND (${LPS} STREQUAL "grb")))
+            if(NOT ((${basename} STREQUAL "classical_30_0.mps") AND ((${LPS} STREQUAL "grb") OR (${LPS} STREQUAL "cpx"))))
             add_test(NAME ${prefix}-${setting}-${basename}
                COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set read ${PROJECT_SOURCE_DIR}/check/${instpath} read ${PROJECT_SOURCE_DIR}/check/${decpath} opt validatesol ${optval} ${optval} q"
                     )
@@ -688,7 +688,7 @@ if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQU
                                     FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
-            endif()  # separation does not converge, #3724 (LPS=grb, BendersQP-benders-qp-classical_30_0.mps)
+            endif()  # separation does not converge, #3724 (LPS=grb or LPS=cpx, BendersQP-benders-qp-classical_30_0.mps)
         endforeach(setting)
     endforeach(instance)
 endif()
