@@ -437,6 +437,7 @@ SCIP_RETCODE countNonlinearities(
          /* get active index of resultant */
          probindex = SCIPvarGetProbindex(SCIPvarGetProbvar(andres));
 
+         /**! [SnippetCodeStyleIfFor] */
          /* the resultant might be deleted */
          if( probindex >= 0 )
             ++nlcount[probindex];
@@ -450,6 +451,7 @@ SCIP_RETCODE countNonlinearities(
             if( probindex >= 0 )
                ++nlcount[probindex];
          }
+         /**! [SnippetCodeStyleIfFor] */
       }
    }
 
@@ -622,6 +624,8 @@ SCIP_RETCODE addBdchg(
    return SCIP_OKAY;
 }
 
+/**! [SnippetCodeStyleStaticAsserts] */
+
 /** frees bound change arrays */
 static
 void freeBdchgs(
@@ -636,6 +640,8 @@ void freeBdchgs(
    assert(bdchgtypes != NULL);
    assert(bdchgbounds != NULL);
    assert(nbdchgs != NULL);
+
+/**! [SnippetCodeStyleStaticAsserts] */
 
    SCIPfreeBufferArrayNull(scip, bdchgbounds);
    SCIPfreeBufferArrayNull(scip, bdchgtypes);
