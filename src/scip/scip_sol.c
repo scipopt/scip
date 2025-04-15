@@ -3258,9 +3258,13 @@ SCIP_RETCODE readSolFile(
       SCIP_RETCODE retcode;
 
       /* get next line */
-      if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
+      if( SCIPfgets(buffer, (int)sizeof(buffer), file) == NULL )
+      {
+         if( !SCIPfeof(file) )
+            *error = TRUE;
          break;
-      lineno++;
+      }
+      ++lineno;
 
       /* there are some lines which may precede the solution information */
       if( SCIPstrncasecmp(buffer, "solution status:", 16) == 0 || SCIPstrncasecmp(buffer, "objective value:", 16) == 0
