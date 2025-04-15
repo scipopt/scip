@@ -280,6 +280,7 @@ SCIP_RETCODE SCIPactivatePricer(
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
 SCIP_EXPORT
