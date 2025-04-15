@@ -51,7 +51,7 @@
 #define DEFAULT_DELAFTERADD      TRUE  /**< should the deletion routine be performed after the addition routine (in the case of additive) */
 
 #define DEFAULT_BATCHINGRULE     2     /**< how the batchsize (the number of constraints or bounds that are added / deleted per iteration) should be updated: 0=constant, 1=linear, 2=exponential */
-#define DEFAULT_INITBATCHSIZE    1     /**< the initial batchsize for the first iteration */
+#define DEFAULT_INITBATCHSIZE    16    /**< the initial batchsize for the first iteration */
 #define DEFAULT_MAXBATCHSIZE     INT_MAX /**< the maximum batchsize per iteration */
 #define DEFAULT_MAXRELBATCHSIZE  0.5   /**< the maximum batchsize relative to the original problem per iteration */
 #define DEFAULT_BATCHINGCOEFF    2.0   /**< the coefficient with which the batchsize is summed / multiplied each iteration if batchingrule != 0 */
