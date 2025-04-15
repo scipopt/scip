@@ -221,6 +221,7 @@ int SCIPgetNChildren(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetSiblings(
@@ -235,6 +236,7 @@ SCIP_RETCODE SCIPgetSiblings(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_EXPORT
 int SCIPgetNSiblings(
@@ -248,6 +250,7 @@ int SCIPgetNSiblings(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetLeaves(
@@ -262,6 +265,7 @@ SCIP_RETCODE SCIPgetLeaves(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_EXPORT
 int SCIPgetNLeaves(
