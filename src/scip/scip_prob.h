@@ -1847,6 +1847,9 @@ SCIP_RETCODE SCIPdelConsNode(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
+ *
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdelConsLocal(
