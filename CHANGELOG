@@ -298,6 +298,22 @@ Miscellaneous
 
 - updated description of paramater misc/usesymmetry
 
+@section RN923 SCIP 9.2.3
+*************************
+
+Fixed bugs
+----------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Miscellaneous
+-------------
+
 @section RN922 SCIP 9.2.2
 *************************
 
