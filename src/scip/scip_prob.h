@@ -435,7 +435,7 @@ SCIP_RETCODE SCIPsetProbName(
    const char*           name                /**< name to be set */
    );
 
-/** changes the objective function
+/** changes the objective function of the original problem.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
