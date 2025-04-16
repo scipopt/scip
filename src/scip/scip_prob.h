@@ -805,6 +805,10 @@ SCIP_RETCODE SCIPaddPricedVar(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @warning The variable is not deleted from the constraints when in SCIP_STAGE_PROBLEM.  In this stage, it is the
+ *           user's responsibility to ensure the variable has been removed from all constraints or the constraints
+ *           deleted.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdelVar(
