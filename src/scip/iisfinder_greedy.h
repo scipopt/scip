@@ -97,11 +97,11 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_Bool             delafteradd,        /**< should the deletion routine be performed after the addition routine (in the case of additive) */
    SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
 
-   int                   batchingrule,       /**< how the batchsize (the number of constraints or bounds that are added / deleted per iteration) should be updated: 0=constant, 1=linear, 2=exponential */
    int                   initbatchsize,      /**< the initial batchsize for the first iteration */
    int                   maxbatchsize,       /**< the maximum batchsize per iteration */
    SCIP_Real             maxrelbatchsize,    /**< the maximum batchsize relative to the original problem per iteration */
-   SCIP_Real             batchingcoeff,      /**< the coefficient with which the batchsize is summed / multiplied each iteration if batchingrule != 0 */
+   SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied each iteration */
+   int                   batchingoffset,     /**< the offset with which the batchsize is summed each iteration */
 
    SCIP_RESULT*          result              /**< pointer to store the result of the IIS run */
    );

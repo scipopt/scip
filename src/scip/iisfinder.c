@@ -414,8 +414,8 @@ SCIP_RETCODE SCIPiisGenerate(
       if( !iis->infeasible )
          SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
 
-      /*                                 iis, timelim, nodelim, removebounds, silent, timelimperiter, nodelimperiter, additive, conservative, delafteradd, dynamicreordering, batchingrule, initbatchsize, maxbatchsize, maxrelbatchsize, batchingcoeff, result */
-      SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, 1e+20,          -1L,            FALSE,    TRUE,         TRUE,        TRUE,              0,            1,             1,            1.0,             1.0,           &result) );
+      /*                                 iis, timelim, nodelim, removebounds, silent, timelimperiter, nodelimperiter, additive, conservative, delafteradd, dynamicreordering, initbatchsize, maxbatchsize, maxrelbatchsize, batchingfactor, batchingoffset, result */
+      SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, 1e+20,          -1L,            FALSE,    TRUE,         TRUE,        TRUE,              1,             1,            1.0,             1.0,            0,              &result) );
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
    }
 
