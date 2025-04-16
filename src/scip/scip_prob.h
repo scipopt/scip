@@ -1787,7 +1787,7 @@ SCIP_RETCODE SCIPaddConsNode(
  *       - \ref SCIP_STAGE_SOLVING
  *
  *  @note The same constraint cannot be added twice to the branching tree with different "validnode" parameters. This is
- *        the case due internal data structures and performance issues. In such a case you should try to realize your
+ *        the case due to internal data structures and performance issues. In such a case you should try to realize your
  *        issue using the method SCIPdisableCons() and SCIPenableCons() and control these via the event system of SCIP.
  */
 SCIP_EXPORT
