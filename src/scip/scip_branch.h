@@ -60,6 +60,9 @@ extern "C" {
  */
 
 /** creates a branching rule and includes it in SCIP
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *      - \ref SCIP_STAGE_INIT
+ *      - \ref SCIP_STAGE_PROBLEM
  *
  *  @note method has all branching rule callbacks as arguments and is thus changed every time a new
  *        callback is added in future releases; consider using SCIPincludeBranchruleBasic() and setter functions
