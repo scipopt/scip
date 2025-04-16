@@ -1735,7 +1735,7 @@ SCIP_RETCODE SCIPaddConflict(
    SCIP_Bool             iscutoffinvolved    /**< is a cutoff bound involved in this conflict */
    );
 
-/** removes all conflicts depending on an old cutoff bound if the improvement of the incumbent is good enough
+/** tries to remove conflicts depending on an old cutoff bound if the improvement of the new incumbent is good enough
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
