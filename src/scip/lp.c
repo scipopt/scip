@@ -2712,7 +2712,7 @@ SCIP_RETCODE lpSetRealpar(
 }
 
 #ifndef NDEBUG
-/** checks, that parameter of type int in LP solver has the given value, ignoring unknown parameters */
+/** checks that parameter of type int in LP solver has the given value, ignoring unknown parameters */
 static
 SCIP_RETCODE lpCheckIntpar(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -2737,7 +2737,7 @@ SCIP_RETCODE lpCheckIntpar(
    return retcode;
 }
 
-/** checks, that parameter of type SCIP_Bool in LP solver has the given value, ignoring unknown parameters */
+/** checks that parameter of type SCIP_Bool in LP solver has the given value, ignoring unknown parameters */
 static
 SCIP_RETCODE lpCheckBoolpar(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -2748,7 +2748,7 @@ SCIP_RETCODE lpCheckBoolpar(
    return lpCheckIntpar(lp, lpparam, (int)value);
 }
 
-/** checks, that parameter of type SCIP_Real in LP solver has the given value, ignoring unknown parameters */
+/** checks that parameter of type SCIP_Real in LP solver has the given value, ignoring unknown parameters */
 static
 SCIP_RETCODE lpCheckRealpar(
    SCIP_LP*              lp,                 /**< current LP data */
