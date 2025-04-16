@@ -29,6 +29,7 @@
  * @author Mark Turner
  *
  */
+#define SCIP_DEBUG
 
 #include <stdio.h>
 
@@ -211,6 +212,7 @@ SCIP_RETCODE updateBatchsize(
    assert( n >= i );
    maxbatchsize = MIN(maxbatchsize, n - i);
    *batchsize = MIN(*batchsize, maxbatchsize);
+   *batchsize = MAX(*batchsize, 1);
    SCIPdebugMsg(scip, "Updated batchsize to %d\n", *batchsize);
 
    return SCIP_OKAY;
@@ -500,6 +502,7 @@ SCIP_RETCODE deletionFilterBatch(
    int nvars;
    int i;
    int k;
+   int batchindex;
    int batchsize;
 
    scip = SCIPiisGetSubscip(iis);
@@ -533,6 +536,7 @@ SCIP_RETCODE deletionFilterBatch(
    while( i < nconss )
    {
       k = 0;
+      batchindex = i;
       while( i < nconss && k < batchsize )
       {
          assert( conss[order[i]] != NULL );
@@ -555,7 +559,7 @@ SCIP_RETCODE deletionFilterBatch(
 
       /* reset i to beginning of current batch if batch has not been deleted and k was large */
       if( !deleted && (k > initbatchsize) )
-         i -= k;
+         i = batchindex;
 
       /* update batchsize and corresponding indices */
       SCIPfreeBlockMemoryArray(scip, &idxs, batchsize);
@@ -591,6 +595,7 @@ SCIP_RETCODE deletionFilterBatch(
       while( i < nvars )
       {
          k = 0;
+         batchindex = i;
          /* Do not delete bounds of binary variables or bother with calculations of free variables */
          while( i < nvars && k < batchsize )
          {
@@ -623,7 +628,7 @@ SCIP_RETCODE deletionFilterBatch(
 
          /* reset i to beginning of current batch if batch has not been deleted and k was large */
          if( !deleted && (k > initbatchsize) )
-            i -= k;
+            i = batchindex;
 
          /* update batchsize and corresponding indices */
          SCIPfreeBlockMemoryArray(scip, &idxs, batchsize);
