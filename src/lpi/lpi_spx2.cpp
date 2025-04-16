@@ -4603,7 +4603,7 @@ SCIP_Bool SCIPlpiIsInfinity(
 /**@name File Interface Methods */
 /**@{ */
 
-/** returns, whether the given file exists */
+/** returns whether the given file exists */
 static
 SCIP_Bool fileExists(
    const char*           filename            /**< file name */

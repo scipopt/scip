@@ -616,7 +616,7 @@ SCIP_Bool nodesHaveCommonClique(
    }
 }
 
-/** returns, whether the edge (node1, node2) is in the graph */
+/** returns whether the edge (node1, node2) is in the graph */
 static
 TCLIQUE_ISEDGE(tcliqueIsedgeClique)
 {

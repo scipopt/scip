@@ -2441,7 +2441,7 @@ SCIP_Bool SCIPstrAtStart(
  * @{
  */
 
-/** returns, whether the given file exists */
+/** returns whether the given file exists */
 SCIP_EXPORT
 SCIP_Bool SCIPfileExists(
    const char*           filename            /**< file name */
