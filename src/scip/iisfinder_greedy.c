@@ -396,7 +396,7 @@ SCIP_RETCODE additionSubproblem(
    SCIP_Longint          nodelimperiter,     /**< maximum number of nodes per individual solve call */
    SCIP_Bool*            feasible,           /**< pointer to store whether the problem is feasible */
    SCIP_Bool*            stop                /**< pointer to store whether we have to stop */
-)
+   )
 {
    SCIP* scip;
    SCIP_RETCODE retcode;
