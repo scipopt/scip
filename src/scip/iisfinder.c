@@ -749,7 +749,7 @@ SCIP_RETCODE SCIPiisFree(
 
 /** reset an IIS (in case one exists from a previous solve) */
 SCIP_RETCODE SCIPiisReset(
-   SCIP_IIS**           iis                  /**< pointer to the IIS */
+   SCIP_IIS**            iis                 /**< pointer to the IIS */
    )
 {
    assert(iis != NULL);
@@ -855,7 +855,7 @@ void SCIPiisAddNNodes(
 
 /** get the randnumgen of the IIS */
 SCIP_RANDNUMGEN* SCIPiisGetRandnumgen(
-   SCIP_IIS*            iis                  /**< pointer to the IIS */
+   SCIP_IIS*             iis                 /**< pointer to the IIS */
    )
 {
    assert( iis != NULL );
@@ -864,7 +864,7 @@ SCIP_RANDNUMGEN* SCIPiisGetRandnumgen(
 
 /** get the subscip of an IIS */
 SCIP* SCIPiisGetSubscip(
-   SCIP_IIS*            iis                  /**< pointer to the IIS */
+   SCIP_IIS*             iis                 /**< pointer to the IIS */
    )
 {
    assert( iis != NULL );
