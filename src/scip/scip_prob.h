@@ -1988,8 +1988,10 @@ SCIP_RETCODE SCIPupdateNodeDualbound(
    SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
    );
 
-/** if given value is larger than the node's lower bound (in transformed problem), sets the node's lower bound
- *  to the new value
+/** if given value is higher than the node's lower bound (in transformed problem), sets the node's lower bound to the
+ *  new value.
+ *
+ *  @note must not be used on a leaf because the node priority queue remains untouched
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
