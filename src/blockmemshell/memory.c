@@ -158,7 +158,7 @@ static MEMLIST*          memlist = NULL;     /**< global memory list for debuggi
 static size_t            memused = 0;        /**< number of allocated bytes */
 
 #ifdef CHECKMEM
-/** checks, whether the number of allocated bytes match the entries in the memory list */
+/** checks whether the number of allocated bytes match the entries in the memory list */
 static
 void checkMemlist(
    void

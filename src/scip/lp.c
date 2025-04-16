@@ -5090,7 +5090,7 @@ void rowCalcIdxsAndVals(
    }
 }
 
-/** checks, whether the given scalar scales the given value to an integral number with error in the given bounds */
+/** checks whether the given scalar scales the given value to an integral number with error in the given bounds */
 static
 SCIP_Bool isIntegralScalar(
    SCIP_Real             val,                /**< value that should be scaled to an integral value */
