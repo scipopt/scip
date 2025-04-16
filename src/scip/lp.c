@@ -19180,7 +19180,7 @@ SCIP_RETCODE SCIPlpGetDualDegeneracy(
    return SCIP_OKAY;
 }
 
-/** checks, if absolute difference of values is in range of LP primal feastol */
+/** checks if absolute difference of values is in range of LP primal feastol */
 SCIP_Bool SCIPlpIsFeasEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -19200,7 +19200,7 @@ SCIP_Bool SCIPlpIsFeasEQ(
    return EPSEQ(val1, val2, lp->feastol);
 }
 
-/** checks, if absolute difference of val1 and val2 is lower than LP primal feastol */
+/** checks if absolute difference of val1 and val2 is lower than LP primal feastol */
 SCIP_Bool SCIPlpIsFeasLT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -19220,7 +19220,7 @@ SCIP_Bool SCIPlpIsFeasLT(
    return EPSLT(val1, val2, lp->feastol);
 }
 
-/** checks, if absolute difference of val1 and val2 is not greater than LP primal feastol */
+/** checks if absolute difference of val1 and val2 is not greater than LP primal feastol */
 SCIP_Bool SCIPlpIsFeasLE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -19240,7 +19240,7 @@ SCIP_Bool SCIPlpIsFeasLE(
    return EPSLE(val1, val2, lp->feastol);
 }
 
-/** checks, if absolute difference of val1 and val2 is greater than LP primal feastol */
+/** checks if absolute difference of val1 and val2 is greater than LP primal feastol */
 SCIP_Bool SCIPlpIsFeasGT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -19260,7 +19260,7 @@ SCIP_Bool SCIPlpIsFeasGT(
    return EPSGT(val1, val2, lp->feastol);
 }
 
-/** checks, if absolute difference of val1 and val2 is not lower than -LP primal feastol */
+/** checks if absolute difference of val1 and val2 is not lower than -LP primal feastol */
 SCIP_Bool SCIPlpIsFeasGE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -19280,7 +19280,7 @@ SCIP_Bool SCIPlpIsFeasGE(
    return EPSGE(val1, val2, lp->feastol);
 }
 
-/** checks, if value is in range LP primal feasibility tolerance of 0.0 */
+/** checks if value is in range LP primal feasibility tolerance of 0.0 */
 SCIP_Bool SCIPlpIsFeasZero(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             val                 /**< value to process */
@@ -19291,7 +19291,7 @@ SCIP_Bool SCIPlpIsFeasZero(
    return EPSZ(val, lp->feastol);
 }
 
-/** checks, if value is greater than LP primal feasibility tolerance */
+/** checks if value is greater than LP primal feasibility tolerance */
 SCIP_Bool SCIPlpIsFeasPositive(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             val                 /**< value to process */
@@ -19302,7 +19302,7 @@ SCIP_Bool SCIPlpIsFeasPositive(
    return EPSP(val, lp->feastol);
 }
 
-/** checks, if value is lower than -LP primal feasibility tolerance */
+/** checks if value is lower than -LP primal feasibility tolerance */
 SCIP_Bool SCIPlpIsFeasNegative(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             val                 /**< value to process */

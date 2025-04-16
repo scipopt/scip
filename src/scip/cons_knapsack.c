@@ -4946,7 +4946,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
       SCIPfreeBufferArray(scip, &gubconsGC1);
    }
 
-   /* checks, if lifting yielded a violated cut */
+   /* checks if lifting yielded a violated cut */
    if( SCIPisEfficacious(scip, (cutact - liftrhs)/sqrt((SCIP_Real)MAX(liftrhs, 1))) )
    {
       SCIP_ROW* row;
@@ -5003,7 +5003,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
       }
       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-      /* checks, if cut is violated enough */
+      /* checks if cut is violated enough */
       if( SCIPisCutEfficacious(scip, sol, row) )
       {
          if( cons != NULL )
@@ -5114,7 +5114,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
    SCIP_CALL( sequentialUpAndDownLifting(scip, vars, nvars, ntightened, weights, capacity, solvals, varsT1, varsT2, varsF, varsR,
          nvarsT1, nvarsT2, nvarsF, nvarsR, nvarsT1, liftcoefs, &cutact, &liftrhs) );
 
-   /* checks, if lifting yielded a violated cut */
+   /* checks if lifting yielded a violated cut */
    if( SCIPisEfficacious(scip, (cutact - liftrhs)/sqrt((SCIP_Real)MAX(liftrhs, 1))) )
    {
       SCIP_ROW* row;
@@ -5170,7 +5170,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
       }
       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-      /* checks, if cut is violated enough */
+      /* checks if cut is violated enough */
       if( SCIPisCutEfficacious(scip, sol, row) )
       {
          if( cons != NULL )
@@ -5240,7 +5240,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
          nonmincovervars, nmincovervars, nnonmincovervars, mincoverweight, realliftcoefs, &cutact) );
    liftrhs = nmincovervars - 1;
 
-   /* checks, if lifting yielded a violated cut */
+   /* checks if lifting yielded a violated cut */
    if( SCIPisEfficacious(scip, (cutact - liftrhs)/sqrt((SCIP_Real)MAX(liftrhs, 1))) )
    {
       SCIP_ROW* row;
@@ -5284,7 +5284,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
       }
       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-      /* checks, if cut is violated enough */
+      /* checks if cut is violated enough */
       if( SCIPisCutEfficacious(scip, sol, row) )
       {
          if( cons != NULL )

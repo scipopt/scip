@@ -2264,7 +2264,7 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
 
 #endif
 
-/** checks, if SCIP is in one of the feasible stages */
+/** checks if SCIP is in one of the feasible stages */
 #ifndef NDEBUG
 SCIP_RETCODE SCIPcheckStage(
    SCIP*                 scip,               /**< SCIP data structure */

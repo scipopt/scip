@@ -1573,7 +1573,7 @@ SCIP_Bool SCIPlpDivingRowsChanged(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
-/** checks, if absolute difference of values is in range of LP primal feastol */
+/** checks if absolute difference of values is in range of LP primal feastol */
 SCIP_Bool SCIPlpIsFeasEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1581,7 +1581,7 @@ SCIP_Bool SCIPlpIsFeasEQ(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if absolute difference of val1 and val2 is lower than LP primal feastol */
+/** checks if absolute difference of val1 and val2 is lower than LP primal feastol */
 SCIP_Bool SCIPlpIsFeasLT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1589,7 +1589,7 @@ SCIP_Bool SCIPlpIsFeasLT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if absolute difference of val1 and val2 is not greater than LP primal feastol */
+/** checks if absolute difference of val1 and val2 is not greater than LP primal feastol */
 SCIP_Bool SCIPlpIsFeasLE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1597,7 +1597,7 @@ SCIP_Bool SCIPlpIsFeasLE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if absolute difference of val1 and val2 is greater than LP primal feastol */
+/** checks if absolute difference of val1 and val2 is greater than LP primal feastol */
 SCIP_Bool SCIPlpIsFeasGT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1605,7 +1605,7 @@ SCIP_Bool SCIPlpIsFeasGT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if absolute difference of val1 and val2 is not lower than -LP primal feastol */
+/** checks if absolute difference of val1 and val2 is not lower than -LP primal feastol */
 SCIP_Bool SCIPlpIsFeasGE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1613,19 +1613,19 @@ SCIP_Bool SCIPlpIsFeasGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if value is in range LP primal feasibility tolerance of 0.0 */
+/** checks if value is in range LP primal feasibility tolerance of 0.0 */
 SCIP_Bool SCIPlpIsFeasZero(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
-/** checks, if value is greater than LP primal feasibility tolerance */
+/** checks if value is greater than LP primal feasibility tolerance */
 SCIP_Bool SCIPlpIsFeasPositive(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
-/** checks, if value is lower than -LP primal feasibility tolerance */
+/** checks if value is lower than -LP primal feasibility tolerance */
 SCIP_Bool SCIPlpIsFeasNegative(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             val                 /**< value to be compared against zero */
