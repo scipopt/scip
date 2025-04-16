@@ -29,7 +29,6 @@
  * @author Mark Turner
  *
  */
-#define SCIP_DEBUG
 
 #include <stdio.h>
 
