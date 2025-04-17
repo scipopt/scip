@@ -341,7 +341,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
 
    SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nintegers, NULL, NULL,
          &nbinimplvars, &nintimplvars, &ncontimplvars, &ncontvars) );
-   nintegers = nintegers - nbinimplvars - nintimplvars - ncontimplvars - ncontvars;
+   nintegers = nintegers - ncontimplvars - ncontvars;
    assert(nintegers >= 0);
 
    bestscore = SCIP_REAL_MIN;
