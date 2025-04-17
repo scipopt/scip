@@ -3360,6 +3360,10 @@ SCIP_RETCODE SCIPcreateConsBounddisjunction(
       for( v1 = 0; v1 < nvars; v1++ )
       {
          int v2;
+
+         /* check that the bounds are sensible, i.e., not nan or inf */
+         assert( SCIPisFinite(bounds[v1]) );
+
          for( v2 = v1+1; v2 < nvars; v2++ )
          {
             assert(vars[v1] != vars[v2] || (SCIPboundtypeOpposite(boundtypes[v1]) == boundtypes[v2]
