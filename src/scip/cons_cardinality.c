@@ -3647,6 +3647,15 @@ SCIP_RETCODE SCIPcreateConsCardinality(
 
    modifiable = FALSE;
 
+#ifndef NDEBUG
+   /* Check that the weights are sensible (not nan or inf); although not strictly needed, such values are likely a mistake. */
+   if ( nvars > 0 && weights != NULL )
+   {
+      for (v = 0; v < nvars; ++v)
+         assert( SCIPisFinite(weights[v]) );
+   }
+#endif
+
    /* find the cardinality constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
