@@ -95,6 +95,23 @@ Interface changes
 - SCIPapplyBendersDecomposition has been removed. This was originally used to apply Benders' decomposition from a
   supplied decomposition structure. The application of Benders' decomposition now occurs in benders_relax.
 
+- remove the following functions that were declared in h-files, but not implemented:
+  SCIPselectPtrRealReal(), SCIPselectWeightedPtrRealReal(), SCIPsortPtrRealReal(),
+  SCIPbendersApplyDecomposition(), SCIPcertificatePrintSolExact(),
+  SCIPcomprInitsol(), SCIPcomprExitsol(),
+  SCIPincludeExLinconsUpgrade(), SCIPupgradeConsExactLinear(), SCIPgetRunningErrorStatsExactLinear(),
+  SCIPcolExactGetMinPrimsol(), SCIPgetExprsdataBilinear(),
+  SCIPreoptnodeGetSplitCons(),
+  SCIPrationalarrayClear(),
+  SCIPreoptAddGlbCons(),
+  SCIPapplyBendersDecomposition,
+  SCIPgetRowActivityExact(), SCIPgetRowFeasibilityExact()
+  SCIPgetVarCoefChg()
+  SCIPvalsExactFree()
+  SCIPallocateSymgraphConsnodeperm()
+  SCIPvarGetOrigIndex()
+  SCIPwriteSto()
+
 ### New API functions
 
 - SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
@@ -136,6 +153,7 @@ Interface changes
 - added SCIPexprGetIntegrality(), which in addition to the existing function SCIPexprIsIntegral() provides information about the presence of weakly implied integral variables
 - added SCIPincludeRelaxBenders(), which is used to include the Benders' decomposition relaxator.
 - added SCIPgetMasterProblemRelaxBenders() for retrieving the master problem SCIP instance from the Benders' decomposition relaxator.
+- added SCIPsortDownIntIntIntReal()
 
 ### Changes in preprocessor macros
 
