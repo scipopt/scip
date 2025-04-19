@@ -1,0 +1,158 @@
+#!/usr/bin/perl
+#
+# Parses output of nm on "libscip.a" and searches for functions in a given h-file that are not defined.
+#
+# To use, first run nm on "libscip.a" and store the output in a
+# file. Then run this script on this file with a given h-file.
+#
+# The code to decect whether we are in a documentation string comes from check_scip_style.prl.
+
+my $narg = @ARGV;
+
+if ( $narg != 2 )
+{
+   printf("usage: <.> <nm-output> <h-file>\n");
+   exit(1);
+}
+
+
+# open file
+open FILE, $ARGV[0] or die $!;
+
+# get list of functions that are defined in the nm-file
+my %D;
+
+while(<FILE>)
+{
+   chomp;
+   my $str = $_;
+
+   my @A = split(/\s+/, $str);
+   if ( $#A > 1 )
+   {
+      # the define functions are of type "T" or "t"
+      if ( $A[1] eq "T" || $A[1] eq "t" )
+      {
+         # store the function name in hash
+         $D{$A[2]} = 1;
+      }
+   }
+}
+close FILE;
+
+# open h-file
+open FILE, $ARGV[1] or die $!;
+
+# variables to see whether we are in a comments
+my $incomment = 0;
+my $indocumentation = 0;
+my $afterdocumentation = 0;
+
+printf("Functions that appear in h-file, but are not defined in nm-file:\n");
+while(<FILE>)
+{
+   chomp;
+   my $str = $_;
+
+   if ( $str =~ /^#/ )
+   {
+      next;
+   }
+
+   # remove everything within a string
+   if ( $str =~ /\".*\"/ && $str !~ /(extern \"C\" \{)/ )
+   {
+      # remove minimal occurence of string
+      $str =~ s/\".*?\"//g;
+   }
+
+   # if we are in a comment that started in previous lines, we search for the end of the comment
+   if ( $incomment == 1 || $indocumentation == 1 )
+   {
+      $afterdocumentation = 0;
+      if ( $str =~ /\*\// )
+      {
+         # remove comment from current line
+         $str =~ s/(.*)\*\///g;
+
+         if ( $indocumentation == 1 )
+         {
+            $afterdocumentation = 1;
+         }
+         $incomment = 0;
+         $indocumentation = 0;
+      }
+      else
+      {
+         # skip line (comment continues)
+         next;
+      }
+   }
+   else
+   {
+      # if a comment starts or ends in current line
+      if ( $str =~ /\/\*/ || $str =~ /\*\// )
+      {
+         # handle one-line documentation
+         if ( $str =~ /\/\*\*(.*)\*\// )
+         {
+            # remove documentation comments that are within the current line
+            $str =~ s/\/\*\*(.*)\*\///g;
+            $afterdocumentation = 1;
+         }
+         else
+         {
+            # handle one-line comments
+            if ( $str =~ /\/\*(.*)\*\// )
+            {
+               # remove comments that are within the current line
+               $str =~ s/\/\*(.*)\*\///g;
+            }
+         }
+
+         # check whether documentation starts
+         if ( $str =~ /\/\*\*/ )
+         {
+            $indocumentation = 1;
+            $incomment = 1;
+            $afterdocumentation = 0;
+            next;
+         }
+
+         # check whether comment starts
+         if ( $str =~ /\/\*/ )
+         {
+            $incomment = 1;
+            $afterdocumentation = 0;
+            next;
+         }
+      }
+   }
+
+   # try to determine function name
+   if ( $afterdocumentation == 1 )
+   {
+      # check for parenthesis
+      if ( $str =~ /\S\(/ && $str !~ /\)\)/ )
+      {
+         my @mystr = split(/\(/, $str);
+         my @s = split(/\s+/, $mystr[0]);
+
+         # guess function name
+         my $functionname = $s[$#s];
+         if ( $mystr[0] =~ /SCIP\_DECL/ )
+         {
+            @s = split(/[\s+,\)]/, $mystr[1]);
+            $functionname = $s[0];
+         }
+
+         $afterdocumentation = 0;
+
+         if ( not $D{$functionname} )
+         {
+            printf("%s\n", $functionname);
+         }
+      }
+   }
+}
+close FILE;
