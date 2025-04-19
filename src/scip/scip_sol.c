@@ -3258,21 +3258,25 @@ SCIP_RETCODE readSolFile(
       SCIP_RETCODE retcode;
 
       /* get next line */
-      if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
+      if( SCIPfgets(buffer, (int)sizeof(buffer), file) == NULL )
+      {
+         if( !SCIPfeof(file) )
+            *error = TRUE;
          break;
-      lineno++;
+      }
+      ++lineno;
 
       /* there are some lines which may precede the solution information */
-      if( SCIPstrncasecmp(buffer, "solution status:", 16) == 0 || SCIPstrncasecmp(buffer, "objective value:", 16) == 0 ||
-         SCIPstrncasecmp(buffer, "Log started", 11) == 0 || SCIPstrncasecmp(buffer, "Variable Name", 13) == 0 ||
-         SCIPstrncasecmp(buffer, "All other variables", 19) == 0 || strspn(buffer, " \n\r\t\f") == strlen(buffer) ||
-         SCIPstrncasecmp(buffer, "NAME", 4) == 0 || SCIPstrncasecmp(buffer, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
-         SCIPstrncasecmp(buffer, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
+      if( SCIPstrncasecmp(buffer, "solution status:", 16) == 0 || SCIPstrncasecmp(buffer, "objective value:", 16) == 0
+         || buffer[strspn(buffer, " \t\n\v\f\r")] == '\0' || SCIPstrncasecmp(buffer, "Log started", 11) == 0
+         || SCIPstrncasecmp(buffer, "Variable Name", 13) == 0 || SCIPstrncasecmp(buffer, "All other variables", 19) == 0
+         || SCIPstrncasecmp(buffer, "NAME", 4) == 0 || SCIPstrncasecmp(buffer, "ENDATA", 6) == 0 /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         || SCIPstrncasecmp(buffer, "=obj=", 5) == 0 ) /* avoid "unknown variable" warning when reading MIPLIB SOL files */
          continue;
 
       /* tokenize the line */
-      varname = SCIPstrtok(buffer, " \t", &endptr);
-      valuestring = SCIPstrtok(NULL, " \t", &endptr);
+      varname = SCIPstrtok(buffer, " \t\v", &endptr);
+      valuestring = SCIPstrtok(NULL, " \t\n\v\f\r", &endptr);
       if( valuestring == NULL )
       {
          SCIPerrorMessage("Invalid input line %d in solution file <%s>: <%s>.\n", lineno, filename, buffer);

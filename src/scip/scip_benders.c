@@ -1042,54 +1042,6 @@ SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
    return SCIP_OKAY;
 }
 
-/** applies a Benders' decomposition to the selected decomposition from the decomposition store
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-SCIP_RETCODE SCIPapplyBendersDecomposition(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   int                   decompindex         /**< the index of the decomposition that will be applied */
-   )
-{
-   SCIP_BENDERS* benders;
-
-   assert(scip != NULL);
-   assert(scip->decompstore != NULL);
-   assert(SCIPdecompstoreGetNOrigDecomps(scip->decompstore) > 0);
-   assert(decompindex >= 0 && decompindex < SCIPdecompstoreGetNOrigDecomps(scip->decompstore));
-
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPapplyBendersDecomposition", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-   /* if there already exists an active Benders' decomposition, then default decomposition is not applied. */
-   if( SCIPgetNActiveBenders(scip) > 0 )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "A Benders' decomposition already exists. The default Benders' decomposition will not be applied to the stored decomposition.\n");
-      return SCIP_OKAY;
-   }
-
-   /* retrieving the default Benders' decomposition plugin */
-   benders = SCIPfindBenders(scip, "default");
-
-   /* if the default Benders' decomposition plugin doesn't exist, then this will result in an error */
-   if( benders == NULL )
-   {
-      SCIPerrorMessage("The default Benders' decomposition plugin is required to apply Benders' decomposition using the input decomposition.");
-      return SCIP_ERROR;
-   }
-
-   /* applying the Benders' decomposition. If SCIP is in the PROBLEM stage, then the auxiliary variables don't need to
-    * be added. However, in any other stage, then the auxiliary variables must be added to the problem.
-    */
-   SCIP_CALL( SCIPbendersApplyDecomposition(benders, scip->set,
-         SCIPdecompstoreGetOrigDecomps(scip->decompstore)[decompindex]) );
-
-   return SCIP_OKAY;
-}
-
 /** creates a Benders' cut algorithms and includes it in the associated Benders' decomposition
  *
  *  This should be called from the SCIPincludeBendersXyz for the associated Benders' decomposition. It is only possible

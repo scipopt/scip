@@ -516,6 +516,7 @@ SCIP_RETCODE countNonlinearities(
          if( probindex >= 0 )
             ++nlcount[probindex];
 
+         /**! [SnippetCodeStyleIfFor] */
          for( v = 0; v < nandvars; ++v )
          {
             /* get active index of operator */
@@ -525,6 +526,7 @@ SCIP_RETCODE countNonlinearities(
             if( probindex >= 0 )
                ++nlcount[probindex];
          }
+         /**! [SnippetCodeStyleIfFor] */
       }
    }
 
@@ -697,6 +699,7 @@ SCIP_RETCODE addBdchg(
    return SCIP_OKAY;
 }
 
+/**! [SnippetCodeStyleStaticAsserts] */
 /** frees bound change arrays */
 static
 void freeBdchgs(
@@ -707,10 +710,12 @@ void freeBdchgs(
    int*                  nbdchgs             /**< pointer to number of bound changes */
    )
 {
+   assert(scip != NULL);
    assert(bdchginds != NULL);
    assert(bdchgtypes != NULL);
    assert(bdchgbounds != NULL);
    assert(nbdchgs != NULL);
+/**! [SnippetCodeStyleStaticAsserts] */
 
    SCIPfreeBufferArrayNull(scip, bdchgbounds);
    SCIPfreeBufferArrayNull(scip, bdchgtypes);

@@ -43,7 +43,8 @@ const char* const missing[] =
    "table",
    "compression",
    "solvingphases",
-   "propagating/symmetry"
+   "propagating/symmetry",
+   "relaxing/benders"
 };
 const int nmissing = sizeof(missing) / sizeof(missing[0]);
 

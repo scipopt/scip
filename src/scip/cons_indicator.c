@@ -335,8 +335,8 @@ struct SCIP_ConsData
    SCIP_VAR**            varswithevents;     /**< linear constraint variables with bound change events */
    SCIP_EVENTTYPE*       eventtypes;         /**< eventtypes of linear constraint variables with bound change events */
    int                   nevents;            /**< number of bound change events of linear constraint variables */
-   SCIP_Bool             activeone;          /**< whether the constraint is active on 1 or 0 */
-   SCIP_Bool             lessthanineq;       /**< whether the original linear constraint is less-than-rhs or greater-than-rhs */
+   SCIP_Bool             activeone;          /**< whether the constraint is active on 1 or 0 (only used at creation time) */
+   SCIP_Bool             lessthanineq;       /**< whether the original linear constraint is less-than-rhs or greater-than-rhs (only used at creation time) */
    int                   nfixednonzero;      /**< number of variables among binvar and slackvar fixed to be nonzero */
    int                   colindex;           /**< column index in alternative LP */
    unsigned int          linconsactive:1;    /**< whether linear constraint and slack variable are active */
@@ -479,7 +479,6 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_VAR** linvars;
    SCIP_Real* linvals;
    SCIP_Real constant;
-   SCIP_Real actweight;
    SCIP_Real lhs;
    SCIP_Real rhs;
    SCIP_Bool suc;
@@ -552,14 +551,11 @@ SCIP_RETCODE addSymmetryInformation(
 
    SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
-   /* activation of a constraint is modeled as weight of the edge to the activation variable */
-   actweight = consdata->activeone ? 1.0 : -1.0;
-
    if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
    {
       /* encode aggregation by a sum-expression and connect it to indicator node */
       SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &opnodeidx) ); /*lint !e641*/
-      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, opnodeidx, TRUE, actweight) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, opnodeidx, TRUE, 1.0) );
 
       /* add nodes and edges for variables in aggregation */
       SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, opnodeidx, vars, vals, nlocvars, constant) );
@@ -569,15 +565,15 @@ SCIP_RETCODE addSymmetryInformation(
       if( symtype == SYM_SYMTYPE_SIGNPERM )
       {
          nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, actweight) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, 1.0) );
 
          nodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[0]);
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, -actweight) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, -1.0) );
       }
       else
       {
          nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, actweight) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, 1.0) );
       }
    }
 
