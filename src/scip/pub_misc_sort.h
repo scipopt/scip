@@ -205,16 +205,6 @@ void SCIPsortPtrRealBool(
    int                   len                 /**< length of arrays */
    );
 
-/** sort of three joint arrays of pointers/Reals/Reals, sorted by first array in non-decreasing order */
-SCIP_EXPORT
-void SCIPsortPtrRealReal(
-   void**                ptrarray,           /**< pointer array to be sorted */
-   SCIP_Real*            realarray1,         /**< first SCIP_Real array to be permuted in the same way */
-   SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   int                   len                 /**< length of arrays */
-   );
-
 /** sort of three joint arrays of pointers/pointers/ints, sorted by first array in non-decreasing order */
 SCIP_EXPORT
 void SCIPsortPtrPtrInt(
