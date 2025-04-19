@@ -228,18 +228,6 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    const char            sense               /**< sense of the constraint, i.e., G, L, or E */
    );
 
-/** create a new node data structure for the current node */
-SCIP_RETCODE SCIPcertificateTransAggrrow(
-   SCIP_SET*             set,                /**< general SCIP settings */
-   SCIP_PROB*            prob,               /**< SCIP problem data */
-   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
-   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
-   SCIP_ROW*             row,                /**< the cut that we are attempting to prove */
-   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
-   SCIP_Real*            weights,            /**< array of weights */
-   int                   naggrrows           /**< length of the arrays */
-   );
-
 /** prints cutoff bound for objective value **/
 SCIP_RETCODE SCIPcertificatePrintCutoffBound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -416,13 +404,6 @@ SCIP_RETCODE SCIPcertificateSaveFinalbound(
 void SCIPcertificatePrintRtpInfeas(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP_Bool             isorigfile          /**< should the original solution be printed or in transformed space */
-   );
-
-/** prints SOL header and exact solution to certificate file */
-void SCIPcertificatePrintSolExact(
-   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** updates the current derived bound of the node with newbound, if newbound is better */

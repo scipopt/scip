@@ -122,15 +122,6 @@ typedef struct SCIP_LinConsUpgrade SCIP_EXLINCONSUPGRADE; /**< linear constraint
       int ncoeffspone, int ncoeffsnone, int ncoeffspint, int ncoeffsnint, int ncoeffspfrac, int ncoeffsnfrac, \
       SCIP_Real poscoeffsum, SCIP_Real negcoeffsum, SCIP_Bool integral, SCIP_CONS** upgdcons)
 
-/** includes a linear constraint update method into the linear constraint handler */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExLinconsUpgrade(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DECL_EXLINCONSUPGD((*linconsupgd)),  /**< method to call for upgrading linear constraint */
-   int                   priority,           /**< priority of upgrading method */
-   const char*           conshdlrname        /**< name of the constraint handler */
-   );
-
 /** creates and captures a linear constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
@@ -375,23 +366,6 @@ SCIP_EXPORT
 SCIP_ROWEXACT* SCIPgetRowExactExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
-   );
-
-/** tries to automatically convert a linear constraint into a more specific and more specialized constraint */
-SCIP_EXPORT
-SCIP_RETCODE SCIPupgradeConsExactLinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< source constraint to try to convert */
-   SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
-   );
-
-/** returns statistics of running error analysis feasibility checks */
-SCIP_EXPORT
-void SCIPgetRunningErrorStatsExactLinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Longint*         ncalls,             /**< stores number of times running error analysis was called */
-   SCIP_Longint*         nsuccess,           /**< stores number of times running error analysis successfully determined feasibility */
-   SCIP_Longint*         naborts             /**< stores number of times running error analysis had to abort */
    );
 
 /** prints the certificate for a given original exact linear constraint */

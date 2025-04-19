@@ -828,12 +828,6 @@ SCIP_RETCODE SCIPrationalarrayFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
-/** clears a dynamic real array */
-SCIP_EXPORT
-SCIP_RETCODE SCIPrationalarrayClear(
-   SCIP_RATIONALARRAY*   rationalarray       /**< dynamic real array */
-   );
-
 /** gets value of entry in dynamic array */
 SCIP_EXPORT
 void SCIPrationalarrayGetVal(

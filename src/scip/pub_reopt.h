@@ -86,17 +86,6 @@ SCIP_REOPTTYPE SCIPreoptnodeGetType(
    SCIP_REOPTNODE*       reoptnode           /**< node of the reoptimization tree */
    );
 
-/** create the constraint which splits the node stored at ID id on the basis of the stored dual information. */
-SCIP_EXPORT
-void SCIPreoptnodeGetSplitCons(
-   SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
-   SCIP_VAR**            vars,               /**< array to store the variables of the constraint */
-   SCIP_Real*            vals,               /**< array to store the coefficients of the variables */
-   REOPT_CONSTYPE*       constype,           /**< type of the constraint */
-   int                   conssize,           /**< size of the arrays */
-   int*                  nvars               /**< pointer to store the size of the constraints */
-   );
-
 /** returns all added constraints at ID id */
 SCIP_EXPORT
 void SCIPreoptnodeGetConss(
