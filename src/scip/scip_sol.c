@@ -49,6 +49,7 @@
 #include "scip/cons_linear.h"
 #include "scip/debug.h"
 #include "scip/lp.h"
+#include "scip/lpexact.h"
 #include "scip/nlp.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
@@ -61,7 +62,9 @@
 #include "scip/relax.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
@@ -85,6 +88,316 @@
 #include "scip/tree.h"
 #include "xml/xml.h"
 
+/** checks solution for feasibility in original problem without adding it to the solution store; to improve the
+ *  performance we use the following order when checking for violations:
+ *
+ *  1. variable bounds
+ *  2. constraint handlers with positive or zero priority that don't need constraints (e.g. integral constraint handler)
+ *  3. original constraints
+ *  4. constraint handlers with negative priority that don't need constraints (e.g. Benders' decomposition constraint handler)
+ */
+static
+SCIP_RETCODE checkSolOrig(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             checkmodifiable     /**< have modifiable constraint to be checked? */
+   )
+{
+   SCIP_RESULT result;
+   int v;
+   int c;
+   int h;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(feasible != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "checkSolOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   *feasible = TRUE;
+
+   SCIPsolResetViolations(sol);
+
+   if( !printreason )
+      completely = FALSE;
+
+   if( SCIPisExact(scip) )
+   {
+      if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+         SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->origprob) );
+      else
+         SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->transprob) );
+   }
+
+   /* check bounds */
+   if( checkbounds )
+   {
+      for( v = 0; v < scip->origprob->nvars; ++v )
+      {
+         SCIP_VAR* var;
+         SCIP_Real solval;
+         SCIP_Real lb;
+         SCIP_Real ub;
+
+         var = scip->origprob->vars[v];
+         solval = SCIPsolGetVal(sol, scip->set, scip->stat, var);
+
+         lb = SCIPvarGetLbOriginal(var);
+         ub = SCIPvarGetUbOriginal(var);
+
+         SCIPupdateSolBoundViolation(scip, sol, lb - solval, SCIPrelDiff(lb, solval));
+         SCIPupdateSolBoundViolation(scip, sol, solval - ub, SCIPrelDiff(solval, ub));
+
+         if( SCIPsetIsFeasLT(scip->set, solval, lb) || SCIPsetIsFeasGT(scip->set, solval, ub) )
+         {
+            *feasible = FALSE;
+
+            if( printreason )
+            {
+               SCIPmessagePrintInfo(scip->messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
+                  SCIPvarGetName(var), lb, ub, solval);
+            }
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* call constraint handlers with positive or zero check priority that don't need constraints */
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   {
+      if( SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= 0 )
+      {
+         if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+         {
+            SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+                  checkintegrality, checklprows, printreason, completely, &result) );
+
+            if( result != SCIP_FEASIBLE )
+            {
+               *feasible = FALSE;
+
+               if( !completely )
+                  return SCIP_OKAY;
+            }
+         }
+      }
+      /* constraint handlers are sorted by priority, so we can break when reaching the first one with negative priority */
+      else
+         break;
+   }
+
+   /* check original constraints
+    *
+    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
+    * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
+    * have to be checked;
+    */
+   for( c = 0; c < scip->origprob->nconss; ++c )
+   {
+      if( SCIPconsIsChecked(scip->origprob->conss[c]) && (checkmodifiable || !SCIPconsIsModifiable(scip->origprob->conss[c])) )
+      {
+         /* check solution */
+         SCIP_CALL( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol,
+               checkintegrality, checklprows, printreason, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* call constraint handlers with negative check priority that don't need constraints;
+    * continue with the first constraint handler with negative priority which caused us to break in the above loop */
+   for( ; h < scip->set->nconshdlrs; ++h )
+   {
+      assert(SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) < 0);
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+               checkintegrality, checklprows, printreason, completely, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks solution (fp or exact) for exact feasibility in original problem without adding it to the solution store;
+ * to improve the performance we use the following order when checking for violations:
+ *
+ *  1. variable bounds
+ *  2. constraint handlers with positive or zero priority that don't need constraints (e.g. integral constraint handler)
+ *  3. original constraints
+ *  4. constraint handlers with negative priority that don't need constraints (e.g. Benders' decomposition constraint handler)
+ */
+static
+SCIP_RETCODE checkSolOrigExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             checkmodifiable     /**< have modifiable constraint to be checked? */
+   )
+{
+   SCIP_RATIONAL* solval;
+   SCIP_RATIONAL* lb;
+   SCIP_RATIONAL* ub;
+   SCIP_RESULT result;
+   int v;
+   int c;
+   int h;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(feasible != NULL);
+   assert(SCIPisExact(scip));
+
+   SCIP_CALL( SCIPcheckStage(scip, "checkSolOrigExact", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   *feasible = TRUE;
+
+   SCIPsolResetViolations(sol);
+
+   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+      SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->origprob) );
+   else
+      SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->transprob) );
+
+   if( !printreason )
+      completely = FALSE;
+
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &solval) );
+
+   /* check bounds */
+   if( checkbounds )
+   {
+      for( v = 0; v < scip->origprob->nvars; ++v )
+      {
+         SCIP_VAR* var;
+
+         var = scip->origprob->vars[v];
+         if( SCIPisExactSol(scip, sol) )
+            SCIPsolGetValExact(solval, sol, scip->set, scip->stat, var);
+         else
+            SCIPrationalSetReal(solval, SCIPsolGetVal(sol, scip->set, scip->stat, var));
+
+         lb = SCIPvarGetLbOriginalExact(var);
+         ub = SCIPvarGetUbOriginalExact(var);
+
+         if( SCIPrationalIsLT(solval, lb) || SCIPrationalIsGT(solval, ub) )
+         {
+            *feasible = FALSE;
+
+            if( printreason )
+            {
+               SCIPmessagePrintInfo(scip->messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
+                  SCIPvarGetName(var), SCIPrationalGetReal(lb), SCIPrationalGetReal(ub), SCIPrationalGetReal(solval));
+            }
+
+            if( !completely )
+            {
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
+               return SCIP_OKAY;
+            }
+         }
+      }
+   }
+
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
+
+   /* call constraint handlers with positive or zero check priority that don't need constraints */
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   {
+      if( SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= 0 )
+      {
+         if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+         {
+            SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+                  checkintegrality, checklprows, printreason, completely, &result) );
+
+            if( result != SCIP_FEASIBLE )
+            {
+               *feasible = FALSE;
+
+               if( !completely )
+                  return SCIP_OKAY;
+            }
+         }
+      }
+      /* constraint handlers are sorted by priority, so we can break when reaching the first one with negative priority */
+      else
+         break;
+   }
+
+   /* check original constraints
+    *
+    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
+    * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
+    * have to be checked;
+    */
+   for( c = 0; c < scip->origprob->nconss; ++c )
+   {
+      if( SCIPconsIsChecked(scip->origprob->conss[c]) && (checkmodifiable || !SCIPconsIsModifiable(scip->origprob->conss[c])) )
+      {
+         /* check solution */
+         SCIP_CALL( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol,
+               checkintegrality, checklprows, printreason, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* call constraint handlers with negative check priority that don't need constraints;
+    * continue with the first constraint handler with negative priority which caused us to break in the above loop */
+   for( ; h < scip->set->nconshdlrs; ++h )
+   {
+      assert(SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) < 0);
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+               checkintegrality, checklprows, printreason, completely, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** update integrality violation of a solution */
 void SCIPupdateSolIntegralityViolation(
@@ -211,6 +524,56 @@ SCIP_RETCODE SCIPcreateSol(
    }  /*lint !e788*/
 }
 
+/** creates an exact primal solution, initialized to zero
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPcreateSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateSolExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPsolCreateOriginalExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->origprimal, NULL, heur) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_EXITPRESOLVE:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPsolCreateExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_EXITSOLVE:
+   case SCIP_STAGE_FREETRANS:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDDATA;
+   }  /*lint !e788*/
+}
+
 /** creates a primal solution, initialized to the current LP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -235,6 +598,34 @@ SCIP_RETCODE SCIPcreateLPSol(
 
    SCIP_CALL( SCIPsolCreateLPSol(sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
          scip->tree, scip->lp, heur) );
+
+   return SCIP_OKAY;
+}
+
+/** creates an exact primal solution, initialized to the current exact LP solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPcreateLPSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateLPSolExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
+   {
+      SCIPerrorMessage("LP solution does not exist\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPsolCreateLPSolExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+            scip->tree, scip->lpexact, heur) );
 
    return SCIP_OKAY;
 }
@@ -894,6 +1285,32 @@ SCIP_RETCODE SCIPlinkLPSol(
    return SCIP_OKAY;
 }
 
+/** links a primal solution to the current exact LP solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPlinkLPSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPlinkLPSolExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpExactIsSolved(scip) )
+   {
+      SCIPerrorMessage("Exact LP solution does not exist\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPsolLinkLPSolExact(sol, scip->set, scip->lpexact) );
+
+   return SCIP_OKAY;
+}
+
 /** links a primal solution to the current NLP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1052,6 +1469,34 @@ SCIP_RETCODE SCIPunlinkSol(
    return SCIP_OKAY;
 }
 
+/** stores exact solution values of variables in solution's own array
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_RETCODE SCIPunlinkSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPunlinkSolExact", FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   SCIP_CALL( SCIPsolUnlinkExact(sol, scip->set, scip->transprob) );
+
+   return SCIP_OKAY;
+}
+
 /** sets value of variable in primal CIP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1091,6 +1536,49 @@ SCIP_RETCODE SCIPsetSolVal(
    }
 
    SCIP_CALL( SCIPsolSetVal(sol, scip->set, scip->stat, scip->tree, var, val) );
+
+   return SCIP_OKAY;
+}
+
+/** sets exact value of variable in primal CIP solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_RETCODE SCIPsetSolValExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution */
+   SCIP_VAR*             var,                /**< variable to add to solution */
+   SCIP_RATIONAL*        val                 /**< solution value of variable */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetSolValExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   assert( var->scip == scip );
+   assert(SCIPisExactSol(scip, sol));
+
+   if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
+   {
+      SCIPerrorMessage("cannot set value of transformed variable <%s> in original space solution\n",
+         SCIPvarGetName(var));
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPsolSetValExact(sol, scip->set, scip->stat, scip->tree, var, val) );
 
    return SCIP_OKAY;
 }
@@ -1232,6 +1720,49 @@ SCIP_Real SCIPgetSolVal(
    return SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(scip->tree));
 }
 
+/** returns value of variable in exact primal CIP solution, or in current LP/pseudo solution
+ *
+ *  @return value of variable in primal CIP solution, or in current exaxct LP/pseudo solution
+ *
+ *  @pre In case the solution pointer @p sol is @b NULL, that means it is asked for the LP or pseudo solution, this method
+ *       can only be called if @p scip is in the solving stage \ref SCIP_STAGE_SOLVING. In any other case, this method
+ *       can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+void SCIPgetSolValExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   SCIP_VAR*             var,                /**< variable to get value for */
+   SCIP_RATIONAL*        res                 /**< resulting rational */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolValExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   assert( var->scip == scip );
+
+   if( sol != NULL )
+   {
+      SCIPsolGetValExact(res, sol, scip->set, scip->stat, var);
+   }
+   else
+   {
+      SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolValExact(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+      SCIPvarGetSolExact(var, res, SCIPtreeHasCurrentNodeLP(scip->tree));
+   }
+}
+
 /** gets values of multiple variables in primal CIP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1327,6 +1858,70 @@ SCIP_Real SCIPgetSolOrigObj(
    }
 }
 
+/** returns exact objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
+ *
+ *  @return exact objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+void SCIPgetSolOrigObjExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
+   SCIP_RATIONAL*        res                 /**< result pointer to store rational */
+   )
+{
+   SCIP_RATIONAL* tmp;
+   assert(SCIPisExactSol(scip, sol));
+
+   /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
+    * for all other solutions, we should be at least in SCIP_STAGE_TRANSFORMING
+    */
+   if( sol != NULL && SCIPsolIsOriginal(sol) )
+   {
+      SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolOrigObjExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+      SCIPrationalSetRational(res, SCIPsolGetOrigObjExact(sol));
+      return;
+   }
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolOrigObjExact", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   SCIP_CALL_ABORT( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
+   if( sol != NULL )
+   {
+      SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob, tmp);
+      SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, res);
+   }
+   else
+   {
+      SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolOrigObjExact(sol==NULL)", \
+            FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+      if( SCIPtreeHasCurrentNodeLP(scip->tree) )
+      {
+         SCIPlpExactGetObjval(scip->lpexact, scip->set, tmp);
+         SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, res);
+      }
+      else
+      {
+         SCIPlpExactGetPseudoObjval(scip->lpexact, scip->set, tmp);
+         SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, res);
+      }
+   }
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
+}
+
 /** returns transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
  *
  *  @return transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
@@ -1361,6 +1956,42 @@ SCIP_Real SCIPgetSolTransObj(
          return SCIPlpGetObjval(scip->lp, scip->set, scip->transprob);
       else
          return SCIPlpGetPseudoObjval(scip->lp, scip->set, scip->transprob);
+   }
+}
+
+/** returns exact transformed objective value of primal CIP solution, or transformed current exact LP/pseudo objective value
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE _TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+void SCIPgetSolTransObjExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
+   SCIP_RATIONAL*        res                 /**< result pointer to store rational */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolTransObjExact", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   if( sol != NULL )
+      SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob, res);
+   else
+   {
+      SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolTransObjExact(sol==NULL)", \
+            FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+      if( SCIPtreeHasCurrentNodeLP(scip->tree) )
+         SCIPlpExactGetObjval(scip->lpexact, scip->set, res);
+      else
+         SCIPlpExactGetPseudoObjval(scip->lpexact, scip->set, res);
    }
 }
 
@@ -1576,8 +2207,8 @@ SCIP_Bool SCIPareSolsEqual(
    return SCIPsolsAreEqual(sol1, sol2, scip->set, scip->stat, scip->origprob, scip->transprob);
 }
 
-/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
- *  deteriorated by this method.
+/** adjusts solution values of implied integral variables in handed solution, solution objective value is not
+ *  deteriorated by this method
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1635,7 +2266,7 @@ SCIP_RETCODE SCIPprintSol(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
-   SCIP_Real objvalue;
+   SCIP_Real objval;
    SCIP_Bool currentsol;
    SCIP_Bool oldquiet = FALSE;
 
@@ -1644,6 +2275,13 @@ SCIP_RETCODE SCIPprintSol(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    currentsol = (sol == NULL);
+
+   if( currentsol ? SCIPisExact(scip) : SCIPsolIsExact(sol) )
+   {
+      SCIP_CALL( SCIPprintSolExact(scip, sol, file, printzeros) );
+      return SCIP_OKAY;
+   }
+
    if( currentsol )
    {
       SCIP_CALL( SCIPcheckStage(scip, "SCIPprintSol(sol==NULL)", \
@@ -1669,15 +2307,96 @@ SCIP_RETCODE SCIPprintSol(
    else
    {
       if( SCIPsolIsOriginal(sol) )
-         objvalue = SCIPsolGetOrigObj(sol);
+         objval = SCIPsolGetOrigObj(sol);
       else
-         objvalue = SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
+         objval = SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
 
-      SCIPprintReal(scip, file, objvalue, 20, 15);
+      SCIPprintReal(scip, file, objval, 20, 15);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
    }
 
    SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, FALSE,
+         printzeros) );
+
+   if( file != NULL && scip->messagehdlr != NULL )
+   {
+      SCIPmessagehdlrSetQuiet(scip->messagehdlr, oldquiet);
+   }
+
+   if( currentsol )
+   {
+      /* free temporary solution */
+      SCIP_CALL( SCIPsolFree(&sol, scip->mem->probmem, scip->primal) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** print an exact solution */
+SCIP_RETCODE SCIPprintSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   SCIP_RATIONAL* objval;
+   SCIP_RATIONAL* tmp;
+   SCIP_Bool currentsol;
+   SCIP_Bool oldquiet = FALSE;
+   char* objvalstr;
+   int objvalsize;
+
+   assert(SCIPisTransformed(scip) || sol != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintSolExact", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   currentsol = (sol == NULL);
+   if( currentsol )
+   {
+      SCIP_CALL( SCIPcheckStage(scip, "SCIPprintSolExact(sol==NULL)", \
+            FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+      /* create a temporary solution that is linked to the current solution */
+      SCIP_CALL( SCIPsolCreateCurrentSolExact(&sol, scip->mem->probmem, scip->set, scip->stat, scip->primal,
+            scip->tree, scip->lpexact, NULL) );
+   }
+
+   if( file != NULL && scip->messagehdlr != NULL )
+   {
+      oldquiet = SCIPmessagehdlrIsQuiet(scip->messagehdlr);
+      SCIPmessagehdlrSetQuiet(scip->messagehdlr, FALSE);
+   }
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "objective value:                 ");
+
+   if( SCIPsolIsPartial(sol) )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "unknown\n");
+   }
+   else
+   {
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
+
+      if( SCIPsolIsOriginal(sol) )
+         SCIPrationalSetRational(objval, SCIPsolGetOrigObjExact(sol));
+      else
+      {
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
+         SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob, tmp);
+         SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, objval);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
+      }
+
+      objvalsize = SCIPrationalStrLen(objval) + 1;
+      SCIP_CALL( SCIPallocBufferArray(scip, &objvalstr, objvalsize) );
+      (void)SCIPrationalToString(objval, objvalstr, objvalsize);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "%20s\n", objvalstr);
+      SCIPfreeBufferArray(scip, &objvalstr);
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &objval);
+   }
+
+   SCIP_CALL( SCIPsolPrintExact(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, FALSE,
          printzeros) );
 
    if( file != NULL && scip->messagehdlr != NULL )
@@ -1773,7 +2492,7 @@ SCIP_RETCODE SCIPprintMIPStart(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   SCIP_Real objvalue;
+   SCIP_Real objval;
    SCIP_Bool oldquiet = FALSE;
 
    assert(sol != NULL);
@@ -1790,11 +2509,11 @@ SCIP_RETCODE SCIPprintMIPStart(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "objective value:                 ");
 
    if( SCIPsolIsOriginal(sol) )
-      objvalue = SCIPsolGetOrigObj(sol);
+      objval = SCIPsolGetOrigObj(sol);
    else
-      objvalue = SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
+      objval = SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
 
-   SCIPprintReal(scip, file, objvalue, 20, 15);
+   SCIPprintReal(scip, file, objval, 20, 15);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
 
    SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, TRUE,
@@ -2327,6 +3046,23 @@ SCIP_RETCODE SCIProundSol(
    return SCIP_OKAY;
 }
 
+/** copy the fp values to the exact arrays of the solution */
+SCIP_RETCODE SCIPmakeSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   )
+{
+   assert(!SCIPsolIsExact(sol));
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPmakeSolExact", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+      SCIP_CALL( SCIPsolMakeExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprob) );
+   else
+      SCIP_CALL( SCIPsolMakeExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob) );
+
+   return SCIP_OKAY;
+}
+
 /** retransforms solution to original problem space
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -2371,6 +3107,66 @@ SCIP_RETCODE SCIPretransformSol(
       SCIP_Bool hasinfval;
 
       SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
+      break;
+   }
+   case SCIP_SOLORIGIN_PARTIAL:
+   case SCIP_SOLORIGIN_UNKNOWN:
+      SCIPerrorMessage("unknown solution origin.\n");
+      return SCIP_INVALIDCALL;
+
+   default:
+      /* note that this is in an internal SCIP error since all solution origins are covert in the switch above */
+      SCIPerrorMessage("invalid solution origin <%d>\n", SCIPsolGetOrigin(sol));
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** retransforms exact solution to original problem space
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_RETCODE SCIPretransformSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPretransformSolExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   switch( SCIPsolGetOrigin(sol) )
+   {
+   case SCIP_SOLORIGIN_ORIGINAL:
+      /* nothing to do */
+      return SCIP_OKAY;
+
+   case SCIP_SOLORIGIN_LPSOL:
+   case SCIP_SOLORIGIN_NLPSOL:
+   case SCIP_SOLORIGIN_RELAXSOL:
+   case SCIP_SOLORIGIN_PSEUDOSOL:
+
+      /* first unlink solution */
+      SCIP_CALL( SCIPunlinkSolExact(scip, sol) );
+
+      /*lint -fallthrough*/
+   case SCIP_SOLORIGIN_ZERO:
+   {
+      SCIP_Bool hasinfval;
+
+      SCIP_CALL( SCIPsolRetransformExact(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
       break;
    }
    case SCIP_SOLORIGIN_PARTIAL:
@@ -2505,7 +3301,7 @@ SCIP_RETCODE readSolFile(
          value = SCIPinfinity(scip);
       else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
          value = -SCIPinfinity(scip);
-      else if( SCIPstrncasecmp(valuestring, "unknown", 7) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "unk", 3) == 0 )
       {
          value = SCIP_UNKNOWN;
          localpartial = TRUE;
@@ -2667,7 +3463,7 @@ SCIP_RETCODE readXmlSolFile(
          value = SCIPinfinity(scip);
       else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
          value = -SCIPinfinity(scip);
-      else if( SCIPstrncasecmp(valuestring, "unknown", 7) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "unk", 3) == 0 )
       {
          value = SCIP_UNKNOWN;
          localpartial = TRUE;
@@ -3269,16 +4065,23 @@ SCIP_RETCODE SCIPcheckSol(
    }
 
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
-   checklprows = checklprows || scip->set->misc_exactsolve;
+   checklprows = checklprows || scip->set->exact_enable;
 
    if( !printreason )
       completely = FALSE;
 
+   /* SCIPsolCheck() can only be called on transformed solutions */
    if( SCIPsolIsOriginal(sol) )
    {
-      /* SCIPsolCheck() can only be called on transformed solutions */
-      SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+      if( SCIPisExact(scip) )
+      {
+         SCIP_CALL( checkSolOrigExact(scip, sol, feasible, printreason, completely, checkbounds, checkintegrality, checklprows, FALSE) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
             printreason, completely, checkbounds, checkintegrality, checklprows, FALSE, feasible) );
+      }
    }
    else
    {
@@ -3331,8 +4134,15 @@ SCIP_RETCODE SCIPcheckSolOrig(
       completely = FALSE;
 
    /* check solution in original problem; that includes bounds, integrality, and non modifiable constraints */
-   SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+   if( SCIPisExact(scip) )
+   {
+      SCIP_CALL( checkSolOrigExact(scip, sol, feasible, printreason, completely, TRUE, TRUE, TRUE, FALSE) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
          printreason, completely, TRUE, TRUE, TRUE, FALSE, feasible) );
+   }
 
    return SCIP_OKAY;
 }
@@ -3402,6 +4212,138 @@ SCIP_RETCODE SCIPupdatePrimalRay(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPupdatePrimalRay", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPprimalUpdateRay(scip->primal, scip->set, scip->stat, primalray, scip->mem->probmem) );
+
+   return SCIP_OKAY;
+}
+
+/** overwrite the fp-values in a solution with the rounded exact ones */
+SCIP_RETCODE SCIPoverwriteFPsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(scip != NULL);
+   assert(sol != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPoverwriteFPsol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   SCIP_CALL( SCIPsolOverwriteFPSolWithExact(sol, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree) );
+
+   return SCIP_OKAY;
+}
+
+/** returns TRUE if the solution is an exact rational solution */
+SCIP_Bool SCIPisExactSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(SCIPisTransformed(scip) || sol != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPisExactSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPsolIsExact(sol);
+}
+
+/** checks exact primal solution; if feasible, adds it to storage; solution is freed afterwards
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note Do not call during propagation, use heur_trysol instead.
+ */
+SCIP_RETCODE SCIPtrySolFreeExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed */
+   SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
+   )
+{
+   SCIP_SOL* bestsol;
+
+   assert(stored != NULL);
+   assert(sol != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPtrySolFreeExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   bestsol = SCIPgetBestSol(scip);
+
+   if( !printreason )
+      completely = FALSE;
+
+   /* we cannot check partial solutions */
+   if( SCIPsolIsPartial(*sol) )
+   {
+      SCIPerrorMessage("Cannot check feasibility of partial solutions.\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   /* if the solution is added during presolving and it is not defined on original variables,
+    * presolving operations will destroy its validity, so we retransform it to the original space
+    */
+   if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(*sol) )
+   {
+      SCIP_Bool hasinfval;
+
+      SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
+      SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
+   }
+
+   if( SCIPsolIsOriginal(*sol) )
+   {
+      SCIP_Bool feasible;
+
+      /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
+       * including modifiable constraints
+       */
+      SCIP_CALL( checkSolOrig(scip, *sol, &feasible, printreason, completely, checkbounds, checkintegrality, checklprows, TRUE) );
+
+      if( feasible )
+      {
+         SCIP_CALL( SCIPprimalAddSolFreeExact(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+               scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lpexact, scip->eventqueue, scip->eventfilter,
+               sol, stored) );
+
+         if( *stored )
+         {
+            if( bestsol != SCIPgetBestSol(scip) )
+            {
+               SCIPstoreSolutionGap(scip);
+            }
+         }
+      }
+      else
+      {
+         SCIP_CALL( SCIPsolFree(sol, scip->mem->probmem, scip->primal) );
+         *stored = FALSE;
+      }
+   }
+   else
+   {
+      SCIP_CALL( SCIPprimalTrySolFreeExact(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+            scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lpexact, scip->eventqueue, scip->eventfilter,
+            sol, printreason, completely, checkbounds, checkintegrality, checklprows, stored) );
+
+      if( *stored )
+      {
+         if( bestsol != SCIPgetBestSol(scip) )
+         {
+            SCIPstoreSolutionGap(scip);
+         }
+      }
+   }
 
    return SCIP_OKAY;
 }

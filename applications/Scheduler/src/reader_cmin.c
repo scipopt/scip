@@ -168,7 +168,7 @@ SCIP_Bool getNextToken(
 
    /* read value token */
    tokenlen = 0;
-   while( isdigit(buf[cmininput->linepos]) )
+   while( isdigit((unsigned char)buf[cmininput->linepos]) )
    {
       assert(tokenlen < SCIP_MAXSTRLEN);
       assert(!isDelimChar(buf[cmininput->linepos]));

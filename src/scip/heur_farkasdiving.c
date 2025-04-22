@@ -145,11 +145,8 @@ SCIP_RETCODE checkDivingCandidates(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &objcoefs, ndivecands) );
 
-   /* collect all absolute values of objective coefficients and count binary, integer,
-    * and implicit integer in the objective function
-    */
+   /* collect and count all non-zero absolute values of objective coefficients for diving candidates */
    nnzobjcoefs = 0;
-
    if( SCIPgetNObjVars(scip) > 0 )
    {
       for( i = 0; i < ndivecands; i++ )
@@ -254,17 +251,16 @@ SCIP_RETCODE checkGlobalProperties(
 {
    SCIP_VAR** vars;
    SCIP_Bool success;
-   int nbinvars;
-   int nintvars;
+   int nenfovars;
 
    assert(scip != NULL);
    assert(heurdata != NULL);
 
    vars = SCIPgetVars(scip);
-   nbinvars = SCIPgetNBinVars(scip);
-   nintvars = SCIPgetNIntVars(scip);
+   nenfovars = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(nenfovars >= 0);
 
-   SCIP_CALL( checkDivingCandidates(scip, heurdata, vars, nbinvars+nintvars, &success) );
+   SCIP_CALL( checkDivingCandidates(scip, heurdata, vars, nenfovars, &success) );
 
    if( !success )
    {
@@ -537,6 +533,9 @@ SCIP_RETCODE SCIPincludeHeurFarkasdiving(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecFarkasdiving, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyFarkasdiving) );

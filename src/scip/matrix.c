@@ -39,6 +39,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
@@ -48,6 +49,7 @@
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_var.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -56,6 +58,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_var.h"
 #include "scip/struct_matrix.h"
+#include "scip/rational.h"
 #include <string.h>
 
 /*
@@ -93,6 +96,43 @@ SCIP_RETCODE getActiveVariables(
       SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize) );
    }
    assert(requiredsize == *nvars);
+
+   return SCIP_OKAY;
+}
+
+/** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant */
+static
+SCIP_RETCODE getActiveVariablesExact(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_VAR***           vars,               /**< vars array to get active variables for */
+   SCIP_RATIONAL**       scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   SCIP_RATIONAL*        constant            /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   )
+{
+   int requiredsize;
+
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(scalars != NULL);
+   assert(*vars != NULL);
+   assert(*scalars != NULL);
+   assert(nvars != NULL);
+   assert(constant != NULL);
+
+   SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, *vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+
+   if( requiredsize > *nvars )
+   {
+      SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
+      SCIP_CALL( SCIPrationalReallocBufferArray(SCIPbuffer(scip), &scalars, *nvars, requiredsize) );
+
+      /* call function a second time with enough memory */
+      SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, *vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
+      assert(requiredsize <= *nvars);
+   }
+
+   assert(requiredsize <= *nvars);
 
    return SCIP_OKAY;
 }
@@ -215,6 +255,125 @@ SCIP_RETCODE addRow(
    return SCIP_OKAY;
 }
 
+/** add one row to the constraint matrix */
+static
+SCIP_RETCODE addRowExact(
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
+   SCIP_VAR**            vars,               /**< variables of this row */
+   SCIP_RATIONAL**       vals,               /**< coefficients of this row */
+   int                   nvars,              /**< number of variables of this row */
+   SCIP_RATIONAL*        lhs,                /**< left hand side */
+   SCIP_RATIONAL*        rhs,                /**< right hand side */
+   int                   maxnnonzsmem,       /**< maximal number of fillable elements */
+   SCIP_Bool*            rowadded            /**< flag indicating if constraint was added to matrix */
+   )
+{
+   int j;
+   int probindex;
+   int rowidx;
+   SCIP_Real factor;
+   SCIP_Bool rangedorequality;
+
+   assert(vars != NULL);
+   assert(vals != NULL);
+
+   rowidx = matrix->nrows;
+   rangedorequality = FALSE;
+
+   if( SCIPrationalIsNegInfinity(lhs) )
+   {
+      factor = -1.0;
+      SCIPrationalNegate(matrix->matrixvalsexact->lhsexact[rowidx], rhs);
+      SCIPrationalSetInfinity(matrix->matrixvalsexact->rhsexact[rowidx]);
+      matrix->isrhsinfinite[rowidx] = TRUE;
+   }
+   else
+   {
+      factor = 1.0;
+      SCIPrationalSetRational(matrix->matrixvalsexact->lhsexact[rowidx], lhs);
+      SCIPrationalSetRational(matrix->matrixvalsexact->rhsexact[rowidx], rhs);
+      matrix->isrhsinfinite[rowidx] = SCIPrationalIsInfinity(matrix->matrixvalsexact->rhsexact[rowidx]);
+
+      if( !SCIPrationalIsInfinity(rhs) )
+         rangedorequality = TRUE;
+   }
+
+   if( SCIPrationalIsNegInfinity(matrix->matrixvalsexact->lhsexact[rowidx]) )
+   {
+      /* ignore redundant constraint */
+      *rowadded = FALSE;
+      return SCIP_OKAY;
+   }
+
+   matrix->rowmatbeg[rowidx] = matrix->nnonzs;
+
+   /* = or ranged */
+   if( rangedorequality )
+   {
+      assert(factor > 0);
+
+      for( j = 0; j < nvars; j++ )
+      {
+         assert(maxnnonzsmem > matrix->nnonzs);
+
+         /* ignore variables 0 - coefficients */
+         if( SCIPrationalIsZero(vals[j]) )
+            continue;
+
+         SCIPrationalMultReal(matrix->matrixvalsexact->rowmatvalexact[matrix->nnonzs], vals[j], factor);
+         matrix->rowmatval[matrix->nnonzs] = SCIPrationalGetReal(matrix->matrixvalsexact->rowmatvalexact[matrix->nnonzs]);
+         probindex = SCIPvarGetProbindex(vars[j]);
+         assert(matrix->vars[probindex] == vars[j]);
+
+         matrix->nuplocks[probindex]++;
+         matrix->ndownlocks[probindex]++;
+
+         assert(0 <= probindex && probindex < matrix->ncols);
+         matrix->rowmatind[matrix->nnonzs] = probindex;
+
+         (matrix->nnonzs)++;
+      }
+   }
+   /* >= or <= */
+   else
+   {
+      for( j = 0; j < nvars; j++ )
+      {
+         assert(maxnnonzsmem > matrix->nnonzs);
+
+         /* ignore variables with very small coefficients */
+         if( SCIPrationalIsZero(vals[j]) )
+            continue;
+
+         /* due to the factor, <= constraints will be transfered to >= */
+         SCIPrationalMultReal(matrix->matrixvalsexact->rowmatvalexact[matrix->nnonzs], vals[j], factor);
+         matrix->rowmatval[matrix->nnonzs] = SCIPrationalGetReal(matrix->matrixvalsexact->rowmatvalexact[matrix->nnonzs]);
+         probindex = SCIPvarGetProbindex(vars[j]);
+         assert(matrix->vars[probindex] == vars[j]);
+
+         if( SCIPrationalIsPositive(matrix->matrixvalsexact->rowmatvalexact[matrix->nnonzs]) )
+            matrix->ndownlocks[probindex]++;
+         else
+         {
+            assert(SCIPrationalIsNegative(matrix->matrixvalsexact->rowmatvalexact[matrix->nnonzs]));
+            matrix->nuplocks[probindex]++;
+         }
+
+         assert(0 <= probindex && probindex < matrix->ncols);
+         matrix->rowmatind[matrix->nnonzs] = probindex;
+
+         (matrix->nnonzs)++;
+      }
+   }
+
+   matrix->rowmatcnt[rowidx] = matrix->nnonzs - matrix->rowmatbeg[rowidx];
+
+   ++(matrix->nrows);
+   *rowadded = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** add one constraint to matrix */
 static
 SCIP_RETCODE addConstraint(
@@ -292,6 +451,91 @@ SCIP_RETCODE addConstraint(
    return SCIP_OKAY;
 }
 
+/** add one constraint to matrix */
+static
+SCIP_RETCODE addConstraintExact(
+   SCIP*                 scip,               /**< current scip instance */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
+   SCIP_VAR**            vars,               /**< variables of this constraint */
+   SCIP_RATIONAL**       vals,               /**< variable coefficients of this constraint */
+   int                   nvars,              /**< number of variables */
+   SCIP_RATIONAL*        lhs,                /**< left hand side */
+   SCIP_RATIONAL*        rhs,                /**< right hand side */
+   int                   maxnnonzsmem,       /**< maximal number of fillable elements */
+   SCIP_Bool*            rowadded            /**< flag indicating of row was added to matrix */
+   )
+{
+   SCIP_VAR** activevars;
+   SCIP_RATIONAL** activevals;
+   SCIP_RATIONAL* activeconstant;
+   SCIP_RATIONAL* tmplhs; /* need these due to the constant */
+   SCIP_RATIONAL* tmprhs;
+   int nactivevars;
+   int v;
+
+   assert(scip != NULL);
+   assert(matrix != NULL);
+   assert(vars != NULL || nvars == 0);
+   assert(SCIPrationalIsLE(lhs, rhs));
+   assert(rowadded != NULL);
+
+   *rowadded = FALSE;
+
+   /* constraint is redundant */
+   if( SCIPrationalIsNegInfinity(lhs) && SCIPrationalIsInfinity(rhs) )
+      return SCIP_OKAY;
+
+   /* we do not add empty constraints to the matrix */
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   activevars = NULL;
+   activevals = NULL;
+   nactivevars = nvars;
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &activeconstant) );
+   SCIP_CALL( SCIPrationalCopyBuffer(SCIPbuffer(scip), &tmplhs, lhs) );
+   SCIP_CALL( SCIPrationalCopyBuffer(SCIPbuffer(scip), &tmprhs, rhs) );
+
+   /* duplicate variable and value array */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
+   if( vals != NULL )
+   {
+      SCIP_CALL( SCIPrationalCopyBufferArray(SCIPbuffer(scip), &activevals, vals, nactivevars ) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &activevals, nactivevars) );
+
+      for( v = 0; v < nactivevars; v++ )
+         SCIPrationalSetInt(activevals[v], 1L, 1L);
+   }
+
+   /* retransform given variables to active variables */
+   SCIP_CALL( getActiveVariablesExact(scip, &activevars, activevals, &nactivevars, activeconstant) );
+
+   /* adapt left and right hand side */
+   if( !SCIPrationalIsNegInfinity(lhs) )
+      SCIPrationalDiff(tmplhs, lhs, activeconstant);
+   if( !SCIPrationalIsInfinity(rhs) )
+      SCIPrationalDiff(tmprhs, rhs, activeconstant);
+
+   /* add single row to matrix */
+   if( nactivevars > 0 )
+   {
+      SCIP_CALL( addRowExact(matrix, activevars, activevals, nactivevars, tmplhs, tmprhs, maxnnonzsmem, rowadded) );
+   }
+
+   /* free buffer arrays */
+   SCIPrationalFreeBufferArray(SCIPbuffer(scip), &activevals, nvars);
+   SCIPfreeBufferArray(scip, &activevars);
+
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmprhs);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmplhs);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &activeconstant);
+
+   return SCIP_OKAY;
+}
+
 /** transform row major format into column major format */
 static
 SCIP_RETCODE setColumnMajorFormat(
@@ -304,6 +548,7 @@ SCIP_RETCODE setColumnMajorFormat(
    int* rowpnt;
    int* rowend;
    SCIP_Real* valpnt;
+   SCIP_RATIONAL* valpntrational;
    int* fillidx;
 
    assert(scip != NULL);
@@ -343,12 +588,16 @@ SCIP_RETCODE setColumnMajorFormat(
       rowpnt = matrix->rowmatind + matrix->rowmatbeg[i];
       rowend = rowpnt + matrix->rowmatcnt[i];
       valpnt = matrix->rowmatval + matrix->rowmatbeg[i];
+      if( SCIPisExact(scip) )
+         valpntrational = matrix->matrixvalsexact->rowmatvalexact[matrix->rowmatbeg[i]];
 
       for( ; rowpnt < rowend; rowpnt++, valpnt++ )
       {
          assert(*rowpnt < matrix->ncols);
          colidx = *rowpnt;
          matrix->colmatval[matrix->colmatbeg[colidx] + fillidx[colidx]] = *valpnt;
+         if( SCIPisExact(scip) )
+            SCIPrationalSetRational(matrix->matrixvalsexact->colmatvalexact[matrix->colmatbeg[colidx] + fillidx[colidx]], valpntrational); /*lint !e644*/
          matrix->colmatind[matrix->colmatbeg[colidx] + fillidx[colidx]] = i;
          fillidx[colidx]++;
       }
@@ -396,7 +645,7 @@ SCIP_RETCODE calcActivityBounds(
 
          /* get variable coefficient */
          val = *valpnt;
-         assert(!SCIPisZero(scip, val));
+         assert(!SCIPisZero(scip, val) || SCIPisExact(scip));
 
          assert(matrix->ncols > col);
 
@@ -519,7 +768,7 @@ SCIP_RETCODE SCIPmatrixCreate(
 
          if( strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "knapsack") == 0
             || strcmp(conshdlrname, "setppc") == 0 || strcmp(conshdlrname, "logicor") == 0
-            || strcmp(conshdlrname, "varbound") == 0 )
+            || strcmp(conshdlrname, "varbound") == 0 || (strcmp(conshdlrname, "exactlinear") == 0) )
          {
             /* increment number of supported constraints */
             nconss += nconshdlrconss;
@@ -626,6 +875,18 @@ SCIP_RETCODE SCIPmatrixCreate(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->ub, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->nuplocks, matrix->ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix->ndownlocks, matrix->ncols) );
+   if( SCIPisExact(scip) )
+   {
+      SCIP_CALL( SCIPallocBuffer(scip, &matrix->matrixvalsexact) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->colmatvalexact, nnonzstmp) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->rowmatvalexact, nnonzstmp) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->lhsexact, nconss) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->rhsexact, nconss) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &matrix->matrixvalsexact->lbexact, matrix->ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &matrix->matrixvalsexact->ubexact, matrix->ncols) );
+      matrix->matrixvalsexact->buffersize = nnonzstmp;
+      matrix->matrixvalsexact->buffersizenconss = nconss;
+   }
 
    BMSclearMemoryArray(matrix->nuplocks, matrix->ncols);
    BMSclearMemoryArray(matrix->ndownlocks, matrix->ncols);
@@ -638,6 +899,12 @@ SCIP_RETCODE SCIPmatrixCreate(
 
       matrix->lb[v] = SCIPvarGetLbGlobal(var);
       matrix->ub[v] = SCIPvarGetUbGlobal(var);
+
+      if( SCIPisExact(scip) )
+      {
+         matrix->matrixvalsexact->lbexact[v] = SCIPvarGetLbGlobalExact(var);
+         matrix->matrixvalsexact->ubexact[v] = SCIPvarGetUbGlobalExact(var);
+      }
    }
 
    /* allocate memory */
@@ -694,6 +961,36 @@ SCIP_RETCODE SCIPmatrixCreate(
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLinear(scip, cons),
                   SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
                   SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons), nnonzstmp, &rowadded) );
+
+            if(rowadded)
+            {
+               assert(cnt < nconss);
+               matrix->cons[cnt] = cons;
+               cnt++;
+            }
+         }
+      }
+      else if( strcmp(conshdlrname, "exactlinear") == 0 )
+      {
+         for( c = 0; c < nconshdlrconss && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
+         {
+            cons = conshdlrconss[c];
+            assert(SCIPconsIsTransformed(cons));
+
+            /* do not include constraints that can be altered due to column generation */
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *complete = FALSE;
+
+               if( onlyifcomplete )
+                  break;
+
+               continue;
+            }
+
+            SCIP_CALL( addConstraintExact(scip, matrix, SCIPgetVarsExactLinear(scip, cons),
+                  SCIPgetValsExactLinear(scip, cons), SCIPgetNVarsExactLinear(scip, cons),
+                  SCIPgetLhsExactLinear(scip, cons), SCIPgetRhsExactLinear(scip, cons), nnonzstmp, &rowadded) );
 
             if(rowadded)
             {
@@ -1020,6 +1317,18 @@ SCIP_RETCODE SCIPmatrixCreate(
 
       SCIPfreeBufferArray(scip, &matrix->ndownlocks);
       SCIPfreeBufferArray(scip, &matrix->nuplocks);
+
+      if( SCIPisExact(scip) )
+      {
+         SCIPfreeBufferArray(scip, &matrix->matrixvalsexact->ubexact);
+         SCIPfreeBufferArray(scip, &matrix->matrixvalsexact->lbexact);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->rhsexact, nconss);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->lhsexact, nconss);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->rowmatvalexact, nnonzstmp);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &matrix->matrixvalsexact->colmatvalexact, nnonzstmp);
+         SCIPfreeBuffer(scip, &matrix->matrixvalsexact);
+      }
+
       SCIPfreeBufferArray(scip, &matrix->ub);
       SCIPfreeBufferArray(scip, &matrix->lb);
       SCIPfreeBufferArray(scip, &matrix->colmatcnt);
@@ -1081,6 +1390,20 @@ void SCIPmatrixFree(
 
       SCIPfreeBufferArray(scip, &((*matrix)->ndownlocks));
       SCIPfreeBufferArray(scip, &((*matrix)->nuplocks));
+
+      if( SCIPisExact(scip) )
+      {
+         assert((*matrix)->matrixvalsexact != NULL);
+         SCIPfreeBufferArray(scip, &(*matrix)->matrixvalsexact->ubexact);
+         SCIPfreeBufferArray(scip, &(*matrix)->matrixvalsexact->lbexact);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &(*matrix)->matrixvalsexact->rhsexact, (*matrix)->matrixvalsexact->buffersizenconss);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &(*matrix)->matrixvalsexact->lhsexact, (*matrix)->matrixvalsexact->buffersizenconss);
+
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &(*matrix)->matrixvalsexact->rowmatvalexact, (*matrix)->matrixvalsexact->buffersize);
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &(*matrix)->matrixvalsexact->colmatvalexact, (*matrix)->matrixvalsexact->buffersize);
+         SCIPfreeBuffer(scip, &(*matrix)->matrixvalsexact);
+      }
+
       SCIPfreeBufferArray(scip, &((*matrix)->ub));
       SCIPfreeBufferArray(scip, &((*matrix)->lb));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatcnt));
@@ -1515,12 +1838,15 @@ SCIP_RETCODE SCIPmatrixGetParallelCols(
 #undef SCIPmatrixGetVar
 #undef SCIPmatrixGetColName
 #undef SCIPmatrixGetRowValPtr
+#undef SCIPmatrixGetRowValPtrExact
 #undef SCIPmatrixGetRowIdxPtr
 #undef SCIPmatrixGetRowNNonzs
 #undef SCIPmatrixGetRowName
 #undef SCIPmatrixGetNRows
 #undef SCIPmatrixGetRowLhs
+#undef SCIPmatrixGetRowLhsExact
 #undef SCIPmatrixGetRowRhs
+#undef SCIPmatrixGetRowRhsExact
 #undef SCIPmatrixIsRowRhsInfinity
 #undef SCIPmatrixGetNNonzs
 #undef SCIPmatrixGetRowMinActivity
@@ -1659,6 +1985,18 @@ SCIP_Real* SCIPmatrixGetRowValPtr(
    return matrix->rowmatval + matrix->rowmatbeg[row];
 }
 
+/** get row based start pointer of values */
+SCIP_RATIONAL** SCIPmatrixGetRowValPtrExact(
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
+   int                   row                 /**< row index */
+   )
+{
+   assert(matrix != NULL);
+   assert(0 <= row && row < matrix->nrows);
+
+   return matrix->matrixvalsexact->rowmatvalexact + matrix->rowmatbeg[row];
+}
+
 /** get row based start pointer of column indices */
 int* SCIPmatrixGetRowIdxPtr(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
@@ -1727,6 +2065,30 @@ SCIP_Real SCIPmatrixGetRowRhs(
    assert(0 <= row && row < matrix->nrows);
 
    return matrix->rhs[row];
+}
+
+/** get left-hand-side of row */
+SCIP_RATIONAL* SCIPmatrixGetRowLhsExact(
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
+   int                   row                 /**< row index */
+   )
+{
+   assert(matrix != NULL);
+   assert(0 <= row && row < matrix->nrows);
+
+   return matrix->matrixvalsexact->lhsexact[row];
+}
+
+/** get right-hand-side of row */
+SCIP_RATIONAL* SCIPmatrixGetRowRhsExact(
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
+   int                   row                 /**< row index */
+   )
+{
+   assert(matrix != NULL);
+   assert(0 <= row && row < matrix->nrows);
+
+   return matrix->matrixvalsexact->rhsexact[row];
 }
 
 /** flag indicating if right-hand-side of row is infinity */

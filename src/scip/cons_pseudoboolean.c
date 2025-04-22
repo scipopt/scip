@@ -1967,11 +1967,12 @@ SCIP_RETCODE createAndAddAndCons(
    CONSANDDATA* newdata;
    CONSANDDATA* tmpdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   char name[SCIP_MAXSTRLEN];
    SCIP_Bool separate;
    SCIP_Bool propagate;
    SCIP_Bool removable;
    SCIP_Bool transformed;
+   char name[SCIP_MAXSTRLEN];
+   int v;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -2045,15 +2046,22 @@ SCIP_RETCODE createAndAddAndCons(
       /* create new and-constraint */
       SCIP_CONS* newcons;
       SCIP_VAR* resultant;
+      SCIP_IMPLINTTYPE impltype = SCIP_IMPLINTTYPE_STRONG;
+
+      /* get resultant implied integral type */
+      for( v = 0; v < nvars; ++v )
+      {
+         if( SCIPvarGetImplType(vars[v]) == SCIP_IMPLINTTYPE_WEAK )
+         {
+            impltype = SCIP_IMPLINTTYPE_WEAK;
+            break;
+         }
+      }
 
       /* create auxiliary variable */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, ARTIFICIALVARNAMEPREFIX"%d", conshdlrdata->nallconsanddatas);
-      SCIP_CALL( SCIPcreateVar(scip, &resultant, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
-            TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
-
-      /* @todo: branch on artificial variables, the test results show that it is of advantage */
-      /* change branching priority of artificial variable to -1 */
-      SCIP_CALL( SCIPchgVarBranchPriority(scip, resultant, -1) );
+      SCIP_CALL( SCIPcreateVarImpl(scip, &resultant, name, 0.0, 1.0, 0.0,
+            SCIP_VARTYPE_CONTINUOUS, impltype, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
 
       /* add auxiliary variable to the problem */
       SCIP_CALL( SCIPaddVar(scip, resultant) );
@@ -2065,7 +2073,6 @@ SCIP_RETCODE createAndAddAndCons(
       {
          SCIP_Real val;
          SCIP_Real debugsolval;
-         int v;
 
          for( v = nvars - 1; v >= 0; --v )
          {
@@ -2125,8 +2132,6 @@ SCIP_RETCODE createAndAddAndCons(
 
       if( transformed )
       {
-         int v;
-
          newdata->cons = newcons;
          SCIP_CALL( SCIPcaptureCons(scip, newdata->cons) );
 

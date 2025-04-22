@@ -397,7 +397,8 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/dual") );
 
    /* we remember here which way (continuous or not) we went, in case all binary and integer vars get fixed in root */
-   heurdata->continuous = SCIPgetNBinVars(heurdata->subscip) == 0 && SCIPgetNIntVars(heurdata->subscip) == 0;
+   heurdata->continuous = (SCIPgetNContVars(heurdata->subscip) + SCIPgetNContImplVars(heurdata->subscip)
+         == SCIPgetNVars(heurdata->subscip));
    if( !heurdata->continuous )
    {
       /* set presolve maxrounds and emphasis; always disable components presolver

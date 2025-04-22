@@ -473,7 +473,7 @@ SCIP_RETCODE consdataCreateRedundant(
       SCIP_VAR* var;
       int nvarsbuffer = 0;
       int nviolated = 0;
-      int v;
+      int v = 0;
 
       SCIP_CALL( SCIPduplicateBufferArray(scip, &varsbuffer, vars, nvars) );
       SCIP_CALL( SCIPduplicateBufferArray(scip, &boundtypesbuffer, boundtypes, nvars) );
@@ -484,76 +484,100 @@ SCIP_RETCODE consdataCreateRedundant(
       SCIPsortPtrRealInt((void**)varsbuffer, boundsbuffer, (int*) boundtypesbuffer, SCIPvarComp, nvars);
 
       /* filter out redundant literals */
-      for( v = 0; v < nvars; ++v )
+      while( v < nvars )
       {
-         int w;
+         int lowerindex;
+         int upperindex;
 
-         /* if we should compress fixed variables */
-         if( SCIPisConsCompressionEnabled(scip) && varsbuffer[v] != NULL )
+         var = varsbuffer[v];
+
+         /* compress fixed variables */
+         if( SCIPisConsCompressionEnabled(scip) && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
          {
-            var = varsbuffer[v];
-
-            /* if the variable is fixed */
-            if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+            /* if the literal is feasible for the fixed variable, then the whole constraint is feasible, so we reduce
+             * it to only this literal
+             */
+            if( ( boundtypesbuffer[v] == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, var, SCIPvarGetLbLocal(var), boundsbuffer[v]) )
+               || ( boundtypesbuffer[v] == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, var, SCIPvarGetUbLocal(var), boundsbuffer[v]) ) )
             {
-               /* If the literal is feasible for the fixed variable, then the whole constraint is feasible. In this
-                * case, we reduce the constraint to only this literal. */
-               if( (boundtypesbuffer[v] == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, var, SCIPvarGetLbLocal(var), boundsbuffer[v]))
-                || (boundtypesbuffer[v] == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, var, SCIPvarGetUbLocal(var), boundsbuffer[v])) )
-               {
-                  /* save this feasible assignment at the first position */
-                  varsbuffer[0] = var;
-                  boundtypesbuffer[0] = boundtypesbuffer[v];
-                  boundsbuffer[0] = boundsbuffer[v];
-                  nvarsbuffer = 1;
-                  break;
-               }
-               else
-               {
-                  /* otherwise the literal is violated - we skip the literal */
-                  ++nviolated;
-                  continue;
-               }
+               /* save this feasible assignment at the first position */
+               varsbuffer[0] = var;
+               boundtypesbuffer[0] = boundtypesbuffer[v];
+               boundsbuffer[0] = boundsbuffer[v];
+               nvarsbuffer = 1;
+               break;
+            }
+            else
+            {
+               /* otherwise the literal is violated - we skip the literal */
+               ++nviolated;
+               ++v;
+               continue;
             }
          }
+
+         /* initialize bound indices */
+         if( boundtypesbuffer[v] == SCIP_BOUNDTYPE_LOWER )
+         {
+            lowerindex = v;
+            upperindex = -1;
+         }
+         else
+         {
+            assert(boundtypesbuffer[v] == SCIP_BOUNDTYPE_UPPER);
+
+            lowerindex = -1;
+            upperindex = v;
+         }
+
+         ++v;
 
          /* check subsequent variables with the same variable for redundancy */
-         for( w = v + 1; w < nvars && varsbuffer[v] == varsbuffer[w]; ++w )
+         while( v < nvars && varsbuffer[v] == var )
          {
-            if( boundtypesbuffer[v] == boundtypesbuffer[w] )
+            if( boundtypesbuffer[v] == SCIP_BOUNDTYPE_LOWER )
             {
-               if( boundtypesbuffer[v] == SCIP_BOUNDTYPE_LOWER )
-               {
-                  /* check whether current bound is as strong */
-                  if( SCIPisLE(scip, boundsbuffer[v], boundsbuffer[w]) )
-                     varsbuffer[v] = NULL;  /* skip current bound */
-                  else
-                     varsbuffer[w] = NULL;  /* remove later bound */
-               }
-               else
-               {
-                  assert(boundtypesbuffer[v] == SCIP_BOUNDTYPE_UPPER);
-
-                  /* check whether current bound is as strong */
-                  if( SCIPisGE(scip, boundsbuffer[v], boundsbuffer[w]) )
-                     varsbuffer[v] = NULL;  /* skip current bound */
-                  else
-                     varsbuffer[w] = NULL;  /* remove later bound */
-               }
+               /* keep the weaker lower bound */
+               if( lowerindex == -1 || boundsbuffer[lowerindex] > boundsbuffer[v] )
+                  lowerindex = v;
             }
+            else
+            {
+               assert(boundtypesbuffer[v] == SCIP_BOUNDTYPE_UPPER);
+
+               /* keep the weaker upper bound */
+               if( upperindex == -1 || boundsbuffer[upperindex] < boundsbuffer[v] )
+                  upperindex = v;
+            }
+
+            ++v;
          }
 
-         /* keep current bound if it is not redundant (possibly redundant variable w is treated later) */
-         if( varsbuffer[v] != NULL )
+         /* keep bound sequence */
+         if( upperindex != -1 && lowerindex > upperindex )
+            SCIPswapInts(&lowerindex, &upperindex);
+
+         /* keep first bound */
+         if( lowerindex != -1 )
          {
-            /* switch last and current bound */
-            varsbuffer[nvarsbuffer] = varsbuffer[v];
-            boundtypesbuffer[nvarsbuffer] = boundtypesbuffer[v];
-            boundsbuffer[nvarsbuffer] = boundsbuffer[v];
+            assert(nvarsbuffer != upperindex);
+
+            varsbuffer[nvarsbuffer] = varsbuffer[lowerindex];
+            boundtypesbuffer[nvarsbuffer] = boundtypesbuffer[lowerindex];
+            boundsbuffer[nvarsbuffer] = boundsbuffer[lowerindex];
+            ++nvarsbuffer;
+         }
+
+         /* keep second bound */
+         if( upperindex != -1 )
+         {
+            varsbuffer[nvarsbuffer] = varsbuffer[upperindex];
+            boundtypesbuffer[nvarsbuffer] = boundtypesbuffer[upperindex];
+            boundsbuffer[nvarsbuffer] = boundsbuffer[upperindex];
             ++nvarsbuffer;
          }
       }
-      assert( nvarsbuffer > 0 || SCIPisConsCompressionEnabled(scip) ); /* no variables can only happen if compression is enabled */
+      assert(nvarsbuffer > 0 || SCIPisConsCompressionEnabled(scip)); /* no variables can only happen if compression is enabled */
 
 #ifndef NDEBUG
       /* if there are no variables left, this is because all literals are infeasible */

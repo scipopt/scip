@@ -106,7 +106,7 @@
 #define DEFAULT_LINEARIZE         FALSE /**< should constraint get linearized and removed? */
 #define DEFAULT_ENFORCECUTS        TRUE /**< should cuts be separated during LP enforcing? */
 #define DEFAULT_AGGRLINEARIZATION FALSE /**< should an aggregated linearization be used? */
-#define DEFAULT_UPGRRESULTANT      TRUE /**< should all binary resultant variables be upgraded to implicit binary variables */
+#define DEFAULT_UPGRRESULTANT     FALSE /**< should implied integrality of resultant variables be detected? */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving be performed? */
 
 #define HASHSIZE_ANDCONS            500 /**< minimal size of hash table in and constraint tables */
@@ -159,7 +159,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             linearize;          /**< should constraint get linearized and removed? */
    SCIP_Bool             enforcecuts;        /**< should cuts be separated during LP enforcing? */
    SCIP_Bool             aggrlinearization;  /**< should an aggregated linearization be used?  */
-   SCIP_Bool             upgrresultant;      /**< upgrade binary resultant variable to an implicit binary variable */
+   SCIP_Bool             upgrresultant;      /**< should implied integrality of resultant variables be detected? */
    SCIP_Bool             dualpresolving;     /**< should dual presolving be performed?  */
 };
 
@@ -5066,7 +5066,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          &conshdlrdata->aggrlinearization, TRUE, DEFAULT_AGGRLINEARIZATION, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/upgraderesultant",
-         "should all binary resultant variables be upgraded to implicit binary variables?",
+         "should implied integrality of resultant variables be detected?",
          &conshdlrdata->upgrresultant, TRUE, DEFAULT_UPGRRESULTANT, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/dualpresolving",
@@ -5130,15 +5130,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
 
    /* upgrade binary resultant variable to an implicit binary variable */
    /* @todo add implicit upgrade in presolving, improve decision making for upgrade by creating an implication graph */
-   if( conshdlrdata->upgrresultant && SCIPvarGetType(resvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(resvar)
-#if 1 /* todo delete following hack,
-       *      the following avoids upgrading not artificial variables, for example and-resultants which are generated
-       *      from the gate presolver, it seems better to not upgrade these variables
-       */
-      && strlen(SCIPvarGetName(resvar)) > strlen(ARTIFICIALVARNAMEPREFIX) && strncmp(SCIPvarGetName(resvar), ARTIFICIALVARNAMEPREFIX, strlen(ARTIFICIALVARNAMEPREFIX)) == 0 )
-#else
-      )
-#endif
+   if( conshdlrdata->upgrresultant && !SCIPvarIsImpliedIntegral(resvar) )
    {
       SCIP_VAR* activeresvar;
       SCIP_VAR* activevar;

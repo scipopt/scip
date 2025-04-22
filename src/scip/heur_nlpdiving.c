@@ -1871,7 +1871,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       searchbound = SCIPceil(scip, searchbound);
 
    /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
-   maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   maxdivedepth = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(maxdivedepth >= 0);
    maxdivedepth = MIN(maxdivedepth, maxdepth);
    maxdivedepth *= 10;
 
@@ -1919,7 +1920,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          for( c = 0; c < ncovervars; c++ )
          {
             /* insert variable into hash map */
-            if( SCIPvarIsNonimpliedIntegral(covervars[c]) )
+            if( SCIPvarGetType(covervars[c]) != SCIP_VARTYPE_CONTINUOUS )
             {
                assert(!SCIPhashmapExists(varincover, covervars[c]));
                SCIP_CALL( SCIPhashmapInsertInt(varincover, covervars[c], c+1) );
@@ -2284,7 +2285,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                      nlpsolval = SCIPvarGetNLPSol(covervars[c]);
                      nlpsolval = MIN(nlpsolval,ub);
                      nlpsolval = MAX(nlpsolval,lb);
-                     assert(!SCIPvarIsNonimpliedIntegral(covervars[c]) || SCIPisFeasIntegral(scip, nlpsolval));
+                     assert(SCIPvarGetType(covervars[c]) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, nlpsolval));
 
                      /* open a new probing node if this will not exceed the maximal tree depth,
                       * otherwise fix all the remaining variables at the same probing node
@@ -2304,7 +2305,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                      if( SCIPisLbBetter(scip, nlpsolval, lb, ub) )
                      {
                         SCIP_CALL( SCIPchgVarLbProbing(scip, covervars[c], nlpsolval) );
-                        /* if covervar was implicit integer and fractional, then nlpsolval may be below lower bound now, so adjust to new bound */
+                        /* if covervar was continuous implied integral and fractional, then nlpsolval may be below
+                         * lower bound now, so adjust to new bound
+                         */
                         nlpsolval = MAX(nlpsolval, SCIPvarGetLbLocal(covervars[c])); /*lint !e666*/
                      }
                      if( SCIPisUbBetter(scip, nlpsolval, lb, ub) )

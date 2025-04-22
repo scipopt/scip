@@ -29,10 +29,10 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 #include "scip/clock.h"
 #include "scip/cons.h"
 #include "scip/lp.h"
+#include "scip/lpexact.h"
 #include "scip/misc.h"
 #include "scip/nlp.h"
 #include "scip/primal.h"
@@ -46,6 +46,7 @@
 #include "scip/sol.h"
 #include "scip/stat.h"
 #include "scip/struct_lp.h"
+#include "scip/struct_lpexact.h"
 #include "scip/struct_prob.h"
 #include "scip/struct_set.h"
 #include "scip/struct_sol.h"
@@ -53,7 +54,6 @@
 #include "scip/struct_var.h"
 #include "scip/tree.h"
 #include "scip/var.h"
-
 
 
 /** clears solution arrays of primal CIP solution */
@@ -66,6 +66,11 @@ SCIP_RETCODE solClearArrays(
 
    SCIP_CALL( SCIPboolarrayClear(sol->valid) );
    sol->hasinfval = FALSE;
+
+   if( SCIPsolIsExact(sol) )
+   {
+      SCIP_CALL( SCIPboolarrayClear(sol->valsexact->valid) );
+   }
 
    return SCIP_OKAY;
 }
@@ -97,6 +102,38 @@ SCIP_RETCODE solSetArrayVal(
    /* store whether the solution has infinite values assigned to variables */
    if( val != SCIP_UNKNOWN ) /*lint !e777*/
       sol->hasinfval = (sol->hasinfval || SCIPsetIsInfinity(set, val) || SCIPsetIsInfinity(set, -val));
+
+   return SCIP_OKAY;
+}
+
+/** sets value of variable in the exact solution's array */
+static
+SCIP_RETCODE solSetArrayValExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_RATIONAL*        val                 /**< value to set variable to */
+   )
+{
+   int idx;
+
+   assert(sol != NULL);
+   assert(SCIPsolIsExact(sol));
+
+   idx = SCIPvarGetIndex(var);
+
+   /* from now on, variable must not be deleted */
+   SCIPvarMarkNotDeletable(var);
+
+   /* mark the variable valid */
+   SCIP_CALL( SCIPboolarraySetVal(sol->valsexact->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
+
+   /* set the value in the solution array */
+   SCIP_CALL( SCIPrationalarraySetVal(sol->valsexact->vals, idx, val) );
+
+   /* store whether the solution has infinite values assigned to variables */
+   if( SCIPrationalIsAbsInfinity(val) ) /*lint !e777*/
+      sol->hasinfval = TRUE;
 
    return SCIP_OKAY;
 }
@@ -193,6 +230,56 @@ SCIP_Real solGetArrayVal(
    }
 }
 
+/** returns the value of the variable in the given exact solution */
+static
+void solGetArrayValExact(
+   SCIP_RATIONAL*        res,
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   int idx;
+
+   assert(sol != NULL);
+   assert(SCIPsolIsExact(sol));
+
+   idx = SCIPvarGetIndex(var);
+
+   /* check, if the variable's value is valid */
+   if( SCIPboolarrayGetVal(sol->valsexact->valid, idx) )
+   {
+      SCIPrationalarrayGetVal(sol->valsexact->vals, idx, res);
+   }
+   else
+   {
+      /* return the variable's value corresponding to the origin */
+      switch( sol->solorigin )
+      {
+      case SCIP_SOLORIGIN_ORIGINAL:
+      case SCIP_SOLORIGIN_ZERO:
+         SCIPrationalSetReal(res, 0.0);
+         break;
+
+      case SCIP_SOLORIGIN_LPSOL:
+         SCIPvarGetLPSolExact(var, res);
+         break;
+
+      case SCIP_SOLORIGIN_PSEUDOSOL:
+         SCIPrationalSetRational(res, SCIPvarGetPseudoSolExact(var));
+         break;
+
+      case SCIP_SOLORIGIN_PARTIAL:
+      case SCIP_SOLORIGIN_UNKNOWN:
+      case SCIP_SOLORIGIN_RELAXSOL:
+      case SCIP_SOLORIGIN_NLPSOL:
+      default:
+         SCIPerrorMessage("unknown solution origin <%d>\n", sol->solorigin);
+         SCIPABORT();
+         return; /*lint !e527*/
+      }
+   }
+}
+
 /** stores solution value of variable in solution's own array */
 static
 SCIP_RETCODE solUnlinkVar(
@@ -255,6 +342,59 @@ SCIP_RETCODE solUnlinkVar(
    }
 }
 
+/** stores solution value of variable in exact solution's own array */
+static
+SCIP_RETCODE solUnlinkVarExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_RATIONAL* solval;
+
+   assert(sol != NULL);
+   assert(var != NULL);
+   assert(SCIPsolIsExact(sol));
+   assert(SCIPvarIsTransformed(var));
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+
+   /* if variable is already valid, nothing has to be done */
+   if( SCIPboolarrayGetVal(sol->valsexact->valid, SCIPvarGetIndex(var)) )
+      return SCIP_OKAY;
+
+   SCIPsetDebugMsg(set, "unlinking solution value of variable <%s>\n", SCIPvarGetName(var));
+
+   /* store the correct solution value into the solution array */
+   switch( sol->solorigin )
+   {
+   case SCIP_SOLORIGIN_ORIGINAL:
+      SCIPerrorMessage("cannot unlink solutions of original problem space\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_SOLORIGIN_ZERO:
+      return SCIP_OKAY;
+
+   case SCIP_SOLORIGIN_LPSOL:
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &solval) );
+      SCIPvarGetLPSolExact(var, solval);
+      SCIP_CALL( solSetArrayValExact(sol, set, var, solval) );
+      SCIPrationalFreeBuffer(set->buffer, &solval);
+      return SCIP_OKAY;
+
+   case SCIP_SOLORIGIN_PSEUDOSOL:
+      SCIP_CALL( solSetArrayValExact(sol, set, var, SCIPvarGetPseudoSolExact(var)) );
+      return SCIP_OKAY;
+
+   case SCIP_SOLORIGIN_RELAXSOL:
+   case SCIP_SOLORIGIN_NLPSOL:
+   case SCIP_SOLORIGIN_PARTIAL:
+   case SCIP_SOLORIGIN_UNKNOWN:
+   default:
+      SCIPerrorMessage("unknown solution origin <%d>\n", sol->solorigin);
+      return SCIP_INVALIDDATA;
+   }
+}
+
 /** sets the solution time, nodenum, runnum, and depth stamp to the current values */
 static
 void solStamp(
@@ -308,6 +448,8 @@ SCIP_RETCODE SCIPsolCreate(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
+   (*sol)->valsexact = NULL;
+
    SCIPsolResetViolations(*sol);
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
@@ -317,6 +459,50 @@ SCIP_RETCODE SCIPsolCreate(
    SCIPsolSetHeur(*sol, heur);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
+
+   return SCIP_OKAY;
+}
+
+/** creates primal CIP solution with exact rational values, initialized to zero */
+SCIP_RETCODE SCIPsolCreateExact(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(sol != NULL);
+   assert(blkmem != NULL);
+   assert(stat != NULL);
+
+   SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(*sol)->valsexact) );
+   SCIP_CALL( SCIPrationalarrayCreate(&(*sol)->valsexact->vals, blkmem) );
+   SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valsexact->valid, blkmem) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*sol)->valsexact->obj) );
+
+   assert(SCIPsolIsExact(*sol));
+
+   return SCIP_OKAY;
+}
+
+/** creates a copy of exact solution data */
+SCIP_RETCODE SCIPvalsExactCopy(
+   SCIP_VALSEXACT**      valsexact,          /**< pointer to store the copy of the primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VALSEXACT*       sourcevals          /**< primal CIP solution to copy */
+   )
+{
+   assert(valsexact != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, valsexact) );
+   SCIP_CALL( SCIPrationalarrayCopy(&(*valsexact)->vals, blkmem, sourcevals->vals) );
+   SCIP_CALL( SCIPboolarrayCopy(&(*valsexact)->valid, blkmem, sourcevals->valid) );
+   SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(*valsexact)->obj, sourcevals->obj) );
 
    return SCIP_OKAY;
 }
@@ -345,6 +531,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
+   (*sol)->valsexact = NULL;
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
 
@@ -354,6 +541,34 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    SCIPsolResetViolations(*sol);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
+
+   return SCIP_OKAY;
+}
+
+/** creates exact primal CIP solution in original problem space, initialized to the offset in the original problem */
+SCIP_RETCODE SCIPsolCreateOriginalExact(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(sol != NULL);
+   assert(blkmem != NULL);
+   assert(stat != NULL);
+
+   SCIP_CALL( SCIPsolCreateOriginal(sol, blkmem, set, stat, origprob, primal, tree, heur) );
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(*sol)->valsexact ) );
+   SCIP_CALL( SCIPrationalarrayCreate(&(*sol)->valsexact->vals, blkmem) );
+   SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valsexact->valid, blkmem) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*sol)->valsexact->obj) );
+
+   assert(SCIPsolIsExact(*sol));
 
    return SCIP_OKAY;
 }
@@ -415,6 +630,14 @@ SCIP_RETCODE SCIPsolCopy(
    (*sol)->viol.relviolcons = sourcesol->viol.relviolcons;
    (*sol)->viol.relviollprows = sourcesol->viol.relviollprows;
 
+   /* copy rational values if solution is exact */
+   if( SCIPsolIsExact(sourcesol) )
+   {
+      SCIP_CALL( SCIPvalsExactCopy( &(*sol)->valsexact, blkmem, sourcesol->valsexact) );
+   }
+   else
+      (*sol)->valsexact = NULL;
+
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
    return SCIP_OKAY;
@@ -455,6 +678,13 @@ SCIP_RETCODE SCIPsolTransform(
    sol->valid = tsol->valid;
    tsol->vals = tmpvals;
    tsol->valid = tmpvalid;
+   if( SCIPsolIsExact(sol) )
+   {
+      SCIP_VALSEXACT* tmpvalsexact;
+      tmpvalsexact = sol->valsexact;
+      sol->valsexact = tsol->valsexact;
+      tsol->valsexact = tmpvalsexact;
+   }
 
    /* copy solorigin and objective (should be the same, only to avoid numerical issues);
     * we keep the other statistics of the original solution, since that was the first time that this solution as found
@@ -467,8 +697,8 @@ SCIP_RETCODE SCIPsolTransform(
    return SCIP_OKAY;
 }
 
-/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
- *  deteriorated by this method.
+/** adjusts solution values of implied integral variables in handed solution, solution objective value is not
+ *  deteriorated by this method
  */
 SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -480,28 +710,26 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
    )
 {
    SCIP_VAR** vars;
-   int nimplvars;
-   int nbinvars;
-   int nintvars;
+   int nimplvarsbegin;
+   int nimplvarsend;
    int v;
 
    assert(sol != NULL);
    assert(prob != NULL);
 
-   /* get variable data */
-   vars = SCIPprobGetVars(prob);
-   nbinvars = SCIPprobGetNBinVars(prob);
-   nintvars = SCIPprobGetNIntVars(prob);
-   nimplvars = SCIPprobGetNImplVars(prob);
+   /* get number of implied integral variables */
+   nimplvarsend = SCIPprobGetNImplVars(prob);
 
-   if( nimplvars == 0 )
+   if( nimplvarsend == 0 )
       return SCIP_OKAY;
 
-   /* calculate the last array position of implicit integer variables */
-   nimplvars = nbinvars + nintvars + nimplvars;
+   /* get range of implied integral variables */
+   vars = SCIPprobGetVars(prob);
+   nimplvarsbegin = SCIPprobGetNBinVars(prob) + SCIPprobGetNIntVars(prob);
+   nimplvarsend += nimplvarsbegin;
 
-   /* loop over implicit integer variables and round them up or down */
-   for( v = nbinvars + nintvars; v < nimplvars; ++v )
+   /* loop over implied integral variables and round them up or down */
+   for( v = nimplvarsbegin; v < nimplvarsend; ++v )
    {
       SCIP_VAR* var;
       SCIP_Real solval;
@@ -604,6 +832,7 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
 
    return SCIP_OKAY;
 }
+
 /** creates primal CIP solution, initialized to the current LP solution */
 SCIP_RETCODE SCIPsolCreateLPSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
@@ -623,6 +852,30 @@ SCIP_RETCODE SCIPsolCreateLPSol(
 
    SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
    SCIP_CALL( SCIPsolLinkLPSol(*sol, set, stat, prob, tree, lp) );
+
+   return SCIP_OKAY;
+}
+
+/** creates primal CIP solution with exact rational values, initialized to the current exact LP solution
+ *  (will use exact safe dual solution if lp was not solved exactly)
+ */
+SCIP_RETCODE SCIPsolCreateLPSolExact(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(sol != NULL);
+   assert(lp != NULL);
+   assert(lp->solved);
+
+   SCIP_CALL( SCIPsolCreateExact(sol, blkmem, set, stat, primal, tree, heur) );
+   SCIP_CALL( SCIPsolLinkLPSolExact(*sol, set, lp) );
 
    return SCIP_OKAY;
 }
@@ -699,6 +952,26 @@ SCIP_RETCODE SCIPsolCreatePseudoSol(
    return SCIP_OKAY;
 }
 
+/** creates primal CIP solution, initialized to the current exact pseudo solution */
+SCIP_RETCODE SCIPsolCreatePseudoSolExact(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(sol != NULL);
+
+   SCIP_CALL( SCIPsolCreateExact(sol, blkmem, set, stat, primal, tree, heur) );
+   SCIP_CALL( SCIPsolLinkPseudoSolExact(*sol, set, lp) );
+
+   return SCIP_OKAY;
+}
+
 /** creates primal CIP solution, initialized to the current solution */
 SCIP_RETCODE SCIPsolCreateCurrentSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
@@ -721,6 +994,33 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
    else
    {
       SCIP_CALL( SCIPsolCreatePseudoSol(sol, blkmem, set, stat, prob, primal, tree, lp, heur) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** creates primal CIP solution with exact rational values, initialized to the current solution */
+SCIP_RETCODE SCIPsolCreateCurrentSolExact(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(tree != NULL);
+
+   if( SCIPtreeHasCurrentNodeLP(tree) )
+   {
+      assert(lp->solved);
+      SCIP_CALL( SCIPsolCreateLPSolExact(sol, blkmem, set, stat, primal, tree, lp, heur) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPsolCreatePseudoSolExact(sol, blkmem, set, stat, primal, tree, lp, heur) );
    }
 
    return SCIP_OKAY;
@@ -750,6 +1050,7 @@ SCIP_RETCODE SCIPsolCreatePartial(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
+   (*sol)->valsexact = NULL;
    stat->solindex++;
    solStamp(*sol, stat, NULL, TRUE);
    SCIPsolResetViolations(*sol);
@@ -785,6 +1086,7 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
+   (*sol)->valsexact = NULL;
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
    SCIPsolResetViolations(*sol);
@@ -793,6 +1095,24 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    SCIPsolSetHeur(*sol, heur);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
+
+   return SCIP_OKAY;
+}
+
+/** frees exact solution values */
+static
+SCIP_RETCODE valsExactFree(
+   SCIP_VALSEXACT**      valsexact,          /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   assert(valsexact != NULL);
+   assert(*valsexact != NULL);
+
+   SCIPrationalFreeBlock(blkmem, &(*valsexact)->obj);
+   SCIP_CALL( SCIPrationalarrayFree(&(*valsexact)->vals, blkmem) );
+   SCIP_CALL( SCIPboolarrayFree(&(*valsexact)->valid) );
+   BMSfreeBlockMemory(blkmem, valsexact);
 
    return SCIP_OKAY;
 }
@@ -811,6 +1131,10 @@ SCIP_RETCODE SCIPsolFree(
 
    SCIP_CALL( SCIPrealarrayFree(&(*sol)->vals) );
    SCIP_CALL( SCIPboolarrayFree(&(*sol)->valid) );
+   if( SCIPsolIsExact(*sol) )
+   {
+      SCIP_CALL( valsExactFree(&((*sol)->valsexact), blkmem) );
+   }
    BMSfreeBlockMemory(blkmem, sol);
 
    return SCIP_OKAY;
@@ -870,6 +1194,29 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    solStamp(sol, stat, tree, TRUE);
 
    SCIPsetDebugMsg(set, " -> objective value: %g\n", sol->obj);
+
+   return SCIP_OKAY;
+}
+
+/** copies current exact LP solution into exact CIP solution by linking */
+SCIP_RETCODE SCIPsolLinkLPSolExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPEXACT*         lp                  /**< current LP data */
+   )
+{
+   assert(sol != NULL);
+   assert(lp != NULL);
+   assert(lp->solved);
+   assert(SCIPsolIsExact(sol));
+
+   /* clear the old solution arrays */
+   SCIP_CALL( solClearArrays(sol) );
+
+   /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
+   SCIPlpExactGetObjval(lp, set, sol->valsexact->obj);
+   sol->obj = SCIPrationalRoundReal(sol->valsexact->obj, SCIP_R_ROUND_UPWARDS);
+   sol->solorigin = SCIP_SOLORIGIN_LPSOL;
 
    return SCIP_OKAY;
 }
@@ -984,6 +1331,27 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    return SCIP_OKAY;
 }
 
+/** copies current exact pseudo solution into exact CIP solution by linking */
+SCIP_RETCODE SCIPsolLinkPseudoSolExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPEXACT*         lp                  /**< current LP data */
+   )
+{
+   assert(sol != NULL);
+   assert(SCIPsolIsExact(sol));
+
+   /* clear the old solution arrays */
+   SCIP_CALL( solClearArrays(sol) );
+
+   /* link solution to pseudo solution */
+   SCIPlpExactGetPseudoObjval(lp, set, sol->valsexact->obj);
+
+   SCIPsetDebugMsg(set, " -> objective value: %g\n", sol->obj);
+
+   return SCIP_OKAY;
+}
+
 /** copies current solution (LP or pseudo solution) into CIP solution by linking */
 SCIP_RETCODE SCIPsolLinkCurrentSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1023,6 +1391,9 @@ SCIP_RETCODE SCIPsolClear(
    sol->solorigin = SCIP_SOLORIGIN_ZERO;
    sol->obj = 0.0;
    solStamp(sol, stat, tree, TRUE);
+
+   if( SCIPsolIsExact(sol) )
+      SCIPrationalSetReal(sol->valsexact->obj, 0.0);
 
    return SCIP_OKAY;
 }
@@ -1069,6 +1440,36 @@ SCIP_RETCODE SCIPsolUnlink(
 
       sol->solorigin = SCIP_SOLORIGIN_ZERO;
    }
+
+   return SCIP_OKAY;
+}
+
+/** stores solution values of variables in exact solution's own array */
+SCIP_RETCODE SCIPsolUnlinkExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem data */
+   )
+{
+   int v;
+
+   assert(sol != NULL);
+   assert(prob != NULL);
+   assert(prob->nvars == 0 || prob->vars != NULL);
+   assert(SCIPsolIsExact(sol));
+
+   if( sol->solorigin != SCIP_SOLORIGIN_ORIGINAL && sol->solorigin != SCIP_SOLORIGIN_ZERO
+      && sol->solorigin != SCIP_SOLORIGIN_UNKNOWN )
+   {
+      SCIPsetDebugMsg(set, "completing solution %p\n", (void*)sol);
+
+      for( v = 0; v < prob->nvars; ++v )
+      {
+         SCIP_CALL( solUnlinkVarExact(sol, set, prob->vars[v]) );
+      }
+   }
+
+   SCIP_CALL( SCIPsolUnlink(sol, set, prob) );
 
    return SCIP_OKAY;
 }
@@ -1167,6 +1568,7 @@ SCIP_RETCODE SCIPsolSetVal(
       assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
          || sol->lpcount == stat->lpcount);
       oldval = solGetArrayVal(sol, var);
+
       if( val != oldval )  /*lint !e777*/
       {
          SCIP_CALL( solSetArrayVal(sol, set, var, val) );
@@ -1285,6 +1687,127 @@ SCIP_RETCODE SCIPsolSetVal(
          return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), -val);
       else
          return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), SCIPvarGetNegationConstant(var) - val);
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+}
+
+/** sets value of variable in exact primal CIP solution */
+SCIP_RETCODE SCIPsolSetValExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
+   SCIP_VAR*             var,                /**< variable to add to solution */
+   SCIP_RATIONAL*        val                 /**< solution value of variable */
+   )
+{
+   SCIP_RATIONAL* oldval;
+   SCIP_RATIONAL* tmp;
+   SCIP_RETCODE retcode;
+
+   assert(sol != NULL);
+   assert(stat != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
+      || sol->solorigin == SCIP_SOLORIGIN_ZERO
+      || sol->solorigin == SCIP_SOLORIGIN_PARTIAL
+      || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN);
+   assert(var != NULL);
+   assert(!SCIPrationalIsAbsInfinity(val));
+   assert(SCIPsolIsExact(sol));
+
+   SCIPsetDebugMsg(set, "setting value of <%s> in exact solution %p to %g\n", SCIPvarGetName(var), (void*)sol, SCIPrationalGetReal(val));
+
+   /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
+   switch( SCIPvarGetStatusExact(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL )
+      {
+         SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldval) );
+
+         solGetArrayValExact(oldval, sol, var);
+
+         if( !SCIPrationalIsEQ(val, oldval) )
+         {
+            SCIP_RATIONAL* obj;
+
+            SCIP_CALL( solSetArrayValExact(sol, set, var, val) );
+            obj = SCIPvarGetObjExact(var);
+            SCIPrationalDiffProd(sol->valsexact->obj, obj, oldval);
+
+            SCIPrationalAddProd(sol->valsexact->obj, obj, val);
+         }
+
+         SCIPrationalFreeBuffer(set->buffer, &oldval);
+         return SCIP_OKAY;
+      }
+      else
+         return SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetTransVar(var), val);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldval) );
+
+      solGetArrayValExact(oldval, sol, var);
+
+      if( !SCIPrationalIsEQ(val, oldval) )
+      {
+         SCIP_RATIONAL* obj;
+         SCIP_CALL( solSetArrayValExact(sol, set, var, val) );
+         obj = SCIPvarGetObjExact(var);
+         SCIPrationalDiffProd(sol->valsexact->obj, obj, oldval);
+         SCIPrationalAddProd(sol->valsexact->obj, obj, val);
+      }
+
+      SCIPrationalFreeBuffer(set->buffer, &oldval);
+      return SCIP_OKAY;
+
+   case SCIP_VARSTATUS_FIXED:
+      assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
+      if( !SCIPrationalIsEQ(val, SCIPvarGetLbGlobalExact(var)) )
+      {
+         SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %.15g to different value %.15g\n",
+            SCIPvarGetName(var), SCIPrationalGetReal(SCIPvarGetLbGlobalExact(var)), SCIPrationalGetReal(val));
+         return SCIP_INVALIDDATA;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
+      assert(!SCIPrationalIsZero(SCIPvarGetAggrScalarExact(var)));
+      assert(!SCIPrationalIsAbsInfinity(SCIPvarGetAggrConstantExact(var)));
+      assert(!SCIPrationalIsAbsInfinity(SCIPvarGetAggrScalarExact(var)));
+
+      SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
+
+      if( SCIPrationalIsAbsInfinity(val) )
+      {
+         if( !SCIPrationalIsPositive(SCIPvarGetAggrScalarExact(var)) )
+            SCIPrationalNegate(tmp, val);
+         retcode = SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetAggrVar(var),  tmp);
+      }
+      else
+      {
+         SCIPrationalDiff(tmp, val, SCIPvarGetAggrConstantExact(var));
+         SCIPrationalDiv(tmp, tmp, SCIPvarGetAggrScalarExact(var));
+         retcode = SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetAggrVar(var), tmp);
+      }
+
+      SCIPrationalFreeBuffer(set->buffer, &tmp);
+      return retcode;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
+      SCIPABORT();
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_NEGATED:
+      assert(!SCIPsetIsInfinity(set, SCIPvarGetNegationConstant(var)) && !SCIPsetIsInfinity(set, -SCIPvarGetNegationConstant(var)));
+
+      return SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetNegationVar(var), val);
 
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -1442,9 +1965,9 @@ SCIP_Real SCIPsolGetVal(
 
    case SCIP_VARSTATUS_FIXED:
       assert(!SCIPsolIsOriginal(sol));
-      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var)); /*lint !e777*/
-      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var)); /*lint !e777*/
-      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var)); /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var) || (set->exact_enable && SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var)))) ; /*lint !e777*/
+      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var) || (set->exact_enable && SCIPrationalIsEQ(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var)))); /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var) || (set->exact_enable && SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var)))); /*lint !e777*/
       return SCIPvarGetLbGlobal(var);
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
@@ -1495,6 +2018,155 @@ SCIP_Real SCIPsolGetVal(
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
       return 0.0; /*lint !e527*/
+   }
+}
+
+/** returns value of variable in exact primal CIP solution */
+void SCIPsolGetValExact(
+   SCIP_RATIONAL*        res,                /**< resulting rational */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_VAR*             var                 /**< variable to get value for */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_RATIONAL** scalars;
+   SCIP_RATIONAL* solval;
+   int nvars;
+   int i;
+
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
+      || sol->solorigin == SCIP_SOLORIGIN_ZERO
+      || sol->solorigin == SCIP_SOLORIGIN_PARTIAL
+      || sol->solorigin == SCIP_SOLORIGIN_LPSOL
+      || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN);
+   assert(var != NULL);
+   assert(SCIPsolIsExact(sol));
+
+   /* if the value of a transformed variable in an original solution is requested, we need to project the variable back
+    * to the original space, the opposite case is handled below
+    */
+   if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL && SCIPvarIsTransformed(var) )
+   {
+      SCIP_RETCODE retcode;
+      SCIP_VAR* origvar;
+      SCIP_RATIONAL* scalar;
+      SCIP_RATIONAL* constant;
+
+      (void) SCIPrationalCreateBuffer(set->buffer, &scalar);
+      (void) SCIPrationalCreateBuffer(set->buffer, &constant);
+
+      /* we cannot get the value of a transformed variable for a solution that lives in the original problem space
+       * -> get the corresponding original variable first
+       */
+      origvar = var;
+      SCIPrationalSetInt(scalar, 1L, 1L);
+      SCIPrationalSetReal(constant, 0.0);
+      retcode = SCIPvarGetOrigvarSumExact(&origvar, scalar, constant);
+      if ( retcode != SCIP_OKAY )
+      {
+         SCIPABORT();
+         return;
+      }
+      if( origvar == NULL )
+      {
+         /* the variable has no original counterpart: in the original solution, it has a value of zero */
+         SCIPrationalSetReal(res, 0.0);
+         return;
+      }
+
+      assert(!SCIPvarIsTransformed(origvar));
+
+      SCIPsolGetValExact(res, sol, set, stat, origvar);
+      SCIPrationalMult(res, res, scalar);
+      SCIPrationalAdd(res, res, constant);
+
+      SCIPrationalFreeBuffer(set->buffer, &constant);
+      SCIPrationalFreeBuffer(set->buffer, &scalar);
+
+      return;
+   }
+
+   /* only values for non fixed variables (LOOSE or COLUMN) are stored; others have to be transformed */
+   switch( SCIPvarGetStatusExact(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL )
+         solGetArrayValExact(res, sol, var);
+      else
+         SCIPsolGetValExact(res, sol, set, stat, SCIPvarGetTransVar(var));
+      break;
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
+      assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
+      || sol->lpcount == stat->lpcount );
+      solGetArrayValExact(res, sol, var);
+      break;
+
+   case SCIP_VARSTATUS_FIXED:
+      assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
+      assert(SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var))); /*lint !e777*/
+      assert(SCIPrationalIsEQ(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var))); /*lint !e777*/
+      assert(SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var))); /*lint !e777*/
+      SCIPrationalSetRational(res, SCIPvarGetLbGlobalExact(var));
+      break;
+
+    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
+      SCIPsolGetValExact(res, sol, set, stat, SCIPvarGetAggrVar(var));
+      if( SCIPrationalIsAbsInfinity(res) )
+      {
+         if( SCIPrationalGetSign(res) * SCIPrationalGetSign(SCIPvarGetAggrScalarExact(var)) > 0 )
+         {
+            SCIPrationalSetInfinity(res);
+            return;
+         }
+         if( SCIPrationalGetSign(res) * SCIPrationalGetSign(SCIPvarGetAggrScalarExact(var)) < 0 )
+         {
+            SCIPrationalSetNegInfinity(res);
+            return;
+         }
+      }
+      SCIPrationalMult(res, res, SCIPvarGetAggrScalarExact(var));
+      SCIPrationalAdd(res, res, SCIPvarGetAggrConstantExact(var));
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      (void) SCIPrationalCreateBuffer(set->buffer, &solval);
+
+      nvars = SCIPvarGetMultaggrNVars(var);
+      vars = SCIPvarGetMultaggrVars(var);
+      scalars = SCIPvarGetMultaggrScalarsExact(var);
+      SCIPrationalSetRational(res, SCIPvarGetMultaggrConstantExact(var));
+      for( i = 0; i < nvars; ++i )
+      {
+         SCIPsolGetValExact(solval, sol, set, stat, vars[i]);
+         if( SCIPrationalIsAbsInfinity(solval) )
+         {
+            if( SCIPrationalGetSign(scalars[i]) == SCIPrationalGetSign(solval) )
+               SCIPrationalSetInfinity(res);
+            if( SCIPrationalGetSign(scalars[i]) != SCIPrationalGetSign(solval) && !SCIPrationalIsZero(scalars[i]) )
+               SCIPrationalSetNegInfinity(res);
+            break;
+         }
+         SCIPrationalAddProd(res, scalars[i], solval);
+      }
+      SCIPrationalFreeBuffer(set->buffer, &solval);
+      break;
+
+   case SCIP_VARSTATUS_NEGATED:
+      SCIPsolGetValExact(res, sol, set, stat, SCIPvarGetNegationVar(var));
+      SCIPrationalDiffReal(res, res, SCIPvarGetNegationConstant(var));
+      SCIPrationalNegate(res, res);
+      break;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      SCIPrationalSetReal(res, 0.0); /*lint !e527*/
    }
 }
 
@@ -1584,6 +2256,25 @@ SCIP_Real SCIPsolGetObj(
       return sol->obj;
 }
 
+/** gets objective value of exact primal CIP solution in transformed problem */
+void SCIPsolGetObjExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_RATIONAL*        objval              /**< store the result here */
+    )
+{
+   assert(sol != NULL);
+   assert(SCIPsolIsExact(sol));
+
+   /* for original solutions, sol->obj contains the external objective value */
+   if( SCIPsolIsOriginal(sol) )
+      SCIPprobInternObjvalExact(transprob, origprob, set, sol->valsexact->obj, objval);
+   else
+      SCIPrationalSetRational(objval, sol->valsexact->obj);
+}
+
 /** updates primal solutions after a change in a variable's objective value */
 void SCIPsolUpdateVarObj(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1659,6 +2350,132 @@ SCIP_RETCODE SCIPsolMarkPartial(
 
    /* free buffer */
    SCIPsetFreeBufferArray(set, &vals);
+
+   return SCIP_OKAY;
+}
+
+/** checks primal CIP solution for exact feasibility
+ *  (either checks fp values exactly or rational values if it is a rational solution)
+ */
+static
+SCIP_RETCODE solCheckExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool*            feasible            /**< stores whether solution is feasible */
+   )
+{
+   SCIP_RESULT result;
+   SCIP_RATIONAL* solval;
+   int h;
+
+   assert(sol != NULL);
+   assert(!SCIPsolIsOriginal(sol));
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(feasible != NULL);
+
+   SCIPsetDebugMsg(set, "checking solution with objective value %g (nodenum=%" SCIP_LONGINT_FORMAT ", origin=%u)\n",
+      sol->obj, sol->nodenum, sol->solorigin);
+
+   *feasible = TRUE;
+
+   if( !printreason )
+      completely = FALSE;
+
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &solval) );
+
+   /* check whether the solution respects the global bounds of the variables */
+   {
+      int v;
+
+      for( v = 0; v < prob->nvars && (*feasible || completely); ++v )
+      {
+         SCIP_VAR* var;
+
+         var = prob->vars[v];
+         if( SCIPsolIsExact(sol) )
+            SCIPsolGetValExact(solval, sol, set, stat, var);
+         else
+            SCIPrationalSetReal(solval, SCIPsolGetVal(sol, set, stat, var));
+
+         if( !SCIPrationalIsAbsInfinity(solval) ) /*lint !e777*/
+         {
+            SCIP_RATIONAL* lb;
+            SCIP_RATIONAL* ub;
+
+            lb = SCIPvarGetLbGlobalExact(var);
+            ub = SCIPvarGetUbGlobalExact(var);
+
+            /* if we have to check bound and one of the current bounds is violated */
+            if( (!SCIPrationalIsNegInfinity(lb) && SCIPrationalIsLT(solval, lb)) || (!SCIPrationalIsInfinity(ub) && SCIPrationalIsGT(solval, ub)) )
+            {
+               *feasible = FALSE;
+
+               if( printreason )
+               {
+                  SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", SCIPrationalGetReal(solval), SCIPvarGetName(var),
+                     SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), SCIPrationalIsGT(solval, ub) ? SCIPrationalGetReal(lb) - SCIPrationalGetReal(solval) : SCIPrationalGetReal(solval) - SCIPrationalGetReal(ub));
+               }
+#ifdef SCIP_DEBUG
+               else
+               {
+                  SCIPrationalDebugMessage("  -> solution value %q violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
+                     SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+               }
+#endif
+            }
+
+            /* check whether there are infinite variable values that lead to an objective value of +infinity */
+            if( *feasible && sol->hasinfval )
+            {
+               *feasible = *feasible && (!SCIPrationalIsInfinity(solval) || !SCIPrationalIsPositive(SCIPvarGetObjExact(var)) );
+               *feasible = *feasible && (!SCIPrationalIsNegInfinity(solval) || !SCIPrationalIsNegative(SCIPvarGetObjExact(var)) );
+
+               if( ((SCIPrationalIsInfinity(solval) && SCIPrationalIsPositive(SCIPvarGetObjExact(var))))
+                  || (SCIPrationalIsNegInfinity(solval) && SCIPrationalIsNegative(SCIPvarGetObjExact(var))) )
+               {
+                  if( printreason )
+                  {
+                     SCIPrationalDebugMessage("infinite solution value %q for variable  <%s> with obj %q implies objective value +infinity\n",
+                        SCIPrationalGetReal(solval), SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
+                  }
+#ifdef SCIP_DEBUG
+                  else
+                  {
+                     SCIPrationalDebugMessage("infinite solution value %q for variable  <%s> with obj %g implies objective value +infinity\n",
+                        solval, SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
+                  }
+#endif
+               }
+            }
+         }
+      }
+   }
+
+   /* check whether the solution fulfills all constraints */
+   for( h = 0; h < set->nconshdlrs && (*feasible || completely); ++h )
+   {
+      SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
+            TRUE, checklprows, printreason, completely, &result) );
+      *feasible = *feasible && (result == SCIP_FEASIBLE);
+
+#ifdef SCIP_DEBUG
+      if( !(*feasible) )
+      {
+         SCIPdebugPrintf("  -> infeasibility detected in constraint handler <%s>\n",
+            SCIPconshdlrGetName(set->conshdlrs[h]));
+      }
+#endif
+   }
+
+   SCIPrationalFreeBuffer(set->buffer, &solval);
 
    return SCIP_OKAY;
 }
@@ -1864,6 +2681,13 @@ SCIP_RETCODE SCIPsolCheck(
 
    *feasible = TRUE;
 
+   /* have to check bounds without tolerances in exact solving mode */
+   if( set->exact_enable )
+   {
+      SCIP_CALL( solCheckExact(sol, set, messagehdlr, blkmem, stat, prob, printreason,
+            completely, checklprows, feasible) );
+   }
+
    SCIPsolResetViolations(sol);
 
    if( !printreason )
@@ -1892,20 +2716,20 @@ SCIP_RETCODE SCIPsolCheck(
 
             /* if we have to check bound and one of the current bounds is violated */
             if( checkbounds && ((!SCIPsetIsInfinity(set, -lb) && SCIPsetIsFeasLT(set, solval, lb))
-                     || (!SCIPsetIsInfinity(set, ub) && SCIPsetIsFeasGT(set, solval, ub))) )
+                  || (!SCIPsetIsInfinity(set, ub) && SCIPsetIsFeasGT(set, solval, ub))) )
             {
                *feasible = FALSE;
 
                if( printreason )
                {
                   SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
-                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(lb - solval, 0.0) + MAX(solval - ub, 0.0));
+                     SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(lb - solval, 0.0) + MAX(solval - ub, 0.0));
                }
 #ifdef SCIP_DEBUG
                else
                {
                   SCIPsetDebugMsgPrint(set, "  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
-                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+                     SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
                }
 #endif
             }
@@ -1974,8 +2798,9 @@ SCIP_RETCODE SCIPsolRound(
    assert(prob->transformed);
    assert(success != NULL);
 
-   /* round all roundable fractional variables in the corresponding direction as long as no unroundable var was found */
-   nvars = prob->nbinvars + prob->nintvars;
+   /* round all roundable fractional enforced integral variables as long as no unroundable var was found */
+   nvars = prob->nvars - prob->ncontvars - prob->ncontimplvars;
+   assert(nvars >= 0);
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
@@ -2023,6 +2848,45 @@ SCIP_RETCODE SCIPsolRound(
 
    /* check, if rounding was successful */
    *success = (v == nvars);
+
+   return SCIP_OKAY;
+}
+
+/** copy the fp values to the exact arrays of the solution */
+SCIP_RETCODE SCIPsolMakeExact(
+   SCIP_SOL*             sol,                /**< primal solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob                /**< transformed problem data */
+   )
+{
+   int v;
+   SCIP_RATIONAL* tmp;
+
+   if( SCIPsolIsExact(sol) )
+      return SCIP_OKAY;
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &sol->valsexact ) );
+   SCIP_CALL( SCIPrationalarrayCreate(&sol->valsexact->vals, blkmem) );
+   SCIP_CALL( SCIPboolarrayCreate(&sol->valsexact->valid, blkmem) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &sol->valsexact->obj) );
+
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
+
+   SCIP_CALL( SCIPsolUnlink(sol, set, prob) );
+
+   SCIPrationalSetReal(sol->valsexact->obj, sol->obj);
+
+   for( v = 0; v < prob->nvars; v++ )
+   {
+      SCIPrationalSetReal(tmp, solGetArrayVal(sol, prob->vars[v]));
+      SCIP_CALL( solSetArrayValExact(sol, set, prob->vars[v], tmp) );
+   }
+
+   SCIPsolRecomputeInternObjExact(sol, set, stat, prob);
+
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -2088,6 +2952,14 @@ SCIP_RETCODE SCIPsolRetransform(
    assert(transprob->transformed);
 
    *hasinfval = FALSE;
+
+   /* transform exact values first (needs unchanged solorigin) */
+   if( SCIPsolIsExact(sol) )
+   {
+      SCIP_CALL( SCIPsolRetransformExact(sol, set, stat, origprob, transprob, hasinfval) );
+      SCIP_CALL( SCIPsolOverwriteFPSolWithExact(sol, set, stat, origprob, transprob, NULL) );
+      return SCIP_OKAY;
+   }
 
    /* This method was a performance bottleneck when retransforming a solution during presolving, before flattening the
     * aggregation graph. In that case, calling SCIPsolGetVal() on the original variable consumed too much
@@ -2180,6 +3052,122 @@ SCIP_RETCODE SCIPsolRetransform(
    return SCIP_OKAY;
 }
 
+/** retransforms exact solution to original problem space */
+SCIP_RETCODE SCIPsolRetransformExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_Bool*            hasinfval           /**< pointer to store whether the solution has infinite values */
+   )
+{
+   SCIP_VAR** transvars;
+   SCIP_VAR** vars;
+   SCIP_VAR** activevars;
+   SCIP_RATIONAL** solvals;
+   SCIP_RATIONAL** activevals;
+   SCIP_RATIONAL** transsolvals;
+   SCIP_RATIONAL* constant;
+   int requiredsize;
+   int ntransvars;
+   int nactivevars;
+   int nvars;
+   int v;
+   int i;
+
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ZERO);
+   assert(origprob != NULL);
+   assert(transprob != NULL);
+   assert(hasinfval != NULL);
+   assert(!origprob->transformed);
+   assert(transprob->transformed);
+   assert(SCIPsolIsExact(sol));
+
+   *hasinfval = FALSE;
+
+   /* This method was a performance bottleneck when retransforming a solution during presolving, before flattening the
+    * aggregation graph. In that case, calling SCIPsolGetVal() on the original variable consumed too much
+    * time. Therefore, we now first compute the active representation of each original variable using
+    * SCIPvarGetActiveRepresentatives(), which is much faster, and sum up the solution values of the active variables by
+    * hand for each original variable.
+    */
+   vars = origprob->vars;
+   nvars = origprob->nvars;
+   transvars = transprob->vars;
+   ntransvars = transprob->nvars;
+
+   /* allocate temporary memory for getting the active representation of the original variables, buffering the solution
+    * values of all active variables and storing the original solution values
+    */
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &transsolvals, ntransvars + 1) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, ntransvars + 1) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &activevals, ntransvars + 1) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &solvals, nvars) );
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &constant) );
+
+   assert(transsolvals != NULL); /* for flexelint */
+
+   /* get the solution values of all active variables */
+   for( v = 0; v < ntransvars; ++v )
+   {
+      SCIPsolGetValExact(transsolvals[v], sol, set, stat, transvars[v]);
+   }
+
+   /* get the solution in original problem variables */
+   for( v = 0; v < nvars; ++v )
+   {
+      activevars[0] = vars[v];
+      SCIPrationalSetReal(activevals[0], 1.0);
+      nactivevars = 1;
+      SCIPrationalSetReal(constant, 0.0);
+
+      /* get active representation of the original variable */
+      SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, activevars, activevals, &nactivevars, ntransvars + 1, constant,
+            &requiredsize, TRUE) );
+      assert(requiredsize <= ntransvars);
+
+      /* compute solution value of the original variable */
+      SCIPrationalSetRational(solvals[v], constant);
+      for( i = 0; i < nactivevars; ++i )
+      {
+         assert(0 <= SCIPvarGetProbindex(activevars[i]) && SCIPvarGetProbindex(activevars[i]) < ntransvars);
+         SCIPrationalAddProd(solvals[v], activevals[i], transsolvals[SCIPvarGetProbindex(activevars[i])]);
+      }
+
+      if( SCIPrationalIsAbsInfinity(solvals[v]) )
+         *hasinfval = TRUE;
+   }
+
+   /* clear the solution and convert it into original space */
+   SCIP_CALL( solClearArrays(sol) );
+   SCIPrationalSetReal(sol->valsexact->obj, origprob->objoffset);
+   sol->solorigin = SCIP_SOLORIGIN_ORIGINAL;
+
+   /* reinsert the values of the original variables */
+   for( v = 0; v < nvars; ++v )
+   {
+      /* we might require unchangedObjexact for this assert if exact probing mode is implemented */
+      assert(SCIPvarGetUnchangedObj(vars[v]) == SCIPvarGetObj(vars[v])); /*lint !e777*/
+
+      if( !SCIPrationalIsZero(solvals[v]) )
+      {
+         SCIP_CALL( solSetArrayValExact(sol, set, vars[v], solvals[v]) );
+         SCIPrationalAddProd(sol->valsexact->obj, SCIPvarGetObjExact(vars[v]), solvals[v]);
+      }
+   }
+
+   /* free temporary memory */
+   SCIPrationalFreeBuffer(set->buffer, &constant);
+   SCIPrationalFreeBufferArray(set->buffer, &solvals, nvars);
+   SCIPrationalFreeBufferArray(set->buffer, &activevals, ntransvars + 1);
+   SCIPsetFreeBufferArray(set, &activevars);
+   SCIPrationalFreeBufferArray(set->buffer, &transsolvals, ntransvars + 1);
+
+   return SCIP_OKAY;
+}
+
 /** recomputes the objective value of an original solution, e.g., when transferring solutions
  *  from the solution pool (objective coefficients might have changed in the meantime)
  */
@@ -2217,6 +3205,120 @@ void SCIPsolRecomputeObj(
       sol->obj = -SCIPsetInfinity(set);
 }
 
+/** recomputes the objective value of an exact solution, e.g., when initialized from an fp solution */
+void SCIPsolRecomputeInternObjExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob                /**< scip problem */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_RATIONAL* solval;
+   int nvars;
+   int v;
+
+   assert(sol != NULL);
+   assert(SCIPsolIsExact(sol));
+   assert(prob != NULL);
+
+   vars = prob->vars;
+   nvars = prob->nvars;
+   (void) SCIPrationalCreateBuffer(set->buffer, &solval);
+
+   SCIPrationalSetInt(sol->valsexact->obj, 0L, 1L);
+
+   /* recompute the objective value */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIPsolGetValExact(solval, sol, set, stat, vars[v]);
+      if( !SCIPrationalIsZero(solval) ) /*lint !e777*/
+      {
+         SCIPrationalAddProd(sol->valsexact->obj, SCIPvarGetObjExact(vars[v]), solval);
+      }
+   }
+
+   SCIPrationalFreeBuffer(set->buffer, &solval);
+}
+
+/** returns whether the given solutions (exact or floating point) are exactly equal */
+static
+SCIP_Bool solsAreEqualExact(
+   SCIP_SOL*             sol1,               /**< first primal CIP solution */
+   SCIP_SOL*             sol2,               /**< second primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob           /**< transformed problem after presolve, or NULL if both solution are
+                                              *   defined in the original problem space */
+   )
+{
+   SCIP_PROB* prob;
+   SCIP_RATIONAL* tmp1;
+   SCIP_RATIONAL* tmp2;
+   int v;
+   SCIP_Bool result = TRUE;
+
+   assert(sol1 != NULL);
+   assert(sol2 != NULL);
+   assert(((SCIPsolGetOrigin(sol1) == SCIP_SOLORIGIN_ORIGINAL) && (SCIPsolGetOrigin(sol2) == SCIP_SOLORIGIN_ORIGINAL)) || transprob != NULL);
+
+   (void) SCIPrationalCreateBuffer(set->buffer, &tmp1);
+   (void) SCIPrationalCreateBuffer(set->buffer, &tmp2);
+
+   /* if both solutions are original or both are transformed, take the objective values stored in the solutions */
+   if( (SCIPsolGetOrigin(sol1) == SCIP_SOLORIGIN_ORIGINAL) == (SCIPsolGetOrigin(sol2) == SCIP_SOLORIGIN_ORIGINAL) )
+   {
+      SCIPsolIsExact(sol1) ? SCIPrationalSetRational(tmp1, sol1->valsexact->obj) : SCIPrationalSetReal(tmp1, sol1->obj);
+      SCIPsolIsExact(sol2) ? SCIPrationalSetRational(tmp2, sol2->valsexact->obj) : SCIPrationalSetReal(tmp2, sol2->obj);
+   }
+   /* one solution is original and the other not, so we have to get for both the objective in the transformed problem */
+   else
+   {
+      if( SCIPsolIsExact(sol1) )
+         SCIPsolGetObjExact(sol1, set, transprob, origprob, tmp1);
+      else
+         SCIPrationalSetReal(tmp1, SCIPsolGetObj(sol1, set, transprob, origprob));
+      if( SCIPsolIsExact(sol2) )
+         SCIPsolGetObjExact(sol2, set, transprob, origprob, tmp2);
+      else
+         SCIPrationalSetReal(tmp2, SCIPsolGetObj(sol2, set, transprob, origprob));
+   }
+
+   /* solutions with different objective values cannot be the same */
+   if( !SCIPrationalIsEQ(tmp1, tmp2) )
+      result = FALSE;
+
+   /* if one of the solutions is defined in the original space, the comparison has to be performed in the original
+    * space
+    */
+   prob = transprob;
+   if( sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL || sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL )
+      prob = origprob;
+   assert(prob != NULL);
+
+   /* compare each variable value */
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      if( SCIPsolIsExact(sol1) )
+         SCIPsolGetValExact(tmp1, sol1, set, stat, prob->vars[v]);
+      else
+         SCIPrationalSetReal(tmp1, SCIPsolGetVal(sol1, set, stat, prob->vars[v]));
+      if( SCIPsolIsExact(sol2) )
+         SCIPsolGetValExact(tmp2, sol2, set, stat, prob->vars[v]);
+      else
+         SCIPrationalSetReal(tmp2, SCIPsolGetVal(sol2, set, stat, prob->vars[v]));
+
+      if( !SCIPrationalIsEQ(tmp1, tmp2) )
+         result = FALSE;
+   }
+
+   SCIPrationalFreeBuffer(set->buffer, &tmp2);
+   SCIPrationalFreeBuffer(set->buffer, &tmp1);
+
+   return result;
+}
+
 /** returns whether the given solutions are equal */
 SCIP_Bool SCIPsolsAreEqual(
    SCIP_SOL*             sol1,               /**< first primal CIP solution */
@@ -2237,6 +3339,12 @@ SCIP_Bool SCIPsolsAreEqual(
    assert(sol1 != NULL);
    assert(sol2 != NULL);
    assert((SCIPsolIsOriginal(sol1) && SCIPsolIsOriginal(sol2)) || transprob != NULL);
+
+   /* exact solutions should be checked exactly */
+   if( set->exact_enable )
+   {
+      return solsAreEqualExact(sol1, sol2, set, stat, origprob, transprob);
+   }
 
    /* if both solutions are original or both are transformed, take the objective values stored in the solutions */
    if( SCIPsolIsOriginal(sol1) == SCIPsolIsOriginal(sol2) )
@@ -2325,7 +3433,7 @@ SCIP_RETCODE SCIPsolPrint(
          else if( SCIPsetIsInfinity(set, -solval) )
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
          SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->fixedvars[v]));
       }
    }
@@ -2384,7 +3492,7 @@ SCIP_RETCODE SCIPsolPrint(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
             SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->fixedvars[v]));
          }
       }
@@ -2409,11 +3517,200 @@ SCIP_RETCODE SCIPsolPrint(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
             SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->vars[v]));
          }
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** outputs non-zero elements of exact solution to file stream */
+SCIP_RETCODE SCIPsolPrintExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< problem data (original or transformed) */
+   SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             mipstart,           /**< should only discrete variables be printed? */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   SCIP_RATIONAL* solval;
+   char* solvalstr;
+   int solvallen;
+   int solvalsize = SCIP_MAXSTRLEN;
+   int v;
+
+   assert(sol != NULL);
+   assert(prob != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || prob->transformed || transprob != NULL);
+   assert(SCIPsolIsExact(sol));
+
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &solval) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &solvalstr, solvalsize) );
+
+   /* display variables of problem data */
+   for( v = 0; v < prob->nfixedvars; ++v )
+   {
+      assert(prob->fixedvars[v] != NULL);
+
+      /* skip non-discrete variables in a mip start */
+      if( mipstart && !SCIPvarIsIntegral(prob->fixedvars[v]) )
+         continue;
+
+      SCIPsolGetValExact(solval, sol, set, stat, prob->fixedvars[v]);
+      if( printzeros || mipstart
+         || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !SCIPrationalIsZero(solval))
+         || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL) ) /*lint !e777*/
+      {
+         solvallen = SCIPrationalToString(solval, solvalstr, solvalsize);
+         if( solvallen >= solvalsize )
+         {
+            solvalsize = SCIPrationalStrLen(solval) + 1;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+            solvallen = SCIPrationalToString(solval, solvalstr, solvalsize);
+            assert(solvallen < solvalsize);
+         }
+
+         SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " %20s", solvalstr);
+
+         solvallen = SCIPrationalToString(SCIPvarGetObjExact(prob->fixedvars[v]), solvalstr, solvalsize);
+         if( solvallen >= solvalsize )
+         {
+            solvalsize = SCIPrationalStrLen(solval) + 1;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+            solvallen = SCIPrationalToString(solval, solvalstr, solvalsize);
+            assert(solvallen < solvalsize);
+         }
+
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%s)\n", solvalstr);
+      }
+   }
+
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      assert(prob->vars[v] != NULL);
+
+      /* skip non-discrete variables in a mip start */
+      if( mipstart && !SCIPvarIsIntegral(prob->vars[v]) )
+         continue;
+
+      SCIPsolGetValExact(solval, sol, set, stat, prob->vars[v]);
+      if( printzeros || mipstart
+         || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !SCIPrationalIsZero(solval)) ) /*lint !e777*/
+      {
+         solvallen = SCIPrationalToString(solval, solvalstr, solvalsize);
+         if( solvallen >= solvalsize )
+         {
+            solvalsize = SCIPrationalStrLen(solval) + 1;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+            solvallen = SCIPrationalToString(solval, solvalstr, solvalsize);
+            assert(solvallen < solvalsize);
+         }
+
+         SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->vars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " %20s", solvalstr);
+
+         solvallen = SCIPrationalToString(SCIPvarGetObjExact(prob->vars[v]), solvalstr, solvalsize);
+         if( solvallen >= solvalsize )
+         {
+            solvalsize = SCIPrationalStrLen(solval) + 1;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+            solvallen = SCIPrationalToString(solval, solvalstr, solvalsize);
+            assert(solvallen < solvalsize);
+         }
+
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%s)\n", solvalstr);
+      }
+   }
+
+   /* display additional priced variables (if given problem data is original problem) */
+   if( !prob->transformed && sol->solorigin != SCIP_SOLORIGIN_ORIGINAL )
+   {
+      assert(transprob != NULL);
+      for( v = 0; v < transprob->nfixedvars; ++v )
+      {
+         assert(transprob->fixedvars[v] != NULL);
+         if( SCIPvarIsTransformedOrigvar(transprob->fixedvars[v]) )
+            continue;
+
+         /* skip non-discrete variables in a mip start */
+         if( mipstart && !SCIPvarIsIntegral(transprob->fixedvars[v]) )
+            continue;
+
+         SCIPsolGetValExact(solval, sol, set, stat, transprob->fixedvars[v]);
+         if( printzeros || mipstart || !SCIPrationalIsZero(solval) )
+         {
+            solvallen = SCIPrationalToString(solval, solvalstr, solvalsize);
+            if( solvallen >= solvalsize )
+            {
+               solvalsize = SCIPrationalStrLen(solval) + 1;
+               SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+               solvallen = SCIPrationalToString(solval, solvalstr, solvalsize);
+               assert(solvallen < solvalsize);
+            }
+
+            SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " %20s", solvalstr);
+
+            solvallen = SCIPrationalToString(SCIPvarGetObjExact(transprob->fixedvars[v]), solvalstr, solvalsize);
+            if( solvallen >= solvalsize )
+            {
+               solvalsize = SCIPrationalStrLen(solval) + 1;
+               SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+               solvallen = SCIPrationalToString(solval, solvalstr, solvalsize);
+               assert(solvallen < solvalsize);
+            }
+
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%s)\n", solvalstr);
+         }
+      }
+      for( v = 0; v < transprob->nvars; ++v )
+      {
+         assert(transprob->vars[v] != NULL);
+         if( SCIPvarIsTransformedOrigvar(transprob->vars[v]) )
+            continue;
+
+         /* skip non-discrete variables in a mip start */
+         if( mipstart && !SCIPvarIsIntegral(transprob->vars[v]) )
+            continue;
+
+         SCIPsolGetValExact(solval, sol, set, stat, transprob->vars[v]);
+         if( printzeros || !SCIPrationalIsZero(solval) )
+         {
+            solvallen = SCIPrationalToString(solval, solvalstr, solvalsize);
+            if( solvallen >= solvalsize )
+            {
+               solvalsize = SCIPrationalStrLen(solval) + 1;
+               SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+               solvallen = SCIPrationalToString(solval, solvalstr, solvalsize);
+               assert(solvallen < solvalsize);
+            }
+
+            SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->vars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " %20s", solvalstr);
+
+            solvallen = SCIPrationalToString(SCIPvarGetObjExact(transprob->vars[v]), solvalstr, solvalsize);
+            if( solvallen >= solvalsize )
+            {
+               solvalsize = SCIPrationalStrLen(solval) + 1;
+               SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+               solvallen = SCIPrationalToString(solval, solvalstr, solvalsize);
+               assert(solvallen < solvalsize);
+            }
+
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%s)\n", solvalstr);
+         }
+      }
+   }
+
+   SCIPsetFreeBufferArray(set, &solvalstr);
+   SCIPrationalFreeBuffer(set->buffer, &solval);
 
    return SCIP_OKAY;
 }
@@ -2452,7 +3749,7 @@ SCIP_RETCODE SCIPsolPrintRay(
          else if( SCIPsetIsInfinity(set, -solval) )
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
          SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->fixedvars[v]));
       }
    }
@@ -2496,7 +3793,7 @@ SCIP_RETCODE SCIPsolPrintRay(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
             SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->fixedvars[v]));
          }
       }
@@ -2517,7 +3814,7 @@ SCIP_RETCODE SCIPsolPrintRay(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
             SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->vars[v]));
          }
       }
@@ -2689,6 +3986,81 @@ SCIP_Real SCIPsolGetRelConsViolation(
    return sol->viol.relviolcons;
 }
 
+/** returns whether a solution is an exact rational solution */
+SCIP_Bool SCIPsolIsExact(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->valsexact != NULL;
+}
+
+/** overwrite FP solution with exact values */
+SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
+   SCIP_SOL*             sol,                /**< exact primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< problem data */
+   SCIP_PROB*            transprob,          /**< problem data */
+   SCIP_TREE*            tree                /**< branch and bound tree, or NULL */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_RATIONAL* solval;
+   int nvars;
+   int i;
+
+   assert(sol != NULL);
+   assert(SCIPsolIsExact(sol));
+
+   vars = SCIPsolIsOriginal(sol) ? SCIPprobGetVars(origprob) : SCIPprobGetVars(transprob);
+   nvars = SCIPsolIsOriginal(sol) ? SCIPprobGetNVars(origprob) : SCIPprobGetNVars(transprob);
+
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &solval) );
+
+   /* overwrite all the variables */
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_ROUNDMODE_RAT roundmode;
+      SCIPsolGetValExact(solval, sol, set, stat, vars[i]);
+      roundmode = vars[i]->obj > 0 ? SCIP_R_ROUND_UPWARDS : SCIP_R_ROUND_DOWNWARDS;
+
+      SCIPrationalDebugMessage("overwriting value %g of var %s with value %g (%q) \n", SCIPsolGetVal(sol, set, stat, vars[i]),
+           vars[i]->name, SCIPrationalRoundReal(solval, roundmode), solval);
+
+      SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[i],
+         SCIPrationalRoundReal(solval, roundmode)) );
+   }
+
+   if( SCIPsolIsOriginal(sol) )
+   {
+      SCIPrationalSetRational(solval, SCIPsolGetOrigObjExact(sol));
+   }
+   else
+   {
+      SCIPsolGetObjExact(sol, set, transprob, origprob, solval);
+   }
+
+   /* hard-set the obj value of the solution  */
+   sol->obj = SCIPrationalRoundReal(solval, SCIP_R_ROUND_UPWARDS);
+
+   SCIPrationalFreeBuffer(set->buffer, &solval);
+
+   return SCIP_OKAY;
+}
+
+/** comparison method for sorting solution by decreasing objective value (best solution will be sorted to the end) */
+SCIP_DECL_SORTPTRCOMP(SCIPsolComp)
+{
+   if( ((SCIP_SOL*)elem1)->obj - ((SCIP_SOL*)elem2)->obj < 0 )
+      return 1;
+   else if( ((SCIP_SOL*)elem1)->obj - ((SCIP_SOL*)elem2)->obj > 0 )
+      return -1;
+   else
+      return 0;
+}
+
 /*
  * simple functions implemented as defines
  */
@@ -2758,6 +4130,18 @@ SCIP_Real SCIPsolGetOrigObj(
    return sol->obj;
 }
 
+/** gets objective value of primal CIP solution which lives in the original problem space */
+SCIP_RATIONAL* SCIPsolGetOrigObjExact(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+   assert(SCIPsolIsOriginal(sol));
+   assert(SCIPsolIsExact(sol));
+
+   return sol->valsexact->obj;
+}
+
 /** adds value to the objective value of a given original primal CIP solution */
 void SCIPsolOrigAddObjval(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -2768,6 +4152,20 @@ void SCIPsolOrigAddObjval(
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
 
    sol->obj += addval;
+}
+
+/** adds value to the objective value of a given original primal CIP solution */
+void SCIPsolOrigAddObjvalExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_RATIONAL*        addval              /**< offset value to add */
+   )
+{
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+   assert(SCIPsolIsExact(sol));
+
+   SCIPrationalAdd(sol->valsexact->obj, sol->valsexact->obj, addval);
+   sol->obj = SCIPrationalGetReal(sol->valsexact->obj);
 }
 
 /** gets clock time, when this solution was found */

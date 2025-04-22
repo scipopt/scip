@@ -68,6 +68,12 @@ void SCIPpricerSetData(
    SCIP_PRICERDATA*      pricerdata          /**< new variable pricer user data */
    );
 
+/** marks the variable pricer as safe to use in exact solving mode */
+SCIP_EXPORT
+void SCIPpricerMarkExact(
+   SCIP_PRICER*          pricer              /**< pricer */
+   );
+
 /** gets name of variable pricer */
 SCIP_EXPORT
 const char* SCIPpricerGetName(

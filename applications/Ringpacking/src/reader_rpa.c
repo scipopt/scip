@@ -150,7 +150,7 @@ SCIP_DECL_READERREAD(readerReadRpa)
    }
 
    lineno = 0;
-   sprintf(name, "++ uninitialized ++");
+   (void) sprintf(name, "++ uninitialized ++");
    ntypes = 0;
 
    /* read problem dimension */

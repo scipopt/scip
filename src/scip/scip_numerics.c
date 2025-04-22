@@ -51,6 +51,9 @@
 #include "scip/struct_scip.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_message.h"
+#include "scip/rational.h"
+#include <string.h>
+#include <ctype.h>
 
 
 /* In debug mode, the following methods are implemented as function calls to ensure
@@ -438,6 +441,49 @@ SCIP_Bool SCIPparseReal(
    {
       /* parse a finite value */
       return SCIPstrToRealValue(localstr, value, endptr);
+   }
+}
+
+/** parse a rational value */
+SCIP_Bool SCIPparseRational(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< string to search */
+   SCIP_RATIONAL*        value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   )
+{
+   char* localstr;
+
+   assert(scip != NULL);
+   assert(str != NULL);
+   assert(value != NULL);
+   assert(endptr != NULL);
+
+   localstr = (char*)str;
+
+   /* ignore white space */
+   while(isspace((unsigned char)*localstr))
+      ++localstr;
+
+   /* test for a special infinity first */
+   if( strncmp(localstr, "+infinity", 9) == 0 )
+   {
+      SCIPrationalSetInfinity(value);
+      *endptr = (char*)(localstr + 9);
+      return TRUE;
+   }
+   else if( strncmp(localstr, "-infinity", 9) == 0 )
+   {
+      SCIPrationalSetNegInfinity(value);
+      *endptr = (char*)(localstr + 9);
+      return TRUE;
+   }
+   else
+   {
+      /* parse a finite value */
+      SCIPrationalSetString(value, str);
+      *endptr = (char*)(localstr + SCIPrationalStrLen(value));
+      return TRUE;
    }
 }
 

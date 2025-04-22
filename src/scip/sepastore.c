@@ -38,6 +38,7 @@
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/lp.h"
+#include "scip/lpexact.h"
 #include "scip/var.h"
 #include "scip/tree.h"
 #include "scip/reopt.h"
@@ -52,6 +53,8 @@
 #include "scip/struct_event.h"
 #include "scip/struct_sepastore.h"
 #include "scip/misc.h"
+#include "scip/pub_lpexact.h"
+#include "scip/scip_lpexact.h"
 
 
 
@@ -195,6 +198,10 @@ SCIP_Bool sepastoreIsCutRedundant(
    if( SCIProwIsModifiable(cut) )
       return FALSE;
 
+   /** @todo implement a safe redundancy check for cuts in exact solving mode */
+   if( set->exact_enable )
+      return FALSE;
+
    /* check for activity redundancy */
    lhs = SCIProwGetLhs(cut);
    rhs = SCIProwGetRhs(cut);
@@ -233,6 +240,10 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
    assert(infeasible != NULL);
 
    *infeasible = FALSE;
+
+   /** @todo implement a safe redundancy or infeasibility check for cuts in exact solving mode */
+   if( set->exact_enable )
+      return FALSE;
 
    /* modifiable cuts cannot be declared redundant or infeasible, since we don't know all coefficients */
    if( SCIProwIsModifiable(cut) )
@@ -1002,7 +1013,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          SCIP_Bool applied = FALSE;
 
          /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP row */
-         if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
+         if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 && !set->exact_enable )
          {
             SCIPsetDebugMsg(set, " -> applying forced cut <%s> as boundchange\n", SCIProwGetName(cut));
             SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
@@ -1012,6 +1023,26 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
          if( !applied )
          {
+            /* create rational representation of the cut; note that this may slightly change the floating-point
+             * coefficients
+             */
+            if( set->exact_enable && SCIProwGetRowExact(cut) == NULL )
+            {
+               SCIP_Bool poolcut = FALSE;
+               if( !SCIProwIsLocal(cut) && !(SCIPisCutNew(set->scip, cut)) )
+               {
+                  poolcut = TRUE;
+                  SCIP_CALL( SCIPdelPoolCut(set->scip, cut) );
+               }
+               SCIP_CALL( SCIProwExactCreateFromRow(cut, blkmem, set, stat, eventqueue, transprob, lp->lpexact) );
+               if( poolcut )
+               {
+                  SCIP_CALL( SCIPaddPoolCut(set->scip, cut) );
+               }
+
+               SCIP_CALL( SCIPaddRowExact(set->scip, cut->rowexact));
+            }
+
             /* add cut to the LP and update orthogonalities */
             SCIPsetDebugMsg(set, " -> applying%s cut <%s>\n", (i < sepastore->nforcedcuts) ? " forced" : "", SCIProwGetName(cut));
             /*SCIPdebug( SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/

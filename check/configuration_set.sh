@@ -159,7 +159,7 @@ fi
 # check if the test run should be processed in a debug tool environment
 if test "${DEBUGTOOL}" = "valgrind"
 then
-    DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full --suppressions=${SCIPPATH}/../suppressions.valgrind "
+    DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full --num-callers=20 --suppressions=${SCIPPATH}/../suppressions.valgrind "
 elif test "${DEBUGTOOL}" = "rr"
 then
     DEBUGTOOLCMD="rr record --chaos -o RRTRACEFOLDER_PLACEHOLDER.rr "
