@@ -5289,13 +5289,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
    /* make sure, only active variables remain in the remaining constraints */
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CONSDATA* consdata;
-
       if( SCIPconsIsDeleted(conss[c]) )
          continue;
-
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
 
       /* since we are not allowed to detect infeasibility in the exitpre stage, we dont give an infeasible pointer */
       SCIP_CALL( applyFixings(scip, conss[c], NULL) );
