@@ -506,7 +506,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    /* we only want to process each solution once */
    bestsol = SCIPgetBestSol(scip);
-   if( bestsol == NULL || heurdata->lastsolindex == SCIPsolGetIndex(bestsol) || SCIPisExactSol(scip, bestsol) )
+   if( bestsol == NULL || heurdata->lastsolindex == SCIPsolGetIndex(bestsol) || SCIPsolIsExact(bestsol) )
       return SCIP_OKAY;
 
    /* reset the timing mask to its default value (at the root node it could be different) */

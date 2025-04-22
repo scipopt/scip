@@ -2704,7 +2704,7 @@ SCIP_RETCODE SCIPsolveDiveLP(
 
    /* solve diving LP */
    SCIP_CALL( SCIPlpSolveAndEval(scip->lp, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat,
-         scip->eventqueue, scip->eventfilter, scip->transprob, (SCIP_Longint)itlim, FALSE, FALSE, FALSE, lperror) );
+         scip->eventqueue, scip->eventfilter, scip->transprob, (SCIP_Longint)itlim, FALSE, FALSE, FALSE, FALSE, lperror) );
 
    /* the LP is infeasible or the objective limit was reached */
    if( SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT

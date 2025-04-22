@@ -134,7 +134,7 @@ SCIP_Bool debugSolutionAvailable(
 static
 SCIP_RETCODE readSolfile(
    SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           solfilename,        /**< solution filename to read */
+   const char*           filename,           /**< solution filename to read */
    SCIP_SOL**            debugsolptr,
    SCIP_Real*            debugsolvalptr,
    SCIP_STAGE*           debugsolstageptr,
@@ -144,18 +144,17 @@ SCIP_RETCODE readSolfile(
    int*                  valssize            /**< pointer to store the length of the variable names and solution values arrays */
    )
 {
+   SCIP_FILE* file;
    SCIP_VAR** vars;
    SCIP_Real* solvalues;
-   SCIP_FILE* file;
    SCIP_SOL* debugsol;
    SCIP_Real debugsolval;
-   int nonvalues;
-   int nfound;
-   int i;
    SCIP_Bool unknownvariablemessage;
+   int lineno;
+   int i;
 
    assert(set != NULL);
-   assert(solfilename != NULL);
+   assert(filename != NULL);
    assert(names != NULL);
    assert(*names == NULL);
    assert(vals != NULL);
@@ -163,113 +162,157 @@ SCIP_RETCODE readSolfile(
    assert(nvals != NULL);
    assert(valssize != NULL);
 
-   printf("***** debug: reading solution file <%s>\n", solfilename);
+   printf("***** debug: reading solution file <%s>\n", filename);
 
    /* open solution file */
-   file = SCIPfopen(solfilename, "r");
+   file = SCIPfopen(filename, "r");
    if( file == NULL )
    {
-      SCIPerrorMessage("cannot open solution file <%s> specified in scip/debug.h\n", solfilename);
-      SCIPprintSysError(solfilename);
+      SCIPerrorMessage("cannot open solution file <%s> specified in scip/debug.h\n", filename);
+      SCIPprintSysError(filename);
       return SCIP_NOFILE;
    }
 
    /* read data */
-   nonvalues = 0;
    *valssize = 0;
    unknownvariablemessage = FALSE;
+   lineno = 0;
 
    while( !SCIPfeof(file) )
    {
-      char buf[SCIP_MAXSTRLEN];
-      char name[SCIP_MAXSTRLEN];
-      char objstring[SCIP_MAXSTRLEN];
-      char valuestring[SCIP_MAXSTRLEN];
+      /**@todo unlimit buffer size */
+      char buffer[SCIP_MAXSTRLEN];
+      const char* varname;
+      const char* valuestring;
+      char* endptr;
       SCIP_VAR* var;
-      SCIP_Real val;
-      int nread;
 
-      if( SCIPfgets(buf, SCIP_MAXSTRLEN, file) == NULL )
+      /* get next line */
+      if( SCIPfgets(buffer, (int)sizeof(buffer), file) == NULL )
       {
          if( SCIPfeof(file) )
             break;
          else
+         {
+            SCIPfclose(file);
             return SCIP_READERROR;
+         }
       }
+      ++lineno;
 
-      /* there are some lines which may preceed the solution information */
-      if( SCIPstrncasecmp(buf, "solution status:", 16) == 0 || SCIPstrncasecmp(buf, "objective value:", 16) == 0 ||
-         SCIPstrncasecmp(buf, "Log started", 11) == 0 || SCIPstrncasecmp(buf, "Variable Name", 13) == 0 ||
-         SCIPstrncasecmp(buf, "All other variables", 19) == 0 || strspn(buf, " \n\r\t\f") == strlen(buf) ||
-         SCIPstrncasecmp(buf, "NAME", 4) == 0 || SCIPstrncasecmp(buf, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
-         SCIPstrncasecmp(buf, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
-      {
-         ++nonvalues;
+      /* there are some lines which may precede the solution information */
+      if( SCIPstrncasecmp(buffer, "solution status:", 16) == 0 || SCIPstrncasecmp(buffer, "objective value:", 16) == 0
+         || buffer[strspn(buffer, " \t\n\v\f\r")] == '\0' || SCIPstrncasecmp(buffer, "Log started", 11) == 0
+         || SCIPstrncasecmp(buffer, "Variable Name", 13) == 0 || SCIPstrncasecmp(buffer, "All other variables", 19) == 0
+         || SCIPstrncasecmp(buffer, "NAME", 4) == 0 || SCIPstrncasecmp(buffer, "ENDATA", 6) == 0 /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         || SCIPstrncasecmp(buffer, "=obj=", 5) == 0 ) /* avoid "unknown variable" warning when reading MIPLIB SOL files */
          continue;
-      }
 
-      /* cppcheck-suppress invalidscanf */
-      nread = sscanf(buf, "%s %s %s\n", name, valuestring, objstring);
-      if( nread < 2 )
+      /* tokenize the line */
+      varname = SCIPstrtok(buffer, " \t\v", &endptr);
+      valuestring = SCIPstrtok(NULL, " \t\n\v\f\r", &endptr);
+      if( valuestring == NULL )
       {
-         printf("invalid input line %d in solution file <%s>: <%s>\n", *nvals + nonvalues, solfilename, name);
+         SCIPerrorMessage("Invalid input line %d in solution file <%s>: <%s>.\n", lineno, filename, buffer);
          SCIPfclose(file);
          return SCIP_READERROR;
       }
 
       /* find the variable */
-      var = SCIPfindVar(set->scip, name);
+      var = SCIPfindVar(set->scip, varname);
       if( var == NULL )
       {
          if( !unknownvariablemessage )
          {
             SCIPverbMessage(set->scip, SCIP_VERBLEVEL_NORMAL, NULL, "unknown variable <%s> in line %d of solution file <%s>\n",
-               name, *nvals + nonvalues, solfilename);
+               varname, lineno, filename);
             SCIPverbMessage(set->scip, SCIP_VERBLEVEL_NORMAL, NULL, "  (further unknown variables are ignored)\n");
             unknownvariablemessage = TRUE;
          }
          continue;
       }
 
-      /* cast the value, check first for inv(alid) or inf(inite) ones that need special treatment */
+      /* ignore invalid value */
       if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
+      {
+         SCIPdebugMsg(set->scip, "ignored invalid assignment for variable <%s>\n", varname);
          continue;
-      else if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
-         val = SCIPsetInfinity(set);
-      else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
-         val = -SCIPsetInfinity(set);
-      else
+      }
+
+      /**@todo: store exact debugsol */
       {
-         /* cppcheck-suppress invalidscanf */
-         nread = sscanf(valuestring, "%lf", &val);
-         if( nread != 1 )
+         SCIP_Real value;
+
+         if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
+            value = SCIPsetInfinity(set);
+         else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
+            value = -SCIPsetInfinity(set);
+         else if( !SCIPstrToRealValue(valuestring, &value, &endptr) || *endptr != '\0' )
          {
-            SCIPerrorMessage("Invalid solution value <%s> for variable <%s> in line %d of solution file <%s>.\n",
-                             valuestring, name, *nvals + nonvalues, solfilename);
-            SCIPfclose(file);
-            return SCIP_READERROR;
+#ifdef SCIP_WITH_EXACTSOLVE
+            /* convert exact value */
+            if( SCIPrationalIsString(valuestring) )
+            {
+               SCIP_RATIONAL* valueexact;
+
+               SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(set->scip), &valueexact, valuestring) );
+
+               value = SCIPrationalGetReal(valueexact);
+
+               SCIPrationalFreeBlock(SCIPblkmem(set->scip), &valueexact);
+            }
+            else
+#endif
+            {
+               SCIPerrorMessage("Invalid solution value <%s> for variable <%s> in line %d of solution file <%s>.\n",
+                     valuestring, varname, lineno, filename);
+               SCIPfclose(file);
+               return SCIP_READERROR;
+            }
          }
-      }
 
-      /* allocate memory */
-      if( *nvals >= *valssize )
-      {
-         *valssize = MAX(2 * *valssize, (*nvals)+1);
-         SCIP_ALLOC( BMSreallocMemoryArray(names, *valssize) );
-         SCIP_ALLOC( BMSreallocMemoryArray(vals, *valssize) );
-      }
-      assert(*nvals < *valssize);
+         /* skip zero entry */
+         if( value == 0.0 ) /*lint !e777*/
+            continue;
 
-      /* store solution value in sorted list */
-      for( i = *nvals; i > 0 && strcmp(name, (*names)[i-1]) < 0; --i )
-      {
-         (*names)[i] = (*names)[i-1];
-         (*vals)[i] = (*vals)[i-1];
+         /* search insertion index in sorted list */
+         i = *nvals - 1;
+         while( i >= 0 && strcmp(varname, (*names)[i]) < 0 )
+            --i;
+
+         /* overwrite real solution */
+         if( i >= 0 && strcmp(varname, (*names)[i]) == 0 )
+         {
+            SCIPwarningMessage(set->scip, "Overwriting %lf with %lf for <%s> in line %d of solution file <%s>.\n",
+                  (*vals)[i], value, varname, lineno, filename);
+            (*vals)[i] = value;
+         }
+         /* add real solution */
+         else
+         {
+            int j;
+
+            if( *nvals >= *valssize )
+            {
+               *valssize = MAX(2 * (*valssize), (*nvals) + 1);
+               SCIP_ALLOC( BMSreallocMemoryArray(names, *valssize) );
+               SCIP_ALLOC( BMSreallocMemoryArray(vals, *valssize) );
+            }
+            assert(*nvals < *valssize);
+
+            ++i;
+            for( j = *nvals; j > i; --j )
+            {
+               (*names)[j] = (*names)[j - 1];
+               (*vals)[j] = (*vals)[j - 1];
+            }
+            SCIP_ALLOC( BMSduplicateMemoryArray(&(*names)[i], varname, strlen(varname)+1) );
+            (*vals)[i] = value;
+            ++(*nvals);
+         }
+
+         SCIPdebugMsg(set->scip, "found variable <%s>: value <%g>\n", varname, value);
       }
-      SCIP_ALLOC( BMSduplicateMemoryArray(&(*names)[i], name, strlen(name)+1) );
-      SCIPdebugMsg(set->scip, "found variable <%s>: value <%g>\n", (*names)[i], val);
-      (*vals)[i] = val;
-      (*nvals)++;
    }
 
    /* get memory for SCIP solution */
@@ -277,27 +320,22 @@ SCIP_RETCODE readSolfile(
    SCIP_ALLOC( BMSallocMemoryArray(&solvalues, *valssize) );
 
    debugsolval = 0.0;
-   nfound = 0;
 
    /* get solution value */
    for( i = 0; i < *nvals; ++i)
    {
-      SCIP_VAR* var;
-      var = SCIPfindVar(set->scip, (*names)[i]);
-      if( var != NULL )
-      {
-         vars[nfound] = var;
-         solvalues[nfound] = (*vals)[i];
-         ++nfound;
-         debugsolval += (*vals)[i] * SCIPvarGetObj(var);
-      }
+      SCIP_VAR* var = SCIPfindVar(set->scip, (*names)[i]);
+      assert(var != NULL);
+      vars[i] = var;
+      solvalues[i] = (*vals)[i];
+      debugsolval += solvalues[i] * SCIPvarGetObj(var);
    }
    SCIPdebugMsg(set->scip, "Debug Solution value is %g.\n", debugsolval);
 
 #ifdef SCIP_MORE_DEBUG
-   SCIPsortPtrReal((void**)vars, solvalues, sortVarsAfterNames, nfound);
+   SCIPsortPtrReal((void**)vars, solvalues, sortVarsAfterNames, *nvals);
 
-   for( i = 0; i < nfound - 1; ++i)
+   for( i = 0; i < *nvals - 1; ++i)
    {
       assert(strcmp(SCIPvarGetName(vars[i]), SCIPvarGetName(vars[i + 1])) != 0);
    }
@@ -310,7 +348,7 @@ SCIP_RETCODE readSolfile(
       *debugsolstageptr = SCIPgetStage(set->scip);
 
       /* set SCIP solution values */
-      SCIP_CALL( SCIPsetSolVals(set->scip, debugsol, nfound, vars, solvalues ) );
+      SCIP_CALL( SCIPsetSolVals(set->scip, debugsol, *nvals, vars, solvalues ) );
    }
 
    BMSfreeMemoryArray(&vars);
@@ -325,7 +363,7 @@ SCIP_RETCODE readSolfile(
    /* close file */
    SCIPfclose(file);
 
-   printf("***** debug: read %d non-zero entries (%d variables found)\n", *nvals, nfound);
+   printf("***** debug: found %d non-zero entries\n", *nvals);
 
    return SCIP_OKAY;
 }

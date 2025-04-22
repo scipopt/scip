@@ -5421,6 +5421,11 @@ SCIP_RETCODE SCIPcreateConsVarbound(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
 
+   /* check that the given parameters are sensible, i.e., not nan or inf */
+   assert( SCIPisFinite(vbdcoef) );
+   assert( SCIPisFinite(lhs) );
+   assert( SCIPisFinite(rhs) );
+
    /* find the variable bound constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )

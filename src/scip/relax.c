@@ -371,15 +371,15 @@ SCIP_RETCODE SCIPrelaxExec(
 
    *result = SCIP_DIDNOTRUN;
 
-   /* check, if the relaxator is compatible with exact solving mode */
-   if( set->exact_enable && !relax->exact )
-      return SCIP_OKAY;
-
    /* check, if the relaxation is already solved */
    if( relax->lastsolvednode == stat->ntotalnodes && ! SCIPinProbing(set->scip) )
       return SCIP_OKAY;
 
    relax->lastsolvednode = stat->ntotalnodes;
+
+   /* check, if the relaxator is compatible with exact solving mode */
+   if( set->exact_enable && !relax->exact )
+      return SCIP_OKAY;
 
    if( (depth == 0 && relax->freq == 0) || (relax->freq > 0 && depth % relax->freq == 0) )
    {

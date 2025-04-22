@@ -280,6 +280,7 @@ set(scipsources
     scip/benders.c
     scip/benderscut.c
     scip/bendersdefcuts.c
+    scip/relax_benders.c
     scip/boundstore.c
     scip/branch.c
     scip/clock.c
@@ -529,6 +530,7 @@ set(scipheaders
     scip/benderscut_nogood.h
     scip/benderscut_opt.h
     scip/bendersdefcuts.h
+    scip/relax_benders.h
     scip/bitencode.h
     scip/boundstore.h
     scip/branch_allfullstrong.h

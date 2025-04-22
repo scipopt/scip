@@ -1728,13 +1728,6 @@ SCIP_RETCODE SCIPoverwriteFPsol(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-/** returns TRUE if the solution is an exact rational solution */
-SCIP_EXPORT
-SCIP_Bool SCIPisExactSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< primal CIP solution */
-   );
-
 /** checks exact primal solution; if feasible, adds it to storage; solution is freed afterwards
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

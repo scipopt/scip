@@ -32,6 +32,7 @@
  *  the LP solvers data has to be updated to the current LP with a call to
  *  lpExactFlush().
  */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "lpi/lpi.h"
@@ -5120,7 +5121,7 @@ SCIP_RETCODE SCIPcolExactCalcFarkasRedcostCoef(
    assert(SCIPvarGetColExact(col->var) == col);
 
    if( usefarkas )
-      SCIPrationalSetInt(result, 0L, 1L);
+      SCIPrationalSetFraction(result, 0LL, 1LL);
    else
       SCIPrationalSetRational(result, col->obj);
 

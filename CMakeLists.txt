@@ -21,7 +21,7 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 set(SCIP_VERSION_MAJOR 10)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
-set(SCIP_VERSION_API 141)
+set(SCIP_VERSION_API 143)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}
@@ -543,10 +543,6 @@ elseif(LPS STREQUAL "highs")
         message(FATAL_ERROR "Requested LP solver HiGHS not found.")
     endif()
     find_package(Threads REQUIRED)
-    find_package(OpenMP)
-    if(OPENMP_FOUND)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    endif()
 elseif(LPS STREQUAL "none")
     set(lpi lpi/lpi_none.c)
 else()

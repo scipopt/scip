@@ -1277,7 +1277,6 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP*                 targetscip          /**< target SCIP data structure */
    );
 
-
 /** sets the working limits as well as common search parameters for the auxiliary problem
  *
  *  @note memory and time limits are not affected, and must be set using SCIPcopyLimits() instead

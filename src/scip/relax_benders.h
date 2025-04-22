@@ -22,57 +22,39 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_implint.h
- * @ingroup PRESOLVERS
- * @brief  Presolver that detects implicit integer variables
- * @author Rolf van der Hulst
- *
- * This presolver looks for implicit integer variables, which are variables whose integrality is implied.
- * The linear constraint handler handles the simple (primal) case such as 2x + 2y + z = 3, where z is implied integral by
- * x and y. It also handles a more complicated dual case, where we have 'dual' implied integrality if z occurs only in
- * inequalities of the primal form (where the equality becomes an inequality), and has integral bounds.
- *
- * In this plugin we explicitly look for the following structure in the constraint matrix:
- * \f[
- * \begin{array}{llll}
- * A x & + B y &       & \leq c\\
- * D x &       & + E z & \leq f\\
- * & &               x & \in Z^{p_1} \\
- * & &               y & \in Z^{p_2} \times R^{n_2-p_2}\\
- * & &               z & \in Z^{p_3} \times R^{n_3-p_3}
- * \end{array}
- * \f]
- * where A and c are integral and B is totally unimodular. It is not difficult to see that after fixing the x variables,
- * that the remaining problem on the y variables is an integral polyhedron (and independent of the z variables).
- * Hence, y is implied integral by x.
- *
- * Note that this presolver only treats integral rows, where SCIPisIntegral() is used to check integrality.
+/**@file   relax_benders.h
+ * @ingroup DEFPLUGINS_RELAX
+ * @brief  benders relaxator
+ * @author Stephen J. Maher
  */
 
-#ifndef __SCIP_PRESOL_IMPLINT_H__
-#define __SCIP_PRESOL_IMPLINT_H__
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
+#ifndef __SCIP_RELAX_BENDERS_H__
+#define __SCIP_RELAX_BENDERS_H__
+
+
+#include "scip/scip.h"
+#include "scip/scip_export.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
-/** creates the implicit integer presolver and includes it in SCIP
- *
- * @ingroup PresolverIncludes
- */
+/** creates the benders relaxator and includes it in SCIP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludePresolImplint(
+SCIP_RETCODE SCIPincludeRelaxBenders(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns the master problem SCIP instance */
+SCIP_EXPORT
+SCIP* SCIPgetMasterProblemRelaxBenders(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SCIP_PRESOL_IMPLINT_H__ */
+#endif

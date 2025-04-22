@@ -258,6 +258,7 @@
 #include "scip/table_default.h"
 #include "scip/concsolver_scip.h"
 #include "scip/benders_default.h"
+#include "scip/relax_benders.h"
 #include "scip/cutsel_hybrid.h"
 #include "scip/cutsel_dynamic.h"
 #include "scip/cutsel_ensemble.h"

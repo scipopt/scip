@@ -878,6 +878,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/reader_tim.o \
 			scip/reader_wbo.o \
 			scip/reader_zpl.o \
+			scip/relax_benders.o \
 			scip/sepa_aggregation.o \
 			scip/sepa_cgmip.o \
 			scip/sepa_clique.o \

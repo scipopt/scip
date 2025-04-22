@@ -187,6 +187,10 @@ set(settings_BendersQP
     "benders-qp"
    )
 
+set(settings_BendersDec
+    "usebenders-dec"
+)
+
 set(settings_Decomp
    "decompheurs"
    "decompheurs_dps"
@@ -376,7 +380,7 @@ set(instances_Bilinrelax
 # PB instances
 #
 set(instances_PB
-    "instances/PseudoBoolean/factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B.opb\;3"
+    "instances/PseudoBoolean/factor-mod-size=9-P0=263-P1=409-P2=29-P3=379-B.opb\;3"
     "instances/PseudoBoolean/normalized-bsg_10_4_5.opb\;-4"
     "instances/PseudoBoolean/normalized-mds_10_4_3.opb\;2"
     "instances/PseudoBoolean/normalized-mds_50_25_5.opb\;3"
@@ -483,9 +487,16 @@ set(instances_BendersLB
    )
 
 set(instances_BendersQP
-    "instances/Benders/classical_20_0.mps\;instances/Benders/classical_20.dec\;-8.22960761981176e-02"
-    "instances/Benders/classical_30_0.mps\;instances/Benders/classical_30.dec\;-7.98150796362468e-02"
-    "instances/Benders/classical_30_15.mps\;instances/Benders/classical_30.dec\;-7.34740783553289e-02"
+    "instances/Benders/classical_20_0.mps\;instances/Benders/classical_20.dec\;-8.22958452550615e-02"
+    "instances/Benders/classical_30_0.mps\;instances/Benders/classical_30.dec\;-7.98149452840201e-02"
+    "instances/Benders/classical_30_15.mps\;instances/Benders/classical_30.dec\;-7.34739274330805e-02"
+   )
+
+set(instances_BendersDec
+   "instances/Benders/cap41.lp\;instances/Benders/cap41.dec\;+1.24518068000000e+06"
+   "instances/Benders/cap42.lp\;instances/Benders/cap42.dec\;+1.31282733250000e+06"
+   "instances/Benders/cap43.lp\;instances/Benders/cap43.dec\;+1.37782733250000e+06"
+   "instances/Benders/cap44.lp\;instances/Benders/cap44.dec\;+1.47532733250000e+06"
    )
 
 set(instances_Decomp
@@ -667,7 +678,7 @@ if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQU
             #
             # treat the instance as a tuple (list) of two values
             #
-            if(NOT ((${basename} STREQUAL "classical_30_0.mps") AND (${LPS} STREQUAL "grb")))
+            if(NOT ((${basename} STREQUAL "classical_30_0.mps") AND ((${LPS} STREQUAL "grb") OR (${LPS} STREQUAL "cpx"))))
             add_test(NAME ${prefix}-${setting}-${basename}
                COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set read ${PROJECT_SOURCE_DIR}/check/${instpath} read ${PROJECT_SOURCE_DIR}/check/${decpath} opt validatesol ${optval} ${optval} q"
                     )
@@ -677,7 +688,7 @@ if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQU
                                     FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
-            endif()  # separation does not converge, #3724 (LPS=grb, BendersQP-benders-qp-classical_30_0.mps)
+            endif()  # separation does not converge, #3724 (LPS=grb or LPS=cpx, BendersQP-benders-qp-classical_30_0.mps)
         endforeach(setting)
     endforeach(instance)
 endif()
@@ -729,6 +740,7 @@ add_instancetests(instances_Benders settings_Benders "Benders")
 add_instancetests(instances_Or settings_Or "Or")
 add_instancetests(instances_BendersLB settings_BendersLB "BendersLB")
 add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
+add_decompinstancetests(instances_BendersDec settings_BendersDec "BendersDec")
 add_decompinstancetests(instances_Decomp settings_Decomp "Decomp")
 add_pairtests(pairs_Issue "Issue")
 

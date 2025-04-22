@@ -67,6 +67,12 @@ SCIP_Bool SCIPsolIsOriginal(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** returns whether a solution is an exact rational solution */
+SCIP_EXPORT
+SCIP_Bool SCIPsolIsExact(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
 /** returns whether the given solution is partial */
 SCIP_EXPORT
 SCIP_Bool SCIPsolIsPartial(

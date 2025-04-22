@@ -507,7 +507,7 @@ SCIP_RETCODE addConstraintExact(
       SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &activevals, nactivevars) );
 
       for( v = 0; v < nactivevars; v++ )
-         SCIPrationalSetInt(activevals[v], 1L, 1L);
+         SCIPrationalSetFraction(activevals[v], 1LL, 1LL);
    }
 
    /* retransform given variables to active variables */

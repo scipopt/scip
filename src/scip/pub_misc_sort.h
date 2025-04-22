@@ -361,6 +361,15 @@ void SCIPsortRealIntPtr(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of three joint arrays of Reals/Pointers/Pointers, sorted by first array in non-decreasing order */
+SCIP_EXPORT
+void SCIPsortRealPtrPtr(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of three joint arrays of Reals/Reals/Pointer, sorted by first array in non-decreasing order */
 SCIP_EXPORT
 void SCIPsortRealRealPtr(
@@ -943,6 +952,15 @@ void SCIPsortDownRealIntPtr(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of three joint arrays of Reals/Pointer/Pointer, sorted by first array in non-decreasing order */
+SCIP_EXPORT
+void SCIPsortDownRealPtrPtr(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of three joint arrays of Reals/Reals/ints, sorted by first array in non-increasing order */
 SCIP_EXPORT
 void SCIPsortDownRealRealInt(
@@ -1030,15 +1048,6 @@ void SCIPsortDownRealRealRealPtr(
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
    SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   int                   len                 /**< length of arrays */
-   );
-
-/** sort of three joint arrays of Reals/pointers, sorted by first array in non-decreasing order */
-SCIP_EXPORT
-void SCIPsortDownRealPtrPtr(
-   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
-   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
-   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
@@ -1648,6 +1657,19 @@ void SCIPsortedvecInsertRealIntPtr(
    void**                ptrarray,           /**< pointer array where an element is to be inserted  */
    SCIP_Real             keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
+   void*                 field2val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
+/** insert a new element into three joint arrays of Reals/Pointer/Pointer, sorted by first array in non-decreasing order */
+SCIP_EXPORT
+void SCIPsortedvecInsertRealPtrPtr(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   void**                ptrarray1,          /**< first pointer array where an element is to be inserted */
+   void**                ptrarray2,          /**< second pointer array where an element is to be inserted  */
+   SCIP_Real             keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
    void*                 field2val,          /**< additional value of new element */
    int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
@@ -2435,19 +2457,6 @@ void SCIPsortedvecInsertDownRealPtr(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
-/** insert a new element into three joint arrays of Reals/pointers, sorted by first array in non-increasing order */
-SCIP_EXPORT
-void SCIPsortedvecInsertDownRealPtrPtr(
-   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
-   void**                ptrarray1,          /**< first pointer array where an element is to be inserted */
-   void**                ptrarray2,          /**< second pointer array where an element is to be inserted */
-   SCIP_Real             keyval,             /**< key value of new element */
-   void*                 field1val,          /**< additional value of new element */
-   void*                 field2val,          /**< additional value of new element */
-   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
-   int*                  pos                 /**< pointer to store the insertion position, or NULL */
-   );
-
 /** insert a new element into two joint arrays of Reals/ints, sorted by first array in non-increasing order */
 SCIP_EXPORT
 void SCIPsortedvecInsertDownRealInt(
@@ -2511,6 +2520,18 @@ void SCIPsortedvecInsertDownRealIntPtr(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
+/** insert a new element into three joint arrays of Reals/Pointer/Pointer, sorted by first array in non-increasing order */
+SCIP_EXPORT
+void SCIPsortedvecInsertDownRealPtrPtr(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   void**                ptrarray1,          /**< first pointer array where an element is to be inserted */
+   void**                ptrarray2,          /**< second pointer array where an element is to be inserted */
+   SCIP_Real             keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   void*                 field2val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
 
 /** insert a new element into three joint arrays of Reals/Reals/Pointer, sorted by first array in non-increasing order */
 SCIP_EXPORT
@@ -3270,6 +3291,16 @@ void SCIPsortedvecDelPosRealIntPtr(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from three joint arrays of Reals/Pointer/Pointer, sorted by first array in non-decreasing order */
+SCIP_EXPORT
+void SCIPsortedvecDelPosRealPtrPtr(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be deleted */
+   void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
+   void**                ptrarray2,          /**< first pointer array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from three joint arrays of Reals/Reals/Pointer, sorted by first array in non-decreasing order */
 SCIP_EXPORT
 void SCIPsortedvecDelPosRealRealPtr(
@@ -3903,6 +3934,16 @@ void SCIPsortedvecDelPosDownRealIntPtr(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from three joint arrays of Reals/Pointer/Pointer, sorted by first array in non-increasing order */
+SCIP_EXPORT
+void SCIPsortedvecDelPosDownRealPtrPtr(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be deleted */
+   void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
+   void**                ptrarray2,          /**< second pointer array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from three joint arrays of Reals/Reals/ints, sorted by first array in non-increasing order */
 SCIP_EXPORT
 void SCIPsortedvecDelPosDownRealRealInt(
@@ -3930,16 +3971,6 @@ void SCIPsortedvecDelPosDownRealRealPtrPtr(
    SCIP_Real*            realarray2,         /**< second SCIP_Real array where an element is to be deleted */
    void**                ptrarray1,          /**< pointer array where an element is to be deleted */
    void**                ptrarray2,          /**< pointer array where an element is to be deleted */
-   int                   pos,                /**< array position of element to be deleted */
-   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
-   );
-
-/** delete the element at the given position from three joint arrays of Reals/Reals/Pointer, sorted by first array in non-increasing order */
-SCIP_EXPORT
-void SCIPsortedvecDelPosDownRealPtrPtr(
-   SCIP_Real*            realarray,          /**< first SCIP_Real array where an element is to be deleted */
-   void**                ptrarray1,          /**< first pointer array where an element is to be deleted */
-   void**                ptrarray2,          /**< second pointer array where an element is to be deleted */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );

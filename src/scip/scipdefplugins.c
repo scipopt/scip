@@ -276,6 +276,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    /* include advanced features */
    SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
    SCIP_CALL( SCIPincludeBendersDefault(scip) );
+   SCIP_CALL( SCIPincludeRelaxBenders(scip) );
 
    SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
 

@@ -370,7 +370,7 @@ SCIP_RETCODE SCIPtransformProb(
    {
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
          "%d/%d feasible solution%s given by solution candidate storage, new primal bound %.6e\n\n",
-         nfeassols, ncandsols, (nfeassols > 1 ? "s" : ""), SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
+         nfeassols, ncandsols, (nfeassols > 1 ? "s" : ""), SCIPgetPrimalbound(scip));
    }
    else if( ncandsols > 0 && !scip->set->reopt_enable )
    {
@@ -2681,16 +2681,6 @@ SCIP_RETCODE SCIPsolve(
 
    /* initialize presolving flag (may be modified in SCIPpresolve()) */
    scip->stat->performpresol = FALSE;
-
-   /* if a decomposition exists and Benders' decomposition has been enabled, then a decomposition is performed */
-   if( scip->set->stage == SCIP_STAGE_PROBLEM && SCIPdecompstoreGetNOrigDecomps(scip->decompstore) > 0
-      && scip->set->decomp_applybenders && SCIPgetNActiveBenders(scip) == 0 )
-   {
-      int decompindex = 0;
-
-      /* applying the Benders' decomposition */
-      SCIP_CALL( SCIPapplyBendersDecomposition(scip, decompindex) );
-   }
 
    /* start solving timer */
    SCIPclockStart(scip->stat->solvingtime, scip->set);
