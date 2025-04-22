@@ -69,58 +69,17 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
  *
  * @{
  *
- * @name Linear Constraints
+ * @name Exact Linear Constraints
  *
- * This constraint handler handles linear constraints in their most general form. That is,
+ * This constraint handler handles linear constraints in their most general form
  * \f[
  *   lhs \leq \sum_{i=1}^n a_i x_i \leq rhs
  * \f]
- * with \f$a_i \in Q, i = 1,\dots,n\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
- * and decision variables \f$x_i, i = 1,\dots,n\f$ which can be binary, integer, or continuous.
- *
- * Furthermore, this header offers the upgrade functionality of a general linear constraint into a more specific
- * constraint, such as a knapsack constraint, via SCIP_DECL_LINCONSUPGD() and SCIPincludeLinconsUpgrade()
+ * in a numerically exact way, where \f$a_i \in Q, i = 1,\dots,n\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
+ * and \f$x_i, i = 1,\dots,n\f$ which can be binary, integer, or continuous decision variables.
  *
  * @{
  */
-
-typedef struct SCIP_LinConsUpgrade SCIP_EXLINCONSUPGRADE; /**< linear constraint update method */
-
-/** upgrading method for linear constraints into more specific constraints
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - cons            : the linear constraint to upgrade
- *  - nvars           : number of variables in the constraint
- *  - vars            : array with constraint variables
- *  - vals            : array with constraint coefficients
- *  - lhs             : left hand side of linear constraint
- *  - rhs             : right hand side of linear constraint
- *  - nposbin         : number of binary variables with positive coefficient
- *  - nnegbin         : number of binary variables with negative coefficient
- *  - nposint         : number of integer variables with positive coefficient
- *  - nnegint         : number of integer variables with negative coefficient
- *  - nposimpl        : number of implicit integer variables with positive coefficient (including implicit binary variables)
- *  - nnegimpl        : number of implicit integer variables with negative coefficient (including implicit binary variables)
- *  - nposimplbin     : number of implicit binary variables with positive coefficient
- *  - nnegimplbin     : number of implicit binary variables with negative coefficient
- *  - nposcont        : number of continuous variables with positive coefficient
- *  - nnegcont        : number of continuous variables with negative coefficient
- *  - ncoeffspone     : number of +1 coefficients
- *  - ncoeffsnone     : number of -1 coefficients
- *  - ncoeffspint     : number of positive integral coefficients other than +1
- *  - ncoeffsnint     : number of negative integral coefficients other than -1
- *  - ncoeffspfrac    : number of positive fractional coefficients
- *  - ncoeffsnfrac    : number of negative fractional coefficients
- *  - poscoeffsum     : sum of all positive coefficients
- *  - negcoeffsum     : sum of all negative coefficients
- *  - integral        : TRUE iff constraints activity value is always integral
- *  - upgdcons        : pointer to store the upgraded constraint
- */
-#define SCIP_DECL_EXLINCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, int nvars, SCIP_VAR** vars, SCIP_Real* vals, SCIP_Real lhs, SCIP_Real rhs, \
-      int nposbin, int nnegbin, int nposint, int nnegint, int nposimpl, int nnegimpl, int nposimplbin, int nnegimplbin, int nposcont, int nnegcont, \
-      int ncoeffspone, int ncoeffsnone, int ncoeffspint, int ncoeffsnint, int ncoeffspfrac, int ncoeffsnfrac, \
-      SCIP_Real poscoeffsum, SCIP_Real negcoeffsum, SCIP_Bool integral, SCIP_CONS** upgdcons)
 
 /** creates and captures a linear constraint
  *
