@@ -71,7 +71,12 @@
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define DEFAULT_CHECKFPFEASIBILITY TRUE /**< should a solution be checked in floating-point arithmetic prior to being processed? */
+/**@todo determine checkcontimplint default */
 #define DEFAULT_CHECKCONTIMPLINT   TRUE /**< should integrality of continuous implied integral variables be ensured? */
+/**@todo tune abortfrac default */
+#define DEFAULT_ABORTFRAC          1e-9 /**< fractionality of enforced integral value above which reparation is aborted */
+/**@todo tune unfixfrac default */
+#define DEFAULT_UNFIXFRAC           0.0 /**< fractionality of weakly implied value up to which reparation fixes variable */
 #define DEFAULT_MAXSTALLS          1000 /**< maximal number of consecutive repair calls without success */
 #define DEFAULT_SOLBUFSIZE           10 /**< size of solution buffer */
 #define DEFAULT_MINIMPROVE          0.2 /**< minimal percentage of primal improvement to trigger solution processing */
@@ -98,6 +103,8 @@ struct SCIP_ConshdlrData
    int                   ncurrentstalls;     /**< number of times the exact lp was solved unsuccessfully in a row */
    SCIP_Bool             checkfpfeasibility; /**< should a solution be checked in floating-point arithmetic prior to being processed? */
    SCIP_Bool             checkcontimplint;   /**< should integrality of continuous implied integral variables be ensured? */
+   SCIP_Real             abortfrac;          /**< fractionality of enforced integral value above which reparation is aborted */
+   SCIP_Real             unfixfrac;          /**< fractionality of weakly implied value up to which reparation fixes variable */
    int                   maxstalls;          /**< maximal number of consecutive repair calls without success */
    int                   solbufsize;         /**< size of solution buffer */
    SCIP_Real             minimprove;         /**< minimal percentage of primal improvement to trigger solution processing */
@@ -610,20 +617,15 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
             /* for all integer and implied integer variables we check if their solution value is near-integral and abort
              * if not, except for continuous variables whose integrality is weakly implied: then the solution value
              * could be fractional in a floating-point feasible solution and we only know that a feasible solution with
-             * integral value exists; in this case we currently round and fix its value, which may lead to infeasibility
+             * integral value exists; in this case we leave it unfixed to avoid infeasibility
              */
-            /**@todo test whether it improves performance to leave continuous implied integral variables unfixed:
-             *       strongly implied ones should be near-integral but only indirectly enforced,
-             *       while for weakly implied ones, rounding can even introduce structural infeasibilities,
-             *       so it can be more effective to not fix it at the cost of a less efficient exact LP solve
-             */
-            if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS && !SCIPisIntegral(scip, solval) )
+            if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS && !EPSISINT(solval, conshdlrdata->abortfrac) )
             {
                *result = SCIP_INFEASIBLE;
                break;
             }
             else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS
-               && SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK )
+               && SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK && !EPSISINT(solval, conshdlrdata->unfixfrac) )
             {
                SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
                SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
@@ -890,6 +892,14 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
          "constraints/" CONSHDLR_NAME "/checkimpliedintegrality",
          "should integrality of continuous implied integral variables be ensured?",
          &conshdlrdata->checkcontimplint, TRUE, DEFAULT_CHECKCONTIMPLINT, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/" CONSHDLR_NAME "/abortfrac",
+         "fractionality of enforced integral value above which reparation is aborted",
+         &conshdlrdata->abortfrac, TRUE, DEFAULT_ABORTFRAC, 0.0, 0.5, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/" CONSHDLR_NAME "/unfixfrac",
+         "fractionality of weakly implied value up to which reparation fixes variable",
+         &conshdlrdata->unfixfrac, TRUE, DEFAULT_UNFIXFRAC, 0.0, 0.5, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/maxstalls",
          "maximal number of consecutive repair calls without success",
