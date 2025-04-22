@@ -103,7 +103,7 @@
 #define DEFAULT_SKIPBADINITCANDS TRUE        /**< should branching rule skip candidates that have a low probability to be
                                               *  better than the best strong-branching or pseudo-candidate? */
 #define DEFAULT_STARTRANDSEED    5           /**< start random seed for random number generation */
-#define DEFAULT_DYNAMICLOOKAHEAD TRUE        /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
+#define DEFAULT_DYNAMICLOOKAHEAD FALSE       /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
 #define DEFAULT_MINSAMPLESIZE    10          /**< minimum sample size to estimate the tree size for dynamic lookahead */
 #define DEFAULT_DYNAMICLOOKDISTRIBUTION 1    /**< which distribution should be used for dynamic lookahead? 0=exponential, 1=Pareto, 2=log-normal */
 #define DEFAULT_RANDINITORDER    FALSE       /**< should slight perturbation of scores be used to break ties in the prior scores? */
