@@ -3841,7 +3841,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          if( successresolution )
             SCIP_CALL( conflictRowReplace(conflictrow, blkmem, resolvedconflictrow) );
-        else
+         else
             goto TERMINATE_RESOLUTION_LOOP;
 
          /* we must reset the conflict lower and upper bound to be able to add weaker bounds later */
