@@ -615,10 +615,24 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
              *       while for weakly implied ones, rounding can even introduce structural infeasibilities,
              *       so it can be more effective to not fix it at the cost of a less efficient exact LP solve
              */
-            if( SCIPisIntegral(scip, solval)
-               || ( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS
-               && SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK ) )
+            if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS && !SCIPisIntegral(scip, solval) )
             {
+               *result = SCIP_INFEASIBLE;
+               break;
+            }
+            else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS
+               && SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK )
+            {
+               SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
+               SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
+
+               SCIP_CALL( SCIPchgVarLbExactDive(scip, vars[i], SCIPvarGetLbGlobalExact(vars[i])) );
+               SCIP_CALL( SCIPchgVarUbExactDive(scip, vars[i], SCIPvarGetUbGlobalExact(vars[i])) );
+            }
+            else
+            {
+               assert(SCIPvarIsIntegral(vars[i]));
+
                SCIP_RATIONAL* newbound;
 
                SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &newbound) );
@@ -635,8 +649,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
                SCIPrationalFreeBuffer(SCIPbuffer(scip), &newbound);
             }
-            else
-               *result = SCIP_INFEASIBLE;
          }
       }
 
