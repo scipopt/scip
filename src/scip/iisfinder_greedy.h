@@ -98,6 +98,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
 
    int                   initbatchsize,      /**< the initial batchsize for the first iteration */
+   SCIP_Real             initrelbatchsize,   /**< the initial batchsize relative to the original problem for the first iteration */
    int                   maxbatchsize,       /**< the maximum batchsize per iteration */
    SCIP_Real             maxrelbatchsize,    /**< the maximum batchsize relative to the original problem per iteration */
    SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied each iteration */

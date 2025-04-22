@@ -51,6 +51,7 @@
 #define DEFAULT_DELAFTERADD      TRUE  /**< should the deletion routine be performed after the addition routine (in the case of additive) */
 
 #define DEFAULT_INITBATCHSIZE    16    /**< the initial batchsize for the first iteration */
+#define DEFAULT_INITRELBATCHSIZE -1.0  /**< the initial batchsize relative to the original problem for the first iteration */
 #define DEFAULT_MAXBATCHSIZE     INT_MAX /**< the maximum batchsize per iteration */
 #define DEFAULT_MAXRELBATCHSIZE  0.5   /**< the maximum batchsize relative to the original problem per iteration */
 #define DEFAULT_BATCHINGFACTOR   2.0   /**< the factor with which the batchsize is multiplied each iteration */
@@ -72,6 +73,7 @@ struct SCIP_IISfinderData
    SCIP_Bool             dynamicreordering;  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
 
    int                   initbatchsize;      /**< the initial batchsize for the first iteration */
+   SCIP_Real             initrelbatchsize;   /**< the initial batchsize relative to the original problem for the first iteration */
    int                   maxbatchsize;       /**< the maximum batchsize per iteration */
    SCIP_Real             maxrelbatchsize;    /**< the maximum batchsize relative to the original problem per iteration */
    SCIP_Real             batchingfactor;     /**< the factor with which the batchsize is multiplied each iteration */
@@ -878,6 +880,7 @@ SCIP_DECL_IISFINDEREXEC(iisfinderExecGreedy)
             iisfinderdata->delafteradd,
             iisfinderdata->dynamicreordering,
             iisfinderdata->initbatchsize,
+            iisfinderdata->initrelbatchsize,
             iisfinderdata->maxbatchsize,
             iisfinderdata->maxrelbatchsize,
             iisfinderdata->batchingfactor,
@@ -946,8 +949,13 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "iis/" IISFINDER_NAME "/initbatchsize",
-         "the initial batchsize for the first iteration",
+         "the initial batchsize for the first iteration, ignored if initrelbatchsize > 0",
          &iisfinderdata->initbatchsize, FALSE, DEFAULT_INITBATCHSIZE, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "iis/" IISFINDER_NAME "/initrelbatchsize",
+         "the initial batchsize relative to the original problem for the first iteration, ignored if <= 0",
+         &iisfinderdata->initrelbatchsize, FALSE, DEFAULT_INITRELBATCHSIZE, -1.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "iis/" IISFINDER_NAME "/maxbatchsize",
@@ -997,6 +1005,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
 
    int                   initbatchsize,      /**< the initial batchsize for the first iteration */
+   SCIP_Real             initrelbatchsize,   /**< the initial batchsize relative to the original problem for the first iteration */
    int                   maxbatchsize,       /**< the maximum batchsize per iteration */
    SCIP_Real             maxrelbatchsize,    /**< the maximum batchsize relative to the original problem per iteration */
    SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied each iteration */
@@ -1007,6 +1016,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
 {
    int nconss;
    int nvars;
+   int problemsize;
    SCIP* scip = SCIPiisGetSubscip(iis);
    SCIP_Bool alldeletionssolved = TRUE;
 
@@ -1018,7 +1028,15 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
 
    nconss = SCIPgetNOrigConss(scip);
    nvars = SCIPgetNOrigVars(scip);
-   initbatchsize = MIN(initbatchsize, MAX(nconss, nvars));
+   problemsize = MAX(nconss, nvars);
+
+   /* find the maximum batchsize w.r.t. problem size */
+   maxbatchsize = MIN( maxbatchsize, (int)SCIPceil(scip, maxrelbatchsize * problemsize) );
+
+   /* find the initial batchsize */
+   if( initrelbatchsize > 0 )
+      initbatchsize = (int)SCIPceil(scip, initrelbatchsize * problemsize);
+   initbatchsize = MIN(initbatchsize, problemsize);
    initbatchsize = MAX(initbatchsize, 1);
 
    if( additive )
