@@ -562,6 +562,8 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    {
       if( SCIPvarGetStatusExact(vars[i]) == SCIP_VARSTATUS_COLUMN )
       {
+         assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS);
+
          SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
          SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
 
