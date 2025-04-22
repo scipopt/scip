@@ -168,18 +168,19 @@ SCIP_RETCODE revertConssDeletions(
 
    assert( addconss || !keepptrs );
 
-   for (i = 0; i < ndelconss; ++i)
+   for( i = 0; i < ndelconss; ++i )
    {
       if( addconss )
          SCIP_CALL( SCIPaddCons(scip, conss[idxs[i]]) );
       if( keepptrs )
-         copycons = conss[idxs[i]];
-      SCIP_CALL( SCIPreleaseCons(scip, &conss[idxs[i]]) );
-      if( keepptrs )
       {
-         assert( addconss );
+         assert( SCIPconsGetNUses(conss[idxs[i]]) > 1 );
+         copycons = conss[idxs[i]];
+         SCIP_CALL( SCIPreleaseCons(scip, &conss[idxs[i]]) );
          conss[idxs[i]] = copycons;
       }
+      else
+         SCIP_CALL( SCIPreleaseCons(scip, &conss[idxs[i]]) );
    }
 
    return SCIP_OKAY;
