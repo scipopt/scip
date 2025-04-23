@@ -271,7 +271,5 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
    SCIP_CALL( SCIPincludeBendersDefault(scip) );
 
-   SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
-
    return SCIP_OKAY;
 }
