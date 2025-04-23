@@ -2571,8 +2571,16 @@ SCIP_RETCODE SCIPpresolve(
 
          if( SCIPprobIsObjIntegral(scip->transprob) )
          {
-            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-               "transformed objective value is always integral (scale: %.15g)\n", scip->transprob->objscale);
+            if( SCIPisExact(scip) )
+            {
+               SCIPrationalPrintf("transformed objective value is always integral (scale: %q)\n",
+                  scip->transprob->objscaleexact);
+            }
+            else
+            {
+               SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+                  "transformed objective value is always integral (scale: %.15g)\n", scip->transprob->objscale);
+            }
          }
       }
       else
