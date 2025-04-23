@@ -963,7 +963,7 @@ SCIP_RETCODE ComplementedMirLhs(
    newlhs = SCIPsetCeil(set, newlhs) + deltanewlhs;
    reasonrow->lhs = newlhs;
 
-   /* remove variables with zero coefficient. Loop backwards */
+   /* remove variables with zero coefficient. */
    conflictRowRemoveZeroVars(reasonrow, set);
 
    return SCIP_OKAY;
@@ -985,8 +985,6 @@ void linearCombRows(
    assert(row2 != NULL);
    assert(scale > 0.0);
 
-   conflictRowRemoveZeroVars(row1, set);
-
    /* add conflict and reason conflict rows; */
    for( i = 0; i < row2->nnz; ++i )
    {
@@ -1003,6 +1001,9 @@ void linearCombRows(
          row1->vals[idx] = row1->vals[idx] + scale * row2->vals[idx];
    }
    row1->lhs = row1->lhs + scale * row2->lhs;
+
+   /* remove variables with zero coefficient. */
+   conflictRowRemoveZeroVars(row1, set);
 }
 
 /** returns whether a bound change is resolvable or not */
@@ -2732,16 +2733,12 @@ SCIP_RETCODE rescaleAndResolve(
    {
       int idx;
       idx = resolvedrow->inds[i];
-      if( SCIPsetIsZero(set, resolvedrow->vals[idx] ) )
-      {
-         conflictRowRemoveZeroVar(resolvedrow, set, i);
-      }
-      else
-      {
-         smallestcoef = MIN(smallestcoef, resolvedrow->vals[idx]);
-         largestcoef = MAX(largestcoef, resolvedrow->vals[idx]);
-      }
+      assert(!SCIPsetIsZero(set, resolvedrow->vals[idx]));
+
+      smallestcoef = MIN(smallestcoef, resolvedrow->vals[idx]);
+      largestcoef = MAX(largestcoef, resolvedrow->vals[idx]);
    }
+
    SCIPsetDebugMsgPrint(set, "Nonzeros in resolved row: %d \n", resolvedrow->nnz);
 
    /* check if the quotient of coefficients in the resolvent exceeds the max allowed quotient */
@@ -2822,7 +2819,6 @@ SCIP_RETCODE resolveClauses(
          }
 
          linearCombRows(set, conflictrow, reasonrow, 1.0);
-         conflictRowRemoveZeroVars(conflictrow, set);
 
          assert(conflictrow->vals[residx] == 0);
 
@@ -3741,6 +3737,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
    if( nchgcoefs > 0 )
    {
+      /* remove variables with zero coefficients from the conflict row */
+      conflictRowRemoveZeroVars(conflictrow, set);
+
       SCIP_CALL( computeSlack(set, vars, conflictrow, bdchginfo, NULL, NULL) );
       /* the slack after coefficient tightening must also be negative */
       assert(SCIPsetIsLT(set, conflictrow->slack, 0.0));
@@ -3898,6 +3897,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
          if( nchgcoefs > 0 )
          {
             SCIP_Real previousslack;
+
+            /* remove variables with zero coefficients from the conflict row */
+            conflictRowRemoveZeroVars(conflictrow, set);
 
             /* The new slack should always be less or equal to the old slack */
             previousslack = conflictrow->slack;
