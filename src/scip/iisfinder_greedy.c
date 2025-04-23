@@ -174,10 +174,9 @@ SCIP_RETCODE revertConssDeletions(
          SCIP_CALL( SCIPaddCons(scip, conss[idxs[i]]) );
       if( keepptrs )
       {
-         assert( SCIPconsGetNUses(conss[idxs[i]]) > 1 );
          copycons = conss[idxs[i]];
-         SCIP_CALL( SCIPreleaseCons(scip, &conss[idxs[i]]) );
-         conss[idxs[i]] = copycons;
+         assert(SCIPconsGetNUses(copycons) > 1);
+         SCIP_CALL( SCIPreleaseCons(scip, &copycons) );
       }
       else
          SCIP_CALL( SCIPreleaseCons(scip, &conss[idxs[i]]) );
