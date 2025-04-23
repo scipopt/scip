@@ -1072,9 +1072,8 @@ SCIP_RETCODE constructProjectShiftDataLPIExact(
    SCIP_CALL( SCIPlpExactSyncLPs(lpexact, blkmem, set) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
-   assert(lpexact->nrows > 0);
-
    projshiftdata->nextendedrows = 2*lpexact->nrows + 2*lpexact->ncols;
+   assert(projshiftdata->nextendedrows > 1);
 
    /* call function to select the set S */
    SCIP_CALL( projectShiftChooseDualSubmatrix(lp, lpexact, set, stat, messagehdlr, eventqueue, prob, blkmem) );
