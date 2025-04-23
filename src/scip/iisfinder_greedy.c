@@ -1060,11 +1060,12 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    /* find the maximum batchsize w.r.t. problem size */
    maxrelbatchsize = SCIPceil(scip, maxrelbatchsize * problemsize);
    maxbatchsize = MIN(maxbatchsize, (int)maxrelbatchsize);
+   maxbatchsize = MAX(maxbatchsize, 1);
 
    /* find the initial batchsize */
    if( initrelbatchsize > 0 )
       initbatchsize = (int)SCIPceil(scip, initrelbatchsize * problemsize);
-   initbatchsize = MIN(initbatchsize, problemsize);
+   initbatchsize = MIN(initbatchsize, maxbatchsize);
    initbatchsize = MAX(initbatchsize, 1);
 
    if( additive )
