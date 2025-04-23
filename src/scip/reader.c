@@ -305,6 +305,7 @@ SCIP_RETCODE SCIPreaderWrite(
       SCIP_VAR** fixedvars;
       SCIP_CONS** conss;
       SCIP_CONS* cons;
+      SCIP_Real objoffset;
       SCIP_Real objscale;
       char* name;
       int nfixedvars;
@@ -508,17 +509,31 @@ SCIP_RETCODE SCIPreaderWrite(
          }
       }
 
+      /* get exact objective offset and scale */
+      if( set->exact_enable )
+      {
+         /**@todo write exact objoffset */
+         objoffset = SCIPrationalGetReal(SCIPprobGetObjoffsetExact(prob));
+         /**@todo write exact objscale */
+         objscale = SCIPrationalGetReal(SCIPprobGetObjscaleExact(prob));
+      }
+      /* get real objective offset and scale */
+      else
+      {
+         objoffset = SCIPprobGetObjoffset(prob);
+         objscale = SCIPprobGetObjscale(prob);
+      }
+
       /* adapt objective scale for transformed problem (for the original no change is necessary) */
-      objscale = SCIPprobGetObjscale(prob);
       if( SCIPprobIsTransformed(prob) && SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
          objscale *= -1.0;
 
       /* call reader to write problem */
-      retcode = reader->readerwrite(set->scip, reader, file, SCIPprobGetName(prob), SCIPprobGetData(prob), SCIPprobIsTransformed(prob),
-         SCIPprobGetObjsense(prob), objscale, SCIPprobGetObjoffset(prob),
-         vars, nvars, SCIPprobGetNBinVars(prob), SCIPprobGetNIntVars(prob), SCIPprobGetNImplVars(prob), SCIPprobGetNContVars(prob),
-         fixedvars, nfixedvars, SCIPprobGetStartNVars(prob),
-         conss, nconss, SCIPprobGetMaxNConss(prob), SCIPprobGetStartNConss(prob), genericnames, result);
+      retcode = reader->readerwrite(set->scip, reader, file, SCIPprobGetName(prob), SCIPprobGetData(prob),
+            SCIPprobIsTransformed(prob), SCIPprobGetObjsense(prob), objscale, objoffset, vars, nvars,
+            SCIPprobGetNBinVars(prob), SCIPprobGetNIntVars(prob), SCIPprobGetNImplVars(prob),
+            SCIPprobGetNContVars(prob), fixedvars, nfixedvars, SCIPprobGetStartNVars(prob), conss, nconss,
+            SCIPprobGetMaxNConss(prob), SCIPprobGetStartNConss(prob), genericnames, result);
 
       /* reset variable and constraint names to original names */
       if( genericnames )

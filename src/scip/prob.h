@@ -694,6 +694,16 @@ SCIP_Real SCIPprobGetObjscale(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** gets the exact objective offset */
+SCIP_RATIONAL* SCIPprobGetObjoffsetExact(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets the exact objective scalar */
+SCIP_RATIONAL* SCIPprobGetObjscaleExact(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 /** is constraint compression enabled for this problem? */
 SCIP_Bool SCIPprobIsConsCompressionEnabled(
    SCIP_PROB*            prob                /**< problem data */
@@ -736,6 +746,8 @@ void SCIPprobEnableConsCompression(
 #define SCIPprobGetObjsense(prob)       ((prob)->objsense)
 #define SCIPprobGetObjoffset(prob)      ((prob)->objoffset)
 #define SCIPprobGetObjscale(prob)       ((prob)->objscale)
+#define SCIPprobGetObjoffsetExact(prob) ((prob)->objoffsetexact)
+#define SCIPprobGetObjscaleExact(prob)  ((prob)->objscaleexact)
 #define SCIPprobIsConsCompressionEnabled(prob)  ((prob)->conscompression)
 #define SCIPprobEnableConsCompression(prob)  ((prob)->conscompression = TRUE)
 #endif

@@ -2751,6 +2751,8 @@ SCIP_RETCODE SCIPprobCollectStatistics(
 #undef SCIPprobGetObjsense
 #undef SCIPprobGetObjoffset
 #undef SCIPprobGetObjscale
+#undef SCIPprobGetObjoffsetExact
+#undef SCIPprobGetObjscaleExact
 #undef SCIPisConsCompressedEnabled
 #undef SCIPprobEnableConsCompression
 
@@ -2971,6 +2973,8 @@ SCIP_Real SCIPprobGetObjoffset(
    )
 {
    assert(prob != NULL);
+   assert(prob->objoffsetexact == NULL);
+
    return prob->objoffset;
 }
 
@@ -2980,7 +2984,31 @@ SCIP_Real SCIPprobGetObjscale(
    )
 {
    assert(prob != NULL);
+   assert(prob->objscaleexact == NULL);
+
    return prob->objscale;
+}
+
+/** gets the exact objective offset */
+SCIP_RATIONAL* SCIPprobGetObjoffsetExact(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   assert(prob->objoffsetexact != NULL);
+
+   return prob->objoffsetexact;
+}
+
+/** gets the exact objective scalar */
+SCIP_RATIONAL* SCIPprobGetObjscaleExact(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   assert(prob->objscaleexact != NULL);
+
+   return prob->objscaleexact;
 }
 
 /** is constraint compression enabled for this problem? */
