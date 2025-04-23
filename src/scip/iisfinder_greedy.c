@@ -1039,6 +1039,8 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    )
 {
    SCIP* scip;
+   int nconss;
+   int nvars;
    int problemsize;
    SCIP_Bool alldeletionssolved;
 
@@ -1050,7 +1052,10 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    assert( maxbatchsize > 0 );
 
    *result = SCIP_DIDNOTFIND;
-   problemsize = MAX(SCIPgetNOrigConss(scip), SCIPgetNOrigVars(scip));
+
+   nconss = SCIPgetNOrigVars(scip);
+   nvars = SCIPgetNOrigConss(scip);
+   problemsize = MAX(nconss, nvars);
 
    /* find the maximum batchsize w.r.t. problem size */
    maxrelbatchsize = SCIPceil(scip, maxrelbatchsize * problemsize);
