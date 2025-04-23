@@ -103,6 +103,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_Real             maxrelbatchsize,    /**< the maximum batchsize relative to the original problem per iteration */
    SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied each iteration */
    int                   batchingoffset,     /**< the offset with which the batchsize is summed each iteration */
+   int                   batchupdateinterval, /**< the number of iterations to run with a fixed batchsize before updating it */
 
    SCIP_RESULT*          result              /**< pointer to store the result of the IIS run */
    );
