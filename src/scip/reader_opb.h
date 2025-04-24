@@ -81,9 +81,12 @@ SCIP_RETCODE SCIPwriteOpb(
    const char*           name,               /**< problem name */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
-   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
-                                                  extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
+   SCIP_RATIONAL*        objoffsetexact,     /**< exact objective offset from bound shifting and fixing */
+   SCIP_RATIONAL*        objscaleexact,      /**< exact scalar applied to objective function; external objective value is
+                                              *   extobjexact = objsense * objscaleexact * (intobjexact + objoffsetexact) */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                   nvars,              /**< number of active variables in the problem */
    int                   nbinvars,           /**< number of binary variables */

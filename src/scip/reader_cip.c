@@ -1096,34 +1096,38 @@ SCIP_DECL_READERWRITE(readerWriteCip)
 
    SCIPinfoMessage(scip, file, "OBJECTIVE\n");
    SCIPinfoMessage(scip, file, "  Sense            : %s\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
-   /**@todo write exact offset */
-   /* if( objoffsetexact != NULL ) */
-   /* { */
-   /*    if( !SCIPrationalIsZero(objoffsetexact) ) */
-   /*    { */
-   /*       SCIPinfoMessage(scip, file, "  Offset           : "); */
-   /*       SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, objoffsetexact); */
-   /*       SCIPinfoMessage(scip, file, "\n"); */
-   /*    } */
-   /* } */
+   /* write exact offset */
+   if( objoffsetexact != NULL )
+   {
+      assert(SCIPisExact(scip));
+
+      if( !SCIPrationalIsZero(objoffsetexact) )
+      {
+         SCIPinfoMessage(scip, file, "  Offset           : ");
+         SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, objoffsetexact);
+         SCIPinfoMessage(scip, file, "\n");
+      }
+   }
    /* write real offset */
-   /* else */
+   else
    {
       if( objoffset != 0.0 ) /*lint !e777*/
          SCIPinfoMessage(scip, file, "  Offset           : %+.15g\n", objoffset);
    }
-   /**@todo write exact scale */
-   /* if( objscaleexact != NULL ) */
-   /* { */
-   /*    if( !SCIPrationalIsEQReal(objscaleexact, 1.0) ) */
-   /*    { */
-   /*       SCIPinfoMessage(scip, file, "  Scale            : "); */
-   /*       SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, objscaleexact); */
-   /*       SCIPinfoMessage(scip, file, "\n"); */
-   /*    } */
-   /* } */
+   /* write exact scale */
+   if( objscaleexact != NULL )
+   {
+      assert(SCIPisExact(scip));
+
+      if( !SCIPrationalIsEQReal(objscaleexact, 1.0) )
+      {
+         SCIPinfoMessage(scip, file, "  Scale            : ");
+         SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, objscaleexact);
+         SCIPinfoMessage(scip, file, "\n");
+      }
+   }
    /* write real scale */
-   /* else */
+   else
    {
       if( objscale != 1.0 ) /*lint !e777*/
          SCIPinfoMessage(scip, file, "  Scale            : %.15g\n", objscale);

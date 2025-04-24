@@ -4891,8 +4891,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
 
-   SCIP_CALL( SCIPwriteMps(scip, reader, file, name, transformed, objsense, objscale, objoffset, vars,
-         nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, result) );
+   SCIP_CALL( SCIPwriteMps(scip, reader, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,
+         vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, result) );
 
    return SCIP_OKAY;
 }
@@ -4977,7 +4977,6 @@ SCIP_RETCODE SCIPreadMps(
    return SCIP_OKAY;
 }
 
-
 /** writes problem to file */
 SCIP_RETCODE SCIPwriteMps(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4986,9 +4985,12 @@ SCIP_RETCODE SCIPwriteMps(
    const char*           name,               /**< problem name */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_RATIONAL*        objoffsetexact,     /**< exact objective offset from bound shifting and fixing */
+   SCIP_RATIONAL*        objscaleexact,      /**< exact scalar applied to objective function; external objective value is
+                                              *   extobjexact = objsense * objscaleexact * (intobjexact + objoffsetexact) */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                   nvars,              /**< number of active variables in the problem */
    int                   nbinvars,           /**< number of binary variables */
@@ -5068,6 +5070,20 @@ SCIP_RETCODE SCIPwriteMps(
 
    /* get implied integral level for writeVarIsIntegral() and printColumnSection() */
    SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
+
+   /**@todo write exact offset */
+   if( objoffsetexact != NULL )
+   {
+      assert(SCIPisExact(scip));
+      objoffset = SCIPrationalGetReal(objoffsetexact);
+   }
+
+   /**@todo write exact scale */
+   if( objscaleexact != NULL )
+   {
+      assert(SCIPisExact(scip));
+      objscale = SCIPrationalGetReal(objscaleexact);
+   }
 
    needRANGES = FALSE;
    maxnamelen = 0;

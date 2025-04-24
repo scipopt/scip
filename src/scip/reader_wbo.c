@@ -77,8 +77,8 @@ SCIP_DECL_READERREAD(readerReadWbo)
 static
 SCIP_DECL_READERWRITE(readerWriteWbo)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPwriteOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-         nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, genericnames, result) );
+   SCIP_CALL( SCIPwriteOpb(scip, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,
+         vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, genericnames, result) );
 
    return SCIP_OKAY;
 }
