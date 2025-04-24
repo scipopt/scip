@@ -318,15 +318,15 @@ SCIP_RETCODE SCIPrationalCreateString(
    const char*           desc                /**< the string describing the rational */
    );
 
-/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p str
+/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p desc
  *
  *  @return Returns TRUE if a value could be extracted, otherwise FALSE
  */
 SCIP_EXPORT
 SCIP_Bool SCIPstrToRationalValue(
-   char*                 str,                /**< string to search */
+   char*                 desc,               /**< string to search */
    SCIP_RATIONAL*        value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p desc */
    );
 
 /** resets the flag isfprepresentable to SCIP_ISFPREPRESENTABLE_UNKNOWN */
