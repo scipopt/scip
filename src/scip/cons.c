@@ -6238,17 +6238,35 @@ SCIP_RETCODE SCIPconsParse(
    /* scan constraint handler name */
    assert(str != NULL);
    SCIPstrCopySection(str, '[', ']', conshdlrname, SCIP_MAXSTRLEN, &endptr);
-   if ( endptr == NULL || endptr == str )
+   if( endptr == NULL || endptr == str )
    {
       SCIPmessagePrintWarning(messagehdlr, "Syntax error: Could not find constraint handler name.\n");
       return SCIP_OKAY;
    }
    assert(endptr != NULL);
+
+   /* allow parsing linear constraints exactly in exact solving mode */
+   if( set->exact_enable )
+   {
+      /* linear to exactlinear */
+      if( strcmp(conshdlrname, "linear") == 0 )
+         strcpy(conshdlrname, "exactlinear");
+   }
+#ifdef SCIP_DISABLED_CODE
+   /**@todo allow parsing exactlinear constraints approximately in real solving mode, but issue a warning message */
+   else
+   {
+      /* exactlinear to linear */
+      if( strcmp(conshdlrname, "exactlinear") == 0 )
+         strcpy(conshdlrname, "linear");
+   }
+#endif
+
    SCIPsetDebugMsg(set, "constraint handler name <%s>\n", conshdlrname);
 
    /* scan constraint name */
    SCIPstrCopySection(endptr, '<', '>', consname, SCIP_MAXSTRLEN, &endptr);
-   if ( endptr == NULL || endptr == str )
+   if( endptr == NULL || endptr == str )
    {
       SCIPmessagePrintWarning(messagehdlr, "Syntax error: Could not find constraint name.\n");
       return SCIP_OKAY;

@@ -270,13 +270,23 @@ SCIP_RETCODE SCIPrationalReallocArray(
    int                   newlen              /**< size of src array */
    )
 {
-   assert(newlen >= oldlen);
-
-   BMSreallocMemoryArray(result, newlen);
-
-   for( int i = oldlen; i < newlen; ++i )
+   if( newlen < oldlen )
    {
-      SCIP_CALL( SCIPrationalCreate(&(*result)[i]) );
+      for( int i = oldlen - 1; i >= newlen; --i )
+      {
+         SCIPrationalFree(*result + i);
+      }
+
+      SCIP_ALLOC( BMSreallocMemoryArray(result, newlen) );
+   }
+   else
+   {
+      SCIP_ALLOC( BMSreallocMemoryArray(result, newlen) );
+
+      for( int i = oldlen; i < newlen; ++i )
+      {
+         SCIP_CALL( SCIPrationalCreate(*result + i) );
+      }
    }
 
    return SCIP_OKAY;
@@ -290,13 +300,23 @@ SCIP_RETCODE SCIPrationalReallocBufferArray(
    int                   newlen              /**< size of src array */
    )
 {
-   assert(newlen >= oldlen);
-
-   BMSreallocBufferMemoryArray(mem, result, newlen);
-
-   for( int i = oldlen; i < newlen; ++i )
+   if( newlen < oldlen )
    {
-      SCIP_CALL( SCIPrationalCreateBuffer(mem, &(*result)[i]) );
+      for( int i = oldlen - 1; i >= newlen; --i )
+      {
+         SCIPrationalFreeBuffer(mem, *result + i);
+      }
+
+      SCIP_ALLOC( BMSreallocBufferMemoryArray(mem, result, newlen) );
+   }
+   else
+   {
+      SCIP_ALLOC( BMSreallocBufferMemoryArray(mem, result, newlen) );
+
+      for( int i = oldlen; i < newlen; ++i )
+      {
+         SCIP_CALL( SCIPrationalCreateBuffer(mem, *result + i) );
+      }
    }
 
    return SCIP_OKAY;
@@ -312,18 +332,20 @@ SCIP_RETCODE SCIPrationalReallocBlockArray(
 {
    if( newlen < oldlen )
    {
-      for( int i = newlen; i < oldlen; ++i )
+      for( int i = oldlen - 1; i >= newlen; --i )
       {
-         SCIPrationalFreeBlock(mem, &((*result)[i]));
+         SCIPrationalFreeBlock(mem, *result + i);
       }
+
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(mem, result, oldlen, newlen) );
    }
    else
    {
-      BMSreallocBlockMemoryArray(mem, result, oldlen, newlen);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(mem, result, oldlen, newlen) );
 
       for( int i = oldlen; i < newlen; ++i )
       {
-         SCIP_CALL( SCIPrationalCreateBlock(mem, &((*result)[i])) );
+         SCIP_CALL( SCIPrationalCreateBlock(mem, *result + i) );
       }
    }
 
@@ -789,49 +811,114 @@ SCIP_RETCODE SCIPrationalCreateString(
    return SCIP_OKAY;
 }
 
-/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p str
+/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p desc
  *
  *  @return Returns TRUE if a value could be extracted, otherwise FALSE
  */
 SCIP_Bool SCIPstrToRationalValue(
-   char*                 str,                /**< string to search */
+   char*                 desc,               /**< string to search */
    SCIP_RATIONAL*        value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p desc */
    )
 {
-   size_t endpos;
+   bool negative;
 
-   assert(str != nullptr);
-   assert(value != nullptr);
-   assert(endptr != nullptr);
+   assert(desc != NULL);
+   assert(value != NULL);
+   assert(endptr != NULL);
 
-   *endptr = str;
+   *endptr = desc;
 
-   if( *str == '-' || *str == '+' )
-      ++str;
-
-   endpos = strspn(str, "0123456789");
-
-   if( endpos == 0 )
-      return FALSE;
-
-   str += endpos;
-
-   if( *str == '/' )
+   switch( *desc )
    {
-      ++str;
-      endpos = strspn(str, "0123456789");
-
-      if( endpos == 0 )
-         return FALSE;
-
-      str += endpos;
+   case '-':
+      ++desc;
+      negative = true;
+      break;
+   case '+':
+      ++desc;
+      /*lint -fallthrough*/
+   default:
+      negative = false;
+      break;
    }
 
-   std::string s(*endptr, str);
+   if( *desc == '\0' || *desc == '/' )
+      return FALSE;
 
-   *endptr = str;
+   if( SCIPstrncasecmp(desc, "inf", 3) == 0 )
+   {
+      if( negative )
+         SCIPrationalSetNegInfinity(value);
+      else
+         SCIPrationalSetInfinity(value);
+
+      *endptr = desc + 2;
+
+      if( *(++(*endptr)) == 'i' )
+      {
+         if( *(++(*endptr)) == 'n' )
+         {
+            if( *(++(*endptr)) == 'i' )
+            {
+               if( *(++(*endptr)) == 't' )
+               {
+                  if( *(++(*endptr)) == 'y' )
+                     ++(*endptr);
+               }
+            }
+         }
+      }
+
+      return TRUE;
+   }
+
+   desc += strspn(desc, "0123456789");
+
+   /* parse rational format */
+   if( *desc == '/' )
+   {
+      ++desc;
+
+      if( *desc == '\0' )
+         return FALSE;
+
+      desc += strspn(desc, "0123456789");
+   }
+   /* parse real format */
+   else if( *desc != '\0' )
+   {
+      if( *desc == '.' )
+      {
+         int mantissalen;
+
+         ++desc;
+         mantissalen = strspn(desc, "0123456789");
+
+         if( mantissalen == 0 )
+            return FALSE;
+
+         desc += mantissalen;
+      }
+
+      if( *desc == 'e' || *desc == 'E' )
+      {
+         ++desc;
+
+         if( *desc == '-' || *desc == '+' )
+            ++desc;
+
+         if( *desc == '\0' )
+            return FALSE;
+
+         desc += strspn(desc, "0123456789");
+      }
+   }
+
+   std::string s(*endptr, desc);
+
    SCIPrationalSetString(value, s.c_str());
+   *endptr = desc;
 
    return TRUE;
 }

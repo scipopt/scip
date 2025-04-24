@@ -496,7 +496,7 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
          else
             SCIPinfoMessage(scip, file, " %+.15g", vals[v]);
       }
-      else if( nvars > 0 )
+      else if( v > 0 )
          SCIPinfoMessage(scip, file, " +");
 
       /* print variable name */
@@ -554,18 +554,13 @@ SCIP_RETCODE SCIPwriteVarsLinearsumExact(
             SCIPinfoMessage(scip, file, " -");
          else
          {
-            char buf[3 * SCIP_MAXSTRLEN];
-            int len;
-
-            len = SCIPrationalToString(vals[v], buf, 3 * SCIP_MAXSTRLEN);
-            if( len == SCIP_MAXSTRLEN )
-            {
-               SCIPerrorMessage("rational was truncated while printing\n");
-            }
-            SCIPinfoMessage(scip, file, " %s", buf);
+            SCIPinfoMessage(scip, file, " ");
+            if( !SCIPrationalIsNegative(vals[v]) )
+               SCIPinfoMessage(scip, file, "+");
+            SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, vals[v]);
          }
       }
-      else if( nvars > 0 )
+      else if( v > 0 )
          SCIPinfoMessage(scip, file, " +");
 
       /* print variable name */
