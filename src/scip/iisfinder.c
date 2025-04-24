@@ -418,7 +418,6 @@ SCIP_RETCODE SCIPiisGenerate(
       SCIP_CALL( SCIPsetIntParam(set->scip, "iis/greedy/maxbatchsize", 1) );
       SCIP_CALL( iisfindergreedy->iisfinderexec(iis, iisfindergreedy, timelim, nodelim, removebounds, silent, &result) );
       SCIP_CALL( SCIPsetIntParam(set->scip, "iis/greedy/maxbatchsize", initbatchsize) );
-      /* SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, 1e+20, FALSE, TRUE, TRUE, TRUE, -1L, 1, 1.0, &result) ); */
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
    }
 
