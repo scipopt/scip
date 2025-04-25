@@ -5561,41 +5561,35 @@ SCIP_RETCODE multiAggregateBinvar(
 
    assert(scip != NULL);
    assert(vars != NULL);
-   assert(nvars > 1);
-   assert(0 <= pos && pos < nvars);
+   assert(nvars >= 1);
+   assert(pos >= 0);
+   assert(pos < nvars);
    assert(infeasible != NULL);
    assert(aggregated != NULL);
 
-   if( nvars == 2 )
-   {
-      SCIP_Bool redundant;
-
-      /* perform aggregation on variables resulting from a set-packing constraint */
-      SCIP_CALL( SCIPaggregateVars(scip, vars[pos], vars[nvars - pos - 1], 1.0, 1.0, 1.0, infeasible, &redundant, aggregated) );
-
-      if( *aggregated )
-         SCIPdebugMsg(scip, "aggregated %s = 1 - %s\n", SCIPvarGetName(vars[pos]), SCIPvarGetName(vars[nvars - pos - 1]));
-
-      return SCIP_OKAY;
-   }
-
-   if( !linearconshdlrexist )
+   if( !linearconshdlrexist && nvars > 2 )
    {
       *infeasible = FALSE;
+      *aggregated = FALSE;
+
       return SCIP_OKAY;
    }
 
+   /* if the first variable will be multi-aggregated, we do not need to copy the variables */
+   if( pos == 0 )
+      tmpvars = vars + 1;
    /* if the last variable will be multi-aggregated, we do not need to copy the variables */
-   if( pos == nvars - 1 )
+   else if( pos == nvars - 1 )
       tmpvars = vars;
+   /* copy variables for aggregation */
    else
    {
-      /* copy variables for aggregation */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpvars, vars, nvars) );
-      tmpvars[pos] = tmpvars[nvars - 1];
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpvars, vars, nvars - 1) );
+      tmpvars[pos] = vars[nvars - 1];
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &scalars, nvars - 1) );
+
    /* initialize scalars */
    for( v = nvars - 2; v >= 0; --v )
       scalars[v] = -1.0;
@@ -5610,9 +5604,10 @@ SCIP_RETCODE multiAggregateBinvar(
 
    SCIPfreeBufferArray(scip, &scalars);
 
-   if( pos < nvars - 1 )
+   if( pos != 0 && pos != nvars - 1 )
    {
       assert(tmpvars != vars);
+      assert(tmpvars != vars + 1);
       SCIPfreeBufferArray(scip, &tmpvars);
    }
 
