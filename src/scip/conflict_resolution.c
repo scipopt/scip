@@ -2496,7 +2496,6 @@ SCIP_RETCODE conflictRowFromLpRow(
 /** get the reason for the given bound change */
 static
 SCIP_RETCODE getReasonRow(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2674,7 +2673,6 @@ SCIP_RETCODE executeResolutionStep(
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_BDCHGINFO*       currbdchginfo,      /**< current bound change to resolve */
    int                   residx,             /**< index of variable to resolve */
-   int                   validdepth,         /**< minimal depth level at which the conflict is valid */
    int                   maxsize,            /**< maximal size of conflict rows */
    SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
    int*                  fixsides,           /**< dense array of variables fixed to a bound */
@@ -2778,7 +2776,7 @@ SCIP_RETCODE executeResolutionStep(
 
             /* get reason row of the latest bdchginfo */
             conflictRowClear(blkmem, reasonrow, nvars);
-            SCIP_CALL( getReasonRow(conflict, blkmem, vars, set, continuousbdchginfo, reasonrow, varidx, fixbounds, fixsides,
+            SCIP_CALL( getReasonRow(blkmem, vars, set, continuousbdchginfo, reasonrow, varidx, fixbounds, fixsides,
                                     &successgetreason) );
             if( !successgetreason )
             {
@@ -3200,7 +3198,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          conflictRowClear(blkmem, conflict->reasonrow, nvars);
 
          /* get reason row of the latest bdchginfo */
-         SCIP_CALL( getReasonRow(conflict, blkmem, vars, set, bdchginfo, conflict->reasonrow, residx, fixbounds, fixsides,
+         SCIP_CALL( getReasonRow(blkmem, vars, set, bdchginfo, conflict->reasonrow, residx, fixbounds, fixsides,
                                  &successgetreason) );
          if( !successgetreason )
          {
@@ -3215,7 +3213,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          /* call resolution */
          SCIPsetDebugMsgPrint(set, " Applying resolution with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
-         SCIP_CALL( executeResolutionStep(conflict, set, vars, blkmem, bdchginfo, residx, validdepth, maxsize, fixbounds, fixsides, &successresolution ) );
+         SCIP_CALL( executeResolutionStep(conflict, set, vars, blkmem, bdchginfo, residx, maxsize, fixbounds, fixsides, &successresolution ) );
 
          if( successresolution )
             SCIP_CALL( conflictRowReplace(conflictrow, blkmem, resolvedconflictrow) );
