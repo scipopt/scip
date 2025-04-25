@@ -2472,13 +2472,7 @@ SCIP_RETCODE conflictQueueBound(
    if( success != NULL )
       *success = FALSE;
 
-   if( conflict->reasonclauseres )
-   {
-      /* insert the bound change into the separate queue */
-      assert(conflict->bdchgonlyresqueue);
-      SCIP_CALL( SCIPpqueueInsert(conflict->reasonbdchgqueue, (void*)bdchginfo) );
-   }
-   else if( set->conf_usegenres && !conflict->bdchgonlyconfqueue )
+   if( set->conf_usegenres && !conflict->bdchgonlyconfqueue )
    {
       if( !betterBoundInResolutionQueue(conflict, set, bdchginfo) )
       {
@@ -3405,7 +3399,6 @@ void conflictClearResolution(
 
    /* clear the resolution conflict analysis queues */
    SCIPpqueueClear(conflict->resbdchgqueue);
-   SCIPpqueueClear(conflict->reasonbdchgqueue);
 
    /* reset the current lower and upper bounds leading to conflict */
    if( set->conf_usegenres )

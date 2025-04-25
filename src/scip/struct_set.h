@@ -239,7 +239,6 @@ struct SCIP_Set
    SCIP_Bool             conf_cleanbnddepend;/**< should conflicts related to an old cutoff bound be removed? */
    SCIP_Bool             conf_useprop;       /**< should propagation conflict analysis be used? (uses conflict graph only) */
    SCIP_Bool             conf_usegenres;     /**< should generalized resolution conflict analysis be used? */
-   SCIP_Bool             conf_clausefallback;/**< should the clause version of generalized resolution conflict analysis be used as a fallback? */
    char                  conf_useinflp;      /**< should infeasible LP conflict analysis be used?
                                               *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
                                               */

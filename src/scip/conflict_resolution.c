@@ -819,12 +819,7 @@ void conflictRowRemoveZeroVars(
 }
 
 
-/** complement and apply MIR to the reason constraint lhs <= a^T x
- *
- *  We complement a variable x_i:
- *  if a_i > 0 and x_i is not fixed to 0
- *  if a_i < 0 and x_i is fixed to 1
-*/
+/** complement and apply MIR to a 0-1 reason constraint lhs <= a^T x */
 static
 SCIP_RETCODE ComplementedMirLhs(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1023,17 +1018,7 @@ SCIP_Bool isResolvableBdchg(
       return FALSE;
    /* propagation */
    else if( bdchgtype == SCIP_BOUNDCHGTYPE_PROPINFER )
-   {
-      /* todo also other propagators can be resolved */
-      if( SCIPbdchginfoGetInferProp(bdchginfo) == NULL )
-         return FALSE;
-      else if( strcmp(SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo)), "pseudoobj") == 0 )
-         return TRUE;
-      else if( strcmp(SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo)), "vbounds") == 0 )
-         return TRUE;
-      else
-         return FALSE;
-   }
+      return FALSE;
    /* constraint */
    assert(bdchgtype == SCIP_BOUNDCHGTYPE_CONSINFER);
    conshdlr = SCIPconsGetHdlr(SCIPbdchginfoGetInferCons(bdchginfo));
@@ -1043,61 +1028,6 @@ SCIP_Bool isResolvableBdchg(
       return FALSE;
 
    return TRUE;
-}
-
-/** returns whether we can extract the reason bound changes leading to the
- *  implication of bdchginfo by reverse propagation */
-static
-SCIP_Bool reasonIsLinearizable(
-   SCIP_BDCHGINFO*       bdchginfo           /**< bound change to check */
-   )
-{
-   SCIP_BOUNDCHGTYPE bdchgtype;
-
-   bdchgtype = SCIPbdchginfoGetChgtype(bdchginfo);
-   if( bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
-      return FALSE;
-   else if( bdchgtype == SCIP_BOUNDCHGTYPE_PROPINFER )
-   {
-      if( SCIPbdchginfoGetInferProp(bdchginfo) == NULL )
-         return FALSE;
-      else if( strcmp(SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo)), "pseudoobj") == 0 )
-         return TRUE;
-      else
-         return FALSE;
-   }
-   else
-   {
-      SCIP_CONSHDLR *conshdlr;
-      const char* conshdlrname;
-      assert(bdchgtype == SCIP_BOUNDCHGTYPE_CONSINFER);
-      conshdlr = SCIPconsGetHdlr(SCIPbdchginfoGetInferCons(bdchginfo));
-      conshdlrname = SCIPconshdlrGetName(conshdlr);
-
-      if( strcmp(conshdlrname, "linear") == 0 )
-         return TRUE;
-      else if( strcmp(conshdlrname, "setppc") == 0 )
-         return TRUE;
-      else if( strcmp(conshdlrname, "logicor") == 0 )
-         return TRUE;
-      else if( strcmp(conshdlrname, "knapsack") == 0 )
-         return TRUE;
-      else if( strcmp(conshdlrname, "varbound") == 0 )
-         return FALSE;
-      else if( strcmp(conshdlrname, "orbisack") == 0 )
-         return TRUE;
-      else if( strcmp(conshdlrname, "orbitope") == 0 )
-         return TRUE;
-      else if( strcmp(conshdlrname, "and") == 0 )
-         return TRUE;
-      if( strcmp(conshdlrname, "xor") == 0 )
-         return TRUE;
-      if( strcmp(conshdlrname, "or") == 0 )
-         return TRUE;
-      if( strcmp(conshdlrname, "bounddisjunction") == 0 )
-         return TRUE;
-   }
-   return FALSE;
 }
 
 /** returns whether there exists a resolvable bound change or not */
@@ -2262,419 +2192,6 @@ SCIP_Real computeScaleReason(
 
 }
 
-/* get a clause out of the current bound changes and the fixed bounds */
-static
-SCIP_RETCODE getConflictClause(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_VAR**            vars,               /**< array of variables */
-   SCIP_BDCHGINFO*       currbdchginfo,      /**< bound change to resolve */
-   SCIP_Bool*            success,            /**< pointer to store whether we could find an  initial conflict */
-   SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
-   int*                  fixsides,           /**< dense array of variables fixed to a bound */
-   int                   nvars,              /**< number of variables */
-   SCIP_Bool             initial             /**< whether we are in the initialization conflict analysis */
-   )
-{
-   SCIPsetDebugMsgPrint(set, "Getting conflict clause: \n");
-
-   *success = FALSE;
-
-   if( !set->conf_clausefallback )
-      return SCIP_OKAY;
-
-   if( SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) && SCIPsetGetStage(set) == SCIP_STAGE_SOLVING )
-   {
-      SCIP_CONFLICTROW* conflictrow;
-      int* includeinconflict;
-      SCIP_Bool isbinary;
-      SCIP_Real lhs;
-      int nfixsides;
-      int pos;
-      int idx;
-
-      conflictrow = conflict->conflictrow;
-      isbinary = TRUE;
-      lhs = 1.0;
-      nfixsides = 0;
-
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &includeinconflict, SCIPpqueueNElems(conflict->resbdchgqueue)) );
-      /** given the set of bound changes that renders infeasibility we can create a no-good cut
-       *  as initial conflict. E.g. if x = 1, y = 1, z = 0 leads to infeasibility,
-       *  then the initial conflict constraint is (1 - x) + (1 - y) + z >= 1
-       */
-      for( int i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); i++ )
-      {
-         SCIP_BDCHGINFO* bdchginfo;
-         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
-         if( initial || isBdchgConflictRelevant(conflict, bdchginfo, FALSE) )
-         {
-            includeinconflict[i] = 1;
-            if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)) )
-            {
-               isbinary = FALSE;
-               break;
-            }
-            if( SCIPbdchginfoGetNewbound(bdchginfo) >= 0.5 )
-               lhs--;
-         }
-         else
-            includeinconflict[i] = 0;
-      }
-
-      if( isbinary && fixsides != NULL )
-      {
-         for( int i = 0; i < nvars; i++ )
-         {
-            if( fixsides[i] != 0 )
-            {
-               if( !SCIPvarIsBinary(vars[i]) )
-               {
-                  isbinary = FALSE;
-                  break;
-               }
-               if( fixbounds[i] >= 0.5 )
-                  lhs--;
-               nfixsides++;
-            }
-         }
-      }
-
-      if( isbinary )
-      {
-         /* clear the row before creating a new row for the clause */
-         conflictRowClear(blkmem, conflictrow, nvars);
-
-         conflictrow->nnz = SCIPpqueueNElems(conflict->resbdchgqueue) + 1 + nfixsides;
-         conflictrow->lhs = lhs;
-
-         if( conflictrow->size == 0 )
-         {
-            assert(conflictrow->inds == NULL);
-
-            SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictrow->inds, conflictrow->nnz) );
-            conflictrow->size = conflictrow->nnz;
-         }
-         else if( conflictrow->size < conflictrow->nnz )
-         {
-            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictrow->inds, conflictrow->size, conflictrow->nnz) );
-            conflictrow->size = conflictrow->nnz;
-         }
-
-         idx = SCIPvarGetProbindex(SCIPbdchginfoGetVar(currbdchginfo));
-         /* for the current bound change */
-         if( SCIPbdchginfoGetNewbound(currbdchginfo) > 0.5 )
-         {
-            conflictrow->vals[idx] = -1.0;
-            conflictrow->lhs -= 1.0;
-         }
-         else
-            conflictrow->vals[idx] = 1.0;
-
-         conflictrow->inds[0] = SCIPvarGetProbindex(SCIPbdchginfoGetVar(currbdchginfo));
-         pos = 1;
-
-         if( fixsides != NULL )
-         {
-            for( int i = 0; i < nvars; i++ )
-            {
-               if( fixsides[i] != 0 )
-               {
-                  conflictrow->vals[i] = fixbounds[i] > 0.5 ? -1.0 : 1.0;
-                  conflictrow->inds[pos] = i;
-                  pos++;
-               }
-            }
-         }
-
-         for( int i = 0; i < SCIPpqueueNElems(conflict->resbdchgqueue); i++ )
-         {
-            SCIP_BDCHGINFO* bdchginfo;
-            bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
-            if( includeinconflict[i] == 1 )
-            {
-               idx = SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo));
-               conflictrow->vals[idx] = SCIPbdchginfoGetNewbound(bdchginfo) > 0.5 ? -1.0 : 1.0;
-               conflictrow->inds[pos] = idx;
-               pos++;
-            }
-            else
-               conflictrow->nnz--;
-         }
-         *success = TRUE;
-      }
-      SCIPsetFreeBufferArray(set, &includeinconflict);
-   }
-   if( !(*success) )
-      SCIPsetDebugMsgPrint(set, " \t -> cannot create clause because of non-binary variable \n");
-   return SCIP_OKAY;
-}
-
-/** tries to resolve given bound change */
-static
-SCIP_RETCODE reasonBoundChanges(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_BDCHGINFO*       bdchginfo,          /**< bound change to resolve */
-   SCIP_Real             relaxedbd,          /**< the relaxed bound */
-   int                   validdepth,         /**< minimal depth level at which the conflict is valid */
-   SCIP_Bool*            resolved            /**< pointer to store whether the bound change was resolved */
-   )
-{
-   SCIP_VAR* actvar;
-   SCIP_CONS* infercons;
-   SCIP_PROP* inferprop;
-   SCIP_RESULT result;
-
-   assert(conflict != NULL);
-   assert(!SCIPbdchginfoIsRedundant(bdchginfo));
-
-   *resolved = FALSE;
-
-   actvar = SCIPbdchginfoGetVar(bdchginfo);
-   assert(actvar != NULL);
-   assert(SCIPvarIsActive(actvar));
-
-   /* check, if the bound change can and should be resolved:
-    *  - the reason must be either a global constraint
-    *  - or a propagator
-    */
-   switch(SCIPbdchginfoGetChgtype(bdchginfo))
-   {
-   case SCIP_BOUNDCHGTYPE_CONSINFER:
-      infercons = SCIPbdchginfoGetInferCons(bdchginfo);
-      assert(infercons != NULL);
-
-      if( SCIPconsIsGlobal(infercons) || SCIPconsGetValidDepth(infercons) <= validdepth )
-      {
-         SCIP_VAR* infervar;
-         int inferinfo;
-         SCIP_BOUNDTYPE inferboundtype;
-         SCIP_BDCHGIDX* bdchgidx;
-
-         /* resolve bound change by asking the constraint that infered the bound to put all bounds that were
-          * the reasons for the conflicting bound change on the priority queue
-          */
-         infervar = SCIPbdchginfoGetInferVar(bdchginfo);
-         inferinfo = SCIPbdchginfoGetInferInfo(bdchginfo);
-         inferboundtype = SCIPbdchginfoGetInferBoundtype(bdchginfo);
-         bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-         assert(infervar != NULL);
-
-         SCIPsetDebugMsgPrint(set, " \t -> getting reason for <%s> %s %g(%g) [status:%d, type:%d, depth:%d, pos:%d]: <%s> %s %g [cons:<%s>(%s), info:%d]\n",
-            SCIPvarGetName(actvar),
-            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            SCIPbdchginfoGetNewbound(bdchginfo), relaxedbd,
-            SCIPvarGetStatus(actvar), SCIPvarGetType(actvar),
-            SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
-            SCIPvarGetName(infervar),
-            inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            SCIPgetVarBdAtIndex(set->scip, infervar, inferboundtype, bdchgidx, TRUE),
-            SCIPconsGetName(infercons),
-            SCIPconsIsGlobal(infercons) ? "global" : "local",
-            inferinfo);
-
-         /* in case the inference variables is not an active variables, we need to transform the relaxed bound */
-         if( actvar != infervar )
-         {
-            SCIP_VAR* var;
-            SCIP_Real scalar;
-            SCIP_Real constant;
-
-            assert(SCIPvarGetStatus(infervar) == SCIP_VARSTATUS_AGGREGATED
-               || SCIPvarGetStatus(infervar) == SCIP_VARSTATUS_NEGATED
-               || (SCIPvarGetStatus(infervar) == SCIP_VARSTATUS_MULTAGGR && SCIPvarGetMultaggrNVars(infervar) == 1));
-
-            scalar = 1.0;
-            constant = 0.0;
-
-            var = infervar;
-
-            /* transform given varibale to active varibale */
-            SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &constant) );
-            assert(var == actvar);
-
-            relaxedbd *= scalar;
-            relaxedbd += constant;
-         }
-
-         conflict->reasonclauseres = TRUE;
-         SCIP_CALL( SCIPconsResolvePropagation(infercons, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, &result) );
-         *resolved = (result == SCIP_SUCCESS);
-         conflict->reasonclauseres = FALSE;
-
-      }
-      break;
-
-   case SCIP_BOUNDCHGTYPE_PROPINFER:
-      inferprop = SCIPbdchginfoGetInferProp(bdchginfo);
-      if( inferprop != NULL )
-      {
-         SCIP_VAR* infervar;
-         int inferinfo;
-         SCIP_BOUNDTYPE inferboundtype;
-         SCIP_BDCHGIDX* bdchgidx;
-
-         /* resolve bound change by asking the propagator that infered the bound to put all bounds that were
-          * the reasons for the conflicting bound change on the priority queue
-          */
-         infervar = SCIPbdchginfoGetInferVar(bdchginfo);
-         inferinfo = SCIPbdchginfoGetInferInfo(bdchginfo);
-         inferboundtype = SCIPbdchginfoGetInferBoundtype(bdchginfo);
-         bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-         assert(infervar != NULL);
-
-         SCIPsetDebugMsgPrint(set, " \t -> getting reason for <%s> %s %g(%g) [status:%d, depth:%d, pos:%d]: <%s> %s %g [prop:<%s>, info:%d]\n",
-            SCIPvarGetName(actvar),
-            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            SCIPbdchginfoGetNewbound(bdchginfo), relaxedbd,
-            SCIPvarGetStatus(actvar), SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
-            SCIPvarGetName(infervar),
-            inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            SCIPgetVarBdAtIndex(set->scip, infervar, inferboundtype, bdchgidx, TRUE),
-            SCIPpropGetName(inferprop), inferinfo);
-
-         conflict->reasonclauseres = TRUE;
-         SCIP_CALL( SCIPpropResolvePropagation(inferprop, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, &result) );
-         *resolved = (result == SCIP_SUCCESS);
-         conflict->reasonclauseres = FALSE;
-      }
-      break;
-
-   case SCIP_BOUNDCHGTYPE_BRANCHING:
-      assert(!(*resolved));
-      break;
-
-   default:
-      SCIPerrorMessage(" \t -> invalid bound change type <%d>\n", SCIPbdchginfoGetChgtype(bdchginfo));
-      return SCIP_INVALIDDATA;
-   }
-
-   SCIPsetDebugMsgPrint(set, " \t -> resolving status: %u\n", *resolved);
-
-   /* in case the bound change was not resolved, the reason bound change queue should have zero elements */
-   assert((*resolved) || (SCIPpqueueNElems(conflict->reasonbdchgqueue) == 0));
-
-   return SCIP_OKAY;
-}
-
-/** get a conflict row from bound changes */
-static
-SCIP_RETCODE getReasonClause(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_BDCHGINFO*       currbdchginfo,      /**< bound change to resolve */
-   SCIP_Real             relaxedbd,          /**< the relaxed bound */
-   int                   validdepth,         /**< minimal depth level at which the conflict is valid */
-   SCIP_Bool*            success             /**< pointer to store whether we could find a reason*/
-   )
-{
-   SCIPsetDebugMsgPrint(set, "Getting reason clause: \n");
-
-   *success = FALSE;
-
-   if( !set->conf_clausefallback )
-      return SCIP_OKAY;
-
-   /* if the current bound change is on a non-binary variable then we cannot find a linear reason */
-   if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(currbdchginfo)) || !reasonIsLinearizable(currbdchginfo) )
-   {
-      SCIPsetDebugMsgPrint(set, " \t -> cannot create clause because of non-binary variable \n");
-      return SCIP_OKAY;
-   }
-   /* make sure that the reason bound change queue is empty */
-   if( SCIPpqueueNElems(conflict->reasonbdchgqueue) != 0 )
-      SCIPpqueueClear(conflict->reasonbdchgqueue);
-
-   SCIP_CALL( reasonBoundChanges(conflict, set, currbdchginfo, relaxedbd, validdepth, success) );
-   if( !(*success) || SCIPpqueueNElems(conflict->reasonbdchgqueue) == 0 )
-   {
-      *success = FALSE;
-      SCIPsetDebugMsgPrint(set, " \t -> cannot create clause because of unresolvable bound change \n");
-      return SCIP_OKAY;
-   }
-   else
-   {
-      SCIP_CONFLICTROW* reasonrow;
-      SCIP_Bool isbinary;
-      SCIP_Real lhs;
-
-      reasonrow = conflict->reasonrow;
-      *success = FALSE;
-      isbinary = TRUE;
-      lhs = 1.0;
-
-      /** given the set of bound changes that leads to propagation of the current
-       *  bound change, create a clause reason conflict row
-       *  E.g. if x = 1, y = 1, leads to z = 0 then the reason
-       *  constraint is (1 - x) + (1 - y) + (1 - z) >= 1
-       */
-      for( int i = 0; i < SCIPpqueueNElems(conflict->reasonbdchgqueue); i++ )
-      {
-         SCIP_BDCHGINFO* bdchginfo;
-         bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->reasonbdchgqueue)[i]);
-
-         if( !SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)) )
-         {
-            isbinary = FALSE;
-            break;
-         }
-         if( SCIPbdchginfoGetNewbound(bdchginfo) == 1.0 )
-            lhs--;
-      }
-
-      if( isbinary )
-      {
-         int idx;
-
-         for( int i = 0; i < reasonrow->nnz; i++ )
-            reasonrow->vals[reasonrow->inds[i]] = 0.0;
-
-         reasonrow->nnz = SCIPpqueueNElems(conflict->reasonbdchgqueue) + 1;
-         reasonrow->lhs = lhs;
-
-         if( reasonrow->size == 0 )
-         {
-            assert(reasonrow->inds == NULL);
-
-            SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reasonrow->inds, reasonrow->nnz) );
-            reasonrow->size = reasonrow->nnz;
-         }
-
-         else if( reasonrow->size < reasonrow->nnz )
-         {
-            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reasonrow->inds, reasonrow->size, reasonrow->nnz) );
-            reasonrow->size = reasonrow->nnz;
-         }
-         /* add the variable we are resolving and update lhs */
-         reasonrow->inds[0] = SCIPvarGetProbindex(SCIPbdchginfoGetVar(currbdchginfo));
-         idx = reasonrow->inds[0];
-         reasonrow->vals[idx] = SCIPbdchginfoGetNewbound(currbdchginfo) > 0.5 ? 1.0 : -1.0;
-
-         reasonrow->lhs += SCIPbdchginfoGetNewbound(currbdchginfo) > 0.5 ? 0.0 : -1.0;
-
-         for( int i = 0; i < reasonrow->nnz - 1; i++ )
-         {
-            SCIP_BDCHGINFO* bdchginfo;
-            bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->reasonbdchgqueue)[i]);
-            reasonrow->inds[i+1] = SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo));
-            idx = reasonrow->inds[i+1];
-            reasonrow->vals[idx] = SCIPbdchginfoGetNewbound(bdchginfo) > 0.5 ? -1.0 : 1.0;
-         }
-         *success = TRUE;
-      }
-   }
-   if( !(*success) )
-   {
-       SCIPsetDebugMsgPrint(set, " \t -> cannot create clause because of non-binary variable \n");
-      return SCIP_OKAY;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** compute the resolved conflict row resolvedrow = row1 + scale * row2 */
 static
 SCIP_RETCODE rescaleAndResolve(
@@ -2752,80 +2269,6 @@ SCIP_RETCODE rescaleAndResolve(
    }
 
    *success = TRUE;
-
-   return SCIP_OKAY;
-}
-
-/** clause based resolution */
-static
-SCIP_RETCODE resolveClauses(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_VAR**            vars,               /**< array of variables */
-   SCIP_BDCHGINFO*       currbdchginfo,      /**< bound change to resolve */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   int                   residx,             /**< index of variable to resolve */
-   int                   nvars,              /**< number of variables */
-   SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
-   int*                  fixsides,           /**< dense array of variables fixed to a bound */
-   SCIP_Bool*            success             /**< apply resolution */
-   )
-{
-   SCIP_Bool successclause;
-
-   SCIPsetDebugMsgPrint(set, "Apply clause weakening for both conflict and reason \n");
-
-   *success = FALSE;
-
-   if( !set->conf_clausefallback )
-      return SCIP_OKAY;
-
-   /* first construct a conflict clause out of fixed bounds, current bound to
-    * resolve, and bounds in the queue */
-   SCIP_CALL( getConflictClause(conflict, blkmem, set, vars, currbdchginfo, &successclause, fixbounds, fixsides, nvars, FALSE) );
-   if( successclause )
-   {
-      SCIP_CONFLICTROW* conflictrow;
-      SCIP_CONFLICTROW* reasonrow;
-
-      conflictrow = conflict->conflictrow;
-      reasonrow = conflict->reasonrow;
-      SCIPsetDebugMsgPrint(set, "Clausal Conflict Row:  \n");
-      SCIPdebug(printConflictRow(conflict->conflictrow, set, vars, CONFLICT_ROWTYPE));
-
-#ifndef SCIP_DEBUG
-      SCIP_CALL( computeSlack(set, vars, conflictrow, currbdchginfo, fixbounds, fixsides) );
-      assert(SCIPsetIsRelEQ(set, conflictrow->slack, -1.0));
-#endif
-      conflictrow->slack = -1.0;
-
-      /* get reason clause by resolving propagation */
-      SCIP_CALL( getReasonClause(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetNewbound(currbdchginfo), 0, &successclause) );
-      if( successclause )
-      {
-         int newsize;
-
-#ifndef SCIP_DEBUG
-         SCIP_CALL( computeSlack(set, vars, reasonrow, currbdchginfo, fixbounds, fixsides) );
-         assert(SCIPsetIsRelEQ(set, reasonrow->slack, 0.0));
-#endif
-         reasonrow->slack = 0.0;
-
-         /* make sure enough memory is allocated for the resolved conflict row */
-         newsize = conflictrow->nnz + reasonrow->nnz;
-         if( conflictrow->size < newsize )
-         {
-            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictrow->inds, conflictrow->size, newsize ) );
-            conflictrow->size = newsize;
-         }
-
-         linearCombRows(set, conflictrow, reasonrow, 1.0);
-
-         assert(conflictrow->vals[residx] == 0);
-
-         *success = TRUE;
-      }
-   }
 
    return SCIP_OKAY;
 }
@@ -3060,7 +2503,6 @@ SCIP_RETCODE getReasonRow(
    SCIP_BDCHGINFO*       currbdchginfo,      /**< bound change to resolve */
    SCIP_CONFLICTROW*     reasonrow,          /**< reason row for the bound change */
    int                   residx,             /**< index of the bound change to resolve */
-   int                   validdepth,         /**< minimal depth level at which the conflict is valid */
    SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
    int*                  fixsides,           /**< dense array of variables fixed to a bound */
    SCIP_Bool*            success             /**< pointer to store whether we could get a linear reason */
@@ -3086,21 +2528,10 @@ SCIP_RETCODE getReasonRow(
       /* get the corresponding reason row */
       reasonlprow = SCIPconsCreateRow(set->scip, reasoncon);
 
-      /* in case of orbitope-, orbisack-, and-constaints we construct a linearized clause as reason */
       if( reasonlprow == NULL )
       {
-         SCIP_CALL( getReasonClause(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetNewbound(currbdchginfo), validdepth, success) );
-         if( *success )
-         {
-#ifndef SCIP_DEBUG
-            SCIP_CALL( computeSlack(set, vars, reasonrow, currbdchginfo, fixbounds, fixsides) );
-            assert(SCIPsetIsZero(set, reasonrow->slack));
-#endif
-            reasonrow->slack = 0.0;
-            return SCIP_OKAY;
-         }
-         else
-            return SCIP_OKAY;
+         SCIPsetDebugMsgPrint(set, "Could not create row for reason constraint \n");
+         return SCIP_OKAY;
       }
 
       /* get the conflict row of the reason row */
@@ -3116,18 +2547,8 @@ SCIP_RETCODE getReasonRow(
       }
       else if( SCIPsetIsInfinity(set, -reasonrow->lhs) || SCIPsetIsInfinity(set, reasonrow->lhs) )
       {
-         /* to be able to continue we construct a linearized clause as reason */
-         SCIP_CALL( getReasonClause(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetNewbound(currbdchginfo), validdepth, success) );
-         if( *success )
-         {
-#ifndef SCIP_DEBUG
-            SCIP_CALL( computeSlack(set, vars, reasonrow, currbdchginfo, fixbounds, fixsides) );
-            assert(SCIPsetIsZero(set, reasonrow->slack));
-#endif
-            reasonrow->slack = 0.0;
-         }
+         *success = FALSE;
          return SCIP_OKAY;
-
       }
 
       SCIP_CALL( computeSlack(set, vars, reasonrow, currbdchginfo, fixbounds, fixsides) );
@@ -3152,34 +2573,11 @@ SCIP_RETCODE getReasonRow(
 
          if( !SCIPsetIsLT(set, reasonrow->slack - coef * (boundusedinslack - SCIPbdchginfoGetOldbound(currbdchginfo)), 0.0) )
          {
-
-            assert((strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0) || (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "linear") == 0));
-            SCIP_CALL( getReasonClause(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetNewbound(currbdchginfo), validdepth, success) );
-
-            if( *success )
-            {
-#ifndef SCIP_DEBUG
-               SCIP_CALL( computeSlack(set, vars, reasonrow, currbdchginfo, fixbounds, fixsides) );
-               assert(SCIPsetIsZero(set, reasonrow->slack));
-#endif
-               reasonrow->slack = 0.0;
-            }
+            SCIPsetDebugMsgPrint(set, "Reason row does not propagate because of non-linear propagation \n");
+            *success = FALSE;
             return SCIP_OKAY;
          }
       }
-   }
-   else if( isResolvableBdchg(currbdchginfo) && SCIPbdchginfoGetChgtype(currbdchginfo) == SCIP_BOUNDCHGTYPE_PROPINFER )
-   {
-      SCIP_CALL( getReasonClause(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetNewbound(currbdchginfo), validdepth, success) );
-      if( *success )
-      {
-#ifndef SCIP_DEBUG
-         SCIP_CALL( computeSlack(set, vars, reasonrow, currbdchginfo, fixbounds, fixsides) );
-         assert(SCIPsetIsZero(set, reasonrow->slack));
-#endif
-         reasonrow->slack = 0.0;
-      }
-      return SCIP_OKAY;
    }
    else
    {
@@ -3243,35 +2641,15 @@ SCIP_RETCODE getConflictRow(
       SCIP_CALL( computeSlack(set, vars, conflictrow, currbdchginfo, NULL, NULL) );
    }
 
-   /** if no row exists create the conflict row (if possible) from the bound changes that lead to infeasibility
-    * Moreover the slack should be negative. If it is not (for some good reason) create again the conflict row
-    * (if possible) from the bound changes.
-    * The only cases where this may not be true is if the conflict is found by some non-linear propagation argument:
+   /** The conflict row might not be infeasible.
+    *  This may not be true is if the conflict is found by some non-linear propagation argument:
     *  - by a negated clique in the knapsack constraint handler
-    *  - by propagating a ranged row (gcd argument)
+    *  - by propagating a ranged row with a gcd argument
     */
    if( initialconflictrow == NULL || SCIPsetIsGE(set, conflictrow->slack, 0.0) )
    {
-      SCIP_Bool successclause;
-      SCIP_CONSHDLR* conshdlr;
-
-      if( initialconflictrow != NULL )
-      {
-         SCIPsetDebugMsgPrint(set, "Slack of conflict constraint is not negative \n");
-         conshdlr = SCIProwGetOriginConshdlr(initialconflictrow);
-         SCIPsetDebugMsgPrint(set, "%s",SCIPconshdlrGetName(conshdlr));
-         /* relaxed assertion */
-         assert(strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 || strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0);
-      }
-
-      SCIP_CALL( getConflictClause(conflict, blkmem, set, vars, currbdchginfo, &successclause, NULL, NULL, prob->nvars, TRUE) );
-      if( !successclause )
-      {
-         SCIPsetDebugMsgPrint(set, "Initial conflict clause could not be retrieved \n");
-         return SCIP_OKAY;
-      }
-      SCIP_CALL( computeSlack(set, vars, conflictrow, currbdchginfo, NULL, NULL) );
-      assert(conflictrow->slack == -1.0);
+      SCIPsetDebugMsgPrint(set, "Initial conflict could not be retrieved \n");
+      return SCIP_OKAY;
    }
 
    /* check once more if the initial conflict is too long */
@@ -3400,7 +2778,7 @@ SCIP_RETCODE executeResolutionStep(
 
             /* get reason row of the latest bdchginfo */
             conflictRowClear(blkmem, reasonrow, nvars);
-            SCIP_CALL( getReasonRow(conflict, blkmem, vars, set, continuousbdchginfo, reasonrow, varidx, validdepth, fixbounds, fixsides,
+            SCIP_CALL( getReasonRow(conflict, blkmem, vars, set, continuousbdchginfo, reasonrow, varidx, fixbounds, fixsides,
                                     &successgetreason) );
             if( !successgetreason )
             {
@@ -3822,7 +3200,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          conflictRowClear(blkmem, conflict->reasonrow, nvars);
 
          /* get reason row of the latest bdchginfo */
-         SCIP_CALL( getReasonRow(conflict, blkmem, vars, set, bdchginfo, conflict->reasonrow, residx, validdepth, fixbounds, fixsides,
+         SCIP_CALL( getReasonRow(conflict, blkmem, vars, set, bdchginfo, conflict->reasonrow, residx, fixbounds, fixsides,
                                  &successgetreason) );
          if( !successgetreason )
          {
@@ -3872,23 +3250,15 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          SCIPdebug(printConflictRow(conflictrow, set, vars, RESOLVED_CONFLICT_ROWTYPE));
 
-         /** The slack is positive -> No conflict. Unfortunately we cannot guarrante that the slack
-          *  becomes zero after reducing the reason (even if we have only binary variables)
-          *  Till now there are two major problems:
+         /** A positive slack means that the conflict row is not infeasible anymore.
+          *  Unfortunately we cannot guarrante that the slack becomes zero after reducing
+          *  the reason (even if we have only binary variables).
+          *  Two issues are non-linear propagations, e.g.
           *    - Knapsack constraints that use negated cliques in the propagation
           *    - Ranged row propagation (gcd argument)
           */
          if( SCIPsetIsGE(set, conflictrow->slack, 0.0) )
-         {
-            if( isBinaryConflictRow(set, vars, conflictrow) && isBinaryConflictRow(set, vars, conflict->reasonrow) && set->conf_clausefallback )
-            {
-                  SCIP_CALL( resolveClauses(set, conflict, vars, bdchginfo, blkmem, residx, nvars, fixbounds, fixsides, &successresolution) );
-                  if( !successresolution )
-                     goto TERMINATE_RESOLUTION_LOOP;
-            }
-            else
-               goto TERMINATE_RESOLUTION_LOOP;
-         }
+            goto TERMINATE_RESOLUTION_LOOP;
 
          nressteps++;
 
@@ -4061,7 +3431,6 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
 
    /* clear the bound change queues */
    SCIPpqueueClear(conflict->resbdchgqueue);
-   SCIPpqueueClear(conflict->reasonbdchgqueue);
    SCIPpqueueClear(conflict->continuousbdchgqueue);
 
    /* stop timing */

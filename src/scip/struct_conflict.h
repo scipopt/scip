@@ -209,7 +209,6 @@ struct SCIP_Conflict
    SCIP_PQUEUE*          bdchgqueue;         /**< unprocessed conflict bound changes */
    SCIP_PQUEUE*          forcedbdchgqueue;   /**< unprocessed conflict bound changes that must be resolved */
    SCIP_PQUEUE*          resbdchgqueue;      /**< unprocessed conflict bound changes used in generalized resolution*/
-   SCIP_PQUEUE*          reasonbdchgqueue;   /**< unprocessed bound changes that are the reason for the current bound change */
    SCIP_PQUEUE*          continuousbdchgqueue;/**< unprocessed bound changes that are continuous */
    SCIP_PROOFSET*        proofset;           /**< proof sets found at the current node */
    SCIP_PROOFSET**       proofsets;          /**< proof sets found at the current node */
@@ -233,7 +232,6 @@ struct SCIP_Conflict
    int                   conflictrowssize;   /**< size of conflictrows array */
    SCIP_Bool             bdchgonlyconfqueue; /**< if true we add bound changes only in graph conflict queues */
    SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only in generalized resolution queues */
-   SCIP_Bool             reasonclauseres;    /**< if true we have a reason clause resolution */
 
 };
 
