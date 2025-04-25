@@ -918,10 +918,8 @@ SCIP_RETCODE SCIPdebugCheckConss(
    return SCIP_OKAY;
 }
 
-/** checks for validity of the debugging solution in given constraints.
- *  The constraints can be any constraints, not only active ones.
- */
-SCIP_RETCODE SCIPdebugCheckAnyConss(
+/** checks for validity of the debugging solution for any globally valid constraints. */
+SCIP_RETCODE SCIPdebugCheckAnyGlobalValidConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints to check for validity */
    int                   nconss              /**< number of given constraints */

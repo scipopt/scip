@@ -2005,7 +2005,7 @@ SCIP_RETCODE createAndAddConflictCon(
               FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
 
    /* check if the constraint is valid for the debug solution */
-   SCIP_CALL( SCIPdebugCheckAnyConss(set->scip, &cons, 1) );
+   SCIP_CALL( SCIPdebugCheckAnyGlobalValidConss(set->scip, &cons, 1) );
 
    /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
    SCIP_CALL( SCIPupgradeConsLinear(set->scip, cons, &upgdcons) );
@@ -2014,8 +2014,9 @@ SCIP_RETCODE createAndAddConflictCon(
       SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
       cons = upgdcons;
    }
+
    /* check if the constraint is valid for the debug solution */
-   SCIP_CALL( SCIPdebugCheckAnyConss(set->scip, &cons, 1) );
+   SCIP_CALL( SCIPdebugCheckAnyGlobalValidConss(set->scip, &cons, 1) );
 
    /* update statistics */
    SCIP_CALL( updateStatistics(conflict, vars, blkmem, set, stat, conflictrow, conflictrow->validdepth) );

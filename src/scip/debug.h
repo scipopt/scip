@@ -97,10 +97,8 @@ SCIP_RETCODE SCIPdebugCheckConss(
    int                   nconss              /**< number of given constraints */
    );
 
-/** checks for validity of the debugging solution in given constraints.
- *  The constraints can be any constraints, not only active ones.
- */
-SCIP_RETCODE SCIPdebugCheckAnyConss(
+/** checks for validity of the debugging solution for any globally valid constraints. */
+SCIP_RETCODE SCIPdebugCheckAnyGlobalValidConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints to check for validity */
    int                   nconss              /**< number of given constraints */
@@ -295,7 +293,7 @@ SCIP_Bool SCIPwithDebugSol(void);
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
 #define SCIPdebugFree(set) SCIP_OKAY
 #define SCIPdebugCheckConss(scip,conss,nconss) SCIP_OKAY
-#define SCIPdebugCheckAnyConss(scip,conss,nconss) SCIP_OKAY
+#define SCIPdebugCheckAnyGlobalValidConss(scip,conss,nconss) SCIP_OKAY
 #define SCIPdebugCheckRow(set,row) SCIP_OKAY
 #define SCIPdebugCheckLbGlobal(scip,var,lb) SCIP_OKAY
 #define SCIPdebugCheckUbGlobal(scip,var,ub) SCIP_OKAY
