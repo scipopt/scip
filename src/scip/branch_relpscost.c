@@ -882,7 +882,7 @@ SCIP_Real strongBranchingTreeSize(
    return pow(2.0, estimatedepth + 1.0) - 1.0;
 }
 
-/* Calculate the cumulative distribution function (CDF) value for an exponential distribution. */
+/* Calculate the cumulative distribution function (CDF) value for a mixture of a Dirac at zero and a continuous distribution (depending on distributioncdf) */
 static
 SCIP_Real cdfProbability(
    SCIP_Real             rate,               /** rate of the distribution */
