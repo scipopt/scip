@@ -3469,84 +3469,6 @@ void appendLine(
 
 /* print row in LP format to file stream */
 static
-SCIP_RETCODE printRowExact(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           rowname,            /**< row name */
-   const char*           rownameextension,   /**< row name extension */
-   const char*           type,               /**< row type ("=", "<=", or ">=") */
-   SCIP_VAR**            linvars,            /**< array of linear variables */
-   SCIP_RATIONAL**       linvals,            /**< array of linear coefficient values */
-   int                   nlinvars,           /**< number of linear variables */
-   SCIP_RATIONAL*        rhs                 /**< right hand side */
-   )
-{
-   int v;
-   char linebuffer[LP_MAX_PRINTLEN+1] = { '\0' };
-   char ratbuffer[LP_MAX_PRINTLEN+1] = { '\0' };
-   int linecnt;
-
-   char varname[LP_MAX_NAMELEN];
-   char consname[LP_MAX_NAMELEN + 1]; /* an extra character for ':' */
-   char buffer[LP_MAX_PRINTLEN];
-
-   assert( scip != NULL );
-   assert( strcmp(type, "=") == 0 || strcmp(type, "<=") == 0 || strcmp(type, ">=") == 0 );
-   assert( nlinvars == 0 || (linvars != NULL && linvals != NULL) );
-
-   clearLine(linebuffer, &linecnt);
-
-   /* start each line with a space */
-   appendLine(scip, file, linebuffer, &linecnt, " ");
-
-   /* print row name */
-   if( strlen(rowname) > 0 || strlen(rownameextension) > 0 )
-   {
-      (void) SCIPsnprintf(consname, LP_MAX_NAMELEN + 1, "%s%s:", rowname, rownameextension);
-      appendLine(scip, file, linebuffer, &linecnt, consname);
-   }
-
-   /* print coefficients */
-   for( v = 0; v < nlinvars; ++v )
-   {
-      SCIP_VAR* var;
-
-      assert(linvars != NULL);  /* for lint */
-      assert(linvals != NULL);
-
-      var = linvars[v];
-      assert( var != NULL );
-
-      /* we start a new line; therefore we tab this line */
-      if( linecnt == 0 )
-         appendLine(scip, file, linebuffer, &linecnt, " ");
-
-      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) SCIPrationalToString(linvals[v], ratbuffer, LP_MAX_PRINTLEN);
-      if( !SCIPrationalIsNegative(linvals[v]) )
-         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, "+%s %s", ratbuffer, varname);
-      else
-         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, "%s %s", ratbuffer, varname);
-
-      appendLine(scip, file, linebuffer, &linecnt, buffer);
-   }
-
-   (void) SCIPrationalToString(rhs, ratbuffer, LP_MAX_PRINTLEN);
-   (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %s", type, ratbuffer);
-
-   /* we start a new line; therefore we tab this line */
-   if( linecnt == 0 )
-      appendLine(scip, file, linebuffer, &linecnt, " ");
-   appendLine(scip, file, linebuffer, &linecnt, buffer);
-
-   endLine(scip, file, linebuffer, &linecnt);
-
-   return SCIP_OKAY;
-}
-
-
-/* print row in LP format to file stream */
-static
 SCIP_RETCODE printRow(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -3561,18 +3483,18 @@ SCIP_RETCODE printRow(
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
 {
-   int v;
-   char linebuffer[LP_MAX_PRINTLEN+1] = { '\0' };
-   int linecnt;
-
+   char linebuffer[LP_MAX_PRINTLEN + 1] = { '\0' };
    char varname[LP_MAX_NAMELEN];
    char varname2[LP_MAX_NAMELEN];
    char consname[LP_MAX_NAMELEN + 1]; /* an extra character for ':' */
    char buffer[LP_MAX_PRINTLEN];
+   int linecnt;
+   int written;
+   int v;
 
-   assert( scip != NULL );
-   assert( strcmp(type, "=") == 0 || strcmp(type, "<=") == 0 || strcmp(type, ">=") == 0 );
-   assert( nlinvars == 0 || (linvars != NULL && linvals != NULL) );
+   assert(scip != NULL);
+   assert(strcmp(type, "=") == 0 || strcmp(type, "<=") == 0 || strcmp(type, ">=") == 0);
+   assert(nlinvars == 0 || (linvars != NULL && linvals != NULL));
 
    clearLine(linebuffer, &linecnt);
 
@@ -3582,7 +3504,12 @@ SCIP_RETCODE printRow(
    /* print row name */
    if( strlen(rowname) > 0 || strlen(rownameextension) > 0 )
    {
-      (void) SCIPsnprintf(consname, LP_MAX_NAMELEN + 1, "%s%s:", rowname, rownameextension);
+      written = SCIPsnprintf(consname, LP_MAX_NAMELEN + 1, "%s%s:", rowname, rownameextension);
+      if( written > LP_MAX_NAMELEN )
+      {
+         SCIPerrorMessage("buffer length exceeded\n");
+         return SCIP_INVALIDDATA;
+      }
       appendLine(scip, file, linebuffer, &linecnt, consname);
    }
 
@@ -3595,15 +3522,24 @@ SCIP_RETCODE printRow(
       assert(linvals != NULL);
 
       var = linvars[v];
-      assert( var != NULL );
+      assert(var != NULL);
 
       /* we start a new line; therefore we tab this line */
       if( linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, " ");
 
-      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", linvals[v], varname);
-
+      written = SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+      if( written >= LP_MAX_NAMELEN )
+      {
+         SCIPerrorMessage("buffer length exceeded\n");
+         return SCIP_INVALIDDATA;
+      }
+      written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", linvals[v], varname);
+      if( written >= LP_MAX_PRINTLEN )
+      {
+         SCIPerrorMessage("buffer length exceeded\n");
+         return SCIP_INVALIDDATA;
+      }
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
 
@@ -3652,15 +3588,24 @@ SCIP_RETCODE printRow(
          assert(activevals != NULL);
 
          var = activevars[v];
-         assert( var != NULL );
+         assert(var != NULL);
 
          /* we start a new line; therefore we tab this line */
          if( linecnt == 0 )
             appendLine(scip, file, linebuffer, &linecnt, " ");
 
-         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", activevals[v], varname);
-
+         written = SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         if( written >= LP_MAX_NAMELEN )
+         {
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
+         written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", activevals[v], varname);
+         if( written >= LP_MAX_PRINTLEN )
+         {
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
@@ -3694,9 +3639,18 @@ SCIP_RETCODE printRow(
          if( linecnt == 0 )
             appendLine(scip, file, linebuffer, &linecnt, " ");
 
-         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", lincoef, varname);
-
+         written = SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         if( written >= LP_MAX_NAMELEN )
+         {
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
+         written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", lincoef, varname);
+         if( written >= LP_MAX_PRINTLEN )
+         {
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
@@ -3725,9 +3679,18 @@ SCIP_RETCODE printRow(
          if( linecnt == 0 )
             appendLine(scip, file, linebuffer, &linecnt, " ");
 
-         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s^2", sqrcoef, varname);
-
+         written = SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         if( written >= LP_MAX_NAMELEN )
+         {
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
+         written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s^2", sqrcoef, varname);
+         if( written >= LP_MAX_PRINTLEN )
+         {
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
@@ -3756,10 +3719,24 @@ SCIP_RETCODE printRow(
          if( linecnt == 0 )
             appendLine(scip, file, linebuffer, &linecnt, " ");
 
-         (void) SCIPsnprintf(varname,  LP_MAX_NAMELEN, "%s", SCIPvarGetName(var1));
-         (void) SCIPsnprintf(varname2, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var2));
-         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s * %s", bilincoef, varname, varname2);
-
+         written = SCIPsnprintf(varname,  LP_MAX_NAMELEN, "%s", SCIPvarGetName(var1));
+         if( written >= LP_MAX_NAMELEN )
+         {
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
+         written = SCIPsnprintf(varname2, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var2));
+         if( written >= LP_MAX_NAMELEN )
+         {
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
+         written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s * %s", bilincoef, varname, varname2);
+         if( written >= LP_MAX_PRINTLEN )
+         {
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
@@ -3767,11 +3744,123 @@ SCIP_RETCODE printRow(
       appendLine(scip, file, linebuffer, &linecnt, " ]");
    }
 
-   /* print left hand side */
-   if( SCIPisZero(scip, rhs) )
-      rhs = 0.0;
+   /* print right hand side */
+   written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %+.15g", type, rhs);
+   if( written >= LP_MAX_PRINTLEN )
+   {
+      SCIPerrorMessage("buffer length exceeded\n");
+      return SCIP_INVALIDDATA;
+   }
 
-   (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %+.15g", type, rhs);
+   /* we start a new line; therefore we tab this line */
+   if( linecnt == 0 )
+      appendLine(scip, file, linebuffer, &linecnt, " ");
+   appendLine(scip, file, linebuffer, &linecnt, buffer);
+
+   endLine(scip, file, linebuffer, &linecnt);
+
+   return SCIP_OKAY;
+}
+
+/* print exact row in LP format to file stream */
+static
+SCIP_RETCODE printRowExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< row name */
+   const char*           rownameextension,   /**< row name extension */
+   const char*           type,               /**< row type ("=", "<=", or ">=") */
+   SCIP_VAR**            linvars,            /**< array of linear variables */
+   SCIP_RATIONAL**       linvals,            /**< array of linear coefficient values */
+   int                   nlinvars,           /**< number of linear variables */
+   SCIP_RATIONAL*        rhs                 /**< right hand side */
+   )
+{
+   char linebuffer[LP_MAX_PRINTLEN + 1] = { '\0' };
+   char ratbuffer[LP_MAX_PRINTLEN] = { '\0' };
+   char varname[LP_MAX_NAMELEN];
+   char consname[LP_MAX_NAMELEN + 1]; /* an extra character for ':' */
+   char buffer[LP_MAX_PRINTLEN];
+   int linecnt;
+   int written;
+   int v;
+
+   assert(scip != NULL);
+   assert(strcmp(type, "=") == 0 || strcmp(type, "<=") == 0 || strcmp(type, ">=") == 0);
+   assert(nlinvars == 0 || (linvars != NULL && linvals != NULL));
+
+   clearLine(linebuffer, &linecnt);
+
+   /* start each line with a space */
+   appendLine(scip, file, linebuffer, &linecnt, " ");
+
+   /* print row name */
+   if( strlen(rowname) > 0 || strlen(rownameextension) > 0 )
+   {
+      written = SCIPsnprintf(consname, LP_MAX_NAMELEN + 1, "%s%s:", rowname, rownameextension);
+      if( written > LP_MAX_NAMELEN )
+      {
+         SCIPerrorMessage("buffer length exceeded\n");
+         return SCIP_INVALIDDATA;
+      }
+      appendLine(scip, file, linebuffer, &linecnt, consname);
+   }
+
+   /* print coefficients */
+   for( v = 0; v < nlinvars; ++v )
+   {
+      SCIP_VAR* var;
+
+      assert(linvars != NULL);  /* for lint */
+      assert(linvals != NULL);
+
+      var = linvars[v];
+      assert(var != NULL);
+
+      /* we start a new line; therefore we tab this line */
+      if( linecnt == 0 )
+         appendLine(scip, file, linebuffer, &linecnt, " ");
+
+      written = SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+      if( written >= LP_MAX_NAMELEN )
+      {
+         SCIPerrorMessage("buffer length exceeded\n");
+         return SCIP_INVALIDDATA;
+      }
+      written = SCIPrationalToString(linvals[v], ratbuffer, LP_MAX_PRINTLEN);
+      if( written >= LP_MAX_PRINTLEN )
+      {
+         SCIPerrorMessage("buffer length exceeded\n");
+         return SCIP_INVALIDDATA;
+      }
+      if( !SCIPrationalIsNegative(linvals[v]) )
+         written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " +%s %s", ratbuffer, varname);
+      else
+         written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %s", ratbuffer, varname);
+      if( written >= LP_MAX_PRINTLEN )
+      {
+         SCIPerrorMessage("buffer length exceeded\n");
+         return SCIP_INVALIDDATA;
+      }
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
+   }
+
+   /* print right hand side */
+   written = SCIPrationalToString(rhs, ratbuffer, LP_MAX_PRINTLEN);
+   if( written >= LP_MAX_PRINTLEN )
+   {
+      SCIPerrorMessage("buffer length exceeded\n");
+      return SCIP_INVALIDDATA;
+   }
+   if( !SCIPrationalIsNegative(rhs) )
+      written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s +%s", type, ratbuffer);
+   else
+      written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %s", type, ratbuffer);
+   if( written >= LP_MAX_PRINTLEN )
+   {
+      SCIPerrorMessage("buffer length exceeded\n");
+      return SCIP_INVALIDDATA;
+   }
 
    /* we start a new line; therefore we tab this line */
    if( linecnt == 0 )
