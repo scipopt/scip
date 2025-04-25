@@ -32,6 +32,8 @@ Features
   the problem is now solved in a Benders' decomposition relaxator; instead of decomposing the original SCIP instance, the relaxator builds the decomposed problem in
   sub-SCIPs and solves it via default Benders' Decomposition; a solution to the original (undecomposed) problem is now made available by the relaxator;
   the SCIP shell dialog "display statistics" now also prints the statistics from solving the Benders' decomposition in the relaxator
+- added a dynamic max-lookahead criterion for strong branching. Fits a probability distribution to the observed candidate gains and
+  stop evaluating further candidates once the expected tree-size reduction no longer justifies the LP evaluation cost.
 
 Performance improvements
 ------------------------
@@ -193,6 +195,9 @@ Interface changes
   solving after the completion of the Benders' decomposition algorithm if the problem is not solved to optimality. The
   "nodelimit" parameter allows the user to provide a node limit for the Benders' decomposition master problem (by
   default the limits from the original SCIP instance are copied to the master problem).
+- new parameters "branching/relpscost/dynamiclookahead", "branching/relpscost/dynamiclookaheadquot", "branching/relpscost/dynamiclookdistribution",
+  and "branching/relpscost/minsamplesize" to configure the dynamic max-lookahead criterion for strong branching: enable flag, fraction threshold,
+  distribution choice, and minimum sample size.
 
 ### Data structures
 

@@ -28,6 +28,7 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
+ * @author Gioni Mexi
  * @author Marc Pfetsch
  * @author Krunal Patel
  */
