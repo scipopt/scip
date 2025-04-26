@@ -13064,7 +13064,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
       else
       {
          /* locate the inference variable and calculate the capacity that has to be used up to conclude infervar == 0;
-          * inferinfo stores the position of the inference variable (but maybe the variables were resorted)
+          * inferinfo stores the position of the inference variable (but maybe the variables were re-sorted)
           */
          if( inferinfo < consdata->nvars && consdata->vars[inferinfo] == infervar )
             capsum = consdata->weights[inferinfo];
