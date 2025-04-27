@@ -299,7 +299,7 @@ SCIP_RETCODE checkSolOrigExact(
          SCIP_VAR* var;
 
          var = scip->origprob->vars[v];
-         if( SCIPisExactSol(scip, sol) )
+         if( SCIPsolIsExact(sol) )
             SCIPsolGetValExact(solval, sol, scip->set, scip->stat, var);
          else
             SCIPrationalSetReal(solval, SCIPsolGetVal(sol, scip->set, scip->stat, var));
@@ -1569,7 +1569,7 @@ SCIP_RETCODE SCIPsetSolValExact(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetSolValExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    assert( var->scip == scip );
-   assert(SCIPisExactSol(scip, sol));
+   assert(SCIPsolIsExact(sol));
 
    if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
@@ -1883,7 +1883,7 @@ void SCIPgetSolOrigObjExact(
    )
 {
    SCIP_RATIONAL* tmp;
-   assert(SCIPisExactSol(scip, sol));
+   assert(SCIPsolIsExact(sol));
 
    /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
     * for all other solutions, we should be at least in SCIP_STAGE_TRANSFORMING
@@ -3221,6 +3221,7 @@ SCIP_RETCODE readSolFile(
    SCIP_Bool*            error               /**< pointer store if an error occured */
    )
 {
+   SCIP_HASHSET* unknownvars = NULL;
    SCIP_FILE* file;
    SCIP_Bool unknownvariablemessage;
    SCIP_Bool localpartial;
@@ -3248,32 +3249,35 @@ SCIP_RETCODE readSolFile(
    /* read the file */
    while( !SCIPfeof(file) && !(*error) )
    {
+      /**@todo unlimit buffer size */
       char buffer[SCIP_MAXSTRLEN];
-      char varname[SCIP_MAXSTRLEN];
-      char valuestring[SCIP_MAXSTRLEN];
-      char objstring[SCIP_MAXSTRLEN];
-      char format[SCIP_MAXSTRLEN];
+      const char* varname;
+      const char* valuestring;
+      char* endptr;
       SCIP_VAR* var;
-      SCIP_Real value;
-      int nread;
+      SCIP_RETCODE retcode;
 
       /* get next line */
-      if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
+      if( SCIPfgets(buffer, (int)sizeof(buffer), file) == NULL )
+      {
+         if( !SCIPfeof(file) )
+            *error = TRUE;
          break;
-      lineno++;
+      }
+      ++lineno;
 
       /* there are some lines which may precede the solution information */
-      if( SCIPstrncasecmp(buffer, "solution status:", 16) == 0 || SCIPstrncasecmp(buffer, "objective value:", 16) == 0 ||
-         SCIPstrncasecmp(buffer, "Log started", 11) == 0 || SCIPstrncasecmp(buffer, "Variable Name", 13) == 0 ||
-         SCIPstrncasecmp(buffer, "All other variables", 19) == 0 || strspn(buffer, " \n\r\t\f") == strlen(buffer) ||
-         SCIPstrncasecmp(buffer, "NAME", 4) == 0 || SCIPstrncasecmp(buffer, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
-         SCIPstrncasecmp(buffer, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
+      if( SCIPstrncasecmp(buffer, "solution status:", 16) == 0 || SCIPstrncasecmp(buffer, "objective value:", 16) == 0
+         || buffer[strspn(buffer, " \t\n\v\f\r")] == '\0' || SCIPstrncasecmp(buffer, "Log started", 11) == 0
+         || SCIPstrncasecmp(buffer, "Variable Name", 13) == 0 || SCIPstrncasecmp(buffer, "All other variables", 19) == 0
+         || SCIPstrncasecmp(buffer, "NAME", 4) == 0 || SCIPstrncasecmp(buffer, "ENDATA", 6) == 0 /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         || SCIPstrncasecmp(buffer, "=obj=", 5) == 0 ) /* avoid "unknown variable" warning when reading MIPLIB SOL files */
          continue;
 
-      /* parse the line */
-      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
-      nread = sscanf(buffer, format, varname, valuestring, objstring);
-      if( nread < 2 )
+      /* tokenize the line */
+      varname = SCIPstrtok(buffer, " \t\v", &endptr);
+      valuestring = SCIPstrtok(NULL, " \t\n\v\f\r", &endptr);
+      if( valuestring == NULL )
       {
          SCIPerrorMessage("Invalid input line %d in solution file <%s>: <%s>.\n", lineno, filename, buffer);
          *error = TRUE;
@@ -3294,59 +3298,101 @@ SCIP_RETCODE readSolFile(
          continue;
       }
 
-      /* cast the value */
-      if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
-         continue;
-      else if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
-         value = SCIPinfinity(scip);
-      else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
-         value = -SCIPinfinity(scip);
-      else if( SCIPstrncasecmp(valuestring, "unk", 3) == 0 )
-      {
-         value = SCIP_UNKNOWN;
-         localpartial = TRUE;
-      }
-      else
-      {
-         /* coverity[secure_coding] */
-         nread = sscanf(valuestring, "%lf", &value);
-         if( nread != 1 )
-         {
-            SCIPerrorMessage("Invalid solution value <%s> for variable <%s> in line %d of solution file <%s>.\n",
-               valuestring, varname, lineno, filename);
-            *error = TRUE;
-            break;
-         }
-      }
-
-      /* set the solution value of the variable, if not multiaggregated */
+      /* ignore multi-aggregated variable */
       if( SCIPisTransformed(scip) && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n", SCIPvarGetName(var));
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n",
+               varname);
+         continue;
       }
-      else
+
+      /* ignore invalid value */
+      if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
       {
-         SCIP_RETCODE retcode;
+         SCIPdebugMsg(scip, "ignored invalid assignment for variable <%s>\n", varname);
+         continue;
+      }
 
-         retcode = SCIPsetSolVal(scip, sol, var, value);
+      /* read the value */
+      if( SCIPsolIsExact(sol) )
+      {
+         assert(SCIPisExact(scip));
+         SCIP_RATIONAL* value;
 
-         if( retcode == SCIP_INVALIDDATA )
+         if( SCIPrationalIsString(valuestring) )
          {
-            if( SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_FIXED )
+            SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &value, valuestring) );
+            assert(value != NULL);
+         }
+         else if( SCIPstrncasecmp(valuestring, "unk", 3) == 0 )
+         {
+            /**@todo handle unknown value as null pointer and set up exact partial solution instead */
+            /* value = NULL; */
+            if( unknownvars == NULL )
             {
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored conflicting solution value for fixed variable <%s>\n",
-                  SCIPvarGetName(var));
+               SCIP_CALL( SCIPhashsetCreate(&unknownvars, SCIPblkmem(scip), SCIPgetNVars(scip)) );
             }
-            else
-            {
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n",
-                  SCIPvarGetName(var));
-            }
+            SCIP_CALL( SCIPhashsetInsert(unknownvars, SCIPblkmem(scip), (void*)var) );
+            localpartial = TRUE;
+            continue;
          }
          else
          {
-            SCIP_CALL_FINALLY( retcode, SCIPfclose(file) );
+            SCIPerrorMessage("Invalid solution value <%s> for variable <%s> in line %d of solution file <%s>.\n",
+                  valuestring, varname, lineno, filename);
+            *error = TRUE;
+            break;
          }
+
+         retcode = SCIPsetSolValExact(scip, sol, var, value);
+
+         SCIPrationalFreeBlock(SCIPblkmem(scip), &value);
+      }
+      else
+      {
+         SCIP_Real value;
+
+         if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
+            value = SCIPinfinity(scip);
+         else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
+            value = -SCIPinfinity(scip);
+         else if( SCIPstrncasecmp(valuestring, "unk", 3) == 0 )
+         {
+            value = SCIP_UNKNOWN;
+            localpartial = TRUE;
+         }
+         else if( !SCIPstrToRealValue(valuestring, &value, &endptr) || *endptr != '\0' )
+         {
+#ifdef SCIP_WITH_EXACTSOLVE
+            /* convert exact value */
+            if( SCIPrationalIsString(valuestring) )
+            {
+               SCIP_RATIONAL* valueexact;
+
+               SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &valueexact, valuestring) );
+
+               value = SCIPrationalGetReal(valueexact);
+
+               SCIPrationalFreeBlock(SCIPblkmem(scip), &valueexact);
+            }
+            else
+#endif
+            {
+               SCIPerrorMessage("Invalid solution value <%s> for variable <%s> in line %d of solution file <%s>.\n",
+                     valuestring, varname, lineno, filename);
+               *error = TRUE;
+               break;
+            }
+         }
+
+         retcode = SCIPsetSolVal(scip, sol, var, value);
+      }
+
+      if( retcode == SCIP_INVALIDDATA )
+         SCIPwarningMessage(scip, "ignored conflicting solution value for fixed variable <%s>\n", varname);
+      else
+      {
+         SCIP_CALL_FINALLY( retcode, SCIPfclose(file) );
       }
    }
 
@@ -3357,10 +3403,39 @@ SCIP_RETCODE readSolFile(
    {
       if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
       {
+         if( SCIPsolIsExact(sol) )
+         {
+            assert(SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL);
+            SCIP_CALL( SCIPsolMakeReal(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->origprob) );
+         }
+
          SCIP_CALL( SCIPsolMarkPartial(sol, scip->set, scip->stat, scip->origprob->vars, scip->origprob->nvars) );
       }
       else
          *error = TRUE;
+   }
+
+   if( unknownvars != NULL )
+   {
+      if( !(*error) )
+      {
+         SCIP_VAR** slots = (SCIP_VAR**)SCIPhashsetGetSlots(unknownvars);
+         int nslots = SCIPhashsetGetNSlots(unknownvars);
+         int i;
+
+         assert(!SCIPsolIsExact(sol));
+         assert(SCIPsolIsPartial(sol));
+
+         for( i = 0; i < nslots; ++i )
+         {
+            if( slots[i] != NULL )
+            {
+               SCIP_CALL( SCIPsetSolVal(scip, sol, slots[i], SCIP_UNKNOWN) );
+            }
+         }
+      }
+
+      SCIPhashsetFree(&unknownvars, SCIPblkmem(scip));
    }
 
    if( partial != NULL )
@@ -3379,12 +3454,13 @@ SCIP_RETCODE readXmlSolFile(
    SCIP_Bool*            error               /**< pointer store if an error occured */
    )
 {
-   SCIP_Bool unknownvariablemessage;
-   SCIP_Bool localpartial;
+   SCIP_HASHSET* unknownvars = NULL;
    XML_NODE* start;
    const XML_NODE* varsnode;
    const XML_NODE* varnode;
    const char* tag;
+   SCIP_Bool unknownvariablemessage;
+   SCIP_Bool localpartial;
 
    assert(scip != NULL);
    assert(sol != NULL);
@@ -3421,14 +3497,23 @@ SCIP_RETCODE readXmlSolFile(
       SCIP_VAR* var;
       const char* varname;
       const char* valuestring;
-      SCIP_Real value;
-      int nread;
+      char* endptr;
+      SCIP_RETCODE retcode;
 
       /* find variable name */
       varname = SCIPxmlGetAttrval(varnode, "name");
       if( varname == NULL )
       {
          SCIPerrorMessage("Attribute \"name\" of variable not found.\n");
+         *error = TRUE;
+         break;
+      }
+
+      /* find value of variable */
+      valuestring = SCIPxmlGetAttrval(varnode, "value");
+      if( valuestring == NULL )
+      {
+         SCIPerrorMessage("Attribute \"value\" of variable not found.\n");
          *error = TRUE;
          break;
       }
@@ -3447,66 +3532,101 @@ SCIP_RETCODE readXmlSolFile(
          continue;
       }
 
-      /* find value of variable */
-      valuestring = SCIPxmlGetAttrval(varnode, "value");
-      if( valuestring == NULL )
-      {
-         SCIPerrorMessage("Attribute \"value\" of variable not found.\n");
-         *error = TRUE;
-         break;
-      }
-
-      /* cast the value */
-      if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
-         continue;
-      else if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
-         value = SCIPinfinity(scip);
-      else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
-         value = -SCIPinfinity(scip);
-      else if( SCIPstrncasecmp(valuestring, "unk", 3) == 0 )
-      {
-         value = SCIP_UNKNOWN;
-         localpartial = TRUE;
-      }
-      else
-      {
-         /* coverity[secure_coding] */
-         nread = sscanf(valuestring, "%lf", &value);
-         if( nread != 1 )
-         {
-            SCIPwarningMessage(scip, "invalid solution value <%s> for variable <%s> in XML solution file <%s>\n", valuestring, varname, filename);
-            *error = TRUE;
-            break;
-         }
-      }
-
-      /* set the solution value of the variable, if not multiaggregated */
+      /* ignore multi-aggregated variable */
       if( SCIPisTransformed(scip) && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n", SCIPvarGetName(var));
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n",
+               varname);
+         continue;
       }
-      else
-      {
-         SCIP_RETCODE retcode;
-         retcode = SCIPsetSolVal(scip, sol, var, value);
 
-         if( retcode == SCIP_INVALIDDATA )
+      /* ignore invalid value */
+      if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
+      {
+         SCIPdebugMsg(scip, "ignored invalid assignment for variable <%s>\n", varname);
+         continue;
+      }
+
+      /* read the value */
+      if( SCIPsolIsExact(sol) )
+      {
+         assert(SCIPisExact(scip));
+         SCIP_RATIONAL* value;
+
+         if( SCIPrationalIsString(valuestring) )
          {
-            if( SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_FIXED )
+            SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &value, valuestring) );
+            assert(value != NULL);
+         }
+         else if( SCIPstrncasecmp(valuestring, "unk", 3) == 0 )
+         {
+            /**@todo handle unknown value as null pointer and set up exact partial solution instead */
+            /* value = NULL; */
+            if( unknownvars == NULL )
             {
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored conflicting solution value for fixed variable <%s>\n",
-                  SCIPvarGetName(var));
+               SCIP_CALL( SCIPhashsetCreate(&unknownvars, SCIPblkmem(scip), SCIPgetNVars(scip)) );
             }
-            else
-            {
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n",
-                  SCIPvarGetName(var));
-            }
+            SCIP_CALL( SCIPhashsetInsert(unknownvars, SCIPblkmem(scip), (void*)var) );
+            localpartial = TRUE;
+            continue;
          }
          else
          {
-            SCIP_CALL( retcode );
+            SCIPerrorMessage("Invalid solution value <%s> for variable <%s> in XML solution file <%s>.\n",
+                  valuestring, varname, filename);
+            *error = TRUE;
+            break;
          }
+
+         retcode = SCIPsetSolValExact(scip, sol, var, value);
+
+         SCIPrationalFreeBlock(SCIPblkmem(scip), &value);
+      }
+      else
+      {
+         SCIP_Real value;
+
+         if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
+            value = SCIPinfinity(scip);
+         else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
+            value = -SCIPinfinity(scip);
+         else if( SCIPstrncasecmp(valuestring, "unk", 3) == 0 )
+         {
+            value = SCIP_UNKNOWN;
+            localpartial = TRUE;
+         }
+         else if( !SCIPstrToRealValue(valuestring, &value, &endptr) || *endptr != '\0' )
+         {
+#ifdef SCIP_WITH_EXACTSOLVE
+            /* convert exact value */
+            if( SCIPrationalIsString(valuestring) )
+            {
+               SCIP_RATIONAL* valueexact;
+
+               SCIP_CALL( SCIPrationalCreateString(SCIPblkmem(scip), &valueexact, valuestring) );
+
+               value = SCIPrationalGetReal(valueexact);
+
+               SCIPrationalFreeBlock(SCIPblkmem(scip), &valueexact);
+            }
+            else
+#endif
+            {
+               SCIPerrorMessage("Invalid solution value <%s> for variable <%s> in XML solution file <%s>.\n",
+                     valuestring, varname, filename);
+               *error = TRUE;
+               break;
+            }
+         }
+
+         retcode = SCIPsetSolVal(scip, sol, var, value);
+      }
+
+      if( retcode == SCIP_INVALIDDATA )
+         SCIPwarningMessage(scip, "ignored conflicting solution value for fixed variable <%s>\n", varname);
+      else
+      {
+         SCIP_CALL( retcode );
       }
    }
 
@@ -3517,10 +3637,37 @@ SCIP_RETCODE readXmlSolFile(
    {
       if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
       {
+         if( SCIPsolIsExact(sol) )
+         {
+            assert(SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL);
+            SCIP_CALL( SCIPsolMakeReal(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->origprob) );
+         }
+
          SCIP_CALL( SCIPsolMarkPartial(sol, scip->set, scip->stat, scip->origprob->vars, scip->origprob->nvars) );
       }
       else
          *error = TRUE;
+   }
+
+   if( unknownvars != NULL )
+   {
+      if( !(*error) )
+      {
+         SCIP_VAR** slots = (SCIP_VAR**)SCIPhashsetGetSlots(unknownvars);
+         int nslots = SCIPhashsetGetNSlots(unknownvars);
+         int i;
+
+         assert(!SCIPsolIsExact(sol));
+         assert(SCIPsolIsPartial(sol));
+
+         for( i = 0; i < nslots; ++i )
+         {
+            if( slots[i] != NULL )
+               SCIP_CALL( SCIPsetSolVal(scip, sol, slots[i], SCIP_UNKNOWN) );
+         }
+      }
+
+      SCIPhashsetFree(&unknownvars, SCIPblkmem(scip));
    }
 
    if( partial != NULL )
@@ -4230,19 +4377,6 @@ SCIP_RETCODE SCIPoverwriteFPsol(
    SCIP_CALL( SCIPsolOverwriteFPSolWithExact(sol, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree) );
 
    return SCIP_OKAY;
-}
-
-/** returns TRUE if the solution is an exact rational solution */
-SCIP_Bool SCIPisExactSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< primal CIP solution */
-   )
-{
-   assert(SCIPisTransformed(scip) || sol != NULL);
-
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPisExactSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
-
-   return SCIPsolIsExact(sol);
 }
 
 /** checks exact primal solution; if feasible, adds it to storage; solution is freed afterwards

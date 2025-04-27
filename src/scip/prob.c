@@ -1657,10 +1657,12 @@ void SCIPprobAddObjoffset(
    )
 {
    assert(prob != NULL);
-   assert(prob->transformed);
 
-   SCIPdebugMessage("adding %g to objective offset %g: new offset = %g\n", addval, prob->objoffset, prob->objoffset + addval);
+   SCIPdebugMessage("adding %g to real objective offset %g\n", addval, prob->objoffset);
+
    prob->objoffset += addval;
+
+   SCIPdebugMessage("new objective offset %g\n", prob->objoffset);
 }
 
 /** adds value to objective offset */
@@ -1670,11 +1672,13 @@ void SCIPprobAddObjoffsetExact(
    )
 {
    assert(prob != NULL);
-   assert(prob->transformed);
    assert(prob->objoffsetexact != NULL);
 
-   SCIPrationalDebugMessage("adding %q to objective offset %q \n", addval, prob->objoffsetexact);
+   SCIPrationalDebugMessage("adding %q to exact objective offset %q\n", addval, prob->objoffsetexact);
+
    SCIPrationalAdd(prob->objoffsetexact, prob->objoffsetexact, addval);
+
+   SCIPrationalDebugMessage("new objective offset %q\n", prob->objoffsetexact);
 }
 
 /** sets the dual bound on objective function */

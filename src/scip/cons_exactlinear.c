@@ -69,7 +69,6 @@
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
-#include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
@@ -151,7 +150,6 @@ struct SCIP_ConsData
    SCIP_RATIONAL**       vals;               /**< coefficients of constraint entries */
    SCIP_INTERVAL*        valsreal;           /**< values of val rounded up/down to closest fp-representable numbers */
    SCIP_EVENTDATA**      eventdata;          /**< event data for bound change events of the variables */
-   SCIP_EVENTDATA**      roweventdata;       /**< event data for bound change events of the variables in the row */
    int                   minactivityneginf;  /**< number of coefficients contributing with neg. infinite value to minactivity */
    int                   minactivityposinf;  /**< number of coefficients contributing with pos. infinite value to minactivity */
    int                   maxactivityneginf;  /**< number of coefficients contributing with neg. infinite value to maxactivity */
@@ -1091,7 +1089,7 @@ void consdataComputePseudoActivity(
    SCIP_RATIONAL* bound;
    SCIP_RATIONAL* val;
 
-   SCIPrationalSetInt(pseudoactivity, 0L, 1L);
+   SCIPrationalSetFraction(pseudoactivity, 0LL, 1LL);
 
    pseudoactivityposinf = 0;
    pseudoactivityneginf = 0;
@@ -2802,7 +2800,7 @@ void consdataGetActivity(
 
       (void) SCIPrationalCreateBuffer(SCIPbuffer(scip), &solval);
 
-      SCIPrationalSetInt(activity, 0L, 1L);
+      SCIPrationalSetFraction(activity, 0LL, 1LL);
       nposinf = 0;
       nneginf = 0;
 
@@ -4873,8 +4871,6 @@ SCIP_RETCODE createRows(
    consdataInvalidateActivities(consdata);
    if( !(consdata->hasfprelax) || consdata->onerowrelax )
       consdata->rowrhs = NULL;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->roweventdata, SCIProwExactGetNNonz(consdata->rowexact)) );
-   BMSclearMemoryArray(consdata->roweventdata, SCIProwExactGetNNonz(consdata->rowexact));
 
    return SCIP_OKAY;
 }
@@ -5145,7 +5141,7 @@ SCIP_RETCODE enforceConstraint(
    if( sol == NULL )
       checkexact =  SCIPlpExactIsSolved(scip);
    else
-      checkexact = SCIPisExactSol(scip, sol);
+      checkexact = SCIPsolIsExact(sol);
 
    SCIPdebugMsg(scip, "Enforcement method of linear constraints for %s solution\n", sol == NULL ? "LP" : "relaxation");
    SCIPdebug( SCIPprintSol(scip, sol, NULL, FALSE));
@@ -5355,10 +5351,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolExactLinear)
 
       if( consdata->rowlhs != NULL )
       {
-         SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowlhs) );
-         SCIPfreeBlockMemoryArray(scip, &consdata->roweventdata, SCIProwExactGetNNonz(consdata->rowexact));
-
          SCIP_CALL( SCIPreleaseRowExact(scip, &consdata->rowexact) );
+         SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowlhs) );
+
          if( consdata->rowrhs != NULL )
          {
             assert(!consdata->onerowrelax);
@@ -5716,7 +5711,7 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
    assert(conshdlrdata != NULL);
 
    /* if the fp-solution has a stand-in exact solution we check that instead */
-   checkexact = SCIPisExactSol(scip, sol);
+   checkexact = SCIPsolIsExact(sol);
 
    /* check all linear constraints for feasibility */
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )

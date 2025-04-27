@@ -28,6 +28,10 @@ Features
 - added decomposition kernel search (DKS) heuristic (disabled by default). This heuristic implements a kernel search framework and can be used
   both as a construction heuristic as well as an improvement heuristic. In addition, existing decomposition information can be utilized by this heuristic.
 - symmetry detection does not treat implicit integer variables separately anymore, but computes symmetries based on the variable type inferred from variable bounds and implied integrality
+- when solving a SCIP problem with additional decomposition information (for example, when reading a DEC file) and enabling decomposition/applybenders,
+  the problem is now solved in a Benders' decomposition relaxator; instead of decomposing the original SCIP instance, the relaxator builds the decomposed problem in
+  sub-SCIPs and solves it via default Benders' Decomposition; a solution to the original (undecomposed) problem is now made available by the relaxator;
+  the SCIP shell dialog "display statistics" now also prints the statistics from solving the Benders' decomposition in the relaxator
 
 Performance improvements
 ------------------------
@@ -68,6 +72,7 @@ Interface changes
 - the callback SCIP_DECL_EXPRINTEGRALITY, which returns the integrality of an expression, had its fourth argument change from SCIP_Bool* to SCIP_IMPLINTTYPE*, to represent implied integrality in nonlinear expressions, that is an implied integral type of an auxiliary variable if the expression were assigned to it
 - new event SCIP_EVENTTYPE_DUALBOUNDIMPROVED is generated whenever the global dual bound is improved
 - new event mask SCIP_EVENTTYPE_GAPUPDATED for catching updates in primal or dual bound
+- added new sorting functions SCIPsortRealPtrPtr(), ...
 
 ### Deleted and changed API methods
 
@@ -87,6 +92,8 @@ Interface changes
 - SCIPexprSetIntegrality(): set argument generalized from SCIP_Bool integral to SCIP_IMPLINTTYPE integrality (4th position)
 - Temporarily for SCIP 10 only: Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integral type SCIP_IMPLINTTYPE_WEAK instead
 - Temporarily for SCIP 10 only: SCIPchgVarType() converts a call with type SCIP_VARTYPE_IMPLINT into a call of SCIPchgVarImplType() with type SCIP_IMPLINTTYPE_WEAK
+- SCIPapplyBendersDecomposition has been removed. This was originally used to apply Benders' decomposition from a
+  supplied decomposition structure. The application of Benders' decomposition now occurs in benders_relax.
 
 ### New API functions
 
@@ -127,6 +134,8 @@ Interface changes
 - added SCIPvarsCountTypes() to determine the variable type count distribution for an array of variables
 - added SCIPeventGetOldImplType() and SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
 - added SCIPexprGetIntegrality(), which in addition to the existing function SCIPexprIsIntegral() provides information about the presence of weakly implied integral variables
+- added SCIPincludeRelaxBenders(), which is used to include the Benders' decomposition relaxator.
+- added SCIPgetMasterProblemRelaxBenders() for retrieving the master problem SCIP instance from the Benders' decomposition relaxator.
 
 ### Changes in preprocessor macros
 
@@ -162,6 +171,7 @@ Interface changes
 - new parameter "propagating/symmetry/handlesignedorbitopes" to control whether special symmetry handling techniques for orbitopes whose columns can be (partially) reflected shall be applied
 - new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
 - new parameter "propagating/symmetry/dispsyminfo" to control whether information about which symmetry handling methods are applied are printed
+- new parameter "presolving/implint/convertintegers" to control whether implied integrality should also be detected for enforced integral variables
 - new parameter "presolving/implint/columnrowratio" indicates the ratio of rows/columns where the row-wise network matrix detection algorithm is used instead of the column-wise network matrix detection algorithm
 - new parameter "presolving/implint/numericslimit" determines the limit for absolute integral coefficients beyond which the corresponding rows and variables are excluded from implied integrality detection
 - iis/minimal, iis/nodes, iis/removedbounds, iis/removeunusedvars, iis/silent, iis/stopafterone, iis/time, iis/greedy/additive, iis/greedy/conservative, iis/greedy/delafteradd, iis/greedy/dynamicreordering, iis/greedy/maxbatchsize, iis/greedy/maxrelbatchsize, iis/greedy/nodelimperiter, iis/greedy/priority, iis/greedy/timelimperiter
@@ -178,6 +188,11 @@ Interface changes
   "heuristics/dks/buckmaxgap", "heuristics/dks/maxlinkscore", "heuristics/dks/maxbuckfrac", "heuristics/dks/maxnodes",
   "heuristics/dks/usetwolevel", "heuristics/dks/usedecomp", "heuristics/dks/usebestsol", "heuristics/dks/redcostsort", "heuristics/dks/primalonly",
   "heuristics/dks/redcostlogsort", "heuristics/dks/objcutoff", and "heuristics/dks/runbinprobsonly" to control heuristic decomposition kernel search
+- new parameters "relaxing/benders/continueorig" and "relaxing/benders/nodelimit" for controlling the behaviour of the
+  Benders' decomposition relaxator. The "continueorig" parameter indicates whether the original problem should continue
+  solving after the completion of the Benders' decomposition algorithm if the problem is not solved to optimality. The
+  "nodelimit" parameter allows the user to provide a node limit for the Benders' decomposition master problem (by
+  default the limits from the original SCIP instance are copied to the master problem).
 
 ### Data structures
 
@@ -284,15 +299,31 @@ Miscellaneous
 
 - updated description of paramater misc/usesymmetry
 
+@section RN923 SCIP 9.2.3
+*************************
+
+Fixed bugs
+----------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Miscellaneous
+-------------
+
 @section RN922 SCIP 9.2.2
 *************************
 
 Fixed bugs
 ----------
 
-- fixed definition of slack variables of >= constraints and ranged rows in LP interface to Gurobi (lpi_grb.c)
+- fixed definition of slack variables of >= constraints and ranged rows in LP interface to Gurobi
 - free memory leaking singleton arrays for ignored variables in SCIPapplyHeurDualval()
-- use epsilon tolerance for bound implications of dual substitutions in dualPresolve() of cons_linear.c
+- use epsilon tolerance for bound implications of dual substitutions in dualPresolve() of cons_linear
 - fixed timeouts due to race conditions when using TPI=omp
 - fixed issues with indexing of concurrent solvers when a solver finishes (because SCIP is too fast) before others have been created when using TPI=tny
 - respect fixing if variable is declared binary in bounds section of mps file
@@ -301,12 +332,18 @@ Fixed bugs
 - adds missing NULL check for Benders' subproblems in feasalt cut
 - apply objective scale to pseudoboolean non-linear terms
 - impose pseudoboolean cost bound without intermediate casting
-- flatten aggregation graph before finishing presolving to accelerate evaluating an empty solution
-- respect fixed resultants in binvarGetActiveProbindex() of branch_relpscost.c
-- drop fixed resultants when copying pseudoboolean constraint to avert segmentation fault
-- correct matrix entry when resolving aggregated variables in checkSystemGF2() of cons_xor.c
-- corrected symmetry detection graph of cons_and.c, cons_or.c, and cons_xor.c
-- correct redundancy filter in consdataCreateRedundant() of cons_bounddisjunction.c
+- flatten aggregation graph before finishing presolve to accelerate evaluating an empty solution
+- respect fixed resultants in binvarGetActiveProbindex() of branch_relpscost
+- drop fixed resultants when copying pseudoboolean constraint
+- correct matrix entry when resolving aggregated variables in checkSystemGF2() of cons_xor
+- corrected symmetry detection graph of cons_and, cons_or, cons_xor, and cons_indicator
+- correct redundancy filter in consdataCreateRedundant() of cons_bounddisjunction
+- replaced unreliable comparison of node pointers by node numbers in prop_genvbounds
+- allocate memory for all integral variables in applyCliqueFixings() of heur_clique
+- fix conflict resolution for one particular case in cons_indicator
+- make interface to nauty thread safe
+- use relative epsilon tolerance to check Farkas row in SCIPlpGetDualfarkas() to avoid invalid cutoff
+- fixed bug with SOS2 constraints of size that avoided a correct enforcing
 
 Build system
 ------------
@@ -324,9 +361,6 @@ Build system
 - fix use of SANITIZE=full for debug builds with GCC on Linux: removed -fsanitize=leak because it cannot be used together with -fsanitize=address
 - fix that make install SHARED=true missed to install libscipbase
 
-Miscellaneous
--------------
-
 @section RN921 SCIP 9.2.1
 *************************
 
@@ -341,7 +375,6 @@ Fixed bugs
 - added copy callbacks for presolvers dualagg and redvub, branching rules lookahead and cloud, primal heuristics dualval and repair, propagator nlobbt, and separators gauge and convexproj
 - respect maximal separation rounds setting by running remaining delayed separators in last round
 - replace terms consistently in applyFixings() of cons_linear to handle infinite aggregations
-- fixed bug with SOS2 constraints of size that avoided a correct enforcing
 
 Build system
 ------------

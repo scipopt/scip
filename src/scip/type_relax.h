@@ -28,6 +28,11 @@
  * @author Tobias Achterberg
  */
 
+/** @defgroup DEFPLUGINS_RELAX Default relaxators
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files of the default relaxators of SCIP
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_TYPE_RELAX_H__

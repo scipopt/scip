@@ -494,8 +494,17 @@ SCIP_RETCODE SCIPsolRound(
    SCIP_Bool*            success             /**< pointer to store whether rounding was successful */
    );
 
-/** copy the fp values to the exact arrays of the solution */
+/** copies the real values to the exact arrays of the solution */
 SCIP_RETCODE SCIPsolMakeExact(
+   SCIP_SOL*             sol,                /**< primal solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob                /**< transformed problem data */
+   );
+
+/** approximates and copies the exact values to the real arrays of the solution and frees the exact data */
+SCIP_RETCODE SCIPsolMakeReal(
    SCIP_SOL*             sol,                /**< primal solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -542,7 +551,7 @@ void SCIPsolRecomputeObj(
    SCIP_PROB*            origprob            /**< original problem */
    );
 
-/** recomputes the exact objective value of a solution, e.g., when initialized from an fp solution */
+/** recomputes the objective value of an exact solution, e.g., when initialized from a real solution */
 void SCIPsolRecomputeInternObjExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -641,11 +650,6 @@ void SCIPsolUpdateLPConsViolation(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real             absviol,            /**< absolute violation of constraint */
    SCIP_Real             relviol             /**< relative violation of constraint */
-   );
-
-/** checks whether soltion has exact rational solution values */
-SCIP_Bool SCIPsolIsExact(
-   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets objective value of primal CIP solution which lives in the original problem space */

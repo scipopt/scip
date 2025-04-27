@@ -8,6 +8,7 @@
 #include<unordered_map>
 #include <fstream>
 #include "utility.h"
+#include "ds.h"
 #include "coloring.h"
 
 namespace dejavu {

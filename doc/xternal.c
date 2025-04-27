@@ -7719,6 +7719,43 @@
  * parameter is provided "reading/sto/usebenders" that will inform the STO reader to apply Benders' decomposition to the
  * input stochastic program.
  *
+ * @section BENDERSDECSTRUCTURE Inputting a user-defined decomposition structure
+ *
+ * Benders' decomposition can be applied from a user-provided decomposition structure. Details about the decomposition
+ * structure and how to provide it to SCIP can be found at @ref DECOMP. Prior to reading the decomposition structure
+ * into SCIP, it is necessary to inform SCIP that the variables and constraints must be labelled for Benders'
+ * decomposition. This is achieved by setting the parameter "decomposition/benderslabels" to "TRUE". Following this,
+ * Benders' decomposition will be applied if the parameter "decomposition/applybenders" is set to "TRUE".
+ *
+ * When Benders' decomposition is applied using the decomposition structure, the Benders' decomposition algorithm is
+ * executed within a relaxator (see @ref RELAX). The relaxator is called when processing the root node of the original
+ * SCIP instance, before the first LP solve. Within the relaxator, a sub-SCIP is created, upon which the Benders'
+ * decomposition is applied. The default Benders' decomposition plugin (see @ref BENDERSDEFAULT) is used for applying
+ * the decomposition. The master problem sub-SCIP is solved and then the solution from the Benders' decomposition
+ * algorithm is returned.
+ *
+ * If the problem is solved to optimality by the Benders' decomposition algorithm, then the original SCIP instance
+ * terminates. There are cases where the Benders' decomposition algorithm terminates without an optimal solution. As a
+ * result, the original SCIP instance would continue solving. These cases are: reaching node, memory or solution limits,
+ * or numerical issues meaning that the Benders' solution is not optimal for the original problem. The parameter
+ * "relaxing/benders/continueorig" is provided to inform SCIP whether the original SCIP instance should continue solving
+ * following the completion of the Benders' algorithm. By default, solving in the original SCIP instance is interrupted
+ * when the relaxator finishes.
+ *
+ * The parameter setting and limits from the original SCIP instance are copied across to the master problem
+ * sub-SCIP in the Benders' decomposition relaxator. It is possible to set a separate node limit for the Benders'
+ * algorithm within the relaxator. This is achieved by using the parameter "relaxing/benders/nodelimit". A possible use
+ * case for a separate Benders' node limit is that the Benders' algorithm could be used as an initial heuristics for the
+ * original SCIP instance.
+ *
+ * An advantage over using the decomposition structure compared to an instance in the SMPS format is that the solution
+ * to the original problem is easily accessible. At the completion of the Benders' decomposition algorithm, the best
+ * know solution is copied back to the original SCIP instance. Note that using a decomposition structure is not the only
+ * way to get the original problem solution from the Benders' decomposition algorithm. Whichever method you use, it is
+ * possible to solve the Benders' decomposition subproblems by calling SCIPsetupBendersSubproblem() and then
+ * SCIPsolveBendersSubproblem() for each subproblem using the best solution from the master problem. An example of this
+ * can be found in solveBendersSubproblems() of `src/scip/relax_benders.c`.
+ *
  * @section BENDERSDEFAULT Using the default Benders' decomposition plugin.
  *
  * A default implementation of a Benders' decomposition plugin has been included in \SCIP 6.0 (see

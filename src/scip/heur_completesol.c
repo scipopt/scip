@@ -1077,7 +1077,7 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
 
    *result = SCIP_DELAYED;
 
-   /* do not call heuristic of node was already detected to be infeasible */
+   /* do not call heuristic if node was already detected to be infeasible */
    if( nodeinfeasible )
       return SCIP_OKAY;
 
@@ -1103,7 +1103,7 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
       && (heurdata->beforepresol || SCIPgetCurrentNode(scip) != SCIPgetRootNode(scip)) )
       return SCIP_OKAY;
 
-   /* get variable data and return of no variables are left in the problem */
+   /* get variable data and return if no variables are left in the problem */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    if( heurdata->ignorecont )

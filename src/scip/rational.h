@@ -76,14 +76,6 @@ SCIP_RETCODE SCIPrationalCreateBlock(
    SCIP_RATIONAL**       rational            /**< pointer to the rational to create */
    );
 
-/** allocates and creates a rational from a string in the format, e.g. "12/35" */
-SCIP_EXPORT
-SCIP_RETCODE SCIPrationalCreateString(
-   BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_RATIONAL**       rational,           /**< pointer to the rational to create */
-   const char*           desc                /**< the string describing the rational */
-   );
-
 /** creates a copy of a rational using ordinary memory */
 SCIP_EXPORT
 SCIP_RETCODE SCIPrationalCopy(
@@ -280,17 +272,10 @@ void SCIPrationalSetRational(
 
 /** sets a rational to a nom/denom value */
 SCIP_EXPORT
-void SCIPrationalSetInt(
+void SCIPrationalSetFraction(
    SCIP_RATIONAL*        res,                /**< the result */
    SCIP_Longint          nom,                /**< the nominator */
    SCIP_Longint          denom               /**< the denominator */
-   );
-
-/** sets a rational to the value described by a string */
-SCIP_EXPORT
-void SCIPrationalSetString(
-   SCIP_RATIONAL*        res,                /**< the result */
-   const char*           desc                /**< the string describing the rational */
    );
 
 /** sets a rational to the value of another a real */
@@ -318,15 +303,30 @@ SCIP_Bool SCIPrationalIsString(
    const char*           desc                /**< string to check */
    );
 
-/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p str
+/** sets a rational to the value described by a string */
+SCIP_EXPORT
+void SCIPrationalSetString(
+   SCIP_RATIONAL*        res,                /**< the result */
+   const char*           desc                /**< the string describing the rational */
+   );
+
+/** allocates and creates a rational from a string if known, otherwise assigns a null pointer */
+SCIP_EXPORT
+SCIP_RETCODE SCIPrationalCreateString(
+   BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_RATIONAL**       rational,           /**< pointer to the rational to create */
+   const char*           desc                /**< the string describing the rational */
+   );
+
+/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p desc
  *
  *  @return Returns TRUE if a value could be extracted, otherwise FALSE
  */
 SCIP_EXPORT
 SCIP_Bool SCIPstrToRationalValue(
-   char*                 str,                /**< string to search */
+   char*                 desc,               /**< string to search */
    SCIP_RATIONAL*        value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p desc */
    );
 
 /** resets the flag isfprepresentable to SCIP_ISFPREPRESENTABLE_UNKNOWN */

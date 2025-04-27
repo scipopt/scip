@@ -2062,7 +2062,7 @@ void SCIPsolGetValExact(
        * -> get the corresponding original variable first
        */
       origvar = var;
-      SCIPrationalSetInt(scalar, 1L, 1L);
+      SCIPrationalSetFraction(scalar, 1LL, 1LL);
       SCIPrationalSetReal(constant, 0.0);
       retcode = SCIPvarGetOrigvarSumExact(&origvar, scalar, constant);
       if ( retcode != SCIP_OKAY )
@@ -2852,7 +2852,7 @@ SCIP_RETCODE SCIPsolRound(
    return SCIP_OKAY;
 }
 
-/** copy the fp values to the exact arrays of the solution */
+/** copies the real values to the exact arrays of the solution */
 SCIP_RETCODE SCIPsolMakeExact(
    SCIP_SOL*             sol,                /**< primal solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2861,24 +2861,21 @@ SCIP_RETCODE SCIPsolMakeExact(
    SCIP_PROB*            prob                /**< transformed problem data */
    )
 {
-   int v;
    SCIP_RATIONAL* tmp;
+   int v;
 
    if( SCIPsolIsExact(sol) )
       return SCIP_OKAY;
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &sol->valsexact ) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &sol->valsexact) );
    SCIP_CALL( SCIPrationalarrayCreate(&sol->valsexact->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&sol->valsexact->valid, blkmem) );
    SCIP_CALL( SCIPrationalCreateBlock(blkmem, &sol->valsexact->obj) );
-
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
 
    SCIP_CALL( SCIPsolUnlink(sol, set, prob) );
 
-   SCIPrationalSetReal(sol->valsexact->obj, sol->obj);
-
-   for( v = 0; v < prob->nvars; v++ )
+   for( v = 0; v < prob->nvars; ++v )
    {
       SCIPrationalSetReal(tmp, solGetArrayVal(sol, prob->vars[v]));
       SCIP_CALL( solSetArrayValExact(sol, set, prob->vars[v], tmp) );
@@ -2887,6 +2884,42 @@ SCIP_RETCODE SCIPsolMakeExact(
    SCIPsolRecomputeInternObjExact(sol, set, stat, prob);
 
    SCIPrationalFreeBuffer(set->buffer, &tmp);
+
+   return SCIP_OKAY;
+}
+
+/** approximates and copies the exact values to the real arrays of the solution and frees the exact data */
+SCIP_RETCODE SCIPsolMakeReal(
+   SCIP_SOL*             sol,                /**< primal solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob                /**< transformed problem data */
+   )
+{
+   SCIP_RATIONAL* tmp;
+   int v;
+
+   if( !SCIPsolIsExact(sol) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
+
+   SCIP_CALL( SCIPsolUnlinkExact(sol, set, prob) );
+
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      solGetArrayValExact(tmp, sol, prob->vars[v]);
+      SCIP_CALL( solSetArrayVal(sol, set, prob->vars[v], SCIPrationalGetReal(tmp)) );
+   }
+
+   SCIPsolRecomputeObj(sol, set, stat, prob);
+
+   SCIPrationalFreeBuffer(set->buffer, &tmp);
+   SCIPrationalFreeBlock(blkmem, &sol->valsexact->obj);
+   SCIP_CALL( SCIPboolarrayFree(&sol->valsexact->valid) );
+   SCIP_CALL( SCIPrationalarrayFree(&sol->valsexact->vals, blkmem) );
+   BMSfreeBlockMemory(blkmem, &sol->valsexact);
 
    return SCIP_OKAY;
 }
@@ -3205,7 +3238,7 @@ void SCIPsolRecomputeObj(
       sol->obj = -SCIPsetInfinity(set);
 }
 
-/** recomputes the objective value of an exact solution, e.g., when initialized from an fp solution */
+/** recomputes the objective value of an exact solution, e.g., when initialized from a real solution */
 void SCIPsolRecomputeInternObjExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3226,7 +3259,7 @@ void SCIPsolRecomputeInternObjExact(
    nvars = prob->nvars;
    (void) SCIPrationalCreateBuffer(set->buffer, &solval);
 
-   SCIPrationalSetInt(sol->valsexact->obj, 0L, 1L);
+   SCIPrationalSetFraction(sol->valsexact->obj, 0LL, 1LL);
 
    /* recompute the objective value */
    for( v = 0; v < nvars; ++v )
@@ -3986,16 +4019,6 @@ SCIP_Real SCIPsolGetRelConsViolation(
    return sol->viol.relviolcons;
 }
 
-/** returns whether a solution is an exact rational solution */
-SCIP_Bool SCIPsolIsExact(
-   SCIP_SOL*             sol                 /**< primal CIP solution */
-   )
-{
-   assert(sol != NULL);
-
-   return sol->valsexact != NULL;
-}
-
 /** overwrite FP solution with exact values */
 SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
    SCIP_SOL*             sol,                /**< exact primal CIP solution */
@@ -4107,6 +4130,16 @@ SCIP_Bool SCIPsolIsOriginal(
    assert(sol != NULL);
 
    return (sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || sol->solorigin == SCIP_SOLORIGIN_PARTIAL);
+}
+
+/** returns whether a solution is an exact rational solution */
+SCIP_Bool SCIPsolIsExact(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->valsexact != NULL;
 }
 
 /** returns whether the given solution is defined on original variables and containes unknown solution values */

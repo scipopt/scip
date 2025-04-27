@@ -131,7 +131,7 @@ SCIP_RETCODE fromCommandLine(
 
          SCIP_CALL( SCIPcreateSolCopy(scip, &origsol, bestsol) );
          SCIP_CALL( SCIPretransformSol(scip, origsol) );
-         if( SCIPisExact(scip) && SCIPisExactSol(scip, bestsol) )
+         if( SCIPisExact(scip) && SCIPsolIsExact(bestsol) )
          {
             SCIP_CALL( SCIPprintSolExact(scip, origsol, NULL, FALSE) );
          }

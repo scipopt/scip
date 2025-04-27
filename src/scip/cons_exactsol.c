@@ -45,8 +45,10 @@
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
 #include "scip/rational.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
+#include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_lpexact.h"
 #include "scip/scip_mem.h"
@@ -54,7 +56,6 @@
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
-#include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/set.h"
@@ -415,17 +416,22 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       return SCIP_OKAY;
 
    /* do not run for solutions that are already exact */
-   if( SCIPisExactSol(scip, sol) )
+   if( SCIPsolIsExact(sol) )
+      return SCIP_OKAY;
+
+   /* do not run after solving is finished */
+   if( SCIPgetStage(scip) > SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
    /* if we are at a point where we can't dive exactly, buffer the solution and return */
-   if( !SCIPhasCurrentNodeLP(scip) || SCIPnodeGetType(SCIPgetCurrentNode(scip)) != SCIP_NODETYPE_FOCUSNODE )
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPhasCurrentNodeLP(scip) || SCIPnodeGetType(SCIPgetCurrentNode(scip)) != SCIP_NODETYPE_FOCUSNODE )
    {
       SCIP_CALL( bufferSolution(scip, sol, conshdlrdata) );
       *result = SCIP_INFEASIBLE;
       return SCIP_OKAY;
    }
 
+   /* construct the LP; we ignore the (local) cutoff result, because we relax bounds later */
    if( !SCIPisLPConstructed(scip) )
    {
       SCIP_Bool cutoff = FALSE;
@@ -563,6 +569,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
          if( SCIPvarGetStatusExact(vars[i]) == SCIP_VARSTATUS_COLUMN )
          {
             SCIP_Real solval;
+
             solval = SCIPgetSolVal(scip, worksol, vars[i]);
 
             assert(SCIPrationalIsLE(SCIPvarGetLbLocalExact(vars[i]), SCIPvarGetUbLocalExact(vars[i])));

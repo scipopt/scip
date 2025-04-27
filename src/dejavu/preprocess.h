@@ -13,14 +13,20 @@
 #include "refinement.h"
 #include "components.h"
 #include <vector>
-#include <iomanip>
 #include <ctime>
 
 namespace dejavu {
     using dejavu::ds::coloring;
-
+    
     class preprocessor;
-    static preprocessor* save_preprocessor;
+
+    /**
+     * Used to make preprocessor object available from nauty/saucy/Traces hook.
+     */
+    inline preprocessor*& save_preprocessor() {
+        static thread_local preprocessor* p = nullptr;
+        return p;
+    }
 
     /**
      * \brief preprocessor for symmetry detection
@@ -36,7 +42,6 @@ namespace dejavu {
          */
         enum preop { deg01, deg2ue, deg2ma, qcedgeflip, densify2, twins };
 
-        //inline static preprocessor* save_preprocessor;
         dejavu_hook* saved_hook = nullptr;
 
         dejavu::timed_print* print = nullptr;
@@ -128,6 +133,7 @@ namespace dejavu {
         }
 
     private:
+
         // combine translation layers
         void meld_translation_layers() {
             if (layers_melded)
@@ -342,139 +348,6 @@ namespace dejavu {
             return removed_twins;
         }
 
-        int remove_twins(dejavu::sgraph *g, int *colmap, dejavu_hook* hook) {
-            //coloring col;
-            g->initialize_coloring(&c, colmap);
-
-            dejavu::ds::markset  test_twin(g->v_size);
-            std::vector<int> add_to_string;
-            dejavu::ds::worklist twin_counter(g->v_size);
-
-            dejavu::ds::markset  potential_twin(g->v_size);
-            dejavu::ds::worklist potential_twin_counter(g->v_size);
-
-            dejavu::ds::markset  touched(g->v_size);
-
-            std::vector<int> potential_twin_list;
-
-            del.reset();
-
-            int d_limit = std::max(static_cast<int>(sqrt(sqrt(g->v_size))), 8);
-
-            int s_twins = 0;
-            for(int i = 0; i < g->v_size; ++i) twin_counter[i] = 0;
-                // iterate over color classes
-            for(int i = 0; i < g->v_size;) {
-                const int color = i;
-                const int color_size = c.ptn[color] + 1;
-                i += color_size;
-
-                for(int j = 0; j < color_size; ++j) {
-                    if(j == 2 && s_twins == 0) break;
-                    const int vertex = c.lab[color + j];
-                    if(g->d[vertex] > d_limit) break;
-
-                    touched.set(vertex);
-                    int twin_class_sz = 1;
-
-                    bool limit_breached = false;
-
-                    add_to_string.clear();
-                    if(del.get(vertex)) continue;
-                    test_twin.reset();
-                    potential_twin.reset();
-                    potential_twin_list.clear();
-                    for(int k = 0; k < g->d[vertex]; ++k) {
-                        const int neighbour = g->e[g->v[vertex] + k];
-                        test_twin.set(neighbour);
-                        if(g->d[neighbour] > d_limit) {
-                            limit_breached = true;
-                            break;
-                        }
-                        for(int l = 0; l < g->d[neighbour]; ++l) {
-                            const int neighbour_neighbour = g->e[g->v[neighbour] + l];
-                            if(touched.get(neighbour_neighbour)) continue;
-                            if(potential_twin.get(neighbour_neighbour)) {
-                                potential_twin_counter[neighbour_neighbour] += 1;
-                            } else {
-                                potential_twin.set(neighbour_neighbour);
-                                potential_twin_counter[neighbour_neighbour] = 1;
-                                potential_twin_list.push_back(neighbour_neighbour);
-                            }
-                        }
-                    }
-                    if(limit_breached) break;
-
-                    //for(int jj = j+1; jj < color_size; ++jj) {
-                    for(int other_vertex : potential_twin_list) {
-                        bool is_twin = true;
-                        //const int other_vertex = col.lab[color + jj];
-                        if(potential_twin_counter[other_vertex] < g->d[vertex] - 1) continue;
-                        if(vertex == other_vertex || del.get(other_vertex) ||
-                                c.vertex_to_col[other_vertex] != c.vertex_to_col[vertex]) continue;
-                        dej_assert(g->d[vertex] == g->d[other_vertex]);
-                        for(int k = 0; k < g->d[other_vertex]; ++k) {
-                            const int neighbour = g->e[g->v[other_vertex] + k];
-                            if(neighbour == vertex) continue;
-                            if(!test_twin.get(neighbour)) {
-                                is_twin = false;
-                                break;
-                            }
-                        }
-
-                        if(is_twin) {
-                            ++s_twins;
-                            ++twin_counter[vertex];
-                            dej_assert(vertex != other_vertex);
-                            ++twin_class_sz;
-                            multiply_to_group_size(twin_class_sz);
-                            del.set(other_vertex);
-                            add_to_string.push_back(other_vertex);
-
-                            _automorphism[vertex]       = other_vertex;
-                            _automorphism[other_vertex] = vertex;
-                            _automorphism_supp.push_back(vertex);
-                            _automorphism_supp.push_back(other_vertex);
-
-                            pre_hook(g->v_size, _automorphism.get_array(), _automorphism_supp.cur_pos,
-                                     _automorphism_supp.get_array(), hook);
-
-                            reset_automorphism(_automorphism.get_array(), _automorphism_supp.cur_pos,
-                                               _automorphism_supp.get_array());
-                            _automorphism_supp.reset();
-                        }
-                    }
-
-                    dej_assert(!del.get(vertex));
-                    dej_assert(twin_class_sz -1 == static_cast<int>(add_to_string.size()));
-                    dej_assert(twin_counter[vertex] == static_cast<int>(add_to_string.size()));
-                    const int orig_vertex = translate_back(vertex);
-                    for(auto& other_vertex : add_to_string) {
-                        dej_assert(del.get(other_vertex));
-                        const int orig_other  = translate_back(other_vertex);
-                        dej_assert(static_cast<int>(recovery_strings[orig_vertex].size()) ==
-                                   static_cast<int>(recovery_strings[orig_other].size()));
-                        recovery_strings[orig_vertex].push_back(orig_other);
-                        for(int k = 0; k < static_cast<int>(recovery_strings[orig_other].size()); ++k) {
-                            recovery_strings[orig_vertex].push_back(recovery_strings[orig_other][k]);
-                        }
-                    }
-                }
-
-                add_to_string.clear();
-                for(int j = 0; j < color_size; ++j) {
-                    const int vertex = c.lab[color + j];
-                    if(!del.get(vertex)) {
-                        dej_assert(colmap[vertex] + twin_counter[vertex] < color + color_size);
-                        colmap[vertex] = color + twin_counter[vertex];
-                        add_to_string.push_back(vertex);
-                    }
-                }
-            }
-
-            return s_twins;
-        }
-
         // reset internal automorphism structure to the identity
         static void reset_automorphism(int *rautomorphism, int nsupp, const int *supp) {
             for (int i = 0; i < nsupp; ++i) {
@@ -506,11 +379,8 @@ namespace dejavu {
 
             del.reset();
 
-            //coloring test_col;
             g->initialize_coloring(&c, colmap);
-
             assure_ir_quotient_init(g);
-
             touched_color_cache.reset();
 
             worklist_deg0.reset();
@@ -522,9 +392,6 @@ namespace dejavu {
             }
 
             add_edge_buff_act.reset();
-            //add_edge_buff.reserve(g->v_size);
-            //for (int i = 0; i < g->v_size; ++i)
-             //   add_edge_buff.emplace_back(); // could do this smarter... i know how many edges end up here
 
             for (int i = 0; i < g->v_size;) {
                 const int test_v = c.lab[i];
@@ -786,7 +653,6 @@ namespace dejavu {
             dejavu::markset color_test(g->v_size);
             dejavu::markset color_unique(g->v_size);
 
-            //coloring col;
             g->initialize_coloring(&c, colmap);
 
             add_edge_buff_act.reset();
@@ -795,7 +661,6 @@ namespace dejavu {
             }
 
             del.reset();
-
             worklist_deg1.reset();
 
             dejavu::worklist endpoint_cnt(g->v_size);
@@ -1133,7 +998,6 @@ namespace dejavu {
             dejavu::markset color_test(g->v_size);
             dejavu::markset color_unique(g->v_size);
 
-            //coloring col;
             g->initialize_coloring(&c, colmap);
             add_edge_buff_act.reset();
             for (int i = 0; i < g->v_size; ++i) {
@@ -1396,7 +1260,6 @@ namespace dejavu {
         void red_deg2_densifysc1(dejavu::sgraph *g, int *colmap) {
             if (g->v_size <= 1 || h_deact_deg2) return;
 
-            //coloring col;
             g->initialize_coloring(&c, colmap);
             add_edge_buff_act.reset();
             for (int i = 0; i < g->v_size; ++i) add_edge_buff[i].clear();
@@ -1614,7 +1477,6 @@ namespace dejavu {
         // color cycles according to their size
         // remove uniform colored cycles
         bool red_deg2_color_cycles(dejavu::sgraph *g, int *colmap) {
-            //coloring col;
             g->initialize_coloring(&c, colmap);
             for(int i = 0; i < g->v_size; ++i) {
                 colmap[i] = c.vertex_to_col[i];
@@ -1669,23 +1531,20 @@ namespace dejavu {
                 return;
 
             dejavu::ds::markset color_test(g->v_size);
-
             dejavu::ds::markset color_unique(g->v_size);
 
-            //coloring col;
             g->initialize_coloring(&c, colmap);
 
             add_edge_buff_act.reset();
             for (int i = 0; i < g->v_size; ++i) add_edge_buff[i].clear();
 
             del.reset();
-
             worklist_deg1.reset();
 
             dejavu::ds::worklist endpoint_cnt(g->v_size);
             for (int i = 0; i < g->v_size; ++i) endpoint_cnt.push_back(0);
 
-            dejavu::ds::markset path_done(g->v_size);
+            dejavu::ds::markset  path_done(g->v_size);
             dejavu::ds::worklist color_pos(g->v_size);
             dejavu::ds::worklist not_unique(2*g->v_size);
             dejavu::ds::worklist not_unique_analysis(g->v_size);
@@ -3371,7 +3230,7 @@ namespace dejavu {
 
             domain_size = g->v_size;
             saved_hook = hook;
-            save_preprocessor = this;
+            save_preprocessor() = this;
             if(g->v_size == 0)
                 return;
             g->dense = !(g->e_size < g->v_size || g->e_size / g->v_size < g->v_size / (g->e_size / g->v_size));
@@ -3493,7 +3352,6 @@ namespace dejavu {
             copy_coloring_to_colmap(&c, colmap);
             if(print) print->timer_print("colorref", g->v_size, c.cells);
 
-            //if(!has_deg_0 && !has_deg_1 && !has_deg_2 && !has_discrete) return;
             has_deg_0 = (count_deg0 > 4);
             has_deg_1 = (count_deg1 > 8);
             has_deg_2 = (count_deg2 > 128); /*< if there's only very few, there's really no point... */
@@ -3538,7 +3396,6 @@ namespace dejavu {
 
                         case preop::twins: {
                             // check for twins and mark them for deletion
-                            //int s_twins = remove_twins(g, colmap, hook);
                             const int s_twins_true  = twins_partition_refinement(g, colmap, hook, false);
                             if(s_twins_true > 0) perform_del(g, colmap);
                             const int s_twins_false = twins_partition_refinement(g, colmap, hook, true);
@@ -3613,7 +3470,7 @@ namespace dejavu {
 #if defined(BLISS_VERSION_MAJOR) && defined(BLISS_VERSION_MINOR)
 #if ( BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76 )
         void bliss_hook(unsigned int n, const unsigned int *aut) {
-          auto p = save_preprocessor;
+          auto p = save_preprocessor();
           p->pre_hook_buffered(n, (const int *) aut, -1, nullptr, p->saved_hook);
        }
 #else
@@ -3630,22 +3487,22 @@ namespace dejavu {
 #endif
         // Traces usage specific:
         static inline void traces_hook(int, int* aut, int n) {
-            auto p = save_preprocessor;
+            auto p = save_preprocessor();
             p->pre_hook_buffered(n, (const int *) aut, -1, nullptr, p->saved_hook);
         }
 
         void traces_save_my_preprocessor() {
-            save_preprocessor = this;
+            save_preprocessor() = this;
         }
 
         // nauty usage specific:
         static inline void nauty_hook(int, int* aut, int*, int, int, int n) {
-            auto p = save_preprocessor;
+            auto p = save_preprocessor();
             p->pre_hook_buffered(n, (const int *) aut, -1, nullptr, p->saved_hook);
         }
 
         void nauty_save_my_preprocessor() {
-            save_preprocessor = this;
+            save_preprocessor() = this;
         }
 
         // saucy usage specific:
@@ -3657,7 +3514,7 @@ namespace dejavu {
 
         // dejavu usage specific
         static inline void _dejavu_hook(int n, const int* aut, int nsupp, const int* supp) {
-            auto p = save_preprocessor;
+            auto p = save_preprocessor();
             if(p->skipped_preprocessing && !p->decomposer) {
                 if(p->saved_hook != nullptr) {
                     (*p->saved_hook)(n, aut, nsupp, supp);

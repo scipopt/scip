@@ -102,7 +102,7 @@ Test(rationals, create_and_free)
 
 Test(rationals, setting, .description = "tests all the different methods to set/get rationals")
 {
-   int testint = 100345;
+   SCIP_Longint testint = 100345;
    SCIP_Real testreal = 1235.235690;
    SCIP_RATIONAL* testr;
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_BOOST)
@@ -117,7 +117,7 @@ Test(rationals, setting, .description = "tests all the different methods to set/
 #endif
 
    /* test setter methods */
-   SCIPrationalSetInt(r1, testint, 1);
+   SCIPrationalSetFraction(r1, testint, 1LL);
    cr_assert_eq(SCIPrationalGetReal(r1), testint, "setting from and converting back to int did not give same result");
    /* set to fp number */
    SCIPrationalSetReal(r1, testreal);
@@ -187,7 +187,7 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    cr_assert(SCIPrationalIsZero(r2));
 
    /* mul -inf * -1 */
-   SCIPrationalSetInt(r2, -1, 1);
+   SCIPrationalSetFraction(r2, -1LL, 1LL);
    SCIPrationalMult(rbuf, r1, r2);
    cr_assert(SCIPrationalIsInfinity(rbuf));
 
@@ -203,10 +203,10 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    cr_assert(!SCIPrationalIsEQ(r1, r2));
 
    /* Difference 0.5 - - 0.5 == 1*/
-   SCIPrationalSetInt(r1, 1, 2);
-   SCIPrationalSetInt(r2, -1, 2);
+   SCIPrationalSetFraction(r1, 1LL, 2LL);
+   SCIPrationalSetFraction(r2, -1LL, 2LL);
    SCIPrationalDiff(rbuf, r1, r2);
-   SCIPrationalSetInt(r1, 1, 1);
+   SCIPrationalSetFraction(r1, 1LL, 1LL);
    cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* Diff 1 - 1.5 == -0.5 */
@@ -216,41 +216,41 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    /* RelDiff -5 / -0.5 == -4.5 / 5 */
    SCIPrationalMultReal(r1, r1, 10);
    SCIPrationalRelDiff(rbuf, r1, r2);
-   SCIPrationalSetInt(r1, -9, 10);
+   SCIPrationalSetFraction(r1, -9LL, 10LL);
    cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* Division (-9/10) / (-0.5) == 18/10 */
    SCIPrationalDiv(rbuf, r1, r2);
-   SCIPrationalSetInt(r1, 18, 10);
+   SCIPrationalSetFraction(r1, 18LL, 10LL);
    cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    SCIPrationalDivReal(rbuf, r1, 2);
-   SCIPrationalSetInt(r1, 9, 10);
+   SCIPrationalSetFraction(r1, 9LL, 10LL);
    cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* SCIPrationalAddProd 9/10 += 9/10 * -0.5 == 9/20 */
    SCIPrationalAddProd(rbuf, r1, r2);
-   SCIPrationalSetInt(r1, 9, 20);
+   SCIPrationalSetFraction(r1, 9LL, 20LL);
    cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* SCIPrationalDiffProd 9/20 -= 9/20 * -0.5 == 27/40 */
    SCIPrationalDiffProd(rbuf, r1, r2);
-   SCIPrationalSetInt(r1, 27, 40);
+   SCIPrationalSetFraction(r1, 27LL, 40LL);
    cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* Negation */
    SCIPrationalNegate(rbuf, r1);
-   SCIPrationalSetInt(r1, -27, 40);
+   SCIPrationalSetFraction(r1, -27LL, 40LL);
    cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* Abs */
    SCIPrationalAbs(rbuf, r1);
-   SCIPrationalSetInt(r1, 27, 40);
+   SCIPrationalSetFraction(r1, 27LL, 40LL);
    cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* Invert */
    SCIPrationalInvert(rbuf, r1);
-   SCIPrationalSetInt(r1, 40, 27);
+   SCIPrationalSetFraction(r1, 40LL, 27LL);
    cr_assert(SCIPrationalIsEQ(rbuf, r1));
 
    /* min/max */
@@ -273,8 +273,8 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    cr_assert(SCIPrationalIsNegative(rbuf));
 
    /* SCIPrationalIsIntegral */
-   SCIPrationalSetInt(r1, 15, 5);
-   SCIPrationalSetInt(r2, 15, 7);
+   SCIPrationalSetFraction(r1, 15LL, 5LL);
+   SCIPrationalSetFraction(r2, 15LL, 7LL);
    cr_assert(SCIPrationalIsIntegral(r1));
    cr_assert(!SCIPrationalIsIntegral(r2));
 
@@ -320,7 +320,7 @@ Test(rationals, overflows, .description = "test conversion methods with huge rat
    SCIP_Longint reslong = 0;
 
    // round -1/2 up/down/nearest
-   SCIPrationalSetInt(r1, testlong, -(testlong * 2));
+   SCIPrationalSetFraction(r1, testlong, -(testlong * 2));
    SCIPrationalRoundInteger(r2, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(SCIPrationalGetReal(r2), 0);
    SCIPrationalRoundLong(&reslong, r1, SCIP_R_ROUND_UPWARDS);
@@ -337,7 +337,7 @@ Test(rationals, overflows, .description = "test conversion methods with huge rat
    cr_assert_eq(reslong, -1);
 
    // round 1/2 up/down/nearest
-   SCIPrationalSetInt(r1, testlong, (testlong * 2));
+   SCIPrationalSetFraction(r1, testlong, (testlong * 2));
    SCIPrationalRoundInteger(r2, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(SCIPrationalGetReal(r2), 1);
    SCIPrationalRoundLong(&reslong, r1, SCIP_R_ROUND_UPWARDS);
@@ -354,7 +354,7 @@ Test(rationals, overflows, .description = "test conversion methods with huge rat
    cr_assert_eq(reslong, 1);
 
    // round -1/3 up/down/nearest
-   SCIPrationalSetInt(r1, testlong, -(testlong * 3));
+   SCIPrationalSetFraction(r1, testlong, -(testlong * 3));
    SCIPrationalRoundInteger(r2, r1, SCIP_R_ROUND_UPWARDS);
    cr_assert_eq(SCIPrationalGetReal(r2), 0);
    SCIPrationalRoundInteger(r2, r1, SCIP_R_ROUND_DOWNWARDS);
@@ -370,7 +370,7 @@ Test(rationals, arrays, .description = "tests rational array methods")
    cr_log_info("testing rational array methods \n");
 
    // test getter and setters
-   SCIPrationalSetInt(r1, 2, 5);
+   SCIPrationalSetFraction(r1, 2LL, 5LL);
    SCIPrationalarraySetVal(ratar, 5, r1);
    SCIPrationalarrayGetVal(ratar, 5, r2);
    cr_assert(SCIPrationalIsEQ(r1, r2));
@@ -390,8 +390,8 @@ Test(rationals, arrays, .description = "tests rational array methods")
    cr_assert(SCIPrationalIsEQ(r1, r2));
 
    // test incval
-   SCIPrationalSetInt(r2, 1, 5);
-   SCIPrationalSetInt(r1, 2, 5);
+   SCIPrationalSetFraction(r2, 1LL, 5LL);
+   SCIPrationalSetFraction(r1, 2LL, 5LL);
    SCIPrationalarraySetVal(ratar, 7, r2);
    SCIPrationalarrayIncVal(ratar, 7, r1);
 

@@ -1,0 +1,248 @@
+STATISTICS
+  Problem name     : EGOUT
+  Variables        : 141 (55 binary, 0 integer, 0 implicit integer, 86 continuous)
+  Constraints      : 0 initial, 98 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <I.041042>: obj=1033/50, original bounds=[0,1]
+  [binary] <I.001...>: obj=2821/100, original bounds=[0,1]
+  [binary] <I.001003>: obj=1857/100, original bounds=[0,1]
+  [binary] <I.002003>: obj=169/20, original bounds=[0,1]
+  [binary] <I.002...>: obj=529/25, original bounds=[0,1]
+  [binary] <I.003005>: obj=1419/50, original bounds=[0,1]
+  [binary] <I.004005>: obj=49/5, original bounds=[0,1]
+  [binary] <I.004...>: obj=2329/100, original bounds=[0,1]
+  [binary] <I.005007>: obj=507/100, original bounds=[0,1]
+  [binary] <I.006007>: obj=339/50, original bounds=[0,1]
+  [binary] <I.007008>: obj=29/10, original bounds=[0,1]
+  [binary] <I.008...>: obj=2789/100, original bounds=[0,1]
+  [binary] <I.008009>: obj=1003/100, original bounds=[0,1]
+  [binary] <I.010012>: obj=737/50, original bounds=[0,1]
+  [binary] <I.011012>: obj=619/100, original bounds=[0,1]
+  [binary] <I.012...>: obj=221/10, original bounds=[0,1]
+  [binary] <I.012013>: obj=791/50, original bounds=[0,1]
+  [binary] <I.013016>: obj=1133/100, original bounds=[0,1]
+  [binary] <I.014015>: obj=579/100, original bounds=[0,1]
+  [binary] <I.015016>: obj=39/10, original bounds=[0,1]
+  [binary] <I.016...>: obj=2479/100, original bounds=[0,1]
+  [binary] <I.016017>: obj=409/25, original bounds=[0,1]
+  [binary] <I.017018>: obj=69/20, original bounds=[0,1]
+  [binary] <I.009018>: obj=113/50, original bounds=[0,1]
+  [binary] <I.018019>: obj=193/50, original bounds=[0,1]
+  [binary] <I.019024>: obj=841/100, original bounds=[0,1]
+  [binary] <I.024...>: obj=1323/50, original bounds=[0,1]
+  [binary] <I.023024>: obj=1601/100, original bounds=[0,1]
+  [binary] <I.022023>: obj=1673/100, original bounds=[0,1]
+  [binary] <I.020022>: obj=47/4, original bounds=[0,1]
+  [binary] <I.021022>: obj=13/4, original bounds=[0,1]
+  [binary] <I.022...>: obj=2741/100, original bounds=[0,1]
+  [binary] <I.024026>: obj=299/50, original bounds=[0,1]
+  [binary] <I.025026>: obj=547/25, original bounds=[0,1]
+  [binary] <I.025...>: obj=4371/100, original bounds=[0,1]
+  [binary] <I.026027>: obj=571/50, original bounds=[0,1]
+  [binary] <I.027...>: obj=117/5, original bounds=[0,1]
+  [binary] <I.027032>: obj=15/2, original bounds=[0,1]
+  [binary] <I.030031>: obj=673/100, original bounds=[0,1]
+  [binary] <I.031032>: obj=148/25, original bounds=[0,1]
+  [binary] <I.029031>: obj=97/10, original bounds=[0,1]
+  [binary] <I.028029>: obj=1267/100, original bounds=[0,1]
+  [binary] <I.028...>: obj=529/20, original bounds=[0,1]
+  [binary] <I.032033>: obj=271/100, original bounds=[0,1]
+  [binary] <I.033037>: obj=589/100, original bounds=[0,1]
+  [binary] <I.036037>: obj=197/20, original bounds=[0,1]
+  [binary] <I.034036>: obj=17/2, original bounds=[0,1]
+  [binary] <I.035036>: obj=9, original bounds=[0,1]
+  [binary] <I.037038>: obj=227/100, original bounds=[0,1]
+  [binary] <I.038040>: obj=637/100, original bounds=[0,1]
+  [binary] <I.039040>: obj=81/5, original bounds=[0,1]
+  [binary] <I.040...>: obj=1179/50, original bounds=[0,1]
+  [binary] <I.041...>: obj=2993/100, original bounds=[0,1]
+  [binary] <I.040041>: obj=673/100, original bounds=[0,1]
+  [binary] <I.042...>: obj=773/25, original bounds=[0,1]
+  [continuous] <F....001>: obj=0, original bounds=[49/20,49/20]
+  [continuous] <F....002>: obj=0, original bounds=[61/100,61/100]
+  [continuous] <F....004>: obj=0, original bounds=[791/100,791/100]
+  [continuous] <F....006>: obj=0, original bounds=[227/50,227/50]
+  [continuous] <F....007>: obj=0, original bounds=[57/50,57/50]
+  [continuous] <F....009>: obj=0, original bounds=[7/25,7/25]
+  [continuous] <F....010>: obj=0, original bounds=[113/100,113/100]
+  [continuous] <F....011>: obj=0, original bounds=[1073/50,1073/50]
+  [continuous] <F....013>: obj=0, original bounds=[116/25,116/25]
+  [continuous] <F....014>: obj=0, original bounds=[31/100,31/100]
+  [continuous] <F....015>: obj=0, original bounds=[31/25,31/25]
+  [continuous] <F....017>: obj=0, original bounds=[7/100,7/100]
+  [continuous] <F....019>: obj=0, original bounds=[241/100,241/100]
+  [continuous] <F....020>: obj=0, original bounds=[39/100,39/100]
+  [continuous] <F....021>: obj=0, original bounds=[741/100,741/100]
+  [continuous] <F....023>: obj=0, original bounds=[7/100,7/100]
+  [continuous] <F....025>: obj=0, original bounds=[961/50,961/50]
+  [continuous] <F....026>: obj=0, original bounds=[1049/100,1049/100]
+  [continuous] <F....028>: obj=0, original bounds=[22/25,22/25]
+  [continuous] <F....029>: obj=0, original bounds=[57/10,57/10]
+  [continuous] <F....030>: obj=0, original bounds=[7/25,7/25]
+  [continuous] <F....031>: obj=0, original bounds=[7/25,7/25]
+  [continuous] <F....033>: obj=0, original bounds=[19/100,19/100]
+  [continuous] <F....034>: obj=0, original bounds=[19/100,19/100]
+  [continuous] <F....035>: obj=0, original bounds=[7/25,7/25]
+  [continuous] <F....036>: obj=0, original bounds=[57/100,57/100]
+  [continuous] <F....038>: obj=0, original bounds=[53/10,53/10]
+  [continuous] <F....039>: obj=0, original bounds=[133/25,133/25]
+  [continuous] <F....040>: obj=0, original bounds=[19/25,19/25]
+  [continuous] <F....041>: obj=0, original bounds=[127/25,127/25]
+  [continuous] <F....042>: obj=0, original bounds=[161/25,161/25]
+  [continuous] <F.001...>: obj=979/1000, original bounds=[0,+inf]
+  [continuous] <F.001003>: obj=17/500, original bounds=[0,+inf]
+  [continuous] <F.002003>: obj=2/125, original bounds=[0,+inf]
+  [continuous] <F.002...>: obj=457/500, original bounds=[0,+inf]
+  [continuous] <F.003005>: obj=57/1000, original bounds=[0,+inf]
+  [continuous] <F.004005>: obj=2/125, original bounds=[0,+inf]
+  [continuous] <F.004...>: obj=969/1000, original bounds=[0,+inf]
+  [continuous] <F.005007>: obj=3/500, original bounds=[0,+inf]
+  [continuous] <F.006007>: obj=1/100, original bounds=[0,+inf]
+  [continuous] <F.007008>: obj=1/500, original bounds=[0,+inf]
+  [continuous] <F.008...>: obj=122/125, original bounds=[0,+inf]
+  [continuous] <F.008009>: obj=17/1000, original bounds=[0,+inf]
+  [continuous] <F.010012>: obj=27/1000, original bounds=[0,+inf]
+  [continuous] <F.011012>: obj=9/1000, original bounds=[0,+inf]
+  [continuous] <F.012...>: obj=241/250, original bounds=[0,+inf]
+  [continuous] <F.012013>: obj=1/40, original bounds=[0,+inf]
+  [continuous] <F.013016>: obj=3/200, original bounds=[0,+inf]
+  [continuous] <F.014015>: obj=1/100, original bounds=[0,+inf]
+  [continuous] <F.015016>: obj=3/500, original bounds=[0,+inf]
+  [continuous] <F.016...>: obj=97/100, original bounds=[0,+inf]
+  [continuous] <F.016017>: obj=11/500, original bounds=[0,+inf]
+  [continuous] <F.017018>: obj=3/1000, original bounds=[0,+inf]
+  [continuous] <F.009018>: obj=1/500, original bounds=[0,+inf]
+  [continuous] <F.018019>: obj=1/250, original bounds=[0,+inf]
+  [continuous] <F.019024>: obj=969/1000, original bounds=[0,+inf]
+  [continuous] <F.024...>: obj=21/1000, original bounds=[0,+inf]
+  [continuous] <F.023024>: obj=13/500, original bounds=[0,+inf]
+  [continuous] <F.022023>: obj=11/500, original bounds=[0,+inf]
+  [continuous] <F.020022>: obj=1/200, original bounds=[0,+inf]
+  [continuous] <F.021022>: obj=971/1000, original bounds=[0,+inf]
+  [continuous] <F.022...>: obj=1/250, original bounds=[0,+inf]
+  [continuous] <F.024026>: obj=27/500, original bounds=[0,+inf]
+  [continuous] <F.025026>: obj=27/500, original bounds=[0,+inf]
+  [continuous] <F.025...>: obj=1017/1000, original bounds=[0,+inf]
+  [continuous] <F.026027>: obj=1/50, original bounds=[0,+inf]
+  [continuous] <F.027...>: obj=967/1000, original bounds=[0,+inf]
+  [continuous] <F.027032>: obj=11/1000, original bounds=[0,+inf]
+  [continuous] <F.030031>: obj=3/250, original bounds=[0,+inf]
+  [continuous] <F.031032>: obj=1/250, original bounds=[0,+inf]
+  [continuous] <F.029031>: obj=3/250, original bounds=[0,+inf]
+  [continuous] <F.028029>: obj=3/125, original bounds=[0,+inf]
+  [continuous] <F.028...>: obj=39/40, original bounds=[0,+inf]
+  [continuous] <F.032033>: obj=1/500, original bounds=[0,+inf]
+  [continuous] <F.033037>: obj=1/250, original bounds=[0,+inf]
+  [continuous] <F.036037>: obj=9/500, original bounds=[0,+inf]
+  [continuous] <F.034036>: obj=2/125, original bounds=[0,+inf]
+  [continuous] <F.035036>: obj=3/200, original bounds=[0,+inf]
+  [continuous] <F.037038>: obj=1/1000, original bounds=[0,+inf]
+  [continuous] <F.038040>: obj=9/1000, original bounds=[0,+inf]
+  [continuous] <F.039040>: obj=1/40, original bounds=[0,+inf]
+  [continuous] <F.040...>: obj=967/1000, original bounds=[0,+inf]
+  [continuous] <F.041...>: obj=49/50, original bounds=[0,+inf]
+  [continuous] <F.040041>: obj=1/100, original bounds=[0,+inf]
+  [continuous] <F.041042>: obj=7/200, original bounds=[0,+inf]
+  [continuous] <F.042...>: obj=489/500, original bounds=[0,+inf]
+CONSTRAINTS
+  [exactlinear] <...>: <F....001>[C] +<F....002>[C] +<F....004>[C] +<F....006>[C] +<F....007>[C] +<F....009>[C] +<F....010>[C] +<F....011>[C] +<F....013>[C] +<F....014>[C] +<F....015>[C] +<F....017>[C] +<F....019>[C] +<F....020>[C] +<F....021>[C] +<F....023>[C] +<F....025>[C] +<F....026>[C] +<F....028>[C] +<F....029>[C] +<F....030>[C] +<F....031>[C] +<F....033>[C] +<F....034>[C] +<F....035>[C] +<F....036>[C] +<F....038>[C] +<F....039>[C] +<F....040>[C] +<F....041>[C] +<F....042>[C] -<F.001...>[C] -<F.002...>[C] -<F.004...>[C] -<F.008...>[C] -<F.012...>[C] -<F.016...>[C] -<F.024...>[C] -<F.022...>[C] -<F.025...>[C] -<F.027...>[C] -<F.028...>[C] -<F.040...>[C] -<F.041...>[C] -<F.042...>[C] == 0;
+  [exactlinear] <001>:  -<F....001>[C] +<F.001...>[C] +<F.001003>[C] == 0;
+  [exactlinear] <002>:  -<F....002>[C] +<F.002003>[C] +<F.002...>[C] == 0;
+  [exactlinear] <004>:  -<F....004>[C] +<F.004005>[C] +<F.004...>[C] == 0;
+  [exactlinear] <006>:  -<F....006>[C] +<F.006007>[C] == 0;
+  [exactlinear] <007>:  -<F....007>[C] -<F.005007>[C] -<F.006007>[C] +<F.007008>[C] == 0;
+  [exactlinear] <009>:  -<F....009>[C] -<F.008009>[C] +<F.009018>[C] == 0;
+  [exactlinear] <010>:  -<F....010>[C] +<F.010012>[C] == 0;
+  [exactlinear] <011>:  -<F....011>[C] +<F.011012>[C] == 0;
+  [exactlinear] <013>:  -<F....013>[C] -<F.012013>[C] +<F.013016>[C] == 0;
+  [exactlinear] <014>:  -<F....014>[C] +<F.014015>[C] == 0;
+  [exactlinear] <015>:  -<F....015>[C] -<F.014015>[C] +<F.015016>[C] == 0;
+  [exactlinear] <017>:  -<F....017>[C] -<F.016017>[C] +<F.017018>[C] == 0;
+  [exactlinear] <019>:  -<F....019>[C] -<F.018019>[C] +<F.019024>[C] == 0;
+  [exactlinear] <020>:  -<F....020>[C] +<F.020022>[C] == 0;
+  [exactlinear] <021>:  -<F....021>[C] +<F.021022>[C] == 0;
+  [exactlinear] <023>:  -<F....023>[C] +<F.023024>[C] -<F.022023>[C] == 0;
+  [exactlinear] <025>:  -<F....025>[C] +<F.025026>[C] +<F.025...>[C] == 0;
+  [exactlinear] <026>:  -<F....026>[C] -<F.024026>[C] -<F.025026>[C] +<F.026027>[C] == 0;
+  [exactlinear] <028>:  -<F....028>[C] +<F.028029>[C] +<F.028...>[C] == 0;
+  [exactlinear] <029>:  -<F....029>[C] +<F.029031>[C] -<F.028029>[C] == 0;
+  [exactlinear] <030>:  -<F....030>[C] +<F.030031>[C] == 0;
+  [exactlinear] <031>:  -<F....031>[C] -<F.030031>[C] +<F.031032>[C] -<F.029031>[C] == 0;
+  [exactlinear] <033>:  -<F....033>[C] -<F.032033>[C] +<F.033037>[C] == 0;
+  [exactlinear] <034>:  -<F....034>[C] +<F.034036>[C] == 0;
+  [exactlinear] <035>:  -<F....035>[C] +<F.035036>[C] == 0;
+  [exactlinear] <036>:  -<F....036>[C] +<F.036037>[C] -<F.034036>[C] -<F.035036>[C] == 0;
+  [exactlinear] <038>:  -<F....038>[C] -<F.037038>[C] +<F.038040>[C] == 0;
+  [exactlinear] <039>:  -<F....039>[C] +<F.039040>[C] == 0;
+  [exactlinear] <040>:  -<F....040>[C] -<F.038040>[C] -<F.039040>[C] +<F.040...>[C] +<F.040041>[C] == 0;
+  [exactlinear] <041>:  -<F....041>[C] +<F.041...>[C] -<F.040041>[C] +<F.041042>[C] == 0;
+  [exactlinear] <042>:  -<F....042>[C] -<F.041042>[C] +<F.042...>[C] == 0;
+  [exactlinear] <003>:  -<F.001003>[C] -<F.002003>[C] +<F.003005>[C] == 0;
+  [exactlinear] <005>:  -<F.003005>[C] -<F.004005>[C] +<F.005007>[C] == 0;
+  [exactlinear] <008>:  -<F.007008>[C] +<F.008...>[C] +<F.008009>[C] == 0;
+  [exactlinear] <012>:  -<F.010012>[C] -<F.011012>[C] +<F.012...>[C] +<F.012013>[C] == 0;
+  [exactlinear] <016>:  -<F.013016>[C] -<F.015016>[C] +<F.016...>[C] +<F.016017>[C] == 0;
+  [exactlinear] <018>:  -<F.017018>[C] -<F.009018>[C] +<F.018019>[C] == 0;
+  [exactlinear] <024>:  -<F.019024>[C] +<F.024...>[C] -<F.023024>[C] +<F.024026>[C] == 0;
+  [exactlinear] <022>: <F.022023>[C] -<F.020022>[C] -<F.021022>[C] +<F.022...>[C] == 0;
+  [exactlinear] <027>:  -<F.026027>[C] +<F.027...>[C] +<F.027032>[C] == 0;
+  [exactlinear] <032>:  -<F.027032>[C] -<F.031032>[C] +<F.032033>[C] == 0;
+  [exactlinear] <037>:  -<F.033037>[C] -<F.036037>[C] +<F.037038>[C] == 0;
+  [exactlinear] <U.001...>:  -2926/25<I.001...>[B] +<F.001...>[C] <= 0;
+  [exactlinear] <U.001003>:  -2926/25<I.001003>[B] +<F.001003>[C] <= 0;
+  [exactlinear] <U.002003>:  -2926/25<I.002003>[B] +<F.002003>[C] <= 0;
+  [exactlinear] <U.002...>:  -2926/25<I.002...>[B] +<F.002...>[C] <= 0;
+  [exactlinear] <U.003005>:  -2926/25<I.003005>[B] +<F.003005>[C] <= 0;
+  [exactlinear] <U.004005>:  -2926/25<I.004005>[B] +<F.004005>[C] <= 0;
+  [exactlinear] <U.004...>:  -2926/25<I.004...>[B] +<F.004...>[C] <= 0;
+  [exactlinear] <U.005007>:  -2926/25<I.005007>[B] +<F.005007>[C] <= 0;
+  [exactlinear] <U.006007>:  -2926/25<I.006007>[B] +<F.006007>[C] <= 0;
+  [exactlinear] <U.007008>:  -2926/25<I.007008>[B] +<F.007008>[C] <= 0;
+  [exactlinear] <U.008...>:  -2926/25<I.008...>[B] +<F.008...>[C] <= 0;
+  [exactlinear] <U.008009>:  -2926/25<I.008009>[B] +<F.008009>[C] <= 0;
+  [exactlinear] <U.010012>:  -2926/25<I.010012>[B] +<F.010012>[C] <= 0;
+  [exactlinear] <U.011012>:  -2926/25<I.011012>[B] +<F.011012>[C] <= 0;
+  [exactlinear] <U.012...>:  -2926/25<I.012...>[B] +<F.012...>[C] <= 0;
+  [exactlinear] <U.012013>:  -2926/25<I.012013>[B] +<F.012013>[C] <= 0;
+  [exactlinear] <U.013016>:  -2926/25<I.013016>[B] +<F.013016>[C] <= 0;
+  [exactlinear] <U.014015>:  -2926/25<I.014015>[B] +<F.014015>[C] <= 0;
+  [exactlinear] <U.015016>:  -2926/25<I.015016>[B] +<F.015016>[C] <= 0;
+  [exactlinear] <U.016...>:  -2926/25<I.016...>[B] +<F.016...>[C] <= 0;
+  [exactlinear] <U.016017>:  -2926/25<I.016017>[B] +<F.016017>[C] <= 0;
+  [exactlinear] <U.017018>:  -2926/25<I.017018>[B] +<F.017018>[C] <= 0;
+  [exactlinear] <U.009018>:  -2926/25<I.009018>[B] +<F.009018>[C] <= 0;
+  [exactlinear] <U.018019>:  -2926/25<I.018019>[B] +<F.018019>[C] <= 0;
+  [exactlinear] <U.019024>:  -2926/25<I.019024>[B] +<F.019024>[C] <= 0;
+  [exactlinear] <U.024...>:  -2926/25<I.024...>[B] +<F.024...>[C] <= 0;
+  [exactlinear] <U.023024>:  -2926/25<I.023024>[B] +<F.023024>[C] <= 0;
+  [exactlinear] <U.022023>:  -2926/25<I.022023>[B] +<F.022023>[C] <= 0;
+  [exactlinear] <U.020022>:  -2926/25<I.020022>[B] +<F.020022>[C] <= 0;
+  [exactlinear] <U.021022>:  -2926/25<I.021022>[B] +<F.021022>[C] <= 0;
+  [exactlinear] <U.022...>:  -2926/25<I.022...>[B] +<F.022...>[C] <= 0;
+  [exactlinear] <U.024026>:  -2926/25<I.024026>[B] +<F.024026>[C] <= 0;
+  [exactlinear] <U.025026>:  -2926/25<I.025026>[B] +<F.025026>[C] <= 0;
+  [exactlinear] <U.025...>:  -2926/25<I.025...>[B] +<F.025...>[C] <= 0;
+  [exactlinear] <U.026027>:  -2926/25<I.026027>[B] +<F.026027>[C] <= 0;
+  [exactlinear] <U.027...>:  -2926/25<I.027...>[B] +<F.027...>[C] <= 0;
+  [exactlinear] <U.027032>:  -2926/25<I.027032>[B] +<F.027032>[C] <= 0;
+  [exactlinear] <U.030031>:  -2926/25<I.030031>[B] +<F.030031>[C] <= 0;
+  [exactlinear] <U.031032>:  -2926/25<I.031032>[B] +<F.031032>[C] <= 0;
+  [exactlinear] <U.029031>:  -2926/25<I.029031>[B] +<F.029031>[C] <= 0;
+  [exactlinear] <U.028029>:  -2926/25<I.028029>[B] +<F.028029>[C] <= 0;
+  [exactlinear] <U.028...>:  -2926/25<I.028...>[B] +<F.028...>[C] <= 0;
+  [exactlinear] <U.032033>:  -2926/25<I.032033>[B] +<F.032033>[C] <= 0;
+  [exactlinear] <U.033037>:  -2926/25<I.033037>[B] +<F.033037>[C] <= 0;
+  [exactlinear] <U.036037>:  -2926/25<I.036037>[B] +<F.036037>[C] <= 0;
+  [exactlinear] <U.034036>:  -2926/25<I.034036>[B] +<F.034036>[C] <= 0;
+  [exactlinear] <U.035036>:  -2926/25<I.035036>[B] +<F.035036>[C] <= 0;
+  [exactlinear] <U.037038>:  -2926/25<I.037038>[B] +<F.037038>[C] <= 0;
+  [exactlinear] <U.038040>:  -2926/25<I.038040>[B] +<F.038040>[C] <= 0;
+  [exactlinear] <U.039040>:  -2926/25<I.039040>[B] +<F.039040>[C] <= 0;
+  [exactlinear] <U.040...>:  -2926/25<I.040...>[B] +<F.040...>[C] <= 0;
+  [exactlinear] <U.041...>:  -2926/25<I.041...>[B] +<F.041...>[C] <= 0;
+  [exactlinear] <U.040041>:  -2926/25<I.040041>[B] +<F.040041>[C] <= 0;
+  [exactlinear] <U.041042>:  -2926/25<I.041042>[B] +<F.041042>[C] <= 0;
+  [exactlinear] <U.042...>:  -2926/25<I.042...>[B] +<F.042...>[C] <= 0;
+END
