@@ -239,7 +239,7 @@ SCIP_RETCODE readSolfile(
          continue;
       }
 
-      /**@todo: store exact debugsol */
+      /**@todo store exact debugsol */
       {
          SCIP_Real value;
 

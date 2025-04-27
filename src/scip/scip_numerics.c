@@ -452,39 +452,23 @@ SCIP_Bool SCIPparseRational(
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
-   char* localstr;
-
    assert(scip != NULL);
    assert(str != NULL);
    assert(value != NULL);
    assert(endptr != NULL);
 
-   localstr = (char*)str;
-
    /* ignore white space */
-   while(isspace((unsigned char)*localstr))
-      ++localstr;
+   *endptr = (char*)str;
+   (void)SCIPskipSpace(endptr);
 
-   /* test for a special infinity first */
-   if( strncmp(localstr, "+infinity", 9) == 0 )
+   if( !SCIPstrToRationalValue(*endptr, value, endptr) )
    {
-      SCIPrationalSetInfinity(value);
-      *endptr = (char*)(localstr + 9);
-      return TRUE;
+      *endptr = (char*)str;
+
+      return FALSE;
    }
-   else if( strncmp(localstr, "-infinity", 9) == 0 )
-   {
-      SCIPrationalSetNegInfinity(value);
-      *endptr = (char*)(localstr + 9);
-      return TRUE;
-   }
-   else
-   {
-      /* parse a finite value */
-      SCIPrationalSetString(value, str);
-      *endptr = (char*)(localstr + SCIPrationalStrLen(value));
-      return TRUE;
-   }
+
+   return TRUE;
 }
 
 /** checks, if values are in range of epsilon */

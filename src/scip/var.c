@@ -2826,33 +2826,55 @@ SCIP_RETCODE SCIPvarCopy(
    return SCIP_OKAY;
 }
 
-/** parse given string for a SCIP_Real bound */
+/** parse given string for a value */
 static
 SCIP_RETCODE parseValue(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           str,                /**< string to parse */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed */
+   SCIP_RATIONAL*        valueexact          /**< pointer to store the parsed exact value */
    )
 {
-   /* first check for infinity value */
-   if( strncmp(str, "+inf", 4) == 0 )
+   assert(value == NULL || valueexact == NULL);
+
+   /* parse exact value */
+   if( valueexact != NULL )
    {
-      *value = SCIPsetInfinity(set);
-      (*endptr) = (char*)str + 4;
-   }
-   else if( strncmp(str, "-inf", 4) == 0 )
-   {
-      *value = -SCIPsetInfinity(set);
-      (*endptr) = (char*)str + 4;
-   }
-   else
-   {
-      if( !SCIPstrToRealValue(str, value, endptr) )
+      /* check for rationality */
+      if( SCIPrationalIsString(str) )
       {
-         SCIPerrorMessage("expected value: %s.\n", str);
+         SCIPrationalSetString(valueexact, str);
+         SCIPrationalCanonicalize(valueexact);
+      }
+      else
+      {
+         SCIPerrorMessage("expected exact value: %s\n", str);
          return SCIP_READERROR;
       }
+
+      SCIPrationalDebugMessage("parsed exact value: %q\n", valueexact);
+   }
+   /* parse real value */
+   else if( value != NULL )
+   {
+      char* endptr;
+
+      /* check for infinity */
+      if( strncmp(str, "+inf", 4) == 0 )
+      {
+         *value = SCIPsetInfinity(set);
+      }
+      else if( strncmp(str, "-inf", 4) == 0 )
+      {
+         *value = -SCIPsetInfinity(set);
+      }
+      else if( !SCIPstrToRealValue(str, value, &endptr) || *endptr != '\0' )
+      {
+         SCIPerrorMessage("expected real value: %s\n", str);
+         return SCIP_READERROR;
+      }
+
+      SCIPsetDebugMsg(set, "parsed real value: %g\n", *value);
    }
 
    return SCIP_OKAY;
@@ -2866,11 +2888,12 @@ SCIP_RETCODE parseBounds(
    char*                 type,               /**< bound type (global, local, or lazy) */
    SCIP_Real*            lb,                 /**< pointer to store the lower bound */
    SCIP_Real*            ub,                 /**< pointer to store the upper bound */
+   SCIP_RATIONAL*        lbexact,            /**< pointer to store the exact lower bound */
+   SCIP_RATIONAL*        ubexact,            /**< pointer to store the exact upper bound */
    char**                endptr              /**< pointer to store the final string position if successfully parsed (or NULL if an error occured) */
    )
 {
    char token[SCIP_MAXSTRLEN];
-   char* tmpend;
 
    SCIPsetDebugMsg(set, "parsing bounds: '%s'\n", str);
 
@@ -2888,16 +2911,16 @@ SCIP_RETCODE parseBounds(
 
    /* get lower bound */
    SCIPstrCopySection(str, '[', ',', token, SCIP_MAXSTRLEN, endptr);
-   str = *endptr;
-   SCIP_CALL( parseValue(set, token, lb, &tmpend) );
+   SCIP_CALL( parseValue(set, token, lb, lbexact) );
+
+   str = *endptr - 1;
 
    /* get upper bound */
-   SCIP_CALL( parseValue(set, str, ub, endptr) );
-
-   SCIPsetDebugMsg(set, "parsed bounds: [%g,%g]\n", *lb, *ub);
+   SCIPstrCopySection(str, ',', ']', token, SCIP_MAXSTRLEN, endptr);
+   SCIP_CALL( parseValue(set, token, ub, ubexact) );
 
    /* skip end of bounds */
-   while ( **endptr != '\0' && (**endptr == ']' || **endptr == ',') )
+   if( **endptr == ',' )
       ++(*endptr);
 
    return SCIP_OKAY;
@@ -2913,27 +2936,26 @@ SCIP_RETCODE varParse(
    SCIP_Real*            lb,                 /**< pointer to store the lower bound */
    SCIP_Real*            ub,                 /**< pointer to store the upper bound */
    SCIP_Real*            obj,                /**< pointer to store the objective coefficient */
+   SCIP_RATIONAL*        lbexact,            /**< pointer to store the exact lower bound */
+   SCIP_RATIONAL*        ubexact,            /**< pointer to store the exact upper bound */
+   SCIP_RATIONAL*        objexact,           /**< pointer to store the exact objective coefficient */
    SCIP_VARTYPE*         vartype,            /**< pointer to store the variable type */
    SCIP_IMPLINTTYPE*     impltype,           /**< pointer to store the implied integral type */
    SCIP_Real*            lazylb,             /**< pointer to store if the lower bound is lazy */
    SCIP_Real*            lazyub,             /**< pointer to store if the upper bound is lazy */
+   SCIP_RATIONAL*        lazylbexact,        /**< pointer to store if the exact lower bound is lazy */
+   SCIP_RATIONAL*        lazyubexact,        /**< pointer to store if the exact upper bound is lazy */
    SCIP_Bool             local,              /**< should the local bound be applied */
    char**                endptr,             /**< pointer to store the final string position if successfully */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
-   SCIP_Real parsedlb;
-   SCIP_Real parsedub;
+   SCIP_Bool lazyread = FALSE;
    char token[SCIP_MAXSTRLEN];
    char* strptr;
    int i;
 
-   assert(lb != NULL);
-   assert(ub != NULL);
-   assert(obj != NULL);
    assert(vartype != NULL);
-   assert(lazylb != NULL);
-   assert(lazyub != NULL);
    assert(success != NULL);
 
    (*success) = TRUE;
@@ -2974,33 +2996,21 @@ SCIP_RETCODE varParse(
    /* move string pointer behind variable name */
    str = *endptr;
 
-   /* cut out objective coefficient */
+   /* get objective coefficient */
    SCIPstrCopySection(str, '=', ',', token, SCIP_MAXSTRLEN, endptr);
+   SCIP_CALL( parseValue(set, token, obj, objexact) );
 
    /* move string pointer behind objective coefficient */
    str = *endptr;
 
-   /* get objective coefficient */
-   if( !SCIPstrToRealValue(token, obj, endptr) )
-   {
-      *endptr = NULL;
-      return SCIP_READERROR;
-   }
-
-   SCIPsetDebugMsg(set, "parsed objective coefficient <%g>\n", *obj);
-
    /* parse global/original bounds */
-   SCIP_CALL( parseBounds(set, str, token, lb, ub, endptr) );
-   if ( *endptr == NULL )
+   SCIP_CALL( parseBounds(set, str, token, lb, ub, lbexact, ubexact, endptr) );
+   if( *endptr == NULL )
    {
       SCIPerrorMessage("Expected bound type: %s.\n", token);
       return SCIP_READERROR;
    }
    assert(strncmp(token, "global", 6) == 0 || strncmp(token, "original", 8) == 0);
-
-   /* initialize the lazy bound */
-   *lazylb = -SCIPsetInfinity(set);
-   *lazyub =  SCIPsetInfinity(set);
 
    /* store pointer */
    strptr = *endptr;
@@ -3011,38 +3021,123 @@ SCIP_RETCODE varParse(
       /* start after previous bounds */
       strptr = *endptr;
 
-      /* parse global bounds */
-      SCIP_CALL( parseBounds(set, strptr, token, &parsedlb, &parsedub, endptr) );
+      /* parse variable bounds */
+      SCIP_CALL( parseBounds(set, strptr, token, lazylb, lazyub, lazylbexact, lazyubexact, endptr) );
+
+      /* set local bounds */
+      if( strncmp(token, "local", 5) == 0 )
+      {
+         if( local )
+         {
+            if( lb != NULL )
+            {
+               assert(lazylb != NULL);
+               *lb = *lazylb;
+            }
+
+            if( ub != NULL )
+            {
+               assert(lazyub != NULL);
+               *ub = *lazyub;
+            }
+
+            if( lbexact != NULL )
+            {
+               assert(lazylbexact != NULL);
+               SCIPrationalSetRational(lbexact, lazylbexact);
+            }
+
+            if( ubexact != NULL )
+            {
+               assert(lazyubexact != NULL);
+               SCIPrationalSetRational(ubexact, lazyubexact);
+            }
+         }
+      }
+      /* set lazy bounds */
+      else if( strncmp(token, "lazy", 4) == 0 )
+      {
+         lazyread = TRUE;
+         break;
+      }
 
       /* stop if parsing of bounds failed */
       if( *endptr == NULL )
          break;
+   }
 
-      if( strncmp(token, "local", 5) == 0 && local )
-      {
-         *lb = parsedlb;
-         *ub = parsedub;
-      }
-      else if( strncmp(token, "lazy", 4) == 0 )
-      {
-         *lazylb = parsedlb;
-         *lazyub = parsedub;
-      }
+   /* reset lazy bounds */
+   if( !lazyread )
+   {
+      if( lazylb != NULL )
+         *lazylb = -SCIPsetInfinity(set);
+
+      if( lazyub != NULL )
+         *lazyub = SCIPsetInfinity(set);
+
+      if( lazylbexact != NULL )
+         SCIPrationalSetNegInfinity(lazylbexact);
+
+      if( lazyubexact != NULL )
+         SCIPrationalSetInfinity(lazyubexact);
    }
 
    /* check bounds for binary variables */
-   if ( (*vartype) == SCIP_VARTYPE_BINARY )
+   if( (*vartype) == SCIP_VARTYPE_BINARY )
    {
-      if ( SCIPsetIsLT(set, *lb, 0.0) || SCIPsetIsGT(set, *ub, 1.0) )
+      if( lb != NULL && *lb < 0.0 )
       {
-         SCIPerrorMessage("Parsed invalid bounds for binary variable <%s>: [%f, %f].\n", name, *lb, *ub);
+         SCIPerrorMessage("Parsed invalid lower bound for binary variable <%s>: %f.\n", name, *lb);
          return SCIP_READERROR;
       }
-      if ( !SCIPsetIsInfinity(set, -(*lazylb)) && !SCIPsetIsInfinity(set, *lazyub) &&
-           ( SCIPsetIsLT(set, *lazylb, 0.0) || SCIPsetIsGT(set, *lazyub, 1.0) ) )
+
+      if( ub != NULL && *ub > 1.0 )
       {
-         SCIPerrorMessage("Parsed invalid lazy bounds for binary variable <%s>: [%f, %f].\n", name, *lazylb, *lazyub);
+         SCIPerrorMessage("Parsed invalid upper bound for binary variable <%s>: %f.\n", name, *ub);
          return SCIP_READERROR;
+      }
+
+      if( lbexact != NULL && SCIPrationalIsNegative(lbexact) )
+      {
+         SCIPerrorMessage("Parsed invalid exact lower bound for binary variable <%s>: %f.\n",
+               name, SCIPrationalRoundReal(lbexact, SCIP_R_ROUND_DOWNWARDS));
+         return SCIP_READERROR;
+      }
+
+      if( ubexact != NULL && SCIPrationalIsGTReal(ubexact, 1.0) )
+      {
+         SCIPerrorMessage("Parsed invalid exact upper bound for binary variable <%s>: %f.\n",
+               name, SCIPrationalRoundReal(ubexact, SCIP_R_ROUND_UPWARDS));
+         return SCIP_READERROR;
+      }
+
+      if( lazyread )
+      {
+         if( lazylb != NULL && *lazylb < 0.0 )
+         {
+            SCIPerrorMessage("Parsed invalid lazy lower bound for binary variable <%s>: %f.\n", name, *lazylb);
+            return SCIP_READERROR;
+         }
+
+         if( lazyub != NULL && *lazyub > 1.0 )
+         {
+            SCIPerrorMessage("Parsed invalid lazy upper bound for binary variable <%s>: %f.\n", name, *lazyub);
+            return SCIP_READERROR;
+         }
+
+         if( lazylbexact != NULL && SCIPrationalIsNegative(lazylbexact) )
+         {
+            SCIPerrorMessage("Parsed invalid exact lazy lower bound for binary variable <%s>: %f.\n",
+                  name, SCIPrationalRoundReal(lazylbexact, SCIP_R_ROUND_DOWNWARDS));
+            return SCIP_READERROR;
+         }
+
+         if( lazyubexact != NULL && SCIPrationalIsGTReal(lazyubexact, 1.0) )
+         {
+            SCIPerrorMessage("Parsed invalid exact lazy upper bound for binary variable <%s>: %f.\n",
+                  name, SCIPrationalRoundReal(lazyubexact, SCIP_R_ROUND_UPWARDS));
+            return SCIP_READERROR;
+         }
       }
    }
 
@@ -3114,13 +3209,8 @@ SCIP_RETCODE SCIPvarParseOriginal(
    )
 {
    char name[SCIP_MAXSTRLEN];
-   SCIP_Real lb;
-   SCIP_Real ub;
-   SCIP_Real obj;
    SCIP_VARTYPE vartype;
    SCIP_IMPLINTTYPE impltype;
-   SCIP_Real lazylb;
-   SCIP_Real lazyub;
 
    assert(var != NULL);
    assert(blkmem != NULL);
@@ -3128,33 +3218,94 @@ SCIP_RETCODE SCIPvarParseOriginal(
    assert(endptr != NULL);
    assert(success != NULL);
 
-   /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &impltype, &lazylb, &lazyub,
-         FALSE, endptr, success) );
-
-   if( *success ) /*lint !e774*/
+   /* parse exact variable */
+   if( set->exact_enable )
    {
-      /* create variable */
-      SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
-            varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+      SCIP_RATIONAL* lb;
+      SCIP_RATIONAL* ub;
+      SCIP_RATIONAL* obj;
+      SCIP_RATIONAL* lazylb;
+      SCIP_RATIONAL* lazyub;
 
-      /* set variable status and data */
-      SCIPvarAdjustLb(*var, set, &lb);
-      SCIPvarAdjustUb(*var, set, &ub);
-      (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL; /*lint !e641*/
-      (*var)->data.original.origdom.holelist = NULL;
-      (*var)->data.original.origdom.lb = lb;
-      (*var)->data.original.origdom.ub = ub;
-      (*var)->data.original.transvar = NULL;
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &lb) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &ub) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &obj) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &lazylb) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &lazyub) );
 
-      /* set lazy status of variable bounds */
-      SCIPvarAdjustLb(*var, set, &lazylb);
-      SCIPvarAdjustUb(*var, set, &lazyub);
-      (*var)->lazylb = lazylb;
-      (*var)->lazyub = lazyub;
+      /* parse string in cip format for exact variable information */
+      SCIP_CALL( varParse(set, messagehdlr, str, name, NULL, NULL, NULL, lb, ub, obj, &vartype, &impltype,
+            NULL, NULL, lazylb, lazyub, FALSE, endptr, success) );
 
-      /* capture variable */
-      SCIPvarCapture(*var);
+      if( *success ) /*lint !e774*/
+      {
+         /* create variable */
+         SCIP_CALL( varCreate(var, blkmem, set, stat, name, SCIPrationalRoundReal(lb, SCIP_R_ROUND_DOWNWARDS),
+               SCIPrationalRoundReal(ub, SCIP_R_ROUND_UPWARDS), SCIPrationalRoundReal(obj, SCIP_R_ROUND_NEAREST),
+               vartype, impltype, initial, removable, varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+
+         /* add exact data */
+         SCIP_CALL( SCIPvarAddExactData(*var, blkmem, lb, ub, obj) );
+
+         /* set variable status and data */
+         assert(*var != NULL);
+         assert((*var)->exactdata != NULL);
+         (*var)->exactdata->varstatusexact = SCIP_VARSTATUS_ORIGINAL;
+         (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_ORIGINAL;
+         (*var)->data.original.origdom.holelist = NULL;
+         (*var)->data.original.origdom.lb = (*var)->glbdom.lb;
+         (*var)->data.original.origdom.ub = (*var)->glbdom.ub;
+         (*var)->data.original.transvar = NULL;
+         /**@todo implement lazy bounds in exact solving mode (and adjust values before setting them) */
+         if( !SCIPrationalIsNegInfinity(lazylb) || !SCIPrationalIsInfinity(lazyub) )
+         {
+            SCIPerrorMessage("exact lazy bounds not supported yet\n");
+            return SCIP_READERROR;
+         }
+
+         /* capture variable */
+         SCIPvarCapture(*var);
+      }
+
+      SCIPrationalFreeBlock(blkmem, &lazyub);
+      SCIPrationalFreeBlock(blkmem, &lazylb);
+      SCIPrationalFreeBlock(blkmem, &obj);
+      SCIPrationalFreeBlock(blkmem, &ub);
+      SCIPrationalFreeBlock(blkmem, &lb);
+   }
+   else
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real obj;
+      SCIP_Real lazylb;
+      SCIP_Real lazyub;
+
+      /* parse string in cip format for variable information */
+      SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, NULL, NULL, NULL, &vartype, &impltype,
+            &lazylb, &lazyub, NULL, NULL, FALSE, endptr, success) );
+
+      if( *success ) /*lint !e774*/
+      {
+         /* create variable */
+         SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
+               varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+
+         /* set variable status and data */
+         assert(*var != NULL);
+         (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_ORIGINAL;
+         (*var)->data.original.origdom.holelist = NULL;
+         (*var)->data.original.origdom.lb = (*var)->glbdom.lb;
+         (*var)->data.original.origdom.ub = (*var)->glbdom.ub;
+         (*var)->data.original.transvar = NULL;
+         SCIPvarAdjustLb(*var, set, &lazylb);
+         SCIPvarAdjustUb(*var, set, &lazyub);
+         (*var)->lazylb = lazylb;
+         (*var)->lazyub = lazyub;
+
+         /* capture variable */
+         SCIPvarCapture(*var);
+      }
    }
 
    return SCIP_OKAY;
@@ -3184,41 +3335,99 @@ SCIP_RETCODE SCIPvarParseTransformed(
    )
 {
    char name[SCIP_MAXSTRLEN];
-   SCIP_Real lb;
-   SCIP_Real ub;
-   SCIP_Real obj;
    SCIP_VARTYPE vartype;
    SCIP_IMPLINTTYPE impltype;
-   SCIP_Real lazylb;
-   SCIP_Real lazyub;
 
    assert(var != NULL);
    assert(blkmem != NULL);
    assert(endptr != NULL);
    assert(success != NULL);
 
-   /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &impltype, &lazylb, &lazyub,
-         TRUE, endptr, success) );
-
-   if( *success ) /*lint !e774*/
+   /* parse exact variable */
+   if( set->exact_enable )
    {
-      /* create variable */
-      SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
-            varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+      SCIP_RATIONAL* lb;
+      SCIP_RATIONAL* ub;
+      SCIP_RATIONAL* obj;
+      SCIP_RATIONAL* lazylb;
+      SCIP_RATIONAL* lazyub;
 
-      /* create event filter for transformed variable */
-      SCIP_CALL( SCIPeventfilterCreate(&(*var)->eventfilter, blkmem) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &lb) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &ub) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &obj) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &lazylb) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &lazyub) );
 
-      /* set variable status and data */
-      (*var)->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
+      /* parse string in cip format for exact variable information */
+      SCIP_CALL( varParse(set, messagehdlr, str, name, NULL, NULL, NULL, lb, ub, obj, &vartype, &impltype,
+            NULL, NULL, lazylb, lazyub, TRUE, endptr, success) );
 
-      /* set lazy status of variable bounds */
-      (*var)->lazylb = lazylb;
-      (*var)->lazyub = lazyub;
+      if( *success ) /*lint !e774*/
+      {
+         /* create variable */
+         SCIP_CALL( varCreate(var, blkmem, set, stat, name, SCIPrationalRoundReal(lb, SCIP_R_ROUND_DOWNWARDS),
+               SCIPrationalRoundReal(ub, SCIP_R_ROUND_UPWARDS), SCIPrationalRoundReal(obj, SCIP_R_ROUND_NEAREST),
+               vartype, impltype, initial, removable, varcopy, vardelorig, vartrans, vardeltrans, vardata) );
 
-      /* capture variable */
-      SCIPvarCapture(*var);
+         /* add exact data */
+         SCIP_CALL( SCIPvarAddExactData(*var, blkmem, lb, ub, obj) );
+
+         /* set variable status and data */
+         assert(*var != NULL);
+         assert((*var)->exactdata != NULL);
+         (*var)->exactdata->varstatusexact = SCIP_VARSTATUS_LOOSE;
+         (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_LOOSE;
+         /**@todo implement lazy bounds in exact solving mode */
+         if( !SCIPrationalIsNegInfinity(lazylb) || !SCIPrationalIsInfinity(lazyub) )
+         {
+            SCIPerrorMessage("exact lazy bounds not supported yet\n");
+            return SCIP_READERROR;
+         }
+
+         /* create event filter for transformed variable */
+         SCIP_CALL( SCIPeventfilterCreate(&(*var)->eventfilter, blkmem) );
+
+         /* capture variable */
+         SCIPvarCapture(*var);
+      }
+
+      SCIPrationalFreeBlock(blkmem, &lazyub);
+      SCIPrationalFreeBlock(blkmem, &lazylb);
+      SCIPrationalFreeBlock(blkmem, &obj);
+      SCIPrationalFreeBlock(blkmem, &ub);
+      SCIPrationalFreeBlock(blkmem, &lb);
+   }
+   /* parse real variable */
+   else
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real obj;
+      SCIP_Real lazylb;
+      SCIP_Real lazyub;
+
+      /* parse string in cip format for variable information */
+      SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, NULL, NULL, NULL, &vartype, &impltype,
+            &lazylb, &lazyub, NULL, NULL, TRUE, endptr, success) );
+
+      if( *success ) /*lint !e774*/
+      {
+         /* create variable */
+         SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
+               varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+
+         /* set variable status and data */
+         assert(*var != NULL);
+         (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_LOOSE;
+         (*var)->lazylb = lazylb;
+         (*var)->lazyub = lazyub;
+
+         /* create event filter for transformed variable */
+         SCIP_CALL( SCIPeventfilterCreate(&(*var)->eventfilter, blkmem) );
+
+         /* capture variable */
+         SCIPvarCapture(*var);
+      }
    }
 
    return SCIP_OKAY;
@@ -3617,19 +3826,51 @@ void printBounds(
 {
    assert(set != NULL);
 
-   SCIPmessageFPrintInfo(messagehdlr, file, ", %s=", name);
+   SCIPmessageFPrintInfo(messagehdlr, file, ", %s=[", name);
    if( SCIPsetIsInfinity(set, lb) )
-      SCIPmessageFPrintInfo(messagehdlr, file, "[+inf,");
+      SCIPmessageFPrintInfo(messagehdlr, file, "+inf");
    else if( SCIPsetIsInfinity(set, -lb) )
-      SCIPmessageFPrintInfo(messagehdlr, file, "[-inf,");
+      SCIPmessageFPrintInfo(messagehdlr, file, "-inf");
    else
-      SCIPmessageFPrintInfo(messagehdlr, file, "[%.15g,", lb);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", lb);
+   SCIPmessageFPrintInfo(messagehdlr, file, ",");
    if( SCIPsetIsInfinity(set, ub) )
-      SCIPmessageFPrintInfo(messagehdlr, file, "+inf]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "+inf");
    else if( SCIPsetIsInfinity(set, -ub) )
-      SCIPmessageFPrintInfo(messagehdlr, file, "-inf]");
+      SCIPmessageFPrintInfo(messagehdlr, file, "-inf");
    else
-      SCIPmessageFPrintInfo(messagehdlr, file, "%.15g]", ub);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", ub);
+   SCIPmessageFPrintInfo(messagehdlr, file, "]");
+}
+
+/** outputs the given exact bounds into the file stream */
+static
+void printBoundsExact(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_RATIONAL*        lb,                 /**< exact lower bound */
+   SCIP_RATIONAL*        ub,                 /**< exact upper bound */
+   const char*           name                /**< bound type name */
+   )
+{
+   assert(lb != NULL);
+   assert(ub != NULL);
+
+   SCIPmessageFPrintInfo(messagehdlr, file, ", %s=[", name);
+   if( SCIPrationalIsInfinity(lb) )
+      SCIPmessageFPrintInfo(messagehdlr, file, "+inf");
+   else if( SCIPrationalIsNegInfinity(lb) )
+      SCIPmessageFPrintInfo(messagehdlr, file, "-inf");
+   else
+      SCIPrationalMessage(messagehdlr, file, lb);
+   SCIPmessageFPrintInfo(messagehdlr, file, ",");
+   if( SCIPrationalIsInfinity(ub) )
+      SCIPmessageFPrintInfo(messagehdlr, file, "+inf");
+   else if( SCIPrationalIsNegInfinity(ub) )
+      SCIPmessageFPrintInfo(messagehdlr, file, "-inf");
+   else
+      SCIPrationalMessage(messagehdlr, file, ub);
+   SCIPmessageFPrintInfo(messagehdlr, file, "]");
 }
 
 /** prints hole list to file stream */
@@ -3681,9 +3922,6 @@ SCIP_RETCODE SCIPvarPrint(
    assert(set->write_implintlevel >= -2);
    assert(set->write_implintlevel <= 2);
 
-   SCIP_HOLELIST* holelist;
-   SCIP_Real lb;
-   SCIP_Real ub;
    SCIP_VARTYPE vartype = SCIPvarGetType(var);
    SCIP_IMPLINTTYPE impltype = SCIPvarGetImplType(var);
    int i;
@@ -3721,55 +3959,115 @@ SCIP_RETCODE SCIPvarPrint(
    /* name */
    SCIPmessageFPrintInfo(messagehdlr, file, " <%s>:", var->name);
 
-   /* objective value */
-   SCIPmessageFPrintInfo(messagehdlr, file, " obj=%.15g", var->obj);
-
-   /* bounds (global bounds for transformed variables, original bounds for original variables) */
-   if( !SCIPvarIsTransformed(var) )
+   if( var->exactdata != NULL )
    {
-      /* output original bound */
-      lb = SCIPvarGetLbOriginal(var);
-      ub = SCIPvarGetUbOriginal(var);
-      printBounds(set, messagehdlr, file, lb, ub, "original bounds");
+      assert(set->exact_enable);
 
-      /* output lazy bound */
-      lb = SCIPvarGetLbLazy(var);
-      ub = SCIPvarGetUbLazy(var);
+      SCIP_RATIONAL* lb;
+      SCIP_RATIONAL* ub;
 
-      /* only display the lazy bounds if they are different from [-infinity,infinity] */
-      if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
-         printBounds(set, messagehdlr, file, lb, ub, "lazy bounds");
+      /* exact objective value */
+      assert(var->exactdata->obj != NULL);
+      SCIPmessageFPrintInfo(messagehdlr, file, " obj=");
+      SCIPrationalMessage(messagehdlr, file, var->exactdata->obj);
 
-      holelist = SCIPvarGetHolelistOriginal(var);
-      printHolelist(messagehdlr, file, holelist, "original holes");
+      /* exact bounds (global bounds for transformed variables, original bounds for original variables) */
+      if( !SCIPvarIsTransformed(var) )
+      {
+         /* output exact original bounds */
+         lb = SCIPvarGetLbOriginalExact(var);
+         ub = SCIPvarGetUbOriginalExact(var);
+         printBoundsExact(messagehdlr, file, lb, ub, "original bounds");
+
+         /**@todo get exact lazy bounds */
+         /**@todo output exact lazy bounds */
+         if( !SCIPsetIsInfinity(set, -SCIPvarGetLbLazy(var)) || !SCIPsetIsInfinity(set, SCIPvarGetUbLazy(var)) )
+         {
+            SCIPerrorMessage("exact lazy bounds not supported yet\n");
+            return SCIP_INVALIDDATA;
+         }
+
+         assert(SCIPvarGetHolelistOriginal(var) == NULL);
+      }
+      else
+      {
+         /* output exact global bounds */
+         lb = SCIPvarGetLbGlobalExact(var);
+         ub = SCIPvarGetUbGlobalExact(var);
+         printBoundsExact(messagehdlr, file, lb, ub, "global bounds");
+
+         /* output exact local bounds */
+         lb = SCIPvarGetLbLocalExact(var);
+         ub = SCIPvarGetUbLocalExact(var);
+         printBoundsExact(messagehdlr, file, lb, ub, "local bounds");
+
+         /**@todo get exact lazy bounds */
+         /**@todo output exact lazy bounds */
+         if( !SCIPsetIsInfinity(set, -SCIPvarGetLbLazy(var)) || !SCIPsetIsInfinity(set, SCIPvarGetUbLazy(var)) )
+         {
+            SCIPerrorMessage("exact lazy bounds not supported yet\n");
+            return SCIP_INVALIDDATA;
+         }
+
+         assert(SCIPvarGetHolelistGlobal(var) == NULL);
+         assert(SCIPvarGetHolelistLocal(var) == NULL);
+      }
    }
    else
    {
-      /* output global bound */
-      lb = SCIPvarGetLbGlobal(var);
-      ub = SCIPvarGetUbGlobal(var);
-      printBounds(set, messagehdlr, file, lb, ub, "global bounds");
+      assert(!set->exact_enable);
 
-      /* output local bound */
-      lb = SCIPvarGetLbLocal(var);
-      ub = SCIPvarGetUbLocal(var);
-      printBounds(set, messagehdlr, file, lb, ub, "local bounds");
+      SCIP_Real lb;
+      SCIP_Real ub;
 
-      /* output lazy bound */
-      lb = SCIPvarGetLbLazy(var);
-      ub = SCIPvarGetUbLazy(var);
+      /* objective value */
+      SCIPmessageFPrintInfo(messagehdlr, file, " obj=%.15g", var->obj);
 
-      /* only display the lazy bounds if they are different from [-infinity,infinity] */
-      if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
-         printBounds(set, messagehdlr, file, lb, ub, "lazy bounds");
+      /* bounds (global bounds for transformed variables, original bounds for original variables) */
+      if( !SCIPvarIsTransformed(var) )
+      {
+         /* output original bounds */
+         lb = SCIPvarGetLbOriginal(var);
+         ub = SCIPvarGetUbOriginal(var);
+         printBounds(set, messagehdlr, file, lb, ub, "original bounds");
 
-      /* global hole list */
-      holelist = SCIPvarGetHolelistGlobal(var);
-      printHolelist(messagehdlr, file, holelist, "global holes");
+         /* output lazy bounds */
+         lb = SCIPvarGetLbLazy(var);
+         ub = SCIPvarGetUbLazy(var);
 
-      /* local hole list */
-      holelist = SCIPvarGetHolelistLocal(var);
-      printHolelist(messagehdlr, file, holelist, "local holes");
+         /* only display the lazy bounds if they are different from [-infinity,infinity] */
+         if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
+            printBounds(set, messagehdlr, file, lb, ub, "lazy bounds");
+
+         /* original hole list */
+         printHolelist(messagehdlr, file, SCIPvarGetHolelistOriginal(var), "original holes");
+      }
+      else
+      {
+         /* output global bounds */
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
+         printBounds(set, messagehdlr, file, lb, ub, "global bounds");
+
+         /* output local bounds */
+         lb = SCIPvarGetLbLocal(var);
+         ub = SCIPvarGetUbLocal(var);
+         printBounds(set, messagehdlr, file, lb, ub, "local bounds");
+
+         /* output lazy bounds */
+         lb = SCIPvarGetLbLazy(var);
+         ub = SCIPvarGetUbLazy(var);
+
+         /* only display the lazy bounds if they are different from [-infinity,infinity] */
+         if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
+            printBounds(set, messagehdlr, file, lb, ub, "lazy bounds");
+
+         /* global hole list */
+         printHolelist(messagehdlr, file, SCIPvarGetHolelistGlobal(var), "global holes");
+
+         /* local hole list */
+         printHolelist(messagehdlr, file, SCIPvarGetHolelistLocal(var), "local holes");
+      }
    }
 
    /* implication of variable */

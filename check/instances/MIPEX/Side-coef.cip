@@ -1,0 +1,35 @@
+STATISTICS
+  Problem name     : Side-coef
+  Variables        : 19 (19 binary, 0 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 7 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <x0>: obj=0, original bounds=[0,1]
+  [binary] <x1>: obj=0, original bounds=[0,1]
+  [binary] <x2>: obj=0, original bounds=[0,1]
+  [binary] <x3>: obj=0, original bounds=[0,1]
+  [binary] <x4>: obj=0, original bounds=[0,1]
+  [binary] <x5>: obj=0, original bounds=[0,1]
+  [binary] <x6>: obj=0, original bounds=[0,1]
+  [binary] <x7>: obj=0, original bounds=[0,1]
+  [binary] <x8>: obj=0, original bounds=[0,1]
+  [binary] <x9>: obj=0, original bounds=[0,1]
+  [binary] <x10>: obj=0, original bounds=[0,1]
+  [binary] <x11>: obj=0, original bounds=[0,1]
+  [binary] <x12>: obj=0, original bounds=[0,1]
+  [binary] <x13>: obj=1, original bounds=[0,1]
+  [binary] <x14>: obj=1, original bounds=[0,1]
+  [binary] <x15>: obj=2, original bounds=[0,1]
+  [binary] <x16>: obj=1, original bounds=[0,1]
+  [binary] <x17>: obj=1, original bounds=[0,1]
+  [binary] <x18>: obj=2, original bounds=[0,1]
+CONSTRAINTS
+  [exactlinear] <c0>: 360 <=  +60<x9>[B] +53<x3>[B] +5321/100<x10>[B] +46<x12>[B] +38<x8>[B] +40<x7>[B] +80<x14>[B] +40<x0>[B] +40<x2>[B] +40<x6>[B] +80<x4>[B] +40<x5>[B] <= 380;
+  [exactlinear] <c1>:  -52<x4>[B] -32<x1>[B] -260/10<x10>[B] -23<x12>[B] -20<x2>[B] -20<x6>[B] -19<x8>[B] <= -140;
+  [exactlinear] <c2>:  -10<x14>[B] -6<x13>[B] -6<x3>[B] -5<x7>[B] -5<x0>[B] <= -16;
+  [exactlinear] <c3>:  -2<x11>[B] -2<x18>[B] -2<x15>[B] -<x16>[B] -<x17>[B] <= -3;
+  [exactlinear] <c4>:  -<x1>[B] -<x10>[B] -<x2>[B] <= -2;
+  [exactlinear] <c5>:  -<x9>[B] -<x5>[B] <= -1;
+  [exactlinear] <c6>: <x1>[B] +<x11>[B] +<x9>[B] <= 1;
+END

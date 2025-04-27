@@ -150,7 +150,6 @@ struct SCIP_ConsData
    SCIP_RATIONAL**       vals;               /**< coefficients of constraint entries */
    SCIP_INTERVAL*        valsreal;           /**< values of val rounded up/down to closest fp-representable numbers */
    SCIP_EVENTDATA**      eventdata;          /**< event data for bound change events of the variables */
-   SCIP_EVENTDATA**      roweventdata;       /**< event data for bound change events of the variables in the row */
    int                   minactivityneginf;  /**< number of coefficients contributing with neg. infinite value to minactivity */
    int                   minactivityposinf;  /**< number of coefficients contributing with pos. infinite value to minactivity */
    int                   maxactivityneginf;  /**< number of coefficients contributing with neg. infinite value to maxactivity */
@@ -4872,8 +4871,6 @@ SCIP_RETCODE createRows(
    consdataInvalidateActivities(consdata);
    if( !(consdata->hasfprelax) || consdata->onerowrelax )
       consdata->rowrhs = NULL;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->roweventdata, SCIProwExactGetNNonz(consdata->rowexact)) );
-   BMSclearMemoryArray(consdata->roweventdata, SCIProwExactGetNNonz(consdata->rowexact));
 
    return SCIP_OKAY;
 }
@@ -5354,10 +5351,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolExactLinear)
 
       if( consdata->rowlhs != NULL )
       {
-         SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowlhs) );
-         SCIPfreeBlockMemoryArray(scip, &consdata->roweventdata, SCIProwExactGetNNonz(consdata->rowexact));
-
          SCIP_CALL( SCIPreleaseRowExact(scip, &consdata->rowexact) );
+         SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowlhs) );
+
          if( consdata->rowrhs != NULL )
          {
             assert(!consdata->onerowrelax);
