@@ -1,5 +1,5 @@
 \ SCIP STATISTICS
-\   Problem name     : Side
+\   Problem name     : Side-coeftest
 \   Variables        : 19 (19 binary, 0 integer, 0 implicit integer, 0 continuous)
 \   Constraints      : 7
 Minimize

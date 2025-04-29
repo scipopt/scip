@@ -17897,8 +17897,14 @@ SCIP_RETCODE SCIPcreateConsLinear(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* check that the given lhs/rhs are sensible, i.e., not nan or inf */
+   assert( SCIPisFinite(lhs) );
+   assert( SCIPisFinite(rhs) );
+
    for( j = 0; j < nvars; ++j )
    {
+      /* check that the given coefficients are sensible, i.e., not nan or inf */
+      assert( SCIPisFinite(vals[j]) );
       if( SCIPisInfinity(scip, REALABS(vals[j])) )
       {
          SCIPerrorMessage("coefficient of variable <%s> is infinite.\n", SCIPvarGetName(vars[j]));

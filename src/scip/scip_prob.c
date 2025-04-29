@@ -1336,7 +1336,7 @@ SCIP_RETCODE SCIPaddOrigObjoffset(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddOrigObjoffset", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   scip->origprob->objoffset += addval;
+   SCIPprobAddObjoffset(scip->origprob, addval);
    SCIPprimalAddOrigObjoffset(scip->origprimal, scip->set, addval);
 
    return SCIP_OKAY;

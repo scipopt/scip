@@ -94,6 +94,7 @@
 #include "scip/scip_var.h"
 #include "scip/prop_symmetry.h"
 #include "scip/rational.h"
+#include "scip/relax_benders.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -1884,11 +1885,22 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
 /** dialog execution method for the display statistics command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 {  /*lint --e{715}*/
+   SCIP* bendersmasterprob;
+
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
    SCIP_CALL( SCIPprintStatistics(scip, NULL) );
    SCIPdialogMessage(scip, NULL, "\n");
+
+   /* displaying the Benders' decomposition statistics, if decomp was run */
+   bendersmasterprob = SCIPgetMasterProblemRelaxBenders(scip);
+   if( bendersmasterprob != NULL )
+   {
+      SCIPdialogMessage(scip, NULL, "Benders' Decomposition Statistics:\n");
+      SCIP_CALL( SCIPprintStatistics(bendersmasterprob, NULL) );
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 

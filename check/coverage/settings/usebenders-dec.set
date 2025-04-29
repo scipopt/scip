@@ -1,0 +1,21 @@
+# SCIP version 10.0.0
+
+# should the variables be labelled for the application of Benders' decomposition?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+decomposition/benderslabels = TRUE
+
+# if a decomposition exists, should Benders' decomposition be applied?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+decomposition/applybenders = TRUE
+
+# frequency for calling primal heuristic <alns> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 20]
+heuristics/alns/freq = -1
+
+# frequency for calling primal heuristic <rens> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+heuristics/rens/freq = -1
+
+# should Benders' decomposition be used in LNS heurisics?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
+benders/default/lnscheck = FALSE

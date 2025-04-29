@@ -22,60 +22,39 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scip_debug.c
- * @ingroup OTHER_CFILES
- * @brief  public methods for debugging
- * @author Tobias Achterberg
- * @author Timo Berthold
- * @author Gerald Gamrath
- * @author Leona Gottwald
- * @author Stefan Heinz
- * @author Gregor Hendel
- * @author Thorsten Koch
- * @author Alexander Martin
- * @author Marc Pfetsch
- * @author Michael Winkler
- * @author Kati Wolter
- *
- * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
+/**@file   relax_benders.h
+ * @ingroup DEFPLUGINS_RELAX
+ * @brief  benders relaxator
+ * @author Stephen J. Maher
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/debug.h"
-#include "scip/pub_message.h"
-#include "scip/scip_debug.h"
-#include "scip/scip_prop.h"
+#ifndef __SCIP_RELAX_BENDERS_H__
+#define __SCIP_RELAX_BENDERS_H__
 
-/** enable debug solution mechanism
- *
- *  the debug solution mechanism allows to trace back the invalidation of
- *  a debug solution during the solution process of SCIP. It must be explicitly
- *  enabled for the SCIP data structure.
- *
- *  @see debug.h for more information on debug solution mechanism
- */
-void SCIPenableDebugSol(
+
+#include "scip/scip.h"
+#include "scip/scip_export.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** creates the benders relaxator and includes it in SCIP */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeRelaxBenders(
    SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPenableDebugSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   );
 
-   if( SCIPfindProp(scip, "debug") == NULL )
-      (void)SCIPdebugIncludeProp(scip);
-
-   SCIPdebugSolEnable(scip);
-}
-
-/** disable solution debugging mechanism
- *
- *  @see debug.h for more information on debug solution mechanism
- */
-void SCIPdisableDebugSol(
+/** returns the master problem SCIP instance */
+SCIP_EXPORT
+SCIP* SCIPgetMasterProblemRelaxBenders(
    SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPdisableDebugSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   );
 
-   SCIPdebugSolDisable(scip);
+#ifdef __cplusplus
 }
+#endif
+
+#endif

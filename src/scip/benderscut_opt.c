@@ -309,6 +309,7 @@ SCIP_RETCODE computeMIRForOptimalityCut(
    for( i = 0; i < nvars; i++ )
    {
       rowinds[i] = SCIPvarGetProbindex(vars[i]);
+      assert(rowinds[i] >= 0);
       rowvals[i] = -vals[i];
    }
 
