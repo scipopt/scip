@@ -2543,9 +2543,9 @@ SCIP_RETCODE printProblem(
       SCIP_RETCODE retcode;
 
       if( extension != NULL )
-         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, file, extension, genericnames, &result);
+         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, scip->messagehdlr, file, extension, genericnames, &result);
       else
-         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, file, "cip", genericnames, &result);
+         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, scip->messagehdlr, file, "cip", genericnames, &result);
 
       /* check for reader errors */
       if( retcode == SCIP_WRITEERROR )

@@ -279,6 +279,7 @@ SCIP_RETCODE SCIPreaderWrite(
    SCIP_READER*          reader,             /**< reader */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     msghdlr,            /**< message handler */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    const char*           extension,          /**< file format */
    SCIP_Bool             genericnames,       /**< using generic variable and constraint names? */
@@ -310,6 +311,7 @@ SCIP_RETCODE SCIPreaderWrite(
       int nconss;
       int nvars;
       int i;
+      int nduplicates;
 
       /* only readers marked as exact can read and write in exact solving mode */
       if( set->exact_enable && !reader->exact )
@@ -322,6 +324,45 @@ SCIP_RETCODE SCIPreaderWrite(
       nvars = SCIPprobGetNVars(prob);
       fixedvars = SCIPprobGetFixedVars(prob);
       nfixedvars = SCIPprobGetNFixedVars(prob);
+
+      /* check if multiple variables have the same name */
+      if ( !genericnames )
+      {
+         nduplicates = 0;
+
+         for( i = 0; i < nvars; ++i )
+         {
+            if( vars[i] != (SCIP_VAR*) SCIPprobFindVar(prob, (void*) SCIPvarGetName(vars[i])) )
+            {
+               if( nduplicates < 3 )
+               {
+                  SCIPmessageFPrintWarning(msghdlr, "The same variable name <%s> has been used for at least two different variables.\n", SCIPvarGetName(vars[i]));
+               }
+               ++nduplicates;
+            }
+         }
+
+         for( i = 0; i < nfixedvars; ++i )
+         {
+            if( fixedvars[i] != (SCIP_VAR*) SCIPprobFindVar(prob, (void*) SCIPvarGetName(fixedvars[i])) )
+            {
+               if( nduplicates < 3 )
+               {
+                  SCIPmessageFPrintWarning(msghdlr, "The same variable name <%s> has been used for at least two different variables.\n", SCIPvarGetName(fixedvars[i]));
+               }
+               ++nduplicates;
+            }
+         }
+
+         if( nduplicates > 0 )
+         {
+            if( nduplicates > 3 )
+            {
+               SCIPmessageFPrintWarning(msghdlr, "In total %d duplicate variable names.\n", nduplicates);
+            }
+            SCIPmessageFPrintWarning(msghdlr, "This will likely result in wrong output files. Please use unique variable names.\n");
+         }
+      }
 
       /* case of the transformed problem, we want to write currently valid problem */
       if( SCIPprobIsTransformed(prob) )
@@ -382,6 +423,33 @@ SCIP_RETCODE SCIPreaderWrite(
       {
          conss = SCIPprobGetConss(prob);
          nconss = SCIPprobGetNConss(prob);
+      }
+
+      /* check if multiple constraints have the same name */
+      if ( !genericnames )
+      {
+         nduplicates = 0;
+
+         for( i = 0; i < SCIPprobGetNConss(prob); ++i )
+         {
+            if( conss[i] != (SCIP_CONS*) SCIPprobFindCons(prob, (void*) SCIPconsGetName(conss[i])) )
+            {
+               if( nduplicates < 3 )
+               {
+                  SCIPmessageFPrintWarning(msghdlr, "The same constraint name <%s> has been used for at least two different constraints.\n", SCIPconsGetName(conss[i]));
+               }
+               ++nduplicates;
+            }
+         }
+
+         if( nduplicates > 0)
+         {
+            if( nduplicates > 3 )
+            {
+               SCIPmessageFPrintWarning(msghdlr, "In total %d duplicate constraint names.\n", nduplicates);
+            }
+            SCIPmessageFPrintWarning(msghdlr, "This can result in wrong output files, especially with indicator constraints.\n");
+         }
       }
 
       if( genericnames )
