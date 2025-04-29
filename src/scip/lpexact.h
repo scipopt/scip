@@ -517,16 +517,6 @@ SCIP_RATIONAL* SCIPcolExactGetPrimsol(
    SCIP_COLEXACT*        col                 /**< LP column */
    );
 
-/** gets the minimal LP solution value, this column ever assumed */
-SCIP_RATIONAL* SCIPcolExactGetMinPrimsol(
-   SCIP_COLEXACT*        col                 /**< LP column */
-   );
-
-/** gets the maximal LP solution value, this column ever assumed */
-SCIP_RATIONAL* SCIPcolExactGetMaxPrimsol(
-   SCIP_COLEXACT*        col                 /**< LP column */
-   );
-
 /*
  * lp update methods
  */

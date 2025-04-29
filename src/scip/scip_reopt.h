@@ -316,16 +316,6 @@ SCIP_Real SCIPgetReoptSimilarity(
    int                   run2                /**< number of run */
    );
 
-/** check the changes of the variable coefficient in the objective function */
-SCIP_EXPORT
-void SCIPgetVarCoefChg(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   varidx,             /**< index of variable */
-   SCIP_Bool*            negated,            /**< coefficient changed the sign */
-   SCIP_Bool*            entering,           /**< coefficient gets non-zero coefficient */
-   SCIP_Bool*            leaving             /**< coefficient gets zero coefficient */
-   );
-
 /** @} */
 
 #ifdef __cplusplus

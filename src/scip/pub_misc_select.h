@@ -439,36 +439,6 @@ void SCIPselectWeightedPtrRealBool(
    );
 
 
-/** partial sort of three joint arrays of pointers/Reals/Reals, sorted by first array in non-decreasing order around the \p k-th element,
- *  see \ref SelectionAlgorithms for more information.
- */
-SCIP_EXPORT
-void SCIPselectPtrRealReal(
-   void**                ptrarray,           /**< pointer array to be sorted */
-   SCIP_Real*            realarray1,         /**< first SCIP_Real array to be permuted in the same way */
-   SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   int                   k,                  /**< the index of the desired element, must be between 0 (search for maximum/minimum) and len - 1 */
-   int                   len                 /**< length of arrays */
-   );
-
-
-/** partial sort of three joint arrays of pointers/Reals/Reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
- *  see \ref SelectionAlgorithms for more information.
- */
-SCIP_EXPORT
-void SCIPselectWeightedPtrRealReal(
-   void**                ptrarray,           /**< pointer array to be sorted */
-   SCIP_Real*            realarray1,         /**< first SCIP_Real array to be permuted in the same way */
-   SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
-   int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
-   );
-
-
 /** partial sort of three joint arrays of pointers/pointers/ints, sorted by first array in non-decreasing order around the \p k-th element,
  *  see \ref SelectionAlgorithms for more information.
  */

@@ -185,8 +185,6 @@ struct SCIP_ConsData
    unsigned int          removedfixings:1;   /**< are all fixed variables removed from the constraint? */
    unsigned int          changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
    unsigned int          normalized:1;       /**< is the constraint in normalized form? */
-   unsigned int          upgradetried:1;     /**< was the constraint already tried to be upgraded? */
-   unsigned int          upgraded:1;         /**< is the constraint upgraded and will it be removed after preprocessing? */
    unsigned int          coefsorted :1;      /**< are the constraint's variables sorted? */
    unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
    unsigned int          cliquesadded:1;     /**< were the cliques of the constraint already extracted? */
@@ -213,7 +211,6 @@ struct SCIP_EventData
 struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
-   SCIP_EXLINCONSUPGRADE** linconsupgrades;    /**< linear constraint upgrade methods for specializing linear constraints */
    SCIP_RATIONAL*        maxaggrnormscale;   /**< maximal allowed relative gain in maximum norm for constraint aggregation
                                               *   (0.0: disable constraint aggregation) */
    SCIP_RATIONAL*        maxcardbounddist;   /**< maximal relative distance from current node's dual bound to primal bound compared
@@ -221,8 +218,6 @@ struct SCIP_ConshdlrData
    SCIP_RATIONAL*        mingainpernmincomp; /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
    SCIP_RATIONAL*        maxeasyactivitydelta;/**< maximum activity delta to run easy propagation on linear constraint
                                                *   (faster, but numerically less stable) */
-   int                   linconsupgradessize;/**< size of linconsupgrade array */
-   int                   nlinconsupgrades;   /**< number of linear constraint upgrade methods */
    int                   tightenboundsfreq;  /**< multiplier on propagation frequency, how often the bounds are tightened */
    int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
@@ -370,9 +365,6 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(eventhdlr != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
-   (*conshdlrdata)->linconsupgrades = NULL;
-   (*conshdlrdata)->linconsupgradessize = 0;
-   (*conshdlrdata)->nlinconsupgrades = 0;
    (*conshdlrdata)->naddconss = 0;
    (*conshdlrdata)->ncheckserrorbound = 0;
    (*conshdlrdata)->nabotserrorbound = 0;
@@ -402,8 +394,6 @@ void conshdlrdataFree(
    assert(scip != NULL);
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
-
-   SCIPfreeBlockMemoryArrayNull(scip, &(*conshdlrdata)->linconsupgrades, (*conshdlrdata)->linconsupgradessize);
 
    SCIPrationalFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxaggrnormscale);
    SCIPrationalFreeBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxcardbounddist);
@@ -794,8 +784,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->removedfixings = FALSE;
    (*consdata)->changed = TRUE;
    (*consdata)->normalized = FALSE;
-   (*consdata)->upgradetried = FALSE;
-   (*consdata)->upgraded = FALSE;
    (*consdata)->indexsorted = (nvars <= 1);
    (*consdata)->merged = (nvars <= 1);
    (*consdata)->cliquesadded = FALSE;
@@ -3289,7 +3277,6 @@ SCIP_RETCODE chgLhs(
    consdata->lhsreal = SCIPrationalRoundReal(lhs, SCIP_R_ROUND_DOWNWARDS);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
-   consdata->upgradetried = FALSE;
    consdata->rangedrowpropagated = 0;
 
    /* update the lhs of the LP row */
@@ -3414,7 +3401,6 @@ SCIP_RETCODE chgRhs(
    consdata->rhsreal = SCIPrationalRoundReal(rhs, SCIP_R_ROUND_UPWARDS);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
-   consdata->upgradetried = FALSE;
    consdata->rangedrowpropagated = 0;
 
    /* update the rhs of the LP row */
@@ -3509,7 +3495,6 @@ SCIP_RETCODE addCoef(
 
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
-   consdata->upgradetried = FALSE;
    consdata->cliquesadded = FALSE;
    consdata->implsadded = FALSE;
    consdata->rangedrowpropagated = 0;
@@ -3634,7 +3619,6 @@ SCIP_RETCODE delCoefPos(
    consdata->presolved = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
-   consdata->upgradetried = FALSE;
    consdata->cliquesadded = FALSE;
    consdata->implsadded = FALSE;
    consdata->rangedrowpropagated = 0;
@@ -3720,7 +3704,6 @@ SCIP_RETCODE chgCoefPos(
    consdata->presolved = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
-   consdata->upgradetried = FALSE;
    consdata->cliquesadded = FALSE;
    consdata->implsadded = FALSE;
    consdata->rangedrowpropagated = 0;
@@ -5300,29 +5283,14 @@ SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
    assert(scip != NULL);
    assert(SCIPisExact(scip) || nconss == 0);
 
-   /* delete all linear constraints that were upgraded to a more specific constraint type;
-    * make sure, only active variables remain in the remaining constraints
-    */
+   /* make sure, only active variables remain in the remaining constraints */
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CONSDATA* consdata;
-
       if( SCIPconsIsDeleted(conss[c]) )
          continue;
 
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
-      if( consdata->upgraded )
-      {
-         SCIPerrorMessage("exact linear constraint upgrade not implemented yet\n");
-         return SCIP_ERROR;
-      }
-      else
-      {
-         /* since we are not allowed to detect infeasibility in the exitpre stage, we dont give an infeasible pointer */
-         SCIP_CALL( applyFixings(scip, conss[c], NULL) );
-      }
+      /* since we are not allowed to detect infeasibility in the exitpre stage, we dont give an infeasible pointer */
+      SCIP_CALL( applyFixings(scip, conss[c], NULL) );
    }
 
    return SCIP_OKAY;
