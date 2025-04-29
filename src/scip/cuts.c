@@ -12649,49 +12649,49 @@ SCIP_RETCODE cutsTransformStrongCG(
                selectedbounds[cutindex] = SCIP_BOUNDTYPE_UPPER;
             }
          }
-//         else if( data->isimplint[s] )
-//         {
-//            /* For implied integers, we still prefer to choose the bound substitution that makes them positive, but
-//             * if we cannot manage to do so it is not an error, because we can still treat them as integer variables */
-//            SCIP_Real simplelb;
-//            SCIP_Real simpleub;
-//            SCIP_Bool lowerinf;
-//            SCIP_Bool upperinf;
-//            SCIP_Bool positive;
-//
-//            /* find closest lower bound in standard lower bound or variable lower bound for continuous variable so that it will have a positive coefficient */
-//            SCIP_CALL( findMIRBestLb(scip, data->vars[v], sol, data, usevbds, allowlocal,
-//                  bestlbs + cutindex, &simplelb, bestlbtypes + cutindex) );
-//
-//            /* find closest upper bound in standard upper bound or variable upper bound for continuous variable so that it will have a positive coefficient */
-//            SCIP_CALL( findMIRBestUb(scip, data->vars[v], sol, data, usevbds, allowlocal,
-//                  bestubs + cutindex, &simpleub, bestubtypes + cutindex) );
-//
-//            lowerinf = SCIPisInfinity(scip, -bestlbs[cutindex]);
-//            upperinf = SCIPisInfinity(scip, bestubs[cutindex]);
-//            positive = QUAD_TO_DBL(coef) > 0.0;
-//
-//            if( (lowerinf && upperinf) )
-//            {
-//               /* we found a free variable in the row with non-zero coefficient
-//                *  -> MIR row can't be transformed in standard form
-//                */
-//               *freevariable = TRUE;
-//               goto TERMINATE;
-//            }
-//
-//            /* preferably, choose bound that makes value positive */
-//            if( (positive && lowerinf) || (!positive && !upperinf) )
-//            {
-//               varsign[cutindex] = -1;
-//               selectedbounds[cutindex] = SCIP_BOUNDTYPE_UPPER;
-//            }
-//            else
-//            {
-//               varsign[cutindex] = +1;
-//               selectedbounds[cutindex] = SCIP_BOUNDTYPE_LOWER;
-//            }
-//         }
+         else if( data->isimplint[s] )
+         {
+            /* For implied integers, we still prefer to choose the bound substitution that makes them positive, but
+             * if we cannot manage to do so it is not an error, because we can still treat them as integer variables */
+            SCIP_Real simplelb;
+            SCIP_Real simpleub;
+            SCIP_Bool lowerinf;
+            SCIP_Bool upperinf;
+            SCIP_Bool positive;
+
+            /* find closest lower bound in standard lower bound or variable lower bound for continuous variable so that it will have a positive coefficient */
+            SCIP_CALL( findMIRBestLb(scip, data->vars[v], sol, data, usevbds, allowlocal,
+                  bestlbs + cutindex, &simplelb, bestlbtypes + cutindex) );
+
+            /* find closest upper bound in standard upper bound or variable upper bound for continuous variable so that it will have a positive coefficient */
+            SCIP_CALL( findMIRBestUb(scip, data->vars[v], sol, data, usevbds, allowlocal,
+                  bestubs + cutindex, &simpleub, bestubtypes + cutindex) );
+
+            lowerinf = SCIPisInfinity(scip, -bestlbs[cutindex]);
+            upperinf = SCIPisInfinity(scip, bestubs[cutindex]);
+            positive = QUAD_TO_DBL(coef) > 0.0;
+
+            if( (lowerinf && upperinf) )
+            {
+               /* we found a free variable in the row with non-zero coefficient
+                *  -> MIR row can't be transformed in standard form
+                */
+               *freevariable = TRUE;
+               goto TERMINATE;
+            }
+
+            /* preferably, choose bound that makes value positive */
+            if( (positive && lowerinf) || (!positive && !upperinf) )
+            {
+               varsign[cutindex] = -1;
+               selectedbounds[cutindex] = SCIP_BOUNDTYPE_UPPER;
+            }
+            else
+            {
+               varsign[cutindex] = +1;
+               selectedbounds[cutindex] = SCIP_BOUNDTYPE_LOWER;
+            }
+         }
          else
          {
             /* For explicit integers, we have no restrictions. */
