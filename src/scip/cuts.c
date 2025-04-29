@@ -2847,14 +2847,14 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    {
       aggrrow->slacksign[i] = -1;
       sideval = row->lhs - row->constant;
-      if( (SCIProwIsIntegral(row)) )
+      if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) )
          sideval = SCIPceil(scip, sideval); /* row is integral: round left hand side up */
    }
    else
    {
       aggrrow->slacksign[i] = +1;
       sideval = row->rhs - row->constant;
-      if( (SCIProwIsIntegral(row)) )
+      if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) )
          sideval = SCIPfloor(scip, sideval); /* row is integral: round right hand side up */
    }
 
@@ -3290,24 +3290,24 @@ SCIP_RETCODE addOneRow(
    {
       assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
 
-      if( weight > 0.0 && ((negslack == 0) || (negslack == 1 && !(SCIProwIsIntegral(row)))) )
+      if( weight > 0.0 && ((negslack == 0) || (negslack == 1 && !(SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0))) )
          return SCIP_OKAY;
 
       sideval = row->lhs - row->constant;
       /* row is integral? round left hand side up */
-      if( (SCIProwIsIntegral(row)) )
+      if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) )
          sideval = SCIPceil(scip, sideval);
    }
    else
    {
       assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
 
-      if( weight < 0.0 && ((negslack == 0) || (negslack == 1 && !(SCIProwIsIntegral(row)))) )
+      if( weight < 0.0 && ((negslack == 0) || (negslack == 1 && !(SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0))) )
          return SCIP_OKAY;
 
       sideval = row->rhs - row->constant;
       /* row is integral? round right hand side down */
-      if( (SCIProwIsIntegral(row)) )
+      if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) )
          sideval = SCIPfloor(scip, sideval);
    }
 
@@ -3424,7 +3424,7 @@ SCIP_RETCODE addOneRowSafely(
       *lhsused = TRUE;
       assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
 
-      if( weight > 0.0 && ((negslack == 0) || (negslack == 1 && !(SCIProwIsIntegral(row)))) )
+      if( weight > 0.0 && ((negslack == 0) || (negslack == 1 && !(SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0))) )
          return SCIP_OKAY;
 
       SCIPintervalSetRoundingModeDownwards();
@@ -3442,7 +3442,7 @@ SCIP_RETCODE addOneRowSafely(
       *lhsused = FALSE;
       assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
 
-      if( weight < 0.0 && ((negslack == 0) || (negslack == 1 && !(SCIProwIsIntegral(row)))) )
+      if( weight < 0.0 && ((negslack == 0) || (negslack == 1 && !(SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0))) )
          return SCIP_OKAY;
 
       SCIPintervalSetRoundingModeUpwards();
@@ -3583,7 +3583,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                SCIP_Bool integral = FALSE;
 
                /* just exclude the negative continuous slacks for the certificate rows */
-               if( (SCIProwIsIntegral(row)) &&
+               if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) &&
                   ((!lhsused && SCIPrealIsExactlyIntegral(row->rhs) &&  SCIPrealIsExactlyIntegral(row->constant)) ||
                   (lhsused && SCIPrealIsExactlyIntegral(row->lhs) &&  SCIPrealIsExactlyIntegral(row->constant))) )
                {
@@ -3606,7 +3606,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                if( rowused && !rowusedcert && !integral )
                {
                   SCIPdebugMessage("row has negative continous slack\n");
-                  assert( (lhsused && weights[rowinds[k]] >= 0) || ((!lhsused) && weights[rowinds[k]] <= 0) || (SCIProwIsIntegral(row)) );
+                  assert( (lhsused && weights[rowinds[k]] >= 0) || ((!lhsused) && weights[rowinds[k]] <= 0) || (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) );
                   negslackrows[nnegslackrows] = rows[rowinds[k]];
                   negslackweights[nnegslackrows] = -weights[rowinds[k]];
                   nnegslackrows++;
@@ -3649,7 +3649,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   SCIP_Bool integral = FALSE;
 
                   /* just exclude the negative continuous slacks for the certificate rows */
-                  if( (SCIProwIsIntegral(row)) &&
+                  if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) &&
                      ((!lhsused && SCIPrealIsExactlyIntegral(row->rhs) &&  SCIPrealIsExactlyIntegral(row->constant)) ||
                      (lhsused && SCIPrealIsExactlyIntegral(row->lhs) &&  SCIPrealIsExactlyIntegral(row->constant))) )
                   {
@@ -3672,7 +3672,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   if( rowused && !rowusedcert && !integral )
                   {
                      SCIPdebugMessage("row has negative continous slack\n");
-                     assert( (lhsused && weights[k] >= 0) || ((!lhsused) && weights[k] <= 0) || (SCIProwIsIntegral(row)) );
+                     assert( (lhsused && weights[k] >= 0) || ((!lhsused) && weights[k] <= 0) || (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) );
                      negslackrows[nnegslackrows] = rows[k];
                      negslackweights[nnegslackrows] = -weights[k];
                      nnegslackrows++;
@@ -6996,7 +6996,7 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
       SCIPintervalMulScalar(SCIPinfinity(scip), &ar, ar, (double) slacksign[i]);
 
       /* calculate slack variable's coefficient a^_r in the cut */
-      if( (SCIProwIsIntegral(row)) &&
+      if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) &&
             ((slacksign[i] == +1 && SCIPrealIsExactlyIntegral(row->rhs) &&  SCIPrealIsExactlyIntegral(row->constant))
             || (slacksign[i] == -1 && SCIPrealIsExactlyIntegral(row->lhs) &&  SCIPrealIsExactlyIntegral(row->constant))) ) /*lint !e613*/
       {
@@ -7492,7 +7492,7 @@ SCIP_RETCODE cutsSubstituteMIR(
       SCIPquadprecProdDD(ar, slacksign[i] * scale, weights[i]);
 
       /* calculate slack variable's coefficient a^_r in the cut */
-      if( (SCIProwIsIntegral(row)) )
+      if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) )
       {
          /* slack variable is always integral:
           *    a^_r = a~_r = down(a'_r)                      , if f_r <= f0
@@ -7544,7 +7544,7 @@ SCIP_RETCODE cutsSubstituteMIR(
          /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
          assert(!SCIPisInfinity(scip, row->rhs));
          QUAD_ASSIGN(rowrhs, row->rhs - row->constant);
-         if( (SCIProwIsIntegral(row)) )
+         if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) )
          {
             /* the right hand side was implicitly rounded down in row aggregation */
             SCIPquadprecEpsFloorQ(rowrhs, rowrhs, SCIPepsilon(scip)); /*lint !e666*/
@@ -7559,7 +7559,7 @@ SCIP_RETCODE cutsSubstituteMIR(
          /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
          assert(!SCIPisInfinity(scip, -row->lhs));
          QUAD_ASSIGN(rowlhs, row->lhs - row->constant);
-         if( (SCIProwIsIntegral(row)) )
+         if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) )
          {
             /* the left hand side was implicitly rounded up in row aggregation */
             SCIPquadprecEpsCeilQ(rowlhs, rowlhs, SCIPepsilon(scip)); /*lint !e666*/
@@ -8724,7 +8724,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
          row = rows[aggrrow->rowsinds[i]];
 
-         if( (aggrrow->rowweights[i] * aggrrow->slacksign[i]) >= 0.0 && !(SCIProwIsIntegral(row)) )
+         if( (aggrrow->rowweights[i] * aggrrow->slacksign[i]) >= 0.0 && !(SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) )
             continue;
 
          /* compute solution value of slack variable */
@@ -8746,7 +8746,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
             slackval = slackval - row->lhs;
          }
 
-         if( (SCIProwIsIntegral(row)) )
+         if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) )
          {
             /* if row is integral add variable to tmp arrays */
             tmpvalues[ntmpcoefs] = slackval;
@@ -11519,7 +11519,7 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
          rowlhs = row->lhs - row->constant;
          rowrhs = row->rhs - row->constant;
 
-         if( (SCIProwIsIntegral(row)) )
+         if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) )
          {
             rowrhs = SCIPfloor(scip, rowrhs);
             rowlhs = SCIPceil(scip, rowlhs);
@@ -13125,7 +13125,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       SCIPquadprecProdDD(ar, slacksign[i] * scale, weights[i]);
 
       /* calculate slack variable's coefficient a_r in the cut */
-      if( (SCIProwIsIntegral(row)) )
+      if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) )
       {
          /* slack variable is always integral */
          SCIPquadprecEpsFloorQ(downar, ar, SCIPepsilon(scip)); /*lint !e666*/
@@ -13176,7 +13176,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
          /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a_r * (rhs - c) to the right hand side */
          assert(!SCIPisInfinity(scip, row->rhs));
          rhs = row->rhs - row->constant;
-         if( (SCIProwIsIntegral(row)) )
+         if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) )
          {
             /* the right hand side was implicitly rounded down in row aggregation */
             rhs = SCIPfloor(scip, rhs);
@@ -13192,7 +13192,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
          /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a_r * (c - lhs) to the right hand side */
          assert(!SCIPisInfinity(scip, -row->lhs));
          lhs = row->lhs - row->constant;
-         if( (SCIProwIsIntegral(row)) )
+         if( (SCIProwIsIntegral(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0) )
          {
             /* the left hand side was implicitly rounded up in row aggregation */
             lhs = SCIPceil(scip, lhs);
