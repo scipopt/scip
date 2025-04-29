@@ -798,7 +798,7 @@ Interface changes
   SCIPupdateSymgraphLhs(), SCIPupdateSymgraphRhs(), SCIPfixSymgraphVarnode(), SCIPaddSymgraphEdge(), SCIPcomputeSymgraphColors(), SCIPgetSymgraphSymtype(), SCIPgetSymgraphVars(),
   SCIPgetSymgraphNVars(), SCIPgetSymgraphNConsnodes(), SCIPgetSymgraphNNodes(), SCIPgetSymgraphNEdges(), SCIPgetSymgraphEdgeFirst(), SCIPgetSymgraphEdgeSecond(),
   SCIPgetSymgraphVarnodeColor(), SCIPgetSymgraphNodeType(), SCIPgetSymgraphNodeColor(), SCIPisSymgraphEdgeColored(), SCIPgetSymgraphEdgeColor(), SCIPgetSymgraphNVarcolors(),
-  SCIPhasGraphUniqueEdgetype(), SCIPallocateSymgraphConsnodeperm(), SCIPcreateSymgraphConsnodeperm(), SCIPgetSymgraphConsnodeperm(), SCIPfreeSymgraphConsnodeperm(),
+  SCIPhasGraphUniqueEdgetype(), SCIPcreateSymgraphConsnodeperm(), SCIPgetSymgraphConsnodeperm(), SCIPfreeSymgraphConsnodeperm(),
   SCIPgetSymActiveVariables(), SCIPfreeSymDataExpr(), SCIPgetSymExprdataNConstants(), SCIPgetSymExprdataConstants(), SCIPgetCoefSymData(),
   SCIPcreateSymOpNodeType(), SCIPgetSymOpNodeType()
 - SCIPexprhdlrSetGetSymdata(), SCIPexprhdlrHasGetSymData(), SCIPgetSymDataExpr(), SCIPcallExprGetSymData() to access symmetry data of expressions
@@ -1835,7 +1835,7 @@ Constraint handlers for NLP:
 - added SCIPcreateConsBasicSignpowerNonlinear() to create a nonlinear constraint that looks like the former abspower or signpower constraints
 
 Nonlinear Handler:
-- added SCIPincludeNlhdlrBilinear(), SCIPgetExprsBilinear(), SCIPgetExprsdataBilinear(), SCIPgetNExprsBilinear(), SCIPaddIneqBilinear()
+- added SCIPincludeNlhdlrBilinear(), SCIPgetExprsBilinear(), SCIPgetNExprsBilinear(), SCIPaddIneqBilinear()
 - added SCIPincludeNlhdlrConvex(), SCIPincludeNlhdlrConcave(), SCIPhasExprCurvature()
 - added SCIPincludeNlhdlrDefault()
 - added SCIPincludeNlhdlrPerspective()
