@@ -16,6 +16,7 @@ Build system
 Miscellaneous
 -------------
 
+- when writing a problem with non-generic names, warnings are printed if variable or constraint names are not unique
 
 @section RN922 SCIP 9.2.2
 *************************
