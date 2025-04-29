@@ -6701,7 +6701,7 @@ SCIP_RETCODE cutsRoundMIR(
       int nnz = data->secnnz[s];
 
       SCIP_Bool enfintegral = data->isenfint[s];
-      SCIP_Bool implintegral = data->isimplint[s];
+//      SCIP_Bool implintegral = data->isimplint[s];
 
       /* iterate backwards over indices in section, so we can easily shrink the section if we find zeros */
       for( i = nnz - 1; i >= 0 ; --i )
@@ -6729,7 +6729,7 @@ SCIP_RETCODE cutsRoundMIR(
 
          QUAD_ARRAY_LOAD(aj, data->cutcoefs, v);
 
-         if( enfintegral || implintegral )
+         if( enfintegral )
          {
             /* variable is integral */
             SCIP_Real QUAD(downaj);
@@ -12608,7 +12608,7 @@ SCIP_RETCODE cutsTransformStrongCG(
 
          int cutindex = data->ncutinds;
          /* For continuous variables, we must choose the bound substitution so that they become positive in the cut */
-         if( !data->isenfint[s] && !data->isimplint[s] )
+         if( !data->isenfint[s]  )
          {
             if( QUAD_TO_DBL(coef) > 0.0 )
             {
@@ -12649,7 +12649,7 @@ SCIP_RETCODE cutsTransformStrongCG(
                selectedbounds[cutindex] = SCIP_BOUNDTYPE_UPPER;
             }
          }
-         else if( data->isimplint[s] )
+         else if( FALSE && data->isimplint[s] )
          {
             /* For implied integers, we still prefer to choose the bound substitution that makes them positive, but
              * if we cannot manage to do so it is not an error, because we can still treat them as integer variables */
@@ -12858,7 +12858,7 @@ SCIP_RETCODE cutsRoundStrongCG(
       int* indices = data->secindices[s];
       int nnz = data->secnnz[s];
       SCIP_Bool enfintegral = data->isenfint[s];
-      SCIP_Bool implintegral = data->isimplint[s];
+//      SCIP_Bool implintegral = data->isimplint[s];
 
       /* iterate backwards over indices in section, so we can easily shrink the section if we find zeros */
       for( i = nnz - 1; i >= 0 ; --i )
@@ -12884,7 +12884,7 @@ SCIP_RETCODE cutsRoundStrongCG(
 
          QUAD_ARRAY_LOAD(aj, data->cutcoefs, v);
 
-         if( enfintegral || implintegral )
+         if( enfintegral )
          {
             /* Variable is integral */
             SCIP_Real QUAD(downaj);
