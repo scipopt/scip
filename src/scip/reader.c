@@ -430,7 +430,7 @@ SCIP_RETCODE SCIPreaderWrite(
       {
          nduplicates = 0;
 
-         for( i = 0; i < SCIPprobGetNConss(prob); ++i )
+         for( i = 0; i < nconss; ++i )
          {
             if( conss[i] != (SCIP_CONS*) SCIPprobFindCons(prob, (void*) SCIPconsGetName(conss[i])) )
             {
