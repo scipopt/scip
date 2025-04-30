@@ -56,7 +56,7 @@ SCIP_RETCODE SCIPincludeCutselXyz(
 
 /** perform a cut selection algorithm for the given array of cuts
  *
- *  The input cuts array should be resorted such that the selected cuts come first.
+ *  The input cuts array should be re-sorted such that the selected cuts come first.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPselectCutsXyz(

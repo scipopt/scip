@@ -1959,7 +1959,7 @@ SCIP_Real SCIPadjustedVarUbExactFloat(
  *  that in conflict analysis, this change is treated like a branching decision
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2009,7 +2009,7 @@ SCIP_RETCODE SCIPchgVarLbExact(
  *  that in conflict analysis, this change is treated like a branching decision
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2092,7 +2092,7 @@ SCIP_RETCODE SCIPchgVarUbNode(
  *  if the global bound is better than the local bound
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2117,7 +2117,7 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
  *  if the global bound is better than the local bound
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2198,7 +2198,7 @@ SCIP_RETCODE SCIPchgVarUbLazy(
  *  is treated like a branching decision
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2253,7 +2253,7 @@ SCIP_RETCODE SCIPtightenVarLbExact(
  *  is treated like a branching decision
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2311,7 +2311,7 @@ SCIP_RETCODE SCIPtightenVarUbExact(
  *        SCIPinferVarUbCons
  *
  *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *        SCIPgetVars()) gets re-sorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -2333,7 +2333,7 @@ SCIP_RETCODE SCIPinferVarFixCons(
  *  for the deduction of the bound change
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2363,7 +2363,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
  *  for the deduction of the bound change
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2475,7 +2475,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
  *        SCIPinferVarUbProp
  *
  *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *        SCIPgetVars()) gets re-sorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -2497,7 +2497,7 @@ SCIP_RETCODE SCIPinferVarFixProp(
  *  for the deduction of the bound change
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2527,7 +2527,7 @@ SCIP_RETCODE SCIPinferVarLbProp(
  *  for the deduction of the bound change
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2580,7 +2580,7 @@ SCIP_RETCODE SCIPinferBinvarProp(
  *  also tightens the local bound, if the global bound is better than the local bound
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2608,7 +2608,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
  *  also tightens the local bound, if the global bound is better than the local bound
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

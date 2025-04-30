@@ -946,7 +946,7 @@ SCIP_RETCODE SCIPlpiFreeState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    );
 
-/** checks, whether the given LPi state contains simplex basis information */
+/** checks whether the given LPi state contains simplex basis information */
 SCIP_EXPORT
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */

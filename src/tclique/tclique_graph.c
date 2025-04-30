@@ -88,7 +88,7 @@ TCLIQUE_GETWEIGHTS(tcliqueGetWeights)
    return tcliquegraph->weights;
 }
 
-/** returns, whether the edge (node1, node2) is in the graph */
+/** returns whether the edge (node1, node2) is in the graph */
 TCLIQUE_ISEDGE(tcliqueIsEdge)
 {
    int* currentadjedge;

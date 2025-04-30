@@ -117,7 +117,7 @@ void freeClique(
    BMSfreeMemory(clique);
 }
 
-/** checks, whether clique1 is a subset of clique2 and returns the following value:
+/** checks whether clique1 is a subset of clique2 and returns the following value:
  *   == 0 if clique1 == clique2, or clique1 is contained in clique2,
  *    < 0 if clique1 < clique2, and clique1 is not contained in clique2,
  *    > 0 if clique1 > clique2, and clique1 is not contained in clique2

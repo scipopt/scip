@@ -11336,7 +11336,7 @@ void SCIPstrCopySection(
  * File methods
  */
 
-/** returns, whether the given file exists */
+/** returns whether the given file exists */
 SCIP_Bool SCIPfileExists(
    const char*           filename            /**< file name */
    )

@@ -137,8 +137,7 @@ SCIP_RETCODE SCIPsolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** transforms, presolves, and solves problem using additional solvers which emphasize on
- *  finding solutions.
+/** transforms, presolves, and solves problem using the configured concurrent solvers
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -167,8 +166,7 @@ SCIP_RETCODE SCIPsolveParallel(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** transforms, presolves, and solves problem using additional solvers which emphasize on
- *  finding solutions.
+/** transforms, presolves, and solves problem using the configured concurrent solvers
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

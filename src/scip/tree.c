@@ -9349,7 +9349,7 @@ int SCIPtreeGetFocusDepth(
    return tree->focusnode != NULL ? (int)tree->focusnode->depth : -1;
 }
 
-/** returns, whether the LP was or is to be solved in the focus node */
+/** returns whether the LP was or is to be solved in the focus node */
 SCIP_Bool SCIPtreeHasFocusNodeLP(
    SCIP_TREE*            tree                /**< branch and bound tree */
    )
@@ -9424,7 +9424,7 @@ int SCIPtreeGetCurrentDepth(
    return tree->pathlen-1;
 }
 
-/** returns, whether the LP was or is to be solved in the current node */
+/** returns whether the LP was or is to be solved in the current node */
 SCIP_Bool SCIPtreeHasCurrentNodeLP(
    SCIP_TREE*            tree                /**< branch and bound tree */
    )

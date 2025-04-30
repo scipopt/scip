@@ -3799,7 +3799,7 @@ SCIP_RETCODE SCIPcreateConsCardinality(
 /** creates and captures a cardinality constraint with all constraint flags set to their default values.
  *
  *  @warning Do NOT set the constraint to be modifiable manually, because this might lead
- *  to wrong results as the variable array will not be resorted
+ *  to wrong results as the variable array will not be re-sorted
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method \ref SCIPreleaseCons()
  */
