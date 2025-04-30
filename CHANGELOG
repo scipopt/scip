@@ -39,6 +39,7 @@ Performance improvements
 ------------------------
 
 - reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
+- simplified symmetry detection graphs in case all edges have the same color
 
 Examples and applications
 -------------------------
