@@ -586,8 +586,8 @@ SCIP_RETCODE aggregateNextRow(
    assert( success != NULL );
    *success = FALSE;
 
-   firstcontvar = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
-   ncontvars = SCIPgetNImplVars(scip) + SCIPgetNContVars(scip);
+   firstcontvar = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNBinImplVars(scip) + SCIPgetNIntImplVars(scip) ;
+   ncontvars = SCIPgetNContImplVars(scip) + SCIPgetNContVars(scip);
    assert( firstcontvar + ncontvars == SCIPgetNVars(scip) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &badvarinds, MIN(ncontvars, nnz)) );
@@ -937,8 +937,11 @@ SCIP_RETCODE aggregation(
 
       if( sepadata->sepcmir )
       {
-         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, VARTYPEUSEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
-            aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
+//         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, VARTYPEUSEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
+//            aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
+         SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, VARTYPEUSEVBDS, allowlocal, FALSE, NULL, NULL, MINFRAC, MAXFRAC, 1.0,
+                                                   aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
+
       }
       else
       {
