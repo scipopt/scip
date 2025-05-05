@@ -783,7 +783,7 @@ SCIP_RETCODE additionFilterBatch(
          assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
 
          /* update batchsize if problem feasible */
-         if ( feasible )
+         if( feasible )
             SCIP_CALL( updateBatchsize(scip, initbatchsize, maxbatchsize, i, nconss, iteration, FALSE, batchingfactor, batchingoffset, batchupdateinterval, &batchsize) );
 
          /* Add any other constraints that are also feasible for the current solution */
