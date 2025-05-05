@@ -806,7 +806,7 @@ SCIP_RETCODE additionFilterBatch(
             }
             if( k > 0 )
             {
-               SCIPdebugMsg(scip,  "Added %d constraints by reordering dynamically.\n", k);
+               SCIPdebugMsg(scip, "Added %d constraints by reordering dynamically.\n", k);
                if( ! silent )
                   SCIPiisfinderInfoMessage(iis, FALSE);
             }
