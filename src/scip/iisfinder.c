@@ -253,12 +253,13 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_CONS** conss;
    SCIP_VAR** vars;
    SCIP_IIS* iis;
+   int maxbatchsize;
    int i;
    int j;
    int nconss;
    int nvars;
    int nbounds;
-   int initbatchsize;
+   SCIP_PARAM* parammaxbatchsize;
    SCIP_IISFINDER* iisfindergreedy;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
    SCIP_Bool silent;
@@ -380,7 +381,9 @@ SCIP_RETCODE SCIPiisGenerate(
 
          /* Recreate the subscip if one of the IIS finder algorithms has produced an invalid infeasible subsystem */
          if( !iis->infeasible )
+         {
             SCIP_CALL( createSubscipIIS(set, iis, timelim - SCIPclockGetTime(iis->iistime), nodelim) );
+         }
 
          /* start timing */
          SCIPclockStart(iisfinder->iisfindertime, set);
@@ -408,17 +411,32 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/minimal", &minimal) );
    if( !iis->irreducible && minimal && !(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) && !trivial )
    {
-      SCIPdebugMsg(set->scip, "----- STARTING GREEDY DELETION ALGORITHM WITH INITBATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
-
-      if( !iis->infeasible )
-         SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
-
       iisfindergreedy = SCIPsetFindIISfinder(set, "greedy");
-      SCIP_CALL( SCIPgetIntParam(set->scip, "iis/greedy/maxbatchsize", &initbatchsize) );
-      SCIP_CALL( SCIPsetIntParam(set->scip, "iis/greedy/maxbatchsize", 1) );
-      SCIP_CALL( iisfindergreedy->iisfinderexec(iis, iisfindergreedy, timelim, nodelim, removebounds, silent, &result) );
-      SCIP_CALL( SCIPsetIntParam(set->scip, "iis/greedy/maxbatchsize", initbatchsize) );
-      assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
+
+      if( iisfindergreedy != NULL )
+      {
+         SCIPdebugMsg(set->scip, "----- STARTING GREEDY DELETION ALGORITHM WITH MAXBATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
+
+         if( !iis->infeasible )
+         {
+            SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
+         }
+
+         /* force singleton batches */
+         parammaxbatchsize = SCIPsetGetParam(set, "iis/greedy/maxbatchsize");
+         maxbatchsize = SCIPparamGetInt(parammaxbatchsize);
+         SCIP_CALL( SCIPchgIntParam(set->scip, parammaxbatchsize, 1) );
+
+         SCIP_CALL( iisfindergreedy->iisfinderexec(iis, iisfindergreedy, timelim, nodelim, removebounds, silent, &result) );
+         assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
+
+         /* reset maximal batchsize */
+         SCIP_CALL( SCIPchgIntParam(set->scip, parammaxbatchsize, maxbatchsize) );
+      }
+      else
+      {
+         SCIPwarningMessage(set->scip, "Greedy IIS finder not included, result may be reducible.\n");
+      }
    }
 
    /* Remove redundant constraints that potentially are left over from indicator constraints,
