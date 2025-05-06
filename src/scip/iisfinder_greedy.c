@@ -726,135 +726,6 @@ SCIP_RETCODE additionFilterBatch(
    return SCIP_OKAY;
 }
 
-/*
- * Callback methods of IIS finder
- */
-
-
-/** copy method for IIS finder plugin (called when SCIP copies plugins) */
-static
-SCIP_DECL_IISFINDERCOPY(iisfinderCopyGreedy)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(iisfinder != NULL);
-   assert(strcmp(SCIPiisfinderGetName(iisfinder), IISFINDER_NAME) == 0);
-
-   /* call inclusion method of IIS finder */
-   SCIP_CALL( SCIPincludeIISfinderGreedy(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** destructor of IIS finder to free user data (called when SCIP is exiting) */
-/**! [SnippetIISfinderFreeGreedy] */
-static
-SCIP_DECL_IISFINDERFREE(iisfinderFreeGreedy)
-{  /*lint --e{715}*/
-   SCIP_IISFINDERDATA* iisfinderdata;
-
-   iisfinderdata = SCIPiisfinderGetData(iisfinder);
-
-   SCIPfreeBlockMemory(scip, &iisfinderdata);
-
-   SCIPiisfinderSetData(iisfinder, NULL);
-
-   return SCIP_OKAY;
-}
-/**! [SnippetIISfinderFreeGreedy] */
-
-/** IIS finder generation method of IIS */
-static
-SCIP_DECL_IISFINDEREXEC(iisfinderExecGreedy)
-{  /*lint --e{715}*/
-   struct SCIP_IISfinderData* iisfinderdata;
-
-   assert(iisfinder != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_DIDNOTFIND;
-
-   iisfinderdata = SCIPiisfinderGetData(iisfinder);
-   assert(iisfinderdata != NULL);
-
-   SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent,
-            iisfinderdata->timelimperiter, iisfinderdata->additive, iisfinderdata->conservative,
-            iisfinderdata->dynamicreordering, iisfinderdata->delafteradd,
-            iisfinderdata->nodelimperiter, iisfinderdata->maxbatchsize,
-            iisfinderdata->maxrelbatchsize, result) );
-
-   return SCIP_OKAY;
-}
-
-
-/*
- * IIS finder specific interface methods
- */
-
-/** creates the greedy IIS finder and includes it in SCIP */
-SCIP_RETCODE SCIPincludeIISfinderGreedy(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_IISFINDERDATA* iisfinderdata;
-   SCIP_IISFINDER* iisfinder;
-
-   /* create greedy IIS finder data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &iisfinderdata) );
-   BMSclearMemory(iisfinderdata);
-
-   SCIP_CALL( SCIPincludeIISfinderBasic(scip, &iisfinder, IISFINDER_NAME, IISFINDER_DESC, IISFINDER_PRIORITY,
-         iisfinderExecGreedy, iisfinderdata) );
-
-   assert(iisfinder != NULL);
-
-   /* set non fundamental callbacks via setter functions */
-   SCIP_CALL( SCIPsetIISfinderCopy(scip, iisfinder, iisfinderCopyGreedy) );
-   SCIP_CALL( SCIPsetIISfinderFree(scip, iisfinder, iisfinderFreeGreedy) );
-
-   /* add greedy IIS finder parameters */
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "iis/" IISFINDER_NAME "/maxbatchsize",
-         "maximum batch size of constraints (or bounds) that are removed or added in one iteration",
-         &iisfinderdata->maxbatchsize, FALSE, DEFAULT_MAXBATCHSIZE, 1, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "iis/" IISFINDER_NAME "/maxrelbatchsize",
-         "maximum number of constraints (or bounds) relative to the original problem that are added / removed in one iteration",
-         &iisfinderdata->maxrelbatchsize, FALSE, DEFAULT_MAXRELBATCHSIZE, 0.0, 1.0, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "iis/" IISFINDER_NAME "/timelimperiter",
-         "time limit of optimization process for each individual subproblem",
-         &iisfinderdata->timelimperiter, FALSE, DEFAULT_TIMELIMPERITER, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddLongintParam(scip,
-         "iis/" IISFINDER_NAME "/nodelimperiter",
-         "node limit of optimization process for each individual subproblem",
-         &iisfinderdata->nodelimperiter, FALSE, DEFAULT_NODELIMPERITER, -1L, SCIP_LONGINT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "iis/" IISFINDER_NAME "/additive",
-         "should an additive constraint approach be used instead of deletion",
-         &iisfinderdata->additive, FALSE, DEFAULT_ADDITIVE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "iis/" IISFINDER_NAME "/conservative",
-         "should a hit limit (e.g. node  time) solve be counted as feasible when deleting constraints",
-         &iisfinderdata->conservative, TRUE, DEFAULT_CONSERVATIVE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "iis/" IISFINDER_NAME "/dynamicreordering",
-         "should satisfied constraints outside the batch of an intermediate solve be added during the additive method",
-         &iisfinderdata->dynamicreordering, TRUE, DEFAULT_DYNAMICREORDERING, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "iis/" IISFINDER_NAME "/delafteradd",
-         "should the deletion routine be performed after the addition routine (in the case of additive)",
-         &iisfinderdata->delafteradd, TRUE, DEFAULT_DELAFTERADD, NULL, NULL) );
-
-   return SCIP_OKAY;
-}
-
 /** perform a greedy addition or deletion algorithm to obtain an infeasible subsystem (IS).
  *
  *  This is the generation method for the greedy IIS finder rule.
@@ -864,7 +735,8 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
  *  this is done until no more constraints (or batches of constraints) can be deleted without making
  *  the problem feasible.
  */
-SCIP_RETCODE SCIPexecIISfinderGreedy(
+static
+SCIP_RETCODE execIISfinderGreedy(
    SCIP_IIS*             iis,                /**< IIS data structure */
    SCIP_Real             timelim,            /**< The global time limit on the IIS finder call */
    SCIP_Longint          nodelim,            /**< The global node limit on the IIS finder call */
@@ -944,6 +816,136 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
          return SCIP_OKAY;
       }
    }
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * Callback methods of IIS finder
+ */
+
+
+/** copy method for IIS finder plugin (called when SCIP copies plugins) */
+static
+SCIP_DECL_IISFINDERCOPY(iisfinderCopyGreedy)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(iisfinder != NULL);
+   assert(strcmp(SCIPiisfinderGetName(iisfinder), IISFINDER_NAME) == 0);
+
+   /* call inclusion method of IIS finder */
+   SCIP_CALL( SCIPincludeIISfinderGreedy(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** destructor of IIS finder to free user data (called when SCIP is exiting) */
+/**! [SnippetIISfinderFreeGreedy] */
+static
+SCIP_DECL_IISFINDERFREE(iisfinderFreeGreedy)
+{  /*lint --e{715}*/
+   SCIP_IISFINDERDATA* iisfinderdata;
+
+   iisfinderdata = SCIPiisfinderGetData(iisfinder);
+
+   SCIPfreeBlockMemory(scip, &iisfinderdata);
+
+   SCIPiisfinderSetData(iisfinder, NULL);
+
+   return SCIP_OKAY;
+}
+/**! [SnippetIISfinderFreeGreedy] */
+
+/** IIS finder generation method of IIS */
+static
+SCIP_DECL_IISFINDEREXEC(iisfinderExecGreedy)
+{  /*lint --e{715}*/
+   struct SCIP_IISfinderData* iisfinderdata;
+
+   assert(iisfinder != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTFIND;
+
+   iisfinderdata = SCIPiisfinderGetData(iisfinder);
+   assert(iisfinderdata != NULL);
+
+   SCIP_CALL( execIISfinderGreedy(iis, timelim, nodelim, removebounds, silent,
+            iisfinderdata->timelimperiter, iisfinderdata->additive, iisfinderdata->conservative,
+            iisfinderdata->dynamicreordering, iisfinderdata->delafteradd,
+            iisfinderdata->nodelimperiter, iisfinderdata->maxbatchsize,
+            iisfinderdata->maxrelbatchsize, result) );
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * IIS finder specific interface methods
+ */
+
+/** creates the greedy IIS finder and includes it in SCIP */
+SCIP_RETCODE SCIPincludeIISfinderGreedy(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_IISFINDERDATA* iisfinderdata;
+   SCIP_IISFINDER* iisfinder;
+
+   /* create greedy IIS finder data */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &iisfinderdata) );
+   BMSclearMemory(iisfinderdata);
+
+   SCIP_CALL( SCIPincludeIISfinderBasic(scip, &iisfinder, IISFINDER_NAME, IISFINDER_DESC, IISFINDER_PRIORITY,
+         iisfinderExecGreedy, iisfinderdata) );
+
+   assert(iisfinder != NULL);
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetIISfinderCopy(scip, iisfinder, iisfinderCopyGreedy) );
+   SCIP_CALL( SCIPsetIISfinderFree(scip, iisfinder, iisfinderFreeGreedy) );
+
+   /* add greedy IIS finder parameters */
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "iis/" IISFINDER_NAME "/maxbatchsize",
+         "maximum batch size of constraints (or bounds) that are removed or added in one iteration",
+         &iisfinderdata->maxbatchsize, FALSE, DEFAULT_MAXBATCHSIZE, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "iis/" IISFINDER_NAME "/maxrelbatchsize",
+         "maximum number of constraints (or bounds) relative to the original problem that are added / removed in one iteration",
+         &iisfinderdata->maxrelbatchsize, FALSE, DEFAULT_MAXRELBATCHSIZE, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "iis/" IISFINDER_NAME "/timelimperiter",
+         "time limit of optimization process for each individual subproblem",
+         &iisfinderdata->timelimperiter, FALSE, DEFAULT_TIMELIMPERITER, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip,
+         "iis/" IISFINDER_NAME "/nodelimperiter",
+         "node limit of optimization process for each individual subproblem",
+         &iisfinderdata->nodelimperiter, FALSE, DEFAULT_NODELIMPERITER, -1L, SCIP_LONGINT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "iis/" IISFINDER_NAME "/additive",
+         "should an additive constraint approach be used instead of deletion",
+         &iisfinderdata->additive, FALSE, DEFAULT_ADDITIVE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "iis/" IISFINDER_NAME "/conservative",
+         "should a hit limit (e.g. node  time) solve be counted as feasible when deleting constraints",
+         &iisfinderdata->conservative, TRUE, DEFAULT_CONSERVATIVE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "iis/" IISFINDER_NAME "/dynamicreordering",
+         "should satisfied constraints outside the batch of an intermediate solve be added during the additive method",
+         &iisfinderdata->dynamicreordering, TRUE, DEFAULT_DYNAMICREORDERING, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "iis/" IISFINDER_NAME "/delafteradd",
+         "should the deletion routine be performed after the addition routine (in the case of additive)",
+         &iisfinderdata->delafteradd, TRUE, DEFAULT_DELAFTERADD, NULL, NULL) );
 
    return SCIP_OKAY;
 }
