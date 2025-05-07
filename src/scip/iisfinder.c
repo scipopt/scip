@@ -71,6 +71,9 @@ SCIP_RETCODE createSubscipIIS(
    int nvars;
    int i;
 
+   assert( set != NULL );
+   assert( iis != NULL );
+
    /* Create the subscip used for storing the IIS */
    if( iis->subscip != NULL )
    {
@@ -381,24 +384,23 @@ SCIP_RETCODE SCIPiisGenerate(
       {
          SCIP_IISFINDER* iisfinder;
          iisfinder = set->iisfinders[i];
-         assert(iis != NULL);
-
-         /* Recreate the subscip if one of the IIS finder algorithms has produced an invalid infeasible subsystem */
-         if( !iis->infeasible )
-         {
-            SCIP_CALL( createSubscipIIS(set, iis, timelim - SCIPclockGetTime(iis->iistime), nodelim) );
-         }
+         assert( iis->infeasible );
 
          /* start timing */
          SCIPclockStart(iisfinder->iisfindertime, set);
 
          SCIPdebugMsg(set->scip, "----- STARTING IIS FINDER %s -----\n", iisfinder->name);
          SCIP_CALL( iisfinder->iisfinderexec(iis, iisfinder, timelim, nodelim, removebounds, silent, &result) );
+         assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
 
          /* stop timing */
          SCIPclockStop(iisfinder->iisfindertime, set);
 
-         assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
+         /* recreate the initial subscip if the IIS finder has produced an invalid infeasible subsystem */
+         if( !iis->infeasible )
+         {
+            SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
+         }
 
          if( timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim) )
          {
@@ -419,12 +421,9 @@ SCIP_RETCODE SCIPiisGenerate(
 
       if( iisfindergreedy != NULL )
       {
-         SCIPdebugMsg(set->scip, "----- STARTING GREEDY DELETION ALGORITHM WITH MAXBATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
+         assert( iis->infeasible );
 
-         if( !iis->infeasible )
-         {
-            SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
-         }
+         SCIPdebugMsg(set->scip, "----- STARTING GREEDY DELETION ALGORITHM WITH MAXBATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
 
          /* save finder settings */
          paramadditive = SCIPsetGetParam(set, "iis/greedy/additive");
