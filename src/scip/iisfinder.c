@@ -253,12 +253,16 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_CONS** conss;
    SCIP_VAR** vars;
    SCIP_IIS* iis;
+   SCIP_Bool additive;
+   SCIP_Bool conservative;
    int maxbatchsize;
    int i;
    int j;
    int nconss;
    int nvars;
    int nbounds;
+   SCIP_PARAM* paramadditive;
+   SCIP_PARAM* paramconservative;
    SCIP_PARAM* parammaxbatchsize;
    SCIP_IISFINDER* iisfindergreedy;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
@@ -422,15 +426,25 @@ SCIP_RETCODE SCIPiisGenerate(
             SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
          }
 
-         /* force singleton batches */
+         /* save finder settings */
+         paramadditive = SCIPsetGetParam(set, "iis/greedy/additive");
+         paramconservative = SCIPsetGetParam(set, "iis/greedy/conservative");
          parammaxbatchsize = SCIPsetGetParam(set, "iis/greedy/maxbatchsize");
+         additive = SCIPparamGetBool(paramadditive);
+         conservative = SCIPparamGetBool(paramconservative);
          maxbatchsize = SCIPparamGetInt(parammaxbatchsize);
+
+         /* reliable singleton deletion */
+         SCIP_CALL( SCIPchgBoolParam(set->scip, paramadditive, FALSE) );
+         SCIP_CALL( SCIPchgBoolParam(set->scip, paramconservative, TRUE) );
          SCIP_CALL( SCIPchgIntParam(set->scip, parammaxbatchsize, 1) );
 
          SCIP_CALL( iisfindergreedy->iisfinderexec(iis, iisfindergreedy, timelim, nodelim, removebounds, silent, &result) );
          assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
 
-         /* reset maximal batchsize */
+         /* reset finder settings */
+         SCIP_CALL( SCIPchgBoolParam(set->scip, paramadditive, additive) );
+         SCIP_CALL( SCIPchgBoolParam(set->scip, paramconservative, conservative) );
          SCIP_CALL( SCIPchgIntParam(set->scip, parammaxbatchsize, maxbatchsize) );
       }
       else
