@@ -6247,8 +6247,21 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             {
                assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING);
 
-               /* the negated variable did not occur in a set partitioning constraint (those will be iterated over
-                * first), so we cannot aggregate this variable
+               /* if the negated variable occurs in an additional packing constraint,
+                * then we are no longer in a doubleton or singleton case;
+                * this case of two packing and one partitioning constraint (thus,
+                * 2 down- and 2 uplocks) cannot be handled by this routine, so the
+                * variable cannot be aggregated, see also #3752 and !3832;
+                * this situation is characterized by having 2 downlocks (one from the
+                * partitioning constraint, one from the negated variable in the other
+                * packing constraint; the current packing constraint (cons) does not
+                * contribute a downlock)
+                */
+               if( ndownlocks >= 2 )
+                  continue;
+
+               /* if the negated variable did not occur in a set partitioning constraint
+                * (those will be iterated over first), we cannot aggregate this variable
                 */
                if( !SCIPhashmapExists(vartoindex, (void*) negvar) )
                   continue;

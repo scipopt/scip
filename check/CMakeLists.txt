@@ -549,7 +549,8 @@ set(pairs_Issue
     "instances/Issue/3727.cip\;1922\;vanillafullstrong_reduced_presolving_separating_heuristics"
     "instances/Issue/3728.cip\;0\;reduced_presolving_heuristics"
     "instances/Issue/3746.cip\;0\;seed_1"
-    "instances/Issue/3752.cip\;28066\;default"
+    "instances/Issue/3752_1.cip\;28066\;default"
+    "instances/Issue/3752_2.cip\;0\;default"
     "instances/Issue/3787.lp\;1\;default"
     "instances/Issue/3832.cip\;0\;default"
     # Test currently not working since problems with the relative check for presolved problems appear: https://git.zib.de/integer/scip/-/issues/3819
