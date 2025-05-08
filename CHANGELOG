@@ -48,6 +48,8 @@ Miscellaneous
 Fixed bugs
 ----------
 
+- avoid hashmap key error in removal of doubletons and singletons in dual presolve of setppc constraints by skipping tripleton locks
+
 Build system
 ------------
 
