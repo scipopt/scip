@@ -3451,7 +3451,7 @@
  * \n
  * Note that this property only defines the default value of the priority. The user may change this value arbitrarily by
  * adjusting the corresponding parameter setting. Whenever, even during solving, the priority of a cut selector is
- * changed, the cut selectors are resorted by the new priorities.
+ * changed, the cut selectors are re-sorted by the new priorities.
  *
  *
  * @section CUTSEL_DATA Cut Selector Data
@@ -3507,7 +3507,7 @@
  * @subsection CUTSELSELECT
  *
  * The CUTSELSELECT callback should decide which cuts should be added to the relaxation.
- * The callback receives the arrays of cuts to select from. This array must be resorted and the first nselectedcuts from
+ * The callback receives the arrays of cuts to select from. This array must be re-sorted and the first nselectedcuts from
  * the sorted array are going to be selected.
  * In addition to the aforementioned cuts, the list of forced cuts is also given as an argument. This array can be used
  * to help with the selection algorithm. Note, however, that this array should not be tampered with.

@@ -65,12 +65,6 @@ SCIP_EXPR** SCIPgetExprsBilinear(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    );
 
-/** returns an array of nonlinear handler expressions data of expressions that have been detected by the bilinear nonlinear handler */
-SCIP_EXPORT
-SCIP_NLHDLREXPRDATA** SCIPgetExprsdataBilinear(
-   SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-   );
-
 /** returns the total number of expressions that have been detected by the bilinear nonlinear handler */
 SCIP_EXPORT
 int SCIPgetNExprsBilinear(

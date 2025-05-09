@@ -61,7 +61,7 @@ extern "C" {
  * @{
  */
 
-/** returns, whether the LP was or is to be solved in the current node
+/** returns whether the LP was or is to be solved in the current node
  *
  *  @return whether the LP was or is to be solved in the current node.
  *
@@ -75,7 +75,7 @@ SCIP_Bool SCIPhasCurrentNodeLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns, whether the LP of the current node is already constructed
+/** returns whether the LP of the current node is already constructed
  *
  *  @return whether the LP of the current node is already constructed.
  *

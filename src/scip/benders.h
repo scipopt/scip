@@ -264,14 +264,6 @@ SCIP_RETCODE SCIPbendersMergeSubproblemIntoMaster(
    int                   probnumber          /**< the number of the subproblem that will be merged into the master problem*/
    );
 
-/** Applies a Benders' decomposition to the problem based upon the decomposition selected from the storage */
-extern
-SCIP_RETCODE SCIPbendersApplyDecomposition(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_DECOMP*          decomp              /**< the decomposition to apply to the problem */
-   );
-
 /** sets priority of Benders' decomposition */
 void SCIPbendersSetPriority(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */

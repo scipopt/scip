@@ -2295,7 +2295,7 @@ SCIP_RETCODE SCIPgenVBoundAdd(
       SCIP_CALL( addNewGenVBound(scip, propdata, genvbound) );
    }
 
-   /* mark genvbounds array to be resorted */
+   /* mark genvbounds array to be re-sorted */
    propdata->issorted = FALSE;
 
    /* debug message */
@@ -2540,7 +2540,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
             propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds];
             propdata->genvboundstore[i]->index = i;
 
-            /* mark genvbounds array to be resorted */
+            /* mark genvbounds array to be re-sorted */
             propdata->issorted = FALSE;
          }
       }

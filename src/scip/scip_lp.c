@@ -74,7 +74,7 @@
 #include "scip/tree.h"
 #include "scip/var.h"
 
-/** returns, whether the LP was or is to be solved in the current node
+/** returns whether the LP was or is to be solved in the current node
  *
  *  @return whether the LP was or is to be solved in the current node.
  *
@@ -92,7 +92,7 @@ SCIP_Bool SCIPhasCurrentNodeLP(
    return SCIPtreeHasCurrentNodeLP(scip->tree);
 }
 
-/** returns, whether the LP of the current node is already constructed
+/** returns whether the LP of the current node is already constructed
  *
  *  @return whether the LP of the current node is already constructed.
  *

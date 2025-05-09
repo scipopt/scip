@@ -432,7 +432,7 @@ SCIP_RETCODE SCIPincludeCutselHybrid(
  *
  *  This is the selection method of the hybrid cut selector which uses a weighted sum of the
  *  efficacy, parallelism, directed cutoff distance, and the integral support.
- *  The input cuts array gets resorted s.t the selected cuts come first and the remaining
+ *  The input cuts array gets re-sorted s.t the selected cuts come first and the remaining
  *  ones are the end.
  */
 SCIP_RETCODE SCIPselectCutsHybrid(

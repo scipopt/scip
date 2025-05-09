@@ -347,16 +347,6 @@ SCIP_Bool SCIPhasGraphUniqueEdgetype(
  *  @note @p colors of symmetry detection graph must have been computed
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPallocateSymgraphConsnodeperm(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SYM_GRAPH*            graph               /**< symmetry detection graph */
-   );
-
-/** creates consnodeperm array for symmetry detection graph
- *
- *  @note @p colors of symmetry detection graph must have been computed
- */
-SCIP_EXPORT
 SCIP_RETCODE SCIPcreateSymgraphConsnodeperm(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph               /**< symmetry detection graph */
