@@ -2244,6 +2244,7 @@ SCIP_RETCODE SCIPcreateConsOr(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   int i;
 
    /* find the or constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -2251,6 +2252,23 @@ SCIP_RETCODE SCIPcreateConsOr(
    {
       SCIPerrorMessage("or constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* check whether resultant variable is binary */
+   if( !SCIPvarIsBinary(resvar) )
+   {
+      SCIPerrorMessage("resultant <%s> is not binary\n", SCIPvarGetName(resvar));
+      return SCIP_INVALIDDATA;
+   }
+
+   /* check whether all variables are binary */
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPvarIsBinary(vars[i]) )
+      {
+         SCIPerrorMessage("operand <%s> is not binary\n", SCIPvarGetName(vars[i]));
+         return SCIP_INVALIDDATA;
+      }
    }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
