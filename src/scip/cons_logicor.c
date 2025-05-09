@@ -5450,6 +5450,7 @@ SCIP_RETCODE SCIPcreateConsLogicor(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
+   int i;
 
    assert(scip != NULL);
 
@@ -5459,6 +5460,16 @@ SCIP_RETCODE SCIPcreateConsLogicor(
    {
       SCIPerrorMessage("logic or constraint handler not found\n");
       return SCIP_INVALIDCALL;
+   }
+
+   /* check whether all variables are binary */
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPvarIsBinary(vars[i]) )
+      {
+         SCIPerrorMessage("operand <%s> is not binary\n", SCIPvarGetName(vars[i]));
+         return SCIP_INVALIDDATA;
+      }
    }
 
    /* create the constraint specific data */

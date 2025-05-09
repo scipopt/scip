@@ -7095,6 +7095,7 @@ SCIP_RETCODE createConsSetppc(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
 
    assert(scip != NULL);
 
@@ -7104,6 +7105,16 @@ SCIP_RETCODE createConsSetppc(
    {
       SCIPerrorMessage("set partitioning / packing / covering constraint handler not found\n");
       return SCIP_INVALIDCALL;
+   }
+
+   /* check whether all variables are binary */
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPvarIsBinary(vars[i]) )
+      {
+         SCIPerrorMessage("operand <%s> is not binary\n", SCIPvarGetName(vars[i]));
+         return SCIP_INVALIDDATA;
+      }
    }
 
    /* create the constraint specific data */
