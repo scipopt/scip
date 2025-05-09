@@ -5115,6 +5115,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Bool infeasible;
+   int i;
 
    /* find the AND-constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -5122,6 +5123,23 @@ SCIP_RETCODE SCIPcreateConsAnd(
    {
       SCIPerrorMessage("AND-constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* check whether resultant variable is binary */
+   if( !SCIPvarIsBinary(resvar) )
+   {
+      SCIPerrorMessage("resultant <%s> is not binary\n", SCIPvarGetName(resvar));
+      return SCIP_INVALIDDATA;
+   }
+
+   /* check whether all variables are binary */
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPvarIsBinary(vars[i]) )
+      {
+         SCIPerrorMessage("operand <%s> is not binary\n", SCIPvarGetName(vars[i]));
+         return SCIP_INVALIDDATA;
+      }
    }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
