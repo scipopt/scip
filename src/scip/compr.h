@@ -93,18 +93,6 @@ SCIP_RETCODE SCIPcomprExit(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** informs tree compression that the branch and bound process is being started */
-SCIP_RETCODE SCIPcomprInitsol(
-   SCIP_COMPR*           compr,              /**< tree compression */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   );
-
-/** informs tree compression that the branch and bound process data is being freed */
-SCIP_RETCODE SCIPcomprExitsol(
-   SCIP_COMPR*           compr,              /**< tree compression */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   );
-
 /** calls execution method of tree compression */
 SCIP_RETCODE SCIPcomprExec(
    SCIP_COMPR*           compr,              /**< tree compression */

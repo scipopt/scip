@@ -87,6 +87,7 @@ SCIP_RETCODE SCIPreaderWrite(
    SCIP_READER*          reader,             /**< reader */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     msghdlr,            /**< message handler */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    const char*           format,             /**< file format (or NULL) */
    SCIP_Bool             genericnames,       /**< using generic variable and constraint names? */

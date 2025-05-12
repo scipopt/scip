@@ -533,7 +533,7 @@ SCIP_RETCODE SCIPincludeCutselDynamic(
  *
  *  This is the selection method of the dynamic cut selector which implements
  *  the dynamic orthognality filtering based on the ratio of efficacies.
- *  The input cuts array gets resorted s.t the selected cuts come first and the remaining
+ *  The input cuts array gets re-sorted s.t the selected cuts come first and the remaining
  *  ones are the end.
  */
 SCIP_RETCODE SCIPselectCutsDynamic(

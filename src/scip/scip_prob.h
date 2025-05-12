@@ -325,6 +325,8 @@ SCIP_RETCODE SCIPfreeProb(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
+ *
+ *  @todo This need to be changed to use the new random number generator implemented in random.c
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPpermuteProb(
@@ -435,7 +437,7 @@ SCIP_RETCODE SCIPsetProbName(
    const char*           name                /**< name to be set */
    );
 
-/** changes the objective function
+/** changes the objective function of the original problem.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -805,6 +807,10 @@ SCIP_RETCODE SCIPaddPricedVar(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @warning The variable is not deleted from the constraints when in SCIP_STAGE_PROBLEM.  In this stage, it is the
+ *           user's responsibility to ensure the variable has been removed from all constraints or the constraints
+ *           deleted.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdelVar(
@@ -1488,6 +1494,7 @@ SCIP_Bool SCIPallVarsInProb(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
@@ -1534,11 +1541,13 @@ SCIP_RETCODE SCIPdelCons(
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS */
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
 SCIP_EXPORT
 SCIP_CONS* SCIPfindOrigCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1726,7 +1735,7 @@ SCIP_RETCODE SCIPaddConflict(
    SCIP_Bool             iscutoffinvolved    /**< is a cutoff bound involved in this conflict */
    );
 
-/** removes all conflicts depending on an old cutoff bound if the improvement of the incumbent is good enough
+/** tries to remove conflicts depending on an old cutoff bound if the improvement of the new incumbent is good enough
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1787,7 +1796,7 @@ SCIP_RETCODE SCIPaddConsNode(
  *       - \ref SCIP_STAGE_SOLVING
  *
  *  @note The same constraint cannot be added twice to the branching tree with different "validnode" parameters. This is
- *        the case due internal data structures and performance issues. In such a case you should try to realize your
+ *        the case due to internal data structures and performance issues. In such a case you should try to realize your
  *        issue using the method SCIPdisableCons() and SCIPenableCons() and control these via the event system of SCIP.
  */
 SCIP_EXPORT
@@ -1838,6 +1847,9 @@ SCIP_RETCODE SCIPdelConsNode(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note SCIP stage does not get changed
+ *
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdelConsLocal(
@@ -1958,8 +1970,10 @@ SCIP_RETCODE SCIPupdateLocalLowerbound(
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    );
 
-/** if given value is tighter (larger for minimization, smaller for maximization) than the node's dual bound,
- *  sets the node's dual bound to the new value
+/** if given value is tighter (higher for minimization, lower for maximization) than the node's dual bound, sets the
+ *  node's dual bound to the new value.
+ *
+ *  @note must not be used on a leaf because the node priority queue remains untouched
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1974,8 +1988,10 @@ SCIP_RETCODE SCIPupdateNodeDualbound(
    SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
    );
 
-/** if given value is larger than the node's lower bound (in transformed problem), sets the node's lower bound
- *  to the new value
+/** if given value is higher than the node's lower bound (in transformed problem), sets the node's lower bound to the
+ *  new value.
+ *
+ *  @note must not be used on a leaf because the node priority queue remains untouched
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

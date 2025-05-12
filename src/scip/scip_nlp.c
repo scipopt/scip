@@ -101,7 +101,7 @@ void SCIPenableNLP(
    scip->transprob->nlpenabled = TRUE;
 }
 
-/** returns, whether an NLP has been constructed
+/** returns whether an NLP has been constructed
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITSOLVE

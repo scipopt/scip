@@ -128,7 +128,7 @@ SCIP_Bool SCIPisCutEfficacious(
       return SCIProwIsSolEfficacious(cut, scip->set, scip->stat, sol, (SCIPtreeGetCurrentDepth(scip->tree) == 0));
 }
 
-/** checks, if the given cut's efficacy is larger than the minimal cut efficacy
+/** checks if the given cut's efficacy is larger than the minimal cut efficacy
  *
  *  @return TRUE if the given cut's efficacy is larger than the minimal cut efficacy, otherwise FALSE
  */

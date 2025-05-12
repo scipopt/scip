@@ -1996,11 +1996,6 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    SCIP_Bool             removefromvar       /**< should the implications and variable bounds be removed from the var itself? */
    );
 
-/** return the index of the original variable */
-int SCIPvarGetOrigIndex(
-   SCIP_VAR*             var                 /**< scip variable */
-   );
-
 /** Get the tightest local lower bound (from the exact and the real bound) */
 void SCIPvarGetLbLocalExactMaximal(
    SCIP_VAR*             var,                /**< problem variable */
