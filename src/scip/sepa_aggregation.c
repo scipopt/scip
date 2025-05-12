@@ -115,7 +115,7 @@
 #define POSTPROCESS                TRUE
 #define VARTYPEUSEVBDS                2 /**< We allow variable bound substitution for variables with continuous vartype only.
                                          *   See cuts.c for more information. */
-#define MINFRAC                    0.05
+#define MINFRAC                    0.005
 #define MAXFRAC                    0.999
 #define MAKECONTINTEGRAL          FALSE
 #define IMPLINTSARECONT
