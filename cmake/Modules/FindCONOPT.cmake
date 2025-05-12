@@ -1,0 +1,14 @@
+find_path(CONOPT_INCLUDE_DIRS
+    NAMES conopt.f90
+    HINTS ${CONOPT_DIR} $ENV{CONOPT_DIR}
+    PATH_SUFFIXES src)
+
+find_library(CONOPT_LIBRARY
+    NAMES conopt4
+    HINTS ${CONOPT_DIR} $ENV{CONOPT_DIR}
+    PATH_SUFFIXES lib)
+
+set(CONOPT_LIBRARIES ${CONOPT_LIBRARY})
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(CONOPT DEFAULT_MSG CONOPT_INCLUDE_DIRS CONOPT_LIBRARIES)
