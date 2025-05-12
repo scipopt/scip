@@ -1,0 +1,403 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*                                                                           */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
+/*                                                                           */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* NLP interface for the CONOPT solver */
+
+/**@file    nlpi_conopt.c
+ * @ingroup DEFPLUGINS_NLPI
+ * @brief   CONOPT NLP interface
+ * @author  you
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#include "scip/nlpi_conopt.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_nlpi.h"
+#include "scip/pub_message.h"
+
+#include "coiheader.h"
+#include "scip_message.h"
+
+#define NLPI_NAME              "conopt"                    /**< short concise name of solver */
+#define NLPI_DESC              "solver interface template" /**< description of solver */
+#define NLPI_PRIORITY          0                           /**< priority of NLP solver */
+
+#define SCIP_DEBUG
+
+/*
+ * Data structures
+ */
+
+/* TODO: fill in the necessary NLP solver interface data */
+
+struct SCIP_NlpiData
+{
+};
+
+/* TODO: fill in the necessary NLP problem instance data */
+
+struct SCIP_NlpiProblem
+{
+   coiHandle_t CntVect;                      /* pointer to CONOPT Control Vector */
+};
+
+
+/*
+ * Local methods
+ */
+
+/* put your local methods here, and declare them static */
+
+/* callback for CONOPT's output */
+int COI_CALLCONV Std_Message( int SMSG, int DMSG, int NMSG, char* MSGV[], void* USRMEM  )
+{
+   int i;
+
+   for( i = 0; i < SMSG; i++ )
+   {
+      printf("%s\n", MSGV[i]);
+   }
+
+#ifdef flush
+   fflush(fd); fflush(fs);
+#endif
+   return 0;
+}
+
+
+/*
+ * Callback methods of NLP solver interface
+ */
+
+/* TODO: Implement all necessary NLP interface methods. The methods with an #ifdef SCIP_DISABLED_CODE ... #else #define ... are optional */
+
+#ifdef SCIP_DISABLED_CODE
+/** copy method of NLP interface (called when SCIP copies plugins) */
+static
+SCIP_DECL_NLPICOPY(nlpiCopyXyz)
+{
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+#else
+#define nlpiCopyConopt NULL
+#endif
+
+/** destructor of NLP interface to free nlpi data */
+static
+SCIP_DECL_NLPIFREE(nlpiFreeConopt)
+{
+   assert(nlpi != NULL);
+   assert(nlpidata != NULL);
+   assert(*nlpidata != NULL);
+
+   SCIPfreeBlockMemory(scip, nlpidata);
+   assert(*nlpidata == NULL);
+
+   return SCIP_OKAY;
+}  /*lint !e715*/
+
+#ifdef SCIP_DISABLED_CODE
+/** gets pointer for NLP solver */
+static
+SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXyz)
+{
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return NULL;  /*lint !e527*/
+}  /*lint !e715*/
+#else
+#define nlpiGetSolverPointerConopt NULL
+#endif
+
+/** creates a problem instance */
+static
+SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemConopt)
+{
+   int COI_Error = 0;
+
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, problem) );
+   assert(*problem != NULL);
+
+   coiCreate(&((*problem)->CntVect));
+   COI_Error += COIDEF_Message((*problem)->CntVect, &Std_Message); /* register the callback message */
+
+   if ( COI_Error )
+   {
+      SCIPinfoMessage(scip, NULL, "Errors encountered when including CONOPT, %d", COI_Error);
+   }
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
+/** free a problem instance */
+static
+SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemConopt)
+{
+   assert(nlpi     != NULL);
+   assert(problem  != NULL);
+   assert(*problem != NULL);
+
+   coiFree(&((*problem)->CntVect));
+
+   SCIPfreeBlockMemory(scip, problem);
+   *problem = NULL;
+
+   return SCIP_OKAY;
+}  /*lint !e715*/
+
+#ifdef SCIP_DISABLED_CODE
+/** gets pointer to solver-internal problem instance */
+static
+SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerXyz)
+{
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return NULL;  /*lint !e527*/
+}  /*lint !e715*/
+#else
+#define nlpiGetProblemPointerConopt NULL
+#endif
+
+/** add variables */
+static
+SCIP_DECL_NLPIADDVARS(nlpiAddVarsConopt)
+{
+   int COI_Error = 0; /* CONOPT error counter */
+
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+
+   COI_Error += COIDEF_NumVar(problem->CntVect, 4); /*TODO add actual number of vars*/
+
+   if( COI_Error )
+   {
+      SCIPinfoMessage(scip, NULL, "Errors encountered during adding variables, %d", COI_Error);
+   }
+
+   return SCIP_OKAY;
+}  /*lint !e715*/
+
+
+/** add constraints */
+static
+SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsConopt)
+{
+   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
+/** sets or overwrites objective, a minimization problem is expected */
+static
+SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveConopt)
+{
+   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
+/** change variable bounds */
+static
+SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsConopt)
+{
+   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
+/** change constraint bounds */
+static
+SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesConopt)
+{
+   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
+/** delete a set of variables */
+static
+SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetConopt)
+{
+   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
+/** delete a set of constraints */
+static
+SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetConopt)
+{
+   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
+/** changes (or adds) linear coefficients in a constraint or objective */
+static
+SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsConopt)
+{
+   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
+/** replaces the expression tree of a constraint or objective */
+static
+SCIP_DECL_NLPICHGEXPR(nlpiChgExprConopt)
+{
+   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
+/** change the constant offset in the objective */
+static
+SCIP_DECL_NLPICHGOBJCONSTANT(nlpiChgObjConstantConopt)
+{
+   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
+#ifdef SCIP_DISABLED_CODE
+/** sets initial guess */
+static
+SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessXyz)
+{
+   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+#else
+#define nlpiSetInitialGuessConopt NULL
+#endif
+
+/** try to solve NLP
+ *
+ * Note that SCIP will already have reset a timelimit of SCIP_REAL_MAX to the time remaining for the SCIP solve in SCIPnlpiSolve().
+ */
+static
+SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
+{
+   int COI_Error = 0; /* CONOPT error counter */
+
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+
+   COI_Error = COI_Solve(problem->CntVect); /* optimize */
+   if( COI_Error )
+   {
+      SCIPinfoMessage(scip, NULL, "Errors encountered during solution, %d", COI_Error);
+   }
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
+/** gives solution status */
+static
+SCIP_DECL_NLPIGETSOLSTAT(nlpiGetSolstatConopt)
+{
+   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_NLPSOLSTAT_UNKNOWN;  /*lint !e527*/
+}  /*lint !e715*/
+
+/** gives termination reason */
+static
+SCIP_DECL_NLPIGETTERMSTAT(nlpiGetTermstatConopt)
+{
+   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_NLPTERMSTAT_OTHER;  /*lint !e527*/
+}  /*lint !e715*/
+
+/** gives primal and dual solution values */
+static
+SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionConopt)
+{
+   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
+/** gives solve statistics */
+static
+SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsConopt)
+{
+   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
+   SCIPABORT();
+
+   return SCIP_OKAY;  /*lint !e527*/
+}  /*lint !e715*/
+
+/*
+ * NLP solver interface specific interface methods
+ */
+
+/** create solver interface for Conopt solver and includes it into SCIP */
+SCIP_RETCODE SCIPincludeNlpSolverConopt(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_NLPIDATA* nlpidata;
+   int COI_Error = 0; /* CONOPT error counter */
+
+   /* create Conopt solver interface data */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nlpidata) );
+
+   /* create and include solver interface */
+   SCIP_CALL( SCIPincludeNlpi(scip,
+         NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
+         nlpiCopyConopt, nlpiFreeConopt, nlpiGetSolverPointerConopt,
+         nlpiCreateProblemConopt, nlpiFreeProblemConopt, nlpiGetProblemPointerConopt,
+         nlpiAddVarsConopt, nlpiAddConstraintsConopt, nlpiSetObjectiveConopt,
+         nlpiChgVarBoundsConopt, nlpiChgConsSidesConopt, nlpiDelVarSetConopt, nlpiDelConstraintSetConopt,
+         nlpiChgLinearCoefsConopt, nlpiChgExprConopt, nlpiChgObjConstantConopt,
+         nlpiSetInitialGuessConopt, nlpiSolveConopt,
+         nlpiGetSolstatConopt, nlpiGetTermstatConopt, nlpiGetSolutionConopt, nlpiGetStatisticsConopt,
+         nlpidata) );
+
+   return SCIP_OKAY;
+}

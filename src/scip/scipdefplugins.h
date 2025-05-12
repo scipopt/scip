@@ -267,6 +267,7 @@
 #include "scip/nlpi_ipopt.h"
 #include "scip/nlpi_filtersqp.h"
 #include "scip/nlpi_worhp.h"
+#include "scip/nlpi_conopt.h"
 #include "scip/nlpi_all.h"
 
 #ifdef __cplusplus

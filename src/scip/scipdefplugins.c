@@ -270,6 +270,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNlpSolverFilterSQP(scip) );
    SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, TRUE) );
    SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, FALSE) );
+   SCIP_CALL( SCIPincludeNlpSolverConopt(scip) );
    SCIP_CALL( SCIPincludeNlpSolverAll(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
    SCIP_CALL( SCIPincludeTableDefault(scip) );
