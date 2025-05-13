@@ -9844,17 +9844,19 @@ SCIP_RETCODE convertLongEquality(
             if( conshdlrdata->multaggrremove && !removescons )
                continue;
 
-            /* prefer variables that make the constraints redundant */
-            if( bestremovescons && !removescons )
-               continue;
-
             /* if the constraint does not become redundant, only accept the variable if it does not appear in
              * other constraints
              */
             if( !removescons && nlocks > maxnlocksstay )
                continue;
 
-            better = better || (!bestremovescons && removescons);
+            /* prefer variables that make the constraints redundant
+             * unless there is a continuous better slack
+             */
+            if( !bestremovescons && removescons )
+               better = TRUE;
+            else if( bestremovescons && !removescons && (bestslacktype > SCIP_VARTYPE_INTEGER || slacktype <= SCIP_VARTYPE_INTEGER) )
+               better = FALSE;
             if( better )
             {
                bestslackpos = v;
