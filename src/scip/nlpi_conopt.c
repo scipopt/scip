@@ -63,6 +63,7 @@ struct SCIP_NlpiData
 
 struct SCIP_NlpiProblem
 {
+   SCIP*                 scip;               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle;             /**< Oracle-helper to store and evaluate NLP */
 
    SCIP_Bool             firstrun;
@@ -95,23 +96,35 @@ void invalidateSolution(
    problem->termstat = SCIP_NLPTERMSTAT_OTHER;
 }
 
-void initConopt(
+static void initConopt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem             /**< pointer to NLPI problem structure */
 )
 {
+   int COI_Error = 0; /* CONOPT error counter */
 
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+
+   // COI_Error += COIDEF_NumVar(problem->CntVect, 4); /*TODO add actual number of vars*/
+
+   COI_Error += COIDEF_UsrMem(problem->CntVect, (void*)problem);
+
+   if( COI_Error )
+   {
+      SCIPinfoMessage(scip, NULL, "Error %d encountered during adding variables", COI_Error);
+   }
 }
 
-void freeConopt(
+static void freeConopt(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
 )
 {
 
 }
 
-void updateConopt(
+static void updateConopt(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
 )
 {
@@ -121,8 +134,45 @@ void updateConopt(
 
 /** Implementations of CONOPT callbacks */
 
+/* TODO implement ErrMsg */
+
+/* TODO implement status routine */
+
+/* TODO implement solution routine */
+
+/* TODO complete this */
+int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], int VSTA[], int TYPE[], double RHS[],
+      int ESTA[], int COLSTA[], int ROWNO[], double VALUE[], int NLFLAG[], int NUMVAR, int NUMCON, int NUMNZ, void* USRMEM)
+{
+   SCIP_Real* lbs;
+   SCIP_Real* ubs;
+   SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+
+   lbs = SCIPnlpiOracleGetVarLbs(problem->oracle);
+   ubs = SCIPnlpiOracleGetVarUbs(problem->oracle);
+
+   for( int i = 0; i < NUMVAR; i++ )
+   {
+      LOWER[i] = lbs[i];
+      UPPER[i] = ubs[i];
+      CURR[i] = 0.0; /* TODO get proper initial values */
+   }
+
+   /* TODO check if VSTA is needed */
+
+   for ( int i = 0; i < NUMCON; i++ )
+   {
+      SCIP_Real lhs = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
+      SCIP_Real rhs = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
+
+      /* TODO: track correspondence between SCIP and CONOPT conss - the indices will need to be different */
+   }
+
+   return 0;
+}
+
 /* callback for CONOPT's output */
-int COI_CALLCONV Std_Message(int SMSG, int DMSG, int NMSG, char* MSGV[], void* USRMEM)
+static int COI_CALLCONV Std_Message(int SMSG, int DMSG, int NMSG, char* MSGV[], void* USRMEM)
 {
    int i;
 
@@ -199,6 +249,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemConopt)
    assert(*problem != NULL);
 
    (*problem)->firstrun = TRUE;
+   (*problem)->scip = scip;
 
    /* initialize oracle */
    SCIP_CALL( SCIPnlpiOracleCreate(scip, &(*problem)->oracle) );
@@ -266,20 +317,6 @@ SCIP_DECL_NLPIADDVARS(nlpiAddVarsConopt)
    problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
-
-   // int COI_Error = 0; /* CONOPT error counter */
-   //
-   // assert(nlpi != NULL);
-   // assert(problem != NULL);
-   //
-   // COI_Error += COIDEF_NumVar(problem->CntVect, 4); /*TODO add actual number of vars*/
-   //
-   // if( COI_Error )
-   // {
-   //    SCIPinfoMessage(scip, NULL, "Error %d encountered during adding variables", COI_Error);
-   // }
-   //
-   // return SCIP_OKAY;
 }  /*lint !e715*/
 
 
