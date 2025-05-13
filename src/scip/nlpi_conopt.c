@@ -33,6 +33,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/nlpi_conopt.h"
+#include "scip/nlpioracle.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_nlp.h"
@@ -62,7 +63,17 @@ struct SCIP_NlpiData
 
 struct SCIP_NlpiProblem
 {
-   coiHandle_t CntVect;                      /* pointer to CONOPT Control Vector */
+   SCIP_NLPIORACLE*      oracle;             /**< Oracle-helper to store and evaluate NLP */
+
+   SCIP_Bool             firstrun;
+   SCIP_NLPSOLSTAT       solstat;            /**< solution status from last NLP solve */
+   SCIP_NLPTERMSTAT      termstat;           /**< termination status from last NLP solve */
+   SCIP_Real             lasttime;           /**< time spend in last run */
+   int                   lastniter;          /**< number of iterations in last run */
+   SCIP_Real             solvetime;          /**< time spend for last NLP solve */
+   int                   niterations;        /**< number of iterations for last NLP solve */
+
+   coiHandle_t           CntVect;            /**< pointer to CONOPT Control Vector */
 };
 
 
@@ -72,8 +83,46 @@ struct SCIP_NlpiProblem
 
 /* put your local methods here, and declare them static */
 
+/** sets the solstat and termstat to unknown and other, resp. */
+static
+void invalidateSolution(
+   SCIP_NLPIPROBLEM*     problem             /**< data structure of problem */
+   )
+{
+   assert(problem != NULL);
+
+   problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+   problem->termstat = SCIP_NLPTERMSTAT_OTHER;
+}
+
+void initConopt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
+   SCIP_NLPIPROBLEM*     problem             /**< pointer to NLPI problem structure */
+)
+{
+
+}
+
+void freeConopt(
+   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
+)
+{
+
+}
+
+void updateConopt(
+   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
+)
+{
+
+}
+
+
+/** Implementations of CONOPT callbacks */
+
 /* callback for CONOPT's output */
-int COI_CALLCONV Std_Message( int SMSG, int DMSG, int NMSG, char* MSGV[], void* USRMEM  )
+int COI_CALLCONV Std_Message(int SMSG, int DMSG, int NMSG, char* MSGV[], void* USRMEM)
 {
    int i;
 
@@ -137,14 +186,25 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXyz)
 #define nlpiGetSolverPointerConopt NULL
 #endif
 
-/** creates a problem instance */
+/** create a problem instance */
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemConopt)
 {
    int COI_Error = 0;
 
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+
    SCIP_CALL( SCIPallocClearBlockMemory(scip, problem) );
    assert(*problem != NULL);
+
+   (*problem)->firstrun = TRUE;
+
+   /* initialize oracle */
+   SCIP_CALL( SCIPnlpiOracleCreate(scip, &(*problem)->oracle) );
+   SCIP_CALL( SCIPnlpiOracleSetProblemName(scip, (*problem)->oracle, name) );
+
+
 
    coiCreate(&((*problem)->CntVect));
    COI_Error += COIDEF_Message((*problem)->CntVect, &Std_Message); /* register the callback message */
@@ -164,6 +224,11 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemConopt)
    assert(nlpi     != NULL);
    assert(problem  != NULL);
    assert(*problem != NULL);
+
+   if( (*problem)->oracle != NULL )
+   {
+      SCIP_CALL( SCIPnlpiOracleFree(scip, &(*problem)->oracle) );
+   }
 
    coiFree(&((*problem)->CntVect));
 
@@ -191,19 +256,30 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerXyz)
 static
 SCIP_DECL_NLPIADDVARS(nlpiAddVarsConopt)
 {
-   int COI_Error = 0; /* CONOPT error counter */
-
    assert(nlpi != NULL);
    assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   COI_Error += COIDEF_NumVar(problem->CntVect, 4); /*TODO add actual number of vars*/
+   SCIP_CALL( SCIPnlpiOracleAddVars(scip, problem->oracle, nvars, lbs, ubs, varnames) );
 
-   if( COI_Error )
-   {
-      SCIPinfoMessage(scip, NULL, "Errors encountered during adding variables, %d", COI_Error);
-   }
+   invalidateSolution(problem);
+   problem->firstrun = TRUE;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e527*/
+
+   // int COI_Error = 0; /* CONOPT error counter */
+   //
+   // assert(nlpi != NULL);
+   // assert(problem != NULL);
+   //
+   // COI_Error += COIDEF_NumVar(problem->CntVect, 4); /*TODO add actual number of vars*/
+   //
+   // if( COI_Error )
+   // {
+   //    SCIPinfoMessage(scip, NULL, "Error %d encountered during adding variables", COI_Error);
+   // }
+   //
+   // return SCIP_OKAY;
 }  /*lint !e715*/
 
 
@@ -211,8 +287,15 @@ SCIP_DECL_NLPIADDVARS(nlpiAddVarsConopt)
 static
 SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsConopt)
 {
-   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+
+   SCIP_CALL( SCIPnlpiOracleAddConstraints(scip, problem->oracle, nconss, lhss, rhss,
+         nlininds, lininds, linvals, exprs, names) );
+
+   invalidateSolution(problem);
+   problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -221,8 +304,17 @@ SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsConopt)
 static
 SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveConopt)
 {
-   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+
+   /* TODO do we need to reset CONOPT? */
+   if( expr != NULL || SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, -1) )
+      problem->firstrun = TRUE;
+
+   SCIP_CALL( SCIPnlpiOracleSetObjective(scip, problem->oracle, constant, nlins, lininds, linvals, expr) );
+
+   invalidateSolution(problem);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -231,8 +323,15 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveConopt)
 static
 SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsConopt)
 {
-   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+
+   /* TODO do this on the conopt side */
+
+   SCIP_CALL( SCIPnlpiOracleChgVarBounds(scip, problem->oracle, nvars, indices, lbs, ubs) );
+
+   invalidateSolution(problem);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -241,8 +340,15 @@ SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsConopt)
 static
 SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesConopt)
 {
-   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+
+   /* TODO do this on the conopt side */
+
+   SCIP_CALL( SCIPnlpiOracleChgConsSides(scip, problem->oracle, nconss, indices, lhss, rhss) );
+
+   invalidateSolution(problem);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -251,8 +357,14 @@ SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesConopt)
 static
 SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetConopt)
 {
-   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+
+   SCIP_CALL( SCIPnlpiOracleDelVarSet(scip, problem->oracle, dstats) );
+
+   invalidateSolution(problem);
+   problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -261,8 +373,14 @@ SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetConopt)
 static
 SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetConopt)
 {
-   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+
+   SCIP_CALL( SCIPnlpiOracleDelConsSet(scip, problem->oracle, dstats) );
+
+   invalidateSolution(problem);
+   problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -271,8 +389,14 @@ SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetConopt)
 static
 SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsConopt)
 {
-   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+
+   SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(scip, problem->oracle, idx, nvals, varidxs, vals) );
+
+   invalidateSolution(problem);
+   problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -281,8 +405,14 @@ SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsConopt)
 static
 SCIP_DECL_NLPICHGEXPR(nlpiChgExprConopt)
 {
-   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+
+   SCIP_CALL( SCIPnlpiOracleChgExpr(scip, problem->oracle, idxcons, expr) );
+
+   invalidateSolution(problem);
+   problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -291,12 +421,16 @@ SCIP_DECL_NLPICHGEXPR(nlpiChgExprConopt)
 static
 SCIP_DECL_NLPICHGOBJCONSTANT(nlpiChgObjConstantConopt)
 {
-   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+
+   SCIP_CALL( SCIPnlpiOracleChgObjConstant(scip, problem->oracle, objconstant) );
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
+/* TODO */
 #ifdef SCIP_DISABLED_CODE
 /** sets initial guess */
 static
@@ -323,11 +457,58 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
    assert(nlpi != NULL);
    assert(problem != NULL);
 
+   SCIPdebugMsg(scip, "solve with parameters " SCIP_NLPPARAM_PRINT(param));
+
+   SCIP_CALL( SCIPnlpiOracleResetEvalTime(scip, problem->oracle) );
+
+   if( param.timelimit == 0.0 )
+   {
+      /* there is nothing we can do if we are not given any time */
+      problem->niterations = 0;
+      problem->solvetime = 0.0;
+      problem->termstat = SCIP_NLPTERMSTAT_TIMELIMIT;
+      problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
+
+      return SCIP_OKAY;
+   }
+
+   problem->lastniter = -1;
+   problem->lasttime  = -1.0;
+
+   /* TODO handle param.verblevel */
+
+   // /* if warmstart parameter is disabled, then we will not warmstart */
+   // if( !param.warmstart )
+      // problem->warmstart = FALSE;
+
+   /* initialize Conopt data if necessary */
+   if( problem->firstrun )
+   { /* TODO implement the functions */
+      freeConopt(problem);
+      initConopt(scip, nlpi, problem);
+      problem->firstrun = FALSE;
+   }
+   else
+   {
+      updateConopt(problem);
+   }
+
+   /* TODO set parameters */
+
+   /* TODO set initial guess (if available) */
+
+
+
    COI_Error = COI_Solve(problem->CntVect); /* optimize */
    if( COI_Error )
    {
       SCIPinfoMessage(scip, NULL, "Errors encountered during solution, %d", COI_Error);
+      exit(1);
    }
+
+   /* TODO interpret conopt result (update solstat, termstat, print some debug message) */
+
+   /* TODO handle some statistics */
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -336,20 +517,20 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
 static
 SCIP_DECL_NLPIGETSOLSTAT(nlpiGetSolstatConopt)
 {
-   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
 
-   return SCIP_NLPSOLSTAT_UNKNOWN;  /*lint !e527*/
+   return problem->solstat;
 }  /*lint !e715*/
 
 /** gives termination reason */
 static
 SCIP_DECL_NLPIGETTERMSTAT(nlpiGetTermstatConopt)
 {
-   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
 
-   return SCIP_NLPTERMSTAT_OTHER;  /*lint !e527*/
+   return problem->termstat;
 }  /*lint !e715*/
 
 /** gives primal and dual solution values */
@@ -366,10 +547,17 @@ SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionConopt)
 static
 SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsConopt)
 {
-   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(statistics != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   statistics->niterations = problem->lastniter;
+   statistics->totaltime = problem->lasttime;
+   statistics->evaltime = SCIPnlpiOracleGetEvalTime(scip, problem->oracle);
+   // statistics->consviol = problem->wsp->FeasOrigMax;
+   statistics->boundviol = 0.0;
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /*
