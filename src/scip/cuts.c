@@ -8364,8 +8364,8 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
     * aggrrow->nnz variables: if all are continuous and we use variable bounds to complement, we introduce aggrrow->nnz
     * extra vars)
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &bounddist, aggrrow->nnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bounddistpos, aggrrow->nnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounddist, nvars + aggrrow->nnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounddistpos, nvars + aggrrow->nnz) );
 
    /* initialize mkset with the unscaled aggregation */
    {
