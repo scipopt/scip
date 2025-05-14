@@ -792,7 +792,8 @@ SCIP_RETCODE additionFilterBatch(
             k = 0;
             for( j = i; j < nconss; ++j )
             {
-               if( !inIS[order[j]] )
+               /* Don't dynamically add indicator constraints */
+               if( !inIS[order[j]] && ( strcmp("indicator", SCIPconshdlrGetName(SCIPconsGetHdlr(conss[order[j]]))) == 1 ) )
                {
                   SCIP_CALL( SCIPcheckCons(scip, conss[order[j]], copysol, FALSE, FALSE, FALSE, &result) );
                   if( result == SCIP_FEASIBLE )
