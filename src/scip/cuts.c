@@ -4121,6 +4121,7 @@ int varSection(
 }
 
 /** finds the best lower bound of the variable to use for MIR transformation */
+/* @todo make behavior identical to the unsafe MIR cut computation */
 static
 SCIP_RETCODE findBestLbSafely(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4187,6 +4188,7 @@ SCIP_RETCODE findBestLbSafely(
 }
 
 /** finds the best upper bound of the variable to use for MIR transformation */
+/* @todo make behavior identical to the unsafe MIR cut computation */
 static
 SCIP_RETCODE findBestUbSafely(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4252,6 +4254,7 @@ SCIP_RETCODE findBestUbSafely(
 }
 
 /** determine the best bounds with respect to the given solution for complementing the given variable */
+/* @todo make behavior identical to the unsafe MIR cut computation */
 static
 SCIP_RETCODE determineBestBoundsSafely(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5062,6 +5065,8 @@ void doMIRBoundSubstitution(
 /** performs the bound substitution step with the given variable or simple bounds for the variable with the given problem index
  *
  *  @note this method is safe for usage in exact solving mode
+ *
+ *  @todo make behavior identical to the unsafe MIR cut computation
  */
 static
 void performBoundSubstitutionSafely(
@@ -5107,6 +5112,8 @@ void performBoundSubstitutionSafely(
 /** performs the bound substitution step with the simple bound for the variable with the given problem index
  *
  *  @note this method is safe for usage in exact solving mode
+ *
+ *  @todo make behavior identical to the unsafe MIR cut computation
  */
 static
 void performBoundSubstitutionSimpleSafely(
@@ -5279,6 +5286,8 @@ void performBoundSubstitutionSimple(
  *  \f]
  *
  *  @note this method is safe for usage in exact solving mode
+ *
+ *  @todo make behavior identical to the unsafe MIR cut computation
  */
 static
 SCIP_RETCODE cutsTransformMIRSafely(
@@ -6908,6 +6917,8 @@ SCIP_RETCODE cutsRoundMIR(
  *  @note this method is safe for usage in exact solving mode
  *
  *  @todo certify and use integrality of row in exact solving mode
+ *
+ *  @todo make behavior identical to the unsafe MIR cut computation
  */
 static
 SCIP_RETCODE cutsSubstituteMIRSafely(
@@ -7588,6 +7599,8 @@ SCIP_RETCODE cutsSubstituteMIR(
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  *
  *  @note this method is safe for usage in exact solving mode
+ *
+ *  @todo make behavior identical to the unsafe MIR cut computation
  */
 static
 SCIP_RETCODE calcMIRSafely(
