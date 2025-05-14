@@ -361,7 +361,7 @@ SCIP_RETCODE computeAutomorphisms(
    }
 
    /* determine log10 of symmetry group size */
-   *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx());
+   *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx()) + (SCIP_Real) sassy.exp;
 
    return SCIP_OKAY;
 }
