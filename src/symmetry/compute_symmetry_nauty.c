@@ -1388,7 +1388,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    }
 
    /* determine log10 of symmetry group size */
-   *log10groupsize = (SCIP_Real) stats.grpsize2;
+   *log10groupsize = log10(stats.grpsize1 * exp10((SCIP_Real) stats.grpsize2));
 
    return SCIP_OKAY;
 }
