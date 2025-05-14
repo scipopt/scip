@@ -8370,15 +8370,13 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpcoefs, nvars + aggrrow->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvalues, nvars + aggrrow->nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, aggrrow->nnz + 6) );
+   /* The +4 comes from a few rules that create extra delta candidates, see usages of ndeltacands. */
+   SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, nvars + 4) );
 
-   /* we only compute bound distance for integer variables; we allocate an array of length aggrrow->nnz to store this, since
-    * this is the largest number of integer variables. (in contrast to the number of total variables which can be 2 *
-    * aggrrow->nnz variables: if all are continuous and we use variable bounds to complement, we introduce aggrrow->nnz
-    * extra vars)
-    */
-   SCIP_CALL( SCIPallocBufferArray(scip, &bounddist, nvars + aggrrow->nnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bounddistpos, nvars + aggrrow->nnz) );
+   /* we only compute bound distance for integer variables; by variable bound substitution, the number of integer variables
+    * can grow significantly. Hence, these allocations are length nvars */
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounddist, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounddistpos, nvars) );
 
    /* initialize mkset with the unscaled aggregation */
    {
@@ -8507,6 +8505,8 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       ++nbounddist;
    }
 
+   assert(nbounddist <= nvars);
+
    /* no fractional variable; so abort here */
    if( nbounddist == 0 )
       goto TERMINATE;
@@ -8589,6 +8589,8 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       deltacands[ndeltacands++] = maxabsmksetcoef + 1.0;
 
    deltacands[ndeltacands++] = 1.0;
+
+   assert(ndeltacands <= nvars + 4);
 
    maxtestdelta = MIN(ndeltacands, maxtestdelta);
 
@@ -8803,6 +8805,8 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
             contsqrnorm += SQR(slackcoeff);
          }
       }
+
+      assert(ntmpcoefs <= nvars + aggrrow->nrows);
    }
 
    /* try all candidates for delta and remember best */
