@@ -9086,6 +9086,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    return SCIP_OKAY;
 }
 
+#ifndef NDEBUG
 /** test whether a clique partition is correct */
 static
 SCIP_RETCODE SCIPtestCliquePartition(
@@ -9133,6 +9134,7 @@ SCIP_RETCODE SCIPtestCliquePartition(
    }
    return SCIP_OKAY;
 }
+#endif
 
 /** calculates a partition of the given set of binary variables into cliques
  *
@@ -9200,7 +9202,9 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIPfreeBufferArray(scip, &tmpvars);
    SCIPfreeBufferArray(scip, &tmpvalues);
 
+#ifndef NDEBUG
    SCIP_CALL( SCIPtestCliquePartition(scip, vars, nvars, cliquepartition, *ncliques) );
+#endif
 
    return SCIP_OKAY;
 }
