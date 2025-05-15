@@ -2348,7 +2348,7 @@ SCIP_RETCODE SCIPpriceLoop(
                   stoppricing = FALSE;
 
                /* update lower bound w.r.t. the lower bound given by the pricer */
-               SCIPnodeUpdateLowerbound(currentnode, stat, set, eventfilter, tree, transprob, origprob, lb, NULL);
+               SCIP_CALL( SCIPnodeUpdateLowerbound(currentnode, stat, set, eventfilter, tree, transprob, origprob, lb, NULL) );
                SCIPsetDebugMsg(set, " -> new lower bound given by pricer %s: %g", SCIPpricerGetName(set->pricers[p]), lb);
                break;
             }
