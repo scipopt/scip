@@ -511,6 +511,7 @@ set(pairs_Issue
     # "instances/Issue/3842.cip\;-16812.7692740365\;default"
     "instances/Issue/3870.cip\;5133546551065818\;default"
     "instances/Issue/3908.cip\;-20317.1313131313\;subrestart"
+    "instances/Issue/3911.cip\;-30386.2338470598\;lexdual"
 )
 
 #
