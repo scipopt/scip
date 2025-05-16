@@ -8361,7 +8361,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    *success = FALSE;
    nvars = SCIPgetNVars(scip);
-   firstcontvar = nvars - SCIPgetNContVars(scip);
+   firstcontvar = nvars - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
    vars = SCIPgetVars(scip);
 
    /* allocate temporary memory */
@@ -8634,36 +8634,8 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       /* get the soltion value of the continuous variable */
       solval = SCIPgetSolVal(scip, sol, var);
 
-      if( boundtype[i] >= 0 )
-      {
-         /* variable was complemented with a variable bound */
-         if( varsign[i] == -1 )
-         {
-            SCIP_Real varcoef;
-            SCIP_Real constant;
-            SCIP_Real vbdsolval;
-
-            varcoef = SCIPvarGetVubCoefs(vars[mksetinds[i]])[boundtype[i]];
-            constant = SCIPvarGetVubConstants(vars[mksetinds[i]])[boundtype[i]];
-            vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVubVars(vars[mksetinds[i]])[boundtype[i]]);
-
-            solval = (varcoef * vbdsolval + constant) - solval;
-         }
-         else
-         {
-            SCIP_Real varcoef;
-            SCIP_Real constant;
-            SCIP_Real vbdsolval;
-
-            varcoef = SCIPvarGetVlbCoefs(vars[mksetinds[i]])[boundtype[i]];
-            constant = SCIPvarGetVlbConstants(vars[mksetinds[i]])[boundtype[i]];
-            vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVlbVars(vars[mksetinds[i]])[boundtype[i]]);
-
-            solval = solval - (varcoef * vbdsolval + constant);
-         }
-      }
       /* now compute the solution value in the transform space considering complementation */
-      else if( boundtype[i] == -1 )
+      if( boundtype[i] == -1 )
       {
          /* variable was complemented with global (simple) bound */
          if( varsign[i] == -1 )
@@ -8882,8 +8854,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       int bestubtype;
 
       k = bounddistpos[i];
-      if( boundtype[k] >= 0 )
-         continue;
 
       SCIP_CALL( findBestLb(scip, vars[mksetinds[k]], sol, 0, allowlocal, &bestlb, &bestlbtype) );
 
