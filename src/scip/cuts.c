@@ -8486,6 +8486,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    maxabsmksetcoef = -1.0;
    nbounddist = 0;
 
+   assert(mksetnnz <= nvars);
    for( i = mksetnnz - 1; i >= 0 && mksetinds[i] < firstcontvar; --i )
    {
       SCIP_VAR* var = vars[mksetinds[i]];
@@ -8504,7 +8505,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       deltacands[nbounddist] = QUAD_TO_DBL(coef);
       ++nbounddist;
    }
-
    assert(nbounddist <= nvars);
 
    /* no fractional variable; so abort here */
@@ -8526,7 +8526,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 #endif
 
    ndeltacands = nbounddist;
-
+   assert(ndeltacands <= nvars);
    SCIPsortDownRealRealInt(bounddist, deltacands, bounddistpos, nbounddist);
 
    {
@@ -8590,8 +8590,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    deltacands[ndeltacands++] = 1.0;
 
-   assert(ndeltacands <= nvars + 4);
-
    maxtestdelta = MIN(ndeltacands, maxtestdelta);
 
    /* For each delta
@@ -8624,6 +8622,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
     */
 
    ntmpcoefs = 0;
+   assert(mksetnnz <= nvars);
    for( i = intstart; i < mksetnnz; ++i )
    {
       SCIP_VAR* var;
@@ -8759,7 +8758,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       SCIP_ROW** rows;
 
       rows = SCIPgetLPRows(scip);
-
+      assert(ntmpcoefs <= nvars);
       for( i = 0; i < aggrrow->nrows; ++i )
       {
          SCIP_ROW* row;
@@ -8805,8 +8804,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
             contsqrnorm += SQR(slackcoeff);
          }
       }
-
-      assert(ntmpcoefs <= nvars + aggrrow->nrows);
    }
 
    /* try all candidates for delta and remember best */
