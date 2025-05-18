@@ -2422,36 +2422,36 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
    SCIP_Bool success;
 
-   assert(heur != NULL);
    assert(scip != NULL);
+   assert(heur != NULL);
    assert(result != NULL);
+
+   *result = SCIP_DELAYED;
+
+   /* only call heuristic if feasible solution is available */
+   if( SCIPgetNSols(scip) == 0 )
+      return SCIP_OKAY;
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   *result = SCIP_DELAYED;
-
-   /* only call heuristic, if feasible solution is available */
-   if( SCIPgetNSols(scip) <= 0 )
+   /* only call heuristic if enough nodes were processed since last incumbent */
+   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip, SCIPgetBestSol(scip)) < heurdata->nwaitingnodes )
       return SCIP_OKAY;
 
    /* in case of many unsuccessful calls, the nextnodenumber is increased to prevent us from running too often  */
    if( SCIPgetNNodes(scip) < heurdata->nextnodenumber )
       return SCIP_OKAY;
 
-   /* only call heuristic, if the best solution comes from transformed problem */
+   /* only call heuristic if the best solution comes from transformed problem */
    assert(SCIPgetBestSol(scip) != NULL);
    if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
       return SCIP_OKAY;
 
-   /* only call heuristic, if enough nodes were processed since last incumbent */
-   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip)) < heurdata->nwaitingnodes )
-      return SCIP_OKAY;
-
    *result = SCIP_DIDNOTRUN;
 
-   /* only call heuristic, if discrete variables are present */
+   /* only call heuristic if discrete variables are present */
    if( SCIPgetNBinVars(scip) == 0 && SCIPgetNIntVars(scip) == 0 )
       return SCIP_OKAY;
 
@@ -2463,7 +2463,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
    /* determine solving limits for the sub-SCIP for the first time */
    SCIP_CALL( determineLimits(scip, heur, &solvelimits, &runagain) );
 
-   if( ! runagain )
+   if( !runagain )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
