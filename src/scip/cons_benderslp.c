@@ -132,6 +132,34 @@ SCIP_DECL_CONSFREE(consFreeBenderslp)
 }
 
 
+/** initialization method of constraint handler (called after problem was transformed) */
+static
+SCIP_DECL_CONSINIT(consInitBenderslp)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   conshdlr->needscons = !conshdlrdata->active;
+
+   return SCIP_OKAY;
+}
+
+
+/** deinitialization method of constraint handler (called before transformed problem is freed) */
+static
+SCIP_DECL_CONSEXIT(consExitBenderslp)
+{  /*lint --e{715}*/
+   assert(conshdlr != NULL);
+
+   conshdlr->needscons = FALSE;
+
+   return SCIP_OKAY;
+}
+
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -147,10 +175,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpBenderslp)
     * FEASIBLE. The actual feasibility of the Benders' decomposition subproblems is checked in cons_benders.
    */
    (*result) = SCIP_FEASIBLE;
-
-   /* only check the Benders' decomposition subproblems for fractional LP solutions if the two-phase method is activated */
-   if( !conshdlrdata->active )
-      return SCIP_OKAY;
 
    /* updating the stall count. If the bound has improved since the last call, then the stall count is set to zero */
    conshdlrdata->stallcount++;
@@ -207,7 +231,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxBenderslp)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-   if( !conshdlrdata->active || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
+   if( conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth )
       (*result) = SCIP_FEASIBLE;
    else
       SCIP_CALL( SCIPconsBendersEnforceSolution(scip, sol, conshdlr, result, SCIP_BENDERSENFOTYPE_RELAX, FALSE) );
@@ -226,7 +250,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsBenderslp)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-   if( !conshdlrdata->active || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
+   if( conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth )
       (*result) = SCIP_FEASIBLE;
    else
       SCIP_CALL( SCIPconsBendersEnforceSolution(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_PSEUDO, FALSE) );
@@ -243,7 +267,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsBenderslp)
 static
 SCIP_DECL_CONSCHECK(consCheckBenderslp)
 {  /*lint --e{715}*/
-   (*result) = SCIP_FEASIBLE;
+   assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -286,6 +312,8 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
    assert(conshdlr != NULL);
 
    /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitBenderslp) );
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyBenderslp, NULL) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBenderslp) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBenderslp) );
