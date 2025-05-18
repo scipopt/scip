@@ -2383,25 +2383,23 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
 
    assert(scip != NULL);
    assert(prop != NULL);
+   assert(result != NULL);
    assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
 
    *result = SCIP_DIDNOTRUN;
-
-   if( !SCIPallowStrongDualReds(scip) )
-      return SCIP_OKAY;
 
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   SCIPdebugMsg(scip, "proppresol in problem <%s>\n", SCIPgetProbName(scip));
-
    /* do not run if no genvbounds were added yet */
    if( propdata->ngenvbounds < 1 )
-   {
-      SCIPdebugMsg(scip, "no bounds were added yet\n");
       return SCIP_OKAY;
-   }
+
+   if( !SCIPallowStrongDualReds(scip) )
+      return SCIP_OKAY;
+
+   SCIPdebugMsg(scip, "proppresol in problem <%s>\n", SCIPgetProbName(scip));
 
    /* propagate */
    SCIP_CALL( execGenVBounds(scip, propdata, result, TRUE, nchgbds) );
@@ -2581,17 +2579,22 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
 
    assert(scip != NULL);
    assert(prop != NULL);
+   assert(result != NULL);
    assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
 
    *result = SCIP_DIDNOTRUN;
 
-   /* do not run if propagation w.r.t. current objective is not allowed */
-   if( !SCIPallowWeakDualReds(scip) )
-      return SCIP_OKAY;
-
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
+
+   /* do not run if no genvbounds were added yet */
+   if( propdata->ngenvbounds < 1 )
+      return SCIP_OKAY;
+
+   /* do not run if propagation w.r.t. current objective is not allowed */
+   if( !SCIPallowWeakDualReds(scip) )
+      return SCIP_OKAY;
 
    /* update upper bound of the cutoffboundvar */
    if( propdata->cutoffboundvar != NULL )
@@ -2623,14 +2626,6 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
 
    SCIPdebugMsg(scip, "propexec in problem <%s> at depth %d%s\n", SCIPgetProbName(scip), SCIPgetDepth(scip),
       SCIPinProbing(scip) ? " in probing" : "");
-
-   /* do not run if no genvbounds were added yet */
-   if( propdata->ngenvbounds < 1 )
-   {
-      /**@todo is it really no performance issue to be called each time when there are no genvbounds, e.g., for MIPs? */
-      SCIPdebugMsg(scip, "no bounds were added yet\n");
-      return SCIP_OKAY;
-   }
 
    /* add the genvbounds in the genvboundstore as constraints to the problem; afterwards clear the genvboundstore */
    if( propdata->propasconss )
