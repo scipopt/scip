@@ -59,6 +59,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/set.h"
+#include "scip/struct_cons.h"
 
 
 /* fundamental constraint handler properties */

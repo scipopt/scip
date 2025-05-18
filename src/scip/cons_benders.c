@@ -52,6 +52,7 @@
 #include "scip/cons_benders.h"
 #include "scip/heur_trysol.h"
 #include "scip/heuristics.h"
+#include "scip/struct_cons.h"
 
 
 /* fundamental constraint handler properties */

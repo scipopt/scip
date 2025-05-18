@@ -49,6 +49,7 @@
 #include "scip/scip.h"
 #include "scip/cons_benderslp.h"
 #include "scip/cons_benders.h"
+#include "scip/struct_cons.h"
 
 
 /* fundamental constraint handler properties */
