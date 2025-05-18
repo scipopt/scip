@@ -141,15 +141,8 @@ SCIP_RETCODE runHeuristic(
    assert(scip != NULL);
    assert(runheur != NULL);
 
-   /* do not run heuristic if no NLP solver is available */
-   if( SCIPgetNNlpis(scip) <= 0 )
-   {
-      *runheur = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* do not run heuristic if no NLP */
-   if( !SCIPisNLPConstructed(scip) )
+   /* do not run heuristic if NLP or NLP solver is unavailable */
+   if( !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0 )
    {
       *runheur = FALSE;
       return SCIP_OKAY;
@@ -1542,14 +1535,22 @@ static
 SCIP_DECL_HEUREXEC(heurExecSubNlp)
 {  /*lint --e{666,715}*/
    SCIP_HEURDATA* heurdata;
-   SCIP_Bool      runheur;
-   SCIP_Real      itercontingent;
+   SCIP_Bool runheur;
+   SCIP_Real itercontingent;
 
    assert(scip != NULL);
    assert(heur != NULL);
 
    /* obviously, we did not do anything yet */
    *result = SCIP_DIDNOTRUN;
+
+   /* before we run the heuristic for the first time, check whether we want to run the heuristic at all */
+   if( SCIPheurGetNCalls(heur) == 0 )
+   {
+      SCIP_CALL( runHeuristic(scip, &runheur) );
+      if( !runheur )
+         return SCIP_OKAY;
+   }
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
@@ -1562,14 +1563,6 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
     */
    if( heurdata->subscip == NULL && heurdata->keepcopy && heurdata->triedsetupsubscip )
       return SCIP_OKAY;
-
-   /* before we run the heuristic for the first time, check whether we want to run the heuristic at all */
-   if( SCIPheurGetNCalls(heur) == 0 )
-   {
-      SCIP_CALL( runHeuristic(scip, &runheur) );
-      if( !runheur )
-         return SCIP_OKAY;
-   }
 
    if( heurdata->startcand == NULL )
    {
