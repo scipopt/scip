@@ -447,11 +447,17 @@ SCIP_DECL_CONSINIT(consInitBenders)
    assert(conshdlr != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
-   conshdlrdata->checkedsolssize = DEFAULT_CHECKEDSOLSSIZE;
-   conshdlrdata->ncheckedsols = 0;
+   if( conshdlrdata->active )
+   {
+      conshdlrdata->checkedsolssize = DEFAULT_CHECKEDSOLSSIZE;
+      conshdlrdata->ncheckedsols = 0;
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize) );
+   }
+   else
+      conshdlr->needscons = TRUE;
 
    return SCIP_OKAY;
 }
@@ -466,11 +472,16 @@ SCIP_DECL_CONSEXIT(consExitBenders)
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
+   if( !conshdlr->needscons )
+   {
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
 
-   /* freeing the checked sols array */
-   SCIPfreeBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize);
+      /* freeing the checked sols array */
+      SCIPfreeBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize);
+   }
+   else
+      conshdlr->needscons = FALSE;
 
    return SCIP_OKAY;
 }
@@ -480,7 +491,6 @@ SCIP_DECL_CONSEXIT(consExitBenders)
 static
 SCIP_DECL_CONSINITLP(consInitlpBenders)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_BENDERS** benders;
    int nactivebenders;
    int i;
@@ -488,20 +498,14 @@ SCIP_DECL_CONSINITLP(consInitlpBenders)
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
+   benders = SCIPgetBenders(scip);
+   nactivebenders = SCIPgetNActiveBenders(scip);
 
-   if( conshdlrdata->active )
-   {
-      benders = SCIPgetBenders(scip);
-      nactivebenders = SCIPgetNActiveBenders(scip);
+   (*infeasible) = FALSE;
 
-      (*infeasible) = FALSE;
-
-      /* checking all Benders' decomposition implementations to see if any subproblems have been declared as infeasible */
-      for( i = 0; i < nactivebenders && !(*infeasible); i++ )
-         (*infeasible) = SCIPbendersSubproblemsAreInfeasible(benders[i]);
-   }
+   /* checking all Benders' decomposition implementations to see if any subproblems have been declared as infeasible */
+   for( i = 0; i < nactivebenders && !(*infeasible); i++ )
+      (*infeasible) = SCIPbendersSubproblemsAreInfeasible(benders[i]);
 
    return SCIP_OKAY;
 }
@@ -510,20 +514,10 @@ SCIP_DECL_CONSINITLP(consInitlpBenders)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpBenders)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   if( conshdlrdata->active )
-   {
-      SCIP_CALL( SCIPconsBendersEnforceSolution(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_LP, TRUE) );
-   }
-   else
-      (*result) = SCIP_FEASIBLE;
+   SCIP_CALL( SCIPconsBendersEnforceSolution(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_LP, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -533,20 +527,10 @@ SCIP_DECL_CONSENFOLP(consEnfolpBenders)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxBenders)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   if( conshdlrdata->active )
-   {
-      SCIP_CALL( SCIPconsBendersEnforceSolution(scip, sol, conshdlr, result, SCIP_BENDERSENFOTYPE_RELAX, TRUE) );
-   }
-   else
-      (*result) = SCIP_FEASIBLE;
+   SCIP_CALL( SCIPconsBendersEnforceSolution(scip, sol, conshdlr, result, SCIP_BENDERSENFOTYPE_RELAX, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -556,20 +540,10 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxBenders)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsBenders)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   if( conshdlrdata->active )
-   {
-      SCIP_CALL( SCIPconsBendersEnforceSolution(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_PSEUDO, TRUE) );
-   }
-   else
-      (*result) = SCIP_FEASIBLE;
+   SCIP_CALL( SCIPconsBendersEnforceSolution(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_PSEUDO, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -596,84 +570,86 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    assert(conshdlr != NULL);
    assert(result != NULL);
 
-   (*result) = SCIP_FEASIBLE;
+   *result = SCIP_FEASIBLE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( !conshdlrdata->active )
+      return SCIP_OKAY;
+
    performcheck = TRUE;
    auxviol = FALSE;
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
    /* if the constraint handler is active, then the check must be performed.  */
-   if( conshdlrdata->active )
+   benders = SCIPgetBenders(scip);
+   nactivebenders = SCIPgetNActiveBenders(scip);
+
+   /* checking if the solution was constructed by this constraint handler */
+   solindex = SCIPsolGetIndex(sol);
+   for( i = 0; i < conshdlrdata->ncheckedsols; i++ )
    {
-      benders = SCIPgetBenders(scip);
-      nactivebenders = SCIPgetNActiveBenders(scip);
-
-      /* checking if the solution was constructed by this constraint handler */
-      solindex = SCIPsolGetIndex(sol);
-      for( i = 0; i < conshdlrdata->ncheckedsols; i++ )
+      if( conshdlrdata->checkedsols[i] == solindex )
       {
-         if( conshdlrdata->checkedsols[i] == solindex )
-         {
-            conshdlrdata->checkedsols[0] = conshdlrdata->checkedsols[conshdlrdata->ncheckedsols - 1];
-            conshdlrdata->ncheckedsols--;
+         conshdlrdata->checkedsols[0] = conshdlrdata->checkedsols[conshdlrdata->ncheckedsols - 1];
+         conshdlrdata->ncheckedsols--;
 
-            performcheck = FALSE;
-            break;
-         }
+         performcheck = FALSE;
+         break;
       }
+   }
 
-      /* if the solution has not been checked before, then we must perform the check */
-      if( performcheck && nactivebenders > 0 )
+   /* if the solution has not been checked before, then we must perform the check */
+   if( performcheck && nactivebenders > 0 )
+   {
+      for( i = 0; i < nactivebenders; i++ )
       {
-         for( i = 0; i < nactivebenders; i++ )
-         {
-            /* if any subproblems are declared as infeasible, then the result must be returned as infeasible. It is not
-             * possible to generate cuts, since the LP is infeasible without performing any master variable fixing
-             */
-            if( SCIPbendersSubproblemsAreInfeasible(benders[i]) )
-            {
-               (*result) = SCIP_INFEASIBLE;
-            }
-            else
-            {
-               SCIP_Bool infeasible;
-               infeasible = FALSE;
-
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, &auxviol,
-                     SCIP_BENDERSENFOTYPE_CHECK, TRUE) );
-            }
-
-            /* in the case of multiple Benders' decompositions, the subproblems are solved until a constriant is added or
-             * infeasibility is proven. So if the result is not SCIP_FEASIBLE, then the loop is exited */
-            if( (*result) != SCIP_FEASIBLE )
-               break;
-         }
-
-         /* in the case that the problem is feasible, this means that all subproblems are feasible. The auxiliary variables
-          * still need to be updated. This is done by constructing a valid solution. */
-         if( (*result) == SCIP_FEASIBLE )
-         {
-            if( auxviol )
-            {
-               if( !SCIPsolIsOriginal(sol) )
-               {
-                  SCIP_CALL( constructValidSolution(scip, conshdlr, sol, SCIP_BENDERSENFOTYPE_CHECK) );
-               }
-
-               if( printreason )
-                  SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "all subproblems are feasible but there is a violation in the auxiliary variables\n");
-
-               (*result) = SCIP_INFEASIBLE;
-            }
-         }
-
-         /* if no Benders' decomposition were run, then the result is returned as SCIP_FEASIBLE. The SCIP_DIDNOTRUN result
-          * indicates that no subproblems were checked or that cuts were disabled, so that it is not guaranteed that this
-          * solution is feasible.
+         /* if any subproblems are declared as infeasible, then the result must be returned as infeasible. It is not
+          * possible to generate cuts, since the LP is infeasible without performing any master variable fixing
           */
-         if( (*result) == SCIP_DIDNOTRUN )
-            (*result) = SCIP_FEASIBLE;
+         if( SCIPbendersSubproblemsAreInfeasible(benders[i]) )
+         {
+            (*result) = SCIP_INFEASIBLE;
+         }
+         else
+         {
+            SCIP_Bool infeasible;
+            infeasible = FALSE;
+
+            SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, &auxviol,
+                  SCIP_BENDERSENFOTYPE_CHECK, TRUE) );
+         }
+
+         /* in the case of multiple Benders' decompositions, the subproblems are solved until a constriant is added or
+          * infeasibility is proven. So if the result is not SCIP_FEASIBLE, then the loop is exited */
+         if( (*result) != SCIP_FEASIBLE )
+            break;
       }
+
+      /* in the case that the problem is feasible, this means that all subproblems are feasible. The auxiliary variables
+       * still need to be updated. This is done by constructing a valid solution. */
+      if( (*result) == SCIP_FEASIBLE )
+      {
+         if( auxviol )
+         {
+            if( !SCIPsolIsOriginal(sol) )
+            {
+               SCIP_CALL( constructValidSolution(scip, conshdlr, sol, SCIP_BENDERSENFOTYPE_CHECK) );
+            }
+
+            if( printreason )
+               SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "all subproblems are feasible but there is a violation in the auxiliary variables\n");
+
+            (*result) = SCIP_INFEASIBLE;
+         }
+      }
+
+      /* if no Benders' decomposition were run, then the result is returned as SCIP_FEASIBLE. The SCIP_DIDNOTRUN result
+       * indicates that no subproblems were checked or that cuts were disabled, so that it is not guaranteed that this
+       * solution is feasible.
+       */
+      if( (*result) == SCIP_DIDNOTRUN )
+         (*result) = SCIP_FEASIBLE;
    }
 
    return SCIP_OKAY;
@@ -690,7 +666,6 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 static
 SCIP_DECL_CONSPRESOL(consPresolBenders)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_BENDERS** benders;
    int nactivebenders;
    int nsubproblems;
@@ -711,58 +686,52 @@ SCIP_DECL_CONSPRESOL(consPresolBenders)
       return SCIP_OKAY;
    }
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
    /* it is only possible to compute the lower bound of the subproblems if the constraint handler is active */
-   if( conshdlrdata->active )
+   benders = SCIPgetBenders(scip);
+   nactivebenders = SCIPgetNActiveBenders(scip);
+
+   /* need to compute the lower bound for all active Benders' decompositions */
+   for( i = 0; i < nactivebenders; i++ )
    {
-      benders = SCIPgetBenders(scip);
-      nactivebenders = SCIPgetNActiveBenders(scip);
+      nsubproblems = SCIPbendersGetNSubproblems(benders[i]);
 
-      /* need to compute the lower bound for all active Benders' decompositions */
-      for( i = 0; i < nactivebenders; i++ )
+      for( j = 0; j < nsubproblems; j++ )
       {
-         nsubproblems = SCIPbendersGetNSubproblems(benders[i]);
+         SCIP_VAR* auxiliaryvar;
+         SCIP_Real lowerbound;
+         SCIP_Bool infeasible;
 
-         for( j = 0; j < nsubproblems; j++ )
+         infeasible = FALSE;
+
+         /* computing the lower bound of the subproblem by solving it without any variable fixings */
+         SCIP_CALL( SCIPcomputeBendersSubproblemLowerbound(scip, benders[i], j, &lowerbound, &infeasible) );
+
+         if( infeasible )
          {
-            SCIP_VAR* auxiliaryvar;
-            SCIP_Real lowerbound;
-            SCIP_Bool infeasible;
-
-            infeasible = FALSE;
-
-            /* computing the lower bound of the subproblem by solving it without any variable fixings */
-            SCIP_CALL( SCIPcomputeBendersSubproblemLowerbound(scip, benders[i], j, &lowerbound, &infeasible) );
-
-            if( infeasible )
-            {
-               (*result) = SCIP_CUTOFF;
-               break;
-            }
-
-            /* retrieving the auxiliary variable */
-            auxiliaryvar = SCIPbendersGetAuxiliaryVar(benders[i], j);
-
-            /* only update the lower bound if it is greater than the current lower bound */
-            if( SCIPisGT(scip, lowerbound, SCIPvarGetLbLocal(auxiliaryvar)) )
-            {
-               SCIPdebugMsg(scip, "Tightened lower bound of <%s> to %g\n", SCIPvarGetName(auxiliaryvar), lowerbound);
-               /* updating the lower bound of the auxiliary variable */
-               SCIP_CALL( SCIPchgVarLb(scip, auxiliaryvar, lowerbound) );
-
-               (*nchgbds)++;
-               (*result) = SCIP_SUCCESS;
-            }
-
-            /* stores the lower bound for the subproblem */
-            SCIPbendersUpdateSubproblemLowerbound(benders[i], j, lowerbound);
+            (*result) = SCIP_CUTOFF;
+            break;
          }
 
-         if( (*result) == SCIP_CUTOFF )
-            break;
+         /* retrieving the auxiliary variable */
+         auxiliaryvar = SCIPbendersGetAuxiliaryVar(benders[i], j);
+
+         /* only update the lower bound if it is greater than the current lower bound */
+         if( SCIPisGT(scip, lowerbound, SCIPvarGetLbLocal(auxiliaryvar)) )
+         {
+            SCIPdebugMsg(scip, "Tightened lower bound of <%s> to %g\n", SCIPvarGetName(auxiliaryvar), lowerbound);
+            /* updating the lower bound of the auxiliary variable */
+            SCIP_CALL( SCIPchgVarLb(scip, auxiliaryvar, lowerbound) );
+
+            (*nchgbds)++;
+            (*result) = SCIP_SUCCESS;
+         }
+
+         /* stores the lower bound for the subproblem */
+         SCIPbendersUpdateSubproblemLowerbound(benders[i], j, lowerbound);
       }
+
+      if( (*result) == SCIP_CUTOFF )
+         break;
    }
 
    return SCIP_OKAY;
@@ -793,45 +762,45 @@ SCIP_DECL_CONSLOCK(consLockBenders)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   if( !conshdlrdata->active )
+      return SCIP_OKAY;
+
    /* the locks should only be added if the Benders' decomposition constraint handler has been activated */
-   if( conshdlrdata->active )
+   benders = SCIPgetBenders(scip);
+   nactivebenders = SCIPgetNActiveBenders(scip);
+
+   /* retrieving the master problem variables */
+   SCIP_CALL( SCIPgetOrigVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   /* need to compute the lower bound for all active Benders' decompositions */
+   for( i = 0; i < nactivebenders; i++ )
    {
-      benders = SCIPgetBenders(scip);
-      nactivebenders = SCIPgetNActiveBenders(scip);
+      nsubproblems = SCIPbendersGetNSubproblems(benders[i]);
 
-      /* retrieving the master problem variables */
-      SCIP_CALL( SCIPgetOrigVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-      /* need to compute the lower bound for all active Benders' decompositions */
-      for( i = 0; i < nactivebenders; i++ )
+      /* if the auxiliary variable exists, then we need to add a down lock. Initially, a down lock is added to all
+       * auxiliary variables during creating. This is because the creation of auxiliary variable occurs after
+       * CONS_LOCK is called. The inclusion of the auxiliary variables in this function is to cover the case if locks
+       * are added or removed after presolving.
+       */
+      for( j = 0; j < nsubproblems; j++ )
       {
-         nsubproblems = SCIPbendersGetNSubproblems(benders[i]);
+         SCIP_VAR* auxvar;
 
-         /* if the auxiliary variable exists, then we need to add a down lock. Initially, a down lock is added to all
-          * auxiliary variables during creating. This is because the creation of auxiliary variable occurs after
-          * CONS_LOCK is called. The inclusion of the auxiliary variables in this function is to cover the case if locks
-          * are added or removed after presolving.
-          */
-         for( j = 0; j < nsubproblems; j++ )
+         auxvar = SCIPbendersGetAuxiliaryVar(benders[i], j);
+
+         if( auxvar != NULL )
          {
-            SCIP_VAR* auxvar;
-
-            auxvar = SCIPbendersGetAuxiliaryVar(benders[i], j);
-
-            if( auxvar != NULL )
-            {
-               SCIP_CALL( SCIPaddVarLocksType(scip, auxvar, locktype, nlockspos, nlocksneg) );
-            }
+            SCIP_CALL( SCIPaddVarLocksType(scip, auxvar, locktype, nlockspos, nlocksneg) );
          }
+      }
 
-         /* adding up and down locks for all master problem variables. Since the locks for all constraint handlers
-          * without constraints, no auxiliary variables have been added. As such, all variables are master variables.
-          */
-         for( j = 0; j < nvars; j++ )
-         {
-            SCIP_CALL( SCIPaddVarLocksType(scip, vars[j], locktype, (nlockspos + nlocksneg)*nsubproblems,
-                  (nlockspos + nlocksneg)*nsubproblems) );
-         }
+      /* adding up and down locks for all master problem variables. Since the locks for all constraint handlers
+       * without constraints, no auxiliary variables have been added. As such, all variables are master variables.
+       */
+      for( j = 0; j < nvars; j++ )
+      {
+         SCIP_CALL( SCIPaddVarLocksType(scip, vars[j], locktype, (nlockspos + nlocksneg)*nsubproblems,
+               (nlockspos + nlocksneg)*nsubproblems) );
       }
    }
 
