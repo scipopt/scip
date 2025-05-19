@@ -167,13 +167,11 @@ int COI_CALLCONV Std_Status(int MODSTA, int SOLSTA, int ITER, double OBJVAL, voi
    scip = problem->scip;
    assert(scip != NULL);
 
-   SCIPinfoMessage(scip, NULL, "\nCONOPT has finished Optimizing\n");
-   SCIPinfoMessage(scip, NULL, "Model status    = %8d\n", MODSTA);
-   SCIPinfoMessage(scip, NULL, "Solver status   = %8d\n", SOLSTA);
-   SCIPinfoMessage(scip, NULL, "Iteration count = %8d\n", ITER);
-   SCIPinfoMessage(scip, NULL, "Objective value = %10f\n", OBJVAL);
+   SCIPdebugMsg(scip, "CONOPT has finished optimizing\n");
+   SCIPdebugMsg(scip, "Iteration count = %8d\n", ITER);
+   SCIPdebugMsg(scip, "Objective value = %10f\n", OBJVAL);
 
-
+   problem->niterations = ITER;
    problem->objval = OBJVAL;
 
    switch( MODSTA )
@@ -271,8 +269,8 @@ static SCIP_RETCODE initConopt(
    int COI_Error = 0; /* CONOPT error counter */
    int nrangeconss = 0;
    int nconss;
-   int* jacoffset;
-   int* hessoffset;
+   const int* jacoffset;
+   const int* hessoffset;
 
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -752,7 +750,6 @@ SCIP_RETCODE SCIPincludeNlpSolverConopt(
    )
 {
    SCIP_NLPIDATA* nlpidata;
-   int COI_Error = 0; /* CONOPT error counter */
 
    /* create Conopt solver interface data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlpidata) );
