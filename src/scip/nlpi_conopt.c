@@ -84,54 +84,6 @@ struct SCIP_NlpiProblem
 
 /* put your local methods here, and declare them static */
 
-/** sets the solstat and termstat to unknown and other, resp. */
-static
-void invalidateSolution(
-   SCIP_NLPIPROBLEM*     problem             /**< data structure of problem */
-   )
-{
-   assert(problem != NULL);
-
-   problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-   problem->termstat = SCIP_NLPTERMSTAT_OTHER;
-}
-
-static void initConopt(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem             /**< pointer to NLPI problem structure */
-)
-{
-   int COI_Error = 0; /* CONOPT error counter */
-
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-
-   // COI_Error += COIDEF_NumVar(problem->CntVect, 4); /*TODO add actual number of vars*/
-
-   COI_Error += COIDEF_UsrMem(problem->CntVect, (void*)problem);
-
-   if( COI_Error )
-   {
-      SCIPinfoMessage(scip, NULL, "Error %d encountered during adding variables", COI_Error);
-   }
-}
-
-static void freeConopt(
-   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
-)
-{
-
-}
-
-static void updateConopt(
-   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
-)
-{
-
-}
-
-
 /** Implementations of CONOPT callbacks */
 
 /* TODO implement ErrMsg */
@@ -171,20 +123,123 @@ int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], i
    return 0;
 }
 
-/* callback for CONOPT's output */
+/* callback for CONOPT's standard output */
 static int COI_CALLCONV Std_Message(int SMSG, int DMSG, int NMSG, char* MSGV[], void* USRMEM)
 {
-   int i;
+   SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
 
-   for( i = 0; i < SMSG; i++ )
+   for( int i = 0; i < SMSG; i++ )
+      SCIPinfoMessage(problem->scip, NULL, "%s\n", MSGV[i]);
+
+   return 0;
+}
+
+/* callback for CONOPT's standard error output */
+int COI_CALLCONV Std_ErrMsg(int ROWNO, int COLNO, int POSNO, const char* MSG, void* USRMEM)
+{
+   if( ROWNO == -1 )
+      SCIPerrorMessage("Variable %d : ", COLNO);
+   else if( COLNO == -1 )
+      SCIPerrorMessage("Constraint %d : ", ROWNO);
+   else
+      SCIPerrorMessage("Variable %d appearing in constraint %d : ", COLNO, ROWNO);
+   SCIPerrorMessage("%s\n", MSG);
+
+   return 0;
+}
+
+/* NLPI local methods */
+
+/** sets the solstat and termstat to unknown and other, resp. */
+static
+void invalidateSolution(
+   SCIP_NLPIPROBLEM*     problem             /**< data structure of problem */
+   )
+{
+   assert(problem != NULL);
+
+   problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+   problem->termstat = SCIP_NLPTERMSTAT_OTHER;
+}
+
+static SCIP_RETCODE initConopt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
+   SCIP_NLPIPROBLEM*     problem             /**< pointer to NLPI problem structure */
+)
+{
+   int COI_Error = 0; /* CONOPT error counter */
+   int nrangeconss = 0;
+   int nconss;
+   int* jacoffset;
+   int* hessoffset;
+
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
+
+   nconss = SCIPnlpiOracleGetNConstraints(problem->oracle);
+
+   /* count range constraints: because CONOPT doesn't support them directly, will need to add a slack variable for each ranged constraint */
+   for( int i = 0; i < SCIPnlpiOracleGetNConstraints(problem->oracle); i++ )
    {
-      printf("%s\n", MSGV[i]);
+      SCIP_Real lhs = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
+      SCIP_Real rhs = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
+
+      if( !SCIPisEQ(scip, lhs, rhs) )
+         nrangeconss++;
    }
 
-#ifdef flush
-   fflush(fd); fflush(fs);
-#endif
-   return 0;
+   /* inform CONOPT about problem sizes */
+
+   COI_Error += COIDEF_NumVar(problem->CntVect, SCIPnlpiOracleGetNVars(problem->oracle) + nrangeconss);
+   COI_Error += COIDEF_NumCon(problem->CntVect, nconss);
+
+   /* jacobian information */
+   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &jacoffset, NULL) );
+   COI_Error += COIDEF_NumNz(problem->CntVect, jacoffset[nconss] + nrangeconss); /* each slack var adds a Jacobian nnz */
+   // COI_Error += COIDEF_NumNlNz(problem->CntVect, ); TODO find out how to go about nonlinear jacobian entries
+
+   /* hessian information */
+   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &hessoffset, NULL) );
+   COI_Error += COIDEF_NumHess(problem->CntVect, hessoffset[nconss]);
+
+   /* tell conopt to minimise the objective (the oracle always gives us a minimisation problem) */
+   COI_Error += COIDEF_OptDir(problem->CntVect, -1);
+
+   /* oracle gives objective as a constraint, hence use ObjCon (not ObjVar) here */
+   COI_Error += COIDEF_ObjCon(problem->CntVect, nconss); /* TODO: decide which index to use for the objective constraint; nconss? */
+
+   /* register callback routines */
+
+   COI_Error += COIDEF_Message(problem->CntVect, &Std_Message);
+   COI_Error += COIDEF_ErrMsg(problem->CntVect, &Std_ErrMsg);
+   COI_Error += COIDEF_Status(problem->CntVect, &Std_Status);
+   // COI_Error +=  COIDEF_Solution  ( CntVect, &Std_Solution );  /* Register the callback Solution    */
+   // COI_Error +=  COIDEF_ReadMatrix( CntVect, &Tut_ReadMatrix); /* Register the callback ReadMatrix  */
+   // COI_Error +=  COIDEF_FDEval    ( CntVect, &Tut_FDEval);     /* Register the callback FDEval      */
+
+   /* pass the problem pointer to CONOPT, so that it may be used in CONOPT callbacks */
+   COI_Error += COIDEF_UsrMem(problem->CntVect, (void*)problem);
+
+   if( COI_Error )
+      SCIPinfoMessage(scip, NULL, "Error %d encountered during adding variables", COI_Error);
+
+   return SCIP_OKAY;
+}
+
+static void freeConopt(
+   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
+)
+{
+
+}
+
+static void updateConopt(
+   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
+)
+{
+
 }
 
 
@@ -240,8 +295,6 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXyz)
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemConopt)
 {
-   int COI_Error = 0;
-
    assert(nlpi != NULL);
    assert(problem != NULL);
 
@@ -255,15 +308,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemConopt)
    SCIP_CALL( SCIPnlpiOracleCreate(scip, &(*problem)->oracle) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName(scip, (*problem)->oracle, name) );
 
-
-
-   coiCreate(&((*problem)->CntVect));
-   COI_Error += COIDEF_Message((*problem)->CntVect, &Std_Message); /* register the callback message */
-
-   if ( COI_Error )
-   {
-      SCIPinfoMessage(scip, NULL, "Errors encountered when including CONOPT, %d", COI_Error);
-   }
+   coiCreate(&((*problem)->CntVect)); /* TODO handle errors here? */
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
