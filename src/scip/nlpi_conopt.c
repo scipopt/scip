@@ -69,10 +69,9 @@ struct SCIP_NlpiProblem
    SCIP_Bool             firstrun;
    SCIP_NLPSOLSTAT       solstat;            /**< solution status from last NLP solve */
    SCIP_NLPTERMSTAT      termstat;           /**< termination status from last NLP solve */
-   SCIP_Real             lasttime;           /**< time spend in last run */
-   int                   lastniter;          /**< number of iterations in last run */
    SCIP_Real             solvetime;          /**< time spend for last NLP solve */
    int                   niterations;        /**< number of iterations for last NLP solve */
+   SCIP_Real             objval;             /**< objective value from last run */
 
    coiHandle_t           CntVect;            /**< pointer to CONOPT Control Vector */
 };
@@ -99,9 +98,15 @@ int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], i
    SCIP_Real* lbs;
    SCIP_Real* ubs;
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+   SCIP_NLPIORACLE* oracle;
 
-   lbs = SCIPnlpiOracleGetVarLbs(problem->oracle);
-   ubs = SCIPnlpiOracleGetVarUbs(problem->oracle);
+   assert(problem != NULL);
+
+   oracle = problem->oracle;
+   assert(oracle != NULL);
+
+   lbs = SCIPnlpiOracleGetVarLbs(oracle);
+   ubs = SCIPnlpiOracleGetVarUbs(oracle);
 
    for( int i = 0; i < NUMVAR; i++ )
    {
@@ -114,8 +119,8 @@ int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], i
 
    for ( int i = 0; i < NUMCON; i++ )
    {
-      SCIP_Real lhs = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
-      SCIP_Real rhs = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
+      SCIP_Real lhs = SCIPnlpiOracleGetConstraintLhs(oracle, i);
+      SCIP_Real rhs = SCIPnlpiOracleGetConstraintRhs(oracle, i);
 
       /* TODO: track correspondence between SCIP and CONOPT conss - the indices will need to be different */
    }
@@ -127,6 +132,9 @@ int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], i
 static int COI_CALLCONV Std_Message(int SMSG, int DMSG, int NMSG, char* MSGV[], void* USRMEM)
 {
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+
+   assert(problem != NULL);
+   assert(problem->scip != NULL);
 
    for( int i = 0; i < SMSG; i++ )
       SCIPinfoMessage(problem->scip, NULL, "%s\n", MSGV[i]);
@@ -144,6 +152,98 @@ int COI_CALLCONV Std_ErrMsg(int ROWNO, int COLNO, int POSNO, const char* MSG, vo
    else
       SCIPerrorMessage("Variable %d appearing in constraint %d : ", COLNO, ROWNO);
    SCIPerrorMessage("%s\n", MSG);
+
+   return 0;
+}
+
+/* callback for CONOPT to report about the solving status */
+int COI_CALLCONV Std_Status(int MODSTA, int SOLSTA, int ITER, double OBJVAL, void* USRMEM)
+{
+   SCIP* scip;
+   SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+
+   assert(problem != NULL);
+
+   scip = problem->scip;
+   assert(scip != NULL);
+
+   SCIPinfoMessage(scip, NULL, "\nCONOPT has finished Optimizing\n");
+   SCIPinfoMessage(scip, NULL, "Model status    = %8d\n", MODSTA);
+   SCIPinfoMessage(scip, NULL, "Solver status   = %8d\n", SOLSTA);
+   SCIPinfoMessage(scip, NULL, "Iteration count = %8d\n", ITER);
+   SCIPinfoMessage(scip, NULL, "Objective value = %10f\n", OBJVAL);
+
+
+   problem->objval = OBJVAL;
+
+   switch( MODSTA )
+   {
+      case 1:
+         SCIPdebugMsg(scip, "NLP problem solved to global optimality\n");
+         problem->solstat = SCIP_NLPSOLSTAT_GLOBOPT;
+         break;
+      case 2:
+         SCIPdebugMsg(scip, "NLP problem solved to local optimality\n");
+         problem->solstat = SCIP_NLPSOLSTAT_LOCOPT;
+         break;
+      case 3:
+         SCIPdebugMsg(scip, "NLP problem unbounded\n");
+         problem->solstat = SCIP_NLPSOLSTAT_UNBOUNDED;
+         break;
+      case 4:
+         SCIPdebugMsg(scip, "NLP problem infeasible\n");
+         problem->solstat = SCIP_NLPSOLSTAT_GLOBINFEASIBLE;
+         break;
+      case 5:
+         SCIPdebugMsg(scip, "NLP problem locally infeasible\n");
+         problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+         break;
+      case 6: /* intermediate infeasible */
+      case 7: /* intermediate non-optimal */
+      case 12: /* unknown error */
+      case 13:
+         SCIPdebugMsg(scip, "NLP problem status unknown (CONOPT status %d)\n", MODSTA);
+         problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
+         break;
+      default:
+         SCIPerrorMessage("CONOPT returned an unexpected solution status %d\n", MODSTA);
+         problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+   }
+
+   switch( SOLSTA )
+   {
+      case 1:
+         problem->termstat = SCIP_NLPTERMSTAT_OKAY;
+         SCIPdebugMsg(scip, "CONOPT terminated with normal status.\n");
+         break;
+      case 2:
+         problem->termstat = SCIP_NLPTERMSTAT_ITERLIMIT;
+         SCIPdebugMsg(scip, "CONOPT terminated due to an iteration limit.\n");
+         break;
+      case 3:
+         problem->termstat = SCIP_NLPTERMSTAT_TIMELIMIT;
+         SCIPdebugMsg(scip, "CONOPT terminated due to a time limit.\n");
+         break;
+      case 5:
+         problem->termstat = SCIP_NLPTERMSTAT_EVALERROR;
+         SCIPdebugMsg(scip, "CONOPT terminated due to evaluation errors.\n");
+         break;
+      case 8:
+         problem->termstat = SCIP_NLPTERMSTAT_INTERRUPT;
+         SCIPdebugMsg(scip, "CONOPT interrupted by user.\n");
+         break;
+      case 4: /* terminated by solver */
+      case 6: /* unknown */
+      case 9: /* error: setup failure */
+      case 10: /* error: solver failure */
+      case 11: /* error: internal solver error */
+         SCIPdebugMsg(scip, "CONOPT terminated with status %d\n", SOLSTA);
+         problem->termstat = SCIP_NLPTERMSTAT_OTHER;
+         break;
+      default:
+         SCIPerrorMessage("CONOPT returned an unexpected termination status %d\n", SOLSTA);
+         problem->termstat = SCIP_NLPTERMSTAT_OTHER;
+   }
 
    return 0;
 }
@@ -554,8 +654,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
       return SCIP_OKAY;
    }
 
-   problem->lastniter = -1;
-   problem->lasttime  = -1.0;
+   problem->niterations = -1;
+   problem->solvetime  = -1.0;
 
    /* TODO handle param.verblevel */
 
@@ -633,8 +733,8 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsConopt)
    assert(problem != NULL);
    assert(statistics != NULL);
 
-   statistics->niterations = problem->lastniter;
-   statistics->totaltime = problem->lasttime;
+   statistics->niterations = problem->niterations;
+   statistics->totaltime = problem->solvetime;
    statistics->evaltime = SCIPnlpiOracleGetEvalTime(scip, problem->oracle);
    // statistics->consviol = problem->wsp->FeasOrigMax;
    statistics->boundviol = 0.0;
