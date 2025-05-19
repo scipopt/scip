@@ -85,10 +85,6 @@ struct SCIP_NlpiProblem
 
 /** Implementations of CONOPT callbacks */
 
-/* TODO implement ErrMsg */
-
-/* TODO implement status routine */
-
 /* TODO implement solution routine */
 
 /* TODO complete this */
@@ -101,6 +97,7 @@ int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], i
    SCIP_NLPIORACLE* oracle;
 
    assert(problem != NULL);
+   assert(problem->scip != NULL);
 
    oracle = problem->oracle;
    assert(oracle != NULL);
@@ -115,15 +112,42 @@ int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], i
       CURR[i] = 0.0; /* TODO get proper initial values */
    }
 
-   /* TODO check if VSTA is needed */
+   /* TODO check if VSTA is needed - seems to not be the case */
 
    for ( int i = 0; i < NUMCON; i++ )
    {
       SCIP_Real lhs = SCIPnlpiOracleGetConstraintLhs(oracle, i);
       SCIP_Real rhs = SCIPnlpiOracleGetConstraintRhs(oracle, i);
 
-      /* TODO: track correspondence between SCIP and CONOPT conss - the indices will need to be different */
+      assert(!SCIPisInfinity(problem->scip, lhs) || !SCIPisInfinity(problem->scip, rhs));
+
+      if( !SCIPisInfinity(problem->scip, lhs) && !SCIPisInfinity(problem->scip, rhs) )
+      {
+         TYPE[i] = 0; /* an equality or ranged row modelled as equality */
+
+         if( !SCIPisEQ(problem->scip, lhs, rhs) )
+         {
+            /* range constraint lhs <= g(x) <= rhs:
+             * reformulate as g(x) - s = 0 and lhs <= s <= rhs */
+            RHS[i] = 0.0;
+            /* TODO introduce slack */
+         }
+         else
+            RHS[i] = lhs;
+      }
+      else if( !SCIPisInfinity(problem->scip, lhs) )
+      {
+         TYPE[i] = 1;
+         RHS[i] = lhs;
+      }
+      else
+      {
+         TYPE[i] = 2;
+         RHS[i] = rhs;
+      }
    }
+
+   /* TODO Jacobian information */
 
    return 0;
 }
@@ -156,7 +180,7 @@ int COI_CALLCONV Std_ErrMsg(int ROWNO, int COLNO, int POSNO, const char* MSG, vo
    return 0;
 }
 
-/* callback for CONOPT to report about the solving status */
+/* callback for CONOPT to report the solving statuses */
 int COI_CALLCONV Std_Status(int MODSTA, int SOLSTA, int ITER, double OBJVAL, void* USRMEM)
 {
    SCIP* scip;
