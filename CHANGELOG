@@ -52,6 +52,7 @@ Fixed bugs
 - when upgrading to xor constraint require parity variable to be enforced integral
 - provide the depth of the applied effective root with SCIPtreeGetEffectiveRootDepth() to avert invalid globalization of constraint set changes
 - disable objective limit during lexicographic dual minimization to keep feasibility status
+- declare infinite bound inference infeasible in SCIPinferVarLbCons() and SCIPinferVarUbCons() to maintain correct loose LP values
 
 Build system
 ------------
