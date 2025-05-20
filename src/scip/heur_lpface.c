@@ -1099,14 +1099,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
    *result = SCIP_DELAYED;
 
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* delay heuristic if the active search tree path is not deep enough */
-   if( SCIPgetDepth(scip) < heurdata->minpathlen - 1 )
-      return SCIP_OKAY;
-
    /* we skip infeasible nodes */
    if( nodeinfeasible )
       return SCIP_OKAY;
@@ -1134,6 +1126,14 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
    /* only run at lower bound defining nodes */
    if( SCIPisGT(scip, focusnodelb, SCIPgetLowerbound(scip)) )
+      return SCIP_OKAY;
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* delay heuristic if the active search tree path is not deep enough */
+   if( SCIPgetDepth(scip) < heurdata->minpathlen - 1 )
       return SCIP_OKAY;
 
    /* the node number to run the heuristic again was not yet reached */
