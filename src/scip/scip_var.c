@@ -6989,26 +6989,17 @@ SCIP_RETCODE SCIPinferVarLbCons(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
-   /* ignore tightenings of lower bounds to +infinity during solving process */
-   if( SCIPisInfinity(scip, newbound)  && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-   {
-#ifndef NDEBUG
-      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
-         SCIPvarGetLbLocal(var));
-#endif
-      return SCIP_OKAY;
-   }
-
    /* get current bounds */
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   if( SCIPsetIsFeasGT(scip->set, newbound, ub) || (scip->set->exact_enable && ub < newbound))
+   if( SCIPisInfinity(scip, newbound) || SCIPisFeasGT(scip, newbound, ub) || (scip->set->exact_enable && ub < newbound) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
+
    newbound = MIN(newbound, ub);
 
    if( (force && SCIPsetIsLE(scip->set, newbound, lb)) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
@@ -7103,26 +7094,17 @@ SCIP_RETCODE SCIPinferVarUbCons(
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
-   /* ignore tightenings of upper bounds to -infinity during solving process */
-   if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-   {
-#ifndef NDEBUG
-      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
-         SCIPvarGetUbLocal(var));
-#endif
-      return SCIP_OKAY;
-   }
-
    /* get current bounds */
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   if( SCIPsetIsFeasLT(scip->set, newbound, lb) || (scip->set->exact_enable && lb > newbound) )
+   if( SCIPisInfinity(scip, -newbound) || SCIPisFeasLT(scip, newbound, lb) || (scip->set->exact_enable && lb > newbound) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
+
    newbound = MAX(newbound, lb);
 
    if( (force && SCIPsetIsGE(scip->set, newbound, ub)) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
