@@ -8955,6 +8955,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    int* marked;
    int ntotalvars;
    int i;
+   int k;
 
    assert( vars != NULL );
    assert( values != NULL );
@@ -8984,6 +8985,43 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    ncliqueparts[0] = 1;
    *ncliques = 1;
 
+   /* move first clique to first part */
+   if( SCIPvarIsActive(vars[0]) )
+   {
+      SCIP_CLIQUE** varcliques;
+      SCIP_VAR** cliquevars;
+      int nvarclique;
+
+      varcliques = SCIPvarGetCliques(vars[0], values[0]);
+      assert( varcliques != NULL );
+
+      nvarclique = SCIPcliqueGetNVars(varcliques[0]);
+      cliquevars = SCIPcliqueGetVars(varcliques[0]);
+
+      for( k = 0; k < nvarclique; ++k )
+      {
+         SCIP_VAR* othervar;
+         int varidx;
+         int j;
+
+         othervar = cliquevars[k];
+         assert( othervar != NULL );
+
+         if ( ! SCIPvarIsActive(othervar) || othervar == vars[0] )
+            continue;
+
+         varidx = SCIPvarGetProbindex(othervar);
+         assert( 0 <= varidx && varidx < ntotalvars );
+
+         j = idx[varidx];
+         if( j >= 0 )
+         {
+            cliquepartition[j] = 0;
+            ++(ncliqueparts[0]);
+         }
+      }
+   }
+
    /* loop through remaining nodes */
    for( i = 1; i < nvars; ++i )
    {
@@ -8999,7 +9037,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
       value = values[i];
       nvarcliques = SCIPvarGetNCliques(var, value);
 
-      /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
+      /* if variable is not active (multi-aggregated or fixed), it will be moved to a new part */
       if( SCIPvarIsActive(var) && nvarcliques > 0 )
       {
          SCIP_CLIQUE** varcliques;
@@ -9015,11 +9053,10 @@ SCIP_RETCODE calcCliquePartitionGreedy(
          for( l = 0; l < nvarcliques && ! foundpart; ++l)
          {
             SCIP_VAR** cliquevars;
-            SCIP_VAR* othervar;
             SCIP_Bool* cliquevals;
+            SCIP_VAR* othervar;
             int nvarclique;
             int varidx;
-            int k;
             int j;
 
             assert( varcliques[l] != NULL );
