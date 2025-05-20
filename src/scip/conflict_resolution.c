@@ -1934,9 +1934,6 @@ SCIP_RETCODE createAndAddConflictCon(
               lhs, SCIPsetInfinity(set), FALSE, set->conf_separate, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
               FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
 
-   /* check if the constraint is valid for the debug solution */
-   SCIP_CALL( SCIPdebugCheckAnyGlobalValidConss(set->scip, &cons, 1) );
-
    /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
    SCIP_CALL( SCIPupgradeConsLinear(set->scip, cons, &upgdcons) );
    if( upgdcons != NULL )
