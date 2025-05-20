@@ -223,6 +223,7 @@ struct SCIP_Conflict
    SCIP_Real*            conflictvarslbs;    /**< maximal lower bounds of variables in the current resolution conflict */
    SCIP_Real*            conflictvarsubs;    /**< minimal upper bounds of variables in the current resolution conflict */
    SCIP_BDCHGINFO**      tmpbdchginfos;      /**< temporarily created bound change information data */
+   int                   conflictprobnvars;  /**< number of variables in the current problem where conflict analysis is used */
    int                   conflictsetssize;   /**< size of conflictsets array */
    int                   nconflictsets;      /**< number of available conflict sets (used slots in conflictsets array) */
    int                   proofsetssize;      /**< size of proofsets array */

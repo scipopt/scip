@@ -305,6 +305,7 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->conflictvarslbs = NULL;
    (*conflict)->conflictvarsubs = NULL;
    (*conflict)->tmpbdchginfos = NULL;
+   (*conflict)->conflictprobnvars = 0;
    (*conflict)->conflictsetssize = 0;
    (*conflict)->nconflictsets = 0;
    (*conflict)->conflictrows = NULL;

@@ -3406,10 +3406,12 @@ void conflictClearResolution(
    nvars = SCIPprobGetNVars(prob);
 
    /* allocate memory for the lower and upper bounds of variables used in the resolution conflict analysis */
-   if( conflict->conflictvarslbs == NULL )
+   if(conflict->conflictprobnvars < nvars)
+   {
+      conflict->conflictprobnvars = nvars;
       BMSreallocMemoryArray(&conflict->conflictvarslbs, nvars);
-   if( conflict->conflictvarsubs == NULL )
       BMSreallocMemoryArray(&conflict->conflictvarsubs, nvars);
+   }
 
    for( i = 0; i < nvars; ++i )
    {
