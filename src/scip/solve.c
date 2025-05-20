@@ -2322,24 +2322,42 @@ SCIP_RETCODE SCIPpriceLoop(
       for( p = 0; p < set->nactivepricers && !enoughvars; ++p )
       {
          SCIP_CALL( SCIPpricerExec(set->pricers[p], set, transprob, lp, pricestore, &lb, &stopearly, &result) );
-         assert(result == SCIP_DIDNOTRUN || result == SCIP_SUCCESS);
-         SCIPsetDebugMsg(set, "pricing: pricer %s returned result = %s, lowerbound = %f\n",
-            SCIPpricerGetName(set->pricers[p]), (result == SCIP_DIDNOTRUN ? "didnotrun" : "success"), lb);
-         enoughvars = enoughvars || (SCIPsetGetPriceMaxvars(set, pretendroot) == INT_MAX ?
-               FALSE : SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot) + 1);
-         *aborted = ( (*aborted) || (result == SCIP_DIDNOTRUN) );
+         switch ( result )
+         {
+            case SCIP_DIDNOTRUN:
+            {
+               /* pricer did not run */
+               SCIPsetDebugMsg(set, "pricing: pricer %s did not run\n", SCIPpricerGetName(set->pricers[p]));
+               *aborted = TRUE;
+               break;
+            }
+            case SCIP_SUCCESS:
+            {
+               /* pricer found new variables or proved that no variable with negative reduced cost exists */
+               SCIPsetDebugMsg(set, "pricing: pricer %s succeeded, lowerbound = %f\n",
+                  SCIPpricerGetName(set->pricers[p]), lb);
 
-         /* set stoppricing to TRUE, if the first pricer wants to stop pricing */
-         if( p == 0 && stopearly )
-            stoppricing = TRUE;
+               enoughvars = SCIPpricestoreGetNVars(pricestore) > SCIPsetGetPriceMaxvars(set, pretendroot);
 
-         /* stoppricing only remains TRUE, if all other pricers want to stop pricing as well */
-         if( stoppricing && !stopearly )
-            stoppricing = FALSE;
+               /* set stoppricing to TRUE, if the first pricer wants to stop pricing */
+               if( p == 0 && stopearly )
+                  stoppricing = TRUE;
 
-         /* update lower bound w.r.t. the lower bound given by the pricer */
-         SCIP_CALL( SCIPnodeUpdateLowerbound(currentnode, stat, set, eventfilter, tree, transprob, origprob, lb, NULL) );
-         SCIPsetDebugMsg(set, " -> new lower bound given by pricer %s: %g\n", SCIPpricerGetName(set->pricers[p]), lb);
+               /* stoppricing only remains TRUE, if all other pricers want to stop pricing as well */
+               if( stoppricing && !stopearly )
+                  stoppricing = FALSE;
+
+               /* update lower bound w.r.t. the lower bound given by the pricer */
+               SCIP_CALL( SCIPnodeUpdateLowerbound(currentnode, stat, set, eventfilter, tree, transprob, origprob, lb, NULL) );
+               SCIPsetDebugMsg(set, " -> new lower bound given by pricer %s: %g", SCIPpricerGetName(set->pricers[p]), lb);
+               break;
+            }
+            default:
+            {
+               SCIPerrorMessage("pricer <%s> returned invalid result <%d>\n", SCIPpricerGetName(set->pricers[p]), result);
+               return SCIP_INVALIDRESULT;
+            }
+         } /*lint !e788*/
       }
 
       /* apply the priced variables to the LP */

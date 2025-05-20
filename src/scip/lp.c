@@ -11016,7 +11016,6 @@ SCIP_RETCODE lpLexDualSimplex(
    /* search for lexicographically minimal optimal solution */
    if( !lp->diving && !lp->probing && SCIPlpiIsOptimal(lp->lpi) )
    {
-      SCIP_Bool chooseBasic;
       SCIP_Real* primsol;
       SCIP_Real* dualsol;
       SCIP_Real* redcost;
@@ -11038,6 +11037,8 @@ SCIP_RETCODE lpLexDualSimplex(
       int* indrow;
       int* indallcol;
       int* indallrow;
+      SCIP_Bool chooseBasic;
+      SCIP_Bool success;
       int nDualDeg;
       int r, c;
       int cntcol;
@@ -11164,6 +11165,10 @@ SCIP_RETCODE lpLexDualSimplex(
          }
       }
 #endif
+
+      /* disable objective limit */
+      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_OBJLIM, SCIPlpiInfinity(lp->lpi), &success) );
+      assert(success);
 
       /* perform lexicographic rounds */
       pos = -1;
@@ -11403,7 +11408,7 @@ SCIP_RETCODE lpLexDualSimplex(
       SCIP_CALL( SCIPlpiChgSides(lp->lpi, lp->nlpirows, indallrow, oldlhs, oldrhs) );
       SCIP_CALL( SCIPlpiChgObj(lp->lpi, lp->nlpicols, indallcol, oldobj) );
 
-      /* resolve to update solvers internal data structures - should only produce few pivots - is this needed? */
+      /* resolve to update solvers internal data structures - should only produce few pivots */
       retcode = SCIPlpiSolveDual(lp->lpi);
       if( retcode == SCIP_LPERROR )
       {
@@ -11415,6 +11420,12 @@ SCIP_RETCODE lpLexDualSimplex(
          SCIP_CALL( retcode );
       }
       assert(SCIPlpiIsOptimal(lp->lpi));
+
+      /* reset objective limit */
+      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_OBJLIM, lp->lpiobjlim, &success) );
+      assert(success);
+
+      /* add LP iterations */
       SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
       lexIterations += iterations;
 
