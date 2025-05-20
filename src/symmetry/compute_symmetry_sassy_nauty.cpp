@@ -378,7 +378,7 @@ SCIP_RETCODE computeAutomorphisms(
    *log10groupsize = 0.0;
    if(sg.nv > 0) {
       sparsenauty(&sg, lab, ptn, orbits, &options, &stats, NULL);
-      *log10groupsize = (SCIP_Real) stats.grpsize2;
+      *log10groupsize = log10(stats.grpsize1 * pow(10.0, (SCIP_Real) (stats.grpsize2 + sassy.exp)));
    }
 #else
    convert_dejavu_to_traces(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
@@ -392,6 +392,7 @@ SCIP_RETCODE computeAutomorphisms(
    options.defaultptn = FALSE; /* use color classes */
    if(sg.nv > 0) {
       Traces(&sg, lab, ptn, orbits, &options, &stats, NULL);
+      *log10groupsize = log10(stats.grpsize1 * pow(10.0, (SCIP_Real) (stats.grpsize2 + sassy.exp)));
    }
 #endif
 
