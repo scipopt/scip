@@ -88,13 +88,15 @@ struct SCIP_NlpiProblem
 /* TODO implement solution routine */
 
 /* TODO complete this */
-int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], int VSTA[], int TYPE[], double RHS[],
+static int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], int VSTA[], int TYPE[], double RHS[],
       int ESTA[], int COLSTA[], int ROWNO[], double VALUE[], int NLFLAG[], int NUMVAR, int NUMCON, int NUMNZ, void* USRMEM)
 {
-   SCIP_Real* lbs;
-   SCIP_Real* ubs;
+   const SCIP_Real* lbs;
+   const SCIP_Real* ubs;
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
    SCIP_NLPIORACLE* oracle;
+   int norigvars = SCIPnlpiOracleGetNVars(oracle);
+   int nslackvars = 0;
 
    assert(problem != NULL);
    assert(problem->scip != NULL);
@@ -105,7 +107,8 @@ int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], i
    lbs = SCIPnlpiOracleGetVarLbs(oracle);
    ubs = SCIPnlpiOracleGetVarUbs(oracle);
 
-   for( int i = 0; i < NUMVAR; i++ )
+   /* add all 'normal' (i.e. non-slack) variables here */
+   for( int i = 0; i < norigvars; i++ )
    {
       LOWER[i] = lbs[i];
       UPPER[i] = ubs[i];
@@ -114,7 +117,7 @@ int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], i
 
    /* TODO check if VSTA is needed - seems to not be the case */
 
-   for ( int i = 0; i < NUMCON; i++ )
+   for( int i = 0; i < NUMCON; i++ )
    {
       SCIP_Real lhs = SCIPnlpiOracleGetConstraintLhs(oracle, i);
       SCIP_Real rhs = SCIPnlpiOracleGetConstraintRhs(oracle, i);
@@ -130,7 +133,10 @@ int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], i
             /* range constraint lhs <= g(x) <= rhs:
              * reformulate as g(x) - s = 0 and lhs <= s <= rhs */
             RHS[i] = 0.0;
-            /* TODO introduce slack */
+            LOWER[norigvars + nslackvars] = lhs;
+            UPPER[norigvars + nslackvars] = rhs;
+            CURR[norigvars + nslackvars] = 0.0; /* TODO set proper initial values */
+            nslackvars++;
          }
          else
             RHS[i] = lhs;
@@ -146,6 +152,7 @@ int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], i
          RHS[i] = rhs;
       }
    }
+   assert(norigvars + nslackvars == NUMVAR);
 
    /* TODO Jacobian information */
 
@@ -167,7 +174,7 @@ static int COI_CALLCONV Std_Message(int SMSG, int DMSG, int NMSG, char* MSGV[], 
 }
 
 /* callback for CONOPT's standard error output */
-int COI_CALLCONV Std_ErrMsg(int ROWNO, int COLNO, int POSNO, const char* MSG, void* USRMEM)
+static int COI_CALLCONV Std_ErrMsg(int ROWNO, int COLNO, int POSNO, const char* MSG, void* USRMEM)
 {
    if( ROWNO == -1 )
       SCIPerrorMessage("Variable %d : ", COLNO);
@@ -181,7 +188,7 @@ int COI_CALLCONV Std_ErrMsg(int ROWNO, int COLNO, int POSNO, const char* MSG, vo
 }
 
 /* callback for CONOPT to report the solving statuses */
-int COI_CALLCONV Std_Status(int MODSTA, int SOLSTA, int ITER, double OBJVAL, void* USRMEM)
+static int COI_CALLCONV Std_Status(int MODSTA, int SOLSTA, int ITER, double OBJVAL, void* USRMEM)
 {
    SCIP* scip;
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
