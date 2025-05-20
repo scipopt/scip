@@ -1204,7 +1204,7 @@ SCIP_RETCODE separateCons(
 
          if( cutoff )
          {
-            assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(var)));
+            assert(SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(var)));
 
             /* analyze infeasibility */
             SCIP_CALL( analyzeConflict(scip, cons, var, newlb, PROPRULE_1, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
@@ -1235,7 +1235,7 @@ SCIP_RETCODE separateCons(
 
          if( cutoff )
          {
-            assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(var)));
+            assert(SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(var)));
 
             /* analyze infeasibility */
             SCIP_CALL( analyzeConflict(scip, cons, var, newub, PROPRULE_3, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
@@ -1561,7 +1561,7 @@ SCIP_RETCODE propagateCons(
             if( *cutoff )
             {
                SCIPdebugMsg(scip, "cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
-               assert( SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)) );
+               assert(SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)));
 
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
@@ -1602,7 +1602,7 @@ SCIP_RETCODE propagateCons(
                   if( *cutoff )
                   {
                      SCIPdebugMsg(scip, "cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-                     assert( SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)) );
+                     assert(SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
 
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newlb, PROPRULE_2, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
@@ -1634,7 +1634,7 @@ SCIP_RETCODE propagateCons(
                   if( *cutoff )
                   {
                      SCIPdebugMsg(scip, "cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-                     assert( SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)) );
+                     assert(SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
 
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
@@ -1704,7 +1704,7 @@ SCIP_RETCODE propagateCons(
             if( *cutoff )
             {
                SCIPdebugMsg(scip, "cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
-               assert( SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)) );
+               assert(SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)));
 
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
@@ -1745,7 +1745,7 @@ SCIP_RETCODE propagateCons(
                   if( *cutoff )
                   {
                      SCIPdebugMsg(scip, "cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-                     assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
+                     assert(SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
 
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
@@ -1779,7 +1779,7 @@ SCIP_RETCODE propagateCons(
                   if( *cutoff )
                   {
                      SCIPdebugMsg(scip, "cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-                     assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
+                     assert(SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
 
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
