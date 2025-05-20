@@ -45,8 +45,6 @@
  *
  */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-// #define SCIP_DEBUG
-// #define SCIP_MORE_DEBUG
 
 #include "blockmemshell/memory.h"
 #include "scip/clock.h"
@@ -1117,9 +1115,9 @@ SCIP_BDCHGINFO* conflictFirstCand(
       (void)(SCIPpqueueRemove(conflict->resbdchgqueue));
 
       if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
-         var->conflictreslb = SCIP_REAL_MIN;
+         conflict->conflictvarslbs[SCIPvarGetProbindex(var)] = SCIP_REAL_MIN;
       else
-         var->conflictresub = SCIP_REAL_MAX;
+         conflict->conflictvarsubs[SCIPvarGetProbindex(var)] = SCIP_REAL_MAX;
 
       /* call method recursively to get next conflict analysis candidate */
       bdchginfo = conflictFirstCand(set, conflict, initial);
@@ -2891,9 +2889,9 @@ SCIP_RETCODE markBdchgAsFixed(
 
    /* Reset conflict bounds to allow weaker bounds to be added later */
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
-      vars[varidx]->conflictreslb = SCIP_REAL_MIN;
+      conflict->conflictvarslbs[varidx] = SCIP_REAL_MIN;
    else
-      vars[varidx]->conflictresub = SCIP_REAL_MAX;
+      conflict->conflictvarsubs[varidx] = SCIP_REAL_MAX;
 
    SCIPsetDebugMsgPrint(set, "ignoring the latest bound change of variable %s to %f\n",
          SCIPvarGetName(var), SCIPbdchginfoGetNewbound(*currbdchginfo));
@@ -3219,9 +3217,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          /* we must reset the conflict lower and upper bound to be able to add weaker bounds later */
          if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
-            vars[residx]->conflictreslb = SCIP_REAL_MIN;
+            conflict->conflictvarslbs[residx] = SCIP_REAL_MIN;
          else
-            vars[residx]->conflictresub = SCIP_REAL_MAX;
+            conflict->conflictvarsubs[residx] = SCIP_REAL_MAX;
 
          if( conflictrow->nnz > maxsize )
          {

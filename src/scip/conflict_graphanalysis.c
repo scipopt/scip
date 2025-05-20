@@ -2357,25 +2357,24 @@ SCIP_Bool betterBoundInResolutionQueue(
    {
    case SCIP_BOUNDTYPE_LOWER:
       /* the variable is already member of the conflict; hence check if the new bound is redundant */
-      if( var->conflictreslb < newbound )
+      if( conflict->conflictvarslbs[SCIPvarGetProbindex(var)] < newbound )
       {
-         var->conflictreslb = newbound;
+         conflict->conflictvarslbs[SCIPvarGetProbindex(var)] = newbound;
          return FALSE;
       }
       SCIPsetDebugMsg(set, "ResQueue: ignoring redundant bound change <%s> >= %g since a stronger lower bound exist <%s> >= %g\n",
-         SCIPvarGetName(var), newbound, SCIPvarGetName(var), var->conflictreslb);
-
+         SCIPvarGetName(var), newbound, SCIPvarGetName(var), conflict->conflictvarslbs[SCIPvarGetProbindex(var)]);
       return TRUE;
 
    case SCIP_BOUNDTYPE_UPPER:
       /* the variable is already member of the conflict; hence check if the new bound is redundant */
-      if( var->conflictresub > newbound )
+      if ( conflict->conflictvarsubs[SCIPvarGetProbindex(var)] > newbound )
       {
-         var->conflictresub = newbound;
+         conflict->conflictvarsubs[SCIPvarGetProbindex(var)] = newbound;
          return FALSE;
       }
       SCIPsetDebugMsg(set, "ResQueue: ignoring redundant bound change <%s> <= %g since a stronger upper bound exist <%s> <= %g\n",
-         SCIPvarGetName(var), newbound, SCIPvarGetName(var), var->conflictresub);
+         SCIPvarGetName(var), newbound, SCIPvarGetName(var), conflict->conflictvarsubs[SCIPvarGetProbindex(var)]);
 
       return TRUE;
 
@@ -3390,6 +3389,9 @@ void conflictClearResolution(
    SCIP_PROB*            prob                /**< problem data */
    )
 {
+   int nvars;
+   int i;
+
    assert(conflict != NULL);
    assert(set != NULL);
    assert(prob != NULL);
@@ -3401,19 +3403,18 @@ void conflictClearResolution(
    SCIPpqueueClear(conflict->resbdchgqueue);
 
    /* reset the current lower and upper bounds leading to conflict */
-   if( set->conf_usegenres )
-   {
-      SCIP_VAR** vars;
-      int nvars;
-      int i;
+   nvars = SCIPprobGetNVars(prob);
 
-      vars = SCIPprobGetVars(prob);
-      nvars = SCIPprobGetNVars(prob);
-      for( i = 0; i < nvars; ++i )
-      {
-         vars[i]->conflictreslb = SCIP_REAL_MIN;
-         vars[i]->conflictresub = SCIP_REAL_MAX;
-      }
+   /* allocate memory for the lower and upper bounds of variables used in the resolution conflict analysis */
+   if( conflict->conflictvarslbs == NULL )
+      BMSreallocMemoryArray(&conflict->conflictvarslbs, nvars);
+   if( conflict->conflictvarsubs == NULL )
+      BMSreallocMemoryArray(&conflict->conflictvarsubs, nvars);
+
+   for( i = 0; i < nvars; ++i )
+   {
+      conflict->conflictvarslbs[i] = SCIP_REAL_MIN;
+      conflict->conflictvarsubs[i] = SCIP_REAL_MAX;
    }
 }
 

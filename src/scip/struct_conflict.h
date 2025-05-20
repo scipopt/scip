@@ -220,6 +220,8 @@ struct SCIP_Conflict
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
    SCIP_CONFLICTSET**    conflictsets;       /**< conflict sets found at the current node */
    SCIP_Real*            conflictsetscores;  /**< score values of the conflict sets found at the current node */
+   SCIP_Real*            conflictvarslbs;    /**< maximal lower bounds of variables in the current resolution conflict */
+   SCIP_Real*            conflictvarsubs;    /**< minimal upper bounds of variables in the current resolution conflict */
    SCIP_BDCHGINFO**      tmpbdchginfos;      /**< temporarily created bound change information data */
    int                   conflictsetssize;   /**< size of conflictsets array */
    int                   nconflictsets;      /**< number of available conflict sets (used slots in conflictsets array) */

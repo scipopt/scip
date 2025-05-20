@@ -2396,8 +2396,6 @@ SCIP_RETCODE varCreate(
    (*var)->primsolavg = 0.5 * (lb + ub);
    (*var)->conflictlb = SCIP_REAL_MIN;
    (*var)->conflictub = SCIP_REAL_MAX;
-   (*var)->conflictreslb = SCIP_REAL_MIN;
-   (*var)->conflictresub= SCIP_REAL_MAX;
    (*var)->conflictrelaxedlb = (*var)->conflictlb;
    (*var)->conflictrelaxedub = (*var)->conflictub;
    (*var)->lazylb = -SCIPsetInfinity(set);

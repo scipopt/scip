@@ -302,6 +302,8 @@ SCIP_RETCODE SCIPconflictCreate(
    SCIP_CALL( SCIPconflictsetCreate(&(*conflict)->conflictset, blkmem) );
    (*conflict)->conflictsets = NULL;
    (*conflict)->conflictsetscores = NULL;
+   (*conflict)->conflictvarslbs = NULL;
+   (*conflict)->conflictvarsubs = NULL;
    (*conflict)->tmpbdchginfos = NULL;
    (*conflict)->conflictsetssize = 0;
    (*conflict)->nconflictsets = 0;
@@ -413,6 +415,8 @@ SCIP_RETCODE SCIPconflictFree(
 
    BMSfreeMemoryArrayNull(&(*conflict)->conflictsets);
    BMSfreeMemoryArrayNull(&(*conflict)->conflictsetscores);
+   BMSfreeMemoryArrayNull(&(*conflict)->conflictvarslbs);
+   BMSfreeMemoryArrayNull(&(*conflict)->conflictvarsubs);
    BMSfreeMemoryArrayNull(&(*conflict)->proofsets);
    BMSfreeMemoryArrayNull(&(*conflict)->conflictrows);
    BMSfreeMemoryArrayNull(&(*conflict)->tmpbdchginfos);
