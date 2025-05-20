@@ -2413,14 +2413,14 @@ SCIP_DECL_HEUREXEC(heurExecGins)
    DECOMPHORIZON* decomphorizon;             /* data structure for processing multiple blocks of a decomposition */
    SCIP_DECOMP* decomp;
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
-
-   int nvars;                                /* number of original problem's variables */
-   int i;
-   int nfixedvars;
+   SCIP_SOL* oldincumbent;
+   SCIP_SOL* newincumbent;
    SOLVELIMITS solvelimits;
    SCIP_Bool runagain;
-
    SCIP_Bool success;
+   int nvars;                                /* number of original problem's variables */
+   int nfixedvars;
+   int i;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -2436,17 +2436,20 @@ SCIP_DECL_HEUREXEC(heurExecGins)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* only call heuristic if enough nodes were processed since last incumbent */
-   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip, SCIPgetBestSol(scip)) < heurdata->nwaitingnodes )
-      return SCIP_OKAY;
-
    /* in case of many unsuccessful calls, the nextnodenumber is increased to prevent us from running too often  */
    if( SCIPgetNNodes(scip) < heurdata->nextnodenumber )
       return SCIP_OKAY;
 
+   /* get best solution */
+   newincumbent = SCIPgetBestSol(scip);
+   assert(newincumbent != NULL);
+
+   /* only call heuristic if enough nodes were processed since last incumbent */
+   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip, newincumbent) < heurdata->nwaitingnodes )
+      return SCIP_OKAY;
+
    /* only call heuristic if the best solution comes from transformed problem */
-   assert(SCIPgetBestSol(scip) != NULL);
-   if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
+   if( SCIPsolIsOriginal(newincumbent) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTRUN;
@@ -2487,9 +2490,6 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
    do
    {
-      SCIP_SOL* oldincumbent;
-      SCIP_SOL* newincumbent;
-
       /* create a new problem, by fixing all variables except for a small neighborhood */
       SCIP_CALL( determineVariableFixings(scip, fixedvars, fixedvals, &nfixedvars, heurdata, rollinghorizon, decomphorizon, &success) );
 
@@ -2555,15 +2555,15 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       heurdata->usednodes += SCIPgetNNodes(subscip);
 
       success = FALSE;
+
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
        */
-      oldincumbent = SCIPgetBestSol(scip);
-
       SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, NULL) );
       if( success )
          *result = SCIP_FOUNDSOL;
 
+      oldincumbent = newincumbent;
       newincumbent = SCIPgetBestSol(scip);
 
       /* free subproblem */
