@@ -1414,11 +1414,9 @@ SCIP_RETCODE MirReduction(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, reasonrow->nnz) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rowvals, reasonrow->nnz) );
 
-   /* todo change this: set all variables to some dummy value */
+   /* set all variables to zero in the reference solution */
    for( int i = 0; i < nvars; ++i )
-   {
       SCIP_CALL( SCIPsetSolVal(set->scip, refsol, vars[i], 0.0) );
-   }
 
    /* create a sparse row of the form ax <= b from the reason */
    rowrhs = -reasonrow->lhs;
@@ -1431,9 +1429,7 @@ SCIP_RETCODE MirReduction(
       coef = reasonrow->vals[idx];
       rowinds[i] = idx;
       rowvals[i] = -coef;
-      /* We set the solution to the values used in propagation.
-       * todo for the variable to resolve (varidx), we should set it to the propagating fractional value
-       */
+      /* We set the solution to the values used in propagation */
       if( idx == varidx )
       {
          SCIP_Real fracval;
@@ -1694,7 +1690,6 @@ SCIP_RETCODE updateBdchgQueue(
 
       if( coef > 0.0 )
       {
-         /* refactortodo this may not work for multiple bdchgs ie problems with continuous and general integers */
          SCIP_Real bnd;
          if( SCIPvarGetNBdchgInfosUb(vars[v]) > 0 )
          {
@@ -1854,15 +1849,9 @@ SCIP_RETCODE updateStatistics(
 
          idx = conflictrow->inds[i];
          var = vars[idx];
-         /* todo atm this does not work for general MIP */
-         /* to make this work we need the relaxed bound for the integer and
-          * continuous variables. We can get them by giving to this function the
-          * UIP bdchgidx as parameter and checking if there exist bound changes
-          * for variables before that bound change that lead to the
-          * infeasibility of the conflict constraint. Alternative: Can we get
-          * these values directly these values from the resbdchgqueue and the
-          * current bdchg and all previous ones that have been fixed? */
+
          assert(!SCIPsetIsZero(set, conflictrow->vals[idx]));
+
          boundtype = conflictrow->vals[idx] > 0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER;
          bound = conflictrow->vals[idx] > 0 ? SCIPvarGetLbLocal(var) : SCIPvarGetUbLocal(var);
 
@@ -1999,7 +1988,6 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    /* calculate the maximal size of each accepted conflict set */
    maxsize = 2 * conflictCalcResMaxsize(set, transprob);
 
-   /* todo compute insert depth (if we start doing local conflict analysis) */
    SCIPsetDebugMsgPrint(set, "flushing %d conflict constraint at focus depth %d (id: %d, vd: %d, cd: %d, rd: %d, maxsize: %d)\n",
       1, focusdepth, conflictrow->insertdepth, conflictrow->validdepth, conflictrow->conflictdepth, conflictrow->repropdepth, maxsize);
 
@@ -2053,7 +2041,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
       if( SCIPvarIsIntegral(var) )
          bound = conflictrow->vals[idx] > 0.0 ? SCIPsetCeil(set, bound) : SCIPsetFloor(set, bound);
 
-      /* refactortodo: rethink the logic and add asserts. Also find a better way
+      /* todo: rethink the logic and add asserts. Also find a better way
        * to inform the statistics that a constraint is added "inderectly", also
        * update number of global bound changes from conflict analysis */
       if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGT(set, bound, SCIPvarGetUbGlobal(var)) )
@@ -2082,7 +2070,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    /* generate the linear constraint */
    else if( !hasRelaxationOnlyVar(set, vars, conflictrow) )
    {
-      /* @todo use the right insert depth and not valid depth */
+      /* todo use the right insert depth and not valid depth */
       SCIP_CALL( createAndAddConflictCon(conflict, blkmem, set, stat, vars, \
                      tree, reopt, lp, cliquetable, conflictrow, conflictrow->insertdepth, success) );
       conflict->nappliedglbresconss++;
@@ -2300,8 +2288,6 @@ SCIP_RETCODE reduceReason(
       }
       else if( set->conf_mbreduction )
       {
-         /* todo: check that if the slack is always zero if general integers and continuous variables are not at local bounds */
-         /* in this case there is no guarrantee that after MIR we get a reason with zero slack */
          SCIP_CALL( MirReduction(set, blkmem, vars, nvars, rowtoreduce, currbdchginfo, residx, coefinrow) );
          SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixsides) );
       }
@@ -2717,7 +2703,6 @@ SCIP_RETCODE executeResolutionStep(
       /* apply reduction to the reason row */
       SCIP_CALL( reduceReason(set, blkmem, vars, nvars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixsides) );
 
-      /* todo add some flag if the reduction really did something so that we avoid some of the calculations below */
       /* after reduction resolve again */
       SCIPsetDebugMsgPrint(set, "Resolve %s after reducing the reason row \n", SCIPvarGetName(vars[residx]));
       SCIP_CALL( rescaleAndResolve(set, conflict, conflictrow, reducedreasonrow, resolvedconflictrow, blkmem,
@@ -2736,7 +2721,6 @@ SCIP_RETCODE executeResolutionStep(
          SCIP_Real coefresidx;
 
          /* now both the reducedreasonrow and reasonrow are the rows before the reduction */
-         /* todo add a parameter to be able to work with the row after the reduction */
          SCIP_CALL( conflictRowReplace(reducedreasonrow, blkmem, reasonrow) );
 
          coefresidx = reducedreasonrow->vals[residx];
@@ -3046,7 +3030,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    *nconss = 0;
    *nconfvars = 0;
 
-   /* todo at the moment only global resolution conflict analysis is supported */
+   /* todo implement local conflict analysis */
    if( validdepth > 0)
       return SCIP_OKAY;
 
@@ -3210,6 +3194,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIPsetDebugMsgPrint(set, " Applying resolution with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
          SCIP_CALL( executeResolutionStep(conflict, set, vars, blkmem, bdchginfo, residx, maxsize, fixbounds, fixsides, &successresolution ) );
 
+         /* todo we can strengthen the conflict row by applying MIR */
          if( successresolution )
             SCIP_CALL( conflictRowReplace(conflictrow, blkmem, resolvedconflictrow) );
          else
