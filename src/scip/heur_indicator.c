@@ -403,7 +403,7 @@ SCIP_DECL_HEURINIT(heurInitIndicator)
       if ( heurdata->indicatorconshdlr == NULL || SCIPgetSubscipDepth(scip) > 0 )
       {
          heurdata->inittiming = SCIPheurGetTimingmask(heur);
-         SCIPheurSetTimingmask(heur, 0);
+         SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_NONE);
       }
    }
 
@@ -418,7 +418,7 @@ SCIP_DECL_HEUREXIT(heurExitIndicator)
    assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
 
    /* reenable indicator heuristic */
-   if ( SCIPheurGetTimingmask(heur) == 0 )
+   if ( SCIPheurGetTimingmask(heur) == SCIP_HEURTIMING_NONE )
    {
       SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
       assert( heurdata != NULL );
