@@ -150,6 +150,7 @@ struct SCIP_HeurData
 #endif
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
+   SCIP_HEURTIMING       inittiming;         /**< initial heuristic timing */
 };
 
 
@@ -1609,6 +1610,45 @@ SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolNlpdiving)
+{  /*lint --e{715}*/
+   assert(heur != NULL);
+
+   /* disable nlpdiving heuristic */
+   if( !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0 )
+   {
+      SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
+      assert(heurdata != NULL);
+      heurdata->inittiming = SCIPheurGetTimingmask(heur);
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_NONE);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolNlpdiving)
+{  /*lint --e{715}*/
+   assert(heur != NULL);
+
+   /* reenable nlpdiving heuristic */
+   if( SCIPheurGetTimingmask(heur) == SCIP_HEURTIMING_NONE )
+   {
+      SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
+      assert(heurdata != NULL);
+      assert(!SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0);
+      SCIPheurSetTimingmask(heur, heurdata->inittiming);
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecNlpdiving)
@@ -1666,12 +1706,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    assert(scip != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(result != NULL);
+   assert(SCIPisNLPConstructed(scip));
+   assert(SCIPgetNNlpis(scip) >= 1);
 
    *result = SCIP_DIDNOTRUN;
-
-   /* only call heuristic if an NLP relaxation has been constructed */
-   if( !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0 )
-      return SCIP_OKAY;
 
    /* do not call heuristic of node was already detected to be infeasible */
    if( nodeinfeasible )
@@ -2673,6 +2711,7 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
 
    /* create heuristic data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
+   heurdata->inittiming = HEUR_TIMING;
 
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
@@ -2683,6 +2722,8 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeNlpdiving) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitNlpdiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitNlpdiving) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolNlpdiving) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolNlpdiving) );
 
    /* get event handler for bound change events */
    heurdata->eventhdlr = NULL;
