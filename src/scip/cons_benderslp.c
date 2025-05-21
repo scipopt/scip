@@ -156,6 +156,15 @@ SCIP_DECL_CONSEXIT(consExitBenderslp)
 {  /*lint --e{715}*/
    assert(conshdlr != NULL);
 
+#ifndef NDEBUG
+   if( SCIPconshdlrNeedsCons(conshdlr) )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+      assert(!conshdlrdata->active);
+   }
+#endif
+
    /* reenable benderslp handler */
    SCIPconshdlrSetNeedsCons(conshdlr, FALSE);
 
