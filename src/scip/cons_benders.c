@@ -52,7 +52,6 @@
 #include "scip/cons_benders.h"
 #include "scip/heur_trysol.h"
 #include "scip/heuristics.h"
-#include "scip/struct_cons.h"
 
 
 /* fundamental constraint handler properties */
@@ -450,15 +449,17 @@ SCIP_DECL_CONSINIT(consInitBenders)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( conshdlrdata->active )
+   /* disable benders handler */
+   if( !conshdlrdata->active )
    {
-      conshdlrdata->checkedsolssize = DEFAULT_CHECKEDSOLSSIZE;
-      conshdlrdata->ncheckedsols = 0;
-
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize) );
+      SCIPconshdlrSetNeedsCons(conshdlr, TRUE);
+      return SCIP_OKAY;
    }
-   else
-      conshdlr->needscons = TRUE;
+
+   conshdlrdata->checkedsolssize = DEFAULT_CHECKEDSOLSSIZE;
+   conshdlrdata->ncheckedsols = 0;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize) );
 
    return SCIP_OKAY;
 }
@@ -473,16 +474,19 @@ SCIP_DECL_CONSEXIT(consExitBenders)
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
-   if( !conshdlr->needscons )
-   {
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
-      /* freeing the checked sols array */
-      SCIPfreeBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize);
+   /* reenable benders handler */
+   if( SCIPconshdlrNeedsCons(conshdlr) )
+   {
+      assert(!conshdlrdata->active);
+      SCIPconshdlrSetNeedsCons(conshdlr, FALSE);
+      return SCIP_OKAY;
    }
-   else
-      conshdlr->needscons = FALSE;
+
+   /* freeing the checked sols array */
+   SCIPfreeBlockMemoryArray(scip, &conshdlrdata->checkedsols, conshdlrdata->checkedsolssize);
 
    return SCIP_OKAY;
 }

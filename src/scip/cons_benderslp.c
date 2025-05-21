@@ -49,7 +49,6 @@
 #include "scip/scip.h"
 #include "scip/cons_benderslp.h"
 #include "scip/cons_benders.h"
-#include "scip/struct_cons.h"
 
 
 /* fundamental constraint handler properties */
@@ -144,7 +143,8 @@ SCIP_DECL_CONSINIT(consInitBenderslp)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   conshdlr->needscons = !conshdlrdata->active;
+   /* disable benderslp handler */
+   SCIPconshdlrSetNeedsCons(conshdlr, !conshdlrdata->active);
 
    return SCIP_OKAY;
 }
@@ -156,7 +156,8 @@ SCIP_DECL_CONSEXIT(consExitBenderslp)
 {  /*lint --e{715}*/
    assert(conshdlr != NULL);
 
-   conshdlr->needscons = FALSE;
+   /* reenable benderslp handler */
+   SCIPconshdlrSetNeedsCons(conshdlr, FALSE);
 
    return SCIP_OKAY;
 }

@@ -59,7 +59,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/set.h"
-#include "scip/struct_cons.h"
 
 
 /* fundamental constraint handler properties */
@@ -720,9 +719,10 @@ SCIP_DECL_CONSINIT(consInitExactSol)
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
+   /* disable exactsol handler */
    if( !SCIPisExact(scip) )
    {
-      conshdlr->needscons = TRUE;
+      SCIPconshdlrSetNeedsCons(conshdlr, TRUE);
       return SCIP_OKAY;
    }
 
@@ -757,10 +757,11 @@ SCIP_DECL_CONSEXIT(consExitExactSol)
    assert(scip != NULL);
    assert(conshdlr != NULL);
 
-   if( conshdlr->needscons )
+   /* reenable exactsol handler */
+   if( SCIPconshdlrNeedsCons(conshdlr) )
    {
       assert(!SCIPisExact(scip));
-      conshdlr->needscons = FALSE;
+      SCIPconshdlrSetNeedsCons(conshdlr, FALSE);
       return SCIP_OKAY;
    }
 
