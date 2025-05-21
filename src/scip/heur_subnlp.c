@@ -1541,7 +1541,10 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    {
       SCIP_CALL( SCIPhasNLPContinuousNonlinearity(scip, &runheur) );
       if( !runheur )
+      {
+         SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_NONE);
          return SCIP_OKAY;
+      }
    }
 
    /* get heuristic's data */
