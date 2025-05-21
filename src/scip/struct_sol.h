@@ -97,8 +97,8 @@ struct SCIP_Sol
    SCIP_SOLTYPE          type;               /**< type of solution: heuristic or (LP) relaxation solution, or unspecified origin */
 #ifndef NDEBUG
    SCIP_Longint          lpcount;            /**< number of LPs solved when this solution was created, needed for debug checks
-                                              *   concerning solutions linked to the LP solution
-                                              */
+                                              *   concerning solutions linked to the LP solution */
+   SCIP*                 scip;               /**< SCIP data structure */
 #endif
 };
 
