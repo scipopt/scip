@@ -387,8 +387,8 @@ SCIP_DECL_HEURINIT(heurInitIndicator)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert( heur != NULL );
    assert( scip != NULL );
+   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -397,11 +397,33 @@ SCIP_DECL_HEURINIT(heurInitIndicator)
    if ( heurdata->indicatorconshdlr == NULL )
    {
       heurdata->indicatorconshdlr = SCIPfindConshdlr(scip, "indicator");
-      if ( heurdata->indicatorconshdlr == NULL )
-      {
-         SCIPwarningMessage(scip, "Could not find indicator constraint handler.\n");
-      }
+
+      /* disable indicator heuristic */
+      if ( heurdata->indicatorconshdlr == NULL || SCIPgetSubscipDepth(scip) > 0 )
+         SCIPheurSetTimingmask(heur, 0);
    }
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
+static
+SCIP_DECL_HEUREXIT(heurExitIndicator)
+{  /*lint --e{715}*/
+   assert( scip != NULL );
+   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
+
+#ifndef NDEBUG
+   if ( SCIPheurGetTimingmask(heur) == 0 && SCIPgetSubscipDepth(scip) == 0 )
+   {
+      SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
+      assert( heurdata != NULL );
+      assert( heurdata->indicatorconshdlr == NULL );
+   }
+#endif
+
+   /* reenable indicator heuristic */
+   SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
    return SCIP_OKAY;
 }
@@ -447,10 +469,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicator)
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
-
-   if ( heurdata->indicatorconshdlr == NULL )
-      return SCIP_OKAY;
-
+   assert( heurdata->indicatorconshdlr != NULL );
    nindconss = heurdata->solcand == NULL ? SCIPconshdlrGetNConss(heurdata->indicatorconshdlr) : heurdata->nindconss;
 
    /* the heuristic will only be successful if there are indicator constraints, no binary variables except for the
@@ -458,9 +477,6 @@ SCIP_DECL_HEUREXEC(heurExecIndicator)
    if ( nindconss == 0
       || SCIPgetNBinVars(scip) + SCIPgetNBinImplVars(scip) > nindconss
       || SCIPgetNIntVars(scip) + SCIPgetNIntImplVars(scip) >= 1 )
-      return SCIP_OKAY;
-
-   if ( SCIPgetSubscipDepth(scip) > 0 )
       return SCIP_OKAY;
 
    /* call heuristic if solution candidate is available */
@@ -572,6 +588,7 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIndicator) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitIndicator) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitIndicator) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeIndicator) );
 
    /* add parameters */
