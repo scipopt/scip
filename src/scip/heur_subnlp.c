@@ -124,35 +124,13 @@ struct SCIP_HeurData
    int                   iterinit;           /**< number of iterations used for initial NLP solves */
    int                   ninitsolves;        /**< number of successful NLP solves until switching to iterlimit guess and using success rate */
    int                   itermin;            /**< minimal number of iterations for NLP solves */
+   SCIP_HEURTIMING       inittiming;         /**< initial heuristic timing */
 };
 
 
 /*
  * Local methods
  */
-
-/** indicates whether the heuristic should be running, i.e., whether we expect something nonlinear after fixing all discrete variables */
-static
-SCIP_RETCODE runHeuristic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            runheur             /**< buffer to store whether to run heuristic */
-   )
-{
-   assert(scip != NULL);
-   assert(runheur != NULL);
-
-   /* do not run heuristic if NLP or NLP solver is unavailable */
-   if( !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0 )
-   {
-      *runheur = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* do not run heuristic if no continuous nonlinear variables in NLP */
-   SCIP_CALL( SCIPhasNLPContinuousNonlinearity(scip, runheur) );
-
-   return SCIP_OKAY;
-}
 
 /** free sub-SCIP data structure */
 static
@@ -1490,12 +1468,21 @@ SCIP_DECL_HEURINIT(heurInitSubNlp)
 static
 SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
 {
+   SCIP_HEURDATA* heurdata;
+
    assert(scip != NULL);
    assert(heur != NULL);
 
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   heurdata->inittiming = SCIPheurGetTimingmask(heur);
+
+   /* disable subnlp heuristic */
+   if( !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0 )
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_NONE);
    /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
-   if( SCIPheurGetFreqofs(heur) == 0 )
-      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP | HEUR_TIMING);
+   else if( SCIPheurGetFreqofs(heur) == 0 )
+      SCIPheurSetTimingmask(heur, heurdata->inittiming | SCIP_HEURTIMING_DURINGLPLOOP);
 
    return SCIP_OKAY;
 }
@@ -1505,6 +1492,7 @@ static
 SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
 {
    SCIP_HEURDATA* heurdata;
+
    assert(scip != NULL);
    assert(heur != NULL);
 
@@ -1524,7 +1512,9 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
       SCIP_CALL( SCIPfreeSol(scip, &heurdata->startcand) );
    }
 
-   SCIPheurSetTimingmask(heur, HEUR_TIMING);
+   /* reset subnlp heuristic */
+   assert(SCIPheurGetTimingmask(heur) != SCIP_HEURTIMING_NONE || !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0);
+   SCIPheurSetTimingmask(heur, heurdata->inittiming);
 
    return SCIP_OKAY;
 }
@@ -1540,6 +1530,8 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
 
    assert(scip != NULL);
    assert(heur != NULL);
+   assert(SCIPisNLPConstructed(scip));
+   assert(SCIPgetNNlpis(scip) >= 1);
 
    /* obviously, we did not do anything yet */
    *result = SCIP_DIDNOTRUN;
@@ -1547,7 +1539,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    /* before we run the heuristic for the first time, check whether we want to run the heuristic at all */
    if( SCIPheurGetNCalls(heur) == 0 )
    {
-      SCIP_CALL( runHeuristic(scip, &runheur) );
+      SCIP_CALL( SCIPhasNLPContinuousNonlinearity(scip, &runheur) );
       if( !runheur )
          return SCIP_OKAY;
    }
@@ -1675,6 +1667,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    /* create Nlp primal heuristic data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    BMSclearMemory(heurdata);
+   heurdata->inittiming = HEUR_TIMING;
 
    /* include variable event handler */
    heurdata->eventhdlr = NULL;
@@ -1955,6 +1948,10 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
+   /* only update starting point if an NLP relaxation has been constructed */
+   if( !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0 )
+      return SCIP_OKAY;
+
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
@@ -1966,7 +1963,7 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
          return SCIP_OKAY;
       if( SCIPheurGetFreq(heur) < 0 )
          return SCIP_OKAY;
-      SCIP_CALL( runHeuristic(scip, &runheur) );
+      SCIP_CALL( SCIPhasNLPContinuousNonlinearity(scip, &runheur) );
       if( !runheur )
          return SCIP_OKAY;
    }
