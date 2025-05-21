@@ -54,6 +54,7 @@ foreach(n ${nSet})
             )
     set_tests_properties(examples-queens-${n}
                         PROPERTIES
+			FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS examples-queens-build
                         )
     if(WIN32)

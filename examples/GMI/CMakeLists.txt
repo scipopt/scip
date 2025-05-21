@@ -82,6 +82,7 @@ foreach(instance ${instances})
                 )
         set_tests_properties(examples-gmi-${setting}-${basename}
                             PROPERTIES
+                            FAIL_REGULAR_EXPRESSION "ERROR"
                                 DEPENDS examples-gmi-build
                             )
         if(WIN32)

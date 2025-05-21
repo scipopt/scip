@@ -77,6 +77,7 @@ foreach(instance ${instances})
     set_tests_properties(examples-eventhdlr-${basename}
                         PROPERTIES
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS examples-eventhdlr-build
                             )
     if(WIN32)

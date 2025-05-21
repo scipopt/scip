@@ -44,6 +44,7 @@ foreach(instance ${instances})
         set_tests_properties(examples-lop-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                FAIL_REGULAR_EXPRESSION "ERROR"
                                 DEPENDS examples-lop-build
                                 RESOURCE_LOCK libscip
                             )
