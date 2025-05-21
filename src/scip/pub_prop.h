@@ -259,6 +259,13 @@ SCIP_PROPTIMING SCIPpropGetTimingmask(
    SCIP_PROP*            prop                /**< propagator */
    );
 
+/** sets new timing mask for propagator */
+SCIP_EXPORT
+void SCIPpropSetTimingmask(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_PROPTIMING       timingmask          /**< new timing mask of propagator */
+   );
+
 /** does the propagator perform presolving? */
 SCIP_EXPORT
 SCIP_Bool SCIPpropDoesPresolve(

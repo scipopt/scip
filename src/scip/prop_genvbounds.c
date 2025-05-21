@@ -164,6 +164,7 @@ struct SCIP_PropData
    SCIP_Bool             sort;               /**< sort genvbounds and wait for bound change events? (otherwise all
                                               *   genvbounds are applied in each node) */
    SCIP_Bool             propasconss;        /**< should genvbounds be transformed to (linear) constraints? */
+   SCIP_PROPTIMING       inittiming;         /**< initial propagator timing */
 };
 
 
@@ -669,16 +670,22 @@ SCIP_RETCODE freeGenVBound(
 static
 SCIP_RETCODE freeGenVBounds(
    SCIP*                 scip,
+   SCIP_PROP*            prop,
    SCIP_PROPDATA*        propdata
    )
 {
    int i;
 
    assert(scip != NULL);
+   assert(prop != NULL);
    assert(propdata != NULL);
 
    if( propdata->genvboundstore != NULL )
    {
+      /* disable genvbounds propagator */
+      if( propdata->ngenvbounds >= 1 )
+         SCIPpropSetTimingmask(prop, SCIP_PROPTIMING_NONE);
+
       /* free genvbounds */
       for( i = propdata->ngenvbounds - 1; i >= 0; i-- )
       {
@@ -718,6 +725,7 @@ SCIP_RETCODE freeGenVBounds(
 static
 SCIP_RETCODE freeGenVBoundsRelaxOnly(
    SCIP*                 scip,
+   SCIP_PROP*            prop,
    SCIP_PROPDATA*        propdata
    )
 {
@@ -762,6 +770,10 @@ SCIP_RETCODE freeGenVBoundsRelaxOnly(
       /* free starting indices data */
       SCIP_CALL( freeStartingData(scip, propdata) );
    }
+
+   /* disable genvbounds propagator */
+   if( propdata->ngenvbounds == 0 )
+      SCIPpropSetTimingmask(prop, SCIP_PROPTIMING_NONE);
 
    return SCIP_OKAY;
 }
@@ -1860,6 +1872,7 @@ SCIP_RETCODE initPropdata(
    assert(scip != NULL);
    assert(propdata != NULL);
    assert(propdata->eventhdlr != NULL);
+   assert(propdata->ngenvbounds == -1);
 
    SCIPdebugMsg(scip, "init propdata\n");
 
@@ -1882,6 +1895,7 @@ SCIP_RETCODE initPropdata(
 static
 SCIP_RETCODE addNewGenVBound(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< genvbounds propagator */
    SCIP_PROPDATA*        propdata,           /**< data of the genvbounds propagator */
    GENVBOUND*            genvbound           /**< genvbound to be added */
    )
@@ -1906,6 +1920,10 @@ SCIP_RETCODE addNewGenVBound(
       propdata->genvboundstoresize = 2*propdata->genvboundstoresize + 1;
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->genvboundstore), oldsize, propdata->genvboundstoresize) );
    }
+
+   /* enable genvbounds propagator */
+   if( propdata->ngenvbounds == 0 )
+      SCIPpropSetTimingmask(prop, propdata->inittiming);
 
    /* new index is propdata->ngenvbounds */
    SCIP_CALL( SCIPhashmapInsert(hashmap, genvbound->var, genvbound) );
@@ -2008,6 +2026,7 @@ SCIP_RETCODE execGenVBounds(
 static
 SCIP_RETCODE createConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< genvbounds propagator */
    SCIP_PROPDATA*        propdata            /**< data of the genvbounds propagator */
    )
 {
@@ -2098,9 +2117,11 @@ SCIP_RETCODE createConstraints(
    }
 
    /* now delete all genvbounds in the genvboundstore */
-   if( propdata->ngenvbounds > 0 )
+   if( propdata->genvboundstore != NULL )
    {
-      assert(propdata->genvboundstore != NULL);
+      /* disable genvbounds propagator */
+      if( propdata->ngenvbounds >= 1 )
+         SCIPpropSetTimingmask(prop, SCIP_PROPTIMING_NONE);
 
       for( i = propdata->ngenvbounds - 1; i >= 0; i-- )
       {
@@ -2292,7 +2313,7 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    /* if genvbound is not overwritten, create a new entry in genvboundstore */
    if( newgenvbound )
    {
-      SCIP_CALL( addNewGenVBound(scip, propdata, genvbound) );
+      SCIP_CALL( addNewGenVBound(scip, genvboundprop, propdata, genvbound) );
    }
 
    /* mark genvbounds array to be re-sorted */
@@ -2370,6 +2391,12 @@ SCIP_DECL_PROPINIT(propInitGenvbounds)
    propdata->issorted = FALSE;
 
    propdata->prop = prop;
+
+   /* store genvbounds timing */
+   propdata->inittiming = SCIPpropGetTimingmask(prop);
+
+   /* disable genvbounds propagator, enabled when genvbounds are added */
+   SCIPpropSetTimingmask(prop, SCIP_PROPTIMING_NONE);
 
    return SCIP_OKAY;
 }
@@ -2548,6 +2575,10 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
 
    SCIPfreeBufferArray(scip, &vars);
 
+   /* disable genvbounds propagator */
+   if( propdata->ngenvbounds == 0 )
+      SCIPpropSetTimingmask(prop, SCIP_PROPTIMING_NONE);
+
    return SCIP_OKAY;
 }
 
@@ -2566,7 +2597,10 @@ SCIP_DECL_PROPEXIT(propExitGenvbounds)
    assert(propdata != NULL);
 
    /* free remaining genvbounds */
-   SCIP_CALL( freeGenVBounds(scip, propdata) );
+   SCIP_CALL( freeGenVBounds(scip, prop, propdata) );
+
+   /* reset genvbounds timing */
+   SCIPpropSetTimingmask(prop, propdata->inittiming);
 
    return SCIP_OKAY;
 }
@@ -2587,10 +2621,7 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
-
-   /* do not run if no genvbounds were added yet */
-   if( propdata->ngenvbounds < 1 )
-      return SCIP_OKAY;
+   assert(propdata->ngenvbounds >= 1);
 
    /* do not run if propagation w.r.t. current objective is not allowed */
    if( !SCIPallowWeakDualReds(scip) )
@@ -2630,7 +2661,7 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    /* add the genvbounds in the genvboundstore as constraints to the problem; afterwards clear the genvboundstore */
    if( propdata->propasconss )
    {
-      SCIP_CALL( createConstraints(scip, propdata) );
+      SCIP_CALL( createConstraints(scip, prop, propdata) );
       return SCIP_OKAY;
    }
 
@@ -2736,12 +2767,12 @@ SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
    if( !SCIPisInRestart(scip) )
    {
       /* free all genvbounds if we are not in a restart */
-      SCIP_CALL( freeGenVBounds(scip, propdata) );
+      SCIP_CALL( freeGenVBounds(scip, prop, propdata) );
    }
    else
    {
       /* free all genvbounds that use relax-only variables if we are in a restart */
-      SCIP_CALL( freeGenVBoundsRelaxOnly(scip, propdata) );
+      SCIP_CALL( freeGenVBoundsRelaxOnly(scip, prop, propdata) );
    }
 
    /* drop and free all events */
@@ -2871,6 +2902,7 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
 
    /* create genvbounds propagator data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
+   propdata->inittiming = PROP_TIMING;
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,

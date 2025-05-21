@@ -217,7 +217,7 @@ SCIP_RETCODE doPropCreate(
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when propagator should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS))",
       SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)(&(*prop)->timingmask), TRUE, (int) timingmask, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
+         (int*)(&(*prop)->timingmask), TRUE, (int)timingmask, (int)SCIP_PROPTIMING_NONE, (int)SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presolpriority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "presolving priority of propagator <%s>", name);
@@ -234,7 +234,7 @@ SCIP_RETCODE doPropCreate(
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing mask of the presolving method of propagator <%s> (%u:FAST, %u:MEDIUM, %u:EXHAUSTIVE, %u:FINAL)",
       name, SCIP_PRESOLTIMING_FAST, SCIP_PRESOLTIMING_MEDIUM, SCIP_PRESOLTIMING_EXHAUSTIVE, SCIP_PRESOLTIMING_FINAL);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)&(*prop)->presoltiming, TRUE, (int)presoltiming, (int) SCIP_PRESOLTIMING_NONE, (int) SCIP_PRESOLTIMING_MAX, NULL, NULL) ); /*lint !e740*/
+         (int*)&(*prop)->presoltiming, TRUE, (int)presoltiming, (int)SCIP_PRESOLTIMING_NONE, (int)SCIP_PRESOLTIMING_MAX, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -1290,6 +1290,17 @@ SCIP_PROPTIMING SCIPpropGetTimingmask(
    assert(prop != NULL);
 
    return prop->timingmask;
+}
+
+/** sets new timing mask for propagator */
+void SCIPpropSetTimingmask(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_PROPTIMING       timingmask          /**< new timing mask of propagator */
+   )
+{
+   assert(prop != NULL);
+
+   prop->timingmask = timingmask;
 }
 
 /** does the propagator perform presolving? */

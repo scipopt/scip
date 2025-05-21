@@ -62,6 +62,7 @@ typedef unsigned int SCIP_PRESOLTIMING;
 
 
 /** propagation execution timing flags */
+#define SCIP_PROPTIMING_NONE              0x000u  /**< never call propagator */
 #define SCIP_PROPTIMING_BEFORELP          0x001u  /**< call propagator before LP is solved */
 #define SCIP_PROPTIMING_DURINGLPLOOP      0x002u  /**< call propagator after each LP solving during cut-and-price loop */
 #define SCIP_PROPTIMING_AFTERLPLOOP       0x004u  /**< call propagator after the cut-and-price loop was finished */
