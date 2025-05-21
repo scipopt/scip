@@ -1615,16 +1615,20 @@ SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
 static
 SCIP_DECL_HEURINITSOL(heurInitsolNlpdiving)
 {  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
    assert(heur != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* store nlpdiving timing */
+   heurdata->inittiming = SCIPheurGetTimingmask(heur);
 
    /* disable nlpdiving heuristic */
    if( !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0 )
-   {
-      SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
-      assert(heurdata != NULL);
-      heurdata->inittiming = SCIPheurGetTimingmask(heur);
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_NONE);
-   }
 
    return SCIP_OKAY;
 }
@@ -1634,16 +1638,16 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlpdiving)
 static
 SCIP_DECL_HEUREXITSOL(heurExitsolNlpdiving)
 {  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
    assert(heur != NULL);
 
-   /* reenable nlpdiving heuristic */
-   if( SCIPheurGetTimingmask(heur) == SCIP_HEURTIMING_NONE )
-   {
-      SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
-      assert(heurdata != NULL);
-      assert(!SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0);
-      SCIPheurSetTimingmask(heur, heurdata->inittiming);
-   }
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* reset nlpdiving timing */
+   SCIPheurSetTimingmask(heur, heurdata->inittiming);
 
    return SCIP_OKAY;
 }

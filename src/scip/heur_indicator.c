@@ -395,16 +395,16 @@ SCIP_DECL_HEURINIT(heurInitIndicator)
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
 
+   /* store indicator timing */
+   heurdata->inittiming = SCIPheurGetTimingmask(heur);
+
    if ( heurdata->indicatorconshdlr == NULL )
    {
       heurdata->indicatorconshdlr = SCIPfindConshdlr(scip, "indicator");
 
       /* disable indicator heuristic */
       if ( heurdata->indicatorconshdlr == NULL || SCIPgetSubscipDepth(scip) > 0 )
-      {
-         heurdata->inittiming = SCIPheurGetTimingmask(heur);
          SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_NONE);
-      }
    }
 
    return SCIP_OKAY;
@@ -414,17 +414,17 @@ SCIP_DECL_HEURINIT(heurInitIndicator)
 static
 SCIP_DECL_HEUREXIT(heurExitIndicator)
 {  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
    assert( scip != NULL );
    assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
 
-   /* reenable indicator heuristic */
-   if ( SCIPheurGetTimingmask(heur) == SCIP_HEURTIMING_NONE )
-   {
-      SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
-      assert( heurdata != NULL );
-      assert( heurdata->indicatorconshdlr == NULL || SCIPgetSubscipDepth(scip) > 0 );
-      SCIPheurSetTimingmask(heur, heurdata->inittiming);
-   }
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert( heurdata != NULL );
+
+   /* reset indicator timing */
+   SCIPheurSetTimingmask(heur, heurdata->inittiming);
 
    return SCIP_OKAY;
 }

@@ -1473,8 +1473,11 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
    assert(scip != NULL);
    assert(heur != NULL);
 
+   /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
+   /* store subnlp timing */
    heurdata->inittiming = SCIPheurGetTimingmask(heur);
 
    /* disable subnlp heuristic */
@@ -1496,7 +1499,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
    assert(scip != NULL);
    assert(heur != NULL);
 
-   /* get heuristic's data */  
+   /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
@@ -1512,8 +1515,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
       SCIP_CALL( SCIPfreeSol(scip, &heurdata->startcand) );
    }
 
-   /* reset subnlp heuristic */
-   assert(SCIPheurGetTimingmask(heur) != SCIP_HEURTIMING_NONE || !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0);
+   /* reset subnlp timing */
    SCIPheurSetTimingmask(heur, heurdata->inittiming);
 
    return SCIP_OKAY;
