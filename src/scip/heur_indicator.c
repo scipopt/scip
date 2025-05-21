@@ -82,6 +82,7 @@ struct SCIP_HeurData
    SCIP_CONSHDLR*        indicatorconshdlr;  /**< indicator constraint handler */
    SCIP_SOL*             lastsol;            /**< last solution considered for improvement */
    SCIP_Bool             improvesols;        /**< Try to improve other solutions by one-opt? */
+   SCIP_HEURTIMING       inittiming;         /**< initial heuristic timing */
 };
 
 /*
@@ -400,7 +401,10 @@ SCIP_DECL_HEURINIT(heurInitIndicator)
 
       /* disable indicator heuristic */
       if ( heurdata->indicatorconshdlr == NULL || SCIPgetSubscipDepth(scip) > 0 )
+      {
+         heurdata->inittiming = SCIPheurGetTimingmask(heur);
          SCIPheurSetTimingmask(heur, 0);
+      }
    }
 
    return SCIP_OKAY;
@@ -413,17 +417,14 @@ SCIP_DECL_HEUREXIT(heurExitIndicator)
    assert( scip != NULL );
    assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
 
-#ifndef NDEBUG
-   if ( SCIPheurGetTimingmask(heur) == 0 && SCIPgetSubscipDepth(scip) == 0 )
+   /* reenable indicator heuristic */
+   if ( SCIPheurGetTimingmask(heur) == 0 )
    {
       SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
       assert( heurdata != NULL );
-      assert( heurdata->indicatorconshdlr == NULL );
+      assert( heurdata->indicatorconshdlr == NULL || SCIPgetSubscipDepth(scip) > 0 );
+      SCIPheurSetTimingmask(heur, heurdata->inittiming);
    }
-#endif
-
-   /* reenable indicator heuristic */
-   SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
    return SCIP_OKAY;
 }
@@ -574,6 +575,7 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
    heurdata->lastsol = NULL;
    heurdata->indicatorconshdlr = NULL;
    heurdata->obj = SCIPinfinity(scip);
+   heurdata->inittiming = HEUR_TIMING;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
