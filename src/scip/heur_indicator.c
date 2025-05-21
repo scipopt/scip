@@ -382,9 +382,9 @@ SCIP_DECL_HEURCOPY(heurCopyIndicator)
    return SCIP_OKAY;
 }
 
-/** initialization method of primal heuristic (called after problem was transformed) */
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
-SCIP_DECL_HEURINIT(heurInitIndicator)
+SCIP_DECL_HEURINITSOL(heurInitsolIndicator)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -395,24 +395,22 @@ SCIP_DECL_HEURINIT(heurInitIndicator)
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
 
+   /* find indicator handler */
+   heurdata->indicatorconshdlr = SCIPfindConshdlr(scip, "indicator");
+
    /* store indicator timing */
    heurdata->inittiming = SCIPheurGetTimingmask(heur);
 
-   if ( heurdata->indicatorconshdlr == NULL )
-   {
-      heurdata->indicatorconshdlr = SCIPfindConshdlr(scip, "indicator");
-
-      /* disable indicator heuristic */
-      if ( heurdata->indicatorconshdlr == NULL || SCIPgetSubscipDepth(scip) > 0 )
-         SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_NONE);
-   }
+   /* disable indicator heuristic, enabled when indicators are passed */
+   if ( heurdata->indicatorconshdlr == NULL || SCIPconshdlrGetNConss(heurdata->indicatorconshdlr) == 0 || SCIPgetSubscipDepth(scip) > 0 )
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_NONE);
 
    return SCIP_OKAY;
 }
 
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 static
-SCIP_DECL_HEUREXIT(heurExitIndicator)
+SCIP_DECL_HEUREXITSOL(heurExitsolIndicator)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -589,8 +587,8 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIndicator) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitIndicator) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitIndicator) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolIndicator) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolIndicator) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeIndicator) );
 
    /* add parameters */
@@ -647,6 +645,9 @@ SCIP_RETCODE SCIPheurPassIndicator(
    else
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(heurdata->solcand), solcand, nindconss) );
    heurdata->obj = obj;
+
+   /* enable indicator heuristic */
+   SCIPheurSetTimingmask(heur, heurdata->inittiming);
 
    return SCIP_OKAY;
 }
