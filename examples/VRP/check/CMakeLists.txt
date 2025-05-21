@@ -3,13 +3,14 @@ include(CTest)
 # define the instance sets
 #
 # semicolon '\;' is used to split an instance and its optimal objective value
+# and its optimal value minus one
 # For infeasible instances, '+infinity' is used (or '-infinity' in case of maximization)
 #
 set(instances
-    "eil13\;247"
-#    "eil22\;375"
+    "eil13\;2.47\;2.46"
+#    "eil22\;3.75\;3.74"
 #    this instance takes too long
-    "eil7\;104"
+    "eil7\;1.04\;1.03"
 )
 
 #
@@ -31,15 +32,18 @@ set_tests_properties(examples-vrp-build
 #
 foreach(instance ${instances})
     #
-    # treat the instance as a tuple (list) of two values
+    # treat the instance as a tuple (list) of three values
     #
     list(GET instance 0 basename)
     list(GET instance 1 optval)
-    add_test(NAME examples-vrp-${basename}
+    list(GET instance 2 optvalminusone)
+    add_test(NAME "examples-vrp-${basename}"
             COMMAND $<TARGET_FILE:vrp> ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.vrp
             )
-    set_tests_properties(examples-vrp-${basename}
+    set_tests_properties("examples-vrp-${basename}"
                         PROPERTIES
+                            PASS_REGULAR_EXPRESSION "Primal Bound       : \\+(${optval}000000*|${optvalminusone}999999*)e\\+02"
+                            FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS examples-vrp-build
                             RESOURCE_LOCK libscip
                             )

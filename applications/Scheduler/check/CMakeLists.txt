@@ -61,6 +61,7 @@ foreach(instance ${instances})
     set_tests_properties("applications-scheduler-${basename}"
                         PROPERTIES
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS applications-scheduler-build
                             RESOURCE_LOCK libscip
                         )

@@ -40,6 +40,7 @@ foreach(instance ${instances})
     set_tests_properties("examples-binpacking-${basename}"
                         PROPERTIES
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS examples-binpacking-build
                             RESOURCE_LOCK libscip
                         )
