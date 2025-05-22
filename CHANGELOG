@@ -190,6 +190,7 @@ Interface changes
 - removed benders/default/numthreads, multi-threading support for Benders' decomposition has been temporarily disabled.
 - restricted range of parameter propagating/symmetry/sstleadervartype to [1,7]; its new default value is 6
 - propagating/*/timingmask extended by setting 0 to disable propagators completely
+- constraints/components/propfreq defaulted to -1 and in turn constraints/components/maxdepth defaulted to 2147483647 avoiding redundant calls of components propagator by default
 
 ### New parameters
 
