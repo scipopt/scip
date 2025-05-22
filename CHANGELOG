@@ -53,6 +53,7 @@ Fixed bugs
 - provide the depth of the applied effective root with SCIPtreeGetEffectiveRootDepth() to avert invalid globalization of constraint set changes
 - disable objective limit during lexicographic dual minimization to keep feasibility status
 - declare infinite bound inference infeasible in SCIPinferVarLbCons() and SCIPinferVarUbCons() to maintain correct loose LP values
+- fixed update of consssorted flags in a variable expressions data when adding an additional constraint using this variable
 
 Build system
 ------------

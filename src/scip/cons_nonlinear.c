@@ -1128,7 +1128,7 @@ SCIP_RETCODE catchVarEvent(
    if( ownerdata->nconss <= 1 )
       ownerdata->consssorted = TRUE;
    else if( ownerdata->consssorted )
-      ownerdata->consssorted = compIndexConsNonlinear(ownerdata->conss[ownerdata->nconss-2], ownerdata->conss[ownerdata->nconss-1]) > 0;
+      ownerdata->consssorted = compIndexConsNonlinear(ownerdata->conss[ownerdata->nconss-2], ownerdata->conss[ownerdata->nconss-1]) < 0;
 
    /* catch variable events, if not done so yet (first constraint) */
    if( ownerdata->filterpos < 0 )
