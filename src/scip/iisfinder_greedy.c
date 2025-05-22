@@ -944,3 +944,35 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
 
    return SCIP_OKAY;
 }
+
+/** perform the greedy deletion algorithm with singleton batches to obtain an irreducible infeasible subsystem (IIS) */
+SCIP_RETCODE SCIPiisGreedyMinimize(
+   SCIP_IIS*             iis                 /**< IIS data structure */
+   )
+{
+   SCIP* scip = SCIPiisGetSubscip(iis);
+   SCIP_Real timelim;
+   SCIP_Longint nodelim;
+   SCIP_Bool removebounds;
+   SCIP_Bool silent;
+   SCIP_Bool alldeletionssolved = TRUE;
+
+   assert( scip != NULL );
+
+   if( !SCIPiisIsSubscipInfeasible(iis) )
+   {
+      SCIPerrorMessage("infeasible problem required\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPgetRealParam(scip, "iis/time", &timelim) );
+   SCIP_CALL( SCIPgetLongintParam(scip, "iis/nodes", &nodelim) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "iis/removebounds", &removebounds) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "iis/silent", &silent) );
+
+   SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, DEFAULT_TIMELIMPERITER, DEFAULT_NODELIMPERITER, removebounds, TRUE, 1, &alldeletionssolved) );
+   if( alldeletionssolved && SCIPiisGetTime(iis) < timelim && ( nodelim == -1 || SCIPiisGetNNodes(iis) < nodelim ) )
+      SCIPiisSetSubscipIrreducible(iis, TRUE);
+
+   return SCIP_OKAY;
+}

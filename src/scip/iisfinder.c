@@ -39,6 +39,7 @@
 #include "scip/scip.h"
 #include "scip/cons_linear.h"
 #include "scip/iisfinder.h"
+#include "scip/iisfinder_greedy.h"
 #include "scip/struct_iisfinder.h"
 
 
@@ -256,27 +257,20 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_CONS** conss;
    SCIP_VAR** vars;
    SCIP_IIS* iis;
-   SCIP_Bool additive;
-   SCIP_Bool conservative;
-   int maxbatchsize;
-   int i;
-   int j;
-   int nconss;
-   int nvars;
-   int nbounds;
-   SCIP_PARAM* paramadditive;
-   SCIP_PARAM* paramconservative;
-   SCIP_PARAM* parammaxbatchsize;
-   SCIP_IISFINDER* iisfindergreedy;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
+   SCIP_Real timelim;
+   SCIP_Longint nodelim;
    SCIP_Bool silent;
    SCIP_Bool minimal;
    SCIP_Bool stopafterone;
    SCIP_Bool removeunusedvars;
    SCIP_Bool trivial;
    SCIP_Bool islinear;
-   SCIP_Real timelim;
-   SCIP_Longint nodelim;
+   int nconss;
+   int nvars;
+   int nbounds;
+   int i;
+   int j;
 
    /* sort the iis finders by priority */
    SCIPsetSortIISfinders(set);
@@ -412,39 +406,11 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/minimal", &minimal) );
    if( !iis->irreducible && minimal && !(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) && !trivial )
    {
-      iisfindergreedy = SCIPsetFindIISfinder(set, "greedy");
+      assert( iis->infeasible );
 
-      if( iisfindergreedy != NULL )
-      {
-         assert( iis->infeasible );
+      SCIPdebugMsg(iis->subscip, "----- STARTING GREEDY SINGLETON DELETION ALGORITHM. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
 
-         SCIPdebugMsg(iis->subscip, "----- STARTING GREEDY DELETION ALGORITHM WITH MAXBATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
-
-         /* save finder settings */
-         paramadditive = SCIPgetParam(iis->subscip, "iis/greedy/additive");
-         paramconservative = SCIPgetParam(iis->subscip, "iis/greedy/conservative");
-         parammaxbatchsize = SCIPgetParam(iis->subscip, "iis/greedy/maxbatchsize");
-         additive = SCIPparamGetBool(paramadditive);
-         conservative = SCIPparamGetBool(paramconservative);
-         maxbatchsize = SCIPparamGetInt(parammaxbatchsize);
-
-         /* reliable singleton deletion */
-         SCIP_CALL( SCIPchgBoolParam(iis->subscip, paramadditive, FALSE) );
-         SCIP_CALL( SCIPchgBoolParam(iis->subscip, paramconservative, TRUE) );
-         SCIP_CALL( SCIPchgIntParam(iis->subscip, parammaxbatchsize, 1) );
-
-         SCIP_CALL( iisfindergreedy->iisfinderexec(iis, iisfindergreedy, &result) );
-         assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
-
-         /* reset finder settings */
-         SCIP_CALL( SCIPchgBoolParam(iis->subscip, paramadditive, additive) );
-         SCIP_CALL( SCIPchgBoolParam(iis->subscip, paramconservative, conservative) );
-         SCIP_CALL( SCIPchgIntParam(iis->subscip, parammaxbatchsize, maxbatchsize) );
-      }
-      else
-      {
-         SCIPwarningMessage(iis->subscip, "Greedy IIS finder not included, result may be reducible.\n");
-      }
+      SCIP_CALL( SCIPiisGreedyMinimize(iis) );
    }
 
    /* Remove redundant constraints that potentially are left over from indicator constraints,

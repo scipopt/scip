@@ -66,6 +66,19 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/**@addtogroup IISFINDERS
+ *
+ * @{
+ */
+
+/** perform the greedy deletion algorithm with singleton batches to obtain an irreducible infeasible subsystem (IIS) */
+SCIP_EXPORT
+SCIP_RETCODE SCIPiisGreedyMinimize(
+   SCIP_IIS*             iis                 /**< IIS data structure */
+   );
+
+/** @} */
+
 #ifdef __cplusplus
 }
 #endif
