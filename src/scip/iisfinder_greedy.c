@@ -738,46 +738,45 @@ SCIP_RETCODE additionFilterBatch(
 static
 SCIP_RETCODE execIISfinderGreedy(
    SCIP_IIS*             iis,                /**< IIS data structure */
-   SCIP_Real             timelim,            /**< The global time limit on the IIS finder call */
-   SCIP_Longint          nodelim,            /**< The global node limit on the IIS finder call */
-   SCIP_Bool             removebounds,       /**< Whether the algorithm should remove bounds as well as constraints */
-   SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
-   SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
-   SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
-   SCIP_Bool             conservative,       /**< should a hit limit (e.g. node / time) solve be counted as feasible when deleting constraints */
-   SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
-   SCIP_Bool             delafteradd,        /**< should the deletion routine be performed after the addition routine (in the case of additive) */
-   SCIP_Longint          nodelimperiter,     /**< maximum number of nodes per individual solve call */
-   int                   maxbatchsize,       /**< the maximum number of constraints to delete or add per iteration */
-   SCIP_Real             maxrelbatchsize,    /**< the maximum number of constraints relative to the original problem to delete or add per iteration */
+   SCIP_IISFINDERDATA*   iisfinderdata,      /**< IIS finder data */
    SCIP_RESULT*          result              /**< pointer to store the result of the IIS finder run. SCIP_DIDNOTFIND if the algorithm failed, otherwise SCIP_SUCCESS. */
    )
 {
-   int nconss;
-   int nvars;
-   int batchsize;
    SCIP* scip = SCIPiisGetSubscip(iis);
+   SCIP_Real timelim;
+   SCIP_Longint nodelim;
+   SCIP_Bool removebounds;
+   SCIP_Bool silent;
    SCIP_Bool alldeletionssolved = TRUE;
+   int nvars;
+   int nconss;
+   int batchsize;
 
    assert( scip != NULL );
+   assert( iisfinderdata != NULL );
    assert( result != NULL );
+
+   SCIP_CALL( SCIPgetRealParam(scip, "iis/time", &timelim) );
+   SCIP_CALL( SCIPgetLongintParam(scip, "iis/nodes", &nodelim) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "iis/removebounds", &removebounds) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "iis/silent", &silent) );
 
    *result = SCIP_DIDNOTFIND;
 
    nconss = SCIPgetNOrigConss(scip);
    nvars = SCIPgetNOrigVars(scip);
    batchsize = MAX(nconss, nvars);
-   batchsize = (int)SCIPceil(scip, maxrelbatchsize * batchsize);
-   batchsize = MIN(batchsize, maxbatchsize);
+   batchsize = (int)SCIPceil(scip, iisfinderdata->maxrelbatchsize * batchsize);
+   batchsize = MIN(batchsize, iisfinderdata->maxbatchsize);
    batchsize = MAX(batchsize, 1);
 
-   if( additive )
+   if( iisfinderdata->additive )
    {
       if( !silent )
       {
          SCIPdebugMsg(scip, "----- STARTING GREEDY ADDITION ALGORITHM -----\n");
       }
-      SCIP_CALL( additionFilterBatch(iis, timelim, nodelim, silent, timelimperiter, nodelimperiter, dynamicreordering, batchsize) );
+      SCIP_CALL( additionFilterBatch(iis, timelim, nodelim, silent, iisfinderdata->timelimperiter, iisfinderdata->nodelimperiter, iisfinderdata->dynamicreordering, batchsize) );
       SCIPiisSetSubscipIrreducible(iis, FALSE);
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
       {
@@ -791,7 +790,7 @@ SCIP_RETCODE execIISfinderGreedy(
       {
          SCIPdebugMsg(scip, "----- STARTING GREEDY DELETION ALGORITHM -----\n");
       }
-      SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, timelimperiter, nodelimperiter, removebounds, conservative, batchsize, &alldeletionssolved) );
+      SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, iisfinderdata->timelimperiter, iisfinderdata->nodelimperiter, removebounds, iisfinderdata->conservative, batchsize, &alldeletionssolved) );
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
       {
          *result = SCIP_SUCCESS;
@@ -801,13 +800,13 @@ SCIP_RETCODE execIISfinderGreedy(
          SCIPiisSetSubscipIrreducible(iis, TRUE);
    }
 
-   if( delafteradd && additive )
+   if( iisfinderdata->delafteradd && iisfinderdata->additive )
    {
       if( !silent )
       {
          SCIPdebugMsg(scip, "----- STARTING GREEDY DELETION ALGORITHM FOLLOWING COMPLETED ADDITION ALGORITHM -----\n");
       }
-      SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, timelimperiter, nodelimperiter, removebounds, conservative, batchsize, &alldeletionssolved) );
+      SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, iisfinderdata->timelimperiter, iisfinderdata->nodelimperiter, removebounds, iisfinderdata->conservative, batchsize, &alldeletionssolved) );
       if( alldeletionssolved && batchsize == 1 )
          SCIPiisSetSubscipIrreducible(iis, TRUE);
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
@@ -861,7 +860,7 @@ SCIP_DECL_IISFINDERFREE(iisfinderFreeGreedy)
 static
 SCIP_DECL_IISFINDEREXEC(iisfinderExecGreedy)
 {  /*lint --e{715}*/
-   struct SCIP_IISfinderData* iisfinderdata;
+   SCIP_IISFINDERDATA* iisfinderdata;
 
    assert(iisfinder != NULL);
    assert(result != NULL);
@@ -871,11 +870,7 @@ SCIP_DECL_IISFINDEREXEC(iisfinderExecGreedy)
    iisfinderdata = SCIPiisfinderGetData(iisfinder);
    assert(iisfinderdata != NULL);
 
-   SCIP_CALL( execIISfinderGreedy(iis, timelim, nodelim, removebounds, silent,
-            iisfinderdata->timelimperiter, iisfinderdata->additive, iisfinderdata->conservative,
-            iisfinderdata->dynamicreordering, iisfinderdata->delafteradd,
-            iisfinderdata->nodelimperiter, iisfinderdata->maxbatchsize,
-            iisfinderdata->maxrelbatchsize, result) );
+   SCIP_CALL( execIISfinderGreedy(iis, iisfinderdata, result) );
 
    return SCIP_OKAY;
 }
