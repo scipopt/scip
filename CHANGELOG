@@ -158,8 +158,8 @@ Interface changes
 - added SCIPincludeRelaxBenders(), which is used to include the Benders' decomposition relaxator.
 - added SCIPgetMasterProblemRelaxBenders() for retrieving the master problem SCIP instance from the Benders' decomposition relaxator.
 - added SCIPsortDownIntIntIntReal()
-- SCIPconshdlrSetNeedsCons() to switch constraint handlers without constraints
-- SCIPpropSetTimingmask() to switch timing of propagators
+- SCIPconshdlrSetNeedsCons() to set whether constraint handler callbacks should also be called if there are no constraints
+- SCIPpropSetTimingmask() to set timing mask of a propagator
 
 ### Changes in preprocessor macros
 
@@ -190,7 +190,7 @@ Interface changes
 - removed benders/default/numthreads, multi-threading support for Benders' decomposition has been temporarily disabled.
 - restricted range of parameter propagating/symmetry/sstleadervartype to [1,7]; its new default value is 6
 - propagating/*/timingmask extended by setting 0 to disable propagators completely
-- constraints/components/propfreq defaulted to -1 and in turn constraints/components/maxdepth defaulted to 2147483647 avoiding redundant calls of components propagator by default
+- changed defaults of constraints/components/propfreq and constraints/components/maxdepth to -1 and 2147483647, respectively, to avoid unnecessary calls of components propagator by default
 
 ### New parameters
 
