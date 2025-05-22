@@ -8910,6 +8910,126 @@ SCIP_RETCODE SCIPaddClique(
    return SCIP_OKAY;
 }
 
+/** add largest clique to part */
+static
+void addLargestCliquePart(
+   SCIP_VAR*             var,                /**< variable to treat */
+   SCIP_Bool             value,              /**< value of variable */
+   int                   varidx,             /**< index of variable */
+   int*                  idx,                /**< mapping of problem variable indices to given subset */
+   SCIP_Bool*            values,             /**< values of variables in given subset */
+   int                   p,                  /**< part index */
+   int                   nvars,              /**< number of variables in the array */
+   int                   ntotalvars,         /**< total number of varialbes */
+   int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*                  ncliqueparts        /**< array to store the size of each part */
+   )
+{
+   assert( ncliqueparts[p] == 0 );
+
+   /* put variable into part p */
+   cliquepartition[varidx] = p;
+   ncliqueparts[p] = 1;
+
+   /* if variable is active, then add largest clique */
+   if( SCIPvarIsActive(var) )
+   {
+      int nvarcliques;
+
+      nvarcliques = SCIPvarGetNCliques(var, value);
+
+      if( nvarcliques > 0 )
+      {
+         SCIP_CLIQUE** varcliques;
+         int maxsize = -1;
+         int maxidx = -1;
+         int l;
+
+         varcliques = SCIPvarGetCliques(var, value);
+         assert( varcliques != NULL );
+
+         /* loop through all cliques */
+         for( l = 0; l < nvarcliques; ++l)
+         {
+            SCIP_VAR** cliquevars;
+            SCIP_Bool* cliquevals;
+            int nvarclique;
+            int size = 0;
+            int k;
+
+            assert( varcliques[l] != NULL );
+            nvarclique = SCIPcliqueGetNVars(varcliques[l]);
+            cliquevars = SCIPcliqueGetVars(varcliques[l]);
+            cliquevals = SCIPcliqueGetValues(varcliques[l]);
+
+            /* loop through clique and determine size */
+            for( k = 0; k < nvarclique; ++k )
+            {
+               SCIP_VAR* othervar;
+               int othervaridx;
+               int j;
+
+               othervar = cliquevars[k];
+               assert( othervar != NULL );
+
+               if( SCIPvarIsActive(othervar) )
+               {
+                  othervaridx = SCIPvarGetProbindex(othervar);
+                  assert( 0 <= othervaridx && othervaridx < ntotalvars );
+
+                  j = idx[othervaridx];
+                  if( j >= 0 && cliquevals[k] == values[j] )
+                     ++size;
+               }
+            }
+            if ( size > maxsize )
+            {
+               maxsize = size;
+               maxidx = l;
+            }
+         }
+
+         /* add clique */
+         if( maxsize > 0 )
+         {
+            SCIP_VAR** cliquevars;
+            SCIP_Bool* cliquevals;
+            int nvarclique;
+            int k;
+
+            assert( maxidx >= 0 );
+            nvarclique = SCIPcliqueGetNVars(varcliques[maxidx]);
+            cliquevars = SCIPcliqueGetVars(varcliques[maxidx]);
+            cliquevals = SCIPcliqueGetValues(varcliques[maxidx]);
+
+            /* loop through clique and determine size */
+            for( k = 0; k < nvarclique; ++k )
+            {
+               SCIP_VAR* othervar;
+               int othervaridx;
+               int j;
+
+               othervar = cliquevars[k];
+               assert( othervar != NULL );
+
+               if( SCIPvarIsActive(othervar) )
+               {
+                  othervaridx = SCIPvarGetProbindex(othervar);
+                  assert( 0 <= othervaridx && othervaridx < ntotalvars );
+
+                  j = idx[othervaridx];
+                  if( j >= 0 && cliquevals[k] == values[j] && othervar != var )
+                  {
+                     cliquepartition[j] = p;
+                     ++(ncliqueparts[p]);
+                  }
+               }
+            }
+         }
+      }
+   }
+}
+
 /** calculates a partition of the given set of binary variables into cliques
  *
  *  The output array contains one value for each variable, such that two variables have the same value iff they
@@ -8962,47 +9082,9 @@ SCIP_RETCODE calcCliquePartitionGreedy(
       idx[SCIPvarGetProbindex(vars[i])] = i;
    }
 
-   /* the first variable starts the first clique */
-   cliquepartition[0] = 0;
-   ncliqueparts[0] = 1;
+   /* add largest clique containing first variable to part 0 */
+   addLargestCliquePart(vars[0], values[0], 0, idx, values, 0, nvars, ntotalvars, cliquepartition, ncliqueparts);
    *ncliques = 1;
-
-   /* move first clique to first part */
-   if( SCIPvarIsActive(vars[0]) )
-   {
-      SCIP_CLIQUE** varcliques;
-      SCIP_VAR** cliquevars;
-      int nvarclique;
-
-      varcliques = SCIPvarGetCliques(vars[0], values[0]);
-      assert( varcliques != NULL );
-
-      nvarclique = SCIPcliqueGetNVars(varcliques[0]);
-      cliquevars = SCIPcliqueGetVars(varcliques[0]);
-
-      for( k = 0; k < nvarclique; ++k )
-      {
-         SCIP_VAR* othervar;
-         int varidx;
-         int j;
-
-         othervar = cliquevars[k];
-         assert( othervar != NULL );
-
-         if ( ! SCIPvarIsActive(othervar) || othervar == vars[0] )
-            continue;
-
-         varidx = SCIPvarGetProbindex(othervar);
-         assert( 0 <= varidx && varidx < ntotalvars );
-
-         j = idx[varidx];
-         if( j >= 0 )
-         {
-            cliquepartition[j] = 0;
-            ++(ncliqueparts[0]);
-         }
-      }
-   }
 
    /* loop through remaining nodes */
    for( i = 1; i < nvars; ++i )
@@ -9012,8 +9094,6 @@ SCIP_RETCODE calcCliquePartitionGreedy(
       SCIP_Bool value;
       int nvarcliques;
       int p;
-
-      assert( cliquepartition[i] == -1 );
 
       var = vars[i];
       value = values[i];
