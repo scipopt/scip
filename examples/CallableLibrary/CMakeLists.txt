@@ -64,6 +64,7 @@ macro(addbuildandtest target)
             )
     set_tests_properties(examples-callablelibrary_${target}
                         PROPERTIES
+			    FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS examples-callablelibrary_${target}-build
                         )
     if(WIN32)

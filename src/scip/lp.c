@@ -13869,33 +13869,30 @@ void getObjvalDeltaLb(
    int*                  deltainf            /**< pointer to store the number of variables with infinite best bound */
    )
 {
-   assert(!SCIPsetIsInfinity(set, REALABS(obj)));
+   assert(obj > 0.0);
+   assert(!SCIPsetIsInfinity(set, obj));
    assert(!SCIPsetIsInfinity(set, oldlb));
-   assert(!SCIPsetIsInfinity(set, -oldlb) || !SCIPsetIsInfinity(set, -newlb));
-   assert(SCIPsetIsPositive(set, obj)); /* we only need to update if the objective is positive */
+   assert(!SCIPsetIsInfinity(set, newlb));
+   assert(newlb != oldlb); /*lint !e777*/
 
-   if( SCIPsetIsInfinity(set, -oldlb) )
+   if( SCIPsetIsInfinity(set, -newlb) )
    {
-      if( !SCIPsetIsInfinity(set, newlb) )
-      {
-         (*deltainf) = -1;
-         (*deltaval) = newlb * obj;
-      }
-      else
-      {
-         (*deltainf) = 0;
-         (*deltaval) = 0.0;
-      }
+      assert(!SCIPsetIsInfinity(set, -oldlb));
+
+      *deltainf = 1;
+      *deltaval = -obj * oldlb;
    }
-   else if( SCIPsetIsInfinity(set, REALABS(newlb)) )
+   else if( SCIPsetIsInfinity(set, -oldlb) )
    {
-      (*deltainf) = 1;
-      (*deltaval) = -oldlb * obj;
+      assert(!SCIPsetIsInfinity(set, -newlb));
+
+      *deltainf = -1;
+      *deltaval = obj * newlb;
    }
    else
    {
-      (*deltainf) = 0;
-      (*deltaval) = obj * (newlb - oldlb);
+      *deltainf = 0;
+      *deltaval = obj * (newlb - oldlb);
    }
 }
 
@@ -13910,33 +13907,30 @@ void getObjvalDeltaUb(
    int*                  deltainf            /**< pointer to store the number of variables with infinite best bound */
    )
 {
-   assert(!SCIPsetIsInfinity(set, REALABS(obj)));
+   assert(obj < 0.0);
+   assert(!SCIPsetIsInfinity(set, -obj));
    assert(!SCIPsetIsInfinity(set, -oldub));
-   assert(!SCIPsetIsInfinity(set, oldub) || !SCIPsetIsInfinity(set, newub));
-   assert(SCIPsetIsNegative(set, obj)); /* we only need to update if the objective is negative */
+   assert(!SCIPsetIsInfinity(set, -newub));
+   assert(newub != oldub); /*lint !e777*/
 
-   if( SCIPsetIsInfinity(set, oldub) )
+   if( SCIPsetIsInfinity(set, newub) )
    {
-      if( !SCIPsetIsInfinity(set, -newub) )
-      {
-         (*deltainf) = -1;
-         (*deltaval) = newub * obj;
-      }
-      else
-      {
-         (*deltainf) = 0;
-         (*deltaval) = 0.0;
-      }
+      assert(!SCIPsetIsInfinity(set, oldub));
+
+      *deltainf = 1;
+      *deltaval = -obj * oldub;
    }
-   else if( SCIPsetIsInfinity(set, REALABS(newub)) )
+   else if( SCIPsetIsInfinity(set, oldub) )
    {
-      (*deltainf) = 1;
-      (*deltaval) = -oldub * obj;
+      assert(!SCIPsetIsInfinity(set, newub));
+
+      *deltainf = -1;
+      *deltaval = obj * newub;
    }
    else
    {
-      (*deltainf) = 0;
-      (*deltaval) = obj * (newub - oldub);
+      *deltainf = 0;
+      *deltaval = obj * (newub - oldub);
    }
 }
 
