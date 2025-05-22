@@ -7500,33 +7500,35 @@ SCIP_RETCODE propagateSymmetry(
    SCIP_Bool*            didrun              /**< pointer for storing whether a propagator actually ran */
    )
 {
+   SCIP_Bool didrunlocal;
    int nredlocal;
 
    assert( scip != NULL );
    assert( propdata != NULL );
-   assert( infeasible != NULL );
    assert( nred != NULL );
    assert( didrun != NULL );
 
    *nred = 0;
-   *infeasible = FALSE;
    *didrun = FALSE;
 
    /* apply orbitopal reduction */
-   SCIP_CALL( SCIPorbitopalReductionPropagate(scip, propdata->orbitopalreddata, infeasible, &nredlocal, didrun) );
+   SCIP_CALL( SCIPorbitopalReductionPropagate(scip, propdata->orbitopalreddata, infeasible, &nredlocal, &didrunlocal) );
    *nred += nredlocal;
+   *didrun |= didrunlocal;
    if ( *infeasible )
       return SCIP_OKAY;
 
    /* apply orbital reduction */
-   SCIP_CALL( SCIPorbitalReductionPropagate(scip, propdata->orbitalreddata, infeasible, &nredlocal, didrun) );
+   SCIP_CALL( SCIPorbitalReductionPropagate(scip, propdata->orbitalreddata, infeasible, &nredlocal, &didrunlocal) );
    *nred += nredlocal;
+   *didrun |= didrunlocal;
    if ( *infeasible )
       return SCIP_OKAY;
 
    /* apply dynamic lexicographic reduction */
-   SCIP_CALL( SCIPlexicographicReductionPropagate(scip, propdata->lexreddata, infeasible, &nredlocal, didrun) );
+   SCIP_CALL( SCIPlexicographicReductionPropagate(scip, propdata->lexreddata, infeasible, &nredlocal, &didrunlocal) );
    *nred += nredlocal;
+   *didrun |= didrunlocal;
    if ( *infeasible )
       return SCIP_OKAY;
 
@@ -7755,6 +7757,7 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    int nred;
 
    assert( scip != NULL );
+   assert( prop != NULL );
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
@@ -7767,8 +7770,8 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
-   /* usesymmetry must be read in order for propdata to have initialized symmetry handling propagators */
-   if ( propdata->usesymmetry < 0 )
+   /* usesymmetry must be read and non-zero in order for propdata to have initialized symmetry handling propagators */
+   if ( propdata->usesymmetry <= 0 )
       return SCIP_OKAY;
 
    SCIP_CALL( propagateSymmetry(scip, propdata, &infeasible, &nred, &didrun) );
