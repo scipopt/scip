@@ -78,8 +78,12 @@ struct SCIP_NlpiOracle
 
    SCIP_NLPIORACLECONS*  objective;          /**< objective */
 
-   int*                  jacoffsets;         /**< rowwise jacobi sparsity pattern: constraint offsets in jaccols */
+   int*                  jacrowoffsets;      /**< rowwise jacobi sparsity pattern: constraint offsets in jaccols */
    int*                  jaccols;            /**< rowwise jacobi sparsity pattern: indices of variables appearing in constraints */
+   int*                  jaccoloffsets;      /**< columnwise jacobi sparsity pattern: variable offsets in jacrows */
+   int*                  jacrows;            /**< columnwise jacobi sparsity pattern: indices of constraints where corresponding variables appear */
+   int                   jacnnlnnz;          /**< number of entries in the Jacobian corresponding to nonlinear terms */
+   int*                  jacnlnnz;           /**< array with indices in jaccols corresponding to nonlinear terms */
 
    int*                  heslagoffsets;      /**< rowwise sparsity pattern of hessian matrix of Lagrangian: row offsets in heslagcol */
    int*                  heslagcols;         /**< rowwise sparsity pattern of hessian matrix of Lagrangian: column indices; sorted for each row */
@@ -203,15 +207,26 @@ void invalidateJacobiSparsity(
 
    SCIPdebugMessage("%p invalidate jacobian sparsity\n", (void*)oracle);
 
-   if( oracle->jacoffsets == NULL )
-   { /* nothing to do */
+   if( oracle->jacrowoffsets == NULL )
+   { /* nothing to do for the row representation */
       assert(oracle->jaccols == NULL);
+   }
+   else
+   {
+      assert(oracle->jaccols != NULL);
+      SCIPfreeBlockMemoryArray(scip, &oracle->jaccols,    oracle->jacrowoffsets[oracle->nconss]);
+      SCIPfreeBlockMemoryArray(scip, &oracle->jacrowoffsets, oracle->nconss + 1);
+   }
+
+   if( oracle->jaccoloffsets == NULL )
+   { /* nothing to do for the column representation */
+      assert(oracle->jacrows == NULL);
       return;
    }
 
-   assert(oracle->jaccols != NULL);
-   SCIPfreeBlockMemoryArray(scip, &oracle->jaccols,    oracle->jacoffsets[oracle->nconss]);
-   SCIPfreeBlockMemoryArray(scip, &oracle->jacoffsets, oracle->nconss + 1);
+   assert(oracle->jacrows != NULL);
+   SCIPfreeBlockMemoryArray(scip, &oracle->jacrows, oracle->jaccoloffsets[oracle->nvars]);
+   SCIPfreeBlockMemoryArray(scip, &oracle->jaccoloffsets, oracle->nvars + 1);
 }
 
 /** Invalidates the sparsity pattern of the Hessian of the Lagragian.
@@ -2027,48 +2042,65 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
 SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const int**           offset,             /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
-   const int**           col                 /**< pointer to store pointer that stores the indices of variables that appear in each row, offset[nconss] gives length of col, can be NULL */
+   const int**           rowoffset,          /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
+   const int**           col,                /**< pointer to store pointer that stores the indices of variables that appear in each row,
+                                              *   rowoffset[nconss] gives length of col, can be NULL */
+   const int**           coloffset,          /**< pointer to store pointer that stores the offsets to each column's sparsity pattern in row, can be NULL */
+   const int**           row                 /**< pointer to store pointer that stores the indices of rows that each variable participates in,
+                                              *   coloffset[nvars] gives length of row, can be NULL */
    )
 {
    SCIP_NLPIORACLECONS* cons;
    SCIP_EXPRITER* it;
    SCIP_EXPR* expr;
    SCIP_Bool* nzflag;
+   int* nvarnnz; /* for each variable, number of constraints it has a nonzero in */
    int nnz;
    int maxnnz;
    int i;
    int j;
+   int sumvarnnz; /* sum of nonzeroes for all columns, used in jaccoloffset computation */
 
    assert(oracle != NULL);
 
    SCIPdebugMessage("%p get jacobian sparsity\n", (void*)oracle);
 
-   if( oracle->jacoffsets != NULL )
+   if( oracle->jacrowoffsets != NULL )
    {
       assert(oracle->jaccols != NULL);
-      if( offset != NULL )
-         *offset = oracle->jacoffsets;
+      assert(oracle->jacrows != NULL);
+      if( rowoffset != NULL )
+         *rowoffset = oracle->jacrowoffsets;
       if( col != NULL )
          *col = oracle->jaccols;
+      if( coloffset != NULL )
+         *coloffset = oracle->jaccoloffsets;
+      if( row != NULL )
+         *row = oracle->jacrows;
       return SCIP_OKAY;
    }
 
    SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacoffsets, oracle->nconss + 1) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacrowoffsets, oracle->nconss + 1) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &oracle->jaccoloffsets, oracle->nvars + 1) );
 
    maxnnz = MIN(oracle->nvars, 10) * oracle->nconss;  /* initial guess */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jaccols, maxnnz) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacrows, maxnnz) );
 
    if( maxnnz == 0 )
    {
       /* no variables */
-      BMSclearMemoryArray(oracle->jacoffsets, oracle->nconss + 1);
-      if( offset != NULL )
-         *offset = oracle->jacoffsets;
+      BMSclearMemoryArray(oracle->jacrowoffsets, oracle->nconss + 1);
+      if( rowoffset != NULL )
+         *rowoffset = oracle->jacrowoffsets;
       if( col != NULL )
          *col = oracle->jaccols;
+      if( coloffset != NULL )
+         *coloffset = oracle->jaccoloffsets;
+      if( row != NULL )
+         *row = oracle->jacrows;
 
       SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
@@ -2077,13 +2109,14 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    nnz = 0;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nzflag, oracle->nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &nvarnnz, oracle->nvars) );
 
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
    SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
 
    for( i = 0; i < oracle->nconss; ++i )
    {
-      oracle->jacoffsets[i] = nnz;
+      oracle->jacrowoffsets[i] = nnz;
 
       cons = oracle->conss[i];
       assert(cons != NULL);
@@ -2115,7 +2148,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
             nzflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
          }
 
-      /* store variables indices in jaccols */
+      /* store variables indices in jaccols and increase coloffsets */
       for( j = 0; j < oracle->nvars; ++j )
       {
          if( nzflag[j] == FALSE )
@@ -2124,12 +2157,13 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
          SCIP_CALL( ensureIntArraySize(scip, &oracle->jaccols, &maxnnz, nnz + 1) );
          oracle->jaccols[nnz] = j;
          ++nnz;
+         ++nvarnnz[j]; /* increase the counter of the variable's nonzeroes */
       }
    }
 
    SCIPfreeExpriter(&it);
 
-   oracle->jacoffsets[oracle->nconss] = nnz;
+   oracle->jacrowoffsets[oracle->nconss] = nnz;
 
    /* shrink jaccols array to nnz */
    if( nnz < maxnnz )
@@ -2139,10 +2173,37 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 
    SCIPfreeBlockMemoryArray(scip, &nzflag, oracle->nvars);
 
-   if( offset != NULL )
-      *offset = oracle->jacoffsets;
+   /* use nvarnnz to compute jaccoloffsets */
+   sumvarnnz = 0;
+   for( i = 0; i < oracle->nvars; ++i )
+   {
+      oracle->jaccoloffsets[i] = sumvarnnz;
+      sumvarnnz += nvarnnz[i];
+      nvarnnz[i] = 0;
+   }
+   oracle->jaccoloffsets[oracle->nvars + 1] = sumvarnnz;
+
+   /* use the row representation (jacrowoffsets, jaccols) to fill in the column representation nonzeroes (jacrows) */
+   int considx = 0;
+   for( i = 0; i < nnz; ++i )
+   {
+      int coloffset = oracle->jaccoloffsets[oracle->jaccols[i]]; /* this gives us the offset corresponding to the index of the nnz variable */
+
+      if( i == oracle->jacrowoffsets[considx] )
+         ++considx;
+      oracle->jacrows[coloffset + nvarnnz[oracle->jaccols[i]]] = considx;
+   }
+
+   SCIPfreeBlockMemoryArray(scip, &nvarnnz, oracle->nvars); /* TODO may need to clear the array first */
+
+   if( rowoffset != NULL )
+      *rowoffset = oracle->jacrowoffsets;
    if( col != NULL )
       *col = oracle->jaccols;
+   if( coloffset != NULL )
+      *coloffset = oracle->jaccoloffsets;
+   if( row != NULL )
+      *row = oracle->jacrows;
 
    SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
@@ -2179,7 +2240,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    assert(oracle != NULL);
    assert(jacobi != NULL);
 
-   assert(oracle->jacoffsets != NULL);
+   assert(oracle->jacrowoffsets != NULL);
    assert(oracle->jaccols    != NULL);
 
    SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
@@ -2188,7 +2249,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
 
    retcode = SCIP_OKAY;
 
-   j = oracle->jacoffsets[0];  /* TODO isn't oracle->jacoffsets[0] == 0 and thus always j == k ? */
+   j = oracle->jacrowoffsets[0];  /* TODO isn't oracle->jacrowoffsets[0] == 0 and thus always j == k ? */
    k = 0;
    for( i = 0; i < oracle->nconss; ++i )
    {
@@ -2210,7 +2271,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
                for( l = 0; l < cons->nlinidxs; ++l )
                   convals[i] += cons->lincoefs[l] * x[cons->linidxs[l]];
          }
-         assert(j == oracle->jacoffsets[i+1]);
+         assert(j == oracle->jacrowoffsets[i+1]);
          continue;
       }
 
@@ -2243,8 +2304,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
       /* store complete gradient (linear + nonlinear) in jacobi
        * use the already evaluated sparsity pattern to pick only elements from grad that could have been set
        */
-      assert(j == oracle->jacoffsets[i]);
-      for( ; j < oracle->jacoffsets[i+1]; ++j )
+      assert(j == oracle->jacrowoffsets[i]);
+      for( ; j < oracle->jacrowoffsets[i+1]; ++j )
       {
          if( !SCIPisFinite(grad[oracle->jaccols[j]]) )
          {
