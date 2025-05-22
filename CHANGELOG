@@ -157,6 +157,8 @@ Interface changes
 - added SCIPincludeRelaxBenders(), which is used to include the Benders' decomposition relaxator.
 - added SCIPgetMasterProblemRelaxBenders() for retrieving the master problem SCIP instance from the Benders' decomposition relaxator.
 - added SCIPsortDownIntIntIntReal()
+- SCIPconshdlrSetNeedsCons() to switch constraint handlers without constraints
+- SCIPpropSetTimingmask() to switch timing of propagators
 
 ### Changes in preprocessor macros
 
@@ -165,6 +167,8 @@ Interface changes
 - SCIPincludeConshdlrOrbitopePP(), SCIPcreateConsOrbitopePP(), SCIPcreateConsBasicOrbitopePP(), SCIPincludeConshdlrOrbitopeFull(), SCIPcreateConsOrbitopeFull(), SCIPcreateConsBasicOrbitopeFull()
 - SCIP_VERSION_SUB and SCIP_SUBVERSION are deprecated
 - removed SCIP_VARTYPE_IMPLINT_CHAR
+- added SCIP_PROPTIMING_NONE propagator timing to never call
+- added SCIP_HEURTIMING_NONE heuristic timing to never call
 
 ### Command line interface
 
