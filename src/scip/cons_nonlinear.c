@@ -1361,7 +1361,7 @@ SCIP_RETCODE createCons(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( local && SCIPgetDepth(scip) != 0 )
+   if( local && SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
       SCIPerrorMessage("Locally valid nonlinear constraints are not supported, yet.\n");
       return SCIP_INVALIDCALL;
