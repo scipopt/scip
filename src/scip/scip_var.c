@@ -9162,17 +9162,23 @@ SCIP_RETCODE calcCliquePartitionGreedy(
                }
             }
          }
-      }
 
-      /* if part has not been found, move variable into a new clique */
-      if( ! foundpart )
-      {
+         /* if part has not been found, add corresponding clique */
+         if( ! foundpart )
+         {
 #ifndef NDEBUG
-         for( p = 0; p < *ncliques; ++p)
-            assert( nneigh[p] < ncliqueparts[p] );
+            for( p = 0; p < *ncliques; ++p)
+               assert( nneigh[p] < ncliqueparts[p] );
 #endif
-         assert( ncliqueparts[*ncliques] == 0 );
-         ++(ncliqueparts[*ncliques]);
+            assert( ncliqueparts[*ncliques] == 0 );
+
+            addLargestCliquePart(vars[i], values[i], i, idx, values, *ncliques, nvars, ntotalvars, cliquepartition, ncliqueparts);
+            ++(*ncliques);
+         }
+      }
+      else
+      {
+         ncliqueparts[*ncliques] = 1;
          cliquepartition[i] = (*ncliques)++;
       }
    }
