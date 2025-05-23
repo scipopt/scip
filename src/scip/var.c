@@ -2318,7 +2318,6 @@ SCIP_RETCODE varSetName(
    return SCIP_OKAY;
 }
 
-
 /** creates variable; if variable is of integral type, fractional bounds are automatically rounded; an integer variable
  *  with bounds zero and one is automatically converted into a binary variable
  */
@@ -2351,30 +2350,33 @@ SCIP_RETCODE varCreate(
    assert(stat != NULL);
    assert(vartype != SCIP_DEPRECATED_VARTYPE_IMPLINT);
 
-   /* adjust bounds of variable */
-   integral = vartype != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_IMPLINTTYPE_NONE;
-   lb = adjustedLb(set, integral, lb);
-   ub = adjustedUb(set, integral, ub);
+   /* exact bounds may follow later */
+   if( !set->exact_enable )
+   {
+      /* adjust bounds of variable */
+      integral = vartype != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_IMPLINTTYPE_NONE;
+      lb = adjustedLb(set, integral, lb);
+      ub = adjustedUb(set, integral, ub);
 
-   /* convert [0,1]-integers into binary variables and check that binary variables have correct bounds */
-   if( (SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0))
-      && (SCIPsetIsEQ(set, ub, 0.0) || SCIPsetIsEQ(set, ub, 1.0)) )
-   {
-      if( vartype == SCIP_VARTYPE_INTEGER )
-         vartype = SCIP_VARTYPE_BINARY;
-   }
-   else
-   {
-      if( vartype == SCIP_VARTYPE_BINARY )
+      /* convert [0,1]-integers into binary variables and check that binary variables have correct bounds */
+      if( ( lb == 0.0 || lb == 1.0 ) && ( ub == 0.0 || ub == 1.0 ) ) /*lint !e777*/
       {
-         SCIPerrorMessage("invalid bounds [%.2g,%.2g] for binary variable <%s>\n", lb, ub, name);
-         return SCIP_INVALIDDATA;
+         if( vartype == SCIP_VARTYPE_INTEGER )
+            vartype = SCIP_VARTYPE_BINARY;
       }
-   }
+      else
+      {
+         if( vartype == SCIP_VARTYPE_BINARY )
+         {
+            SCIPerrorMessage("invalid bounds [%.2g,%.2g] for binary variable <%s>\n", lb, ub, name);
+            return SCIP_INVALIDDATA;
+         }
+      }
 
-   assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0));
-   assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, ub, 0.0) || SCIPsetIsEQ(set, ub, 1.0));
-   assert(vartype != SCIP_DEPRECATED_VARTYPE_IMPLINT);
+      assert(vartype != SCIP_VARTYPE_BINARY || lb == 0.0 || lb == 1.0); /*lint !e777*/
+      assert(vartype != SCIP_VARTYPE_BINARY || ub == 0.0 || ub == 1.0); /*lint !e777*/
+      assert(vartype != SCIP_DEPRECATED_VARTYPE_IMPLINT);
+   }
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, var) );
 
@@ -2558,7 +2560,12 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    return SCIP_OKAY;
 }
 
-/** create and set the exact variable bounds and objective value, if a value is NULL, the floating-point data is used */
+/** creates and sets the exact variable bounds and objective value (using floating-point data if value pointer is NULL)
+ *
+ *  @note an inactive integer variable with bounds zero and one is automatically converted into a binary variable
+ *
+ *  @note if exact data is provided, the corresponding floating-point data is overwritten
+ */
 SCIP_RETCODE SCIPvarAddExactData(
    SCIP_VAR*             var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2570,61 +2577,71 @@ SCIP_RETCODE SCIPvarAddExactData(
    assert(var != NULL);
    assert(blkmem != NULL);
 
-   assert(ub == NULL || var->glbdom.ub == SCIPrationalRoundReal(ub, SCIP_R_ROUND_UPWARDS)); /*lint !e777*/
-   assert(lb == NULL || var->glbdom.lb == SCIPrationalRoundReal(lb, SCIP_R_ROUND_DOWNWARDS)); /*lint !e777*/
-
+   assert(var->exactdata == NULL);
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(var->exactdata)) );
 
    if( lb != NULL )
    {
+      var->data.original.origdom.lb = SCIPrationalRoundReal(lb, SCIP_R_ROUND_DOWNWARDS);
+      var->glbdom.lb = var->data.original.origdom.lb;
+      var->locdom.lb = var->data.original.origdom.lb;
+
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->origdom.lb, lb) );
       SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->glbdom.lb, lb) );
       SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->locdom.lb, lb) );
-      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->origdom.lb, lb) );
    }
    else
    {
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->origdom.lb) );
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->glbdom.lb) );
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->locdom.lb) );
-      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->origdom.lb) );
 
+      SCIPrationalSetReal(var->exactdata->origdom.lb, var->data.original.origdom.lb);
       SCIPrationalSetReal(var->exactdata->glbdom.lb, var->glbdom.lb);
       SCIPrationalSetReal(var->exactdata->locdom.lb, var->locdom.lb);
-      SCIPrationalSetReal(var->exactdata->origdom.lb, var->glbdom.lb);
    }
 
    if( ub != NULL )
    {
+      var->data.original.origdom.ub = SCIPrationalRoundReal(ub, SCIP_R_ROUND_UPWARDS);
+      var->glbdom.ub = var->data.original.origdom.ub;
+      var->locdom.ub = var->data.original.origdom.ub;
+
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->origdom.ub, ub) );
       SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->glbdom.ub, ub) );
       SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->locdom.ub, ub) );
-      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->origdom.ub, ub) );
    }
    else
    {
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->origdom.ub) );
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->glbdom.ub) );
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->locdom.ub) );
-      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->origdom.ub) );
 
+      SCIPrationalSetReal(var->exactdata->origdom.ub, var->data.original.origdom.ub);
       SCIPrationalSetReal(var->exactdata->glbdom.ub, var->glbdom.ub);
       SCIPrationalSetReal(var->exactdata->locdom.ub, var->locdom.ub);
-      SCIPrationalSetReal(var->exactdata->origdom.ub, var->glbdom.ub);
    }
 
    if( obj != NULL )
    {
+      var->unchangedobj = SCIPrationalGetReal(obj);
+      var->obj = var->unchangedobj;
+
       SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->obj, obj) );
       SCIPintervalSetRational(&var->exactdata->objinterval, obj);
    }
    else
    {
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->obj) );
+
       SCIPrationalSetReal(var->exactdata->obj, var->obj);
-      SCIPintervalSet(&var->exactdata->objinterval, 0.0);
+      SCIPintervalSet(&var->exactdata->objinterval, var->obj);
    }
 
-   var->exactdata->locdom.lbcertificateidx = -1;
-   var->exactdata->locdom.ubcertificateidx = -1;
    var->exactdata->glbdom.lbcertificateidx = -1;
    var->exactdata->glbdom.ubcertificateidx = -1;
+   var->exactdata->locdom.lbcertificateidx = -1;
+   var->exactdata->locdom.ubcertificateidx = -1;
    var->exactdata->colexact = NULL;
    var->exactdata->varstatusexact = SCIPvarGetStatus(var);
    var->exactdata->certificateindex = -1;
@@ -2632,13 +2649,30 @@ SCIP_RETCODE SCIPvarAddExactData(
    var->exactdata->multaggr.constant = NULL;
    var->exactdata->aggregate.constant = NULL;
    var->exactdata->aggregate.scalar = NULL;
+   var->primsolavg = 0.5 * (var->data.original.origdom.lb + var->data.original.origdom.ub);
+
+   /* convert inactive [0,1]-integers into binary variables and check that binary variables have correct bounds */
+   if( ( SCIPrationalIsZero(var->exactdata->origdom.lb) || SCIPrationalIsEQReal(var->exactdata->origdom.lb, 1.0) )
+      && ( SCIPrationalIsZero(var->exactdata->origdom.ub) || SCIPrationalIsEQReal(var->exactdata->origdom.ub, 1.0) ) )
+   {
+      if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && var->probindex == -1 )
+         var->vartype = (unsigned int)SCIP_VARTYPE_BINARY;
+   }
+   else
+   {
+      if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_BINARY )
+      {
+         SCIPerrorMessage("invalid bounds [%.2g,%.2g] for binary variable <%s>\n", var->data.original.origdom.lb, var->data.original.origdom.ub, var->name);
+         return SCIP_INVALIDDATA;
+      }
+   }
 
    return SCIP_OKAY;
 }
 
-/** copies exact variable data from one variable to another;
+/** copies exact variable data from one variable to another
  *
- *  Cannot be integrated into varCopy because it is needed, e.g., when transforming vars.
+ *  @note This method cannot be integrated into SCIPvarCopy() because it is needed, e.g., when transforming vars.
  */
 SCIP_RETCODE SCIPvarCopyExactData(
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -3238,22 +3272,19 @@ SCIP_RETCODE SCIPvarParseOriginal(
       if( *success ) /*lint !e774*/
       {
          /* create variable */
-         SCIP_CALL( varCreate(var, blkmem, set, stat, name, SCIPrationalRoundReal(lb, SCIP_R_ROUND_DOWNWARDS),
-               SCIPrationalRoundReal(ub, SCIP_R_ROUND_UPWARDS), SCIPrationalRoundReal(obj, SCIP_R_ROUND_NEAREST),
-               vartype, impltype, initial, removable, varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+         SCIP_CALL( varCreate(var, blkmem, set, stat, name, 0.0, 0.0, 0.0, vartype, impltype, initial, removable,
+               varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+
+         /* set variable status */
+         SCIPvarAdjustLbExact(*var, set, lb);
+         SCIPvarAdjustUbExact(*var, set, ub);
+         (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_ORIGINAL;
+         (*var)->data.original.origdom.holelist = NULL;
+         (*var)->data.original.transvar = NULL;
 
          /* add exact data */
          SCIP_CALL( SCIPvarAddExactData(*var, blkmem, lb, ub, obj) );
 
-         /* set variable status and data */
-         assert(*var != NULL);
-         assert((*var)->exactdata != NULL);
-         (*var)->exactdata->varstatusexact = SCIP_VARSTATUS_ORIGINAL;
-         (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_ORIGINAL;
-         (*var)->data.original.origdom.holelist = NULL;
-         (*var)->data.original.origdom.lb = (*var)->glbdom.lb;
-         (*var)->data.original.origdom.ub = (*var)->glbdom.ub;
-         (*var)->data.original.transvar = NULL;
          /**@todo implement lazy bounds in exact solving mode (and adjust values before setting them) */
          if( !SCIPrationalIsNegInfinity(lazylb) || !SCIPrationalIsInfinity(lazyub) )
          {
@@ -3289,7 +3320,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
          SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
                varcopy, vardelorig, vartrans, vardeltrans, vardata) );
 
-         /* set variable status and data */
+         /* set variable status */
          assert(*var != NULL);
          (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_ORIGINAL;
          (*var)->data.original.origdom.holelist = NULL;
@@ -3363,18 +3394,17 @@ SCIP_RETCODE SCIPvarParseTransformed(
       if( *success ) /*lint !e774*/
       {
          /* create variable */
-         SCIP_CALL( varCreate(var, blkmem, set, stat, name, SCIPrationalRoundReal(lb, SCIP_R_ROUND_DOWNWARDS),
-               SCIPrationalRoundReal(ub, SCIP_R_ROUND_UPWARDS), SCIPrationalRoundReal(obj, SCIP_R_ROUND_NEAREST),
-               vartype, impltype, initial, removable, varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+         SCIP_CALL( varCreate(var, blkmem, set, stat, name, 0.0, 0.0, 0.0, vartype, impltype, initial, removable,
+               varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+
+         /* set variable status */
+         SCIPvarAdjustLbExact(*var, set, lb);
+         SCIPvarAdjustUbExact(*var, set, ub);
+         (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_LOOSE;
 
          /* add exact data */
          SCIP_CALL( SCIPvarAddExactData(*var, blkmem, lb, ub, obj) );
 
-         /* set variable status and data */
-         assert(*var != NULL);
-         assert((*var)->exactdata != NULL);
-         (*var)->exactdata->varstatusexact = SCIP_VARSTATUS_LOOSE;
-         (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_LOOSE;
          /**@todo implement lazy bounds in exact solving mode */
          if( !SCIPrationalIsNegInfinity(lazylb) || !SCIPrationalIsInfinity(lazyub) )
          {
@@ -3414,7 +3444,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
          SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
                varcopy, vardelorig, vartrans, vardeltrans, vardata) );
 
-         /* set variable status and data */
+         /* set variable status */
          assert(*var != NULL);
          (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_LOOSE;
          (*var)->lazylb = lazylb;
