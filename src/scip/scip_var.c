@@ -8910,7 +8910,7 @@ SCIP_RETCODE SCIPaddClique(
    return SCIP_OKAY;
 }
 
-/** add largest clique to part */
+/** add largest clique containing a given variable to part of clique partitioning */
 static
 void addLargestCliquePart(
    SCIP_VAR*             var,                /**< variable to treat */
@@ -8925,6 +8925,11 @@ void addLargestCliquePart(
    int*                  ncliqueparts        /**< array to store the size of each part */
    )
 {
+   assert( var != NULL );
+   assert( idx != NULL );
+   assert( values != NULL );
+   assert( cliquepartition != NULL );
+   assert( ncliqueparts != NULL );
    assert( ncliqueparts[p] == 0 );
 
    /* put variable into part p */
@@ -8966,7 +8971,7 @@ void addLargestCliquePart(
             for( k = 0; k < nvarclique; ++k )
             {
                SCIP_VAR* othervar;
-               int othervaridx;
+               int probidx;
                int j;
 
                othervar = cliquevars[k];
@@ -8974,11 +8979,11 @@ void addLargestCliquePart(
 
                if( SCIPvarIsActive(othervar) )
                {
-                  othervaridx = SCIPvarGetProbindex(othervar);
-                  assert( 0 <= othervaridx && othervaridx < ntotalvars );
+                  probidx = SCIPvarGetProbindex(othervar);
+                  assert( 0 <= probidx && probidx < ntotalvars );
 
-                  j = idx[othervaridx];
-                  if( j >= 0 && cliquevals[k] == values[j] )
+                  j = idx[probidx];
+                  if( j >= 0 && cliquevals[k] == values[j] && cliquepartition[j] < 0 )
                      ++size;
                }
             }
@@ -9002,11 +9007,11 @@ void addLargestCliquePart(
             cliquevars = SCIPcliqueGetVars(varcliques[maxidx]);
             cliquevals = SCIPcliqueGetValues(varcliques[maxidx]);
 
-            /* loop through clique and determine size */
+            /* loop through clique and add it to part */
             for( k = 0; k < nvarclique; ++k )
             {
                SCIP_VAR* othervar;
-               int othervaridx;
+               int probidx;
                int j;
 
                othervar = cliquevars[k];
@@ -9014,11 +9019,11 @@ void addLargestCliquePart(
 
                if( SCIPvarIsActive(othervar) )
                {
-                  othervaridx = SCIPvarGetProbindex(othervar);
-                  assert( 0 <= othervaridx && othervaridx < ntotalvars );
+                  probidx = SCIPvarGetProbindex(othervar);
+                  assert( 0 <= probidx && probidx < ntotalvars );
 
-                  j = idx[othervaridx];
-                  if( j >= 0 && cliquevals[k] == values[j] && othervar != var )
+                  j = idx[probidx];
+                  if( j >= 0 && cliquevals[k] == values[j] && othervar != var && cliquepartition[j] < 0 )
                   {
                      cliquepartition[j] = p;
                      ++(ncliqueparts[p]);
