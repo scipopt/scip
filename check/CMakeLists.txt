@@ -831,7 +831,6 @@ set(basenames_opb_wrongformat
     flugpl_rational.mps
     gt2.mps
     lseu_dcmulti.cip
-    MANN_a9.clq.lp
     misc03.mps
     misc03.zpl
     rgn.mps

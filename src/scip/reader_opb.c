@@ -4613,23 +4613,29 @@ SCIP_RETCODE SCIPwriteOpb(
    SCIP_CONSHDLR* indicatorhdlr = SCIPfindConshdlr(scip, "indicator");
    SCIP_Bool existands;
    SCIP_Bool existandconshdlr;
+   SCIP_Bool ispseudoboolean;
    SCIP_RETCODE retcode = SCIP_OKAY;
    int* nandvars;
-   int nresvars;
+   int nintegralvars = nvars - ncontvars;
    int nindicatorconss = indicatorhdlr != NULL ? SCIPconshdlrGetNConss(indicatorhdlr) : 0;
+   int nresvars;
    int v;
 
-   /* computes all and-resultants and their corresponding constraint variables */
-   /* coverity[leaked_storage] */
-   SCIP_CALL( computeAndConstraintInfos(scip, transformed, &resvars, &nresvars, &andvars, &nandvars, &existandconshdlr, &existands) );
-
-   if( nintvars > 0 || ncontvars > nindicatorconss )
+   /* check whether problem is pseudoboolean */
+   ispseudoboolean = (ncontvars <= nindicatorconss);
+   for( v = nbinvars; v < nintegralvars && ispseudoboolean; ++v )
    {
-      SCIPwarningMessage(scip, "only binary problems can be written in OPB format.\n");
-      *result = SCIP_DIDNOTRUN;
+      if( !SCIPvarIsBinary(vars[v])
+         && ( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || ++ncontvars > nindicatorconss ) )
+         ispseudoboolean = FALSE;
    }
-   else
+
+   if( ispseudoboolean )
    {
+      /* computes all and-resultants and their corresponding constraint variables */
+      /* coverity[leaked_storage] */
+      SCIP_CALL( computeAndConstraintInfos(scip, transformed, &resvars, &nresvars, &andvars, &nandvars, &existandconshdlr, &existands) );
+
       if( genericnames )
       {
 #ifndef NDEBUG
@@ -4733,25 +4739,30 @@ SCIP_RETCODE SCIPwriteOpb(
          }
       }
 
-      *result = SCIP_SUCCESS;
-   }
-
-   if( existands )
-   {
-      /* free temporary buffers */
-      assert(resvars != NULL);
-      assert(andvars != NULL);
-      assert(nandvars != NULL);
-
-      for( v = nresvars - 1; v >= 0; --v )
+      if( existands )
       {
-         assert(andvars[v] != NULL);
-         SCIPfreeMemoryArray(scip, &andvars[v]);
+         /* free temporary buffers */
+         assert(resvars != NULL);
+         assert(andvars != NULL);
+         assert(nandvars != NULL);
+
+         for( v = nresvars - 1; v >= 0; --v )
+         {
+            assert(andvars[v] != NULL);
+            SCIPfreeMemoryArray(scip, &andvars[v]);
+         }
+
+         SCIPfreeMemoryArray(scip, &nandvars);
+         SCIPfreeMemoryArray(scip, &andvars);
+         SCIPfreeMemoryArray(scip, &resvars);
       }
 
-      SCIPfreeMemoryArray(scip, &nandvars);
-      SCIPfreeMemoryArray(scip, &andvars);
-      SCIPfreeMemoryArray(scip, &resvars);
+      *result = SCIP_SUCCESS;
+   }
+   else
+   {
+      SCIPwarningMessage(scip, "only binary problems can be written in OPB format.\n");
+      *result = SCIP_DIDNOTRUN;
    }
 
    if( retcode == SCIP_INVALIDDATA )
