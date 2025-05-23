@@ -9083,7 +9083,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    for( i = 0; i < nvars; ++i )
    {
       cliquepartition[i] = -1;
-      assert( idx[SCIPvarGetProbindex(vars[i])] == -1 );
+      /* note that it could happen that variables appear multiple times */
       idx[SCIPvarGetProbindex(vars[i])] = i;
    }
 
