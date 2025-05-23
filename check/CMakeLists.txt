@@ -340,7 +340,8 @@ if(SCIP_WITH_EXACTSOLVE)
         "instances/MIPEX/Side-coef.cip\;2"
         "instances/MIPEX/Side-coeftest.lp\;2"
         "instances/MIP/stein27_inf.lp\;+infinity"
-        "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
+        # OPB unsafe yet
+        # "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
     )
     if(SCIP_WITH_ZIMPL)
         list(APPEND
