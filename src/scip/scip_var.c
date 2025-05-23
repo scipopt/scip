@@ -9100,6 +9100,10 @@ SCIP_RETCODE calcCliquePartitionGreedy(
       int nvarcliques;
       int p;
 
+      /* skip already treated variables */
+      if( cliquepartition[i] >= 0 )
+         continue;
+
       var = vars[i];
       value = values[i];
       nvarcliques = SCIPvarGetNCliques(var, value);
