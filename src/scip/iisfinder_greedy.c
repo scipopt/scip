@@ -530,7 +530,6 @@ SCIP_RETCODE deletionFilterBatch(
          }
          if( k == 0 )
             break;
-         i = i + k;
 
          /* treat subproblem with LB deletions */
          SCIP_CALL( deletionSubproblem(iis, NULL, vars, idxs, k, timelim, timelimperiter, nodelim, nodelimperiter,
