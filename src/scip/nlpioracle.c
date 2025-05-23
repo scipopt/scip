@@ -2042,11 +2042,11 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
 SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const int**           rowoffset,          /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
-   const int**           col,                /**< pointer to store pointer that stores the indices of variables that appear in each row,
+   const int**           rowoffsets,          /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
+   const int**           cols,                /**< pointer to store pointer that stores the indices of variables that appear in each row,
                                               *   rowoffset[nconss] gives length of col, can be NULL */
-   const int**           coloffset,          /**< pointer to store pointer that stores the offsets to each column's sparsity pattern in row, can be NULL */
-   const int**           row                 /**< pointer to store pointer that stores the indices of rows that each variable participates in,
+   const int**           coloffsets,          /**< pointer to store pointer that stores the offsets to each column's sparsity pattern in row, can be NULL */
+   const int**           rows                 /**< pointer to store pointer that stores the indices of rows that each variable participates in,
                                               *   coloffset[nvars] gives length of row, can be NULL */
    )
 {
@@ -2069,14 +2069,14 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    {
       assert(oracle->jaccols != NULL);
       assert(oracle->jacrows != NULL);
-      if( rowoffset != NULL )
-         *rowoffset = oracle->jacrowoffsets;
-      if( col != NULL )
-         *col = oracle->jaccols;
-      if( coloffset != NULL )
-         *coloffset = oracle->jaccoloffsets;
-      if( row != NULL )
-         *row = oracle->jacrows;
+      if( rowoffsets != NULL )
+         *rowoffsets = oracle->jacrowoffsets;
+      if( cols != NULL )
+         *cols = oracle->jaccols;
+      if( coloffsets != NULL )
+         *coloffsets = oracle->jaccoloffsets;
+      if( rows != NULL )
+         *rows = oracle->jacrows;
       return SCIP_OKAY;
    }
 
@@ -2093,14 +2093,14 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    {
       /* no variables */
       BMSclearMemoryArray(oracle->jacrowoffsets, oracle->nconss + 1);
-      if( rowoffset != NULL )
-         *rowoffset = oracle->jacrowoffsets;
-      if( col != NULL )
-         *col = oracle->jaccols;
-      if( coloffset != NULL )
-         *coloffset = oracle->jaccoloffsets;
-      if( row != NULL )
-         *row = oracle->jacrows;
+      if( rowoffsets != NULL )
+         *rowoffsets = oracle->jacrowoffsets;
+      if( cols != NULL )
+         *cols = oracle->jaccols;
+      if( coloffsets != NULL )
+         *coloffsets = oracle->jaccoloffsets;
+      if( rows != NULL )
+         *rows = oracle->jacrows;
 
       SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
@@ -2129,6 +2129,9 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
             SCIP_CALL( ensureIntArraySize(scip, &oracle->jaccols, &maxnnz, nnz + cons->nlinidxs) );
             BMScopyMemoryArray(&oracle->jaccols[nnz], cons->linidxs, cons->nlinidxs);
             nnz += cons->nlinidxs;
+
+            for( j = 0; j < cons->nlinidxs; ++j )
+               ++nvarnnz[cons->linidxs[j]];
          }
          continue;
       }
@@ -2181,7 +2184,9 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       sumvarnnz += nvarnnz[i];
       nvarnnz[i] = 0;
    }
-   oracle->jaccoloffsets[oracle->nvars + 1] = sumvarnnz;
+   oracle->jaccoloffsets[oracle->nvars] = sumvarnnz;
+
+   /* TODO adjust sizes of the new arrays */
 
    /* use the row representation (jacrowoffsets, jaccols) to fill in the column representation nonzeroes (jacrows) */
    int considx = 0;
@@ -2196,14 +2201,14 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 
    SCIPfreeBlockMemoryArray(scip, &nvarnnz, oracle->nvars); /* TODO may need to clear the array first */
 
-   if( rowoffset != NULL )
-      *rowoffset = oracle->jacrowoffsets;
-   if( col != NULL )
-      *col = oracle->jaccols;
-   if( coloffset != NULL )
-      *coloffset = oracle->jaccoloffsets;
-   if( row != NULL )
-      *row = oracle->jacrows;
+   if( rowoffsets != NULL )
+      *rowoffsets = oracle->jacrowoffsets;
+   if( cols != NULL )
+      *cols = oracle->jaccols;
+   if( coloffsets != NULL )
+      *coloffsets = oracle->jaccoloffsets;
+   if( rows != NULL )
+      *rows = oracle->jacrows;
 
    SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
