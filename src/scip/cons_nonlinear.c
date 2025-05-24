@@ -1129,7 +1129,7 @@ SCIP_RETCODE catchVarEvent(
    if( ownerdata->nconss <= 1 )
       ownerdata->consssorted = TRUE;
    else if( ownerdata->consssorted )
-      ownerdata->consssorted = compIndexConsNonlinear(ownerdata->conss[ownerdata->nconss-2], ownerdata->conss[ownerdata->nconss-1]) > 0;
+      ownerdata->consssorted = compIndexConsNonlinear(ownerdata->conss[ownerdata->nconss-2], ownerdata->conss[ownerdata->nconss-1]) < 0;
 
    /* catch variable events, if not done so yet (first constraint) */
    if( ownerdata->filterpos < 0 )
@@ -1362,7 +1362,7 @@ SCIP_RETCODE createCons(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( local && SCIPgetDepth(scip) != 0 )
+   if( local && SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
       SCIPerrorMessage("Locally valid nonlinear constraints are not supported, yet.\n");
       return SCIP_INVALIDCALL;

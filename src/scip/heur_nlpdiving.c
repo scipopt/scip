@@ -150,6 +150,7 @@ struct SCIP_HeurData
 #endif
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
+   SCIP_HEURTIMING       inittiming;         /**< initial heuristic timing */
 };
 
 
@@ -1609,6 +1610,49 @@ SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolNlpdiving)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* store nlpdiving timing */
+   heurdata->inittiming = SCIPheurGetTimingmask(heur);
+
+   /* disable nlpdiving heuristic */
+   if( !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0 )
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_NONE);
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolNlpdiving)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* reset nlpdiving timing */
+   SCIPheurSetTimingmask(heur, heurdata->inittiming);
+
+   return SCIP_OKAY;
+}
+
+
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecNlpdiving)
@@ -1643,6 +1687,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    SCIP_Bool solvesubmip;
    SCIP_Longint ncalls;
    SCIP_Longint nsolsfound;
+   SCIP_VAR* backtrackvar;     /* (first) variable to fix differently in backtracking */
+   SCIP_Real backtrackvarval;  /* (fractional) value of backtrack variable */
+   SCIP_Bool backtrackroundup; /* whether variable should be rounded up in backtracking */
+   int backtrackdepth;         /* depth where to go when backtracking */
    int avgnnlpiterations;
    int maxnnlpiterations;
    int npseudocands;
@@ -1658,25 +1706,12 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    int nfeasnlps;
    int bestcand;
    int c;
-   int       backtrackdepth;   /* depth where to go when backtracking */
-   SCIP_VAR* backtrackvar;     /* (first) variable to fix differently in backtracking */
-   SCIP_Real backtrackvarval;  /* (fractional) value of backtrack variable */
-   SCIP_Bool backtrackroundup; /* whether variable should be rounded up in backtracking */
 
-   backtrackdepth = -1;
-   backtrackvar = NULL;
-   backtrackvarval = 0.0;
-   backtrackroundup = FALSE;
-   bestsol = NULL;
-   pseudocandsnlpsol = NULL;
-   pseudocandslpsol = NULL;
-   covervars = NULL;
-
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(result != NULL);
-   /* assert(SCIPhasCurrentNodeLP(scip)); */
+   assert(SCIPisNLPConstructed(scip));
+   assert(SCIPgetNNlpis(scip) >= 1);
 
    *result = SCIP_DIDNOTRUN;
 
@@ -1684,11 +1719,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    if( nodeinfeasible )
       return SCIP_OKAY;
 
-   /* only call heuristic, if an NLP relaxation has been constructed */
-   if( !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0 )
-      return SCIP_OKAY;
-
-   /* only call heuristic, if the current node will not be cutoff, e.g., due to a (integer and NLP-)feasible LP solution */
+   /* only call heuristic if the current node will not be cutoff, e.g., due to a (integer and NLP-)feasible LP solution */
    if( SCIPisFeasGE(scip, SCIPgetLocalLowerbound(scip), SCIPgetUpperbound(scip)) )
       return SCIP_OKAY;
 
@@ -1696,7 +1727,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* do not call heuristic, if it barely succeded */
+   /* do not call heuristic if it barely succeded */
    if( (SCIPheurGetNSolsFound(heur) + 1.0) / (SCIP_Real)(SCIPheurGetNCalls(heur) + 1.0) < heurdata->minsuccquot )
       return SCIP_OKAY;
 
@@ -1708,7 +1739,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
    *result = SCIP_DIDNOTRUN;
 
-   /* only try to dive, if we are in the correct part of the tree, given by minreldepth and maxreldepth */
+   /* only try to dive if we are in the correct part of the tree, given by minreldepth and maxreldepth */
    depth = SCIPgetDepth(scip);
    maxdepth = SCIPgetMaxDepth(scip);
    maxdepth = MAX(maxdepth, 30);
@@ -1723,7 +1754,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    maxnnlpiterations = heurdata->maxnlpiterabs;
    maxnnlpiterations += (int)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxnlpiterrel);
 
-   /* don't try to dive, if we took too many NLP iterations during diving */
+   /* don't try to dive if we took too many NLP iterations during diving */
    if( heurdata->nnlpiterations >= maxnnlpiterations )
       return SCIP_OKAY;
 
@@ -1731,7 +1762,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    avgnnlpiterations = (int)(heurdata->nnlpiterations / MAX(ncalls, 1.0));
    maxnnlpiterations = (int)MAX((SCIP_Real) maxnnlpiterations, (SCIP_Real) heurdata->nnlpiterations + 1.2*avgnnlpiterations);
 
-   /* don't try to dive, if there are no unfixed discrete variables */
+   /* don't try to dive if there are no unfixed discrete variables */
    SCIP_CALL( SCIPgetPseudoBranchCands(scip, NULL, &npseudocands, NULL) );
    if( npseudocands == 0 )
       return SCIP_OKAY;
@@ -1741,7 +1772,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    /* set starting point to lp solution */
    SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
 
-   /* solve NLP relaxation, if not solved already */
+   /* solve NLP relaxation if not solved already */
    nlpsolstat = SCIPgetNLPSolstat(scip);
    if( nlpsolstat > SCIP_NLPSOLSTAT_FEASIBLE )
    {
@@ -1876,6 +1907,15 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    maxdivedepth = MIN(maxdivedepth, maxdepth);
    maxdivedepth *= 10;
 
+   /* initialize local variables */
+   backtrackdepth = -1;
+   backtrackvar = NULL;
+   backtrackvarval = 0.0;
+   backtrackroundup = FALSE;
+   bestsol = NULL;
+   pseudocandsnlpsol = NULL;
+   pseudocandslpsol = NULL;
+   covervars = NULL;
    covercomputed = FALSE;
    varincover = NULL;
 
@@ -2675,6 +2715,7 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
 
    /* create heuristic data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
+   heurdata->inittiming = HEUR_TIMING;
 
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
@@ -2685,6 +2726,8 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeNlpdiving) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitNlpdiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitNlpdiving) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolNlpdiving) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolNlpdiving) );
 
    /* get event handler for bound change events */
    heurdata->eventhdlr = NULL;

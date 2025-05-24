@@ -261,7 +261,12 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    );
 
-/** create and set the exact variable bounds and objective value */
+/** creates and sets the exact variable bounds and objective value (using floating-point data if value pointer is NULL)
+ *
+ *  @note an inactive integer variable with bounds zero and one is automatically converted into a binary variable
+ *
+ *  @note if exact data is provided, the corresponding floating-point data is overwritten
+ */
 SCIP_RETCODE SCIPvarAddExactData(
    SCIP_VAR*             var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -270,7 +275,10 @@ SCIP_RETCODE SCIPvarAddExactData(
    SCIP_RATIONAL*        obj                 /**< objective function value */
    );
 
-/** copy exact variable data from one variable to another */
+/** copies exact variable data from one variable to another
+ *
+ *  @note This method cannot be integrated into SCIPvarCopy() because it is needed, e.g., when transforming vars.
+ */
 SCIP_RETCODE SCIPvarCopyExactData(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             targetvar,          /**< variable that gets the exact data */

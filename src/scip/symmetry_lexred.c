@@ -1931,6 +1931,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
 
    *infeasible = FALSE;
    *nred = 0;
+   *didrun = FALSE;
 
    /* early termination */
    if ( masterdata->nlexdatas == 0 )

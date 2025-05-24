@@ -1093,13 +1093,9 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    int nbinvars;
    int nintvars;
 
-   assert(heur != NULL);
    assert(scip != NULL);
+   assert(heur != NULL);
    assert(result != NULL);
-
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
 
    *result = SCIP_DELAYED;
 
@@ -1107,24 +1103,17 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    if( nodeinfeasible )
       return SCIP_OKAY;
 
-   /* the node number to run the heuristic again was not yet reached */
-   if( SCIPgetNNodes(scip) < heurdata->nextnodenumber )
-      return SCIP_OKAY;
-
    /* do not run heuristic on nodes that were not solved to optimality */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
    /* LP face requires that the LP defines a valid lower bound for the current node */
-   if( ! SCIPisLPRelax(scip) || ! SCIPallColsInLP(scip) )
+   if( !SCIPisLPRelax(scip) || !SCIPallColsInLP(scip) )
       return SCIP_OKAY;
 
    assert(SCIPgetCurrentNode(scip) != NULL);
    focusnodelb = SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
    assert(!SCIPisInfinity(scip, focusnodelb));
-
-   /* from the checked conditions, the LP objective should be a valid lower bound for the current node */
-   assert(SCIPisGE(scip, focusnodelb, SCIPgetLPObjval(scip)));
 
    /* do not run if the current focus node already has a lower bound higher than the LP value at the node,
     * for example, due to strong branching
@@ -1132,12 +1121,23 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    if( SCIPisGT(scip, focusnodelb, SCIPgetLPObjval(scip)) )
       return SCIP_OKAY;
 
+   /* from the checked conditions, the LP objective should be the lower bound for the current node */
+   assert(SCIPisEQ(scip, focusnodelb, SCIPgetLPObjval(scip)));
+
+   /* only run at lower bound defining nodes */
+   if( SCIPisGT(scip, focusnodelb, SCIPgetLowerbound(scip)) )
+      return SCIP_OKAY;
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
    /* delay heuristic if the active search tree path is not deep enough */
    if( SCIPgetDepth(scip) < heurdata->minpathlen - 1 )
       return SCIP_OKAY;
 
-   /* only run at lower bound defining nodes */
-   if( SCIPisGT(scip, focusnodelb, SCIPgetLowerbound(scip)) )
+   /* the node number to run the heuristic again was not yet reached */
+   if( SCIPgetNNodes(scip) < heurdata->nextnodenumber )
       return SCIP_OKAY;
 
    /* only run if lower bound has increased since last LP objective where the sub-MIP was solved to infeasibility */

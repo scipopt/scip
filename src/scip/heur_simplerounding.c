@@ -439,52 +439,64 @@ static
 SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
+   int nbinintvars;
 
+   assert(SCIPhasCurrentNodeLP(scip));
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(result != NULL);
-   assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
 
-   /* only call heuristic, if an optimal LP solution is at hand or if relaxation solution is available */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && ! SCIPisRelaxSolValid(scip) )
-      return SCIP_OKAY;
+   /* get nonimplied integral variable number */
+   nbinintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
 
-   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
-   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+   /* only call heuristic if there are integral variables */
+   if( nbinintvars == 0 )
       return SCIP_OKAY;
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* don't call heuristic, if we have already processed the current LP solution but no relaxation solution is available */
-   if ( SCIPgetNLPs(scip) == heurdata->lastlp && ! SCIPisRelaxSolValid(scip) )
+   /* only call heuristic if there are roundable variables; except we are called during pricing, in this case we
+    * want to detect a (mixed) integer (LP) solution which is primal feasible
+    */
+   if( heurtiming != SCIP_HEURTIMING_DURINGPRICINGLOOP && heurdata->nroundablevars == 0 )
+      return SCIP_OKAY;
+
+   /* only call heuristic if an optimal LP solution or a relaxation solution is available */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && !SCIPisRelaxSolValid(scip) )
+      return SCIP_OKAY;
+
+   /* only call heuristic if the LP objective value is smaller than the cutoff bound */
+   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+      return SCIP_OKAY;
+
+   /* only call heuristic if the current LP solution is not already processed or a relaxation solution is available */
+   if( SCIPgetNLPs(scip) == heurdata->lastlp && !SCIPisRelaxSolValid(scip) )
       return SCIP_OKAY;
 
    /* on our first call or after each pricing round, calculate the number of roundable variables */
-   if( heurdata->nroundablevars == -1  || heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP )
+   if( heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP || heurdata->nroundablevars == -1 )
    {
       SCIP_VAR** vars;
-      int nbinintvars;
-      int nroundablevars;
       int i;
 
+      heurdata->nroundablevars = 0;
       vars = SCIPgetVars(scip);
-      nbinintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
-      nroundablevars = 0;
+
       for( i = 0; i < nbinintvars; ++i )
       {
          if( SCIPvarMayRoundDown(vars[i]) || SCIPvarMayRoundUp(vars[i]) )
-            nroundablevars++;
+            ++heurdata->nroundablevars;
       }
-      heurdata->nroundablevars = nroundablevars;
-   }
 
-   /* don't call heuristic if there are no roundable variables; except we are called during pricing, in this case we
-    * want to detect a (mixed) integer (LP) solution which is primal feasible */
-   if( heurdata->nroundablevars == 0 && heurtiming != SCIP_HEURTIMING_DURINGPRICINGLOOP )
-      return SCIP_OKAY;
+      /* only call heuristic if there are roundable variables; except we are called during pricing, in this case we
+       * want to detect a (mixed) integer (LP) solution which is primal feasible
+       */
+      if( heurtiming != SCIP_HEURTIMING_DURINGPRICINGLOOP && heurdata->nroundablevars == 0 )
+         return SCIP_OKAY;
+   }
 
    *result = SCIP_DIDNOTFIND;
 
