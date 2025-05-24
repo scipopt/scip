@@ -4891,6 +4891,12 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
 
+   if( SCIPisExact(scip) )
+   {
+      SCIPerrorMessage("MPS reader cannot yet write problems in exact solving mode\n");
+      return SCIP_WRITEERROR;
+   }
+
    SCIP_CALL( SCIPwriteMps(scip, reader, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,
          vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, result) );
 
