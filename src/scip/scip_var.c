@@ -9082,9 +9082,16 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    /* initialize the cliquepartition array with -1 and idx */
    for( i = 0; i < nvars; ++i )
    {
+      int probidx;
+
       cliquepartition[i] = -1;
       /* note that it could happen that variables appear multiple times */
-      idx[SCIPvarGetProbindex(vars[i])] = i;
+      probidx = SCIPvarGetProbindex(vars[i]);
+      if( probidx >= 0 )
+      {
+         assert( probidx <= ntotalvars );
+         idx[probidx] = i;
+      }
    }
 
    /* add largest clique containing first variable to part 0 */
