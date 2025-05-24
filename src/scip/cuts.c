@@ -12688,7 +12688,7 @@ SCIP_RETCODE cutsTransformStrongCG(
             upperinf = SCIPisInfinity(scip, bestubs[cutindex]);
             positive = QUAD_TO_DBL(coef) > 0.0;
 
-            if( (lowerinf && upperinf) )
+            if( lowerinf && upperinf )
             {
                /* we found a free variable in the row with non-zero coefficient
                 *  -> MIR row can't be transformed in standard form
@@ -13295,9 +13295,11 @@ SCIP_RETCODE SCIPcalcStrongCG(
 
    /* terminate if an integral slack fractionality is unreliable or a negative continuous slack variable is present */
    for( i = 0; i < aggrrow->nrows; ++i )
+   {
       if( ( scip->lp->rows[aggrrow->rowsinds[i]]->integral && ABS(aggrrow->rowweights[i] * scale) > large )
          || ( !scip->lp->rows[aggrrow->rowsinds[i]]->integral && aggrrow->rowweights[i] * aggrrow->slacksign[i] < 0.0 ) )
          return SCIP_OKAY;
+   }
 
    /* allocate temporary memory */
    nvars = SCIPgetNVars(scip);
