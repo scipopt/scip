@@ -8987,6 +8987,7 @@ void addLargestCliquePart(
                   j = idx[probidx];
                   if( j >= 0 && cliquevals[k] == values[j] && cliquepartition[j] < 0 )
                   {
+                     assert( j < nvars );
                      ++size;
                      if ( j < smallestidx )
                         smallestidx = j;
@@ -9035,6 +9036,7 @@ void addLargestCliquePart(
                   j = idx[probidx];
                   if( j >= 0 && cliquevals[k] == values[j] && othervar != var && cliquepartition[j] < 0 )
                   {
+                     assert( j < nvars );
                      cliquepartition[j] = p;
                      ++(ncliqueparts[p]);
                   }
