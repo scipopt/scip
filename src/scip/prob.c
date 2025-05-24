@@ -1311,6 +1311,8 @@ SCIP_RETCODE SCIPprobChgVarType(
    SCIP_VARTYPE          vartype             /**< new type of variable */
    )
 {
+   SCIP_Bool upgraded;
+
    assert(prob != NULL);
    assert(var != NULL);
    assert(SCIPvarGetProbindex(var) >= 0);
@@ -1329,7 +1331,7 @@ SCIP_RETCODE SCIPprobChgVarType(
    }
 
    /* Do not remove cliques, varbounds and implications if we upgrade the type */
-   SCIP_Bool upgraded = vartype > SCIPvarGetType(var);
+   upgraded = vartype > SCIPvarGetType(var);
 
    /* temporarily remove variable from problem */
    SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var, upgraded) );
@@ -1363,6 +1365,8 @@ SCIP_RETCODE SCIPprobChgVarImplType(
    SCIP_IMPLINTTYPE      impltype            /**< new implied integral type of variable */
    )
 {
+   SCIP_Bool upgraded;
+
    assert(prob != NULL);
    assert(var != NULL);
    assert(SCIPvarGetProbindex(var) >= 0);
@@ -1381,7 +1385,8 @@ SCIP_RETCODE SCIPprobChgVarImplType(
    }
 
    /* Do not remove cliques, varbounds and implications unless type becomes non-implied */
-   SCIP_Bool upgraded = impltype != SCIP_IMPLINTTYPE_NONE;
+   upgraded = impltype != SCIP_IMPLINTTYPE_NONE;
+
    /* temporarily remove variable from problem */
    SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var, upgraded) );
 
