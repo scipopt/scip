@@ -2641,7 +2641,7 @@ SCIP_RETCODE writeOpbObjective(
       }
    }
 
-   /* there exist a objective function */
+   /* there exists an objective function */
    if( objective )
    {
       /* write exact objective */
