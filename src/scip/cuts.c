@@ -5576,6 +5576,7 @@ SCIP_RETCODE cutsTransformMIR(
       i = 0;
       while( i < data->secnnz[s] )
       {
+         int cutindex;
          int v = indices[i];
 
          /* due to variable bound usage, cancellation may have occurred */
@@ -5591,8 +5592,7 @@ SCIP_RETCODE cutsTransformMIR(
             continue;
          }
 
-         int cutindex = data->ncutinds;
-
+         cutindex = data->ncutinds;
          SCIP_CALL( determineBestBounds(scip, data->vars[v], sol, data, boundswitch, usevbds, allowlocal, fixintegralrhs,
                ignoresol, boundsfortrans, boundtypesfortrans,
                bestlbs + cutindex, bestubs + cutindex, bestlbtypes + cutindex, bestubtypes + cutindex,
