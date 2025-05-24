@@ -4094,9 +4094,11 @@ int varSection(
    int                   probindex           /**< Problem index of a variable */
    )
 {
-   assert(data);
+   int limit;
 
-   int limit = data->nvars - data->ncontvars;
+   assert(data != NULL);
+
+   limit = data->nvars - data->ncontvars;
    if( probindex >= limit )
       return 0;
 
@@ -4117,6 +4119,7 @@ int varSection(
       return 4;
 
    assert(limit == data->nbinvars);
+
    return 5;
 }
 
