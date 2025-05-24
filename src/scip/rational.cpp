@@ -1786,7 +1786,7 @@ int SCIPrationalStrLen(
       return rational->val.str().length();
 }
 
-/** prints rational to file using message handler */
+/** prints rational into a file using message handler */
 void SCIPrationalMessage(
    SCIP_MESSAGEHDLR*     msg,                /**< message handler */
    FILE*                 file,               /**< file pointer */
@@ -1806,6 +1806,24 @@ void SCIPrationalMessage(
    {
       std::string s = rational->val.str();
       SCIPmessageFPrintInfo(msg, file, "%s", s.c_str());
+   }
+}
+
+/** prints rational depending on the verbosity level */
+void SCIPrationalPrintVerbInfo(
+   SCIP_MESSAGEHDLR*     msg,                /**< message handler */
+   SCIP_VERBLEVEL        verblevel,          /**< current verbosity level */
+   SCIP_VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   SCIP_RATIONAL*        rational            /**< the rational to print */
+   )
+{
+   assert(msgverblevel > SCIP_VERBLEVEL_NONE);
+   assert(msgverblevel <= SCIP_VERBLEVEL_FULL);
+   assert(verblevel <= SCIP_VERBLEVEL_FULL);
+
+   if( msgverblevel <= verblevel )
+   {
+      SCIPrationalMessage(msg, NULL, rational);
    }
 }
 
