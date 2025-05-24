@@ -5570,7 +5570,6 @@ SCIP_RETCODE cutsTransformMIR(
    for( s = 0; s < NSECTIONS; ++s )
    {
       int* indices = data->secindices[s];
-
       int cutindsstart = data->ncutinds;
       int usevbds = data->usevbds[s];
 
