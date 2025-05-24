@@ -100,8 +100,8 @@ SCIP_RETCODE SCIPincludeReaderWbo(
 
    assert(reader != NULL);
 
-   /* reader is safe to use in exact solving mode */
-   SCIPreaderMarkExact(reader);
+   /* @todo mark reader as safe to use in exact solving mode if opb reader is safe */
+   /* SCIPreaderMarkExact(reader); */
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyWbo) );
