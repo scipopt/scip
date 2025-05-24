@@ -5560,11 +5560,11 @@ SCIP_RETCODE cutsTransformMIR(
    *localbdsused = FALSE;
 
    /* allocate temporary memory to store best bounds and bound types */
-   SCIP_CALL( SCIPallocBufferArray(scip, &bestlbs, 2*totalnnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bestubs, 2*totalnnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bestlbtypes, 2*totalnnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bestubtypes, 2*totalnnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &selectedbounds, 2*totalnnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestlbs, 2 * totalnnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestubs, 2 * totalnnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestlbtypes, 2 * totalnnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestubtypes, 2 * totalnnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &selectedbounds, 2 * totalnnz) );
 
    /* transform the cut, one variable section at a time */
    for( s = 0; s < NSECTIONS; ++s )
