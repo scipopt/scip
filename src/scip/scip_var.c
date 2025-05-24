@@ -8948,6 +8948,7 @@ void addLargestCliquePart(
          SCIP_CLIQUE** varcliques;
          int maxsize = -1;
          int maxidx = -1;
+         int maxsmallestidx = ntotalvars + 1;
          int l;
 
          varcliques = SCIPvarGetCliques(var, value);
@@ -8960,6 +8961,7 @@ void addLargestCliquePart(
             SCIP_Bool* cliquevals;
             int nvarclique;
             int size = 0;
+            int smallestidx = ntotalvars + 1;
             int k;
 
             assert( varcliques[l] != NULL );
@@ -8984,10 +8986,18 @@ void addLargestCliquePart(
 
                   j = idx[probidx];
                   if( j >= 0 && cliquevals[k] == values[j] && cliquepartition[j] < 0 )
+                  {
                      ++size;
+                     if ( j < smallestidx )
+                        smallestidx = j;
+                  }
                }
             }
-            if ( size > maxsize )
+
+            /* We sort according to size as first objective and then according to the smallest index appearing in the
+             * clique other than the given variable. This helps to pick nodes in cliques that are close together, which
+             * often is helpful for the knapsack constraint handler. */
+            if ( size > maxsize || (size == maxsize && smallestidx < maxsmallestidx) )
             {
                maxsize = size;
                maxidx = l;
