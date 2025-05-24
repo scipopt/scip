@@ -517,6 +517,7 @@ SCIP_RETCODE SCIPreaderWrite(
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &objoffsetexact) );
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &objscaleexact) );
 
+         /* floating-point values should not be used, so set to dummy values */
          objoffset = 0.0;
          objscale = 1.0;
          SCIPrationalSetRational(objoffsetexact, SCIPprobGetObjoffsetExact(prob));
