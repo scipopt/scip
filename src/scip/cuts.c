@@ -330,11 +330,11 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadScale(
    return SCIP_OKAY;
 }
 
-/** add a scaled row to a dense vector indexed over the problem variables and keep the
- *  index of non-zeros up-to-date
+/** add a scaled row to a dense vector indexed over the problem variables and keep the index of non-zeros up-to-date
  *
- *  In the safe variant, we need to transform all the variables (implicitly) to >= 0 vars using their upper/lower bounds
- *  When adding \lambda * (c^Tx \le d) to a^Tx \le b, this results in:
+ *  In the safe variant, we need to transform all variables (implicitly) to nonnegative variables using their
+ *  upper/lower bounds.  When adding \lambda * (c^Tx \le d) to a^Tx \le b, this results in:
+ *
  *    Define m_i=a_i+\lambda c_i
  *           U \cap L = \empty
  *           U = \{ i : x_i \le u_i\}
@@ -342,9 +342,10 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadScale(
  *
  *    \sum_{i \in U} \overline{m_i}x_i + \sum_{i \in L}\underline{m_i}x_i
  *                     \le b+ \lambda d + \sum_{i \in U, u_i > 0}(\overline{m_i}-\underline{m_i})u_i + \sum_{i \in L, l_i < 0}(\underline{m_i}-\overline{m_i})l_i}
- *  This methods sums up the left hand side, and safes the change of the rhs due to the variable bounds in @param rhschange
  *
- * * @note this method is safe for usage in exact solving mode
+ *  This methods sums up the left hand side, and stores the change of the rhs due to the variable bounds in @param rhschange.
+ *
+ *  @note this method is safe for usage in exact solving mode
  */
 static
 SCIP_RETCODE varVecAddScaledRowCoefsSafely(
@@ -355,7 +356,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsSafely(
    SCIP_ROW*             row,                /**< row coefficients to add to variable vector */
    SCIP_Real             scale,              /**< scale for adding given row to variable vector */
    SCIP_Real*            rhschange,          /**< change in rhs due to variable conjugation */
-   SCIP_Bool*            success             /**< was the addition succesful */
+   SCIP_Bool*            success             /**< was the addition successful? */
    )
 {
    int i;
@@ -363,11 +364,14 @@ SCIP_RETCODE varVecAddScaledRowCoefsSafely(
    SCIP_VAR* var;
    SCIP_ROWEXACT* rowexact;
 
+   assert(SCIPisExact(scip));
    assert(inds != NULL);
    assert(vals != NULL);
    assert(nnz != NULL);
    assert(row != NULL);
-   assert(SCIPisExact(scip));
+   assert(rhschange != NULL);
+   assert(success != NULL);
+   assert(*success);
 
    previousroundmode = SCIPintervalGetRoundingMode();
    SCIPintervalSetRoundingModeDownwards();
@@ -387,7 +391,10 @@ SCIP_RETCODE varVecAddScaledRowCoefsSafely(
       val = vals[probindex];
 
       if( val == 0.0 )
+      {
+         assert(*nnz < SCIPgetNVars(scip));
          inds[(*nnz)++] = probindex;
+      }
 
       if( val == SCIP_INVALID ) /*lint !e777*/
          val = 0.0;
@@ -428,7 +435,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsSafely(
 
       /* we can't set the value to 0 or the sparsity pattern does not work. We can't perturb it slightly because we are solving
        * exactly; this is taken care of in removeZerosSafely */
-      if( val == 0 )
+      if( val == 0.0 )
          val = SCIP_INVALID;
 
       vals[probindex] = val;
@@ -1568,7 +1575,8 @@ SCIP_RETCODE cutTightenCoefsQuad(
 }
 
 /** multiplies a parameter for a variable in a row safely (using variable bounds and increasing the rhs)
- * @return the scaled value
+ *
+ *  @return the scaled value
  */
 static
 SCIP_Real scaleValSafely(
@@ -1578,7 +1586,7 @@ SCIP_Real scaleValSafely(
    SCIP_Bool             cutislocal,         /**< should local or global bounds be used */
    SCIP_VAR*             var,                /**< the variable that is relevant */
    SCIP_Real*            rhschange,          /**< resulting change in rhs of row */
-   SCIP_Bool*            success             /**< was the operation succesful? (false if no bounds) */
+   SCIP_Bool*            success             /**< was the operation successful? (false if no bounds) */
    )
 {
    SCIP_ROUNDMODE previousroundmode;
@@ -3233,8 +3241,10 @@ SCIP_Real SCIPaggrRowCalcEfficacyNorm(
    return calcEfficacyNormQuad(scip, aggrrow->vals, aggrrow->inds, aggrrow->nnz);
 }
 
-/** Adds one row to the aggregation row. Differs from SCIPaggrRowAddRow() by providing some additional
- *  parameters required for SCIPaggrRowSumRows()
+/** adds one row to the aggregation row
+ *
+ *  @note this method differs from SCIPaggrRowAddRow() by providing some additional parameters required for
+ *        SCIPaggrRowSumRows()
  */
 static
 SCIP_RETCODE addOneRow(
@@ -3343,8 +3353,10 @@ SCIP_RETCODE addOneRow(
    return SCIP_OKAY;
 }
 
-/** Adds one row to the aggregation row. Differs from SCIPaggrRowAddRow() by providing some additional
- *  parameters required for SCIPaggrRowSumRows()
+/** adds one row to the aggregation row
+ *
+ *  @note this method differs from SCIPaggrRowAddRowSafely() by providing some additional parameters required for
+ *        SCIPaggrRowSumRows()
  *
  *  @note this method is the variant of addOneRow() that is safe to use in exact solving mode
  */
@@ -3360,7 +3372,7 @@ SCIP_RETCODE addOneRowSafely(
    int                   maxaggrlen,         /**< maximal length of aggregation row */
    SCIP_Bool*            rowtoolong,         /**< is the aggregated row too long */
    SCIP_Bool*            rowused,            /**< was the row really added? */
-   SCIP_Bool*            success,            /**< was the row added succesfully? */
+   SCIP_Bool*            success,            /**< was the row added successfully? */
    SCIP_Bool*            lhsused             /**< was the lhs or the rhs of the row used? */
    )
 {
@@ -3497,8 +3509,7 @@ SCIP_RETCODE addOneRowSafely(
    return SCIP_OKAY;
 }
 
-/** aggregate rows using the given weights; the current content of the aggregation
- *  row, \p aggrrow, gets overwritten
+/** aggregate rows using the given weights; the current content of the aggregation row, \p aggrrow, is overwritten
  *
  *  @note this method is safe for usage in exact solving mode
  */
@@ -3527,7 +3538,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    int k;
    int nusedrows;
    int nnegslackrows;
-   SCIP_Bool rowtoolong, rowtoolongcert;
+   SCIP_Bool rowtoolong;
    SCIP_Bool rowused, rowusedcert, lhsused;
 
    assert( scip != NULL );
@@ -3564,6 +3575,9 @@ SCIP_RETCODE SCIPaggrRowSumRows(
          if( !SCIPisExact(scip) )
          {
             SCIP_CALL( addOneRow(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
+
+            if( rowtoolong )
+               *valid = FALSE;
          }
          else  /*lint --e{644}*/
          {
@@ -3572,7 +3586,13 @@ SCIP_RETCODE SCIPaggrRowSumRows(
             SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal,
                   negslack, maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
 
-            if( SCIPisCertified(scip) )
+            if( rowtoolong )
+               *valid = FALSE;
+
+            if( !(*valid) )
+               break;
+
+            if( certificaterow != NULL )
             {
                SCIP_ROW* row = rows[rowinds[k]];
                SCIP_Bool integral = FALSE;
@@ -3588,9 +3608,10 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                }
                else
                {
-                  assert(certificaterow != NULL);
                   SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis,
-                        allowlocal, 0, maxaggrlen, &rowtoolongcert, &rowusedcert, valid, &lhsused) );
+                        allowlocal, 0, nvars, &rowtoolong, &rowusedcert, valid, &lhsused) );
+                  /* the certificate row may exceed the limit maxaggrlen */
+                  assert(!rowtoolong);
                }
                if( rowusedcert )
                {
@@ -3609,11 +3630,8 @@ SCIP_RETCODE SCIPaggrRowSumRows(
             }
          }
 
-         if( rowtoolong )
-         {
-            *valid = FALSE;
+         if( !(*valid) )
             break;
-         }
       }
    }
    else
@@ -3625,6 +3643,9 @@ SCIP_RETCODE SCIPaggrRowSumRows(
             if( !SCIPisExact(scip) )
             {
                SCIP_CALL( addOneRow(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
+
+               if( rowtoolong )
+                  *valid = FALSE;
             }
             else
             {
@@ -3633,7 +3654,13 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack,
                      maxaggrlen, &rowtoolong, &rowused, valid, &lhsused) );
 
-               if( SCIPisCertified(scip) )
+               if( rowtoolong )
+                  *valid = FALSE;
+
+               if( !(*valid) )
+                  break;
+
+               if( certificaterow != NULL )
                {
                   SCIP_ROW* row = rows[k];
                   SCIP_Bool integral = FALSE;
@@ -3649,9 +3676,10 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   }
                   else
                   {
-                     assert(certificaterow != NULL);
                      SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[k], weights[k], sidetypebasis, allowlocal, 0,
-                           maxaggrlen, &rowtoolongcert, &rowusedcert, valid, &lhsused) );
+                           nvars, &rowtoolong, &rowusedcert, valid, &lhsused) );
+                     /* the certificate row may exceed the limit maxaggrlen */
+                     assert(!rowtoolong);
                   }
                   if( rowusedcert )
                   {
@@ -3670,30 +3698,27 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                }
             }
 
-            if( rowtoolong )
-            {
-               *valid = FALSE;
+            if( !(*valid) )
                break;
-            }
          }
       }
    }
 
    if( *valid )
-      SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, valid);
-   if( SCIPisCertified(scip) )
    {
-      SCIP_Bool validcert;
+      SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, valid);
 
-      assert(certificaterow != NULL);
+      if( certificaterow != NULL )
+      {
+         SCIPaggrRowRemoveZeros(scip, certificaterow, FALSE, valid);
+         SCIP_CALL( SCIPaddCertificateAggrInfo(scip, certificaterow, usedrows, usedweights, certificaterow->nrows,
+               negslackrows, negslackweights, nnegslackrows) );
+      }
+   }
 
-      validcert = TRUE;
-      SCIPaggrRowRemoveZeros(scip, certificaterow, FALSE, &validcert);
-      *valid = *valid && validcert;
-
-      SCIP_CALL( SCIPaddCertificateAggrInfo(scip, certificaterow, usedrows, usedweights, certificaterow->nrows, negslackrows, negslackweights, nnegslackrows) );
+   if( certificaterow != NULL )
+   {
       SCIPaggrRowFree(scip, &certificaterow);
-
       SCIPfreeBufferArray(scip, &negslackweights);
       SCIPfreeBufferArray(scip, &negslackrows);
       SCIPfreeBufferArray(scip, &usedweights);
@@ -3715,7 +3740,7 @@ SCIP_RETCODE postprocessCut(
    SCIP_Real*            cutcoefs,           /**< non-zeros coefficients of cut */
    int*                  nnz,                /**< number non-zeros coefficients of cut */
    SCIP_Real*            cutrhs,             /**< right hand side of cut */
-   SCIP_Bool*            success             /**< pointer to return whether post-processing was succesful or cut is redundant */
+   SCIP_Bool*            success             /**< pointer to return whether post-processing was successful or cut is redundant */
    )
 {
    int i;
@@ -6504,7 +6529,7 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
        * - sign = -1: s = lhs - a^Tx <= 0
        */
       {
-         SCIP_Bool success;
+         SCIP_Bool success = TRUE;
          SCIP_Real sidevalchg;
 
          if( SCIPisCertified(scip) && !integralslack )
@@ -6516,6 +6541,7 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
          }
 
          SCIP_CALL( varVecAddScaledRowCoefsSafely(scip, cutinds, cutcoefs, nnz, userow, mult, &sidevalchg, &success) );
+         assert(success);
 
          /* move to rhs -> need to round up */
          SCIPintervalSetRoundingModeUpwards();
@@ -6737,7 +6763,7 @@ SCIP_RETCODE cutsSubstituteMIRRational(
          userow = row;
 
       {
-         SCIP_Bool success;
+         SCIP_Bool success = TRUE;
          SCIP_Real sidevalchg;
 
          SCIPrationalMultReal(cutar, cutar, -slacksign[i]);
@@ -6754,6 +6780,7 @@ SCIP_RETCODE cutsSubstituteMIRRational(
          }
 
          SCIP_CALL( varVecAddScaledRowCoefsSafely(scip, cutinds, cutcoefs, nnz, userow, mult, &sidevalchg, &success) );
+         assert(success);
 
          /* move to rhs -> need to round up */
          SCIPintervalSetRoundingModeUpwards();
