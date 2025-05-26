@@ -126,10 +126,13 @@ Test(oracle, jacsparsity, .init = setup, .fini = teardown,
 
    const int* jacrowoffsets = NULL;
    const int* jaccols = NULL;
+   const SCIP_Bool* jaccolnlflags = NULL;
    const int* jaccoloffsets = NULL;
    const int* jacrows = NULL;
+   const SCIP_Bool* jacrownlflags = NULL;
 
-   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, oracle, &jacrowoffsets, &jaccols, &jaccoloffsets, &jacrows) );
+   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, oracle, &jacrowoffsets, &jaccols, &jaccolnlflags, &jaccoloffsets,
+         &jacrows, &jacrownlflags) );
 
    expecti(jacrowoffsets[0], 0);
    expecti(jacrowoffsets[1], 2);
@@ -143,6 +146,13 @@ Test(oracle, jacsparsity, .init = setup, .fini = teardown,
    expecti(jaccols[4], 1);
    expecti(jaccols[5], 3);
 
+   expecti(jaccolnlflags[0], TRUE);
+   expecti(jaccolnlflags[1], TRUE);
+   expecti(jaccolnlflags[2], FALSE);
+   expecti(jaccolnlflags[3], FALSE);
+   expecti(jaccolnlflags[4], FALSE);
+   expecti(jaccolnlflags[5], FALSE);
+
    expecti(jaccoloffsets[0], 0);
    expecti(jaccoloffsets[1], 1);
    expecti(jaccoloffsets[2], 2);
@@ -155,6 +165,15 @@ Test(oracle, jacsparsity, .init = setup, .fini = teardown,
    expecti(jacrows[3], 1);
    expecti(jacrows[4], 1);
    expecti(jacrows[5], 2);
+
+   cr_assert(jacrownlflags != NULL);
+
+   expecti(jacrownlflags[0], TRUE);
+   expecti(jacrownlflags[1], FALSE);
+   expecti(jacrownlflags[2], TRUE);
+   expecti(jacrownlflags[3], FALSE);
+   expecti(jacrownlflags[4], FALSE);
+   expecti(jacrownlflags[5], FALSE);
 
    SCIPfreeBufferArray(scip, &linvals);
    SCIPfreeBufferArray(scip, &lininds);

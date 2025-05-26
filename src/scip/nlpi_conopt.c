@@ -156,6 +156,8 @@ static int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPP
 
    /* TODO Jacobian information */
 
+   /* get Jacobian sparsity information */
+
    return 0;
 }
 
@@ -325,7 +327,7 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_NumCon(problem->CntVect, nconss);
 
    /* jacobian information */
-   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &jacoffset, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &jacoffset, NULL, NULL, NULL, NULL, NULL) );
    COI_Error += COIDEF_NumNz(problem->CntVect, jacoffset[nconss] + nrangeconss); /* each slack var adds a Jacobian nnz */
    // COI_Error += COIDEF_NumNlNz(problem->CntVect, ); TODO find out how to go about nonlinear jacobian entries
 
