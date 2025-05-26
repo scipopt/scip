@@ -4856,6 +4856,14 @@ SCIP_DECL_READERREAD(readerReadOpb)
 static
 SCIP_DECL_READERWRITE(readerWriteOpb)
 {  /*lint --e{715}*/
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   if( SCIPisExact(scip) )
+   {
+      SCIPerrorMessage("OPB reader cannot yet write problems in exact solving mode\n");
+      return SCIP_WRITEERROR;
+   }
 
    SCIP_CALL( SCIPwriteOpb(scip, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,
          vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, genericnames, result) );
@@ -4881,8 +4889,8 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
 
-   /**@todo make reader safe to use in exact solving mode */
-   /* SCIPreaderMarkExact(reader); */
+   /* reader is safe to use in exact solving mode, but exact writing still needs to be implemented */
+   SCIPreaderMarkExact(reader);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyOpb) );
