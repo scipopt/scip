@@ -834,7 +834,8 @@ SCIP_RETCODE addRowToAggrRow(
    else
    {
       *success = FALSE;
-      SCIP_CALL( SCIPaggrRowAddRowSafely(set->scip, aggrrow, row, weight, negated ? -1 : 1, success) );
+      /**@todo add row safely */
+      /* SCIP_CALL( SCIPaggrRowAddRowSafely(set->scip, aggrrow, row, weight, negated ? -1 : 1, success) ); */
    }
 
    SCIPsetDebugMsg(set, " -> add %s row <%s>[%g,%g](lp depth: %d): dual=%g -> dualrhs=%g\n",

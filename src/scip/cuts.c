@@ -2897,6 +2897,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    int i;
 
    assert(SCIPisExact(scip));
+   assert(success != NULL);
 
    /* update local flag */
    aggrrow->local = aggrrow->local || row->local;
@@ -2981,6 +2982,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    QUAD_ASSIGN(aggrrow->rhs, sidevalchg);
 
    /* add up coefficients */
+   *success = TRUE;
    SCIP_CALL( varVecAddScaledRowCoefsSafely(scip, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, userow, weight, &sidevalchg, success) );
 
    sidevalchg += QUAD_TO_DBL(aggrrow->rhs);
