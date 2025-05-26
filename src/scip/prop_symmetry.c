@@ -2052,9 +2052,9 @@ SCIP_RETCODE ensureSymmetryMovedpermvarscountsComputed(
    propdata->nmovedimplintpermvars = 0;
    propdata->nmovedcontpermvars = 0;
 
-   for (p = 0; p < propdata->nperms; ++p)
+   for (v = 0; v < propdata->npermvars; ++v)
    {
-      for (v = 0; v < propdata->npermvars; ++v)
+      for (p = 0; p < propdata->nperms; ++p)
       {
          if ( propdata->perms[p][v] != v )
          {
@@ -2078,6 +2078,7 @@ SCIP_RETCODE ensureSymmetryMovedpermvarscountsComputed(
                SCIPerrorMessage("Variable provided with unknown vartype\n");
                return SCIP_ERROR;
             }
+            break;
          }
       }
    }
