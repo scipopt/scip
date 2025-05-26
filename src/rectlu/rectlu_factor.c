@@ -3488,7 +3488,6 @@ int RECTLUbuildFactorization(
    int *singc = 0;
 
    assert(*f == NULL);
-   assert(m >= n);
 
    if( m < n )
       return 1;
@@ -3501,13 +3500,11 @@ int RECTLUbuildFactorization(
    rval = QSnum_factor_create_factor_work (*f,n,m);
    CGcheck_rval (rval, "QSnum_factor_create_factor_work failed");
 
-   rval = QSnum_factor (*f, basisx, matbeg, matcnt, matind, matval, &nsing,&singr, &singc);
+   rval = QSnum_factor (*f, basisx, matbeg, matcnt, matind, matval, &nsing, &singr, &singc);
    CGcheck_rval (rval, "QSsnum_factor failed");
+
    if( nsing > 0 )
-   {
-      printf ("Matrix is NONSINGULAR!\n");
-      rval = 1;  goto CLEANUP;
-   }
+      rval = 1;
 
  CLEANUP:
    return rval;

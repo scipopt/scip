@@ -56,6 +56,7 @@
 #include "scip/rational.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_lpexact.h"
+#include "scip/scip_message.h"
 #include "scip/set.h"
 #include "scip/sepastoreexact.h"
 #include "scip/sol.h"
@@ -4649,7 +4650,8 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
       break;
 
    case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-      SCIPerrorMessage("Feature exakt unbounded ray not fully implemented yet \n");
+      SCIPsetDebugMsg(set, " -> LP unbounded\n");
+      SCIPwarningMessage(set->scip, "Exact LP solver returned unbounded ray: handling not fully supported.\n");
       break;
 
    case SCIP_LPSOLSTAT_OBJLIMIT:
@@ -4909,7 +4911,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
 TERMINATE:
 
    /* stop timing and update number of calls and fails, and proved bound status */
-   if ( usefarkas )
+   if( usefarkas )
    {
       SCIPclockStop(stat->provedinfeaslptime, set);
       stat->nexlpinf++;
@@ -4928,7 +4930,7 @@ TERMINATE:
 }
 
 /*
- * row mehods
+ * row methods
  */
 
 /** increases usage counter of LP row */
