@@ -2398,12 +2398,12 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       /* we fail if we tried all available methods, or if we had to solve the lp exactly but could not */
       if( (lpexact->forceexactsolve && (*lperror)) || (nattempts >= 3 && !lp->hasprovedbound) || (lastboundmethod == 't') )
       {
-         SCIPdebugMessage("failed save bounding call after %d attempts to compute safe bound\n", nattempts);
+         SCIPdebugMessage("failed safe bounding call after %d attempts to compute safe bound\n", nattempts);
          shouldabort = TRUE;
          *lperror = TRUE;
       }
       if( lpexact->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT )
-	 shouldabort = TRUE;
+         shouldabort = TRUE;
    }
 #endif
    if( *lperror && lp->lpsolstat != SCIP_LPSOLSTAT_TIMELIMIT && lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT )
