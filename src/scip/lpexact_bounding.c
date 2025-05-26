@@ -1206,12 +1206,18 @@ SCIP_RETCODE projectShift(
    int shift;
    SCIP_Bool isfeas;
 
+   assert(lp != NULL);
+   assert(lp->solved);
+   assert(lpexact != NULL);
+   assert(set != NULL);
+   assert(safebound != NULL);
+
    /* project-and-shift method:
     * 1. projection step (to ensure that equalities are satisfied):
     *   - compute error in equalities: r=c-Ay^
     *   - backsolve system of equations to find correction of error: z with Dz=r
     *   - add corretion to approximate dual solution: bold(y)=y^+[z 0]
-    * 2. shifing step (to ensure that inequalities are satisfied):
+    * 2. shifting step (to ensure that inequalities are satisfied):
     *   - take convex combination of projected approximate point bold(y) with interior point y*
     * 3. compute dual objective value of feasible dual solution and set bound
     */
@@ -1269,8 +1275,7 @@ SCIP_RETCODE projectShift(
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &maxv) );
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &dualbound) );
 
-   /* flush exact lp */
-   /* set up the exact lpi for the current node */
+   /* set up the exact lpi for the current node and flush exact lp */
    SCIP_CALL( SCIPlpExactSyncLPs(lpexact, blkmem, set) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
@@ -2010,14 +2015,11 @@ SCIP_RETCODE boundShift(
    int i;
    int j;
 
-   assert(lpexact != NULL);
    assert(lp != NULL);
-   assert(lp->solved || lpexact->lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
+   assert(lp->solved);
+   assert(lpexact != NULL);
    assert(set != NULL);
    assert(safebound != NULL);
-
-   lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-   lpexact->solved = 0;
 
    if( !SCIPlpExactBoundShiftUseful(lpexact) )
       return SCIP_OKAY;

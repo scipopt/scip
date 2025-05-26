@@ -2135,6 +2135,7 @@ SCIP_RETCODE lpExactFlushAddRows(
    lp->solved = FALSE;
    lp->primalfeasible = FALSE;
    lp->primalchecked = FALSE;
+   lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
    return SCIP_OKAY;
 }
@@ -2247,6 +2248,7 @@ SCIP_RETCODE lpExactFlushChgCols(
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
       lp->dualchecked = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
    /* change bounds in LP */
@@ -2259,6 +2261,7 @@ SCIP_RETCODE lpExactFlushChgCols(
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
       lp->primalchecked = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
    lp->nchgcols = 0;
@@ -2366,6 +2369,7 @@ SCIP_RETCODE lpExactFlushChgRows(
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
       lp->primalchecked = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
    lp->nchgrows = 0;
@@ -3678,6 +3682,7 @@ SCIP_RETCODE SCIPlpExactFlush(
    /* we can't retrieve the solution from Qsoptex after anything was changed, so we need to resolve the lp */
 #ifdef SCIP_WITH_QSOPTEX
    lp->solved = FALSE;
+   lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 #endif
 
    assert(lp->nlpicols == lp->ncols);
@@ -7893,12 +7898,14 @@ SCIP_RETCODE lpExactRestoreSolVals(
    storedsolvals = lpexact->storedsolvals;
    if( storedsolvals != NULL )
    {
-      lpexact->solved = storedsolvals->lpissolved;
 #ifdef SCIP_WITH_QSOPTEX
       lpexact->solved = FALSE;
+      lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+#else
+      lpexact->solved = storedsolvals->lpissolved;
+      lpexact->lpsolstat = storedsolvals->lpsolstat;
 #endif
       SCIPrationalSetRational(lpexact->lpobjval, storedsolvals->lpobjval);
-      lpexact->lpsolstat = storedsolvals->lpsolstat;
       lpexact->primalfeasible = storedsolvals->primalfeasible;
       lpexact->primalchecked = storedsolvals->primalchecked;
       lpexact->dualfeasible = storedsolvals->dualfeasible;
