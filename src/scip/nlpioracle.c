@@ -2087,20 +2087,19 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 
    maxnnz = MIN(oracle->nvars, 10) * oracle->nconss;  /* initial guess */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jaccols, maxnnz) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacrows, maxnnz) );
 
    if( maxnnz == 0 )
    {
-      /* no variables */
+      /* no variables */ /* @todo: because of the min(nvars, 10), this only happens when there are no variables, not constraints */
       BMSclearMemoryArray(oracle->jacrowoffsets, oracle->nconss + 1);
       if( rowoffsets != NULL )
          *rowoffsets = oracle->jacrowoffsets;
       if( cols != NULL )
          *cols = oracle->jaccols;
       if( coloffsets != NULL )
-         *coloffsets = oracle->jaccoloffsets;
+         *coloffsets = NULL;
       if( rows != NULL )
-         *rows = oracle->jacrows;
+         *rows = NULL;
 
       SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
@@ -2176,6 +2175,10 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 
    SCIPfreeBlockMemoryArray(scip, &nzflag, oracle->nvars);
 
+   /* compute the column representation */
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacrows, nnz) );
+
    /* use nvarnnz to compute jaccoloffsets */
    sumvarnnz = 0;
    for( i = 0; i < oracle->nvars; ++i )
@@ -2186,8 +2189,6 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    }
    oracle->jaccoloffsets[oracle->nvars] = sumvarnnz;
 
-   /* TODO adjust sizes of the new arrays */
-
    /* use the row representation (jacrowoffsets, jaccols) to fill in the column representation nonzeroes (jacrows) */
    int considx = 0;
    for( i = 0; i < nnz; ++i )
@@ -2196,10 +2197,12 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 
       if( i == oracle->jacrowoffsets[considx] )
          ++considx;
-      oracle->jacrows[coloffset + nvarnnz[oracle->jaccols[i]]] = considx;
+
+      oracle->jacrows[coloffset + nvarnnz[oracle->jaccols[i]]] = considx-1;
+      nvarnnz[oracle->jaccols[i]]++;
    }
 
-   SCIPfreeBlockMemoryArray(scip, &nvarnnz, oracle->nvars); /* TODO may need to clear the array first */
+   SCIPfreeBlockMemoryArray(scip, &nvarnnz, oracle->nvars);
 
    if( rowoffsets != NULL )
       *rowoffsets = oracle->jacrowoffsets;

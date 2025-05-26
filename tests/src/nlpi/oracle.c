@@ -131,8 +131,30 @@ Test(oracle, jacsparsity, .init = setup, .fini = teardown,
 
    SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, oracle, &jacrowoffsets, &jaccols, &jaccoloffsets, &jacrows) );
 
+   expecti(jacrowoffsets[0], 0);
+   expecti(jacrowoffsets[1], 2);
+   expecti(jacrowoffsets[2], 4);
    expecti(jacrowoffsets[3], 6);
+
+   expecti(jaccols[0], 0);
+   expecti(jaccols[1], 2);
+   expecti(jaccols[2], 2);
+   expecti(jaccols[3], 3);
+   expecti(jaccols[4], 1);
+   expecti(jaccols[5], 3);
+
+   expecti(jaccoloffsets[0], 0);
+   expecti(jaccoloffsets[1], 1);
+   expecti(jaccoloffsets[2], 2);
+   expecti(jaccoloffsets[3], 4);
    expecti(jaccoloffsets[4], 6);
+
+   expecti(jacrows[0], 0);
+   expecti(jacrows[1], 2);
+   expecti(jacrows[2], 0);
+   expecti(jacrows[3], 1);
+   expecti(jacrows[4], 1);
+   expecti(jacrows[5], 2);
 
    SCIPfreeBufferArray(scip, &linvals);
    SCIPfreeBufferArray(scip, &lininds);
