@@ -2055,7 +2055,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    const int**           coloffsets,         /**< pointer to store pointer that stores the offsets to each column's sparsity pattern in row, can be NULL */
    const int**           rows,               /**< pointer to store pointer that stores the indices of rows that each variable participates in,
                                               *   coloffset[nvars] gives length of row, can be NULL */
-   const SCIP_Bool**     rownlflags          /**< flags indicating whether an entry in nonlinear (sorted column-wise) */
+   const SCIP_Bool**     rownlflags,         /**< flags indicating whether an entry in nonlinear (sorted column-wise) */
+   int*                  nnlnz               /**< number of nonlinear nonzeroes */
    )
 {
    SCIP_NLPIORACLECONS* cons;
@@ -2123,6 +2124,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       return SCIP_OKAY;
    }
    nnz = 0;
+   (*nnlnz) = 0;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nzflag, oracle->nvars) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &nvarnnz, oracle->nvars) );
@@ -2178,6 +2180,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
          oracle->jaccolnlflags[nnz] = TRUE;
          ++nnz;
          ++nvarnnz[j]; /* increase the counter of the variable's nonzeroes */
+         ++(*nnlnz);
       }
    }
 

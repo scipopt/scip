@@ -354,7 +354,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    const int**           coloffset,          /**< pointer to store pointer that stores the offsets to each column's sparsity pattern in row, can be NULL */
    const int**           rows,               /**< pointer to store pointer that stores the indices of rows that each variable participates in,
                                               *   coloffset[nvars] gives length of row, can be NULL */
-   const SCIP_Bool**     rownlflags          /**< flags indicating whether an entry in nonlinear (sorted column-wise) */
+   const SCIP_Bool**     rownlflags,         /**< flags indicating whether an entry in nonlinear (sorted column-wise) */
+   int*                  nnlnz               /**< number of nonlinear nonzeroes */
    );
 
 /** evaluates the Jacobian matrix in a given point

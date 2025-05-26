@@ -87,7 +87,6 @@ struct SCIP_NlpiProblem
 
 /* TODO implement solution routine */
 
-/* TODO complete this */
 static int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], int VSTA[], int TYPE[], double RHS[],
       int ESTA[], int COLSTA[], int ROWNO[], double VALUE[], int NLFLAG[], int NUMVAR, int NUMCON, int NUMNZ, void* USRMEM)
 {
@@ -97,6 +96,7 @@ static int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPP
    SCIP_NLPIORACLE* oracle;
    int norigvars = SCIPnlpiOracleGetNVars(oracle);
    int nslackvars = 0;
+   const SCIP_Bool* jacrownlflags;
 
    assert(problem != NULL);
    assert(problem->scip != NULL);
@@ -154,9 +154,12 @@ static int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPP
    }
    assert(norigvars + nslackvars == NUMVAR);
 
-   /* TODO Jacobian information */
+   /* Jacobian information */
 
-   /* get Jacobian sparsity information */
+   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->scip, oracle, NULL, NULL, NULL, NULL, NULL, &jacrownlflags) );
+
+   for( int i = 0; i < NUMNZ; i++ )
+      NLFLAG[i] = jacrownlflags[i];
 
    return 0;
 }
@@ -304,6 +307,7 @@ static SCIP_RETCODE initConopt(
    int nconss;
    const int* jacoffset;
    const int* hessoffset;
+   int nnlnz;
 
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -327,9 +331,9 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_NumCon(problem->CntVect, nconss);
 
    /* jacobian information */
-   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &jacoffset, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &jacoffset, NULL, NULL, NULL, NULL, NULL, &nnlnz) );
    COI_Error += COIDEF_NumNz(problem->CntVect, jacoffset[nconss] + nrangeconss); /* each slack var adds a Jacobian nnz */
-   // COI_Error += COIDEF_NumNlNz(problem->CntVect, ); TODO find out how to go about nonlinear jacobian entries
+   COI_Error += COIDEF_NumNlNz(problem->CntVect, nnlnz);
 
    /* hessian information */
    SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &hessoffset, NULL) );
@@ -347,7 +351,7 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_ErrMsg(problem->CntVect, &Std_ErrMsg);
    COI_Error += COIDEF_Status(problem->CntVect, &Std_Status);
    // COI_Error +=  COIDEF_Solution  ( CntVect, &Std_Solution );  /* Register the callback Solution    */
-   // COI_Error +=  COIDEF_ReadMatrix( CntVect, &Tut_ReadMatrix); /* Register the callback ReadMatrix  */
+   COI_Error += COIDEF_ReadMatrix(problem->CntVect, &Tut_ReadMatrix);
    // COI_Error +=  COIDEF_FDEval    ( CntVect, &Tut_FDEval);     /* Register the callback FDEval      */
 
    /* pass the problem pointer to CONOPT, so that it may be used in CONOPT callbacks */
