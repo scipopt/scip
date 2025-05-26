@@ -3655,6 +3655,19 @@ SCIP_RETCODE SCIPcreateConsCardinality(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* check whether indicator variables are binary */
+   if( indvars != NULL )
+   {
+      for( v = 0; v < nvars; ++v )
+      {
+         if( !SCIPvarIsBinary(indvars[v]) )
+         {
+            SCIPerrorMessage("indicator <%s> is not binary\n", SCIPvarGetName(indvars[v]));
+            return SCIP_INVALIDDATA;
+         }
+      }
+   }
+
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
