@@ -77,6 +77,7 @@ Interface changes
 - new event SCIP_EVENTTYPE_DUALBOUNDIMPROVED is generated whenever the global dual bound is improved
 - new event mask SCIP_EVENTTYPE_GAPUPDATED for catching updates in primal or dual bound
 - added new sorting functions SCIPsortRealPtrPtr(), ...
+- the callback SCIP_DECL_READERWRITE is equipped with objoffset, objscale, objoffsetexact, objscaleexact as arguments 8 through 11 to write the exact objective offset and scale in exact mode
 
 ### Deleted and changed API methods
 
