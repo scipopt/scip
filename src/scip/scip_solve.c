@@ -2553,9 +2553,9 @@ SCIP_RETCODE SCIPpresolve(
             scip->transprob->ncontimplvars, scip->transprob->nconss);
 
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-                                  "presolved problem has %d implied integral variables (%d bin, %d int, %d cont)\n",
-                                  SCIPprobGetNImplVars(scip->transprob), scip->transprob->nbinimplvars,
-                                  scip->transprob->nintimplvars, scip->transprob->ncontimplvars);
+            "presolved problem has %d implied integral variables (%d bin, %d int, %d cont)\n",
+            SCIPprobGetNImplVars(scip->transprob), scip->transprob->nbinimplvars, scip->transprob->nintimplvars,
+            scip->transprob->ncontimplvars);
 
          for( h = 0; h < scip->set->nconshdlrs; ++h )
          {
@@ -2572,7 +2572,7 @@ SCIP_RETCODE SCIPpresolve(
          if( SCIPprobIsObjIntegral(scip->transprob) )
          {
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                  "transformed objective value is always integral (scale: ");
+               "transformed objective value is always integral (scale: ");
 
             if( SCIPisExact(scip) )
             {
@@ -2581,12 +2581,11 @@ SCIP_RETCODE SCIPpresolve(
             }
             else
             {
-               SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                     "%.15g", scip->transprob->objscale);
+               SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "%.15g",
+                  scip->transprob->objscale);
             }
 
-            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                  ")\n");
+            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, ")\n");
          }
       }
       else

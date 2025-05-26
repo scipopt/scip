@@ -180,8 +180,8 @@ SCIP_DECL_EVENTEXEC(eventExecDualBoundImproved)
       dualbound = SCIPgetDualbound(scip);
 
       /* print dual bound */
-      SCIPinfoMessage(scip, NULL,
-            "found new dual bound with value %.15g in problem <%s>\n", dualbound, SCIPgetProbName(scip));
+      SCIPinfoMessage(scip, NULL, "found new dual bound with value %.15g in problem <%s>\n", dualbound,
+         SCIPgetProbName(scip));
 
       /* ensure finite improvement */
       assert(!SCIPisInfinity(scip, ABS(dualbound)));
