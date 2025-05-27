@@ -5134,6 +5134,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
    }
 
    /* check whether all variables are binary */
+   assert(vars != NULL || nvars == 0);
    for( i = 0; i < nvars; ++i )
    {
       if( !SCIPvarIsBinary(vars[i]) )

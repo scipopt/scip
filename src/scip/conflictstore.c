@@ -330,10 +330,8 @@ SCIP_RETCODE removeExactConflictFromCertificateHashmap(
 
    certificate = SCIPgetCertificate(set->scip);
    assert(certificate != NULL);
-   assert(certificate->rowdatahash != NULL);
 
-   /* only do something if constraint does not already exist */
-   if( SCIPhashmapExists(certificate->rowdatahash, (void*) cons) )
+   if( certificate->rowdatahash != NULL && SCIPhashmapExists(certificate->rowdatahash, (void*) cons) )
    {
       SCIP_CALL( SCIPhashmapRemove(certificate->rowdatahash, (void*) cons) );
    }

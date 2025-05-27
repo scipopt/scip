@@ -1189,7 +1189,6 @@ void SCIPrationalAddProd(
             SCIPABORT();
          }
 
-         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
          res->val = op1->val.sign() * op2->val.sign();
          res->isinf = TRUE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
@@ -1219,7 +1218,6 @@ void SCIPrationalAddProdReal(
          return;
       else
       {
-         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
          res->val = (op2 > 0) ? op1->val.sign() : -op1->val.sign();
          res->isinf = TRUE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
@@ -1249,7 +1247,6 @@ void SCIPrationalDiffProd(
          return;
       else
       {
-         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
          res->val = op1->val.sign() * op2->val.sign();
          res->isinf = TRUE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
@@ -1279,7 +1276,6 @@ void SCIPrationalDiffProdReal(
          return;
       else
       {
-         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
          res->val = (op2 > 0) ? op1->val.sign() : -op1->val.sign();
          res->isinf = TRUE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
@@ -1786,7 +1782,7 @@ int SCIPrationalStrLen(
       return rational->val.str().length();
 }
 
-/** prints rational to file using message handler */
+/** prints rational into a file using message handler */
 void SCIPrationalMessage(
    SCIP_MESSAGEHDLR*     msg,                /**< message handler */
    FILE*                 file,               /**< file pointer */
@@ -1806,6 +1802,24 @@ void SCIPrationalMessage(
    {
       std::string s = rational->val.str();
       SCIPmessageFPrintInfo(msg, file, "%s", s.c_str());
+   }
+}
+
+/** prints rational depending on the verbosity level */
+void SCIPrationalPrintVerbInfo(
+   SCIP_MESSAGEHDLR*     msg,                /**< message handler */
+   SCIP_VERBLEVEL        verblevel,          /**< current verbosity level */
+   SCIP_VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   SCIP_RATIONAL*        rational            /**< the rational to print */
+   )
+{
+   assert(msgverblevel > SCIP_VERBLEVEL_NONE);
+   assert(msgverblevel <= SCIP_VERBLEVEL_FULL);
+   assert(verblevel <= SCIP_VERBLEVEL_FULL);
+
+   if( msgverblevel <= verblevel )
+   {
+      SCIPrationalMessage(msg, NULL, rational);
    }
 }
 
@@ -2001,15 +2015,9 @@ SCIP_Bool SCIPrationalDenominatorIsLE(
    SCIP_Longint          val                 /**< long value to compare to */
    )
 {
-   scip::Integer denominator;
+   assert(!SCIPrationalIsAbsInfinity(rational));
 
-   if( SCIPrationalIsAbsInfinity(rational) )
-   {
-      SCIPerrorMessage("cannot compare denominator of infinite value");
-      return false;
-   }
-
-   denominator = boost::multiprecision::denominator(rational->val);
+   scip::Integer denominator = boost::multiprecision::denominator(rational->val);
 
    return denominator <= val;
 }
