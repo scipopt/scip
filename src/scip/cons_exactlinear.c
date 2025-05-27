@@ -2815,6 +2815,8 @@ void consdataGetActivity(
       }
       assert(nneginf >= 0 && nposinf >= 0);
 
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
+
       SCIPdebugMsg(scip, "activity of linear constraint: %.15g, %d positive infinity values, %d negative infinity values \n", SCIPrationalGetReal(activity), nposinf, nneginf);
 
       /* check for amount of infinity values and correct the activity */
@@ -2827,7 +2829,6 @@ void consdataGetActivity(
          SCIPrationalSetNegInfinity(activity);
 
       SCIPrationalDebugMessage("corrected activity of linear constraint: %q\n", activity);
-      SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
    }
 }
 
