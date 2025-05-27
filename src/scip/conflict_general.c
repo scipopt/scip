@@ -819,6 +819,7 @@ SCIP_RETCODE addRowToAggrRow(
    assert(row != NULL);
    assert(weight != 0.0);
    assert(safely == set->exact_enable);
+   assert(success != NULL);
 
    /* add minimal value to dual row's left hand side: y_i < 0 -> lhs, y_i > 0 -> rhs */
    negated = weight < 0.0;
@@ -834,8 +835,7 @@ SCIP_RETCODE addRowToAggrRow(
    else
    {
       *success = FALSE;
-      /**@todo add row safely */
-      /* SCIP_CALL( SCIPaggrRowAddRowSafely(set->scip, aggrrow, row, weight, negated ? -1 : 1, success) ); */
+      SCIP_CALL( SCIPaggrRowAddRowSafely(set->scip, aggrrow, row, weight, negated ? -1 : 1, success) );
    }
 
    SCIPsetDebugMsg(set, " -> add %s row <%s>[%g,%g](lp depth: %d): dual=%g -> dualrhs=%g\n",
