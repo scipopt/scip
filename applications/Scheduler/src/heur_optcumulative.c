@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_optcumulative.h
+/**@file   heur_optcumulative.c
  * @ingroup PRIMALHEURISTICS
  * @brief  heuristic for cumulative scheduling with optional activities
  * @author Stefan Heinz
