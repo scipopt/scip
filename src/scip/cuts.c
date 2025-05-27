@@ -3610,9 +3610,9 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                }
                else
                {
+                  /* the certificate row may exceed the limit maxaggrlen */
                   SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis,
                         allowlocal, 0, nvars, &rowtoolong, &rowusedcert, valid, &lhsused) );
-                  /* the certificate row may exceed the limit maxaggrlen */
                   assert(!rowtoolong);
                }
                if( rowusedcert )
@@ -3678,9 +3678,9 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   }
                   else
                   {
+                     /* the certificate row may exceed the limit maxaggrlen */
                      SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[k], weights[k], sidetypebasis, allowlocal, 0,
                            nvars, &rowtoolong, &rowusedcert, valid, &lhsused) );
-                     /* the certificate row may exceed the limit maxaggrlen */
                      assert(!rowtoolong);
                   }
                   if( rowusedcert )
