@@ -1880,8 +1880,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
    /* extract variables, constraints and number of constraints */
    if( heurdata->usetransprob )
    {
-      SCIP_VAR* tempvar;     /* the transformed variable to each original variable */
-      tempvar = NULL;
+      SCIP_VAR* tempvar = NULL;     /* the transformed variable to each original variable */
 
       /* Extract the decompositions of the transformed problem */
       SCIPgetDecomps(scip, &alldecomps, &ndecomps, FALSE);
@@ -1898,8 +1897,8 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
 
          SCIP_CALL( SCIPvarGetOrigvarSum(&tempvar, &scalar, &constant) );
 
-         if( tempvar != NULL ) 
-	         SCIP_CALL( SCIPhashmapSetImageReal(lbvarmap, vars[i], SCIPvarGetLbOriginal(tempvar)) );
+         if( tempvar != NULL )
+            SCIP_CALL( SCIPhashmapSetImageReal(lbvarmap, vars[i], SCIPvarGetLbOriginal(tempvar)) );
       }
 
       /* initialize the constraints of the transformed problem */
@@ -1920,7 +1919,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       conss = SCIPgetOrigConss(scip);
    }
 
-   if( ndecomps == 0 || !heurdata->usedecomp ) 
+   if( ndecomps == 0 || !heurdata->usedecomp )
    {
       SCIPdebugMsg(scip, "No decompositions available or wanted, going ahead without decomp\n");
       ndecomps = 0;           /* set to 0 for later unnecessary ifs */
@@ -1948,8 +1947,8 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
    {
       if( nbinvars == 0 || ncontvars > 0 )
       {
-	      SCIPdebugMsg(scip, "do not run dks if continuous variables or only integer variables are present\n");
-	      goto TERMINATE;
+         SCIPdebugMsg(scip, "do not run dks if continuous variables or only integer variables are present\n");
+         goto TERMINATE;
       }
    }
 
@@ -1988,19 +1987,17 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
          blklbl_offset = 1;
 
       /* fill the mapping of blocklabels to blockindices */
-      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &block2index, 
-            blocklabels[nblocklabels - 1] + 1 + blklbl_offset) );
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &block2index, blocklabels[nblocklabels - 1] + 1 + blklbl_offset) );
 
       block2index[0] = 0;     /* SCIP_DECOMP_LINKVAR = -1, but are saved at index 0 */
       for( b = 0; b < nblocklabels; b++ )
          block2index[blocklabels[b] + blklbl_offset] = b + 1;
-      
    }
    else
    {
       /* initialize dummy varlabels to avoid further distinctions in the following code*/
       int v;
-      
+
       for( v = 0; v < nvars; v++ )
          varlabels[v] = 0;
 
@@ -2037,7 +2034,6 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       BMSclearMemoryArray(bw_nintnonkernelvars, nblocks + 1);
    }
 
-
    /* if there are either integer variables or binary variables only, just consider these */
    if( nbinvars == 0 || nintvars == 0 || !heurdata->usetwolevel )
    {
@@ -2071,7 +2067,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
             &nintkernelvars, &nintnonkernelvars, block2index, varlabels, blklbl_offset, nvars) );
 
       SCIPdebugMsg(scip, "%d initial bin kernel vars\n%d initial int kernel vars\n", nkernelvars, nintkernelvars);
-      
+
       if( nkernelvars == 0 )
       {
          if( nintkernelvars == 0 )
@@ -2154,17 +2150,17 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       maxcontnonkernelsize = (int)SCIPfloor(scip, heurdata->kernelsizefactor * ncontnonkernelvars);
    else
       maxcontnonkernelsize = ncontkernelvars + ncontnonkernelvars;
-   
+
    if( (int)SCIPfloor(scip, heurdata->kernelsizefactor * nkernelvars) < (nkernelvars + nnonkernelvars) )
       maxkernelsize = (int)SCIPfloor(scip, heurdata->kernelsizefactor * nkernelvars);
    else
       maxkernelsize = nkernelvars + nnonkernelvars;
-     
+
    if( (int)SCIPfloor(scip, heurdata->kernelsizefactor * nnonkernelvars) <  (nkernelvars + nnonkernelvars) )
      maxnonkernelsize = (int)SCIPfloor(scip, heurdata->kernelsizefactor * nnonkernelvars);
    else
      maxnonkernelsize = nkernelvars + nnonkernelvars;
-       
+
    /* initialize the kernel and non kernel variable arrays (just binary (non/)kernel variables if 2-level buckets) */
    SCIP_CALL( SCIPallocBufferArray(scip, &contkernelvars, maxcontkernelsize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &contnonkernelvars, maxcontnonkernelsize) );
@@ -2240,7 +2236,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
    {
       SCIP_Real intratio;
       SCIP_Real binratio;
-      
+
       nbuckets = 0;
       for( b = 0; b < nblocks + 1; b++ )
       {
@@ -2249,7 +2245,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
             intratio = SCIPceil(scip, bw_nintnonkernelvars[b] / (SCIP_Real)bw_nintkernelvars[b]);
          else
             intratio = SCIPinfinity(scip);
-         
+
          if( bw_nnonkernelvars[b] > 0 && bw_nkernelvars[b] > 0 )
             binratio = SCIPceil(scip, bw_nnonkernelvars[b] / (SCIP_Real)bw_nkernelvars[b]);
          else
@@ -2257,12 +2253,12 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
 
          if( !SCIPisInfinity(scip, intratio) )
          {
-	         nbuckets += (int)intratio;
+            nbuckets += (int)intratio;
             nusedratios++;
          }
          if( !SCIPisInfinity(scip, binratio) )
          {
-	         nbuckets += (int)binratio;
+            nbuckets += (int)binratio;
             nusedratios++;
          }
       }
@@ -2275,7 +2271,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       {
          if( bw_nnonkernelvars[b] > 0 && bw_nkernelvars[b] > 0 )
          {
-	         nbuckets += (int)SCIPceil(scip, (SCIP_Real)bw_nnonkernelvars[b] / (SCIP_Real)bw_nkernelvars[b]);
+            nbuckets += (int)SCIPceil(scip, (SCIP_Real)bw_nnonkernelvars[b] / (SCIP_Real)bw_nkernelvars[b]);
             nusedratios++;
          }
       }
@@ -2288,7 +2284,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
 
    /* determine the amount of iterations over the buckets/ amount of investigated buckets */
    iters = MIN(nbuckets, heurdata->maxbucks) + 1;
-   
+
    /* create an extra array for the bucket constraints for hashmap creation in createBucketlistAndBuckets() */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &bucketconss, conss, nconss) );
 
@@ -2296,15 +2292,17 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
    SCIP_CALL( createBucketlistAndBuckets(scip, heurdata->usetransprob, iters - 1, &bucketlist, &success) );
    if( !success )
       goto TERMINATE;
-   
+
    /* fill every bucket with its variables, nothing to do for the first ('kernel') bucket -> k = 1 */
    if( iters > 1 )
+   {
       SCIP_CALL( fillBuckets(scip, &bucketlist,
             bw_contnonkernelvars, bw_nonkernelvars, bw_intnonkernelvars,
             bw_ncontnonkernelvars, bw_nnonkernelvars, bw_nintnonkernelvars,
             bw_cont_redcost, bw_redcost, bw_int_redcost,
             twolevel, heurdata->redcostlogsort, iters - 1, nblocks) );
-   
+   }
+
    /* build the kernelvariables out of each blocks kernel variables */
    j = 0;
    n = 0;
@@ -2316,10 +2314,12 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
 
       for( l = 0; l < bw_nkernelvars[b]; l++ )
          kernelvars[n++] = bw_kernelvars[b][l];
-      
+
       if( twolevel )
+      {
          for( l = 0; l < bw_nintkernelvars[b]; l++ )
             intkernelvars[m++] = bw_intkernelvars[b][l];
+      }
    }
    assert(j == ncontkernelvars);
    assert(n == nkernelvars);
@@ -2327,11 +2327,11 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       assert(m == nintkernelvars);
 
    /* loop over all buckets, solve the small MIP defined by the bucket, adjust kernel */
-   mipgap = 0.0;                    
+   mipgap = 0.0;
    nodesleft = heurdata->maxnodes;
    nnodes = 0;
    for( k = 0; k < iters; k++ )
-   {  
+   {
       SCIP_Bool found;
       SCIP_Bool infeasible;
       SCIP_Bool fixed;
@@ -2344,8 +2344,8 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       bucket = &bucketlist->buckets[k];
 
       /* do not compute the current bucket if the number of free bin/int variables exceeds some percentage */
-      if( SCIPisGT(scip, (SCIP_Real)(nkernelvars + nintkernelvars + bucket->nbucketvars + bucket->nintbucketvars), 
-		   heurdata->maxbuckfrac * (SCIP_Real)(nintvars + nbinvars)) )
+      if( SCIPisGT(scip, (SCIP_Real)(nkernelvars + nintkernelvars + bucket->nbucketvars + bucket->nintbucketvars),
+            heurdata->maxbuckfrac * (SCIP_Real)(nintvars + nbinvars)) )
          continue;
 
       /* fix all integer and binary variables to zero that are neither in the kernel nor in the current bucket */
@@ -2356,7 +2356,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
          fixed = FALSE;
 
          var = vars[i];
-         
+
          if( var == NULL )
             SCIPdebugMsg(scip, "Variable is null!\n");
 
@@ -2364,7 +2364,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
             SCIPdebugMsg(scip, "Hit a cont variable");
 
          /* search for the current variable in the kernel and in the current bucket */
-         SCIP_CALL( searchKernelAndBucket(bucket, contkernelvars, ncontkernelvars, kernelvars, nkernelvars, 
+         SCIP_CALL( searchKernelAndBucket(bucket, contkernelvars, ncontkernelvars, kernelvars, nkernelvars,
                intkernelvars, nintkernelvars, var, &found) );
 
          if( found == TRUE )
@@ -2396,7 +2396,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       /* construct a constraint that ensures the use of the bucketvariables */
       if( heurdata->addUseConss && bucket->bucketvars != NULL )
          SCIP_CALL( addUseConstraint(bucket) );
-      
+
       /* add objective cutoff if desired */
       if( heurdata->objcutoff )
       {
@@ -2408,19 +2408,19 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
                cutoff = SCIPgetUpperbound(scip) + SCIPgetLowerbound(scip);
             else
                cutoff = SCIPgetUpperbound(scip);
-            
+
             cutoff = MIN(upperbound, cutoff);
             SCIP_CALL( SCIPsetObjlimit(bucket->subscip, cutoff) );
          }
       }
 
 #ifdef DKS_WRITE_PROBLEMS
-      if( bucket->number < 0 ) 
+      if( bucket->number < 0 )
       {
-	      char name[SCIP_MAXSTRLEN];
-	      /* write the current bucket problem */
-	      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "subscip_bucket_%d.lp", bucket->number);
-	      SCIP_CALL( SCIPwriteOrigProblem(bucket->subscip, name, NULL, FALSE) );
+         char name[SCIP_MAXSTRLEN];
+         /* write the current bucket problem */
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "subscip_bucket_%d.lp", bucket->number);
+         SCIP_CALL( SCIPwriteOrigProblem(bucket->subscip, name, NULL, FALSE) );
       }
 #endif
       /* update the time limit */
@@ -2438,19 +2438,19 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       /* get the node limit which results from evenly distributing the remaining nodes */
       if( nodesleft > 0 )
       {
-	      SCIP_Longint nodes_evenly_dist;
+         SCIP_Longint nodes_evenly_dist;
          nodes_evenly_dist = (SCIP_Longint)SCIPceil(scip, ((SCIP_Real)nodesleft) / ((SCIP_Real)(iters - k)));
-	      if( 1LL > nodes_evenly_dist )
-	         nnodes = 1LL;
-	      else
-	         nnodes = nodes_evenly_dist;
+         if( 1LL > nodes_evenly_dist )
+            nnodes = 1LL;
+         else
+            nnodes = nodes_evenly_dist;
       }
       else
       {
          SCIPdebugMsg(scip, "Overall node limit reached.\n");
          goto TERMINATE;
       }
-      
+
       /* set the node limit parameter for the subscip */
       SCIP_CALL( SCIPsetLongintParam(bucket->subscip, "limits/nodes", nnodes) );
 
@@ -2487,8 +2487,8 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       }
 
       /* check if the solution is better if one of the three cases occur:
-         - solution is optimal 
-         - solution reached gaplimit  
+         - solution is optimal
+         - solution reached gaplimit
          - node limit is reached and there is one solution */
 
       if( status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_GAPLIMIT ||
@@ -2499,7 +2499,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
 
          sol = SCIPgetBestSol(bucket->subscip);
          val = SCIPgetSolOrigObj(bucket->subscip, sol);
-         
+
          /* if there is no solution yet or if the value of the current solution is better than the saved solution */
          if( SCIPisInfinity(scip, bestlocval) || val <= bestlocval )
          {
@@ -2525,7 +2525,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
          SCIPdebugMsg(scip, "Bucket solving status %d is not supported\n", status);
          goto TERMINATE;
       }
-      
+
       SCIP_CALL( SCIPfreeTransform(bucket->subscip) );
 
 #ifdef DKS_KERNEL_INFO
@@ -2560,7 +2560,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       SCIPdebug( SCIP_CALL( SCIPprintSol(scip, newsol, NULL, FALSE) ) );
       SCIPdebugMsg(scip, "Objective value %.2f\n", SCIPgetSolOrigObj(scip, newsol));
       SCIPdebugMsg(scip, "Objective value of subscip %.2f\n", SCIPgetSolOrigObj(bestbucket->subscip, bestsol));
-      
+
       /* check the feasibilty of the new created solution, save it if so and free it */
       SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 
@@ -2593,7 +2593,7 @@ TERMINATE:
       SCIPfreeBufferArray(scip, &bw_intnonkernelcount);
 
    if( bw_intkernelcount != NULL )
-      SCIPfreeBufferArray(scip, &bw_intkernelcount);      
+      SCIPfreeBufferArray(scip, &bw_intkernelcount);
 
    if( intnonkernelvars != NULL )
       SCIPfreeBufferArray(scip, &intnonkernelvars);
@@ -2615,7 +2615,7 @@ TERMINATE:
 
    if( binintvars != NULL )
       SCIPfreeBufferArray(scip, &binintvars);
-   
+
    if( nonkernelvars != NULL )
       SCIPfreeBufferArray(scip, &nonkernelvars);
 
@@ -2666,7 +2666,7 @@ TERMINATE:
 
    if( bw_intkernelvars != NULL )
       SCIPfreeBufferArray(scip, &bw_intkernelvars);
- 
+
    if( bw_nonkernelvars != NULL )
       SCIPfreeBufferArray(scip, &bw_nonkernelvars);
 
@@ -2696,12 +2696,12 @@ TERMINATE:
 
    if( bw_ncontkernelvars != NULL )
       SCIPfreeBufferArray(scip, &bw_ncontkernelvars);
- 
+
    if( block2index != NULL )
    {
       if( blocklabels != NULL )
       {
-	      assert(nblocklabels >= 1);
+         assert(nblocklabels >= 1);
          SCIPfreeBlockMemoryArrayNull(scip, &block2index, blocklabels[nblocklabels - 1] + 1 + blklbl_offset);
       }
       else
@@ -2716,14 +2716,14 @@ TERMINATE:
 
    if( varlabels != NULL )
       SCIPfreeBufferArray(scip, &varlabels);
-  
+
    SCIP_CALL( freeRedcostArrays(scip, &bw_cont_redcost, &bw_redcost, &bw_int_redcost, nblocks) );
 
 
    if( lbvarmap != NULL )
       SCIPhashmapFree(&lbvarmap);
 
-   if( bucketlist != NULL ) 
+   if( bucketlist != NULL )
    {
       for( k = bucketlist->nbuckets - 1; k >= 1; k-- )
       {
@@ -2753,12 +2753,11 @@ SCIP_RETCODE SCIPincludeHeurDKS(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_HEURDATA* heurdata;
-   SCIP_HEUR* heur;
+   SCIP_HEURDATA* heurdata = NULL;
+   SCIP_HEUR* heur = NULL;
 
    /* create dks primal heuristic data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
-   heur = NULL;
    assert(heurdata != NULL);
    heurdata->ncalls = 0;
    heurdata->uselesscall = FALSE;
@@ -2776,11 +2775,11 @@ SCIP_RETCODE SCIPincludeHeurDKS(
 
    /* add dks primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxbucks",
-         "maximal number of buckets to be investigated", 
+         "maximal number of buckets to be investigated",
          &heurdata->maxbucks, TRUE, DEFAULT_MAXBUCKS, 1, 100, NULL, NULL) );
-   
+
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/kernelsizefactor",
-         "factor with which the initial kernel size can grow max", 
+         "factor with which the initial kernel size can grow max",
          &heurdata->kernelsizefactor, TRUE, DEFAULT_KERNELSIZEFACTOR, 1.0, 10.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/addUseConss",
@@ -2799,48 +2798,48 @@ SCIP_RETCODE SCIPincludeHeurDKS(
          "should a variable with max one uplock and one downlock be in the kernel?",
          &heurdata->lesslockskernel, TRUE, DEFAULT_LESSLOCKSKERNEL, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usetransprob", 
-         "should dks use the transformed problem?", 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usetransprob",
+         "should dks use the transformed problem?",
          &heurdata->usetransprob, TRUE, DEFAULT_USETRANSPROB, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/buckmaxgap",
-         "defines the maximum mipgap a bucket can be solved to", 
+         "defines the maximum mipgap a bucket can be solved to",
          &heurdata->buckmaxgap, TRUE, DEFAULT_BUCKMAXGAP, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxlinkscore",
-         "defines a bound to the linkscore of the decomp", 
+         "defines a bound to the linkscore of the decomp",
          &heurdata->maxlinkscore, TRUE, DEFAULT_MAXLINKSCORE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxbuckfrac",
-         "defines a maximal share of bin/int variables for a bucket to be respected", 
+         "defines a maximal share of bin/int variables for a bucket to be respected",
          &heurdata->maxbuckfrac, TRUE, DEFAULT_MAXBUCKFRAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
          "maximum number of nodes to regard in all subproblems",
-         &heurdata->maxnodes, TRUE, DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) ); 
-   
+         &heurdata->maxnodes, TRUE, DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usetwolevel",
-         "should a two level bucket structure be used if possible?", 
+         "should a two level bucket structure be used if possible?",
          &heurdata->usetwolevel, FALSE, DEFAULT_USETWOLEVEL, NULL, NULL) );
-   
+
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usedecomp",
-         "should a decomposition be used if given?", 
+         "should a decomposition be used if given?",
          &heurdata->usedecomp, FALSE, DEFAULT_USEDECOMP, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usebestsol", 
-         "should the best solution instead of the LP solution be used?", 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usebestsol",
+         "should the best solution instead of the LP solution be used?",
          &heurdata->usebestsol, FALSE, DEFAULT_USEBESTSOL, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/redcostsort", 
-         "should the bucket variables be sorted by reduced costs in the LP solution?", 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/redcostsort",
+         "should the bucket variables be sorted by reduced costs in the LP solution?",
          &heurdata->redcostsort, FALSE, DEFAULT_REDCOSTSORT, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/primalonly", 
-         "should the heuristic terminate after the first primal solution is found?", 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/primalonly",
+         "should the heuristic terminate after the first primal solution is found?",
          &heurdata->primalonly, FALSE, DEFAULT_PRIMALONLY, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/redcostlogsort",
-         "should the bucket variables be sorted logarithmically by reduced costs in the LP solution?", 
+         "should the bucket variables be sorted logarithmically by reduced costs in the LP solution?",
          &heurdata->redcostlogsort, FALSE, DEFAULT_REDCOSTLOGSORT, NULL, NULL) ) ;
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/objcutoff",
