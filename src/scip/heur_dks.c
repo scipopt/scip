@@ -309,6 +309,7 @@ SCIP_RETCODE countKernelVariables(
             bw_nnonkernelvars[block]++;
          }
          break;
+
       /* LP value > lb -> count integer as kernel variable else not */
       /* count separatly if binaries and integers are present */
       case SCIP_VARTYPE_INTEGER:
@@ -344,6 +345,7 @@ SCIP_RETCODE countKernelVariables(
             }
          }
          break;
+
       /* LP value > lower bound -> potential kernel variable else not for continuous vars */
       case SCIP_VARTYPE_CONTINUOUS:
       default:
@@ -446,6 +448,7 @@ SCIP_RETCODE fillKernels(
             bw_nonkernelcount[block_index]++;
          }
          break;
+
       /* LP value > lb -> integer kernel variable else non-kernel variable */
       /* count separatly if binaries and integers are present */
       case SCIP_VARTYPE_INTEGER:
@@ -492,6 +495,7 @@ SCIP_RETCODE fillKernels(
             }
          }
          break;
+
       /* LP value > lower bound -> continuous kernel variable else non-kernel variable */
       case SCIP_VARTYPE_CONTINUOUS:
       default:
