@@ -2095,6 +2095,8 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
          }
          else
          {
+            assert(bw_nintkernelvars != NULL);
+
             /* bin vars are all zero in lp sol -> 1-level buckets with int first and bin vars in kernel afterwards */
             nkernelvars = nintkernelvars;
             nnonkernelvars += nintnonkernelvars;
@@ -2131,6 +2133,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       SCIP_CALL( SCIPallocBufferArray(scip, &bw_intkernelvars, nblocks + 1 ) );
       SCIP_CALL( SCIPallocBufferArray(scip, &bw_intnonkernelvars, nblocks + 1) );
    }
+
    /* initialize kernel and non kernel variables for each block */
    for( b = 0; b < nblocks + 1; b++ )
    {
@@ -2144,7 +2147,12 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
 
       if( twolevel )
       {
-         int intblocksize = bw_nintkernelvars[b] + bw_nintnonkernelvars[b];
+         int intblocksize;
+
+         assert(bw_nintkernelvars != NULL);
+         assert(bw_nintnonkernelvars != NULL);
+
+         intblocksize = bw_nintkernelvars[b] + bw_nintnonkernelvars[b];
 
          SCIP_CALL( SCIPallocBufferArray(scip, &(bw_intkernelvars[b]), intblocksize) );
          SCIP_CALL( SCIPallocBufferArray(scip, &(bw_intnonkernelvars[b]), intblocksize) );
