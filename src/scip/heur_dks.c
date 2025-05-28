@@ -372,7 +372,7 @@ static
 SCIP_RETCODE fillKernels(
    SCIP*                 scip,               /**< main SCIP data structure */
    SCIP_VAR**            vars,               /**< array of variables */
-   SCIP_VAR***           binintvars,         /**< array of binary and integer variables */
+   SCIP_VAR**            binintvars,         /**< array of binary and integer variables */
    SCIP_VAR***           bw_contkernelvars,  /**< blockwise array of continuous kernel variables */
    SCIP_VAR***           bw_contnonkernelvars,     /**< blockwise array of continuous non-kernel variables */
    SCIP_VAR***           bw_kernelvars,      /**< blockwise array of (binary) kernel variables */
@@ -433,7 +433,7 @@ SCIP_RETCODE fillKernels(
       /* compare binaries only to the lower bound of 0.0 and add to kernel or non-kernel variables */
       case SCIP_VARTYPE_BINARY:
          /* adding the variable to the binary and integer variable array */
-         (*binintvars)[j++] = vars[i];
+         binintvars[j++] = vars[i];
 
          if( !SCIPisEQ(scip, lpval, 0.0) )
          {
@@ -453,7 +453,7 @@ SCIP_RETCODE fillKernels(
       /* count separatly if binaries and integers are present */
       case SCIP_VARTYPE_INTEGER:
          /* adding the variable to the binary and integer variable array */
-         (*binintvars)[j++] = vars[i];
+         binintvars[j++] = vars[i];
 
          if(  (!SCIPisEQ(scip, lpval, 0.0) && !SCIPisEQ(scip, lpval, lb)) 
             || (usetranslb && SCIPisGT(scip, lb, lborig)) )
@@ -2235,7 +2235,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       BMSclearMemoryArray(bw_intnonkernelcount, nblocks + 1);
 
       /* filling of the kernels with the variables */
-      SCIP_CALL( fillKernels(scip, vars, &binintvars,
+      SCIP_CALL( fillKernels(scip, vars, binintvars,
             bw_contkernelvars, bw_contnonkernelvars, bw_kernelvars, bw_nonkernelvars,
             bw_intkernelvars, bw_intnonkernelvars, bestcurrsol, lbvarmap, twolevel, usebestsol,
             heurdata->usetransprob, heurdata->translbkernel, bw_contkernelcount,
@@ -2244,7 +2244,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
    }
    else
       /* filling of the kernels with the variables */
-      SCIP_CALL( fillKernels(scip, vars, &binintvars,
+      SCIP_CALL( fillKernels(scip, vars, binintvars,
             bw_contkernelvars, bw_contnonkernelvars, bw_kernelvars, bw_nonkernelvars, NULL, NULL,
             bestcurrsol, lbvarmap, twolevel, usebestsol, heurdata->usetransprob,
             heurdata->translbkernel, bw_contkernelcount, bw_contnonkernelcount, bw_kernelcount,
