@@ -494,10 +494,13 @@ SCIP_Bool mpsinputReadLine(
       len = (unsigned int) strlen(mpsi->buf);
 
       for( i = 0; i < len; i++ )
+      {
          if( (mpsi->buf[i] == '\t') || (mpsi->buf[i] == '\n') || (mpsi->buf[i] == '\r') )
             mpsi->buf[i] = BLANK;
+      }
 
       /* remove trailing whitespace, for len < 14 check to succeed on forplan.mps again */
+      assert(len < MPS_MAX_LINELEN);
       while( len > 0 && mpsi->buf[len-1] == BLANK )
          --len;
 

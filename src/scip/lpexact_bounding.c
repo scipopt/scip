@@ -2307,7 +2307,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_Real*            safebound,          /**< pointer to store the calculated safe bound */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
-   )
+   ) /*lint --e{715}*/
 {  /*lint --e{715}*/
 #ifdef SCIP_WITH_BOOST
    char dualboundmethod;

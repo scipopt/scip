@@ -1557,8 +1557,8 @@ SCIP_RETCODE readConstraints(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean");
 #endif
       retcode = SCIPcreateConsPseudoboolean(scip, &cons, name, linvars, nlincoefs, lincoefs, terms, ntermcoefs,
-            ntermvars, termcoefs, indvar, weight, issoftcons, lhs, rhs, initial, separate, enforce, check, propagate,
-            local, modifiable, dynamic, removable, FALSE);
+         ntermvars, termcoefs, indvar, weight, issoftcons, lhs, rhs, initial, separate, enforce, check, propagate, /*lint !e644*/
+         local, modifiable, dynamic, removable, FALSE);
       if( retcode != SCIP_OKAY )
          goto TERMINATE;
    }
@@ -1572,8 +1572,8 @@ SCIP_RETCODE readConstraints(
 #endif
       if( !SCIPisExact(scip) )
       {
-         retcode = SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
+         retcode = SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs, /*lint !e644*/
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
       }
       else
       {
@@ -1584,8 +1584,8 @@ SCIP_RETCODE readConstraints(
          SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &lincoefsrat, nlincoefs) );
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhsrat) );
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhsrat) );
-         SCIPrationalSetReal(lhsrat, lhs);
-         SCIPrationalSetReal(rhsrat, rhs);
+         SCIPrationalSetReal(lhsrat, lhs); /*lint !e644*/
+         SCIPrationalSetReal(rhsrat, rhs); /*lint !e644*/
          for( int i = 0; i < nlincoefs; ++i )
             SCIPrationalSetReal(lincoefsrat[i], lincoefs[i]);
          retcode = SCIPcreateConsExactLinear(scip, &cons, name, nlincoefs, linvars, lincoefsrat, lhsrat, rhsrat,
@@ -4643,7 +4643,7 @@ SCIP_RETCODE SCIPwriteOpb(
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_Bool             genericnames,       /**< should generic variable and constraint names be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
-   )
+   ) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_VAR*** andvars;
    SCIP_VAR** resvars;

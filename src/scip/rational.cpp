@@ -528,6 +528,7 @@ void SCIPrationalCanonicalize(
    SCIP_RATIONAL*        rational            /**< rational to put in canonical form */
    )
 {
+   assert(rational != nullptr);
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_BOOST)
    mpq_canonicalize(rational->val.backend().data());
 #endif
@@ -680,7 +681,7 @@ SCIP_Bool SCIPrationalIsString(
    {
       if( *desc == '.' )
       {
-         int mantissalen;
+         size_t mantissalen;
 
          ++desc;
          mantissalen = strspn(desc, "0123456789");
@@ -890,7 +891,7 @@ SCIP_Bool SCIPstrToRationalValue(
    {
       if( *desc == '.' )
       {
-         int mantissalen;
+         size_t mantissalen;
 
          ++desc;
          mantissalen = strspn(desc, "0123456789");
@@ -2029,6 +2030,7 @@ SCIP_Longint SCIPrationalNumerator(
    SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
+   assert(rational != nullptr);
    return rational->val.val;
 }
 
@@ -2037,6 +2039,7 @@ SCIP_Longint SCIPrationalDenominator(
    SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
+   assert(rational != nullptr);
    return 1.0;
 }
 
@@ -2046,6 +2049,7 @@ SCIP_Bool SCIPrationalDenominatorIsLE(
    SCIP_Longint          val                 /**< long value to compare to */
    )
 {
+   assert(rational != nullptr);
    return TRUE;
 }
 #endif
@@ -2055,6 +2059,7 @@ int SCIPrationalGetSign(
    const SCIP_RATIONAL*  rational            /**< the rational */
    )
 {
+   assert(rational != nullptr);
    return rational->val.sign();
 }
 
@@ -2064,18 +2069,18 @@ void SCIPrationalGetFrac(
    SCIP_RATIONAL*        src                 /**< src rational */
    )
 {
-#ifdef SCIP_WITH_BOOST
-   scip::Integer roundint, rest;
-
    assert(src != nullptr);
    assert(res != nullptr);
+
+#ifdef SCIP_WITH_BOOST
 
    if( src->isinf )
       SCIPrationalSetReal(res, 0.0);
    else
    {
-      roundint = 0;
-      rest = 0;
+      scip::Integer roundint = 0;
+      scip::Integer rest = 0;
+
       divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
       if( rest != 0 )
       {
@@ -2092,9 +2097,10 @@ SCIP_Real SCIPrationalGetReal(
    )
 {
    SCIP_Real retval = 0.0;
-#ifdef SCIP_WITH_BOOST
+
    assert(rational != nullptr);
 
+#ifdef SCIP_WITH_BOOST
    if( rational->isinf )
       return (rational->val.sign() * infinity);
 
@@ -2166,11 +2172,10 @@ void SCIPrationalRoundInteger(
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
-#ifdef SCIP_WITH_BOOST
-   scip::Integer roundint, rest;
-
    assert(src != nullptr);
    assert(res != nullptr);
+#ifdef SCIP_WITH_BOOST
+   scip::Integer roundint, rest;
 
    if( src->isinf )
       SCIPrationalSetRational(res, src);
@@ -2214,13 +2219,14 @@ SCIP_Bool SCIPrationalRoundLong(
    )
 {
    SCIP_Bool success = FALSE;
-#ifdef SCIP_WITH_BOOST
-   scip::Integer roundint, rest;
 
    assert(src != nullptr);
    assert(res != nullptr);
+
+#ifdef SCIP_WITH_BOOST
    assert(!src->isinf);
 
+   scip::Integer roundint, rest;
    divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
 
    if( rest != 0 )
@@ -2320,6 +2326,8 @@ void SCIPrationalComputeApproximationLong(
    int sign;
    int done = 0;
 
+   assert(res != nullptr);
+   assert(src != nullptr);
    assert(numerator(src->val) <= SCIP_LONGINT_MAX);
    assert(denominator(src->val) <= SCIP_LONGINT_MAX);
 
@@ -2473,6 +2481,8 @@ void SCIPrationalComputeApproximation(
    int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
    )
 {
+   assert(src != nullptr);
+   assert(res != nullptr);
 #ifdef SCIP_WITH_BOOST
    int done = 0;
 

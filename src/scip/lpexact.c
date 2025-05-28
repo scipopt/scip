@@ -204,7 +204,7 @@ SCIP_Bool rowExactInSync(
    SCIP_ROWEXACT*        rowexact,           /**< exact row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     msg                 /**< message handler for debug output */ /*lint !e204*/
-   )
+   ) /*lint --e{715}*/
 {
    SCIP_ROW* fprow;
    SCIP_Bool synced;
@@ -3149,7 +3149,7 @@ SCIP_RETCODE SCIProwExactCreate(
    SCIP_RATIONAL*        lhs,                /**< left hand side of row */
    SCIP_RATIONAL*        rhs,                /**< right hand side of row */
    SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
-   )
+   ) /*lint --e{715}*/
 {
    assert(row != NULL);
    assert(fprow != NULL);

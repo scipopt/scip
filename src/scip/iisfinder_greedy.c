@@ -190,6 +190,9 @@ SCIP_RETCODE deletionSubproblem(
    SCIP_Bool chgmade = FALSE;
    int i;
 
+   assert(conss != NULL);
+   assert(vars != NULL);
+
    *deleted = FALSE;
    *stop = FALSE;
    scip = SCIPiisGetSubscip(iis);

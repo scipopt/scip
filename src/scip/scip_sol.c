@@ -3425,8 +3425,9 @@ SCIP_RETCODE readSolFile(
       /* read the value */
       if( SCIPsolIsExact(sol) )
       {
+         SCIP_RATIONAL* value = NULL;
+
          assert(SCIPisExact(scip));
-         SCIP_RATIONAL* value;
 
          if( SCIPrationalIsString(valuestring) )
          {
@@ -3660,8 +3661,9 @@ SCIP_RETCODE readXmlSolFile(
       /* read the value */
       if( SCIPsolIsExact(sol) )
       {
+         SCIP_RATIONAL* value = NULL;
+
          assert(SCIPisExact(scip));
-         SCIP_RATIONAL* value;
 
          if( SCIPrationalIsString(valuestring) )
          {
