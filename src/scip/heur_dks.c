@@ -993,7 +993,7 @@ SCIP_RETCODE freeBucket(
 /** initialize the bucketlist */
 static
 SCIP_RETCODE initBucketlist(
-   SCIP*                 scip,                
+   SCIP*                 scip,               /**< SCIP data structure */
    BUCKETLIST**          bucketlist,         /**< pointer to bucketlist */
    int                   nbuckets            /**< number of buckets */
    )
@@ -1043,7 +1043,7 @@ SCIP_RETCODE freeBucketlist(
 }
 
 /** creates the subscip for each bucket */
-static 
+static
 SCIP_RETCODE bucketCreateSubscip(
    BUCKET*               bucket,             /**< the bucket to create the subscip for */
    SCIP_Bool             usetransprob,       /**< indicating whether the transformed or the original problem is used */
@@ -1088,16 +1088,16 @@ SCIP_RETCODE bucketCreateSubscip(
 
 #ifdef SCIP_DEBUG /* we print statistics later, so we need to copy statistics tables */
    SCIP_CALL( SCIPcopyPlugins(scip, bucket->subscip,
-	      TRUE, FALSE, TRUE, TRUE, TRUE,
-			TRUE, TRUE, TRUE, TRUE, TRUE,
-			TRUE, TRUE, TRUE, FALSE, TRUE,
-			TRUE, TRUE, TRUE, TRUE, TRUE, success) );
+         TRUE, FALSE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, FALSE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, bucket->subscip,
-			TRUE, FALSE, TRUE, TRUE, TRUE,
-			TRUE, TRUE, TRUE, TRUE, TRUE,
-			TRUE, TRUE, TRUE, FALSE, FALSE,
-			TRUE, FALSE, FALSE, TRUE, TRUE, success) );
+         TRUE, FALSE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, FALSE, FALSE,
+         TRUE, FALSE, FALSE, TRUE, TRUE, success) );
 #endif
 
    /* copy parameter settings */
@@ -1114,23 +1114,23 @@ SCIP_RETCODE bucketCreateSubscip(
    SCIP_CALL( SCIPsetSubscipsOff(bucket->subscip, TRUE) );
 
    /* copy all variables */
-   SCIP_CALL( SCIPcopyProb(scip, bucket->subscip, varsmap, NULL, FALSE, probname) ); 
+   SCIP_CALL( SCIPcopyProb(scip, bucket->subscip, varsmap, NULL, FALSE, probname) );
    SCIP_CALL( SCIPcopyVars(scip, bucket->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );
 
    /* copy as many constraints as possible */
    SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), SCIPgetNConss(scip)) );
 
    conss = SCIPgetConss(scip);
-   
+
    for( i = 0; i < SCIPgetNConss(scip); ++i )
    {
       /* do not check this if we use the transformed problem */
       if( !usetransprob )
          assert(!SCIPconsIsModifiable(conss[i]));
       /* copy the constraint */
-      SCIP_CALL( SCIPgetConsCopy(scip, bucket->subscip, conss[i], &newcons, SCIPconsGetHdlr(conss[i]), varsmap, consmap, 
-            NULL, SCIPconsIsInitial(conss[i]), SCIPconsIsSeparated(conss[i]), SCIPconsIsEnforced(conss[i]), 
-            SCIPconsIsChecked(conss[i]), SCIPconsIsPropagated(conss[i]), FALSE, FALSE, SCIPconsIsDynamic(conss[i]), 
+      SCIP_CALL( SCIPgetConsCopy(scip, bucket->subscip, conss[i], &newcons, SCIPconsGetHdlr(conss[i]), varsmap, consmap,
+            NULL, SCIPconsIsInitial(conss[i]), SCIPconsIsSeparated(conss[i]), SCIPconsIsEnforced(conss[i]),
+            SCIPconsIsChecked(conss[i]), SCIPconsIsPropagated(conss[i]), FALSE, FALSE, SCIPconsIsDynamic(conss[i]),
             SCIPconsIsRemovable(conss[i]), FALSE, FALSE, success) );
 
       /* abort if constraint was not successfully copied */
@@ -1138,7 +1138,9 @@ SCIP_RETCODE bucketCreateSubscip(
       {
          *success = FALSE;
          if( newcons != NULL )
-	         SCIP_CALL( SCIPreleaseCons(bucket->subscip, &newcons) );
+         {
+            SCIP_CALL( SCIPreleaseCons(bucket->subscip, &newcons) );
+         }
          SCIPhashmapFree(&varsmap);
          SCIPhashmapFree(&consmap);
          return SCIP_OKAY;
@@ -1150,14 +1152,14 @@ SCIP_RETCODE bucketCreateSubscip(
          SCIP_CALL( SCIPreleaseCons(bucket->subscip, &newcons) );
       }
    }
-   
+
    SCIPhashmapFree(&consmap);
    if( !(*success) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "In heur_dks: failed to copy some constraints, continuing\n");
       SCIPdebugMsg(scip, "In heur_dks: failed to copy some constraints to subscip, continue anyway\n");
-   } 
-   
+   }
+
    /* create arrays translating scip transformed vars to subscip original vars, and vice versa
     * capture variables in scip and subscip
     * catch global bound change events
@@ -1229,14 +1231,14 @@ SCIP_RETCODE bucketCreateSubscip(
    SCIP_CALL( SCIPsetIntParam(bucket->subscip, "display/verblevel", 0) );
    SCIP_CALL( SCIPsetBoolParam(bucket->subscip, "timing/statistictiming", FALSE) );
 #endif
-   
+
    SCIPdebugMsg(scip, "created subscip of bucket %d\n", bucket->number);
 
    return SCIP_OKAY;
 }
 
 /** create bucketlist and initialize buckets */
-static 
+static
 SCIP_RETCODE createBucketlistAndBuckets(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             usetransprob,       /**< indication whether to use the transformed problem (or the original) */
@@ -1247,6 +1249,7 @@ SCIP_RETCODE createBucketlistAndBuckets(
 {
    BUCKET* bucket;
    int b;
+
    bucket = NULL;
    *success = TRUE;
 
@@ -1261,9 +1264,10 @@ SCIP_RETCODE createBucketlistAndBuckets(
       assert((*bucketlist)->nbuckets == b + 1);
 
       bucket = &(*bucketlist)->buckets[b];
-      
+
       /* build subscip for bucket */
-      SCIP_CALL( bucketCreateSubscip(bucket, usetransprob, success) ); 
+      SCIP_CALL( bucketCreateSubscip(bucket, usetransprob, success) );
+
       if( !(*success) )
          return SCIP_OKAY;
    }
@@ -1272,9 +1276,8 @@ SCIP_RETCODE createBucketlistAndBuckets(
    return SCIP_OKAY;
 }
 
-
-/* search variable in kernel and bucket */
-static 
+/** search variable in kernel and bucket */
+static
 SCIP_RETCODE searchKernelAndBucket(
    BUCKET*               bucket,             /**< bucket to be solved next */
    SCIP_VAR**            contkernelvars,     /**< continuous variables in the latest kernel */
@@ -1295,14 +1298,14 @@ SCIP_RETCODE searchKernelAndBucket(
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
       for( j = 0; j < ncontkernelvars; j++ )
-      {    
+      {
          if( contkernelvars[j] != NULL && var == contkernelvars[j] )
          {
             *found = TRUE;
             return SCIP_OKAY;
          }
       }
-      
+
       /* search for the current variable in the continuous bucket variables */
       for( j = 0; j < bucket->ncontbucketvars; j++ )
       {
@@ -1408,6 +1411,7 @@ SCIP_RETCODE adjustKernelVars(
       {
          assert(SCIPvarGetProbindex(contkvars[n]) <= SCIPgetNVars(scip));
          var = bucket->scip2sub[SCIPvarGetProbindex(contkvars[n])];
+
          if( var != NULL )
             val = SCIPgetSolVal(bucket->subscip, solution, var);
          else
@@ -1425,14 +1429,14 @@ SCIP_RETCODE adjustKernelVars(
       else
          contkvars[n] = NULL;
    }
-   
+
    /* dependent on #levels, check the solution value of the bin/int value to be unequal to 0 and/or its lb */
    nnewkernelvars = 0;
    for( n = 0; n < *nkernelvars; n++ )
    {
       if( kvars[n] == NULL )
          continue;
-      
+
       /* get the value of the current kernel variable in the solution and its lower bound */
       if( SCIPvarIsActive(kvars[n]) )
       {
@@ -1474,6 +1478,7 @@ SCIP_RETCODE adjustKernelVars(
          {
             assert(SCIPvarGetProbindex(intkvars[n]) <= SCIPgetNVars(scip));
             var = bucket->scip2sub[SCIPvarGetProbindex(intkvars[n])];
+
             if( var != NULL )
                val = SCIPgetSolVal(bucket->subscip, solution, var);
             else
@@ -1504,6 +1509,7 @@ SCIP_RETCODE adjustKernelVars(
       {
          assert(SCIPvarGetProbindex(bucket->contbucketvars[n]) <= SCIPgetNVars(scip));
          var = bucket->scip2sub[SCIPvarGetProbindex(bucket->contbucketvars[n])];
+
          if( var != NULL )
             val = SCIPgetSolVal(bucket->subscip, solution, var);
          else
@@ -1511,7 +1517,7 @@ SCIP_RETCODE adjustKernelVars(
       }
       else
          continue;
-      
+
       lb = SCIPvarGetLbGlobal(bucket->contbucketvars[n]);
 
       /* if the solution value of the bucket var != zero and != its lb, add it to the cont kernel vars */
@@ -1600,9 +1606,9 @@ SCIP_RETCODE adjustKernelVars(
          }
       }
       /* if the size of the kernel is different, change it */
-      *nintkernelvars = nnewintkernelvars; 
+      *nintkernelvars = nnewintkernelvars;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -1637,7 +1643,7 @@ SCIP_RETCODE addUseConstraint(
          continue;
       if( SCIPvarIsActive(bucket->bucketvars[n]) )
          var = bucket->scip2sub[SCIPvarGetProbindex(bucket->bucketvars[n])];
-      else 
+      else
          var = NULL;
 
       if( var != NULL )
@@ -1677,15 +1683,14 @@ SCIP_RETCODE addUseConstraint(
    (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "useconstraint_bucket_%d", bucket->number);
 
    /* add the constraint: (-1 * sum of bucket variables <= - sum of lbs - 1) s.t. at least 1 of these vars is nonzero */
-   SCIP_CALL( SCIPcreateConsBasicLinear(bucket->subscip, &constraint, consname, k, subvars, coeffs, 
-                                        -SCIPinfinity(bucket->subscip), rhs) );
+   SCIP_CALL( SCIPcreateConsBasicLinear(bucket->subscip, &constraint, consname, k, subvars, coeffs, -SCIPinfinity(bucket->subscip), rhs) );
    SCIP_CALL( SCIPaddCons(bucket->subscip, constraint) );
    SCIP_CALL( SCIPreleaseCons(bucket->subscip, &constraint) );
 
    /* free the arrays */
    if( subvars != NULL )
       SCIPfreeBufferArray(bucket->subscip, &subvars);
-   
+
    if( coeffs != NULL )
       SCIPfreeBufferArray(bucket->subscip, &coeffs);
 
@@ -1725,7 +1730,7 @@ SCIP_DECL_HEURFREE(heurFreeDKS)
 
    SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
-   
+
    return SCIP_OKAY;
 }
 
