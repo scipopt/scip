@@ -523,15 +523,15 @@ SCIP_RETCODE fillKernels(
 static
 SCIP_RETCODE reducedCostSort(
    SCIP*                 scip,               /**< main SCIP data structure */
-   SCIP_VAR****          bw_contnonkernelvars,     /**< array pointer of continuous, non-kernel variables */
-   SCIP_VAR****          bw_nonkernelvars,   /**< array pointer of (binary,) non-kernel variables */
-   SCIP_VAR****          bw_intnonkernelvars,   /**< array pointer of integer, non-kernel variables */
+   SCIP_VAR***           bw_contnonkernelvars, /**< array pointer of continuous, non-kernel variables */
+   SCIP_VAR***           bw_nonkernelvars,   /**< array pointer of (binary,) non-kernel variables */
+   SCIP_VAR***           bw_intnonkernelvars,  /**< array pointer of integer, non-kernel variables */
    SCIP_Real***          bw_cont_redcost,    /**< array pointer with reduced costs for continuous variables */
    SCIP_Real***          bw_redcost,         /**< array pointer with reduced costs for (binary) variables */
    SCIP_Real***          bw_int_redcost,     /**< array pointer with reduced costs for integer variables */
-   int*                  bw_ncontnonkernelvars,    /**< blockwise number of continuous, non-kernel variables */
+   int*                  bw_ncontnonkernelvars, /**< blockwise number of continuous, non-kernel variables */
    int*                  bw_nnonkernelvars,  /**< blockwise number of (binary,) non-kernel variables */
-   int*                  bw_nintnonkernelvars,     /**< blockwise number of integer, non-kernel variables */
+   int*                  bw_nintnonkernelvars, /**< blockwise number of integer, non-kernel variables */
    SCIP_Bool             twolevel,           /**< usage of one or two level structure */
    int                   nblocks             /**< number of blocks */
    )
@@ -549,10 +549,10 @@ SCIP_RETCODE reducedCostSort(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &((*bw_cont_redcost)[b]), bw_ncontnonkernelvars[b]) );
       SCIP_CALL( SCIPallocBufferArray(scip, &((*bw_redcost)[b]), bw_nnonkernelvars[b]) );
-      
+
       for( i = 0; i < bw_ncontnonkernelvars[b]; i++ )
       {
-         (*bw_cont_redcost)[b][i] = SCIPgetVarRedcost(scip, (*bw_contnonkernelvars)[b][i]);
+         (*bw_cont_redcost)[b][i] = SCIPgetVarRedcost(scip, bw_contnonkernelvars[b][i]);
          /* if a var is not in LP (SCIP_INVALID), we assign a reduced cost of zero & thus the var to an early bucket */
          if( (*bw_cont_redcost)[b][i] == SCIP_INVALID ) /*lint !e777*/
             (*bw_cont_redcost)[b][i] = 0.0;
@@ -560,14 +560,14 @@ SCIP_RETCODE reducedCostSort(
 
       for( i = 0; i < bw_nnonkernelvars[b]; i++ )
       {
-         (*bw_redcost)[b][i] = SCIPgetVarRedcost(scip, (*bw_nonkernelvars)[b][i]);
+         (*bw_redcost)[b][i] = SCIPgetVarRedcost(scip, bw_nonkernelvars[b][i]);
          /* if a var is not in LP (SCIP_INVALID), we assign a reduced cost of zero & thus the var to an early bucket */
          if( (*bw_redcost)[b][i] == SCIP_INVALID ) /*lint !e777*/
             (*bw_redcost)[b][i] = 0.0;
       }
 
-      SCIPsortRealPtr((*bw_cont_redcost)[b], (void**)((*bw_contnonkernelvars)[b]), bw_ncontnonkernelvars[b]);
-      SCIPsortRealPtr((*bw_redcost)[b], (void**)((*bw_nonkernelvars)[b]), bw_nnonkernelvars[b]);
+      SCIPsortRealPtr((*bw_cont_redcost)[b], (void**)bw_contnonkernelvars[b], bw_ncontnonkernelvars[b]);
+      SCIPsortRealPtr((*bw_redcost)[b], (void**)bw_nonkernelvars[b], bw_nnonkernelvars[b]);
 
       if( twolevel )
       {
@@ -575,13 +575,13 @@ SCIP_RETCODE reducedCostSort(
 
          for( i = 0; i < bw_nintnonkernelvars[b]; i++ )
          {
-            (*bw_int_redcost)[b][i] = SCIPgetVarRedcost(scip, (*bw_intnonkernelvars)[b][i]);
+            (*bw_int_redcost)[b][i] = SCIPgetVarRedcost(scip, bw_intnonkernelvars[b][i]);
             /* if a var is not in LP (SCIP_INVALID), we assign a red cost of zero & thus the var to an early bucket */
             if( (*bw_int_redcost)[b][i] == SCIP_INVALID ) /*lint !e777*/
                (*bw_int_redcost)[b][i] = 0.0;
          }
-         
-         SCIPsortRealPtr((*bw_int_redcost)[b], (void**)((*bw_intnonkernelvars)[b]), bw_nintnonkernelvars[b]);
+
+         SCIPsortRealPtr((*bw_int_redcost)[b], (void**)bw_intnonkernelvars[b], bw_nintnonkernelvars[b]);
       }
    }
 
@@ -598,14 +598,16 @@ SCIP_RETCODE freeRedcostArrays(
    int                   nblocks             /**< number of blocks */
    )
 {
-   int b;               
+   int b;
 
    /* type-wise and blockwise freeing of reduced cost arrays */
    if( *bw_cont_redcost != NULL )
    {
       for( b = 0; b < nblocks + 1; b++ )
+      {
          if( (*bw_cont_redcost)[b] != NULL )
             SCIPfreeBufferArray(scip, &((*bw_cont_redcost)[b]));
+      }
 
       SCIPfreeBufferArray(scip, bw_cont_redcost);
    }
@@ -613,8 +615,10 @@ SCIP_RETCODE freeRedcostArrays(
    if( *bw_redcost != NULL )
    {
       for( b = 0; b < nblocks + 1; b++ )
+      {
          if( (*bw_redcost)[b] != NULL )
             SCIPfreeBufferArray(scip, &((*bw_redcost)[b]));
+      }
 
       SCIPfreeBufferArray(scip, bw_redcost);
    }
@@ -622,8 +626,10 @@ SCIP_RETCODE freeRedcostArrays(
    if( *bw_int_redcost != NULL )
    {
       for( b = 0; b < nblocks + 1; b++ )
+      {
          if( (*bw_int_redcost)[b] != NULL )
             SCIPfreeBufferArray(scip, &((*bw_int_redcost)[b]));
+      }
 
       SCIPfreeBufferArray(scip, bw_int_redcost);
    }
@@ -642,9 +648,6 @@ SCIP_Bool isInCurrentLogBucket(
    int                   nbuckets            /**< number of buckets */
    )
 {
-   assert(base >= 1);
-   assert(!SCIPisInfinity(scip, base));
-
    /* compute the reduced cost bounds for the current interval for logarithmic sorting */
    SCIP_Real redcostlb = pow(base, (double)(currentindex - 1));
    SCIP_Real redcostub = pow(base, (double)currentindex);
@@ -655,6 +658,9 @@ SCIP_Bool isInCurrentLogBucket(
    /* check whether the current reduced cost is in (min, max] */
    SCIP_Bool greatermincost = SCIPisGT(scip, shifted_redcost, redcostlb);
    SCIP_Bool lessequalmaxcost = SCIPisLE(scip, shifted_redcost, redcostub);
+
+   assert(base >= 1);
+   assert(!SCIPisInfinity(scip, base));
 
    /* respecting the edge cases, return the result */
    if( currentindex == 1 )
@@ -720,7 +726,7 @@ SCIP_RETCODE fillBuckets(
       SCIP_CALL( SCIPallocBufferArray(scip, &bases, nblocks + 1) );
       if( twolevel )
          SCIP_CALL( SCIPallocBufferArray(scip, &intbases, nblocks + 1) );
-      
+
       for( b = 0; b < nblocks + 1; b++ )
       {
          if( bw_ncontnonkernelvars[b] > 0 )
@@ -776,7 +782,7 @@ SCIP_RETCODE fillBuckets(
    for( k = 1; k < nbuckets + 1; k++ )
    {
       bucket = &(*bucketlist)->buckets[k];
-      
+
       contbucklength = 0;
       bucklength = 0;
       intbucklength = 0;
@@ -788,17 +794,25 @@ SCIP_RETCODE fillBuckets(
          {
             /* calculation of the variable array length for each type */
             for( l = 0; l < bw_ncontnonkernelvars[b]; l++ )
+            {
                if( isInCurrentLogBucket(scip, contbases[b], bw_cont_redcost[b][l], bw_cont_redcost[b][0], k, nbuckets) )
                   contbucklength++;
-            
+            }
+
             for( l = 0; l < bw_nnonkernelvars[b]; l++ )
+            {
                if( isInCurrentLogBucket(scip, bases[b], bw_redcost[b][l], bw_redcost[b][0], k, nbuckets) )
                   bucklength++;
+            }
 
             if( twolevel )
+            {
                for( l = 0; l < bw_nintnonkernelvars[b]; l++ )
+               {
                   if( isInCurrentLogBucket(scip, intbases[b], bw_int_redcost[b][l], bw_int_redcost[b][0], k, nbuckets) )
                      intbucklength++;
+               }
+            }
          }
          else
          {
@@ -842,17 +856,25 @@ SCIP_RETCODE fillBuckets(
          {
             /* assignment of the variables to the respective bucket variable arrays for each type */
             for( l = 0; l < bw_ncontnonkernelvars[b]; l++ )
+            {
                if( isInCurrentLogBucket(scip, contbases[b], bw_cont_redcost[b][l], bw_cont_redcost[b][0], k, nbuckets) )
                   bucket->contbucketvars[j++] = bw_contnonkernelvars[b][l];
+            }
 
             for( l = 0; l < bw_nnonkernelvars[b]; l++ )
+            {
                if( isInCurrentLogBucket(scip, bases[b], bw_redcost[b][l], bw_redcost[b][0], k, nbuckets) )
                   bucket->bucketvars[n++] = bw_nonkernelvars[b][l];
+            }
 
             if( twolevel )
+            {
                for( l = 0; l < bw_nintnonkernelvars[b]; l++ )
+               {
                   if( isInCurrentLogBucket(scip, intbases[b], bw_int_redcost[b][l], bw_int_redcost[b][0], k, nbuckets) )
                      bucket->intbucketvars[m++] = bw_intnonkernelvars[b][l];
+               }
+            }
          }
          else
          {
@@ -2252,8 +2274,8 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
 
    /* sorting of bucket variables according to the reduced costs in non-decreasing order */
    if( heurdata->redcostsort || heurdata->redcostlogsort )
-      SCIP_CALL( reducedCostSort(scip, &bw_contnonkernelvars, &bw_nonkernelvars, &bw_intnonkernelvars,
-            &bw_cont_redcost, &bw_redcost, &bw_int_redcost, bw_ncontnonkernelvars, bw_nnonkernelvars, 
+      SCIP_CALL( reducedCostSort(scip, bw_contnonkernelvars, bw_nonkernelvars, bw_intnonkernelvars,
+            &bw_cont_redcost, &bw_redcost, &bw_int_redcost, bw_ncontnonkernelvars, bw_nnonkernelvars,
             bw_nintnonkernelvars, twolevel, nblocks) );
 
    /* initialization of the buckets */
