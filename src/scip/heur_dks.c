@@ -2017,21 +2017,15 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
    }
 
    /* initialize a kernel variable counter and a non kernel variable counter for each block + linking block (="+ 1") */
-   SCIP_CALL( SCIPallocBufferArray(scip, &bw_ncontkernelvars, nblocks + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bw_ncontnonkernelvars, nblocks + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bw_nkernelvars, nblocks + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bw_nnonkernelvars, nblocks + 1) );
-   BMSclearMemoryArray(bw_ncontkernelvars, nblocks + 1);
-   BMSclearMemoryArray(bw_ncontnonkernelvars, nblocks + 1);
-   BMSclearMemoryArray(bw_nkernelvars, nblocks + 1);
-   BMSclearMemoryArray(bw_nnonkernelvars, nblocks + 1);
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &bw_ncontkernelvars, nblocks + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &bw_ncontnonkernelvars, nblocks + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &bw_nkernelvars, nblocks + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &bw_nnonkernelvars, nblocks + 1) );
 
    if( nbinvars > 0 && nintvars > 0 && heurdata->usetwolevel )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &bw_nintkernelvars, nblocks + 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &bw_nintnonkernelvars, nblocks + 1) );
-      BMSclearMemoryArray(bw_nintkernelvars, nblocks + 1);
-      BMSclearMemoryArray(bw_nintnonkernelvars, nblocks + 1);
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &bw_nintkernelvars, nblocks + 1) );
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &bw_nintnonkernelvars, nblocks + 1) );
    }
 
    /* if there are either integer variables or binary variables only, just consider these */
@@ -2171,14 +2165,10 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
    SCIP_CALL( SCIPallocBufferArray(scip, &binintvars, nbinvars + nintvars) );
 
    /* extract (potential) init kernel vars (value > 0) and not kernel vars for all blocks + the linking one (= "+ 1") */
-   SCIP_CALL( SCIPallocBufferArray(scip, &bw_contkernelcount, nblocks + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bw_contnonkernelcount, nblocks + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bw_kernelcount, nblocks + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bw_nonkernelcount, nblocks + 1) );
-   BMSclearMemoryArray(bw_contkernelcount, nblocks + 1);
-   BMSclearMemoryArray(bw_contnonkernelcount, nblocks + 1);
-   BMSclearMemoryArray(bw_kernelcount, nblocks + 1);
-   BMSclearMemoryArray(bw_nonkernelcount, nblocks + 1);
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &bw_contkernelcount, nblocks + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &bw_contnonkernelcount, nblocks + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &bw_kernelcount, nblocks + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &bw_nonkernelcount, nblocks + 1) );
 
    maxintkernelsize = 0;
 
@@ -2201,10 +2191,8 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       SCIP_CALL( SCIPallocBufferArray(scip, &intnonkernelvars, maxintnonkernelsize) );
 
       /* allocate memory for counting the pure integer variables for all blocks + the linking block (= "+ 1") */
-      SCIP_CALL( SCIPallocBufferArray(scip, &bw_intkernelcount, nblocks + 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &bw_intnonkernelcount, nblocks + 1) );
-      BMSclearMemoryArray(bw_intkernelcount, nblocks + 1);
-      BMSclearMemoryArray(bw_intnonkernelcount, nblocks + 1);
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &bw_intkernelcount, nblocks + 1) );
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &bw_intnonkernelcount, nblocks + 1) );
 
       /* filling of the kernels with the variables */
       SCIP_CALL( fillKernels(scip, vars, binintvars,
