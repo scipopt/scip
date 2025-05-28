@@ -1740,25 +1740,25 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DECOMP** alldecomps;
-   SCIP_DECOMP* decomp;
-   SCIP_HASHMAP* lbvarmap;                   /* variable map connecting transformed vars to their original lower bd */
+   SCIP_DECOMP* decomp = NULL;
+   SCIP_HASHMAP* lbvarmap = NULL;            /* variable map connecting transformed vars to their original lower bd */
    SCIP_CONSHDLR* conshdlr;                  /* constraint handler to check for indicator constraints */
-   SCIP_VAR*** bw_contkernelvars;
-   SCIP_VAR*** bw_contnonkernelvars;
-   SCIP_VAR*** bw_kernelvars;
-   SCIP_VAR*** bw_nonkernelvars;
-   SCIP_VAR*** bw_intkernelvars;
-   SCIP_VAR*** bw_intnonkernelvars;
-   SCIP_VAR** vars;
-   SCIP_VAR** contkernelvars;
-   SCIP_VAR** contnonkernelvars;
-   SCIP_VAR** kernelvars;                    /* just the bin kernel vars if problem includes bin AND int vars */
-   SCIP_VAR** nonkernelvars;                 /* just the bin non kernel vars if problem includes bin AND int vars */
-   SCIP_VAR** intkernelvars;                 /* used if problem includes binary AND integer variables */
-   SCIP_VAR** intnonkernelvars;              /* used if problem includes binary AND integer variables */
-   SCIP_VAR** binintvars;
-   SCIP_CONS** conss;
-   SCIP_CONS** bucketconss;
+   SCIP_VAR*** bw_contkernelvars = NULL;
+   SCIP_VAR*** bw_contnonkernelvars = NULL;
+   SCIP_VAR*** bw_kernelvars = NULL;
+   SCIP_VAR*** bw_nonkernelvars = NULL;
+   SCIP_VAR*** bw_intkernelvars = NULL;
+   SCIP_VAR*** bw_intnonkernelvars = NULL;
+   SCIP_VAR** vars = NULL;
+   SCIP_VAR** contkernelvars = NULL;
+   SCIP_VAR** contnonkernelvars = NULL;
+   SCIP_VAR** kernelvars = NULL;             /* just the bin kernel vars if problem includes bin AND int vars */
+   SCIP_VAR** nonkernelvars = NULL;          /* just the bin non kernel vars if problem includes bin AND int vars */
+   SCIP_VAR** intkernelvars = NULL;          /* used if problem includes binary AND integer variables */
+   SCIP_VAR** intnonkernelvars = NULL;       /* used if problem includes binary AND integer variables */
+   SCIP_VAR** binintvars = NULL;
+   SCIP_CONS** conss = NULL;
+   SCIP_CONS** bucketconss = NULL;
    SCIP_Real gapfactor;
    SCIP_Real maxcontkernelsize;
    SCIP_Real maxcontnonkernelsize;
@@ -1770,32 +1770,32 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
    SCIP_Real bestlocval;
    SCIP_Real mipgap;
    SCIP_Real linkscore;
-   SCIP_Real** bw_cont_redcost;
-   SCIP_Real** bw_redcost;
-   SCIP_Real** bw_int_redcost;
+   SCIP_Real** bw_cont_redcost = NULL;
+   SCIP_Real** bw_redcost = NULL;
+   SCIP_Real** bw_int_redcost = NULL;
    SCIP_STATUS status;
    SCIP_Bool success;
    SCIP_Bool twolevel;                          /* clarifying if two level buckets are used */
    SCIP_Bool usebestsol;
-   SCIP_SOL* bestcurrsol;
-   BUCKETLIST* bucketlist;
+   SCIP_SOL* bestcurrsol = NULL;
+   BUCKETLIST* bucketlist = NULL;
    BUCKET* bucket;
-   int* varlabels;
-   int* conslabels;
-   int* block2index;
-   int* blocklabels;
-   int* bw_ncontkernelvars;
-   int* bw_ncontnonkernelvars;
-   int* bw_nkernelvars;
-   int* bw_nnonkernelvars;
-   int* bw_nintkernelvars;
-   int* bw_nintnonkernelvars;
-   int* bw_contkernelcount;
-   int* bw_contnonkernelcount;
-   int* bw_kernelcount;
-   int* bw_nonkernelcount;
-   int* bw_intkernelcount;
-   int* bw_intnonkernelcount;
+   int* varlabels = NULL;
+   int* conslabels = NULL;
+   int* block2index = NULL;
+   int* blocklabels = NULL;
+   int* bw_ncontkernelvars = NULL;
+   int* bw_ncontnonkernelvars = NULL;
+   int* bw_nkernelvars = NULL;
+   int* bw_nnonkernelvars = NULL;
+   int* bw_nintkernelvars = NULL;
+   int* bw_nintnonkernelvars = NULL;
+   int* bw_contkernelcount = NULL;
+   int* bw_contnonkernelcount = NULL;
+   int* bw_kernelcount = NULL;
+   int* bw_nonkernelcount = NULL;
+   int* bw_intkernelcount = NULL;
+   int* bw_intnonkernelcount = NULL;
    SCIP_Longint nodesleft;
    SCIP_Longint nnodes;
    int gapcall;
@@ -1835,55 +1835,9 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
 
    *result = SCIP_DIDNOTRUN;
 
-   decomp = NULL;
-   lbvarmap = NULL;
-
-   bw_contkernelvars = NULL;
-   bw_contnonkernelvars = NULL;
-   bw_kernelvars = NULL;
-   bw_nonkernelvars = NULL;
-   bw_intkernelvars = NULL;
-   bw_intnonkernelvars = NULL;
-
-   vars = NULL;
-   contkernelvars = NULL;
-   contnonkernelvars = NULL;
-   kernelvars = NULL;
-   nonkernelvars = NULL;
-   intkernelvars = NULL;
-   intnonkernelvars = NULL;
-   binintvars = NULL;
-
-   conss = NULL;
-   bucketconss = NULL;
    bestlocval = SCIPinfinity(scip);
    twolevel = FALSE;
    success = TRUE;
-   bestcurrsol = NULL;
-   bucketlist = NULL;
-
-   varlabels = NULL;
-   conslabels = NULL;
-
-   blocklabels = NULL;
-   block2index = NULL;
-
-   bw_ncontkernelvars = NULL;
-   bw_ncontnonkernelvars = NULL;
-   bw_nkernelvars = NULL;
-   bw_nnonkernelvars = NULL;
-   bw_nintkernelvars = NULL;
-   bw_nintnonkernelvars = NULL;
-   bw_contkernelcount = NULL;
-   bw_contnonkernelcount = NULL;
-   bw_kernelcount = NULL;
-   bw_nonkernelcount = NULL;
-   bw_intkernelcount = NULL;
-   bw_intnonkernelcount = NULL;
-
-   bw_cont_redcost = NULL;
-   bw_redcost = NULL;
-   bw_int_redcost = NULL;
 
    gapfactor = 1.0;
    gapcall = 0;
