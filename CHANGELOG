@@ -344,6 +344,7 @@ Fixed bugs
 - declare infinite bound inference infeasible in SCIPinferVarLbCons() and SCIPinferVarUbCons() to maintain correct loose LP values
 - fixed update of consssorted flags in a variable expressions data when adding an additional constraint using this variable
 - corrected computation of number of variables affected by symmetry
+- fixed computation of symmetry group size
 
 Build system
 ------------
