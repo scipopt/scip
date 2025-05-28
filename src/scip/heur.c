@@ -2071,13 +2071,3 @@ void SCIPvariableGraphFree(
 
    SCIPfreeBlockMemory(scip, vargraph);
 }
-
-/** returns TRUE if the heuristic is safe to be executed in exact solving mode */
-SCIP_Bool SCIPheurIsExact(
-   SCIP_HEUR*            heur                /**< primal heuristic */
-   )
-{
-   assert(heur != NULL);
-
-   return heur->exact;
-}
