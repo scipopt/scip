@@ -190,9 +190,6 @@ SCIP_RETCODE deletionSubproblem(
    SCIP_Bool chgmade = FALSE;
    int i;
 
-   assert(conss != NULL);
-   assert(vars != NULL);
-
    *deleted = FALSE;
    *stop = FALSE;
    scip = SCIPiisGetSubscip(iis);
@@ -200,6 +197,7 @@ SCIP_RETCODE deletionSubproblem(
    /* remove bounds or constraints*/
    if( delbounds )
    {
+      assert(vars != NULL);
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &bounds, ndels) );
       for (i = 0; i < ndels; ++i)
       {
@@ -225,6 +223,8 @@ SCIP_RETCODE deletionSubproblem(
    }
    else
    {
+      assert(conss != NULL);
+
       if( ndels > 0 )
          chgmade = TRUE;
       for (i = 0; i < ndels; ++i)
