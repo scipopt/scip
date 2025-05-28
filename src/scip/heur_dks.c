@@ -190,13 +190,11 @@ SCIP_RETCODE getLinkingScoreAndBlocklabels(
    int nlinkscorevars = 0;                   /* number of linking vars for calculation */
 
    assert(nblocklabels != NULL);
-   assert(nblocklabels != NULL);
 
    *nblocklabels = 0;                        /* number of distinct block labels */
 
    for( v = 0; v < nvars; v++ )
    {
-      assert(blocklabels != NULL);
       assert(varlabels != NULL);
 
       /* counting of linking variables */
@@ -2212,9 +2210,11 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
 
    /* sorting of bucket variables according to the reduced costs in non-decreasing order */
    if( heurdata->redcostsort || heurdata->redcostlogsort )
+   {
       SCIP_CALL( reducedCostSort(scip, bw_contnonkernelvars, bw_nonkernelvars, bw_intnonkernelvars,
             &bw_cont_redcost, &bw_redcost, &bw_int_redcost, bw_ncontnonkernelvars, bw_nnonkernelvars,
             bw_nintnonkernelvars, twolevel, nblocks) );
+   }
 
    /* initialization of the buckets */
    /* determine the amount of buckets needed */
