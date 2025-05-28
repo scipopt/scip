@@ -190,11 +190,14 @@ SCIP_RETCODE getLinkingScoreAndBlocklabels(
    int nlinkscorevars = 0;                   /* number of linking vars for calculation */
 
    assert(nblocklabels != NULL);
+   assert(nblocklabels != NULL);
 
    *nblocklabels = 0;                        /* number of distinct block labels */
 
    for( v = 0; v < nvars; v++ )
    {
+      assert(varlabels != NULL);
+
       /* counting of linking variables */
       if( varlabels[v] == SCIP_DECOMP_LINKVAR )
          nlinkscorevars++;
@@ -202,6 +205,7 @@ SCIP_RETCODE getLinkingScoreAndBlocklabels(
       else if( *nblocklabels < nblocks && blocklabels != NULL )
       {
          newlabel = TRUE;
+
          /* check the current label for novelty */
          for( b = 0; b < *nblocklabels; b++ )
          {
@@ -221,6 +225,7 @@ SCIP_RETCODE getLinkingScoreAndBlocklabels(
    /* counting of linking constraints */
    for( v = 0; v < nconss; v++ )
    {
+      assert(conslabels != NULL);
       if( conslabels[v] == SCIP_DECOMP_LINKCONS )
          nlinkscoreconss++;
    }
