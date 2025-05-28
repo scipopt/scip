@@ -975,15 +975,10 @@ SCIP_RETCODE freeBucket(
    BUCKET*               bucket              /**< bucket structure to free */
    )
 {
-   SCIP_VAR**  subvars;
-   int         nsubvars;
-
    assert(scip != NULL);
    assert(bucket != NULL);
 
    assert(bucket->subscip != NULL);
-
-   SCIP_CALL( SCIPgetOrigVarsData(bucket->subscip, &subvars, &nsubvars, NULL, NULL, NULL, NULL) );
 
    /* free variable mappings subscip -> scip and scip -> subscip */
    SCIPfreeBufferArrayNull(scip, &bucket->scip2sub);
