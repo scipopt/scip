@@ -172,7 +172,7 @@ struct SCIP_HeurData
 /** calculate the linking score of a given decomposition */
 static
 SCIP_RETCODE getLinkingScoreAndBlocklabels(
-   int**                 blocklabels,        /**< int array to store the different block labels */
+   int*                  blocklabels,        /**< int array to store the different block labels */
    int*                  varlabels,          /**< array of variable labels */
    int*                  conslabels,         /**< array of constraint labels */
    SCIP_Real*            linkscore,          /**< linking score to return */
@@ -196,6 +196,7 @@ SCIP_RETCODE getLinkingScoreAndBlocklabels(
 
    for( v = 0; v < nvars; v++ )
    {
+      assert(blocklabels != NULL);
       assert(varlabels != NULL);
 
       /* counting of linking variables */
@@ -209,7 +210,7 @@ SCIP_RETCODE getLinkingScoreAndBlocklabels(
          /* check the current label for novelty */
          for( b = 0; b < *nblocklabels; b++ )
          {
-            if( (*blocklabels)[b] == varlabels[v] )
+            if( blocklabels[b] == varlabels[v] )
             {
                newlabel = FALSE;
                break;
@@ -218,7 +219,7 @@ SCIP_RETCODE getLinkingScoreAndBlocklabels(
 
          /* add unseen labels */
          if( newlabel )
-            (*blocklabels)[(*nblocklabels)++] = varlabels[v];
+            blocklabels[(*nblocklabels)++] = varlabels[v];
       }
    }
 
@@ -1992,7 +1993,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       SCIP_CALL( SCIPallocBufferArray(scip, &blocklabels, nblocks) );
 
       /* check if linking score of the instance is sufficiently low to get called */
-      SCIP_CALL( getLinkingScoreAndBlocklabels(&blocklabels, varlabels, conslabels, &linkscore, &nblocklabels,
+      SCIP_CALL( getLinkingScoreAndBlocklabels(blocklabels, varlabels, conslabels, &linkscore, &nblocklabels,
             nblocks, nvars, nconss) );
       if( linkscore > heurdata->maxlinkscore )
       {
