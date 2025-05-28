@@ -172,7 +172,6 @@ struct SCIP_HeurData
 /** calculate the linking score of a given decomposition */
 static
 SCIP_RETCODE getLinkingScoreAndBlocklabels(
-   SCIP*                 scip,               /**< main SCIP data structure */
    int**                 blocklabels,        /**< int array to store the different block labels */
    int*                  varlabels,          /**< array of variable labels */
    int*                  conslabels,         /**< array of constraint labels */
@@ -183,12 +182,15 @@ SCIP_RETCODE getLinkingScoreAndBlocklabels(
    int                   nconss              /**< number of constraints */
    )
 {
-   int v;                           
+   int v;
    int b;
 
    SCIP_Bool newlabel = TRUE;                /* indication of finding a new label */
    int nlinkscoreconss = 0;                  /* number of linking conss for calculation */
    int nlinkscorevars = 0;                   /* number of linking vars for calculation */
+
+   assert(nblocklabels != NULL);
+
    *nblocklabels = 0;                        /* number of distinct block labels */
 
    for( v = 0; v < nvars; v++ )
@@ -224,10 +226,10 @@ SCIP_RETCODE getLinkingScoreAndBlocklabels(
    }
 
    /* linking score calculation */
-   *linkscore = ( (SCIP_Real)nlinkscorevars*(SCIP_Real)nconss + (SCIP_Real)nlinkscoreconss*(SCIP_Real)nvars - 
-                   (SCIP_Real)nlinkscorevars*(SCIP_Real)nlinkscoreconss ) / ((SCIP_Real)nconss*(SCIP_Real)nvars);
+   *linkscore = ( (SCIP_Real)nlinkscorevars*(SCIP_Real)nconss + (SCIP_Real)nlinkscoreconss*(SCIP_Real)nvars -
+      (SCIP_Real)nlinkscorevars*(SCIP_Real)nlinkscoreconss ) / ((SCIP_Real)nconss*(SCIP_Real)nvars);
 
-   return SCIP_OKAY; 
+   return SCIP_OKAY;
 }
 
 /** count of potential kernel variables for one level or two level structure */
@@ -241,12 +243,12 @@ SCIP_RETCODE countKernelVariables(
    SCIP_Bool             usebestsol,         /**< usage of best or lp solution */
    SCIP_Bool             usetransprob,       /**< usage of transformed or original problem */ 
    SCIP_Bool             usetranslb,         /**< usage of transformed lb in comparison to original lb */
-   int**                 bw_ncontkernelvars, /**< blockwise number of continuous kernel variables */
-   int**                 bw_ncontnonkernelvars,    /**< blockwise number of continuous non-kernel variables */
-   int**                 bw_nkernelvars,     /**< blockwise number of (binary) kernel variables */
-   int**                 bw_nnonkernelvars,  /**< blockwise number of (binary) non-kernel variables */
-   int**                 bw_nintkernelvars,  /**< blockwise number of integer kernel variables */
-   int**                 bw_nintnonkernelvars,     /**< blockwise number of integer non-kernel variables */
+   int*                  bw_ncontkernelvars, /**< blockwise number of continuous kernel variables */
+   int*                  bw_ncontnonkernelvars, /**< blockwise number of continuous non-kernel variables */
+   int*                  bw_nkernelvars,     /**< blockwise number of (binary) kernel variables */
+   int*                  bw_nnonkernelvars,  /**< blockwise number of (binary) non-kernel variables */
+   int*                  bw_nintkernelvars,  /**< blockwise number of integer kernel variables */
+   int*                  bw_nintnonkernelvars, /**< blockwise number of integer non-kernel variables */
    int*                  ncontkernelvars,    /**< number of continuous kernel variables */
    int*                  ncontnonkernelvars, /**< number of continuous non-kernel variables */
    int*                  nkernelvars,        /**< number of (binary) kernel variables */
@@ -259,12 +261,21 @@ SCIP_RETCODE countKernelVariables(
    int                   nvars               /**< number of variables */
    )
 {
-   
    SCIP_Real lpval;      /* variable value in LP solution */
-   SCIP_Real lb;        
-   SCIP_Real lborig;   
-   int i;           
+   SCIP_Real lb;
+   SCIP_Real lborig;
+   int i;
    int block;
+
+   assert(bw_ncontkernelvars != NULL);
+   assert(bw_ncontnonkernelvars != NULL);
+   assert(bw_nkernelvars != NULL);
+   assert(bw_nnonkernelvars != NULL);
+
+   assert(ncontkernelvars != NULL);
+   assert(ncontnonkernelvars != NULL);
+   assert(nkernelvars != NULL);
+   assert(nnonkernelvars != NULL);
 
    /* count all possible kernel variables dependent on their type blockwise and overall */
    for( i = 0; i < nvars; i++ )
@@ -284,12 +295,12 @@ SCIP_RETCODE countKernelVariables(
          if( !SCIPisEQ(scip, lpval, 0.0) )
          {
             (*nkernelvars)++;
-            (*bw_nkernelvars)[block]++;
+            bw_nkernelvars[block]++;
          }
          else
          {
             (*nnonkernelvars)++;
-            (*bw_nnonkernelvars)[block]++;
+            bw_nnonkernelvars[block]++;
          }
          break;
       /* LP value > lb -> count integer as kernel variable else not */
@@ -300,26 +311,30 @@ SCIP_RETCODE countKernelVariables(
          {
             if( twolevel )
             {
-               (*nintkernelvars)++;
-               (*bw_nintkernelvars)[block]++;
+               if( nintkernelvars != NULL )
+                  (*nintkernelvars)++;
+               if( bw_nintkernelvars != NULL )
+                  bw_nintkernelvars[block]++;
             }
             else
             {
                (*nkernelvars)++;
-               (*bw_nkernelvars)[block]++;
+               bw_nkernelvars[block]++;
             }
          }
          else
          {
             if( twolevel )
             {
-               (*nintnonkernelvars)++;
-               (*bw_nintnonkernelvars)[block]++;
+               if( nintnonkernelvars != NULL )
+                  (*nintnonkernelvars)++;
+               if( bw_nintnonkernelvars != NULL )
+                  bw_nintnonkernelvars[block]++;
             }
             else
             {
                (*nnonkernelvars)++;
-               (*bw_nnonkernelvars)[block]++;
+               bw_nnonkernelvars[block]++;
             }
          }
          break;
@@ -330,17 +345,17 @@ SCIP_RETCODE countKernelVariables(
             || (usetranslb && SCIPisGT(scip, lb, lborig)) )
          {
             (*ncontkernelvars)++;
-            (*bw_ncontkernelvars)[block]++;
+            bw_ncontkernelvars[block]++;
          }
          else
          {
             (*ncontnonkernelvars)++;
-            (*bw_ncontnonkernelvars)[block]++;
+            bw_ncontnonkernelvars[block]++;
          }
          break;
       } /*lint !e788*/
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -350,24 +365,24 @@ SCIP_RETCODE fillKernels(
    SCIP*                 scip,               /**< main SCIP data structure */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_VAR***           binintvars,         /**< array of binary and integer variables */
-   SCIP_VAR****          bw_contkernelvars,  /**< blockwise array of continuous kernel variables */
-   SCIP_VAR****          bw_contnonkernelvars,     /**< blockwise array of continuous non-kernel variables */
-   SCIP_VAR****          bw_kernelvars,      /**< blockwise array of (binary) kernel variables */
-   SCIP_VAR****          bw_nonkernelvars,   /**< blockwise array of (binary) non-kernel variables */
-   SCIP_VAR****          bw_intkernelvars,   /**< blockwise array of integer kernel variables */
-   SCIP_VAR****          bw_intnonkernelvars,   /**< blockwise array of integer non-kernel variables */
+   SCIP_VAR***           bw_contkernelvars,  /**< blockwise array of continuous kernel variables */
+   SCIP_VAR***           bw_contnonkernelvars,     /**< blockwise array of continuous non-kernel variables */
+   SCIP_VAR***           bw_kernelvars,      /**< blockwise array of (binary) kernel variables */
+   SCIP_VAR***           bw_nonkernelvars,   /**< blockwise array of (binary) non-kernel variables */
+   SCIP_VAR***           bw_intkernelvars,   /**< blockwise array of integer kernel variables */
+   SCIP_VAR***           bw_intnonkernelvars,   /**< blockwise array of integer non-kernel variables */
    SCIP_SOL*             bestcurrsol,        /**< best current solution */
    SCIP_HASHMAP*         lbvarmap,           /**< original lower bound of transformed variables */
    SCIP_Bool             twolevel,           /**< usage of one or two level structure */
    SCIP_Bool             usebestsol,         /**< usage of best or lp solution */
    SCIP_Bool             usetransprob,       /**< usage of transformed or original problem */
    SCIP_Bool             usetranslb,         /**< usage of transformed lb in comparison to original lb */
-   int**                 bw_contkernelcount, /**< blockwise counter of continuous kernel variables */
-   int**                 bw_contnonkernelcount,    /**< blockwise counter of continuous non-kernel variables */
-   int**                 bw_kernelcount,     /**< blockwise counter of (binary) kernel variables */
-   int**                 bw_nonkernelcount,  /**< blockwise counter of (binary) non-kernel variables */
-   int**                 bw_intkernelcount,  /**< blockwise counter of integer kernel variables */
-   int**                 bw_intnonkernelcount,     /**< blockwise counter of integer non-kernel variables */
+   int*                  bw_contkernelcount, /**< blockwise counter of continuous kernel variables */
+   int*                  bw_contnonkernelcount,    /**< blockwise counter of continuous non-kernel variables */
+   int*                  bw_kernelcount,     /**< blockwise counter of (binary) kernel variables */
+   int*                  bw_nonkernelcount,  /**< blockwise counter of (binary) non-kernel variables */
+   int*                  bw_intkernelcount,  /**< blockwise counter of integer kernel variables */
+   int*                  bw_intnonkernelcount,     /**< blockwise counter of integer non-kernel variables */
    int*                  block2index,        /**< mapping of block labels to block index */
    int*                  varlabels,          /**< array of variable labels */
    int                   nblocks,            /**< number of blocks >= 1 */
@@ -376,14 +391,23 @@ SCIP_RETCODE fillKernels(
    )
 {
    SCIP_Real lpval;      /* variable value in LP solution */
-   SCIP_Real lb;        
-   SCIP_Real lborig;    
+   SCIP_Real lb;
+   SCIP_Real lborig;
    int i;                /* variable counter */
    int j = 0;            /* integer and binary variable counter */
    int m;                /* temporary integer variable index */
    int n;                /* temporary (binary) variable index */
    int l;                /* temporary continuous variable index */
-   int block_index;      
+   int block_index;
+
+   assert(bw_contkernelvars != NULL);
+   assert(bw_contnonkernelvars != NULL);
+   assert(bw_kernelvars != NULL);
+   assert(bw_nonkernelvars != NULL);
+   assert(bw_contkernelcount != NULL);
+   assert(bw_contnonkernelcount  != NULL);
+   assert(bw_kernelcount != NULL);
+   assert(bw_nonkernelcount != NULL);
 
    /* assign all variables dependent on their type blockwise to a kernel or a non-kernel */
    for( i = 0; i < nvars; i++ )
@@ -405,15 +429,15 @@ SCIP_RETCODE fillKernels(
 
          if( !SCIPisEQ(scip, lpval, 0.0) )
          {
-            n = (*bw_kernelcount)[block_index];
-            (*bw_kernelvars)[block_index][n] = vars[i];
-            ((*bw_kernelcount)[block_index])++;
+            n = bw_kernelcount[block_index];
+            bw_kernelvars[block_index][n] = vars[i];
+            bw_kernelcount[block_index]++;
          }
          else
          {
-            n = (*bw_nonkernelcount)[block_index];
-            (*bw_nonkernelvars)[block_index][n] = vars[i];
-            ((*bw_nonkernelcount)[block_index])++;
+            n = bw_nonkernelcount[block_index];
+            bw_nonkernelvars[block_index][n] = vars[i];
+            bw_nonkernelcount[block_index]++;
          }
          break;
       /* LP value > lb -> integer kernel variable else non-kernel variable */
@@ -427,30 +451,38 @@ SCIP_RETCODE fillKernels(
          {
             if( twolevel )
             {
-               m = (*bw_intkernelcount)[block_index];
-               (*bw_intkernelvars)[block_index][m] = vars[i];
-               ((*bw_intkernelcount)[block_index])++;
+               if( bw_intkernelcount != NULL )
+               {
+                  m = bw_intkernelcount[block_index];
+                  if( bw_intkernelvars != NULL )
+                     bw_intkernelvars[block_index][m] = vars[i];
+                  bw_intkernelcount[block_index]++;
+               }
             }
             else
             {
-               m = (*bw_kernelcount)[block_index];
-               (*bw_kernelvars)[block_index][m] = vars[i];
-               ((*bw_kernelcount)[block_index])++;
+               m = bw_kernelcount[block_index];
+               bw_kernelvars[block_index][m] = vars[i];
+               bw_kernelcount[block_index]++;
             }
          }
          else
          {
             if( twolevel )
             {
-               m = (*bw_intnonkernelcount)[block_index];
-               (*bw_intnonkernelvars)[block_index][m] = vars[i];
-               ((*bw_intnonkernelcount)[block_index])++;
+               if( bw_intnonkernelcount != NULL )
+               {
+                  m = bw_intnonkernelcount[block_index];
+                  if( bw_intnonkernelvars != NULL )
+                     bw_intnonkernelvars[block_index][m] = vars[i];
+                  bw_intnonkernelcount[block_index]++;
+               }
             }
             else
             {
-               m = (*bw_nonkernelcount)[block_index];
-               (*bw_nonkernelvars)[block_index][m] = vars[i];
-               ((*bw_nonkernelcount)[block_index])++;
+               m = bw_nonkernelcount[block_index];
+               bw_nonkernelvars[block_index][m] = vars[i];
+               bw_nonkernelcount[block_index]++;
             }
          }
          break;
@@ -460,15 +492,15 @@ SCIP_RETCODE fillKernels(
          if( (!SCIPisEQ(scip, lpval, 0.0) && !SCIPisEQ(scip, lpval, lb) )
             || (usetranslb && SCIPisGT(scip, lb, lborig)) )
          {
-            l = (*bw_contkernelcount)[block_index];
-            (*bw_contkernelvars)[block_index][l] = vars[i];
-            ((*bw_contkernelcount)[block_index])++;
+            l = bw_contkernelcount[block_index];
+            bw_contkernelvars[block_index][l] = vars[i];
+            bw_contkernelcount[block_index]++;
          }
          else
          {
-            l = (*bw_contnonkernelcount)[block_index];
-            (*bw_contnonkernelvars)[block_index][l] = vars[i];
-            ((*bw_contnonkernelcount)[block_index])++;
+            l = bw_contnonkernelcount[block_index];
+            bw_contnonkernelvars[block_index][l] = vars[i];
+            bw_contnonkernelcount[block_index]++;
          }
          break;
       } /*lint !e788*/
@@ -977,8 +1009,7 @@ SCIP_RETCODE freeBucketlist(
    if( (*bucketlist)->buckets != NULL )
       SCIPfreeBlockMemoryArray(scip, &(*bucketlist)->buckets, nbuckets);
 
-   if( *bucketlist != NULL )
-      SCIPfreeBlockMemory(scip, bucketlist);
+   SCIPfreeBlockMemory(scip, bucketlist);
    *bucketlist = NULL;
 
    return SCIP_OKAY;
@@ -1956,7 +1987,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       SCIP_CALL( SCIPallocBufferArray(scip, &blocklabels, nblocks) );
 
       /* check if linking score of the instance is sufficiently low to get called */
-      SCIP_CALL( getLinkingScoreAndBlocklabels(scip, &blocklabels, varlabels, conslabels, &linkscore, &nblocklabels, 
+      SCIP_CALL( getLinkingScoreAndBlocklabels(&blocklabels, varlabels, conslabels, &linkscore, &nblocklabels,
             nblocks, nvars, nconss) );
       if( linkscore > heurdata->maxlinkscore )
       {
@@ -2026,7 +2057,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
    {
       SCIP_CALL( countKernelVariables(scip, vars, bestcurrsol, lbvarmap,
             twolevel, usebestsol, heurdata->usetransprob, heurdata->translbkernel,
-            &bw_ncontkernelvars, &bw_ncontnonkernelvars, &bw_nkernelvars, &bw_nnonkernelvars, NULL, NULL,
+            bw_ncontkernelvars, bw_ncontnonkernelvars, bw_nkernelvars, bw_nnonkernelvars, NULL, NULL,
             &ncontkernelvars, &ncontnonkernelvars, &nkernelvars, &nnonkernelvars, NULL, NULL,
             block2index, varlabels, blklbl_offset, nvars) );
 
@@ -2041,7 +2072,6 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       else if( nkernelvars > nnonkernelvars )
          /* @possible todo: if kernel vars >> nonkernel vars or >x% of all integer/binary variables => adjust */
          SCIPdebugMsg(scip, "There are more kernel variables than not in the kernel\n");
-      
    }
    else
    {
@@ -2050,8 +2080,8 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
 
       SCIP_CALL( countKernelVariables(scip, vars, bestcurrsol, lbvarmap,
             twolevel, usebestsol, heurdata->usetransprob, heurdata->translbkernel,
-            &bw_ncontkernelvars, &bw_ncontnonkernelvars, &bw_nkernelvars, &bw_nnonkernelvars, &bw_nintkernelvars, 
-            &bw_nintnonkernelvars, &ncontkernelvars, &ncontnonkernelvars, &nkernelvars, &nnonkernelvars, 
+            bw_ncontkernelvars, bw_ncontnonkernelvars, bw_nkernelvars, bw_nnonkernelvars, bw_nintkernelvars,
+            bw_nintnonkernelvars, &ncontkernelvars, &ncontnonkernelvars, &nkernelvars, &nnonkernelvars,
             &nintkernelvars, &nintnonkernelvars, block2index, varlabels, blklbl_offset, nvars) );
 
       SCIPdebugMsg(scip, "%d initial bin kernel vars\n%d initial int kernel vars\n", nkernelvars, nintkernelvars);
@@ -2170,11 +2200,11 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
          maxintkernelsize = (int)SCIPfloor(scip, heurdata->kernelsizefactor * nintkernelvars);
       else
          maxintkernelsize = nintkernelvars + nintnonkernelvars;
-       
+
       if( (int)SCIPfloor(scip, heurdata->kernelsizefactor * nintnonkernelvars) < (nintkernelvars + nintnonkernelvars) )
-	      maxintnonkernelsize = (int)SCIPfloor(scip, heurdata->kernelsizefactor * nintnonkernelvars);
+         maxintnonkernelsize = (int)SCIPfloor(scip, heurdata->kernelsizefactor * nintnonkernelvars);
       else
-	      maxintnonkernelsize = nintkernelvars + nintnonkernelvars;
+         maxintnonkernelsize = nintkernelvars + nintnonkernelvars;
 
       /* additionally initialize the integer kernel and the non integer kernel variable arrays */
       SCIP_CALL( SCIPallocBufferArray(scip, &intkernelvars, maxintkernelsize) );
@@ -2187,20 +2217,20 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       BMSclearMemoryArray(bw_intnonkernelcount, nblocks + 1);
 
       /* filling of the kernels with the variables */
-      SCIP_CALL( fillKernels(scip, vars, &binintvars, 
-            &bw_contkernelvars, &bw_contnonkernelvars, &bw_kernelvars, &bw_nonkernelvars, 
-            &bw_intkernelvars, &bw_intnonkernelvars, bestcurrsol, lbvarmap, twolevel, usebestsol, 
-            heurdata->usetransprob, heurdata->translbkernel, &bw_contkernelcount, 
-            &bw_contnonkernelcount, &bw_kernelcount, &bw_nonkernelcount, &bw_intkernelcount, 
-            &bw_intnonkernelcount, block2index, varlabels, nblocks, blklbl_offset, nvars) );
+      SCIP_CALL( fillKernels(scip, vars, &binintvars,
+            bw_contkernelvars, bw_contnonkernelvars, bw_kernelvars, bw_nonkernelvars,
+            bw_intkernelvars, bw_intnonkernelvars, bestcurrsol, lbvarmap, twolevel, usebestsol,
+            heurdata->usetransprob, heurdata->translbkernel, bw_contkernelcount,
+            bw_contnonkernelcount, bw_kernelcount, bw_nonkernelcount, bw_intkernelcount,
+            bw_intnonkernelcount, block2index, varlabels, nblocks, blklbl_offset, nvars) );
    }
    else
       /* filling of the kernels with the variables */
       SCIP_CALL( fillKernels(scip, vars, &binintvars,
-            &bw_contkernelvars, &bw_contnonkernelvars, &bw_kernelvars, &bw_nonkernelvars, NULL, NULL,
-            bestcurrsol, lbvarmap, twolevel, usebestsol, heurdata->usetransprob, 
-            heurdata->translbkernel, &bw_contkernelcount, &bw_contnonkernelcount, &bw_kernelcount, 
-            &bw_nonkernelcount, NULL, NULL, block2index, varlabels, nblocks, blklbl_offset, nvars) );
+            bw_contkernelvars, bw_contnonkernelvars, bw_kernelvars, bw_nonkernelvars, NULL, NULL,
+            bestcurrsol, lbvarmap, twolevel, usebestsol, heurdata->usetransprob,
+            heurdata->translbkernel, bw_contkernelcount, bw_contnonkernelcount, bw_kernelcount,
+            bw_nonkernelcount, NULL, NULL, block2index, varlabels, nblocks, blklbl_offset, nvars) );
 
    /* sorting of bucket variables according to the reduced costs in non-decreasing order */
    if( heurdata->redcostsort || heurdata->redcostlogsort )
