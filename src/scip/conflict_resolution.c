@@ -1988,11 +1988,12 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    /* calculate the maximal size of each accepted conflict set */
    maxsize = 2 * conflictCalcResMaxsize(set, transprob);
 
-   SCIPsetDebugMsgPrint(set, "flushing %d conflict constraint at focus depth %d (id: %d, vd: %d, cd: %d, rd: %d, maxsize: %d)\n",
-      1, focusdepth, conflictrow->insertdepth, conflictrow->validdepth, conflictrow->conflictdepth, conflictrow->repropdepth, maxsize);
+   SCIPsetDebugMsgPrint(set, "flushing conflict constraint at focus depth %d (id: %d, vd: %d, cd: %d, rd: %d, maxsize: %d)\n",
+      focusdepth, conflictrow->insertdepth, conflictrow->validdepth, conflictrow->conflictdepth, conflictrow->repropdepth, maxsize);
 
    *success = FALSE;
    *mirsuccess = FALSE;
+
    /* do not add long conflicts */
    if( conflictrow->nnz > maxsize )
    {
@@ -2013,7 +2014,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
     * directly (except if we are in strong branching or diving - in this case a bound change would yield an unflushed LP
     * and is not handled when restoring the information)
     *
-    * @note A bound change can only be applied if it is are related to the active node or if is a global bound
+    * @note A bound change can only be applied if it is related to the active node or if is a global bound
     *       change. Bound changes which are related to any other node cannot be handled at point due to the internal
     *       data structure
     */
@@ -2042,7 +2043,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
          bound = conflictrow->vals[idx] > 0.0 ? SCIPsetCeil(set, bound) : SCIPsetFloor(set, bound);
 
       /* todo: rethink the logic and add asserts. Also find a better way
-       * to inform the statistics that a constraint is added "inderectly", also
+       * to inform the statistics that a constraint is added "indirectly", also
        * update number of global bound changes from conflict analysis */
       if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGT(set, bound, SCIPvarGetUbGlobal(var)) )
       {
