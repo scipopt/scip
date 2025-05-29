@@ -850,8 +850,8 @@ SCIP_RETCODE SCIPdebugFree(
    return SCIP_OKAY;
 }
 
-/** checks for validity of the debugging solution in given constraints */
-SCIP_RETCODE SCIPdebugCheckConss(
+/** checks for validity of the debugging solution in given active constraints */
+SCIP_RETCODE SCIPdebugCheckActiveConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints to check for validity */
    int                   nconss              /**< number of given constraints */
@@ -919,7 +919,7 @@ SCIP_RETCODE SCIPdebugCheckConss(
 }
 
 /** checks for validity of the debugging solution for any globally valid constraints. */
-SCIP_RETCODE SCIPdebugCheckAnyGlobalValidConss(
+SCIP_RETCODE SCIPdebugCheckConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints to check for validity */
    int                   nconss              /**< number of given constraints */

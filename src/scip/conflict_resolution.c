@@ -1930,7 +1930,7 @@ SCIP_RETCODE createAndAddConflictCon(
    }
 
    /* check if the constraint is valid for the debug solution */
-   SCIP_CALL( SCIPdebugCheckAnyGlobalValidConss(set->scip, &cons, 1) );
+   SCIP_CALL( SCIPdebugCheckConss(set->scip, &cons, 1) );
 
    /* update statistics */
    SCIP_CALL( updateStatistics(conflict, vars, blkmem, set, stat, conflictrow, conflictrow->validdepth) );
