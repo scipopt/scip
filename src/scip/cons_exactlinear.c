@@ -2039,10 +2039,11 @@ void consdataUpdateDelCoef(
 /** returns the minimum absolute value of all coefficients in the constraint */
 static
 SCIP_RATIONAL* consdataGetMinAbsvalEx(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
 
    if( !consdata->validminabsval )
