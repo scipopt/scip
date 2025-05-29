@@ -1961,8 +1961,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_CONFLICTROW*     conflictrow,        /**< conflict row to add to the tree */
-   SCIP_Bool*            success,            /**< true if the conflict is added to the problem */
-   SCIP_Bool*            mirsuccess          /**< true if the MIR was successful */
+   SCIP_Bool*            success             /**< true if the conflict is added to the problem */
    )
 {
    SCIP_VAR** vars;
@@ -1981,6 +1980,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    assert(conflictrow != NULL);
    assert(conflictrow->validdepth == 0);
    assert(vars != NULL);
+   assert(success != NULL);
 
    assert(focusdepth <= SCIPtreeGetCurrentDepth(tree));
    assert(SCIPtreeGetCurrentDepth(tree) == tree->pathlen-1);
@@ -1992,7 +1992,6 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
       focusdepth, conflictrow->insertdepth, conflictrow->validdepth, conflictrow->conflictdepth, conflictrow->repropdepth, maxsize);
 
    *success = FALSE;
-   *mirsuccess = FALSE;
 
    /* do not add long conflicts */
    if( conflictrow->nnz > maxsize )
@@ -2941,17 +2940,10 @@ SCIP_RETCODE addConflictRows(
       {
 
          SCIP_Bool success;
-         SCIP_Bool mirsuccess;
 
-         mirsuccess = FALSE;
          SCIP_CALL( SCIPconflictAddConflictCon(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
-               lp, branchcand, eventqueue, eventfilter, cliquetable, conflictrowtoadd, &success, &mirsuccess) );
+               lp, branchcand, eventqueue, eventfilter, cliquetable, conflictrowtoadd, &success) );
          if( success )
-         {
-            (*nconss)++;
-            (*nconfvars) += conflictrowtoadd->nnz;
-         }
-         if( mirsuccess )
          {
             (*nconss)++;
             (*nconfvars) += conflictrowtoadd->nnz;
