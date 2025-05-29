@@ -5289,6 +5289,17 @@ SCIP_Bool SCIPconshdlrNeedsCons(
    return conshdlr->needscons;
 }
 
+/** sets the needscons flag of constraint handler, for example to disable without constraints */
+void SCIPconshdlrSetNeedsCons(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_Bool             needscons           /**< should be skipped, if no constraints are available? */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->needscons = needscons;
+}
+
 /** does the constraint handler perform presolving? */
 SCIP_Bool SCIPconshdlrDoesPresolve(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */

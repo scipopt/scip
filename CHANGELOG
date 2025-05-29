@@ -40,6 +40,7 @@ Performance improvements
 
 - reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
 - simplified symmetry detection graphs in case all edges have the same color
+- avoid unnecessary calls of constraint handlers components, benders, benderslp, propagator genvbounds, and heuristics ofins, subnlp, nlpdiving, indicator
 
 Examples and applications
 -------------------------
@@ -157,6 +158,8 @@ Interface changes
 - added SCIPincludeRelaxBenders(), which is used to include the Benders' decomposition relaxator.
 - added SCIPgetMasterProblemRelaxBenders() for retrieving the master problem SCIP instance from the Benders' decomposition relaxator.
 - added SCIPsortDownIntIntIntReal()
+- SCIPconshdlrSetNeedsCons() to set whether constraint handler callbacks should also be called if there are no constraints
+- SCIPpropSetTimingmask() to set timing mask of a propagator
 
 ### Changes in preprocessor macros
 
@@ -165,6 +168,8 @@ Interface changes
 - SCIPincludeConshdlrOrbitopePP(), SCIPcreateConsOrbitopePP(), SCIPcreateConsBasicOrbitopePP(), SCIPincludeConshdlrOrbitopeFull(), SCIPcreateConsOrbitopeFull(), SCIPcreateConsBasicOrbitopeFull()
 - SCIP_VERSION_SUB and SCIP_SUBVERSION are deprecated
 - removed SCIP_VARTYPE_IMPLINT_CHAR
+- added SCIP_PROPTIMING_NONE propagator timing to never call
+- added SCIP_HEURTIMING_NONE heuristic timing to never call
 
 ### Command line interface
 
@@ -184,6 +189,8 @@ Interface changes
 - removed reading/gmsreader/signpower
 - removed benders/default/numthreads, multi-threading support for Benders' decomposition has been temporarily disabled.
 - restricted range of parameter propagating/symmetry/sstleadervartype to [1,7]; its new default value is 6
+- propagating/*/timingmask extended by setting 0 to disable propagators completely
+- changed defaults of constraints/components/propfreq and constraints/components/maxdepth to -1 and 2147483647, respectively, to avoid unnecessary calls of components propagator by default
 
 ### New parameters
 
@@ -334,6 +341,7 @@ Fixed bugs
 - provide the depth of the applied effective root with SCIPtreeGetEffectiveRootDepth() to avert invalid globalization of constraint set changes
 - disable objective limit during lexicographic dual minimization to keep feasibility status
 - declare infinite bound inference infeasible in SCIPinferVarLbCons() and SCIPinferVarUbCons() to maintain correct loose LP values
+- fixed update of consssorted flags in a variable expressions data when adding an additional constraint using this variable
 
 Build system
 ------------

@@ -48,7 +48,7 @@ extern "C" {
  *  @note: in contrast to other timings, these timings need to start from 0x0002u in order to avoid confusion with
  *         the now obsolete '(presol)delay' boolean flag used until SCIP version 3.1.1
  */
-#define SCIP_PRESOLTIMING_NONE            0x002u  /**< presolving disabled */
+#define SCIP_PRESOLTIMING_NONE            0x002u  /**< never call presolver */
 #define SCIP_PRESOLTIMING_FAST            0x004u  /**< timing for fast presolving methods */
 #define SCIP_PRESOLTIMING_MEDIUM          0x008u  /**< timing for more expensive presolving methods */
 #define SCIP_PRESOLTIMING_EXHAUSTIVE      0x010u  /**< timing for most expensive presolving methods */
@@ -62,6 +62,7 @@ typedef unsigned int SCIP_PRESOLTIMING;
 
 
 /** propagation execution timing flags */
+#define SCIP_PROPTIMING_NONE              0x000u  /**< never call propagator */
 #define SCIP_PROPTIMING_BEFORELP          0x001u  /**< call propagator before LP is solved */
 #define SCIP_PROPTIMING_DURINGLPLOOP      0x002u  /**< call propagator after each LP solving during cut-and-price loop */
 #define SCIP_PROPTIMING_AFTERLPLOOP       0x004u  /**< call propagator after the cut-and-price loop was finished */
@@ -75,6 +76,7 @@ typedef unsigned int SCIP_PROPTIMING;
 
 
 /** heuristics execution timing flags */
+#define SCIP_HEURTIMING_NONE              0x000u  /**< never call heuristic */
 #define SCIP_HEURTIMING_BEFORENODE        0x001u  /**< call heuristic before the processing of the node starts */
 #define SCIP_HEURTIMING_DURINGLPLOOP      0x002u  /**< call heuristic after each LP solving during cut-and-price loop */
 #define SCIP_HEURTIMING_AFTERLPLOOP       0x004u  /**< call heuristic after the cut-and-price loop was finished */

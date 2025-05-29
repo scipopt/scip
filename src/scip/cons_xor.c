@@ -1074,26 +1074,9 @@ SCIP_RETCODE applyFixings(
 
             if( aggregated )
             {
-               (*naggrvars)++;
-
-               if( SCIPvarIsActive(newvar) )
-               {
-                  SCIP_CALL( setIntvar(scip, cons, newvar) );
-                  SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
-               }
-               /* the new variable should only by inactive if it was fixed due to the aggregation, so also the old variable
-                * should be fixed now.
-                *
-                * @todo if newvar is not active we may want to transform the xor into a linear constraint
-                */
-               else
-               {
-                  assert(SCIPvarGetStatus(newvar) == SCIP_VARSTATUS_FIXED);
-                  assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->intvar), SCIPvarGetUbGlobal(consdata->intvar)));
-
-                  SCIP_CALL( setIntvar(scip, cons, newvar) );
-                  SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
-               }
+               ++(*naggrvars);
+               SCIP_CALL( setIntvar(scip, cons, newvar) );
+               SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
             }
             else
             {
@@ -4306,7 +4289,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 
                   if( aggregated )
                   {
-                     (*naggrvars)++;
+                     ++(*naggrvars);
                      assert(SCIPvarIsActive(consdata0->intvar));
                   }
                   else
@@ -4460,7 +4443,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          *cutoff = *cutoff || infeasible;
          if( aggregated )
-            (*naggrvars)++;
+            ++(*naggrvars);
 
          if( redundant )
          {
@@ -4483,7 +4466,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 
                   *cutoff = *cutoff || infeasible;
                   if( aggregated )
-                     (*naggrvars)++;
+                     ++(*naggrvars);
                }
             }
          }
@@ -5415,7 +5398,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
             if( aggregated )
             {
                assert(redundant);
-               (*naggrvars)++;
+               ++(*naggrvars);
             }
 
             /* the constraint can be deleted if the intvar is fixed or NULL */
