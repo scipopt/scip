@@ -37,7 +37,7 @@
  *
  *  The selector allows the user to specify a filtering strategy during cut selection ('d'ynamic- and 'f'ull dynamic),
  *  which determines how the orthogonality filtering is applied.
- *  In both cases, after a cut is selected, the remaining cuts are resorted by computing their relative efficacy to the
+ *  In both cases, after a cut is selected, the remaining cuts are re-sorted by computing their relative efficacy to the
  *  selected cut. The efficacy ratio is then used to filter the cuts based on the filtering strategy:
  *  - 'd'ynamic-parallelism: The dynamic parallelism strategy filters cuts based on the efficacy ratio between cut
  *  pairs. It only filters cuts that are not theoretically improving the efficacy of the pair given the first cut, i.e.,
@@ -80,7 +80,7 @@ SCIP_RETCODE SCIPincludeCutselDynamic(
  *  This is an extension of the hybrid cutselector to employ a dynamic range
  *  when applying orthogonality filtering, dependent on the efficacy ratio between cuts.
  *
- *  The input cuts array should be resorted such that the selected cuts come first.
+ *  The input cuts array should be re-sorted such that the selected cuts come first.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPselectCutsDynamic(

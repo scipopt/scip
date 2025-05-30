@@ -3681,10 +3681,10 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
    n  = quaddata->nquadexprs;
 
    /* do not check curvature if nn will be too large
-    * we want nn * sizeof(real) to fit into an unsigned int, so n must be <= sqrt(unit_max/sizeof(real))
-    * sqrt(2*214748364/8) = 7327.1475350234
+    * we want nn * sizeof(real) to fit into an unsigned int, so n must be <= sqrt(uint_max/sizeof(real))
+    * sqrt(4294967295/8) = 23170.47500322339
     */
-   if( n > 7000 )
+   if( n > 23000 )
    {
       SCIPmessageFPrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL, NULL,
             "number of quadratic variables is too large (%d) to check the curvature\n", n);

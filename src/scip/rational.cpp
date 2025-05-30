@@ -270,13 +270,23 @@ SCIP_RETCODE SCIPrationalReallocArray(
    int                   newlen              /**< size of src array */
    )
 {
-   assert(newlen >= oldlen);
-
-   BMSreallocMemoryArray(result, newlen);
-
-   for( int i = oldlen; i < newlen; ++i )
+   if( newlen < oldlen )
    {
-      SCIP_CALL( SCIPrationalCreate(&(*result)[i]) );
+      for( int i = oldlen - 1; i >= newlen; --i )
+      {
+         SCIPrationalFree(*result + i);
+      }
+
+      SCIP_ALLOC( BMSreallocMemoryArray(result, newlen) );
+   }
+   else
+   {
+      SCIP_ALLOC( BMSreallocMemoryArray(result, newlen) );
+
+      for( int i = oldlen; i < newlen; ++i )
+      {
+         SCIP_CALL( SCIPrationalCreate(*result + i) );
+      }
    }
 
    return SCIP_OKAY;
@@ -290,13 +300,23 @@ SCIP_RETCODE SCIPrationalReallocBufferArray(
    int                   newlen              /**< size of src array */
    )
 {
-   assert(newlen >= oldlen);
-
-   BMSreallocBufferMemoryArray(mem, result, newlen);
-
-   for( int i = oldlen; i < newlen; ++i )
+   if( newlen < oldlen )
    {
-      SCIP_CALL( SCIPrationalCreateBuffer(mem, &(*result)[i]) );
+      for( int i = oldlen - 1; i >= newlen; --i )
+      {
+         SCIPrationalFreeBuffer(mem, *result + i);
+      }
+
+      SCIP_ALLOC( BMSreallocBufferMemoryArray(mem, result, newlen) );
+   }
+   else
+   {
+      SCIP_ALLOC( BMSreallocBufferMemoryArray(mem, result, newlen) );
+
+      for( int i = oldlen; i < newlen; ++i )
+      {
+         SCIP_CALL( SCIPrationalCreateBuffer(mem, *result + i) );
+      }
    }
 
    return SCIP_OKAY;
@@ -312,18 +332,20 @@ SCIP_RETCODE SCIPrationalReallocBlockArray(
 {
    if( newlen < oldlen )
    {
-      for( int i = newlen; i < oldlen; ++i )
+      for( int i = oldlen - 1; i >= newlen; --i )
       {
-         SCIPrationalFreeBlock(mem, &((*result)[i]));
+         SCIPrationalFreeBlock(mem, *result + i);
       }
+
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(mem, result, oldlen, newlen) );
    }
    else
    {
-      BMSreallocBlockMemoryArray(mem, result, oldlen, newlen);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(mem, result, oldlen, newlen) );
 
       for( int i = oldlen; i < newlen; ++i )
       {
-         SCIP_CALL( SCIPrationalCreateBlock(mem, &((*result)[i])) );
+         SCIP_CALL( SCIPrationalCreateBlock(mem, *result + i) );
       }
    }
 
@@ -506,6 +528,7 @@ void SCIPrationalCanonicalize(
    SCIP_RATIONAL*        rational            /**< rational to put in canonical form */
    )
 {
+   assert(rational != nullptr);
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_BOOST)
    mpq_canonicalize(rational->val.backend().data());
 #endif
@@ -658,7 +681,7 @@ SCIP_Bool SCIPrationalIsString(
    {
       if( *desc == '.' )
       {
-         int mantissalen;
+         size_t mantissalen;
 
          ++desc;
          mantissalen = strspn(desc, "0123456789");
@@ -789,49 +812,114 @@ SCIP_RETCODE SCIPrationalCreateString(
    return SCIP_OKAY;
 }
 
-/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p str
+/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p desc
  *
  *  @return Returns TRUE if a value could be extracted, otherwise FALSE
  */
 SCIP_Bool SCIPstrToRationalValue(
-   char*                 str,                /**< string to search */
+   char*                 desc,               /**< string to search */
    SCIP_RATIONAL*        value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p desc */
    )
 {
-   size_t endpos;
+   bool negative;
 
-   assert(str != nullptr);
-   assert(value != nullptr);
-   assert(endptr != nullptr);
+   assert(desc != NULL);
+   assert(value != NULL);
+   assert(endptr != NULL);
 
-   *endptr = str;
+   *endptr = desc;
 
-   if( *str == '-' || *str == '+' )
-      ++str;
-
-   endpos = strspn(str, "0123456789");
-
-   if( endpos == 0 )
-      return FALSE;
-
-   str += endpos;
-
-   if( *str == '/' )
+   switch( *desc )
    {
-      ++str;
-      endpos = strspn(str, "0123456789");
-
-      if( endpos == 0 )
-         return FALSE;
-
-      str += endpos;
+   case '-':
+      ++desc;
+      negative = true;
+      break;
+   case '+':
+      ++desc;
+      /*lint -fallthrough*/
+   default:
+      negative = false;
+      break;
    }
 
-   std::string s(*endptr, str);
+   if( *desc == '\0' || *desc == '/' )
+      return FALSE;
 
-   *endptr = str;
+   if( SCIPstrncasecmp(desc, "inf", 3) == 0 )
+   {
+      if( negative )
+         SCIPrationalSetNegInfinity(value);
+      else
+         SCIPrationalSetInfinity(value);
+
+      *endptr = desc + 2;
+
+      if( *(++(*endptr)) == 'i' )
+      {
+         if( *(++(*endptr)) == 'n' )
+         {
+            if( *(++(*endptr)) == 'i' )
+            {
+               if( *(++(*endptr)) == 't' )
+               {
+                  if( *(++(*endptr)) == 'y' )
+                     ++(*endptr);
+               }
+            }
+         }
+      }
+
+      return TRUE;
+   }
+
+   desc += strspn(desc, "0123456789");
+
+   /* parse rational format */
+   if( *desc == '/' )
+   {
+      ++desc;
+
+      if( *desc == '\0' )
+         return FALSE;
+
+      desc += strspn(desc, "0123456789");
+   }
+   /* parse real format */
+   else if( *desc != '\0' )
+   {
+      if( *desc == '.' )
+      {
+         size_t mantissalen;
+
+         ++desc;
+         mantissalen = strspn(desc, "0123456789");
+
+         if( mantissalen == 0 )
+            return FALSE;
+
+         desc += mantissalen;
+      }
+
+      if( *desc == 'e' || *desc == 'E' )
+      {
+         ++desc;
+
+         if( *desc == '-' || *desc == '+' )
+            ++desc;
+
+         if( *desc == '\0' )
+            return FALSE;
+
+         desc += strspn(desc, "0123456789");
+      }
+   }
+
+   std::string s(*endptr, desc);
+
    SCIPrationalSetString(value, s.c_str());
+   *endptr = desc;
 
    return TRUE;
 }
@@ -1102,7 +1190,6 @@ void SCIPrationalAddProd(
             SCIPABORT();
          }
 
-         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
          res->val = op1->val.sign() * op2->val.sign();
          res->isinf = TRUE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
@@ -1132,7 +1219,6 @@ void SCIPrationalAddProdReal(
          return;
       else
       {
-         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
          res->val = (op2 > 0) ? op1->val.sign() : -op1->val.sign();
          res->isinf = TRUE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
@@ -1162,7 +1248,6 @@ void SCIPrationalDiffProd(
          return;
       else
       {
-         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
          res->val = op1->val.sign() * op2->val.sign();
          res->isinf = TRUE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
@@ -1192,7 +1277,6 @@ void SCIPrationalDiffProdReal(
          return;
       else
       {
-         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
          res->val = (op2 > 0) ? op1->val.sign() : -op1->val.sign();
          res->isinf = TRUE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
@@ -1699,7 +1783,7 @@ int SCIPrationalStrLen(
       return rational->val.str().length();
 }
 
-/** prints rational to file using message handler */
+/** prints rational into a file using message handler */
 void SCIPrationalMessage(
    SCIP_MESSAGEHDLR*     msg,                /**< message handler */
    FILE*                 file,               /**< file pointer */
@@ -1719,6 +1803,24 @@ void SCIPrationalMessage(
    {
       std::string s = rational->val.str();
       SCIPmessageFPrintInfo(msg, file, "%s", s.c_str());
+   }
+}
+
+/** prints rational depending on the verbosity level */
+void SCIPrationalPrintVerbInfo(
+   SCIP_MESSAGEHDLR*     msg,                /**< message handler */
+   SCIP_VERBLEVEL        verblevel,          /**< current verbosity level */
+   SCIP_VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   SCIP_RATIONAL*        rational            /**< the rational to print */
+   )
+{
+   assert(msgverblevel > SCIP_VERBLEVEL_NONE);
+   assert(msgverblevel <= SCIP_VERBLEVEL_FULL);
+   assert(verblevel <= SCIP_VERBLEVEL_FULL);
+
+   if( msgverblevel <= verblevel )
+   {
+      SCIPrationalMessage(msg, NULL, rational);
    }
 }
 
@@ -1914,15 +2016,9 @@ SCIP_Bool SCIPrationalDenominatorIsLE(
    SCIP_Longint          val                 /**< long value to compare to */
    )
 {
-   scip::Integer denominator;
+   assert(!SCIPrationalIsAbsInfinity(rational));
 
-   if( SCIPrationalIsAbsInfinity(rational) )
-   {
-      SCIPerrorMessage("cannot compare denominator of infinite value");
-      return false;
-   }
-
-   denominator = boost::multiprecision::denominator(rational->val);
+   scip::Integer denominator = boost::multiprecision::denominator(rational->val);
 
    return denominator <= val;
 }
@@ -1934,6 +2030,7 @@ SCIP_Longint SCIPrationalNumerator(
    SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
+   assert(rational != nullptr);
    return rational->val.val;
 }
 
@@ -1942,6 +2039,7 @@ SCIP_Longint SCIPrationalDenominator(
    SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
+   assert(rational != nullptr);
    return 1.0;
 }
 
@@ -1951,6 +2049,7 @@ SCIP_Bool SCIPrationalDenominatorIsLE(
    SCIP_Longint          val                 /**< long value to compare to */
    )
 {
+   assert(rational != nullptr);
    return TRUE;
 }
 #endif
@@ -1960,6 +2059,7 @@ int SCIPrationalGetSign(
    const SCIP_RATIONAL*  rational            /**< the rational */
    )
 {
+   assert(rational != nullptr);
    return rational->val.sign();
 }
 
@@ -1969,18 +2069,18 @@ void SCIPrationalGetFrac(
    SCIP_RATIONAL*        src                 /**< src rational */
    )
 {
-#ifdef SCIP_WITH_BOOST
-   scip::Integer roundint, rest;
-
    assert(src != nullptr);
    assert(res != nullptr);
+
+#ifdef SCIP_WITH_BOOST
 
    if( src->isinf )
       SCIPrationalSetReal(res, 0.0);
    else
    {
-      roundint = 0;
-      rest = 0;
+      scip::Integer roundint = 0;
+      scip::Integer rest = 0;
+
       divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
       if( rest != 0 )
       {
@@ -1997,9 +2097,10 @@ SCIP_Real SCIPrationalGetReal(
    )
 {
    SCIP_Real retval = 0.0;
-#ifdef SCIP_WITH_BOOST
+
    assert(rational != nullptr);
 
+#ifdef SCIP_WITH_BOOST
    if( rational->isinf )
       return (rational->val.sign() * infinity);
 
@@ -2071,11 +2172,10 @@ void SCIPrationalRoundInteger(
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
-#ifdef SCIP_WITH_BOOST
-   scip::Integer roundint, rest;
-
    assert(src != nullptr);
    assert(res != nullptr);
+#ifdef SCIP_WITH_BOOST
+   scip::Integer roundint, rest;
 
    if( src->isinf )
       SCIPrationalSetRational(res, src);
@@ -2119,13 +2219,14 @@ SCIP_Bool SCIPrationalRoundLong(
    )
 {
    SCIP_Bool success = FALSE;
-#ifdef SCIP_WITH_BOOST
-   scip::Integer roundint, rest;
 
    assert(src != nullptr);
    assert(res != nullptr);
+
+#ifdef SCIP_WITH_BOOST
    assert(!src->isinf);
 
+   scip::Integer roundint, rest;
    divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
 
    if( rest != 0 )
@@ -2225,6 +2326,8 @@ void SCIPrationalComputeApproximationLong(
    int sign;
    int done = 0;
 
+   assert(res != nullptr);
+   assert(src != nullptr);
    assert(numerator(src->val) <= SCIP_LONGINT_MAX);
    assert(denominator(src->val) <= SCIP_LONGINT_MAX);
 
@@ -2378,6 +2481,8 @@ void SCIPrationalComputeApproximation(
    int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
    )
 {
+   assert(src != nullptr);
+   assert(res != nullptr);
 #ifdef SCIP_WITH_BOOST
    int done = 0;
 

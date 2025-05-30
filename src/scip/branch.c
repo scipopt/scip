@@ -466,7 +466,7 @@ SCIP_RETCODE SCIPbranchcandGetExternCands(
    int*                  nprioexterncands,   /**< pointer to store the number of candidates with maximal priority, or NULL */
    int*                  nprioexternbins,    /**< pointer to store the number of binary candidates with maximal priority, or NULL */
    int*                  nprioexternints,    /**< pointer to store the number of integer candidates with maximal priority, or NULL */
-   int*                  nprioexternimpls    /**< pointer to store the number of implicit integer candidates with maximal priority, 
+   int*                  nprioexternimpls    /**< pointer to store the number of implicit integer candidates with maximal priority,
                                               *   or NULL */
    )
 {
@@ -643,7 +643,7 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
    {
       /* candidate has equal priority as the current maximum:
        * move away the first non-maximal priority candidate, move the current candidate to the correct
-       * slot (binaries first, integers next, implicit integers next, continuous last) and increase the number 
+       * slot (binaries first, integers next, implicit integers next, continuous last) and increase the number
        * of maximal priority candidates
        */
       if( insertpos != branchcand->nprioexterncands )
@@ -675,11 +675,11 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
             assert(vartype != SCIP_VARTYPE_CONTINUOUS);
             if( insertpos != branchcand->nprioexternbins + branchcand->nprioexternints )
             {
-               branchcand->externcands[insertpos] = 
+               branchcand->externcands[insertpos] =
                   branchcand->externcands[branchcand->nprioexternbins + branchcand->nprioexternints];
-               branchcand->externcandsscore[insertpos] = 
+               branchcand->externcandsscore[insertpos] =
                   branchcand->externcandsscore[branchcand->nprioexternbins + branchcand->nprioexternints];
-               branchcand->externcandssol[insertpos] = 
+               branchcand->externcandssol[insertpos] =
                   branchcand->externcandssol[branchcand->nprioexternbins + branchcand->nprioexternints];
 
                insertpos = branchcand->nprioexternbins + branchcand->nprioexternints;
@@ -793,7 +793,7 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
       }
       /* the variable is continuous, look at the slots containing continuous variables */
       assert(vartype == SCIP_VARTYPE_CONTINUOUS);
-      for( i = branchcand->nprioexternbins + branchcand->nprioexternints + branchcand->nprioexternimpls; 
+      for( i = branchcand->nprioexternbins + branchcand->nprioexternints + branchcand->nprioexternimpls;
            i < branchcand->nprioexterncands; i++ )
          if( branchcand->externcands[i] == var )
             return TRUE;
@@ -2326,7 +2326,7 @@ SCIP_Real SCIPbranchGetScoreMultiple(
 /** computes a branching point for a (not necessarily discrete) variable
  * a suggested branching point is first projected onto the box
  * if no point is suggested, then the value in the current LP or pseudo solution is used
- * if this value is at infinity, then 0.0 projected onto the bounds and then moved inside the interval is used 
+ * if this value is at infinity, then 0.0 projected onto the bounds and then moved inside the interval is used
  * for a discrete variable, it is ensured that the returned value is fractional
  * for a continuous variable, the parameter branching/clamp defines how far a branching point need to be from the bounds of a variable
  * the latter is only applied if no point has been suggested, or the suggested point is not inside the variable's interval
@@ -2385,7 +2385,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
       else if( (SCIPsetIsInfinity(set, -lb) || SCIPsetIsRelGT(set, branchpoint, lb)) &&
                 (SCIPsetIsInfinity(set,  ub) || SCIPsetIsRelLT(set, branchpoint, ub)) )
       {
-         /* if it is continuous and inside the box, then accept it */ 
+         /* if it is continuous and inside the box, then accept it */
          return branchpoint;
       }
       /* if it is continuous and suggestion is one of the bounds, continue below */
@@ -2445,7 +2445,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
          branchpoint = 0.0;
    }
    else if( SCIPsetIsInfinity(set, -branchpoint) )
-   { 
+   {
       /* if value is at -infty, then the lower bound should be at -infinity */
       assert(SCIPsetIsInfinity(set, -lb));
 

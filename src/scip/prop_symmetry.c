@@ -2194,9 +2194,9 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
    propdata->nmovedintpermvars = 0;
    propdata->nmovedcontpermvars = 0;
 
-   for (p = 0; p < propdata->nperms; ++p)
+   for (v = 0; v < propdata->npermvars; ++v)
    {
-      for (v = 0; v < propdata->npermvars; ++v)
+      for (p = 0; p < propdata->nperms; ++p)
       {
          if ( propdata->perms[p][v] != v )
          {
@@ -2217,6 +2217,7 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
                SCIPerrorMessage("unknown variable type\n");
                return SCIP_INVALIDDATA;
             } /*lint !e788*/
+            break;
          }
       }
    }
@@ -2498,7 +2499,7 @@ SCIP_RETCODE determineSymmetry(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%d", maxgenerators);
 
    /* display statistics: log10 group size, number of affected vars*/
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", log10 of symmetry group size: %.1f", propdata->log10groupsize);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", log10 of symmetry group size: %.2f", propdata->log10groupsize);
 
    if ( propdata->displaynorbitvars )
    {
@@ -7500,33 +7501,35 @@ SCIP_RETCODE propagateSymmetry(
    SCIP_Bool*            didrun              /**< pointer for storing whether a propagator actually ran */
    )
 {
+   SCIP_Bool didrunlocal;
    int nredlocal;
 
    assert( scip != NULL );
    assert( propdata != NULL );
-   assert( infeasible != NULL );
    assert( nred != NULL );
    assert( didrun != NULL );
 
    *nred = 0;
-   *infeasible = FALSE;
    *didrun = FALSE;
 
    /* apply orbitopal reduction */
-   SCIP_CALL( SCIPorbitopalReductionPropagate(scip, propdata->orbitopalreddata, infeasible, &nredlocal, didrun) );
+   SCIP_CALL( SCIPorbitopalReductionPropagate(scip, propdata->orbitopalreddata, infeasible, &nredlocal, &didrunlocal) );
    *nred += nredlocal;
+   *didrun |= didrunlocal;
    if ( *infeasible )
       return SCIP_OKAY;
 
    /* apply orbital reduction */
-   SCIP_CALL( SCIPorbitalReductionPropagate(scip, propdata->orbitalreddata, infeasible, &nredlocal, didrun) );
+   SCIP_CALL( SCIPorbitalReductionPropagate(scip, propdata->orbitalreddata, infeasible, &nredlocal, &didrunlocal) );
    *nred += nredlocal;
+   *didrun |= didrunlocal;
    if ( *infeasible )
       return SCIP_OKAY;
 
    /* apply dynamic lexicographic reduction */
-   SCIP_CALL( SCIPlexicographicReductionPropagate(scip, propdata->lexreddata, infeasible, &nredlocal, didrun) );
+   SCIP_CALL( SCIPlexicographicReductionPropagate(scip, propdata->lexreddata, infeasible, &nredlocal, &didrunlocal) );
    *nred += nredlocal;
+   *didrun |= didrunlocal;
    if ( *infeasible )
       return SCIP_OKAY;
 
@@ -7755,6 +7758,7 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    int nred;
 
    assert( scip != NULL );
+   assert( prop != NULL );
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
@@ -7767,8 +7771,8 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
-   /* usesymmetry must be read in order for propdata to have initialized symmetry handling propagators */
-   if ( propdata->usesymmetry < 0 )
+   /* usesymmetry must be read and non-zero in order for propdata to have initialized symmetry handling propagators */
+   if ( propdata->usesymmetry <= 0 )
       return SCIP_OKAY;
 
    SCIP_CALL( propagateSymmetry(scip, propdata, &infeasible, &nred, &didrun) );

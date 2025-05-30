@@ -4127,7 +4127,7 @@ SCIP_RETCODE SCIPbendersExec(
    /* inserting the subproblems into the priority queue for the next solve call */
    SCIP_CALL( updateSubproblemStatQueue(benders, executedidx, nexecutedidx, TRUE) );
 
-   if( stopped )
+   if( stopped ) /*lint !e774*/
       goto TERMINATE;
 
    allverified = (nverified == nsubproblems);
@@ -4278,7 +4278,7 @@ POSTSOLVE:
 
 TERMINATE:
    /* if the solving process has stopped, then all subproblems need to be freed */
-   if( stopped )
+   if( stopped ) /*lint !e774*/
       nfree = nsubproblems;
    else
       nfree = nexecutedidx;

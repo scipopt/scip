@@ -6439,7 +6439,7 @@ SCIP_Real SCIPsetRecompfac(
    return set->num_recompfac;
 }
 
-/** checks, if value is (positive) infinite */
+/** checks if value is (positive) infinite */
 SCIP_Bool SCIPsetIsInfinity(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to be compared against infinity */
@@ -6450,7 +6450,7 @@ SCIP_Bool SCIPsetIsInfinity(
    return (val >= set->num_infinity);
 }
 
-/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+/** checks if value is huge and should be handled separately (e.g., in activity computation) */
 SCIP_Bool SCIPsetIsHugeValue(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to be checked whether it is huge */
@@ -6461,7 +6461,7 @@ SCIP_Bool SCIPsetIsHugeValue(
    return (val >= set->num_hugeval);
 }
 
-/** checks, if values are in range of epsilon */
+/** checks if values are in range of epsilon */
 SCIP_Bool SCIPsetIsEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6481,7 +6481,7 @@ SCIP_Bool SCIPsetIsEQ(
    return EPSEQ(val1, val2, set->num_epsilon);
 }
 
-/** checks, if val1 is (more than epsilon) lower than val2 */
+/** checks if val1 is (more than epsilon) lower than val2 */
 SCIP_Bool SCIPsetIsLT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6501,7 +6501,7 @@ SCIP_Bool SCIPsetIsLT(
    return EPSLT(val1, val2, set->num_epsilon);
 }
 
-/** checks, if val1 is not (more than epsilon) greater than val2 */
+/** checks if val1 is not (more than epsilon) greater than val2 */
 SCIP_Bool SCIPsetIsLE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6521,7 +6521,7 @@ SCIP_Bool SCIPsetIsLE(
    return EPSLE(val1, val2, set->num_epsilon);
 }
 
-/** checks, if val1 is (more than epsilon) greater than val2 */
+/** checks if val1 is (more than epsilon) greater than val2 */
 SCIP_Bool SCIPsetIsGT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6541,7 +6541,7 @@ SCIP_Bool SCIPsetIsGT(
    return EPSGT(val1, val2, set->num_epsilon);
 }
 
-/** checks, if val1 is not (more than epsilon) lower than val2 */
+/** checks if val1 is not (more than epsilon) lower than val2 */
 SCIP_Bool SCIPsetIsGE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6561,7 +6561,7 @@ SCIP_Bool SCIPsetIsGE(
    return EPSGE(val1, val2, set->num_epsilon);
 }
 
-/** checks, if value is in range epsilon of 0.0 */
+/** checks if value is in range epsilon of 0.0 */
 SCIP_Bool SCIPsetIsZero(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -6572,7 +6572,7 @@ SCIP_Bool SCIPsetIsZero(
    return EPSZ(val, set->num_epsilon);
 }
 
-/** checks, if value is greater than epsilon */
+/** checks if value is greater than epsilon */
 SCIP_Bool SCIPsetIsPositive(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -6583,7 +6583,7 @@ SCIP_Bool SCIPsetIsPositive(
    return EPSP(val, set->num_epsilon);
 }
 
-/** checks, if value is lower than -epsilon */
+/** checks if value is lower than -epsilon */
 SCIP_Bool SCIPsetIsNegative(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -6594,7 +6594,7 @@ SCIP_Bool SCIPsetIsNegative(
    return EPSN(val, set->num_epsilon);
 }
 
-/** checks, if value is integral within epsilon */
+/** checks if value is integral within epsilon */
 SCIP_Bool SCIPsetIsIntegral(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -6626,7 +6626,7 @@ SCIP_Bool SCIPsetIsScalingIntegral(
    return EPSISINT(scalar*val, scaledeps);
 }
 
-/** checks, if given fractional part is smaller than epsilon */
+/** checks if given fractional part is smaller than epsilon */
 SCIP_Bool SCIPsetIsFracIntegral(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -6688,7 +6688,7 @@ SCIP_Real SCIPsetFrac(
    return EPSFRAC(val, set->num_epsilon);
 }
 
-/** checks, if values are in range of sumepsilon */
+/** checks if values are in range of sumepsilon */
 SCIP_Bool SCIPsetIsSumEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6708,7 +6708,7 @@ SCIP_Bool SCIPsetIsSumEQ(
    return EPSEQ(val1, val2, set->num_sumepsilon);
 }
 
-/** checks, if val1 is (more than sumepsilon) lower than val2 */
+/** checks if val1 is (more than sumepsilon) lower than val2 */
 SCIP_Bool SCIPsetIsSumLT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6728,7 +6728,7 @@ SCIP_Bool SCIPsetIsSumLT(
    return EPSLT(val1, val2, set->num_sumepsilon);
 }
 
-/** checks, if val1 is not (more than sumepsilon) greater than val2 */
+/** checks if val1 is not (more than sumepsilon) greater than val2 */
 SCIP_Bool SCIPsetIsSumLE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6748,7 +6748,7 @@ SCIP_Bool SCIPsetIsSumLE(
    return EPSLE(val1, val2, set->num_sumepsilon);
 }
 
-/** checks, if val1 is (more than sumepsilon) greater than val2 */
+/** checks if val1 is (more than sumepsilon) greater than val2 */
 SCIP_Bool SCIPsetIsSumGT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6768,7 +6768,7 @@ SCIP_Bool SCIPsetIsSumGT(
    return EPSGT(val1, val2, set->num_sumepsilon);
 }
 
-/** checks, if val1 is not (more than sumepsilon) lower than val2 */
+/** checks if val1 is not (more than sumepsilon) lower than val2 */
 SCIP_Bool SCIPsetIsSumGE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6788,7 +6788,7 @@ SCIP_Bool SCIPsetIsSumGE(
    return EPSGE(val1, val2, set->num_sumepsilon);
 }
 
-/** checks, if value is in range sumepsilon of 0.0 */
+/** checks if value is in range sumepsilon of 0.0 */
 SCIP_Bool SCIPsetIsSumZero(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -6799,7 +6799,7 @@ SCIP_Bool SCIPsetIsSumZero(
    return EPSZ(val, set->num_sumepsilon);
 }
 
-/** checks, if value is greater than sumepsilon */
+/** checks if value is greater than sumepsilon */
 SCIP_Bool SCIPsetIsSumPositive(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -6810,7 +6810,7 @@ SCIP_Bool SCIPsetIsSumPositive(
    return EPSP(val, set->num_sumepsilon);
 }
 
-/** checks, if value is lower than -sumepsilon */
+/** checks if value is lower than -sumepsilon */
 SCIP_Bool SCIPsetIsSumNegative(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -6869,7 +6869,7 @@ SCIP_Real SCIPsetSumFrac(
    return EPSFRAC(val, set->num_sumepsilon);
 }
 
-/** checks, if relative difference of values is in range of feastol */
+/** checks if relative difference of values is in range of feastol */
 SCIP_Bool SCIPsetIsFeasEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6893,7 +6893,7 @@ SCIP_Bool SCIPsetIsFeasEQ(
    return EPSZ(diff, set->num_feastol);
 }
 
-/** checks, if relative difference of val1 and val2 is lower than feastol */
+/** checks if relative difference of val1 and val2 is lower than feastol */
 SCIP_Bool SCIPsetIsFeasLT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6917,7 +6917,7 @@ SCIP_Bool SCIPsetIsFeasLT(
    return EPSN(diff, set->num_feastol);
 }
 
-/** checks, if relative difference of val1 and val2 is not greater than feastol */
+/** checks if relative difference of val1 and val2 is not greater than feastol */
 SCIP_Bool SCIPsetIsFeasLE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6941,7 +6941,7 @@ SCIP_Bool SCIPsetIsFeasLE(
    return !EPSP(diff, set->num_feastol);
 }
 
-/** checks, if relative difference of val1 and val2 is greater than feastol */
+/** checks if relative difference of val1 and val2 is greater than feastol */
 SCIP_Bool SCIPsetIsFeasGT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6965,7 +6965,7 @@ SCIP_Bool SCIPsetIsFeasGT(
    return EPSP(diff, set->num_feastol);
 }
 
-/** checks, if relative difference of val1 and val2 is not lower than -feastol */
+/** checks if relative difference of val1 and val2 is not lower than -feastol */
 SCIP_Bool SCIPsetIsFeasGE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -6989,7 +6989,7 @@ SCIP_Bool SCIPsetIsFeasGE(
    return !EPSN(diff, set->num_feastol);
 }
 
-/** checks, if value is in range feasibility tolerance of 0.0 */
+/** checks if value is in range feasibility tolerance of 0.0 */
 SCIP_Bool SCIPsetIsFeasZero(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -7000,7 +7000,7 @@ SCIP_Bool SCIPsetIsFeasZero(
    return EPSZ(val, set->num_feastol);
 }
 
-/** checks, if value is greater than feasibility tolerance */
+/** checks if value is greater than feasibility tolerance */
 SCIP_Bool SCIPsetIsFeasPositive(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -7011,7 +7011,7 @@ SCIP_Bool SCIPsetIsFeasPositive(
    return EPSP(val, set->num_feastol);
 }
 
-/** checks, if value is lower than -feasibility tolerance */
+/** checks if value is lower than -feasibility tolerance */
 SCIP_Bool SCIPsetIsFeasNegative(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -7022,7 +7022,7 @@ SCIP_Bool SCIPsetIsFeasNegative(
    return EPSN(val, set->num_feastol);
 }
 
-/** checks, if value is integral within the feasibility bounds */
+/** checks if value is integral within the feasibility bounds */
 SCIP_Bool SCIPsetIsFeasIntegral(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -7034,7 +7034,7 @@ SCIP_Bool SCIPsetIsFeasIntegral(
    return EPSISINT(val, set->num_feastol);
 }
 
-/** checks, if given fractional part is smaller than feastol */
+/** checks if given fractional part is smaller than feastol */
 SCIP_Bool SCIPsetIsFeasFracIntegral(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -7096,7 +7096,7 @@ SCIP_Real SCIPsetFeasFrac(
    return EPSFRAC(val, set->num_feastol);
 }
 
-/** checks, if relative difference of values is in range of dual feasibility tolerance */
+/** checks if relative difference of values is in range of dual feasibility tolerance */
 SCIP_Bool SCIPsetIsDualfeasEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7120,7 +7120,7 @@ SCIP_Bool SCIPsetIsDualfeasEQ(
    return EPSZ(diff, set->num_dualfeastol);
 }
 
-/** checks, if relative difference of val1 and val2 is lower than dual feasibility tolerance */
+/** checks if relative difference of val1 and val2 is lower than dual feasibility tolerance */
 SCIP_Bool SCIPsetIsDualfeasLT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7144,7 +7144,7 @@ SCIP_Bool SCIPsetIsDualfeasLT(
    return EPSN(diff, set->num_dualfeastol);
 }
 
-/** checks, if relative difference of val1 and val2 is not greater than dual feasibility tolerance */
+/** checks if relative difference of val1 and val2 is not greater than dual feasibility tolerance */
 SCIP_Bool SCIPsetIsDualfeasLE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7168,7 +7168,7 @@ SCIP_Bool SCIPsetIsDualfeasLE(
    return !EPSP(diff, set->num_dualfeastol);
 }
 
-/** checks, if relative difference of val1 and val2 is greater than dual feasibility tolerance */
+/** checks if relative difference of val1 and val2 is greater than dual feasibility tolerance */
 SCIP_Bool SCIPsetIsDualfeasGT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7192,7 +7192,7 @@ SCIP_Bool SCIPsetIsDualfeasGT(
    return EPSP(diff, set->num_dualfeastol);
 }
 
-/** checks, if relative difference of val1 and val2 is not lower than -dual feasibility tolerance */
+/** checks if relative difference of val1 and val2 is not lower than -dual feasibility tolerance */
 SCIP_Bool SCIPsetIsDualfeasGE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7216,7 +7216,7 @@ SCIP_Bool SCIPsetIsDualfeasGE(
    return !EPSN(diff, set->num_dualfeastol);
 }
 
-/** checks, if value is in range feasibility tolerance of 0.0 */
+/** checks if value is in range feasibility tolerance of 0.0 */
 SCIP_Bool SCIPsetIsDualfeasZero(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -7227,7 +7227,7 @@ SCIP_Bool SCIPsetIsDualfeasZero(
    return EPSZ(val, set->num_dualfeastol);
 }
 
-/** checks, if value is greater than dual feasibility tolerance */
+/** checks if value is greater than dual feasibility tolerance */
 SCIP_Bool SCIPsetIsDualfeasPositive(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -7238,7 +7238,7 @@ SCIP_Bool SCIPsetIsDualfeasPositive(
    return EPSP(val, set->num_dualfeastol);
 }
 
-/** checks, if value is lower than -dual feasibility tolerance */
+/** checks if value is lower than -dual feasibility tolerance */
 SCIP_Bool SCIPsetIsDualfeasNegative(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -7249,7 +7249,7 @@ SCIP_Bool SCIPsetIsDualfeasNegative(
    return EPSN(val, set->num_dualfeastol);
 }
 
-/** checks, if value is integral within the dual feasibility bounds */
+/** checks if value is integral within the dual feasibility bounds */
 SCIP_Bool SCIPsetIsDualfeasIntegral(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -7261,7 +7261,7 @@ SCIP_Bool SCIPsetIsDualfeasIntegral(
    return EPSISINT(val, set->num_dualfeastol);
 }
 
-/** checks, if given fractional part is smaller than dual feasibility tolerance */
+/** checks if given fractional part is smaller than dual feasibility tolerance */
 SCIP_Bool SCIPsetIsDualfeasFracIntegral(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */
@@ -7323,7 +7323,7 @@ SCIP_Real SCIPsetDualfeasFrac(
    return EPSFRAC(val, set->num_dualfeastol);
 }
 
-/** checks, if the given new lower bound is at least min(oldub - oldlb, |oldlb|) times the bound
+/** checks if the given new lower bound is at least min(oldub - oldlb, |oldlb|) times the bound
  *  strengthening epsilon better than the old one or the change in the lower bound would fix the
  *  sign of the variable
  */
@@ -7347,7 +7347,7 @@ SCIP_Bool SCIPsetIsLbBetter(
    return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(MIN(oldub - oldlb, REALABS(oldlb)), 1e-3));  /*lint !e666*/
 }
 
-/** checks, if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
+/** checks if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
  *  strengthening epsilon better than the old one or the change in the upper bound would fix the
  *  sign of the variable
  */
@@ -7371,7 +7371,7 @@ SCIP_Bool SCIPsetIsUbBetter(
    return EPSLT(newub, oldub, set->num_boundstreps * MAX(MIN(oldub - oldlb, REALABS(oldub)), 1e-3));  /*lint !e666*/
 }
 
-/** checks, if the given cut's efficacy is larger than the minimal cut efficacy */
+/** checks if the given cut's efficacy is larger than the minimal cut efficacy */
 SCIP_Bool SCIPsetIsEfficacious(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             root,               /**< should the root's minimal cut efficacy be used? */
@@ -7387,7 +7387,7 @@ SCIP_Bool SCIPsetIsEfficacious(
       return EPSP(efficacy, set->sepa_minefficacy);
 }
 
-/** checks, if relative difference of values is in range of epsilon */
+/** checks if relative difference of values is in range of epsilon */
 SCIP_Bool SCIPsetIsRelEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7411,7 +7411,7 @@ SCIP_Bool SCIPsetIsRelEQ(
    return EPSZ(diff, set->num_epsilon);
 }
 
-/** checks, if relative difference of val1 and val2 is lower than epsilon */
+/** checks if relative difference of val1 and val2 is lower than epsilon */
 SCIP_Bool SCIPsetIsRelLT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7435,7 +7435,7 @@ SCIP_Bool SCIPsetIsRelLT(
    return EPSN(diff, set->num_epsilon);
 }
 
-/** checks, if relative difference of val1 and val2 is not greater than epsilon */
+/** checks if relative difference of val1 and val2 is not greater than epsilon */
 SCIP_Bool SCIPsetIsRelLE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7459,7 +7459,7 @@ SCIP_Bool SCIPsetIsRelLE(
    return !EPSP(diff, set->num_epsilon);
 }
 
-/** checks, if relative difference of val1 and val2 is greater than epsilon */
+/** checks if relative difference of val1 and val2 is greater than epsilon */
 SCIP_Bool SCIPsetIsRelGT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7483,7 +7483,7 @@ SCIP_Bool SCIPsetIsRelGT(
    return EPSP(diff, set->num_epsilon);
 }
 
-/** checks, if relative difference of val1 and val2 is not lower than -epsilon */
+/** checks if relative difference of val1 and val2 is not lower than -epsilon */
 SCIP_Bool SCIPsetIsRelGE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7507,7 +7507,7 @@ SCIP_Bool SCIPsetIsRelGE(
    return !EPSN(diff, set->num_epsilon);
 }
 
-/** checks, if relative difference of values is in range of sumepsilon */
+/** checks if relative difference of values is in range of sumepsilon */
 SCIP_Bool SCIPsetIsSumRelEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7531,7 +7531,7 @@ SCIP_Bool SCIPsetIsSumRelEQ(
    return EPSZ(diff, set->num_sumepsilon);
 }
 
-/** checks, if relative difference of val1 and val2 is lower than sumepsilon */
+/** checks if relative difference of val1 and val2 is lower than sumepsilon */
 SCIP_Bool SCIPsetIsSumRelLT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7555,7 +7555,7 @@ SCIP_Bool SCIPsetIsSumRelLT(
    return EPSN(diff, set->num_sumepsilon);
 }
 
-/** checks, if relative difference of val1 and val2 is not greater than sumepsilon */
+/** checks if relative difference of val1 and val2 is not greater than sumepsilon */
 SCIP_Bool SCIPsetIsSumRelLE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7579,7 +7579,7 @@ SCIP_Bool SCIPsetIsSumRelLE(
    return !EPSP(diff, set->num_sumepsilon);
 }
 
-/** checks, if relative difference of val1 and val2 is greater than sumepsilon */
+/** checks if relative difference of val1 and val2 is greater than sumepsilon */
 SCIP_Bool SCIPsetIsSumRelGT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7603,7 +7603,7 @@ SCIP_Bool SCIPsetIsSumRelGT(
    return EPSP(diff, set->num_sumepsilon);
 }
 
-/** checks, if relative difference of val1 and val2 is not lower than -sumepsilon */
+/** checks if relative difference of val1 and val2 is not lower than -sumepsilon */
 SCIP_Bool SCIPsetIsSumRelGE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val1,               /**< first value to be compared */
@@ -7637,7 +7637,7 @@ SCIP_Bool SCIPsetGetSubscipsOff(
    return set->subscipsoff;
 }
 
-/** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.
+/** Checks if an iteratively updated value is reliable or should be recomputed from scratch.
  *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
  *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
  *  were canceled out when increasing the value and are random after decreasing it.

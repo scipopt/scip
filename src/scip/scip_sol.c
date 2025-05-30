@@ -83,6 +83,7 @@
 #include "scip/struct_prob.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
+#include "scip/struct_sol.h"
 #include "scip/struct_stat.h"
 #include "scip/struct_var.h"
 #include "scip/tree.h"
@@ -116,6 +117,7 @@ SCIP_RETCODE checkSolOrig(
 
    assert(scip != NULL);
    assert(sol != NULL);
+   assert(sol->scip == scip);
    assert(feasible != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "checkSolOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -272,6 +274,7 @@ SCIP_RETCODE checkSolOrigExact(
 
    assert(scip != NULL);
    assert(sol != NULL);
+   assert(sol->scip == scip);
    assert(feasible != NULL);
    assert(SCIPisExact(scip));
 
@@ -406,6 +409,10 @@ void SCIPupdateSolIntegralityViolation(
    SCIP_Real             absviol             /**< absolute violation */
    )
 {
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    if( SCIPprimalUpdateViolations(scip->origprimal) )
       SCIPsolUpdateIntegralityViolation(sol, absviol);
 }
@@ -418,6 +425,10 @@ void SCIPupdateSolBoundViolation(
    SCIP_Real             relviol             /**< relative violation */
    )
 {
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    if( SCIPprimalUpdateViolations(scip->origprimal) )
       SCIPsolUpdateBoundViolation(sol, absviol, relviol);
 }
@@ -430,6 +441,10 @@ void SCIPupdateSolLPRowViolation(
    SCIP_Real             relviol             /**< relative violation */
    )
 {
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    if( SCIPprimalUpdateViolations(scip->origprimal) )
       SCIPsolUpdateLPRowViolation(sol, absviol, relviol);
 }
@@ -442,6 +457,10 @@ void SCIPupdateSolConsViolation(
    SCIP_Real             relviol             /**< relative violation */
    )
 {
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    if( SCIPprimalUpdateViolations(scip->origprimal) )
       SCIPsolUpdateConsViolation(sol, absviol, relviol);
 }
@@ -454,6 +473,10 @@ void SCIPupdateSolLPConsViolation(
    SCIP_Real             relviol             /**< relative violation */
    )
 {
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    if( SCIPprimalUpdateViolations(scip->origprimal) )
       SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
 }
@@ -1231,6 +1254,8 @@ SCIP_RETCODE SCIPfreeSol(
    SCIP_SOL**            sol                 /**< pointer to the solution */
    )
 {
+   assert(sol != NULL);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPfreeSol", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    switch( scip->set->stage )
@@ -1272,6 +1297,9 @@ SCIP_RETCODE SCIPlinkLPSol(
    SCIP_SOL*             sol                 /**< primal solution */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPlinkLPSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpIsSolved(scip->lp) )
@@ -1298,6 +1326,9 @@ SCIP_RETCODE SCIPlinkLPSolExact(
    SCIP_SOL*             sol                 /**< primal solution */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPlinkLPSolExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpExactIsSolved(scip) )
@@ -1324,6 +1355,9 @@ SCIP_RETCODE SCIPlinkNLPSol(
    SCIP_SOL*             sol                 /**< primal solution */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPlinkNLPSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
@@ -1356,6 +1390,9 @@ SCIP_RETCODE SCIPlinkRelaxSol(
    SCIP_SOL*             sol                 /**< primal solution */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPlinkRelaxSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPrelaxationIsSolValid(scip->relaxation) )
@@ -1383,6 +1420,9 @@ SCIP_RETCODE SCIPlinkPseudoSol(
    SCIP_SOL*             sol                 /**< primal solution */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPlinkPseudoSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPsolLinkPseudoSol(sol, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp) );
@@ -1403,6 +1443,9 @@ SCIP_RETCODE SCIPlinkCurrentSol(
    SCIP_SOL*             sol                 /**< primal solution */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPlinkCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPsolLinkCurrentSol(sol, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp) );
@@ -1434,6 +1477,9 @@ SCIP_RETCODE SCIPclearSol(
    SCIP_SOL*             sol                 /**< primal solution */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPclearSol", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    SCIP_CALL( SCIPsolClear(sol, scip->stat, scip->tree) );
@@ -1462,6 +1508,9 @@ SCIP_RETCODE SCIPunlinkSol(
    SCIP_SOL*             sol                 /**< primal solution */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPunlinkSol", FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
@@ -1490,6 +1539,9 @@ SCIP_RETCODE SCIPunlinkSolExact(
    SCIP_SOL*             sol                 /**< primal solution */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPunlinkSolExact", FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    SCIP_CALL( SCIPsolUnlinkExact(sol, scip->set, scip->transprob) );
@@ -1527,6 +1579,8 @@ SCIP_RETCODE SCIPsetSolVal(
 
    assert(var != NULL);
    assert(var->scip == scip);
+   assert(sol != NULL);
+   assert(sol->scip == scip);
 
    if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
@@ -1568,7 +1622,10 @@ SCIP_RETCODE SCIPsetSolValExact(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetSolValExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   assert( var->scip == scip );
+   assert(var != NULL);
+   assert(var->scip == scip);
+   assert(sol != NULL);
+   assert(sol->scip == scip);
    assert(SCIPsolIsExact(sol));
 
    if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
@@ -1612,6 +1669,8 @@ SCIP_RETCODE SCIPsetSolVals(
 {
    int v;
 
+   assert(sol != NULL);
+   assert(sol->scip == scip);
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
 
@@ -1668,6 +1727,8 @@ SCIP_RETCODE SCIPincSolVal(
 
    assert(var != NULL);
    assert(var->scip == scip);
+   assert(sol != NULL);
+   assert(sol->scip == scip);
 
    if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
@@ -1711,6 +1772,7 @@ SCIP_Real SCIPgetSolVal(
 
    assert(var != NULL);
    assert(var->scip == scip);
+   assert(sol == NULL || sol->scip == scip);
 
    if( sol != NULL )
       return SCIPsolGetVal(sol, scip->set, scip->stat, var);
@@ -1750,6 +1812,7 @@ void SCIPgetSolValExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolValExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    assert( var->scip == scip );
+   assert(sol == NULL || sol->scip == scip);
 
    if( sol != NULL )
    {
@@ -1833,6 +1896,8 @@ SCIP_Real SCIPgetSolOrigObj(
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    )
 {
+   assert(sol == NULL || sol->scip == scip);
+
    /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
     * for all other solutions, we should be at least in SCIP_STAGE_TRANSFORMING
     */
@@ -1883,6 +1948,8 @@ void SCIPgetSolOrigObjExact(
    )
 {
    SCIP_RATIONAL* tmp;
+
+   assert(sol == NULL || sol->scip == scip);
    assert(SCIPsolIsExact(sol));
 
    /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
@@ -1946,6 +2013,8 @@ SCIP_Real SCIPgetSolTransObj(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolTransObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
+   assert(sol == NULL || sol->scip == scip);
+
    if( sol != NULL )
       return SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob);
    else
@@ -1982,6 +2051,8 @@ void SCIPgetSolTransObjExact(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolTransObjExact", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
+   assert(sol == NULL || sol->scip == scip);
+
    if( sol != NULL )
       SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob, res);
    else
@@ -2012,6 +2083,8 @@ SCIP_RETCODE SCIPrecomputeSolObj(
    )
 {
    assert(scip != NULL);
+   assert(sol != NULL);
+   assert(sol->scip == scip);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPrecomputeSolObj", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -2094,6 +2167,9 @@ SCIP_Real SCIPgetSolTime(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolTime", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    return SCIPsolGetTime(sol);
 }
 
@@ -2120,6 +2196,9 @@ int SCIPgetSolRunnum(
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolRunnum", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   assert(sol != NULL);
+   assert(sol->scip == scip);
 
    return SCIPsolGetRunnum(sol);
 }
@@ -2148,6 +2227,9 @@ SCIP_Longint SCIPgetSolNodenum(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolNodenum", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    return SCIPsolGetNodenum(sol);
 }
 
@@ -2174,6 +2256,9 @@ SCIP_HEUR* SCIPgetSolHeur(
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolHeur", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   assert(sol != NULL);
+   assert(sol->scip == scip);
 
    return SCIPsolGetHeur(sol);
 }
@@ -2204,6 +2289,11 @@ SCIP_Bool SCIPareSolsEqual(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPareSolsEqual", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
+   assert(sol1 != NULL);
+   assert(sol2 != NULL);
+   assert(sol1->scip == scip);
+   assert(sol2->scip == scip);
+
    return SCIPsolsAreEqual(sol1, sol2, scip->set, scip->stat, scip->origprob, scip->transprob);
 }
 
@@ -2226,6 +2316,7 @@ SCIP_RETCODE SCIPadjustImplicitSolVals(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPadjustImplicitSolVals", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(sol != NULL);
+   assert(sol->scip == scip);
    SCIP_CALL( SCIPsolAdjustImplicitSolVals(sol, scip->set, scip->stat, scip->transprob, scip->tree, uselprows) );
 
    return SCIP_OKAY;
@@ -2271,6 +2362,7 @@ SCIP_RETCODE SCIPprintSol(
    SCIP_Bool oldquiet = FALSE;
 
    assert(SCIPisTransformed(scip) || sol != NULL);
+   assert(sol == NULL || sol->scip == scip);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
@@ -2348,6 +2440,7 @@ SCIP_RETCODE SCIPprintSolExact(
    int objvalsize;
 
    assert(SCIPisTransformed(scip) || sol != NULL);
+   assert(sol == NULL || sol->scip == scip);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintSolExact", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
@@ -2440,6 +2533,8 @@ SCIP_RETCODE SCIPprintTransSol(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintTransSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
+   assert(sol == NULL || sol->scip == scip);
+
    currentsol = (sol == NULL);
    if( currentsol )
    {
@@ -2496,6 +2591,7 @@ SCIP_RETCODE SCIPprintMIPStart(
    SCIP_Bool oldquiet = FALSE;
 
    assert(sol != NULL);
+   assert(sol->scip == scip);
    assert(!SCIPsolIsPartial(sol));
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintMIPStart", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
@@ -2759,6 +2855,7 @@ SCIP_RETCODE SCIPprintRay(
 {
    assert(scip != NULL);
    assert(sol != NULL);
+   assert(sol->scip == scip);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintRay", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
@@ -3035,6 +3132,9 @@ SCIP_RETCODE SCIProundSol(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIProundSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    if( SCIPsolIsOriginal(sol) )
    {
       SCIPerrorMessage("cannot round original space solution\n");
@@ -3052,7 +3152,10 @@ SCIP_RETCODE SCIPmakeSolExact(
    SCIP_SOL*             sol                 /**< primal solution */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
    assert(!SCIPsolIsExact(sol));
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPmakeSolExact", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
@@ -3085,6 +3188,9 @@ SCIP_RETCODE SCIPretransformSol(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPretransformSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    switch ( SCIPsolGetOrigin(sol) )
@@ -3145,6 +3251,9 @@ SCIP_RETCODE SCIPretransformSolExact(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPretransformSolExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    switch( SCIPsolGetOrigin(sol) )
@@ -3258,21 +3367,25 @@ SCIP_RETCODE readSolFile(
       SCIP_RETCODE retcode;
 
       /* get next line */
-      if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
+      if( SCIPfgets(buffer, (int)sizeof(buffer), file) == NULL )
+      {
+         if( !SCIPfeof(file) )
+            *error = TRUE;
          break;
-      lineno++;
+      }
+      ++lineno;
 
       /* there are some lines which may precede the solution information */
-      if( SCIPstrncasecmp(buffer, "solution status:", 16) == 0 || SCIPstrncasecmp(buffer, "objective value:", 16) == 0 ||
-         SCIPstrncasecmp(buffer, "Log started", 11) == 0 || SCIPstrncasecmp(buffer, "Variable Name", 13) == 0 ||
-         SCIPstrncasecmp(buffer, "All other variables", 19) == 0 || strspn(buffer, " \n\r\t\f") == strlen(buffer) ||
-         SCIPstrncasecmp(buffer, "NAME", 4) == 0 || SCIPstrncasecmp(buffer, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
-         SCIPstrncasecmp(buffer, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
+      if( SCIPstrncasecmp(buffer, "solution status:", 16) == 0 || SCIPstrncasecmp(buffer, "objective value:", 16) == 0
+         || buffer[strspn(buffer, " \t\n\v\f\r")] == '\0' || SCIPstrncasecmp(buffer, "Log started", 11) == 0
+         || SCIPstrncasecmp(buffer, "Variable Name", 13) == 0 || SCIPstrncasecmp(buffer, "All other variables", 19) == 0
+         || SCIPstrncasecmp(buffer, "NAME", 4) == 0 || SCIPstrncasecmp(buffer, "ENDATA", 6) == 0 /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         || SCIPstrncasecmp(buffer, "=obj=", 5) == 0 ) /* avoid "unknown variable" warning when reading MIPLIB SOL files */
          continue;
 
       /* tokenize the line */
-      varname = SCIPstrtok(buffer, " \t", &endptr);
-      valuestring = SCIPstrtok(NULL, " \t", &endptr);
+      varname = SCIPstrtok(buffer, " \t\v", &endptr);
+      valuestring = SCIPstrtok(NULL, " \t\n\v\f\r", &endptr);
       if( valuestring == NULL )
       {
          SCIPerrorMessage("Invalid input line %d in solution file <%s>: <%s>.\n", lineno, filename, buffer);
@@ -3312,8 +3425,9 @@ SCIP_RETCODE readSolFile(
       /* read the value */
       if( SCIPsolIsExact(sol) )
       {
+         SCIP_RATIONAL* value = NULL;
+
          assert(SCIPisExact(scip));
-         SCIP_RATIONAL* value;
 
          if( SCIPrationalIsString(valuestring) )
          {
@@ -3460,6 +3574,7 @@ SCIP_RETCODE readXmlSolFile(
 
    assert(scip != NULL);
    assert(sol != NULL);
+   assert(sol->scip == scip);
    assert(error != NULL);
 
    /* read xml file */
@@ -3546,8 +3661,9 @@ SCIP_RETCODE readXmlSolFile(
       /* read the value */
       if( SCIPsolIsExact(sol) )
       {
+         SCIP_RATIONAL* value = NULL;
+
          assert(SCIPisExact(scip));
-         SCIP_RATIONAL* value;
 
          if( SCIPrationalIsString(valuestring) )
          {
@@ -3733,6 +3849,9 @@ SCIP_RETCODE SCIPaddSol(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE) );
 
    switch( scip->set->stage )
@@ -3797,6 +3916,10 @@ SCIP_RETCODE SCIPaddSolFree(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
+   assert(sol != NULL);
+   assert(*sol != NULL);
+   assert((*sol)->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddSolFree", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE) );
 
    switch( scip->set->stage )
@@ -3904,6 +4027,7 @@ SCIP_RETCODE SCIPtrySol(
    SCIP_SOL* bestsol;
 
    assert(sol != NULL);
+   assert(sol->scip == scip);
    assert(stored != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtrySol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -4001,6 +4125,8 @@ SCIP_RETCODE SCIPtrySolFree(
 
    assert(stored != NULL);
    assert(sol != NULL);
+   assert(*sol != NULL);
+   assert((*sol)->scip == scip);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -4198,6 +4324,9 @@ SCIP_RETCODE SCIPcheckSol(
    SCIP_Bool*            feasible            /**< stores whether given solution is feasible */
    )
 {
+   assert(sol != NULL);
+   assert(sol->scip == scip);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcheckSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* return immediately if the solution is of type partial */
@@ -4262,6 +4391,7 @@ SCIP_RETCODE SCIPcheckSolOrig(
 {
    assert(scip != NULL);
    assert(sol != NULL);
+   assert(sol->scip == scip);
    assert(feasible != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcheckSolOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -4367,6 +4497,7 @@ SCIP_RETCODE SCIPoverwriteFPsol(
 {
    assert(scip != NULL);
    assert(sol != NULL);
+   assert(sol->scip == scip);
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPoverwriteFPsol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
@@ -4405,6 +4536,8 @@ SCIP_RETCODE SCIPtrySolFreeExact(
 
    assert(stored != NULL);
    assert(sol != NULL);
+   assert(*sol != NULL);
+   assert((*sol)->scip == scip);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPtrySolFreeExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 

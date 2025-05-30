@@ -4961,7 +4961,7 @@ SCIP_RETCODE SCIPlpiFreeState(
    return SCIP_OKAY;
 }
 
-/** checks, whether the given LP state contains simplex basis information */
+/** checks whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */
@@ -5444,7 +5444,7 @@ SCIP_Bool SCIPlpiIsInfinity(
 /**@name File Interface Methods */
 /**@{ */
 
-/** returns, whether the given file exists */
+/** returns whether the given file exists */
 static
 SCIP_Bool fileExists(
    const char*           filename            /**< file name */

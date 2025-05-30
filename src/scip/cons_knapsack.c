@@ -4946,7 +4946,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
       SCIPfreeBufferArray(scip, &gubconsGC1);
    }
 
-   /* checks, if lifting yielded a violated cut */
+   /* checks if lifting yielded a violated cut */
    if( SCIPisEfficacious(scip, (cutact - liftrhs)/sqrt((SCIP_Real)MAX(liftrhs, 1))) )
    {
       SCIP_ROW* row;
@@ -5003,7 +5003,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
       }
       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-      /* checks, if cut is violated enough */
+      /* checks if cut is violated enough */
       if( SCIPisCutEfficacious(scip, sol, row) )
       {
          if( cons != NULL )
@@ -5114,7 +5114,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
    SCIP_CALL( sequentialUpAndDownLifting(scip, vars, nvars, ntightened, weights, capacity, solvals, varsT1, varsT2, varsF, varsR,
          nvarsT1, nvarsT2, nvarsF, nvarsR, nvarsT1, liftcoefs, &cutact, &liftrhs) );
 
-   /* checks, if lifting yielded a violated cut */
+   /* checks if lifting yielded a violated cut */
    if( SCIPisEfficacious(scip, (cutact - liftrhs)/sqrt((SCIP_Real)MAX(liftrhs, 1))) )
    {
       SCIP_ROW* row;
@@ -5170,7 +5170,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
       }
       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-      /* checks, if cut is violated enough */
+      /* checks if cut is violated enough */
       if( SCIPisCutEfficacious(scip, sol, row) )
       {
          if( cons != NULL )
@@ -5240,7 +5240,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
          nonmincovervars, nmincovervars, nnonmincovervars, mincoverweight, realliftcoefs, &cutact) );
    liftrhs = nmincovervars - 1;
 
-   /* checks, if lifting yielded a violated cut */
+   /* checks if lifting yielded a violated cut */
    if( SCIPisEfficacious(scip, (cutact - liftrhs)/sqrt((SCIP_Real)MAX(liftrhs, 1))) )
    {
       SCIP_ROW* row;
@@ -5284,7 +5284,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
       }
       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-      /* checks, if cut is violated enough */
+      /* checks if cut is violated enough */
       if( SCIPisCutEfficacious(scip, sol, row) )
       {
          if( cons != NULL )
@@ -13064,7 +13064,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
       else
       {
          /* locate the inference variable and calculate the capacity that has to be used up to conclude infervar == 0;
-          * inferinfo stores the position of the inference variable (but maybe the variables were resorted)
+          * inferinfo stores the position of the inference variable (but maybe the variables were re-sorted)
           */
          if( inferinfo < consdata->nvars && consdata->vars[inferinfo] == infervar )
             capsum = consdata->weights[inferinfo];
@@ -13663,6 +13663,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
+   int i;
 
    /* find the knapsack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -13670,6 +13671,17 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
    {
       SCIPerrorMessage("knapsack constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* check whether all variables are binary */
+   assert(vars != NULL || nvars == 0);
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPvarIsBinary(vars[i]) )
+      {
+         SCIPerrorMessage("item <%s> is not binary\n", SCIPvarGetName(vars[i]));
+         return SCIP_INVALIDDATA;
+      }
    }
 
    /* get event handler */

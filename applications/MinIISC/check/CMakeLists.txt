@@ -42,6 +42,7 @@ foreach(instance ${instances})
     set_tests_properties("applications-miniisc-${basename}"
                         PROPERTIES
                             PASS_REGULAR_EXPRESSION "Primal Bound       : \\+(${optval}\\.000000*|${optvalminusone}\\.999999*)e\\+00"
+                            FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS applications-miniisc-build
                             RESOURCE_LOCK libscip
                         )

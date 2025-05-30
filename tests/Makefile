@@ -203,7 +203,7 @@ $(BINDIRS):
 .PHONY: test
 test:           $(UNITTESTSBIN)
 		make ctestrunner
-		$(DISABLE_ASLR) --output-on-failure $(if $(FILTER), -R $(FILTER))
+		$(DISABLE_ASLR) ctest --output-on-failure $(if $(FILTER), -R $(FILTER))
 
 .PHONY: ctestrunner
 ctestrunner: 	$(UNITTESTSBIN)

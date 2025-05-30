@@ -72,40 +72,10 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
  * @{
  */
 
-/** perform a greedy addition or deletion algorithm to obtain an infeasible subsystem (IS).
- *
- *  This is the generation method for the greedy IIS finder rule.
- *  Depending on the parameter choices, constraints are either greedily added from an empty problem,
- *  or deleted from a valid problem state. In the case of constraints being added, this is done until the problem
- *  becomes infeasible, after which one can then begin deleting constraints. In the case of deleting constraints,
- *  this is done until no more constraints (or batches of constraints) can be deleted without making
- *  the problem feasible.
- *  The algorithm also extends to variable bounds.
- */
+/** perform the greedy deletion algorithm with singleton batches to obtain an irreducible infeasible subsystem (IIS) */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexecIISfinderGreedy(
-   SCIP_IIS*             iis,                /**< IIS data structure */
-   SCIP_Real             timelim,            /**< The global time limit on the IIS call */
-   SCIP_Longint          nodelim,            /**< The global node limit on the IIS call */
-   SCIP_Bool             removebounds,       /**< Whether the algorithm should remove bounds as well as constraints */
-   SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
-
-   SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
-   SCIP_Longint          nodelimperiter,     /**< maximum number of nodes per individual solve call */
-   SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
-   SCIP_Bool             conservative,       /**< should a hit limit (e.g. node / time) solve be counted as feasible when deleting constraints */
-   SCIP_Bool             delafteradd,        /**< should the deletion routine be performed after the addition routine (in the case of additive) */
-   SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
-
-   int                   initbatchsize,      /**< the initial batchsize for the first iteration */
-   SCIP_Real             initrelbatchsize,   /**< the initial batchsize relative to the original problem for the first iteration */
-   int                   maxbatchsize,       /**< the maximum batchsize per iteration */
-   SCIP_Real             maxrelbatchsize,    /**< the maximum batchsize relative to the original problem per iteration */
-   SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied each iteration */
-   int                   batchingoffset,     /**< the offset with which the batchsize is summed each iteration */
-   int                   batchupdateinterval, /**< the number of iterations to run with a fixed batchsize before updating it */
-
-   SCIP_RESULT*          result              /**< pointer to store the result of the IIS run */
+SCIP_RETCODE SCIPiisGreedyMinimize(
+   SCIP_IIS*             iis                 /**< IIS data structure */
    );
 
 /** @} */

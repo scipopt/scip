@@ -496,7 +496,7 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
          else
             SCIPinfoMessage(scip, file, " %+.15g", vals[v]);
       }
-      else if( nvars > 0 )
+      else if( v > 0 )
          SCIPinfoMessage(scip, file, " +");
 
       /* print variable name */
@@ -554,18 +554,13 @@ SCIP_RETCODE SCIPwriteVarsLinearsumExact(
             SCIPinfoMessage(scip, file, " -");
          else
          {
-            char buf[3 * SCIP_MAXSTRLEN];
-            int len;
-
-            len = SCIPrationalToString(vals[v], buf, 3 * SCIP_MAXSTRLEN);
-            if( len == SCIP_MAXSTRLEN )
-            {
-               SCIPerrorMessage("rational was truncated while printing\n");
-            }
-            SCIPinfoMessage(scip, file, " %s", buf);
+            SCIPinfoMessage(scip, file, " ");
+            if( !SCIPrationalIsNegative(vals[v]) )
+               SCIPinfoMessage(scip, file, "+");
+            SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, vals[v]);
          }
       }
-      else if( nvars > 0 )
+      else if( v > 0 )
          SCIPinfoMessage(scip, file, " +");
 
       /* print variable name */
@@ -5690,7 +5685,7 @@ SCIP_Real SCIPadjustedVarUbExactFloat(
  *  that in conflict analysis, this change is treated like a branching decision
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -5868,7 +5863,7 @@ SCIP_RETCODE SCIPchgVarLbExact(
  *  that in conflict analysis, this change is treated like a branching decision
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6133,7 +6128,7 @@ SCIP_RETCODE SCIPchgVarUbNode(
  *  if the global bound is better than the local bound
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6222,7 +6217,7 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
  *  if the global bound is better than the local bound
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6395,7 +6390,7 @@ SCIP_RETCODE SCIPchgVarUbLazy(
  *  is treated like a branching decision
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6645,7 +6640,7 @@ SCIP_RETCODE SCIPtightenVarLbExact(
  *  is treated like a branching decision
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6897,7 +6892,7 @@ SCIP_RETCODE SCIPtightenVarUbExact(
  *        SCIPinferVarUbCons
  *
  *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *        SCIPgetVars()) gets re-sorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -6958,7 +6953,7 @@ SCIP_RETCODE SCIPinferVarFixCons(
  *  for the deduction of the bound change
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -6994,26 +6989,17 @@ SCIP_RETCODE SCIPinferVarLbCons(
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
-   /* ignore tightenings of lower bounds to +infinity during solving process */
-   if( SCIPisInfinity(scip, newbound)  && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-   {
-#ifndef NDEBUG
-      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
-         SCIPvarGetLbLocal(var));
-#endif
-      return SCIP_OKAY;
-   }
-
    /* get current bounds */
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   if( SCIPsetIsFeasGT(scip->set, newbound, ub) || (scip->set->exact_enable && ub < newbound))
+   if( SCIPisInfinity(scip, newbound) || SCIPisFeasGT(scip, newbound, ub) || (scip->set->exact_enable && ub < newbound) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
+
    newbound = MIN(newbound, ub);
 
    if( (force && SCIPsetIsLE(scip->set, newbound, lb)) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
@@ -7072,7 +7058,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
  *  for the deduction of the bound change
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -7108,26 +7094,17 @@ SCIP_RETCODE SCIPinferVarUbCons(
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
-   /* ignore tightenings of upper bounds to -infinity during solving process */
-   if( SCIPisInfinity(scip, -newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-   {
-#ifndef NDEBUG
-      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
-         SCIPvarGetUbLocal(var));
-#endif
-      return SCIP_OKAY;
-   }
-
    /* get current bounds */
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   if( SCIPsetIsFeasLT(scip->set, newbound, lb) || (scip->set->exact_enable && lb > newbound) )
+   if( SCIPisInfinity(scip, -newbound) || SCIPisFeasLT(scip, newbound, lb) || (scip->set->exact_enable && lb > newbound) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
+
    newbound = MAX(newbound, lb);
 
    if( (force && SCIPsetIsGE(scip->set, newbound, ub)) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
@@ -7535,7 +7512,7 @@ SCIP_RETCODE SCIPinferBinvarCons(
  *        SCIPinferVarUbProp
  *
  *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
- *        SCIPgetVars()) gets resorted.
+ *        SCIPgetVars()) gets re-sorted.
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
@@ -7596,7 +7573,7 @@ SCIP_RETCODE SCIPinferVarFixProp(
  *  for the deduction of the bound change
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -7711,7 +7688,7 @@ SCIP_RETCODE SCIPinferVarLbProp(
  *  for the deduction of the bound change
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -8037,7 +8014,7 @@ SCIP_RETCODE tightenVarLbGlobalSafe(
  *  also tightens the local bound, if the global bound is better than the local bound
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -8268,7 +8245,7 @@ SCIP_RETCODE tightenVarUbGlobalSafe(
  *  also tightens the local bound, if the global bound is better than the local bound
  *
  *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
- *           SCIPgetVars()) gets resorted.
+ *           SCIPgetVars()) gets re-sorted.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

@@ -1539,12 +1539,14 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
    {
       SCIPsort(perm, SYMsortEdges, (void*) graph, graph->nedges);
 
-      /* check whether edges are colored; due to sorting, only check first edge */
-      if( SCIPisInfinity(scip, graph->edgevals[perm[0]]) )
+      /* check for uncolored or uniformly colored edges, which is easy due to sorting */
+      if( SCIPisInfinity(scip, graph->edgevals[perm[0]]) ||
+         SCIPisEQ(scip, graph->edgevals[perm[0]], graph->edgevals[perm[graph->nedges - 1]]) )
       {
-         /* all edges are uncolored */
+         /* when all edges are uncolored or uniformly colored, we can ignore edge colors */
+         graph->uniqueedgetype = TRUE;
          for( i = 0; i < graph->nedges; ++i )
-            graph->edgecolors[perm[i]] = -1;
+            graph->edgecolors[i] = -1;
       }
       else
       {
@@ -1566,10 +1568,6 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
             graph->edgecolors[perm[i]] = color;
             prevval = thisval;
          }
-
-         /* check whether all edges are equivalent */
-         if( i == graph->nedges && graph->edgecolors[perm[0]] == graph->edgecolors[perm[i-1]] )
-            graph->uniqueedgetype = TRUE;
 
          /* assign uncolored edges color -1 */
          for( ; i < graph->nedges; ++i )

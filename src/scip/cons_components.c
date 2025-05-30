@@ -73,14 +73,14 @@
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
+#define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYPROP         TRUE /**< should propagation method be delayed, if other propagators found reductions? */
 
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FINAL  /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
 
-#define DEFAULT_MAXDEPTH             -1      /**< maximum depth of a node to run components detection (-1: disable component detection during solving) */
+#define DEFAULT_MAXDEPTH        INT_MAX      /**< maximum depth of a node to run components detection (-1: disable component detection during solving) */
 #define DEFAULT_MAXINTVARS          200      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
 #define DEFAULT_MINSIZE              50      /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
 #define DEFAULT_MINRELSIZE          0.1      /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */

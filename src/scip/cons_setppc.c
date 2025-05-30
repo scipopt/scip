@@ -5566,41 +5566,35 @@ SCIP_RETCODE multiAggregateBinvar(
 
    assert(scip != NULL);
    assert(vars != NULL);
-   assert(nvars > 1);
-   assert(0 <= pos && pos < nvars);
+   assert(nvars >= 1);
+   assert(pos >= 0);
+   assert(pos < nvars);
    assert(infeasible != NULL);
    assert(aggregated != NULL);
 
-   if( nvars == 2 )
-   {
-      SCIP_Bool redundant;
-
-      /* perform aggregation on variables resulting from a set-packing constraint */
-      SCIP_CALL( SCIPaggregateVars(scip, vars[pos], vars[nvars - pos - 1], 1.0, 1.0, 1.0, infeasible, &redundant, aggregated) );
-
-      if( *aggregated )
-         SCIPdebugMsg(scip, "aggregated %s = 1 - %s\n", SCIPvarGetName(vars[pos]), SCIPvarGetName(vars[nvars - pos - 1]));
-
-      return SCIP_OKAY;
-   }
-
-   if( !linearconshdlrexist )
+   if( !linearconshdlrexist && nvars > 2 )
    {
       *infeasible = FALSE;
+      *aggregated = FALSE;
+
       return SCIP_OKAY;
    }
 
+   /* if the first variable will be multi-aggregated, we do not need to copy the variables */
+   if( pos == 0 )
+      tmpvars = vars + 1;
    /* if the last variable will be multi-aggregated, we do not need to copy the variables */
-   if( pos == nvars - 1 )
+   else if( pos == nvars - 1 )
       tmpvars = vars;
+   /* copy variables for aggregation */
    else
    {
-      /* copy variables for aggregation */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpvars, vars, nvars) );
-      tmpvars[pos] = tmpvars[nvars - 1];
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpvars, vars, nvars - 1) );
+      tmpvars[pos] = vars[nvars - 1];
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &scalars, nvars - 1) );
+
    /* initialize scalars */
    for( v = nvars - 2; v >= 0; --v )
       scalars[v] = -1.0;
@@ -5615,9 +5609,10 @@ SCIP_RETCODE multiAggregateBinvar(
 
    SCIPfreeBufferArray(scip, &scalars);
 
-   if( pos < nvars - 1 )
+   if( pos != 0 && pos != nvars - 1 )
    {
       assert(tmpvars != vars);
+      assert(tmpvars != vars + 1);
       SCIPfreeBufferArray(scip, &tmpvars);
    }
 
@@ -6252,8 +6247,21 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             {
                assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING);
 
-               /* the negated variable did not occur in a set partitioning constraint (those will be iterated over
-                * first), so we cannot aggregate this variable
+               /* if the negated variable occurs in an additional packing constraint,
+                * then we are no longer in a doubleton or singleton case;
+                * this case of two packing and one partitioning constraint (thus,
+                * 2 down- and 2 uplocks) cannot be handled by this routine, so the
+                * variable cannot be aggregated, see also #3752 and !3832;
+                * this situation is characterized by having 2 downlocks (one from the
+                * partitioning constraint, one from the negated variable in the other
+                * packing constraint; the current packing constraint (cons) does not
+                * contribute a downlock)
+                */
+               if( ndownlocks >= 2 )
+                  continue;
+
+               /* if the negated variable did not occur in a set partitioning constraint
+                * (those will be iterated over first), we cannot aggregate this variable
                 */
                if( !SCIPhashmapExists(vartoindex, (void*) negvar) )
                   continue;
@@ -7087,6 +7095,7 @@ SCIP_RETCODE createConsSetppc(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
 
    assert(scip != NULL);
 
@@ -7096,6 +7105,17 @@ SCIP_RETCODE createConsSetppc(
    {
       SCIPerrorMessage("set partitioning / packing / covering constraint handler not found\n");
       return SCIP_INVALIDCALL;
+   }
+
+   /* check whether all variables are binary */
+   assert(vars != NULL || nvars == 0);
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPvarIsBinary(vars[i]) )
+      {
+         SCIPerrorMessage("operand <%s> is not binary\n", SCIPvarGetName(vars[i]));
+         return SCIP_INVALIDDATA;
+      }
    }
 
    /* create the constraint specific data */

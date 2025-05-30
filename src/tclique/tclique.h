@@ -144,7 +144,7 @@ TCLIQUE_GETNNODES(tcliqueGetNNodes);
 SCIP_EXPORT
 TCLIQUE_GETWEIGHTS(tcliqueGetWeights);
 
-/** returns, whether the edge (node1, node2) is in the graph */
+/** returns whether the edge (node1, node2) is in the graph */
 SCIP_EXPORT
 TCLIQUE_ISEDGE(tcliqueIsEdge);
 

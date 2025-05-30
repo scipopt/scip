@@ -333,17 +333,18 @@ endif()
 # exact ip instances
 if(SCIP_WITH_EXACTSOLVE)
     set(instances_MIPEX
+        "instances/MIPEX/egout.cip\;5681007/10000"
         "instances/MIP/enigma.mps\;0"
         "instances/MIPEX/flugpl_rational.mps\;1201500"
-        "instances/MIP/stein27_inf.lp\;+infinity"
         "instances/MIP/Side.lp\;2"
+        "instances/MIPEX/Side-coef.cip\;2"
         "instances/MIPEX/Side-coeftest.lp\;2"
+        "instances/MIP/stein27_inf.lp\;+infinity"
         "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
     )
     if(SCIP_WITH_ZIMPL)
         list(APPEND
             instances_MIPEX
-            "instances/MIPEX/egout.zpl\;568.1007"
             "instances/MIPEX/misc03.zpl\;3360"
             "instances/MIPEX/rgn.zpl\;2054999981/25000000"
             "instances/MIPEX/stein27.zpl\;18"
@@ -548,24 +549,28 @@ set(pairs_Issue
     "instances/Issue/3727.cip\;1922\;vanillafullstrong_reduced_presolving_separating_heuristics"
     "instances/Issue/3728.cip\;0\;reduced_presolving_heuristics"
     "instances/Issue/3746.cip\;0\;seed_1"
-    "instances/Issue/3752.cip\;28066\;default"
+    "instances/Issue/3752_1.cip\;28066\;default"
+    "instances/Issue/3752_2.cip\;0\;default"
     "instances/Issue/3787.lp\;1\;default"
     "instances/Issue/3832.cip\;0\;default"
     # Test currently not working since problems with the relative check for presolved problems appear: https://git.zib.de/integer/scip/-/issues/3819
     # "instances/Issue/3842.cip\;-16812.7692740365\;default"
     "instances/Issue/3870.cip\;5133546551065818\;default"
+    "instances/Issue/3908.cip\;-20317.1313131313\;subrestart"
+    "instances/Issue/3911.cip\;-30386.2338470598\;lexdual"
+    "instances/Issue/3917.cip\;+infinity\;default"
 )
 
 #
 # available reader file extensions for MIP problems
 #
 set(reader_extensions_MIP
+  "cip"
   "mps"
   "lp"
   "opb"
   "pip"
   "fzn"
-  "cip"
   "rlp"
   )
 
@@ -574,6 +579,14 @@ set(reader_extensions_MIP
 #
 set(reader_extensions_PB
   "cip"
+  )
+
+#
+# available reader file extensions for MIPEX problems
+#
+set(reader_extensions_MIPEX
+  "cip"
+  "lp"
   )
 
 #
@@ -810,16 +823,18 @@ endforeach(instance)
 set(basenames_opb_wrongformat
     bell5.mps
     blend2.mps
+    dcmulti.mps
+    egout.cip
     egout.mps
     flugpl.mps
+    flugpl_rational.mps
     gt2.mps
-    MANN_a9.clq.lp
-    misc03.mps
-    rgn.mps
-    vpm2.fzn
     lseu_dcmulti.cip
-    lseu_dcmulti_sHB.cip
-    dcmulti.mps
+    misc03.mps
+    misc03.zpl
+    rgn.mps
+    rgn.zpl
+    vpm2.fzn
     )
 set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
 
@@ -827,7 +842,12 @@ set(message_format_opb "WARNING: only binary problems can be written in OPB form
 # the following instances use variable or equations names that are not supported in pip format
 #
 set(basenames_pip_wrongformat
+    dcmulti.mps
+    egout.cip
+    egout.mps
+    lseu_dcmulti.cip
     rgn.mps
+    rgn.zpl
     )
 set(message_format_pip "PIP might be corrupted")
 
@@ -835,7 +855,12 @@ set(message_format_pip "PIP might be corrupted")
 # the following instances use variable or equations names that are not supported in lp format
 #
 set(basenames_lp_wrongformat
+    dcmulti.mps
+    egout.cip
+    egout.mps
+    lseu_dcmulti.cip
     rgn.mps
+    rgn.zpl
     )
 set(message_format_lp "WARNING: violation of LP format - a constraint name starts with a digit; it is not possible to read the generated LP file with SCIP; use write/genproblem or write/gentransproblem for generic variable names")
 
@@ -1226,7 +1251,43 @@ endif()
 
 if(SCIP_WITH_EXACTSOLVE)
     #
-    # first test without certification
+    # first test writing and reading from and to different file extensions for default MIPEX (only without original objective offset)
+    #
+    foreach(instance ${instances_MIPEX})
+        split_instance(instance)
+        foreach(extension ${reader_extensions_MIPEX})
+            #
+            # configure the batch file for this test by substituting placeholders in the in.file
+            #
+            # does this instance match the requirements of this format?
+            list(FIND basenames_${extension}_wrongformat ${basename} wrongformat)
+            #
+            # use different template batch files depending on the format requirements
+            #
+            if( wrongformat EQUAL -1 )
+                configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+                set(regex "Validation         : Success.*Validation         : Success")
+            else()
+                configure_file(interactiveshell/readertest-wrongformat.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+                set(regex "${message_format_${extension}}")
+            endif()
+            if(NOT ((${extension} STREQUAL "cip") AND (${basename} STREQUAL "rgn.zpl") AND (${LPS} STREQUAL "xprs")))
+            add_test(NAME MIPEX-readertest-${extension}-${basename}
+                    COMMAND $<TARGET_FILE:scip>
+                    -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/exact-default.set"
+                    -b "${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat"
+                    )
+            set_tests_properties(MIPEX-readertest-${extension}-${basename}
+                                PROPERTIES
+                                    PASS_REGULAR_EXPRESSION ${regex}
+                                    FAIL_REGULAR_EXPRESSION "ERROR"
+                                    DEPENDS scip-build
+                                )
+            endif()  # LP Error: Xpress returned 11, #3724
+        endforeach(extension)
+    endforeach(instance)
+    #
+    # second test without certification
     #
     foreach(instance ${instances_MIPEX})
         split_instance(instance)
@@ -1252,7 +1313,7 @@ if(SCIP_WITH_EXACTSOLVE)
         endforeach(setting)
     endforeach(instance ${instances_MIPEX})
     #
-    # second test with certification, even if VIPR is not available, because it leads to SCIP running differently
+    # third test with certification, even if VIPR is not available, because it leads to SCIP running differently
     #
     foreach(instance ${instances_MIPEX})
         split_instance(instance)
@@ -1287,6 +1348,7 @@ if(SCIP_WITH_EXACTSOLVE)
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
 
+               if(NOT ((${setting} STREQUAL "exact-projshift") AND (${basename} STREQUAL "misc03.zpl") AND (${LPS} STREQUAL "xprs")))
                add_test(NAME MIPEX-${setting}-${basename}-vipr
                      COMMAND ${VIPRCHK} ${basename}.${setting}_complete.vipr)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr
@@ -1295,6 +1357,7 @@ if(SCIP_WITH_EXACTSOLVE)
                                  PASS_REGULAR_EXPRESSION "Successfully verified;Infeasibility verified"
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
+               endif() # verification fails with Failed to derive constraint DualBound_12055, #3724
 
                add_test(NAME MIPEX-${setting}-${basename}-vipr_ori
                      COMMAND ${VIPRCHK} ${basename}.${setting}.vipr_ori)

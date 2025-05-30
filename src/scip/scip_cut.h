@@ -104,7 +104,7 @@ SCIP_Bool SCIPisCutEfficacious(
    SCIP_ROW*             cut                 /**< separated cut */
    );
 
-/** checks, if the given cut's efficacy is larger than the minimal cut efficacy
+/** checks if the given cut's efficacy is larger than the minimal cut efficacy
  *
  *  @return TRUE if the given cut's efficacy is larger than the minimal cut efficacy, otherwise FALSE
  */

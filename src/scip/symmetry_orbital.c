@@ -1594,15 +1594,18 @@ SCIP_RETCODE SCIPorbitalReductionPropagate(
 
    assert( scip != NULL );
    assert( orbireddata != NULL );
+   assert( (orbireddata->componentdatas == NULL) == (orbireddata->ncomponents == 0) );
+   assert( orbireddata->ncomponents >= 0 );
+   assert( orbireddata->ncomponents <= orbireddata->maxncomponents );
    assert( infeasible != NULL );
    assert( nred != NULL );
    assert( didrun != NULL );
 
    *infeasible = FALSE;
    *nred = 0;
+   *didrun = FALSE;
 
-   /* no components, no orbital reduction */
-   assert( orbireddata->ncomponents >= 0 );
+   /* early termination */
    if ( orbireddata->ncomponents == 0 )
       return SCIP_OKAY;
 

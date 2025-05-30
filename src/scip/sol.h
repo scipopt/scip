@@ -674,12 +674,6 @@ SCIP_RETCODE SCIPvalsExactCopy(
    SCIP_VALSEXACT*       sourcevals          /**< primal CIP solution to copy */
    );
 
-/** frees primal CIP solution */
-SCIP_RETCODE SCIPvalsExactFree(
-   SCIP_VALSEXACT**      valsexact,          /**< pointer to primal CIP solution */
-   BMS_BLKMEM*           blkmem              /**< block memory */
-   );
-
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */

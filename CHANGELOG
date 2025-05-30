@@ -32,11 +32,15 @@ Features
   the problem is now solved in a Benders' decomposition relaxator; instead of decomposing the original SCIP instance, the relaxator builds the decomposed problem in
   sub-SCIPs and solves it via default Benders' Decomposition; a solution to the original (undecomposed) problem is now made available by the relaxator;
   the SCIP shell dialog "display statistics" now also prints the statistics from solving the Benders' decomposition in the relaxator
+- added a dynamic max-lookahead criterion for strong branching. Fits a probability distribution to the observed candidate gains and
+  stop evaluating further candidates once the expected tree-size reduction no longer justifies the LP evaluation cost.
 
 Performance improvements
 ------------------------
 
 - reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
+- simplified symmetry detection graphs in case all edges have the same color
+- avoid unnecessary calls of constraint handlers components, benders, benderslp, propagator genvbounds, and heuristics ofins, subnlp, nlpdiving, indicator
 
 Examples and applications
 -------------------------
@@ -64,6 +68,7 @@ Interface changes
 
 ### New and changed callbacks
 
+- added SCIP_DECL_IISFINDERCOPY(), SCIP_DECL_IISFINDERFREE(), and SCIP_DECL_IISFINDEREXEC() for iisfinder implementations
 - added a new callback TABLE_COLLECT for the table plugin that collects the data for the specific statistics table in a SCIP_DATATREE object
 - for a table plugin, only one of the callbacks TABLE_COLLECT or TABLE_OUTPUT needs to be implemented, but implementing both is preferred;
   if TABLE_OUTPUT is omitted, then SCIP tries to print a table from the data given by TABLE_COLLECT
@@ -72,6 +77,8 @@ Interface changes
 - the callback SCIP_DECL_EXPRINTEGRALITY, which returns the integrality of an expression, had its fourth argument change from SCIP_Bool* to SCIP_IMPLINTTYPE*, to represent implied integrality in nonlinear expressions, that is an implied integral type of an auxiliary variable if the expression were assigned to it
 - new event SCIP_EVENTTYPE_DUALBOUNDIMPROVED is generated whenever the global dual bound is improved
 - new event mask SCIP_EVENTTYPE_GAPUPDATED for catching updates in primal or dual bound
+- added new sorting functions SCIPsortRealPtrPtr(), ...
+- the callback SCIP_DECL_READERWRITE is equipped with objoffset, objscale, objoffsetexact, objscaleexact as arguments 8 through 11 to write the exact objective offset and scale in exact mode
 
 ### Deleted and changed API methods
 
@@ -94,6 +101,23 @@ Interface changes
 - SCIPapplyBendersDecomposition has been removed. This was originally used to apply Benders' decomposition from a
   supplied decomposition structure. The application of Benders' decomposition now occurs in benders_relax.
 
+- remove the following functions that were declared in h-files, but not implemented:
+  SCIPselectPtrRealReal(), SCIPselectWeightedPtrRealReal(), SCIPsortPtrRealReal(),
+  SCIPbendersApplyDecomposition(), SCIPcertificatePrintSolExact(),
+  SCIPcomprInitsol(), SCIPcomprExitsol(),
+  SCIPincludeExLinconsUpgrade(), SCIPupgradeConsExactLinear(), SCIPgetRunningErrorStatsExactLinear(),
+  SCIPcolExactGetMinPrimsol(), SCIPgetExprsdataBilinear(),
+  SCIPreoptnodeGetSplitCons(),
+  SCIPrationalarrayClear(),
+  SCIPreoptAddGlbCons(),
+  SCIPapplyBendersDecomposition,
+  SCIPgetRowActivityExact(), SCIPgetRowFeasibilityExact()
+  SCIPgetVarCoefChg()
+  SCIPvalsExactFree()
+  SCIPallocateSymgraphConsnodeperm()
+  SCIPvarGetOrigIndex()
+  SCIPwriteSto()
+
 ### New API functions
 
 - SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
@@ -112,7 +136,7 @@ Interface changes
   STO readers respectively. These readers are all used when reading an SMPS instance.
 - SCIPdialogIsHidden(), SCIPdialogSetHidden() to determine whether a dialog should be hidden in help list
 - added SCIPincludeIISfinder(), SCIPincludeIISfinderBasic(), SCIPsetIISfinderCopy(), SCIPsetIISfinderFree(), SCIPgenerateIIS(), SCIPfindIISfinder(), SCIPgetIISfinders(), SCIPgetNIISfinders(), SCIPsetIISfinderPriority(), SCIPgetIIS()
-- added SCIPiisfinderGetName(), SCIPiisfinderGetData(), SCIPiisfinderGetDesc(), SCIPiisfinderGetPriority(), SCIPiisfinderSetData(), SCIPiisfinderGetTime(), SCIPiisfinderInfoMessage(), SCIPiisGetTime(), SCIPiisIsSubscipInfeasible(), SCIPiisIsSubscipIrreducible(), SCIPiisGetNNodes(), SCIPiisSetSubscipInfeasible(), SCIPiisSetSubscipIrreducible(), SCIPiisAddNNodes(), SCIPiisGetRandnumgen(), SCIPiisGetSubscip()
+- added SCIPiisfinderGetName(), SCIPiisfinderGetData(), SCIPiisfinderGetDesc(), SCIPiisfinderGetPriority(), SCIPiisfinderSetData(), SCIPiisfinderGetTime(), SCIPiisfinderInfoMessage(), SCIPiisGetTime(), SCIPiisIsSubscipInfeasible(), SCIPiisIsSubscipIrreducible(), SCIPiisGetNNodes(), SCIPiisSetSubscipInfeasible(), SCIPiisSetSubscipIrreducible(), SCIPiisAddNNodes(), SCIPiisGetRandnumgen(), SCIPiisGetSubscip(), SCIPiisGreedyMinimize()
 - functions to create, modify, and free SCIP_DATATREE objects and to print as JSON or table (see pub_datatree.h and scip_datatree.h)
 - SCIPcollect*Statistics() for every SCIPprint*Statistics() in scip_solvingstats.h
 - SCIPprintStatisticsJson() to output a JSON string of the table statistics data
@@ -135,6 +159,9 @@ Interface changes
 - added SCIPexprGetIntegrality(), which in addition to the existing function SCIPexprIsIntegral() provides information about the presence of weakly implied integral variables
 - added SCIPincludeRelaxBenders(), which is used to include the Benders' decomposition relaxator.
 - added SCIPgetMasterProblemRelaxBenders() for retrieving the master problem SCIP instance from the Benders' decomposition relaxator.
+- added SCIPsortDownIntIntIntReal()
+- SCIPconshdlrSetNeedsCons() to set whether constraint handler callbacks should also be called if there are no constraints
+- SCIPpropSetTimingmask() to set timing mask of a propagator
 
 ### Changes in preprocessor macros
 
@@ -143,6 +170,8 @@ Interface changes
 - SCIPincludeConshdlrOrbitopePP(), SCIPcreateConsOrbitopePP(), SCIPcreateConsBasicOrbitopePP(), SCIPincludeConshdlrOrbitopeFull(), SCIPcreateConsOrbitopeFull(), SCIPcreateConsBasicOrbitopeFull()
 - SCIP_VERSION_SUB and SCIP_SUBVERSION are deprecated
 - removed SCIP_VARTYPE_IMPLINT_CHAR
+- added SCIP_PROPTIMING_NONE propagator timing to never call
+- added SCIP_HEURTIMING_NONE heuristic timing to never call
 
 ### Command line interface
 
@@ -162,6 +191,8 @@ Interface changes
 - removed reading/gmsreader/signpower
 - removed benders/default/numthreads, multi-threading support for Benders' decomposition has been temporarily disabled.
 - restricted range of parameter propagating/symmetry/sstleadervartype to [1,7]; its new default value is 6
+- propagating/*/timingmask extended by setting 0 to disable propagators completely
+- changed defaults of constraints/components/propfreq and constraints/components/maxdepth to -1 and 2147483647, respectively, to avoid unnecessary calls of components propagator by default
 
 ### New parameters
 
@@ -192,6 +223,9 @@ Interface changes
   solving after the completion of the Benders' decomposition algorithm if the problem is not solved to optimality. The
   "nodelimit" parameter allows the user to provide a node limit for the Benders' decomposition master problem (by
   default the limits from the original SCIP instance are copied to the master problem).
+- new parameters "branching/relpscost/dynamiclookahead", "branching/relpscost/dynamiclookaheadquot", "branching/relpscost/dynamiclookdistribution",
+  and "branching/relpscost/minsamplesize" to configure the dynamic max-lookahead criterion for strong branching: enable flag, fraction threshold,
+  distribution choice, and minimum sample size.
 
 ### Data structures
 
@@ -297,6 +331,33 @@ Miscellaneous
 -------------
 
 - updated description of paramater misc/usesymmetry
+
+@section RN923 SCIP 9.2.3
+*************************
+
+Fixed bugs
+----------
+
+- avoid hashmap key error in removal of doubletons and singletons in dual presolve of setppc constraints by skipping tripleton locks
+- when upgrading to xor constraint require parity variable to be enforced integral
+- provide the depth of the applied effective root with SCIPtreeGetEffectiveRootDepth() to avert invalid globalization of constraint set changes
+- disable objective limit during lexicographic dual minimization to keep feasibility status
+- declare infinite bound inference infeasible in SCIPinferVarLbCons() and SCIPinferVarUbCons() to maintain correct loose LP values
+- fixed update of consssorted flags in a variable expressions data when adding an additional constraint using this variable
+- corrected computation of number of variables affected by symmetry
+- fixed computation of symmetry group size
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Miscellaneous
+-------------
+
+- when writing a problem with non-generic names, warnings are printed if variable or constraint names are not unique
 
 @section RN922 SCIP 9.2.2
 *************************
@@ -774,7 +835,7 @@ Interface changes
   SCIPupdateSymgraphLhs(), SCIPupdateSymgraphRhs(), SCIPfixSymgraphVarnode(), SCIPaddSymgraphEdge(), SCIPcomputeSymgraphColors(), SCIPgetSymgraphSymtype(), SCIPgetSymgraphVars(),
   SCIPgetSymgraphNVars(), SCIPgetSymgraphNConsnodes(), SCIPgetSymgraphNNodes(), SCIPgetSymgraphNEdges(), SCIPgetSymgraphEdgeFirst(), SCIPgetSymgraphEdgeSecond(),
   SCIPgetSymgraphVarnodeColor(), SCIPgetSymgraphNodeType(), SCIPgetSymgraphNodeColor(), SCIPisSymgraphEdgeColored(), SCIPgetSymgraphEdgeColor(), SCIPgetSymgraphNVarcolors(),
-  SCIPhasGraphUniqueEdgetype(), SCIPallocateSymgraphConsnodeperm(), SCIPcreateSymgraphConsnodeperm(), SCIPgetSymgraphConsnodeperm(), SCIPfreeSymgraphConsnodeperm(),
+  SCIPhasGraphUniqueEdgetype(), SCIPcreateSymgraphConsnodeperm(), SCIPgetSymgraphConsnodeperm(), SCIPfreeSymgraphConsnodeperm(),
   SCIPgetSymActiveVariables(), SCIPfreeSymDataExpr(), SCIPgetSymExprdataNConstants(), SCIPgetSymExprdataConstants(), SCIPgetCoefSymData(),
   SCIPcreateSymOpNodeType(), SCIPgetSymOpNodeType()
 - SCIPexprhdlrSetGetSymdata(), SCIPexprhdlrHasGetSymData(), SCIPgetSymDataExpr(), SCIPcallExprGetSymData() to access symmetry data of expressions
@@ -1811,7 +1872,7 @@ Constraint handlers for NLP:
 - added SCIPcreateConsBasicSignpowerNonlinear() to create a nonlinear constraint that looks like the former abspower or signpower constraints
 
 Nonlinear Handler:
-- added SCIPincludeNlhdlrBilinear(), SCIPgetExprsBilinear(), SCIPgetExprsdataBilinear(), SCIPgetNExprsBilinear(), SCIPaddIneqBilinear()
+- added SCIPincludeNlhdlrBilinear(), SCIPgetExprsBilinear(), SCIPgetNExprsBilinear(), SCIPaddIneqBilinear()
 - added SCIPincludeNlhdlrConvex(), SCIPincludeNlhdlrConcave(), SCIPhasExprCurvature()
 - added SCIPincludeNlhdlrDefault()
 - added SCIPincludeNlhdlrPerspective()

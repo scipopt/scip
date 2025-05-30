@@ -318,15 +318,15 @@ SCIP_RETCODE SCIPrationalCreateString(
    const char*           desc                /**< the string describing the rational */
    );
 
-/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p str
+/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p desc
  *
  *  @return Returns TRUE if a value could be extracted, otherwise FALSE
  */
 SCIP_EXPORT
 SCIP_Bool SCIPstrToRationalValue(
-   char*                 str,                /**< string to search */
+   char*                 desc,               /**< string to search */
    SCIP_RATIONAL*        value,              /**< pointer to store the parsed value */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p desc */
    );
 
 /** resets the flag isfprepresentable to SCIP_ISFPREPRESENTABLE_UNKNOWN */
@@ -690,12 +690,21 @@ int SCIPrationalStrLen(
 
 #endif
 
-/** prints rational to file using message handler */
+/** prints rational into a file using message handler */
 SCIP_EXPORT
 void SCIPrationalMessage(
    SCIP_MESSAGEHDLR*     msg,                /**< message handler */
    FILE*                 file,               /**< file pointer */
-   SCIP_RATIONAL*        r                   /**< the rational to print */
+   SCIP_RATIONAL*        rational            /**< the rational to print */
+   );
+
+/** prints rational depending on the verbosity level */
+SCIP_EXPORT
+void SCIPrationalPrintVerbInfo(
+   SCIP_MESSAGEHDLR*     msg,                /**< message handler */
+   SCIP_VERBLEVEL        verblevel,          /**< current verbosity level */
+   SCIP_VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   SCIP_RATIONAL*        rational            /**< the rational to print */
    );
 
 /** prints a rational to command line (for debugging) */
@@ -826,12 +835,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPrationalarrayFree(
    SCIP_RATIONALARRAY**  rationalarray,      /**< pointer to the real array */
    BMS_BLKMEM*           blkmem              /**< block memory */
-   );
-
-/** clears a dynamic real array */
-SCIP_EXPORT
-SCIP_RETCODE SCIPrationalarrayClear(
-   SCIP_RATIONALARRAY*   rationalarray       /**< dynamic real array */
    );
 
 /** gets value of entry in dynamic array */

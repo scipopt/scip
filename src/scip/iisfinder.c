@@ -40,7 +40,6 @@
 #include "scip/cons_linear.h"
 #include "scip/iisfinder.h"
 #include "scip/iisfinder_greedy.h"
-
 #include "scip/struct_iisfinder.h"
 
 
@@ -72,6 +71,9 @@ SCIP_RETCODE createSubscipIIS(
    SCIP_Bool success;
    int nvars;
    int i;
+
+   assert( set != NULL );
+   assert( iis != NULL );
 
    /* Create the subscip used for storing the IIS */
    if( iis->subscip != NULL )
@@ -255,26 +257,20 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_CONS** conss;
    SCIP_VAR** vars;
    SCIP_IIS* iis;
-   int i;
-   int j;
-   int nconss;
-   int nvars;
-   int nbounds;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
+   SCIP_Real timelim;
+   SCIP_Longint nodelim;
    SCIP_Bool silent;
-   SCIP_Bool removebounds;
    SCIP_Bool minimal;
    SCIP_Bool stopafterone;
    SCIP_Bool removeunusedvars;
    SCIP_Bool trivial;
    SCIP_Bool islinear;
-   SCIP_Real timelim;
-   SCIP_Longint nodelim;
-
-   /* start timing */
-   SCIP_CALL( SCIPgetRealParam(set->scip, "iis/time", &timelim) );
-   SCIP_CALL( SCIPgetLongintParam(set->scip, "iis/nodes", &nodelim) );
-   SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/silent", &silent) );
+   int nconss;
+   int nvars;
+   int nbounds;
+   int i;
+   int j;
 
    /* sort the iis finders by priority */
    SCIPsetSortIISfinders(set);
@@ -284,6 +280,8 @@ SCIP_RETCODE SCIPiisGenerate(
 
    /* Create the subscip used for storing the IIS */
    SCIP_CALL( SCIPiisReset(&iis) );
+   SCIP_CALL( SCIPgetRealParam(set->scip, "iis/time", &timelim) );
+   SCIP_CALL( SCIPgetLongintParam(set->scip, "iis/nodes", &nodelim) );
    SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
 
    SCIPclockStart(iis->iistime, set);
@@ -369,33 +367,33 @@ SCIP_RETCODE SCIPiisGenerate(
 
    /* Try all IIS generators */
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/stopafterone", &stopafterone) );
-   SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/removebounds", &removebounds) );
    if( !trivial )
    {
       for( i = 0; i < set->niisfinders; ++i )
       {
          SCIP_IISFINDER* iisfinder;
          iisfinder = set->iisfinders[i];
-         assert(iis != NULL);
-
-         /* Recreate the subscip if one of the IIS finder algorithms has produced an invalid infeasible subsystem */
-         if( !iis->infeasible )
-            SCIP_CALL( createSubscipIIS(set, iis, timelim - SCIPclockGetTime(iis->iistime), nodelim) );
+         assert( iis->infeasible );
 
          /* start timing */
          SCIPclockStart(iisfinder->iisfindertime, set);
 
-         SCIPdebugMsg(set->scip, "----- STARTING IIS FINDER %s -----\n", iisfinder->name);
-         SCIP_CALL( iisfinder->iisfinderexec(iis, iisfinder, timelim, nodelim, removebounds, silent, &result) );
+         SCIPdebugMsg(iis->subscip, "----- STARTING IIS FINDER %s -----\n", iisfinder->name);
+         SCIP_CALL( iisfinder->iisfinderexec(iis, iisfinder, &result) );
+         assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
 
          /* stop timing */
          SCIPclockStop(iisfinder->iisfindertime, set);
 
-         assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
+         /* recreate the initial subscip if the IIS finder has produced an invalid infeasible subsystem */
+         if( !iis->infeasible )
+         {
+            SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
+         }
 
          if( timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim) )
          {
-            SCIPdebugMsg(set->scip, "Time or node limit hit. Stopping Search.\n");
+            SCIPdebugMsg(iis->subscip, "Time or node limit hit. Stopping Search.\n");
             break;
          }
 
@@ -408,15 +406,12 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/minimal", &minimal) );
    if( !iis->irreducible && minimal && !(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) && !trivial )
    {
+      assert( iis->infeasible );
 
-      SCIPdebugMsg(set->scip, "----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
+      SCIPdebugMsg(iis->subscip, "----- STARTING GREEDY SINGLETON DELETION ALGORITHM. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
 
-      if( !iis->infeasible )
-         SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
-
-      /*                                 iis, timelim, nodelim, removebounds, silent, timelimperiter, nodelimperiter, additive, conservative, delafteradd, dynamicreordering, initbatchsize, initrelbatchsize, maxbatchsize, maxrelbatchsize, batchingfactor, batchingoffset, batchupdateinterval, result */
-      SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, 1e+20,          -1L,            FALSE,    TRUE,         TRUE,        TRUE,              1,             -1.0,             1,            1.0,             1.0,            0,              1,                   &result) );
-      assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
+      SCIP_CALL( SCIPiisGreedyMinimize(iis) );
+      assert( iis->infeasible );
    }
 
    /* Remove redundant constraints that potentially are left over from indicator constraints,
@@ -458,6 +453,7 @@ SCIP_RETCODE SCIPiisGenerate(
       }
    }
 
+   SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/silent", &silent) );
    if( !silent )
       SCIPiisfinderInfoMessage(iis, FALSE);
 

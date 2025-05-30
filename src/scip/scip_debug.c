@@ -45,6 +45,7 @@
 #include "scip/debug.h"
 #include "scip/pub_message.h"
 #include "scip/scip_debug.h"
+#include "scip/scip_prop.h"
 
 /** enable debug solution mechanism
  *
@@ -59,6 +60,9 @@ void SCIPenableDebugSol(
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPenableDebugSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   if( SCIPfindProp(scip, "debug") == NULL )
+      (void)SCIPdebugIncludeProp(scip);
 
    SCIPdebugSolEnable(scip);
 }

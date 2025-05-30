@@ -211,20 +211,6 @@ SCIP_RETCODE SCIPaddVarsToRowExact(
    SCIP_RATIONAL**       vals                /**< values of coefficients */
    );
 
-/** returns the activity of a row in the last LP or pseudo solution
- *
- *  @return the activity of a row in the last LP or pseudo solution
- *
- *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-void SCIPgetRowActivityExact(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_RATIONAL*        result              /**< result pointer */
-   );
-
 /** returns the activity of a row for the given primal solution with running error analysis
  *
  *  @return the activitiy of a row for the given primal solution and the error bound of the activity; returns true on success
@@ -239,20 +225,6 @@ SCIP_Bool SCIPgetRowSolActivityWithErrorboundExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Real*            activity,           /**< the approximate activity */
    SCIP_Real*            errorbound          /**< the error bound */
-   );
-
-/** returns the feasibility of a row in the last LP or pseudo solution
- *
- *  @return the feasibility of a row in the last LP or pseudo solution
- *
- *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-void SCIPgetRowFeasibilityExact(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_RATIONAL*        result              /**< result pointer */
    );
 
 /** returns the activity of a row for the given primal solution
