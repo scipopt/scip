@@ -255,7 +255,6 @@ struct SCIP_Set
    SCIP_Bool             conf_prefinfproof;  /**< prefer infeasibility proof to boundexceeding proof */
    SCIP_Bool             conf_preferbinary;  /**< should binary conflicts be preferred? */
    SCIP_Bool             conf_allowlocal;    /**< should conflict constraints be generated that are only valid locally? */
-   SCIP_Bool             conf_resallowlocal; /**< should resolution conflict constraints be generated that are only valid locally? */
    SCIP_Bool             conf_settlelocal;   /**< should conflict constraints be attached only to the local subtree where
                                               *   they can be useful? */
    SCIP_Bool             conf_repropagate;   /**< should earlier nodes be repropagated in order to replace branching

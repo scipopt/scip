@@ -182,7 +182,6 @@
 #define SCIP_DEFAULT_CONF_REDUCTION        'm'  /**< which tightening reduction should be used?
                                                  *   ('o'ff, 'm'ir) */
 #define SCIP_DEFAULT_CONF_MBREDUCTION      TRUE /**< should apply the mixed binary reduction? */
-#define SCIP_DEFAULT_CONF_RESALLOWLOCAL   FALSE /**< should resolution conflict constraints be generated that are only valid locally? */
 
 /* Constraints */
 
@@ -1548,11 +1547,6 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/allowlocal",
          "should conflict constraints be generated that are only valid locally?",
          &(*set)->conf_allowlocal, TRUE, SCIP_DEFAULT_CONF_ALLOWLOCAL,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/resallowlocal",
-         "should resolution conflict constraints be generated that are only valid locally?",
-         &(*set)->conf_resallowlocal, TRUE, SCIP_DEFAULT_CONF_RESALLOWLOCAL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/settlelocal",

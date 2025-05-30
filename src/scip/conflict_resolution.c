@@ -1155,7 +1155,7 @@ SCIP_Bool SCIPconflictResolutionApplicable(
    )
 {
    /* check, if generalized resolution conflict analysis is enabled */
-   if( !set->conf_enable || !set->conf_usegenres || SCIPsetGetStage(set) != SCIP_STAGE_SOLVING )
+   if( !set->conf_enable || !set->conf_usegenres )
       return FALSE;
 
    return TRUE;
@@ -2533,9 +2533,8 @@ SCIP_RETCODE getReasonRow(
 
       SCIP_CALL( computeSlack(set, vars, reasonrow, currbdchginfo, fixbounds, fixsides) );
 
-      /* If the slack is greater than 0, we check that the reason actually
-      propagated the variable we resolve. It propagates a variable x_i if
-      (slack - a_i * (oldbound - newbound) is smaller than 0 */
+      /* If the slack is greater than 0, we check that the reason actually propagated the variable we resolve.
+         It propagates a variable x_i if (slack - a_i * ( boundusedinslack - oldbound)) < 0 */
       if( SCIPsetIsGT(set, reasonrow->slack, 0.0) )
       {
          SCIP_VAR* var;
