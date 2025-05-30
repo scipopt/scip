@@ -1382,8 +1382,7 @@ SCIP_RETCODE upgradeCons(
          SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
          SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
          SCIPconsIsStickingAtNode(cons)) );
-   SCIP_CALL( SCIPaddCons(scip, andcons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &andcons) );
+   SCIP_CALL( SCIPaddUpgrade(scip, cons, &andcons) );
 
    /* delete the or constraint */
    SCIP_CALL( SCIPdelCons(scip, cons) );

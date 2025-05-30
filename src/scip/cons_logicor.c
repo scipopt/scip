@@ -3660,10 +3660,8 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
                      SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-               SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIPdebugPrintCons(scip, newcons, NULL);
-
-               SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
 
                SCIPdebugMsg(scip, "logicor constraint <%s> is redundant due to negated clique information and will be replaced by a setppc constraint \n",
                   SCIPconsGetName(cons));
@@ -3801,10 +3799,8 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugPrintCons(scip, newcons, NULL);
-
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
 
          SCIPdebugMsg(scip, "logicor constraint <%s> was upgraded to a set-packing constraint\n", SCIPconsGetName(cons));
 
@@ -3866,8 +3862,7 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
                SCIPconsIsStickingAtNode(cons)) );
 
          /* add constraint */
-         SCIP_CALL( SCIPaddCons(scip, conslinear) );
-         SCIP_CALL( SCIPreleaseCons(scip, &conslinear) );
+         SCIP_CALL( SCIPaddUpgrade(scip, cons, &conslinear) );
          SCIP_CALL( SCIPdelCons(scip, cons) );
 
          (*ndelconss)++;

@@ -1497,9 +1497,7 @@ SCIP_RETCODE consdataLinearize(
    {
       /* add and release new constraint */
       SCIPdebugPrintCons(scip, lincons, NULL); /*lint !e644*/
-      SCIP_CALL( SCIPaddCons(scip, lincons) ); /*lint !e644*/
-      SCIP_CALL( SCIPreleaseCons(scip, &lincons) ); /*lint !e644*/
-
+      SCIP_CALL( SCIPaddUpgrade(scip, cons, &lincons) );
       ++(*nupgdconss);
    }
 
@@ -2603,8 +2601,7 @@ SCIP_RETCODE dualPresolve(
                      SCIPconsIsStickingAtNode(cons)) );
 
                /* add constraint */
-               SCIP_CALL( SCIPaddCons(scip, newcons) );
-               SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
             }
             (*naddconss) += consdata->nvars;
 
@@ -2895,8 +2892,7 @@ SCIP_RETCODE cliquePresolve(
                   !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
             SCIPdebugMsg(scip, " -> adding clique constraint: ");
             SCIPdebugPrintCons(scip, cliquecons, NULL);
-            SCIP_CALL( SCIPaddCons(scip, cliquecons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+            SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
             ++(*naddconss);
 
             SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -3046,8 +3042,7 @@ SCIP_RETCODE cliquePresolve(
                         !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
                   SCIPdebugMsg(scip, " -> adding clique constraint: ");
                   SCIPdebugPrintCons(scip, cliquecons, NULL);
-                  SCIP_CALL( SCIPaddCons(scip, cliquecons) );
-                  SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+                  SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
                   ++(*naddconss);
                }
             }
@@ -3307,8 +3302,7 @@ SCIP_RETCODE cliquePresolve(
                !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
          SCIPdebugMsg(scip, " -> upgrading AND-constraint <%s> with use of clique information to a set-partitioning constraint: \n", SCIPconsGetName(cons));
          SCIPdebugPrintCons(scip, cliquecons, NULL);
-         SCIP_CALL( SCIPaddCons(scip, cliquecons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+         SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
          ++(*naddconss);
 
          /* delete old constraint */
@@ -3954,8 +3948,7 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
                      !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
                /* add constraint */
-               SCIP_CALL( SCIPaddCons(scip, newcons) );
-               SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
             }
          }
 
@@ -3985,8 +3978,7 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
                   !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
             /* add constraint */
-            SCIP_CALL( SCIPaddCons(scip, newcons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+            SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
          }
 
          /* create additional linear constraint */
@@ -4001,8 +3993,7 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
                !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
          /* add constraint */
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
 
          /* delete constraint */
          SCIP_CALL( SCIPdelCons(scip, cons) );
