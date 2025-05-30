@@ -1083,17 +1083,15 @@ SCIP_RETCODE extractGates(
                initial, separate, enforce, check, propagate,
                local, modifiable, dynamic, removable, stickingatnode) );
 
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugMsg(scip, "-------------->\n");
          SCIPdebugPrintCons(scip, newcons, NULL);
+         SCIP_CALL( SCIPaddUpgrade(scip, logicor, &newcons) );
 
          ++(*naddconss);
          ++(presoldata->ngates);
 
          SCIP_CALL( SCIPdelCons(scip, logicor) );
          ++(*ndelconss);
-
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
          SCIPfreeBufferArray(scip, &consvars);
       }
@@ -1107,17 +1105,15 @@ SCIP_RETCODE extractGates(
                initial, separate, enforce, check, propagate,
                local, modifiable, dynamic, removable, stickingatnode) );
 
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugMsg(scip, "-------------->\n");
          SCIPdebugPrintCons(scip, newcons, NULL);
+         SCIP_CALL( SCIPaddUpgrade(scip, logicor, &newcons) );
 
          ++(*naddconss);
          ++(presoldata->ngates);
 
          SCIP_CALL( SCIPdelCons(scip, logicor) );
          ++(*ndelconss);
-
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
       }
    }
 
@@ -1667,9 +1663,9 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
                         initial, separate, enforce, check, propagate,
                         local, modifiable, dynamic, removable, stickingatnode) );
 
-                  SCIP_CALL( SCIPaddCons(scip, newcons) );
                   SCIPdebugMsg(scip, "-------------->\n");
                   SCIPdebugPrintCons(scip, newcons, NULL);
+                  SCIP_CALL( SCIPaddUpgrade(scip, setppc, &newcons) );
 
                   ++(*naddconss);
                   ++(presoldata->ngates);
@@ -1677,8 +1673,6 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
                   /* delete redundant set-packing constraint */
                   SCIP_CALL( SCIPdelCons(scip, setppc) );
                   ++(*ndelconss);
-
-                  SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
                }
 
                /* delete redundant logicor constraint */

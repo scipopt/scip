@@ -376,8 +376,7 @@ SCIP_RETCODE upgradeIndicatorSuperindicator(
             SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );
 
-      SCIP_CALL( SCIPaddCons(scip, indcons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &indcons) );
+      SCIP_CALL( SCIPaddUpgrade(scip, cons, &indcons) );
 
       SCIPdebug( nnewconss++ );
    }
@@ -405,8 +404,7 @@ SCIP_RETCODE upgradeIndicatorSuperindicator(
             SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );
 
-      SCIP_CALL( SCIPaddCons(scip, indcons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &indcons) );
+      SCIP_CALL( SCIPaddUpgrade(scip, cons, &indcons) );
 
       SCIPfreeBufferArray(scip, &negvals);
 
@@ -574,8 +572,7 @@ SCIP_RETCODE upgradeLinearSuperindicator(
                SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
                SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
 
          SCIPdebug( nnewconss++ );
       }
@@ -605,8 +602,7 @@ SCIP_RETCODE upgradeLinearSuperindicator(
                SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
                SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
 
          SCIPdebug( nnewconss++ );
       }
