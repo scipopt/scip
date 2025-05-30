@@ -29,13 +29,9 @@
  * @author Paul Meinhold
  */
 
-#include <stdio.h>
-
 #include <assert.h>
-#include <string.h>
 
-#include "scip/scip_iisfinder.h"
-#include <scip/iisfinder_greedy.h>
+#include "scip/iisfinder_greedy.h"
 
 #define IISFINDER_NAME           "greedy"
 #define IISFINDER_DESC           "greedy deletion or addition constraint deletion"
@@ -56,6 +52,7 @@
 #define DEFAULT_BATCHINGFACTOR   2.0   /**< the factor with which the batchsize is multiplied each iteration */
 #define DEFAULT_BATCHINGOFFSET   0     /**< the offset with which the batchsize is summed each iteration */
 #define DEFAULT_BATCHUPDATEINTERVAL 1  /**< the number of iterations to run with a fixed batchsize before updating it */
+
 
 /*
  * Data structures
