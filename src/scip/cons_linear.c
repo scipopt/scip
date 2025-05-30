@@ -12949,13 +12949,10 @@ SCIP_RETCODE aggregateConstraints(
 
       SCIP_CALL( normalizeCons(scip, newcons, infeasible) );
 
-      if( *infeasible )
-         goto TERMINATE;
-
       /* check, if we really want to use the new constraint instead of the old one:
        * use the new one, if the maximum norm doesn't grow too much
        */
-      if( consdataGetMaxAbsval(SCIPconsGetData(newcons)) <= maxaggrnormscale * consdataGetMaxAbsval(consdata0) )
+      if( !(*infeasible) && consdataGetMaxAbsval(SCIPconsGetData(newcons)) <= maxaggrnormscale * consdataGetMaxAbsval(consdata0) )
       {
          SCIPdebugMsg(scip, " -> aggregated to <%s>\n", SCIPconsGetName(newcons));
          SCIPdebugPrintCons(scip, newcons, NULL);
@@ -12965,14 +12962,14 @@ SCIP_RETCODE aggregateConstraints(
             (*nchgcoefs) += consdata0->nvars + consdata1->nvars - nvarscommon;
          *aggregated = TRUE;
 
-         /* delete the old constraint, and add the new linear constraint to the problem */
+         /* add the new linear constraint to the problem and delete the old constraint */
+         SCIP_CALL( SCIPaddUpgrade(scip, cons0, &newcons) );
          SCIP_CALL( SCIPdelCons(scip, cons0) );
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
       }
-
-     TERMINATE:
-      /* release the new constraint */
-      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      else
+      {
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      }
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &newvals);
