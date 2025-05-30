@@ -24,10 +24,9 @@
 
 /**@file   iisfinder_greedy.c
  * @brief  greedy deletion and addition filter heuristic to compute (I)ISs
- * @author Paul Meinhold
  * @author Marc Pfetsch
  * @author Mark Turner
- *
+ * @author Paul Meinhold
  */
 
 #include <stdio.h>

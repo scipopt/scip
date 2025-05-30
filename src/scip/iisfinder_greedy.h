@@ -25,9 +25,9 @@
 /**@file   iisfinder_greedy.h
  * @ingroup IISFINDERS
  * @brief  greedy deletion and addition filter heuristic to compute IISs
- * @author Paul Meinhold
  * @author Marc Pfetsch
  * @author Mark Turner
+ * @author Paul Meinhold
  *
  * An irreducible infeasible subsystem (IIS) is a subset of the constraints and bounds from a problem
  * that is infeasible.
