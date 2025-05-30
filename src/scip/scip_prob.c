@@ -3221,20 +3221,23 @@ SCIP_RETCODE SCIPaddCons(
 SCIP_RETCODE SCIPaddUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            oldcons,            /**< underlying constraint to upgrade */
-   SCIP_CONS*            newcons             /**< upgraded constraint to add */
+   SCIP_CONS**           newcons             /**< upgraded constraint to add */
    )
 {
+   assert(oldcons != NULL);
+   assert(newcons != NULL);
+   assert(*newcons != NULL);
    assert(SCIPconsIsGlobal(oldcons) || SCIPconsGetValidDepth(oldcons) == SCIPconsGetActiveDepth(oldcons));
 
    if( SCIPconsIsConflict(oldcons) )
    {
-      SCIP_CALL( SCIPaddConflict(scip, SCIPconsIsLocal(oldcons) ? SCIPgetCurrentNode(scip) : NULL, newcons, NULL,
+      SCIP_CALL( SCIPaddConflict(scip, SCIPconsIsLocal(oldcons) ? SCIPgetCurrentNode(scip) : NULL, *newcons, NULL,
             SCIPconsGetConflictType(oldcons), SCIPconsIsCutoffInvolved(oldcons)) );
    }
    else
    {
-      SCIP_CALL( SCIPaddCons(scip, newcons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      SCIP_CALL( SCIPaddCons(scip, *newcons) );
+      SCIP_CALL( SCIPreleaseCons(scip, newcons) );
    }
 
    return SCIP_OKAY;

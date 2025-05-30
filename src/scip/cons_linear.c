@@ -16762,7 +16762,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             if( upgdcons != NULL )
             {
                /* add the upgraded constraint to the problem */
-               SCIP_CALL( SCIPaddUpgrade(scip, cons, upgdcons) );
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, &upgdcons) );
                ++(*nupgdconss);
 
                /* mark the linear constraint being upgraded and to be removed after presolving;

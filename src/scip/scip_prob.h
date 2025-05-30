@@ -1533,7 +1533,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPaddUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            oldcons,            /**< underlying constraint to upgrade */
-   SCIP_CONS*            newcons             /**< upgraded constraint to add */
+   SCIP_CONS**           newcons             /**< upgraded constraint to add */
    );
 
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the

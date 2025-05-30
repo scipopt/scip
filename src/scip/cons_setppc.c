@@ -2021,7 +2021,7 @@ SCIP_RETCODE applyFixings(
                /* add the downgraded constraint to the problem */
                SCIPdebugMsg(scip, "adding linear constraint: ");
                SCIPdebugPrintCons(scip, newcons, NULL);
-               SCIP_CALL( SCIPaddUpgrade(scip, cons, newcons) );
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
 
                /* free constraint arrays */
                SCIPfreeBufferArray(scip, &consvals);

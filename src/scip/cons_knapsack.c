@@ -7884,7 +7884,7 @@ SCIP_RETCODE upgradeCons(
    }
 
    /* add the upgraded constraint to the problem */
-   SCIP_CALL( SCIPaddUpgrade(scip, cons, newcons) );
+   SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
    ++(*naddconss);
 
    /* remove the underlying constraint from the problem */
@@ -8086,7 +8086,7 @@ SCIP_RETCODE deleteRedundantVars(
                   /* add the special constraint to the problem */
                   SCIPdebugMsg(scip, " -> adding clique constraint: ");
                   SCIPdebugPrintCons(scip, cliquecons, NULL);
-                  SCIP_CALL( SCIPaddUpgrade(scip, cons, cliquecons) );
+                  SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
                   ++(*naddconss);
                }
             }
@@ -8320,7 +8320,7 @@ SCIP_RETCODE detectRedundantVars(
                /* add the special constraint to the problem */
                SCIPdebugMsg(scip, " -> adding clique constraint: ");
                SCIPdebugPrintCons(scip, cliquecons, NULL);
-               SCIP_CALL( SCIPaddUpgrade(scip, cons, cliquecons) );
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
                ++(*naddconss);
             }
          }
@@ -8488,7 +8488,7 @@ SCIP_RETCODE dualWeightsTightening(
             SCIPconsIsStickingAtNode(cons)) );
 
       /* add the upgraded constraint to the problem */
-      SCIP_CALL( SCIPaddUpgrade(scip, cons, newcons) );
+      SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
       ++(*naddconss);
 
       /* remove the underlying constraint from the problem */
@@ -10598,7 +10598,7 @@ SCIP_RETCODE tightenWeights(
                   SCIPconsIsStickingAtNode(cons)) );
 
             /* add the upgraded constraint to the problem */
-            SCIP_CALL( SCIPaddUpgrade(scip, cons, cliquecons) );
+            SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
             ++(*naddconss);
 
             /* delete old constraint */
@@ -10659,7 +10659,7 @@ SCIP_RETCODE tightenWeights(
             /* add the special constraint to the problem */
             SCIPdebugMsg(scip, " -> adding clique constraint: ");
             SCIPdebugPrintCons(scip, cliquecons, NULL);
-            SCIP_CALL( SCIPaddUpgrade(scip, cons, cliquecons) );
+            SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
             ++(*naddconss);
          }
 
@@ -10845,7 +10845,7 @@ SCIP_RETCODE tightenWeights(
                         /* add the special constraint to the problem */
                         SCIPdebugMsg(scip, " -> adding clique constraint: ");
                         SCIPdebugPrintCons(scip, cliquecons, NULL);
-                        SCIP_CALL( SCIPaddUpgrade(scip, cons, cliquecons) );
+                        SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
                         ++(*naddconss);
 
                         /* free clique array */
@@ -12989,7 +12989,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
                /* add the upgraded constraint to the problem */
-               SCIP_CALL( SCIPaddUpgrade(scip, cons, cardcons) );
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, &cardcons) );
                ++(*nupgdconss);
 
                /* delete oknapsack constraint */
