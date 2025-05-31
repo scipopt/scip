@@ -56,6 +56,7 @@
 #include "scip/rational.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_lpexact.h"
+#include "scip/scip_message.h"
 #include "scip/set.h"
 #include "scip/sepastoreexact.h"
 #include "scip/sol.h"
@@ -203,7 +204,7 @@ SCIP_Bool rowExactInSync(
    SCIP_ROWEXACT*        rowexact,           /**< exact row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     msg                 /**< message handler for debug output */ /*lint !e204*/
-   )
+   ) /*lint --e{715}*/
 {
    SCIP_ROW* fprow;
    SCIP_Bool synced;
@@ -2135,6 +2136,7 @@ SCIP_RETCODE lpExactFlushAddRows(
    lp->solved = FALSE;
    lp->primalfeasible = FALSE;
    lp->primalchecked = FALSE;
+   lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
    return SCIP_OKAY;
 }
@@ -2247,6 +2249,7 @@ SCIP_RETCODE lpExactFlushChgCols(
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
       lp->dualchecked = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
    /* change bounds in LP */
@@ -2259,6 +2262,7 @@ SCIP_RETCODE lpExactFlushChgCols(
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
       lp->primalchecked = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
    lp->nchgcols = 0;
@@ -2366,6 +2370,7 @@ SCIP_RETCODE lpExactFlushChgRows(
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
       lp->primalchecked = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
    lp->nchgrows = 0;
@@ -3144,7 +3149,7 @@ SCIP_RETCODE SCIProwExactCreate(
    SCIP_RATIONAL*        lhs,                /**< left hand side of row */
    SCIP_RATIONAL*        rhs,                /**< right hand side of row */
    SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
-   )
+   ) /*lint --e{715}*/
 {
    assert(row != NULL);
    assert(fprow != NULL);
@@ -3678,6 +3683,7 @@ SCIP_RETCODE SCIPlpExactFlush(
    /* we can't retrieve the solution from Qsoptex after anything was changed, so we need to resolve the lp */
 #ifdef SCIP_WITH_QSOPTEX
    lp->solved = FALSE;
+   lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 #endif
 
    assert(lp->nlpicols == lp->ncols);
@@ -4649,7 +4655,8 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
       break;
 
    case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-      SCIPerrorMessage("Feature exakt unbounded ray not fully implemented yet \n");
+      SCIPsetDebugMsg(set, " -> LP unbounded\n");
+      SCIPwarningMessage(set->scip, "Exact LP solver returned unbounded ray: handling not fully supported.\n");
       break;
 
    case SCIP_LPSOLSTAT_OBJLIMIT:
@@ -4909,7 +4916,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
 TERMINATE:
 
    /* stop timing and update number of calls and fails, and proved bound status */
-   if ( usefarkas )
+   if( usefarkas )
    {
       SCIPclockStop(stat->provedinfeaslptime, set);
       stat->nexlpinf++;
@@ -4928,7 +4935,7 @@ TERMINATE:
 }
 
 /*
- * row mehods
+ * row methods
  */
 
 /** increases usage counter of LP row */
@@ -7893,12 +7900,14 @@ SCIP_RETCODE lpExactRestoreSolVals(
    storedsolvals = lpexact->storedsolvals;
    if( storedsolvals != NULL )
    {
-      lpexact->solved = storedsolvals->lpissolved;
 #ifdef SCIP_WITH_QSOPTEX
       lpexact->solved = FALSE;
+      lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+#else
+      lpexact->solved = storedsolvals->lpissolved;
+      lpexact->lpsolstat = storedsolvals->lpsolstat;
 #endif
       SCIPrationalSetRational(lpexact->lpobjval, storedsolvals->lpobjval);
-      lpexact->lpsolstat = storedsolvals->lpsolstat;
       lpexact->primalfeasible = storedsolvals->primalfeasible;
       lpexact->primalchecked = storedsolvals->primalchecked;
       lpexact->dualfeasible = storedsolvals->dualfeasible;

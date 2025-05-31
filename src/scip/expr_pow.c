@@ -2719,7 +2719,7 @@ SCIP_DECL_EXPRPARSE(parseSignpower)
       return SCIP_READERROR;
    }
 
-   if( exponent <= 1.0 || SCIPisInfinity(scip, exponent) )
+   if( exponent <= 1.0 || !SCIPisFinite(exponent) || SCIPisInfinity(scip, exponent) )
    {
       SCIPerrorMessage("Expected finite exponent >= 1.0 for signpower().\n");
       return SCIP_READERROR;

@@ -690,12 +690,21 @@ int SCIPrationalStrLen(
 
 #endif
 
-/** prints rational to file using message handler */
+/** prints rational into a file using message handler */
 SCIP_EXPORT
 void SCIPrationalMessage(
    SCIP_MESSAGEHDLR*     msg,                /**< message handler */
    FILE*                 file,               /**< file pointer */
-   SCIP_RATIONAL*        r                   /**< the rational to print */
+   SCIP_RATIONAL*        rational            /**< the rational to print */
+   );
+
+/** prints rational depending on the verbosity level */
+SCIP_EXPORT
+void SCIPrationalPrintVerbInfo(
+   SCIP_MESSAGEHDLR*     msg,                /**< message handler */
+   SCIP_VERBLEVEL        verblevel,          /**< current verbosity level */
+   SCIP_VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   SCIP_RATIONAL*        rational            /**< the rational to print */
    );
 
 /** prints a rational to command line (for debugging) */

@@ -36,6 +36,7 @@
 #include "scip/pub_reader.h"
 #include "scip/reader_opb.h"
 #include "scip/reader_wbo.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_reader.h"
 #include <string.h>
 
@@ -77,8 +78,17 @@ SCIP_DECL_READERREAD(readerReadWbo)
 static
 SCIP_DECL_READERWRITE(readerWriteWbo)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPwriteOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-         nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, genericnames, result) );
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   if( SCIPisExact(scip) )
+   {
+      SCIPerrorMessage("WBO reader cannot yet write problems in exact solving mode\n");
+      return SCIP_WRITEERROR;
+   }
+
+   SCIP_CALL( SCIPwriteOpb(scip, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,
+         vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, genericnames, result) );
 
    return SCIP_OKAY;
 }
@@ -100,7 +110,7 @@ SCIP_RETCODE SCIPincludeReaderWbo(
 
    assert(reader != NULL);
 
-   /* reader is safe to use in exact solving mode */
+   /* reader is safe to use in exact solving mode, but exact writing still needs to be implemented (in OPB reader) */
    SCIPreaderMarkExact(reader);
 
    /* set non fundamental callbacks via setter functions */

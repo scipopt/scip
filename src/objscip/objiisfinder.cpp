@@ -112,7 +112,7 @@ SCIP_DECL_IISFINDEREXEC(iisfinderExecObj)
    assert(iisfinderdata->objiisfinder != NULL);
 
    /* call virtual method of iisfinder object */
-   SCIP_CALL( iisfinderdata->objiisfinder->scip_exec(iis, iisfinder, timelim, nodelim, removebounds, silent, result) );
+   SCIP_CALL( iisfinderdata->objiisfinder->scip_exec(iis, iisfinder, result) );
 
    return SCIP_OKAY;
 }
