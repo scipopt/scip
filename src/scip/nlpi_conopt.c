@@ -84,9 +84,19 @@ struct SCIP_NlpiProblem
 /** Implementations of CONOPT callbacks */
 
 /* CONOPT callback to pass solution back to SCIP */
-static int COI_CALLCONV Std_Solution(const double XVAL[], const double XMAR[], const int XBAS[], const int XSTA[],
-      const double YVAL[], const double YMAR[], const int YBAS[], const int YSTA[], int NUMVAR, int NUMCON,
-      void* USRMEM)
+static int COI_CALLCONV Solution(
+   const double          XVAL[],
+   const double          XMAR[],
+   const int             XBAS[],
+   const int             XSTA[],
+   const double          YVAL[],
+   const double          YMAR[],
+   const int             YBAS[],
+   const int             YSTA[],
+   int                   NUMVAR,
+   int                   NUMCON,
+   void*                 USRMEM
+   )
 {
    /* TODO pass solution to SCIP */
 
@@ -94,8 +104,23 @@ static int COI_CALLCONV Std_Solution(const double XVAL[], const double XMAR[], c
 }
 
 /* CONOPT callback to pass variable bounds, constraint types and sides and Jacobian structure to CONOPT */
-static int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], int VSTA[], int TYPE[], double RHS[],
-      int ESTA[], int COLSTA[], int ROWNO[], double VALUE[], int NLFLAG[], int NUMVAR, int NUMCON, int NUMNZ, void* USRMEM)
+static int COI_CALLCONV ReadMatrix(
+   double                LOWER[],
+   double                CURR[],
+   double                UPPER[],
+   int                   VSTA[],
+   int                   TYPE[],
+   double                RHS[],
+   int                   ESTA[],
+   int                   COLSTA[],
+   int                   ROWNO[],
+   double                VALUE[],
+   int                   NLFLAG[],
+   int                   NUMVAR,
+   int                   NUMCON,
+   int                   NUMNZ,
+   void*                 USRMEM
+   )
 {
    const SCIP_Real* lbs;
    const SCIP_Real* ubs;
@@ -177,7 +202,13 @@ static int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPP
 }
 
 /* callback for CONOPT's standard output */
-static int COI_CALLCONV Std_Message(int SMSG, int DMSG, int NMSG, char* MSGV[], void* USRMEM)
+static int COI_CALLCONV Message(
+   int                   SMSG,
+   int                   DMSG,
+   int                   NMSG,
+   char*                 MSGV[],
+   void*                 USRMEM
+   )
 {
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
 
@@ -191,7 +222,13 @@ static int COI_CALLCONV Std_Message(int SMSG, int DMSG, int NMSG, char* MSGV[], 
 }
 
 /* callback for CONOPT's standard error output */
-static int COI_CALLCONV Std_ErrMsg(int ROWNO, int COLNO, int POSNO, const char* MSG, void* USRMEM)
+static int COI_CALLCONV ErrMsg(
+   int                   ROWNO,
+   int                   COLNO,
+   int                   POSNO,
+   const char*           MSG,
+   void*                 USRMEM
+   )
 {
    if( ROWNO == -1 )
       SCIPerrorMessage("Variable %d : ", COLNO);
@@ -205,7 +242,13 @@ static int COI_CALLCONV Std_ErrMsg(int ROWNO, int COLNO, int POSNO, const char* 
 }
 
 /* callback for CONOPT to report the solving statuses */
-static int COI_CALLCONV Std_Status(int MODSTA, int SOLSTA, int ITER, double OBJVAL, void* USRMEM)
+static int COI_CALLCONV Status(
+   int                   MODSTA,
+   int                   SOLSTA,
+   int                   ITER,
+   double                OBJVAL,
+   void*                 USRMEM
+   )
 {
    SCIP* scip;
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
@@ -294,7 +337,7 @@ static int COI_CALLCONV Std_Status(int MODSTA, int SOLSTA, int ITER, double OBJV
    return 0;
 }
 
-static int COI_CALLCONV Tut_FDEval(const double X[], double* G, double JAC[], int ROWNO, const int JACNUM[], int MODE,
+static int COI_CALLCONV FDEval(const double X[], double* G, double JAC[], int ROWNO, const int JACNUM[], int MODE,
       int IGNERR, int* ERRCNT, int NUMVAR, int NUMJAC, int THREAD, void* USRMEM )
 {
 
@@ -366,12 +409,12 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_ObjCon(problem->CntVect, nconss); /* TODO: decide which index to use for the objective constraint; nconss? */
 
    /* register callback routines */
-   COI_Error += COIDEF_Message(problem->CntVect, &Std_Message);
-   COI_Error += COIDEF_ErrMsg(problem->CntVect, &Std_ErrMsg);
-   COI_Error += COIDEF_Status(problem->CntVect, &Std_Status);
-   COI_Error += COIDEF_Solution(problem->CntVect, &Std_Solution);
-   COI_Error += COIDEF_ReadMatrix(problem->CntVect, &Tut_ReadMatrix);
-   // COI_Error +=  COIDEF_FDEval    ( CntVect, &Tut_FDEval);     /* Register the callback FDEval      */
+   COI_Error += COIDEF_Message(problem->CntVect, &Message);
+   COI_Error += COIDEF_ErrMsg(problem->CntVect, &ErrMsg);
+   COI_Error += COIDEF_Status(problem->CntVect, &Status);
+   COI_Error += COIDEF_Solution(problem->CntVect, &Solution);
+   COI_Error += COIDEF_ReadMatrix(problem->CntVect, &ReadMatrix);
+   COI_Error += COIDEF_FDEval(problem->CntVect, &FDEval);
 
    /* pass the problem pointer to CONOPT, so that it may be used in CONOPT callbacks */
    COI_Error += COIDEF_UsrMem(problem->CntVect, (void*)problem);
@@ -400,8 +443,6 @@ static void updateConopt(
 /*
  * Callback methods of NLP solver interface
  */
-
-/* TODO: Implement all necessary NLP interface methods. The methods with an #ifdef SCIP_DISABLED_CODE ... #else #define ... are optional */
 
 #ifdef SCIP_DISABLED_CODE
 /** copy method of NLP interface (called when SCIP copies plugins) */
