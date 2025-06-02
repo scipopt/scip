@@ -877,7 +877,7 @@ SCIP_RETCODE SYMbuildDejavuGraph(
    }
 
    /* init graph */
-   (*dejavugraph).initialize_graph((unsigned) nnodes, (unsigned) nedges);
+   (*dejavugraph).initialize_graph(nnodes, nedges);
 
    /* add the nodes for linear and nonlinear constraints to the graph */
    SCIP_CALL( createOrDetermineSizeGraph(scip, graph, FALSE, dejavugraph,
@@ -942,7 +942,7 @@ SCIP_RETCODE SYMbuildDejavuGraphCheck(
    }
 
    /* init graph */
-   (*dejavugraph).initialize_graph((unsigned) *nnodes, (unsigned) nedges);
+   (*dejavugraph).initialize_graph(*nnodes, nedges);
 
    /* add the nodes for linear and nonlinear constraints to the graph */
    SCIP_CALL_ABORT( createOrDetermineSizeGraphCheck(scip, G1, G2, FALSE, dejavugraph,

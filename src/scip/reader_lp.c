@@ -4368,8 +4368,8 @@ SCIP_DECL_READERWRITE(readerWriteLp)
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
 
-   SCIP_CALL( SCIPwriteLp(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-         nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
+   SCIP_CALL( SCIPwriteLp(scip, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,
+         vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
 
    return SCIP_OKAY;
 }
@@ -4492,7 +4492,6 @@ SCIP_RETCODE SCIPreadLp(
    return SCIP_OKAY;
 }
 
-
 /** writes problem to file */
 SCIP_RETCODE SCIPwriteLp(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4500,9 +4499,12 @@ SCIP_RETCODE SCIPwriteLp(
    const char*           name,               /**< problem name */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_RATIONAL*        objoffsetexact,     /**< exact objective offset from bound shifting and fixing */
+   SCIP_RATIONAL*        objscaleexact,      /**< exact scalar applied to objective function; external objective value is
+                                              *   extobjexact = objsense * objscaleexact * (intobjexact + objoffsetexact) */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                   nvars,              /**< number of active variables in the problem */
    int                   nbinvars,           /**< number of binary variables */
@@ -4518,14 +4520,15 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_READERDATA* readerdata;
    SCIP_Bool linearizeands;
    SCIP_Bool aggrlinearizationands;
+
+   char linebuffer[LP_MAX_PRINTLEN + 1];
+   char varname[LP_MAX_NAMELEN];
+   char ratbuffer[LP_MAX_PRINTLEN];
+   char buffer[LP_MAX_PRINTLEN];
+   int linecnt;
+   int written;
    int c;
    int v;
-
-   int linecnt;
-   char linebuffer[LP_MAX_PRINTLEN+1];
-
-   char varname[LP_MAX_NAMELEN];
-   char buffer[LP_MAX_PRINTLEN];
 
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLR* conshdlrInd;
@@ -4554,6 +4557,8 @@ SCIP_RETCODE SCIPwriteLp(
    int nconsvars;
 
    SCIP_VAR* var;
+   SCIP_RATIONAL* objexact;
+   SCIP_Real obj;
    SCIP_Real lb;
    SCIP_Real ub;
 
@@ -4629,6 +4634,13 @@ SCIP_RETCODE SCIPwriteLp(
    assert(implintlevel >= -2);
    assert(implintlevel <= 2);
 
+   if( SCIPisExact(scip) )
+   {
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objexact) );
+   }
+   else
+      objexact = NULL;
+
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "\\ SCIP STATISTICS\n");
    SCIPinfoMessage(scip, file, "\\   Problem name     : %s\n", name);
@@ -4653,34 +4665,121 @@ SCIP_RETCODE SCIPwriteLp(
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
 #endif
 
-      if( SCIPisZero(scip, SCIPvarGetObj(var)) )
-         continue;
+      /* multiply exact objscale */
+      if( objexact != NULL )
+      {
+         SCIPrationalSetRational(objexact, SCIPvarGetObjExact(var));
 
-      zeroobj = FALSE;
+         if( SCIPrationalIsZero(objexact) )
+            continue;
 
-      /* we start a new line; therefore we tab this line */
-      if( linecnt == 0 )
-         appendLine(scip, file, linebuffer, &linecnt, "     ");
+         SCIPrationalMult(objexact, objexact, objscaleexact);
+         zeroobj = FALSE;
 
-      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", objscale * SCIPvarGetObj(var), varname );
+         /* we start a new line; therefore we tab this line */
+         if( linecnt == 0 )
+            appendLine(scip, file, linebuffer, &linecnt, "     ");
+
+         written = SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         if( written >= LP_MAX_NAMELEN )
+         {
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &objexact);
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
+         written = SCIPrationalToString(objexact, ratbuffer, LP_MAX_PRINTLEN);
+         if( written >= LP_MAX_PRINTLEN )
+         {
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &objexact);
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
+         if( !SCIPrationalIsNegative(objexact) )
+            written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " +%s %s", ratbuffer, varname);
+         else
+            written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %s", ratbuffer, varname);
+         if( written >= LP_MAX_PRINTLEN )
+         {
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &objexact);
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
+      }
+      /* multiply real objscale */
+      else
+      {
+         obj = SCIPvarGetObj(var);
+
+         if( obj == 0.0 ) /*lint !e777*/
+            continue;
+
+         obj *= objscale;
+         zeroobj = FALSE;
+
+         /* we start a new line; therefore we tab this line */
+         if( linecnt == 0 )
+            appendLine(scip, file, linebuffer, &linecnt, "     ");
+
+         written = SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         if( written >= LP_MAX_NAMELEN )
+         {
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
+         written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", obj, varname);
+         if( written >= LP_MAX_PRINTLEN )
+         {
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
+      }
 
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
 
-   /* add objective offset */
-   if ( ! SCIPisZero(scip, objoffset) )
+   /* add exact objoffset */
+   if( objexact != NULL )
    {
-      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g", objscale * objoffset);
-      appendLine(scip, file, linebuffer, &linecnt, buffer);
+      if( zeroobj || !SCIPrationalIsZero(objoffsetexact) )
+      {
+         SCIPrationalMult(objexact, objoffsetexact, objscaleexact);
+
+         written = SCIPrationalToString(objexact, ratbuffer, LP_MAX_PRINTLEN);
+         if( written >= LP_MAX_PRINTLEN )
+         {
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &objexact);
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
+         if( !SCIPrationalIsNegative(objexact) )
+            written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " +%s", ratbuffer);
+         else
+            written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", ratbuffer);
+         if( written >= LP_MAX_PRINTLEN )
+         {
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &objexact);
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
+
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
+      }
+
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &objexact);
    }
+   /* add real objoffset */
    else
    {
-      /* add a linear term to avoid troubles when reading the lp file with another MIP solver */
-      if( zeroobj && nvars >= 1 )
+      if( zeroobj || objoffset != 0.0 ) /*lint !e777*/
       {
-         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[0]));
-         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " 0 %s", varname );
+         obj = objoffset * objscale;
+
+         written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g", obj);
+         if( written >= LP_MAX_PRINTLEN )
+         {
+            SCIPerrorMessage("buffer length exceeded\n");
+            return SCIP_INVALIDDATA;
+         }
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }

@@ -1039,24 +1039,25 @@ SCIP_RETCODE matrixCreate(
 
             switch( SCIPgetTypeSetppc(scip, cons) )
             {
-               case SCIP_SETPPCTYPE_PARTITIONING :
-                  lhs = 1.0;
-                  rhs = 1.0;
-                  break;
-               case SCIP_SETPPCTYPE_PACKING :
-                  lhs = -SCIPinfinity(scip);
-                  rhs = 1.0;
-                  break;
-               case SCIP_SETPPCTYPE_COVERING :
-                  lhs = 1.0;
-                  rhs = SCIPinfinity(scip);
-                  break;
-               default:
-                  SCIPABORT();
+            case SCIP_SETPPCTYPE_PARTITIONING:
+               lhs = 1.0;
+               rhs = 1.0;
+               break;
+            case SCIP_SETPPCTYPE_PACKING:
+               lhs = -SCIPinfinity(scip);
+               rhs = 1.0;
+               break;
+            case SCIP_SETPPCTYPE_COVERING:
+               lhs = 1.0;
+               rhs = SCIPinfinity(scip);
+               break;
+            default:
+               SCIPABORT();
+               return SCIP_ERROR;
             }
 
             SCIP_CALL( addLinearConstraint(scip, matrix, SCIPgetVarsSetppc(scip, cons), NULL,
-                                           SCIPgetNVarsSetppc(scip, cons), lhs, rhs, cons) );
+                  SCIPgetNVarsSetppc(scip, cons), lhs, rhs, cons) );
          }
       }
       else if( strcmp(conshdlrname, "logicor") == 0 )

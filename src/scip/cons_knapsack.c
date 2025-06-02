@@ -13663,6 +13663,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
+   int i;
 
    /* find the knapsack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -13670,6 +13671,17 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
    {
       SCIPerrorMessage("knapsack constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* check whether all variables are binary */
+   assert(vars != NULL || nvars == 0);
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPvarIsBinary(vars[i]) )
+      {
+         SCIPerrorMessage("item <%s> is not binary\n", SCIPvarGetName(vars[i]));
+         return SCIP_INVALIDDATA;
+      }
    }
 
    /* get event handler */

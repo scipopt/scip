@@ -68,6 +68,7 @@ Interface changes
 
 ### New and changed callbacks
 
+- added SCIP_DECL_IISFINDERCOPY(), SCIP_DECL_IISFINDERFREE(), and SCIP_DECL_IISFINDEREXEC() for iisfinder implementations
 - added a new callback TABLE_COLLECT for the table plugin that collects the data for the specific statistics table in a SCIP_DATATREE object
 - for a table plugin, only one of the callbacks TABLE_COLLECT or TABLE_OUTPUT needs to be implemented, but implementing both is preferred;
   if TABLE_OUTPUT is omitted, then SCIP tries to print a table from the data given by TABLE_COLLECT
@@ -77,6 +78,7 @@ Interface changes
 - new event SCIP_EVENTTYPE_DUALBOUNDIMPROVED is generated whenever the global dual bound is improved
 - new event mask SCIP_EVENTTYPE_GAPUPDATED for catching updates in primal or dual bound
 - added new sorting functions SCIPsortRealPtrPtr(), ...
+- the callback SCIP_DECL_READERWRITE is equipped with objoffset, objscale, objoffsetexact, objscaleexact as arguments 8 through 11 to write the exact objective offset and scale in exact mode
 
 ### Deleted and changed API methods
 
@@ -134,7 +136,7 @@ Interface changes
   STO readers respectively. These readers are all used when reading an SMPS instance.
 - SCIPdialogIsHidden(), SCIPdialogSetHidden() to determine whether a dialog should be hidden in help list
 - added SCIPincludeIISfinder(), SCIPincludeIISfinderBasic(), SCIPsetIISfinderCopy(), SCIPsetIISfinderFree(), SCIPgenerateIIS(), SCIPfindIISfinder(), SCIPgetIISfinders(), SCIPgetNIISfinders(), SCIPsetIISfinderPriority(), SCIPgetIIS()
-- added SCIPiisfinderGetName(), SCIPiisfinderGetData(), SCIPiisfinderGetDesc(), SCIPiisfinderGetPriority(), SCIPiisfinderSetData(), SCIPiisfinderGetTime(), SCIPiisfinderInfoMessage(), SCIPiisGetTime(), SCIPiisIsSubscipInfeasible(), SCIPiisIsSubscipIrreducible(), SCIPiisGetNNodes(), SCIPiisSetSubscipInfeasible(), SCIPiisSetSubscipIrreducible(), SCIPiisAddNNodes(), SCIPiisGetRandnumgen(), SCIPiisGetSubscip()
+- added SCIPiisfinderGetName(), SCIPiisfinderGetData(), SCIPiisfinderGetDesc(), SCIPiisfinderGetPriority(), SCIPiisfinderSetData(), SCIPiisfinderGetTime(), SCIPiisfinderInfoMessage(), SCIPiisGetTime(), SCIPiisIsSubscipInfeasible(), SCIPiisIsSubscipIrreducible(), SCIPiisGetNNodes(), SCIPiisSetSubscipInfeasible(), SCIPiisSetSubscipIrreducible(), SCIPiisAddNNodes(), SCIPiisGetRandnumgen(), SCIPiisGetSubscip(), SCIPiisGreedyMinimize()
 - functions to create, modify, and free SCIP_DATATREE objects and to print as JSON or table (see pub_datatree.h and scip_datatree.h)
 - SCIPcollect*Statistics() for every SCIPprint*Statistics() in scip_solvingstats.h
 - SCIPprintStatisticsJson() to output a JSON string of the table statistics data
@@ -342,6 +344,8 @@ Fixed bugs
 - disable objective limit during lexicographic dual minimization to keep feasibility status
 - declare infinite bound inference infeasible in SCIPinferVarLbCons() and SCIPinferVarUbCons() to maintain correct loose LP values
 - fixed update of consssorted flags in a variable expressions data when adding an additional constraint using this variable
+- corrected computation of number of variables affected by symmetry
+- fixed computation of symmetry group size
 
 Build system
 ------------

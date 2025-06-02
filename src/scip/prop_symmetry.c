@@ -2194,9 +2194,9 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
    propdata->nmovedintpermvars = 0;
    propdata->nmovedcontpermvars = 0;
 
-   for (p = 0; p < propdata->nperms; ++p)
+   for (v = 0; v < propdata->npermvars; ++v)
    {
-      for (v = 0; v < propdata->npermvars; ++v)
+      for (p = 0; p < propdata->nperms; ++p)
       {
          if ( propdata->perms[p][v] != v )
          {
@@ -2217,6 +2217,7 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
                SCIPerrorMessage("unknown variable type\n");
                return SCIP_INVALIDDATA;
             } /*lint !e788*/
+            break;
          }
       }
    }

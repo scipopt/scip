@@ -85,7 +85,9 @@ SCIP_Bool checkAndUpdateFilesize(
 {
    if( certificate->filesize < certificate->maxfilesize )
       certificate->filesize += nchars/(SCIP_MB_TO_CHAR_RATE);
-   return certificate->filesize < certificate->maxfilesize;
+   if( certificate->filesize < certificate->maxfilesize )
+      return TRUE;
+   return FALSE;
 }
 
 /** checks whether node is a left node or not */
@@ -816,7 +818,7 @@ SCIP_RETCODE SCIPcertificateExit(
 
    if( certificate->origfile != NULL )
    {
-      SCIP_Bool printingaborted = !checkAndUpdateFilesize(certificate, 0);
+      SCIP_Bool printingaborted = checkAndUpdateFilesize(certificate, 0) ? FALSE : TRUE;
 
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
          "closing certificate file (wrote approx. %.1f MB%s)\n", certificate->filesize,
@@ -896,8 +898,9 @@ SCIP_Bool SCIPcertificateIsEnabled(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    )
 {
-   return certificate != NULL && certificate->transfile != NULL && certificate->origfile != NULL
-      && certificate->derivationfile != NULL;
+   if( certificate != NULL && certificate->transfile != NULL && certificate->origfile != NULL && certificate->derivationfile != NULL )
+      return TRUE;
+   return FALSE;
 }
 
 /** returns current certificate file size in MB */
@@ -935,26 +938,26 @@ SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
    SCIP_Bool consistent;
 
    if( !SCIPcertificateIsEnabled(certificate) )
-      return true;
+      return TRUE;
 
    assert(certificate != NULL);
 
    consistent = certificate->lastinfo->isbound;
-   consistent = consistent && certificate->lastinfo->varindex == SCIPvarGetCertificateIndex(var);
+   consistent = consistent && certificate->lastinfo->varindex == SCIPvarGetCertificateIndex(var); /*lint !e1785*/
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
-      consistent = consistent && certificate->lastinfo->boundtype == SCIP_BOUNDTYPE_LOWER;
-      consistent = consistent && SCIPrationalRoundReal(certificate->lastinfo->boundval, SCIP_R_ROUND_DOWNWARDS) >= newbound;
+      consistent = consistent && certificate->lastinfo->boundtype == SCIP_BOUNDTYPE_LOWER;  /*lint !e1785*/
+      consistent = consistent && SCIPrationalRoundReal(certificate->lastinfo->boundval, SCIP_R_ROUND_DOWNWARDS) >= newbound; /*lint !e1785*/
    }
    else
    {
-      consistent = consistent && certificate->lastinfo->boundtype == SCIP_BOUNDTYPE_UPPER;
-      consistent = consistent && SCIPrationalRoundReal(certificate->lastinfo->boundval, SCIP_R_ROUND_UPWARDS) <= newbound;
+      consistent = consistent && certificate->lastinfo->boundtype == SCIP_BOUNDTYPE_UPPER; /*lint !e1785*/
+      consistent = consistent && SCIPrationalRoundReal(certificate->lastinfo->boundval, SCIP_R_ROUND_UPWARDS) <= newbound; /*lint !e1785*/
    }
-   consistent = consistent && (!needsglobal || certificate->lastinfo->isglobal);
-   consistent = consistent && certificate->lastinfo->certificateindex == certificate->indexcounter - 1;
-   return consistent;
+   consistent = consistent && (!needsglobal || certificate->lastinfo->isglobal); /*lint !e1785*/
+   consistent = consistent && certificate->lastinfo->certificateindex == certificate->indexcounter - 1; /*lint !e1785*/
 
+   return consistent;
 }
 #endif
 
@@ -1220,8 +1223,6 @@ SCIP_RETCODE SCIPcertificatePrintProofRational(
 {
    int len = SCIPrationalStrLen(val) + 1;
    char* buffer = NULL;
-
-   assert(len <= INT_MAX);
 
    /* check whether certificate output should be created */
    if( !SCIPcertificateIsEnabled(certificate) )
@@ -3350,7 +3351,7 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
                SCIPrationalDiv(ub, ub, var->exactdata->aggregate.scalar);
 
             assert(SCIPrationalIsZero(var->exactdata->aggregate.constant));
-            SCIP_Bool swapBounds = !SCIPrationalIsPositive(var->exactdata->aggregate.scalar);
+            SCIP_Bool swapBounds = SCIPrationalIsPositive(var->exactdata->aggregate.scalar) ? FALSE: TRUE;
             SCIP_CALL( SCIPcertificatePrintCutoffConflictingBounds(scip, certificate, var->data.aggregate.var, swapBounds ? ub : lb, swapBounds ? lb : ub,  swapBounds ? ubindex : lbindex, swapBounds ? lbindex : ubindex) );
             if( lb != NULL )
                SCIPrationalMult(lb, lb, var->exactdata->aggregate.scalar);
