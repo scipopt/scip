@@ -81,12 +81,19 @@ struct SCIP_NlpiProblem
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
-
 /** Implementations of CONOPT callbacks */
 
-/* TODO implement solution routine */
+/* CONOPT callback to pass solution back to SCIP */
+static int COI_CALLCONV Std_Solution(const double XVAL[], const double XMAR[], const int XBAS[], const int XSTA[],
+      const double YVAL[], const double YMAR[], const int YBAS[], const int YSTA[], int NUMVAR, int NUMCON,
+      void* USRMEM)
+{
+   /* TODO pass solution to SCIP */
 
+   return 0;
+}
+
+/* CONOPT callback to pass variable bounds, constraint types and sides and Jacobian structure to CONOPT */
 static int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPPER[], int VSTA[], int TYPE[], double RHS[],
       int ESTA[], int COLSTA[], int ROWNO[], double VALUE[], int NLFLAG[], int NUMVAR, int NUMCON, int NUMNZ, void* USRMEM)
 {
@@ -96,6 +103,7 @@ static int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPP
    SCIP_NLPIORACLE* oracle;
    int norigvars = SCIPnlpiOracleGetNVars(oracle);
    int nslackvars = 0;
+   int nlnnz;
    const SCIP_Bool* jacrownlflags;
 
    assert(problem != NULL);
@@ -117,7 +125,7 @@ static int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPP
 
    /* TODO check if VSTA is needed - seems to not be the case */
 
-   for( int i = 0; i < NUMCON; i++ )
+   for( int i = 0; i < NUMCON-1; i++ )
    {
       SCIP_Real lhs = SCIPnlpiOracleGetConstraintLhs(oracle, i);
       SCIP_Real rhs = SCIPnlpiOracleGetConstraintRhs(oracle, i);
@@ -153,10 +161,14 @@ static int COI_CALLCONV Tut_ReadMatrix(double LOWER[], double CURR[], double UPP
       }
    }
    assert(norigvars + nslackvars == NUMVAR);
+   /* the last constraint is the objective */
+   TYPE[NUMCON-1] = 3; /* objective must be a free row */
+   RHS[NUMCON-1] = 0.0;
 
    /* Jacobian information */
 
-   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->scip, oracle, NULL, NULL, NULL, NULL, NULL, &jacrownlflags) );
+   /* TODO make it so that the column representation is only composed when asked for */
+   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->scip, oracle, NULL, NULL, NULL, NULL, NULL, &jacrownlflags, &nlnnz) );
 
    for( int i = 0; i < NUMNZ; i++ )
       NLFLAG[i] = jacrownlflags[i];
@@ -282,6 +294,14 @@ static int COI_CALLCONV Std_Status(int MODSTA, int SOLSTA, int ITER, double OBJV
    return 0;
 }
 
+static int COI_CALLCONV Tut_FDEval(const double X[], double* G, double JAC[], int ROWNO, const int JACNUM[], int MODE,
+      int IGNERR, int* ERRCNT, int NUMVAR, int NUMJAC, int THREAD, void* USRMEM )
+{
+
+
+   return 0;
+}
+
 /* NLPI local methods */
 
 /** sets the solstat and termstat to unknown and other, resp. */
@@ -328,7 +348,7 @@ static SCIP_RETCODE initConopt(
    /* inform CONOPT about problem sizes */
 
    COI_Error += COIDEF_NumVar(problem->CntVect, SCIPnlpiOracleGetNVars(problem->oracle) + nrangeconss);
-   COI_Error += COIDEF_NumCon(problem->CntVect, nconss);
+   COI_Error += COIDEF_NumCon(problem->CntVect, nconss + 1); /* objective counts as another constraint here */
 
    /* jacobian information */
    SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &jacoffset, NULL, NULL, NULL, NULL, NULL, &nnlnz) );
@@ -346,11 +366,10 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_ObjCon(problem->CntVect, nconss); /* TODO: decide which index to use for the objective constraint; nconss? */
 
    /* register callback routines */
-
    COI_Error += COIDEF_Message(problem->CntVect, &Std_Message);
    COI_Error += COIDEF_ErrMsg(problem->CntVect, &Std_ErrMsg);
    COI_Error += COIDEF_Status(problem->CntVect, &Std_Status);
-   // COI_Error +=  COIDEF_Solution  ( CntVect, &Std_Solution );  /* Register the callback Solution    */
+   COI_Error += COIDEF_Solution(problem->CntVect, &Std_Solution);
    COI_Error += COIDEF_ReadMatrix(problem->CntVect, &Tut_ReadMatrix);
    // COI_Error +=  COIDEF_FDEval    ( CntVect, &Tut_FDEval);     /* Register the callback FDEval      */
 
