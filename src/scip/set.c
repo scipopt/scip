@@ -133,7 +133,7 @@
 
 /* Conflict Analysis (conflict graph) */
 
-#define SCIP_DEFAULT_CONF_MAXSTORESIZE    10000 /**< maximal size of the conflict pool */
+#define SCIP_DEFAULT_CONF_MAXSTORESIZE    12000 /**< maximal size of the conflict pool */
 
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
@@ -173,7 +173,7 @@
 
 /* Conflict Analysis (generalized resolution) */
 
-#define SCIP_DEFAULT_CONF_MAXVARSFRACRES   0.15 /**< maximal fraction of variables involved in a resolution conflict constraint */
+#define SCIP_DEFAULT_CONF_MAXVARSFRACRES   0.20 /**< maximal fraction of variables involved in a resolution conflict constraint */
 #define SCIP_DEFAULT_CONF_RESFUIPLEVELS       1 /**< number of depth levels up to which first UIP's are used in resolution conflict
                                                  *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_CONF_FIXANDCONTINUE  FALSE /**< should we fix unresolvable bound changes and continue? */
