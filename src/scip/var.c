@@ -2350,6 +2350,13 @@ SCIP_RETCODE varCreate(
    assert(stat != NULL);
    assert(vartype != SCIP_DEPRECATED_VARTYPE_IMPLINT);
 
+   /* forbid infinite objective values */
+   if( SCIPsetIsInfinity(set, REALABS(obj)) )
+   {
+      SCIPerrorMessage("invalid objective value: objective value is infinite\n");
+      return SCIP_INVALIDDATA;
+   }
+
    /* exact bounds may follow later */
    if( !set->exact_enable )
    {
