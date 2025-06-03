@@ -1215,6 +1215,7 @@ SCIP_RETCODE readColsExact(
    int*                  nvarnames           /**< the number of stored variable names, or NULL */
    )
 {
+   SCIP_RETCODE retcode = SCIP_OKAY;
    char          colname[MPS_MAX_NAMELEN] = { '\0' };
    SCIP_CONS*    cons;
    SCIP_VAR*     var;
@@ -1298,7 +1299,7 @@ SCIP_RETCODE readColsExact(
 
       if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
       {
-         SCIP_CALL( SCIPchgVarObjExact(scip, var, val) );
+         SCIP_CALL_TERMINATE( retcode, SCIPchgVarObjExact(scip, var, val), TERMINATE );
       }
       else
       {
@@ -1313,7 +1314,7 @@ SCIP_RETCODE readColsExact(
                SCIPwarningMessage(scip, "Coefficient of variable <%s> in constraint <%s> contains infinite value <%e>,"
                   " consider adjusting SCIP infinity.\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPrationalGetReal(val));
             }
-            SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, var, val) );
+            SCIP_CALL_TERMINATE( retcode, SCIPaddCoefExactLinear(scip, cons, var, val), TERMINATE );
          }
       }
       if( mpsinputField5(mpsi) != NULL )
@@ -1325,7 +1326,7 @@ SCIP_RETCODE readColsExact(
 
          if( !strcmp(mpsinputField4(mpsi), mpsinputObjname(mpsi)) )
          {
-            SCIP_CALL( SCIPchgVarObjExact(scip, var, val) );
+            SCIP_CALL_TERMINATE( retcode, SCIPchgVarObjExact(scip, var, val), TERMINATE );
          }
          else
          {
@@ -1336,12 +1337,18 @@ SCIP_RETCODE readColsExact(
             }
             else if( !SCIPrationalIsZero(val) )
             {
-               SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, var, val) );
+               SCIP_CALL_TERMINATE( retcode, SCIPaddCoefExactLinear(scip, cons, var, val), TERMINATE );
             }
          }
       }
+   TERMINATE:
       /* free rational buffer */
       SCIPrationalFreeBuffer(SCIPbuffer(scip), &val);
+      if( retcode != SCIP_OKAY )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &var) );
+         return retcode;
+      }
    }
    mpsinputSyntaxerror(mpsi);
 
@@ -3589,8 +3596,6 @@ SCIP_RETCODE readMps(
    if( mpsinputSection(mpsi) != MPS_ENDATA )
       mpsinputSyntaxerror(mpsi);
 
-   SCIPfclose(fp);
-
    error = mpsinputHasError(mpsi);
 
    if( !error )
@@ -3600,6 +3605,7 @@ SCIP_RETCODE readMps(
 
  TERMINATE:
    mpsinputFree(scip, &mpsi);
+   SCIPfclose(fp);
 
    if( error )
       return SCIP_READERROR;
@@ -3714,8 +3720,6 @@ SCIP_RETCODE readMpsExact(
    if( mpsinputSection(mpsi) != MPS_ENDATA )
       mpsinputSyntaxerror(mpsi);
 
-   SCIPfclose(fp);
-
    error = mpsinputHasError(mpsi);
 
    if( !error )
@@ -3725,6 +3729,7 @@ SCIP_RETCODE readMpsExact(
 
  TERMINATE:
    mpsinputFree(scip, &mpsi);
+   SCIPfclose(fp);
 
    if( error )
       return SCIP_READERROR;
