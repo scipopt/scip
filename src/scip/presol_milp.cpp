@@ -458,12 +458,20 @@ SCIP_RETCODE setupPresolve(
    if( data->enablesparsify )
       presolve.addPresolveMethod( uptr( new Sparsify<T>() ) );
 
-   /* set tolerances */
-   presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
-   presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
+   /* set numerical tolerances */
 #if PAPILO_APIVERSION >= 3
    presolve.getPresolveOptions().useabsfeas = false;
 #endif
+   if( SCIPisExact(scip) )
+   {
+      presolve.getPresolveOptions().epsilon = 0.0;
+      presolve.getPresolveOptions().feastol = 0.0;
+   }
+   else
+   {
+      presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
+      presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
+   }
 
 #ifndef SCIP_PRESOLLIB_ENABLE_OUTPUT
    /* adjust output settings of presolve library */
