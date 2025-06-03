@@ -513,6 +513,7 @@ set(pairs_Issue
     "instances/Issue/3908.cip\;-20317.1313131313\;subrestart"
     "instances/Issue/3911.cip\;-30386.2338470598\;lexdual"
     "instances/Issue/3917.cip\;+infinity\;default"
+    "instances/Issue/3920.cip\;0\;presolving_milp_off"
 )
 
 #
