@@ -4473,7 +4473,7 @@ SCIP_RETCODE SCIPreadLp(
    SCIPfreeBlockMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN);
    SCIPfreeBlockMemoryArray(scip, &lpinput.linebuf, lpinput.linebufsize);
 
-   if( retcode == SCIP_PLUGINNOTFOUND )
+   if( retcode == SCIP_PLUGINNOTFOUND || retcode == SCIP_INVALIDDATA )
       retcode = SCIP_READERROR;
 
    /* check for correct return value */
