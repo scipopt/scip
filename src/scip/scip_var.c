@@ -311,7 +311,7 @@ SCIP_RETCODE SCIPaddVarExactData(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarExactData", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* forbid infinite objective function values */
-   if( obj != NULL && SCIPrationalIsAbsInfinity(obj) )
+   if( (obj != NULL && SCIPrationalIsAbsInfinity(obj)) || (obj == NULL && SCIPisInfinity(scip, REALABS(SCIPvarGetObj(var)))) )
    {
       SCIPerrorMessage("invalid objective function value: value is infinite\n");
       return SCIP_INVALIDDATA;
