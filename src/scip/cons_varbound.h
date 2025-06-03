@@ -195,7 +195,7 @@ SCIP_ROW* SCIPgetRowVarbound(
 
 /** creates and returns the row of the given varbound constraint */
 SCIP_EXPORT
-SCIP_ROW* SCIPcreateRowVarbound(
+SCIP_ROW* SCIPinitRowVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );

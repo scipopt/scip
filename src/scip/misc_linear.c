@@ -623,7 +623,7 @@ SCIP_ROW* SCIPconsCreateRow(
       if (row != NULL)
          return row;
       else
-         return SCIPcreateRowLinear(scip, cons);
+         return SCIPinitRowLinear(scip, cons);
    }
    else if( strcmp(conshdlrname, "setppc") == 0 )
    {
@@ -631,7 +631,7 @@ SCIP_ROW* SCIPconsCreateRow(
       if (row != NULL)
          return row;
       else
-         return SCIPcreateRowSetppc(scip, cons);
+         return SCIPinitRowSetppc(scip, cons);
    }
    else if( strcmp(conshdlrname, "logicor") == 0 )
    {
@@ -639,7 +639,7 @@ SCIP_ROW* SCIPconsCreateRow(
       if (row != NULL)
          return row;
       else
-         return SCIPcreateRowLogicor(scip, cons);
+         return SCIPinitRowLogicor(scip, cons);
    }
    else if( strcmp(conshdlrname, "knapsack") == 0 )
    {
@@ -647,7 +647,7 @@ SCIP_ROW* SCIPconsCreateRow(
       if (row != NULL)
          return row;
       else
-         return SCIPcreateRowKnapsack(scip, cons);
+         return SCIPinitRowKnapsack(scip, cons);
    }
    else if( strcmp(conshdlrname, "varbound") == 0 )
    {
@@ -655,7 +655,7 @@ SCIP_ROW* SCIPconsCreateRow(
       if (row != NULL)
          return row;
       else
-         return SCIPcreateRowVarbound(scip, cons);
+         return SCIPinitRowVarbound(scip, cons);
    }
 
    return NULL;

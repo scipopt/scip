@@ -234,7 +234,6 @@ struct SCIP_Set
    int                   conf_maxstoresize;  /**< maximal size of conflict store */
    int                   conf_reconvlevels;  /**< number of depth levels up to which UIP reconvergence constraints are
                                               *   generated (-1: generate reconvergence constraints in all depth levels) */
-   int                   conf_resolutioncons;/**< number of resolution constraints to add (-1: add every conflict constraint) */
    SCIP_Bool             conf_enable;        /**< should conflict analysis be enabled? */
    SCIP_Bool             conf_cleanbnddepend;/**< should conflicts related to an old cutoff bound be removed? */
    SCIP_Bool             conf_useprop;       /**< should propagation conflict analysis be used? (uses conflict graph only) */

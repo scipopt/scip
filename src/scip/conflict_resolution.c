@@ -3321,10 +3321,10 @@ SCIP_RETCODE conflictAnalyzeResolution(
    {
       int nconstoadd;
 
-      nconstoadd = (set->conf_resolutioncons > 0) ? MIN(set->conf_resolutioncons, conflict->nconflictrows) : conflict->nconflictrows;
+      nconstoadd = (set->conf_resfuiplevels > 0) ? MIN(set->conf_resfuiplevels, conflict->nconflictrows) : conflict->nconflictrows;
 
       SCIP_CALL(addConflictRows(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-            eventfilter,cliquetable, nconstoadd, nconss, nconfvars));
+            eventfilter, cliquetable, nconstoadd, nconss, nconfvars));
    }
 
    freeConflictResources(conflict, blkmem, set, fixbounds, fixsides);

@@ -115,10 +115,10 @@
 #define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USEGENRES        TRUE /**< should generalized resolution conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USEINFLP          'b' /**< should infeasible LP conflict analysis be used?
-                                                 *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray, 'g'eneralized resolution and dual ray)
+                                                 *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
                                                  */
 #define SCIP_DEFAULT_CONF_USEBOUNDLP        'b' /**< should bound exceeding LP conflict analysis be used?
-                                                 *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual solution, 'g'eneralized resolution and dual ray)
+                                                 *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual solution)
                                                  */
 #define SCIP_DEFAULT_CONF_USESB            TRUE /**< should infeasible/bound exceeding strong branching conflict analysis
                                                  *   be used? */
@@ -174,7 +174,6 @@
 /* Conflict Analysis (generalized resolution) */
 
 #define SCIP_DEFAULT_CONF_MAXVARSFRACRES   0.15 /**< maximal fraction of variables involved in a resolution conflict constraint */
-#define SCIP_DEFAULT_CONF_RESOLUTIONCONS      1 /**< number of resolution constraints to add (-1: add every conflict constraint) */
 #define SCIP_DEFAULT_CONF_RESFUIPLEVELS       1 /**< number of depth levels up to which first UIP's are used in resolution conflict
                                                  *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_CONF_FIXANDCONTINUE  FALSE /**< should we fix unresolvable bound changes and continue? */
@@ -1507,11 +1506,6 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/resfuiplevels",
          "number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)",
          &(*set)->conf_resfuiplevels, TRUE, SCIP_DEFAULT_CONF_RESFUIPLEVELS, -1, INT_MAX,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "conflict/resolutioncons",
-         "number of resolution constraints to add (-1: add every conflict constraint)",
-         &(*set)->conf_resolutioncons, TRUE, SCIP_DEFAULT_CONF_RESOLUTIONCONS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "conflict/interconss",
