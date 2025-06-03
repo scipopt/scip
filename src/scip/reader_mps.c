@@ -1308,12 +1308,7 @@ SCIP_RETCODE readColsExact(
             mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_FULL);
          else if( !SCIPrationalIsZero(val) )
          {
-            /* warn the user in case the coefficient is infinite */
-            if( SCIPrationalIsAbsInfinity(val) )
-            {
-               SCIPwarningMessage(scip, "Coefficient of variable <%s> in constraint <%s> contains infinite value <%e>,"
-                  " consider adjusting SCIP infinity.\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPrationalGetReal(val));
-            }
+            /* this method prints a warning in case the coefficient is infinite */
             SCIP_CALL_TERMINATE( retcode, SCIPaddCoefExactLinear(scip, cons, var, val), TERMINATE );
          }
       }
