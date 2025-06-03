@@ -1939,7 +1939,6 @@ void checkRedundancySide(
    SCIP_Real valuey2;
    SCIP_Bool* redundant0;
    SCIP_Bool* redundant1;
-   SCIP_Real eps = SCIPepsilon(scip);
 
    assert(scip != NULL);
    assert(var != NULL);
@@ -1948,8 +1947,8 @@ void checkRedundancySide(
    assert(cons0sidered != NULL);
    assert(cons1sidered != NULL);
 
-   *cons0sidered = SCIPisInfinity(scip, REALABS(side0));
-   *cons1sidered = SCIPisInfinity(scip, REALABS(side1));
+   *cons0sidered = SCIPisInfinity(scip, islhs ? -side0 : side0);
+   *cons1sidered = SCIPisInfinity(scip, islhs ? -side1 : side1);
    *sideequal = FALSE;
 
    if( islhs )
@@ -1994,7 +1993,7 @@ void checkRedundancySide(
       }
 
       /* calculate important values for variables */
-      if( SCIPisPositive(scip, coef0) )
+      if( coef0 > 0.0 )
       {
          valuex1 = MIN(boundvaluex1, ubvar);
          valuex1 = MAX(valuex1, lbvar);
@@ -2004,10 +2003,8 @@ void checkRedundancySide(
          /* if variable is of integral type make values integral too */
          if( SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS )
          {
-            if( !SCIPisFeasIntegral(scip, valuex1) )
-               valuex1 = SCIPfeasFloor(scip, valuex1);
-            if( !SCIPisFeasIntegral(scip, valuex2) )
-               valuex2 = SCIPfeasCeil(scip, valuex2);
+            valuex1 = SCIPfeasFloor(scip, valuex1);
+            valuex2 = SCIPfeasCeil(scip, valuex2);
          }
       }
       else
@@ -2020,10 +2017,8 @@ void checkRedundancySide(
          /* if variable is of integral type make values integral too */
          if( SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS )
          {
-            if( !SCIPisFeasIntegral(scip, valuex1) )
-               valuex1 = SCIPfeasCeil(scip, valuex1);
-            if( !SCIPisFeasIntegral(scip, valuex2) )
-               valuex2 = SCIPfeasFloor(scip, valuex2);
+            valuex1 = SCIPfeasCeil(scip, valuex1);
+            valuex2 = SCIPfeasFloor(scip, valuex2);
          }
       }
 
@@ -2032,9 +2027,9 @@ void checkRedundancySide(
       valuey2 = (side1 - valuex1)/coef1;
 
       /* determine redundancy of one constraints side */
-      if( valuey1 - valuey2 <= eps )
+      if( SCIPisEQ(scip, valuey1, valuey2) )
          *sideequal = TRUE;
-      else if( SCIPisPositive(scip, coef0) )
+      else if( coef0 > 0.0 )
       {
          if( valuey1 < valuey2 )
             *redundant1 = TRUE;
@@ -2054,58 +2049,66 @@ void checkRedundancySide(
       valuey2 = (side1 - valuex2)/coef1;
 
       /* determine redundancy of one constraints side by checking for the first valuex2 */
-      if( SCIPisPositive(scip, coef0) )
+      if( coef0 > 0.0 )
       {
-         /* if both constraints are weaker than the other on one value, we have no redundancy */
-         if( (*redundant1 && valuey1 > valuey2) || (*redundant0 && valuey1 < valuey2) )
+         /* if both constraints are equal on one value, only consider the other value */
+         if( *sideequal )
          {
-            *sideequal = FALSE;
-            *redundant0 = FALSE;
-            *redundant1 = FALSE;
-            return;
-         }
-         else if( *sideequal )
-         {
-            if( valuey1 + eps < valuey2 )
+            assert(!(*redundant0));
+            assert(!(*redundant1));
+
+            if( SCIPisLT(scip, valuey1, valuey2) )
             {
                *sideequal = FALSE;
                *redundant1 = TRUE;
             }
-            else if( valuey1 + eps > valuey2 )
+            else if( SCIPisGT(scip, valuey1, valuey2) )
             {
                *sideequal = FALSE;
                *redundant0 = TRUE;
             }
+         }
+         /* if both constraints are weaker than the other on one value, we have no redundancy */
+         else if( ( *redundant1 && SCIPisGT(scip, valuey1, valuey2) )
+            || ( *redundant0 && SCIPisLT(scip, valuey1, valuey2) ) )
+         {
+            *redundant0 = FALSE;
+            *redundant1 = FALSE;
+            return;
          }
       }
       else
       {
-         /* if both constraints are weaker than the other one on one value, we have no redundancy */
-         if( (*redundant1 && valuey1 < valuey2) || (*redundant0 && valuey1 > valuey2) )
+         /* if both constraints are equal on one value, only consider the other value */
+         if( *sideequal )
          {
-            *sideequal = FALSE;
-            *redundant0 = FALSE;
-            *redundant1 = FALSE;
-            return;
-         }
-         else if( *sideequal )
-         {
-            if( valuey1 + eps < valuey2 )
+            assert(!(*redundant0));
+            assert(!(*redundant1));
+
+            if( SCIPisLT(scip, valuey1, valuey2) )
             {
                *sideequal = FALSE;
                *redundant0 = TRUE;
             }
-            else if( valuey1 + eps > valuey2 )
+            else if( SCIPisGT(scip, valuey1, valuey2) )
             {
                *sideequal = FALSE;
                *redundant1 = TRUE;
             }
+         }
+         /* if both constraints are weaker than the other one on one value, we have no redundancy */
+         else if( ( *redundant0 && SCIPisGT(scip, valuey1, valuey2) )
+            || ( *redundant1 && SCIPisLT(scip, valuey1, valuey2) ) )
+         {
+            *redundant0 = FALSE;
+            *redundant1 = FALSE;
+            return;
          }
       }
       assert(*sideequal || *redundant0 || *redundant1);
 
       /* calculate feasibility domain values for variable y concerning these both constraints */
-      if( SCIPisPositive(scip, coef0) )
+      if( coef0 > 0.0 )
       {
 	 if( islhs )
 	 {
@@ -2123,10 +2126,8 @@ void checkRedundancySide(
          valuey2 = MAX(boundvaluey2, lbvbdvar);
          valuey2 = MIN(valuey2, ubvbdvar);
 
-         if( !SCIPisFeasIntegral(scip, valuey1) )
-            valuey1 = SCIPfeasFloor(scip, valuey1);
-         if( !SCIPisFeasIntegral(scip, valuey2) )
-            valuey2 = SCIPfeasCeil(scip, valuey2);
+         valuey1 = SCIPfeasFloor(scip, valuey1);
+         valuey2 = SCIPfeasCeil(scip, valuey2);
       }
       else
       {
@@ -2146,11 +2147,8 @@ void checkRedundancySide(
          valuey2 = MIN(boundvaluey2, ubvbdvar);
          valuey2 = MAX(valuey2, lbvbdvar);
 
-         /* if variable is of integral type make values integral too */
-         if( !SCIPisFeasIntegral(scip, valuey1) )
-            valuey1 = SCIPfeasCeil(scip, valuey1);
-         if( !SCIPisFeasIntegral(scip, valuey2) )
-            valuey2 = SCIPfeasFloor(scip, valuey2);
+         valuey1 = SCIPfeasCeil(scip, valuey1);
+         valuey2 = SCIPfeasFloor(scip, valuey2);
       }
 
       /* calculate resulting values of variable x by setting y to valuey1 */
@@ -2158,51 +2156,57 @@ void checkRedundancySide(
       valuex2 = side1 - valuey1*coef1;
 
       /* determine redundancy of one constraints side by checking for the first valuey1 */
-      if( (*redundant1 && valuex1 > valuex2) || (*redundant0 && valuex1 < valuex2) )
-      {
-         *sideequal = FALSE;
-         *redundant0 = FALSE;
-         *redundant1 = FALSE;
-         return;
-      }
       if( *sideequal )
       {
-         if( valuex1 + eps < valuex2 )
+         assert(!(*redundant0));
+         assert(!(*redundant1));
+
+         if( SCIPisLT(scip, valuex1, valuex2) )
          {
             *sideequal = FALSE;
             *redundant1 = TRUE;
          }
-         else if( valuex1 + eps > valuex2 )
+         else if( SCIPisGT(scip, valuex1, valuex2) )
          {
             *sideequal = FALSE;
             *redundant0 = TRUE;
          }
+      }
+      else if( ( *redundant1 && SCIPisGT(scip, valuex1, valuex2) )
+         || ( *redundant0 && SCIPisLT(scip, valuex1, valuex2) ) )
+      {
+         *redundant0 = FALSE;
+         *redundant1 = FALSE;
+         return;
       }
 
       /* calculate resulting values of variable x by setting y to valuey2 */
       valuex1 = side0 - valuey2*coef0;
       valuex2 = side1 - valuey2*coef1;
 
-      /* determine redundancy of one constraints side by checking for the first valuey1 */
-      if( (*redundant1 && valuex1 > valuex2) || (*redundant0 && valuex1 < valuex2) )
-      {
-         *sideequal = FALSE;
-         *redundant0 = FALSE;
-         *redundant1 = FALSE;
-         return;
-      }
+      /* determine redundancy of one constraints side by checking for the second valuey2 */
       if( *sideequal )
       {
-         if( valuex1 + eps < valuex2 )
+         assert(!(*redundant0));
+         assert(!(*redundant1));
+
+         if( SCIPisLT(scip, valuex1, valuex2) )
          {
             *sideequal = FALSE;
             *redundant1 = TRUE;
          }
-         else if( valuex1 + eps > valuex2 )
+         else if( SCIPisGT(scip, valuex1, valuex2) )
          {
             *sideequal = FALSE;
             *redundant0 = TRUE;
          }
+      }
+      else if( ( *redundant1 && SCIPisGT(scip, valuex1, valuex2) )
+         || ( *redundant0 && SCIPisLT(scip, valuex1, valuex2) ) )
+      {
+         *redundant0 = FALSE;
+         *redundant1 = FALSE;
+         return;
       }
       assert(*redundant0 || *redundant1 || *sideequal);
    }
