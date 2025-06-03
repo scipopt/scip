@@ -1557,8 +1557,8 @@ SCIP_RETCODE readConstraints(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean");
 #endif
       retcode = SCIPcreateConsPseudoboolean(scip, &cons, name, linvars, nlincoefs, lincoefs, terms, ntermcoefs,
-            ntermvars, termcoefs, indvar, weight, issoftcons, lhs, rhs, initial, separate, enforce, check, propagate,
-            local, modifiable, dynamic, removable, FALSE);
+         ntermvars, termcoefs, indvar, weight, issoftcons, lhs, rhs, initial, separate, enforce, check, propagate, /*lint !e644*/
+         local, modifiable, dynamic, removable, FALSE);
       if( retcode != SCIP_OKAY )
          goto TERMINATE;
    }
@@ -1572,8 +1572,8 @@ SCIP_RETCODE readConstraints(
 #endif
       if( !SCIPisExact(scip) )
       {
-         retcode = SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
+         retcode = SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs, /*lint !e644*/
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
       }
       else
       {
@@ -1584,8 +1584,8 @@ SCIP_RETCODE readConstraints(
          SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &lincoefsrat, nlincoefs) );
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhsrat) );
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhsrat) );
-         SCIPrationalSetReal(lhsrat, lhs);
-         SCIPrationalSetReal(rhsrat, rhs);
+         SCIPrationalSetReal(lhsrat, lhs); /*lint !e644*/
+         SCIPrationalSetReal(rhsrat, rhs); /*lint !e644*/
          for( int i = 0; i < nlincoefs; ++i )
             SCIPrationalSetReal(lincoefsrat[i], lincoefs[i]);
          retcode = SCIPcreateConsExactLinear(scip, &cons, name, nlincoefs, linvars, lincoefsrat, lhsrat, rhsrat,
@@ -2317,9 +2317,12 @@ SCIP_RETCODE writeOpbObjective(
    SCIP_VAR**const*const andvars,            /**< corresponding array of and-variables */
    int const*const       nandvars,           /**< array of numbers of corresponding and-variables */
    SCIP_OBJSENSE const   objsense,           /**< objective sense */
+   SCIP_Real const       objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_Real const       objscale,           /**< scalar applied to objective function; external objective value is
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real const       objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_RATIONAL*const   objoffsetexact,     /**< exact objective offset from bound shifting and fixing */
+   SCIP_RATIONAL*const   objscaleexact,      /**< exact scalar applied to objective function; external objective value is
+                                              *   extobjexact = objsense * objscaleexact * (intobjexact + objoffsetexact) */
    char const*const      multisymbol,        /**< the multiplication symbol to use between coefficient and variable */
    SCIP_Bool const       existands,          /**< does some and-constraints exist? */
    SCIP_Bool const       transformed         /**< TRUE iff problem is the transformed problem */
@@ -2626,7 +2629,8 @@ SCIP_RETCODE writeOpbObjective(
          return SCIP_OKAY;
       }
 
-      if( !SCIPisZero(scip, SCIPvarGetObj(var)) )
+      /**@todo determine exact multiplier */
+      if( !SCIPisExact(scip) && !SCIPisZero(scip, SCIPvarGetObj(var)) )
       {
          objective = TRUE;
          while( !SCIPisIntegral(scip, SCIPvarGetObj(var) * mult) )
@@ -2637,15 +2641,42 @@ SCIP_RETCODE writeOpbObjective(
       }
    }
 
+   /* there exists an objective function */
    if( objective )
    {
-      /* opb format supports only minimization; therefore, a maximization problem has to be converted */
-      if( ( objsense == SCIP_OBJSENSE_MAXIMIZE ) != ( objscale < 0.0 ) )
-         mult *= -1;
+      /* write exact objective */
+      if( SCIPisExact(scip) )
+      {
+         SCIP_RATIONAL* obj;
 
-      /* there exist a objective function*/
-      SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale / mult);
-      SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n", objoffset * mult);
+         /* opb format supports only minimization; therefore, a maximization problem has to be converted */
+         if( (objsense == SCIP_OBJSENSE_MAXIMIZE) != (SCIPrationalIsNegative(objscaleexact)) )
+            mult *= -1;
+         assert(ABS(mult) == 1);
+
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &obj) );
+
+         SCIPrationalDivReal(obj, objscaleexact, (SCIP_Real)mult);
+         SCIPinfoMessage(scip, file, "*   Obj. scale       : ");
+         SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, obj);
+         SCIPinfoMessage(scip, file, "\n");
+         SCIPrationalMultReal(obj, objoffsetexact, (SCIP_Real)mult);
+         SCIPinfoMessage(scip, file, "*   Obj. offset      : ");
+         SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, obj);
+         SCIPinfoMessage(scip, file, "\n");
+
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &obj);
+      }
+      /* write real objective */
+      else
+      {
+         /* opb format supports only minimization; therefore, a maximization problem has to be converted */
+         if( (objsense == SCIP_OBJSENSE_MAXIMIZE) != (objscale < 0.0) )
+            mult *= -1;
+
+         SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale / mult);
+         SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n", objoffset * mult);
+      }
 
       clearBuffer(linebuffer, &linecnt);
 
@@ -4428,9 +4459,12 @@ SCIP_RETCODE writeOpb(
    const char*           name,               /**< problem name */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_RATIONAL*        objoffsetexact,     /**< exact objective offset from bound shifting and fixing */
+   SCIP_RATIONAL*        objscaleexact,      /**< exact scalar applied to objective function; external objective value is
+                                              *   extobjexact = objsense * objscaleexact * (intobjexact + objoffsetexact) */
    SCIP_VAR**            vars,               /**< array with active (binary) variables */
    int                   nvars,              /**< number of active variables in the problem */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
@@ -4475,7 +4509,7 @@ SCIP_RETCODE writeOpb(
 
    /* write objective function */
    SCIP_CALL( writeOpbObjective(scip, file, vars, nvars, resvars, nresvars, andvars, nandvars,
-         objsense, objscale, objoffset, multisymbol, existands, transformed) );
+         objsense, objoffset, objscale, objoffsetexact, objscaleexact, multisymbol, existands, transformed) );
 
    /* write constraints */
    retcode = writeOpbConstraints(scip, file, conss, nconss, vars, nvars, resvars, nresvars, andvars, nandvars,
@@ -4591,9 +4625,12 @@ SCIP_RETCODE SCIPwriteOpb(
    const char*           name,               /**< problem name */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
+   SCIP_RATIONAL*        objoffsetexact,     /**< exact objective offset from bound shifting and fixing */
+   SCIP_RATIONAL*        objscaleexact,      /**< exact scalar applied to objective function; external objective value is
+                                              *   extobjexact = objsense * objscaleexact * (intobjexact + objoffsetexact) */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                   nvars,              /**< number of active variables in the problem */
    int                   nbinvars,           /**< number of binary variables */
@@ -4606,7 +4643,7 @@ SCIP_RETCODE SCIPwriteOpb(
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_Bool             genericnames,       /**< should generic variable and constraint names be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
-   )
+   ) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_VAR*** andvars;
    SCIP_VAR** resvars;
@@ -4655,8 +4692,8 @@ SCIP_RETCODE SCIPwriteOpb(
             assert(sscanf(SCIPvarGetName(vars[v]), "x%d", &idx) == 1);
          }
 #endif
-         retcode = writeOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-               nvars, conss, nconss, resvars, nresvars, andvars, nandvars, existandconshdlr, existands, result);
+         retcode = writeOpb(scip, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,
+               vars, nvars, conss, nconss, resvars, nresvars, andvars, nandvars, existandconshdlr, existands, result);
       }
       else
       {
@@ -4734,8 +4771,8 @@ SCIP_RETCODE SCIPwriteOpb(
                assert(sscanf(SCIPvarGetName(vars[v]), transformed ? "t_x%d" : "x%d", &idx) == 1 || strstr(SCIPvarGetName(vars[v]), INDICATORVARNAME) != NULL || strstr(SCIPvarGetName(vars[v]), INDICATORSLACKVARNAME) != NULL );
             }
 #endif
-            retcode = writeOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-               nvars, conss, nconss, resvars, nresvars, andvars, nandvars, existandconshdlr, existands, result);
+            retcode = writeOpb(scip, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,
+               vars, nvars, conss, nconss, resvars, nresvars, andvars, nandvars, existandconshdlr, existands, result);
          }
       }
 
@@ -4819,9 +4856,17 @@ SCIP_DECL_READERREAD(readerReadOpb)
 static
 SCIP_DECL_READERWRITE(readerWriteOpb)
 {  /*lint --e{715}*/
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
 
-   SCIP_CALL( SCIPwriteOpb(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-         nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, genericnames, result) );
+   if( SCIPisExact(scip) )
+   {
+      SCIPerrorMessage("OPB reader cannot yet write problems in exact solving mode\n");
+      return SCIP_WRITEERROR;
+   }
+
+   SCIP_CALL( SCIPwriteOpb(scip, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,
+         vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, conss, nconss, genericnames, result) );
 
    return SCIP_OKAY;
 }
@@ -4844,8 +4889,8 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
 
-   /**@todo make reader safe to use in exact solving mode */
-   /* SCIPreaderMarkExact(reader); */
+   /* reader is safe to use in exact solving mode, but exact writing still needs to be implemented */
+   SCIPreaderMarkExact(reader);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyOpb) );

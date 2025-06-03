@@ -3372,13 +3372,12 @@ SCIP_RETCODE consdataCreate(
    assert( slackvar != NULL );
    assert( eventhdlrrestart != NULL );
 
-   /* if active on 0, a provided binary variable is reversed */
+   /* if active on 0, a provided binary variable is negated */
    if ( activeone || binvar == NULL )
-   {
       binvarinternal = binvar;
-   }
    else
    {
+      assert( SCIPvarIsBinary(binvar) );
       SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
@@ -8058,11 +8057,12 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       }
    }
 
-   /* if active on 0, a provided binary variable is reversed */
+   /* if active on 0, a provided binary variable is negated */
    if ( activeone || binvar == NULL )
       binvarinternal = binvar;
    else
    {
+      assert( SCIPvarIsBinary(binvar) );
       SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
@@ -8385,15 +8385,14 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
 
       SCIP_Real val = 1.0;
 
-      /* if active on 0, the binary variable is reversed */
+      /* if active on 0, the binary variable is negated */
       SCIP_VAR* binvarinternal;
       if ( activeone )
-      {
          binvarinternal = binvar;
-      }
       else
       {
-         SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
+         assert( SCIPvarIsBinary(binvar) );
+         SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
       }
 
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
@@ -8627,11 +8626,12 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       }
    }
 
-   /* if active on 0, the binary variable is reversed */
+   /* if active on 0, the binary variable is negated */
    if ( activeone )
       binvarinternal = binvar;
    else
    {
+      assert( SCIPvarIsBinary(binvar) );
       SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 

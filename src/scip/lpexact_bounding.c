@@ -1072,9 +1072,8 @@ SCIP_RETCODE constructProjectShiftDataLPIExact(
    SCIP_CALL( SCIPlpExactSyncLPs(lpexact, blkmem, set) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
-   assert(lpexact->nrows > 0);
-
    projshiftdata->nextendedrows = 2*lpexact->nrows + 2*lpexact->ncols;
+   assert(projshiftdata->nextendedrows > 1);
 
    /* call function to select the set S */
    SCIP_CALL( projectShiftChooseDualSubmatrix(lp, lpexact, set, stat, messagehdlr, eventqueue, prob, blkmem) );
@@ -1207,12 +1206,18 @@ SCIP_RETCODE projectShift(
    int shift;
    SCIP_Bool isfeas;
 
+   assert(lp != NULL);
+   assert(lp->solved);
+   assert(lpexact != NULL);
+   assert(set != NULL);
+   assert(safebound != NULL);
+
    /* project-and-shift method:
     * 1. projection step (to ensure that equalities are satisfied):
     *   - compute error in equalities: r=c-Ay^
     *   - backsolve system of equations to find correction of error: z with Dz=r
     *   - add corretion to approximate dual solution: bold(y)=y^+[z 0]
-    * 2. shifing step (to ensure that inequalities are satisfied):
+    * 2. shifting step (to ensure that inequalities are satisfied):
     *   - take convex combination of projected approximate point bold(y) with interior point y*
     * 3. compute dual objective value of feasible dual solution and set bound
     */
@@ -1270,8 +1275,7 @@ SCIP_RETCODE projectShift(
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &maxv) );
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &dualbound) );
 
-   /* flush exact lp */
-   /* set up the exact lpi for the current node */
+   /* set up the exact lpi for the current node and flush exact lp */
    SCIP_CALL( SCIPlpExactSyncLPs(lpexact, blkmem, set) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
@@ -2011,14 +2015,11 @@ SCIP_RETCODE boundShift(
    int i;
    int j;
 
-   assert(lpexact != NULL);
    assert(lp != NULL);
-   assert(lp->solved || lpexact->lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
+   assert(lp->solved);
+   assert(lpexact != NULL);
    assert(set != NULL);
    assert(safebound != NULL);
-
-   lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-   lpexact->solved = 0;
 
    if( !SCIPlpExactBoundShiftUseful(lpexact) )
       return SCIP_OKAY;
@@ -2306,7 +2307,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_Real*            safebound,          /**< pointer to store the calculated safe bound */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
-   )
+   ) /*lint --e{715}*/
 {  /*lint --e{715}*/
 #ifdef SCIP_WITH_BOOST
    char dualboundmethod;
@@ -2397,12 +2398,12 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       /* we fail if we tried all available methods, or if we had to solve the lp exactly but could not */
       if( (lpexact->forceexactsolve && (*lperror)) || (nattempts >= 3 && !lp->hasprovedbound) || (lastboundmethod == 't') )
       {
-         SCIPdebugMessage("failed save bounding call after %d attempts to compute safe bound\n", nattempts);
+         SCIPdebugMessage("failed safe bounding call after %d attempts to compute safe bound\n", nattempts);
          shouldabort = TRUE;
          *lperror = TRUE;
       }
       if( lpexact->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT )
-	 shouldabort = TRUE;
+         shouldabort = TRUE;
    }
 #endif
    if( *lperror && lp->lpsolstat != SCIP_LPSOLSTAT_TIMELIMIT && lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT )

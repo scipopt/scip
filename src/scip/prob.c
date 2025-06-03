@@ -347,10 +347,18 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->permuted = FALSE;
    (*prob)->consschecksorted = FALSE;
    (*prob)->conscompression = FALSE;
-   (*prob)->objoffsetexact = NULL;
    if( set->exact_enable )
    {
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*prob)->objoffsetexact) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*prob)->objscaleexact) );
+
+      SCIPrationalSetReal((*prob)->objoffsetexact, 0.0);
+      SCIPrationalSetReal((*prob)->objscaleexact, 1.0);
+   }
+   else
+   {
+      (*prob)->objoffsetexact = NULL;
+      (*prob)->objscaleexact = NULL;
    }
 
    return SCIP_OKAY;
@@ -527,18 +535,14 @@ SCIP_RETCODE SCIPprobFree(
    BMSfreeMemoryArrayNull(&(*prob)->deletedvars);
 
    /* free hash tables for names */
-   if( (*prob)->varnames != NULL )
-   {
-      SCIPhashtableFree(&(*prob)->varnames);
-   }
    if( (*prob)->consnames != NULL )
-   {
       SCIPhashtableFree(&(*prob)->consnames);
-   }
+   if( (*prob)->varnames != NULL )
+      SCIPhashtableFree(&(*prob)->varnames);
+   if( (*prob)->objscaleexact != NULL )
+      SCIPrationalFreeBlock(blkmem, &(*prob)->objscaleexact);
    if( (*prob)->objoffsetexact != NULL )
-   {
       SCIPrationalFreeBlock(blkmem, &(*prob)->objoffsetexact);
-   }
    BMSfreeMemoryArray(&(*prob)->name);
    BMSfreeMemory(prob);
 
@@ -1985,13 +1989,13 @@ SCIP_RETCODE probScaleObjExact(
                SCIPrationalDebugMessage(" -> var <%s>: newobj = %q\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
                SCIP_CALL( SCIPvarChgObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpexact, eventqueue, objvals[v]) );
             }
-            transprob->objoffset *= SCIPrationalGetReal(intscalar);
-            transprob->objscale /= SCIPrationalGetReal(intscalar);
+            SCIPrationalMult(transprob->objoffsetexact, transprob->objoffsetexact, intscalar);
+            SCIPrationalDiv(transprob->objscaleexact, transprob->objscaleexact, intscalar);
             transprob->objisintegral = TRUE;
-            SCIPsetDebugMsg(set, "integral objective scalar: objscale=%g\n", transprob->objscale);
+            SCIPrationalDebugMessage("integral objective scalar: objscale=%q\n", transprob->objscaleexact);
 
             /* update upperbound and cutoffbound in primal data structure */
-            SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+            SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
          }
       }
 
@@ -2528,31 +2532,22 @@ void SCIPprobExternObjvalExact(
    SCIP_RATIONAL*        objvalext           /**< store external objective value */
    )
 {
-   SCIP_RATIONAL* tmpval;
-
    assert(set != NULL);
    assert(origprob != NULL);
    assert(transprob != NULL);
    assert(transprob->transformed);
-   assert(transprob->objscale > 0.0);
+   assert(SCIPrationalIsPositive(transprob->objscaleexact));
    assert(set->exact_enable);
 
-   (void) SCIPrationalCreateBuffer(set->buffer, &tmpval);
-
    if( SCIPrationalIsAbsInfinity(objval) )
-   {
-      SCIPrationalSetReal(tmpval, (SCIP_Real) transprob->objsense);
-      SCIPrationalMult(objvalext, tmpval, objval);
-   }
+      SCIPrationalMultReal(objvalext, objval, (SCIP_Real)transprob->objsense);
    else
    {
       SCIPrationalAdd(objvalext, objval, transprob->objoffsetexact);
-      SCIPrationalMultReal(objvalext, objvalext, transprob->objscale);
-      SCIPrationalMultReal(objvalext, objvalext, (SCIP_Real) transprob->objsense);
+      SCIPrationalMult(objvalext, objvalext, transprob->objscaleexact);
+      SCIPrationalMultReal(objvalext, objvalext, (SCIP_Real)transprob->objsense);
       SCIPrationalAdd(objvalext, objvalext, origprob->objoffsetexact);
    }
-
-   SCIPrationalFreeBuffer(set->buffer, &tmpval);
 }
 
 /** returns the internal value of the given external objective value */
@@ -2574,7 +2569,7 @@ SCIP_Real SCIPprobInternObjval(
    else if( SCIPsetIsInfinity(set, -objval) )
       return -(SCIP_Real)transprob->objsense * SCIPsetInfinity(set);
    else
-      return (SCIP_Real)transprob->objsense * (objval - origprob->objoffset)/transprob->objscale - transprob->objoffset;
+      return (SCIP_Real)transprob->objsense * (objval - origprob->objoffset) / transprob->objscale - transprob->objoffset;
 }
 
 /** returns the internal value of the given external objective value */
@@ -2586,31 +2581,22 @@ void SCIPprobInternObjvalExact(
    SCIP_RATIONAL*        objvalint           /**< store internal objective value */
    )
 {
-   SCIP_RATIONAL* tmpval;
-
    assert(set != NULL);
    assert(origprob != NULL);
    assert(transprob != NULL);
    assert(transprob->transformed);
-   assert(transprob->objscale > 0.0);
+   assert(SCIPrationalIsPositive(transprob->objscaleexact));
    assert(set->exact_enable);
 
-   (void) SCIPrationalCreateBuffer(set->buffer, &tmpval);
-
    if( SCIPrationalIsAbsInfinity(objval) )
-   {
-      SCIPrationalSetReal(tmpval, (SCIP_Real) transprob->objsense);
-      SCIPrationalMult(objvalint, tmpval, objval);
-   }
+      SCIPrationalMultReal(objvalint, objval, (SCIP_Real)transprob->objsense);
    else
    {
       SCIPrationalDiff(objvalint, objval, origprob->objoffsetexact);
-      SCIPrationalDivReal(objvalint, objvalint, transprob->objscale);
-      SCIPrationalMultReal(objvalint, objvalint, (SCIP_Real) transprob->objsense);
+      SCIPrationalDiv(objvalint, objvalint, transprob->objscaleexact);
+      SCIPrationalMultReal(objvalint, objvalint, (SCIP_Real)transprob->objsense);
       SCIPrationalDiff(objvalint, objvalint, transprob->objoffsetexact);
    }
-
-   SCIPrationalFreeBuffer(set->buffer, &tmpval);
 }
 
 /** returns variable of the problem with given name */
@@ -2765,6 +2751,8 @@ SCIP_RETCODE SCIPprobCollectStatistics(
 #undef SCIPprobGetObjsense
 #undef SCIPprobGetObjoffset
 #undef SCIPprobGetObjscale
+#undef SCIPprobGetObjoffsetExact
+#undef SCIPprobGetObjscaleExact
 #undef SCIPisConsCompressedEnabled
 #undef SCIPprobEnableConsCompression
 
@@ -2985,6 +2973,8 @@ SCIP_Real SCIPprobGetObjoffset(
    )
 {
    assert(prob != NULL);
+   assert(prob->objoffsetexact == NULL);
+
    return prob->objoffset;
 }
 
@@ -2994,7 +2984,31 @@ SCIP_Real SCIPprobGetObjscale(
    )
 {
    assert(prob != NULL);
+   assert(prob->objscaleexact == NULL);
+
    return prob->objscale;
+}
+
+/** gets the exact objective offset */
+SCIP_RATIONAL* SCIPprobGetObjoffsetExact(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   assert(prob->objoffsetexact != NULL);
+
+   return prob->objoffsetexact;
+}
+
+/** gets the exact objective scalar */
+SCIP_RATIONAL* SCIPprobGetObjscaleExact(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   assert(prob->objscaleexact != NULL);
+
+   return prob->objscaleexact;
 }
 
 /** is constraint compression enabled for this problem? */
