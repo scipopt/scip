@@ -784,7 +784,7 @@ void SCIPrationalSetString(
 
       res->val = negative ? -scip::Rational(s) : scip::Rational(s);
       res->val *= pow(10, exponent);
-      res->isinf = FALSE;
+      SCIPrationalCheckInfByValue(res);
       res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
 }
