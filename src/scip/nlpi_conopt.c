@@ -112,13 +112,13 @@ static int COI_CALLCONV ReadMatrix(
    int                   TYPE[],
    double                RHS[],
    int                   ESTA[],
-   int                   COLSTA[],
-   int                   ROWNO[],
+   int                   COLSTA[],           /**< starting indices of Jacobian columns in ROWNO */
+   int                   ROWNO[],            /**< row numbers of Jacobian nonzeros */
    double                VALUE[],
    int                   NLFLAG[],
    int                   NUMVAR,
    int                   NUMCON,
-   int                   NUMNZ,
+   int                   NUMNZ,              /**< number of Jacobian elements as defined in COIDEF_NumNz() */
    void*                 USRMEM
    )
 {
@@ -126,10 +126,11 @@ static int COI_CALLCONV ReadMatrix(
    const SCIP_Real* ubs;
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
    SCIP_NLPIORACLE* oracle;
-   int norigvars = SCIPnlpiOracleGetNVars(oracle);
+   int norigvars;
    int nslackvars = 0;
    int nlnnz;
    const SCIP_Bool* jacrownlflags;
+   int* rangeconsidxs;
 
    assert(problem != NULL);
    assert(problem->scip != NULL);
@@ -137,15 +138,21 @@ static int COI_CALLCONV ReadMatrix(
    oracle = problem->oracle;
    assert(oracle != NULL);
 
+   norigvars = SCIPnlpiOracleGetNVars(oracle);
    lbs = SCIPnlpiOracleGetVarLbs(oracle);
    ubs = SCIPnlpiOracleGetVarUbs(oracle);
+
+   if( SCIPallocBufferArray(problem->scip, &rangeconsidxs, NUMVAR - norigvars) != SCIP_OKAY )
+      return 1;
 
    /* add all 'normal' (i.e. non-slack) variables here */
    for( int i = 0; i < norigvars; i++ )
    {
-      LOWER[i] = lbs[i];
-      UPPER[i] = ubs[i];
-      CURR[i] = 0.0; /* TODO get proper initial values */
+      if( !SCIPisInfinity(problem->scip, -lbs[i]) )
+         LOWER[i] = lbs[i];
+      if( !SCIPisInfinity(problem->scip, ubs[i]) )
+         UPPER[i] = ubs[i];
+      CURR[i] = SCIPisInfinity(problem->scip, -lbs[i]) ? (SCIPisInfinity(problem->scip, ubs[i]) ? 0.0 : ubs[i]) : lbs[i]; /* TODO get proper initial values */
    }
 
    /* TODO check if VSTA is needed - seems to not be the case */
@@ -155,9 +162,9 @@ static int COI_CALLCONV ReadMatrix(
       SCIP_Real lhs = SCIPnlpiOracleGetConstraintLhs(oracle, i);
       SCIP_Real rhs = SCIPnlpiOracleGetConstraintRhs(oracle, i);
 
-      assert(!SCIPisInfinity(problem->scip, lhs) || !SCIPisInfinity(problem->scip, rhs));
+      assert(!SCIPisInfinity(problem->scip, -lhs) || !SCIPisInfinity(problem->scip, rhs));
 
-      if( !SCIPisInfinity(problem->scip, lhs) && !SCIPisInfinity(problem->scip, rhs) )
+      if( !SCIPisInfinity(problem->scip, -lhs) && !SCIPisInfinity(problem->scip, rhs) )
       {
          TYPE[i] = 0; /* an equality or ranged row modelled as equality */
 
@@ -168,13 +175,14 @@ static int COI_CALLCONV ReadMatrix(
             RHS[i] = 0.0;
             LOWER[norigvars + nslackvars] = lhs;
             UPPER[norigvars + nslackvars] = rhs;
-            CURR[norigvars + nslackvars] = 0.0; /* TODO set proper initial values */
+            CURR[norigvars + nslackvars] = (rhs - lhs)/2; /* TODO set proper initial values */
+            rangeconsidxs[nslackvars] = i;
             nslackvars++;
          }
          else
             RHS[i] = lhs;
       }
-      else if( !SCIPisInfinity(problem->scip, lhs) )
+      else if( !SCIPisInfinity(problem->scip, -lhs) )
       {
          TYPE[i] = 1;
          RHS[i] = lhs;
@@ -193,10 +201,31 @@ static int COI_CALLCONV ReadMatrix(
    /* Jacobian information */
 
    /* TODO make it so that the column representation is only composed when asked for */
-   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->scip, oracle, NULL, NULL, NULL, NULL, NULL, &jacrownlflags, &nlnnz) );
+   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->scip, oracle, NULL, NULL, NULL, &COLSTA, &ROWNO, &jacrownlflags, &nlnnz) );
+   assert(COLSTA[norigvars] <= NUMNZ);
+
+   /* add a nonzero for each slack variable */
+   for( int i = 0; i < nslackvars; i++ )
+   {
+      COLSTA[norigvars+i] = COLSTA[norigvars] + i; /* for each slack var, only one nonzero is added */
+      ROWNO[COLSTA[norigvars+i]] = rangeconsidxs[i];
+   }
+   SCIPfreeBufferArray(problem->scip, &rangeconsidxs);
+
+#ifndef NDEBUG
+   printf("\nNUMCON = %d", NUMCON);
+   for( int i = 0; i < NUMNZ; i++ )
+   {
+      assert(ROWNO[i] >= 0 && ROWNO[i] < NUMCON);
+      printf("\nROWNO[%d] = %d", i, ROWNO[i]);
+   }
+   fflush(stdout);
+#endif
+
+   /* TODO fill in VALUE */
 
    for( int i = 0; i < NUMNZ; i++ )
-      NLFLAG[i] = jacrownlflags[i];
+      NLFLAG[i] = jacrownlflags[i] ? 1 : 0;
 
    return 0;
 }
@@ -337,10 +366,40 @@ static int COI_CALLCONV Status(
    return 0;
 }
 
-static int COI_CALLCONV FDEval(const double X[], double* G, double JAC[], int ROWNO, const int JACNUM[], int MODE,
-      int IGNERR, int* ERRCNT, int NUMVAR, int NUMJAC, int THREAD, void* USRMEM )
+static int COI_CALLCONV FDEval(
+   const double          X[],                /**< point of evaluation (provided by CONOPT) */
+   double*               G,                  /**< value of the nonlinear part of the function */
+   double                JAC[],              /**< vector of Jacobian values */
+   int                   ROWNO,              /**< number of the row for which nonlinearities are to be evaluated (provided by CONOPT) */
+   const int             JACNUM[],           /**< list of column numbers for the nonlinear nonzero Jacobian elements in the current row */
+   int                   MODE,               /**< indicator for mode of evaluation (provided by CONOPT) */
+   int                   IGNERR,             /**< indicator whether CONOPT assumes the point to be safe (0) or potentially unsafe (1) */
+   int*                  ERRCNT,             /**< scalar function evaluation error indicator (set to 1 if a function value cannot be computed */
+   int                   NUMVAR,             /**< number of variables (provided by CONOPT) */
+   int                   NUMJAC,             /**< number of nonlinear nonzero Jacobian elements in the current row */
+   int                   THREAD,             /**< only relevant in multi-threading environments */
+   void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
+   )
 {
+   SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+   assert(problem != NULL);
 
+   if( MODE == 1 || MODE == 3 )
+   {
+      /* TODO check compatibility of CONOPT variables with SCIP ones */
+      /* TODO handle SCIP_CALL within callbacks */
+      if( SCIPnlpiOracleEvalConstraintValue(problem->scip, problem->oracle, ROWNO, X, G) != SCIP_OKAY ||
+            *G == SCIP_INVALID )
+         *ERRCNT = 1;
+      /* TODO conversion of infinities and such? */
+   }
+
+   if( MODE == 2 || MODE == 3 )
+   {
+      if( SCIPnlpiOracleEvalJacobianRow(problem->scip, problem->oracle, X, TRUE, ROWNO, NULL, JAC) != SCIP_OKAY )
+         *ERRCNT = 1;
+      /* TODO check some values here? */
+   }
 
    return 0;
 }
@@ -379,17 +438,16 @@ static SCIP_RETCODE initConopt(
    nconss = SCIPnlpiOracleGetNConstraints(problem->oracle);
 
    /* count range constraints: because CONOPT doesn't support them directly, will need to add a slack variable for each ranged constraint */
-   for( int i = 0; i < SCIPnlpiOracleGetNConstraints(problem->oracle); i++ )
+   for( int i = 0; i < nconss; i++ )
    {
       SCIP_Real lhs = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
       SCIP_Real rhs = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
 
-      if( !SCIPisEQ(scip, lhs, rhs) )
+      if( !SCIPisInfinity(problem->scip, -lhs) && !SCIPisInfinity(problem->scip, rhs) && !SCIPisEQ(scip, lhs, rhs) )
          nrangeconss++;
    }
 
    /* inform CONOPT about problem sizes */
-
    COI_Error += COIDEF_NumVar(problem->CntVect, SCIPnlpiOracleGetNVars(problem->oracle) + nrangeconss);
    COI_Error += COIDEF_NumCon(problem->CntVect, nconss + 1); /* objective counts as another constraint here */
 
