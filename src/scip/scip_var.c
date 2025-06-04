@@ -307,6 +307,7 @@ SCIP_RETCODE SCIPaddVarExactData(
    assert(var != NULL);
 
    assert(lb == NULL || ub == NULL || SCIPrationalIsLE(lb, ub));
+   assert(obj != NULL || !SCIPisInfinity(scip, REALABS(SCIPvarGetObj(var))));
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarExactData", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
