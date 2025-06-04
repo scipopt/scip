@@ -5590,6 +5590,7 @@ SCIP_RETCODE cutsTransformMIR(
 
          ++i;
 
+         /* if there is a free variable, we terminate because we cannot derive a MIR cut */
          if( *freevariable )
          {
             int j;
