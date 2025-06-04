@@ -1880,9 +1880,7 @@ SCIP_RETCODE readOPBFile(
    /* close file */
    SCIPfclose(opbinput->file);
 
-   SCIP_CALL( retcode );
-
-   return SCIP_OKAY;
+   return retcode;
 }
 
 
