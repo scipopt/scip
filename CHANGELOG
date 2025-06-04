@@ -275,6 +275,7 @@ Fixed bugs
   to be stable around shortly representable numbers, and a numerical tolerance for comparing cutting plane efficacy for the aggregation
   separator is introduced.
 - accept fractional continuous implied integral variables in heuristic completesol
+- invalidate activity with contradicting infinity contributions
 
 Miscellaneous
 -------------
