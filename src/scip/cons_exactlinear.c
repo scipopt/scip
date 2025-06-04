@@ -6023,6 +6023,7 @@ SCIP_RETCODE findOperators(
 static
 SCIP_DECL_CONSPARSE(consParseExactLinear)
 {  /*lint --e{715}*/
+   SCIP_RETCODE retcode = SCIP_OKAY;
    SCIP_VAR** vars;
    SCIP_RATIONAL** coefs;
    int        nvars;
@@ -6151,7 +6152,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    assert(varstrptr != NULL);
 
    /* parse linear sum to get variables and coefficients */
-   SCIP_CALL( SCIPparseVarsLinearsumExact(scip, varstrptr, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
+   SCIP_CALL_TERMINATE( retcode, SCIPparseVarsLinearsumExact(scip, varstrptr, vars, coefs, &nvars, coefssize, &requsize, &endptr, success), TERMINATE );
 
    if( *success && requsize > coefssize )
    {
@@ -6161,7 +6162,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
 
       coefssize = requsize;
 
-      SCIP_CALL( SCIPparseVarsLinearsumExact(scip, varstrptr, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
+      SCIP_CALL_TERMINATE( retcode, SCIPparseVarsLinearsumExact(scip, varstrptr, vars, coefs, &nvars, coefssize, &requsize, &endptr, success), TERMINATE );
       assert(!*success || requsize <= coefssize); /* if successful, then should have had enough space now */
    }
 
@@ -6171,17 +6172,19 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    }
    else
    {
-      SCIP_CALL( SCIPcreateConsExactLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      SCIP_CALL_TERMINATE( retcode, SCIPcreateConsExactLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode),
+         TERMINATE );
    }
 
+ TERMINATE:
    SCIPrationalFreeBufferArray(SCIPbuffer(scip), &coefs, coefssize);
    SCIPfreeBufferArray(scip, &vars);
 
    SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
    SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhs);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 
