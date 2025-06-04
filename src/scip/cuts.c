@@ -8005,6 +8005,9 @@ SCIP_RETCODE SCIPcalcMIR(
       }
    }
 
+   SCIPdebugMsg(scip, "Initial row:\n");
+   SCIPdebug( printCutQuad(scip, sol, data->cutcoefs, QUAD(data->cutrhs), data->cutinds, nnz, FALSE, FALSE) );
+
    data->ncutinds = 0;
    tmpislocal = aggrrow->local;
 
@@ -8039,7 +8042,7 @@ SCIP_RETCODE SCIPcalcMIR(
          goto TERMINATE;
 
       SCIPdebugMsg(scip, "Aggregated and transformed:\n");
-      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE));
+      SCIPdebug(printCutQuad(scip, sol, data->cutcoefs, QUAD(data->cutrhs), data->cutinds, data->ncutinds, FALSE, FALSE));
    }
 
    /* Calculate fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) , and derive MIR cut
@@ -8093,7 +8096,7 @@ SCIP_RETCODE SCIPcalcMIR(
       SCIP_CALL( cutsRoundMIR(scip, data, varsign, boundtype, QUAD(f0)) );
 
       SCIPdebugMsg(scip, "After MIR rounding:\n");
-      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE));
+      SCIPdebug(printCutQuad(scip, sol, data->cutcoefs, QUAD(data->cutrhs), data->cutinds, data->ncutinds, FALSE, FALSE));
    }
 
    /* substitute aggregated slack variables:
@@ -8114,6 +8117,9 @@ SCIP_RETCODE SCIPcalcMIR(
          aggrrow->nrows, scale,
          data->cutcoefs, QUAD(&data->cutrhs), data->cutinds, &data->ncutinds, QUAD(f0)) );
 
+   SCIPdebugMsg(scip, "After slack substitution:\n");
+   SCIPdebug(printCutQuad(scip, sol, data->cutcoefs, QUAD(data->cutrhs), data->cutinds, data->ncutinds, FALSE, FALSE));
+
    if( postprocess )
    {
       /* remove all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
@@ -8125,6 +8131,9 @@ SCIP_RETCODE SCIPcalcMIR(
    {
       *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), tmpislocal, data->cutcoefs, QUAD(&data->cutrhs), data->cutinds, &data->ncutinds);
    }
+
+   SCIPdebugMsg(scip, "After post processing:\n");
+   SCIPdebug( printCutQuad(scip, sol, data->cutcoefs, QUAD(data->cutrhs), data->cutinds, data->ncutinds, FALSE, FALSE) );
 
    if( *success )
    {
