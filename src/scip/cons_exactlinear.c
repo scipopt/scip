@@ -978,9 +978,8 @@ SCIP_RETCODE consPrintConsSol(
 
          if( sol != NULL )
          {
-            if( !useexactsol )
-               SCIPinfoMessage(scip, file, " (%+.9g)", SCIPgetSolVal(scip, sol, consdata->vars[v]));
-            else
+            SCIPinfoMessage(scip, file, " (");
+            if( useexactsol )
             {
                SCIP_RATIONAL* tmp;
                SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
@@ -988,6 +987,9 @@ SCIP_RETCODE consPrintConsSol(
                SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, tmp);
                SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
             }
+            else
+               SCIPinfoMessage(scip, file, "%+.9g", SCIPgetSolVal(scip, sol, consdata->vars[v]));
+            SCIPinfoMessage(scip, file, ")");
          }
       }
    }
@@ -1084,38 +1086,32 @@ void consdataComputePseudoActivity(
 
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
+      bound = SCIPvarGetBestBoundLocalExact(consdata->vars[i]);
       val = consdata->vals[i];
-      bound = (SCIPvarGetBestBoundType(consdata->vars[i]) == SCIP_BOUNDTYPE_LOWER) ? SCIPvarGetLbLocalExact(consdata->vars[i]) : SCIPvarGetUbLocalExact(consdata->vars[i]);
+      assert(!SCIPrationalIsZero(val));
 
-      if( SCIPrationalIsInfinity(bound) )
+      if( SCIPrationalIsNegInfinity(bound) )
       {
-         if( SCIPrationalIsPositive(val) )
-            pseudoactivityposinf++;
+         if( SCIPrationalIsNegative(val) )
+            ++pseudoactivityposinf;
          else
-            pseudoactivityneginf++;
+            ++pseudoactivityneginf;
+      }
+      else if( SCIPrationalIsInfinity(bound) )
+      {
+         if( SCIPrationalIsNegative(val) )
+            ++pseudoactivityneginf;
+         else
+            ++pseudoactivityposinf;
       }
       else
-      {
-         if( SCIPrationalIsNegInfinity(bound) )
-         {
-            if( SCIPrationalIsPositive(val) )
-               pseudoactivityneginf++;
-            else
-               pseudoactivityposinf++;
-         }
-         else
-         {
-            SCIPrationalAddProd(pseudoactivity, val, bound);
-         }
-      }
+         SCIPrationalAddProd(pseudoactivity, val, bound);
    }
 
-   if( pseudoactivityneginf > 0 && pseudoactivityposinf > 0 )
-      /** @todo introduce a rational equivalent of SCIP_INVALID (maybe an additional flag in SCIP_RATIONAL) */
-      return;
-   else if( pseudoactivityneginf > 0 )
+   /* set pseudo activity to infeasible infinity for contradicting contributions */
+   if( pseudoactivityneginf > 0 && ( pseudoactivityposinf == 0 || !SCIPrationalIsNegInfinity(consdata->lhs) ) )
       SCIPrationalSetNegInfinity(pseudoactivity);
-   else if( pseudoactivityposinf > 0 )
+   else if( pseudoactivityposinf > 0 && ( pseudoactivityneginf == 0 || !SCIPrationalIsInfinity(consdata->rhs) ) )
       SCIPrationalSetInfinity(pseudoactivity);
 }
 
@@ -2800,10 +2796,8 @@ void consdataGetActivity(
          else
             SCIPrationalSetReal(solval, SCIPgetSolVal(scip, sol, consdata->vars[v]));
 
-         if( SCIPrationalIsNegative(consdata->vals[v]) )
-            negsign = TRUE;
-         else
-            negsign = FALSE;
+         assert(!SCIPrationalIsZero(consdata->vals[v]));
+         negsign = SCIPrationalIsNegative(consdata->vals[v]);
 
          if( (SCIPrationalIsInfinity(solval) && !negsign) || (SCIPrationalIsNegInfinity(solval) && negsign) )
             ++nposinf;
@@ -2816,20 +2810,17 @@ void consdataGetActivity(
       }
       assert(nneginf >= 0 && nposinf >= 0);
 
-      SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
-
       SCIPdebugMsg(scip, "activity of linear constraint: %.15g, %d positive infinity values, %d negative infinity values \n", SCIPrationalGetReal(activity), nposinf, nneginf);
 
-      /* check for amount of infinity values and correct the activity */
-      if( nposinf > 0 && nneginf > 0 )
-         /** @todo introduce a rational equivalent of SCIP_INVALID (maybe an additional flag in SCIP_RATIONAL) */
-         return;
-      else if( nposinf > 0 )
-         SCIPrationalSetInfinity(activity);
-      else if( nneginf > 0 )
+      /* set activity to infeasible infinity for contradicting contributions */
+      if( nneginf > 0 && ( nposinf == 0 || !SCIPrationalIsNegInfinity(consdata->lhs) ) )
          SCIPrationalSetNegInfinity(activity);
+      else if( nposinf > 0 && ( nneginf == 0 || !SCIPrationalIsInfinity(consdata->rhs) ) )
+         SCIPrationalSetInfinity(activity);
 
       SCIPrationalDebugMessage("corrected activity of linear constraint: %q\n", activity);
+
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
    }
 }
 
@@ -5708,20 +5699,20 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
             SCIP_CALL( consPrintConsSol(scip, conss[c], sol, checkexact, NULL ) );
             SCIPinfoMessage(scip, NULL, ";\n");
 
-            if( SCIPrationalIsAbsInfinity(activity) ) /*lint !e777*/
-               SCIPinfoMessage(scip, NULL, "activity invalid due to positive and negative infinity contributions\n");
+            if( SCIPrationalIsAbsInfinity(activity) )
+               SCIPinfoMessage(scip, NULL, "activity invalid due to infinity contributions\n");
             else if( SCIPrationalIsLT(activity, consdata->lhs) )
             {
                SCIPrationalDiff(activity, consdata->lhs, activity);
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by ");
-               SCIPrationalPrint(activity);
+               SCIPrationalMessage(SCIPgetMessagehdlr(scip), NULL, activity);
                SCIPinfoMessage(scip, NULL, "\n");
             }
             else if( SCIPrationalIsGT(activity, consdata->rhs) )
             {
                SCIPrationalDiff(activity, activity, consdata->rhs);
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by ");
-               SCIPrationalPrint(activity);
+               SCIPrationalMessage(SCIPgetMessagehdlr(scip), NULL, activity);
                SCIPinfoMessage(scip, NULL, "\n");
             }
 
