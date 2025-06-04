@@ -17944,48 +17944,12 @@ SCIP_RETCODE SCIPcreateConsLinear(
       {
          if( constant < 0.0 )
          {
-            if( SCIPisInfinity(scip, lhs) )
+            if( SCIPisInfinity(scip, -lhs) || SCIPisInfinity(scip, -rhs) )
             {
                SCIPfreeBufferArray(scip, &consvals);
                SCIPfreeBufferArray(scip, &consvars);
 
-               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            if( SCIPisInfinity(scip, rhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-
-            lhs = -SCIPinfinity(scip);
-            rhs = -SCIPinfinity(scip);
-         }
-         else
-         {
-            if( SCIPisInfinity(scip, -lhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            if( SCIPisInfinity(scip, -rhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
+               SCIPerrorMessage("try to generate inconsistent constraint <%s>, inactive variables lead to a negative infinite constant constradicting a lower unbounded side\n", name);
 
                SCIPABORT();
                return SCIP_INVALIDDATA; /*lint !e527*/
@@ -17993,6 +17957,22 @@ SCIP_RETCODE SCIPcreateConsLinear(
 
             lhs = SCIPinfinity(scip);
             rhs = SCIPinfinity(scip);
+         }
+         else
+         {
+            if( SCIPisInfinity(scip, lhs) || SCIPisInfinity(scip, rhs) )
+            {
+               SCIPfreeBufferArray(scip, &consvals);
+               SCIPfreeBufferArray(scip, &consvars);
+
+               SCIPerrorMessage("try to generate inconsistent constraint <%s>, inactive variables lead to a positive infinite constant constradicting an upper unbounded side\n", name);
+
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
+
+            lhs = -SCIPinfinity(scip);
+            rhs = -SCIPinfinity(scip);
          }
       }
       else
