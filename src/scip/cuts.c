@@ -4650,10 +4650,7 @@ SCIP_RETCODE findMIRBestLb(
                SCIP_Real vlbsol;
                SCIP_Real vlbbnd;
 
-               if( sol == NULL )
-                  vlbsol = SCIPvarGetLPSol(vlbvars[i]);
-               else
-                  vlbsol = SCIPgetSolVal(scip, sol, vlbvars[i]);
+               vlbsol = SCIPgetSolVal(scip, sol, vlbvars[i]);
                vlbbnd = vlbcoefs[i] * vlbsol + vlbconsts[i];
 
                if( vlbbnd > bestvlb )
@@ -4742,10 +4739,7 @@ SCIP_RETCODE findMIRBestUb(
                SCIP_Real vubsol;
                SCIP_Real vubbnd;
 
-               if( sol == NULL )
-                  vubsol = SCIPvarGetLPSol(vubvars[i]);
-               else
-                  vubsol = SCIPgetSolVal(scip, sol, vubvars[i]);
+               vubsol = SCIPgetSolVal(scip, sol, vubvars[i]);
                vubbnd = vubcoefs[i] * vubsol + vubconsts[i];
 
                if( vubbnd < bestvub )
@@ -4835,10 +4829,7 @@ SCIP_RETCODE determineBestBounds(
             assert(vlbcoefs != NULL);
             assert(vlbconsts != NULL);
 
-            if( sol == NULL )
-               vlbsol = SCIPvarGetLPSol(vlbvars[k]);
-            else
-               vlbsol = SCIPgetSolVal(scip, sol, vlbvars[k]);
+            vlbsol = SCIPgetSolVal(scip, sol, vlbvars[k]);
 
             *bestlb = vlbcoefs[k] * vlbsol + vlbconsts[k];
          }
@@ -4879,11 +4870,7 @@ SCIP_RETCODE determineBestBounds(
             assert(vubcoefs != NULL);
             assert(vubconsts != NULL);
 
-            if( sol == NULL )
-               vubsol = SCIPvarGetLPSol(vubvars[k]);
-            else
-               vubsol = SCIPgetSolVal(scip, sol, vubvars[k]);
-
+            vubsol = SCIPgetSolVal(scip, sol, vubvars[k]);
             *bestub = vubcoefs[k] * vubsol + vubconsts[k];
          }
 
@@ -4919,7 +4906,7 @@ SCIP_RETCODE determineBestBounds(
       if( !ignoresol )
       {
          /* select transformation bound */
-         varsol = (sol == NULL ? SCIPvarGetLPSol(var) : SCIPgetSolVal(scip, sol, var));
+         varsol = SCIPgetSolVal(scip, sol, var);
 
          if( SCIPisInfinity(scip, *bestub) ) /* if there is no ub, use lb */
             *selectedbound = SCIP_BOUNDTYPE_LOWER;
@@ -5717,7 +5704,7 @@ SCIP_RETCODE cutsTransformMIR(
 
                if( !ignoresol )
                {
-                  solval = (sol == NULL ? SCIPvarGetLPSol(data->vars[v]) : SCIPgetSolVal(scip, sol, data->vars[v]));
+                  solval = SCIPgetSolVal(scip, sol, data->vars[v]);
                   viol = f0 - fj * (varsign[i] == +1 ? solval - bestlbs[i] : bestubs[i] - solval);
                   newviol = newf0 - newfj * (varsign[i] == -1 ? solval - bestlbs[i] : bestubs[i] - solval);
                   violgain = newviol - viol;
