@@ -1155,7 +1155,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    nvars = 0;
    vars = NULL;
    exponents = NULL;
-   coef = SCIP_INVALID;
+   coef = 0.0;
 
    SCIPdebugMsg(scip, "parsing polynomial from '%s'\n", str);
 
@@ -1170,7 +1170,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
       {
       case SCIPPARSEPOLYNOMIAL_STATE_BEGIN:
       {
-         if( coef != SCIP_INVALID  ) /*lint !e777*/
+         if( coef != 0.0 ) /*lint !e777*/
          {
             SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
 
@@ -1200,7 +1200,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
             ++*nmonomials;
 
             nvars = 0;
-            coef = SCIP_INVALID;
+            coef = 0.0;
          }
 
          if( *str == '<' )
@@ -1355,7 +1355,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    case SCIPPARSEPOLYNOMIAL_STATE_END:
    case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
    {
-      if( coef != SCIP_INVALID ) /*lint !e777*/
+      if( coef != 0.0 ) /*lint !e777*/
       {
          /* push last monomial */
          SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
@@ -1502,7 +1502,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
    vars = NULL;
 
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &coef) );
-   SCIPrationalSetInfinity(coef);
+   SCIPrationalSetReal(coef, 0.0);
 
    SCIPdebugMsg(scip, "parsing polynomial from '%s'\n", str);
 
@@ -1517,7 +1517,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
       {
       case SCIPPARSEPOLYNOMIAL_STATE_BEGIN:
       {
-         if( !SCIPrationalIsInfinity(coef)  ) /*lint !e777*/
+         if( !SCIPrationalIsZero(coef) )
          {
             SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", SCIPrationalGetReal(coef), nvars);
 
@@ -1543,7 +1543,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
             ++*nmonomials;
 
             nvars = 0;
-            SCIPrationalSetInfinity(coef);
+            SCIPrationalSetReal(coef, 0.0);
          }
 
          if( *str == '<' )
@@ -1674,7 +1674,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
    case SCIPPARSEPOLYNOMIAL_STATE_END:
    case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
    {
-      if( !SCIPrationalIsInfinity(coef) ) /*lint !e777*/
+      if( !SCIPrationalIsZero(coef) )
       {
          /* push last monomial */
          SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", SCIPrationalGetReal(coef), nvars);
