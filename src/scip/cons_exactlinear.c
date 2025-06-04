@@ -6024,8 +6024,8 @@ static
 SCIP_DECL_CONSPARSE(consParseExactLinear)
 {  /*lint --e{715}*/
    SCIP_RETCODE retcode = SCIP_OKAY;
-   SCIP_VAR** vars;
-   SCIP_RATIONAL** coefs;
+   SCIP_VAR** vars = NULL;
+   SCIP_RATIONAL** coefs = NULL;
    int nvars;
    int coefssize;
    int requsize;
@@ -6045,18 +6045,18 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    assert(name != NULL);
    assert(cons != NULL);
 
+   (*success) = FALSE;
+
+   /* return of string empty */
+   if( !*str )
+      return SCIP_OKAY;
+
    /* set left and right hand side to their default values */
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
 
    SCIPrationalSetNegInfinity(lhs);
    SCIPrationalSetInfinity(rhs);
-
-   (*success) = FALSE;
-
-   /* return of string empty */
-   if( !*str )
-      return SCIP_OKAY;
 
    /* ignore whitespace */
    while( isspace((unsigned char)*str) )
@@ -6065,12 +6065,14 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    /* find operators in the line first, all other remaining parsing depends on occurence of the operators '<=', '>=', '==',
     * and the special word [free]
     */
-   SCIP_CALL( findOperators(str, &firstop, &secondop, &operatorsuccess) );
+   SCIP_CALL_TERMINATE( retcode, findOperators(str, &firstop, &secondop, &operatorsuccess), TERMINATE );
 
    /* if the grammar is not valid for parsing a linear constraint, return */
    if( ! operatorsuccess )
-      return SCIP_OKAY;
-
+   {
+      retcode = SCIP_OKAY;
+      goto TERMINATE;
+   }
    varstrptr = (char *)str;
    lhsstrptr = rhsstrptr = NULL;
    assert(firstop != NULL);
@@ -6117,7 +6119,8 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
       default:
          /* it should not be possible that a different character appears in that position */
          SCIPerrorMessage("Parsing has wrong operator character '%c', should be one of <=>[", *firstop);
-         return SCIP_READERROR;
+         retcode = SCIP_READERROR;
+         goto TERMINATE;
    }
 
    /* parse left hand side, if necessary */
@@ -6126,7 +6129,8 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
       if( ! SCIPparseRational(scip, lhsstrptr, lhs, &endptr) )
       {
          SCIPerrorMessage("error parsing left hand side number from <%s>\n", lhsstrptr);
-         return SCIP_OKAY;
+         retcode = SCIP_OKAY;
+         goto TERMINATE;
       }
 
       /* in case of an equation, assign the left also to the right hand side */
@@ -6140,13 +6144,14 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
       if( ! SCIPparseRational(scip, rhsstrptr, rhs, &endptr) )
       {
          SCIPerrorMessage("error parsing right hand side number from <%s>\n", lhsstrptr);
-         return SCIP_OKAY;
+         retcode = SCIP_OKAY;
+         goto TERMINATE;
       }
    }
 
    /* initialize buffers for storing the variables and coefficients */
    coefssize = 100;
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars,  coefssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, coefssize) );
    SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &coefs, coefssize) );
 
    assert(varstrptr != NULL);
@@ -6178,8 +6183,9 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    }
 
  TERMINATE:
-   SCIPrationalFreeBufferArray(SCIPbuffer(scip), &coefs, coefssize);
-   SCIPfreeBufferArray(scip, &vars);
+   if( coefs != NULL )
+      SCIPrationalFreeBufferArray(SCIPbuffer(scip), &coefs, coefssize);
+   SCIPfreeBufferArrayNull(scip, &vars);
 
    SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
    SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhs);
