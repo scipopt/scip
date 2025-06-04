@@ -6612,40 +6612,14 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
       /* adjust sides and check that we do not subtract infinity values */
       if( SCIPrationalIsAbsInfinity(constant) )
       {
-         if( SCIPrationalIsNegative(constant) )
-         {
-            if( SCIPrationalIsNegInfinity(lhs) || SCIPrationalIsNegInfinity(rhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-               SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
+         SCIPfreeBufferArray(scip, &consvals);
+         SCIPfreeBufferArray(scip, &consvars);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
 
-               SCIPerrorMessage("try to generate inconsistent constraint <%s>, inactive variables lead to a negative infinite constant constradicting a lower unbounded side\n", name);
+         SCIPerrorMessage("while creating constraint <%s> inactive variables lead to an infinite constant\n", name);
 
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-
-            SCIPrationalSetInfinity(lhs);
-            SCIPrationalSetInfinity(rhs);
-         }
-         else
-         {
-            if( SCIPrationalIsInfinity(lhs) || SCIPrationalIsInfinity(rhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-               SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
-
-               SCIPerrorMessage("try to generate inconsistent constraint <%s>, inactive variables lead to a positive infinite constant constradicting an upper unbounded side\n", name);
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-
-            SCIPrationalSetNegInfinity(lhs);
-            SCIPrationalSetNegInfinity(rhs);
-         }
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
       else
       {
