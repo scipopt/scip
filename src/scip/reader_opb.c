@@ -1782,7 +1782,7 @@ SCIP_RETCODE readOPBFile(
     */
 
    /* read the first comment line which contains information about size of products and coefficients */
-   SCIP_CALL( getCommentLineData(scip, opbinput, &objscale, &objoffset) );
+   SCIP_CALL_TERMINATE( retcode, getCommentLineData(scip, opbinput, &objscale, &objoffset), TERMINATE2 );
 
    if( readerdata->maxintsize >= 0 && opbinput->intsize > readerdata->maxintsize )
    {
@@ -1863,7 +1863,8 @@ SCIP_RETCODE readOPBFile(
          SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
          SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhs);
          SCIPrationalFreeBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars);
-         goto TERMINATE1;
+         if( retcode != SCIP_OKAY )
+            goto TERMINATE1;
       }
 
       SCIP_CALL_TERMINATE( retcode, SCIPaddCons(scip, topcostcons), TERMINATE1 );

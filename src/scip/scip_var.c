@@ -314,7 +314,7 @@ SCIP_RETCODE SCIPaddVarExactData(
    /* forbid infinite objective function values */
    if( (obj != NULL && SCIPrationalIsAbsInfinity(obj)) || (obj == NULL && SCIPisInfinity(scip, REALABS(SCIPvarGetObj(var)))) )
    {
-      SCIPerrorMessage("invalid objective function value: value is infinite\n");
+      SCIPerrorMessage("invalid objective coefficient: value is infinite\n");
       return SCIP_INVALIDDATA;
    }
 

@@ -1617,7 +1617,7 @@ SCIP_RETCODE readObjectiveRational(
 
    if( !SCIPrationalIsZero(objoffset) )
    {
-      SCIP_CALL( SCIPaddOrigObjoffsetExact(scip, objoffset) );
+      SCIP_CALL_TERMINATE( retcode, SCIPaddOrigObjoffsetExact(scip, objoffset), TERMINATE );
    }
 
    if( !hasError(lpinput) )
@@ -3305,6 +3305,7 @@ SCIP_RETCODE readLPFile(
       default:
          SCIPerrorMessage("invalid LP file section <%d>\n", lpinput->section);
          retcode = SCIP_INVALIDDATA;
+         goto TERMINATE;
       }
    }
 

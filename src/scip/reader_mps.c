@@ -1216,11 +1216,11 @@ SCIP_RETCODE readColsExact(
    )
 {
    SCIP_RETCODE retcode = SCIP_OKAY;
-   char          colname[MPS_MAX_NAMELEN] = { '\0' };
-   SCIP_CONS*    cons;
-   SCIP_VAR*     var;
+   char colname[MPS_MAX_NAMELEN] = { '\0' };
+   SCIP_CONS* cons;
+   SCIP_VAR* var;
    SCIP_RATIONAL* val;
-   SCIP_Bool     usevartable;
+   SCIP_Bool usevartable;
 
    SCIPdebugMsg(scip, "read columns\n");
 
@@ -1308,7 +1308,7 @@ SCIP_RETCODE readColsExact(
             mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_FULL);
          else if( !SCIPrationalIsZero(val) )
          {
-            /* this method prints a warning in case the coefficient is infinite */
+            /* this method returns an error if the coefficient is infinite */
             SCIP_CALL_TERMINATE( retcode, SCIPaddCoefExactLinear(scip, cons, var, val), TERMINATE );
          }
       }
@@ -3515,7 +3515,6 @@ SCIP_RETCODE readMps(
    SCIP_FILE* fp;
    MPSINPUT* mpsi;
    SCIP_RETCODE retcode;
-   SCIP_Bool error = TRUE;
 
    assert(scip != NULL);
    assert(filename != NULL);
@@ -3591,21 +3590,19 @@ SCIP_RETCODE readMps(
    if( mpsinputSection(mpsi) != MPS_ENDATA )
       mpsinputSyntaxerror(mpsi);
 
-   error = mpsinputHasError(mpsi);
-
-   if( !error )
+   if( mpsinputHasError(mpsi) )
    {
-      SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
+      retcode = SCIP_READERROR;
+      goto TERMINATE;
    }
+
+   SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
 
  TERMINATE:
    mpsinputFree(scip, &mpsi);
    SCIPfclose(fp);
 
-   if( error )
-      return SCIP_READERROR;
-   else
-      return SCIP_OKAY;
+   return retcode;
 }
 
 /** Read LP in "MPS File Format" (version for exact solving mode, numbers can also be rationals).
@@ -3638,7 +3635,6 @@ SCIP_RETCODE readMpsExact(
    SCIP_FILE* fp;
    MPSINPUT* mpsi;
    SCIP_RETCODE retcode;
-   SCIP_Bool error = TRUE;
 
    assert(scip != NULL);
    assert(filename != NULL);
@@ -3715,21 +3711,19 @@ SCIP_RETCODE readMpsExact(
    if( mpsinputSection(mpsi) != MPS_ENDATA )
       mpsinputSyntaxerror(mpsi);
 
-   error = mpsinputHasError(mpsi);
-
-   if( !error )
+   if( mpsinputHasError(mpsi) )
    {
-      SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
+      retcode = SCIP_READERROR;
+      goto TERMINATE;
    }
+
+   SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
 
  TERMINATE:
    mpsinputFree(scip, &mpsi);
    SCIPfclose(fp);
 
-   if( error )
-      return SCIP_READERROR;
-   else
-      return SCIP_OKAY;
+   return retcode;
 }
 
 /*

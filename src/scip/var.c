@@ -2353,7 +2353,7 @@ SCIP_RETCODE varCreate(
    /* forbid infinite objective values */
    if( SCIPsetIsInfinity(set, REALABS(obj)) )
    {
-      SCIPerrorMessage("invalid objective value: objective value is infinite\n");
+      SCIPerrorMessage("invalid objective coefficient: value is infinite\n");
       return SCIP_INVALIDDATA;
    }
 
