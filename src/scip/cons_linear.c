@@ -18197,6 +18197,13 @@ SCIP_RETCODE SCIPaddCoefLinear(
       return SCIP_INVALIDDATA;
    }
 
+   if( SCIPisInfinity(scip, REALABS(val)) )
+   {
+      SCIPerrorMessage("Coefficient of variable <%s> in constraint <%s> is infinite,"
+         " consider adjusting the infinity threshold.\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+      return SCIP_INVALIDDATA;
+   }
+
    /* for the solving process we need linear rows, containing only active variables; therefore when creating a linear
     * constraint after presolving we have to ensure that it holds active variables
     */
