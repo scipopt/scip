@@ -676,11 +676,11 @@ SCIP_RETCODE consdataCreate(
          var = vars[v];
          assert(var != NULL);
 
-         /* warn the user in case the coefficient is infinite */
+         /* terminate if the coefficient is infinite */
          if( SCIPrationalIsAbsInfinity(vals[v]) )
          {
-            SCIPerrorMessage("Coefficient of variable <%s> in constraint <%s> contains infinite value,"
-               " consider adjusting SCIP infinity.\n", SCIPvarGetName(var), consname);
+            SCIPerrorMessage("Coefficient of variable <%s> in constraint <%s> is infinite,"
+               " consider adjusting the infinity threshold.\n", SCIPvarGetName(var), consname);
             retcode = SCIP_INVALIDDATA;
             goto TERMINATE;
          }
@@ -727,9 +727,9 @@ SCIP_RETCODE consdataCreate(
       }
 
    TERMINATE:
+      SCIPfreeBufferArray(scip, &valsrealbuffer);
       SCIPrationalFreeBufferArray(SCIPbuffer(scip), &valsbuffer, nvars);
       SCIPfreeBufferArray(scip, &varsbuffer);
-      SCIPfreeBufferArray(scip, &valsrealbuffer);
 
       if( retcode != SCIP_OKAY )
       {
@@ -6872,8 +6872,8 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
 
    if( SCIPrationalIsAbsInfinity(val) )
    {
-      SCIPerrorMessage("Coefficient of variable <%s> in constraint <%s> contains infinite value,"
-         " consider adjusting SCIP infinity.\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+      SCIPerrorMessage("Coefficient of variable <%s> in constraint <%s> is infinite,"
+         " consider adjusting the infinity threshold.\n", SCIPvarGetName(var), SCIPconsGetName(cons));
       return SCIP_INVALIDDATA;
    }
 
