@@ -72,16 +72,11 @@ SCIP_DECL_EXPRCOPYHDLR(exprCopyhdlrObj)
 
    if( exprhdlrdata->objexprhdlr->iscloneable() )
    {
-      SCIP_Bool valid = FALSE;
       scip::ObjExprhdlr* newobjexprhdlr;
-      newobjexprhdlr = dynamic_cast<scip::ObjExprhdlr*> (exprhdlrdata->objexprhdlr->clone(scip, &valid));
-
-      if( !valid )
-         return SCIP_NOMEMORY;
+      newobjexprhdlr = dynamic_cast<scip::ObjExprhdlr*> (exprhdlrdata->objexprhdlr->clone(scip));
 
       /* call include method of expression handler object */
-      SCIP_EXPRHDLR* targetexprhdlr;
-      SCIP_CALL( SCIPincludeObjExprhdlr(scip, &targetexprhdlr, newobjexprhdlr, TRUE) );
+      SCIP_CALL( SCIPincludeObjExprhdlr(scip, newobjexprhdlr, TRUE) );
    }
 
    return SCIP_OKAY;
@@ -97,8 +92,7 @@ SCIP_DECL_EXPRFREEHDLR(exprFreehdlrObj)
    assert((*exprhdlrdata)->objexprhdlr->scip_ == scip);
 
    /* call virtual method of exprhdlr object */
-   SCIP_CALL( (*exprhdlrdata)->objexprhdlr->scip_freehdlr(scip, exprhdlr,
-                                                          exprhdlrdata) );
+   SCIP_CALL( (*exprhdlrdata)->objexprhdlr->scip_freehdlr(scip, exprhdlr, exprhdlrdata) );
 
    /* free exprhdlr object */
    if( (*exprhdlrdata)->deleteobject )
@@ -169,10 +163,7 @@ SCIP_DECL_EXPRSIMPLIFY(exprSimplifyObj)
    assert(exprhdlrdata->objexprhdlr != NULL);
 
    /* call virtual method of exprhdlr object */
-   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_simplify(scip, expr,
-                                                       simplifiedexpr,
-                                                       ownercreate,
-                                                       ownercreatedata) );
+   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_simplify(scip, expr, simplifiedexpr, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }
@@ -202,9 +193,7 @@ SCIP_DECL_EXPRPRINT(exprPrintObj)
    assert(exprhdlrdata->objexprhdlr != NULL);
 
    /* call virtual method of exprhdlr object */
-   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_print(scip, expr, stage,
-                                                    currentchild,
-                                                    parentprecedence, file) );
+   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_print(scip, expr, stage, currentchild, parentprecedence, file) );
 
    return SCIP_OKAY;
 }
@@ -219,10 +208,8 @@ SCIP_DECL_EXPRPARSE(exprParseObj)
    assert(exprhdlrdata->objexprhdlr != NULL);
 
    /* call virtual method of exprhdlr object */
-   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_parse(scip, exprhdlr, string,
-                                                    endstring, expr, success,
-                                                    ownercreate,
-                                                    ownercreatedata) );
+   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_parse(scip, exprhdlr, string, endstring,
+      expr, success, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }
@@ -270,8 +257,7 @@ SCIP_DECL_EXPRBWFWDIFF(exprBwfwdiffObj)
    assert(exprhdlrdata->objexprhdlr != NULL);
 
    /* call virtual method of exprhdlr object */
-   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_bwfwdiff(scip, expr, childidx,
-                                                       bardot, direction) );
+   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_bwfwdiff(scip, expr, childidx, bardot, direction) );
 
    return SCIP_OKAY;
 }
@@ -287,9 +273,7 @@ SCIP_DECL_EXPRINTEVAL(exprIntevalObj)
    assert(exprhdlrdata->objexprhdlr != NULL);
 
    /* call virtual method of exprhdlr object */
-   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_inteval(scip, expr, interval,
-                                                      intevalvar,
-                                                      intevalvardata) );
+   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_inteval(scip, expr, interval, intevalvar, intevalvardata) );
 
    return SCIP_OKAY;
 }
@@ -305,12 +289,8 @@ SCIP_DECL_EXPRESTIMATE(exprEstimateObj)
    assert(exprhdlrdata->objexprhdlr != NULL);
 
    /* call virtual method of exprhdlr object */
-   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_estimate(scip, expr, localbounds,
-                                                       globalbounds, refpoint,
-                                                       overestimate,
-                                                       targetvalue, coefs,
-                                                       constant, islocal,
-                                                       success, branchcand) );
+   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_estimate(scip, expr, localbounds, globalbounds,
+      refpoint, overestimate, targetvalue, coefs, constant, islocal, success, branchcand) );
 
    return SCIP_OKAY;
 }
@@ -326,10 +306,8 @@ SCIP_DECL_EXPRINITESTIMATES(exprInitestimatesObj)
    assert(exprhdlrdata->objexprhdlr != NULL);
 
    /* call virtual method of exprhdlr object */
-   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_initestimates(scip, expr, bounds,
-                                                            overestimate, coefs,
-                                                            constant,
-                                                            nreturned) );
+   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_initestimates(scip, expr, bounds, overestimate,
+      coefs, constant, nreturned) );
 
    return SCIP_OKAY;
 }
@@ -345,9 +323,7 @@ SCIP_DECL_EXPRREVERSEPROP(exprReversepropObj)
    assert(exprhdlrdata->objexprhdlr != NULL);
 
    /* call virtual method of exprhdlr object */
-   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_reverseprop(scip, expr, bounds,
-                                                          childrenbounds,
-                                                          infeasible) );
+   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_reverseprop(scip, expr, bounds, childrenbounds, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -363,8 +339,7 @@ SCIP_DECL_EXPRHASH(exprHashObj)
    assert(exprhdlrdata->objexprhdlr != NULL);
 
    /* call virtual method of exprhdlr object */
-   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_hash(scip, expr, hashkey,
-                                                   childrenhashes) );
+   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_hash(scip, expr, hashkey, childrenhashes) );
 
    return SCIP_OKAY;
 }
@@ -380,9 +355,7 @@ SCIP_DECL_EXPRCURVATURE(exprCurvatureObj)
    assert(exprhdlrdata->objexprhdlr != NULL);
 
    /* call virtual method of exprhdlr object */
-   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_curvature(scip, expr,
-                                                        exprcurvature, success,
-                                                        childcurv) );
+   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_curvature(scip, expr, exprcurvature, success, childcurv) );
 
    return SCIP_OKAY;
 }
@@ -398,8 +371,7 @@ SCIP_DECL_EXPRMONOTONICITY(exprMonotonicityObj)
    assert(exprhdlrdata->objexprhdlr != NULL);
 
    /* call virtual method of exprhdlr object */
-   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_monotonicity(scip, expr, childidx,
-                                                           result) );
+   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_monotonicity(scip, expr, childidx, result) );
 
    return SCIP_OKAY;
 }
@@ -415,8 +387,7 @@ SCIP_DECL_EXPRINTEGRALITY(exprIntegralityObj)
    assert(exprhdlrdata->objexprhdlr != NULL);
 
    /* call virtual method of exprhdlr object */
-   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_integrality(scip, expr,
-                                                          integrality) );
+   SCIP_CALL( exprhdlrdata->objexprhdlr->scip_integrality(scip, expr, integrality) );
 
    return SCIP_OKAY;
 }
@@ -446,10 +417,12 @@ SCIP_DECL_EXPRGETSYMDATA(exprGetsymdataObj)
 /** creates the expression handler for the given expression handler object and includes it in SCIP */
 SCIP_RETCODE SCIPincludeObjExprhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRHDLR**       exprhdlr,           /**< pointer to store the expression handler */   scip::ObjExprhdlr*    objexprhdlr,        /**< expression handler object */
-   SCIP_Bool             deleteobject        /**< should the expression handler object be deleted when exprhdlr is freed? */
+   scip::ObjExprhdlr*    objexprhdlr,        /**< expression handler object */
+   SCIP_Bool             deleteobject,       /**< should the expression handler object be deleted when exprhdlr is freed? */
+   SCIP_EXPRHDLR**       cexprhdlr           /**< buffer to store C plugin that corresponds to expression handler object, or 0 if not required */
    )
 {
+   SCIP_EXPRHDLR* exprhdlr;
    SCIP_EXPRHDLRDATA* exprhdlrdata;
 
    assert(scip != NULL);
@@ -462,46 +435,48 @@ SCIP_RETCODE SCIPincludeObjExprhdlr(
    exprhdlrdata->deleteobject = deleteobject;
 
    /* include expression handler */
-   SCIP_CALL( SCIPincludeExprhdlr(scip, exprhdlr, objexprhdlr->scip_name_,
-                                  objexprhdlr->scip_desc_,
-                                  objexprhdlr->scip_precedence_, exprEvalObj,
-                                  exprhdlrdata) ); /*lint !e429*/
-   SCIPexprhdlrSetCopyFreeHdlr(*exprhdlr, exprCopyhdlrObj, exprFreehdlrObj);
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, objexprhdlr->scip_name_, objexprhdlr->scip_desc_,
+      objexprhdlr->scip_precedence_, exprEvalObj, exprhdlrdata) ); /*lint !e429*/
+
+   SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, exprCopyhdlrObj, exprFreehdlrObj);
    if( objexprhdlr->scip_has_copydata_ || objexprhdlr->scip_has_freedata_ )
-      SCIPexprhdlrSetCopyFreeData(*exprhdlr,
-                                  objexprhdlr->scip_has_copydata_ ? exprCopydataObj : NULL, objexprhdlr->scip_has_freedata_ ? exprFreedataObj : NULL);
+      SCIPexprhdlrSetCopyFreeData(exprhdlr,
+         objexprhdlr->scip_has_copydata_ ? exprCopydataObj : NULL,
+         objexprhdlr->scip_has_freedata_ ? exprFreedataObj : NULL);
    if( objexprhdlr->scip_has_simplify_ )
-      SCIPexprhdlrSetSimplify(*exprhdlr, exprSimplifyObj);
+      SCIPexprhdlrSetSimplify(exprhdlr, exprSimplifyObj);
    if( objexprhdlr->scip_has_compare_ )
-      SCIPexprhdlrSetCompare(*exprhdlr, exprCompareObj);
+      SCIPexprhdlrSetCompare(exprhdlr, exprCompareObj);
    if( objexprhdlr->scip_has_print_ )
-      SCIPexprhdlrSetPrint(*exprhdlr, exprPrintObj);
+      SCIPexprhdlrSetPrint(exprhdlr, exprPrintObj);
    if( objexprhdlr->scip_has_parse_ )
-      SCIPexprhdlrSetParse(*exprhdlr, exprParseObj);
-   if( objexprhdlr->scip_has_bwdiff_ || objexprhdlr->scip_has_fwdiff_
-      || objexprhdlr->scip_has_bwfwdiff_ )
-      SCIPexprhdlrSetDiff(*exprhdlr,
-                          objexprhdlr->scip_has_bwdiff_ ? exprBwdiffObj : NULL,
-                          objexprhdlr->scip_has_fwdiff_ ? exprFwdiffObj : NULL,
-                          objexprhdlr->scip_has_bwfwdiff_ ? exprBwfwdiffObj : NULL);
+      SCIPexprhdlrSetParse(exprhdlr, exprParseObj);
+   if( objexprhdlr->scip_has_bwdiff_ || objexprhdlr->scip_has_fwdiff_ || objexprhdlr->scip_has_bwfwdiff_ )
+      SCIPexprhdlrSetDiff(exprhdlr,
+         objexprhdlr->scip_has_bwdiff_ ? exprBwdiffObj : NULL,
+         objexprhdlr->scip_has_fwdiff_ ? exprFwdiffObj : NULL,
+         objexprhdlr->scip_has_bwfwdiff_ ? exprBwfwdiffObj : NULL);
    if( objexprhdlr->scip_has_inteval_ )
-      SCIPexprhdlrSetIntEval(*exprhdlr, exprIntevalObj);
+      SCIPexprhdlrSetIntEval(exprhdlr, exprIntevalObj);
    if( objexprhdlr->scip_has_estimate_ || objexprhdlr->scip_has_initestimates_ )
-      SCIPexprhdlrSetEstimate(*exprhdlr,
-                              objexprhdlr->scip_has_initestimates_ ? exprInitestimatesObj : NULL,
-                              objexprhdlr->scip_has_estimate_ ? exprEstimateObj : NULL);
+      SCIPexprhdlrSetEstimate(exprhdlr,
+         objexprhdlr->scip_has_initestimates_ ? exprInitestimatesObj : NULL,
+         objexprhdlr->scip_has_estimate_ ? exprEstimateObj : NULL);
    if( objexprhdlr->scip_has_reverseprop_ )
-      SCIPexprhdlrSetReverseProp(*exprhdlr, exprReversepropObj);
+      SCIPexprhdlrSetReverseProp(exprhdlr, exprReversepropObj);
    if( objexprhdlr->scip_has_hash_ )
-      SCIPexprhdlrSetHash(*exprhdlr, exprHashObj);
+      SCIPexprhdlrSetHash(exprhdlr, exprHashObj);
    if( objexprhdlr->scip_has_curvature_ )
-      SCIPexprhdlrSetCurvature(*exprhdlr, exprCurvatureObj);
+      SCIPexprhdlrSetCurvature(exprhdlr, exprCurvatureObj);
    if( objexprhdlr->scip_has_monotonicity_ )
-      SCIPexprhdlrSetMonotonicity(*exprhdlr, exprMonotonicityObj);
+      SCIPexprhdlrSetMonotonicity(exprhdlr, exprMonotonicityObj);
    if( objexprhdlr->scip_has_integrality_ )
-      SCIPexprhdlrSetIntegrality(*exprhdlr, exprIntegralityObj);
+      SCIPexprhdlrSetIntegrality(exprhdlr, exprIntegralityObj);
    if( objexprhdlr->scip_has_getsymdata_ )
-      SCIPexprhdlrSetGetSymdata(*exprhdlr, exprGetsymdataObj);
+      SCIPexprhdlrSetGetSymdata(exprhdlr, exprGetsymdataObj);
+
+   if( cexprhdlr != NULL )
+      *cexprhdlr = exprhdlr;
 
    return SCIP_OKAY; /*lint !e429*/
 }

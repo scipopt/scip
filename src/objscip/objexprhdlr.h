@@ -32,13 +32,11 @@
 #ifndef __SCIP_OBJEXPRHDLR_H__
 #define __SCIP_OBJEXPRHDLR_H__
 
-
-#include <cassert>
 #include <cstring>
 #include <utility>
 
 #include "scip/scip.h"
-#include "objscip/objprobcloneable.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
@@ -52,7 +50,7 @@ namespace scip
  *  - \ref EXPRHDLRS "List of available expression handlers"
  *  - \ref type_expr.h "Corresponding C interface"
  */
-class ObjExprhdlr : public ObjProbCloneable
+class ObjExprhdlr : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
@@ -475,12 +473,12 @@ public:
  *
  *  The method should be called in one of the following ways:
  *
- *   1. The user is resposible of deleting the object:
+ *   1. The user is responsible of deleting the object:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       SCIP_EXPRHDLR* cexprhdlr;
  *       MyExprhdlr* myexprhdlr = new MyExprhdlr(...);
- *       SCIP_CALL( SCIPincludeObjExprhdlr(scip, &cexprhdlr, &myexprhdlr, FALSE) );
+ *       SCIP_CALL( SCIPincludeObjExprhdlr(scip, &myexprhdlr, FALSE, &cexprhdlr) );
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );
  *       delete myexprhdlr;    // delete exprhdlr AFTER SCIPfree() !
@@ -488,16 +486,18 @@ public:
  *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       SCIP_EXPRHDLR* cexprhdlr;
- *       SCIP_CALL( SCIPincludeObjExprhdlr(scip, &cexprhdlr, new MyExprhdlr(...), TRUE) );
+ *       SCIP_CALL( SCIPincludeObjExprhdlr(scip, new MyExprhdlr(...), TRUE) );
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyExprhdlr is called here
+ *
+ *   Further, in case 1, the C plugin counterpart for myexprhdlr is stored in cexprhdlr.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeObjExprhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRHDLR**       exprhdlr,           /**< pointer to store the expression handler */   scip::ObjExprhdlr*    objconshdlr,        /**< expression handler object */
-   SCIP_Bool             deleteobject        /**< should the expression handler object be deleted when exprhdlr is freed? */
+   scip::ObjExprhdlr*    objexprhdlr,        /**< expression handler object */
+   SCIP_Bool             deleteobject,       /**< should the expression handler object be deleted when exprhdlr is freed? */
+   SCIP_EXPRHDLR**       cexprhdlr = 0       /**< buffer to store C plugin that corresponds to expression handler object, or 0 if not required */
    );
 
 /** returns the exprhdlr object of the given name, or 0 if not existing */
