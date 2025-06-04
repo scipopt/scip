@@ -17030,19 +17030,19 @@ static
 SCIP_DECL_CONSPARSE(consParseLinear)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
-   SCIP_Real* coefs;
-   int        nvars;
-   int        coefssize;
-   int        requsize;
-   SCIP_Real  lhs;
-   SCIP_Real  rhs;
-   char*      endptr;
-   char*      firstop;
-   char*      secondop;
-   SCIP_Bool  operatorsuccess;
-   char*      lhsstrptr;
-   char*      rhsstrptr;
-   char*      varstrptr;
+   SCIP_Real* coefs = NULL;
+   int nvars;
+   int coefssize = 100;
+   int requsize;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   char* endptr;
+   char* firstop;
+   char* secondop;
+   SCIP_Bool operatorsuccess;
+   char* lhsstrptr = NULL;
+   char* rhsstrptr = NULL;
+   char* varstrptr = (char*)str;
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -17071,9 +17071,6 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    /* if the grammar is not valid for parsing a linear constraint, return */
    if( ! operatorsuccess )
       return SCIP_OKAY;
-
-   varstrptr = (char *)str;
-   lhsstrptr = rhsstrptr = NULL;
    assert(firstop != NULL);
 
    /* assign the strings for parsing the left hand side, right hand side, and the linear variable sum */
@@ -17146,7 +17143,6 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    }
 
    /* initialize buffers for storing the variables and coefficients */
-   coefssize = 100;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars,  coefssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
 

@@ -6027,7 +6027,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    SCIP_VAR** vars = NULL;
    SCIP_RATIONAL** coefs = NULL;
    int nvars;
-   int coefssize;
+   int coefssize = 100;
    int requsize;
    SCIP_RATIONAL* lhs;
    SCIP_RATIONAL* rhs;
@@ -6035,9 +6035,9 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    char* firstop;
    char* secondop;
    SCIP_Bool operatorsuccess;
-   char* lhsstrptr;
-   char* rhsstrptr;
-   char* varstrptr;
+   char* lhsstrptr = NULL;
+   char* rhsstrptr = NULL;
+   char* varstrptr = (char*)str;
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -6073,8 +6073,6 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
       retcode = SCIP_OKAY;
       goto TERMINATE;
    }
-   varstrptr = (char *)str;
-   lhsstrptr = rhsstrptr = NULL;
    assert(firstop != NULL);
 
    /* assign the strings for parsing the left hand side, right hand side, and the linear variable sum */
@@ -6150,7 +6148,6 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    }
 
    /* initialize buffers for storing the variables and coefficients */
-   coefssize = 100;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, coefssize) );
    SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &coefs, coefssize) );
 
@@ -6171,11 +6168,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
       assert(!*success || requsize <= coefssize); /* if successful, then should have had enough space now */
    }
 
-   if( !*success )
-   {
-      SCIPerrorMessage("no luck in parsing linear sum '%s'\n", varstrptr);
-   }
-   else
+   if( *success )
    {
       SCIP_CALL_TERMINATE( retcode, SCIPcreateConsExactLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode),
@@ -6183,6 +6176,10 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    }
 
  TERMINATE:
+   if( !*success )
+   {
+      SCIPerrorMessage("no luck in parsing exact linear sum '%s'\n", varstrptr);
+   }
    if( coefs != NULL )
       SCIPrationalFreeBufferArray(SCIPbuffer(scip), &coefs, coefssize);
    SCIPfreeBufferArrayNull(scip, &vars);
