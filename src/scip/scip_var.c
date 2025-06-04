@@ -305,11 +305,12 @@ SCIP_RETCODE SCIPaddVarExactData(
    )
 {
    assert(var != NULL);
-
    assert(lb == NULL || ub == NULL || SCIPrationalIsLE(lb, ub));
-   assert(obj != NULL || !SCIPisInfinity(scip, REALABS(SCIPvarGetObj(var))));
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarExactData", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* real objective should be finite but abort anyway */
+   assert(obj != NULL || !SCIPisInfinity(scip, REALABS(SCIPvarGetObj(var))));
 
    /* forbid infinite objective function values */
    if( (obj != NULL && SCIPrationalIsAbsInfinity(obj)) || (obj == NULL && SCIPisInfinity(scip, REALABS(SCIPvarGetObj(var)))) )
