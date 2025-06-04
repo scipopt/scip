@@ -4123,7 +4123,9 @@ int varSection(
    return 5;
 }
 
-/** finds the best lower bound of the variable to use for MIR transformation */
+/** finds the best lower bound of the variable to use for MIR transformation.
+ * currently, we use a slightly different function for the exact MIR cuts than for the normal MIR cuts due to differences
+ * in how the codes can handle variable bound substitution. This function can only be used with the safe MIR code. */
 /* @todo make behavior identical to the unsafe MIR cut computation */
 static
 SCIP_RETCODE findBestLbSafely(
@@ -4190,7 +4192,9 @@ SCIP_RETCODE findBestLbSafely(
    return SCIP_OKAY;
 }
 
-/** finds the best upper bound of the variable to use for MIR transformation */
+/** finds the best upper bound of the variable to use for MIR transformation.
+ * currently, we use a slightly different function for the exact MIR cuts than for the normal MIR cuts due to differences
+ * in how the codes can handle variable bound substitution. This function can only be used with the safe MIR code. */
 /* @todo make behavior identical to the unsafe MIR cut computation */
 static
 SCIP_RETCODE findBestUbSafely(
@@ -7934,75 +7938,74 @@ SCIP_RETCODE SCIPcalcMIR(
    *success = FALSE;
 
    /* Setup data to track cut and initialize the cut with aggregation */
+   int l;
+   int nnz;
+
+   assert(vartypeusevbds >= 0 && vartypeusevbds < NSECTIONS);
+
+   SCIP_CALL(SCIPallocBuffer(scip, &data));
+
+   nnz = aggrrow->nnz;
+   data->totalnnz = nnz;
+
+   /* initialize sections */
+   for( l = 0; l < NSECTIONS; ++l )
    {
-      int l;
-      int nnz;
-
-      assert(vartypeusevbds >= 0 && vartypeusevbds < NSECTIONS);
-
-      SCIP_CALL( SCIPallocBuffer(scip, &data) );
-
-      nnz = aggrrow->nnz;
-      data->totalnnz = nnz;
-
-      /* initialize sections */
-      for( l = 0; l < NSECTIONS; ++l )
-      {
-         SCIP_CALL( SCIPallocBufferArray(scip, &data->secindices[l], nnz) );
-         data->secnnz[l] = 0;
-         /* Cont. | cont impl. | int impl. | bin impl. | int | bin */
-         data->isenfint[l] = l >= 2 ? TRUE : FALSE;
-         data->isimplint[l] = l >= 1 && l <= 3 ? TRUE : FALSE;
-         /* Use variable bounds for the sections specified by the user */
-         data->usevbds[l] = l < vartypeusevbds ? 2 : 0;
-      }
-
-      /* Problem data needs to be initialized before cut data as it is used to partition the variables into the sections */
-      data->vars = SCIPgetVars(scip);
-      data->nvars = SCIPgetNVars(scip);
-      data->nbinvars = SCIPgetNBinVars(scip);
-      data->nintvars = SCIPgetNIntVars(scip);
-      data->nbinimplvars = SCIPgetNBinImplVars(scip);
-      data->nintimplvars = SCIPgetNIntImplVars(scip);
-      data->ncontimplvars = SCIPgetNContImplVars(scip);
-      data->ncontvars = SCIPgetNContVars(scip);
-
-      SCIP_CALL( SCIPallocCleanBufferArray(scip, &(data->cutcoefs), QUAD_ARRAY_SIZE(data->nvars)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &data->cutinds, data->nvars) );
-
-      SCIPquadprecProdQD(data->cutrhs, aggrrow->rhs, scale);
-
-      if( nnz > 0 )
-      {
-         /* Initalize cut with the aggregation */
-         BMScopyMemoryArray(data->cutinds, aggrrow->inds, nnz);
-
-         for( l = 0; l < nnz; ++l )
-         {
-            SCIP_Real QUAD(coef);
-            int m = aggrrow->inds[l];
-
-            QUAD_ARRAY_LOAD(coef, aggrrow->vals, m);
-
-            SCIPquadprecProdQD(coef, coef, scale);
-
-            QUAD_ARRAY_STORE(data->cutcoefs, m, coef);
-
-            assert(QUAD_HI(coef) != 0.0);
-         }
-
-         /* Sort the array by problem index and add the variables to their sections */
-         SCIPsortDownInt(data->cutinds, nnz);
-         for( l = 0; l < nnz; ++l )
-         {
-            int section = varSection(data, data->cutinds[l]);
-            data->secindices[section][data->secnnz[section]] = data->cutinds[l];
-            ++data->secnnz[section];
-         }
-      }
-
-      data->ncutinds = 0;
+      SCIP_CALL(SCIPallocBufferArray(scip, &data->secindices[l], nnz));
+      data->secnnz[l] = 0;
+      /* Cont. | cont impl. | int impl. | bin impl. | int | bin */
+      assert(NSECTIONS == 6); /* If the section definition is changed, the below lines should also be adjusted to match */
+      data->isenfint[l] = l >= 2 ? TRUE : FALSE;
+      data->isimplint[l] = l >= 1 && l <= 3 ? TRUE : FALSE;
+      /* Use variable bounds for the sections specified by the user */
+      data->usevbds[l] = l < vartypeusevbds ? 2 : 0;
    }
+
+   /* Problem data needs to be initialized before cut data as it is used to partition the variables into the sections */
+   data->vars = SCIPgetVars(scip);
+   data->nvars = SCIPgetNVars(scip);
+   data->nbinvars = SCIPgetNBinVars(scip);
+   data->nintvars = SCIPgetNIntVars(scip);
+   data->nbinimplvars = SCIPgetNBinImplVars(scip);
+   data->nintimplvars = SCIPgetNIntImplVars(scip);
+   data->ncontimplvars = SCIPgetNContImplVars(scip);
+   data->ncontvars = SCIPgetNContVars(scip);
+
+   SCIP_CALL(SCIPallocCleanBufferArray(scip, &( data->cutcoefs ), QUAD_ARRAY_SIZE(data->nvars)));
+   SCIP_CALL(SCIPallocBufferArray(scip, &data->cutinds, data->nvars));
+
+   SCIPquadprecProdQD(data->cutrhs, aggrrow->rhs, scale);
+
+   if( nnz > 0 )
+   {
+      /* Initalize cut with the aggregation */
+      BMScopyMemoryArray(data->cutinds, aggrrow->inds, nnz);
+
+      for( l = 0; l < nnz; ++l )
+      {
+         SCIP_Real QUAD(coef);
+         int m = aggrrow->inds[l];
+
+         QUAD_ARRAY_LOAD(coef, aggrrow->vals, m);
+
+         SCIPquadprecProdQD(coef, coef, scale);
+
+         QUAD_ARRAY_STORE(data->cutcoefs, m, coef);
+
+         assert(QUAD_HI(coef) != 0.0);
+      }
+
+      /* Sort the array by problem index and add the variables to their sections */
+      SCIPsortDownInt(data->cutinds, nnz);
+      for( l = 0; l < nnz; ++l )
+      {
+         int section = varSection(data, data->cutinds[l]);
+         data->secindices[section][data->secnnz[section]] = data->cutinds[l];
+         ++data->secnnz[section];
+      }
+   }
+
+   data->ncutinds = 0;
    tmpislocal = aggrrow->local;
 
    /* allocate temporary memory */
@@ -8386,6 +8389,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          SCIP_CALL( SCIPallocBufferArray(scip, &data->secindices[l], nnz) );
          data->secnnz[l] = 0;
          /* Cont. | cont impl. | int impl. | bin impl. | int | bin */
+         assert(NSECTIONS == 6); /* If the section definition is changed, the below lines should also be adjusted to match */
          data->isenfint[l] = l >= 2 ? TRUE : FALSE;
          data->isimplint[l] = l >= 1 && l <= 3 ? TRUE : FALSE;
          /* Use variable bounds for the sections specified by the user */
@@ -13295,75 +13299,74 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, nvars) );
 
    /* Initialize cut data */
+   int l;
+   int nnz;
+
+   assert(vartypeusevbds >= 0 && vartypeusevbds < NSECTIONS);
+
+   SCIP_CALL(SCIPallocBuffer(scip, &data));
+
+   nnz = aggrrow->nnz;
+   data->totalnnz = nnz;
+
+   /* initialize sections */
+   for( l = 0; l < NSECTIONS; ++l )
    {
-      int l;
-      int nnz;
-
-      assert(vartypeusevbds >= 0 && vartypeusevbds < NSECTIONS);
-
-      SCIP_CALL( SCIPallocBuffer(scip, &data) );
-
-      nnz = aggrrow->nnz;
-      data->totalnnz = nnz;
-
-      /* initialize sections */
-      for( l = 0; l < NSECTIONS; ++l )
-      {
-         SCIP_CALL( SCIPallocBufferArray(scip, &data->secindices[l], nnz) );
-         data->secnnz[l] = 0;
-         /* Cont. | cont impl. | int impl. | bin impl. | int | bin */
-         data->isenfint[l] = l >= 2 ? TRUE : FALSE;
-         data->isimplint[l] = l >= 1 && l <= 3 ? TRUE : FALSE;
-         /* Use variable bounds for the sections specified by the user */
-         data->usevbds[l] = l < vartypeusevbds ? 2 : 0;
-      }
-
-      /* Problem data needs to be initialized before cut data as it is used to partition the variables into the sections */
-      data->vars = SCIPgetVars(scip);
-      data->nvars = SCIPgetNVars(scip);
-      data->nbinvars = SCIPgetNBinVars(scip);
-      data->nintvars = SCIPgetNIntVars(scip);
-      data->nbinimplvars = SCIPgetNBinImplVars(scip);
-      data->nintimplvars = SCIPgetNIntImplVars(scip);
-      data->ncontimplvars = SCIPgetNContImplVars(scip);
-      data->ncontvars = SCIPgetNContVars(scip);
-
-      SCIP_CALL( SCIPallocCleanBufferArray(scip, &(data->cutcoefs), QUAD_ARRAY_SIZE(data->nvars)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &data->cutinds, data->nvars) );
-
-      SCIPquadprecProdQD(data->cutrhs, aggrrow->rhs, scale);
-
-      if( nnz > 0 )
-      {
-         /* Initalize cut with the aggregation */
-         BMScopyMemoryArray(data->cutinds, aggrrow->inds, nnz);
-
-         for( l = 0; l < nnz; ++l )
-         {
-            SCIP_Real QUAD(coef);
-            int m = aggrrow->inds[l];
-
-            QUAD_ARRAY_LOAD(coef, aggrrow->vals, m);
-
-            SCIPquadprecProdQD(coef, coef, scale);
-
-            QUAD_ARRAY_STORE(data->cutcoefs, m, coef);
-
-            assert(QUAD_HI(coef) != 0.0);
-         }
-
-         /* Sort the array by problem index and add the variables to their sections */
-         SCIPsortDownInt(data->cutinds, nnz);
-         for( l = 0; l < nnz; ++l )
-         {
-            int section = varSection(data, data->cutinds[l]);
-            data->secindices[section][data->secnnz[section]] = data->cutinds[l];
-            ++data->secnnz[section];
-         }
-      }
-
-      data->ncutinds = 0;
+      SCIP_CALL(SCIPallocBufferArray(scip, &data->secindices[l], nnz));
+      data->secnnz[l] = 0;
+      /* Cont. | cont impl. | int impl. | bin impl. | int | bin */
+      assert(NSECTIONS == 6); /* If the section definition is changed, the below lines should also be adjusted to match */
+      data->isenfint[l] = l >= 2 ? TRUE : FALSE;
+      data->isimplint[l] = l >= 1 && l <= 3 ? TRUE : FALSE;
+      /* Use variable bounds for the sections specified by the user */
+      data->usevbds[l] = l < vartypeusevbds ? 2 : 0;
    }
+
+   /* Problem data needs to be initialized before cut data as it is used to partition the variables into the sections */
+   data->vars = SCIPgetVars(scip);
+   data->nvars = SCIPgetNVars(scip);
+   data->nbinvars = SCIPgetNBinVars(scip);
+   data->nintvars = SCIPgetNIntVars(scip);
+   data->nbinimplvars = SCIPgetNBinImplVars(scip);
+   data->nintimplvars = SCIPgetNIntImplVars(scip);
+   data->ncontimplvars = SCIPgetNContImplVars(scip);
+   data->ncontvars = SCIPgetNContVars(scip);
+
+   SCIP_CALL(SCIPallocCleanBufferArray(scip, &( data->cutcoefs ), QUAD_ARRAY_SIZE(data->nvars)));
+   SCIP_CALL(SCIPallocBufferArray(scip, &data->cutinds, data->nvars));
+
+   SCIPquadprecProdQD(data->cutrhs, aggrrow->rhs, scale);
+
+   if( nnz > 0 )
+   {
+      /* Initalize cut with the aggregation */
+      BMScopyMemoryArray(data->cutinds, aggrrow->inds, nnz);
+
+      for( l = 0; l < nnz; ++l )
+      {
+         SCIP_Real QUAD(coef);
+         int m = aggrrow->inds[l];
+
+         QUAD_ARRAY_LOAD(coef, aggrrow->vals, m);
+
+         SCIPquadprecProdQD(coef, coef, scale);
+
+         QUAD_ARRAY_STORE(data->cutcoefs, m, coef);
+
+         assert(QUAD_HI(coef) != 0.0);
+      }
+
+      /* Sort the array by problem index and add the variables to their sections */
+      SCIPsortDownInt(data->cutinds, nnz);
+      for( l = 0; l < nnz; ++l )
+      {
+         int section = varSection(data, data->cutinds[l]);
+         data->secindices[section][data->secnnz[section]] = data->cutinds[l];
+         ++data->secnnz[section];
+      }
+   }
+
+   data->ncutinds = 0;
    *cutislocal = aggrrow->local;
 
    if( data->totalnnz > 0 )
