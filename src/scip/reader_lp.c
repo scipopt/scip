@@ -1637,7 +1637,8 @@ SCIP_RETCODE readObjectiveRational(
  TERMINATE:
    /* free memory */
    SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
-   SCIPrationalFreeBlockArray(SCIPblkmem(scip), &coefs, coefssize);
+   if( coefs != NULL )
+      SCIPrationalFreeBlockArray(SCIPblkmem(scip), &coefs, coefssize);
 
    SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpval);
    SCIPrationalFreeBuffer(SCIPbuffer(scip), &objoffset);
