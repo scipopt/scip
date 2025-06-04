@@ -283,6 +283,7 @@ Fixed bugs
 - accept fractional continuous implied integral variables in heuristic completesol
 - invalidate activity with contradicting infinity contributions
 - avoid integer overflow in cons_cumulative.c triggered by unbounded variables, see new parameter "constraints/cumulative/maxtime"
+- fixed memory leaks when LP, MPS and OPB/WBO readers abort unsuccessfully
 
 Miscellaneous
 -------------
