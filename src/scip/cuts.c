@@ -4057,9 +4057,9 @@ SCIP_Real SCIPaggrRowGetRhs(
 
 typedef struct MIR_Data
 {
-   int                   totalnnz;
-   int*                  secindices[NSECTIONS];
-   int                   secnnz[NSECTIONS];
+   int                   totalnnz; /* The total number of nonzeros in all of the sections */
+   int*                  secindices[NSECTIONS]; /* The indices of the variables belonging to the section */
+   int                   secnnz[NSECTIONS];  /* The number of nonzero indices in the section */
 
    SCIP_Bool             isenfint[NSECTIONS];/**< Does the section have an integrality constraint? */
    SCIP_Bool             isimplint[NSECTIONS];/**< Is the section implied integer variables? */
@@ -4068,20 +4068,20 @@ typedef struct MIR_Data
    int                   usevbds[NSECTIONS]; /**< Should variable bound substitution be done for this section? */
 
    /* Problem data that we reuse often */
-   SCIP_VAR**            vars;
-   int                   nvars;
-   int                   nbinvars;
-   int                   nintvars;
-   int                   nbinimplvars;
-   int                   nintimplvars;
-   int                   ncontimplvars;
-   int                   ncontvars;
+   SCIP_VAR**            vars;               /**< pointer to SCIPs variable array */
+   int                   nvars;              /**< total number of variables */
+   int                   nbinvars;           /**< total number of non-implint binary variables */
+   int                   nintvars;           /**< total number of non-implint integer variables */
+   int                   nbinimplvars;       /**< total number of implint binary variables */
+   int                   nintimplvars;       /**< total number of implint integer variables */
+   int                   ncontimplvars;      /**< total number of implint continuous variables */
+   int                   ncontvars;          /**< total number of non-implied continuous variables */
 
    SCIP_Real*            cutcoefs;           /**< working cut indices value array */
-   SCIP_Real             QUAD(cutrhs);
+   SCIP_Real             QUAD(cutrhs);       /**< the working right hand side of the cut*/
 
    int*                  cutinds;            /**< working cut variable problem index array */
-   int                   ncutinds;
+   int                   ncutinds;           /**< number of values in the working cut variable problem index array */
 } MIR_DATA;
 
 /** Returns the section of a variable.
