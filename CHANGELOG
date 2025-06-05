@@ -34,6 +34,7 @@ Features
   the SCIP shell dialog "display statistics" now also prints the statistics from solving the Benders' decomposition in the relaxator
 - added a dynamic max-lookahead criterion for strong branching. Fits a probability distribution to the observed candidate gains and
   stop evaluating further candidates once the expected tree-size reduction no longer justifies the LP evaluation cost.
+- extended the statistics to also include information about the number of variables (per type) affected by symmetry
 
 Performance improvements
 ------------------------
