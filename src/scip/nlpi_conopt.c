@@ -32,6 +32,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define SCIP_DEBUG
+
 #include "scip/nlpi_conopt.h"
 #include "scip/nlpioracle.h"
 #include "scip/scip_mem.h"
@@ -95,7 +97,7 @@ static int COI_CALLCONV Solution(
    const int             YSTA[],
    int                   NUMVAR,
    int                   NUMCON,
-   void*                 USRMEM
+   void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
 {
    /* TODO pass solution to SCIP */
@@ -115,11 +117,11 @@ static int COI_CALLCONV ReadMatrix(
    int                   COLSTA[],           /**< starting indices of Jacobian columns in ROWNO */
    int                   ROWNO[],            /**< row numbers of Jacobian nonzeros */
    double                VALUE[],
-   int                   NLFLAG[],
-   int                   NUMVAR,
-   int                   NUMCON,
+   int                   NLFLAG[],           /**< flags marking nonlinear Jacobian elements (following the same sparse representation as ROWNO) */
+   int                   NUMVAR,             /**< number of variables as defined in COIDEF_NumVar() */
+   int                   NUMCON,             /**< number of constraints as defined in COIDEF_NumCon() */
    int                   NUMNZ,              /**< number of Jacobian elements as defined in COIDEF_NumNz() */
-   void*                 USRMEM
+   void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
 {
    const SCIP_Real* lbs;
@@ -131,6 +133,13 @@ static int COI_CALLCONV ReadMatrix(
    int nlnnz;
    const SCIP_Bool* jacrownlflags;
    int* rangeconsidxs;
+   const int* jaccoloffsets;
+   const int* jacrows;
+   int nobjnz;
+   const int* objnz;
+   const SCIP_Bool* objnlflags;
+   int nobjnlnz;
+   int objnzi = 0;
 
    assert(problem != NULL);
    assert(problem->scip != NULL);
@@ -201,31 +210,58 @@ static int COI_CALLCONV ReadMatrix(
    /* Jacobian information */
 
    /* TODO make it so that the column representation is only composed when asked for */
-   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->scip, oracle, NULL, NULL, NULL, &COLSTA, &ROWNO, &jacrownlflags, &nlnnz) );
-   assert(COLSTA[norigvars] <= NUMNZ);
+   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->scip, oracle, NULL, NULL, NULL, &jaccoloffsets, &jacrows, &jacrownlflags, &nlnnz) );
+   assert(jaccoloffsets[norigvars] <= NUMNZ);
+
+   /* move structure info into COLSTA and ROWNO; while doing so, also add nonzeroes for the objective
+    * (which CONOPT sees as the last constraint with index NUMCON-1) */
+   SCIP_CALL( SCIPnlpiOracleGetObjGradientNnz(problem->scip, oracle, &objnz, &objnlflags, &nobjnz, &nobjnlnz) );
+   for( int i = 0; i < norigvars; i++ )
+   {
+      COLSTA[i] = jaccoloffsets[i] + objnzi; /* starts of columns get shifted by how many objective nonzeros were added */
+      for( int j = jaccoloffsets[i]; j < jaccoloffsets[i+1]; j++ )
+      {
+         ROWNO[j+objnzi] = jacrows[j];
+         NLFLAG[j+objnzi] = jacrownlflags[j] ? 1 : 0;
+      }
+      if( i == objnz[objnzi] )
+      {
+         ROWNO[jaccoloffsets[i+1] + objnzi] = NUMCON - 1;
+         NLFLAG[jaccoloffsets[i+1] + objnzi] = objnlflags[objnzi] ? 1 : 0;
+         ++objnzi;
+      }
+   }
 
    /* add a nonzero for each slack variable */
    for( int i = 0; i < nslackvars; i++ )
    {
       COLSTA[norigvars+i] = COLSTA[norigvars] + i; /* for each slack var, only one nonzero is added */
       ROWNO[COLSTA[norigvars+i]] = rangeconsidxs[i];
+      NLFLAG[COLSTA[norigvars+i]] = 0;
    }
    SCIPfreeBufferArray(problem->scip, &rangeconsidxs);
+   COLSTA[NUMVAR] = NUMNZ;
+   assert(COLSTA[0] == 0);
 
 #ifndef NDEBUG
-   printf("\nNUMCON = %d", NUMCON);
-   for( int i = 0; i < NUMNZ; i++ )
-   {
+   for( int i = 0; i < NUMNZ; ++i )
       assert(ROWNO[i] >= 0 && ROWNO[i] < NUMCON);
-      printf("\nROWNO[%d] = %d", i, ROWNO[i]);
-   }
-   fflush(stdout);
+#endif
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMsg(problem->scip, "Jacobian structure information:\n");
+   SCIPdebugMsg(problem->scip, "COLSTA =\n");
+   for( int i = 0; i < NUMVAR; i++ )
+      printf("%d, ", COLSTA[i]);
+   printf("\n");
+
+   SCIPdebugMsg(problem->scip, "ROWNO =\n");
+   for( int i = 0; i < NUMNZ; i++ )
+      printf("%d, ", ROWNO[i]);
+   printf("\n");
 #endif
 
    /* TODO fill in VALUE */
-
-   for( int i = 0; i < NUMNZ; i++ )
-      NLFLAG[i] = jacrownlflags[i] ? 1 : 0;
 
    return 0;
 }
@@ -236,7 +272,7 @@ static int COI_CALLCONV Message(
    int                   DMSG,
    int                   NMSG,
    char*                 MSGV[],
-   void*                 USRMEM
+   void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
 {
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
@@ -256,7 +292,7 @@ static int COI_CALLCONV ErrMsg(
    int                   COLNO,
    int                   POSNO,
    const char*           MSG,
-   void*                 USRMEM
+   void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
 {
    if( ROWNO == -1 )
@@ -276,7 +312,7 @@ static int COI_CALLCONV Status(
    int                   SOLSTA,
    int                   ITER,
    double                OBJVAL,
-   void*                 USRMEM
+   void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
 {
    SCIP* scip;
@@ -430,6 +466,10 @@ static SCIP_RETCODE initConopt(
    const int* jacoffset;
    const int* hessoffset;
    int nnlnz;
+   const int* objgradnz;
+   const SCIP_Bool* objnl;
+   int nobjgradnz;
+   int nobjgradnls;
 
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -447,14 +487,20 @@ static SCIP_RETCODE initConopt(
          nrangeconss++;
    }
 
+   COI_Error += COIDEF_EmptyCol(problem->CntVect, TRUE);
+
    /* inform CONOPT about problem sizes */
    COI_Error += COIDEF_NumVar(problem->CntVect, SCIPnlpiOracleGetNVars(problem->oracle) + nrangeconss);
    COI_Error += COIDEF_NumCon(problem->CntVect, nconss + 1); /* objective counts as another constraint here */
 
    /* jacobian information */
    SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &jacoffset, NULL, NULL, NULL, NULL, NULL, &nnlnz) );
-   COI_Error += COIDEF_NumNz(problem->CntVect, jacoffset[nconss] + nrangeconss); /* each slack var adds a Jacobian nnz */
-   COI_Error += COIDEF_NumNlNz(problem->CntVect, nnlnz);
+   SCIP_CALL( SCIPnlpiOracleGetObjGradientNnz(scip, problem->oracle, &objgradnz, &objnl, &nobjgradnz, &nobjgradnls) );
+
+   /* each slack var adds a Jacobian nnz; objective also counts as constraint */
+   COI_Error += COIDEF_NumNz(problem->CntVect, jacoffset[nconss] + nrangeconss + nobjgradnz);
+
+   COI_Error += COIDEF_NumNlNz(problem->CntVect, nnlnz + nobjgradnls);
 
    /* hessian information */
    SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &hessoffset, NULL) );

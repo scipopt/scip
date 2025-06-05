@@ -358,6 +358,20 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    int*                  nnlnz               /**< number of nonlinear nonzeroes */
    );
 
+/** gets nonzero indices in the objective gradient
+ *
+ *  Note that internal data is returned in *nz, thus the user does not need to allocate memory there.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   const int**           nz,                 /**< pointer to store pointer that stores the nonzeroes of the objective gradient */
+   const SCIP_Bool**     nlnz,               /**< flags marking nonlinear nonzeroes */
+   int*                  nnz,                /**< number of nonzeroes */
+   int*                  nnlnz               /**< number of nonlinear nonzeroes */
+   );
+
 /** evaluates the Jacobian matrix in a given point
  *
  *  The values in the Jacobian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity().

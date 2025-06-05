@@ -64,6 +64,7 @@ struct SCIP_NlpiOracle
 {
    char*                 name;               /**< name of problem */
 
+   /* variables */
    int                   varssize;           /**< length of variables related arrays */
    int                   nvars;              /**< number of variables */
    SCIP_Real*            varlbs;             /**< array with variable lower bounds */
@@ -72,21 +73,34 @@ struct SCIP_NlpiOracle
    int*                  varlincount;        /**< array with number of appearances of variable in linear part of objective or constraints */
    int*                  varnlcount;         /**< array with number of appearances of variable in nonlinear part of objective or constraints */
 
+   /* constraints */
    int                   consssize;          /**< length of constraints related arrays */
    int                   nconss;             /**< number of constraints */
    SCIP_NLPIORACLECONS** conss;              /**< constraints, or NULL if none */
 
+   /* objective */
    SCIP_NLPIORACLECONS*  objective;          /**< objective */
 
+   /* Jacobian */
+   int                   jacnnlnnz;          /**< number of entries in the Jacobian corresponding to nonlinear terms */
+
+   /* rowwise Jacobian structure */
    int*                  jacrowoffsets;      /**< rowwise jacobi sparsity pattern: constraint offsets in jaccols */
    int*                  jaccols;            /**< rowwise jacobi sparsity pattern: indices of variables appearing in constraints */
+   SCIP_Bool*            jaccolnlflags;      /**< flags indicating whether a Jacobian entry corresponds to a nonlinear variable; sorted rowwise */
+
+   /* columnwise Jacobian structure */
    int*                  jaccoloffsets;      /**< columnwise jacobi sparsity pattern: variable offsets in jacrows */
    int*                  jacrows;            /**< columnwise jacobi sparsity pattern: indices of constraints where corresponding variables appear */
-   int                   jacnnlnnz;          /**< number of entries in the Jacobian corresponding to nonlinear terms */
-   int*                  jacnlnnz;           /**< array with indices in jaccols corresponding to nonlinear terms */
-   SCIP_Bool*            jaccolnlflags;      /**< flags indicating whether a Jacobian entry corresponds to a nonlinear variable; sorted row-wise */
    SCIP_Bool*            jacrownlflags;      /**< flags indicating whether a Jacobian entry corresponds to a nonlinear variable; sorted column-wise */
 
+   /* objective gradient sparsity */
+   int*                  objgradnz;          /**< indices of nonzeroes in the objective gradient */
+   SCIP_Bool*            objnlflags;         /**< flags of nonlinear nonzeroes in the objective gradient */
+   int                   nobjgradnz;         /**< number of nonzeroes in the objective gradient */
+   int                   nobjgradnlnz;       /**< number of nonlinear nonzeroes in the objective gradient */
+
+   /* Hessian sparsity */
    int*                  heslagoffsets;      /**< rowwise sparsity pattern of hessian matrix of Lagrangian: row offsets in heslagcol */
    int*                  heslagcols;         /**< rowwise sparsity pattern of hessian matrix of Lagrangian: column indices; sorted for each row */
 
@@ -2063,6 +2077,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    SCIP_EXPRITER* it;
    SCIP_EXPR* expr;
    SCIP_Bool* nzflag;
+   SCIP_Bool* nlflag;
    int* nvarnnz; /* for each variable, number of constraints it has a nonzero in */
    int nnz;
    int maxnnz;
@@ -2127,6 +2142,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    (*nnlnz) = 0;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nzflag, oracle->nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlflag, oracle->nvars) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &nvarnnz, oracle->nvars) );
 
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
@@ -2158,6 +2174,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
        * @todo this could be done faster for very sparse constraint by assembling all appearing variables, sorting, and removing duplicates
        */
       BMSclearMemoryArray(nzflag, oracle->nvars);
+      BMSclearMemoryArray(nlflag, oracle->nvars);
 
       for( j = 0; j < cons->nlinidxs; ++j )
          nzflag[cons->linidxs[j]] = TRUE;
@@ -2167,6 +2184,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
          {
             assert(SCIPgetIndexExprVaridx(expr) < oracle->nvars);
             nzflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
+            nlflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
          }
 
       /* store variables indices in jaccols and increase coloffsets */
@@ -2177,10 +2195,13 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 
          SCIP_CALL( ensureIntArraySize(scip, &oracle->jaccols, &maxnnz, nnz + 1) );
          oracle->jaccols[nnz] = j;
-         oracle->jaccolnlflags[nnz] = TRUE;
+         if( nlflag[j] )
+         {
+            oracle->jaccolnlflags[nnz] = TRUE;
+            ++(*nnlnz);
+         }
          ++nnz;
          ++nvarnnz[j]; /* increase the counter of the variable's nonzeroes */
-         ++(*nnlnz);
       }
    }
 
@@ -2194,6 +2215,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->jaccols, maxnnz, nnz) );
    }
 
+   SCIPfreeBlockMemoryArray(scip, &nlflag, oracle->nvars);
    SCIPfreeBlockMemoryArray(scip, &nzflag, oracle->nvars);
 
    /* compute the column representation */
@@ -2239,6 +2261,128 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       *rows = oracle->jacrows;
    if( rownlflags != NULL )
       *rownlflags = oracle->jacrownlflags;
+
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
+   return SCIP_OKAY;
+}
+
+/* TODO add the objective case to jacobian row evaluation */
+/** gets nonzero indices in the objective gradient
+ *
+ *  Note that internal data is returned in *nz, thus the user does not need to allocate memory there.
+ */
+SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   const int**           nz,                 /**< pointer to store pointer that stores the nonzeroes of the objective gradient */
+   const SCIP_Bool**     nlflags,            /**< flags marking nonlinear nonzeroes */
+   int*                  nnz,                /**< number of nonzeroes */
+   int*                  nnlnz               /**< number of nonlinear nonzeroes */
+   )
+{
+   SCIP_NLPIORACLECONS* obj;
+   SCIP_EXPRITER* it;
+   SCIP_EXPR* expr;
+   SCIP_Bool* nzflag;
+   SCIP_Bool* nlflag;
+   int j;
+
+   assert(oracle != NULL);
+
+   SCIPdebugMessage("%p get objective gradient sparsity\n", (void*)oracle);
+
+   if( oracle->objgradnz != NULL )
+   {
+      *nz = oracle->objgradnz;
+      *nlflags = oracle->objnlflags;
+      *nnz = oracle->nobjgradnz;
+      *nnlnz = oracle->nobjgradnlnz;
+      return SCIP_OKAY;
+   }
+
+   if( oracle->nvars == 0 )
+   {
+      /* TODO what happens with the fields in oracle? */
+      *nz = NULL;
+      *nlflags = NULL;
+      *nnz = 0;
+      *nnlnz = 0;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->objgradnz), oracle->nvars) ); /* TODO can this and the next be made smaller? */
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->objnlflags), oracle->nvars) );
+   oracle->nobjgradnz = 0;
+   oracle->nobjgradnlnz = 0;
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+
+   /* TODO this can be moved into a separate function */
+   obj = oracle->objective;
+   assert(obj != NULL);
+
+   if( obj->expr == NULL )
+   {
+      /* for a linear objective, we can just copy the linear indices from the objective into the sparsity pattern */
+      if( obj->nlinidxs > 0 )
+      {
+         BMScopyMemoryArray(oracle->objgradnz, obj->linidxs, obj->nlinidxs);
+         oracle->nobjgradnz = obj->nlinidxs;
+      }
+      else
+         oracle->objgradnz = NULL;
+   }
+   else
+   {
+      /* check which variables appear in objective */
+      SCIP_CALL( SCIPallocCleanBufferArray(scip, &nzflag, oracle->nvars) );
+      SCIP_CALL( SCIPallocCleanBufferArray(scip, &nlflag, oracle->nvars) );
+
+      for( j = 0; j < obj->nlinidxs; ++j )
+         nzflag[obj->linidxs[j]] = TRUE;
+
+      for( expr = SCIPexpriterRestartDFS(it, obj->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+         if( SCIPisExprVaridx(scip, expr) )
+         {
+            assert(SCIPgetIndexExprVaridx(expr) < oracle->nvars);
+            nzflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
+            nlflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
+         }
+
+      /* store variables indices in objgradnz and increase nobjgradnz */
+      for( j = 0; j < oracle->nvars; ++j )
+      {
+         if( nzflag[j] == FALSE )
+            continue;
+
+         oracle->objgradnz[oracle->nobjgradnz] = j;
+         ++(oracle->nobjgradnz);
+
+         if( nlflag[j] )
+         {
+            oracle->objnlflags[oracle->nobjgradnz] = TRUE;
+            ++(oracle->nobjgradnlnz);
+         }
+      }
+
+      SCIPfreeCleanBufferArray(scip, &nlflag);
+      SCIPfreeCleanBufferArray(scip, &nzflag);
+   }
+
+   SCIPfreeExpriter(&it);
+
+   /* shrink objgradnz array to nobjgradnz */
+   if( oracle->nobjgradnz < oracle->nvars )
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(oracle->objgradnz), oracle->nvars, oracle->nobjgradnz) );
+
+   *nz = oracle->objgradnz;
+   *nlflags = oracle->objnlflags;
+   *nnz = oracle->nobjgradnz;
+   *nnlnz = oracle->nobjgradnlnz;
 
    SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
