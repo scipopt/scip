@@ -1878,6 +1878,26 @@ char* SCIPnlpiOracleGetConstraintName(
    return oracle->conss[considx]->name;
 }
 
+/** gives linear coefficient of a given variable in a constraint */
+SCIP_Real SCIPnlpiOracleGetConstraintCoef(
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   int                   considx,            /**< constraint index */
+   int                   varpos              /**< variable's position in the constraint's variable array */
+   )
+{
+   SCIP_NLPIORACLECONS* cons;
+
+   assert(oracle != NULL);
+   assert(considx >= -1);
+   assert(considx < oracle->nconss);
+   assert(varpos >= 0);
+
+   cons = considx == -1 ? oracle->objective : oracle->conss[considx];
+   assert(varpos < cons->nlinidxs);
+
+   return cons->lincoefs[varpos];
+}
+
 /** indicates whether constraint is nonlinear */
 SCIP_Bool SCIPnlpiOracleIsConstraintNonlinear(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -2517,7 +2537,7 @@ TERMINATE:
    return retcode;
 }
 
-/* TODO: put row evaluation into a helper function to be called by the above and this functions */
+/* TODO: put row evaluation into a helper function to be called by the above and this functions (isn't this already evalFunction?) */
 /** evaluates a row of the Jacobian matrix in a given point
  *
  *  The values in the Jacobian matrix row are returned in the same order as specified by the rowoffset and col arrays

@@ -137,6 +137,7 @@ static int COI_CALLCONV ReadMatrix(
    const SCIP_Bool* objnlflags;
    int nobjnlnz;
    int objnzi = 0;
+   int* nrownz;
 
    assert(problem != NULL);
 
@@ -215,6 +216,7 @@ static int COI_CALLCONV ReadMatrix(
 
    /* move structure info into COLSTA and ROWNO; while doing so, also add nonzeroes for the objective
     * (which CONOPT sees as the last constraint, i.e. constraint with index NUMCON-1) */
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &nrownz, NUMCON) );
    SCIP_CALL( SCIPnlpiOracleGetObjGradientNnz(scip, oracle, &objnz, &objnlflags, &nobjnz, &nobjnlnz) );
    for( int i = 0; i < norigvars; i++ )
    {
@@ -225,6 +227,11 @@ static int COI_CALLCONV ReadMatrix(
       {
          ROWNO[j+objnzi] = jacrows[j];
          NLFLAG[j+objnzi] = jacrownlflags[j] ? 1 : 0;
+         if( NLFLAG[j+objnzi] == 0 )
+         {
+            VALUE[j+objnzi] = SCIPnlpiOracleGetConstraintCoef(oracle, jacrows[j], nrownz[jacrows[j]]);
+            ++(nrownz[jacrows[j]]);
+         }
       }
 
       /* nonzeroes of objective */
@@ -232,9 +239,16 @@ static int COI_CALLCONV ReadMatrix(
       {
          ROWNO[jaccoloffsets[i+1] + objnzi] = NUMCON - 1;
          NLFLAG[jaccoloffsets[i+1] + objnzi] = objnlflags[objnzi] ? 1 : 0;
+         if( NLFLAG[jaccoloffsets[i+1] + objnzi] == 0 )
+         {
+            /* in the oracle, index -1 is used for the objective */
+            VALUE[jaccoloffsets[i+1] + objnzi] = SCIPnlpiOracleGetConstraintCoef(oracle, -1, nrownz[NUMCON-1]);
+            ++(nrownz[NUMCON-1]);
+         }
          ++objnzi;
       }
    }
+   SCIPfreeCleanBufferArray(scip, &nrownz);
 
    /* add a nonzero for each slack variable */
    for( int i = 0; i < nslackvars; i++ )
@@ -262,6 +276,16 @@ static int COI_CALLCONV ReadMatrix(
    SCIPdebugMsg(scip, "ROWNO =\n");
    for( int i = 0; i < NUMNZ; i++ )
       printf("%d, ", ROWNO[i]);
+   printf("\n");
+
+   SCIPdebugMsg(scip, "NLFLAG =\n");
+   for( int i = 0; i < NUMNZ; i++ )
+      printf("%d, ", NLFLAG[i]);
+   printf("\n");
+
+   SCIPdebugMsg(scip, "VALUE =\n");
+   for( int i = 0; i < NUMNZ; i++ )
+      printf("%g, ", VALUE[i]);
    printf("\n");
 #endif
 
