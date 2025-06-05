@@ -8166,7 +8166,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
             goto TERMINATE;
       }
       /* this means that x = b*x + a_1*y_1 + ... + a_n*y_n + c */
-      else if( !SCIPsetIsZero(set, tmpscalar) )
+      else if( tmpscalar != 0.0 ) /*lint !e777*/
       {
          tmpscalar = 1 - tmpscalar;
          tmpconstant /= tmpscalar;
