@@ -3248,7 +3248,7 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
    /* constraint handlers without constraints should only be called once */
    if( nconss > 0 || (!conshdlr->needscons && relaxchanged) )
    {
-      SCIP_CONS** conss;
+      SCIP_CONS** conss = NULL;
       SCIP_Longint oldndomchgs;
       SCIP_Longint oldnprobdomchgs;
       int oldncuts;
@@ -3266,7 +3266,11 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
       conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
 
       /* get the array of the constraints to be processed */
-      conss = &(conshdlr->enfoconss[firstcons]);
+      if( conshdlr->needscons )
+      {
+         assert(conshdlr->enfoconss != NULL);
+         conss = conshdlr->enfoconss + firstcons;
+      }
 
       oldncuts = SCIPsepastoreGetNCuts(sepastore);
       oldnactiveconss = stat->nactiveconss;
@@ -3644,7 +3648,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       /* constraint handlers without constraints should only be called once */
       if( nconss > 0 || (!conshdlr->needscons && pschanged) )
       {
-         SCIP_CONS** conss;
+         SCIP_CONS** conss = NULL;
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
 
@@ -3657,7 +3661,11 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
 
          /* get the array of the constraints to be processed */
-         conss = &(conshdlr->enfoconss[firstcons]);
+         if( conshdlr->needscons )
+         {
+            assert(conshdlr->enfoconss != NULL);
+            conss = conshdlr->enfoconss + firstcons;
+         }
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
