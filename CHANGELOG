@@ -162,6 +162,7 @@ Interface changes
 - added SCIPsortDownIntIntIntReal()
 - SCIPconshdlrSetNeedsCons() to set whether constraint handler callbacks should also be called if there are no constraints
 - SCIPpropSetTimingmask() to set timing mask of a propagator
+- added C++ interface for expression handlers: src/objscip/objexprhdlr.h
 
 ### Changes in preprocessor macros
 
