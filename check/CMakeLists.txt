@@ -538,6 +538,7 @@ set(pairs_Issue
     "instances/Issue/3662_2.cip\;0\;default"
     "instances/Issue/3675_1.cip\;0\;default"
     "instances/Issue/3675_2.cip\;0\;presolving_heuristics_off"
+    "instances/Issue/3675_3.cip\;21589416.4938212\;default"
     "instances/Issue/3681.cip\;0\;default"
     "instances/Issue/3688.cip\;131882\;reduced_presolving"
     "instances/Issue/3691.cip\;1.862908\;presolvingnolinear"
