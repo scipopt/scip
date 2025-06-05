@@ -8125,7 +8125,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       {
          if( ntmpvars == 0 )
          {
-            if( SCIPsetIsZero(set, tmpconstant) ) /* x = x */
+            if( SCIPsetIsFeasZero(set, tmpconstant) ) /* x = x */
             {
                SCIPsetDebugMsg(set, "Possible multi-aggregation was completely resolved and detected to be redundant.\n");
                goto TERMINATE;
