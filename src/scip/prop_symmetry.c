@@ -760,33 +760,37 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
    assert( tabledata != NULL );
    assert( tabledata->propdata != NULL );
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Symmetry           :\n");
-   SCIP_CALL( ensureSymmetryMovedPermvarsCountsComputed(scip, tabledata->propdata) );
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  #affected vars   : %10d (%d bin, %d int, %d cont)\n",
-      tabledata->propdata->nmovedpermvars, tabledata->propdata->nmovedbinpermvars,
-      tabledata->propdata->nmovedintpermvars, tabledata->propdata->nmovedcontpermvars) ;
-   if ( tabledata->propdata->orbitopalreddata )
+   /* print information only if symmetries are present */
+   if ( tabledata->propdata->nperms > 0 )
    {
-      SCIP_CALL( SCIPorbitopalReductionGetStatistics(scip, tabledata->propdata->orbitopalreddata, &nred, &ncutoff) );
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbitopal red.   : %10d reductions applied,"
-         " %10d cutoffs\n", nred, ncutoff);
-   }
-   if ( tabledata->propdata->orbitalreddata )
-   {
-      SCIP_CALL( SCIPorbitalReductionGetStatistics(scip, tabledata->propdata->orbitalreddata, &nred, &ncutoff) );
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbital reduction: %10d reductions applied,"
-         " %10d cutoffs\n", nred, ncutoff);
-   }
-   if ( tabledata->propdata->lexreddata )
-   {
-      SCIP_CALL( SCIPlexicographicReductionGetStatistics(scip, tabledata->propdata->lexreddata, &nred, &ncutoff) );
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  lexicographic red: %10d reductions applied,"
-         " %10d cutoffs\n", nred, ncutoff);
-   }
-   if ( tabledata->propdata->shadowtreeeventhdlr )
-   {
-      time = SCIPgetShadowTreeEventHandlerExecutionTime(scip, tabledata->propdata->shadowtreeeventhdlr);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  shadow tree time : %10.2f s\n", time);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Symmetry           :\n");
+      SCIP_CALL( ensureSymmetryMovedPermvarsCountsComputed(scip, tabledata->propdata) );
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  #affected vars   : %10d (%d bin, %d int, %d cont)\n",
+         tabledata->propdata->nmovedpermvars, tabledata->propdata->nmovedbinpermvars,
+         tabledata->propdata->nmovedintpermvars, tabledata->propdata->nmovedcontpermvars) ;
+      if ( tabledata->propdata->orbitopalreddata )
+      {
+         SCIP_CALL( SCIPorbitopalReductionGetStatistics(scip, tabledata->propdata->orbitopalreddata, &nred, &ncutoff) );
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbitopal red.   : %10d reductions applied,"
+            " %10d cutoffs\n", nred, ncutoff);
+      }
+      if ( tabledata->propdata->orbitalreddata )
+      {
+         SCIP_CALL( SCIPorbitalReductionGetStatistics(scip, tabledata->propdata->orbitalreddata, &nred, &ncutoff) );
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbital reduction: %10d reductions applied,"
+            " %10d cutoffs\n", nred, ncutoff);
+      }
+      if ( tabledata->propdata->lexreddata )
+      {
+         SCIP_CALL( SCIPlexicographicReductionGetStatistics(scip, tabledata->propdata->lexreddata, &nred, &ncutoff) );
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  lexicographic red: %10d reductions applied,"
+            " %10d cutoffs\n", nred, ncutoff);
+      }
+      if ( tabledata->propdata->shadowtreeeventhdlr )
+      {
+         time = SCIPgetShadowTreeEventHandlerExecutionTime(scip, tabledata->propdata->shadowtreeeventhdlr);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  shadow tree time : %10.2f s\n", time);
+      }
    }
 
    return SCIP_OKAY;
