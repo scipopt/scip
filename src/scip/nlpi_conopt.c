@@ -449,15 +449,20 @@ static int COI_CALLCONV FDEval(
    void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
 {
+   SCIP_RETCODE retcode;
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+
    assert(problem != NULL);
+   assert(ROWNO <= SCIPnlpiOracleGetNConstraints(problem->oracle));
 
    if( MODE == 1 || MODE == 3 )
    {
       /* TODO check compatibility of CONOPT variables with SCIP ones */
       /* TODO handle SCIP_CALL within callbacks */
-      if( SCIPnlpiOracleEvalConstraintValue(problem->scip, problem->oracle, ROWNO, X, G) != SCIP_OKAY ||
-            *G == SCIP_INVALID )
+      retcode = ROWNO < SCIPnlpiOracleGetNConstraints(problem->oracle) ?
+            SCIPnlpiOracleEvalConstraintValue(problem->scip, problem->oracle, ROWNO, X, G) :
+            SCIPnlpiOracleEvalObjectiveValue(problem->scip, problem->oracle, X, G);
+      if( retcode != SCIP_OKAY || *G == SCIP_INVALID )
          *ERRCNT = 1;
       /* TODO conversion of infinities and such? */
    }
@@ -466,7 +471,10 @@ static int COI_CALLCONV FDEval(
    {
       SCIP_Real conval;
 
-      if( SCIPnlpiOracleEvalConstraintGradient(problem->scip, problem->oracle, ROWNO, X, TRUE, &conval, JAC) != SCIP_OKAY )
+      retcode = ROWNO < SCIPnlpiOracleGetNConstraints(problem->oracle) ?
+            SCIPnlpiOracleEvalConstraintGradient(problem->scip, problem->oracle, ROWNO, X, TRUE, &conval, JAC) :
+            SCIPnlpiOracleEvalObjectiveGradient(problem->scip, problem->oracle, X, TRUE, &conval, JAC);
+      if( retcode != SCIP_OKAY )
          *ERRCNT = 1;
       /* TODO check some values here? */
    }
