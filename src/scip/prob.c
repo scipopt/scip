@@ -928,7 +928,7 @@ SCIP_RETCODE probRemoveVar(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable to remove */
-   SCIP_Bool             isupgraded          /**< is the variable removed for the purpose of upgrading its variable type?*/
+   SCIP_Bool             isupgraded          /**< is the variable removed for the purpose of upgrading its variable type? */
    )
 {
    int freepos;

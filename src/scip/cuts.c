@@ -4124,9 +4124,10 @@ int varSection(
 }
 
 /** finds the best lower bound of the variable to use for MIR transformation.
- * currently, we use a slightly different function for the exact MIR cuts than for the normal MIR cuts due to differences
- * in how the codes can handle variable bound substitution. This function can only be used with the safe MIR code. */
-/* @todo make behavior identical to the unsafe MIR cut computation */
+ *
+ *  Currently, we use a slightly different function for the exact MIR cuts than for the normal MIR cuts due to differences
+ *  in how the codes can handle variable bound substitution. This function can only be used with the safe MIR code. */
+/*  @todo make behavior identical to the unsafe MIR cut computation */
 static
 SCIP_RETCODE findBestLbSafely(
    SCIP*                 scip,               /**< SCIP data structure */
