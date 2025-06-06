@@ -464,7 +464,9 @@ static int COI_CALLCONV FDEval(
 
    if( MODE == 2 || MODE == 3 )
    {
-      if( SCIPnlpiOracleEvalJacobianRow(problem->scip, problem->oracle, X, TRUE, ROWNO, NULL, JAC) != SCIP_OKAY )
+      SCIP_Real conval;
+
+      if( SCIPnlpiOracleEvalConstraintGradient(problem->scip, problem->oracle, ROWNO, X, TRUE, &conval, JAC) != SCIP_OKAY )
          *ERRCNT = 1;
       /* TODO check some values here? */
    }

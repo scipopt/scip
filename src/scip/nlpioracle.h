@@ -397,25 +397,6 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    SCIP_Real*            jacobi              /**< pointer to store sparse jacobian values */
    );
 
-/** evaluates a row of the Jacobian matrix in a given point
- *
- *  The values in the Jacobian matrix row are returned in the same order as specified by the rowoffset and col arrays
- *  obtained by SCIPnlpiOracleGetJacobianSparsity().
- *  The user need to call SCIPnlpiOracleGetJacobianSparsity() at least ones before using this function.
- *
- * @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiOracleEvalJacobianRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
-   int                   rowidx,             /**< index of the row for which the Jacobian is to be evaluated */
-   SCIP_Real*            convals,            /**< pointer to store constraint values, can be NULL */
-   SCIP_Real*            jacobi              /**< pointer to store sparse jacobian values */
-   );
-
 /** gets sparsity pattern of the Hessian matrix of the Lagrangian
  *
  *  Note that internal data is returned in *offset and *col, thus the user must not to allocate memory there.
