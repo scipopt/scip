@@ -4844,6 +4844,7 @@ SCIP_RETCODE SCIPvarFix(
    assert(var->scip == set->scip);
    assert(SCIPsetIsEQ(set, var->glbdom.lb, var->locdom.lb));
    assert(SCIPsetIsEQ(set, var->glbdom.ub, var->locdom.ub));
+   assert(!SCIPsetIsInfinity(set, REALABS(fixedval)));
    assert(infeasible != NULL);
    assert(fixed != NULL);
 
@@ -4954,10 +4955,7 @@ SCIP_RETCODE SCIPvarFix(
       /* fix aggregation variable y in x = a*y + c, instead of fixing x directly */
       assert(SCIPsetIsZero(set, var->obj));
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      if( SCIPsetIsInfinity(set, fixedval) || SCIPsetIsInfinity(set, -fixedval) )
-         childfixedval = (var->data.aggregate.scalar < 0.0 ? -fixedval : fixedval);
-      else
-         childfixedval = (fixedval - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      childfixedval = (fixedval - var->data.aggregate.constant) / var->data.aggregate.scalar;
       SCIP_CALL( SCIPvarFix(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp,
             branchcand, eventqueue, eventfilter, cliquetable, childfixedval, infeasible, fixed) );
       break;
@@ -7736,6 +7734,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    assert(SCIPvarGetStatus(vary) == SCIP_VARSTATUS_LOOSE);
    assert(scalarx != 0.0); /*lint !e777*/
    assert(scalary != 0.0); /*lint !e777*/
+   assert(!SCIPsetIsInfinity(set, REALABS(rhs)));
 
    *infeasible = FALSE;
    *aggregated = FALSE;
@@ -8096,6 +8095,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    assert(var->scip == set->scip);
    assert(var->glbdom.lb == var->locdom.lb); /*lint !e777*/
    assert(var->glbdom.ub == var->locdom.ub); /*lint !e777*/
+   assert(!SCIPsetIsInfinity(set, REALABS(constant)));
    assert(naggvars == 0 || aggvars != NULL);
    assert(naggvars == 0 || scalars != NULL);
    assert(infeasible != NULL);
