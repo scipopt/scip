@@ -80,8 +80,8 @@ SCIP_DECL_READERWRITE(readerWriteRlp)
 {  /*lint --e{715}*/
    if( genericnames )
    {
-      SCIP_CALL( SCIPwriteLp(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-            nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
+      SCIP_CALL( SCIPwriteLp(scip, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,
+            vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
    }
    else
    {

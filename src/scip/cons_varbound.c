@@ -1204,7 +1204,7 @@ SCIP_RETCODE separateCons(
 
          if( cutoff )
          {
-            assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(var)));
+            assert(SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(var)));
 
             /* analyze infeasibility */
             SCIP_CALL( analyzeConflict(scip, cons, var, newlb, PROPRULE_1, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
@@ -1235,7 +1235,7 @@ SCIP_RETCODE separateCons(
 
          if( cutoff )
          {
-            assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(var)));
+            assert(SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(var)));
 
             /* analyze infeasibility */
             SCIP_CALL( analyzeConflict(scip, cons, var, newub, PROPRULE_3, SCIP_BOUNDTYPE_UPPER, usebdwidening) );
@@ -1561,7 +1561,7 @@ SCIP_RETCODE propagateCons(
             if( *cutoff )
             {
                SCIPdebugMsg(scip, "cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
-               assert( SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)) );
+               assert(SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->var)));
 
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
@@ -1602,7 +1602,7 @@ SCIP_RETCODE propagateCons(
                   if( *cutoff )
                   {
                      SCIPdebugMsg(scip, "cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-                     assert( SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)) );
+                     assert(SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
 
                      /* analyze infeasibility */
                      SCIP_CALL( analyzeConflict(scip, cons, consdata->vbdvar, newlb, PROPRULE_2, SCIP_BOUNDTYPE_LOWER, usebdwidening) );
@@ -1634,7 +1634,7 @@ SCIP_RETCODE propagateCons(
                   if( *cutoff )
                   {
                      SCIPdebugMsg(scip, "cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-                     assert( SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)) );
+                     assert(SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
 
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
@@ -1704,7 +1704,7 @@ SCIP_RETCODE propagateCons(
             if( *cutoff )
             {
                SCIPdebugMsg(scip, "cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
-               assert( SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)) );
+               assert(SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->var)));
 
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
@@ -1745,7 +1745,7 @@ SCIP_RETCODE propagateCons(
                   if( *cutoff )
                   {
                      SCIPdebugMsg(scip, "cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-                     assert(SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
+                     assert(SCIPisInfinity(scip, -newub) || SCIPisLT(scip, newub, SCIPvarGetLbLocal(consdata->vbdvar)));
 
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
@@ -1779,7 +1779,7 @@ SCIP_RETCODE propagateCons(
                   if( *cutoff )
                   {
                      SCIPdebugMsg(scip, "cutoff while tightening <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-                     assert(SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
+                     assert(SCIPisInfinity(scip, newlb) || SCIPisGT(scip, newlb, SCIPvarGetUbLocal(consdata->vbdvar)));
 
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
@@ -1939,7 +1939,6 @@ void checkRedundancySide(
    SCIP_Real valuey2;
    SCIP_Bool* redundant0;
    SCIP_Bool* redundant1;
-   SCIP_Real eps = SCIPepsilon(scip);
 
    assert(scip != NULL);
    assert(var != NULL);
@@ -1947,9 +1946,10 @@ void checkRedundancySide(
    assert(sideequal != NULL);
    assert(cons0sidered != NULL);
    assert(cons1sidered != NULL);
+   assert(coef0 * coef1 > 0.0);
 
-   *cons0sidered = SCIPisInfinity(scip, REALABS(side0));
-   *cons1sidered = SCIPisInfinity(scip, REALABS(side1));
+   *cons0sidered = SCIPisInfinity(scip, islhs ? -side0 : side0);
+   *cons1sidered = SCIPisInfinity(scip, islhs ? -side1 : side1);
    *sideequal = FALSE;
 
    if( islhs )
@@ -1964,37 +1964,104 @@ void checkRedundancySide(
    }
 
    lbvar = SCIPvarGetLbGlobal(var);
+   assert(!SCIPisInfinity(scip, lbvar));
    ubvar = SCIPvarGetUbGlobal(var);
+   assert(!SCIPisInfinity(scip, -ubvar));
    lbvbdvar = SCIPvarGetLbGlobal(vbdvar);
+   assert(!SCIPisInfinity(scip, lbvbdvar));
    ubvbdvar = SCIPvarGetUbGlobal(vbdvar);
+   assert(!SCIPisInfinity(scip, -ubvbdvar));
 
    /* if both constraints have this side */
    if( !*redundant0 && !*redundant1 )
    {
       /* calculate extreme values, which are reached by setting the other variable to their lower/upper bound */
-      boundxlb1 = side0 - lbvbdvar*coef0;
-      boundxlb2 = side1 - lbvbdvar*coef1;
-      boundylb1 = (side0 - lbvar)/coef0;
-      boundylb2 = (side1 - lbvar)/coef1;
-
-      boundxub1 = side0 - ubvbdvar*coef0;
-      boundxub2 = side1 - ubvbdvar*coef1;
-      boundyub1 = (side0 - ubvar)/coef0;
-      boundyub2 = (side1 - ubvar)/coef1;
-
-      if( islhs )
+      if( SCIPisInfinity(scip, -lbvbdvar) )
       {
-	 boundvaluex1 = MAX(boundxlb1, boundxlb2);
-	 boundvaluex2 = MAX(boundxub1, boundxub2);
+         if( coef0 > 0.0 )
+         {
+            boundxlb1 = SCIPinfinity(scip);
+            boundxlb2 = SCIPinfinity(scip);
+         }
+         else
+         {
+            boundxlb1 = -SCIPinfinity(scip);
+            boundxlb2 = -SCIPinfinity(scip);
+         }
       }
       else
       {
-	 boundvaluex1 = MIN(boundxlb1, boundxlb2);
-	 boundvaluex2 = MIN(boundxub1, boundxub2);
+         boundxlb1 = side0 - lbvbdvar * coef0;
+         boundxlb2 = side1 - lbvbdvar * coef1;
+      }
+      if( SCIPisInfinity(scip, -lbvar) )
+      {
+         if( coef0 > 0.0 )
+         {
+            boundylb1 = SCIPinfinity(scip);
+            boundylb2 = SCIPinfinity(scip);
+         }
+         else
+         {
+            boundylb1 = -SCIPinfinity(scip);
+            boundylb2 = -SCIPinfinity(scip);
+         }
+      }
+      else
+      {
+         boundylb1 = (side0 - lbvar) / coef0;
+         boundylb2 = (side1 - lbvar) / coef1;
+      }
+      if( SCIPisInfinity(scip, ubvbdvar) )
+      {
+         if( coef0 > 0.0 )
+         {
+            boundxub1 = -SCIPinfinity(scip);
+            boundxub2 = -SCIPinfinity(scip);
+         }
+         else
+         {
+            boundxub1 = SCIPinfinity(scip);
+            boundxub2 = SCIPinfinity(scip);
+         }
+      }
+      else
+      {
+         boundxub1 = side0 - ubvbdvar * coef0;
+         boundxub2 = side1 - ubvbdvar * coef1;
+      }
+      if( SCIPisInfinity(scip, ubvar) )
+      {
+         if( coef0 > 0.0 )
+         {
+            boundyub1 = -SCIPinfinity(scip);
+            boundyub2 = -SCIPinfinity(scip);
+         }
+         else
+         {
+            boundyub1 = SCIPinfinity(scip);
+            boundyub2 = SCIPinfinity(scip);
+         }
+      }
+      else
+      {
+         boundyub1 = (side0 - ubvar) / coef0;
+         boundyub2 = (side1 - ubvar) / coef1;
+      }
+
+      if( islhs )
+      {
+         boundvaluex1 = MAX(boundxlb1, boundxlb2);
+         boundvaluex2 = MAX(boundxub1, boundxub2);
+      }
+      else
+      {
+         boundvaluex1 = MIN(boundxlb1, boundxlb2);
+         boundvaluex2 = MIN(boundxub1, boundxub2);
       }
 
       /* calculate important values for variables */
-      if( SCIPisPositive(scip, coef0) )
+      if( coef0 > 0.0 )
       {
          valuex1 = MIN(boundvaluex1, ubvar);
          valuex1 = MAX(valuex1, lbvar);
@@ -2004,10 +2071,8 @@ void checkRedundancySide(
          /* if variable is of integral type make values integral too */
          if( SCIPvarIsIntegral(var) )
          {
-            if( !SCIPisFeasIntegral(scip, valuex1) )
-               valuex1 = SCIPfeasFloor(scip, valuex1);
-            if( !SCIPisFeasIntegral(scip, valuex2) )
-               valuex2 = SCIPfeasCeil(scip, valuex2);
+            valuex1 = SCIPfeasFloor(scip, valuex1);
+            valuex2 = SCIPfeasCeil(scip, valuex2);
          }
       }
       else
@@ -2020,21 +2085,43 @@ void checkRedundancySide(
          /* if variable is of integral type make values integral too */
          if( SCIPvarIsIntegral(var) )
          {
-            if( !SCIPisFeasIntegral(scip, valuex1) )
-               valuex1 = SCIPfeasCeil(scip, valuex1);
-            if( !SCIPisFeasIntegral(scip, valuex2) )
-               valuex2 = SCIPfeasFloor(scip, valuex2);
+            valuex1 = SCIPfeasCeil(scip, valuex1);
+            valuex2 = SCIPfeasFloor(scip, valuex2);
          }
       }
 
       /* calculate resulting values of variable y by setting x to valuex1 */
-      valuey1 = (side0 - valuex1)/coef0;
-      valuey2 = (side1 - valuex1)/coef1;
+      if( SCIPisInfinity(scip, ABS(valuex1)) )
+      {
+         /* only consider sides if coefficients are equal */
+         if( SCIPisEQ(scip, coef0, coef1) )
+         {
+            valuey1 = side0 / coef0;
+            valuey2 = side1 / coef1;
+         }
+         /* only consider original coefficients if otherwise x approaches plus infinity */
+         else if( valuex1 > 0.0 )
+         {
+            valuey1 = coef0;
+            valuey2 = coef1;
+         }
+         /* only consider swapped coefficients if otherwise x approaches minus infinity */
+         else
+         {
+            valuey1 = coef1;
+            valuey2 = coef0;
+         }
+      }
+      else
+      {
+         valuey1 = (side0 - valuex1) / coef0;
+         valuey2 = (side1 - valuex1) / coef1;
+      }
 
       /* determine redundancy of one constraints side */
-      if( valuey1 - valuey2 <= eps )
+      if( SCIPisEQ(scip, valuey1, valuey2) )
          *sideequal = TRUE;
-      else if( SCIPisPositive(scip, coef0) )
+      else if( coef0 > 0.0 )
       {
          if( valuey1 < valuey2 )
             *redundant1 = TRUE;
@@ -2050,159 +2137,240 @@ void checkRedundancySide(
       }
 
       /* calculate resulting values of variable y by setting x to valuex2 */
-      valuey1 = (side0 - valuex2)/coef0;
-      valuey2 = (side1 - valuex2)/coef1;
-
-      /* determine redundancy of one constraints side by checking for the first valuex2 */
-      if( SCIPisPositive(scip, coef0) )
+      if( SCIPisInfinity(scip, ABS(valuex2)) )
       {
-         /* if both constraints are weaker than the other on one value, we have no redundancy */
-         if( (*redundant1 && valuey1 > valuey2) || (*redundant0 && valuey1 < valuey2) )
+         /* only consider sides if coefficients are equal */
+         if( SCIPisEQ(scip, coef0, coef1) )
          {
-            *sideequal = FALSE;
-            *redundant0 = FALSE;
-            *redundant1 = FALSE;
-            return;
+            valuey1 = side0 / coef0;
+            valuey2 = side1 / coef1;
          }
-         else if( *sideequal )
+         /* only consider original coefficients if otherwise x approaches plus infinity */
+         else if( valuex2 > 0.0 )
          {
-            if( valuey1 + eps < valuey2 )
-            {
-               *sideequal = FALSE;
-               *redundant1 = TRUE;
-            }
-            else if( valuey1 + eps > valuey2 )
-            {
-               *sideequal = FALSE;
-               *redundant0 = TRUE;
-            }
+            valuey1 = coef0;
+            valuey2 = coef1;
+         }
+         /* only consider swapped coefficients if otherwise x approaches minus infinity */
+         else
+         {
+            valuey1 = coef1;
+            valuey2 = coef0;
          }
       }
       else
       {
-         /* if both constraints are weaker than the other one on one value, we have no redundancy */
-         if( (*redundant1 && valuey1 < valuey2) || (*redundant0 && valuey1 > valuey2) )
+         valuey1 = (side0 - valuex2) / coef0;
+         valuey2 = (side1 - valuex2) / coef1;
+      }
+
+      /* determine redundancy of one constraints side by checking for the first valuex2 */
+      if( coef0 > 0.0 )
+      {
+         /* if both constraints are equal on one value, only consider the other value */
+         if( *sideequal )
          {
-            *sideequal = FALSE;
-            *redundant0 = FALSE;
-            *redundant1 = FALSE;
-            return;
-         }
-         else if( *sideequal )
-         {
-            if( valuey1 + eps < valuey2 )
-            {
-               *sideequal = FALSE;
-               *redundant0 = TRUE;
-            }
-            else if( valuey1 + eps > valuey2 )
+            assert(!(*redundant0));
+            assert(!(*redundant1));
+
+            if( SCIPisLT(scip, valuey1, valuey2) )
             {
                *sideequal = FALSE;
                *redundant1 = TRUE;
             }
+            else if( SCIPisGT(scip, valuey1, valuey2) )
+            {
+               *sideequal = FALSE;
+               *redundant0 = TRUE;
+            }
+         }
+         /* if both constraints are weaker than the other on one value, we have no redundancy */
+         else if( ( *redundant1 && SCIPisGT(scip, valuey1, valuey2) )
+            || ( *redundant0 && SCIPisLT(scip, valuey1, valuey2) ) )
+         {
+            *redundant0 = FALSE;
+            *redundant1 = FALSE;
+            return;
+         }
+      }
+      else
+      {
+         /* if both constraints are equal on one value, only consider the other value */
+         if( *sideequal )
+         {
+            assert(!(*redundant0));
+            assert(!(*redundant1));
+
+            if( SCIPisLT(scip, valuey1, valuey2) )
+            {
+               *sideequal = FALSE;
+               *redundant0 = TRUE;
+            }
+            else if( SCIPisGT(scip, valuey1, valuey2) )
+            {
+               *sideequal = FALSE;
+               *redundant1 = TRUE;
+            }
+         }
+         /* if both constraints are weaker than the other one on one value, we have no redundancy */
+         else if( ( *redundant0 && SCIPisGT(scip, valuey1, valuey2) )
+            || ( *redundant1 && SCIPisLT(scip, valuey1, valuey2) ) )
+         {
+            *redundant0 = FALSE;
+            *redundant1 = FALSE;
+            return;
          }
       }
       assert(*sideequal || *redundant0 || *redundant1);
 
       /* calculate feasibility domain values for variable y concerning these both constraints */
-      if( SCIPisPositive(scip, coef0) )
+      if( coef0 > 0.0 )
       {
-	 if( islhs )
-	 {
-	    boundvaluey1 = MAX(boundylb1, boundylb2);
-	    boundvaluey2 = MAX(boundyub1, boundyub2);
-	 }
-	 else
-	 {
-	    boundvaluey1 = MIN(boundylb1, boundylb2);
-	    boundvaluey2 = MIN(boundyub1, boundyub2);
-	 }
+         if( islhs )
+         {
+            boundvaluey1 = MAX(boundylb1, boundylb2);
+            boundvaluey2 = MAX(boundyub1, boundyub2);
+         }
+         else
+         {
+            boundvaluey1 = MIN(boundylb1, boundylb2);
+            boundvaluey2 = MIN(boundyub1, boundyub2);
+         }
 
          valuey1 = MIN(boundvaluey1, ubvbdvar);
          valuey1 = MAX(valuey1, lbvbdvar);
          valuey2 = MAX(boundvaluey2, lbvbdvar);
          valuey2 = MIN(valuey2, ubvbdvar);
 
-         if( !SCIPisFeasIntegral(scip, valuey1) )
-            valuey1 = SCIPfeasFloor(scip, valuey1);
-         if( !SCIPisFeasIntegral(scip, valuey2) )
-            valuey2 = SCIPfeasCeil(scip, valuey2);
+         valuey1 = SCIPfeasFloor(scip, valuey1);
+         valuey2 = SCIPfeasCeil(scip, valuey2);
       }
       else
       {
-	 if( islhs )
-	 {
-	    boundvaluey1 = MIN(boundylb1, boundylb2);
-	    boundvaluey2 = MIN(boundyub1, boundyub2);
-	 }
-	 else
-	 {
-	    boundvaluey1 = MAX(boundylb1, boundylb2);
-	    boundvaluey2 = MAX(boundyub1, boundyub2);
-	 }
+         if( islhs )
+         {
+            boundvaluey1 = MIN(boundylb1, boundylb2);
+            boundvaluey2 = MIN(boundyub1, boundyub2);
+         }
+         else
+         {
+            boundvaluey1 = MAX(boundylb1, boundylb2);
+            boundvaluey2 = MAX(boundyub1, boundyub2);
+         }
 
          valuey1 = MAX(boundvaluey1, lbvbdvar);
          valuey1 = MIN(valuey1, ubvbdvar);
          valuey2 = MIN(boundvaluey2, ubvbdvar);
          valuey2 = MAX(valuey2, lbvbdvar);
 
-         /* if variable is of integral type make values integral too */
-         if( !SCIPisFeasIntegral(scip, valuey1) )
-            valuey1 = SCIPfeasCeil(scip, valuey1);
-         if( !SCIPisFeasIntegral(scip, valuey2) )
-            valuey2 = SCIPfeasFloor(scip, valuey2);
+         valuey1 = SCIPfeasCeil(scip, valuey1);
+         valuey2 = SCIPfeasFloor(scip, valuey2);
       }
 
       /* calculate resulting values of variable x by setting y to valuey1 */
-      valuex1 = side0 - valuey1*coef0;
-      valuex2 = side1 - valuey1*coef1;
+      if( SCIPisInfinity(scip, ABS(valuey1)) )
+      {
+         /* only consider sides if coefficients are equal */
+         if( SCIPisEQ(scip, coef0, coef1) )
+         {
+            valuex1 = side0;
+            valuex2 = side1;
+         }
+         /* only consider swapped coefficients if otherwise y approaches plus infinity */
+         else if( valuey1 > 0.0 )
+         {
+            valuex1 = coef1;
+            valuex2 = coef0;
+         }
+         /* only consider original coefficients if otherwise y approaches minus infinity */
+         else
+         {
+            valuex1 = coef0;
+            valuex2 = coef1;
+         }
+      }
+      else
+      {
+         valuex1 = side0 - valuey1 * coef0;
+         valuex2 = side1 - valuey1 * coef1;
+      }
 
       /* determine redundancy of one constraints side by checking for the first valuey1 */
-      if( (*redundant1 && valuex1 > valuex2) || (*redundant0 && valuex1 < valuex2) )
-      {
-         *sideequal = FALSE;
-         *redundant0 = FALSE;
-         *redundant1 = FALSE;
-         return;
-      }
       if( *sideequal )
       {
-         if( valuex1 + eps < valuex2 )
+         assert(!(*redundant0));
+         assert(!(*redundant1));
+
+         if( SCIPisLT(scip, valuex1, valuex2) )
          {
             *sideequal = FALSE;
             *redundant1 = TRUE;
          }
-         else if( valuex1 + eps > valuex2 )
+         else if( SCIPisGT(scip, valuex1, valuex2) )
          {
             *sideequal = FALSE;
             *redundant0 = TRUE;
          }
+      }
+      else if( ( *redundant1 && SCIPisGT(scip, valuex1, valuex2) )
+         || ( *redundant0 && SCIPisLT(scip, valuex1, valuex2) ) )
+      {
+         *redundant0 = FALSE;
+         *redundant1 = FALSE;
+         return;
       }
 
       /* calculate resulting values of variable x by setting y to valuey2 */
-      valuex1 = side0 - valuey2*coef0;
-      valuex2 = side1 - valuey2*coef1;
-
-      /* determine redundancy of one constraints side by checking for the first valuey1 */
-      if( (*redundant1 && valuex1 > valuex2) || (*redundant0 && valuex1 < valuex2) )
+      if( SCIPisInfinity(scip, ABS(valuey2)) )
       {
-         *sideequal = FALSE;
-         *redundant0 = FALSE;
-         *redundant1 = FALSE;
-         return;
+         /* only consider sides if coefficients are equal */
+         if( SCIPisEQ(scip, coef0, coef1) )
+         {
+            valuex1 = side0;
+            valuex2 = side1;
+         }
+         /* only consider swapped coefficients if otherwise y approaches plus infinity */
+         else if( valuey2 > 0.0 )
+         {
+            valuex1 = coef1;
+            valuex2 = coef0;
+         }
+         /* only consider original coefficients if otherwise y approaches minus infinity */
+         else
+         {
+            valuex1 = coef0;
+            valuex2 = coef1;
+         }
       }
+      else
+      {
+         valuex1 = side0 - valuey2 * coef0;
+         valuex2 = side1 - valuey2 * coef1;
+      }
+
+      /* determine redundancy of one constraints side by checking for the second valuey2 */
       if( *sideequal )
       {
-         if( valuex1 + eps < valuex2 )
+         assert(!(*redundant0));
+         assert(!(*redundant1));
+
+         if( SCIPisLT(scip, valuex1, valuex2) )
          {
             *sideequal = FALSE;
             *redundant1 = TRUE;
          }
-         else if( valuex1 + eps > valuex2 )
+         else if( SCIPisGT(scip, valuex1, valuex2) )
          {
             *sideequal = FALSE;
             *redundant0 = TRUE;
          }
+      }
+      else if( ( *redundant1 && SCIPisGT(scip, valuex1, valuex2) )
+         || ( *redundant0 && SCIPisLT(scip, valuex1, valuex2) ) )
+      {
+         *redundant0 = FALSE;
+         *redundant1 = FALSE;
+         return;
       }
       assert(*redundant0 || *redundant1 || *sideequal);
    }

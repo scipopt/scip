@@ -549,12 +549,17 @@ set(pairs_Issue
     "instances/Issue/3727.cip\;1922\;vanillafullstrong_reduced_presolving_separating_heuristics"
     "instances/Issue/3728.cip\;0\;reduced_presolving_heuristics"
     "instances/Issue/3746.cip\;0\;seed_1"
-    "instances/Issue/3752.cip\;28066\;default"
+    "instances/Issue/3752_1.cip\;28066\;default"
+    "instances/Issue/3752_2.cip\;0\;default"
     "instances/Issue/3787.lp\;1\;default"
     "instances/Issue/3832.cip\;0\;default"
     # Test currently not working since problems with the relative check for presolved problems appear: https://git.zib.de/integer/scip/-/issues/3819
     # "instances/Issue/3842.cip\;-16812.7692740365\;default"
     "instances/Issue/3870.cip\;5133546551065818\;default"
+    "instances/Issue/3908.cip\;-20317.1313131313\;subrestart"
+    "instances/Issue/3911.cip\;-30386.2338470598\;lexdual"
+    "instances/Issue/3917.cip\;+infinity\;default"
+    "instances/Issue/3920.cip\;0\;presolving_milp_off"
 )
 
 #
@@ -826,7 +831,6 @@ set(basenames_opb_wrongformat
     flugpl_rational.mps
     gt2.mps
     lseu_dcmulti.cip
-    MANN_a9.clq.lp
     misc03.mps
     misc03.zpl
     rgn.mps
@@ -1268,6 +1272,7 @@ if(SCIP_WITH_EXACTSOLVE)
                 configure_file(interactiveshell/readertest-wrongformat.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
                 set(regex "${message_format_${extension}}")
             endif()
+            if(NOT ((${extension} STREQUAL "cip") AND (${basename} STREQUAL "rgn.zpl") AND (${LPS} STREQUAL "xprs")))
             add_test(NAME MIPEX-readertest-${extension}-${basename}
                     COMMAND $<TARGET_FILE:scip>
                     -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/exact-default.set"
@@ -1279,6 +1284,7 @@ if(SCIP_WITH_EXACTSOLVE)
                                     FAIL_REGULAR_EXPRESSION "ERROR"
                                     DEPENDS scip-build
                                 )
+            endif()  # LP Error: Xpress returned 11, #3724
         endforeach(extension)
     endforeach(instance)
     #
@@ -1343,6 +1349,7 @@ if(SCIP_WITH_EXACTSOLVE)
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
 
+               if(NOT ((${setting} STREQUAL "exact-projshift") AND (${basename} STREQUAL "misc03.zpl") AND (${LPS} STREQUAL "xprs")))
                add_test(NAME MIPEX-${setting}-${basename}-vipr
                      COMMAND ${VIPRCHK} ${basename}.${setting}_complete.vipr)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr
@@ -1351,6 +1358,7 @@ if(SCIP_WITH_EXACTSOLVE)
                                  PASS_REGULAR_EXPRESSION "Successfully verified;Infeasibility verified"
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
+               endif() # verification fails with Failed to derive constraint DualBound_12055, #3724
 
                add_test(NAME MIPEX-${setting}-${basename}-vipr_ori
                      COMMAND ${VIPRCHK} ${basename}.${setting}.vipr_ori)

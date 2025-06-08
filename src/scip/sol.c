@@ -449,6 +449,9 @@ SCIP_RETCODE SCIPsolCreate(
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
    (*sol)->valsexact = NULL;
+#ifndef NDEBUG
+   (*sol)->scip = set->scip;
+#endif
 
    SCIPsolResetViolations(*sol);
    stat->solindex++;
@@ -532,6 +535,9 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
    (*sol)->valsexact = NULL;
+#ifndef NDEBUG
+   (*sol)->scip = set->scip;
+#endif
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
 
@@ -629,6 +635,9 @@ SCIP_RETCODE SCIPsolCopy(
    (*sol)->viol.relviolbounds = sourcesol->viol.relviolbounds;
    (*sol)->viol.relviolcons = sourcesol->viol.relviolcons;
    (*sol)->viol.relviollprows = sourcesol->viol.relviollprows;
+#ifndef NDEBUG
+   (*sol)->scip = set->scip;
+#endif
 
    /* copy rational values if solution is exact */
    if( SCIPsolIsExact(sourcesol) )
@@ -1051,6 +1060,9 @@ SCIP_RETCODE SCIPsolCreatePartial(
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
    (*sol)->valsexact = NULL;
+#ifndef NDEBUG
+   (*sol)->scip = set->scip;
+#endif
    stat->solindex++;
    solStamp(*sol, stat, NULL, TRUE);
    SCIPsolResetViolations(*sol);
@@ -1494,6 +1506,7 @@ SCIP_RETCODE SCIPsolSetVal(
       || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(var != NULL);
+   assert(var->scip == sol->scip);
    assert(SCIPisFinite(val));
 
    SCIPsetDebugMsg(set, "setting value of <%s> in solution %p to %g\n", SCIPvarGetName(var), (void*)sol, val);
@@ -1913,6 +1926,7 @@ SCIP_Real SCIPsolGetVal(
       || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(var != NULL);
+   assert(var->scip == sol->scip);
 
    /* if the value of a transformed variable in an original solution is requested, we need to project the variable back
     * to the original space, the opposite case is handled below

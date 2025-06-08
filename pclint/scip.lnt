@@ -79,6 +79,11 @@
 // turn off warnings for third-party code
 -efile(*,src/amplmp/*)
 
+// switch condition is a constant expression
+-emacro(837,SCIPstatIncrement)
+-emacro(837,SCIPstatAdd)
+-emacro(837,SCIPstatUpdate)
+
 // last value assigned to '_restat_' not used
 -emacro(438,SCIP_CALL)
 -emacro(438,SCIP_CALL_ABORT)
@@ -195,6 +200,7 @@
 -emacro(774,debugMessage)
 -emacro(774,SCIP_CALL_TERMINATE)
 -emacro(774,MCFdebugMessage)
+-emacro(774,SG_FREE)
 
 // possible truncation of addition
 -emacro(776,SCIPreallocBufferArray)

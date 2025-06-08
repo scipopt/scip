@@ -674,6 +674,65 @@ SCIP_RETCODE printSyminfoGroupAction(
    return SCIP_OKAY;
 }
 
+
+/** ensures that movedpermvarscounts is initialized */
+static
+SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   int v;
+   int p;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+
+   /* symmetries must have been determined */
+   assert( propdata->nperms >= 0 );
+
+   /* stop if already computed */
+   if ( propdata->nmovedpermvars >= 0 )
+      return SCIP_OKAY;
+   assert( propdata->nmovedpermvars == -1 );
+
+   propdata->nmovedpermvars = 0;
+   propdata->nmovedbinpermvars = 0;
+   propdata->nmovedintpermvars = 0;
+   propdata->nmovedcontpermvars = 0;
+
+   for (v = 0; v < propdata->npermvars; ++v)
+   {
+      for (p = 0; p < propdata->nperms; ++p)
+      {
+         if ( propdata->perms[p][v] != v )
+         {
+            ++propdata->nmovedpermvars;
+
+            switch ( SCIPgetSymInferredVarType(propdata->permvars[v]) )
+            {
+            case SCIP_VARTYPE_BINARY:
+               ++propdata->nmovedbinpermvars;
+               break;
+            case SCIP_VARTYPE_INTEGER:
+               ++propdata->nmovedintpermvars;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               ++propdata->nmovedcontpermvars;
+               break;
+            default:
+               SCIPerrorMessage("unknown variable type\n");
+               return SCIP_INVALIDDATA;
+            } /*lint !e788*/
+            break;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Table callback methods
  */
@@ -701,10 +760,14 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
    assert( tabledata != NULL );
    assert( tabledata->propdata != NULL );
 
-   if ( tabledata->propdata->orbitopalreddata || tabledata->propdata->orbitalreddata
-      || tabledata->propdata->lexreddata )
+   /* print information only if symmetries are present */
+   if ( tabledata->propdata->nperms > 0 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Symmetry           :\n");
+      SCIP_CALL( ensureSymmetryMovedPermvarsCountsComputed(scip, tabledata->propdata) );
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  #affected vars   : %10d (%d bin, %d int, %d cont)\n",
+         tabledata->propdata->nmovedpermvars, tabledata->propdata->nmovedbinpermvars,
+         tabledata->propdata->nmovedintpermvars, tabledata->propdata->nmovedcontpermvars) ;
       if ( tabledata->propdata->orbitopalreddata )
       {
          SCIP_CALL( SCIPorbitopalReductionGetStatistics(scip, tabledata->propdata->orbitopalreddata, &nred, &ncutoff) );
@@ -2168,60 +2231,76 @@ SCIP_RETCODE ensureSymmetryPermstransComputed(
 }
 
 
-/** ensures that movedpermvarscounts is initialized */
+/** returns whether a SCIP instance has an active inferred binary variable */
 static
-SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
-   SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROPDATA*        propdata            /**< propagator data */
+SCIP_Bool hasInferredBinVar(
+   SCIP*                 scip                /**< SCIP instance */
    )
 {
-   int v;
-   int p;
+   SCIP_VAR** vars;
+   int start;
+   int end;
+   int i;
 
    assert( scip != NULL );
-   assert( propdata != NULL );
 
-   /* symmetries must have been determined */
-   assert( propdata->nperms >= 0 );
+   /* check for variables declared binary or implied binary */
+   if ( SCIPgetNBinVars(scip) > 0 || SCIPgetNBinImplVars(scip) > 0 )
+      return TRUE;
 
-   /* stop if already computed */
-   if ( propdata->nmovedpermvars >= 0 )
-      return SCIP_OKAY;
-   assert( propdata->nmovedpermvars == -1 );
+   /* check for inferred binary variables among integers and continuous implied integral variables */
+   vars = SCIPgetVars(scip);
+   assert( vars != NULL );
 
-   propdata->nmovedpermvars = 0;
-   propdata->nmovedbinpermvars = 0;
-   propdata->nmovedintpermvars = 0;
-   propdata->nmovedcontpermvars = 0;
-
-   for (p = 0; p < propdata->nperms; ++p)
+   start = 0;
+   end = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   assert( end >= start );
+   for (i = start; i < end; ++i)
    {
-      for (v = 0; v < propdata->npermvars; ++v)
-      {
-         if ( propdata->perms[p][v] != v )
-         {
-            ++propdata->nmovedpermvars;
-
-            switch ( SCIPvarGetType(propdata->permvars[v]) )
-            {
-            case SCIP_VARTYPE_BINARY:
-               ++propdata->nmovedbinpermvars;
-               break;
-            case SCIP_VARTYPE_INTEGER:
-               ++propdata->nmovedintpermvars;
-               break;
-            case SCIP_VARTYPE_CONTINUOUS:
-               ++propdata->nmovedcontpermvars;
-               break;
-            default:
-               SCIPerrorMessage("unknown variable type\n");
-               return SCIP_INVALIDDATA;
-            } /*lint !e788*/
-         }
-      }
+      if( SCIPvarIsBinary(vars[i]) )
+         return TRUE;
    }
 
-   return SCIP_OKAY;
+   return FALSE;
+}
+
+
+/** returns whether a SCIP instance has an active inferred integer variable */
+static
+SCIP_Bool hasInferredIntVar(
+   SCIP*                 scip                /**< SCIP instance */
+   )
+{
+   SCIP_VAR** vars;
+   int start;
+   int end;
+   int i;
+
+   assert( scip != NULL );
+
+   vars = SCIPgetVars(scip);
+   assert( vars != NULL );
+
+   /* check for non-binary variables among integer variables */
+   start = SCIPgetNBinVars(scip);
+   end = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   for (i = start; i < end; ++i)
+   {
+      if( ! SCIPvarIsBinary(vars[i]) )
+         return TRUE;
+   }
+
+   /* check for non-binary variables among implied integral variables */
+   start = end + SCIPgetNBinImplVars(scip);
+   end = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   assert( end >= start );
+   for (i = start; i < end; ++i)
+   {
+      if( ! SCIPvarIsBinary(vars[i]) )
+         return TRUE;
+   }
+
+   return FALSE;
 }
 
 
@@ -2425,7 +2504,7 @@ SCIP_RETCODE determineSymmetry(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%d", maxgenerators);
 
    /* display statistics: log10 group size, number of affected vars*/
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", log10 of symmetry group size: %.1f", propdata->log10groupsize);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", log10 of symmetry group size: %.2f", propdata->log10groupsize);
 
    if ( propdata->displaynorbitvars )
    {
@@ -7445,33 +7524,35 @@ SCIP_RETCODE propagateSymmetry(
    SCIP_Bool*            didrun              /**< pointer for storing whether a propagator actually ran */
    )
 {
+   SCIP_Bool didrunlocal;
    int nredlocal;
 
    assert( scip != NULL );
    assert( propdata != NULL );
-   assert( infeasible != NULL );
    assert( nred != NULL );
    assert( didrun != NULL );
 
    *nred = 0;
-   *infeasible = FALSE;
    *didrun = FALSE;
 
    /* apply orbitopal reduction */
-   SCIP_CALL( SCIPorbitopalReductionPropagate(scip, propdata->orbitopalreddata, infeasible, &nredlocal, didrun) );
+   SCIP_CALL( SCIPorbitopalReductionPropagate(scip, propdata->orbitopalreddata, infeasible, &nredlocal, &didrunlocal) );
    *nred += nredlocal;
+   *didrun |= didrunlocal;
    if ( *infeasible )
       return SCIP_OKAY;
 
    /* apply orbital reduction */
-   SCIP_CALL( SCIPorbitalReductionPropagate(scip, propdata->orbitalreddata, infeasible, &nredlocal, didrun) );
+   SCIP_CALL( SCIPorbitalReductionPropagate(scip, propdata->orbitalreddata, infeasible, &nredlocal, &didrunlocal) );
    *nred += nredlocal;
+   *didrun |= didrunlocal;
    if ( *infeasible )
       return SCIP_OKAY;
 
    /* apply dynamic lexicographic reduction */
-   SCIP_CALL( SCIPlexicographicReductionPropagate(scip, propdata->lexreddata, infeasible, &nredlocal, didrun) );
+   SCIP_CALL( SCIPlexicographicReductionPropagate(scip, propdata->lexreddata, infeasible, &nredlocal, &didrunlocal) );
    *nred += nredlocal;
+   *didrun |= didrunlocal;
    if ( *infeasible )
       return SCIP_OKAY;
 
@@ -7700,6 +7781,7 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    int nred;
 
    assert( scip != NULL );
+   assert( prop != NULL );
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
@@ -7712,8 +7794,8 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
-   /* usesymmetry must be read in order for propdata to have initialized symmetry handling propagators */
-   if ( propdata->usesymmetry < 0 )
+   /* usesymmetry must be read and non-zero in order for propdata to have initialized symmetry handling propagators */
+   if ( propdata->usesymmetry <= 0 )
       return SCIP_OKAY;
 
    SCIP_CALL( propagateSymmetry(scip, propdata, &infeasible, &nred, &didrun) );

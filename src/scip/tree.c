@@ -952,11 +952,11 @@ SCIP_RETCODE nodeReleaseParent(
          SCIP_Bool singleChild = FALSE;
          int focusdepth = SCIPtreeGetFocusDepth(tree);
 
-         assert(tree->effectiverootdepth >= 0);
+         assert(tree->updatedeffectiverootdepth >= 0);
 
-         while( tree->effectiverootdepth < focusdepth )
+         while( tree->updatedeffectiverootdepth < focusdepth )
          {
-            SCIP_NODE* effectiveroot = tree->path[tree->effectiverootdepth];
+            SCIP_NODE* effectiveroot = tree->path[tree->updatedeffectiverootdepth];
 
             switch( SCIPnodeGetType(effectiveroot) )
             {
@@ -1001,14 +1001,14 @@ SCIP_RETCODE nodeReleaseParent(
             if( !singleChild )
                break;
 
-            ++tree->effectiverootdepth;
+            ++tree->updatedeffectiverootdepth;
 
             SCIPsetDebugMsg(set,
                "unlinked node #%" SCIP_LONGINT_FORMAT " in depth %d -> new effective root depth: %d\n",
-               SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->effectiverootdepth);
+               SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->updatedeffectiverootdepth);
          }
 
-         assert(!singleChild || SCIPtreeGetEffectiveRootDepth(tree) == SCIPtreeGetFocusDepth(tree));
+         assert(!singleChild || tree->updatedeffectiverootdepth == SCIPtreeGetFocusDepth(tree));
       }
    }
 
@@ -3679,7 +3679,7 @@ SCIP_RETCODE treeSwitchPath(
    SCIP_Bool*            cutoff              /**< pointer to store whether the new focus node can be cut off */
    )
 {
-   int newappliedeffectiverootdepth;
+   int neweffectiverootdepth;
    int forklen;        /* length of the path to subroot/fork/pseudofork/junction node, or 0 if no fork */
    int focusnodedepth; /* depth of the new focus node, or -1 if focusnode == NULL */
    int i;
@@ -3769,25 +3769,25 @@ SCIP_RETCODE treeSwitchPath(
 
       if( freeNode )
       {
-         assert(tree->appliedeffectiverootdepth <= tree->effectiverootdepth);
+         assert(tree->effectiverootdepth <= tree->updatedeffectiverootdepth);
          SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, stat, eventqueue, eventfilter, tree, lp) );
-         assert(tree->effectiverootdepth <= focusnodedepth || tree->focusnode == NULL);
+         assert(tree->updatedeffectiverootdepth <= focusnodedepth || tree->focusnode == NULL);
       }
    }
 
    /* apply effective root shift up to the new focus node */
    *cutoff = FALSE;
-   newappliedeffectiverootdepth = MIN(tree->effectiverootdepth, focusnodedepth);
+   neweffectiverootdepth = MIN(tree->updatedeffectiverootdepth, focusnodedepth);
 
    /* promote the constraint set and bound changes up to the new effective root to be global changes */
-   if( tree->appliedeffectiverootdepth < newappliedeffectiverootdepth )
+   if( tree->effectiverootdepth < neweffectiverootdepth )
    {
       SCIPsetDebugMsg(set,
                       "shift effective root from depth %d to %d: applying constraint set and bound changes to global problem\n",
-                      tree->appliedeffectiverootdepth, newappliedeffectiverootdepth);
+                      tree->effectiverootdepth, neweffectiverootdepth);
 
       /* at first globalize constraint changes to update constraint handlers before changing bounds */
-      for( i = tree->appliedeffectiverootdepth + 1; i <= newappliedeffectiverootdepth; ++i )
+      for( i = tree->effectiverootdepth + 1; i <= neweffectiverootdepth; ++i )
       {
          SCIPsetDebugMsg(set, " -> applying constraint set changes of depth %d\n", i);
 
@@ -3795,7 +3795,7 @@ SCIP_RETCODE treeSwitchPath(
       }
 
       /* at last globalize bound changes triggering delayed events processed after the path switch */
-      for( i = tree->appliedeffectiverootdepth + 1; i <= newappliedeffectiverootdepth && !(*cutoff); ++i )
+      for( i = tree->effectiverootdepth + 1; i <= neweffectiverootdepth && !(*cutoff); ++i )
       {
          SCIPsetDebugMsg(set, " -> applying bound changes of depth %d\n", i);
 
@@ -3803,7 +3803,7 @@ SCIP_RETCODE treeSwitchPath(
       }
 
       /* update applied effective root depth */
-      tree->appliedeffectiverootdepth = newappliedeffectiverootdepth;
+      tree->effectiverootdepth = neweffectiverootdepth;
    }
 
    /* fork might be cut off when applying the pending bound changes */
@@ -5527,7 +5527,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->pathlen = 0;
    (*tree)->pathsize = 0;
    (*tree)->effectiverootdepth = 0;
-   (*tree)->appliedeffectiverootdepth = 0;
+   (*tree)->updatedeffectiverootdepth = 0;
    (*tree)->lastbranchparentid = -1L;
    (*tree)->correctlpdepth = -1;
    (*tree)->cutoffdepth = INT_MAX;
@@ -5644,7 +5644,7 @@ SCIP_RETCODE SCIPtreeClear(
    tree->nsiblings = 0;
    tree->pathlen = 0;
    tree->effectiverootdepth = 0;
-   tree->appliedeffectiverootdepth = 0;
+   tree->updatedeffectiverootdepth = 0;
    tree->correctlpdepth = -1;
    tree->cutoffdepth = INT_MAX;
    tree->repropdepth = INT_MAX;

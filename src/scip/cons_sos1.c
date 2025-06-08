@@ -10385,6 +10385,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    conshdlrdata->tcliquedata = NULL;
    conshdlrdata->cntextsos1 = -1;
    conshdlrdata->varhash = NULL;
+   conshdlrdata->nsos1vars = 0;
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecSOS1, NULL) );

@@ -200,8 +200,9 @@ void SCIPaggrRowClearSafely(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
-/** aggregate rows using the given weights; the current content of the aggregation
- *  row, \p aggrrow, gets overwritten
+/** aggregate rows using the given weights; the current content of the aggregation row, \p aggrrow, is overwritten
+ *
+ *  @note this method is safe for usage in exact solving mode
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowSumRows(

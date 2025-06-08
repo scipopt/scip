@@ -458,12 +458,20 @@ SCIP_RETCODE setupPresolve(
    if( data->enablesparsify )
       presolve.addPresolveMethod( uptr( new Sparsify<T>() ) );
 
-   /* set tolerances */
-   presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
-   presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
+   /* set numerical tolerances */
 #if PAPILO_APIVERSION >= 3
    presolve.getPresolveOptions().useabsfeas = false;
 #endif
+   if( SCIPisExact(scip) )
+   {
+      presolve.getPresolveOptions().epsilon = 0.0;
+      presolve.getPresolveOptions().feastol = 0.0;
+   }
+   else
+   {
+      presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
+      presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
+   }
 
 #ifndef SCIP_PRESOLLIB_ENABLE_OUTPUT
    /* adjust output settings of presolve library */
@@ -524,7 +532,9 @@ SCIP_RETCODE performRationalPresolving(
 
    /* call presolving (without storing information for dual postsolve) */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
+      "   (%.1fs) running MILP presolver%s\n", SCIPgetSolvingTime(scip),
+      presolve.getPresolveOptions().threads == 1 ? "" : " on multiple threads");
+
    int oldnnz = problem.getConstraintMatrix().getNnz();
 
 #if (PAPILO_VERSION_MAJOR >= 2)
@@ -1076,7 +1086,8 @@ SCIP_RETCODE performRealPresolving(
 
    /* call the presolving */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
+      "   (%.1fs) running MILP presolver%s\n", SCIPgetSolvingTime(scip),
+      presolve.getPresolveOptions().threads == 1 ? "" : " on multiple threads");
 
    /* call presolving without storing information for dual postsolve */
 #if (PAPILO_VERSION_MAJOR >= 2)
@@ -1744,7 +1755,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "maximum number of threads presolving may use (0: automatic)",
          &presoldata->threads, FALSE, DEFAULT_THREADS, 0, INT_MAX, NULL, NULL) );
 #else
-   presoldata->threads = DEFAULT_THREADS;
+   presoldata->threads = 1;
 #endif
 
    SCIP_CALL( SCIPaddIntParam(scip,

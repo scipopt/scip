@@ -1129,7 +1129,7 @@ SCIP_RETCODE catchVarEvent(
    if( ownerdata->nconss <= 1 )
       ownerdata->consssorted = TRUE;
    else if( ownerdata->consssorted )
-      ownerdata->consssorted = compIndexConsNonlinear(ownerdata->conss[ownerdata->nconss-2], ownerdata->conss[ownerdata->nconss-1]) > 0;
+      ownerdata->consssorted = compIndexConsNonlinear(ownerdata->conss[ownerdata->nconss-2], ownerdata->conss[ownerdata->nconss-1]) < 0;
 
    /* catch variable events, if not done so yet (first constraint) */
    if( ownerdata->filterpos < 0 )
@@ -1362,7 +1362,7 @@ SCIP_RETCODE createCons(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( local && SCIPgetDepth(scip) != 0 )
+   if( local && SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
       SCIPerrorMessage("Locally valid nonlinear constraints are not supported, yet.\n");
       return SCIP_INVALIDCALL;
@@ -1374,6 +1374,15 @@ SCIP_RETCODE createCons(
       SCIPerrorMessage("Non-initial nonlinear constraints are not supported, yet.\n");
       return SCIP_INVALIDCALL;
    }
+
+
+   if( isnan(lhs) || isnan(rhs) )
+   {
+      SCIPerrorMessage("%s hand side of nonlinear constraint <%s> is nan\n",
+            isnan(lhs) ? "left" : "right", name);
+      return SCIP_INVALIDDATA;
+   }
+
 
    /* create constraint data */
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &consdata) );
@@ -12856,9 +12865,29 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_EXPR* expr;
+   int i;
 
    assert(nlinvars == 0 || (linvars != NULL && lincoefs != NULL));
    assert(nquadterms == 0 || (quadvars1 != NULL && quadvars2 != NULL && quadcoefs != NULL));
+
+   /* check data for infinity or nan values */
+   for( i = 0; i < nlinvars; ++i )
+   {
+      if( !SCIPisFinite(lincoefs[i]) || SCIPisInfinity(scip, lincoefs[i]) )
+      {
+         SCIPerrorMessage("Infinite or nan coefficient of variable %s in quadratic constraint %s\n", SCIPvarGetName(linvars[i]), name);
+         return SCIP_INVALIDDATA;
+      }
+   }
+   for( i = 0; i < nquadterms; ++i )
+   {
+      if( !SCIPisFinite(quadcoefs[i]) || SCIPisInfinity(scip, quadcoefs[i]) )
+      {
+         SCIPerrorMessage("Infinite or nan coefficient of term %s*%s in quadratic constraint %s\n", SCIPvarGetName(quadvars1[i]), SCIPvarGetName(quadvars2[i]), name);
+         return SCIP_INVALIDDATA;
+      }
+   }
+   /* lhs and rhs will be checked in createCons */
 
    /* get nonlinear constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -12939,6 +12968,37 @@ SCIP_RETCODE SCIPcreateConsBasicSOCNonlinear(
 
    assert(vars != NULL || nvars == 0);
 
+   /* check values for infinity or nan */
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPisFinite(coefs[i]) || SCIPisInfinity(scip, coefs[i]) )
+      {
+         SCIPerrorMessage("Second-order cone term with infinite or nan coefficient of variable %s in nonlinear constraint %s\n", SCIPvarGetName(vars[i]), name);
+         return SCIP_INVALIDDATA;
+      }
+      if( offsets != NULL && (!SCIPisFinite(offsets[i]) || SCIPisInfinity(scip, coefs[i])) )
+      {
+         SCIPerrorMessage("Second-order cone term with infinite or nan offset for variable %s in nonlinear constraint %s\n", SCIPvarGetName(vars[i]), name);
+         return SCIP_INVALIDDATA;
+      }
+   }
+   if( !SCIPisFinite(constant) || SCIPisInfinity(scip, constant) )
+   {
+         SCIPerrorMessage("Second-order cone constant with infinite or nan value in nonlinear constraint %s\n", name);
+         return SCIP_INVALIDDATA;
+   }
+   if( !SCIPisFinite(rhscoeff) || SCIPisInfinity(scip, rhscoeff) )
+   {
+         SCIPerrorMessage("Infinite or nan coefficient of right hand side variable in second-order cone constraint %s\n", name);
+         return SCIP_INVALIDDATA;
+   }
+   if( !SCIPisFinite(rhsoffset) || SCIPisInfinity(scip, rhsoffset) )
+   {
+         SCIPerrorMessage("Infinite or nan right hand side offset in second-order cone constraint %s\n", name);
+         return SCIP_INVALIDDATA;
+   }
+   /* lhs and rhs will be checked in createCons */
+
    SCIP_CALL( SCIPcreateExprSum(scip, &lhssum, 0, NULL, NULL, constant, NULL, NULL) );  /* gamma */
    for( i = 0; i < nvars; ++i )
    {
@@ -13008,6 +13068,24 @@ SCIP_RETCODE SCIPcreateConsBasicSignpowerNonlinear(
 
    assert(x != NULL);
    assert(z != NULL);
+
+   if( !SCIPisFinite(exponent) )
+   {
+      SCIPerrorMessage("exponent in nonlinear signpower constraint <%s> is infinite or nan\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   if( !SCIPisFinite(xoffset) )
+   {
+      SCIPerrorMessage("argument offset in nonlinear signpower constraint <%s> is infinite or nan\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   if( !SCIPisFinite(zcoef) )
+   {
+      SCIPerrorMessage("coefficient of linear variable in nonlinear signpower constraint <%s> is infinite or nan\n", name);
+      return SCIP_INVALIDDATA;
+   }
 
    SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
    if( xoffset != 0.0 )

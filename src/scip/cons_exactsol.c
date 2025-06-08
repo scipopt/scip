@@ -317,6 +317,9 @@ void checkProbHasContEqs(
 static
 SCIP_DECL_CONSENFOLP(consEnfolpExactSol)
 {  /*lint --e{715}*/
+   assert(result != NULL);
+   assert(SCIPisExact(scip));
+
    /* returning feasible since we can't enforce anything */
    *result = SCIP_FEASIBLE;
 
@@ -327,6 +330,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactSol)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxExactSol)
 {  /*lint --e{715}*/
+   assert(result != NULL);
+   assert(SCIPisExact(scip));
+
    /* returning feasible since we can't enforce anything */
    *result = SCIP_FEASIBLE;
 
@@ -337,6 +343,9 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxExactSol)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsExactSol)
 {  /*lint --e{715}*/
+   assert(result != NULL);
+   assert(SCIPisExact(scip));
+
    /* returning feasible since we can't enforce anything */
    *result = SCIP_FEASIBLE;
 
@@ -369,14 +378,14 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
-   foundsol = FALSE;
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-   assert(conshdlrdata != NULL);
-
-   /* if we are not solving exactly, we have nothing to check */
    if( !SCIPisExact(scip) )
       return SCIP_OKAY;
+
+   foundsol = FALSE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    /**@todo add event handler to check again if constraints were added/modified or a variable (impl) type changed */
    if( conshdlrdata->probhasconteqs == -1 )
@@ -680,7 +689,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 static
 SCIP_DECL_CONSLOCK(consLockExactSol)
 {  /*lint --e{715}*/
-
    /* do nothing since we are not handling constraints */
    return SCIP_OKAY;
 }
@@ -709,10 +717,14 @@ SCIP_DECL_CONSINIT(consInitExactSol)
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL );
+   assert(conshdlr != NULL);
 
+   /* disable exactsol handler */
    if( !SCIPisExact(scip) )
+   {
+      SCIPconshdlrSetNeedsCons(conshdlr, TRUE);
       return SCIP_OKAY;
+   }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -742,11 +754,16 @@ SCIP_DECL_CONSEXIT(consExitExactSol)
    SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
 
-   if( !SCIPisExact(scip) )
+   /* reenable exactsol handler */
+   if( SCIPconshdlrNeedsCons(conshdlr) )
+   {
+      assert(!SCIPisExact(scip));
+      SCIPconshdlrSetNeedsCons(conshdlr, FALSE);
       return SCIP_OKAY;
+   }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);

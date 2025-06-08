@@ -46,8 +46,10 @@ foreach(instance ${instances})
                 )
         set_tests_properties(examples-relaxator-${basename}
                             PROPERTIES
-                                DEPENDS examples-relaxator-build
-                                RESOURCE_LOCK libscip
+                            PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            FAIL_REGULAR_EXPRESSION "ERROR"
+                            DEPENDS examples-relaxator-build
+                            RESOURCE_LOCK libscip
                             )
         if(WIN32)
             # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,

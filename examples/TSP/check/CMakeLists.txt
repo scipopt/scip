@@ -43,6 +43,7 @@ foreach(instance ${instances})
     set_tests_properties(examples-tsp-${basename}
                         PROPERTIES
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS examples-tsp-build
                             RESOURCE_LOCK libscip
                         )
