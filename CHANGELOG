@@ -101,6 +101,7 @@ Interface changes
 - Temporarily for SCIP 10 only: SCIPchgVarType() converts a call with type SCIP_VARTYPE_IMPLINT into a call of SCIPchgVarImplType() with type SCIP_IMPLINTTYPE_WEAK
 - SCIPapplyBendersDecomposition has been removed. This was originally used to apply Benders' decomposition from a
   supplied decomposition structure. The application of Benders' decomposition now occurs in benders_relax.
+- SCIPcalcMIR(), SCIPcutGenerationHeuristicCMIR(), SCIPcalcStrongCG(): the boolean argument 'usevbds' was replaced by an integer argument 'vartypeusevbds' that indicates for which variables variable bound substitution should be performed.
 
 - remove the following functions that were declared in h-files, but not implemented:
   SCIPselectPtrRealReal(), SCIPselectWeightedPtrRealReal(), SCIPsortPtrRealReal(),
@@ -155,6 +156,7 @@ Interface changes
 - added SCIPgetNOrigBinImplVars(), SCIPgetNOrigIntImplVars(), SCIPgetNOrigContImplVars() to query the number of implied integral variables of each type in original problem; note that SCIPgetNOrigBinVars(), SCIPgetNOrigIntVars(), and SCIPgetNOrigContVars() no longer include the implied integral variables in their counts
 - added SCIPgetNBinImplVars(), SCIPgetNIntImplVars(), SCIPgetNContImplVars() to query the number of implied integral variables of each type in current problem; note that SCIPgetNBinVars(), SCIPgetNIntVars(), and SCIPgetNContVars() no longer include the implied integral variables in their counts
 - added SCIPcolIsImpliedIntegral()
+- added SCIProwGetNumImpliedIntCols() to query the number of implied integer column in the given row
 - added SCIPvarsCountTypes() to determine the variable type count distribution for an array of variables
 - added SCIPeventGetOldImplType() and SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
 - added SCIPexprGetIntegrality(), which in addition to the existing function SCIPexprIsIntegral() provides information about the presence of weakly implied integral variables
