@@ -5599,7 +5599,8 @@ SCIP_RETCODE cutsTransformMIR(
          int v = indices[i];
 
          /* due to variable bound usage, cancellation may have occurred */
-         if( EPSZ(data->cutcoefs[v], QUAD_EPSILON) )
+         QUAD_ARRAY_LOAD(coef, data->cutcoefs, v);
+         if( EPSZ(QUAD_TO_DBL(coef), QUAD_EPSILON) )
          {
             QUAD_ASSIGN(coef, 0.0);
             QUAD_ARRAY_STORE(data->cutcoefs, v, coef);
@@ -5609,7 +5610,7 @@ SCIP_RETCODE cutsTransformMIR(
             /* do not increase the index */
             continue;
          }
-         QUAD_ARRAY_LOAD(coef, data->cutcoefs, v);
+
          cutindex = data->ncutinds;
          SCIP_CALL( determineBestBounds(scip, data->vars[v], sol, data, boundswitch, usevbds, allowlocal, fixintegralrhs,
                ignoresol, boundsfortrans, boundtypesfortrans,
