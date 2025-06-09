@@ -6140,7 +6140,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    if( *success && requsize > coefssize )
    {
       /* realloc buffers and try again */
-      SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requsize) );
       SCIP_CALL( SCIPrationalReallocBufferArray(SCIPbuffer(scip), &coefs, coefssize, requsize) );
 
       coefssize = requsize;

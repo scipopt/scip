@@ -15921,7 +15921,8 @@ SCIP_DECL_CONSTRANS(consTransLinear)
    assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
 
    /* create linear constraint data for target constraint */
-   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
+   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs,
+         sourcedata->rhs) );
 
 #ifndef NDEBUG
    /* if this is a checked or enforced constraints, then there must be no relaxation-only variables */
@@ -17051,15 +17052,15 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    assert(name != NULL);
    assert(cons != NULL);
 
-   /* set left and right hand side to their default values */
-   lhs = -SCIPinfinity(scip);
-   rhs =  SCIPinfinity(scip);
-
-   (*success) = FALSE;
+   *success = FALSE;
 
    /* return of string empty */
-   if( !*str )
+   if( !(*str) )
       return SCIP_OKAY;
+
+   /* set left and right hand side to their default values */
+   lhs = -SCIPinfinity(scip);
+   rhs = SCIPinfinity(scip);
 
    /* ignore whitespace */
    SCIP_CALL( SCIPskipSpace((char**)&str) );
@@ -17144,7 +17145,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    }
 
    /* initialize buffers for storing the variables and coefficients */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars,  coefssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, coefssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
 
    assert(varstrptr != NULL);
@@ -17156,7 +17157,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    {
       /* realloc buffers and try again */
       coefssize = requsize;
-      SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  coefssize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &vars, coefssize) );
       SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, coefssize) );
 
       SCIP_CALL( SCIPparseVarsLinearsum(scip, varstrptr, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
