@@ -522,7 +522,7 @@
 #define SCIP_DEFAULT_EXACT_IMPROVINGSOLS   TRUE /**< should only exact solutions be checked which improve the primal bound? */
 #define SCIP_DEFAULT_EXACT_SAFEDBMETHOD     'a' /**< method for computing safe dual bounds
                                                  *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
-#define SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY 1 /**< frequency at which safe dual bounding method is interleaved with exact LP
+#define SCIP_DEFAULT_EXACT_INTERLEAVEDBFREQ   1 /**< frequency at which safe dual bounding method is interleaved with exact LP
                                                  *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
 #define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION 1 /**< strategy for dual column selection in project-and-shift to compute interior point
                                                  *   (0: no sel, 1: active rows of inexact primal LP, 2: active rows of exact primal LP) */
@@ -2835,7 +2835,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "exact/interleavedbfreq",
          "strategy to interleave safe dual bounding with exact LP solve (0: never, 1: only close to cutoff bound, 2: only at depth lvl 4,8,16,..., 3: close to cutoff bound OR at depth lvl 4,8,16,...)",
-         &(*set)->exact_interleavestrategy, FALSE, SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY, 0, 3, NULL, NULL) );
+         &(*set)->exact_interleavedbfreq, FALSE, SCIP_DEFAULT_EXACT_INTERLEAVEDBFREQ, 0, 3, NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/lpinfo",
          "should the exact LP solver display status messages?",
@@ -2875,7 +2875,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->exact_improvingsols = SCIP_DEFAULT_EXACT_IMPROVINGSOLS;
    (*set)->exact_safedbmethod = SCIP_DEFAULT_EXACT_SAFEDBMETHOD;
    (*set)->exact_psdualcolselection = SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION;
-   (*set)->exact_interleavestrategy = SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY;
+   (*set)->exact_interleavedbfreq = SCIP_DEFAULT_EXACT_INTERLEAVEDBFREQ;
    (*set)->exact_lpinfo = SCIP_DEFAULT_EXACT_LPINFO;
    (*set)->exact_allownegslack = SCIP_DEFAULT_EXACT_ALLOWNEGSLACK;
    (*set)->exact_cutmaxdenom = SCIP_DEFAULT_CUTMAXDENOM;
