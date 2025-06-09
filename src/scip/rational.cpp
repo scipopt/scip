@@ -79,9 +79,9 @@ SCIP_RETCODE SCIPrationalCreate(
 {
    SCIP_ALLOC( BMSallocMemory(rational) );
 
+   new (&(*rational)->val) scip::Rational(0.0);
    (*rational)->isinf = FALSE;
    (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
-   new (&(*rational)->val) scip::Rational(0.0);
 
    return SCIP_OKAY;
 }
@@ -94,9 +94,9 @@ SCIP_RETCODE SCIPrationalCreateBlock(
 {
    SCIP_ALLOC( BMSallocBlockMemory(mem, rational) );
 
+   new (&(*rational)->val) scip::Rational(0.0);
    (*rational)->isinf = FALSE;
    (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
-   new (&(*rational)->val) scip::Rational(0.0);
 
    return SCIP_OKAY;
 }
@@ -109,9 +109,9 @@ SCIP_RETCODE SCIPrationalCreateBuffer(
 {
    BMSallocBufferMemory(mem, rational);
 
+   new (&(*rational)->val) scip::Rational(0.0);
    (*rational)->isinf = FALSE;
    (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
-   new (&(*rational)->val) scip::Rational(0.0);
 
    return SCIP_OKAY;
 }
@@ -353,33 +353,13 @@ SCIP_RETCODE SCIPrationalReallocBlockArray(
 }
 
 #if defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
-/** creates rational from gmp rational */
-SCIP_RETCODE SCIPrationalCreateBlockGMP(
-   BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_RATIONAL**       rational,           /**< pointer to the rational to create */
-   mpq_t                 numb                /**< gmp rational to set */
-   )
-{
-   BMSallocBlockMemory(mem, rational);
-   new (&(*rational)->val) scip::Rational(numb);
-   (*rational)->isinf = FALSE;
-   (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-
-   return SCIP_OKAY;
-}
-
 /** gets the underlying gmp rational pointer */
 mpq_t* SCIPrationalGetGMP(
    SCIP_RATIONAL*        rational            /**< rational to access */
    )
 {
    assert(rational != nullptr);
-
-   if( rational->isinf )
-   {
-      rational->val = 1e150 * rational->val.sign();
-      rational->isinf = TRUE;
-   }
+   assert(!rational->isinf);
 
    return &(rational->val.backend().data());
 }
@@ -391,8 +371,21 @@ void SCIPrationalSetGMP(
    )
 {
    rational->val = numb;
-   rational->isinf = FALSE;
    rational->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+   SCIPrationalCheckInfByValue(rational);
+}
+
+/** creates rational from gmp rational */
+SCIP_RETCODE SCIPrationalCreateBlockGMP(
+   BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_RATIONAL**       rational,           /**< pointer to the rational to create */
+   mpq_t                 numb                /**< gmp rational to set */
+   )
+{
+   SCIP_CALL( SCIPrationalCreateBlock(mem, rational) );
+   SCIPrationalSetGMP(*rational, numb);
+
+   return SCIP_OKAY;
 }
 
 /** sets gmp rational array to values of rational array */
@@ -544,8 +537,9 @@ void SCIPrationalCheckInfByValue(
 {
    if( rational->val * rational->val.sign() >= infinity )
    {
-      rational->isinf = TRUE;
       rational->val = rational->val.sign();
+      rational->isinf = TRUE;
+      rational->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
    }
    else
    {
@@ -583,9 +577,8 @@ void SCIPrationalSetFraction(
    }
 
    res->val = scip::Rational(nom, denom);
-
-   res->isinf = FALSE;
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+   SCIPrationalCheckInfByValue(res);
 }
 
 /** set a rational to the value of another a real */
@@ -596,18 +589,10 @@ void SCIPrationalSetReal(
 {
    assert(res != nullptr);
 
-   if( REALABS(real) >= infinity )
-   {
-      res->isinf = TRUE;
-      res->val = real > 0 ? 1 : -1;
-      res->isfprepresentable = TRUE;
-   }
-   else
-   {
-      res->isinf = FALSE;
-      res->val = real;
-      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
-   }
+   res->val = real;
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
+   SCIPrationalCheckInfByValue(res);
+
    assert(SCIPrationalIsEQReal(res, real));
 }
 
@@ -616,7 +601,7 @@ void SCIPrationalSetInfinity(
    SCIP_RATIONAL*        res                 /**< the result */
    )
 {
-   assert(res != NULL);
+   assert(res != nullptr);
 
    res->val = 1;
    res->isinf = TRUE;
@@ -628,7 +613,7 @@ void SCIPrationalSetNegInfinity(
    SCIP_RATIONAL*        res                 /**< the result */
    )
 {
-   assert(res != NULL);
+   assert(res != nullptr);
 
    res->val = -1;
    res->isinf = TRUE;
@@ -784,8 +769,8 @@ void SCIPrationalSetString(
 
       res->val = negative ? -scip::Rational(s) : scip::Rational(s);
       res->val *= pow(10, exponent);
-      SCIPrationalCheckInfByValue(res);
       res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+      SCIPrationalCheckInfByValue(res);
    }
 }
 
