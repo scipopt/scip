@@ -6045,10 +6045,10 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    assert(name != NULL);
    assert(cons != NULL);
 
-   (*success) = FALSE;
+   *success = FALSE;
 
    /* return of string empty */
-   if( !*str )
+   if( !(*str) )
       return SCIP_OKAY;
 
    /* set left and right hand side to their default values */
