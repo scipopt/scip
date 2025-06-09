@@ -617,7 +617,6 @@ static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA**       consdata,           /**< pointer to linear constraint data */
-   const char*           consname,           /**< name of constraint */
    int                   nvars,              /**< number of nonzeros in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
    SCIP_RATIONAL**       vals,               /**< array with coefficients of constraint entries */
@@ -625,7 +624,6 @@ SCIP_RETCODE consdataCreate(
    SCIP_RATIONAL*        rhs                 /**< right hand side of row */
    )
 {
-   SCIP_RETCODE retcode = SCIP_OKAY;
    int v;
    SCIP_RATIONAL* constant;
    SCIP_Real lhsrel;
@@ -675,15 +673,7 @@ SCIP_RETCODE consdataCreate(
 
          var = vars[v];
          assert(var != NULL);
-
-         /* terminate if the coefficient is infinite */
-         if( SCIPrationalIsAbsInfinity(vals[v]) )
-         {
-            SCIPerrorMessage("Coefficient of variable <%s> in constraint <%s> is infinite,"
-               " consider adjusting the infinity threshold.\n", SCIPvarGetName(var), consname);
-            retcode = SCIP_INVALIDDATA;
-            goto TERMINATE;
-         }
+         assert(!SCIPrationalIsAbsInfinity(vals[v]));
 
          if( !SCIPrationalIsZero(vals[v]) )
          {
@@ -726,17 +716,9 @@ SCIP_RETCODE consdataCreate(
          (*consdata)->varssize = k;
       }
 
-   TERMINATE:
       SCIPfreeBufferArray(scip, &valsrealbuffer);
       SCIPrationalFreeBufferArray(SCIPbuffer(scip), &valsbuffer, nvars);
       SCIPfreeBufferArray(scip, &varsbuffer);
-
-      if( retcode != SCIP_OKAY )
-      {
-         SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
-         SCIPfreeBlockMemory(scip, consdata);
-         SCIP_CALL( retcode );
-      }
    }
 
    (*consdata)->eventdata = NULL;
@@ -5435,8 +5417,8 @@ SCIP_DECL_CONSTRANS(consTransExactLinear)
    assert(sourcedata->rowlhs == NULL && sourcedata->rowexact == NULL);  /* in original problem, there cannot be LP rows */
 
    /* create linear constraint data for target constraint */
-   SCIP_CALL( consdataCreate(scip, &targetdata, SCIPconsGetName(sourcecons), sourcedata->nvars, sourcedata->vars,
-         sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
+   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs,
+         sourcedata->rhs) );
 
    if( sourcedata->nvars > 0 )
       consdataScaleMinValue(scip, targetdata, 2 * SCIPepsilon(scip));
@@ -6565,6 +6547,7 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
+   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -6577,12 +6560,23 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* terminate if a coefficient is infinite */
+   for( i = 0; i < nvars; ++i )
+   {
+      if( SCIPrationalIsAbsInfinity(vals[i]) )
+      {
+         SCIPerrorMessage("Coefficient of variable <%s> in constraint <%s> is infinite,"
+               " consider adjusting the infinity threshold.\n", SCIPvarGetName(vars[i]), name);
+         SCIPABORT();
+         return SCIP_INVALIDDATA;
+      }
+   }
+
    /* for the solving process we need linear rows, containing only active variables; therefore when creating a linear
     * constraint after presolving we have to ensure that it holds active variables
     */
    if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE && nvars > 0 )
    {
-      SCIP_RETCODE retcode;
       SCIP_VAR** consvars;
       SCIP_RATIONAL** consvals;
       SCIP_RATIONAL* constant;
@@ -6629,22 +6623,18 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
       }
 
       /* create constraint data */
-      retcode = consdataCreate(scip, &consdata, name, nconsvars, consvars, consvals, lhs, rhs);
+      SCIP_CALL( consdataCreate(scip, &consdata, nconsvars, consvars, consvals, lhs, rhs) );
 
       SCIPfreeBufferArray(scip, &consvals);
       SCIPfreeBufferArray(scip, &consvars);
       SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
-
-      SCIP_CALL( retcode );
-
-      assert(consdata != NULL);
    }
    else
    {
       /* create constraint data */
-      SCIP_CALL( consdataCreate(scip, &consdata, name, nvars, vars, vals, lhs, rhs) );
-      assert(consdata != NULL);
+      SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars, vals, lhs, rhs) );
    }
+   assert(consdata != NULL);
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
