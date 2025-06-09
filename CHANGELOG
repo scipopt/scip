@@ -15,6 +15,7 @@ Fixed bugs
 - corrected computation of number of variables affected by symmetry
 - fixed computation of symmetry group size
 - correct comparison conditions in checkRedundancySide() of cons_varbound.c to ensure pair redundancy
+- also for the initial LP solve force acceptance of Farkas row in SCIPlpGetDualfarkas() if all other means for obtaining a reliable Farkas proof have failed
 
 Build system
 ------------
