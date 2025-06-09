@@ -6565,8 +6565,8 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
    {
       if( SCIPrationalIsAbsInfinity(vals[i]) )
       {
-         SCIPerrorMessage("Coefficient of variable <%s> in constraint <%s> is infinite,"
-               " consider adjusting the infinity threshold.\n", SCIPvarGetName(vars[i]), name);
+         SCIPerrorMessage("coefficient of variable <%s> in constraint <%s> is infinite,"
+               " consider adjusting the infinity threshold\n", SCIPvarGetName(vars[i]), name);
          SCIPABORT();
          return SCIP_INVALIDDATA;
       }
@@ -6608,11 +6608,9 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
          SCIPfreeBufferArray(scip, &consvals);
          SCIPfreeBufferArray(scip, &consvars);
          SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
-
          SCIPerrorMessage("while creating constraint <%s> inactive variables lead to an infinite constant\n", name);
-
          SCIPABORT();
-         return SCIP_INVALIDDATA; /*lint !e527*/
+         return SCIP_INVALIDDATA;
       }
       else
       {
@@ -6825,10 +6823,12 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       return SCIP_INVALIDDATA;
    }
 
+   /* terminate if coefficient is infinite */
    if( SCIPrationalIsAbsInfinity(val) )
    {
-      SCIPerrorMessage("Coefficient of variable <%s> in constraint <%s> is infinite,"
-         " consider adjusting the infinity threshold.\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+      SCIPerrorMessage("coefficient of variable <%s> in constraint <%s> is infinite,"
+            " consider adjusting the infinity threshold\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+      SCIPABORT();
       return SCIP_INVALIDDATA;
    }
 

@@ -914,9 +914,10 @@ SCIP_RETCODE consdataCreate(
          SCIP_Real val;
 
          var = vars[v];
-         val = vals[v];
-
          assert(var != NULL);
+         val = vals[v];
+         assert(!SCIPisInfinity(scip, val));
+
          if( !SCIPisZero(scip, val) )
          {
             /* treat fixed variable as a constant if problem compression is enabled */
@@ -17878,7 +17879,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
-   int j;
+   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -17891,17 +17892,16 @@ SCIP_RETCODE SCIPcreateConsLinear(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /* check that the given lhs/rhs are sensible, i.e., not nan or inf */
-   assert( SCIPisFinite(lhs) );
-   assert( SCIPisFinite(rhs) );
-
-   for( j = 0; j < nvars; ++j )
+   /* terminate if a coefficient is infinite */
+   assert(SCIPisFinite(lhs));
+   assert(SCIPisFinite(rhs));
+   for( i = 0; i < nvars; ++i )
    {
-      /* check that the given coefficients are sensible, i.e., not nan or inf */
-      assert( SCIPisFinite(vals[j]) );
-      if( SCIPisInfinity(scip, REALABS(vals[j])) )
+      assert(SCIPisFinite(vals[i]));
+      if( SCIPisInfinity(scip, REALABS(vals[i])) )
       {
-         SCIPerrorMessage("coefficient of variable <%s> is infinite.\n", SCIPvarGetName(vars[j]));
+         SCIPerrorMessage("coefficient of variable <%s> in constraint <%s> is infinite,"
+               " consider adjusting the infinity threshold\n", SCIPvarGetName(vars[i]), name);
          SCIPABORT();
          return SCIP_INVALIDDATA;
       }
@@ -17938,38 +17938,11 @@ SCIP_RETCODE SCIPcreateConsLinear(
       /* adjust sides and check that we do not subtract infinity values */
       if( SCIPisInfinity(scip, REALABS(constant)) )
       {
-         if( constant < 0.0 )
-         {
-            if( SCIPisInfinity(scip, -lhs) || SCIPisInfinity(scip, -rhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("try to generate inconsistent constraint <%s>, inactive variables lead to a negative infinite constant constradicting a lower unbounded side\n", name);
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-
-            lhs = SCIPinfinity(scip);
-            rhs = SCIPinfinity(scip);
-         }
-         else
-         {
-            if( SCIPisInfinity(scip, lhs) || SCIPisInfinity(scip, rhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("try to generate inconsistent constraint <%s>, inactive variables lead to a positive infinite constant constradicting an upper unbounded side\n", name);
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-
-            lhs = -SCIPinfinity(scip);
-            rhs = -SCIPinfinity(scip);
-         }
+         SCIPfreeBufferArray(scip, &consvals);
+         SCIPfreeBufferArray(scip, &consvars);
+         SCIPerrorMessage("while creating constraint <%s> inactive variables lead to an infinite constant\n", name);
+         SCIPABORT();
+         return SCIP_INVALIDDATA;
       }
       else
       {
@@ -17991,7 +17964,6 @@ SCIP_RETCODE SCIPcreateConsLinear(
 
       /* create constraint data */
       SCIP_CALL( consdataCreate(scip, &consdata, nconsvars, consvars, consvals, lhs, rhs) );
-      assert(consdata != NULL);
 
       SCIPfreeBufferArray(scip, &consvals);
       SCIPfreeBufferArray(scip, &consvars);
@@ -18000,8 +17972,8 @@ SCIP_RETCODE SCIPcreateConsLinear(
    {
       /* create constraint data */
       SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars, vals, lhs, rhs) );
-      assert(consdata != NULL);
    }
+   assert(consdata != NULL);
 
 #ifndef NDEBUG
    /* if this is a checked or enforced constraints, then there must be no relaxation-only variables */
@@ -18197,10 +18169,13 @@ SCIP_RETCODE SCIPaddCoefLinear(
       return SCIP_INVALIDDATA;
    }
 
+   /* terminate if coefficient is infinite */
+   assert(SCIPisFinite(val));
    if( SCIPisInfinity(scip, REALABS(val)) )
    {
-      SCIPerrorMessage("Coefficient of variable <%s> in constraint <%s> is infinite,"
-         " consider adjusting the infinity threshold.\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+      SCIPerrorMessage("coefficient of variable <%s> in constraint <%s> is infinite,"
+            " consider adjusting the infinity threshold\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+      SCIPABORT();
       return SCIP_INVALIDDATA;
    }
 
