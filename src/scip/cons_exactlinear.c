@@ -6059,8 +6059,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    SCIPrationalSetInfinity(rhs);
 
    /* ignore whitespace */
-   while( isspace((unsigned char)*str) )
-      ++str;
+   SCIP_CALL_TERMINATE( retcode, SCIPskipSpace((char**)&str), TERMINATE );
 
    /* find operators in the line first, all other remaining parsing depends on occurence of the operators '<=', '>=', '==',
     * and the special word [free]
