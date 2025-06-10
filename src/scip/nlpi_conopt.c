@@ -27,7 +27,7 @@
 /**@file    nlpi_conopt.c
  * @ingroup DEFPLUGINS_NLPI
  * @brief   CONOPT NLP interface
- * @author  you
+ * @author  Ksenia Bestuzheva
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -40,6 +40,8 @@
 #include "scip/scip_numerics.h"
 #include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/pub_misc.h"
 #include "scip/pub_message.h"
 
 #include "coiheader.h"
@@ -49,7 +51,8 @@
 #define NLPI_DESC              "solver interface template" /**< description of solver */
 #define NLPI_PRIORITY          0                           /**< priority of NLP solver */
 
-#define SCIP_DEBUG
+#define DEFAULT_RANDSEED       107                         /**< initial random seed */
+#define MAXPERTURB             0.01                        /**< maximal perturbation of bounds in starting point heuristic */
 
 /*
  * Data structures
@@ -63,8 +66,11 @@ struct SCIP_NlpiProblem
 {
    SCIP*                 scip;               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle;             /**< Oracle-helper to store and evaluate NLP */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 
-   SCIP_Bool             firstrun;
+   SCIP_Bool             firstrun;           /**< whether the next NLP solve will be the first one (with the current problem structure) */
+   SCIP_Real*            initguess;          /**< initial values for primal variables, or NULL if not known */
+
    SCIP_NLPSOLSTAT       solstat;            /**< solution status from last NLP solve */
    SCIP_NLPTERMSTAT      termstat;           /**< termination status from last NLP solve */
    SCIP_Real             solvetime;          /**< time spend for last NLP solve */
@@ -158,7 +164,7 @@ static int COI_CALLCONV ReadMatrix(
    int norigvars;
    int nslackvars = 0;
    int njacnlnnz;
-   int* rangeconsidxs;
+   int* rangeconsidxs = NULL;
    const SCIP_Bool* jacrownlflags;
    const int* jaccoloffsets;
    const int* jacrows;
@@ -177,12 +183,21 @@ static int COI_CALLCONV ReadMatrix(
    scip = problem->scip;
    assert(scip != NULL);
 
+   printf("\nReadMatrix for problem:\n");
+   SCIPnlpiOraclePrintProblem(scip, oracle, NULL);
+   printf("\n");
+   printf("\nproblem size info: NUMVAR = %d, NUMCON = %d, NUMNZ = %d", NUMVAR, NUMCON, NUMNZ);
+
    norigvars = SCIPnlpiOracleGetNVars(oracle);
    lbs = SCIPnlpiOracleGetVarLbs(oracle);
    ubs = SCIPnlpiOracleGetVarUbs(oracle);
 
-   if( SCIPallocBufferArray(scip, &rangeconsidxs, NUMVAR - norigvars) != SCIP_OKAY )
-      return 1;
+   /* save indices of range constraints if there are any */
+   if( NUMVAR - norigvars > 0 )
+   {
+      if( SCIPallocBufferArray(scip, &rangeconsidxs, NUMVAR - norigvars) != SCIP_OKAY )
+         return 1;
+   }
 
    /* add all 'normal' (i.e. non-slack) variables here */
    for( int i = 0; i < norigvars; i++ )
@@ -194,7 +209,34 @@ static int COI_CALLCONV ReadMatrix(
       CURR[i] = SCIPisInfinity(scip, -lbs[i]) ? (SCIPisInfinity(scip, ubs[i]) ? 0.0 : ubs[i]) : lbs[i]; /* TODO get proper initial values */
    }
 
-   /* TODO check if VSTA is needed - seems to not be the case */
+   /* specify initial values of original variables */
+   if( problem->initguess != NULL )
+      BMScopyMemoryArray(CURR, problem->initguess, norigvars);
+   else
+   {
+      /* if no initial guess given, project 0 onto variable bounds */
+      SCIP_Real lb, ub;
+
+      assert(problem->randnumgen != NULL);
+
+      SCIPdebugMsg(scip, "Worhp started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
+
+      for( int i = 0; i < norigvars; ++i )
+      {
+         lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
+         ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
+
+         if( lb > 0.0 )
+            CURR[i] = SCIPrandomGetReal(problem->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
+         else if( ub < 0.0 )
+            CURR[i] = SCIPrandomGetReal(problem->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
+         else
+            CURR[i] = SCIPrandomGetReal(problem->randnumgen,
+               MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
+      }
+   }
+
+   /* TODO check if VSTA or ESTA is needed - seems to not be the case */
 
    for( int i = 0; i < NUMCON-1; i++ )
    {
@@ -209,11 +251,22 @@ static int COI_CALLCONV ReadMatrix(
 
          if( !SCIPisEQ(scip, lhs, rhs) )
          {
+            assert(rangeconsidxs != NULL);
+
             /* range constraint lhs <= g(x) <= rhs: reformulate as g(x) - s = 0 and lhs <= s <= rhs */
             RHS[i] = 0.0;
             LOWER[norigvars + nslackvars] = lhs;
             UPPER[norigvars + nslackvars] = rhs;
-            CURR[norigvars + nslackvars] = (rhs - lhs)/2; /* TODO set proper initial values */
+
+            /* set initial value of slack variable */
+            if( lhs > 0.0 )
+               CURR[i] = SCIPrandomGetReal(problem->randnumgen, lhs, lhs + MAXPERTURB*MIN(1.0, rhs-lhs));
+            else if( rhs < 0.0 )
+               CURR[i] = SCIPrandomGetReal(problem->randnumgen, rhs - MAXPERTURB*MIN(1.0, rhs-lhs), rhs);
+            else
+               CURR[i] = SCIPrandomGetReal(problem->randnumgen,
+                  MAX(lhs, -MAXPERTURB*MIN(1.0, rhs-lhs)), MIN(rhs, MAXPERTURB*MIN(1.0, rhs-lhs)));
+
             rangeconsidxs[nslackvars] = i;
             nslackvars++;
          }
@@ -259,7 +312,7 @@ static int COI_CALLCONV ReadMatrix(
          NLFLAG[j+objnzi] = jacrownlflags[j] ? 1 : 0;
          if( NLFLAG[j+objnzi] == 0 )
          {
-            VALUE[j+objnzi] = SCIPnlpiOracleGetConstraintCoef(oracle, jacrows[j], nrownz[jacrows[j]]);
+            VALUE[j+objnzi] = SCIPnlpiOracleGetConstraintCoef(oracle, jacrows[j], nrownz[jacrows[j]]); /* TODO check the ranged case */
             ++(nrownz[jacrows[j]]);
          }
       }
@@ -278,18 +331,22 @@ static int COI_CALLCONV ReadMatrix(
          ++objnzi;
       }
    }
+   assert(COLSTA[0] == 0);
+   COLSTA[norigvars] = jaccoloffsets[norigvars] + objnzi;
    SCIPfreeCleanBufferArray(scip, &nrownz);
 
-   /* add a nonzero for each slack variable */
-   for( int i = 0; i < nslackvars; i++ )
+   if( nslackvars > 0 )
    {
-      COLSTA[norigvars+i] = COLSTA[norigvars] + i; /* for each slack var, only one nonzero is added */
-      ROWNO[COLSTA[norigvars+i]] = rangeconsidxs[i];
-      NLFLAG[COLSTA[norigvars+i]] = 0;
+      /* add a nonzero for each slack variable */
+      for( int i = 0; i < nslackvars; i++ )
+      {
+         COLSTA[norigvars+i] = COLSTA[norigvars] + i; /* for each slack var, only one nonzero is added */
+         ROWNO[COLSTA[norigvars+i]] = rangeconsidxs[i];
+         NLFLAG[COLSTA[norigvars+i]] = 0;
+      }
+      SCIPfreeBufferArray(scip, &rangeconsidxs);
+      COLSTA[NUMVAR] = NUMNZ;
    }
-   SCIPfreeBufferArray(scip, &rangeconsidxs);
-   COLSTA[NUMVAR] = NUMNZ;
-   assert(COLSTA[0] == 0);
 
 #ifndef NDEBUG
    for( int i = 0; i < NUMNZ; ++i )
@@ -299,7 +356,7 @@ static int COI_CALLCONV ReadMatrix(
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "Jacobian structure information:\n");
    SCIPdebugMsg(scip, "COLSTA =\n");
-   for( int i = 0; i < NUMVAR; i++ )
+   for( int i = 0; i <= NUMVAR; i++ )
       printf("%d, ", COLSTA[i]);
    printf("\n");
 
@@ -318,8 +375,6 @@ static int COI_CALLCONV ReadMatrix(
       printf("%g, ", VALUE[i]);
    printf("\n");
 #endif
-
-   /* TODO fill in VALUE */
 
    return 0;
 }
@@ -690,6 +745,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemConopt)
 
    coiCreate(&((*problem)->CntVect)); /* TODO handle errors here? */
 
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandom(scip, &(*problem)->randnumgen, DEFAULT_RANDSEED, TRUE) );
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -705,6 +763,9 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemConopt)
    {
       SCIP_CALL( SCIPnlpiOracleFree(scip, &(*problem)->oracle) );
    }
+
+   SCIPfreeRandom(scip, &(*problem)->randnumgen);
+   SCIPfreeMemoryArrayNull(scip, &(*problem)->initguess);
 
    coiFree(&((*problem)->CntVect));
 
@@ -892,20 +953,26 @@ SCIP_DECL_NLPICHGOBJCONSTANT(nlpiChgObjConstantConopt)
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/* TODO */
-#ifdef SCIP_DISABLED_CODE
 /** sets initial guess */
 static
-SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessXyz)
+SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessConopt)
 {
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   if( primalvalues != NULL )
+   {
+      if( !problem->initguess )
+         SCIP_CALL( SCIPduplicateMemoryArray(scip, &problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle)) );
+      else
+         BMScopyMemoryArray(problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle));
+   }
+   else
+      SCIPfreeMemoryArrayNull(scip, &problem->initguess);
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
-#else
-#define nlpiSetInitialGuessConopt NULL
-#endif
 
 /** try to solve NLP
  *
@@ -957,7 +1024,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
 
    /* TODO set parameters */
 
-   /* TODO set initial guess (if available) */
+   /* TODO set initial guess (if available) (happens in ReadMatrix) */
 
 
 
