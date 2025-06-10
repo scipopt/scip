@@ -3728,6 +3728,20 @@ SCIP_RETCODE SCIPsetResetParams(
    return SCIP_OKAY;
 }
 
+/** checks whether the value pointers attached to each parameter are unique
+ *
+ *  When creating a parameter a value pointer can be attached. This function checks whether these pointers are
+ *  unique. Duplicate pointers indicate an error.
+ */
+SCIP_RETCODE SCIPsetCheckParamValuePtrUnique(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_CALL( SCIPparamsetCheckValuePtrUnique(set->paramset, set) );
+
+   return SCIP_OKAY;
+}
+
 /** sets parameters to
  *
  *  - \ref SCIP_PARAMEMPHASIS_DEFAULT to use default values (see also SCIPsetResetParams())
