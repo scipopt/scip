@@ -71,6 +71,14 @@ struct SCIP_NlpiProblem
    int                   niterations;        /**< number of iterations for last NLP solve */
    SCIP_Real             objval;             /**< objective value from last run */
 
+   int                   nvars;              /**< number of variables in the NLP problem */
+   int                   nconss;             /**< number of constraints in the NLP problem */
+
+   SCIP_Real*            lastprimal;         /**< primal solution from last run, if available */
+   SCIP_Real*            lastdualcons;       /**< dual solution from last run, if available */
+   SCIP_Real*            lastduallb;         /**< dual solution for lower bounds from last run, if available */
+   SCIP_Real*            lastdualub;         /**< dual solution for upper bounds from last run, if available */
+
    coiHandle_t           CntVect;            /**< pointer to CONOPT Control Vector */
 };
 
@@ -96,7 +104,29 @@ static int COI_CALLCONV Solution(
    void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
 {
-   /* TODO pass solution to SCIP */
+   SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+
+   assert(problem != NULL);
+   assert(NUMVAR == problem->nvars);
+   assert(NUMCON == problem->nconss);
+
+   /* TODO some SCIP_CALL */
+   if( problem->lastprimal == NULL )
+   {
+      if( NUMVAR > 0 )
+      {
+         SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastprimal, XVAL, NUMVAR);
+         // SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastduallb, XVAL, NUMVAR); /* TODO how to get this from conopt? */
+         // SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastdualub, XVAL, NUMVAR);
+      }
+      if( NUMCON > 0 )
+         SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastdualcons, YMAR, NUMCON);
+   }
+   else
+   {
+      BMScopyMemoryArray(problem->lastprimal, XVAL, NUMVAR);
+      BMScopyMemoryArray(problem->lastdualcons, YMAR, NUMCON);
+   }
 
    return 0;
 }
@@ -120,8 +150,8 @@ static int COI_CALLCONV ReadMatrix(
    void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
 {
-   SCIP* scip;
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+   SCIP* scip;
    SCIP_NLPIORACLE* oracle;
    const SCIP_Real* lbs;
    const SCIP_Real* ubs;
@@ -492,6 +522,11 @@ void invalidateSolution(
 {
    assert(problem != NULL);
 
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastprimal),   problem->nvars);
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualcons), problem->nconss);
+   // SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastduallb),   problem->lastduallbsize); /* TODO bring this back once I get these values */
+   // SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualub),   problem->lastdualubsize);
+
    problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    problem->termstat = SCIP_NLPTERMSTAT_OTHER;
 }
@@ -529,11 +564,13 @@ static SCIP_RETCODE initConopt(
          nrangeconss++;
    }
 
-   COI_Error += COIDEF_EmptyCol(problem->CntVect, TRUE);
+   COI_Error += COIDEF_EmptyCol(problem->CntVect, 1);
 
    /* inform CONOPT about problem sizes */
    COI_Error += COIDEF_NumVar(problem->CntVect, SCIPnlpiOracleGetNVars(problem->oracle) + nrangeconss);
+   problem->nvars = SCIPnlpiOracleGetNVars(problem->oracle) + nrangeconss; /* TODO make this and nconss debug only? */
    COI_Error += COIDEF_NumCon(problem->CntVect, nconss + 1); /* objective counts as another constraint here */
+   problem->nconss = nconss + 1;
 
    /* jacobian information */
    SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &jacoffsets, NULL, NULL, NULL, NULL, NULL, &nnlnz) );
@@ -962,8 +999,22 @@ SCIP_DECL_NLPIGETTERMSTAT(nlpiGetTermstatConopt)
 static
 SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionConopt)
 {
-   SCIPerrorMessage("method of conopt nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(problem != NULL);
+
+   if( primalvalues != NULL )
+      *primalvalues = problem->lastprimal;
+
+   if( consdualvalues != NULL )
+      *consdualvalues = problem->lastdualcons;
+
+   if( varlbdualvalues != NULL )
+      *varlbdualvalues = problem->lastduallb;
+
+   if( varubdualvalues != NULL )
+      *varubdualvalues = problem->lastdualub;
+
+   if( objval != NULL )
+      *objval = problem->objval;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
