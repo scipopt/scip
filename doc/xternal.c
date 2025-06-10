@@ -4244,10 +4244,16 @@
  *
  * For a complete implementation of an expression handler, take the one for exponential expressions (src/scip/expr_exp.c) as an example.
  *
+ * It is very easy to transfer the C explanation to C++; whenever a function should be implemented using the
+ * SCIP_DECL_EXPRHDLR... notion, reimplement the corresponding virtual member function of the abstract scip::ObjExprhdlr
+ * base class.
+ *
  * @section EXPRHDLR_PROPERTIES Properties of an Expression Handler
  *
  * At the top of the new file `expr_myfunc.c`, you can find the expression handler properties.
  * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the expression handler properties by calling the constructor
+ * of the abstract base class scip::ObjExprhdlr from within your constructor.
  * The properties you have to set have the following meaning:
  *
  * \par EXPRHDLR_NAME: the name of the expression handler.
@@ -4330,6 +4336,8 @@
  * an operational algorithm.
  * They are passed to SCIP when the expression handler is created and included in SCIP via SCIPincludeExprhdlr(),
  * see @ref EXPRHDLR_INTERFACE.
+ * In the C++ wrapper class scip::ObjExprhdlr, the fundamental callback methods are virtual abstract member functions.
+ * You have to implement them in order to be able to construct an object of your expression handler class.
  *
  * Expression handlers have one fundamental callback, @ref EXPREVAL, that needs to be implemented.
  * However, expression handlers with stateful expressions (expressions that have data) need to implement also the

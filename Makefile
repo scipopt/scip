@@ -1131,6 +1131,7 @@ OBJSCIPLIBOBJ	=	objscip/objbenders.o \
 			objscip/objconshdlr.o \
 			objscip/objdialog.o \
 			objscip/objdisp.o \
+			objscip/objexprhdlr.o \
 			objscip/objeventhdlr.o \
 			objscip/objheur.o \
 			objscip/objmessagehdlr.o \

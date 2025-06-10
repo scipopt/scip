@@ -34,6 +34,7 @@ Features
   the SCIP shell dialog "display statistics" now also prints the statistics from solving the Benders' decomposition in the relaxator
 - added a dynamic max-lookahead criterion for strong branching. Fits a probability distribution to the observed candidate gains and
   stop evaluating further candidates once the expected tree-size reduction no longer justifies the LP evaluation cost.
+- extended the statistics to also include information about the number of variables (per type) affected by symmetry
 - added generalized resolution conflict analysis that operates directly on linear constraints instead of conflict graphs.
 
 Performance improvements
@@ -163,6 +164,7 @@ Interface changes
 - added SCIPsortDownIntIntIntReal()
 - SCIPconshdlrSetNeedsCons() to set whether constraint handler callbacks should also be called if there are no constraints
 - SCIPpropSetTimingmask() to set timing mask of a propagator
+- added C++ interface for expression handlers: src/objscip/objexprhdlr.h
 
 ### Changes in preprocessor macros
 
@@ -278,6 +280,7 @@ Fixed bugs
   to be stable around shortly representable numbers, and a numerical tolerance for comparing cutting plane efficacy for the aggregation
   separator is introduced.
 - accept fractional continuous implied integral variables in heuristic completesol
+- invalidate activity with contradicting infinity contributions
 
 Miscellaneous
 -------------
@@ -353,6 +356,7 @@ Fixed bugs
 - fixed update of consssorted flags in a variable expressions data when adding an additional constraint using this variable
 - corrected computation of number of variables affected by symmetry
 - fixed computation of symmetry group size
+- correct comparison conditions in checkRedundancySide() of cons_varbound.c to ensure pair redundancy
 
 Build system
 ------------

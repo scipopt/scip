@@ -1475,12 +1475,12 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "conflict/maxvarsfac",
          "maximal fraction of variables involved in a conflict constraint",
-         &(*set)->conf_maxvarsfac, TRUE, SCIP_DEFAULT_CONF_MAXVARSFAC, 0.0, SCIP_REAL_MAX,
+         &(*set)->conf_maxvarsfac, TRUE, SCIP_DEFAULT_CONF_MAXVARSFAC, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "conflict/maxvarsfracres",
          "maximal fraction of variables involved in a resolution conflict constraint",
-         &(*set)->conf_maxvarsfracres, TRUE, SCIP_DEFAULT_CONF_MAXVARSFRACRES, 0.0, SCIP_REAL_MAX,
+         &(*set)->conf_maxvarsfracres, TRUE, SCIP_DEFAULT_CONF_MAXVARSFRACRES, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "conflict/minmaxvars",

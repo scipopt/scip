@@ -24385,7 +24385,7 @@ SCIP_RATIONAL* SCIPvarGetBestBoundGlobalExact(
    assert(var->exactdata->glbdom.ub != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return var->exactdata->glbdom.lb;
    else
       return var->exactdata->glbdom.ub;
@@ -24415,7 +24415,7 @@ SCIP_RATIONAL* SCIPvarGetWorstBoundGlobalExact(
    assert(var->exactdata->glbdom.ub != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return var->exactdata->glbdom.ub;
    else
       return var->exactdata->glbdom.lb;
@@ -24523,7 +24523,7 @@ SCIP_RATIONAL* SCIPvarGetBestBoundLocalExact(
    assert(var->exactdata->locdom.ub != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return var->exactdata->locdom.lb;
    else
       return var->exactdata->locdom.ub;
@@ -24553,7 +24553,7 @@ SCIP_RATIONAL* SCIPvarGetWorstBoundLocalExact(
    assert(var->exactdata->locdom.ub != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return var->exactdata->locdom.ub;
    else
       return var->exactdata->locdom.lb;
@@ -24581,7 +24581,7 @@ SCIP_BOUNDTYPE SCIPvarGetBestBoundTypeExact(
    assert(var->exactdata != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return SCIP_BOUNDTYPE_LOWER;
    else
       return SCIP_BOUNDTYPE_UPPER;
@@ -24609,7 +24609,7 @@ SCIP_BOUNDTYPE SCIPvarGetWorstBoundTypeExact(
    assert(var->exactdata != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return SCIP_BOUNDTYPE_UPPER;
    else
       return SCIP_BOUNDTYPE_LOWER;
