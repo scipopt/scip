@@ -2380,9 +2380,7 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
             continue;
 
          nzflag[j] = FALSE;
-
          oracle->objgradnz[oracle->nobjgradnz] = j;
-         ++(oracle->nobjgradnz);
 
          if( nlflag[j] )
          {
@@ -2390,6 +2388,7 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
             ++(oracle->nobjgradnlnz);
             nlflag[j] = FALSE;
          }
+         ++(oracle->nobjgradnz);
       }
 
       SCIPfreeCleanBufferArray(scip, &nlflag);
