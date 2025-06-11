@@ -200,7 +200,7 @@
 #define SCIP_DEFAULT_HISTORY_ALLOWTRANSFER FALSE /**< should variable histories be transferred to initialize SCIP copies? */
 
 /* IIS */
-#define SCIP_DEFAULT_IISFINDER_MINIMAL       TRUE  /**< should the resultant infeasible set be irreducible, i.e., an IIS not an IS */
+#define SCIP_DEFAULT_IISFINDER_IRREDUCIBLE   TRUE  /**< should the resultant infeasible set be irreducible, i.e., an IIS not an IS */
 #define SCIP_DEFAULT_IISFINDER_REMOVEBOUNDS  FALSE /**< should bounds of the problem be considered for removal */
 #define SCIP_DEFAULT_IISFINDER_SILENT        FALSE /**< should the IIS finders be run silently and output suppressed */
 #define SCIP_DEFAULT_IISFINDER_STOPAFTERONE  TRUE  /**< should the IIS search stop after a single IIS finder is run (excluding post processing) */
@@ -1698,9 +1698,9 @@ SCIP_RETCODE SCIPsetCreate(
 
    /* IIS parameter */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "iis/minimal",
+         "iis/irreducible",
          "should the resultant infeasible set be irreducible, i.e., an IIS not an IS",
-         &(*set)->iisfinder_minimal, FALSE, SCIP_DEFAULT_IISFINDER_MINIMAL,
+         &(*set)->iisfinder_irreducible, FALSE, SCIP_DEFAULT_IISFINDER_IRREDUCIBLE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "iis/removebounds",

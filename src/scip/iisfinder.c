@@ -142,6 +142,8 @@ SCIP_RETCODE checkTrivialInfeas(
 
    assert( trivial != NULL );
    *trivial = FALSE;
+
+   /* Check for contradicting bounds */
    nvars = SCIPgetNOrigVars(scip);
    vars = SCIPgetOrigVars(scip);
    for( i = 0; i < nvars; i++ )
@@ -152,6 +154,9 @@ SCIP_RETCODE checkTrivialInfeas(
          break;
       }
    }
+
+   /* Check for min/max activities that do not respect their RHS/LHS */
+   //TODO
 
    if( *trivial )
    {
@@ -261,7 +266,7 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_Real timelim;
    SCIP_Longint nodelim;
    SCIP_Bool silent;
-   SCIP_Bool minimal;
+   SCIP_Bool makeirreducible;
    SCIP_Bool stopafterone;
    SCIP_Bool removeunusedvars;
    SCIP_Bool trivial;
@@ -403,14 +408,13 @@ SCIP_RETCODE SCIPiisGenerate(
    }
 
    /* Ensure the problem is irreducible if requested */
-   SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/minimal", &minimal) );
-   if( !iis->irreducible && minimal && !(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) && !trivial )
+   SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/irreducible", &makeirreducible) );
+   if( !iis->irreducible && makeirreducible && !(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) && !trivial )
    {
-      assert( iis->infeasible );
-
       SCIPdebugMsg(iis->subscip, "----- STARTING GREEDY SINGLETON DELETION ALGORITHM. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
 
-      SCIP_CALL( SCIPiisGreedyMinimize(iis) );
+      assert( iis->infeasible );
+      SCIP_CALL( SCIPiisGreedyMakeIrreducible(iis) );
       assert( iis->infeasible );
    }
 
