@@ -300,7 +300,9 @@ static int COI_CALLCONV ReadMatrix(
    /* move structure info into COLSTA and ROWNO; while doing so, also add nonzeroes for the objective
     * (which CONOPT sees as the last constraint, i.e. constraint with index NUMCON-1) */
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &nrownz, NUMCON) );
+
    SCIP_CALL( SCIPnlpiOracleGetObjGradientNnz(scip, oracle, &objnz, &objnlflags, &nobjnz, &nobjnlnz) );
+
    for( int i = 0; i < norigvars; i++ )
    {
       COLSTA[i] = jaccoloffsets[i] + objnzi; /* starts of columns get shifted by how many objective nonzeros were added */
@@ -312,7 +314,7 @@ static int COI_CALLCONV ReadMatrix(
          NLFLAG[j+objnzi] = jacrownlflags[j] ? 1 : 0;
          if( NLFLAG[j+objnzi] == 0 )
          {
-            VALUE[j+objnzi] = SCIPnlpiOracleGetConstraintCoef(oracle, jacrows[j], nrownz[jacrows[j]]); /* TODO check the ranged case */
+            VALUE[j+objnzi] = SCIPnlpiOracleGetConstraintCoef(oracle, jacrows[j], nrownz[jacrows[j]]);
             ++(nrownz[jacrows[j]]);
          }
       }
@@ -333,6 +335,7 @@ static int COI_CALLCONV ReadMatrix(
    }
    assert(COLSTA[0] == 0);
    COLSTA[norigvars] = jaccoloffsets[norigvars] + objnzi;
+   BMSclearMemoryArray(&nrownz, NUMCON);
    SCIPfreeCleanBufferArray(scip, &nrownz);
 
    if( nslackvars > 0 )
@@ -343,6 +346,7 @@ static int COI_CALLCONV ReadMatrix(
          COLSTA[norigvars+i] = COLSTA[norigvars] + i; /* for each slack var, only one nonzero is added */
          ROWNO[COLSTA[norigvars+i]] = rangeconsidxs[i];
          NLFLAG[COLSTA[norigvars+i]] = 0;
+         VALUE[COLSTA[norigvars+i]] = -1.0;
       }
       SCIPfreeBufferArray(scip, &rangeconsidxs);
       COLSTA[NUMVAR] = NUMNZ;
