@@ -35,7 +35,6 @@ Features
 - added a dynamic max-lookahead criterion for strong branching. Fits a probability distribution to the observed candidate gains and
   stop evaluating further candidates once the expected tree-size reduction no longer justifies the LP evaluation cost.
 - extended the statistics to also include information about the number of variables (per type) affected by symmetry
-- added generalized resolution conflict analysis that operates directly on linear constraints instead of conflict graphs.
 
 Performance improvements
 ------------------------
