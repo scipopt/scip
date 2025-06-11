@@ -206,25 +206,36 @@ static int COI_CALLCONV ReadMatrix(
          LOWER[i] = lbs[i];
       if( !SCIPisInfinity(scip, ubs[i]) )
          UPPER[i] = ubs[i];
-      CURR[i] = SCIPisInfinity(scip, -lbs[i]) ? (SCIPisInfinity(scip, ubs[i]) ? 0.0 : ubs[i]) : lbs[i]; /* TODO get proper initial values */
    }
 
    /* specify initial values of original variables */
    if( problem->initguess != NULL )
+   {
       BMScopyMemoryArray(CURR, problem->initguess, norigvars);
+
+      /* some values may have been set outside the bounds - project them */
+      for( int i = 0; i < norigvars; ++i )
+      {
+         SCIP_Real lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
+         SCIP_Real ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
+
+         if( lb > CURR[i] )
+            CURR[i] = SCIPrandomGetReal(problem->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
+         else if( ub < CURR[i] )
+            CURR[i] = SCIPrandomGetReal(problem->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
+      }
+   }
    else
    {
       /* if no initial guess given, project 0 onto variable bounds */
-      SCIP_Real lb, ub;
-
       assert(problem->randnumgen != NULL);
 
       SCIPdebugMsg(scip, "Worhp started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
 
       for( int i = 0; i < norigvars; ++i )
       {
-         lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
-         ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
+         SCIP_Real lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
+         SCIP_Real ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
 
          if( lb > 0.0 )
             CURR[i] = SCIPrandomGetReal(problem->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
@@ -260,11 +271,11 @@ static int COI_CALLCONV ReadMatrix(
 
             /* set initial value of slack variable */
             if( lhs > 0.0 )
-               CURR[i] = SCIPrandomGetReal(problem->randnumgen, lhs, lhs + MAXPERTURB*MIN(1.0, rhs-lhs));
+               CURR[norigvars + nslackvars] = SCIPrandomGetReal(problem->randnumgen, lhs, lhs + MAXPERTURB*MIN(1.0, rhs-lhs));
             else if( rhs < 0.0 )
-               CURR[i] = SCIPrandomGetReal(problem->randnumgen, rhs - MAXPERTURB*MIN(1.0, rhs-lhs), rhs);
+               CURR[norigvars + nslackvars] = SCIPrandomGetReal(problem->randnumgen, rhs - MAXPERTURB*MIN(1.0, rhs-lhs), rhs);
             else
-               CURR[i] = SCIPrandomGetReal(problem->randnumgen,
+               CURR[norigvars + nslackvars] = SCIPrandomGetReal(problem->randnumgen,
                   MAX(lhs, -MAXPERTURB*MIN(1.0, rhs-lhs)), MIN(rhs, MAXPERTURB*MIN(1.0, rhs-lhs)));
 
             rangeconsidxs[nslackvars] = i;
@@ -335,7 +346,7 @@ static int COI_CALLCONV ReadMatrix(
    }
    assert(COLSTA[0] == 0);
    COLSTA[norigvars] = jaccoloffsets[norigvars] + objnzi;
-   BMSclearMemoryArray(&nrownz, NUMCON);
+   BMSclearMemoryArray(nrownz, NUMCON);
    SCIPfreeCleanBufferArray(scip, &nrownz);
 
    if( nslackvars > 0 )
