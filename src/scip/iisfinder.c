@@ -136,9 +136,11 @@ SCIP_RETCODE checkTrivialInfeas(
 {
    SCIP_CONS** conss;
    SCIP_VAR** vars;
+   SCIP_ROW* row;
    int nconss;
    int nvars;
    int i;
+   int j;
 
    assert( trivial != NULL );
    *trivial = FALSE;
@@ -155,13 +157,26 @@ SCIP_RETCODE checkTrivialInfeas(
       }
    }
 
-   /* Check for min/max activities that do not respect their RHS/LHS */
-   //TODO
+   /* Check for linear min/max activities that do not respect their RHS/LHS */
+   conss = SCIPgetConss(scip);
+   nconss = SCIPgetNConss(scip);
+   for( i = 0; i < nconss; ++i )
+   {
+      row = SCIPgetRowLinear(scip, conss[i]);
+
+      /* Skip the constraint if it is not linear or has NULL row */
+      if( !(strcmp("linear", SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i]))) == 0) || row == NULL )
+         continue;
+
+      if( SCIPisGT(scip, SCIProwGetLhs(row), SCIPgetRowMinActivity(scip, row)) || SCIPisLT(scip, SCIProwGetRhs(row), SCIPgetRowMaxActivity(scip, row)) )
+      {
+         *trivial = TRUE;
+         break;
+      }
+   }
 
    if( *trivial )
    {
-      nconss = SCIPgetNOrigConss(scip);
-      conss = SCIPgetOrigConss(scip);
       for( i = nconss - 1; i >= 0; i-- )
       {
          SCIP_CALL( SCIPdelCons(scip, conss[i]) );
