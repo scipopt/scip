@@ -112,11 +112,17 @@ SCIP_RETCODE setLimits(
       assert( globalnodelim >= 0 );
    }
    if( globalnodelim == -1 && nodelimperiter == -1 )
+   {
       SCIP_CALL( SCIPsetLongintParam(scip, "limits/nodes", nodelim) );
+   }
    else if( globalnodelim == -1 || nodelimperiter == -1 )
+   {
       SCIP_CALL( SCIPsetLongintParam(scip, "limits/nodes", MAX(globalnodelim, nodelimperiter)) );
+   }
    else
+   {
       SCIP_CALL( SCIPsetLongintParam(scip, "limits/nodes", MIN(globalnodelim, nodelimperiter)) );
+   }
    return SCIP_OKAY;
 }
 
@@ -858,7 +864,9 @@ SCIP_RETCODE additionFilterBatch(
    for( i = 0; i < nconss; ++i )
    {
       if( !inIS[order[i]] )
+      {
          SCIP_CALL( SCIPreleaseCons(scip, &conss[order[i]]) );
+      }
    }
 
    SCIPfreeBlockMemoryArray(scip, &order, nconss);
