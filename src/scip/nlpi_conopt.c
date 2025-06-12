@@ -98,10 +98,15 @@ struct SCIP_NlpiProblem
 
 /** Implementations of CONOPT callbacks */
 
-/* CONOPT callback to pass solution back to SCIP */
+/** CONOPT callback to pass solution back to SCIP
+ *
+ * The dual values are multiplied by -1, since CONOPT's definition of marginal values is 'by
+ * how much the objective increases if we increase the constraint side by +eps', which, for
+ * minimisation problems (which is always the case here), is the negative of what SCIP expects.
+ */
 static int COI_CALLCONV Solution(
    const double          XVAL[],             /**< solution values of the variables (provided by CONOPT) */
-   const double          XMAR[],             /**< marginal values or reduced costs (provided by CONOPT) */
+   const double          XMAR[],             /**< marginal values (provided by CONOPT) */
    const int             XBAS[],             /**< basis indicators for the variables (provided by CONOPT) */
    const int             XSTA[],             /**< status values for the variables (provided by CONOPT) */
    const double          YVAL[],             /**< values of the left hand sides of all rows in the optimal solution (provided by CONOPT) */
@@ -114,27 +119,52 @@ static int COI_CALLCONV Solution(
    )
 {
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+   int nvars;
 
    assert(problem != NULL);
    assert(NUMVAR == problem->nvars);
    assert(NUMCON == problem->nconss);
 
+   nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+
+   /* number of SCIP variables always less or equal, since CONOPT variables can also contain slack variables */
+   assert(nvars <= NUMVAR);
+
    /* TODO some SCIP_CALL */
+   /* copy values from CONOPT into SCIP arrays. Note that in CONOPT, there is one
+    * extra constraint (the objective) and slack variables that are not explicitly
+    * present in SCIP, which the code below does not copy */
    if( problem->lastprimal == NULL )
    {
       if( NUMVAR > 0 )
       {
-         SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastprimal, XVAL, NUMVAR);
-         // SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastduallb, XVAL, NUMVAR); /* TODO how to get this from conopt? */
-         // SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastdualub, XVAL, NUMVAR);
+         SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastprimal, XVAL, nvars);
+         SCIPallocClearBlockMemoryArray(problem->scip, &problem->lastduallb, nvars);
+         SCIPallocClearBlockMemoryArray(problem->scip, &problem->lastdualub, nvars);
       }
       if( NUMCON > 0 )
-         SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastdualcons, YMAR, NUMCON);
+         SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastdualcons, YMAR, NUMCON-1);
    }
    else
    {
-      BMScopyMemoryArray(problem->lastprimal, XVAL, NUMVAR);
-      BMScopyMemoryArray(problem->lastdualcons, YMAR, NUMCON);
+      BMScopyMemoryArray(problem->lastprimal, XVAL, nvars);
+      BMSclearMemoryArray(problem->lastduallb, nvars);
+      BMSclearMemoryArray(problem->lastdualub, nvars);
+      BMScopyMemoryArray(problem->lastdualcons, YMAR, NUMCON-1);
+   }
+
+   /* get dual multipliers for variable bounds */
+   for( int i = 0; i < nvars; i++ )
+   {
+      if( XBAS[i] == 0 ) /* Xi is at lower bound */
+         problem->lastduallb[i] = -XMAR[i];
+      else if( XBAS[i] == 1 ) /* Xi is at upper bound */
+         problem->lastdualub[i] = -XMAR[i];
+   }
+
+   for( int i = 0; i < NUMCON-1; i++ )
+   {
+      (problem->lastdualcons[i]) *= -1;
    }
 
    return 0;
@@ -596,9 +626,9 @@ void invalidateSolution(
    assert(problem != NULL);
 
    SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastprimal),   problem->nvars);
-   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualcons), problem->nconss);
-   // SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastduallb),   problem->lastduallbsize); /* TODO bring this back once I get these values */
-   // SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualub),   problem->lastdualubsize);
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualcons), problem->nconss-1);
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastduallb),   problem->nvars); /* TODO handling of sizes */
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualub),   problem->nvars);
 
    problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    problem->termstat = SCIP_NLPTERMSTAT_OTHER;
@@ -626,7 +656,7 @@ static SCIP_RETCODE initConopt(
    assert(problem->oracle != NULL);
 
    if( data->solvetime == NULL )
-      SCIP_CALL( SCIPcreateClock(scip, &data->solvetime) );
+      SCIP_CALL( SCIPcreateClock(scip, &(data->solvetime)) );
 
    nconss = SCIPnlpiOracleGetNConstraints(problem->oracle);
 
@@ -728,7 +758,7 @@ SCIP_DECL_NLPIFREE(nlpiFreeConopt)
    assert(*nlpidata != NULL);
 
    if( (*nlpidata)->solvetime != NULL )
-      SCIP_CALL( SCIPfreeClock(scip, &(*nlpidata)->solvetime) );
+      SCIP_CALL( SCIPfreeClock(scip, &((*nlpidata)->solvetime)) );
 
    SCIPfreeBlockMemory(scip, nlpidata);
    assert(*nlpidata == NULL);
@@ -1142,7 +1172,7 @@ SCIP_RETCODE SCIPincludeNlpSolverConopt(
    SCIP_NLPIDATA* nlpidata;
 
    /* create Conopt solver interface data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &nlpidata) );
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &nlpidata) );
 
    /* create and include solver interface */
    SCIP_CALL( SCIPincludeNlpi(scip,
