@@ -44,7 +44,7 @@
  *
  * If the appropriate parameters are set then we can guarantee that the result is irreducible, i.e.,
  * an irreducible infeasible subsystem (IIS). Otherwise we may only obtain an infeasible subsystem (IS).
- * For no settings can we guarantee an irreducible infeasible subsystem (IIS).
+ * This algorithm cannot guarantee to obtain the smallest possible IIS.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
