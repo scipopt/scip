@@ -136,7 +136,11 @@ SCIP_RETCODE checkTrivialInfeas(
 {
    SCIP_CONS** conss;
    SCIP_VAR** vars;
-   SCIP_ROW* row;
+   SCIP_Real* coefs;
+   SCIP_Real maxactivity;
+   SCIP_Real minactivity;
+   SCIP_Bool success;
+   int violatingcons;
    int nconss;
    int nvars;
    int i;
@@ -157,28 +161,54 @@ SCIP_RETCODE checkTrivialInfeas(
       }
    }
 
-   /* Check for linear min/max activities that do not respect their RHS/LHS */
+   /* Check for linear max (min) activities that do not respect their lhs (rhs) */
+   violatingcons = -1;
    conss = SCIPgetConss(scip);
    nconss = SCIPgetNConss(scip);
    for( i = 0; i < nconss; ++i )
    {
-      row = SCIPgetRowLinear(scip, conss[i]);
-
       /* Skip the constraint if it is not linear or has NULL row */
-      if( !(strcmp("linear", SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i]))) == 0) || row == NULL )
+      if( !(strcmp("linear", SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i]))) == 0) )
          continue;
 
-      if( SCIPisGT(scip, SCIProwGetLhs(row), SCIPgetRowMinActivity(scip, row)) || SCIPisLT(scip, SCIProwGetRhs(row), SCIPgetRowMaxActivity(scip, row)) )
+      nvars = SCIPgetNVarsLinear(scip, conss[i]);
+      vars = SCIPgetVarsLinear(scip, conss[i]);
+      coefs = SCIPgetValsLinear(scip, conss[i]);
+
+      /* Compute the max/min activities */
+      maxactivity = 0.0;
+      minactivity = 0.0;
+      for( int j = 0; j < nvars; ++j )
       {
+         if( coefs[j] >= 0.0 )
+         {
+            maxactivity += coefs[j] * SCIPvarGetUbOriginal(vars[j]);
+            minactivity += coefs[j] * SCIPvarGetLbOriginal(vars[j]);
+         }
+         else
+         {
+            maxactivity += coefs[j] * SCIPvarGetLbOriginal(vars[j]);
+            minactivity += coefs[j] * SCIPvarGetUbOriginal(vars[j]);
+         }
+      }
+
+      /* is the violation (max < lhs || rhs < min) true? */
+      if( SCIPisLT(scip, maxactivity, SCIPconsGetLhs(scip, conss[i], &success)) || SCIPisLT(scip, SCIPconsGetRhs(scip, conss[i], &success), minactivity) )
+      {
+         assert( success );
          *trivial = TRUE;
+         violatingcons = i;
          break;
       }
    }
 
+   /* delete all constraints not relevant to the infeasibility */
    if( *trivial )
    {
       for( i = nconss - 1; i >= 0; i-- )
       {
+         if( i == violatingcons )
+            continue;
          SCIP_CALL( SCIPdelCons(scip, conss[i]) );
       }
    }
