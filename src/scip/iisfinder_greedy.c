@@ -1092,7 +1092,7 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "iis/" IISFINDER_NAME "/batchupdateinterval",
-         "the number of iterations to run with a fixed batchsize before updating it, if set to 1, it is updated each iteration",
+         "the number of iterations to run with a constant batchsize before updating (1: always update)",
          &iisfinderdata->batchupdateinterval, TRUE, DEFAULT_BATCHUPDATEINTERVAL, 1, INT_MAX, NULL, NULL) );
 
 
