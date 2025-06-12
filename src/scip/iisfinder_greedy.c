@@ -1087,7 +1087,7 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "iis/" IISFINDER_NAME "/batchingoffset",
-         "the offset with which the batchsize is summed each iteration",
+         "the offset which is added to the multiplied batchsize in every update",
          &iisfinderdata->batchingoffset, TRUE, DEFAULT_BATCHINGOFFSET, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
