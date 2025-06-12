@@ -51,7 +51,7 @@
 #define DEFAULT_MAXRELBATCHSIZE  0.5   /**< the maximum batchsize relative to the original problem per iteration */
 #define DEFAULT_BATCHINGFACTOR   2.0   /**< the factor with which the batchsize is multiplied in every update */
 #define DEFAULT_BATCHINGOFFSET   0.0   /**< the offset which is added to the multiplied batchsize in every update */
-#define DEFAULT_BATCHUPDATEINTERVAL 1  /**< the number of iterations to run with a fixed batchsize before updating it */
+#define DEFAULT_BATCHUPDATEINTERVAL 1  /**< the number of iterations to run with a constant batchsize before updating (1: always update) */
 
 
 /*
@@ -75,7 +75,7 @@ struct SCIP_IISfinderData
    SCIP_Real             maxrelbatchsize;    /**< the maximum batchsize relative to the original problem per iteration */
    SCIP_Real             batchingfactor;     /**< the factor with which the batchsize is multiplied in every update */
    SCIP_Real             batchingoffset;     /**< the offset which is added to the multiplied batchsize in every update */
-   int                   batchupdateinterval; /**< the number of iterations to run with a fixed batchsize before updating it */
+   int                   batchupdateinterval; /**< the number of iterations to run with a constant batchsize before updating (1: always update) */
 };
 
 /*
@@ -195,7 +195,7 @@ SCIP_RETCODE updateBatchsize(
    SCIP_Bool             resettoinit,        /**< should the batchsize be reset to the initial batchsize? */
    SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied in every update */
    SCIP_Real             batchingoffset,     /**< the offset which is added to the multiplied batchsize in every update */
-   int                   batchupdateinterval, /**< the number of iterations to run with a fixed batchsize before updating it */
+   int                   batchupdateinterval, /**< the number of iterations to run with a constant batchsize before updating (1: always update) */
    int*                  batchsize           /**< the batchsize to be updated */
    )
 {
@@ -482,7 +482,7 @@ SCIP_RETCODE deletionFilterBatch(
    int                   maxbatchsize,       /**< the maximum batchsize per iteration */
    SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied in every update */
    SCIP_Real             batchingoffset,     /**< the offset which is added to the multiplied batchsize in every update */
-   int                   batchupdateinterval, /**< the number of iterations to run with a fixed batchsize before updating it */
+   int                   batchupdateinterval, /**< the number of iterations to run with a constant batchsize before updating (1: always update) */
 
    SCIP_Bool*            alldeletionssolved  /**< pointer to store whether all the subscips solved */
    )
@@ -677,7 +677,7 @@ SCIP_RETCODE additionFilterBatch(
    int                   maxbatchsize,       /**< the maximum batchsize per iteration */
    SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied in every update */
    SCIP_Real             batchingoffset,     /**< the offset which is added to the multiplied batchsize in every update */
-   int                   batchupdateinterval /**< the number of iterations to run with a fixed batchsize before updating it */
+   int                   batchupdateinterval /**< the number of iterations to run with a constant batchsize before updating (1: always update) */
    )
 {
    SCIP* scip;
