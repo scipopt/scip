@@ -43,9 +43,11 @@
 #include "scip/scip_randnumgen.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_message.h"
+#include "scip/type_clock.h"
 
 #include "coiheader.h"
 #include "scip_message.h"
+#include "scip_timing.h"
 
 #define NLPI_NAME              "conopt"                    /**< short concise name of solver */
 #define NLPI_DESC              "solver interface template" /**< description of solver */
@@ -60,6 +62,7 @@
 
 struct SCIP_NlpiData
 {
+   SCIP_CLOCK*           solvetime;          /**< clock for measuring solving time */
 };
 
 struct SCIP_NlpiProblem
@@ -603,7 +606,7 @@ void invalidateSolution(
 
 static SCIP_RETCODE initConopt(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
+   SCIP_NLPIDATA*        data,               /**< pointer to NLPIDATA structure */
    SCIP_NLPIPROBLEM*     problem             /**< pointer to NLPI problem structure */
 )
 {
@@ -618,9 +621,12 @@ static SCIP_RETCODE initConopt(
    int nobjgradnz;
    int nobjgradnls;
 
-   assert(nlpi != NULL);
+   assert(data != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   if( data->solvetime == NULL )
+      SCIP_CALL( SCIPcreateClock(scip, &data->solvetime) );
 
    nconss = SCIPnlpiOracleGetNConstraints(problem->oracle);
 
@@ -720,6 +726,9 @@ SCIP_DECL_NLPIFREE(nlpiFreeConopt)
    assert(nlpi != NULL);
    assert(nlpidata != NULL);
    assert(*nlpidata != NULL);
+
+   if( (*nlpidata)->solvetime != NULL )
+      SCIP_CALL( SCIPfreeClock(scip, &(*nlpidata)->solvetime) );
 
    SCIPfreeBlockMemory(scip, nlpidata);
    assert(*nlpidata == NULL);
@@ -996,10 +1005,14 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessConopt)
 static
 SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
 {
+   SCIP_NLPIDATA* data;
    int COI_Error = 0; /* CONOPT error counter */
 
    assert(nlpi != NULL);
    assert(problem != NULL);
+
+   data = SCIPnlpiGetData(nlpi);
+   assert(data != NULL);
 
    SCIPdebugMsg(scip, "solve with parameters " SCIP_NLPPARAM_PRINT(param));
 
@@ -1027,32 +1040,31 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
 
    /* initialize Conopt data if necessary */
    if( problem->firstrun )
-   { /* TODO implement the functions */
+   {
       freeConopt(problem);
-      initConopt(scip, nlpi, problem);
+      initConopt(scip, data, problem);
       problem->firstrun = FALSE;
    }
    else
-   {
       updateConopt(problem);
-   }
 
    /* TODO set parameters */
 
-   /* TODO set initial guess (if available) (happens in ReadMatrix) */
+   /* TODO set initial guess (if available) (happens in ReadMatrix, but might it need updating?) */
 
-
+   /* measure time */
+   SCIPresetClock(scip, data->solvetime);
+   SCIPstartClock(scip, data->solvetime);
 
    COI_Error = COI_Solve(problem->CntVect); /* optimize */
+
+#ifdef SCIP_DEBUG
    if( COI_Error )
-   {
       SCIPinfoMessage(scip, NULL, "Errors encountered during solution, %d", COI_Error);
-      exit(1);
-   }
+#endif
 
-   /* TODO interpret conopt result (update solstat, termstat, print some debug message) */
-
-   /* TODO handle some statistics */
+   /* store statistics (some statistics are passed back to SCIP by the Status callback) */
+   problem->solvetime = SCIPgetClockTime(scip, data->solvetime);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
