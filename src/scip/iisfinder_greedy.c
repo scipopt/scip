@@ -1061,13 +1061,13 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "iis/" IISFINDER_NAME "/initbatchsize",
-         "the initial batchsize for the first iteration, ignored if initrelbatchsize > 0",
+         "the initial batchsize for the first iteration, ignored if initrelbatchsize is positive",
          &iisfinderdata->initbatchsize, FALSE, DEFAULT_INITBATCHSIZE, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "iis/" IISFINDER_NAME "/initrelbatchsize",
-         "the initial batchsize relative to the original problem for the first iteration, ignored if <= 0",
-         &iisfinderdata->initrelbatchsize, FALSE, DEFAULT_INITRELBATCHSIZE, -1.0, 1.0, NULL, NULL) );
+         "the initial batchsize relative to the original problem for the first iteration (0.0: use initbatchsize)",
+         &iisfinderdata->initrelbatchsize, FALSE, DEFAULT_INITRELBATCHSIZE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "iis/" IISFINDER_NAME "/maxbatchsize",
