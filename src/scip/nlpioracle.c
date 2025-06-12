@@ -240,13 +240,23 @@ void invalidateJacobiSparsity(
    { /* nothing to do for the column representation */
       assert(oracle->jacrows == NULL);
       assert(oracle->jacrownlflags == NULL);
-      return;
+   }
+   else
+   {
+      assert(oracle->jacrows != NULL);
+      SCIPfreeBlockMemoryArray(scip, &oracle->jacrownlflags, oracle->jaccoloffsets[oracle->nvars]);
+      SCIPfreeBlockMemoryArray(scip, &oracle->jacrows, oracle->jaccoloffsets[oracle->nvars]);
+      SCIPfreeBlockMemoryArray(scip, &oracle->jaccoloffsets, oracle->nvars + 1);
    }
 
-   assert(oracle->jacrows != NULL);
-   SCIPfreeBlockMemoryArray(scip, &oracle->jacrownlflags, oracle->jaccoloffsets[oracle->nvars]);
-   SCIPfreeBlockMemoryArray(scip, &oracle->jacrows, oracle->jaccoloffsets[oracle->nvars]);
-   SCIPfreeBlockMemoryArray(scip, &oracle->jaccoloffsets, oracle->nvars + 1);
+   if( oracle->objgradnz == NULL )
+   {
+      /* nothing to do for objective gradient structure */
+      assert(oracle->objnlflags == NULL);
+   }
+
+   SCIPfreeBlockMemoryArray(scip, &oracle->objgradnz, oracle->nobjgradnz);
+   SCIPfreeBlockMemoryArray(scip, &oracle->objnlflags, oracle->nobjgradnz);
 }
 
 /** Invalidates the sparsity pattern of the Hessian of the Lagragian.
@@ -2233,6 +2243,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    if( nnz < maxnnz )
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->jaccols, maxnnz, nnz) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->jaccolnlflags, maxnnz, nnz) );
    }
 
    SCIPfreeBlockMemoryArray(scip, &nlflag, oracle->nvars);

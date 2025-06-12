@@ -163,9 +163,7 @@ static int COI_CALLCONV Solution(
    }
 
    for( int i = 0; i < NUMCON-1; i++ )
-   {
       (problem->lastdualcons[i]) *= -1;
-   }
 
    return 0;
 }
@@ -623,12 +621,16 @@ void invalidateSolution(
    SCIP_NLPIPROBLEM*     problem             /**< data structure of problem */
    )
 {
+   int nvars;
+
    assert(problem != NULL);
 
-   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastprimal),   problem->nvars);
+   nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastprimal), nvars);
    SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualcons), problem->nconss-1);
-   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastduallb),   problem->nvars); /* TODO handling of sizes */
-   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualub),   problem->nvars);
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastduallb), nvars); /* TODO handling of sizes */
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualub), nvars);
 
    problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    problem->termstat = SCIP_NLPTERMSTAT_OTHER;
@@ -812,6 +814,8 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemConopt)
    assert(nlpi     != NULL);
    assert(problem  != NULL);
    assert(*problem != NULL);
+
+   invalidateSolution(*problem);
 
    if( (*problem)->oracle != NULL )
    {
