@@ -167,7 +167,7 @@ SCIP_RETCODE checkTrivialInfeas(
    nconss = SCIPgetNConss(scip);
    for( i = 0; i < nconss; ++i )
    {
-      /* Skip the constraint if it is not linear or has NULL row */
+      /* Skip the constraint if it is not linear */
       if( !(strcmp("linear", SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i]))) == 0) )
          continue;
 
