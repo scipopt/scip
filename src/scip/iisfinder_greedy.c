@@ -889,7 +889,7 @@ SCIP_RETCODE execIISfinderGreedy(
    nvars = SCIPgetNOrigVars(scip);
    nconss = SCIPgetNOrigConss(scip);
    maxbatchsize = MAX(nvars, nconss);
-   initbatchsize = iisfinderdata->initrelbatchsize >= 0.0
+   initbatchsize = iisfinderdata->initrelbatchsize > 0.0
          ? (int)ceil(iisfinderdata->initrelbatchsize * maxbatchsize) : MIN(iisfinderdata->initbatchsize, maxbatchsize);
    maxbatchsize = (int)ceil(iisfinderdata->maxrelbatchsize * maxbatchsize);
    maxbatchsize = MIN(iisfinderdata->maxbatchsize, maxbatchsize);
