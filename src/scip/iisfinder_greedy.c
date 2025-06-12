@@ -49,8 +49,8 @@
 #define DEFAULT_INITRELBATCHSIZE 0.03125 /**< the initial batchsize relative to the original problem for the first iteration */
 #define DEFAULT_MAXBATCHSIZE     INT_MAX /**< the maximum batchsize per iteration */
 #define DEFAULT_MAXRELBATCHSIZE  0.5   /**< the maximum batchsize relative to the original problem per iteration */
-#define DEFAULT_BATCHINGFACTOR   2.0   /**< the factor with which the batchsize is multiplied each iteration */
-#define DEFAULT_BATCHINGOFFSET   0     /**< the offset with which the batchsize is summed each iteration */
+#define DEFAULT_BATCHINGFACTOR   2.0   /**< the factor with which the batchsize is multiplied in every update */
+#define DEFAULT_BATCHINGOFFSET   0.0   /**< the offset which is added to the multiplied batchsize in every update */
 #define DEFAULT_BATCHUPDATEINTERVAL 1  /**< the number of iterations to run with a fixed batchsize before updating it */
 
 
@@ -73,8 +73,8 @@ struct SCIP_IISfinderData
    SCIP_Real             initrelbatchsize;   /**< the initial batchsize relative to the original problem for the first iteration */
    int                   maxbatchsize;       /**< the maximum batchsize per iteration */
    SCIP_Real             maxrelbatchsize;    /**< the maximum batchsize relative to the original problem per iteration */
-   SCIP_Real             batchingfactor;     /**< the factor with which the batchsize is multiplied each iteration */
-   int                   batchingoffset;     /**< the offset with which the batchsize is summed each iteration */
+   SCIP_Real             batchingfactor;     /**< the factor with which the batchsize is multiplied in every update */
+   SCIP_Real             batchingoffset;     /**< the offset which is added to the multiplied batchsize in every update */
    int                   batchupdateinterval; /**< the number of iterations to run with a fixed batchsize before updating it */
 };
 
@@ -193,8 +193,8 @@ SCIP_RETCODE updateBatchsize(
    int                   n,                  /**< the total number of constraints or bounds (beyond the batch) */
    int                   iteration,          /**< the current iteration */
    SCIP_Bool             resettoinit,        /**< should the batchsize be reset to the initial batchsize? */
-   SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied each iteration */
-   int                   batchingoffset,     /**< the offset with which the batchsize is summed each iteration */
+   SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied in every update */
+   SCIP_Real             batchingoffset,     /**< the offset which is added to the multiplied batchsize in every update */
    int                   batchupdateinterval, /**< the number of iterations to run with a fixed batchsize before updating it */
    int*                  batchsize           /**< the batchsize to be updated */
    )
@@ -202,12 +202,11 @@ SCIP_RETCODE updateBatchsize(
    if( resettoinit )
       *batchsize = initbatchsize;
    else if( iteration % batchupdateinterval == 0 )
-      *batchsize = batchingoffset + (int)(batchingfactor * (*batchsize));
+      *batchsize = (int)((*batchsize) * batchingfactor + batchingoffset);
 
    /* respect limits and maximum */
    assert( n >= i );
-   maxbatchsize = MIN(maxbatchsize, n - i);
-   *batchsize = MIN(*batchsize, maxbatchsize);
+   *batchsize = MIN3(*batchsize, n - i, maxbatchsize);
    *batchsize = MAX(*batchsize, 1);
    SCIPdebugMsg(scip, "Updated batchsize to %d\n", *batchsize);
 
@@ -481,8 +480,8 @@ SCIP_RETCODE deletionFilterBatch(
 
    int                   initbatchsize,      /**< the initial batchsize for the first iteration */
    int                   maxbatchsize,       /**< the maximum batchsize per iteration */
-   SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied each iteration */
-   int                   batchingoffset,     /**< the offset with which the batchsize is summed each iteration */
+   SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied in every update */
+   SCIP_Real             batchingoffset,     /**< the offset which is added to the multiplied batchsize in every update */
    int                   batchupdateinterval, /**< the number of iterations to run with a fixed batchsize before updating it */
 
    SCIP_Bool*            alldeletionssolved  /**< pointer to store whether all the subscips solved */
@@ -676,8 +675,8 @@ SCIP_RETCODE additionFilterBatch(
 
    int                   initbatchsize,      /**< the initial batchsize for the first iteration */
    int                   maxbatchsize,       /**< the maximum batchsize per iteration */
-   SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied each iteration */
-   int                   batchingoffset,     /**< the offset with which the batchsize is summed each iteration */
+   SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied in every update */
+   SCIP_Real             batchingoffset,     /**< the offset which is added to the multiplied batchsize in every update */
    int                   batchupdateinterval /**< the number of iterations to run with a fixed batchsize before updating it */
    )
 {
@@ -1085,10 +1084,10 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
          "the factor with which the batchsize is multiplied in every update",
          &iisfinderdata->batchingfactor, TRUE, DEFAULT_BATCHINGFACTOR, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddRealParam(scip,
          "iis/" IISFINDER_NAME "/batchingoffset",
          "the offset which is added to the multiplied batchsize in every update",
-         &iisfinderdata->batchingoffset, TRUE, DEFAULT_BATCHINGOFFSET, 0, INT_MAX, NULL, NULL) );
+         &iisfinderdata->batchingoffset, TRUE, DEFAULT_BATCHINGOFFSET, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "iis/" IISFINDER_NAME "/batchupdateinterval",
