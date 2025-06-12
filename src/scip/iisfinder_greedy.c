@@ -202,7 +202,7 @@ SCIP_RETCODE updateBatchsize(
    if( resettoinit )
       *batchsize = initbatchsize;
    else if( iteration % batchupdateinterval == 0 )
-      *batchsize = (int)((*batchsize) * batchingfactor + batchingoffset);
+      *batchsize = (int)ceil(batchingfactor * (*batchsize) + batchingoffset);
 
    /* respect limits and maximum */
    assert( n >= i );
