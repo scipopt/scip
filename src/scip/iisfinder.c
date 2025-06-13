@@ -206,7 +206,7 @@ SCIP_RETCODE checkTrivialInfeas(
          for( j = 0; j < nvars; ++j )
             minactivity += coefs[j] * (coefs[j] >= 0.0 ? SCIPvarGetLbOriginal(vars[j]) : SCIPvarGetUbOriginal(vars[j]));
 
-         /* is the violation (rhs < minactivity) true? */
+         /* Is the violation (rhs < minactivity) true? */
          if( SCIPisSumLT(scip, rhs, minactivity) )
          {
             *trivial = TRUE;
@@ -216,7 +216,7 @@ SCIP_RETCODE checkTrivialInfeas(
       }
    }
 
-   /* delete all constraints not relevant to the infeasibility */
+   /* Delete all constraints not relevant to the infeasibility */
    if( *trivial )
    {
       for( i = nconss - 1; i >= 0; i-- )
