@@ -167,8 +167,9 @@ SCIP_RETCODE checkTrivialInfeas(
    nconss = SCIPgetNConss(scip);
    for( i = 0; i < nconss; ++i )
    {
+      /**@todo generalize activity evaluation */
       /* Skip the constraint if it is not linear */
-      if( !(strcmp("linear", SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i]))) == 0) )
+      if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i])), "linear") != 0 )
          continue;
 
       nvars = SCIPgetNVarsLinear(scip, conss[i]);
