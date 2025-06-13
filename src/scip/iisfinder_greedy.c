@@ -561,10 +561,10 @@ SCIP_RETCODE deletionFilterBatch(
    SCIPrandomPermuteIntArray(randnumgen, order, 0, nconss);
 
    /* Loop through all batches of constraints in random order */
-   deleted = FALSE;
-   stopiter = FALSE;
    i = 0;
    iteration = 0;
+   deleted = FALSE;
+   stopiter = FALSE;
    while( i < nconss )
    {
       /* update batchsize */
