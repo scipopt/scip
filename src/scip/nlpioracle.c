@@ -2265,7 +2265,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 
    oracle->jacrowoffsets[oracle->nconss] = nnz;
 
-   /* shrink jaccols array to nnz */
+   /* shrink jaccols and jaccolnlflags arrays to nnz */
    if( nnz < maxcols )
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->jaccols, maxcols, nnz) );
@@ -2434,9 +2434,12 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
 
    SCIPfreeExpriter(&it);
 
-   /* shrink objgradnz array to nobjgradnz */
+   /* shrink objgradnz and objnlflags array to nobjgradnz */
    if( oracle->nobjgradnz < oracle->nvars )
+   {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(oracle->objgradnz), oracle->nvars, oracle->nobjgradnz) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(oracle->objnlflags), oracle->nvars, oracle->nobjgradnz) );
+   }
 
    *nz = oracle->objgradnz;
    *nlflags = oracle->objnlflags;
