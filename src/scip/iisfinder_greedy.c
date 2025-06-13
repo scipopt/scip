@@ -315,7 +315,7 @@ SCIP_RETCODE deletionSubproblem(
       }
       else
       {
-         SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, TRUE, FALSE) );
+         SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, TRUE, TRUE) );
       }
       *alldeletionssolved = FALSE;
       return SCIP_OKAY;
