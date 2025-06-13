@@ -587,7 +587,7 @@ SCIP_RETCODE deletionFilterBatch(
          break;
 
       /* reset i to beginning of current batch if batch has not been deleted and k was large */
-      if( !deleted && (k > initbatchsize) )
+      if( !deleted && k > initbatchsize )
          i = batchindex;
 
       ++iteration;
@@ -658,7 +658,7 @@ SCIP_RETCODE deletionFilterBatch(
             SCIPiisfinderInfoMessage(iis, FALSE);
 
          /* reset i to beginning of current batch if batch has not been deleted and k was large */
-         if( !deleted && (k > initbatchsize) )
+         if( !deleted && k > initbatchsize )
             i = batchindex;
 
          ++iteration;
@@ -804,13 +804,14 @@ SCIP_RETCODE additionFilterBatch(
          assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
 
          /* Add any other constraints that are also feasible for the current solution */
-         if( (copysol != NULL) && dynamicreordering )
+         if( copysol != NULL && dynamicreordering )
          {
             k = 0;
             for( j = i; j < nconss; ++j )
             {
                /* Don't dynamically add indicator constraints */
-               if( !inIS[order[j]] && ( strcmp("indicator", SCIPconshdlrGetName(SCIPconsGetHdlr(conss[order[j]]))) != 0 ) )
+               if( !inIS[order[j]]
+                  && strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[order[j]])), "indicator") != 0 )
                {
                   SCIP_CALL( SCIPcheckCons(scip, conss[order[j]], copysol, FALSE, FALSE, FALSE, &result) );
                   if( result == SCIP_FEASIBLE )
