@@ -279,6 +279,7 @@ Fixed bugs
   separator is introduced.
 - accept fractional continuous implied integral variables in heuristic completesol
 - invalidate activity with contradicting infinity contributions
+- avoiding integer overflow in cons cumulative by introducing the parameter "constraints/cumulative/maxtime" to control infinite variables
 
 Miscellaneous
 -------------

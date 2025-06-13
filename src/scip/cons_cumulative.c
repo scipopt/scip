@@ -13412,12 +13412,7 @@ SCIP_DECL_CONSPARSE(consParseCumulative)
          str = endptr;
          if( SCIPparseReal(scip, str, &value, &endptr) )
          {
-            int j;
-
             capacity = (int)value;
-
-            for( j = 0; j < nvars; ++j )
-               assert( INT_MAX - durations[j] > boundedConvertRealToInt(scip, SCIPvarGetLbGlobal(vars[j])));
 
             /* create cumulative constraint */
             SCIP_CALL( SCIPcreateConsCumulative(scip, cons, name, nvars, vars, durations, demands, capacity,
@@ -13558,6 +13553,9 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxCumulative) );
 
    /* add cumulative constraint handler parameters */
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/" CONSHDLR_NAME "/maxtime", "maximum range for time horizon",
+         &conshdlrdata->maxtime, TRUE, DEFAULT_MAXVALUE, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/ttinfer",
          "should time-table (core-times) propagator be used to infer bounds?",
@@ -13638,11 +13636,6 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
          "constraints/" CONSHDLR_NAME "/usebdwidening", "should bound widening be used during the conflict analysis?",
          &conshdlrdata->usebdwidening, FALSE, DEFAULT_USEBDWIDENING, NULL, NULL) );
 
-   /* */
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/" CONSHDLR_NAME "/maxtime", "maximum range for time horizon",
-         &conshdlrdata->maxtime, TRUE, DEFAULT_MAXVALUE, 0, INT_MAX, NULL, NULL) );
-
    return SCIP_OKAY;
 }
 
@@ -13681,6 +13674,7 @@ SCIP_RETCODE SCIPcreateConsCumulative(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
+   int i;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
 
@@ -13694,6 +13688,15 @@ SCIP_RETCODE SCIPcreateConsCumulative(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   for( i = 0; i < nvars; ++i )
+   {
+      if( INT_MAX - durations[i] < boundedConvertRealToInt(scip, SCIPvarGetLbGlobal(vars[i])) )
+      {
+         SCIPwarningMessage(scip, "Potential integer overflow for constraint <%s> for variable <%s>!\n",
+                            name, SCIPvarGetName(vars[i]));
+         return SCIP_INVALIDDATA;
+      }
+   }
    SCIPdebugMsg(scip, "create cumulative constraint <%s> with %d jobs\n", name, nvars);
 
    /* create constraint data */
