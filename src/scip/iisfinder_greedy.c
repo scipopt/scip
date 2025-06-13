@@ -163,30 +163,24 @@ SCIP_RETCODE revertConssDeletions(
    SCIP_CONS**           conss,              /**< the array of constraints where some have been deleted */
    int*                  idxs,               /**< the indices of the cons (in the conss array) that have been deleted */
    int                   ndelconss,          /**< the number of constraints that have been deleted */
-   SCIP_Bool             addconss,           /**< Should the constraints be added back */
-   SCIP_Bool             keepptrs            /**< Should the constraint pointers be kept for reuse */
+   SCIP_Bool             releaseonly         /**< Should the constraints just be released instead of added back */
    )
 {
    int i;
    SCIP_CONS* copycons;
 
-   assert( addconss || !keepptrs );
-
    for( i = 0; i < ndelconss; ++i )
    {
-      if( addconss )
+      if( releaseonly )
       {
-         SCIP_CALL( SCIPaddCons(scip, conss[idxs[i]]) );
-      }
-      if( keepptrs )
-      {
-         copycons = conss[idxs[i]];
-         assert(SCIPconsGetNUses(copycons) > 1);
-         SCIP_CALL( SCIPreleaseCons(scip, &copycons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &conss[idxs[i]]) );
       }
       else
       {
-         SCIP_CALL( SCIPreleaseCons(scip, &conss[idxs[i]]) );
+         SCIP_CALL( SCIPaddCons(scip, conss[idxs[i]]) );
+         copycons = conss[idxs[i]];
+         assert(SCIPconsGetNUses(copycons) > 1);
+         SCIP_CALL( SCIPreleaseCons(scip, &copycons) );
       }
    }
 
@@ -315,7 +309,7 @@ SCIP_RETCODE deletionSubproblem(
       }
       else
       {
-         SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, TRUE, TRUE) );
+         SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, FALSE) );
       }
       *alldeletionssolved = FALSE;
       return SCIP_OKAY;
@@ -336,7 +330,7 @@ SCIP_RETCODE deletionSubproblem(
          }
          else
          {
-            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, TRUE, FALSE) );
+            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, !conservative) );
          }
          *stop = TRUE;
          *alldeletionssolved = FALSE;
@@ -364,7 +358,7 @@ SCIP_RETCODE deletionSubproblem(
          }
          if( !delbounds )
          {
-            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, conservative, conservative) );
+            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, !conservative) );
          }
          break;
 
@@ -373,7 +367,7 @@ SCIP_RETCODE deletionSubproblem(
          SCIPiisSetSubscipInfeasible(iis, TRUE);
          if( !delbounds )
          {
-            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, FALSE, FALSE) );
+            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, TRUE) );
          }
          *deleted = TRUE;
          break;
@@ -390,7 +384,7 @@ SCIP_RETCODE deletionSubproblem(
          }
          else
          {
-            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, TRUE, TRUE) );
+            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, FALSE) );
          }
          break;
 
