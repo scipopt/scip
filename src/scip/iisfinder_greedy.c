@@ -809,12 +809,6 @@ SCIP_RETCODE additionFilterBatch(
          SCIP_CALL( SCIPfreeTransform(scip) );
          assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
 
-         /* update batchsize if problem feasible */
-         if( feasible )
-         {
-            SCIP_CALL( updateBatchsize(scip, initbatchsize, maxbatchsize, iteration, FALSE, batchingfactor, batchingoffset, batchupdateinterval, &batchsize) );
-         }
-
          /* Add any other constraints that are also feasible for the current solution */
          if( feasible && (copysol != NULL) && dynamicreordering )
          {
@@ -848,7 +842,14 @@ SCIP_RETCODE additionFilterBatch(
          SCIP_CALL( SCIPfreeTransform(scip) );
          assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
       }
+
       ++iteration;
+
+      /* update batchsize if problem feasible */
+      if( feasible )
+      {
+         SCIP_CALL( updateBatchsize(scip, initbatchsize, maxbatchsize, iteration, FALSE, batchingfactor, batchingoffset, batchupdateinterval, &batchsize) );
+      }
    }
 
    /* Release any cons not in the IS */
