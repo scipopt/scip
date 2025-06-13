@@ -200,6 +200,7 @@ Interface changes
 
 - branching/pscost/discountfactor, branching/relpscost/discountfactor as the discount factor for ancestral pseudo costs in pscost and relpscost branching rules
 - branching/discountedpscost to enable/disable recording ancestral pseudo costs
+- new parameter "constraints/cumulative/maxtime" to control the time horzion and avoid integer overflow for unbounded variables
 - new parameter "propagating/symmetry/handlesignedorbitopes" to control whether special symmetry handling techniques for orbitopes whose columns can be (partially) reflected shall be applied
 - new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
 - new parameter "propagating/symmetry/dispsyminfo" to control whether information about which symmetry handling methods are applied are printed
