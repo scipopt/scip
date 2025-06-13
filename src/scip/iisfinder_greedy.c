@@ -762,7 +762,7 @@ SCIP_RETCODE additionFilterBatch(
    iteration = 0;
    feasible = TRUE;
    stopiter = FALSE;
-   while( feasible )
+   while( i < nconss )
    {
       /* Add the next batch of constraints */
       k = 0;
