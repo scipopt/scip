@@ -41,7 +41,7 @@
 #define DEFAULT_NODELIMPERITER   -1L   /**< node limit of optimization process for each individual subproblem */
 
 #define DEFAULT_ADDITIVE         TRUE  /**< should an additive constraint approach be used instead of deletion */
-#define DEFAULT_CONSERVATIVE     TRUE  /**< should a hit limit (e.g. node  time) solve be counted as feasible when deleting constraints */
+#define DEFAULT_CONSERVATIVE     TRUE  /**< should an unsolved problem (by e.g. user interrupt, node limit, time limit) be considered feasible when deleting constraints */
 #define DEFAULT_DELAFTERADD      TRUE  /**< should the deletion routine be performed after the addition routine (in the case of additive) */
 #define DEFAULT_DYNAMICREORDERING TRUE /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
 
@@ -65,7 +65,7 @@ struct SCIP_IISfinderData
    SCIP_Longint          nodelimperiter;     /**< node limit of optimization process for each individual subproblem */
 
    SCIP_Bool             additive;           /**< should an additive constraint approach be used instead of deletion */
-   SCIP_Bool             conservative;       /**< should a hit limit (e.g. node  time) solve be counted as feasible when deleting constraints */
+   SCIP_Bool             conservative;       /**< should an unsolved problem (by e.g. user interrupt, node limit, time limit) be considered feasible when deleting constraints */
    SCIP_Bool             delafteradd;        /**< should the deletion routine be performed after the addition routine (in the case of additive) */
    SCIP_Bool             dynamicreordering;  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
 
@@ -1060,7 +1060,7 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "iis/" IISFINDER_NAME "/conservative",
-         "should a hit limit (e.g. node  time) solve be counted as feasible when deleting constraints",
+         "should an unsolved problem (by e.g. user interrupt, node limit, time limit) be considered feasible when deleting constraints",
          &iisfinderdata->conservative, TRUE, DEFAULT_CONSERVATIVE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
