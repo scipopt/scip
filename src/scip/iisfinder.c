@@ -411,6 +411,7 @@ SCIP_RETCODE SCIPiisGenerate(
       SCIPdebugMsg(iis->subscip, "----- STARTING GREEDY SINGLETON DELETION ALGORITHM. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
 
       SCIP_CALL( SCIPiisGreedyMinimize(iis) );
+      assert( iis->infeasible );
    }
 
    /* Remove redundant constraints that potentially are left over from indicator constraints,
