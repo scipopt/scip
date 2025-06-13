@@ -210,6 +210,28 @@ SCIP_RETCODE ensureIntArraySize(
    return SCIP_OKAY;
 }
 
+/** ensures that a given array of integers has at least a given length, and clears the newly allocated memory */
+static
+SCIP_RETCODE ensureClearBoolArraySize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool**           boolarray,          /**< array of bools */
+   int*                  len,                /**< length of array (modified if reallocated) */
+   int                   minsize             /**< minimal required array length */
+   )
+{
+   int oldlen = *len;
+
+   assert(boolarray != NULL);
+   assert(len != NULL);
+
+   SCIP_CALL( SCIPensureBlockMemoryArray(scip, boolarray, len, minsize) );
+   assert(*len >= minsize);
+
+   BMSclearMemoryArray((*boolarray)+oldlen, *len-oldlen);
+
+   return SCIP_OKAY;
+}
+
 /** Invalidates the sparsity pattern of the Jacobian.
  *  Should be called when constraints are added or deleted.
  */
@@ -2110,7 +2132,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    SCIP_Bool* nlflag;
    int* nvarnnz; /* for each variable, number of constraints it has a nonzero in */
    int nnz;
-   int maxnnz;
+   int maxcols;
+   int maxflags;
    int i;
    int j;
    int sumvarnnz; /* sum of nonzeroes for all columns, used in jaccoloffset computation */
@@ -2143,11 +2166,12 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacrowoffsets, oracle->nconss + 1) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &oracle->jaccoloffsets, oracle->nvars + 1) );
 
-   maxnnz = MIN(oracle->nvars, 10) * oracle->nconss;  /* initial guess */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jaccols, maxnnz) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &oracle->jaccolnlflags, maxnnz) );
+   maxcols = MIN(oracle->nvars, 10) * oracle->nconss;  /* initial guess */
+   maxflags = maxcols; /* since array extension functions change the length variable, have one variable for each array */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jaccols, maxcols) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->jaccolnlflags), maxflags) );
 
-   if( maxnnz == 0 )
+   if( maxcols == 0 )
    {
       /* no variables */ /* @todo: because of the min(nvars, 10), this only happens when there are no variables, not constraints */
       BMSclearMemoryArray(oracle->jacrowoffsets, oracle->nconss + 1);
@@ -2190,7 +2214,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
          /* for a linear constraint, we can just copy the linear indices from the constraint into the sparsity pattern */
          if( cons->nlinidxs > 0 )
          {
-            SCIP_CALL( ensureIntArraySize(scip, &oracle->jaccols, &maxnnz, nnz + cons->nlinidxs) );
+            SCIP_CALL( ensureIntArraySize(scip, &oracle->jaccols, &maxcols, nnz + cons->nlinidxs) );
+            SCIP_CALL( ensureClearBoolArraySize(scip, &oracle->jaccolnlflags, &maxflags, nnz + cons->nlinidxs) );
             BMScopyMemoryArray(&oracle->jaccols[nnz], cons->linidxs, cons->nlinidxs);
             nnz += cons->nlinidxs;
 
@@ -2223,7 +2248,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
          if( nzflag[j] == FALSE )
             continue;
 
-         SCIP_CALL( ensureIntArraySize(scip, &oracle->jaccols, &maxnnz, nnz + 1) );
+         SCIP_CALL( ensureIntArraySize(scip, &oracle->jaccols, &maxcols, nnz + 1) );
+         SCIP_CALL( ensureClearBoolArraySize(scip, &oracle->jaccolnlflags, &maxflags, nnz + 1) );
          oracle->jaccols[nnz] = j;
          if( nlflag[j] )
          {
@@ -2240,10 +2266,10 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    oracle->jacrowoffsets[oracle->nconss] = nnz;
 
    /* shrink jaccols array to nnz */
-   if( nnz < maxnnz )
+   if( nnz < maxcols )
    {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->jaccols, maxnnz, nnz) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->jaccolnlflags, maxnnz, nnz) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->jaccols, maxcols, nnz) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->jaccolnlflags, maxflags, nnz) );
    }
 
    SCIPfreeBlockMemoryArray(scip, &nlflag, oracle->nvars);
