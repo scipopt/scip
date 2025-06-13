@@ -37,16 +37,16 @@
 #define IISFINDER_DESC           "greedy deletion or addition constraint deletion"
 #define IISFINDER_PRIORITY        8000
 
-#define DEFAULT_TIMELIMPERITER   1e+20 /**< time limit per individual solve call */
-#define DEFAULT_NODELIMPERITER   -1L   /**< maximum number of nodes per individual solve call */
+#define DEFAULT_TIMELIMPERITER   1e+20 /**< time limit of optimization process for each individual subproblem */
+#define DEFAULT_NODELIMPERITER   -1L   /**< node limit of optimization process for each individual subproblem */
 
-#define DEFAULT_ADDITIVE         TRUE  /**< whether an additive approach instead of deletion based approach should be used */
-#define DEFAULT_CONSERVATIVE     TRUE  /**< should a solve that reached some limit be counted as feasible when deleting constraints */
-#define DEFAULT_DYNAMICREORDERING TRUE /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
+#define DEFAULT_ADDITIVE         TRUE  /**< should an additive constraint approach be used instead of deletion */
+#define DEFAULT_CONSERVATIVE     TRUE  /**< should a hit limit (e.g. node  time) solve be counted as feasible when deleting constraints */
 #define DEFAULT_DELAFTERADD      TRUE  /**< should the deletion routine be performed after the addition routine (in the case of additive) */
+#define DEFAULT_DYNAMICREORDERING TRUE /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
 
-#define DEFAULT_INITBATCHSIZE    16    /**< the initial batchsize for the first iteration */
-#define DEFAULT_INITRELBATCHSIZE 0.03125 /**< the initial batchsize relative to the original problem for the first iteration */
+#define DEFAULT_INITBATCHSIZE    16    /**< the initial batchsize for the first iteration, ignored if initrelbatchsize is positive */
+#define DEFAULT_INITRELBATCHSIZE 0.03125 /**< the initial batchsize relative to the original problem for the first iteration (0.0: use initbatchsize) */
 #define DEFAULT_MAXBATCHSIZE     INT_MAX /**< the maximum batchsize per iteration */
 #define DEFAULT_MAXRELBATCHSIZE  0.5   /**< the maximum batchsize relative to the original problem per iteration */
 #define DEFAULT_BATCHINGFACTOR   2.0   /**< the factor with which the batchsize is multiplied in every update */
@@ -61,16 +61,16 @@
 /** IIS finder data */
 struct SCIP_IISfinderData
 {
-   SCIP_Real             timelimperiter;     /**< time limit per individual solve call */
-   SCIP_Longint          nodelimperiter;     /**< maximum number of nodes per individual solve call */
+   SCIP_Real             timelimperiter;     /**< time limit of optimization process for each individual subproblem */
+   SCIP_Longint          nodelimperiter;     /**< node limit of optimization process for each individual subproblem */
 
-   SCIP_Bool             additive;           /**< whether an additive approach instead of deletion based approach should be used */
-   SCIP_Bool             conservative;       /**< should a solve that reached some limit be counted as feasible when deleting constraints */
+   SCIP_Bool             additive;           /**< should an additive constraint approach be used instead of deletion */
+   SCIP_Bool             conservative;       /**< should a hit limit (e.g. node  time) solve be counted as feasible when deleting constraints */
    SCIP_Bool             delafteradd;        /**< should the deletion routine be performed after the addition routine (in the case of additive) */
    SCIP_Bool             dynamicreordering;  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
 
-   int                   initbatchsize;      /**< the initial batchsize for the first iteration */
-   SCIP_Real             initrelbatchsize;   /**< the initial batchsize relative to the original problem for the first iteration */
+   int                   initbatchsize;      /**< the initial batchsize for the first iteration, ignored if initrelbatchsize is positive */
+   SCIP_Real             initrelbatchsize;   /**< the initial batchsize relative to the original problem for the first iteration (0.0: use initbatchsize) */
    int                   maxbatchsize;       /**< the maximum batchsize per iteration */
    SCIP_Real             maxrelbatchsize;    /**< the maximum batchsize relative to the original problem per iteration */
    SCIP_Real             batchingfactor;     /**< the factor with which the batchsize is multiplied in every update */
