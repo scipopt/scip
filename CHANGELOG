@@ -16,7 +16,7 @@ Features
 - added functionality to deal with hypergraphs by means of efficient access to vertices, edges and intersections edges.
 - added support for (transposed) network matrix detection in pub_network.h
 - added a new presolver presol_implint which detects implied integral variables by detecting (transposed) network submatrices in the problem. For now, this plugin is disabled by default.
-- added new plugin type for finding irreducible infeasible subsystems (IIS). Users can now include their own IIS algorithms. Basic addition and deletion based algorithm implemented in iisfinder_greedy.
+- added new plugin type for finding irreducible infeasible subsystems (IIS). Users can now include their own IIS algorithms. Greedy addition and deletion based algorithm with dynamic batch sizing implemented in iisfinder_greedy.
 - added a new data structure SCIP_DATATREE that holds serializable data and a method to export to a JSON file
 - added ability to collect statistics from tables in a SCIP_DATATREE and write out as JSON file;
   dialog write statistics now writes a JSON file if name of file to write ends with .json
