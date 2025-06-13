@@ -784,7 +784,7 @@ SCIP_RETCODE additionFilterBatch(
       retcode = additionSubproblem(iis, timelim, timelimperiter, nodelim, nodelimperiter, &feasible, &stopiter);
       if( !silent )
          SCIPiisfinderInfoMessage(iis, FALSE);
-      if( stopiter || timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
+      if( !feasible || stopiter || timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
       {
          SCIP_CALL( SCIPfreeTransform(scip) );
          break;
@@ -804,7 +804,7 @@ SCIP_RETCODE additionFilterBatch(
          assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
 
          /* Add any other constraints that are also feasible for the current solution */
-         if( feasible && (copysol != NULL) && dynamicreordering )
+         if( (copysol != NULL) && dynamicreordering )
          {
             k = 0;
             for( j = i; j < nconss; ++j )
@@ -839,11 +839,8 @@ SCIP_RETCODE additionFilterBatch(
 
       ++iteration;
 
-      /* update batchsize if problem feasible */
-      if( feasible )
-      {
-         SCIP_CALL( updateBatchsize(scip, initbatchsize, maxbatchsize, iteration, FALSE, batchingfactor, batchingoffset, batchupdateinterval, &batchsize) );
-      }
+      /* update batchsize */
+      SCIP_CALL( updateBatchsize(scip, initbatchsize, maxbatchsize, iteration, FALSE, batchingfactor, batchingoffset, batchupdateinterval, &batchsize) );
    }
 
    /* Release any cons not in the IS */
