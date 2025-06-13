@@ -139,6 +139,8 @@ SCIP_RETCODE checkTrivialInfeas(
    SCIP_Real* coefs;
    SCIP_Real maxactivity;
    SCIP_Real minactivity;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
    SCIP_Bool success;
    int violatingcons;
    int nconss;
@@ -172,34 +174,45 @@ SCIP_RETCODE checkTrivialInfeas(
       if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i])), "linear") != 0 )
          continue;
 
+      /* Get variable information */
       nvars = SCIPgetNVarsLinear(scip, conss[i]);
       vars = SCIPgetVarsLinear(scip, conss[i]);
       coefs = SCIPgetValsLinear(scip, conss[i]);
 
-      /* Compute the max/min activities */
-      maxactivity = 0.0;
-      minactivity = 0.0;
-      for( int j = 0; j < nvars; ++j )
+      /* Check the left-hand side */
+      lhs = SCIPconsGetLhs(scip, conss[i], &success);
+      if( success )
       {
-         if( coefs[j] >= 0.0 )
+         /* Compute the maximum activity */
+         maxactivity = 0.0;
+         for( j = 0; j < nvars; ++j )
+            maxactivity += coefs[j] * (coefs[j] >= 0.0 ? SCIPvarGetUbOriginal(vars[j]) : SCIPvarGetLbOriginal(vars[j]));
+
+         /* Is the violation (maxactivity < lhs) true? */
+         if( SCIPisSumLT(scip, maxactivity, lhs) )
          {
-            maxactivity += coefs[j] * SCIPvarGetUbOriginal(vars[j]);
-            minactivity += coefs[j] * SCIPvarGetLbOriginal(vars[j]);
-         }
-         else
-         {
-            maxactivity += coefs[j] * SCIPvarGetLbOriginal(vars[j]);
-            minactivity += coefs[j] * SCIPvarGetUbOriginal(vars[j]);
+            *trivial = TRUE;
+            violatingcons = i;
+            break;
          }
       }
 
-      /* is the violation (max < lhs || rhs < min) true? */
-      if( SCIPisLT(scip, maxactivity, SCIPconsGetLhs(scip, conss[i], &success)) || SCIPisLT(scip, SCIPconsGetRhs(scip, conss[i], &success), minactivity) )
+      /* Check the right-hand side */
+      rhs = SCIPconsGetRhs(scip, conss[i], &success);
+      if( success )
       {
-         assert( success );
-         *trivial = TRUE;
-         violatingcons = i;
-         break;
+         /* Compute the minimum activity */
+         minactivity = 0.0;
+         for( j = 0; j < nvars; ++j )
+            minactivity += coefs[j] * (coefs[j] >= 0.0 ? SCIPvarGetLbOriginal(vars[j]) : SCIPvarGetUbOriginal(vars[j]));
+
+         /* is the violation (rhs < minactivity) true? */
+         if( SCIPisSumLT(scip, rhs, minactivity) )
+         {
+            *trivial = TRUE;
+            violatingcons = i;
+            break;
+         }
       }
    }
 
