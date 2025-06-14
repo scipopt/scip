@@ -13690,9 +13690,9 @@ SCIP_RETCODE SCIPcreateConsCumulative(
 
    for( i = 0; i < nvars; ++i )
    {
-      if( INT_MAX - durations[i] < boundedConvertRealToInt(scip, SCIPvarGetLbGlobal(vars[i])) )
+      if( INT_MAX - durations[i] < boundedConvertRealToInt(scip, SCIPvarGetUbGlobal(vars[i])) )
       {
-         SCIPwarningMessage(scip, "Potential integer overflow for constraint <%s> for variable <%s>!\n",
+         SCIPerrorMessage("Potential integer overflow for constraint <%s> for variable <%s>!\n",
                             name, SCIPvarGetName(vars[i]));
          return SCIP_INVALIDDATA;
       }
