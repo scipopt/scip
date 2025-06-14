@@ -181,7 +181,9 @@ SCIP_RETCODE checkTrivialInfeas(
 
       /* Check the left-hand side */
       lhs = SCIPconsGetLhs(scip, conss[i], &success);
-      if( success )
+      assert( success );
+
+      if( !SCIPisInfinity(scip, -lhs) )
       {
          /* Compute the maximum activity */
          maxactivity = 0.0;
@@ -199,7 +201,9 @@ SCIP_RETCODE checkTrivialInfeas(
 
       /* Check the right-hand side */
       rhs = SCIPconsGetRhs(scip, conss[i], &success);
-      if( success )
+      assert( success );
+
+      if( !SCIPisInfinity(scip, rhs) )
       {
          /* Compute the minimum activity */
          minactivity = 0.0;
