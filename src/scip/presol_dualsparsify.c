@@ -588,7 +588,8 @@ SCIP_RETCODE aggregation(
    }
 #endif
 
-   assert( !SCIPisZero(scip, weight1) );
+   assert( !SCIPisSumZero(scip, weight1) );
+   assert( !SCIPisSumZero(scip, 1.0 / weight1) );
 
    presoldata->naggregated += 1;
    aggregatedvar = vars[colidx2];
@@ -853,20 +854,23 @@ SCIP_RETCODE cancelCol(
             hashingcolinds = SCIPmatrixGetColIdxPtr(matrix, hashingcolconspair->colindex);
             hashingcolvar = vars[hashingcolconspair->colindex];
             hashingcolisbin = SCIPvarIsBinary(hashingcolvar);
-            scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1;
 
-            if( SCIPisZero(scip, scale) )
-               continue;
-
-            if( REALABS(scale) > MAXSCALE )
-               continue;
-
-            /* @todo do more reduction if knspsack constraint handler supports downgrading constraint,
+            /* @todo do more reduction if knapsack constraint handler supports downgrading constraint,
              * i.e., converting into a linear constraint
              */
             if( hashingcolisbin )
                continue;
-            else if( SCIPvarIsIntegral(hashingcolvar) )
+
+            scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1;
+            assert(scale != 0.0); /*lint !e777*/
+
+            if( REALABS(scale) > MAXSCALE )
+               continue;
+
+            if( !SCIPisVarAggrCoefAcceptable(scip, hashingcolvar, scale) )
+               continue;
+
+            if( SCIPvarIsIntegral(hashingcolvar) )
             {
                if( SCIPvarIsIntegral(cancelvar) )
                {
