@@ -356,7 +356,9 @@ Fixed bugs
 Build system
 ------------
 
-### Cmake
+### CMake
+
+- disable setting the boolean variable MACOSX_RPATH to a string value to actually enable @rpath usage
 
 ### Makefile
 
