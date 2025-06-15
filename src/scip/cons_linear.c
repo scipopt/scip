@@ -9942,6 +9942,7 @@ SCIP_RETCODE convertLongEquality(
       && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_DEPRECATED_VARTYPE_IMPLINT
          || (coefsintegral && varsintegral && nimplvars == 0)) )
    {
+      SCIP_VAR** aggrvars;
       SCIP_VAR* slackvar;
       SCIP_Real* scalars;
       SCIP_Real slackcoef;
@@ -9967,33 +9968,37 @@ SCIP_RETCODE convertLongEquality(
       assert(!SCIPisZero(scip, slackcoef));
       aggrconst = consdata->rhs/slackcoef;
 
-      getNewSidesAfterAggregation(scip, consdata, slackvar, slackcoef, &newlhs, &newrhs);
-      assert(SCIPisLE(scip, newlhs, newrhs));
-      SCIP_CALL( chgLhs(scip, cons, newlhs) );
-      SCIP_CALL( chgRhs(scip, cons, newrhs) );
-      SCIP_CALL( delCoefPos(scip, cons, bestslackpos) );
-
       /* allocate temporary memory */
-      SCIP_CALL( SCIPallocBufferArray(scip, &scalars, consdata->nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &aggrvars, consdata->nvars - 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &scalars, consdata->nvars - 1) );
 
       /* set up the multi-aggregation */
       SCIPdebugMsg(scip, "linear constraint <%s>: multi-aggregate <%s> ==", SCIPconsGetName(cons), SCIPvarGetName(slackvar));
-      for( v = 0; v < consdata->nvars; ++v )
+      for( v = 0; v < consdata->nvars - 1; ++v )
       {
-         scalars[v] = -consdata->vals[v]/slackcoef;
-         SCIPdebugMsgPrint(scip, " %+.15g<%s>", scalars[v], SCIPvarGetName(vars[v]));
+         if( v == bestslackpos )
+         {
+            aggrvars[v] = vars[consdata->nvars - 1];
+            scalars[v] = -consdata->vals[consdata->nvars - 1] / slackcoef;
+         }
+         else
+         {
+            aggrvars[v] = vars[v];
+            scalars[v] = -consdata->vals[v] / slackcoef;
+         }
+         SCIPdebugMsgPrint(scip, " %+.15g<%s>", scalars[v], SCIPvarGetName(aggrvars[v]));
       }
       SCIPdebugMsgPrint(scip, " %+.15g, bounds of <%s>: [%.15g,%.15g], nlocks=%d, maxnlocks=%d, removescons=%u\n",
          aggrconst, SCIPvarGetName(slackvar), SCIPvarGetLbGlobal(slackvar), SCIPvarGetUbGlobal(slackvar),
          bestnlocks, bestremovescons ? maxnlocksremove : maxnlocksstay, bestremovescons);
 
       /* perform the multi-aggregation */
-      SCIP_CALL( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars, vars, scalars, aggrconst,
+      SCIP_CALL( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars - 1, aggrvars, scalars, aggrconst,
             &infeasible, &aggregated) );
-      assert(aggregated);
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &scalars);
+      SCIPfreeBufferArray(scip, &aggrvars);
 
       /* check for infeasible aggregation */
       if( infeasible )
@@ -10003,7 +10008,20 @@ SCIP_RETCODE convertLongEquality(
          return SCIP_OKAY;
       }
 
-      (*naggrvars)++;
+      /* check for applied aggregation */
+      if( !aggregated )
+      {
+         SCIPdebugMsg(scip, "linear constraint <%s>: multi-aggregation not applicable\n", SCIPconsGetName(cons));
+         return SCIP_OKAY;
+      }
+
+      ++(*naggrvars);
+
+      getNewSidesAfterAggregation(scip, consdata, slackvar, slackcoef, &newlhs, &newrhs);
+      assert(SCIPisLE(scip, newlhs, newrhs));
+      SCIP_CALL( chgLhs(scip, cons, newlhs) );
+      SCIP_CALL( chgRhs(scip, cons, newrhs) );
+      SCIP_CALL( delCoefPos(scip, cons, bestslackpos) );
 
       /* delete the constraint if it became redundant */
       if( bestremovescons )
