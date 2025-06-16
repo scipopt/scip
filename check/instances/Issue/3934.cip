@@ -1,0 +1,18 @@
+STATISTICS
+  Problem name     : seed
+  Variables        : 5 (0 binary, 5 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 4 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [integer] <x0>: obj=11, original bounds=[-200,200]
+  [integer] <x1>: obj=-26, original bounds=[-200,200]
+  [integer] <x2>: obj=69, original bounds=[-200,200]
+  [integer] <x3>: obj=-22.83, original bounds=[-200,200]
+  [integer] <x4>: obj=-89, original bounds=[-200,200]
+CONSTRAINTS
+  [linear] <_C12>:  +34.07<x0>[I] -70.32<x1>[I] +85.13<x2>[I] -25.86<x3>[I] -42.1<x4>[I] >= 2180.79;
+  [linear] <_C16>:  -94.72<x0>[I] -50.54<x1>[I] -86.72<x2>[I] +22.59<x3>[I] +55<x4>[I] <= 1511.34;
+  [linear] <_C17>:  -46.9<x0>[I] -42.2<x1>[I] -31.74<x2>[I] -53.51<x3>[I] -93.7<x4>[I] >= 2461.98;
+  [linear] <_C4>:  +34.47<x0>[I] -69.05<x1>[I] -78.26<x2>[I] +62.84<x3>[I] +71.7<x4>[I] <= 1757.36;
+END
