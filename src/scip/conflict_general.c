@@ -2154,8 +2154,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
          *success = (nconss > 0);
 
       conflict->bdchgonlyconfqueue = FALSE;
-
-   }
+ }
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &pseudocoefs);

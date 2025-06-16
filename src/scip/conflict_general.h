@@ -101,7 +101,6 @@ SCIP_RETCODE SCIPconflictClearQueues(
    SCIP_CONFLICT*        conflict            /**< pointer to conflict analysis data */
    );
 
-
 /** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound() and
  *  SCIPconflictAddRelaxedBound(), and on success, calls the conflict handlers to create a conflict constraint out of
  *  the resulting conflict set; updates statistics for propagation conflict analysis

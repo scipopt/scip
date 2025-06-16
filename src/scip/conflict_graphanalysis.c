@@ -2332,8 +2332,6 @@ SCIP_Bool conflictMarkBoundCheckPresence(
       return FALSE; /*lint !e527*/
    }
 }
-
-
 /** marks bound to be present in the current conflict and returns whether a bound which is at least as tight was already
  *  member of the current conflict (i.e., the given bound change does not need to be added)
  */
@@ -2368,7 +2366,7 @@ SCIP_Bool betterBoundInResolutionQueue(
 
    case SCIP_BOUNDTYPE_UPPER:
       /* the variable is already member of the conflict; hence check if the new bound is redundant */
-      if ( conflict->conflictvarsubs[SCIPvarGetProbindex(var)] > newbound )
+      if( conflict->conflictvarsubs[SCIPvarGetProbindex(var)] > newbound )
       {
          conflict->conflictvarsubs[SCIPvarGetProbindex(var)] = newbound;
          return FALSE;
@@ -2483,7 +2481,7 @@ SCIP_RETCODE conflictQueueBound(
    /* mark the bound to be member of the conflict and check if a bound which is at least as tight is already member of
     * the conflict
     */
-   if(!conflict->bdchgonlyresqueue && set->conf_useprop && !conflictMarkBoundCheckPresence(conflict, set, bdchginfo, relaxedbd) )
+   if( !conflict->bdchgonlyresqueue && set->conf_useprop && !conflictMarkBoundCheckPresence(conflict, set, bdchginfo, relaxedbd) )
    {
       /* insert the bound change into the conflict queue */
       if( (!set->conf_preferbinary || SCIPvarIsBinary(SCIPbdchginfoGetVar(bdchginfo)))
