@@ -352,6 +352,7 @@ Fixed bugs
 - fixed computation of symmetry group size
 - correct comparison conditions in checkRedundancySide() of cons_varbound.c to ensure pair redundancy
 - also for the initial LP solve force acceptance of Farkas row in SCIPlpGetDualfarkas() if all other means for obtaining a reliable Farkas proof have failed
+- avoid overwriting set cutoff flag in tightenCoefs(), preprocessConstraintPairs(), and applyFixings() of cons_varbound.c to reject infeasible solutions
 
 Build system
 ------------
