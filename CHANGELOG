@@ -362,6 +362,8 @@ Build system
 
 - disable setting the boolean variable MACOSX_RPATH to a string value to actually enable @rpath usage
 
+- define SOPLEX_NEEDED and ZIMPL_NEEDED to avoid syntax error in configuration file
+
 ### Makefile
 
 Miscellaneous
