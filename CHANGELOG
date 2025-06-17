@@ -22,6 +22,8 @@ Build system
 
 ### Cmake
 
+- define SOPLEX_NEEDED and ZIMPL_NEEDED to avoid syntax error in configuration file
+
 ### Makefile
 
 Miscellaneous
