@@ -214,10 +214,10 @@ static int COI_CALLCONV ReadMatrix(
    scip = problem->scip;
    assert(scip != NULL);
 
-   printf("\nReadMatrix for problem:\n");
-   SCIPnlpiOraclePrintProblem(scip, oracle, NULL);
-   printf("\n");
-   printf("\nproblem size info: NUMVAR = %d, NUMCON = %d, NUMNZ = %d", NUMVAR, NUMCON, NUMNZ);
+   // printf("\nReadMatrix for problem:\n");
+   // SCIPnlpiOraclePrintProblem(scip, oracle, NULL);
+   // printf("\n");
+   SCIPdebugMsg(scip, "NLP sizes passed to CONOPT: NUMVAR = %d, NUMCON = %d, NUMNZ = %d\n", NUMVAR, NUMCON, NUMNZ);
 
    norigvars = SCIPnlpiOracleGetNVars(oracle);
    lbs = SCIPnlpiOracleGetVarLbs(oracle);
@@ -261,7 +261,7 @@ static int COI_CALLCONV ReadMatrix(
       /* if no initial guess given, project 0 onto variable bounds */
       assert(problem->randnumgen != NULL);
 
-      SCIPdebugMsg(scip, "Worhp started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
+      SCIPdebugMsg(scip, "CONOPT started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
 
       for( int i = 0; i < norigvars; ++i )
       {
@@ -399,7 +399,7 @@ static int COI_CALLCONV ReadMatrix(
       assert(ROWNO[i] >= 0 && ROWNO[i] < NUMCON);
 #endif
 
-#ifdef SCIP_DEBUG
+#ifdef STRUCTURE_DEBUG
    SCIPdebugMsg(scip, "Jacobian structure information:\n");
    SCIPdebugMsg(scip, "COLSTA =\n");
    for( int i = 0; i <= NUMVAR; i++ )
@@ -418,7 +418,10 @@ static int COI_CALLCONV ReadMatrix(
 
    SCIPdebugMsg(scip, "VALUE =\n");
    for( int i = 0; i < NUMNZ; i++ )
-      printf("%g, ", VALUE[i]);
+      if( SCIPisInfinity(scip, VALUE[i]) )
+         printf("inf, ");
+      else
+         printf("%g, ", VALUE[i]);
    printf("\n");
 #endif
 
@@ -712,8 +715,15 @@ static SCIP_RETCODE initConopt(
    /* pass the problem pointer to CONOPT, so that it may be used in CONOPT callbacks */
    COI_Error += COIDEF_UsrMem(problem->CntVect, (void*)problem);
 
+   /* register license */
+   /* TODO make sure the license error gets printed by CONOPT if no valid license (even with reduced output) */
+#if defined(LICENSE_INT_1) && defined(LICENSE_INT_2) && defined(LICENSE_INT_3) && defined(LICENSE_TEXT)
+   COI_Error += COIDEF_License(problem->CntVect, LICENSE_INT_1, LICENSE_INT_2, LICENSE_INT_3, LICENSE_TEXT);
+#endif
+
+   /* TODO better handling of this? */
    if( COI_Error )
-      SCIPinfoMessage(scip, NULL, "Error %d encountered during adding variables", COI_Error);
+      SCIPinfoMessage(scip, NULL, "Error %d encountered during initialising CONOPT", COI_Error);
 
    return SCIP_OKAY;
 }
@@ -730,6 +740,37 @@ static void updateConopt(
 )
 {
    /* TODO anything to do here? */
+}
+
+static void handleConoptParam(
+   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
+   const SCIP_NLPPARAM   param               /**< NLP solve parameters */
+)
+{
+   int COI_Error = 0; /* CONOPT error counter */
+
+   assert(problem != NULL);
+
+   if( param.warmstart )
+   {
+      SCIPdebugMsg(problem->scip, "warmstart parameter not supported by CONOPT interface yet. Ignored.\n");
+   }
+   if( param.lobjlimit > -SCIP_REAL_MAX )
+   {
+      SCIPwarningMessage(problem->scip, "lobjlimit parameter not supported by CONOPT interface yet. Ignored.\n");
+   }
+   if( param.fastfail )
+   {
+      SCIPdebugMsg(problem->scip, "fastfail parameter not supported by CONOPT interface yet. Ignored.\n");
+   }
+
+   COI_Error += COIDEF_ItLim(problem->CntVect, param.iterlimit);
+   COI_Error += COIDEF_ResLim(problem->CntVect, param.timelimit);
+
+   /* TODO enable memory limits in NLPIs? */
+
+   if( COI_Error )
+      SCIPinfoMessage(problem->scip, NULL, "Errors encountered during setting parameters, %d", COI_Error);
 }
 
 
@@ -908,7 +949,7 @@ SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsConopt)
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   /* TODO do this on the conopt side */
+   /* TODO can something from the previous solve still be reused? Previous solution may be? */
 
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(scip, problem->oracle, nvars, indices, lbs, ubs) );
 
@@ -1066,7 +1107,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
    problem->niterations = -1;
    problem->solvetime  = -1.0;
 
-   /* TODO handle param.verblevel */
+   /* set CONOPT parameters */
+   handleConoptParam(problem, param);
 
    // /* if warmstart parameter is disabled, then we will not warmstart */
    // if( !param.warmstart )
