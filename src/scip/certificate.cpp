@@ -1055,9 +1055,7 @@ SCIP_RETCODE SCIPcertificatePrintResult(
       if( isorigfile )
          SCIPgetPrimalboundExact(scip, primalbound);
       else
-      {
          SCIPgetUpperboundExact(scip, primalbound);
-      }
 
       assert(!SCIPrationalIsAbsInfinity(primalbound));
 
@@ -1069,15 +1067,27 @@ SCIP_RETCODE SCIPcertificatePrintResult(
          SCIP_CALL( SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound) );
       }
       else
+      {
          SCIP_CALL( SCIPcertificatePrintRtpRange(certificate, isorigfile, primalbound, primalbound) );
+      }
 
       /* print optimal solution into certificate */
       SCIP_CALL( certificatePrintSol(scip, isorigfile, certificate, bestsol) );
    }
    else if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE )
    {
-      SCIPcertificatePrintRtpInfeas(certificate, isorigfile);
-      SCIP_CALL(certificatePrintSol(scip, isorigfile, certificate, NULL) );
+      if( isorigfile )
+      {
+         SCIPrationalSetNegInfinity(dualbound);
+         SCIPrationalSetInfinity(primalbound);
+         SCIP_CALL( SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound) );
+      }
+      else
+      {
+         SCIPcertificatePrintRtpInfeas(certificate, isorigfile);
+      }
+
+      SCIP_CALL( certificatePrintSol(scip, isorigfile, certificate, NULL) );
    }
    else
    {

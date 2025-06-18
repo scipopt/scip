@@ -1367,7 +1367,7 @@ if(SCIP_WITH_EXACTSOLVE)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr_ori
                                  PROPERTIES
                                  DEPENDS MIPEX-${setting}-${basename}-certified
-                                 PASS_REGULAR_EXPRESSION "Successfully checked solution for feasibility"
+                                 PASS_REGULAR_EXPRESSION "Successfully verified"
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
             endif()
