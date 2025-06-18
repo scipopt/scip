@@ -3205,7 +3205,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
             FALSE, FALSE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
       /* add conflict to SCIP */
-      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+      SCIP_CALL( SCIPaddConflict(scip, node, &cons, validnode, conftype, cutoffinvolved) );
       SCIPdebugMsg(scip, "added conflict\n");
       *result = SCIP_CONSADDED;
    }

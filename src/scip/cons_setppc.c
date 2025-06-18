@@ -9234,7 +9234,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       }
 
       /* add conflict to SCIP */
-      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+      SCIP_CALL( SCIPaddConflict(scip, node, &cons, validnode, conftype, cutoffinvolved) );
 
       *result = SCIP_CONSADDED;
 

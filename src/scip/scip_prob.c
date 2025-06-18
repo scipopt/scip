@@ -3231,7 +3231,7 @@ SCIP_RETCODE SCIPaddUpgrade(
 
    if( SCIPconsIsConflict(oldcons) )
    {
-      SCIP_CALL( SCIPaddConflict(scip, SCIPconsIsLocal(oldcons) ? SCIPgetCurrentNode(scip) : NULL, *newcons, NULL,
+      SCIP_CALL( SCIPaddConflict(scip, SCIPconsIsLocal(oldcons) ? SCIPgetCurrentNode(scip) : NULL, newcons, NULL,
             SCIPconsGetConflictType(oldcons), SCIPconsIsCutoffInvolved(oldcons)) );
    }
    else
@@ -3647,7 +3647,7 @@ int SCIPgetNCheckConss(
 SCIP_RETCODE SCIPaddConflict(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to add conflict (or NULL if global) */
-   SCIP_CONS*            cons,               /**< constraint representing the conflict */
+   SCIP_CONS**           cons,               /**< constraint representing the conflict */
    SCIP_NODE*            validnode,          /**< node at which the constraint is valid (or NULL) */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
    SCIP_Bool             iscutoffinvolved    /**< is a cutoff bound involved in this conflict */
@@ -3657,41 +3657,42 @@ SCIP_RETCODE SCIPaddConflict(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(*cons != NULL);
    assert(scip->conflictstore != NULL);
    assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || iscutoffinvolved);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflict", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* mark constraint to be a conflict */
-   SCIP_CALL( SCIPconsMarkConflict(cons) );
+   SCIP_CALL( SCIPconsMarkConflict(*cons) );
    if( iscutoffinvolved )
    {
-      SCIP_CALL( SCIPconsMarkCutoffInvolved(cons) );
+      SCIP_CALL( SCIPconsMarkCutoffInvolved(*cons) );
       primalbound = SCIPgetCutoffbound(scip);
    }
    else
       primalbound = -SCIPinfinity(scip);
-   SCIP_CALL( SCIPconsSetConflictType(cons, conftype) );
+   SCIP_CALL( SCIPconsSetConflictType(*cons, conftype) );
 
    /* add a global conflict */
    if( node == NULL )
    {
-      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPaddCons(scip, *cons) );
    }
    /* add a local conflict */
    else
    {
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
+      SCIP_CALL( SCIPaddConsNode(scip, node, *cons, validnode) );
    }
 
    if( node == NULL || SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
    {
       /* add the conflict to the conflict store */
       SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
-            scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
+            scip->transprob, scip->reopt, *cons, conftype, iscutoffinvolved, primalbound) );
    }
 
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, cons) );
 
    return SCIP_OKAY;
 }
