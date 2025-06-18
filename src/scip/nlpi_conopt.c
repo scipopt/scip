@@ -32,8 +32,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define SCIP_DEBUG
-
 #include "scip/nlpi_conopt.h"
 #include "scip/nlpioracle.h"
 #include "scip/scip_mem.h"
@@ -89,6 +87,10 @@ struct SCIP_NlpiProblem
    SCIP_Real*            lastdualub;         /**< dual solution for upper bounds from last run, if available */
 
    coiHandle_t           CntVect;            /**< pointer to CONOPT Control Vector */
+
+   /* options that will be passed to CONOPT via callbacks */
+   int                   verblevel;          /**< verbosity level, same as in SCIP_NlpParam: 0 off, 1 normal, 2 debug, > 2 more debug */
+   SCIP_Real             opttol;
 };
 
 
@@ -443,8 +445,11 @@ static int COI_CALLCONV Message(
    assert(problem != NULL);
    assert(problem->scip != NULL);
 
-   for( int i = 0; i < SMSG; i++ )
-      SCIPinfoMessage(problem->scip, NULL, "%s\n", MSGV[i]);
+   if( problem->verblevel > 0 )
+   {
+      for( int i = 0; i < SMSG; i++ )
+         SCIPinfoMessage(problem->scip, NULL, "%s\n", MSGV[i]);
+   }
 
    return 0;
 }
@@ -458,15 +463,20 @@ static int COI_CALLCONV ErrMsg(
    void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
 {
-   if( ROWNO == -1 )
-      SCIPerrorMessage("Variable %d : ", COLNO);
-   else if( COLNO == -1 )
-      SCIPerrorMessage("Constraint %d : ", ROWNO);
-   else
-      SCIPerrorMessage("Variable %d appearing in constraint %d : ", COLNO, ROWNO);
-   SCIPerrorMessage("%s\n", MSG);
+   SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
 
-   /* TODO also handle the Jacobian number */
+   if( problem->verblevel > 0 )
+   {
+      if( ROWNO == -1 )
+         SCIPinfoMessage(problem->scip, NULL, "\nCONOPT error/warning: variable %d: ", COLNO);
+      else if( COLNO == -1 )
+         SCIPinfoMessage(problem->scip, NULL, "\nCONOPT error/warning: constraint %d: ", ROWNO);
+      else
+         SCIPinfoMessage(problem->scip, NULL, "\nCONOPT error/warning: variable %d appearing in constraint %d: ", COLNO, ROWNO);
+      SCIPinfoMessage(problem->scip, NULL, "%s\n", MSG);
+
+      /* TODO also handle the Jacobian number */
+   }
 
    return 0;
 }
@@ -616,6 +626,39 @@ static int COI_CALLCONV FDEval(
    return 0;
 }
 
+static int COI_CALLCONV Option(
+   int                   NCALL,              /** number of callback call */
+   double*               RVAL,               /** pointer to set the value of a real option */
+   int*                  IVAL,               /** pointer to set the value of an integer option */
+   int*                  LVAL,
+   char*                 NAME,
+   void*                 USRMEM
+   )
+{
+   SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+
+   assert(problem != NULL);
+
+   switch( NCALL )
+   {
+      case 0: /* information about stopping criteria */
+         strcpy(NAME, "LOCNPT");
+         if( problem->verblevel >= 2 )
+            *IVAL = 1;
+         else
+            *IVAL = 0;
+         break;
+      case 1: /* optimality tolerance */
+         strcpy(NAME, "RTREDG");
+         *RVAL = problem->opttol;
+         break;
+      default:
+         strcpy(NAME,"");
+   }
+
+   return 0;
+}
+
 /* NLPI local methods */
 
 /** sets the solstat and termstat to unknown and other, resp. */
@@ -711,6 +754,7 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_Solution(problem->CntVect, &Solution);
    COI_Error += COIDEF_ReadMatrix(problem->CntVect, &ReadMatrix);
    COI_Error += COIDEF_FDEval(problem->CntVect, &FDEval);
+   COI_Error += COIDEF_Option(problem->CntVect, &Option);
 
    /* pass the problem pointer to CONOPT, so that it may be used in CONOPT callbacks */
    COI_Error += COIDEF_UsrMem(problem->CntVect, (void*)problem);
@@ -764,8 +808,13 @@ static void handleConoptParam(
       SCIPdebugMsg(problem->scip, "fastfail parameter not supported by CONOPT interface yet. Ignored.\n");
    }
 
+   /* options that we can set directly */
    COI_Error += COIDEF_ItLim(problem->CntVect, param.iterlimit);
    COI_Error += COIDEF_ResLim(problem->CntVect, param.timelimit);
+
+   /* options that need to be handled in callbacks */
+   problem->verblevel = param.verblevel;
+   problem->opttol = param.opttol;
 
    /* TODO enable memory limits in NLPIs? */
 
@@ -1081,7 +1130,9 @@ static
 SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
 {
    SCIP_NLPIDATA* data;
+#ifdef SCIP_DEBUG
    int COI_Error = 0; /* CONOPT error counter */
+#endif
 
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -1132,11 +1183,13 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
    SCIPresetClock(scip, data->solvetime);
    SCIPstartClock(scip, data->solvetime);
 
-   COI_Error = COI_Solve(problem->CntVect); /* optimize */
-
+   /* optimize */
 #ifdef SCIP_DEBUG
+   COI_Error = COI_Solve(problem->CntVect);
    if( COI_Error )
       SCIPinfoMessage(scip, NULL, "Errors encountered during solution, %d", COI_Error);
+#else
+   COI_Solve(problem->CntVect);
 #endif
 
    /* store statistics (some statistics are passed back to SCIP by the Status callback) */
