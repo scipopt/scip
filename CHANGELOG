@@ -352,11 +352,17 @@ Fixed bugs
 - fixed computation of symmetry group size
 - correct comparison conditions in checkRedundancySide() of cons_varbound.c to ensure pair redundancy
 - also for the initial LP solve force acceptance of Farkas row in SCIPlpGetDualfarkas() if all other means for obtaining a reliable Farkas proof have failed
+- avoid overwriting set cutoff flag in tightenCoefs(), preprocessConstraintPairs(), and applyFixings() of cons_varbound.c to reject infeasible solutions
+- fix memory leak in exprinterpret_cppad.cpp w.r.t. user expressions
 
 Build system
 ------------
 
-### Cmake
+### CMake
+
+- disable setting the boolean variable MACOSX_RPATH to a string value to actually enable @rpath usage
+
+- define SOPLEX_NEEDED and ZIMPL_NEEDED to avoid syntax error in configuration file
 
 ### Makefile
 
