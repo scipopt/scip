@@ -310,7 +310,7 @@ struct SCIP_Set
    SCIP_Bool             history_allowtransfer; /**< should variable histories be transferred to initialize SCIP copies? */
 
    /* IIS settings */
-   SCIP_Bool             iisfinder_minimal;       /**< should the resultant infeasible set be irreducible, i.e., an IIS not an IS */
+   SCIP_Bool             iisfinder_irreducible;   /**< should the resultant infeasible set be irreducible, i.e., an IIS not an IS */
    SCIP_Bool             iisfinder_removebounds;  /**< should bounds of the problem be considered for removal */
    SCIP_Bool             iisfinder_silent;        /**< should the IIS finders be run silently */
    SCIP_Bool             iisfinder_stopafterone;  /**< should the IIS search stop after a single IIS finder is run (excluding post processing) */

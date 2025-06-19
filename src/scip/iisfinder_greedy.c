@@ -790,7 +790,7 @@ SCIP_RETCODE additionFilterBatch(
          break;
       }
 
-      if( retcode == SCIP_OKAY )
+      if( dynamicreordering && retcode == SCIP_OKAY )
       {
          /* free transform and copy solution if there is one */
          copysol = NULL;
@@ -804,7 +804,7 @@ SCIP_RETCODE additionFilterBatch(
          assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
 
          /* Add any other constraints that are also feasible for the current solution */
-         if( copysol != NULL && dynamicreordering )
+         if( copysol != NULL )
          {
             k = 0;
             for( j = i; j < nconss; ++j )
@@ -1113,7 +1113,7 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
 }
 
 /** perform the greedy deletion algorithm with singleton batches to obtain an irreducible infeasible subsystem (IIS) */
-SCIP_RETCODE SCIPiisGreedyMinimize(
+SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
    SCIP_IIS*             iis                 /**< IIS data structure */
    )
 {
