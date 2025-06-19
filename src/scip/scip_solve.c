@@ -449,6 +449,10 @@ SCIP_RETCODE SCIPtransformProb(
       SCIPdebugMsg(scip, "external memory usage estimated to %" SCIP_LONGINT_FORMAT " byte\n", scip->stat->externmemestim);
    }
 
+#ifndef NDEBUG
+   SCIP_CALL( SCIPsetCheckParamValuePtrUnique(scip->set) );
+#endif
+
    return SCIP_OKAY;
 }
 
