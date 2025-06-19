@@ -2141,6 +2141,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    assert(oracle != NULL);
 
    SCIPdebugMessage("%p get jacobian sparsity\n", (void*)oracle);
+   (*nnlnz) = 0;
 
    if( oracle->jacrowoffsets != NULL )
    {
@@ -2163,18 +2164,9 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 
    SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacrowoffsets, oracle->nconss + 1) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &oracle->jaccoloffsets, oracle->nvars + 1) );
-
-   maxcols = MIN(oracle->nvars, 10) * oracle->nconss;  /* initial guess */
-   maxflags = maxcols; /* since array extension functions change the length variable, have one variable for each array */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jaccols, maxcols) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->jaccolnlflags), maxflags) );
-
-   if( maxcols == 0 )
+   if( oracle->nvars == 0 || oracle->nconss == 0 )
    {
-      /* no variables */ /* @todo: because of the min(nvars, 10), this only happens when there are no variables, not constraints */
-      BMSclearMemoryArray(oracle->jacrowoffsets, oracle->nconss + 1);
+      /* no variables or no constraints */
       if( rowoffsets != NULL )
          *rowoffsets = oracle->jacrowoffsets;
       if( cols != NULL )
@@ -2192,8 +2184,16 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 
       return SCIP_OKAY;
    }
+
+   maxcols = MIN(oracle->nvars, 10) * oracle->nconss;  /* initial guess */
+   maxflags = maxcols; /* since array extension functions change the length variable, have one variable for each array */
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacrowoffsets, oracle->nconss + 1) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &oracle->jaccoloffsets, oracle->nvars + 1) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jaccols, maxcols) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->jaccolnlflags), maxflags) );
+
    nnz = 0;
-   (*nnlnz) = 0;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nzflag, oracle->nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlflag, oracle->nvars) );

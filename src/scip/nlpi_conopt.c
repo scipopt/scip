@@ -216,9 +216,6 @@ static int COI_CALLCONV ReadMatrix(
    scip = problem->scip;
    assert(scip != NULL);
 
-   // printf("\nReadMatrix for problem:\n");
-   // SCIPnlpiOraclePrintProblem(scip, oracle, NULL);
-   // printf("\n");
    SCIPdebugMsg(scip, "NLP sizes passed to CONOPT: NUMVAR = %d, NUMCON = %d, NUMNZ = %d\n", NUMVAR, NUMCON, NUMNZ);
 
    norigvars = SCIPnlpiOracleGetNVars(oracle);
@@ -339,7 +336,7 @@ static int COI_CALLCONV ReadMatrix(
    /* TODO make it so that the column representation is only composed when asked for */
    SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, oracle, NULL, NULL, NULL, &jaccoloffsets, &jacrows,
          &jacrownlflags, &njacnlnnz) );
-   assert(jaccoloffsets[norigvars] <= NUMNZ);
+   assert(jaccoloffsets == NULL || jaccoloffsets[norigvars] <= NUMNZ);
 
    /* move structure info into COLSTA and ROWNO; while doing so, also add nonzeroes for the objective
     * (which CONOPT sees as the last constraint, i.e. constraint with index NUMCON-1) */
@@ -349,36 +346,41 @@ static int COI_CALLCONV ReadMatrix(
 
    for( int i = 0; i < norigvars; i++ )
    {
-      COLSTA[i] = jaccoloffsets[i] + objnzi; /* starts of columns get shifted by how many objective nonzeros were added */
+      COLSTA[i] = jaccoloffsets != NULL ? jaccoloffsets[i] + objnzi : objnzi; /* starts of columns get shifted by how many objective nonzeros were added */
 
-      /* nonzeroes of constraints */
-      for( int j = jaccoloffsets[i]; j < jaccoloffsets[i+1]; j++ )
+      if( jaccoloffsets != NULL )
       {
-         ROWNO[j+objnzi] = jacrows[j];
-         NLFLAG[j+objnzi] = jacrownlflags[j] ? 1 : 0;
-         if( NLFLAG[j+objnzi] == 0 )
+         /* nonzeroes of constraints */
+         for( int j = jaccoloffsets[i]; j < jaccoloffsets[i+1]; j++ )
          {
-            VALUE[j+objnzi] = SCIPnlpiOracleGetConstraintCoef(oracle, jacrows[j], nrownz[jacrows[j]]);
-            ++(nrownz[jacrows[j]]);
+            ROWNO[j+objnzi] = jacrows[j];
+            NLFLAG[j+objnzi] = jacrownlflags[j] ? 1 : 0;
+            if( NLFLAG[j+objnzi] == 0 )
+            {
+               VALUE[j+objnzi] = SCIPnlpiOracleGetConstraintCoef(oracle, jacrows[j], nrownz[jacrows[j]]);
+               ++(nrownz[jacrows[j]]);
+            }
          }
       }
 
       /* nonzeroes of objective */
       if( i == objnz[objnzi] )
       {
-         ROWNO[jaccoloffsets[i+1] + objnzi] = NUMCON - 1;
-         NLFLAG[jaccoloffsets[i+1] + objnzi] = objnlflags[objnzi] ? 1 : 0;
-         if( NLFLAG[jaccoloffsets[i+1] + objnzi] == 0 )
+         int idx = jaccoloffsets != NULL ? jaccoloffsets[i+1] + objnzi : objnzi;
+
+         ROWNO[idx] = NUMCON - 1;
+         NLFLAG[idx] = objnlflags[objnzi] ? 1 : 0;
+         if( NLFLAG[idx] == 0 )
          {
             /* in the oracle, index -1 is used for the objective */
-            VALUE[jaccoloffsets[i+1] + objnzi] = SCIPnlpiOracleGetConstraintCoef(oracle, -1, nrownz[NUMCON-1]);
+            VALUE[idx] = SCIPnlpiOracleGetConstraintCoef(oracle, -1, nrownz[NUMCON-1]);
             ++(nrownz[NUMCON-1]);
          }
          ++objnzi;
       }
    }
    assert(COLSTA[0] == 0);
-   COLSTA[norigvars] = jaccoloffsets[norigvars] + objnzi;
+   COLSTA[norigvars] = jaccoloffsets != NULL ? jaccoloffsets[norigvars] + objnzi : objnzi;
    BMSclearMemoryArray(nrownz, NUMCON);
    SCIPfreeCleanBufferArray(scip, &nrownz);
 
@@ -425,6 +427,7 @@ static int COI_CALLCONV ReadMatrix(
       else
          printf("%g, ", VALUE[i]);
    printf("\n");
+   fflush(stdout);
 #endif
 
    return 0;
@@ -703,6 +706,10 @@ static SCIP_RETCODE initConopt(
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
+   // printf("\nInitialising conopt for problem:\n");
+   // SCIPnlpiOraclePrintProblem(scip, problem->oracle, NULL);
+   // printf("\n");
+
    if( data->solvetime == NULL )
       SCIP_CALL( SCIPcreateClock(scip, &(data->solvetime)) );
 
@@ -731,7 +738,8 @@ static SCIP_RETCODE initConopt(
    SCIP_CALL( SCIPnlpiOracleGetObjGradientNnz(scip, problem->oracle, &objgradnz, &objnl, &nobjgradnz, &nobjgradnls) );
 
    /* each slack var adds a Jacobian nnz; objective also counts as constraint */
-   COI_Error += COIDEF_NumNz(problem->CntVect, jacoffsets[nconss] + nrangeconss + nobjgradnz);
+   COI_Error += COIDEF_NumNz(problem->CntVect, jacoffsets != NULL ? jacoffsets[nconss] + nrangeconss + nobjgradnz :
+         nrangeconss + nobjgradnz);
 
    /* Jacobian nonzeroes include those of constraints and objective */
    COI_Error += COIDEF_NumNlNz(problem->CntVect, nnlnz + nobjgradnls);
