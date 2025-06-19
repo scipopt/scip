@@ -38,6 +38,7 @@ static SCIP* scip = NULL;
 static SCIP_NLPI* ipopt = NULL;
 static SCIP_NLPI* worhpip = NULL;
 static SCIP_NLPI* worhpsqp = NULL;
+static SCIP_NLPI* conopt = NULL;
 
 static
 void setup(void)
@@ -51,6 +52,7 @@ void setup(void)
    ipopt = SCIPfindNlpi(scip, "ipopt");
    worhpip = SCIPfindNlpi(scip, "worhp-ip");
    worhpsqp = SCIPfindNlpi(scip, "worhp-sqp");
+   conopt = SCIPfindNlpi(scip, "conopt");
 }
 
 static
@@ -159,15 +161,15 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    linvals[1] = 1;
    SCIP_CALL( SCIPaddNlpiConstraints(scip, nlpi, nlpiprob, 1, &lhss[2], &rhss[2], &nlinds, &lininds, &linvals, NULL, &consnames[2]) );
 
-#ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, 1) );
-#endif
-
    /* set a starting point close to solution to improve likelihood to converge to expected solution on this nonconvex NLP */
    SCIP_CALL( SCIPsetNlpiInitialGuess(scip, nlpi, nlpiprob, start, NULL, NULL, NULL) );
 
    /* solve NLP */
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = 1e-9, .verblevel = 1) );
+#else
    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = 1e-9) );
+#endif
    cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
    cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
@@ -211,7 +213,12 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    SCIP_CALL( SCIPsetNlpiInitialGuess(scip, nlpi, nlpiprob, initguess, NULL, NULL, NULL) );
 
    /* solve NLP */
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = 1e-9, .verblevel = 1) );
+#else
    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = 1e-9) );
+#endif
+
    cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
    cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
@@ -398,12 +405,15 @@ Test(nlpi, solveQP, .init = setup, .fini = teardown,
    SCIP_NLPTERMSTAT ipopttermstat;
    SCIP_NLPTERMSTAT worhpiptermstat;
    SCIP_NLPTERMSTAT worhpsqptermstat;
+   SCIP_NLPTERMSTAT conopttermstat;
    SCIP_NLPSOLSTAT ipoptsolstat;
    SCIP_NLPSOLSTAT worhpipsolstat;
    SCIP_NLPSOLSTAT worhpsqpsolstat;
+   SCIP_NLPSOLSTAT conoptsolstat;
    SCIP_Real ipoptval;
    SCIP_Real worhpipval;
    SCIP_Real worhpsqpval;
+   SCIP_Real conoptval;
    int i;
 
    for( i = 0; i < 3; ++i )
@@ -427,6 +437,13 @@ Test(nlpi, solveQP, .init = setup, .fini = teardown,
       {
          SCIP_CALL( solveQP(worhpsqp, i+1, DIM, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &worhpsqpval,
                &worhpsqpsolstat, &worhpsqptermstat) );
+      }
+
+      /* solve QP with CONOPT */
+      if( conopt != NULL )
+      {
+         SCIP_CALL( solveQP(conopt, i+1, DIM, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &conoptval,
+               &conoptsolstat, &conopttermstat) );
       }
 
       /* compare the solution values of WORHP and Ipopt */
@@ -472,6 +489,17 @@ Test(nlpi, workinglimits, .init = setup, .fini = teardown,
 
       /* set a small time limit */
       SCIP_CALL( solveQP(worhpsqp, 1, 500, -100.0, 100.0, 1.0, INT_MAX, &solval, &solstat, &termstat) );
+      cr_expect(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
+   }
+
+   if( conopt != NULL )
+   {
+      /* set a small iteration limit */
+      SCIP_CALL( solveQP(conopt, 1, 100, -100.0, 100.0, SCIPinfinity(scip), 2, &solval, &solstat, &termstat) );
+      cr_expect(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
+
+      /* set a small time limit */
+      SCIP_CALL( solveQP(conopt, 1, 500, -100.0, 100.0, 1.0, INT_MAX, &solval, &solstat, &termstat) );
       cr_expect(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
    }
 }
