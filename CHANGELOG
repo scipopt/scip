@@ -102,7 +102,7 @@ Interface changes
 - Temporarily for SCIP 10 only: SCIPchgVarType() converts a call with type SCIP_VARTYPE_IMPLINT into a call of SCIPchgVarImplType() with type SCIP_IMPLINTTYPE_WEAK
 - SCIPapplyBendersDecomposition has been removed. This was originally used to apply Benders' decomposition from a
   supplied decomposition structure. The application of Benders' decomposition now occurs in benders_relax.
-- SCIPcalcMIR(), SCIPcutGenerationHeuristicCMIR(), SCIPcalcStrongCG(): the boolean argument 'usevbds' was replaced by an integer argument 'vartypeusevbds' that indicates for which variables variable bound substitution should be performed.
+- SCIPcalcMIR(), SCIPcutGenerationHeuristicCMIR(), SCIPcalcStrongCG(): the Boolean argument 'usevbds' was replaced by an integer argument 'vartypeusevbds' that indicates for which variables variable bound substitution should be performed.
 
 - remove the following functions that were declared in h-files, but not implemented:
   SCIPselectPtrRealReal(), SCIPselectWeightedPtrRealReal(), SCIPsortPtrRealReal(),
