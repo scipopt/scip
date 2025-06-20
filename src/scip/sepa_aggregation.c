@@ -113,7 +113,8 @@
 
 #define BOUNDSWITCH                 0.5
 #define POSTPROCESS                TRUE
-#define USEVBDS                    TRUE
+#define VARTYPEUSEVBDS                2 /**< We allow variable bound substitution for variables with continuous vartype only.
+                                         *   See cuts.c for more information. */
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
 #define MAKECONTINTEGRAL          FALSE
@@ -936,7 +937,7 @@ SCIP_RETCODE aggregation(
 
       if( sepadata->sepcmir )
       {
-         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
+         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, VARTYPEUSEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
             aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
       }
       else
@@ -1147,7 +1148,7 @@ SCIP_RETCODE separateCuts(
    nvars = SCIPgetNVars(scip);
    ncontvars = SCIPgetNContVars(scip);
 #ifdef IMPLINTSARECONT
-   ncontvars += SCIPgetNImplVars(scip); /* also aggregate out implicit integers */
+   ncontvars += SCIPgetNContImplVars(scip); /* also aggregate out implicit integers */
 #endif
    nintvars = nvars - ncontvars;
    assert(nvars == 0 || vars != NULL);
