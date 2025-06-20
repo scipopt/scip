@@ -18,6 +18,7 @@ Fixed bugs
 - also for the initial LP solve force acceptance of Farkas row in SCIPlpGetDualfarkas() if all other means for obtaining a reliable Farkas proof have failed
 - avoid overwriting set cutoff flag in tightenCoefs(), preprocessConstraintPairs(), and applyFixings() of cons_varbound.c to reject infeasible solutions
 - fix memory leak in exprinterpret_cppad.cpp w.r.t. user expressions
+- adjust bound before checking feasibility in SCIPvarAddVlb() and SCIPvarAddVub() to detect integrality cutoff
 
 Build system
 ------------
