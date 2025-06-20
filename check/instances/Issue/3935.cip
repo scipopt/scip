@@ -1,0 +1,17 @@
+STATISTICS
+  Problem name     : small
+  Variables        : 5 (0 binary, 3 integer, 0 implicit integer, 2 continuous)
+  Constraints      : 0 initial, 3 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [integer] <x0>: obj=88.47, original bounds=[-200,200]
+  [integer] <x1>: obj=0, original bounds=[-200,200]
+  [integer] <x4>: obj=81, original bounds=[-200,200]
+  [continuous] <x3>: obj=12, original bounds=[-200,200]
+  [continuous] <x2>: obj=78, original bounds=[-200,200]
+CONSTRAINTS
+  [linear] <_C15>:  -20.9<x0>[I] -3.19<x1>[I] -35.38<x4>[I] -93.68<x3>[C] +81.29<x2>[C] <= -2023.88;
+  [linear] <_C16>:  +86.76<x0>[I] -62.71<x1>[I] +52.33<x4>[I] -41.23<x3>[C] +78.43<x2>[C] >= -3046.83;
+  [linear] <_C2>:  -23.81<x0>[I] -7.03<x1>[I] +61.09<x4>[I] +87.2<x3>[C] -75.09<x2>[C] >= -1791.83;
+END
