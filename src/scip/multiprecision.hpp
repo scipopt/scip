@@ -49,7 +49,7 @@ namespace scip
       Rational(const double d){val = 0.0;};
       inline int sign() const { return 0; }
       inline bool is_zero() const { return this->val == 0; }
-      inline std::string str() const { return 0; }
+      inline std::string str() const { return ""; }
       Rational& operator=(const int& i){val = i; return *this;};
       Rational& operator+(const Rational& r){return *this;};
       Rational& operator+(const double& r){return *this;};
