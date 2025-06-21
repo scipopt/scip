@@ -90,6 +90,7 @@
  */
 
 /* default parameter values */
+#define DEFAULT_MAXTIME           2000000000 /** < maximum range for time horizon (to avoid integer overflow) */
 
 /* separation */
 #define DEFAULT_USEBINVARS             FALSE /**< should the binary representation be used? */
@@ -122,8 +123,6 @@
 /* conflict analysis */
 #define DEFAULT_USEBDWIDENING           TRUE /**< should bound widening be used during conflict analysis? */
 
-
-#define DEFAULT_MAXVALUE         2000000000 /** < maximum value for hmax/hmin to avoid integer overflow > */
 /**@} */
 
 /**@name Event handler properties
@@ -214,7 +213,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             detectedredundant;  /**< was detection of redundant constraints already performed? */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
 
-   int                   maxtime;            /**< maximum range of time horizon */
+   int                   maxtime;            /**< maximum range for time horizon (to avoid integer overflow) */
    SCIP_Longint          maxnodes;           /**< number of branch-and-bound nodes to solve an independent cumulative constraint  (-1: no limit) */
 
    SCIP_DECL_SOLVECUMULATIVE((*solveCumulative)); /**< method to use a single cumulative condition */
@@ -13555,7 +13554,7 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
    /* add cumulative constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/maxtime", "maximum range for time horizon",
-         &conshdlrdata->maxtime, TRUE, DEFAULT_MAXVALUE, 0, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxtime, TRUE, DEFAULT_MAXTIME, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/ttinfer",
          "should time-table (core-times) propagator be used to infer bounds?",
@@ -13692,8 +13691,9 @@ SCIP_RETCODE SCIPcreateConsCumulative(
    {
       if( INT_MAX - durations[i] < boundedConvertRealToInt(scip, SCIPvarGetUbGlobal(vars[i])) )
       {
-         SCIPerrorMessage("Potential integer overflow for constraint <%s> for variable <%s>!\n",
-                            name, SCIPvarGetName(vars[i]));
+         SCIPerrorMessage("detected potential integer overflow for variable <%s> in constraint <%s>: "
+            "decrease upper bound of variable or time horizon constraints/" CONSHDLR_NAME "/maxtime\n",
+            name, SCIPvarGetName(vars[i]));
          return SCIP_INVALIDDATA;
       }
    }
@@ -13766,8 +13766,13 @@ SCIP_RETCODE SCIPsetHminCumulative(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(hmin >= 0);
-   assert(hmin <= consdata->hmax);
+
+   if( hmin < 0 || hmin > consdata->hmax )
+   {
+      SCIPerrorMessage("invalid value of hmin for cumulative constraint <%s>\n",
+         SCIPconsGetName(cons));
+      return SCIP_INVALIDCALL;
+   }
 
    consdata->hmin = hmin;
 
@@ -13811,7 +13816,13 @@ SCIP_RETCODE SCIPsetHmaxCumulative(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(hmax >= consdata->hmin);
+
+   if( hmax < consdata->hmin )
+   {
+      SCIPerrorMessage("invalid value of hmax for cumulative constraint <%s>\n",
+         SCIPconsGetName(cons));
+      return SCIP_INVALIDCALL;
+   }
 
    consdata->hmax = hmax;
 
