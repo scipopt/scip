@@ -319,7 +319,7 @@ Interface changes
 ### New API functions
 - SCIPdisplaySymmetryGenerators() and SCIPdialogExecDisplaySymmetry() to display generators of symmetry group
 - SCIPconsCreateRow() to create and return the row of a linearly representable constraint
-- SCIPinitRowKnapsack(), SCIPinitRowLinear(), SCIPinitRowLogicor(), SCIPinitRowSetppc(), SCIPinitRowVarbound() to create
+- SCIPcreateRowKnapsack(), SCIPcreateRowLinear(), SCIPcreateRowLogicor(), SCIPcreateRowSetppc(), SCIPcreateRowVarbound() to create
   and get the row of linearly representable constraints.
 - SCIPgetNResConflictConssApplied() to return the number of generalized resolution conflict constraints added to the problem
 

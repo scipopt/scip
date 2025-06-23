@@ -9730,7 +9730,7 @@ SCIP_ROW* SCIPgetRowSetppc(
 }
 
 /** creates and returns the row of the given set partitioning / packing / covering constraint */
-SCIP_ROW* SCIPinitRowSetppc(
+SCIP_ROW* SCIPcreateRowSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )

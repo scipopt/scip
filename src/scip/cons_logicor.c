@@ -5669,7 +5669,7 @@ SCIP_ROW* SCIPgetRowLogicor(
 }
 
 /** creates and returns the row of the given logicor constraint */
-SCIP_ROW* SCIPinitRowLogicor(
+SCIP_ROW* SCIPcreateRowLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )

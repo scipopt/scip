@@ -13958,7 +13958,7 @@ SCIP_ROW* SCIPgetRowKnapsack(
 }
 
 /** creates and returns the row of the given knapsack constraint */
-SCIP_ROW* SCIPinitRowKnapsack(
+SCIP_ROW* SCIPcreateRowKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
