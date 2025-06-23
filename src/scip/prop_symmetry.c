@@ -674,6 +674,65 @@ SCIP_RETCODE printSyminfoGroupAction(
    return SCIP_OKAY;
 }
 
+
+/** ensures that movedpermvarscounts is initialized */
+static
+SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   int v;
+   int p;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+
+   /* symmetries must have been determined */
+   assert( propdata->nperms >= 0 );
+
+   /* stop if already computed */
+   if ( propdata->nmovedpermvars >= 0 )
+      return SCIP_OKAY;
+   assert( propdata->nmovedpermvars == -1 );
+
+   propdata->nmovedpermvars = 0;
+   propdata->nmovedbinpermvars = 0;
+   propdata->nmovedintpermvars = 0;
+   propdata->nmovedcontpermvars = 0;
+
+   for (v = 0; v < propdata->npermvars; ++v)
+   {
+      for (p = 0; p < propdata->nperms; ++p)
+      {
+         if ( propdata->perms[p][v] != v )
+         {
+            ++propdata->nmovedpermvars;
+
+            switch ( SCIPgetSymInferredVarType(propdata->permvars[v]) )
+            {
+            case SCIP_VARTYPE_BINARY:
+               ++propdata->nmovedbinpermvars;
+               break;
+            case SCIP_VARTYPE_INTEGER:
+               ++propdata->nmovedintpermvars;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               ++propdata->nmovedcontpermvars;
+               break;
+            default:
+               SCIPerrorMessage("unknown variable type\n");
+               return SCIP_INVALIDDATA;
+            } /*lint !e788*/
+            break;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Table callback methods
  */
@@ -701,10 +760,14 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
    assert( tabledata != NULL );
    assert( tabledata->propdata != NULL );
 
-   if ( tabledata->propdata->orbitopalreddata || tabledata->propdata->orbitalreddata
-      || tabledata->propdata->lexreddata )
+   /* print information only if symmetries are present */
+   if ( tabledata->propdata->nperms > 0 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "Symmetry           :\n");
+      SCIP_CALL( ensureSymmetryMovedPermvarsCountsComputed(scip, tabledata->propdata) );
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  #affected vars   : %10d (%d bin, %d int, %d cont)\n",
+         tabledata->propdata->nmovedpermvars, tabledata->propdata->nmovedbinpermvars,
+         tabledata->propdata->nmovedintpermvars, tabledata->propdata->nmovedcontpermvars) ;
       if ( tabledata->propdata->orbitopalreddata )
       {
          SCIP_CALL( SCIPorbitopalReductionGetStatistics(scip, tabledata->propdata->orbitopalreddata, &nred, &ncutoff) );
@@ -2162,64 +2225,6 @@ SCIP_RETCODE ensureSymmetryPermstransComputed(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->permstrans[v]), propdata->nmaxperms) );
       for (p = 0; p < propdata->nperms; ++p)
          propdata->permstrans[v][p] = propdata->perms[p][v];
-   }
-
-   return SCIP_OKAY;
-}
-
-
-/** ensures that movedpermvarscounts is initialized */
-static
-SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
-   SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROPDATA*        propdata            /**< propagator data */
-   )
-{
-   int v;
-   int p;
-
-   assert( scip != NULL );
-   assert( propdata != NULL );
-
-   /* symmetries must have been determined */
-   assert( propdata->nperms >= 0 );
-
-   /* stop if already computed */
-   if ( propdata->nmovedpermvars >= 0 )
-      return SCIP_OKAY;
-   assert( propdata->nmovedpermvars == -1 );
-
-   propdata->nmovedpermvars = 0;
-   propdata->nmovedbinpermvars = 0;
-   propdata->nmovedintpermvars = 0;
-   propdata->nmovedcontpermvars = 0;
-
-   for (v = 0; v < propdata->npermvars; ++v)
-   {
-      for (p = 0; p < propdata->nperms; ++p)
-      {
-         if ( propdata->perms[p][v] != v )
-         {
-            ++propdata->nmovedpermvars;
-
-            switch ( SCIPgetSymInferredVarType(propdata->permvars[v]) )
-            {
-            case SCIP_VARTYPE_BINARY:
-               ++propdata->nmovedbinpermvars;
-               break;
-            case SCIP_VARTYPE_INTEGER:
-               ++propdata->nmovedintpermvars;
-               break;
-            case SCIP_VARTYPE_CONTINUOUS:
-               ++propdata->nmovedcontpermvars;
-               break;
-            default:
-               SCIPerrorMessage("unknown variable type\n");
-               return SCIP_INVALIDDATA;
-            } /*lint !e788*/
-            break;
-         }
-      }
    }
 
    return SCIP_OKAY;

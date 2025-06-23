@@ -1268,29 +1268,29 @@ SCIP_Real consdataComputePseudoActivity(
 
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
+      bound = SCIPvarGetBestBoundLocal(consdata->vars[i]);
       val = consdata->vals[i];
-      bound = (SCIPvarGetBestBoundType(consdata->vars[i]) == SCIP_BOUNDTYPE_LOWER) ? SCIPvarGetLbLocal(consdata->vars[i]) : SCIPvarGetUbLocal(consdata->vars[i]);
-      if( SCIPisInfinity(scip, bound) )
+      assert(!SCIPisZero(scip, val));
+
+      if( SCIPisInfinity(scip, -bound) )
       {
-         if( val > 0.0 )
-            pseudoactivityposinf++;
+         if( val < 0.0 )
+            ++pseudoactivityposinf;
          else
-            pseudoactivityneginf++;
+            ++pseudoactivityneginf;
+      }
+      else if( SCIPisInfinity(scip, bound) )
+      {
+         if( val < 0.0 )
+            ++pseudoactivityneginf;
+         else
+            ++pseudoactivityposinf;
       }
       else
-      {
-         if( SCIPisInfinity(scip, -bound) )
-         {
-            if( val > 0.0 )
-               pseudoactivityneginf++;
-            else
-               pseudoactivityposinf++;
-         }
-         else
-            pseudoactivity += val * bound;
-      }
+         pseudoactivity += val * bound;
    }
 
+   /* invalidate pseudo activity for contradicting contributions */
    if( pseudoactivityneginf > 0 && pseudoactivityposinf > 0 )
       return SCIP_INVALID;
    else if( pseudoactivityneginf > 0 )
@@ -3045,10 +3045,8 @@ SCIP_Real consdataGetActivity(
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
 
-         if( consdata->vals[v] < 0 )
-            negsign = TRUE;
-         else
-            negsign = FALSE;
+         assert(!SCIPisZero(scip, consdata->vals[v]));
+         negsign = consdata->vals[v] < 0.0;
 
          if( (SCIPisInfinity(scip, solval) && !negsign) || (SCIPisInfinity(scip, -solval) && negsign) )
             ++nposinf;
@@ -3061,13 +3059,13 @@ SCIP_Real consdataGetActivity(
 
       SCIPdebugMsg(scip, "activity of linear constraint: %.15g, %d positive infinity values, %d negative infinity values \n", activity, nposinf, nneginf);
 
-      /* check for amount of infinity values and correct the activity */
+      /* invalidate activity for contradicting contributions */
       if( nposinf > 0 && nneginf > 0 )
-         activity = (consdata->rhs + consdata->lhs) / 2;
-      else if( nposinf > 0 )
-         activity = SCIPinfinity(scip);
+         activity = SCIP_INVALID;
       else if( nneginf > 0 )
          activity = -SCIPinfinity(scip);
+      else if( nposinf > 0 )
+         activity = SCIPinfinity(scip);
 
       SCIPdebugMsg(scip, "corrected activity of linear constraint: %.15g\n", activity);
    }
@@ -16206,8 +16204,8 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
             SCIP_CALL( consPrintConsSol(scip, conss[c], sol, NULL ) );
             SCIPinfoMessage(scip, NULL, ";\n");
 
-            if( activity == SCIP_INVALID ) /*lint !e777*/
-               SCIPinfoMessage(scip, NULL, "activity invalid due to positive and negative infinity contributions\n");
+            if( activity == SCIP_INVALID || SCIPisInfinity(scip, ABS(activity)) ) /*lint !e777*/
+               SCIPinfoMessage(scip, NULL, "activity invalid due to infinity contributions\n");
             else if( SCIPisFeasLT(scip, activity, consdata->lhs) )
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - activity);
             else if( SCIPisFeasGT(scip, activity, consdata->rhs) )

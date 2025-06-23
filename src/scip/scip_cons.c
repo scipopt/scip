@@ -937,7 +937,6 @@ SCIP_RETCODE SCIPsetConshdlrGetSignedPermsymGraph(
 }
 
 /** returns the constraint handler of the given name, or NULL if not existing */
-/** returns the constraint handler of the given name, or NULL if not existing */
 SCIP_CONSHDLR* SCIPfindConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of constraint handler */

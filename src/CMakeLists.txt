@@ -5,8 +5,7 @@ include(GNUInstallDirs)
 
 function(setLibProperties targetname outputname)
     set_target_properties(${targetname} PROPERTIES
-        OUTPUT_NAME ${outputname}
-        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+        OUTPUT_NAME ${outputname})
 endfunction(setLibProperties)
 
 set(CMAKE_C_STANDARD 99)
@@ -427,6 +426,7 @@ set(objscipsources
     objscip/objdialog.cpp
     objscip/objdisp.cpp
     objscip/objeventhdlr.cpp
+    objscip/objexprhdlr.cpp
     objscip/objheur.cpp
     objscip/objiisfinder.cpp
     objscip/objmessagehdlr.cpp
@@ -494,6 +494,7 @@ set(objscipheaders
     objscip/objdialog.h
     objscip/objdisp.h
     objscip/objeventhdlr.h
+    objscip/objexprhdlr.h
     objscip/objheur.h
     objscip/objiisfinder.h
     objscip/objmessagehdlr.h
@@ -1160,14 +1161,18 @@ target_link_libraries(libscip
     ${LAPACK_LIBRARIES}
 )
 
+set(SOPLEX_NEEDED 0)
+set(ZIMPL_NEEDED 0)
 if(SHARED)
-    set(SOPLEX_NEEDED 0)
-    set(ZIMPL_NEEDED 0)
     target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES})
     add_executable(scip main.c ${scipsources} ${objscipsources} ${lpisources} ${lpiexactsources} ${rectlusources} ${tpisources} ${symsources})
 else()
-    set(SOPLEX_NEEDED ${SOPLEX_FOUND})
-    set(ZIMPL_NEEDED ${ZIMPL_FOUND})
+    if(SOPLEX_FOUND)
+        set(SOPLEX_NEEDED 1)
+    endif()
+    if(ZIMPL_FOUND)
+        set(ZIMPL_NEEDED 1)
+    endif()
     target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
     add_executable(scip main.c)
     target_link_libraries(scip PUBLIC libscip)

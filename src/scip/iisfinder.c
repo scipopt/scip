@@ -136,12 +136,22 @@ SCIP_RETCODE checkTrivialInfeas(
 {
    SCIP_CONS** conss;
    SCIP_VAR** vars;
+   SCIP_Real* coefs;
+   SCIP_Real maxactivity;
+   SCIP_Real minactivity;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   SCIP_Bool success;
+   int violatingcons;
    int nconss;
    int nvars;
    int i;
+   int j;
 
    assert( trivial != NULL );
    *trivial = FALSE;
+
+   /* Check for contradicting bounds */
    nvars = SCIPgetNOrigVars(scip);
    vars = SCIPgetOrigVars(scip);
    for( i = 0; i < nvars; i++ )
@@ -153,12 +163,70 @@ SCIP_RETCODE checkTrivialInfeas(
       }
    }
 
+   /* Check for linear max (min) activities that do not respect their lhs (rhs) */
+   violatingcons = -1;
+   conss = SCIPgetConss(scip);
+   nconss = SCIPgetNConss(scip);
+   for( i = 0; i < nconss; ++i )
+   {
+      /**@todo generalize activity evaluation */
+      /* Skip the constraint if it is not linear */
+      if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i])), "linear") != 0 )
+         continue;
+
+      /* Get variable information */
+      nvars = SCIPgetNVarsLinear(scip, conss[i]);
+      vars = SCIPgetVarsLinear(scip, conss[i]);
+      coefs = SCIPgetValsLinear(scip, conss[i]);
+
+      /* Check the left-hand side */
+      lhs = SCIPconsGetLhs(scip, conss[i], &success);
+      assert( success );
+
+      if( !SCIPisInfinity(scip, -lhs) )
+      {
+         /* Compute the maximum activity */
+         maxactivity = 0.0;
+         for( j = 0; j < nvars; ++j )
+            maxactivity += coefs[j] * (coefs[j] >= 0.0 ? SCIPvarGetUbOriginal(vars[j]) : SCIPvarGetLbOriginal(vars[j]));
+
+         /* Is the violation (maxactivity < lhs) true? */
+         if( SCIPisSumLT(scip, maxactivity, lhs) )
+         {
+            *trivial = TRUE;
+            violatingcons = i;
+            break;
+         }
+      }
+
+      /* Check the right-hand side */
+      rhs = SCIPconsGetRhs(scip, conss[i], &success);
+      assert( success );
+
+      if( !SCIPisInfinity(scip, rhs) )
+      {
+         /* Compute the minimum activity */
+         minactivity = 0.0;
+         for( j = 0; j < nvars; ++j )
+            minactivity += coefs[j] * (coefs[j] >= 0.0 ? SCIPvarGetLbOriginal(vars[j]) : SCIPvarGetUbOriginal(vars[j]));
+
+         /* Is the violation (rhs < minactivity) true? */
+         if( SCIPisSumLT(scip, rhs, minactivity) )
+         {
+            *trivial = TRUE;
+            violatingcons = i;
+            break;
+         }
+      }
+   }
+
+   /* Delete all constraints not relevant to the infeasibility */
    if( *trivial )
    {
-      nconss = SCIPgetNOrigConss(scip);
-      conss = SCIPgetOrigConss(scip);
       for( i = nconss - 1; i >= 0; i-- )
       {
+         if( i == violatingcons )
+            continue;
          SCIP_CALL( SCIPdelCons(scip, conss[i]) );
       }
    }
@@ -261,7 +329,7 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_Real timelim;
    SCIP_Longint nodelim;
    SCIP_Bool silent;
-   SCIP_Bool minimal;
+   SCIP_Bool makeirreducible;
    SCIP_Bool stopafterone;
    SCIP_Bool removeunusedvars;
    SCIP_Bool trivial;
@@ -403,14 +471,14 @@ SCIP_RETCODE SCIPiisGenerate(
    }
 
    /* Ensure the problem is irreducible if requested */
-   SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/minimal", &minimal) );
-   if( !iis->irreducible && minimal && !(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) && !trivial )
+   SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/irreducible", &makeirreducible) );
+   if( !iis->irreducible && makeirreducible && !(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) && !trivial )
    {
-      assert( iis->infeasible );
-
       SCIPdebugMsg(iis->subscip, "----- STARTING GREEDY SINGLETON DELETION ALGORITHM. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
 
-      SCIP_CALL( SCIPiisGreedyMinimize(iis) );
+      assert( iis->infeasible );
+      SCIP_CALL( SCIPiisGreedyMakeIrreducible(iis) );
+      assert( iis->infeasible );
    }
 
    /* Remove redundant constraints that potentially are left over from indicator constraints,

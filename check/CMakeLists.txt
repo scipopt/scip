@@ -559,6 +559,10 @@ set(pairs_Issue
     "instances/Issue/3908.cip\;-20317.1313131313\;subrestart"
     "instances/Issue/3911.cip\;-30386.2338470598\;lexdual"
     "instances/Issue/3917.cip\;+infinity\;default"
+    "instances/Issue/3920.cip\;0\;presolving_milp_off"
+    "instances/Issue/3932.cip\;+infinity\;reduced_tolerance"
+    "instances/Issue/3934.cip\;-5007\;conflict_off_reduced_presolving_subrestart"
+    "instances/Issue/3935.cip\;-24793.9840277416\;default"
 )
 
 #
@@ -1364,7 +1368,7 @@ if(SCIP_WITH_EXACTSOLVE)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr_ori
                                  PROPERTIES
                                  DEPENDS MIPEX-${setting}-${basename}-certified
-                                 PASS_REGULAR_EXPRESSION "Successfully checked solution for feasibility"
+                                 PASS_REGULAR_EXPRESSION "Successfully verified"
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
             endif()

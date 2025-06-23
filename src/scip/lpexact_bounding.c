@@ -1885,8 +1885,8 @@ char chooseInitialBoundingMethod(
        * a) at depth levels 4, 8, 16, ..., or
        * b) almost at cutoffbound
        */
-      interleavedepth = set->exact_interleavestrategy >= 2 && SCIPgetDepth(set->scip) > 0 && isPowerOfTwo(SCIPgetDepth(set->scip) - 1);
-      interleavecutoff = (set->exact_interleavestrategy == 1 || set->exact_interleavestrategy == 3)
+      interleavedepth = set->exact_interleavedbfreq >= 2 && SCIPgetDepth(set->scip) > 0 && isPowerOfTwo(SCIPgetDepth(set->scip) - 1);
+      interleavecutoff = (set->exact_interleavedbfreq == 1 || set->exact_interleavedbfreq == 3)
          && SCIPsetIsGE(set, SCIPlpGetObjval(lpexact->fplp, set, prob), SCIPlpGetCutoffbound(lpexact->fplp))
          && SCIPlpGetObjval(lpexact->fplp, set, prob) < SCIPlpGetCutoffbound(lpexact->fplp);
       if( (interleavedepth || interleavecutoff) && lpexact->allowexactsolve )

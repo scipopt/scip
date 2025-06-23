@@ -8997,9 +8997,6 @@ void varSetProbindex(
    )
 {
    assert(var != NULL);
-   assert(probindex >= 0 || var->vlbs == NULL);
-   assert(probindex >= 0 || var->vubs == NULL);
-   assert(probindex >= 0 || var->implics == NULL);
 
    var->probindex = probindex;
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -9042,13 +9039,16 @@ void SCIPvarSetNamePointer(
  *  variable bounds and implication data structures of the variable are freed. Since in the final removal
  *  of all variables from the transformed problem, this deletes the implication graph completely and is faster
  *  than removing the variables one by one, each time updating all lists of the other variables.
+ *  If 'keepimplics' is TRUE, the implications, variable bounds and cliques are kept. This should be used when the
+ *  variable type is upgraded, i.e. when it gains (implied) integrality, so that existing implications are not lost.
  */
 SCIP_RETCODE SCIPvarRemove(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             final               /**< is this the final removal of all problem variables? */
+   SCIP_Bool             final,              /**< is this the final removal of all problem variables? */
+   SCIP_Bool             keepimplics         /**< should the implications be kept? */
    )
 {
    assert(SCIPvarGetProbindex(var) >= 0);
@@ -9065,7 +9065,7 @@ SCIP_RETCODE SCIPvarRemove(
          SCIPvboundsFree(&var->vubs, blkmem);
          SCIPimplicsFree(&var->implics, blkmem);
       }
-      else
+      else if( !keepimplics )
       {
          /* unlink the variable from all other variables' lists and free the data structures */
          SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, TRUE) );
@@ -15309,18 +15309,19 @@ SCIP_RETCODE SCIPvarAddVlb(
             /* the variable bound constraint defines a new upper bound */
             if( SCIPsetIsGT(set, vlbcoef, 1.0) )
             {
-               SCIP_Real newub = vlbconstant / (1.0 - vlbcoef);
+               /* bound might be adjusted due to integrality condition */
+               SCIP_Real newub = adjustedUb(set, SCIPvarIsIntegral(var), vlbconstant / (1.0 - vlbcoef));
 
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasLT(set, newub, lb) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
-               else if( SCIPsetIsFeasLT(set, newub, ub) )
-               {
-                  /* bound might be adjusted due to integrality condition */
-                  newub = adjustedUb(set, SCIPvarIsIntegral(var), newub);
 
+               /* improve global upper bound of variable */
+               if( SCIPsetIsFeasLT(set, newub, ub) )
+               {
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15345,22 +15346,21 @@ SCIP_RETCODE SCIPvarAddVlb(
             /* the variable bound constraint defines a new lower bound */
             else
             {
-               SCIP_Real newlb;
-
                assert(SCIPsetIsLT(set, vlbcoef, 1.0));
 
-               newlb = vlbconstant / (1.0 - vlbcoef);
+               /* bound might be adjusted due to integrality condition */
+               SCIP_Real newlb = adjustedLb(set, SCIPvarIsIntegral(var), vlbconstant / (1.0 - vlbcoef));
 
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasGT(set, newlb, ub) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
-               else if( SCIPsetIsFeasGT(set, newlb, lb) )
-               {
-                  /* bound might be adjusted due to integrality condition */
-                  newlb = adjustedLb(set, SCIPvarIsIntegral(var), newlb);
 
+               /* improve global lower bound of variable */
+               if( SCIPsetIsFeasGT(set, newlb, lb) )
+               {
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15435,27 +15435,21 @@ SCIP_RETCODE SCIPvarAddVlb(
          /* improve global bounds of vlb variable, and calculate minimal and maximal value of variable bound */
          if( vlbcoef >= 0.0 )
          {
-            SCIP_Real newzub;
-
             if( !SCIPsetIsInfinity(set, xub) )
             {
                /* x >= b*z + d  ->  z <= (x-d)/b */
-               newzub = (xub - vlbconstant)/vlbcoef;
+               SCIP_Real newzub = adjustedUb(set, SCIPvarIsIntegral(vlbvar), (xub - vlbconstant) / vlbcoef);
 
-               /* return if the new bound is less than -infinity */
-               if( SCIPsetIsInfinity(set, REALABS(newzub)) )
-                  return SCIP_OKAY;
-
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasLT(set, newzub, zlb) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
+
+               /* improve global upper bound of variable */
                if( SCIPsetIsFeasLT(set, newzub, zub) )
                {
-                  /* bound might be adjusted due to integrality condition */
-                  newzub = adjustedUb(set, SCIPvarIsIntegral(vlbvar), newzub);
-
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15491,27 +15485,21 @@ SCIP_RETCODE SCIPvarAddVlb(
          }
          else
          {
-            SCIP_Real newzlb;
-
             if( !SCIPsetIsInfinity(set, xub) )
             {
                /* x >= b*z + d  ->  z >= (x-d)/b */
-               newzlb = (xub - vlbconstant)/vlbcoef;
+               SCIP_Real newzlb = adjustedLb(set, SCIPvarIsIntegral(vlbvar), (xub - vlbconstant) / vlbcoef);
 
-               /* return if the new bound is larger than infinity */
-               if( SCIPsetIsInfinity(set, REALABS(newzlb)) )
-                  return SCIP_OKAY;
-
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasGT(set, newzlb, zub) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
+
+               /* improve global lower bound of variable */
                if( SCIPsetIsFeasGT(set, newzlb, zlb) )
                {
-                  /* bound might be adjusted due to integrality condition */
-                  newzlb = adjustedLb(set, SCIPvarIsIntegral(vlbvar), newzlb);
-
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15558,12 +15546,10 @@ SCIP_RETCODE SCIPvarAddVlb(
             *infeasible = TRUE;
             return SCIP_OKAY;
          }
+
          /* improve global lower bound of variable */
          if( SCIPsetIsFeasGT(set, minvlb, xlb) )
          {
-            /* bound might be adjusted due to integrality condition */
-            minvlb = adjustedLb(set, SCIPvarIsIntegral(var), minvlb);
-
             /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
              * with the local bound, in this case we need to store the bound change as pending bound change
              */
@@ -15785,18 +15771,19 @@ SCIP_RETCODE SCIPvarAddVub(
             /* the variable bound constraint defines a new lower bound */
             if( SCIPsetIsGT(set, vubcoef, 1.0) )
             {
-               SCIP_Real newlb = vubconstant / (1.0 - vubcoef);
+               /* bound might be adjusted due to integrality condition */
+               SCIP_Real newlb = adjustedLb(set, SCIPvarIsIntegral(var), vubconstant / (1.0 - vubcoef));
 
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasGT(set, newlb, ub) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
-               else if( SCIPsetIsFeasGT(set, newlb, lb) )
-               {
-                  /* bound might be adjusted due to integrality condition */
-                  newlb = adjustedLb(set, SCIPvarIsIntegral(var), newlb);
 
+               /* improve global lower bound of variable */
+               if( SCIPsetIsFeasGT(set, newlb, lb) )
+               {
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15821,22 +15808,21 @@ SCIP_RETCODE SCIPvarAddVub(
             /* the variable bound constraint defines a new upper bound */
             else
             {
-               SCIP_Real newub;
-
                assert(SCIPsetIsLT(set, vubcoef, 1.0));
 
-               newub = vubconstant / (1.0 - vubcoef);
+               /* bound might be adjusted due to integrality condition */
+               SCIP_Real newub = adjustedUb(set, SCIPvarIsIntegral(var), vubconstant / (1.0 - vubcoef));
 
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasLT(set, newub, lb) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
-               else if( SCIPsetIsFeasLT(set, newub, ub) )
-               {
-                  /* bound might be adjusted due to integrality condition */
-                  newub = adjustedUb(set, SCIPvarIsIntegral(var), newub);
 
+               /* improve global upper bound of variable */
+               if( SCIPsetIsFeasLT(set, newub, ub) )
+               {
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15911,22 +15897,21 @@ SCIP_RETCODE SCIPvarAddVub(
          /* improve global bounds of vub variable, and calculate minimal and maximal value of variable bound */
          if( vubcoef >= 0.0 )
          {
-            SCIP_Real newzlb;
-
             if( !SCIPsetIsInfinity(set, -xlb) )
             {
                /* x <= b*z + d  ->  z >= (x-d)/b */
-               newzlb = (xlb - vubconstant)/vubcoef;
+               SCIP_Real newzlb = adjustedLb(set, SCIPvarIsIntegral(vubvar), (xlb - vubconstant) / vubcoef);
+
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasGT(set, newzlb, zub) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
+
+               /* improve global lower bound of variable */
                if( SCIPsetIsFeasGT(set, newzlb, zlb) )
                {
-                  /* bound might be adjusted due to integrality condition */
-                  newzlb = adjustedLb(set, SCIPvarIsIntegral(vubvar), newzlb);
-
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15962,22 +15947,21 @@ SCIP_RETCODE SCIPvarAddVub(
          }
          else
          {
-            SCIP_Real newzub;
-
             if( !SCIPsetIsInfinity(set, -xlb) )
             {
                /* x <= b*z + d  ->  z <= (x-d)/b */
-               newzub = (xlb - vubconstant)/vubcoef;
+               SCIP_Real newzub = adjustedUb(set, SCIPvarIsIntegral(vubvar), (xlb - vubconstant) / vubcoef);
+
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasLT(set, newzub, zlb) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
+
+               /* improve global upper bound of variable */
                if( SCIPsetIsFeasLT(set, newzub, zub) )
                {
-                  /* bound might be adjusted due to integrality condition */
-                  newzub = adjustedUb(set, SCIPvarIsIntegral(vubvar), newzub);
-
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -16028,9 +16012,6 @@ SCIP_RETCODE SCIPvarAddVub(
          /* improve global upper bound of variable */
          if( SCIPsetIsFeasLT(set, maxvub, xub) )
          {
-            /* bound might be adjusted due to integrality condition */
-            maxvub = adjustedUb(set, SCIPvarIsIntegral(var), maxvub);
-
             /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
              * with the local bound, in this case we need to store the bound change as pending bound change
              */
@@ -24384,7 +24365,7 @@ SCIP_RATIONAL* SCIPvarGetBestBoundGlobalExact(
    assert(var->exactdata->glbdom.ub != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return var->exactdata->glbdom.lb;
    else
       return var->exactdata->glbdom.ub;
@@ -24414,7 +24395,7 @@ SCIP_RATIONAL* SCIPvarGetWorstBoundGlobalExact(
    assert(var->exactdata->glbdom.ub != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return var->exactdata->glbdom.ub;
    else
       return var->exactdata->glbdom.lb;
@@ -24522,7 +24503,7 @@ SCIP_RATIONAL* SCIPvarGetBestBoundLocalExact(
    assert(var->exactdata->locdom.ub != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return var->exactdata->locdom.lb;
    else
       return var->exactdata->locdom.ub;
@@ -24552,7 +24533,7 @@ SCIP_RATIONAL* SCIPvarGetWorstBoundLocalExact(
    assert(var->exactdata->locdom.ub != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return var->exactdata->locdom.ub;
    else
       return var->exactdata->locdom.lb;
@@ -24580,7 +24561,7 @@ SCIP_BOUNDTYPE SCIPvarGetBestBoundTypeExact(
    assert(var->exactdata != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return SCIP_BOUNDTYPE_LOWER;
    else
       return SCIP_BOUNDTYPE_UPPER;
@@ -24608,7 +24589,7 @@ SCIP_BOUNDTYPE SCIPvarGetWorstBoundTypeExact(
    assert(var->exactdata != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return SCIP_BOUNDTYPE_UPPER;
    else
       return SCIP_BOUNDTYPE_LOWER;
