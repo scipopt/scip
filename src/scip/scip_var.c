@@ -9035,9 +9035,10 @@ void addLargestCliquePart(
                   assert( 0 <= probidx && probidx < ntotalvars );
 
                   j = idx[probidx];
-                  if( j >= 0 && cliquevals[k] == values[j] && othervar != var && cliquepartition[j] < 0 )
+                  if( j >= 0 && cliquevals[k] == values[j] && cliquepartition[j] < 0 )
                   {
                      assert( j < nvars );
+                     assert( othervar != var );
                      cliquepartition[j] = p;
                      ++(ncliqueparts[p]);
                   }
