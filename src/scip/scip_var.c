@@ -9002,6 +9002,7 @@ void addLargestCliquePart(
             {
                maxsize = size;
                maxidx = l;
+               maxsmallestidx = smallestidx;
             }
          }
 
