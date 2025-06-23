@@ -8920,7 +8920,7 @@ void addLargestCliquePart(
    SCIP_Bool*            values,             /**< values of variables in given subset */
    int                   p,                  /**< part index */
    int                   nvars,              /**< number of variables in the array */
-   int                   ntotalvars,         /**< total number of varialbes */
+   int                   ntotalvars,         /**< total number of variables */
    int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
    int*                  ncliqueparts        /**< array to store the size of each part */
    )
@@ -8998,7 +8998,7 @@ void addLargestCliquePart(
             /* We sort according to size as first objective and then according to the smallest index appearing in the
              * clique other than the given variable. This helps to pick nodes in cliques that are close together, which
              * often is helpful for the knapsack constraint handler. */
-            if ( size > maxsize || (size == maxsize && smallestidx < maxsmallestidx) )
+            if( size > maxsize || (size == maxsize && smallestidx < maxsmallestidx) )
             {
                maxsize = size;
                maxidx = l;
@@ -9097,7 +9097,8 @@ SCIP_RETCODE calcCliquePartitionGreedy(
       int probidx;
 
       cliquepartition[i] = -1;
-      /* note that it could happen that variables appear multiple times */
+
+      /* note that it could happen that variables appear multiple times in vars; we arbitrarily take the last */
       probidx = SCIPvarGetProbindex(vars[i]);
       if( probidx >= 0 )
       {
@@ -9110,10 +9111,9 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    addLargestCliquePart(vars[0], values[0], 0, idx, values, 0, nvars, ntotalvars, cliquepartition, ncliqueparts);
    *ncliques = 1;
 
-   /* loop through remaining nodes */
+   /* loop through remaining variables */
    for( i = 1; i < nvars; ++i )
    {
-      SCIP_Bool foundpart = FALSE;
       SCIP_VAR* var;
       SCIP_Bool value;
       int nvarcliques;
@@ -9127,9 +9127,10 @@ SCIP_RETCODE calcCliquePartitionGreedy(
       value = values[i];
       nvarcliques = SCIPvarGetNCliques(var, value);
 
-      /* if variable is not active (multi-aggregated or fixed), it will be moved to a new part */
+      /* if variable is not active (multi-aggregated or fixed) or isolated, it will be moved to a new part below */
       if( SCIPvarIsActive(var) && nvarcliques > 0 )
       {
+         SCIP_Bool foundpart = FALSE;
          SCIP_CLIQUE** varcliques;
          int l;
 
