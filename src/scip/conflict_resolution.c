@@ -1529,6 +1529,63 @@ void weakenVarConflictRow(
    row->inds[pos] = row->inds[row->nnz];
 }
 
+/** weaken generalized resolution row by setting variables to their global bounds */
+static
+void weakenConflictRow(
+   SCIP_CONFLICTROW*     row,                /**< generalized resolution row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_BDCHGIDX*        currbdchgidx,       /**< current bound change index */
+   int*                  fixsides            /**< dense array of variables fixed to a bound */
+   )
+{
+   int i;
+   int nvarsweakened;
+
+   assert(row != NULL);
+   assert(set != NULL);
+   assert(vars != NULL);
+   assert(currbdchgidx != NULL);
+
+   nvarsweakened = 0;
+
+   for( i = row->nnz - 1; i >= 0; --i )
+   {
+      SCIP_VAR* vartoweaken;
+      int idx;
+
+      idx = row->inds[i];
+      vartoweaken = vars[idx];
+
+      if( row->vals[idx] > 0.0 )
+      {
+         SCIP_Real ub;
+
+         ub = SCIPgetVarUbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
+
+         if( SCIPsetIsEQ(set, ub, SCIPvarGetUbGlobal(vartoweaken)) && (fixsides == NULL || fixsides[idx] == 0) )
+         {
+            weakenVarConflictRow(row, set, vartoweaken, i);
+            ++nvarsweakened;
+         }
+      }
+      else
+      {
+         SCIP_Real lb;
+
+         lb = SCIPgetVarLbAtIndex(set->scip, vartoweaken, currbdchgidx, TRUE);
+
+         if( SCIPsetIsEQ(set, lb, SCIPvarGetLbGlobal(vartoweaken)) && (fixsides == NULL || fixsides[idx] == 0) )
+         {
+            weakenVarConflictRow(row, set, vartoweaken, i);
+            ++nvarsweakened;
+         }
+      }
+   }
+
+   SCIPdebugMessage("weakened %d variables in the conflict row \n", nvarsweakened);
+}
+
 /** weaken all continuous variables in a generalized resolution row */
 static
 SCIP_RETCODE weakenContinuousVarsConflictRow(
@@ -2526,11 +2583,14 @@ SCIP_RETCODE getConflictRow(
 {
    SCIP_VAR** vars;
    SCIP_CONFLICTROW* conflictrow;
+   SCIP_BDCHGIDX* currbdchgidx;
 
    vars = prob->vars;
    assert(vars != NULL);
 
    conflictrow = conflict->conflictrow;
+   currbdchgidx = SCIPbdchginfoGetIdx(currbdchginfo);
+   assert(currbdchgidx != NULL);
 
    assert(success != NULL);
    *success = FALSE;
@@ -2545,8 +2605,16 @@ SCIP_RETCODE getConflictRow(
       {
          assert(conflictrow->nnz == SCIProwGetNNonz(initialconflictrow));
          SCIPsetDebugMsgPrint(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n", conflictrow->nnz, maxsize);
-         conflict->nreslongconfs++;
-         return SCIP_OKAY;
+         SCIPsetDebugMsgPrint(set, "Try to shorten the conflict row by applying weakening \n");
+
+         weakenConflictRow(conflictrow, set, vars, currbdchgidx, NULL);
+
+         if( conflictrow->nnz > maxsize )
+         {
+            SCIPsetDebugMsgPrint(set, "Conflict row is still too large after weakening %d > %d\n", conflictrow->nnz, maxsize);
+            conflict->nreslongconfs++;
+            return SCIP_OKAY;
+         }
       }
 
       /* set the slack */
@@ -2561,6 +2629,13 @@ SCIP_RETCODE getConflictRow(
    if( initialconflictrow == NULL || SCIPsetIsGE(set, conflictrow->slack, 0.0) )
    {
       SCIPsetDebugMsgPrint(set, "Initial conflict could not be retrieved \n");
+      return SCIP_OKAY;
+   }
+
+   /* check once more if the initial conflict is too long */
+   if( conflictrow->nnz > maxsize )
+   {
+      conflict->nreslongconfs++;
       return SCIP_OKAY;
    }
 
@@ -3128,8 +3203,18 @@ SCIP_RETCODE conflictAnalyzeResolution(
          {
             SCIPsetDebugMsgPrint(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
                            conflictrow->nnz, maxsize);
-            conflict->nreslongconfs++;
-            goto TERMINATE_RESOLUTION_LOOP;
+            weakenConflictRow(conflictrow, set, vars, bdchgidx, fixsides);
+            if( conflictrow->nnz > maxsize )
+            {
+               conflict->nreslongconfs++;
+               goto TERMINATE_RESOLUTION_LOOP;
+            }
+#ifdef SCIP_DEBUG
+            SCIP_Real oldslack;
+            oldslack = conflictrow->slack;
+            SCIP_CALL( computeSlack(set, vars, conflictrow, bdchginfo, fixbounds, fixsides) );
+            assert(SCIPsetIsEQ(set, conflictrow->slack, oldslack));
+#endif
          }
 
          SCIPsetDebugMsgPrint(set, "Slack of resolved row: %f \n", conflictrow->slack);
