@@ -26,27 +26,33 @@
  * @brief  greedy deletion and addition filter heuristic to compute (I)ISs
  * @author Marc Pfetsch
  * @author Mark Turner
- *
+ * @author Paul Meinhold
  */
 
 #include <assert.h>
-#include <string.h>
 
-#include "scip/scip_iisfinder.h"
-#include <scip/iisfinder_greedy.h>
+#include "scip/iisfinder_greedy.h"
 
 #define IISFINDER_NAME           "greedy"
 #define IISFINDER_DESC           "greedy deletion or addition constraint deletion"
 #define IISFINDER_PRIORITY        8000
 
-#define DEFAULT_MAXBATCHSIZE     20    /**< the maximum number of constraints (or bounds) that are added / removed in one subproblem call */
-#define DEFAULT_MAXRELBATCHSIZE  0.035 /**< the maximum number of constraints (or bounds) relative to the original problem that are added / removed in one subproblem call */
-#define DEFAULT_NODELIMPERITER   -1L   /**< maximum number of nodes per individual solve call */
-#define DEFAULT_TIMELIMPERITER   1e+20 /**< time limit per individual solve call */
-#define DEFAULT_ADDITIVE         TRUE  /**< whether an additive approach instead of deletion based approach should be used */
-#define DEFAULT_CONSERVATIVE     TRUE  /**< should a solve that reached some limit be counted as feasible when deleting constraints */
-#define DEFAULT_DYNAMICREORDERING TRUE /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
+#define DEFAULT_TIMELIMPERITER   1e+20 /**< time limit of optimization process for each individual subproblem */
+#define DEFAULT_NODELIMPERITER   -1L   /**< node limit of optimization process for each individual subproblem */
+
+#define DEFAULT_ADDITIVE         TRUE  /**< should an additive constraint approach be used instead of deletion */
+#define DEFAULT_CONSERVATIVE     TRUE  /**< should an unsolved problem (by e.g. user interrupt, node limit, time limit) be considered feasible when deleting constraints */
 #define DEFAULT_DELAFTERADD      TRUE  /**< should the deletion routine be performed after the addition routine (in the case of additive) */
+#define DEFAULT_DYNAMICREORDERING TRUE /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
+
+#define DEFAULT_INITBATCHSIZE    16    /**< the initial batchsize for the first iteration, ignored if initrelbatchsize is positive */
+#define DEFAULT_INITRELBATCHSIZE 0.03125 /**< the initial batchsize relative to the original problem for the first iteration (0.0: use initbatchsize) */
+#define DEFAULT_MAXBATCHSIZE     INT_MAX /**< the maximum batchsize per iteration */
+#define DEFAULT_MAXRELBATCHSIZE  0.5   /**< the maximum batchsize relative to the original problem per iteration */
+#define DEFAULT_BATCHINGFACTOR   2.0   /**< the factor with which the batchsize is multiplied in every update */
+#define DEFAULT_BATCHINGOFFSET   0.0   /**< the offset which is added to the multiplied batchsize in every update */
+#define DEFAULT_BATCHUPDATEINTERVAL 1  /**< the number of iterations to run with a constant batchsize before updating (1: always update) */
+
 
 /*
  * Data structures
@@ -55,14 +61,21 @@
 /** IIS finder data */
 struct SCIP_IISfinderData
 {
-   SCIP_Real             timelimperiter;     /**< time limit per individual solve call */
-   SCIP_Real             maxrelbatchsize;    /**< the maximum number of constraints relative to the original problem to delete or add per iteration */
-   SCIP_Bool             additive;           /**< whether an additive approach instead of deletion based approach should be used */
-   SCIP_Bool             conservative;       /**< should a solve that reached some limit be counted as feasible when deleting constraints */
-   SCIP_Bool             dynamicreordering;  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
+   SCIP_Real             timelimperiter;     /**< time limit of optimization process for each individual subproblem */
+   SCIP_Longint          nodelimperiter;     /**< node limit of optimization process for each individual subproblem */
+
+   SCIP_Bool             additive;           /**< should an additive constraint approach be used instead of deletion */
+   SCIP_Bool             conservative;       /**< should an unsolved problem (by e.g. user interrupt, node limit, time limit) be considered feasible when deleting constraints */
    SCIP_Bool             delafteradd;        /**< should the deletion routine be performed after the addition routine (in the case of additive) */
-   SCIP_Longint          nodelimperiter;     /**< maximum number of nodes per individual solve call */
-   int                   maxbatchsize;       /**< the maximum number of constraints to delete or add per iteration */
+   SCIP_Bool             dynamicreordering;  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
+
+   int                   initbatchsize;      /**< the initial batchsize for the first iteration, ignored if initrelbatchsize is positive */
+   SCIP_Real             initrelbatchsize;   /**< the initial batchsize relative to the original problem for the first iteration (0.0: use initbatchsize) */
+   int                   maxbatchsize;       /**< the maximum batchsize per iteration */
+   SCIP_Real             maxrelbatchsize;    /**< the maximum batchsize relative to the original problem per iteration */
+   SCIP_Real             batchingfactor;     /**< the factor with which the batchsize is multiplied in every update */
+   SCIP_Real             batchingoffset;     /**< the offset which is added to the multiplied batchsize in every update */
+   int                   batchupdateinterval; /**< the number of iterations to run with a constant batchsize before updating (1: always update) */
 };
 
 /*
@@ -99,11 +112,17 @@ SCIP_RETCODE setLimits(
       assert( globalnodelim >= 0 );
    }
    if( globalnodelim == -1 && nodelimperiter == -1 )
+   {
       SCIP_CALL( SCIPsetLongintParam(scip, "limits/nodes", nodelim) );
+   }
    else if( globalnodelim == -1 || nodelimperiter == -1 )
+   {
       SCIP_CALL( SCIPsetLongintParam(scip, "limits/nodes", MAX(globalnodelim, nodelimperiter)) );
+   }
    else
+   {
       SCIP_CALL( SCIPsetLongintParam(scip, "limits/nodes", MIN(globalnodelim, nodelimperiter)) );
+   }
    return SCIP_OKAY;
 }
 
@@ -148,18 +167,50 @@ SCIP_RETCODE revertConssDeletions(
    )
 {
    int i;
+   SCIP_CONS* copycons;
 
-   if( !releaseonly )
+   for( i = 0; i < ndelconss; ++i )
    {
-      for (i = 0; i < ndelconss; ++i)
+      if( releaseonly )
+      {
+         SCIP_CALL( SCIPreleaseCons(scip, &conss[idxs[i]]) );
+      }
+      else
       {
          SCIP_CALL( SCIPaddCons(scip, conss[idxs[i]]) );
+         copycons = conss[idxs[i]];
+         assert(SCIPconsGetNUses(copycons) > 1);
+         SCIP_CALL( SCIPreleaseCons(scip, &copycons) );
       }
    }
-   for (i = 0; i < ndelconss; ++i)
-   {
-      SCIP_CALL( SCIPreleaseCons(scip, &conss[idxs[i]]) );
-   }
+
+   return SCIP_OKAY;
+}
+
+/* Update the batchsize accoring to the chosen rule */
+static
+SCIP_RETCODE updateBatchsize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   initbatchsize,      /**< the initial batchsize */
+   int                   maxbatchsize,       /**< the maximum batchsize per iteration */
+   int                   iteration,          /**< the current iteration */
+   SCIP_Bool             resettoinit,        /**< should the batchsize be reset to the initial batchsize? */
+   SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied in every update */
+   SCIP_Real             batchingoffset,     /**< the offset which is added to the multiplied batchsize in every update */
+   int                   batchupdateinterval, /**< the number of iterations to run with a constant batchsize before updating (1: always update) */
+   int*                  batchsize           /**< the batchsize to be updated */
+   )
+{
+   if( resettoinit )
+      *batchsize = initbatchsize;
+   else if( iteration % batchupdateinterval == 0 )
+      *batchsize = (int)ceil(batchingfactor * (*batchsize) + batchingoffset);
+
+   /* respect limits and maximum */
+   *batchsize = MIN(*batchsize, maxbatchsize);
+   *batchsize = MAX(*batchsize, 1);
+   SCIPdebugMsg(scip, "Updated batchsize to %d\n", *batchsize);
+
    return SCIP_OKAY;
 }
 
@@ -194,7 +245,7 @@ SCIP_RETCODE deletionSubproblem(
    *stop = FALSE;
    scip = SCIPiisGetSubscip(iis);
 
-   /* remove bounds or constraints*/
+   /* remove bounds or constraints */
    if( delbounds )
    {
       assert(vars != NULL);
@@ -257,7 +308,9 @@ SCIP_RETCODE deletionSubproblem(
          SCIPfreeBlockMemoryArray(scip, &bounds, ndels);
       }
       else
+      {
          SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, FALSE) );
+      }
       *alldeletionssolved = FALSE;
       return SCIP_OKAY;
    }
@@ -270,11 +323,15 @@ SCIP_RETCODE deletionSubproblem(
    {
       case SCIP_STATUS_USERINTERRUPT:    /* if a user interrupt occurred, just stop */
       case SCIP_STATUS_TERMINATE:
-         SCIPdebugMsg(scip, "User interrupt. Stopping. \n");
+         SCIPdebugMsg(scip, "User interrupt. Stopping.\n");
          if( delbounds )
+         {
             SCIP_CALL( revertBndChgs(scip, vars, bounds, idxs, ndels, islb) );
+         }
          else
-            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, FALSE) );
+         {
+            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, !conservative) );
+         }
          *stop = TRUE;
          *alldeletionssolved = FALSE;
          break;
@@ -289,23 +346,29 @@ SCIP_RETCODE deletionSubproblem(
       case SCIP_STATUS_INFORUNBD:
       case SCIP_STATUS_DUALLIMIT:
          *alldeletionssolved = FALSE;
-         SCIPdebugMsg(scip, "Some limit reached. Keeping bounds / constraints removed if non-conservative. \n");
+         SCIPdebugMsg(scip, "Some limit reached. Keeping bounds / constraints removed if non-conservative.\n");
          if( !conservative )
          {
             SCIPiisSetSubscipInfeasible(iis, FALSE);
             *deleted = TRUE;
          }
          if( conservative && delbounds )
+         {
             SCIP_CALL( revertBndChgs(scip, vars, bounds, idxs, ndels, islb) );
+         }
          if( !delbounds )
+         {
             SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, !conservative) );
+         }
          break;
 
       case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
          SCIPdebugMsg(scip, "Subproblem with bounds / constraints removed infeasible. Keep them removed.\n");
          SCIPiisSetSubscipInfeasible(iis, TRUE);
          if( !delbounds )
+         {
             SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, TRUE) );
+         }
          *deleted = TRUE;
          break;
 
@@ -316,15 +379,19 @@ SCIP_RETCODE deletionSubproblem(
       case SCIP_STATUS_PRIMALLIMIT:
          SCIPdebugMsg(scip, "Found solution to subproblem with bounds / constraints removed. Add them back.\n");
          if( delbounds )
+         {
             SCIP_CALL( revertBndChgs(scip, vars, bounds, idxs, ndels, islb) );
+         }
          else
+         {
             SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, FALSE) );
+         }
          break;
 
       case SCIP_STATUS_UNKNOWN:
       default:
          *alldeletionssolved = FALSE;
-         SCIPerrorMessage("Unexpected return status %d in removed bounds subproblem. Exiting... \n", status);
+         SCIPerrorMessage("Unexpected return status %d in removed bounds subproblem. Exiting...\n", status);
          if( delbounds )
             SCIPfreeBlockMemoryArray(scip, &bounds, ndels);
          return SCIP_ERROR;
@@ -375,7 +442,7 @@ SCIP_RETCODE additionSubproblem(
    {
       case SCIP_STATUS_USERINTERRUPT:    /* if an user interrupt occurred, just stop */
       case SCIP_STATUS_TERMINATE:
-         SCIPdebugMsg(scip, "User interrupt. Stopping. \n");
+         SCIPdebugMsg(scip, "User interrupt. Stopping.\n");
          *stop = TRUE;
          break;
 
@@ -421,12 +488,19 @@ SCIP_RETCODE deletionFilterBatch(
    SCIP_IIS*             iis,                /**< IIS data structure containing subscip  */
    SCIP_Real             timelim,            /**< The global time limit on the IIS finder call */
    SCIP_Longint          nodelim,            /**< The global node limit on the IIS finder call */
+   SCIP_Bool             removebounds,       /**< Whether the algorithm should remove bounds as well as constraints */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
+
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
    SCIP_Longint          nodelimperiter,     /**< maximum number of nodes per individual solve call */
-   SCIP_Bool             removebounds,       /**< Whether the algorithm should remove bounds as well as constraints */
    SCIP_Bool             conservative,       /**< should a node or time limit solve be counted as feasible when deleting constraints */
-   int                   batchsize,          /**< the number of constraints to delete or add per iteration */
+
+   int                   initbatchsize,      /**< the initial batchsize for the first iteration */
+   int                   maxbatchsize,       /**< the maximum batchsize per iteration */
+   SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied in every update */
+   SCIP_Real             batchingoffset,     /**< the offset which is added to the multiplied batchsize in every update */
+   int                   batchupdateinterval, /**< the number of iterations to run with a constant batchsize before updating (1: always update) */
+
    SCIP_Bool*            alldeletionssolved  /**< pointer to store whether all the subscips solved */
    )
 {
@@ -442,18 +516,30 @@ SCIP_RETCODE deletionFilterBatch(
    SCIP_Bool deleted;
    int nconss;
    int nvars;
+   int batchindex;
+   int batchsize;
+   int iteration;
    int i;
    int k;
 
+   /* get current subscip */
    scip = SCIPiisGetSubscip(iis);
    assert( scip != NULL );
    assert( SCIPiisIsSubscipInfeasible(iis) );
+
+   /* get random generator */
    randnumgen = SCIPiisGetRandnumgen(iis);
    assert( randnumgen != NULL );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &idxs, batchsize) );
+   /* get batch size */
+   assert( initbatchsize >= 1 );
+   assert( maxbatchsize >= 1 );
+   initbatchsize = MIN(initbatchsize, maxbatchsize);
 
-   /* Get constraint information */
+   /* allocate indices array */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &idxs, maxbatchsize) );
+
+   /* get constraint information */
    nconss = SCIPgetNOrigConss(scip);
    origconss = SCIPgetOrigConss(scip);
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, origconss, nconss) );
@@ -469,13 +555,20 @@ SCIP_RETCODE deletionFilterBatch(
    SCIPrandomPermuteIntArray(randnumgen, order, 0, nconss);
 
    /* Loop through all batches of constraints in random order */
-   stopiter = FALSE;
    i = 0;
+   iteration = 0;
+   deleted = FALSE;
+   stopiter = FALSE;
    while( i < nconss )
    {
+      /* update batchsize */
+      SCIP_CALL( updateBatchsize(scip, initbatchsize, maxbatchsize, iteration, !deleted, batchingfactor, batchingoffset, batchupdateinterval, &batchsize) );
+
       k = 0;
+      batchindex = i;
       while( i < nconss && k < batchsize )
       {
+         assert( conss[order[i]] != NULL );
          if( SCIPconsGetNUses(conss[order[i]]) == 1 )
          {
             idxs[k] = order[i];
@@ -493,18 +586,28 @@ SCIP_RETCODE deletionFilterBatch(
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) || stopiter )
          break;
 
+      /* reset i to beginning of current batch if batch has not been deleted and k was large */
+      if( !deleted && k > initbatchsize )
+         i = batchindex;
+
+      ++iteration;
+
       assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
    }
 
    SCIPfreeBlockMemoryArray(scip, &order, nconss);
    SCIPfreeBlockMemoryArray(scip, &conss, nconss);
+   SCIPfreeBlockMemoryArray(scip, &idxs, maxbatchsize);
 
    if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) || stopiter )
-      goto TERMINATE;
+      return SCIP_OKAY;
 
    /* Repeat the above procedure but for bounds instead of constraints */
    if( removebounds )
    {
+      /* allocate indices array */
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &idxs, maxbatchsize) );
+
       nvars = SCIPgetNOrigVars(scip);
       origvars = SCIPgetOrigVars(scip);
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, origvars, nvars) );
@@ -515,9 +618,15 @@ SCIP_RETCODE deletionFilterBatch(
       SCIPrandomPermuteIntArray(randnumgen, order, 0, nvars);
 
       i = 0;
+      iteration = 0;
+      deleted = FALSE;
       while( i < nvars )
       {
+         /* update batchsize */
+         SCIP_CALL( updateBatchsize(scip, initbatchsize, maxbatchsize, iteration, !deleted, batchingfactor, batchingoffset, batchupdateinterval, &batchsize) );
+
          k = 0;
+         batchindex = i;
          /* Do not delete bounds of binary variables or bother with calculations of free variables */
          while( i < nvars && k < batchsize )
          {
@@ -547,16 +656,19 @@ SCIP_RETCODE deletionFilterBatch(
             break;
          if( !silent && deleted )
             SCIPiisfinderInfoMessage(iis, FALSE);
+
+         /* reset i to beginning of current batch if batch has not been deleted and k was large */
+         if( !deleted && k > initbatchsize )
+            i = batchindex;
+
+         ++iteration;
       }
 
       SCIPfreeBlockMemoryArray(scip, &order, nvars);
       SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+      SCIPfreeBlockMemoryArray(scip, &idxs, maxbatchsize);
    }
 
-   goto TERMINATE;
-
-TERMINATE:
-   SCIPfreeBlockMemoryArray(scip, &idxs, batchsize);
    return SCIP_OKAY;
 }
 
@@ -567,10 +679,16 @@ SCIP_RETCODE additionFilterBatch(
    SCIP_Real             timelim,            /**< The global time limit on the IIS finder call */
    SCIP_Longint          nodelim,            /**< The global node limit on the IIS finder call */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
+
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
    SCIP_Longint          nodelimperiter,     /**< maximum number of nodes per individual solve call */
    SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
-   int                   batchsize           /**< the number of constraints to delete or add per iteration */
+
+   int                   initbatchsize,      /**< the initial batchsize for the first iteration */
+   int                   maxbatchsize,       /**< the maximum batchsize per iteration */
+   SCIP_Real             batchingfactor,     /**< the factor with which the batchsize is multiplied in every update */
+   SCIP_Real             batchingoffset,     /**< the offset which is added to the multiplied batchsize in every update */
+   int                   batchupdateinterval /**< the number of iterations to run with a constant batchsize before updating (1: always update) */
    )
 {
    SCIP* scip;
@@ -586,17 +704,28 @@ SCIP_RETCODE additionFilterBatch(
    SCIP_RETCODE retcode;
    SCIP_RESULT result;
    int nconss;
+   int batchsize;
+   int iteration;
    int i;
    int j;
    int k;
 
+   /* get current subscip */
    scip = SCIPiisGetSubscip(iis);
    assert( scip != NULL );
    assert( SCIPiisIsSubscipInfeasible(iis) );
+
+   /* get random generator */
    randnumgen = SCIPiisGetRandnumgen(iis);
    assert( randnumgen != NULL );
 
-   /* Get constraint information */
+   /* get batch size */
+   assert( initbatchsize >= 1 );
+   assert( maxbatchsize >= 1 );
+   initbatchsize = MIN(initbatchsize, maxbatchsize);
+   batchsize = initbatchsize;
+
+   /* get constraint information */
    nconss = SCIPgetNOrigConss(scip);
    origconss = SCIPgetOrigConss(scip);
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, origconss, nconss) );
@@ -630,9 +759,10 @@ SCIP_RETCODE additionFilterBatch(
 
    /* Continue to add constraints until an infeasible status is reached */
    i = 0;
+   iteration = 0;
    feasible = TRUE;
    stopiter = FALSE;
-   while( feasible )
+   while( i < nconss )
    {
       /* Add the next batch of constraints */
       k = 0;
@@ -654,13 +784,13 @@ SCIP_RETCODE additionFilterBatch(
       retcode = additionSubproblem(iis, timelim, timelimperiter, nodelim, nodelimperiter, &feasible, &stopiter);
       if( !silent )
          SCIPiisfinderInfoMessage(iis, FALSE);
-      if( stopiter || timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
+      if( !feasible || stopiter || timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
       {
          SCIP_CALL( SCIPfreeTransform(scip) );
          break;
       }
 
-      if( retcode == SCIP_OKAY )
+      if( dynamicreordering && retcode == SCIP_OKAY )
       {
          /* free transform and copy solution if there is one */
          copysol = NULL;
@@ -674,12 +804,14 @@ SCIP_RETCODE additionFilterBatch(
          assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
 
          /* Add any other constraints that are also feasible for the current solution */
-         if( feasible && (copysol != NULL) && dynamicreordering )
+         if( copysol != NULL )
          {
             k = 0;
             for( j = i; j < nconss; ++j )
             {
-               if( !inIS[order[j]] )
+               /* Don't dynamically add indicator constraints */
+               if( !inIS[order[j]]
+                  && strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[order[j]])), "indicator") != 0 )
                {
                   SCIP_CALL( SCIPcheckCons(scip, conss[order[j]], copysol, FALSE, FALSE, FALSE, &result) );
                   if( result == SCIP_FEASIBLE )
@@ -693,7 +825,7 @@ SCIP_RETCODE additionFilterBatch(
             }
             if( k > 0 )
             {
-               SCIPdebugMsg(scip,  "Added %d many constraints dynamically.\n", k);
+               SCIPdebugMsg(scip, "Added %d constraints by reordering dynamically.\n", k);
                if( ! silent )
                   SCIPiisfinderInfoMessage(iis, FALSE);
             }
@@ -705,13 +837,20 @@ SCIP_RETCODE additionFilterBatch(
          SCIP_CALL( SCIPfreeTransform(scip) );
          assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
       }
+
+      ++iteration;
+
+      /* update batchsize */
+      SCIP_CALL( updateBatchsize(scip, initbatchsize, maxbatchsize, iteration, FALSE, batchingfactor, batchingoffset, batchupdateinterval, &batchsize) );
    }
 
    /* Release any cons not in the IS */
    for( i = 0; i < nconss; ++i )
    {
       if( !inIS[order[i]] )
+      {
          SCIP_CALL( SCIPreleaseCons(scip, &conss[order[i]]) );
+      }
    }
 
    SCIPfreeBlockMemoryArray(scip, &order, nconss);
@@ -749,7 +888,8 @@ SCIP_RETCODE execIISfinderGreedy(
    SCIP_Bool alldeletionssolved = TRUE;
    int nvars;
    int nconss;
-   int batchsize;
+   int maxbatchsize;
+   int initbatchsize;
 
    assert( scip != NULL );
    assert( iisfinderdata != NULL );
@@ -760,14 +900,17 @@ SCIP_RETCODE execIISfinderGreedy(
    SCIP_CALL( SCIPgetBoolParam(scip, "iis/removebounds", &removebounds) );
    SCIP_CALL( SCIPgetBoolParam(scip, "iis/silent", &silent) );
 
-   *result = SCIP_DIDNOTFIND;
-
-   nconss = SCIPgetNOrigConss(scip);
    nvars = SCIPgetNOrigVars(scip);
-   batchsize = MAX(nconss, nvars);
-   batchsize = (int)SCIPceil(scip, iisfinderdata->maxrelbatchsize * batchsize);
-   batchsize = MIN(batchsize, iisfinderdata->maxbatchsize);
-   batchsize = MAX(batchsize, 1);
+   nconss = SCIPgetNOrigConss(scip);
+   maxbatchsize = MAX(nvars, nconss);
+   initbatchsize = iisfinderdata->initrelbatchsize > 0.0
+         ? (int)ceil(iisfinderdata->initrelbatchsize * maxbatchsize) : MIN(iisfinderdata->initbatchsize, maxbatchsize);
+   maxbatchsize = (int)ceil(iisfinderdata->maxrelbatchsize * maxbatchsize);
+   maxbatchsize = MIN(iisfinderdata->maxbatchsize, maxbatchsize);
+   initbatchsize = MAX(initbatchsize, 1);
+   maxbatchsize = MAX(maxbatchsize, 1);
+
+   *result = SCIP_SUCCESS;
 
    if( iisfinderdata->additive )
    {
@@ -775,13 +918,12 @@ SCIP_RETCODE execIISfinderGreedy(
       {
          SCIPdebugMsg(scip, "----- STARTING GREEDY ADDITION ALGORITHM -----\n");
       }
-      SCIP_CALL( additionFilterBatch(iis, timelim, nodelim, silent, iisfinderdata->timelimperiter, iisfinderdata->nodelimperiter, iisfinderdata->dynamicreordering, batchsize) );
+      SCIP_CALL( additionFilterBatch(iis, timelim, nodelim, silent, iisfinderdata->timelimperiter,
+            iisfinderdata->nodelimperiter, iisfinderdata->dynamicreordering, initbatchsize, maxbatchsize,
+            iisfinderdata->batchingfactor, iisfinderdata->batchingoffset, iisfinderdata->batchupdateinterval) );
       SCIPiisSetSubscipIrreducible(iis, FALSE);
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
-      {
-         *result = SCIP_SUCCESS;
          return SCIP_OKAY;
-      }
    }
    else
    {
@@ -789,13 +931,13 @@ SCIP_RETCODE execIISfinderGreedy(
       {
          SCIPdebugMsg(scip, "----- STARTING GREEDY DELETION ALGORITHM -----\n");
       }
-      SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, iisfinderdata->timelimperiter, iisfinderdata->nodelimperiter, removebounds, iisfinderdata->conservative, batchsize, &alldeletionssolved) );
+      SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, removebounds, silent, iisfinderdata->timelimperiter,
+            iisfinderdata->nodelimperiter, iisfinderdata->conservative, initbatchsize, maxbatchsize,
+            iisfinderdata->batchingfactor, iisfinderdata->batchingoffset, iisfinderdata->batchupdateinterval,
+            &alldeletionssolved) );
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
-      {
-         *result = SCIP_SUCCESS;
          return SCIP_OKAY;
-      }
-      if( alldeletionssolved && batchsize == 1 )
+      if( alldeletionssolved && initbatchsize == 1 )
          SCIPiisSetSubscipIrreducible(iis, TRUE);
    }
 
@@ -805,14 +947,14 @@ SCIP_RETCODE execIISfinderGreedy(
       {
          SCIPdebugMsg(scip, "----- STARTING GREEDY DELETION ALGORITHM FOLLOWING COMPLETED ADDITION ALGORITHM -----\n");
       }
-      SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, iisfinderdata->timelimperiter, iisfinderdata->nodelimperiter, removebounds, iisfinderdata->conservative, batchsize, &alldeletionssolved) );
-      if( alldeletionssolved && batchsize == 1 )
-         SCIPiisSetSubscipIrreducible(iis, TRUE);
+      SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, removebounds, silent, iisfinderdata->timelimperiter,
+            iisfinderdata->nodelimperiter, iisfinderdata->conservative, initbatchsize, maxbatchsize,
+            iisfinderdata->batchingfactor, iisfinderdata->batchingoffset, iisfinderdata->batchupdateinterval,
+            &alldeletionssolved) );
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
-      {
-         *result = SCIP_SUCCESS;
          return SCIP_OKAY;
-      }
+      if( alldeletionssolved && initbatchsize == 1 )
+         SCIPiisSetSubscipIrreducible(iis, TRUE);
    }
 
    return SCIP_OKAY;
@@ -901,16 +1043,6 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
    SCIP_CALL( SCIPsetIISfinderFree(scip, iisfinder, iisfinderFreeGreedy) );
 
    /* add greedy IIS finder parameters */
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "iis/" IISFINDER_NAME "/maxbatchsize",
-         "maximum batch size of constraints (or bounds) that are removed or added in one iteration",
-         &iisfinderdata->maxbatchsize, FALSE, DEFAULT_MAXBATCHSIZE, 1, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "iis/" IISFINDER_NAME "/maxrelbatchsize",
-         "maximum number of constraints (or bounds) relative to the original problem that are added / removed in one iteration",
-         &iisfinderdata->maxrelbatchsize, FALSE, DEFAULT_MAXRELBATCHSIZE, 0.0, 1.0, NULL, NULL) );
-
    SCIP_CALL( SCIPaddRealParam(scip,
          "iis/" IISFINDER_NAME "/timelimperiter",
          "time limit of optimization process for each individual subproblem",
@@ -928,24 +1060,60 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "iis/" IISFINDER_NAME "/conservative",
-         "should a hit limit (e.g. node  time) solve be counted as feasible when deleting constraints",
+         "should an unsolved problem (by e.g. user interrupt, node limit, time limit) be considered feasible when deleting constraints",
          &iisfinderdata->conservative, TRUE, DEFAULT_CONSERVATIVE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "iis/" IISFINDER_NAME "/dynamicreordering",
-         "should satisfied constraints outside the batch of an intermediate solve be added during the additive method",
-         &iisfinderdata->dynamicreordering, TRUE, DEFAULT_DYNAMICREORDERING, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "iis/" IISFINDER_NAME "/delafteradd",
          "should the deletion routine be performed after the addition routine (in the case of additive)",
          &iisfinderdata->delafteradd, TRUE, DEFAULT_DELAFTERADD, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "iis/" IISFINDER_NAME "/dynamicreordering",
+         "should satisfied constraints outside the batch of an intermediate solve be added during the additive method",
+         &iisfinderdata->dynamicreordering, TRUE, DEFAULT_DYNAMICREORDERING, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "iis/" IISFINDER_NAME "/initbatchsize",
+         "the initial batchsize for the first iteration, ignored if initrelbatchsize is positive",
+         &iisfinderdata->initbatchsize, FALSE, DEFAULT_INITBATCHSIZE, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "iis/" IISFINDER_NAME "/initrelbatchsize",
+         "the initial batchsize relative to the original problem for the first iteration (0.0: use initbatchsize)",
+         &iisfinderdata->initrelbatchsize, FALSE, DEFAULT_INITRELBATCHSIZE, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "iis/" IISFINDER_NAME "/maxbatchsize",
+         "the maximum batchsize per iteration",
+         &iisfinderdata->maxbatchsize, TRUE, DEFAULT_MAXBATCHSIZE, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "iis/" IISFINDER_NAME "/maxrelbatchsize",
+         "the maximum batchsize relative to the original problem per iteration",
+         &iisfinderdata->maxrelbatchsize, TRUE, DEFAULT_MAXRELBATCHSIZE, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "iis/" IISFINDER_NAME "/batchingfactor",
+         "the factor with which the batchsize is multiplied in every update",
+         &iisfinderdata->batchingfactor, TRUE, DEFAULT_BATCHINGFACTOR, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "iis/" IISFINDER_NAME "/batchingoffset",
+         "the offset which is added to the multiplied batchsize in every update",
+         &iisfinderdata->batchingoffset, TRUE, DEFAULT_BATCHINGOFFSET, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "iis/" IISFINDER_NAME "/batchupdateinterval",
+         "the number of iterations to run with a constant batchsize before updating (1: always update)",
+         &iisfinderdata->batchupdateinterval, TRUE, DEFAULT_BATCHUPDATEINTERVAL, 1, INT_MAX, NULL, NULL) );
+
+
    return SCIP_OKAY;
 }
 
 /** perform the greedy deletion algorithm with singleton batches to obtain an irreducible infeasible subsystem (IIS) */
-SCIP_RETCODE SCIPiisGreedyMinimize(
+SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
    SCIP_IIS*             iis                 /**< IIS data structure */
    )
 {
@@ -955,6 +1123,9 @@ SCIP_RETCODE SCIPiisGreedyMinimize(
    SCIP_Bool removebounds;
    SCIP_Bool silent;
    SCIP_Bool alldeletionssolved = TRUE;
+   int nvars;
+   int nconss;
+   int maxbatchsize;
 
    assert( scip != NULL );
 
@@ -964,12 +1135,18 @@ SCIP_RETCODE SCIPiisGreedyMinimize(
       return SCIP_INVALIDDATA;
    }
 
+   nvars = SCIPgetNOrigVars(scip);
+   nconss = SCIPgetNOrigConss(scip);
+   maxbatchsize = MAX(nvars, nconss);
+
    SCIP_CALL( SCIPgetRealParam(scip, "iis/time", &timelim) );
    SCIP_CALL( SCIPgetLongintParam(scip, "iis/nodes", &nodelim) );
    SCIP_CALL( SCIPgetBoolParam(scip, "iis/removebounds", &removebounds) );
    SCIP_CALL( SCIPgetBoolParam(scip, "iis/silent", &silent) );
 
-   SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, DEFAULT_TIMELIMPERITER, DEFAULT_NODELIMPERITER, removebounds, TRUE, 1, &alldeletionssolved) );
+   SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, removebounds, silent,
+         DEFAULT_TIMELIMPERITER, DEFAULT_NODELIMPERITER, TRUE, 1, maxbatchsize,
+         DEFAULT_BATCHINGFACTOR, DEFAULT_BATCHINGOFFSET, DEFAULT_BATCHUPDATEINTERVAL, &alldeletionssolved) );
    if( alldeletionssolved && SCIPiisGetTime(iis) < timelim && ( nodelim == -1 || SCIPiisGetNNodes(iis) < nodelim ) )
       SCIPiisSetSubscipIrreducible(iis, TRUE);
 

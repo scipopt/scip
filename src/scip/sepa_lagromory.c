@@ -229,7 +229,8 @@
 #define MAKECONTINTEGRAL                             FALSE /**< convert continuous variable to integral variables in SCIPmakeRowIntegral()? */
 #define POSTPROCESS                                   TRUE /**< apply postprocessing after MIR calculation? - see SCIPcalcMIR() */
 #define BOUNDSWITCH                                 0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
-#define USEVBDS                                       TRUE /**< use variable bounds? - see SCIPcalcMIR() */
+#define VARTYPEUSEVBDS                                   2 /**< We allow variable bound substitution for variables with continuous vartype only.
+                                                            *   See SCIPcalcMIR() for more information. */
 #define FIXINTEGRALRHS                               FALSE /**< try to generate an integral rhs? - see SCIPcalcMIR() */
 #define MAXAGGRLEN(ncols)               (0.1*(ncols)+1000) /**< maximal length of base inequality */
 
@@ -2154,7 +2155,7 @@ SCIP_RETCODE generateGMICuts(
        */
 
       /* try to create GMI cut out of the aggregation row */
-      SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL,
+      SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, VARTYPEUSEVBDS, allowlocal, FIXINTEGRALRHS, NULL,
             NULL, minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank,
             &cutislocal, &success) );
 

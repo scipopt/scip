@@ -27,6 +27,7 @@
  * @brief  greedy deletion and addition filter heuristic to compute IISs
  * @author Marc Pfetsch
  * @author Mark Turner
+ * @author Paul Meinhold
  *
  * An irreducible infeasible subsystem (IIS) is a subset of the constraints and bounds from a problem
  * that is infeasible.
@@ -41,9 +42,9 @@
  * O. Guieu and J. Chinneck, Analyzing infeasible mixed-integer and integer linear programs,@p
  * INFORMS J. Comput. 11, no. 1 (1999), pp. 63–77.
  *
- * If the appropriate parameters are set then we can guarantee that the result is minimal, i.e.,
+ * If the appropriate parameters are set then we can guarantee that the result is irreducible, i.e.,
  * an irreducible infeasible subsystem (IIS). Otherwise we may only obtain an infeasible subsystem (IS).
- * For no settings can we guarantee the smallest possible infeasible subsystem.
+ * This algorithm cannot guarantee to find the smallest possible IIS.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -73,7 +74,7 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
 
 /** perform the greedy deletion algorithm with singleton batches to obtain an irreducible infeasible subsystem (IIS) */
 SCIP_EXPORT
-SCIP_RETCODE SCIPiisGreedyMinimize(
+SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
    SCIP_IIS*             iis                 /**< IIS data structure */
    );
 

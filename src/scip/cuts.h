@@ -348,7 +348,10 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             postprocess,        /**< apply a post-processing step to the resulting cut? */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
-   SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   int                   vartypeusevbds,     /**< for all variable types with index smaller than this number, variable
+                                              *   type substitution is allowed. The indices are: 0: continuous,
+                                              *   1: continuous implint., 2: integer implint, 3: binary implint,
+                                              *   4: integer, 5: binary */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
    int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
@@ -393,7 +396,10 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             postprocess,        /**< apply a post-processing step to the resulting cut? */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
-   SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   int                   vartypeusevbds,     /**< for all variable types with index smaller than this number, variable
+                                              *   type substitution is allowed. The indices are: 0: continuous,
+                                              *   1: continuous implint., 2: integer implint, 3: binary implint,
+                                              *   4: integer, 5: binary */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    int                   maxtestdelta,       /**< maximum number of deltas to test */
    int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
@@ -499,7 +505,10 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             postprocess,        /**< apply a post-processing step to the resulting cut? */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
-   SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   int                   vartypeusevbds,     /**< for all variable types with index smaller than this number, variable
+                                              *   type substitution is allowed. The indices are: 0: continuous,
+                                              *   1: continuous implint., 2: integer implint, 3: binary implint,
+                                              *   4: integer, 5: binary */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */

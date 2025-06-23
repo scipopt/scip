@@ -1651,6 +1651,10 @@ SCIP_RETCODE SCIPexprintFreeData(
    SCIPfreeBlockMemoryArrayNull(scip, &(*exprintdata)->hesrowidxs, (*exprintdata)->hesnnz);
    SCIPfreeBlockMemoryArrayNull(scip, &(*exprintdata)->hescolidxs, (*exprintdata)->hesnnz);
 
+   for( vector<atomic_userexpr*>::iterator it((*exprintdata)->userexprs.begin()); it != (*exprintdata)->userexprs.end(); ++it )
+      delete *it;
+   (*exprintdata)->userexprs.clear();
+
    delete *exprintdata;
    *exprintdata = NULL;
 

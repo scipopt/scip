@@ -349,7 +349,7 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
    const char*           paramname           /**< name of the parameter */
    );
 
-/** sets parameters to 
+/** sets parameters to
  *
  *  - \ref SCIP_PARAMEMPHASIS_DEFAULT to use default values (see also SCIPparamsetSetToDefault())
  *  - \ref SCIP_PARAMEMPHASIS_COUNTER to get feasible and "fast" counting process
@@ -439,6 +439,16 @@ SCIP_RETCODE SCIPparamsetCopyParams(
    SCIP_PARAMSET*        targetparamset,     /**< target parameter set */
    SCIP_SET*             set,                /**< global SCIP settings of target SCIP */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler of target SCIP */
+   );
+
+/** checks whether the value pointers attached to each parameter are unique
+ *
+ *  When creating a parameter a value pointer can be attached. This function checks whether these pointers are
+ *  unique. Duplicate pointers indicate an error.
+ */
+SCIP_RETCODE SCIPparamsetCheckValuePtrUnique(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** checks whether value of SCIP_Bool parameter is valid */

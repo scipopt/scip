@@ -66,6 +66,7 @@
 
 #define PRESOL_NAME             "implint"
 #define PRESOL_DESC             "detects implicit integer variables"
+
 /* We want to run as late as possible, but before symmetry detection.
  * The main reason for this is that symmetry detection may add linear constraints that
  * impede the detection of implied integrality, but do not break implied integrality itself.

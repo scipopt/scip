@@ -4426,6 +4426,99 @@ SCIP_RETCODE SCIPparamsetCopyParams(
    return SCIP_OKAY;
 }
 
+/** default comparer for integers */
+static
+SCIP_DECL_SORTPTRCOMP(SCIPsortCompPtr)
+{
+   if( elem1 < elem2 )
+      return -1;
+
+   if( elem2 < elem1 )
+      return 1;
+
+   return 0;
+}
+
+/** checks whether the value pointers attached to each parameter are unique
+ *
+ *  When creating a parameter a value pointer can be attached. This function checks whether these pointers are
+ *  unique. Duplicate pointers indicate an error.
+ */
+SCIP_RETCODE SCIPparamsetCheckValuePtrUnique(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   void** valueptr;
+   int* paramidx;
+   int nparam = 0;
+   int i;
+
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &valueptr, paramset->nparams) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &paramidx, paramset->nparams) );
+
+   for( i = 0; i < paramset->nparams; ++i)
+   {
+      SCIP_PARAM* param;
+
+      paramidx[nparam] = i;
+      param = paramset->params[i];
+      switch( param->paramtype )
+      {
+      case SCIP_PARAMTYPE_BOOL:
+         if( param->data.boolparam.valueptr != NULL )
+            valueptr[nparam++] = (void*) param->data.boolparam.valueptr;
+         break;
+      case SCIP_PARAMTYPE_INT:
+         if( param->data.intparam.valueptr != NULL )
+            valueptr[nparam++] = (void*) param->data.intparam.valueptr;
+         break;
+      case SCIP_PARAMTYPE_LONGINT:
+         if( param->data.longintparam.valueptr != NULL )
+            valueptr[nparam++] = (void*) param->data.longintparam.valueptr;
+         break;
+      case SCIP_PARAMTYPE_REAL:
+         if( param->data.realparam.valueptr != NULL )
+            valueptr[nparam++] = (void*) param->data.realparam.valueptr;
+         break;
+      case SCIP_PARAMTYPE_CHAR:
+         if( param->data.charparam.valueptr != NULL )
+            valueptr[nparam++] = (void*) param->data.charparam.valueptr;
+         break;
+      case SCIP_PARAMTYPE_STRING:
+         if( param->data.stringparam.valueptr != NULL )
+            valueptr[nparam++] = (void*) param->data.stringparam.valueptr;
+         break;
+      default:
+         SCIPerrorMessage("Wrong parameter type %d\n", param->paramtype);
+         SCIPABORT();
+      }
+   }
+   SCIPsortPtrInt(valueptr, paramidx, SCIPsortCompPtr, nparam);
+
+   /* check whether some consecutive pointers are the same */
+   for( i = 0; i < nparam - 1; ++i)
+   {
+      SCIP_PARAM* param1;
+      SCIP_PARAM* param2;
+
+      assert( 0 <= paramidx[i] && paramidx[i] < paramset->nparams );
+      assert( 0 <= paramidx[i+1] && paramidx[i+1] < paramset->nparams );
+      param1 = paramset->params[paramidx[i]];
+      param2 = paramset->params[paramidx[i+1]];
+      if( valueptr[i] == valueptr[i+1] )
+      {
+         SCIPerrorMessage("Value pointer for parameter <%s> is the same as for parameter <%s>.\n", param1->name, param2->name);
+         SCIPABORT();
+      }
+   }
+
+   SCIPsetFreeBufferArray(set, &paramidx);
+   SCIPsetFreeBufferArray(set, &valueptr);
+
+   return SCIP_OKAY;
+}
+
 /** sets fixing status of given parameter */
 void SCIPparamSetFixed(
    SCIP_PARAM*           param,              /**< parameter */
