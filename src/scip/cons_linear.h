@@ -354,7 +354,7 @@ SCIP_ROW* SCIPgetRowLinear(
 
 /** creates and returns the row of the given linear constraint */
 SCIP_EXPORT
-SCIP_ROW* SCIPcreateRowLinear(
+SCIP_RETCODE SCIPcreateRowLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );

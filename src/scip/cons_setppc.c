@@ -9730,7 +9730,7 @@ SCIP_ROW* SCIPgetRowSetppc(
 }
 
 /** creates and returns the row of the given set partitioning / packing / covering constraint */
-SCIP_ROW* SCIPcreateRowSetppc(
+SCIP_RETCODE SCIPcreateRowSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
@@ -9746,7 +9746,7 @@ SCIP_ROW* SCIPcreateRowSetppc(
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
       SCIPABORT();
-      return NULL;  /*lint !e527*/
+      return SCIP_ERROR; /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -9769,15 +9769,15 @@ SCIP_ROW* SCIPcreateRowSetppc(
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
-      return NULL;
+      return SCIP_ERROR;
    }
 
-   SCIP_CALL_ABORT( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), lhs, rhs,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), lhs, rhs,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
-   SCIP_CALL_ABORT( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
+   SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
 
-   return consdata->row;
+   return SCIP_OKAY;
 }
 
 /** returns current number of variables fixed to one in the constraint  */

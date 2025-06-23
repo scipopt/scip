@@ -303,7 +303,7 @@ SCIP_ROW* SCIPgetRowSetppc(
 
 /** creates and returns the row of the given set partitioning / packing / covering constraint */
 SCIP_EXPORT
-SCIP_ROW* SCIPcreateRowSetppc(
+SCIP_RETCODE SCIPcreateRowSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );

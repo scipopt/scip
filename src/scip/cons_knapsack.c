@@ -13958,7 +13958,7 @@ SCIP_ROW* SCIPgetRowKnapsack(
 }
 
 /** creates and returns the row of the given knapsack constraint */
-SCIP_ROW* SCIPcreateRowKnapsack(
+SCIP_RETCODE SCIPcreateRowKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
@@ -13972,7 +13972,7 @@ SCIP_ROW* SCIPcreateRowKnapsack(
    {
       SCIPerrorMessage("constraint is not a knapsack\n");
       SCIPABORT();
-      return NULL;  /*lint !e527*/
+      return SCIP_ERROR; /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
@@ -13980,18 +13980,18 @@ SCIP_ROW* SCIPcreateRowKnapsack(
    assert(consdata->row == NULL);
 
 
-   SCIP_CALL_ABORT( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons),
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons),
          -SCIPinfinity(scip), (SCIP_Real)consdata->capacity,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
-   SCIP_CALL_ABORT( SCIPcacheRowExtensions(scip, consdata->row) );
+   SCIP_CALL( SCIPcacheRowExtensions(scip, consdata->row) );
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL_ABORT( SCIPaddVarToRow(scip, consdata->row, consdata->vars[i], (SCIP_Real)consdata->weights[i]) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, consdata->vars[i], (SCIP_Real)consdata->weights[i]) );
    }
-   SCIP_CALL_ABORT( SCIPflushRowExtensions(scip, consdata->row) );
+   SCIP_CALL( SCIPflushRowExtensions(scip, consdata->row) );
 
-   return consdata->row;
+   return SCIP_OKAY;
 }
 
 /** cleans up (multi-)aggregations and fixings from knapsack constraints */

@@ -2439,7 +2439,8 @@ SCIP_RETCODE getReasonRow(
    if( isResolvableBdchg(currbdchginfo) && SCIPbdchginfoGetChgtype(currbdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER )
    {
       SCIP_CONS* reasoncon;
-      SCIP_ROW* reasonlprow;
+      SCIP_ROW* reasonlprow = NULL;
+
       reasoncon = SCIPbdchginfoGetInferCons(currbdchginfo);
 
       if( !SCIPconsIsGlobal(reasoncon) )
@@ -2449,7 +2450,7 @@ SCIP_RETCODE getReasonRow(
       }
 
       /* get the corresponding reason row */
-      reasonlprow = SCIPconsCreateRow(set->scip, reasoncon);
+      SCIP_CALL( SCIPconsCreateRow(set->scip, reasoncon, &reasonlprow) );
 
       if( reasonlprow == NULL )
       {

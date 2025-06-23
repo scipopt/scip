@@ -747,9 +747,9 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
    /* call resolution conflict analysis */
    if( scip->set->conf_usegenres )
    {
-      SCIP_ROW* conflictrow;
+      SCIP_ROW* conflictrow = NULL;
 
-      conflictrow = SCIPconsCreateRow(scip, cons);
+      SCIP_CALL( SCIPconsCreateRow(scip, cons, &conflictrow) );
       SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
             scip->eventfilter, scip->cliquetable, conflictrow, validdepth, &successres) );

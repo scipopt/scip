@@ -5951,7 +5951,7 @@ SCIP_ROW* SCIPgetRowVarbound(
 }
 
 /** creates and returns the row of the given varbound constraint */
-SCIP_ROW* SCIPcreateRowVarbound(
+SCIP_RETCODE SCIPcreateRowVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
@@ -5964,19 +5964,19 @@ SCIP_ROW* SCIPcreateRowVarbound(
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
-      return NULL;  /*lint !e527*/
+      return SCIP_ERROR; /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-   SCIP_CALL_ABORT( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-   SCIP_CALL_ABORT( SCIPaddVarToRow(scip, consdata->row, consdata->var, 1.0) );
-   SCIP_CALL_ABORT( SCIPaddVarToRow(scip, consdata->row, consdata->vbdvar, consdata->vbdcoef) );
+   SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, consdata->var, 1.0) );
+   SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, consdata->vbdvar, consdata->vbdcoef) );
 
-   return consdata->row;
+   return SCIP_OKAY;
 }
 
 /** cleans up (multi-)aggregations and fixings from varbound constraints */

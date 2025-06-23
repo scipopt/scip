@@ -155,9 +155,10 @@ SCIP_ROW* SCIPconsGetRow(
 
 /** creates and returns the row of an arbitrary SCIP constraint that can be represented as a single linear constraint */
 SCIP_EXPORT
-SCIP_ROW* SCIPconsCreateRow(
+SCIP_RETCODE SCIPconsCreateRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint for which row is queried */
+   SCIP_CONS*            cons,               /**< constraint for which row is queried */
+   SCIP_ROW**            row                 /**< pointer to store the created row */
    );
 
 /** adds the given variable to the input constraint.

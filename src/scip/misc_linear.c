@@ -596,12 +596,12 @@ SCIP_ROW* SCIPconsGetRow(
 }
 
 /** creates and returns the row of an arbitrary SCIP constraint that can be represented as a single linear constraint */
-SCIP_ROW* SCIPconsCreateRow(
+SCIP_RETCODE SCIPconsCreateRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint for which row is queried */
+   SCIP_CONS*            cons,               /**< constraint for which row is queried */
+   SCIP_ROW**            row                 /**< pointer to store the created row */
    )
 {
-   SCIP_ROW* row;
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
 
@@ -614,51 +614,57 @@ SCIP_ROW* SCIPconsCreateRow(
 
    if ( !(SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
    {
-      return SCIPconsGetRow(scip, cons);
+      *row = SCIPconsGetRow(scip, cons);
+      return SCIP_OKAY;
    }
 
    if( strcmp(conshdlrname, "linear") == 0 )
    {
-      row = SCIPgetRowLinear(scip, cons);
-      if (row != NULL)
-         return row;
-      else
-         return SCIPcreateRowLinear(scip, cons);
+      *row = SCIPgetRowLinear(scip, cons);
+      if( *row == NULL )
+      {
+         SCIP_CALL( SCIPcreateRowLinear(scip, cons) );
+         *row = SCIPgetRowLinear(scip, cons);
+      }
    }
    else if( strcmp(conshdlrname, "setppc") == 0 )
    {
-      row = SCIPgetRowSetppc(scip, cons);
-      if (row != NULL)
-         return row;
-      else
-         return SCIPcreateRowSetppc(scip, cons);
+      *row = SCIPgetRowSetppc(scip, cons);
+      if( *row == NULL )
+      {
+         SCIP_CALL( SCIPcreateRowSetppc(scip, cons) );
+         *row = SCIPgetRowSetppc(scip, cons);
+      }
    }
    else if( strcmp(conshdlrname, "logicor") == 0 )
    {
-      row = SCIPgetRowLogicor(scip, cons);
-      if (row != NULL)
-         return row;
-      else
-         return SCIPcreateRowLogicor(scip, cons);
+      *row = SCIPgetRowLogicor(scip, cons);
+      if( *row == NULL )
+      {
+         SCIP_CALL( SCIPcreateRowLogicor(scip, cons) );
+         *row = SCIPgetRowLogicor(scip, cons);
+      }
    }
    else if( strcmp(conshdlrname, "knapsack") == 0 )
    {
-      row = SCIPgetRowKnapsack(scip, cons);
-      if (row != NULL)
-         return row;
-      else
-         return SCIPcreateRowKnapsack(scip, cons);
+      *row = SCIPgetRowKnapsack(scip, cons);
+      if( *row == NULL )
+      {
+         SCIP_CALL( SCIPcreateRowKnapsack(scip, cons) );
+         *row = SCIPgetRowKnapsack(scip, cons);
+      }
    }
    else if( strcmp(conshdlrname, "varbound") == 0 )
    {
-      row = SCIPgetRowVarbound(scip, cons);
-      if (row != NULL)
-         return row;
-      else
-         return SCIPcreateRowVarbound(scip, cons);
+      *row = SCIPgetRowVarbound(scip, cons);
+      if( *row == NULL )
+      {
+         SCIP_CALL( SCIPcreateRowVarbound(scip, cons) );
+         *row = SCIPgetRowVarbound(scip, cons);
+      }
    }
 
-   return NULL;
+   return SCIP_OKAY;
 }
 
 /** adds the given variable to the input constraint.
