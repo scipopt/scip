@@ -9152,7 +9152,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
             SCIP_Bool* cliquevals;
             SCIP_VAR* othervar;
             int nvarclique;
-            int varidx;
+            int probidx;
             int j;
 
             assert( varcliques[l] != NULL );
@@ -9169,10 +9169,10 @@ SCIP_RETCODE calcCliquePartitionGreedy(
                if ( ! SCIPvarIsActive(othervar) || othervar == var )
                   continue;
 
-               varidx = SCIPvarGetProbindex(othervar);
-               assert( 0 <= varidx && varidx < ntotalvars );
+               probidx = SCIPvarGetProbindex(othervar);
+               assert( 0 <= probidx && probidx < ntotalvars );
 
-               j = idx[varidx];
+               j = idx[probidx];
                if( j >= 0 )
                {
                   assert( j < nvars );
