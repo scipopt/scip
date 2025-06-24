@@ -8931,6 +8931,7 @@ void addLargestCliquePart(
    assert( cliquepartition != NULL );
    assert( ncliqueparts != NULL );
    assert( ncliqueparts[p] == 0 );
+   assert( values[varidx] == value );
 
    /* put variable into part p */
    cliquepartition[varidx] = p;
@@ -8989,14 +8990,16 @@ void addLargestCliquePart(
                   {
                      assert( j < nvars );
                      ++size;
-                     if ( j < smallestidx )
+
+                     /* consider smallest index of variables larger than varidx */
+                     if ( j > varidx && j < smallestidx )
                         smallestidx = j;
                   }
                }
             }
 
             /* We sort according to size as first objective and then according to the smallest index appearing in the
-             * clique other than the given variable. This helps to pick nodes in cliques that are close together, which
+             * clique which is larger than the given variable. This hopefully helps to preserve the sorting of variables, which
              * often is helpful for the knapsack constraint handler. */
             if( size > maxsize || (size == maxsize && smallestidx < maxsmallestidx) )
             {
