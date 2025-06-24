@@ -834,6 +834,7 @@ SCIP_RETCODE ComplementedMirLhs(
    SCIP_Real oldlhs;
    SCIP_Real newlhs;
    SCIP_Real fraclhs;
+   SCIP_Real resvarcoef;
    int varidx;
 
    assert(set != NULL);
@@ -870,7 +871,8 @@ SCIP_RETCODE ComplementedMirLhs(
 
    /* first handle x_k and initialize lhs deltas */
    varidx = idxreason;
-   if( reasonrow->vals[varidx] < 0.0 )
+   resvarcoef = reasonrow->vals[varidx];
+   if( resvarcoef < 0.0 )
    {
      deltaoldlhs = -reasonrow->vals[varidx];
      deltanewlhs = -1.0;
@@ -909,6 +911,13 @@ SCIP_RETCODE ComplementedMirLhs(
    oldlhs = reasonrow->lhs;
    newlhs = (oldlhs + deltaoldlhs) / divisor;
    fraclhs = newlhs - SCIPsetFloor(set, newlhs);
+
+   if( fraclhs < MINFRAC || fraclhs > MAXFRAC )
+   {
+      reasonrow->vals[idxreason] = resvarcoef;
+      SCIPsetDebugMsgPrint(set, "skip MIR because the fractionality of the lhs %f is not in [%f,%f]\n", fraclhs, MINFRAC, MAXFRAC);
+      return SCIP_OKAY;
+   }
 
    /* set the new coefficients for the other variables and compute the lhs deltas */
    for( int i = 0; i < reasonrow->nnz; ++i )
@@ -2278,25 +2287,22 @@ SCIP_RETCODE reduceReason(
 
    coefinrow = fabs(rowtoreduce->vals[residx]);
 
-   if( set->conf_reduction == 'm' )
+   if( isBinaryConflictRow(set, vars, rowtoreduce) )
    {
-      if( isBinaryConflictRow(set, vars, rowtoreduce) )
-      {
-         SCIP_CALL( ComplementedMirLhs(set, vars, rowtoreduce, fixsides, currbdchgidx, residx, coefinrow) );
-         SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixsides) );
-         assert(SCIPsetIsLE(set, rowtoreduce->slack, EPS));
-      }
-      else if( set->conf_mbreduction )
-      {
-         SCIP_CALL( MirReduction(set, blkmem, vars, nvars, rowtoreduce, currbdchginfo, residx, coefinrow) );
-         SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixsides) );
-      }
-
-      /* check that the variable we are resolving is still in the reason row */
-      assert(!SCIPsetIsZero(set, rowtoreduce->vals[residx]));
-
-      SCIPdebug(printConflictRow(rowtoreduce, set, vars, REDUCED_REASON_ROWTYPE));
+      SCIP_CALL( ComplementedMirLhs(set, vars, rowtoreduce, fixsides, currbdchgidx, residx, coefinrow) );
+      SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixsides) );
+      assert(SCIPsetIsLE(set, rowtoreduce->slack, EPS));
    }
+   else
+   {
+      SCIP_CALL( MirReduction(set, blkmem, vars, nvars, rowtoreduce, currbdchginfo, residx, coefinrow) );
+      SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixsides) );
+   }
+
+   /* check that the variable we are resolving is still in the reason row */
+   assert(!SCIPsetIsZero(set, rowtoreduce->vals[residx]));
+
+   SCIPdebug(printConflictRow(rowtoreduce, set, vars, REDUCED_REASON_ROWTYPE));
 
    return SCIP_OKAY;
 }
