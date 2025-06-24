@@ -9103,9 +9103,9 @@ SCIP_RETCODE calcCliquePartitionGreedy(
 
       cliquepartition[i] = -1;
 
-      /* note that it could happen that variables appear multiple times in vars; we arbitrarily take the last */
+      /* note that it could happen that variables appear multiple times in vars; we arbitrarily take the first */
       probidx = SCIPvarGetProbindex(vars[i]);
-      if( probidx >= 0 )
+      if( probidx >= 0 && idx[probidx] < 0 )
       {
          assert( probidx <= ntotalvars );
          idx[probidx] = i;
