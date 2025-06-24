@@ -2288,16 +2288,11 @@ SCIP_RETCODE reduceReason(
    coefinrow = fabs(rowtoreduce->vals[residx]);
 
    if( isBinaryConflictRow(set, vars, rowtoreduce) )
-   {
       SCIP_CALL( ComplementedMirLhs(set, vars, rowtoreduce, fixsides, currbdchgidx, residx, coefinrow) );
-      SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixsides) );
-      assert(SCIPsetIsLE(set, rowtoreduce->slack, EPS));
-   }
    else
-   {
       SCIP_CALL( MirReduction(set, blkmem, vars, nvars, rowtoreduce, currbdchginfo, residx, coefinrow) );
-      SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixsides) );
-   }
+
+   SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixsides) );
 
    /* check that the variable we are resolving is still in the reason row */
    assert(!SCIPsetIsZero(set, rowtoreduce->vals[residx]));
