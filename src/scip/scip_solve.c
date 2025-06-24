@@ -1309,7 +1309,7 @@ SCIP_RETCODE presolve(
       {
          /* print presolving statistics */
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "(round %d, %-11s %d del vars, %d del conss, %d add conss, %d chg bounds, %d chg sides, %d chg coeffs, %d upgd conss, %d impls, %d clqs\n",
+            "(round %d, %-11s %d del vars, %d del conss, %d add conss, %d chg bounds, %d chg sides, %d chg coeffs, %d upgd conss, %d impls, %d clqs, %d implints\n",
             scip->stat->npresolrounds, ( presoltiming == SCIP_PRESOLTIMING_FAST ? "fast)" :
                (presoltiming == SCIP_PRESOLTIMING_MEDIUM ? "medium)" :
                   (presoltiming == SCIP_PRESOLTIMING_EXHAUSTIVE ?"exhaustive)" :
@@ -1318,7 +1318,8 @@ SCIP_RETCODE presolve(
             scip->stat->npresoldelconss, scip->stat->npresoladdconss,
             scip->stat->npresolchgbds, scip->stat->npresolchgsides,
             scip->stat->npresolchgcoefs, scip->stat->npresolupgdconss,
-            scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
+            scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable),
+            SCIPprobGetNImplVars(scip->transprob));
       }
 
       /* abort if time limit was reached or user interrupted */
@@ -1439,7 +1440,9 @@ SCIP_RETCODE presolve(
       scip->stat->npresolfixedvars + scip->stat->npresolaggrvars, scip->stat->npresoldelconss, scip->stat->npresoladdconss,
       scip->stat->npresolchgbds, scip->stat->npresoladdholes, scip->stat->npresolchgsides, scip->stat->npresolchgcoefs);
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-      " %d implications, %d cliques\n", scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
+      " %d implications, %d cliques, %d implied integral variables (%d bin, %d int, %d cont)\n",
+      scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable),
+      SCIPprobGetNImplVars(scip->transprob), scip->transprob->nbinimplvars, scip->transprob->nintimplvars, scip->transprob->ncontimplvars);
 
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->transprob);
@@ -2555,11 +2558,6 @@ SCIP_RETCODE SCIPpresolve(
             scip->transprob->nvars, scip->transprob->nbinvars + scip->transprob->nbinimplvars,
             scip->transprob->nintvars + scip->transprob->nintimplvars, scip->transprob->ncontvars +
             scip->transprob->ncontimplvars, scip->transprob->nconss);
-
-         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-            "presolved problem has %d implied integral variables (%d bin, %d int, %d cont)\n",
-            SCIPprobGetNImplVars(scip->transprob), scip->transprob->nbinimplvars, scip->transprob->nintimplvars,
-            scip->transprob->ncontimplvars);
 
          for( h = 0; h < scip->set->nconshdlrs; ++h )
          {
