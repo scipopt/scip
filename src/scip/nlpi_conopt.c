@@ -679,25 +679,54 @@ static int COI_CALLCONV LagrStr(
 {
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
    const int* hessoffsets;
-   const int* cols;
-   int row = 0;
+   const int* rows;
+   int col = 0;
 
    assert(problem != NULL);
 
-   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->scip, problem->oracle, &hessoffsets, &cols) );
+   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->scip, problem->oracle, &hessoffsets, &rows, TRUE) );
 
    for( int i = 0; i < NHESS; i++ )
    {
-      /* skip empty rows */
-      while( hessoffsets[row] == hessoffsets[row+1] )
-         row++;
+      /* check if it's time to switch to the next row (this will also skip empty rows) */
+      while( i == hessoffsets[col+1] )
+         col++;
 
-      if( i == hessoffsets[row+1] )
-         row++;
-
-      HSRW[i] = row;
-      HSCL[i] = cols[i];
+      HSRW[i] = rows[i];
+      HSCL[i] = col;
    }
+
+   return 0;
+}
+
+/** CONOPT callback to compute the Hessian of the Lagrangian
+ *
+ *  the Lagrangian is written as L = sum_{r in rows}U[r] * function(r)
+ */
+static int COI_CALLCONV LagrVal(
+   const double          X[],                /**< point in which the Hessian should be computed (provided by CONOPT) */
+   const double          U[],                /**< vector of weights on the individual constraints (provided by CONOPT) */
+   const int             HSRW[],             /**< row numbers of the lower triangular part of the Hessian (provided by CONOPT) */
+   const int             HSCL[],             /**< column numbers of the lower triangular part of the Hessian; elements must be
+                                                  sorted column-wise, and within each column, row-wise (provided by CONOPT) */
+   double                HSVL[],             /**< values of Hessian entries */
+   int*                  NODRV,              /**< can be set to 1 if the derivatives could not be computed */
+   int                   NUMVAR,             /**< number of variables as defined in coidef_numvar() (provided by CONOPT) */
+   int                   NUMCON,             /**< number of constraints as defined in coidef_numcon() (provided by CONOPT) */
+   int                   NHESS,              /**< number of nonzero elements in the Hessian (provided by CONOPT) */
+   void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
+   )
+{
+   SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+   SCIP_Real* hessvals;
+
+   assert(problem != NULL);
+
+   /* TODO some better handling for isnew */
+   SCIP_CALL( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, X, TRUE, TRUE, U[NUMCON-1], U, hessvals, TRUE) );
+
+   for( int i = 0; i < NHESS; i++ )
+      HSVL[i] = hessvals[i];
 
    return 0;
 }
@@ -785,7 +814,7 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_NumNlNz(problem->CntVect, nnlnz + nobjgradnls);
 
    /* hessian sparsity information */
-   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &hessoffsets, NULL) );
+   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &hessoffsets, NULL, TRUE) );
    COI_Error += COIDEF_NumHess(problem->CntVect, hessoffsets[nconss]);
 
    /* tell CONOPT to minimise the objective (the oracle always gives a minimisation problem) */
@@ -804,6 +833,7 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_FDEval(problem->CntVect, &FDEval);
    COI_Error += COIDEF_Option(problem->CntVect, &Option);
    COI_Error += COIDEF_2DLagrStr(problem->CntVect, &LagrStr);
+   COI_Error += COIDEF_2DLagrVal(problem->CntVect, &LagrVal);
 
    /* pass the problem pointer to CONOPT, so that it may be used in CONOPT callbacks */
    COI_Error += COIDEF_UsrMem(problem->CntVect, (void*)problem);

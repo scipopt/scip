@@ -408,8 +408,9 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int**           offset,             /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
-   const int**           col                 /**< pointer to store pointer that stores the indices of variables that appear in each row,
+   const int**           col,                /**< pointer to store pointer that stores the indices of variables that appear in each row,
                                               *   offsets[nconss] gives length of col, can be NULL */
+   SCIP_Bool             colwise             /**< tells whether a columnwise (TRUE) or rowwise representation is needed */
    );
 
 /** evaluates the Hessian matrix of the Lagrangian in a given point
@@ -429,7 +430,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP_Bool             isnewx_cons,        /**< has the point x changed since the last call to the constraint evaluation function? */
    SCIP_Real             objfactor,          /**< weight for objective function */
    const SCIP_Real*      lambdas,            /**< array with weights (Lagrangian multipliers) for the constraints */
-   SCIP_Real*            hessian             /**< pointer to store sparse hessian values */
+   SCIP_Real*            hessian,            /**< pointer to store sparse hessian values */
+   SCIP_Bool             colwise             /**< whether the entries should be first sorted column-wise (TRUE) or row-wise */
    );
 
 /** resets clock that measures evaluation time */

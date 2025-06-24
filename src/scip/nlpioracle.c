@@ -100,9 +100,10 @@ struct SCIP_NlpiOracle
    int                   nobjgradnz;         /**< number of nonzeroes in the objective gradient */
    int                   nobjgradnlnz;       /**< number of nonlinear nonzeroes in the objective gradient */
 
-   /* Hessian sparsity */
-   int*                  heslagoffsets;      /**< rowwise sparsity pattern of hessian matrix of Lagrangian: row offsets in heslagcol */
-   int*                  heslagcols;         /**< rowwise sparsity pattern of hessian matrix of Lagrangian: column indices; sorted for each row */
+   /* sparsity pattern of the Hessian of the Lagrangian */
+   int*                  heslagoffsets;      /**< column (if colwise==TRUE) or row offsets in heslagnzs */
+   int*                  heslagnzs;          /**< row (if colwise==TRUE) or column indices; sorted for each column (if colwise==TRUE) or row */
+   SCIP_Bool             hescolwise;         /**< indicates whether the Hessian entries are first sorted column-wise (TRUE) or row-wise */
 
    SCIP_EXPRINT*         exprinterpreter;    /**< interpreter for expressions: evaluation and derivatives */
    SCIP_CLOCK*           evalclock;          /**< clock measuring evaluation time */
@@ -295,13 +296,14 @@ void invalidateHessianLagSparsity(
    SCIPdebugMessage("%p invalidate hessian lag sparsity\n", (void*)oracle);
 
    if( oracle->heslagoffsets == NULL )
-   { /* nothing to do */
-      assert(oracle->heslagcols == NULL);
+   {
+      /* nothing to do */
+      assert(oracle->heslagnzs == NULL);
       return;
    }
 
-   assert(oracle->heslagcols != NULL);
-   SCIPfreeBlockMemoryArray(scip, &oracle->heslagcols,    oracle->heslagoffsets[oracle->nvars]);
+   assert(oracle->heslagnzs != NULL);
+   SCIPfreeBlockMemoryArray(scip, &oracle->heslagnzs,     oracle->heslagoffsets[oracle->nvars]);
    SCIPfreeBlockMemoryArray(scip, &oracle->heslagoffsets, oracle->nvars + 1);
 }
 
@@ -798,28 +800,29 @@ static
 SCIP_RETCODE hessLagSparsitySetNzFlagForExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< NLPI oracle */
-   int**                 colnz,              /**< indices of nonzero entries for each column */
-   int*                  collen,             /**< space allocated to store indices of nonzeros for each column */
-   int*                  colnnz,             /**< number of nonzero entries for each column */
+   int**                 nz,                 /**< indices of nonzero entries for each column (if col) or row */
+   int*                  len,                /**< space allocated to store indices of nonzeros for each column (if col) or row */
+   int*                  nnz,                /**< number of nonzero entries for each column (if col) or row */
    int*                  nzcount,            /**< counter for total number of nonzeros; should be increased when nzflag is set to 1 the first time */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_EXPRINTDATA*     exprintdata,        /**< expression interpreter data for expression */
-   int                   dim                 /**< dimension of matrix */
+   int                   dim,                /**< dimension of matrix */
+   SCIP_Bool             colwise             /**< tells the function whether a column-wise (TRUE) or row-wise representation is needed */
    )
 {
    SCIP_Real* x;
    int* rowidxs;
    int* colidxs;
-   int nnz;
+   int ntotalnz;
    int row;
    int col;
    int pos;
    int i;
 
    assert(oracle != NULL);
-   assert(colnz  != NULL);
-   assert(collen != NULL);
-   assert(colnnz != NULL);
+   assert(nz  != NULL);
+   assert(len != NULL);
+   assert(nnz != NULL);
    assert(nzcount != NULL);
    assert(expr != NULL);
    assert(dim >= 0);
@@ -830,9 +833,9 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExpr(
    for( i = 0; i < oracle->nvars; ++i )
       x[i] = 2.0; /* hope that this value does not make much trouble for the evaluation routines */
 
-   SCIP_CALL( SCIPexprintHessianSparsity(scip, oracle->exprinterpreter, expr, exprintdata, x, &rowidxs, &colidxs, &nnz) );
+   SCIP_CALL( SCIPexprintHessianSparsity(scip, oracle->exprinterpreter, expr, exprintdata, x, &rowidxs, &colidxs, &ntotalnz) );
 
-   for( i = 0; i < nnz; ++i )
+   for( i = 0; i < ntotalnz; ++i )
    {
       row = rowidxs[i];
       col = colidxs[i];
@@ -840,11 +843,23 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExpr(
       assert(row < oracle->nvars);
       assert(col <= row);
 
-      if( colnz[row] == NULL || !SCIPsortedvecFindInt(colnz[row], col, colnnz[row], &pos) )
-      {
-         SCIP_CALL( ensureIntArraySize(scip, &colnz[row], &collen[row], colnnz[row]+1) );
-         SCIPsortedvecInsertInt(colnz[row], col, &colnnz[row], NULL);
-         ++*nzcount;
+      if( !colwise )
+      { /* rowwise representation */
+         if( nz[row] == NULL || !SCIPsortedvecFindInt(nz[row], col, nnz[row], &pos) )
+         {
+            SCIP_CALL( ensureIntArraySize(scip, &nz[row], &len[row], nnz[row]+1) );
+            SCIPsortedvecInsertInt(nz[row], col, &nnz[row], NULL);
+            ++*nzcount;
+         }
+      }
+      else
+      { /* columnwise representation */
+         if( nz[col] == NULL || !SCIPsortedvecFindInt(nz[col], row, nnz[col], &pos) )
+         {
+            SCIP_CALL( ensureIntArraySize(scip, &nz[col], &len[col], nnz[col]+1) );
+            SCIPsortedvecInsertInt(nz[col], row, &nnz[col], NULL);
+            ++*nzcount;
+         }
       }
    }
 
@@ -863,9 +878,10 @@ SCIP_RETCODE hessLagAddExpr(
    SCIP_Bool             new_x,              /**< whether point has been evaluated before */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_EXPRINTDATA*     exprintdata,        /**< expression interpreter data for expression */
-   int*                  hesoffset,          /**< row offsets in sparse matrix that is to be filled */
-   int*                  hescol,             /**< column indices in sparse matrix that is to be filled */
-   SCIP_Real*            values              /**< buffer for values of sparse matrix that is to be filled */
+   int*                  hesoffset,          /**< column (if colwise = TRUE) or row offsets in sparse matrix that is to be filled */
+   int*                  hesnzidcs,          /**< row (if colwise = TRUE) or column indices in sparse matrix that is to be filled */
+   SCIP_Real*            values,             /**< buffer for values of sparse matrix that is to be filled */
+   SCIP_Bool             colwise             /**< whether the entries should be first sorted column-wise (TRUE) or row-wise */
    )
 {
    SCIP_Real val;
@@ -884,7 +900,7 @@ SCIP_RETCODE hessLagAddExpr(
    assert(x != NULL || new_x == FALSE);
    assert(expr != NULL);
    assert(hesoffset != NULL);
-   assert(hescol != NULL);
+   assert(hesnzidcs != NULL);
    assert(values != NULL);
 
    SCIP_CALL( SCIPexprintHessian(scip, oracle->exprinterpreter, expr, exprintdata, (SCIP_Real*)x, new_x, &val, &rowidxs, &colidxs, &h, &nnz) );
@@ -908,13 +924,26 @@ SCIP_RETCODE hessLagAddExpr(
       row = rowidxs[i];
       col = colidxs[i];
 
-      if( !SCIPsortedvecFindInt(&hescol[hesoffset[row]], col, hesoffset[row+1] - hesoffset[row], &pos) )
+      if( !colwise )
       {
-         SCIPerrorMessage("Could not find entry (%d, %d) in hessian sparsity\n", row, col);
-         return SCIP_ERROR;
-      }
+         if( !SCIPsortedvecFindInt(&hesnzidcs[hesoffset[row]], col, hesoffset[row+1] - hesoffset[row], &pos) )
+         {
+            SCIPerrorMessage("Could not find entry (%d, %d) in hessian sparsity\n", row, col);
+            return SCIP_ERROR;
+         }
 
-      values[hesoffset[row] + pos] += weight * h[i];
+         values[hesoffset[row] + pos] += weight * h[i];
+      }
+      else
+      {
+         if( !SCIPsortedvecFindInt(&hesnzidcs[hesoffset[col]], row, hesoffset[col+1] - hesoffset[col], &pos) )
+         {
+            SCIPerrorMessage("Could not find entry (%d, %d) in hessian sparsity\n", row, col);
+            return SCIP_ERROR;
+         }
+
+         values[hesoffset[col] + pos] += weight * h[i];
+      }
    }
 
    return SCIP_OKAY;
@@ -2581,21 +2610,22 @@ TERMINATE:
 
 /** gets sparsity pattern of the Hessian matrix of the Lagrangian
  *
- *  Note that internal data is returned in *offset and *col, thus the user must not to allocate memory there.
+ *  Note that internal data is returned in *offset and *nzs, thus the user must not to allocate memory there.
  *  Adding or deleting variables, objective, or constraints may destroy the sparsity structure and make another call to this function necessary.
  *  Only elements of the lower left triangle and the diagonal are counted.
  */
 SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const int**           offset,             /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
-   const int**           col                 /**< pointer to store pointer that stores the indices of variables that appear in each row, offset[nvars] gives length of col, can be NULL */
+   const int**           offset,             /**< pointer to store pointer that stores the offsets to each row's (or col's if colwise == TRUE) sparsity pattern in nzs, can be NULL */
+   const int**           allnz,              /**< pointer to store pointer that stores the indices of variables that appear in each row (or col if colwise = TRUE), offset[nvars] gives length of nzs, can be NULL */
+   SCIP_Bool             colwise             /**< tells whether a columnwise (TRUE) or rowwise representation is needed */
    )
 {
-   int** colnz;   /* nonzeros in Hessian corresponding to one column */
-   int*  collen;  /* collen[i] is length of array colnz[i] */
-   int*  colnnz;  /* colnnz[i] is number of entries in colnz[i] (<= collen[i]) */
-   int   nnz;
+   int** nz;   /* nonzeros in Hessian corresponding to one column (if colwise = TRUE) or row */
+   int*  len;  /* len[i] is length of array nz[i] */
+   int*  nnz;  /* nnz[i] is number of entries in nz[i] (<= len[i]) */
+   int   totalnnz;
    int   i;
    int   j;
    int   cnt;
@@ -2606,65 +2636,70 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
 
    if( oracle->heslagoffsets != NULL )
    {
-      assert(oracle->heslagcols != NULL);
+      assert(oracle->hescolwise == colwise);
+      assert(oracle->heslagnzs != NULL);
       if( offset != NULL )
          *offset = oracle->heslagoffsets;
-      if( col != NULL )
-         *col = oracle->heslagcols;
+      if( allnz != NULL )
+         *allnz = oracle->heslagnzs;
       return SCIP_OKAY;
    }
+
+   oracle->hescolwise = colwise;
 
    SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->heslagoffsets, oracle->nvars + 1) );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &colnz,  oracle->nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &collen, oracle->nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &colnnz, oracle->nvars) );
-   BMSclearMemoryArray(colnz,  oracle->nvars);
-   BMSclearMemoryArray(collen, oracle->nvars);
-   BMSclearMemoryArray(colnnz, oracle->nvars);
-   nnz = 0;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nz,  oracle->nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &len, oracle->nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nnz, oracle->nvars) );
+   BMSclearMemoryArray(nz,  oracle->nvars);
+   BMSclearMemoryArray(len, oracle->nvars);
+   BMSclearMemoryArray(nnz, oracle->nvars);
+   totalnnz = 0;
 
    if( oracle->objective->expr != NULL )
    {
-      SCIP_CALL( hessLagSparsitySetNzFlagForExpr(scip, oracle, colnz, collen, colnnz, &nnz, oracle->objective->expr, oracle->objective->exprintdata, oracle->nvars) );
+      SCIP_CALL( hessLagSparsitySetNzFlagForExpr(scip, oracle, nz, len, nnz, &totalnnz, oracle->objective->expr,
+            oracle->objective->exprintdata, oracle->nvars, colwise) );
    }
 
    for( i = 0; i < oracle->nconss; ++i )
    {
       if( oracle->conss[i]->expr != NULL )
       {
-         SCIP_CALL( hessLagSparsitySetNzFlagForExpr(scip, oracle, colnz, collen, colnnz, &nnz, oracle->conss[i]->expr, oracle->conss[i]->exprintdata, oracle->nvars) );
+         SCIP_CALL( hessLagSparsitySetNzFlagForExpr(scip, oracle, nz, len, nnz, &totalnnz, oracle->conss[i]->expr,
+               oracle->conss[i]->exprintdata, oracle->nvars, colwise) );
       }
    }
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->heslagcols, nnz) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->heslagnzs, totalnnz) );
 
-   /* set hessian sparsity from colnz, colnnz */
+   /* set hessian sparsity from nz, nnz */
    cnt = 0;
    for( i = 0; i < oracle->nvars; ++i )
    {
       oracle->heslagoffsets[i] = cnt;
-      for( j = 0; j < colnnz[i]; ++j )
+      for( j = 0; j < nnz[i]; ++j )
       {
-         assert(cnt < nnz);
-         oracle->heslagcols[cnt++] = colnz[i][j];
+         assert(cnt < totalnnz);
+         oracle->heslagnzs[cnt++] = nz[i][j];
       }
-      SCIPfreeBlockMemoryArrayNull(scip, &colnz[i], collen[i]);
-      collen[i] = 0;
+      SCIPfreeBlockMemoryArrayNull(scip, &nz[i], len[i]);
+      len[i] = 0;
    }
    oracle->heslagoffsets[oracle->nvars] = cnt;
-   assert(cnt == nnz);
+   assert(cnt == totalnnz);
 
-   SCIPfreeBlockMemoryArray(scip, &colnz,  oracle->nvars);
-   SCIPfreeBlockMemoryArray(scip, &colnnz, oracle->nvars);
-   SCIPfreeBlockMemoryArray(scip, &collen, oracle->nvars);
+   SCIPfreeBlockMemoryArray(scip, &nz,  oracle->nvars);
+   SCIPfreeBlockMemoryArray(scip, &nnz, oracle->nvars);
+   SCIPfreeBlockMemoryArray(scip, &len, oracle->nvars);
 
    if( offset != NULL )
       *offset = oracle->heslagoffsets;
-   if( col != NULL )
-      *col = oracle->heslagcols;
+   if( allnz != NULL )
+      *allnz = oracle->heslagnzs;
 
    SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
@@ -2687,7 +2722,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP_Bool             isnewx_cons,        /**< has the point x changed since the last call to the constraint evaluation function? */
    SCIP_Real             objfactor,          /**< weight for objective function */
    const SCIP_Real*      lambda,             /**< weights (Lagrangian multipliers) for the constraints */
-   SCIP_Real*            hessian             /**< pointer to store sparse hessian values */
+   SCIP_Real*            hessian,            /**< pointer to store sparse hessian values */
+   SCIP_Bool             colwise             /**< whether the entries should be first sorted column-wise (TRUE) or row-wise */
    )
 {  /*lint --e{715}*/
    SCIP_RETCODE retcode = SCIP_OKAY;
@@ -2699,7 +2735,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    assert(hessian != NULL);
 
    assert(oracle->heslagoffsets != NULL);
-   assert(oracle->heslagcols != NULL);
+   assert(oracle->heslagnzs != NULL);
+   assert(oracle->hescolwise == colwise);
 
    SCIPdebugMessage("%p eval hessian lag\n", (void*)oracle);
 
@@ -2709,7 +2746,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 
    if( objfactor != 0.0 && oracle->objective->expr != NULL )
    {
-      retcode = hessLagAddExpr(scip, oracle, objfactor, x, isnewx_obj, oracle->objective->expr, oracle->objective->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian);
+      retcode = hessLagAddExpr(scip, oracle, objfactor, x, isnewx_obj, oracle->objective->expr,
+            oracle->objective->exprintdata, oracle->heslagoffsets, oracle->heslagnzs, hessian, colwise);
    }
 
    for( i = 0; i < oracle->nconss && retcode == SCIP_OKAY; ++i )
@@ -2717,7 +2755,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
       assert( lambda != NULL ); /* for lint */
       if( lambda[i] == 0.0 || oracle->conss[i]->expr == NULL )
          continue;
-      retcode = hessLagAddExpr(scip, oracle, lambda[i], x, isnewx_cons, oracle->conss[i]->expr, oracle->conss[i]->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian);
+      retcode = hessLagAddExpr(scip, oracle, lambda[i], x, isnewx_cons, oracle->conss[i]->expr,
+            oracle->conss[i]->exprintdata, oracle->heslagoffsets, oracle->heslagnzs, hessian, colwise);
    }
 
    SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );

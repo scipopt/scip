@@ -846,7 +846,7 @@ void collectStatistic(
    SCIP_CALL_ABORT( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &offset, NULL, NULL, NULL) );
    jacnnz = offset[m];
 
-   SCIP_CALL_ABORT( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &col) );
+   SCIP_CALL_ABORT( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &col, FALSE) );
    hesnnz = offset[n];
 
    // number of nonzeros of matrix in linear system of barrier problem ((11) in Ipopt paper):
@@ -1893,7 +1893,7 @@ bool ScipNLP::get_nlp_info(
 
    if( !approxhessian )
    {
-      retcode = SCIPnlpiOracleGetHessianLagSparsity(scip, nlpiproblem->oracle, &offset, NULL);
+      retcode = SCIPnlpiOracleGetHessianLagSparsity(scip, nlpiproblem->oracle, &offset, NULL, FALSE);
       if( retcode != SCIP_OKAY )
          return false;
       assert(offset != NULL);
@@ -2280,7 +2280,7 @@ bool ScipNLP::eval_h(
       assert(iRow != NULL);
       assert(jCol != NULL);
 
-      if( SCIPnlpiOracleGetHessianLagSparsity(scip, nlpiproblem->oracle, &heslagoffset, &heslagcol) != SCIP_OKAY )
+      if( SCIPnlpiOracleGetHessianLagSparsity(scip, nlpiproblem->oracle, &heslagoffset, &heslagcol, FALSE) != SCIP_OKAY )
          return false;
 
       assert(heslagoffset[0] == 0);
@@ -2309,7 +2309,8 @@ bool ScipNLP::eval_h(
       last_f_eval_x = current_x;
       last_g_eval_x = current_x;
 
-      if( SCIPnlpiOracleEvalHessianLag(scip, nlpiproblem->oracle, x, new_x_obj, new_x_cons, obj_factor, lambda, values) != SCIP_OKAY )
+      if( SCIPnlpiOracleEvalHessianLag(scip, nlpiproblem->oracle, x, new_x_obj, new_x_cons, obj_factor, lambda, values,
+            FALSE) != SCIP_OKAY )
          return false;
    }
 
