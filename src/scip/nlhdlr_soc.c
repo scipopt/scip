@@ -1326,11 +1326,10 @@ SCIP_RETCODE detectSocNorm(
    *success = FALSE;
    issoc = TRUE;
 
-   /* relation is not "<=" -> skip */
-   if( SCIPgetExprNLocksPosNonlinear(expr) == 0 )
+   /* relation is not "<=" or expression is a leaf -> skip */
+   if( SCIPgetExprNLocksPosNonlinear(expr) == 0
+      || SCIPexprGetNChildren(expr) == 0 )
       return SCIP_OKAY;
-
-   assert(SCIPexprGetNChildren(expr) > 0);
 
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
