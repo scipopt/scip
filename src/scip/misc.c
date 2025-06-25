@@ -9399,7 +9399,7 @@ SCIP_Bool SCIPrealToRational(
    SCIP_Real             mindelta,           /**< minimal allowed difference r - q of real r and rational q = n/d */
    SCIP_Real             maxdelta,           /**< maximal allowed difference r - q of real r and rational q = n/d */
    SCIP_Longint          maxdnom,            /**< maximal denominator allowed */
-   SCIP_Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   SCIP_Longint*         numerator,          /**< pointer to store the numerator n of the rational number */
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    )
 {
@@ -9416,9 +9416,9 @@ SCIP_Bool SCIPrealToRational(
    SCIP_Real epsilon;
    int i;
 
-   assert(mindelta < 0.0);
-   assert(maxdelta > 0.0);
-   assert(nominator != NULL);
+   assert(mindelta <= 0.0);
+   assert(maxdelta >= 0.0);
+   assert(numerator != NULL);
    assert(denominator != NULL);
 
    if( REALABS(val) >= ((SCIP_Real)SCIP_LONGINT_MAX) / maxdnom )
@@ -9445,13 +9445,13 @@ SCIP_Bool SCIPrealToRational(
          {
             if( val - ratval0 <= maxdelta )
             {
-               *nominator = (SCIP_Longint)nom;
+               *numerator = (SCIP_Longint)nom;
                *denominator = (SCIP_Longint)dnom;
                return TRUE;
             }
             if( mindelta <= val - ratval1 )
             {
-               *nominator = (SCIP_Longint)(nom+1.0);
+               *numerator = (SCIP_Longint)(nom+1.0);
                *denominator = (SCIP_Longint)dnom;
                return TRUE;
             }
@@ -9506,23 +9506,23 @@ SCIP_Bool SCIPrealToRational(
    if( delta0 < mindelta )
    {
       assert(mindelta <= delta1 && delta1 <= maxdelta);
-      *nominator = (SCIP_Longint)(g0 - 1.0);
+      *numerator = (SCIP_Longint)(g0 - 1.0);
       *denominator = (SCIP_Longint)h0;
    }
    else if( delta0 > maxdelta )
    {
       assert(mindelta <= delta1 && delta1 <= maxdelta);
-      *nominator = (SCIP_Longint)(g0 + 1.0);
+      *numerator = (SCIP_Longint)(g0 + 1.0);
       *denominator = (SCIP_Longint)h0;
    }
    else
    {
-      *nominator = (SCIP_Longint)g0;
+      *numerator = (SCIP_Longint)g0;
       *denominator = (SCIP_Longint)h0;
    }
    assert(*denominator >= 1);
-   assert(val - (SCIP_Real)(*nominator)/(SCIP_Real)(*denominator) >= mindelta);
-   assert(val - (SCIP_Real)(*nominator)/(SCIP_Real)(*denominator) <= maxdelta);
+   assert(val - (SCIP_Real)(*numerator)/(SCIP_Real)(*denominator) >= mindelta);
+   assert(val - (SCIP_Real)(*numerator)/(SCIP_Real)(*denominator) <= maxdelta);
 
    return TRUE;
 }
@@ -9571,7 +9571,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Real bestscalar;
    SCIP_Longint gcd;
    SCIP_Longint scm;
-   SCIP_Longint nominator;
+   SCIP_Longint numerator;
    SCIP_Longint denominator;
    SCIP_Real val;
    SCIP_Real minval;
@@ -9682,7 +9682,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
       }
    }
 
-   /* convert each value into a rational number, calculate the greatest common divisor of the nominators
+   /* convert each value into a rational number, calculate the greatest common divisor of the numerators
     * and the smallest common multiple of the denominators
     */
    gcd = 1;
@@ -9696,15 +9696,15 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
       if( val == 0.0 ) /* zeros are allowed in the vals array */
          continue;
 
-      rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
-      if( rational && nominator != 0 )
+      rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &numerator, &denominator);
+      if( rational && numerator != 0 )
       {
          assert(denominator > 0);
-         gcd = ABS(nominator);
+         gcd = ABS(numerator);
          scm = denominator;
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
          SCIPdebugMessage(" -> c=%d first rational: val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
-            c, val, nominator, denominator, gcd, scm, rational);
+            c, val, numerator, denominator, gcd, scm, rational);
          break;
       }
    }
@@ -9716,15 +9716,15 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
       if( val == 0.0 ) /* zeros are allowed in the vals array */
          continue;
 
-      rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
-      if( rational && nominator != 0 )
+      rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &numerator, &denominator);
+      if( rational && numerator != 0 )
       {
          assert(denominator > 0);
-         gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
+         gcd = SCIPcalcGreComDiv(gcd, ABS(numerator));
          scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
          SCIPdebugMessage(" -> c=%d next rational : val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
-            c, val, nominator, denominator, gcd, scm, rational);
+            c, val, numerator, denominator, gcd, scm, rational);
       }
       else
       {
@@ -9781,7 +9781,7 @@ SCIP_Bool SCIPfindSimpleRational(
    SCIP_Real             lb,                 /**< lower bound of the interval */
    SCIP_Real             ub,                 /**< upper bound of the interval */
    SCIP_Longint          maxdnom,            /**< maximal denominator allowed for resulting rational number */
-   SCIP_Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   SCIP_Longint*         numerator,          /**< pointer to store the numerator n of the rational number */
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    )
 {
@@ -9811,7 +9811,7 @@ SCIP_Bool SCIPfindSimpleRational(
       delta = 0.5*(ub-lb);
    }
 
-   return SCIPrealToRational(center, -delta, +delta, maxdnom, nominator, denominator);
+   return SCIPrealToRational(center, -delta, +delta, maxdnom, numerator, denominator);
 }
 
 #if defined(__INTEL_COMPILER) || defined(_MSC_VER)
@@ -9835,17 +9835,17 @@ SCIP_Real SCIPselectSimpleValue(
    val = 0.5*(lb+ub);
    if( lb < ub )
    {
-      SCIP_Longint nominator;
+      SCIP_Longint numerator;
       SCIP_Longint denominator;
       SCIP_Bool success;
 
       /* try to find a "simple" rational number inside the interval */
       SCIPdebugMessage("simple rational in [%.9f,%.9f]:", lb, ub);
-      success = SCIPfindSimpleRational(lb, ub, maxdnom, &nominator, &denominator);
+      success = SCIPfindSimpleRational(lb, ub, maxdnom, &numerator, &denominator);
       if( success )
       {
-         val = (SCIP_Real)nominator/(SCIP_Real)denominator;
-         SCIPdebugPrintf(" %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " == %.9f\n", nominator, denominator, val);
+         val = (SCIP_Real)numerator/(SCIP_Real)denominator;
+         SCIPdebugPrintf(" %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " == %.9f\n", numerator, denominator, val);
 
          if( val - lb < 0.0 || val - ub > 0.0 )
          {
