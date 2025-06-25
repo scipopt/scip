@@ -722,11 +722,16 @@ static int COI_CALLCONV LagrVal(
 
    assert(problem != NULL);
 
+   SCIP_CALL( SCIPallocBlockMemoryArray(problem->scip, &hessvals, NHESS) );
+
    /* TODO some better handling for isnew */
-   SCIP_CALL( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, X, TRUE, TRUE, U[NUMCON-1], U, hessvals, TRUE) );
+   SCIP_CALL( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, X, TRUE, TRUE, U[NUMCON-1], U, hessvals,
+         TRUE) );
 
    for( int i = 0; i < NHESS; i++ )
       HSVL[i] = hessvals[i];
+
+   SCIPfreeBlockMemoryArray(problem->scip, &hessvals, NHESS);
 
    return 0;
 }
@@ -815,7 +820,7 @@ static SCIP_RETCODE initConopt(
 
    /* hessian sparsity information */
    SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &hessoffsets, NULL, TRUE) );
-   COI_Error += COIDEF_NumHess(problem->CntVect, hessoffsets[nconss]);
+   COI_Error += COIDEF_NumHess(problem->CntVect, hessoffsets[SCIPnlpiOracleGetNVars(problem->oracle)]);
 
    /* tell CONOPT to minimise the objective (the oracle always gives a minimisation problem) */
    COI_Error += COIDEF_OptDir(problem->CntVect, -1);
