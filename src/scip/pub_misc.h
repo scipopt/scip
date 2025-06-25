@@ -1903,7 +1903,7 @@ SCIP_Bool SCIPrealToRational(
    SCIP_Real             mindelta,           /**< minimal allowed difference r - q of real r and rational q = n/d */
    SCIP_Real             maxdelta,           /**< maximal allowed difference r - q of real r and rational q = n/d */
    SCIP_Longint          maxdnom,            /**< maximal denominator allowed */
-   SCIP_Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   SCIP_Longint*         numerator,          /**< pointer to store the numerator n of the rational number */
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    );
 
@@ -1948,7 +1948,7 @@ SCIP_Bool SCIPfindSimpleRational(
    SCIP_Real             lb,                 /**< lower bound of the interval */
    SCIP_Real             ub,                 /**< upper bound of the interval */
    SCIP_Longint          maxdnom,            /**< maximal denominator allowed for resulting rational number */
-   SCIP_Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   SCIP_Longint*         numerator,          /**< pointer to store the numerator n of the rational number */
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    );
 
