@@ -495,7 +495,7 @@ Test(nlpi, workinglimits, .init = setup, .fini = teardown,
    if( conopt != NULL )
    {
       /* set a small iteration limit */
-      SCIP_CALL( solveQP(conopt, 1, 100, -100.0, 100.0, SCIPinfinity(scip), 2, &solval, &solstat, &termstat) );
+      SCIP_CALL( solveQP(conopt, 1, 100, -100.0, 100.0, SCIPinfinity(scip), 1, &solval, &solstat, &termstat) );
       cr_expect(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
 
       /* set a small time limit */
