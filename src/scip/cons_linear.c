@@ -4166,7 +4166,7 @@ SCIP_RETCODE normalizeCons(
    SCIP_CONSDATA* consdata;
    SCIP_Real* vals;
    SCIP_Longint scm;
-   SCIP_Longint nominator;
+   SCIP_Longint numerator;
    SCIP_Longint denominator;
    SCIP_Longint gcd;
    SCIP_Longint maxmult;
@@ -4360,7 +4360,7 @@ SCIP_RETCODE normalizeCons(
       if( !SCIPisIntegral(scip, vals[i]) )
       {
          /* epsilon has been slightly decreased above - to be on the safe side */
-         success = SCIPrealToRational(vals[i], -epsilon, epsilon , maxmult, &nominator, &denominator);
+         success = SCIPrealToRational(vals[i], -epsilon, epsilon , maxmult, &numerator, &denominator);
          if( success )
             scm = SCIPcalcSmaComMul(scm, denominator);
       }

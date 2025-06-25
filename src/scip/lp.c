@@ -5759,7 +5759,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
 #endif
    SCIP_Longint gcd;
    SCIP_Longint scm;
-   SCIP_Longint nominator;
+   SCIP_Longint numerator;
    SCIP_Longint denominator;
    SCIP_Real val;
    SCIP_Real absval;
@@ -5923,15 +5923,15 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
       if( usecontvars || SCIPcolIsIntegral(row->cols[c]) )
       {
          val = row->vals[c];
-         rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
-         if( rational && nominator != 0 )
+         rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &numerator, &denominator);
+         if( rational && numerator != 0 )
          {
             assert(denominator > 0);
-            gcd = ABS(nominator);
+            gcd = ABS(numerator);
             scm = denominator;
             rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
             SCIPsetDebugMsg(set, " -> first rational: val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
-               val, nominator, denominator, gcd, scm, rational);
+               val, numerator, denominator, gcd, scm, rational);
             break;
          }
       }
@@ -5943,15 +5943,15 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
       if( usecontvars || SCIPcolIsIntegral(row->cols[c]) )
       {
          val = row->vals[c];
-         rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
-         if( rational && nominator != 0 )
+         rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &numerator, &denominator);
+         if( rational && numerator != 0 )
          {
             assert(denominator > 0);
-            gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
+            gcd = SCIPcalcGreComDiv(gcd, ABS(numerator));
             scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
             rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
             SCIPsetDebugMsg(set, " -> next rational : val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
-               val, nominator, denominator, gcd, scm, rational);
+               val, numerator, denominator, gcd, scm, rational);
          }
       }
    }
