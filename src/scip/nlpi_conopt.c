@@ -893,13 +893,6 @@ static SCIP_RETCODE initConopt(
    return SCIP_OKAY;
 }
 
-static void updateConopt(
-   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
-)
-{
-   /* TODO anything to do here? */
-}
-
 static void handleConoptParam(
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
    const SCIP_NLPPARAM   param               /**< NLP solve parameters */
@@ -1275,18 +1268,12 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
    /* set CONOPT parameters */
    handleConoptParam(problem, param);
 
-   // /* if warmstart parameter is disabled, then we will not warmstart */
-   // if( !param.warmstart )
-      // problem->warmstart = FALSE;
-
    /* initialize Conopt data if necessary */
    if( problem->firstrun )
    {
       initConopt(scip, data, problem);
       problem->firstrun = FALSE;
    }
-   else
-      updateConopt(problem);
 
    /* TODO update initial guess (normally set in ReadMatrix) */
 
