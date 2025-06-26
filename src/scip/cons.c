@@ -7311,8 +7311,7 @@ SCIP_RETCODE SCIPconsSetConflictType(
 {
    assert(cons != NULL);
    assert(cons->conflict);
-   assert(conftype == SCIP_CONFTYPE_UNKNOWN || conftype == SCIP_CONFTYPE_PROPAGATION
-         || cons->cutoffinvolved == (conftype == SCIP_CONFTYPE_BNDEXCEEDING || conftype == SCIP_CONFTYPE_ALTBNDPROOF));
+   assert(cons->cutoffinvolved || (conftype != SCIP_CONFTYPE_BNDEXCEEDING && conftype != SCIP_CONFTYPE_ALTBNDPROOF));
 
    cons->conftype = (unsigned int)conftype;
 
@@ -8582,10 +8581,9 @@ SCIP_CONFTYPE SCIPconsGetConflictType(
 {
    assert(cons != NULL);
    assert(cons->conflict);
-   assert((SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_UNKNOWN
-         || (SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_PROPAGATION
-         || cons->cutoffinvolved == ((SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_BNDEXCEEDING
-         || (SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_ALTBNDPROOF));
+   assert(cons->cutoffinvolved
+         || ((SCIP_CONFTYPE)cons->conftype != SCIP_CONFTYPE_BNDEXCEEDING
+         && (SCIP_CONFTYPE)cons->conftype != SCIP_CONFTYPE_ALTBNDPROOF));
 
    return (SCIP_CONFTYPE)cons->conftype;
 }

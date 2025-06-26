@@ -5297,13 +5297,16 @@ SCIP_RETCODE SCIPrunBoundHeuristic(
                if( set->conf_useinflp == 'd' || set->conf_useinflp == 'b' )
                {
                   /* change the conflict type */
+                  SCIP_Bool oldusescutoff = conflict->conflictset->usescutoffbound;
                   SCIP_CONFTYPE oldconftype = conflict->conflictset->conflicttype;
+                  conflict->conflictset->usescutoffbound = FALSE;
                   conflict->conflictset->conflicttype = SCIP_CONFTYPE_INFEASLP;
 
                   /* start dual proof analysis */
                   SCIP_CALL( SCIPconflictAnalyzeDualProof(conflict, set, stat, eventfilter, blkmem, origprob, transprob, tree, reopt,
                         lp, farkasrow, validdepth, curvarlbs, curvarubs, FALSE, &globalinfeasible, dualproofsuccess) );
 
+                  conflict->conflictset->usescutoffbound = oldusescutoff;
                   conflict->conflictset->conflicttype = oldconftype;
                }
 
