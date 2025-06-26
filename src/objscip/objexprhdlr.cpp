@@ -76,7 +76,7 @@ SCIP_DECL_EXPRCOPYHDLR(exprCopyhdlrObj)
       newobjexprhdlr = dynamic_cast<scip::ObjExprhdlr*> (exprhdlrdata->objexprhdlr->clone(scip));
 
       /* call include method of expression handler object */
-      SCIP_CALL( SCIPincludeObjExprhdlr(scip, newobjexprhdlr, TRUE) );
+      //SCIP_CALL( SCIPincludeObjExprhdlr(scip, newobjexprhdlr, TRUE) );
    }
 
    return SCIP_OKAY;
