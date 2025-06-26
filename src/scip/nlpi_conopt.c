@@ -254,6 +254,7 @@ static int COI_CALLCONV ReadMatrix(
          UPPER[i] = ubs[i];
    }
 
+   /* TODO if there is an earlier solution, use it here */
    /* specify initial values of original variables */
    if( problem->initguess != NULL )
    {
@@ -605,13 +606,13 @@ static int COI_CALLCONV Status(
  *
  *  The callback has three modes, indicated by MODE:
  *
- *  1: Only evaluate the sum of the nonlinear terms in row ROWNO and return the value in G.
+ *  1: Only evaluate the sum of the nonlinear and linear terms in row ROWNO and return the value in G.
  *  2: Only evaluate the nonlinear Jacobian elements in row ROWNO and return them in JAC.
  *  3: Perform both option 1 and 2.
  */
 static int COI_CALLCONV FDEval(
    const double          X[],                /**< point of evaluation (provided by CONOPT) */
-   double*               G,                  /**< value of the nonlinear part of the function */
+   double*               G,                  /**< value of the function */
    double                JAC[],              /**< vector of Jacobian values */
    int                   ROWNO,              /**< number of the row for which nonlinearities are to be evaluated (provided by CONOPT) */
    const int             JACNUM[],           /**< list of column numbers for the nonlinear nonzero Jacobian elements in the current row (provided by CONOPT when MODE = 2 or 3) */
@@ -877,6 +878,9 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_Option(problem->CntVect, &Option);
    COI_Error += COIDEF_2DLagrStr(problem->CntVect, &LagrStr);
    COI_Error += COIDEF_2DLagrVal(problem->CntVect, &LagrVal);
+   /* TODO complete and add the interval callback */
+
+   COI_Error += COIDEF_FVincLin(problem->CntVect, 1);
 
    /* pass the problem pointer to CONOPT, so that it may be used in CONOPT callbacks */
    COI_Error += COIDEF_UsrMem(problem->CntVect, (void*)problem);
