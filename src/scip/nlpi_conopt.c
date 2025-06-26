@@ -132,7 +132,6 @@ static int COI_CALLCONV Solution(
    /* number of SCIP variables always less or equal, since CONOPT variables can also contain slack variables */
    assert(nvars <= NUMVAR);
 
-   /* TODO some SCIP_CALL */
    /* copy values from CONOPT into SCIP arrays. Note that in CONOPT, there is one
     * extra constraint (the objective) and slack variables that are not explicitly
     * present in SCIP, which the code below does not copy */
@@ -140,12 +139,22 @@ static int COI_CALLCONV Solution(
    {
       if( NUMVAR > 0 )
       {
-         SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastprimal, XVAL, nvars);
-         SCIPallocClearBlockMemoryArray(problem->scip, &problem->lastduallb, nvars);
-         SCIPallocClearBlockMemoryArray(problem->scip, &problem->lastdualub, nvars);
+         if( SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastprimal, XVAL, nvars) != SCIP_OKAY ||
+               SCIPallocClearBlockMemoryArray(problem->scip, &problem->lastduallb, nvars) != SCIP_OKAY ||
+               SCIPallocClearBlockMemoryArray(problem->scip, &problem->lastdualub, nvars) != SCIP_OKAY )
+         {
+            SCIPerrorMessage("Failed to allocate memory for a solution from CONOPT\n");
+            return 1;
+         }
       }
       if( NUMCON > 0 )
-         SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastdualcons, YMAR, NUMCON-1);
+      {
+         if( SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastdualcons, YMAR, NUMCON-1) != SCIP_OKAY )
+         {
+            SCIPerrorMessage("Failed to allocate memory for a solution from CONOPT\n");
+            return 1;
+         }
+      }
    }
    else
    {
@@ -207,7 +216,7 @@ static int COI_CALLCONV ReadMatrix(
    const int* objnz;
    const SCIP_Bool* objnlflags;
    int nobjnlnz;
-   int objnzi = 0;
+   int objnzcnt = 0;
    int* nrownz;
 
    assert(problem != NULL);
@@ -228,7 +237,10 @@ static int COI_CALLCONV ReadMatrix(
    if( NUMVAR - norigvars > 0 )
    {
       if( SCIPallocBufferArray(scip, &rangeconsidxs, NUMVAR - norigvars) != SCIP_OKAY )
+      {
+         SCIPerrorMessage("Failed to allocate memory in the ReadMatrix callback of CONOPT\n");
          return 1;
+      }
    }
 
    /* add all 'normal' (i.e. non-slack) variables here */
@@ -248,13 +260,10 @@ static int COI_CALLCONV ReadMatrix(
       /* some values may have been set outside the bounds - project them */
       for( int i = 0; i < norigvars; ++i )
       {
-         SCIP_Real lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
-         SCIP_Real ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
-
-         if( lb > CURR[i] )
-            CURR[i] = SCIPrandomGetReal(problem->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
-         else if( ub < CURR[i] )
-            CURR[i] = SCIPrandomGetReal(problem->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
+         if( lbs[i] > CURR[i] )
+            CURR[i] = SCIPrandomGetReal(problem->randnumgen, lbs[i], lbs[i] + MAXPERTURB*MIN(1.0, ubs[i]-lbs[i]));
+         else if( ubs[i] < CURR[i] )
+            CURR[i] = SCIPrandomGetReal(problem->randnumgen, ubs[i] - MAXPERTURB*MIN(1.0, ubs[i]-lbs[i]), ubs[i]);
       }
    }
    else
@@ -266,27 +275,22 @@ static int COI_CALLCONV ReadMatrix(
 
       for( int i = 0; i < norigvars; ++i )
       {
-         SCIP_Real lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
-         SCIP_Real ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
-
-         if( lb > 0.0 )
-            CURR[i] = SCIPrandomGetReal(problem->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
-         else if( ub < 0.0 )
-            CURR[i] = SCIPrandomGetReal(problem->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
+         if( lbs[i] > 0.0 )
+            CURR[i] = SCIPrandomGetReal(problem->randnumgen, lbs[i], lbs[i] + MAXPERTURB*MIN(1.0, ubs[i]-lbs[i]));
+         else if( ubs[i] < 0.0 )
+            CURR[i] = SCIPrandomGetReal(problem->randnumgen, ubs[i] - MAXPERTURB*MIN(1.0, ubs[i]-lbs[i]), ubs[i]);
          else
             CURR[i] = SCIPrandomGetReal(problem->randnumgen,
-               MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
+               MAX(lbs[i], -MAXPERTURB*MIN(1.0, ubs[i]-lbs[i])), MIN(ubs[i], MAXPERTURB*MIN(1.0, ubs[i]-lbs[i])));
       }
    }
-
-   /* TODO check if VSTA or ESTA is needed - seems to not be the case */
 
    for( int i = 0; i < NUMCON-1; i++ )
    {
       SCIP_Real lhs = SCIPnlpiOracleGetConstraintLhs(oracle, i);
       SCIP_Real rhs = SCIPnlpiOracleGetConstraintRhs(oracle, i);
 
-      assert(!SCIPisInfinity(scip, -lhs) || !SCIPisInfinity(scip, rhs));
+      assert(lhs <= rhs);
 
       if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) )
       {
@@ -321,11 +325,13 @@ static int COI_CALLCONV ReadMatrix(
          TYPE[i] = 1;
          RHS[i] = lhs;
       }
-      else
+      else if( !SCIPisInfinity(scip, rhs) )
       {
          TYPE[i] = 2;
          RHS[i] = rhs;
       }
+      else
+         TYPE[i] = 3;
    }
    assert(norigvars + nslackvars == NUMVAR);
 
@@ -342,47 +348,51 @@ static int COI_CALLCONV ReadMatrix(
 
    /* move structure info into COLSTA and ROWNO; while doing so, also add nonzeroes for the objective
     * (which CONOPT sees as the last constraint, i.e. constraint with index NUMCON-1) */
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &nrownz, NUMCON) );
-
-   SCIP_CALL( SCIPnlpiOracleGetObjGradientNnz(scip, oracle, &objnz, &objnlflags, &nobjnz, &nobjnlnz) );
+   if( SCIPallocCleanBufferArray(scip, &nrownz, NUMCON) != SCIP_OKAY ||
+         SCIPnlpiOracleGetObjGradientNnz(scip, oracle, &objnz, &objnlflags, &nobjnz, &nobjnlnz) != SCIP_OKAY )
+   {
+      SCIPerrorMessage("Error in the ReadMatrix callback of CONOPT\n");
+      return 1;
+   }
 
    for( int i = 0; i < norigvars; i++ )
    {
-      COLSTA[i] = jaccoloffsets != NULL ? jaccoloffsets[i] + objnzi : objnzi; /* starts of columns get shifted by how many objective nonzeros were added */
+      /* starts of columns get shifted by how many objective nonzeros were added */
+      COLSTA[i] = jaccoloffsets != NULL ? jaccoloffsets[i] + objnzcnt : objnzcnt;
 
       if( jaccoloffsets != NULL )
       {
          /* nonzeroes of constraints */
          for( int j = jaccoloffsets[i]; j < jaccoloffsets[i+1]; j++ )
          {
-            ROWNO[j+objnzi] = jacrows[j];
-            NLFLAG[j+objnzi] = jacrownlflags[j] ? 1 : 0;
-            if( NLFLAG[j+objnzi] == 0 )
+            ROWNO[j+objnzcnt] = jacrows[j];
+            NLFLAG[j+objnzcnt] = jacrownlflags[j] ? 1 : 0;
+            if( NLFLAG[j+objnzcnt] == 0 )
             {
-               VALUE[j+objnzi] = SCIPnlpiOracleGetConstraintCoef(oracle, jacrows[j], nrownz[jacrows[j]]);
+               VALUE[j+objnzcnt] = SCIPnlpiOracleGetConstraintCoef(oracle, jacrows[j], nrownz[jacrows[j]]);
                ++(nrownz[jacrows[j]]);
             }
          }
       }
 
       /* nonzeroes of objective */
-      if( i == objnz[objnzi] )
+      if( i == objnz[objnzcnt] )
       {
-         int idx = jaccoloffsets != NULL ? jaccoloffsets[i+1] + objnzi : objnzi;
+         int idx = jaccoloffsets != NULL ? jaccoloffsets[i+1] + objnzcnt : objnzcnt;
 
          ROWNO[idx] = NUMCON - 1;
-         NLFLAG[idx] = objnlflags[objnzi] ? 1 : 0;
+         NLFLAG[idx] = objnlflags[objnzcnt] ? 1 : 0;
          if( NLFLAG[idx] == 0 )
          {
             /* in the oracle, index -1 is used for the objective */
             VALUE[idx] = SCIPnlpiOracleGetConstraintCoef(oracle, -1, nrownz[NUMCON-1]);
             ++(nrownz[NUMCON-1]);
          }
-         ++objnzi;
+         ++objnzcnt;
       }
    }
    assert(COLSTA[0] == 0);
-   COLSTA[norigvars] = jaccoloffsets != NULL ? jaccoloffsets[norigvars] + objnzi : objnzi;
+   COLSTA[norigvars] = jaccoloffsets != NULL ? jaccoloffsets[norigvars] + objnzcnt : objnzcnt;
    BMSclearMemoryArray(nrownz, NUMCON);
    SCIPfreeCleanBufferArray(scip, &nrownz);
 
@@ -472,15 +482,15 @@ static int COI_CALLCONV ErrMsg(
 
    if( problem->verblevel > 0 )
    {
-      if( ROWNO == -1 )
+      if( ROWNO == -1 && COLNO == -1 )
+         SCIPinfoMessage(problem->scip, NULL, "\nCONOPT error/warning: Jacobian element %d: ", POSNO);
+      else if( ROWNO == -1 )
          SCIPinfoMessage(problem->scip, NULL, "\nCONOPT error/warning: variable %d: ", COLNO);
       else if( COLNO == -1 )
          SCIPinfoMessage(problem->scip, NULL, "\nCONOPT error/warning: constraint %d: ", ROWNO);
       else
          SCIPinfoMessage(problem->scip, NULL, "\nCONOPT error/warning: variable %d appearing in constraint %d: ", COLNO, ROWNO);
       SCIPinfoMessage(problem->scip, NULL, "%s\n", MSG);
-
-      /* TODO also handle the Jacobian number */
    }
 
    return 0;
@@ -582,13 +592,20 @@ static int COI_CALLCONV Status(
    return 0;
 }
 
-/** CONOPT callback for function and Jacobian evaluation */
+/** CONOPT callback for function and Jacobian evaluation
+ *
+ *  The callback has three modes, indicated by MODE:
+ *
+ *  1: Only evaluate the sum of the nonlinear terms in row ROWNO and return the value in G.
+ *  2: Only evaluate the nonlinear Jacobian elements in row ROWNO and return them in JAC.
+ *  3: Perform both option 1 and 2.
+ */
 static int COI_CALLCONV FDEval(
    const double          X[],                /**< point of evaluation (provided by CONOPT) */
    double*               G,                  /**< value of the nonlinear part of the function */
    double                JAC[],              /**< vector of Jacobian values */
    int                   ROWNO,              /**< number of the row for which nonlinearities are to be evaluated (provided by CONOPT) */
-   const int             JACNUM[],           /**< list of column numbers for the nonlinear nonzero Jacobian elements in the current row */
+   const int             JACNUM[],           /**< list of column numbers for the nonlinear nonzero Jacobian elements in the current row (provided by CONOPT when MODE = 2 or 3) */
    int                   MODE,               /**< indicator for mode of evaluation (provided by CONOPT) */
    int                   IGNERR,             /**< indicator whether CONOPT assumes the point to be safe (0) or potentially unsafe (1) */
    int*                  ERRCNT,             /**< scalar function evaluation error indicator (set to 1 if a function value cannot be computed */
@@ -606,26 +623,25 @@ static int COI_CALLCONV FDEval(
 
    if( MODE == 1 || MODE == 3 )
    {
-      /* TODO check compatibility of CONOPT variables with SCIP ones */
-      /* TODO handle SCIP_CALL within callbacks */
+      /* the last 'constraint' is the objective */
+      /* TODO this evaluates the whole constraint? Not just the nonlinear part? */
       retcode = ROWNO < SCIPnlpiOracleGetNConstraints(problem->oracle) ?
             SCIPnlpiOracleEvalConstraintValue(problem->scip, problem->oracle, ROWNO, X, G) :
             SCIPnlpiOracleEvalObjectiveValue(problem->scip, problem->oracle, X, G);
       if( retcode != SCIP_OKAY || *G == SCIP_INVALID )
          *ERRCNT = 1;
-      /* TODO conversion of infinities and such? */
    }
 
    if( MODE == 2 || MODE == 3 )
    {
       SCIP_Real conval;
 
+      /* the last 'constraint' is the objective */
       retcode = ROWNO < SCIPnlpiOracleGetNConstraints(problem->oracle) ?
             SCIPnlpiOracleEvalConstraintGradient(problem->scip, problem->oracle, ROWNO, X, TRUE, &conval, JAC) :
             SCIPnlpiOracleEvalObjectiveGradient(problem->scip, problem->oracle, X, TRUE, &conval, JAC);
       if( retcode != SCIP_OKAY )
          *ERRCNT = 1;
-      /* TODO check some values here? */
    }
 
    return 0;
@@ -684,7 +700,11 @@ static int COI_CALLCONV LagrStr(
 
    assert(problem != NULL);
 
-   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->scip, problem->oracle, &hessoffsets, &rows, TRUE) );
+   if( SCIPnlpiOracleGetHessianLagSparsity(problem->scip, problem->oracle, &hessoffsets, &rows, TRUE) != SCIP_OKAY )
+   {
+      *NODRV = 1;
+      return 0;
+   }
 
    for( int i = 0; i < NHESS; i++ )
    {
@@ -722,11 +742,20 @@ static int COI_CALLCONV LagrVal(
 
    assert(problem != NULL);
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(problem->scip, &hessvals, NHESS) );
+   if( SCIPallocBlockMemoryArray(problem->scip, &hessvals, NHESS) != SCIP_OKAY )
+   {
+      *NODRV = 1;
+      return 0;
+   }
 
-   /* TODO some better handling for isnew */
-   SCIP_CALL( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, X, TRUE, TRUE, U[NUMCON-1], U, hessvals,
-         TRUE) );
+   /* TODO better handling for isnew */
+   if( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, X, TRUE, TRUE, U[NUMCON-1], U, hessvals, TRUE)
+         != SCIP_OKAY )
+   {
+      SCIPfreeBlockMemoryArray(problem->scip, &hessvals, NHESS);
+      *NODRV = 1;
+      return 0;
+   }
 
    for( int i = 0; i < NHESS; i++ )
       HSVL[i] = hessvals[i];
@@ -849,18 +878,10 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_License(problem->CntVect, LICENSE_INT_1, LICENSE_INT_2, LICENSE_INT_3, LICENSE_TEXT);
 #endif
 
-   /* TODO better handling of this? */
    if( COI_Error )
       SCIPinfoMessage(scip, NULL, "Error %d encountered during initialising CONOPT", COI_Error);
 
    return SCIP_OKAY;
-}
-
-static void freeConopt(
-   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
-)
-{
-   /* TODO anything to do here? */
 }
 
 static void updateConopt(
@@ -1252,16 +1273,13 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
    /* initialize Conopt data if necessary */
    if( problem->firstrun )
    {
-      freeConopt(problem);
       initConopt(scip, data, problem);
       problem->firstrun = FALSE;
    }
    else
       updateConopt(problem);
 
-   /* TODO set parameters */
-
-   /* TODO set initial guess (if available) (happens in ReadMatrix, but might it need updating?) */
+   /* TODO update initial guess (normally set in ReadMatrix) */
 
    /* measure time */
    SCIPresetClock(scip, data->solvetime);
@@ -1271,7 +1289,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
 #ifdef SCIP_DEBUG
    COI_Error = COI_Solve(problem->CntVect);
    if( COI_Error )
-      SCIPinfoMessage(scip, NULL, "Errors encountered during solution, %d", COI_Error);
+      SCIPinfoMessage(scip, NULL, "Errors encountered in CONOPT during solution, %d", COI_Error);
 #else
    COI_Solve(problem->CntVect);
 #endif
@@ -1337,7 +1355,7 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsConopt)
    statistics->niterations = problem->niterations;
    statistics->totaltime = problem->solvetime;
    statistics->evaltime = SCIPnlpiOracleGetEvalTime(scip, problem->oracle);
-   // statistics->consviol = problem->wsp->FeasOrigMax; TODO
+   statistics->consviol = SCIP_INVALID; /* TODO currently unavailable in CONOPT; might change */
    statistics->boundviol = 0.0;
 
    return SCIP_OKAY;
