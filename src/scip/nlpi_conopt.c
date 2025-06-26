@@ -634,7 +634,6 @@ static int COI_CALLCONV FDEval(
    if( MODE == 1 || MODE == 3 )
    {
       /* the last 'constraint' is the objective */
-      /* TODO this evaluates the whole constraint? Not just the nonlinear part? */
       retcode = ROWNO < SCIPnlpiOracleGetNConstraints(problem->oracle) ?
             SCIPnlpiOracleEvalConstraintValue(problem->scip, problem->oracle, ROWNO, X, G) :
             SCIPnlpiOracleEvalObjectiveValue(problem->scip, problem->oracle, X, G);
@@ -987,6 +986,8 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXyz)
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemConopt)
 {
+   int COI_Error = 0;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
 
@@ -1000,7 +1001,13 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemConopt)
    SCIP_CALL( SCIPnlpiOracleCreate(scip, &(*problem)->oracle) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName(scip, (*problem)->oracle, name) );
 
-   coiCreate(&((*problem)->CntVect)); /* TODO handle errors here? */
+   COI_Error += coiCreate(&((*problem)->CntVect));
+
+   if( COI_Error )
+   {
+      SCIPerrorMessage("Could not create CONOPT control vector, CONOPT return code %d", COI_Error);
+      return SCIP_ERROR;
+   }
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &(*problem)->randnumgen, DEFAULT_RANDSEED, TRUE) );
@@ -1090,7 +1097,6 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveConopt)
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   /* TODO do we need to reset CONOPT? */
    if( expr != NULL || SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, -1) )
       problem->firstrun = TRUE;
 
@@ -1109,8 +1115,6 @@ SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsConopt)
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   /* TODO can something from the previous solve still be reused? Previous solution may be? */
-
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(scip, problem->oracle, nvars, indices, lbs, ubs) );
 
    invalidateSolution(problem);
@@ -1125,8 +1129,6 @@ SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesConopt)
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-
-   /* TODO do this on the conopt side */
 
    SCIP_CALL( SCIPnlpiOracleChgConsSides(scip, problem->oracle, nconss, indices, lhss, rhss) );
 
@@ -1278,8 +1280,6 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
       initConopt(scip, data, problem);
       problem->firstrun = FALSE;
    }
-
-   /* TODO update initial guess (normally set in ReadMatrix) */
 
    /* measure time */
    SCIPresetClock(scip, data->solvetime);
