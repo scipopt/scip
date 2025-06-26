@@ -144,7 +144,7 @@ static int COI_CALLCONV Solution(
                SCIPallocClearBlockMemoryArray(problem->scip, &problem->lastdualub, nvars) != SCIP_OKAY )
          {
             SCIPerrorMessage("Failed to allocate memory for a solution from CONOPT\n");
-            return 1;
+            return SCIP_NOMEMORY;
          }
       }
       if( NUMCON > 0 )
@@ -152,7 +152,7 @@ static int COI_CALLCONV Solution(
          if( SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastdualcons, YMAR, NUMCON-1) != SCIP_OKAY )
          {
             SCIPerrorMessage("Failed to allocate memory for a solution from CONOPT\n");
-            return 1;
+            return SCIP_NOMEMORY;
          }
       }
    }
@@ -218,6 +218,7 @@ static int COI_CALLCONV ReadMatrix(
    int nobjnlnz;
    int objnzcnt = 0;
    int* nrownz;
+   SCIP_RETCODE retcode;
 
    assert(problem != NULL);
 
@@ -236,10 +237,11 @@ static int COI_CALLCONV ReadMatrix(
    /* save indices of range constraints if there are any */
    if( NUMVAR - norigvars > 0 )
    {
-      if( SCIPallocBufferArray(scip, &rangeconsidxs, NUMVAR - norigvars) != SCIP_OKAY )
+      retcode = SCIPallocBufferArray(scip, &rangeconsidxs, NUMVAR - norigvars);
+      if( retcode != SCIP_OKAY )
       {
-         SCIPerrorMessage("Failed to allocate memory in the ReadMatrix callback of CONOPT\n");
-         return 1;
+         SCIPerrorMessage("No memory in a callback of CONOPT\n");
+         return retcode;
       }
    }
 
@@ -348,11 +350,18 @@ static int COI_CALLCONV ReadMatrix(
 
    /* move structure info into COLSTA and ROWNO; while doing so, also add nonzeroes for the objective
     * (which CONOPT sees as the last constraint, i.e. constraint with index NUMCON-1) */
-   if( SCIPallocCleanBufferArray(scip, &nrownz, NUMCON) != SCIP_OKAY ||
-         SCIPnlpiOracleGetObjGradientNnz(scip, oracle, &objnz, &objnlflags, &nobjnz, &nobjnlnz) != SCIP_OKAY )
+   retcode = SCIPallocCleanBufferArray(scip, &nrownz, NUMCON);
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPerrorMessage("No memory in a callback of CONOPT\n");
+      return retcode;
+   }
+
+   retcode = SCIPnlpiOracleGetObjGradientNnz(scip, oracle, &objnz, &objnlflags, &nobjnz, &nobjnlnz);
+   if( retcode != SCIP_OKAY )
    {
       SCIPerrorMessage("Error in the ReadMatrix callback of CONOPT\n");
-      return 1;
+      return retcode;
    }
 
    for( int i = 0; i < norigvars; i++ )
@@ -1288,6 +1297,9 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
    /* optimize */
 #ifdef SCIP_DEBUG
    COI_Error = COI_Solve(problem->CntVect);
+
+   /* CONOPT may return either a positive error code, which is one of its own error codes,
+    * or a negative error code that is a SCIP_RETCODE returned from one of the callbacks */
    if( COI_Error )
       SCIPinfoMessage(scip, NULL, "Errors encountered in CONOPT during solution, %d", COI_Error);
 #else
