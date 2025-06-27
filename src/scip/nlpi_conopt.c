@@ -78,9 +78,6 @@ struct SCIP_NlpiProblem
    int                   niterations;        /**< number of iterations for last NLP solve */
    SCIP_Real             objval;             /**< objective value from last run */
 
-   int                   nvars;              /**< number of variables in the NLP problem */
-   int                   nconss;             /**< number of constraints in the NLP problem */
-
    SCIP_Real*            lastprimal;         /**< primal solution from last run, if available */
    SCIP_Real*            lastdualcons;       /**< dual solution from last run, if available */
    SCIP_Real*            lastduallb;         /**< dual solution for lower bounds from last run, if available */
@@ -121,16 +118,20 @@ static int COI_CALLCONV Solution(
    )
 {
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
-   int nvars;
+   int noraclevars;
+   int noracleconss;
 
    assert(problem != NULL);
-   assert(NUMVAR == problem->nvars);
-   assert(NUMCON == problem->nconss);
+   assert(problem->oracle != NULL);
 
-   nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+   noraclevars = SCIPnlpiOracleGetNVars(problem->oracle);
+   noracleconss = SCIPnlpiOracleGetNConstraints(problem->oracle);
 
    /* number of SCIP variables always less or equal, since CONOPT variables can also contain slack variables */
-   assert(nvars <= NUMVAR);
+   assert(NUMVAR >= noraclevars);
+
+   /* CONOPT has one more constraint than oracle (the objective) */
+   assert(NUMCON == noracleconss + 1);
 
    /* copy values from CONOPT into SCIP arrays. Note that in CONOPT, there is one
     * extra constraint (the objective) and slack variables that are not explicitly
@@ -139,9 +140,9 @@ static int COI_CALLCONV Solution(
    {
       if( NUMVAR > 0 )
       {
-         if( SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastprimal, XVAL, nvars) != SCIP_OKAY ||
-               SCIPallocClearBlockMemoryArray(problem->scip, &problem->lastduallb, nvars) != SCIP_OKAY ||
-               SCIPallocClearBlockMemoryArray(problem->scip, &problem->lastdualub, nvars) != SCIP_OKAY )
+         if( SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastprimal, XVAL, noraclevars) != SCIP_OKAY ||
+               SCIPallocClearBlockMemoryArray(problem->scip, &problem->lastduallb, noraclevars) != SCIP_OKAY ||
+               SCIPallocClearBlockMemoryArray(problem->scip, &problem->lastdualub, noraclevars) != SCIP_OKAY )
          {
             SCIPerrorMessage("Failed to allocate memory for a solution from CONOPT\n");
             return SCIP_NOMEMORY;
@@ -149,7 +150,7 @@ static int COI_CALLCONV Solution(
       }
       if( NUMCON > 0 )
       {
-         if( SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastdualcons, YMAR, NUMCON-1) != SCIP_OKAY )
+         if( SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastdualcons, YMAR, noracleconss) != SCIP_OKAY )
          {
             SCIPerrorMessage("Failed to allocate memory for a solution from CONOPT\n");
             return SCIP_NOMEMORY;
@@ -158,10 +159,10 @@ static int COI_CALLCONV Solution(
    }
    else
    {
-      BMScopyMemoryArray(problem->lastprimal, XVAL, nvars);
-      BMSclearMemoryArray(problem->lastduallb, nvars);
-      BMSclearMemoryArray(problem->lastdualub, nvars);
-      BMScopyMemoryArray(problem->lastdualcons, YMAR, NUMCON-1);
+      BMScopyMemoryArray(problem->lastprimal, XVAL, noraclevars);
+      BMSclearMemoryArray(problem->lastduallb, noraclevars);
+      BMSclearMemoryArray(problem->lastdualub, noraclevars);
+      BMScopyMemoryArray(problem->lastdualcons, YMAR, noracleconss);
    }
 
    /* replace initial guess with the obtained solution */
@@ -169,18 +170,18 @@ static int COI_CALLCONV Solution(
    {
       if( problem->initguess == NULL )
       {
-         if( SCIPduplicateMemoryArray(problem->scip, &problem->initguess, problem->lastprimal, nvars) != SCIP_OKAY )
+         if( SCIPduplicateMemoryArray(problem->scip, &problem->initguess, problem->lastprimal, noraclevars) != SCIP_OKAY )
          {
             SCIPerrorMessage("Failed to allocate memory for an initial guess from\n");
             return SCIP_NOMEMORY;
          }
       }
       else
-         BMScopyMemoryArray(problem->initguess, problem->lastprimal, nvars);
+         BMScopyMemoryArray(problem->initguess, problem->lastprimal, noraclevars);
    }
 
    /* get dual multipliers for variable bounds */
-   for( int i = 0; i < nvars; i++ )
+   for( int i = 0; i < noraclevars; i++ )
    {
       if( XBAS[i] == 0 ) /* Xi is at lower bound */
          problem->lastduallb[i] = -XMAR[i];
@@ -269,8 +270,8 @@ static int COI_CALLCONV ReadMatrix(
          UPPER[i] = ubs[i];
    }
 
-   /* TODO if there is an earlier solution, use it here */
-   /* specify initial values of original variables */
+   /* specify initial values of original variables,
+    * (if there is a previous solution, it is stored in initguess) */
    if( problem->initguess != NULL )
    {
       BMScopyMemoryArray(CURR, problem->initguess, norigvars);
@@ -843,14 +844,16 @@ void invalidateSolution(
    )
 {
    int nvars;
+   int nconss;
 
    assert(problem != NULL);
 
    nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+   nconss = SCIPnlpiOracleGetNConstraints(problem->oracle);
 
    SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastprimal), nvars);
-   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualcons), problem->nconss-1);
-   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastduallb), nvars); /* TODO handling of sizes */
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualcons), nconss);
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastduallb), nvars);
    SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualub), nvars);
 
    problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
@@ -901,9 +904,7 @@ static SCIP_RETCODE initConopt(
 
    /* inform CONOPT about problem sizes */
    COI_Error += COIDEF_NumVar(problem->CntVect, SCIPnlpiOracleGetNVars(problem->oracle) + nrangeconss);
-   problem->nvars = SCIPnlpiOracleGetNVars(problem->oracle) + nrangeconss; /* TODO make this and nconss debug only? */
    COI_Error += COIDEF_NumCon(problem->CntVect, nconss + 1); /* objective counts as another constraint here */
-   problem->nconss = nconss + 1;
 
    /* jacobian information */
    SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &jacoffsets, NULL, NULL, NULL, NULL, NULL, &nnlnz) );
