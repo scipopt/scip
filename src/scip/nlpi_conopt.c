@@ -164,6 +164,21 @@ static int COI_CALLCONV Solution(
       BMScopyMemoryArray(problem->lastdualcons, YMAR, NUMCON-1);
    }
 
+   /* replace initial guess with the obtained solution */
+   if( problem->lastprimal != NULL )
+   {
+      if( problem->initguess == NULL )
+      {
+         if( SCIPduplicateMemoryArray(problem->scip, &problem->initguess, problem->lastprimal, nvars) != SCIP_OKAY )
+         {
+            SCIPerrorMessage("Failed to allocate memory for an initial guess from\n");
+            return SCIP_NOMEMORY;
+         }
+      }
+      else
+         BMScopyMemoryArray(problem->initguess, problem->lastprimal, nvars);
+   }
+
    /* get dual multipliers for variable bounds */
    for( int i = 0; i < nvars; i++ )
    {
@@ -774,9 +789,54 @@ static int COI_CALLCONV LagrVal(
    return 0;
 }
 
+#ifdef DISABLED_CODE
+/** CONOPT callback to provide interval information
+ *
+ *  The callback has three modes (indicated by the argument MODE):
+ *    1: Only evaluate the bounds on the sum of the nonlinear terms in row ROWNO and return the interval in [GMIN, GMAX].
+ *    2: Only evaluate the bounds on the nonlinear Jacobian elements in row ROWNO and return the intervals in [JMIN, JMAX].
+ *    3: Perform both option 1 and 2. (Currently, MODE = 3 is not used).
+ *
+ *  TODO this is work in progress
+ */
+static int COI_CALLCONV FDInterval(
+   const double*         XMIN,               /**< vector of lower bounds on variables (provided by CONOPT) */
+   const double*         XMAX,               /**< vector of upper bounds on variables (provided by CONOPT) */
+   double*               GMIN,               /**< pointer to store a lower bound on the function value in constraint ROWNO if MODE = 1 or 3 */
+   double*               GMAX,               /**< pointer to store an upper bound on the function value in constraint ROWNO if MODE = 1 or 3 */
+   double*               JMIN,               /**< if MODE = 2 or 3, lower bound on the derivative of row ROWNO with respect to variable I may be returned in JMIN(I) */
+   double*               JAMX,               /**< if MODE = 2 or 3, upper bound on the derivative of row ROWNO with respect to variable I may be returned in JMIN(I) */
+   int                   ROWNO,              /**< number of the current (nonlinear) constraint (provided by CONOPT) */
+   const int*            JCNM,               /**< list of column numbers of nonlinear nonzeroes of the Jacobian in the current row, only defined when MODE = 2 or 3 */
+   int                   MODE,               /**< indicator for mode of evaluation (provided by CONOPT) */
+   double                PINF,               /**< CONOPT's plus infinity (provided by CONOPT) */
+   int                   N,                  /**< number of variables in the model (provided by CONOPT) */
+   int                   NJ,                 /**< number of nonlinear nonzeroes in the Jacobian in current row, only defined when MODE = 2 or 3 */
+   void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
+   )
+{
+   SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+   SCIP_NLPIORACLE* oracle;
+
+   assert(problem != NULL);
+
+   oracle = problem->oracle;
+   assert(oracle != NULL);
+
+
+
+   if( MODE == 1 )
+   { /* evaluate the bounds on the sum of the nonlinear terms in row ROWNO and return the interval in [GMIN, GMAX] */
+
+   }
+
+   return 0;
+}
+#endif
+
 /* NLPI local methods */
 
-/** sets the solstat and termstat to unknown and other, resp. */
+/** frees solution arrays and sets the solstat and termstat to unknown and other, resp. */
 static
 void invalidateSolution(
    SCIP_NLPIPROBLEM*     problem             /**< data structure of problem */
@@ -986,8 +1046,6 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXyz)
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemConopt)
 {
-   int COI_Error = 0;
-
    assert(nlpi != NULL);
    assert(problem != NULL);
 
@@ -1001,11 +1059,11 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemConopt)
    SCIP_CALL( SCIPnlpiOracleCreate(scip, &(*problem)->oracle) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName(scip, (*problem)->oracle, name) );
 
-   COI_Error += coiCreate(&((*problem)->CntVect));
+   coiCreate(&((*problem)->CntVect));
 
-   if( COI_Error )
+   if( (*problem)->CntVect == NULL )
    {
-      SCIPerrorMessage("Could not create CONOPT control vector, CONOPT return code %d", COI_Error);
+      SCIPerrorMessage("Could not create CONOPT control vector\n");
       return SCIP_ERROR;
    }
 
