@@ -3228,6 +3228,7 @@ SCIP_RETCODE SCIPaddUpgrade(
    assert(oldcons != NULL);
    assert(newcons != NULL);
    assert(*newcons != NULL);
+   assert(SCIPconsGetNUpgradeLocks(oldcons) == 0);
    assert(SCIPconsIsGlobal(oldcons) || SCIPconsGetValidDepth(oldcons) == SCIPconsGetActiveDepth(oldcons));
 
    if( SCIPconsIsConflict(oldcons) )

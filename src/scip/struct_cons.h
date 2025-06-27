@@ -65,6 +65,8 @@ struct SCIP_Cons
    int                   activedepth;        /**< depth level of constraint activation (-2: inactive, -1: problem constraint) */
    int                   validdepth;         /**< depth level where constraint is valid (-1: equals activedepth) */
    int                   nuses;              /**< number of times, this constraint is referenced */
+   int                   nupgradelocks;      /**< number of times, a constraint is locked against an upgrade
+                                              *   (e.g. linear -> logicor), 0 means a constraint can be upgraded */
    unsigned int          initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
    unsigned int          separate:1;         /**< TRUE iff constraint should be separated during LP processing */
    unsigned int          enforce:1;          /**< TRUE iff constraint should be enforced during node processing */
@@ -106,8 +108,6 @@ struct SCIP_Cons
    unsigned int          updatemarkpropagate:1;/**< TRUE iff constraint has to be marked to be propagated in update phase */
    unsigned int          updateunmarkpropagate:1;/**< TRUE iff constraint has to be unmarked to be propagated in update phase */
    unsigned int          conftype:3;         /**< type of the conflict constraint */
-   unsigned int          nupgradelocks:25;   /**< number of times, a constraint is locked against an upgrade
-                                              *   (e.g. linear -> logicor), 0 means a constraint can be upgraded */
 #ifndef NDEBUG
    SCIP*                 scip;               /**< SCIP data structure */
 #endif

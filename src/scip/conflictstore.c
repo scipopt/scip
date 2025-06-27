@@ -369,6 +369,9 @@ SCIP_RETCODE delPosConflict(
    SCIPsetDebugMsg(set, "-> remove conflict <%s> at pos=%d with age=%g\n", SCIPconsGetName(conflict), pos, SCIPconsGetAge(conflict));
 #endif
 
+   /**@todo implement conflict upgrade */
+   SCIPconsAddUpgradeLocks(conflict, -1);
+
    /* remove conflict locks */
    SCIP_CALL( SCIPconsAddLocks(conflict, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
 
@@ -431,6 +434,9 @@ SCIP_RETCODE delPosDualray(
 #ifdef SCIP_PRINT_DETAILS
    SCIPsetDebugMsg(set, "-> remove dual proof (ray) at pos=%d age=%g nvars=%d\n", pos, SCIPconsGetAge(dualproof), nvars);
 #endif
+
+   /**@todo implement dualraycons upgrade */
+   SCIPconsAddUpgradeLocks(dualproof, -1);
 
    /* remove conflict locks */
    SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
@@ -495,6 +501,9 @@ SCIP_RETCODE delPosDualsol(
 #ifdef SCIP_PRINT_DETAILS
    SCIPsetDebugMsg(set, "-> remove dual proof (sol) at pos=%d age=%g nvars=%d\n", pos, SCIPconsGetAge(dualproof), nvars);
 #endif
+
+   /**@todo implement dualsolcons upgrade */
+   SCIPconsAddUpgradeLocks(dualproof, -1);
 
    /* remove conflict locks */
    SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
@@ -1070,6 +1079,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    /* add conflict locks */
    SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
+   /**@todo implement dualraycons upgrade */
+   SCIPconsAddUpgradeLocks(dualproof, +1);
+
    /* increase the number of non-zeros */
    SCIP_CALL( SCIPconsGetNVars(dualproof, set, &nvars, &success) );
    assert(success);
@@ -1167,6 +1179,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    /* add conflict locks */
    SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
+   /**@todo implement dualsolcons upgrade */
+   SCIPconsAddUpgradeLocks(dualproof, +1);
+
    /* increase the number of non-zeros */
    SCIP_CALL( SCIPconsGetNVars(dualproof, set, &nvars, &success) );
    assert(success);
@@ -1262,6 +1277,9 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
 
    /* add conflict locks */
    SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
+
+   /**@todo implement conflict upgrade */
+   SCIPconsAddUpgradeLocks(cons, +1);
 
 #ifdef SCIP_PRINT_DETAILS
    SCIPsetDebugMsg(set, "add conflict <%s> to conflict store at position %d\n", SCIPconsGetName(cons), conflictstore->nconflicts-1);

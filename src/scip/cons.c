@@ -8876,8 +8876,9 @@ void SCIPconsAddUpgradeLocks(
 {
    assert(cons != NULL);
 
-   assert(cons->nupgradelocks < (1 << 25) - nlocks); /*lint !e574*/
-   cons->nupgradelocks += (unsigned int) nlocks;
+   assert(cons->nupgradelocks >= -nlocks);
+   cons->nupgradelocks += nlocks;
+   assert(cons->nupgradelocks >= nlocks);
 }
 
 /** gets number of locks against upgrading the constraint, 0 means this constraint can be upgraded */
