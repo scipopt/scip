@@ -8204,7 +8204,7 @@ SCIP_RETCODE detectRedundantVars(
    assert(v < nvars);
 
    /* all but one variable fit into the knapsack, so we can upgrade this constraint to a logicor */
-   if( v == nvars - 1 )
+   if( SCIPconsGetNUpgradeLocks(cons) == 0 && v == nvars - 1 )
    {
       SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
       assert(SCIPconsIsDeleted(cons));
@@ -8219,7 +8219,7 @@ SCIP_RETCODE detectRedundantVars(
       assert(consdata->nvars > 1);
 
       /* all but one variable fit into the knapsack, so we can upgrade this constraint to a logicor */
-      if( v == consdata->nvars - 1 )
+      if( SCIPconsGetNUpgradeLocks(cons) == 0 && v == consdata->nvars - 1 )
       {
          SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
          assert(SCIPconsIsDeleted(cons));
@@ -8277,7 +8277,7 @@ SCIP_RETCODE detectRedundantVars(
       /* if all items fit, then delete the whole constraint but create clique constraints which led to this
        * information
        */
-      if( conshdlrdata->disaggregation && w == nvars )
+      if( conshdlrdata->disaggregation && SCIPconsGetNUpgradeLocks(cons) == 0 && w == nvars )
       {
          SCIP_VAR** clqvars;
          int nclqvars;
@@ -8452,6 +8452,9 @@ SCIP_RETCODE dualWeightsTightening(
    assert(nchgcoefs != NULL);
    assert(nchgsides != NULL);
    assert(naddconss != NULL);
+
+   if( SCIPconsGetNUpgradeLocks(cons) >= 1 )
+      return SCIP_OKAY;
 
 #ifndef NDEBUG
    oldnchgsides = *nchgsides;
@@ -8753,7 +8756,8 @@ SCIP_RETCODE dualWeightsTightening(
 
       return SCIP_OKAY;
    }
-   else /* v < nvars - 1 <=> at least two items with weight smaller than the dual capacity */
+   /* at least two items with weight smaller than the dual capacity */
+   else
    {
       /* @todo generalize the following algorithm for more than two variables */
 
@@ -10573,8 +10577,9 @@ SCIP_RETCODE tightenWeights(
    /* apply rule (2) (don't apply, if the knapsack has too many items for applying this costly method) */
    if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
    {
-      if( conshdlrdata->disaggregation && consdata->nvars - pos <= MAX_USECLIQUES_SIZE && consdata->nvars >= 2
-         && pos > 0 && (SCIP_Longint)consdata->nvars - pos <= consdata->capacity
+      if( conshdlrdata->disaggregation && SCIPconsGetNUpgradeLocks(cons) == 0
+         && consdata->nvars - pos <= MAX_USECLIQUES_SIZE && consdata->nvars >= 2 && pos > 0
+         && (SCIP_Longint)consdata->nvars - pos <= consdata->capacity
          && consdata->weights[pos - 1] == consdata->capacity
          && ( pos == consdata->nvars || consdata->weights[pos] == 1 ) )
       {
@@ -12863,6 +12868,10 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
             cons = conss[c];
             assert( cons != NULL );
+
+            if( SCIPconsGetNUpgradeLocks(cons) >= 1 )
+               continue;
+
             consdata = SCIPconsGetData(cons);
             assert( consdata != NULL );
 
