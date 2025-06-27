@@ -3198,9 +3198,10 @@ SCIP_RETCODE SCIPaddCons(
    }  /*lint !e788*/
 }
 
-/** adds constraint to the problem and conflict to the conflict store; if constraint is only valid locally, it is added
- *  to the local subproblem of the current node (and all of its subnodes); otherwise it is added to the global problem;
- *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
+/** adds constraint to the problem and upgrades conflict in the conflict store; if oldcons is valid globally, newcons
+ *  is added to the global problem; otherwise it is added to the local subproblem of the current node
+ *
+ *  @note must only be called once for both constraints
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

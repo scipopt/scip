@@ -1110,7 +1110,8 @@ SCIP_RETCODE applyFixings(
             /* add the downgraded constraint to the problem */
             SCIPdebugMsg(scip, "adding linear constraint: ");
             SCIPdebugPrintCons(scip, newcons, NULL);
-            SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+            SCIP_CALL( SCIPaddCons(scip, newcons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
             /* free constraint arrays */
             SCIPfreeBufferArray(scip, &consvals);
@@ -3850,7 +3851,7 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
          SCIP_CONS* conslinear;
          char consname[SCIP_MAXSTRLEN];
 
-         SCIPdebugMsg(scip, " -> variable is multi-aggregated, upgrade to linear constraint <%s> == 1 \n",
+         SCIPdebugMsg(scip, " -> variable is multi-aggregated, convert to linear constraint <%s> == 1 \n",
             SCIPvarGetName(consdata->vars[0]));
 
          coef = 1.0;
@@ -3861,8 +3862,9 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
                SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                SCIPconsIsStickingAtNode(cons)) );
 
-         /* add constraint */
-         SCIP_CALL( SCIPaddUpgrade(scip, cons, &conslinear) );
+         /* add the downgraded constraint to the problem */
+         SCIP_CALL( SCIPaddCons(scip, conslinear) );
+         SCIP_CALL( SCIPreleaseCons(scip, &conslinear) );
          SCIP_CALL( SCIPdelCons(scip, cons) );
 
          (*ndelconss)++;

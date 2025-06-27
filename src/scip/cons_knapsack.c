@@ -8086,7 +8086,8 @@ SCIP_RETCODE deleteRedundantVars(
                   /* add the special constraint to the problem */
                   SCIPdebugMsg(scip, " -> adding clique constraint: ");
                   SCIPdebugPrintCons(scip, cliquecons, NULL);
-                  SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
+                  SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                   ++(*naddconss);
                }
             }
@@ -8320,13 +8321,14 @@ SCIP_RETCODE detectRedundantVars(
                /* add the special constraint to the problem */
                SCIPdebugMsg(scip, " -> adding clique constraint: ");
                SCIPdebugPrintCons(scip, cliquecons, NULL);
-               SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
+               SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                ++(*naddconss);
             }
          }
 
          /* delete old constraint */
-         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+         SCIP_CALL( SCIPdelCons(scip, cons) );
          ++(*ndelconss);
 
          SCIPfreeBufferArray(scip, &clqvars);
@@ -10571,9 +10573,10 @@ SCIP_RETCODE tightenWeights(
    /* apply rule (2) (don't apply, if the knapsack has too many items for applying this costly method) */
    if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
    {
-      if( conshdlrdata->disaggregation && consdata->nvars - pos <= MAX_USECLIQUES_SIZE && consdata->nvars >= 2 &&
-         pos > 0 && (SCIP_Longint)consdata->nvars - pos <= consdata->capacity &&
-         consdata->weights[pos - 1] == consdata->capacity && (pos == consdata->nvars || consdata->weights[pos] == 1) )
+      if( conshdlrdata->disaggregation && consdata->nvars - pos <= MAX_USECLIQUES_SIZE && consdata->nvars >= 2
+         && pos > 0 && (SCIP_Longint)consdata->nvars - pos <= consdata->capacity
+         && consdata->weights[pos - 1] == consdata->capacity
+         && ( pos == consdata->nvars || consdata->weights[pos] == 1 ) )
       {
          SCIP_VAR** clqvars;
          SCIP_CONS* cliquecons;
@@ -10598,7 +10601,8 @@ SCIP_RETCODE tightenWeights(
                   SCIPconsIsStickingAtNode(cons)) );
 
             /* add the upgraded constraint to the problem */
-            SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
+            SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
             ++(*naddconss);
 
             /* delete old constraint */
@@ -10659,7 +10663,8 @@ SCIP_RETCODE tightenWeights(
             /* add the special constraint to the problem */
             SCIPdebugMsg(scip, " -> adding clique constraint: ");
             SCIPdebugPrintCons(scip, cliquecons, NULL);
-            SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
+            SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
             ++(*naddconss);
          }
 
@@ -10845,7 +10850,8 @@ SCIP_RETCODE tightenWeights(
                         /* add the special constraint to the problem */
                         SCIPdebugMsg(scip, " -> adding clique constraint: ");
                         SCIPdebugPrintCons(scip, cliquecons, NULL);
-                        SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
+                        SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+                        SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                         ++(*naddconss);
 
                         /* free clique array */

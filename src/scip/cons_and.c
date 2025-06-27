@@ -2601,7 +2601,8 @@ SCIP_RETCODE dualPresolve(
                      SCIPconsIsStickingAtNode(cons)) );
 
                /* add constraint */
-               SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+               SCIP_CALL( SCIPaddCons(scip, newcons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
             }
             (*naddconss) += consdata->nvars;
 
@@ -3042,7 +3043,8 @@ SCIP_RETCODE cliquePresolve(
                         !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
                   SCIPdebugMsg(scip, " -> adding clique constraint: ");
                   SCIPdebugPrintCons(scip, cliquecons, NULL);
-                  SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
+                  SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                   ++(*naddconss);
                }
             }
@@ -3948,7 +3950,8 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
                      !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
                /* add constraint */
-               SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+               SCIP_CALL( SCIPaddCons(scip, newcons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
             }
          }
 
@@ -3978,7 +3981,8 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
                   !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
             /* add constraint */
-            SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+            SCIP_CALL( SCIPaddCons(scip, newcons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
          }
 
          /* create additional linear constraint */
@@ -3993,7 +3997,8 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
                !(consdata->notremovablewhenupgr) && SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
          /* add constraint */
-         SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
          /* delete constraint */
          SCIP_CALL( SCIPdelCons(scip, cons) );
