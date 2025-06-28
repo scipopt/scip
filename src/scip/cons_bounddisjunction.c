@@ -2530,7 +2530,11 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
-         else if( consdata->nvars == 1 )
+
+         if( SCIPconsGetNUpgradeLocks(cons) >= 1 )
+            continue;
+
+         if( consdata->nvars == 1 )
          {
             SCIPdebugMsg(scip, "bound disjunction constraint <%s> has only one undecided literal\n",
                SCIPconsGetName(cons));
