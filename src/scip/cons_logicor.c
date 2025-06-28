@@ -3634,7 +3634,8 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
                break;
             }
 
-            if( SCIPvarsHaveCommonClique(var1, neg1, var2, neg2, TRUE) && conshdlrsetppc != NULL )
+            if( conshdlrsetppc != NULL && SCIPconsGetNUpgradeLocks(cons) == 0
+               && SCIPvarsHaveCommonClique(var1, neg1, var2, neg2, TRUE) )
             {
                SCIP_CONS* newcons;
                SCIP_VAR* vars[2];
@@ -3785,7 +3786,7 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
       }
 
       /* still we have two variables left, we will upgrade this constraint */
-      if( consdata->nvars == 2 && conshdlrsetppc != NULL )
+      if( conshdlrsetppc != NULL && SCIPconsGetNUpgradeLocks(cons) == 0 && consdata->nvars == 2 )
       {
          SCIP_CONS* newcons;
          SCIP_VAR* vars[2];
