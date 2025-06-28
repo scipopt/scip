@@ -3102,7 +3102,7 @@ void prettifyConss(
          && SCIPisLT(scip, REALABS(consdata->vbdcoef), 1.0) )
       {
          SCIP_Real epsilon;
-         SCIP_Longint nominator;
+         SCIP_Longint numerator;
          SCIP_Longint denominator;
          SCIP_Longint maxmult;
          SCIP_Bool success;
@@ -3114,21 +3114,21 @@ void prettifyConss(
          epsilon = SCIPepsilon(scip) / (SCIP_Real)maxmult;
          epsilon *= 0.9;
 
-         success = SCIPrealToRational(consdata->vbdcoef, -epsilon, epsilon , maxmult, &nominator, &denominator);
+         success = SCIPrealToRational(consdata->vbdcoef, -epsilon, epsilon , maxmult, &numerator, &denominator);
 
          if( success )
          {
-            /* it is possible that the dominator is a multiple of the nominator */
-            if( SCIPisIntegral(scip, (SCIP_Real) denominator / (SCIP_Real) nominator) )
+            /* it is possible that the dominator is a multiple of the numerator */
+            if( SCIPisIntegral(scip, (SCIP_Real) denominator / (SCIP_Real) numerator) )
             {
-               denominator /= nominator;
-               nominator = 1;
+               denominator /= numerator;
+               numerator = 1;
             }
 
             success = success && (denominator <= maxmult);
 
-            /* scale the constraint denominator/nominator */
-            if( success && ABS(denominator) > 1 && nominator == 1 )
+            /* scale the constraint denominator/numerator */
+            if( success && ABS(denominator) > 1 && numerator == 1 )
             {
                SCIP_VAR* swapvar;
 
