@@ -3234,7 +3234,7 @@ SCIP_RETCODE SCIPaddUpgrade(
    if( SCIPconsIsConflict(oldcons) )
    {
       SCIP_CALL( SCIPaddConflict(scip, SCIPconsIsLocal(oldcons) ? SCIPgetCurrentNode(scip) : NULL, newcons, NULL,
-            SCIPconsGetConflictType(oldcons), SCIPconsIsCutoffInvolved(oldcons)) );
+            SCIP_CONFTYPE_UNKNOWN, FALSE) );
    }
    else
    {
@@ -3668,13 +3668,9 @@ SCIP_RETCODE SCIPaddConflict(
    /* mark constraint to be a conflict */
    SCIP_CALL( SCIPconsMarkConflict(*cons) );
    if( iscutoffinvolved )
-   {
-      SCIP_CALL( SCIPconsMarkCutoffInvolved(*cons) );
       primalbound = SCIPgetCutoffbound(scip);
-   }
    else
       primalbound = -SCIPinfinity(scip);
-   SCIP_CALL( SCIPconsSetConflictType(*cons, conftype) );
 
    /* add a global conflict */
    if( node == NULL )

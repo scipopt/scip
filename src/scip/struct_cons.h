@@ -87,7 +87,6 @@ struct SCIP_Cons
                                               *   node belongs to the corresponding sub tree
                                               */
    unsigned int          conflict:1;         /**< TRUE iff constraint is a conflict */
-   unsigned int          cutoffinvolved:1;   /**< TRUE iff conflict constraint relies on a cutoff bound */
    unsigned int          enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in current node */
    unsigned int          obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
    unsigned int          markpropagate:1;    /**< TRUE iff constraint is marked to be propagated in the next round */
@@ -107,7 +106,6 @@ struct SCIP_Cons
    unsigned int          updateactfocus:1;   /**< TRUE iff delayed constraint activation happened at focus node */
    unsigned int          updatemarkpropagate:1;/**< TRUE iff constraint has to be marked to be propagated in update phase */
    unsigned int          updateunmarkpropagate:1;/**< TRUE iff constraint has to be unmarked to be propagated in update phase */
-   unsigned int          conftype:3;         /**< type of the conflict constraint */
 #ifndef NDEBUG
    SCIP*                 scip;               /**< SCIP data structure */
 #endif

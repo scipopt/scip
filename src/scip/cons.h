@@ -1084,17 +1084,6 @@ SCIP_RETCODE SCIPconsMarkConflict(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** marks the conflict constraint to be based on a cutoff bound */
-SCIP_RETCODE SCIPconsMarkCutoffInvolved(
-   SCIP_CONS*            cons                /**< conflict constraint */
-   );
-
-/** sets the conflict type for the conflict constraint */
-SCIP_RETCODE SCIPconsSetConflictType(
-   SCIP_CONS*            cons,               /**< conflict constraint */
-   SCIP_CONFTYPE         conftype            /**< conflict type */
-   );
-
 /** marks the constraint to be propagated (update might be delayed) */
 SCIP_EXPORT
 SCIP_RETCODE SCIPconsMarkPropagate(
