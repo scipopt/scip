@@ -246,9 +246,7 @@ SCIP_RETCODE conflictstoreEnsureMem(
    if( num > conflictstore->conflictsize )
    {
       int newsize;
-#ifndef NDEBUG
-      int i;
-#endif
+
       /* initialize the complete data structure */
       if( conflictstore->conflictsize == 0 )
       {
@@ -269,13 +267,6 @@ SCIP_RETCODE conflictstoreEnsureMem(
                newsize) );
       }
 
-#ifndef NDEBUG
-      for( i = conflictstore->nconflicts; i < newsize; i++ )
-      {
-         conflictstore->conflicts[i] = NULL;
-         conflictstore->confprimalbnds[i] = -SCIPsetInfinity(set);
-      }
-#endif
       conflictstore->conflictsize = newsize;
    }
    assert(num <= conflictstore->conflictsize || conflictstore->conflictsize == conflictstore->maxstoresize);
@@ -375,6 +366,10 @@ SCIP_RETCODE delPosConflict(
    /* remove conflict locks */
    SCIP_CALL( SCIPconsAddLocks(conflict, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
 
+   /* invalidate conflict position */
+   assert(conflictstore->conflicts[pos]->confconsspos == pos);
+   conflictstore->conflicts[pos]->confconsspos = -1;
+
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(conflict) )
    {
@@ -387,14 +382,11 @@ SCIP_RETCODE delPosConflict(
    /* replace with conflict at the last position */
    if( pos < lastpos )
    {
+      assert(conflictstore->conflicts[lastpos] != NULL);
       conflictstore->conflicts[pos] = conflictstore->conflicts[lastpos];
+      conflictstore->conflicts[pos]->confconsspos = pos;
       conflictstore->confprimalbnds[pos] = conflictstore->confprimalbnds[lastpos];
    }
-
-#ifndef NDEBUG
-   conflictstore->conflicts[lastpos] = NULL;
-   conflictstore->confprimalbnds[lastpos] = -SCIPsetInfinity(set);
-#endif
 
    /* decrease number of conflicts */
    --conflictstore->nconflicts;
@@ -455,11 +447,6 @@ SCIP_RETCODE delPosDualray(
    {
       conflictstore->dualrayconfs[pos] = conflictstore->dualrayconfs[lastpos];
       conflictstore->drayrelaxonly[pos] = conflictstore->drayrelaxonly[lastpos];
-
-#ifndef NDEBUG
-      conflictstore->dualrayconfs[lastpos] = NULL;
-      conflictstore->drayrelaxonly[lastpos] = TRUE;
-#endif
    }
 
    /* decrease number of dual rays */
@@ -525,14 +512,6 @@ SCIP_RETCODE delPosDualsol(
       conflictstore->scalefactors[pos] = conflictstore->scalefactors[lastpos];
       conflictstore->updateside[pos] = conflictstore->updateside[lastpos];
       conflictstore->dsolrelaxonly[pos] = conflictstore->dsolrelaxonly[lastpos];
-
-#ifndef NDEBUG
-      conflictstore->dualsolconfs[lastpos] = NULL;
-      conflictstore->dualprimalbnds[lastpos] = SCIP_UNKNOWN;
-      conflictstore->scalefactors[lastpos] = 1.0;
-      conflictstore->updateside[lastpos] = FALSE;
-      conflictstore->dsolrelaxonly[lastpos] = TRUE;
-#endif
    }
 
    /* decrease number of dual rays */
@@ -665,6 +644,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    )
 {
    int ndelconfs;
+   int i;
 
    assert(conflictstore != NULL);
    assert(blkmem != NULL);
@@ -676,6 +656,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    if( conflictstore->nconflicts == 0 )
       return SCIP_OKAY;
    assert(conflictstore->nconflicts >= 1);
+   assert(conflictstore->conflicts != NULL);
 
    ndelconfs = 0;
 
@@ -693,10 +674,23 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    /* resort the array regularly */
    if( conflictstore->ncleanups % CONFLICTSTORE_SORTFREQ == 0 )
    {
-      /* sort conflict */
+#ifndef NDEBUG
+      /* check conflict positions */
+      for( i = 0; i < conflictstore->nconflicts; ++i )
+      {
+         assert(conflictstore->conflicts[i] != NULL);
+         assert(conflictstore->conflicts[i]->confconsspos == i);
+      }
+#endif
+
+      /* sort conflict constraints */
       SCIPsortPtrReal((void**)conflictstore->conflicts, conflictstore->confprimalbnds, compareConss, conflictstore->nconflicts);
       assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->conflicts[0]),
             SCIPconsGetAge(conflictstore->conflicts[conflictstore->nconflicts-1])));
+
+      /* update conflict positions */
+      for( i = 0; i < conflictstore->nconflicts; ++i )
+         conflictstore->conflicts[i]->confconsspos = i;
    }
    assert(conflictstore->nconflicts > 0);
 
@@ -709,7 +703,6 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    {
       SCIP_Real maxage;
       int oldest_i;
-      int i;
 
       assert(!SCIPconsIsDeleted(conflictstore->conflicts[0]));
 
@@ -717,7 +710,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
       oldest_i = 0;
 
       /* check the first 10% of conflicts and find the oldest */
-      for( i = 1; i < 0.1 * conflictstore->nconflicts; i++ )
+      for( i = 1; i < 0.1 * conflictstore->nconflicts; ++i )
       {
          assert(!SCIPconsIsDeleted(conflictstore->conflicts[i]));
 
@@ -1266,6 +1259,10 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
 
    /* update the last seen node */
    conflictstore->lastnodenum = curnodenum;
+
+   /* validate conflict position */
+   assert(cons->confconsspos == -1);
+   cons->confconsspos = conflictstore->nconflicts;
 
    SCIPconsCapture(cons);
    conflictstore->conflicts[conflictstore->nconflicts] = cons;

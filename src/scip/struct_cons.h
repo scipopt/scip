@@ -60,6 +60,7 @@ struct SCIP_Cons
    int                   enfoconsspos;       /**< position of constraint in the handler's enfoconss array */
    int                   checkconsspos;      /**< position of constraint in the handler's checkconss array */
    int                   propconsspos;       /**< position of constraint in the handler's propconss array */
+   int                   confconsspos;       /**< position of constraint in the conflict store */
    int                   nlockspos[NLOCKTYPES]; /**< array of times, the constraint locked rounding of its variables */
    int                   nlocksneg[NLOCKTYPES]; /**< array of times, the constraint locked vars for the constraint's negation */
    int                   activedepth;        /**< depth level of constraint activation (-2: inactive, -1: problem constraint) */

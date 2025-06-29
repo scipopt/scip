@@ -6075,6 +6075,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->enfoconsspos = -1;
    (*cons)->checkconsspos = -1;
    (*cons)->propconsspos = -1;
+   (*cons)->confconsspos = -1;
    (*cons)->activedepth = -2;
    (*cons)->validdepth = (local ? -1 : 0);
    (*cons)->age = 0.0;
@@ -6402,6 +6403,7 @@ SCIP_RETCODE SCIPconsFree(
       checkConssArrays((*cons)->conshdlr);
    }
    assert((*cons)->consspos == -1);
+   assert((*cons)->confconsspos == -1);
 
    /* free constraint */
    BMSfreeBlockMemoryArray(blkmem, &(*cons)->name, strlen((*cons)->name)+1);
