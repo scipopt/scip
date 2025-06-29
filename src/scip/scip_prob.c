@@ -3225,22 +3225,33 @@ SCIP_RETCODE SCIPaddUpgrade(
    SCIP_CONS**           newcons             /**< upgraded constraint to add */
    )
 {
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
    assert(oldcons != NULL);
    assert(newcons != NULL);
    assert(*newcons != NULL);
    assert(SCIPconsGetNUpgradeLocks(oldcons) == 0);
    assert(SCIPconsIsGlobal(oldcons) || SCIPconsGetValidDepth(oldcons) == SCIPconsGetActiveDepth(oldcons));
 
-   if( SCIPconsIsConflict(oldcons) )
+   /* add problem constraint */
+   if( SCIPconsIsGlobal(oldcons) )
    {
-      SCIP_CALL( SCIPaddConflict(scip, SCIPconsIsLocal(oldcons) ? SCIPgetCurrentNode(scip) : NULL, newcons, NULL,
-            SCIP_CONFTYPE_UNKNOWN, FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, *newcons) );
    }
    else
    {
-      SCIP_CALL( SCIPaddCons(scip, *newcons) );
-      SCIP_CALL( SCIPreleaseCons(scip, newcons) );
+      SCIP_CALL( SCIPaddConsLocal(scip, *newcons, NULL) );
    }
+
+   /* upgrade conflict constraint */
+   if( SCIPconsIsConflict(oldcons) )
+   {
+      SCIP_CALL( SCIPconflictstoreUpgradeConflict(scip->conflictstore, scip->mem->probmem, scip->set,
+            oldcons, *newcons) );
+   }
+
+   /* release upgraded constraint */
+   SCIP_CALL( SCIPreleaseCons(scip, newcons) );
 
    return SCIP_OKAY;
 }

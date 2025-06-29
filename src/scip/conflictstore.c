@@ -360,9 +360,6 @@ SCIP_RETCODE delPosConflict(
    SCIPsetDebugMsg(set, "-> remove conflict <%s> at pos=%d with age=%g\n", SCIPconsGetName(conflict), pos, SCIPconsGetAge(conflict));
 #endif
 
-   /**@todo implement conflict upgrade */
-   SCIPconsAddUpgradeLocks(conflict, -1);
-
    /* remove conflict locks */
    SCIP_CALL( SCIPconsAddLocks(conflict, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
 
@@ -1275,15 +1272,67 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    /* add conflict locks */
    SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
-   /**@todo implement conflict upgrade */
-   SCIPconsAddUpgradeLocks(cons, +1);
-
 #ifdef SCIP_PRINT_DETAILS
    SCIPsetDebugMsg(set, "add conflict <%s> to conflict store at position %d\n", SCIPconsGetName(cons), conflictstore->nconflicts-1);
    SCIPsetDebugMsg(set, " -> conflict type: %d, cutoff involved = %u\n", conftype, cutoffinvolved);
    if( cutoffinvolved )
       SCIPsetDebugMsg(set, " -> current primal bound: %g\n", primalbound);
 #endif
+
+   return SCIP_OKAY;
+}
+
+/** upgrades an unchecked conflict in the conflict store
+ *
+ *  @note this method releases oldcons and captures newcons
+ */
+SCIP_RETCODE SCIPconflictstoreUpgradeConflict(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONS*            oldcons,            /**< underlying constraint to upgrade */
+   SCIP_CONS*            newcons             /**< upgraded constraint to add */
+   )
+{
+   assert(conflictstore != NULL);
+   assert(conflictstore->conflicts != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(SCIPconsIsConflict(oldcons));
+   assert(!SCIPconsIsDeleted(oldcons));
+   assert(oldcons->confconsspos >= -1);
+   assert(!SCIPconsIsDeleted(newcons));
+   assert(newcons->confconsspos == -1);
+
+   /* multiple upgrades unsupported */
+   if( oldcons->confconsspos == -1 || SCIPconsIsChecked(oldcons) )
+   {
+      assert(SCIPconsIsChecked(oldcons));
+      assert(SCIPconsIsChecked(newcons));
+      return SCIP_OKAY;
+   }
+
+   assert(!SCIPconsIsChecked(oldcons));
+   assert(!SCIPconsIsChecked(newcons));
+   assert(oldcons->confconsspos >= 0);
+   assert(oldcons->confconsspos < conflictstore->nconflicts);
+   assert(conflictstore->conflicts[oldcons->confconsspos] == oldcons);
+
+   /* mark constraint conflict */
+   SCIP_CALL( SCIPconsMarkConflict(newcons) );
+
+   /* replace conflict constraint */
+   conflictstore->conflicts[oldcons->confconsspos] = newcons;
+   newcons->confconsspos = oldcons->confconsspos;
+   oldcons->confconsspos = -1;
+
+   /* transfer conflict locks */
+   SCIP_CALL( SCIPconsAddLocks(newcons, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
+   SCIP_CALL( SCIPconsAddLocks(oldcons, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
+
+   /* update conflict usage */
+   SCIPconsCapture(newcons);
+   SCIP_CALL( SCIPconsRelease(&oldcons, blkmem, set) );
 
    return SCIP_OKAY;
 }
