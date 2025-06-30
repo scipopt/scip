@@ -133,7 +133,7 @@
 
 /* Conflict Analysis (conflict graph) */
 
-#define SCIP_DEFAULT_CONF_MAXSTORESIZE    12000 /**< maximal size of the conflict pool */
+#define SCIP_DEFAULT_CONF_MAXSTORESIZE    10000 /**< maximal size of the conflict pool */
 
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
