@@ -348,18 +348,28 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
 
 /** gets sparsity pattern (rowwise) of Jacobian matrix
  *
- *  Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
+ *  Note that internal data is returned in *rowoffsets and *cols, thus the user does not need to allocate memory there.
  *  Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
+SCIP_RETCODE SCIPnlpiOracleGetJacobianRowSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const int**           rowoffset,          /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
-   const int**           cols,               /**< pointer to store pointer that stores the indices of variables that appear in each row,
+   const int**           rowoffsets,         /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
+   const int**           cols                /**< pointer to store pointer that stores the indices of variables that appear in each row,
                                               *   rowoffset[nconss] gives length of col, can be NULL */
-   const SCIP_Bool**     colnlflags,         /**< flags indicating whether an entry in nonlinear (sorted row-wise) */
-   const int**           coloffset,          /**< pointer to store pointer that stores the offsets to each column's sparsity pattern in row, can be NULL */
+   );
+
+/** gets sparsity pattern (columnwise) of Jacobian matrix
+ *
+ *  Note that internal data is returned in *coloffsets and *rows, thus the user does not need to allocate memory there.
+ *  Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnlpiOracleGetJacobianColSparsity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   const int**           coloffsets,         /**< pointer to store pointer that stores the offsets to each column's sparsity pattern in row, can be NULL */
    const int**           rows,               /**< pointer to store pointer that stores the indices of rows that each variable participates in,
                                               *   coloffset[nvars] gives length of row, can be NULL */
    const SCIP_Bool**     rownlflags,         /**< flags indicating whether an entry in nonlinear (sorted column-wise) */

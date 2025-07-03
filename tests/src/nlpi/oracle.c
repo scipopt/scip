@@ -126,13 +126,13 @@ Test(oracle, jacsparsity, .init = setup, .fini = teardown,
 
    const int* jacrowoffsets = NULL;
    const int* jaccols = NULL;
-   const SCIP_Bool* jaccolnlflags = NULL;
    const int* jaccoloffsets = NULL;
    const int* jacrows = NULL;
    const SCIP_Bool* jacrownlflags = NULL;
+   int njacnlnz;
 
-   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, oracle, &jacrowoffsets, &jaccols, &jaccolnlflags, &jaccoloffsets,
-         &jacrows, &jacrownlflags) );
+   /* rowwise sparsity */
+   SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, oracle, &jacrowoffsets, &jaccols) );
 
    expecti(jacrowoffsets[0], 0);
    expecti(jacrowoffsets[1], 2);
@@ -146,12 +146,12 @@ Test(oracle, jacsparsity, .init = setup, .fini = teardown,
    expecti(jaccols[4], 1);
    expecti(jaccols[5], 3);
 
-   expecti(jaccolnlflags[0], TRUE);
-   expecti(jaccolnlflags[1], TRUE);
-   expecti(jaccolnlflags[2], FALSE);
-   expecti(jaccolnlflags[3], FALSE);
-   expecti(jaccolnlflags[4], FALSE);
-   expecti(jaccolnlflags[5], FALSE);
+   invalidateJacobiSparsity(scip, oracle);
+
+   /* columnwise sparsity */
+   SCIP_CALL( SCIPnlpiOracleGetJacobianColSparsity(scip, oracle, &jaccoloffsets, &jacrows, &jacrownlflags, &njacnlnz) );
+
+   expecti(njacnlnz, 2);
 
    expecti(jaccoloffsets[0], 0);
    expecti(jaccoloffsets[1], 1);

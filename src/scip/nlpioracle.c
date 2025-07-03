@@ -795,6 +795,123 @@ SCIP_RETCODE evalFunctionGradient(
    return SCIP_OKAY;
 }
 
+/** compute rowwise sparsity of the Jacobian */
+static SCIP_RETCODE computeRowJacobianSparsity(
+    SCIP*                scip,               /**< SCIP data structure */
+    SCIP_NLPIORACLE*     oracle,             /**< NLPI oracle */
+    int*                 nnz,                /**< counter for the number of nonzeroes */
+    int*                 nvarnnz,            /**< for each variable, number of constraints it has a nonzero in; can be NULL if not needed */
+    int*                 nnlnz               /**< counter for the number of nonlinear nonzeroes */
+   )
+{
+   int maxcols;
+   int maxflags;
+   SCIP_Bool* nzflag;
+   SCIP_Bool* nlflag;
+   SCIP_EXPRITER* it;
+   SCIP_NLPIORACLECONS* cons;
+   SCIP_EXPR* expr;
+
+   assert(scip != NULL);
+   assert(oracle != NULL);
+
+   (*nnlnz) = 0;
+
+   maxcols = MIN(oracle->nvars, 10) * oracle->nconss; /* initial guess */
+   maxflags = maxcols;                                /* since array extension functions change the length variable, have one variable for each array */
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacrowoffsets, oracle->nconss + 1) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jaccols, maxcols) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->jaccolnlflags), maxflags) );
+
+   (*nnz) = 0;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nzflag, oracle->nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlflag, oracle->nvars) );
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+
+   for( int i = 0; i < oracle->nconss; ++i )
+   {
+      oracle->jacrowoffsets[i] = *nnz;
+
+      cons = oracle->conss[i];
+      assert(cons != NULL);
+
+      if( cons->expr == NULL )
+      {
+         /* for a linear constraint, we can just copy the linear indices from the constraint into the sparsity pattern */
+         if( cons->nlinidxs > 0 )
+         {
+            SCIP_CALL( ensureIntArraySize(scip, &oracle->jaccols, &maxcols, *nnz + cons->nlinidxs) );
+            SCIP_CALL( ensureClearBoolArraySize(scip, &oracle->jaccolnlflags, &maxflags, *nnz + cons->nlinidxs) );
+            BMScopyMemoryArray(&oracle->jaccols[*nnz], cons->linidxs, cons->nlinidxs);
+            (*nnz) += cons->nlinidxs;
+
+            for( int j = 0; j < cons->nlinidxs; ++j )
+            {
+               if( nvarnnz != NULL )
+                  ++nvarnnz[cons->linidxs[j]];
+            }
+         }
+         continue;
+      }
+
+      /* check which variables appear in constraint i
+       * @todo this could be done faster for very sparse constraint by assembling all appearing variables, sorting, and removing duplicates
+       */
+      BMSclearMemoryArray(nzflag, oracle->nvars);
+      BMSclearMemoryArray(nlflag, oracle->nvars);
+
+      for( int j = 0; j < cons->nlinidxs; ++j )
+         nzflag[cons->linidxs[j]] = TRUE;
+
+      for( expr = SCIPexpriterRestartDFS(it, cons->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+         if( SCIPisExprVaridx(scip, expr) )
+         {
+            assert(SCIPgetIndexExprVaridx(expr) < oracle->nvars);
+            nzflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
+            nlflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
+         }
+
+      /* store variables indices in jaccols and increase coloffsets */
+      for( int j = 0; j < oracle->nvars; ++j )
+      {
+         if( nzflag[j] == FALSE )
+            continue;
+
+         SCIP_CALL( ensureIntArraySize(scip, &oracle->jaccols, &maxcols, (*nnz) + 1) );
+         SCIP_CALL( ensureClearBoolArraySize(scip, &oracle->jaccolnlflags, &maxflags, (*nnz) + 1) );
+         oracle->jaccols[*nnz] = j;
+         if( nlflag[j] )
+         {
+            oracle->jaccolnlflags[*nnz] = TRUE;
+            ++(*nnlnz);
+         }
+         ++(*nnz);
+         if( nvarnnz != NULL )
+            ++nvarnnz[j]; /* increase the counter of the variable's nonzeroes */
+      }
+   }
+
+   SCIPfreeExpriter(&it);
+
+   oracle->jacrowoffsets[oracle->nconss] = *nnz;
+
+   /* shrink jaccols and jaccolnlflags arrays to nnz */
+   if( *nnz < maxcols )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->jaccols, maxcols, *nnz) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->jaccolnlflags, maxflags, *nnz) );
+   }
+
+   SCIPfreeBlockMemoryArray(scip, &nlflag, oracle->nvars);
+   SCIPfreeBlockMemoryArray(scip, &nzflag, oracle->nvars);
+
+   return SCIP_OKAY;
+}
+
 /** collects indices of nonzero entries in the lower-left part of the hessian matrix of an expression
  * adds the indices to a given set of indices, avoiding duplicates */
 static
@@ -2140,40 +2257,23 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
 
 /** gets sparsity pattern (rowwise) of Jacobian matrix
  *
- *  Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
+ *  Note that internal data is returned in *rowoffsets and *cols, thus the user does not need to allocate memory there.
  *  Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary.
  */
-SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
+SCIP_RETCODE SCIPnlpiOracleGetJacobianRowSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int**           rowoffsets,         /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
-   const int**           cols,               /**< pointer to store pointer that stores the indices of variables that appear in each row,
+   const int**           cols                /**< pointer to store pointer that stores the indices of variables that appear in each row,
                                               *   rowoffset[nconss] gives length of col, can be NULL */
-   const SCIP_Bool**     colnlflags,         /**< flags indicating whether an entry in nonlinear (sorted row-wise) */
-   const int**           coloffsets,         /**< pointer to store pointer that stores the offsets to each column's sparsity pattern in row, can be NULL */
-   const int**           rows,               /**< pointer to store pointer that stores the indices of rows that each variable participates in,
-                                              *   coloffset[nvars] gives length of row, can be NULL */
-   const SCIP_Bool**     rownlflags,         /**< flags indicating whether an entry in nonlinear (sorted column-wise) */
-   int*                  nnlnz               /**< number of nonlinear nonzeroes */
    )
 {
-   SCIP_NLPIORACLECONS* cons;
-   SCIP_EXPRITER* it;
-   SCIP_EXPR* expr;
-   SCIP_Bool* nzflag;
-   SCIP_Bool* nlflag;
-   int* nvarnnz; /* for each variable, number of constraints it has a nonzero in */
    int nnz;
-   int maxcols;
-   int maxflags;
-   int i;
-   int j;
-   int sumvarnnz; /* sum of nonzeroes for all columns, used in jaccoloffset computation */
+   int nnlnz = 0;
 
    assert(oracle != NULL);
 
    SCIPdebugMessage("%p get jacobian sparsity\n", (void*)oracle);
-   (*nnlnz) = 0;
 
    if( oracle->jacrowoffsets != NULL )
    {
@@ -2183,8 +2283,66 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
          *rowoffsets = oracle->jacrowoffsets;
       if( cols != NULL )
          *cols = oracle->jaccols;
-      if( colnlflags != NULL )
-         *colnlflags = oracle->jaccolnlflags;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+
+   if( oracle->nvars == 0 || oracle->nconss == 0 )
+   {
+      /* no variables or no constraints */
+      if( rowoffsets != NULL )
+         *rowoffsets = oracle->jacrowoffsets;
+      if( cols != NULL )
+         *cols = oracle->jaccols;
+
+      SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( computeRowJacobianSparsity(scip, oracle, &nnz, NULL, &nnlnz) );
+
+   if( rowoffsets != NULL )
+      *rowoffsets = oracle->jacrowoffsets;
+   if( cols != NULL )
+      *cols = oracle->jaccols;
+
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
+   return SCIP_OKAY;
+}
+
+/** gets sparsity pattern (columnwise) of Jacobian matrix
+ *
+ *  Note that internal data is returned in *coloffsets and *rows, thus the user does not need to allocate memory there.
+ *  Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary.
+ */
+SCIP_RETCODE SCIPnlpiOracleGetJacobianColSparsity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   const int**           coloffsets,         /**< pointer to store pointer that stores the offsets to each column's sparsity pattern in row, can be NULL */
+   const int**           rows,               /**< pointer to store pointer that stores the indices of rows that each variable participates in,
+                                              *   coloffset[nvars] gives length of row, can be NULL */
+   const SCIP_Bool**     rownlflags,         /**< flags indicating whether an entry in nonlinear (sorted column-wise), can be NULL */
+   int*                  nnlnz               /**< number of nonlinear nonzeroes */
+   )
+{
+   int* nvarnnz; /* for each variable, number of constraints it has a nonzero in */
+   int nnz;
+   int i;
+   int sumvarnnz; /* sum of nonzeroes for all columns, used in jaccoloffset computation */
+
+   assert(oracle != NULL);
+
+   SCIPdebugMessage("%p get jacobian sparsity\n", (void*)oracle);
+
+   *nnlnz = 0;
+
+   if( oracle->jacrowoffsets != NULL )
+   {
+      assert(oracle->jaccols != NULL);
+      assert(oracle->jacrows != NULL);
       if( coloffsets != NULL )
          *coloffsets = oracle->jaccoloffsets;
       if( rows != NULL )
@@ -2199,12 +2357,6 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    if( oracle->nvars == 0 || oracle->nconss == 0 )
    {
       /* no variables or no constraints */
-      if( rowoffsets != NULL )
-         *rowoffsets = oracle->jacrowoffsets;
-      if( cols != NULL )
-         *cols = oracle->jaccols;
-      if( colnlflags != NULL )
-         *colnlflags = oracle->jaccolnlflags;
       if( coloffsets != NULL )
          *coloffsets = NULL;
       if( rows != NULL )
@@ -2217,98 +2369,13 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       return SCIP_OKAY;
    }
 
-   maxcols = MIN(oracle->nvars, 10) * oracle->nconss;  /* initial guess */
-   maxflags = maxcols; /* since array extension functions change the length variable, have one variable for each array */
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacrowoffsets, oracle->nconss + 1) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &oracle->jaccoloffsets, oracle->nvars + 1) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jaccols, maxcols) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->jaccolnlflags), maxflags) );
-
-   nnz = 0;
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nzflag, oracle->nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlflag, oracle->nvars) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &nvarnnz, oracle->nvars) );
 
-   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
-   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
-
-   for( i = 0; i < oracle->nconss; ++i )
-   {
-      oracle->jacrowoffsets[i] = nnz;
-
-      cons = oracle->conss[i];
-      assert(cons != NULL);
-
-      if( cons->expr == NULL )
-      {
-         /* for a linear constraint, we can just copy the linear indices from the constraint into the sparsity pattern */
-         if( cons->nlinidxs > 0 )
-         {
-            SCIP_CALL( ensureIntArraySize(scip, &oracle->jaccols, &maxcols, nnz + cons->nlinidxs) );
-            SCIP_CALL( ensureClearBoolArraySize(scip, &oracle->jaccolnlflags, &maxflags, nnz + cons->nlinidxs) );
-            BMScopyMemoryArray(&oracle->jaccols[nnz], cons->linidxs, cons->nlinidxs);
-            nnz += cons->nlinidxs;
-
-            for( j = 0; j < cons->nlinidxs; ++j )
-               ++nvarnnz[cons->linidxs[j]];
-         }
-         continue;
-      }
-
-      /* check which variables appear in constraint i
-       * @todo this could be done faster for very sparse constraint by assembling all appearing variables, sorting, and removing duplicates
-       */
-      BMSclearMemoryArray(nzflag, oracle->nvars);
-      BMSclearMemoryArray(nlflag, oracle->nvars);
-
-      for( j = 0; j < cons->nlinidxs; ++j )
-         nzflag[cons->linidxs[j]] = TRUE;
-
-      for( expr = SCIPexpriterRestartDFS(it, cons->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
-         if( SCIPisExprVaridx(scip, expr) )
-         {
-            assert(SCIPgetIndexExprVaridx(expr) < oracle->nvars);
-            nzflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
-            nlflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
-         }
-
-      /* store variables indices in jaccols and increase coloffsets */
-      for( j = 0; j < oracle->nvars; ++j )
-      {
-         if( nzflag[j] == FALSE )
-            continue;
-
-         SCIP_CALL( ensureIntArraySize(scip, &oracle->jaccols, &maxcols, nnz + 1) );
-         SCIP_CALL( ensureClearBoolArraySize(scip, &oracle->jaccolnlflags, &maxflags, nnz + 1) );
-         oracle->jaccols[nnz] = j;
-         if( nlflag[j] )
-         {
-            oracle->jaccolnlflags[nnz] = TRUE;
-            ++(*nnlnz);
-         }
-         ++nnz;
-         ++nvarnnz[j]; /* increase the counter of the variable's nonzeroes */
-      }
-   }
-
-   SCIPfreeExpriter(&it);
-
-   oracle->jacrowoffsets[oracle->nconss] = nnz;
-
-   /* shrink jaccols and jaccolnlflags arrays to nnz */
-   if( nnz < maxcols )
-   {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->jaccols, maxcols, nnz) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->jaccolnlflags, maxflags, nnz) );
-   }
-
-   SCIPfreeBlockMemoryArray(scip, &nlflag, oracle->nvars);
-   SCIPfreeBlockMemoryArray(scip, &nzflag, oracle->nvars);
+   /* row sparsity is more natural to compute with the structures we have - therefore, compute it first */
+   SCIP_CALL( computeRowJacobianSparsity(scip, oracle, &nnz, nvarnnz, nnlnz) );
 
    /* compute the column representation */
-
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &oracle->jaccoloffsets, oracle->nvars + 1) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacrows, nnz) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacrownlflags, nnz) );
 
@@ -2322,7 +2389,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    }
    oracle->jaccoloffsets[oracle->nvars] = sumvarnnz;
 
-   /* use the row representation (jacrowoffsets, jaccols) to fill in the column representation nonzeroes (jacrows) */
+   /* use the row representation (jacrowoffsets, jaccols, jaccolnlflags) to fill in the
+      column representation nonzeroes (jacrows, jacrownlflags) */
    int considx = 0;
    for( i = 0; i < nnz; ++i )
    {
@@ -2338,13 +2406,6 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 
    SCIPfreeBlockMemoryArray(scip, &nvarnnz, oracle->nvars);
 
-
-   if( rowoffsets != NULL )
-      *rowoffsets = oracle->jacrowoffsets;
-   if( cols != NULL )
-      *cols = oracle->jaccols;
-   if( colnlflags != NULL )
-      *colnlflags = oracle->jaccolnlflags;
    if( coloffsets != NULL )
       *coloffsets = oracle->jaccoloffsets;
    if( rows != NULL )

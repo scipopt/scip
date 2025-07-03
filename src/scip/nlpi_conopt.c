@@ -361,8 +361,7 @@ static int COI_CALLCONV ReadMatrix(
    /* Jacobian information */
 
    /* TODO make it so that the column representation is only composed when asked for */
-   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, oracle, NULL, NULL, NULL, &jaccoloffsets, &jacrows,
-         &jacrownlflags, &njacnlnnz) );
+   SCIP_CALL( SCIPnlpiOracleGetJacobianColSparsity(scip, oracle, &jaccoloffsets, &jacrows, &jacrownlflags, &njacnlnnz) );
    assert(jaccoloffsets == NULL || jaccoloffsets[norigvars] <= NUMNZ);
 
    /* move structure info into COLSTA and ROWNO; while doing so, also add nonzeroes for the objective
@@ -869,6 +868,7 @@ static SCIP_RETCODE initConopt(
    int COI_Error = 0; /* CONOPT error counter */
    int nrangeconss = 0;
    int nconss;
+   int nvars;
    const int* jacoffsets;
    const int* hessoffsets;
    int nnlnz;
@@ -889,6 +889,7 @@ static SCIP_RETCODE initConopt(
       SCIP_CALL( SCIPcreateClock(scip, &(data->solvetime)) );
 
    nconss = SCIPnlpiOracleGetNConstraints(problem->oracle);
+   nvars = SCIPnlpiOracleGetNVars(problem->oracle);
 
    /* count range constraints: because CONOPT doesn't support them directly, will need to add a slack variable for each ranged constraint */
    for( int i = 0; i < nconss; i++ )
@@ -903,15 +904,15 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_EmptyCol(problem->CntVect, 1);
 
    /* inform CONOPT about problem sizes */
-   COI_Error += COIDEF_NumVar(problem->CntVect, SCIPnlpiOracleGetNVars(problem->oracle) + nrangeconss);
+   COI_Error += COIDEF_NumVar(problem->CntVect, nvars + nrangeconss);
    COI_Error += COIDEF_NumCon(problem->CntVect, nconss + 1); /* objective counts as another constraint here */
 
    /* jacobian information */
-   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &jacoffsets, NULL, NULL, NULL, NULL, NULL, &nnlnz) );
+   SCIP_CALL( SCIPnlpiOracleGetJacobianColSparsity(scip, problem->oracle, &jacoffsets, NULL, NULL, &nnlnz) );
    SCIP_CALL( SCIPnlpiOracleGetObjGradientNnz(scip, problem->oracle, &objgradnz, &objnl, &nobjgradnz, &nobjgradnls) );
 
    /* each slack var adds a Jacobian nnz; objective also counts as constraint */
-   COI_Error += COIDEF_NumNz(problem->CntVect, jacoffsets != NULL ? jacoffsets[nconss] + nrangeconss + nobjgradnz :
+   COI_Error += COIDEF_NumNz(problem->CntVect, jacoffsets != NULL ? jacoffsets[nvars] + nrangeconss + nobjgradnz :
          nrangeconss + nobjgradnz);
 
    /* Jacobian nonzeroes include those of constraints and objective */
@@ -919,7 +920,7 @@ static SCIP_RETCODE initConopt(
 
    /* hessian sparsity information */
    SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &hessoffsets, NULL, TRUE) );
-   COI_Error += COIDEF_NumHess(problem->CntVect, hessoffsets[SCIPnlpiOracleGetNVars(problem->oracle)]);
+   COI_Error += COIDEF_NumHess(problem->CntVect, hessoffsets[nvars]);
 
    /* tell CONOPT to minimise the objective (the oracle always gives a minimisation problem) */
    COI_Error += COIDEF_OptDir(problem->CntVect, -1);
