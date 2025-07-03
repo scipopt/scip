@@ -276,6 +276,7 @@ void invalidateJacobiSparsity(
    {
       /* nothing to do for objective gradient structure */
       assert(oracle->objnlflags == NULL);
+      return;
    }
 
    SCIPfreeBlockMemoryArray(scip, &oracle->objgradnz, oracle->nobjgradnz);
@@ -903,7 +904,9 @@ SCIP_RETCODE hessLagAddExpr(
    assert(hesnzidcs != NULL);
    assert(values != NULL);
 
-   SCIP_CALL( SCIPexprintHessian(scip, oracle->exprinterpreter, expr, exprintdata, (SCIP_Real*)x, new_x, &val, &rowidxs, &colidxs, &h, &nnz) );
+   SCIP_CALL( SCIPexprintHessian(scip, oracle->exprinterpreter, expr, exprintdata, (SCIP_Real*)x, new_x, &val,
+         &rowidxs, &colidxs, &h, &nnz) );
+
    if( !SCIPisFinite(val) )
    {
       SCIPdebugMessage("hessian evaluation yield invalid function value %g\n", val);
@@ -2334,6 +2337,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    }
 
    SCIPfreeBlockMemoryArray(scip, &nvarnnz, oracle->nvars);
+
 
    if( rowoffsets != NULL )
       *rowoffsets = oracle->jacrowoffsets;
