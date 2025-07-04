@@ -363,7 +363,6 @@ static int COI_CALLCONV ReadMatrix(
 
    /* Jacobian information */
 
-   /* TODO make it so that the column representation is only composed when asked for */
    SCIP_CALL( SCIPnlpiOracleGetJacobianColSparsity(scip, oracle, &jaccoloffsets, &jacrows, &jacrownlflags, &njacnlnnz) );
    assert(jaccoloffsets == NULL || jaccoloffsets[norigvars] <= NUMNZ);
 

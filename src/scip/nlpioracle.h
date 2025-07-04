@@ -392,8 +392,8 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
 
 /** evaluates the Jacobian matrix in a given point
  *
- *  The values in the Jacobian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity().
- *  The user need to call SCIPnlpiOracleGetJacobianSparsity() at least ones before using this function.
+ *  The values in the Jacobian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianRowSparsity().
+ *  The user need to call SCIPnlpiOracleGetJacobianRowSparsity() at least ones before using this function.
  *
  * @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
  */
