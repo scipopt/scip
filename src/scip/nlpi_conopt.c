@@ -22,12 +22,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* NLP interface for the CONOPT solver */
-
 /**@file    nlpi_conopt.c
  * @ingroup DEFPLUGINS_NLPI
  * @brief   CONOPT NLP interface
  * @author  Ksenia Bestuzheva
+ *
+ * NLP interface for the CONOPT solver.
+ *
+ * This file can only be compiled if CONOPT is available.
+ * Otherwise, to resolve public functions, use nlpi_conopt_dummy.c.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
