@@ -157,17 +157,7 @@ SCIP_DECL_SORTPTRCOMP(compareConss)
          return +1;
    }
 #else
-   {
-      SCIP_CONSHDLR* conshdlr1 = SCIPconsGetHdlr(cons1);
-      SCIP_CONSHDLR* conshdlr2 = SCIPconsGetHdlr(cons2);
-
-      if( strcmp(SCIPconshdlrGetName(conshdlr1), "linear") == strcmp(SCIPconshdlrGetName(conshdlr2), "linear") )
-         return 0;
-      else if( strcmp(SCIPconshdlrGetName(conshdlr1), "linear") == 0 )
-         return -1;
-      else
-         return +1;
-   }
+      return 0;
 #endif
 }
 
