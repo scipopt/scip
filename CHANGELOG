@@ -43,6 +43,8 @@ Performance improvements
 - reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
 - simplified symmetry detection graphs in case all edges have the same color
 - avoid unnecessary calls of constraint handlers components, benders, benderslp, propagator genvbounds, and heuristics ofins, subnlp, nlpdiving, indicator
+- disable dualsol and dualray conflict upgrades to maintain conflict store
+- apply general conflict upgrades in conflict store
 
 Examples and applications
 -------------------------
