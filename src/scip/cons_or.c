@@ -1359,7 +1359,7 @@ SCIP_RETCODE upgradeCons(
    assert(nupgdconss != NULL);
 
    /* we cannot upgrade a modifiable constraint, since we don't know what additional variables to expect */
-   if( SCIPconsIsModifiable(cons) )
+   if( SCIPconsIsModifiable(cons) || SCIPconsGetNUpgradeLocks(cons) >= 1 )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "upgrading or constraint <%s> into equivalent and constraint on negated variables\n",

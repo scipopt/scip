@@ -373,7 +373,8 @@ SCIP_RETCODE createPresoldata(
       {
          assert(SCIPconsIsActive(setppcs[c]));
 
-         if( !SCIPconsIsModifiable(setppcs[c]) && SCIPgetTypeSetppc(scip, setppcs[c]) == SCIP_SETPPCTYPE_PACKING
+         if( !SCIPconsIsModifiable(setppcs[c]) && SCIPconsGetNUpgradeLocks(setppcs[c]) == 0
+            && SCIPgetTypeSetppc(scip, setppcs[c]) == SCIP_SETPPCTYPE_PACKING
             && SCIPgetNVarsSetppc(scip, setppcs[c]) == 2 )
          {
             /* insert new element in hashtable */
@@ -451,7 +452,8 @@ SCIP_RETCODE createPresoldata(
       {
          assert(SCIPconsIsActive(logicors[c]));
 
-         if( !SCIPconsIsModifiable(logicors[c]) && SCIPgetNVarsLogicor(scip, logicors[c]) >= 3 )
+         if( !SCIPconsIsModifiable(logicors[c]) && SCIPconsGetNUpgradeLocks(logicors[c]) == 0
+            && SCIPgetNVarsLogicor(scip, logicors[c]) >= 3 )
          {
             /* insert new element in hashtable */
             SCIP_CALL( SCIPhashtableInsert(presoldata->logicorhashtable, (void*) logicors[c]) );
@@ -508,6 +510,7 @@ SCIP_RETCODE cleanupHashDatas(
 
          if( SCIPconsIsDeleted(presoldata->setppchashdatas[c].cons)
             || SCIPconsIsModifiable(presoldata->setppchashdatas[c].cons)
+            || SCIPconsGetNUpgradeLocks(presoldata->setppchashdatas[c].cons) >= 1
             || SCIPgetTypeSetppc(scip, presoldata->setppchashdatas[c].cons) != SCIP_SETPPCTYPE_PACKING
             || SCIPgetNVarsSetppc(scip, presoldata->setppchashdatas[c].cons) != 2 )
          {
@@ -649,7 +652,8 @@ SCIP_RETCODE correctPresoldata(
    {
       assert(SCIPconsIsActive(setppcs[c]));
 
-      if( !SCIPconsIsModifiable(setppcs[c]) && SCIPgetTypeSetppc(scip, setppcs[c]) == SCIP_SETPPCTYPE_PACKING
+      if( !SCIPconsIsModifiable(setppcs[c]) && SCIPconsGetNUpgradeLocks(setppcs[c]) == 0
+         && SCIPgetTypeSetppc(scip, setppcs[c]) == SCIP_SETPPCTYPE_PACKING
          && SCIPgetNVarsSetppc(scip, setppcs[c]) == 2 )
       {
          /* check if constraint is new, and correct array size if necessary */
@@ -746,6 +750,7 @@ SCIP_RETCODE correctPresoldata(
          presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]);
 
       if( !SCIPconsIsActive(presoldata->usefullogicor[c]) || SCIPconsIsModifiable(presoldata->usefullogicor[c])
+         || SCIPconsGetNUpgradeLocks(presoldata->usefullogicor[c]) >= 1
          || SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]) < 3 )
       {
          SCIP_CALL( SCIPhashtableRemove(presoldata->logicorhashtable, (void*) presoldata->usefullogicor[c]) );
@@ -764,7 +769,8 @@ SCIP_RETCODE correctPresoldata(
    {
       assert(SCIPconsIsActive(logicors[c]));
 
-      if( !SCIPconsIsModifiable(logicors[c]) && SCIPgetNVarsLogicor(scip, logicors[c]) >= 3 )
+      if( !SCIPconsIsModifiable(logicors[c]) && SCIPconsGetNUpgradeLocks(logicors[c]) == 0
+         && SCIPgetNVarsLogicor(scip, logicors[c]) >= 3 )
       {
          /* check if constraint is new, and correct array size if necessary */
          if( !SCIPhashtableExists(presoldata->logicorhashtable, (void*) logicors[c]) )
@@ -1499,7 +1505,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
          setppc = setppcconss[d];
          assert(setppc != NULL);
 
-         if( SCIPconsIsDeleted(setppc) || SCIPconsIsModifiable(setppc) )
+         if( SCIPconsIsDeleted(setppc) || SCIPconsIsModifiable(setppc) || SCIPconsGetNUpgradeLocks(setppc) >= 1 )
             continue;
 
          /* @todo if of interest could also be implemented for set-covering constraints */
@@ -1510,11 +1516,8 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
          nsetppcvars = SCIPgetNVarsSetppc(scip, setppc);
 
-         if( nsetppcvars < 2 )
-            continue;
-
          /* to big setppc constraints are picked out */
-         if( nsetppcvars > size )
+         if( nsetppcvars < 2 || nsetppcvars > size )
             continue;
 
          setppcvars = SCIPgetVarsSetppc(scip, setppc);
@@ -1564,7 +1567,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
          logicor = logicorconss[c];
          assert(logicor != NULL);
 
-         if( SCIPconsIsDeleted(logicor) || SCIPconsIsModifiable(logicor) )
+         if( SCIPconsIsDeleted(logicor) || SCIPconsIsModifiable(logicor) || SCIPconsGetNUpgradeLocks(logicor) >= 1 )
             continue;
 
          nlogicorvars = SCIPgetNVarsLogicor(scip, logicor);

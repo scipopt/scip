@@ -164,31 +164,6 @@ SCIP_RETCODE SCIPsortAndCons(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** when 'upgrading' the given AND-constraint, should the check flag for the upgraded constraint be set to TRUE, even if
- *  the check flag of this AND-constraint is set to FALSE?
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Bool             flag                /**< should an arising constraint from the given AND-constraint be checked,
-                                              *   even if the check flag of the AND-constraint is set to FALSE
-                                              */
-   );
-
-/** when 'upgrading' the given AND-constraint, should the removable flag for the upgraded constraint be set to FALSE,
- *  even if the removable flag of this AND-constraint is set to TRUE?
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPchgAndConsRemovableFlagWhenUpgr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Bool             flag                /**< should an arising constraint from the given AND-constraint be not
-                                              *   removable, even if the removable flag of the AND-constraint is set to
-                                              *   TRUE
-                                              */
-   );
-
 /** @} */
 
 /** @} */
