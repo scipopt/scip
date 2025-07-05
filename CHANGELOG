@@ -103,6 +103,7 @@ Interface changes
 - SCIPapplyBendersDecomposition has been removed. This was originally used to apply Benders' decomposition from a
   supplied decomposition structure. The application of Benders' decomposition now occurs in benders_relax.
 - SCIPcalcMIR(), SCIPcutGenerationHeuristicCMIR(), SCIPcalcStrongCG(): the Boolean argument 'usevbds' was replaced by an integer argument 'vartypeusevbds' that indicates for which variables variable bound substitution should be performed.
+- SCIPchgAndConsCheckFlagWhenUpgr() and SCIPchgAndConsRemovableFlagWhenUpgr() are removed to keep upgrade flags consistent, use SCIPconsAddUpgradeLocks() to control upgrades instead
 - the argument cons of SCIPaddConflict() is turned into a double constraint pointer to cleanly release the constraint
 - remove the following functions that were declared in h-files, but not implemented:
   SCIPselectPtrRealReal(), SCIPselectWeightedPtrRealReal(), SCIPsortPtrRealReal(),
