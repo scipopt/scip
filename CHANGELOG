@@ -168,6 +168,7 @@ Interface changes
 - SCIPconshdlrSetNeedsCons() to set whether constraint handler callbacks should also be called if there are no constraints
 - SCIPpropSetTimingmask() to set timing mask of a propagator
 - added C++ interface for expression handlers: src/objscip/objexprhdlr.h
+- SCIPaddUpgrade() to add constraint upgrades while especially informing the conflict store
 
 ### Changes in preprocessor macros
 
