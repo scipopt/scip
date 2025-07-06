@@ -8960,7 +8960,6 @@ void addLargestCliquePart(
             SCIP_VAR** cliquevars;
             SCIP_Bool* cliquevals;
             int nvarclique;
-            int size = 0;
             int smallestidx = ntotalvars + 1;
             int k;
 
@@ -8988,7 +8987,6 @@ void addLargestCliquePart(
                   if( j >= 0 && cliquevals[k] == values[j] && cliquepartition[j] < 0 )
                   {
                      assert( j < nvars );
-                     ++size;
 
                      /* consider smallest index of variables larger than varidx */
                      if ( j > varidx && j < smallestidx )
