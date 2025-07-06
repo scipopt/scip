@@ -8947,9 +8947,8 @@ void addLargestCliquePart(
       if( nvarcliques > 0 )
       {
          SCIP_CLIQUE** varcliques;
-         int maxsize = -1;
-         int maxidx = -1;
-         int maxsmallestidx = ntotalvars + 1;
+         int selectedidx = -1;
+         int selectedsmallestidx = ntotalvars + 1;
          int l;
 
          varcliques = SCIPvarGetCliques(var, value);
@@ -8998,29 +8997,26 @@ void addLargestCliquePart(
                }
             }
 
-            /* We sort according to size as first objective and then according to the smallest index appearing in the
-             * clique which is larger than the given variable. This hopefully helps to preserve the sorting of variables, which
-             * often is helpful for the knapsack constraint handler. */
-            if( size > maxsize || (size == maxsize && smallestidx < maxsmallestidx) )
+            /* We sort according to the smallest index appearing in the clique. This hopefully helps to preserve the
+             * sorting of variables, which often is helpful for the knapsack constraint handler. */
+            if( smallestidx < selectedsmallestidx )
             {
-               maxsize = size;
-               maxidx = l;
-               maxsmallestidx = smallestidx;
+               selectedidx = l;
+               selectedsmallestidx = smallestidx;
             }
          }
 
          /* add clique */
-         if( maxsize > 0 )
+         if( selectedidx > 0 )
          {
             SCIP_VAR** cliquevars;
             SCIP_Bool* cliquevals;
             int nvarclique;
             int k;
 
-            assert( maxidx >= 0 );
-            nvarclique = SCIPcliqueGetNVars(varcliques[maxidx]);
-            cliquevars = SCIPcliqueGetVars(varcliques[maxidx]);
-            cliquevals = SCIPcliqueGetValues(varcliques[maxidx]);
+            nvarclique = SCIPcliqueGetNVars(varcliques[selectedidx]);
+            cliquevars = SCIPcliqueGetVars(varcliques[selectedidx]);
+            cliquevals = SCIPcliqueGetValues(varcliques[selectedidx]);
 
             /* loop through clique and add it to part */
             for( k = 0; k < nvarclique; ++k )
