@@ -35,8 +35,7 @@
 
 /** create solver interface for CONOPT solver and includes it into SCIP, if CONOPT is available */  /*lint -e{715}*/
 SCIP_RETCODE SCIPincludeNlpSolverConopt(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {  /*lint --e{715}*/
    assert(scip != NULL);

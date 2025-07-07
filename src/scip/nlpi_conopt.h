@@ -56,6 +56,24 @@ SCIP_RETCODE SCIPincludeNlpSolverConopt(
  * @{
  */
 
+ /** gets string that identifies CONOPT (version number) */
+SCIP_EXPORT
+const char* SCIPgetSolverNameConopt(
+   void
+   );
+
+/** gets string that describes Conopt (version number) */
+SCIP_EXPORT
+const char* SCIPgetSolverDescConopt(
+   void
+   );
+
+/** returns whether Conopt is available, i.e., whether it has been linked in */
+SCIP_EXPORT
+SCIP_Bool SCIPisConoptAvailableConopt(
+   void
+   );
+
 /** @} */
 
 #ifdef __cplusplus

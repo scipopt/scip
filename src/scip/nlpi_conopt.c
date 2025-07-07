@@ -1001,19 +1001,14 @@ static void handleConoptParam(
  * Callback methods of NLP solver interface
  */
 
-#ifdef SCIP_DISABLED_CODE
 /** copy method of NLP interface (called when SCIP copies plugins) */
 static
-SCIP_DECL_NLPICOPY(nlpiCopyXyz)
+SCIP_DECL_NLPICOPY(nlpiCopyConopt)
 {
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
+   SCIP_CALL( SCIPincludeNlpSolverConopt(scip) );
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
-#else
-#define nlpiCopyConopt NULL
-#endif
 
 /** destructor of NLP interface to free nlpi data */
 static
@@ -1453,4 +1448,32 @@ SCIP_RETCODE SCIPincludeNlpSolverConopt(
          nlpidata) );
 
    return SCIP_OKAY;
+}
+
+/** gets string that identifies CONOPT (version number)
+ *  TODO: get the version number
+ */
+const char* SCIPgetSolverNameConopt(
+   void
+   )
+{
+   return "CONOPT";
+}
+
+/** gets string that describes CONOPT (version number)
+ *  TODO: write a proper description
+ */
+const char* SCIPgetSolverDescConopt(
+   void
+   )
+{
+   return "This is CONOPT";
+}
+
+/** returns whether CONOPT is available, i.e., whether it has been linked in */
+SCIP_Bool SCIPisConoptAvailableConopt(
+   void
+   )
+{
+   return TRUE;
 }
