@@ -1888,8 +1888,8 @@ bool ScipNLP::get_nlp_info(
    retcode = SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &offset, NULL);
    if( retcode != SCIP_OKAY )
       return false;
-   assert(offset != NULL);
-   nnz_jac_g = offset[m];
+
+   nnz_jac_g = offset == NULL ? 0 : offset[m];
 
    if( !approxhessian )
    {
@@ -2217,14 +2217,17 @@ bool ScipNLP::eval_jac_g(
       if( SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &jacoffset, &jaccol) != SCIP_OKAY )
          return false;
 
-      assert(jacoffset[0] == 0);
-      assert(jacoffset[m] == nele_jac);
-      j = jacoffset[0];
-      for( i = 0; i < m; ++i )
-         for( ; j < jacoffset[i+1]; ++j )
-            iRow[j] = i;
+      if( jacoffset != NULL )
+      {
+         assert(jacoffset[0] == 0);
+         assert(jacoffset[m] == nele_jac);
+         j = jacoffset[0];
+         for( i = 0; i < m; ++i )
+            for( ; j < jacoffset[i+1]; ++j )
+               iRow[j] = i;
 
-      BMScopyMemoryArray(jCol, jaccol, nele_jac);
+         BMScopyMemoryArray(jCol, jaccol, nele_jac);
+      }
    }
    else
    {
