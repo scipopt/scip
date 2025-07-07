@@ -85,6 +85,8 @@ struct SCIP_NlpiProblem
    SCIP_Real*            lastdualcons;       /**< dual solution from last run, if available */
    SCIP_Real*            lastduallb;         /**< dual solution for lower bounds from last run, if available */
    SCIP_Real*            lastdualub;         /**< dual solution for upper bounds from last run, if available */
+   int                   varsolsize;         /**< size of solution values arrays corresponding to variables */
+   int                   conssolsize;        /**< size of solution values array corresponding to constraints */
 
    coiHandle_t           CntVect;            /**< pointer to CONOPT Control Vector */
 
@@ -150,6 +152,7 @@ static int COI_CALLCONV Solution(
             SCIPerrorMessage("Failed to allocate memory for a solution from CONOPT\n");
             return SCIP_NOMEMORY;
          }
+         problem->varsolsize = noraclevars;
       }
       if( NUMCON > 0 )
       {
@@ -158,10 +161,13 @@ static int COI_CALLCONV Solution(
             SCIPerrorMessage("Failed to allocate memory for a solution from CONOPT\n");
             return SCIP_NOMEMORY;
          }
+         problem->conssolsize = noracleconss;
       }
    }
    else
    {
+      assert(noraclevars <= problem->varsolsize);
+      assert(noracleconss <= problem->conssolsize);
       BMScopyMemoryArray(problem->lastprimal, XVAL, noraclevars);
       BMSclearMemoryArray(problem->lastduallb, noraclevars);
       BMSclearMemoryArray(problem->lastdualub, noraclevars);
@@ -844,18 +850,14 @@ void invalidateSolution(
    SCIP_NLPIPROBLEM*     problem             /**< data structure of problem */
    )
 {
-   int nvars;
-   int nconss;
-
    assert(problem != NULL);
 
-   nvars = SCIPnlpiOracleGetNVars(problem->oracle);
-   nconss = SCIPnlpiOracleGetNConstraints(problem->oracle);
-
-   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastprimal), nvars);
-   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualcons), nconss);
-   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastduallb), nvars);
-   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualub), nvars);
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastprimal), problem->varsolsize);
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualcons), problem->conssolsize);
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastduallb), problem->varsolsize);
+   SCIPfreeBlockMemoryArrayNull(problem->scip, &(problem->lastdualub), problem->varsolsize);
+   problem->varsolsize = 0;
+   problem->conssolsize = 0;
 
    problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    problem->termstat = SCIP_NLPTERMSTAT_OTHER;
