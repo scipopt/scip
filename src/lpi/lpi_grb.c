@@ -4166,14 +4166,20 @@ SCIP_RETCODE SCIPlpiGetObjval(
 
 #ifndef NDEBUG
    {
+      /* in older version the barrier method does not seem to return valid objective bounds */
+#if GRB_VERSION_MAJOR < 12
       double obnd = -GRB_INFINITY;
       int algo;
-
-      (void)GRBgetintparam(lpi->grbenv, GRB_INT_PAR_METHOD, &algo);
       (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd);
-
-      /* currently the barrier method does not seem to return valid objective bounds */
+      (void)GRBgetintparam(lpi->grbenv, GRB_INT_PAR_METHOD, &algo);
       assert(algo == GRB_METHOD_BARRIER || lpi->solstat != GRB_OPTIMAL || *objval == obnd); /*lint !e777*/
+#else
+      double obnd;
+      double eps;
+      (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd);
+      (void)GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &eps);
+      assert(lpi->solstat != GRB_OPTIMAL || fabs(*objval - obnd) <= eps); /*lint !e777*/
+#endif
    }
 #endif
 
