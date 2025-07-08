@@ -8968,7 +8968,7 @@ void addLargestCliquePart(
             cliquevars = SCIPcliqueGetVars(varcliques[l]);
             cliquevals = SCIPcliqueGetValues(varcliques[l]);
 
-            /* loop through clique and determine size */
+            /* loop through clique */
             for( k = 0; k < nvarclique; ++k )
             {
                SCIP_VAR* othervar;
@@ -8990,7 +8990,14 @@ void addLargestCliquePart(
 
                      /* consider smallest index of variables larger than varidx */
                      if ( j > varidx && j < smallestidx )
+                     {
                         smallestidx = j;
+
+                        /* All variables before varidx have been considered, i.e., have cliquepartition[j] >= 0; thus,
+                         * if the smallestidx is one larger than varidx, we cannot improve and can stop. */
+                        if ( smallestidx == varidx + 1 )
+                           break;
+                     }
                   }
                }
             }
@@ -9001,6 +9008,11 @@ void addLargestCliquePart(
             {
                selectedidx = l;
                selectedsmallestidx = smallestidx;
+
+               /* All variables before varidx have been considered, i.e., have cliquepartition[j] >= 0; thus,
+                * if the smallestidx is one larger than varidx, we cannot improve and can stop. */
+               if ( smallestidx == varidx + 1 )
+                  break;
             }
          }
 
