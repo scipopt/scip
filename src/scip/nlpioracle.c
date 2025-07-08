@@ -2463,14 +2463,6 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
 
    SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
 
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->objgradnz), oracle->nvars) ); /* TODO can this and the next be made smaller? */
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->objnlflags), oracle->nvars) );
-   oracle->nobjgradnz = 0;
-   oracle->nobjgradnlnz = 0;
-
-   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
-   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
-
    /* TODO this can be moved into a separate function */
    obj = oracle->objective;
    assert(obj != NULL);
@@ -2480,28 +2472,45 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
       /* for a linear objective, we can just copy the linear indices from the objective into the sparsity pattern */
       if( obj->nlinidxs > 0 )
       {
-         BMScopyMemoryArray(oracle->objgradnz, obj->linidxs, obj->nlinidxs);
+         SCIPduplicateBlockMemoryArray(scip, &(oracle->objgradnz), obj->linidxs, obj->nlinidxs);
+         SCIPallocClearBlockMemoryArray(scip, &(oracle->objnlflags), obj->nlinidxs);
          oracle->nobjgradnz = obj->nlinidxs;
+         oracle->nobjgradnlnz = 0;
       }
-      else
-         oracle->objgradnz = NULL;
    }
    else
    {
+      int maxnnz = 0; /* an upper bound on the number of nonzeroes */
+
       /* check which variables appear in objective */
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &nzflag, oracle->nvars) );
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &nlflag, oracle->nvars) );
 
       for( j = 0; j < obj->nlinidxs; ++j )
+      {
          nzflag[obj->linidxs[j]] = TRUE;
+         ++maxnnz;
+      }
+
+      SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+      SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
 
       for( expr = SCIPexpriterRestartDFS(it, obj->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+      {
          if( SCIPisExprVaridx(scip, expr) )
          {
             assert(SCIPgetIndexExprVaridx(expr) < oracle->nvars);
             nzflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
             nlflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
+            ++maxnnz;
          }
+      }
+
+      SCIPfreeExpriter(&it);
+
+      maxnnz = MIN(maxnnz, oracle->nvars);
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->objgradnz), maxnnz) );
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->objnlflags), maxnnz) );
 
       /* store variables indices in objgradnz and increase nobjgradnz */
       for( j = 0; j < oracle->nvars; ++j )
@@ -2523,15 +2532,13 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
 
       SCIPfreeCleanBufferArray(scip, &nlflag);
       SCIPfreeCleanBufferArray(scip, &nzflag);
-   }
 
-   SCIPfreeExpriter(&it);
-
-   /* shrink objgradnz and objnlflags array to nobjgradnz */
-   if( oracle->nobjgradnz < oracle->nvars )
-   {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(oracle->objgradnz), oracle->nvars, oracle->nobjgradnz) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(oracle->objnlflags), oracle->nvars, oracle->nobjgradnz) );
+      /* shrink objgradnz and objnlflags array to nobjgradnz */
+      if( oracle->nobjgradnz < maxnnz )
+      {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(oracle->objgradnz), maxnnz, oracle->nobjgradnz) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(oracle->objnlflags), maxnnz, oracle->nobjgradnz) );
+      }
    }
 
    *nz = oracle->objgradnz;

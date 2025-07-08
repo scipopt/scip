@@ -382,6 +382,7 @@ static int COI_CALLCONV ReadMatrix(
    }
 
    retcode = SCIPnlpiOracleGetObjGradientNnz(scip, oracle, &objnz, &objnlflags, &nobjnz, &nobjnlnz);
+   assert(nobjnz > 0 || objnz == NULL);
    if( retcode != SCIP_OKAY )
    {
       SCIPerrorMessage("Error in the ReadMatrix callback of CONOPT\n");
@@ -409,7 +410,7 @@ static int COI_CALLCONV ReadMatrix(
       }
 
       /* nonzeroes of objective */
-      if( i == objnz[objnzcnt] )
+      if( objnz != NULL && i == objnz[objnzcnt] )
       {
          int idx = jaccoloffsets != NULL ? jaccoloffsets[i+1] + objnzcnt : objnzcnt;
 
