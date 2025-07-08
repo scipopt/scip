@@ -8920,7 +8920,7 @@ void addLargestCliquePart(
    SCIP_Bool*            values,             /**< values of variables in given subset */
    int                   p,                  /**< part index */
    int                   nvars,              /**< number of variables in the array */
-   int                   ntotalvars,         /**< total number of variables */
+   int                   nbinvars,           /**< total number of binary variables */
    int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
    int*                  ncliqueparts        /**< array to store the size of each part */
    )
@@ -8948,7 +8948,7 @@ void addLargestCliquePart(
       {
          SCIP_CLIQUE** varcliques;
          int selectedidx = -1;
-         int selectedsmallestidx = ntotalvars + 1;
+         int selectedsmallestidx = nbinvars + 1;
          int l;
 
          varcliques = SCIPvarGetCliques(var, value);
@@ -8960,7 +8960,7 @@ void addLargestCliquePart(
             SCIP_VAR** cliquevars;
             SCIP_Bool* cliquevals;
             int nvarclique;
-            int smallestidx = ntotalvars + 1;
+            int smallestidx = nbinvars + 1;
             int k;
 
             assert( varcliques[l] != NULL );
@@ -8981,7 +8981,7 @@ void addLargestCliquePart(
                if( SCIPvarIsActive(othervar) )
                {
                   probidx = SCIPvarGetProbindex(othervar);
-                  assert( 0 <= probidx && probidx < ntotalvars );
+                  assert( 0 <= probidx && probidx < nbinvars );
 
                   j = idx[probidx];
                   if( j >= 0 && cliquevals[k] == values[j] && cliquepartition[j] < 0 )
@@ -9029,7 +9029,7 @@ void addLargestCliquePart(
                if( SCIPvarIsActive(othervar) )
                {
                   probidx = SCIPvarGetProbindex(othervar);
-                  assert( 0 <= probidx && probidx < ntotalvars );
+                  assert( 0 <= probidx && probidx < nbinvars );
 
                   j = idx[probidx];
                   if( j >= 0 && cliquevals[k] == values[j] && cliquepartition[j] < 0 )
@@ -9073,7 +9073,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    int* idx;
    int* ncliqueparts;
    int* marked;
-   int ntotalvars;
+   int nbinvars;
    int i;
    int k;
 
@@ -9088,13 +9088,15 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    SCIP_CALL( SCIPallocClearBufferArray(scip, &nneigh, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &ncliqueparts, nvars) );
 
+   /* all variables which are of integral type can be potentially of binary type; this can be checked via the method SCIPvarIsBinary(var) */
+   nbinvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+
    /* prepare mapping of probvarindex to indices in given list */
-   ntotalvars = SCIPgetNVars(scip);
-   if ( *probtoidxmapsize < ntotalvars )
+   if ( *probtoidxmapsize < nbinvars )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, probtoidxmap, ntotalvars) );
-      *probtoidxmapsize = ntotalvars;
-      for( i = 0; i < ntotalvars; ++i )
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, probtoidxmap, nbinvars) );
+      *probtoidxmapsize = nbinvars;
+      for( i = 0; i < nbinvars; ++i )
          (*probtoidxmap)[i] = -1;
    }
    idx = *probtoidxmap;
@@ -9102,7 +9104,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
 
 #ifndef NDEBUG
    /* probtoidxmap should be cleared */
-   for( i = 0; i < ntotalvars; ++i )
+   for( i = 0; i < nbinvars; ++i )
       assert( idx[i] == -1 );
 #endif
 
@@ -9117,13 +9119,13 @@ SCIP_RETCODE calcCliquePartitionGreedy(
       probidx = SCIPvarGetProbindex(vars[i]);
       if( probidx >= 0 && idx[probidx] < 0 )
       {
-         assert( probidx <= ntotalvars );
+         assert( probidx <= nbinvars );
          idx[probidx] = i;
       }
    }
 
    /* add largest clique containing first variable to part 0 */
-   addLargestCliquePart(vars[0], values[0], 0, idx, values, 0, nvars, ntotalvars, cliquepartition, ncliqueparts);
+   addLargestCliquePart(vars[0], values[0], 0, idx, values, 0, nvars, nbinvars, cliquepartition, ncliqueparts);
    *ncliques = 1;
 
    /* loop through remaining variables */
@@ -9180,7 +9182,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
                   continue;
 
                probidx = SCIPvarGetProbindex(othervar);
-               assert( 0 <= probidx && probidx < ntotalvars );
+               assert( 0 <= probidx && probidx < nbinvars );
 
                j = idx[probidx];
                if( j >= 0 )
@@ -9216,7 +9218,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
 #endif
             assert( ncliqueparts[*ncliques] == 0 );
 
-            addLargestCliquePart(vars[i], values[i], i, idx, values, *ncliques, nvars, ntotalvars, cliquepartition, ncliqueparts);
+            addLargestCliquePart(vars[i], values[i], i, idx, values, *ncliques, nvars, nbinvars, cliquepartition, ncliqueparts);
             ++(*ncliques);
          }
       }
