@@ -9063,6 +9063,8 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
    SCIP_Bool*const       values,             /**< clique value (TRUE or FALSE) for each variable in the clique */
    int const             nvars,              /**< number of variables in the array */
+   int**                 probtoidxmap,       /**< cleared memory array with default values -1 */
+   int*                  probtoidxmapsize,   /**< returns size of probtoidxmap */
    int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
    int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    )
@@ -9078,6 +9080,8 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    assert( vars != NULL );
    assert( values != NULL );
    assert( nvars > 0 );
+   assert( probtoidxmap != NULL );
+   assert( probtoidxmapsize != NULL );
 
    /* allocate temporary memory for storing the number of neighors in the parts */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &marked, nvars) );
@@ -9086,9 +9090,21 @@ SCIP_RETCODE calcCliquePartitionGreedy(
 
    /* prepare mapping of probvarindex to indices in given list */
    ntotalvars = SCIPgetNVars(scip);
-   SCIP_CALL( SCIPallocBufferArray(scip, &idx, ntotalvars) );
+   if ( *probtoidxmapsize < ntotalvars )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, probtoidxmap, ntotalvars) );
+      *probtoidxmapsize = ntotalvars;
+      for( i = 0; i < ntotalvars; ++i )
+         (*probtoidxmap)[i] = -1;
+   }
+   idx = *probtoidxmap;
+   assert( idx != NULL );
+
+#ifndef NDEBUG
+   /* probtoidxmap should be cleared */
    for( i = 0; i < ntotalvars; ++i )
-      idx[i] = -1;
+      assert( idx[i] == -1 );
+#endif
 
    /* initialize the cliquepartition array with -1 and idx */
    for( i = 0; i < nvars; ++i )
@@ -9211,7 +9227,15 @@ SCIP_RETCODE calcCliquePartitionGreedy(
       }
    }
 
-   SCIPfreeBufferArray(scip, &idx);
+   /* clear probtoidxmap */
+   for( i = 0; i < nvars; ++i )
+   {
+      int probidx;
+      probidx = SCIPvarGetProbindex(vars[i]);
+      if ( probidx >= 0 )
+         idx[probidx] = -1;
+   }
+
    SCIPfreeBufferArray(scip, &ncliqueparts);
    SCIPfreeBufferArray(scip, &nneigh);
    SCIPfreeBufferArray(scip, &marked);
@@ -9285,6 +9309,8 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
    int                   nvars,              /**< number of variables in the clique */
+   int**                 probtoidxmap,       /**< cleared memory array with default values -1 */
+   int*                  probtoidxmapsize,   /**< returns size of probtoidxmap */
    int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
    int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    )
@@ -9328,7 +9354,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP_CALL( SCIPvarsGetProbvarBinary(&tmpvars, &tmpvalues, nvars) );
 
    /* call greedy clique algorithm for all component variables */
-   SCIP_CALL( calcCliquePartitionGreedy(scip, tmpvars, tmpvalues, nvars, cliquepartition, ncliques) );
+   SCIP_CALL( calcCliquePartitionGreedy(scip, tmpvars, tmpvalues, nvars, probtoidxmap, probtoidxmapsize, cliquepartition, ncliques) );
 
    assert(*ncliques >= 1);
 
@@ -9363,6 +9389,8 @@ SCIP_RETCODE SCIPcalcNegatedCliquePartition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
    int                   nvars,              /**< number of variables in the clique */
+   int**                 probtoidxmap,       /**< cleared memory array with default values -1 */
+   int*                  probtoidxmapsize,   /**< returns size of probtoidxmap */
    int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
    int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    )
@@ -9391,7 +9419,7 @@ SCIP_RETCODE SCIPcalcNegatedCliquePartition(
    }
 
    /* calculate cliques on negated variables, which are "negated" cliques on normal variables array */
-   SCIP_CALL( SCIPcalcCliquePartition( scip, negvars, nvars, cliquepartition, ncliques) );
+   SCIP_CALL( SCIPcalcCliquePartition(scip, negvars, nvars, probtoidxmap, probtoidxmapsize, cliquepartition, ncliques) );
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(scip->set, &negvars);

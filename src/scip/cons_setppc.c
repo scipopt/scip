@@ -155,6 +155,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
+   int*                  probtoidxmap;       /**< cleared memory array with default values -1; used for clique partitions */
+   int                   probtoidxmapsize;   /**< size of probtoidxmap */
 };
 
 /** constraint data for set partitioning / packing / covering constraints */
@@ -392,6 +394,8 @@ SCIP_RETCODE conshdlrdataCreate(
    /* set event handler for bound change events */
    (*conshdlrdata)->eventhdlr = eventhdlr;
    (*conshdlrdata)->nsetpart = 0;
+   (*conshdlrdata)->probtoidxmap = NULL;
+   (*conshdlrdata)->probtoidxmapsize = 0;
 
    /* create a random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &(*conshdlrdata)->randnumgen,
@@ -417,6 +421,7 @@ SCIP_RETCODE conshdlrdataFree(
    /* free random number generator */
    SCIPfreeRandom(scip, &(*conshdlrdata)->randnumgen);
 
+   SCIPfreeBlockMemoryArrayNull(scip, &(*conshdlrdata)->probtoidxmap, (*conshdlrdata)->probtoidxmapsize);
    SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
@@ -5139,7 +5144,7 @@ SCIP_RETCODE preprocessCliques(
        * and add them to the usefulconss array and adjust all necessary data this will hopefully lead to faster
        * detection of redundant constraints
        */
-      SCIP_CALL( SCIPcalcCliquePartition(scip, binvars, nbinvars, cliquepartition, &ncliques) );
+      SCIP_CALL( SCIPcalcCliquePartition(scip, binvars, nbinvars, &conshdlrdata->probtoidxmap, &conshdlrdata->probtoidxmapsize, cliquepartition, &ncliques) );
 
       /* resize usefulconss array if necessary */
       SCIP_CALL( SCIPreallocBufferArray(scip, &usefulconss, nconss + ncliques) );
