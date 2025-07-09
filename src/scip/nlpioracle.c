@@ -2417,7 +2417,6 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianColSparsity(
    return SCIP_OKAY;
 }
 
-/* TODO add the objective case to jacobian row evaluation */
 /** gets nonzero indices in the objective gradient
  *
  *  Note that internal data is returned in *nz, thus the user does not need to allocate memory there.

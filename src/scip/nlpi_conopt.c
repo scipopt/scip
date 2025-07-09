@@ -410,7 +410,7 @@ static int COI_CALLCONV ReadMatrix(
       }
 
       /* nonzeroes of objective */
-      if( objnz != NULL && i == objnz[objnzcnt] )
+      if( objnz != NULL && objnzcnt < nobjnz && i == objnz[objnzcnt] )
       {
          int idx = jaccoloffsets != NULL ? jaccoloffsets[i+1] + objnzcnt : objnzcnt;
 
@@ -958,7 +958,7 @@ static SCIP_RETCODE initConopt(
 #endif
 
    if( COI_Error )
-      SCIPinfoMessage(scip, NULL, "Error %d encountered during initialising CONOPT", COI_Error);
+      SCIPinfoMessage(scip, NULL, "Error %d encountered during initialising CONOPT\n", COI_Error);
 
    return SCIP_OKAY;
 }
@@ -996,7 +996,7 @@ static void handleConoptParam(
    /* TODO enable memory limits in NLPIs? */
 
    if( COI_Error )
-      SCIPinfoMessage(problem->scip, NULL, "Errors encountered during setting parameters, %d", COI_Error);
+      SCIPinfoMessage(problem->scip, NULL, "Errors encountered during setting parameters, %d\n", COI_Error);
 }
 
 
@@ -1352,7 +1352,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
    /* CONOPT may return either a positive error code, which is one of its own error codes,
     * or a negative error code that is a SCIP_RETCODE returned from one of the callbacks */
    if( COI_Error )
-      SCIPinfoMessage(scip, NULL, "Errors encountered in CONOPT during solution, %d", COI_Error);
+      SCIPinfoMessage(scip, NULL, "Errors encountered in CONOPT during solution, %d\n", COI_Error);
 #else
    COI_Solve(problem->CntVect);
 #endif
