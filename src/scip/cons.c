@@ -6075,6 +6075,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->enfoconsspos = -1;
    (*cons)->checkconsspos = -1;
    (*cons)->propconsspos = -1;
+   (*cons)->confconsspos = -1;
    (*cons)->activedepth = -2;
    (*cons)->validdepth = (local ? -1 : 0);
    (*cons)->age = 0.0;
@@ -6402,6 +6403,7 @@ SCIP_RETCODE SCIPconsFree(
       checkConssArrays((*cons)->conshdlr);
    }
    assert((*cons)->consspos == -1);
+   assert((*cons)->confconsspos == -1);
 
    /* free constraint */
    BMSfreeBlockMemoryArray(blkmem, &(*cons)->name, strlen((*cons)->name)+1);
@@ -7277,13 +7279,15 @@ SCIP_RETCODE SCIPconsDisablePropagation(
 }
 
 /** marks the constraint to be a conflict */
-void SCIPconsMarkConflict(
+SCIP_RETCODE SCIPconsMarkConflict(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
 
    cons->conflict = TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** marks the constraint to be propagated (update might be delayed) */
@@ -8817,8 +8821,9 @@ void SCIPconsAddUpgradeLocks(
 {
    assert(cons != NULL);
 
-   assert(cons->nupgradelocks < (1 << 28) - nlocks); /*lint !e574*/
-   cons->nupgradelocks += (unsigned int) nlocks;
+   assert(cons->nupgradelocks >= -nlocks);
+   cons->nupgradelocks += nlocks;
+   assert(cons->nupgradelocks >= nlocks);
 }
 
 /** gets number of locks against upgrading the constraint, 0 means this constraint can be upgraded */
