@@ -2017,12 +2017,14 @@ SCIP_RETCODE applyFixings(
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-               SCIP_CALL( SCIPaddCons(scip, newcons) );
 
-               SCIPdebugMsg(scip, "added linear constraint: ");
+               /* add the downgraded constraint to the problem */
+               SCIPdebugMsg(scip, "adding linear constraint: ");
                SCIPdebugPrintCons(scip, newcons, NULL);
+               SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
+               /* free constraint arrays */
                SCIPfreeBufferArray(scip, &consvals);
                SCIPfreeBufferArray(scip, &consvars);
 
@@ -9233,7 +9235,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       }
 
       /* add conflict to SCIP */
-      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+      SCIP_CALL( SCIPaddConflict(scip, node, &cons, validnode, conftype, cutoffinvolved) );
 
       *result = SCIP_CONSADDED;
 

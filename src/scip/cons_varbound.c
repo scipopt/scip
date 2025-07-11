@@ -3744,11 +3744,10 @@ SCIP_RETCODE applyFixings(
 	 SCIP_CALL( SCIPaddCoefLinear(scip, newcons, consdata->vbdvar, consdata->vbdcoef) );
       }
 
-      SCIP_CALL( SCIPaddCons(scip, newcons) );
-
       SCIPdebugMsg(scip, "resolved multi aggregation in varbound constraint <%s> by creating a new linear constraint\n", SCIPconsGetName(cons));
       SCIPdebugPrintCons(scip, newcons, NULL);
 
+      SCIP_CALL( SCIPaddCons(scip, newcons) );
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
       redundant = TRUE;
@@ -4379,8 +4378,8 @@ SCIP_RETCODE upgradeConss(
       cons = conss[c];
       assert(cons != NULL);
 
-      if( !SCIPconsIsActive(cons) )
-	 continue;
+      if( !SCIPconsIsActive(cons) || SCIPconsGetNUpgradeLocks(cons) >= 1 )
+         continue;
 
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
@@ -4515,11 +4514,10 @@ SCIP_RETCODE upgradeConss(
 	       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
 	       SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-	 SCIP_CALL( SCIPaddCons(scip, newcons) );
 	 SCIPdebugMsg(scip, "upgraded varbound constraint <%s> to a set-packing constraint\n", SCIPconsGetName(cons));
 	 SCIPdebugPrintCons(scip, newcons, NULL);
 
-	 SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+	 SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
 	 ++(*naddconss);
 
 	 SCIP_CALL( SCIPdelCons(scip, cons) );

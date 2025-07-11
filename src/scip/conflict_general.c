@@ -2866,7 +2866,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    /* start timing */
    SCIPclockStart(conflict->inflpanalyzetime, set);
    conflict->ninflpcalls++;
-
+   /**@todo reset usescutoffbound flag */
    conflict->conflictset->conflicttype = SCIP_CONFTYPE_INFEASLP;
 
    olddualproofsuccess = conflict->ndualproofsinfsuccess;

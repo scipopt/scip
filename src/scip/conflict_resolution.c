@@ -1945,7 +1945,7 @@ SCIP_RETCODE createAndAddConflictCon(
    SCIP_CALL( updateStatistics(conflict, vars, blkmem, set, stat, conflictrow, conflictrow->validdepth) );
 
    /* add conflict to SCIP */
-   SCIP_CALL( SCIPaddConflict(set->scip, tree->path[insertdepth], cons, tree->path[conflictrow->validdepth], conflictrow->conflicttype, conflictrow->usescutoffbound) );
+   SCIP_CALL( SCIPaddConflict(set->scip, tree->path[insertdepth], &cons, tree->path[conflictrow->validdepth], conflictrow->conflicttype, conflictrow->usescutoffbound) );
    *success = TRUE;
    /* free temporary memory */
    SCIPfreeBufferArray(set->scip, &consvars);

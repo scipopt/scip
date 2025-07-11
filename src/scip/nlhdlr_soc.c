@@ -1331,6 +1331,10 @@ SCIP_RETCODE detectSocNorm(
    if( SCIPgetExprNLocksPosNonlinear(expr) == 0 )
       return SCIP_OKAY;
 
+   /* expression is a leaf (variable or constant) */
+   if( SCIPexprGetNChildren(expr) == 0 )
+      return SCIP_OKAY;
+
    assert(SCIPexprGetNChildren(expr) > 0);
 
    child = SCIPexprGetChildren(expr)[0];

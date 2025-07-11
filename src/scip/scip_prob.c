@@ -78,6 +78,7 @@
 #include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/set.h"
 #include "scip/stat.h"
@@ -3197,6 +3198,64 @@ SCIP_RETCODE SCIPaddCons(
    }  /*lint !e788*/
 }
 
+/** adds constraint to the problem and upgrades conflict in the conflict store; if oldcons is valid globally, newcons
+ *  is added to the global problem; otherwise it is added to the local subproblem of the current node
+ *
+ *  @note must only be called once for both constraints
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note this method will release the upgraded constraint
+ */
+SCIP_RETCODE SCIPaddUpgrade(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            oldcons,            /**< underlying constraint to upgrade */
+   SCIP_CONS**           newcons             /**< upgraded constraint to add */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+   assert(oldcons != NULL);
+   assert(newcons != NULL);
+   assert(*newcons != NULL);
+   assert(SCIPconsGetNUpgradeLocks(oldcons) == 0);
+   assert(SCIPconsIsGlobal(oldcons) || SCIPconsGetValidDepth(oldcons) == SCIPconsGetActiveDepth(oldcons));
+
+   /* add problem constraint */
+   if( SCIPconsIsGlobal(oldcons) )
+   {
+      SCIP_CALL( SCIPaddCons(scip, *newcons) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPaddConsLocal(scip, *newcons, NULL) );
+   }
+
+   /* upgrade conflict constraint */
+   if( SCIPconsIsConflict(oldcons) )
+   {
+      SCIP_CALL( SCIPconflictstoreUpgradeConflict(scip->conflictstore, scip->mem->probmem, scip->set,
+            oldcons, *newcons) );
+   }
+
+   /* release upgraded constraint */
+   SCIP_CALL( SCIPreleaseCons(scip, newcons) );
+
+   return SCIP_OKAY;
+}
+
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
  *  node, where it was added, or from the problem, if it was a problem constraint
  *
@@ -3601,7 +3660,7 @@ int SCIPgetNCheckConss(
 SCIP_RETCODE SCIPaddConflict(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to add conflict (or NULL if global) */
-   SCIP_CONS*            cons,               /**< constraint representing the conflict */
+   SCIP_CONS**           cons,               /**< constraint representing the conflict */
    SCIP_NODE*            validnode,          /**< node at which the constraint is valid (or NULL) */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
    SCIP_Bool             iscutoffinvolved    /**< is a cutoff bound involved in this conflict */
@@ -3611,11 +3670,14 @@ SCIP_RETCODE SCIPaddConflict(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(*cons != NULL);
    assert(scip->conflictstore != NULL);
    assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || iscutoffinvolved);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflict", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* mark constraint to be a conflict */
+   SCIP_CALL( SCIPconsMarkConflict(*cons) );
    if( iscutoffinvolved )
       primalbound = SCIPgetCutoffbound(scip);
    else
@@ -3624,25 +3686,22 @@ SCIP_RETCODE SCIPaddConflict(
    /* add a global conflict */
    if( node == NULL )
    {
-      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPaddCons(scip, *cons) );
    }
    /* add a local conflict */
    else
    {
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
+      SCIP_CALL( SCIPaddConsNode(scip, node, *cons, validnode) );
    }
 
    if( node == NULL || SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
    {
       /* add the conflict to the conflict store */
       SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
-            scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
+            scip->transprob, scip->reopt, *cons, conftype, iscutoffinvolved, primalbound) );
    }
 
-   /* mark constraint to be a conflict */
-   SCIPconsMarkConflict(cons);
-
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, cons) );
 
    return SCIP_OKAY;
 }

@@ -44,6 +44,8 @@ Performance improvements
 - reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
 - simplified symmetry detection graphs in case all edges have the same color
 - avoid unnecessary calls of constraint handlers components, benders, benderslp, propagator genvbounds, and heuristics ofins, subnlp, nlpdiving, indicator
+- disable dualsol and dualray conflict upgrades to maintain conflict store
+- apply general conflict upgrades in conflict store
 
 Examples and applications
 -------------------------
@@ -104,7 +106,8 @@ Interface changes
 - SCIPapplyBendersDecomposition has been removed. This was originally used to apply Benders' decomposition from a
   supplied decomposition structure. The application of Benders' decomposition now occurs in benders_relax.
 - SCIPcalcMIR(), SCIPcutGenerationHeuristicCMIR(), SCIPcalcStrongCG(): the Boolean argument 'usevbds' was replaced by an integer argument 'vartypeusevbds' that indicates for which variables variable bound substitution should be performed.
-
+- SCIPchgAndConsCheckFlagWhenUpgr() and SCIPchgAndConsRemovableFlagWhenUpgr() are removed to keep upgrade flags consistent, use SCIPconsAddUpgradeLocks() to control upgrades instead
+- the argument cons of SCIPaddConflict() is turned into a double constraint pointer to cleanly release the constraint
 - remove the following functions that were declared in h-files, but not implemented:
   SCIPselectPtrRealReal(), SCIPselectWeightedPtrRealReal(), SCIPsortPtrRealReal(),
   SCIPbendersApplyDecomposition(), SCIPcertificatePrintSolExact(),
@@ -168,6 +171,7 @@ Interface changes
 - SCIPconshdlrSetNeedsCons() to set whether constraint handler callbacks should also be called if there are no constraints
 - SCIPpropSetTimingmask() to set timing mask of a propagator
 - added C++ interface for expression handlers: src/objscip/objexprhdlr.h
+- SCIPaddUpgrade() to add constraint upgrades while especially informing the conflict store
 
 ### Changes in preprocessor macros
 
@@ -286,6 +290,7 @@ Fixed bugs
 - accept fractional continuous implied integral variables in heuristic completesol
 - invalidate activity with contradicting infinity contributions
 - avoid integer overflow in cons_cumulative.c triggered by unbounded variables, see new parameter "constraints/cumulative/maxtime"
+- allow negative update in SCIPconsAddUpgradeLocks() to unlock constraint upgrade
 
 Miscellaneous
 -------------
@@ -366,6 +371,8 @@ Fixed bugs
 - avoid overwriting set cutoff flag in tightenCoefs(), preprocessConstraintPairs(), and applyFixings() of cons_varbound.c to reject infeasible solutions
 - fix memory leak in exprinterpret_cppad.cpp w.r.t. user expressions
 - adjust bound before checking feasibility in SCIPvarAddVlb() and SCIPvarAddVub() to detect integrality cutoff
+- choose incumbent solution as reference in varFixingsRins() and varFixingsDins() of heur_alns.c to ensure integrality
+- consider variable type in selectInitialVariableRandomly() of heur_gins.c to count integral variables
 
 Build system
 ------------

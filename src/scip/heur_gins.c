@@ -1610,7 +1610,7 @@ SCIP_RETCODE selectInitialVariableRandomly(
          break;
       }
 
-      assert(SCIPvarIsIntegral(choosevar));
+      assert(SCIPvarGetType(choosevar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(choosevar) == SCIP_VARTYPE_INTEGER);
 
       /* get neighborhood storage */
       SCIP_CALL( SCIPallocBufferArray(scip, &neighborhood, nvars) );
@@ -1643,7 +1643,7 @@ SCIP_RETCODE selectInitialVariableRandomly(
             neighborhood[neighborhoodsize++] = currvar;
 
             /* increase discrete variables counter */
-            if( SCIPvarIsIntegral(currvar) )
+            if( SCIPvarGetType(currvar) <= SCIP_VARTYPE_INTEGER )
                ++ndiscvarsneighborhood;
          }
       }
