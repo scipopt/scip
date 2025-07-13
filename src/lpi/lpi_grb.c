@@ -4153,28 +4153,35 @@ SCIP_RETCODE SCIPlpiGetObjval(
 {
    int ret;
 
-#ifndef NDEBUG
-   double oval = GRB_INFINITY;
-   double obnd = -GRB_INFINITY;
-#endif
-
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(objval != NULL);
 
    SCIPdebugMessage("getting solution's objective value\n");
 
-#ifndef NDEBUG
-   (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, &oval);
-   (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd);
-
-   assert(lpi->solstat != GRB_OPTIMAL || oval == obnd); /*lint !e777*/
-#endif
-
    /* obtain objective value */
    ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, objval);
    assert( ret == 0 || ret == GRB_ERROR_DATA_NOT_AVAILABLE );
    SCIP_UNUSED(ret);
+
+#ifndef NDEBUG
+   {
+      /* in older version the barrier method does not seem to return valid objective bounds */
+#if GRB_VERSION_MAJOR < 12
+      double obnd = -GRB_INFINITY;
+      int algo;
+      (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd);
+      (void)GRBgetintparam(lpi->grbenv, GRB_INT_PAR_METHOD, &algo);
+      assert(algo == GRB_METHOD_BARRIER || lpi->solstat != GRB_OPTIMAL || *objval == obnd); /*lint !e777*/
+#else
+      double obnd;
+      double eps;
+      (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd);
+      (void)GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &eps);
+      assert(lpi->solstat != GRB_OPTIMAL || fabs(*objval - obnd) <= eps); /*lint !e777*/
+#endif
+   }
+#endif
 
    /* return minus infinity if value not available and we reached the iteration limit (see lpi_cpx) */
    if( lpi->solstat == GRB_ITERATION_LIMIT )
