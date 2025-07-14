@@ -199,6 +199,12 @@ public:
    int                         lastniter;    /**< number of iterations in last run */
    SCIP_Real                   lasttime;     /**< time spend in last run */
 
+   int                   ncalls;
+   int                   nsuccess;
+   int                   nlocinfeas;
+   int                   nother;
+   int                   nlimit;
+
    /** constructor */
    SCIP_NlpiProblem()
       : oracle(NULL), randnumgen(NULL),
@@ -207,7 +213,7 @@ public:
         solprimalvalid(false), solprimalgiven(false), soldualvalid(false), soldualgiven(false),
         solprimals(NULL), soldualcons(NULL), soldualvarlb(NULL), soldualvarub(NULL),
         solobjval(SCIP_INVALID), solconsviol(SCIP_INVALID), solboundviol(SCIP_INVALID),
-        lastniter(-1), lasttime(-1.0)
+        lastniter(-1), lasttime(-1.0), ncalls(0), nsuccess(0), nlocinfeas(0), nother(0)
    { }
 };
 
@@ -1057,6 +1063,9 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
    {
       SCIPfreeRandom(scip, &(*problem)->randnumgen);
    }
+
+   printf("\nNLP solver IPOPT stats: ncalls = %d, nsuccess = %d, nlimit = %d, nlocinfeas = %d, nother = %d\n",
+      (*problem)->ncalls, (*problem)->nsuccess, (*problem)->nlimit, (*problem)->nlocinfeas, (*problem)->nother);
 
    delete *problem;
    *problem = NULL;
@@ -2457,11 +2466,13 @@ void ScipNLP::finalize_solution(
    assert(m == SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle));
 
    bool check_feasibility = false; // whether we should check x for feasibility, if not NULL
+   ++(nlpiproblem->ncalls);
    switch( status )
    {
    case SUCCESS:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_LOCOPT;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
+      ++(nlpiproblem->nsuccess);
       assert(x != NULL);
       break;
 
@@ -2470,6 +2481,7 @@ void ScipNLP::finalize_solution(
    case FEASIBLE_POINT_FOUND:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
+      ++(nlpiproblem->nsuccess);
       assert(x != NULL);
       break;
 
@@ -2477,6 +2489,7 @@ void ScipNLP::finalize_solution(
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_ITERLIMIT;
+      ++(nlpiproblem->nlimit);
       break;
 
    case CPUTIME_EXCEEDED:
@@ -2486,6 +2499,7 @@ void ScipNLP::finalize_solution(
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_TIMELIMIT;
+      ++(nlpiproblem->nlimit);
       break;
 
    case STOP_AT_TINY_STEP:
@@ -2494,11 +2508,13 @@ void ScipNLP::finalize_solution(
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_NUMERICERROR;
+      ++(nlpiproblem->nother);
       break;
 
    case LOCAL_INFEASIBILITY:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
+      ++(nlpiproblem->nlocinfeas);
       break;
 
    case USER_REQUESTED_STOP:
@@ -2508,6 +2524,7 @@ void ScipNLP::finalize_solution(
    case DIVERGING_ITERATES:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
+      ++(nlpiproblem->nsuccess);
       break;
 
    // for the following status codes, if we get called here at all,
@@ -2521,6 +2538,7 @@ void ScipNLP::finalize_solution(
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_EVALERROR;
+      ++(nlpiproblem->nother);
       break;
 
    case TOO_FEW_DEGREES_OF_FREEDOM:
@@ -2528,17 +2546,20 @@ void ScipNLP::finalize_solution(
    case INVALID_OPTION:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OTHER;
+      ++(nlpiproblem->nother);
       break;
 
    case OUT_OF_MEMORY:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OUTOFMEMORY;
+      ++(nlpiproblem->nother);
       break;
 
    default:
       SCIPerrorMessage("Ipopt returned with unknown solution status %d\n", status);
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OTHER;
+      ++(nlpiproblem->nother);
       break;
    }
 

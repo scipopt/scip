@@ -43,6 +43,8 @@
 #include "scip/pub_paramset.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_nlp.h"
+
+#include "struct_nlp.h"
 #include "scip/scip_param.h"
 #include "scip/scip_sol.h"
 #include "scip/set.h"
@@ -556,6 +558,8 @@ SCIP_RETCODE SCIPsolveNLPParam(
    }
 
    SCIP_CALL( SCIPnlpSolve(scip->nlp, SCIPblkmem(scip), scip->set, scip->messagehdlr, scip->stat, scip->primal, scip->tree, &param) );
+
+   printf("\nsolstat = %d, termstat = %d\n", scip->nlp->solstat, scip->nlp->termstat);
 
    return SCIP_OKAY;
 }

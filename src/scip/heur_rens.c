@@ -133,6 +133,8 @@ struct SCIP_HeurData
                                               * This is only implemented for testing and not recommended to be used! */
    int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP            */
    SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
+
+   SCIP_Bool             usednlp;            /**< whether an NLP solver has been called */
 };
 
 
@@ -144,6 +146,7 @@ struct SCIP_HeurData
 static
 SCIP_RETCODE computeFixingrate(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,
    SCIP_VAR**            fixedvars,          /**< array to store source SCIP variables whose copies should be fixed in the sub-SCIP */
    SCIP_Real*            fixedvals,          /**< array to store solution values for variable fixing */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
@@ -162,6 +165,7 @@ SCIP_RETCODE computeFixingrate(
    assert(fixedvars != NULL);
    assert(fixedvals != NULL);
    assert(nfixedvars != NULL);
+   assert(heurdata != NULL);
 
    *fixingrate = 1.0;
    *success = FALSE;
@@ -195,6 +199,7 @@ SCIP_RETCODE computeFixingrate(
        * TODO pick some less arbitrary iterlimit
        */
       SCIP_CALL( SCIPsolveNLP(scip, .iterlimit = 3000) );  /*lint !e666*/
+      heurdata->usednlp = TRUE;
 
       /* get solution status of NLP solver */
       stat = SCIPgetNLPSolstat(scip);
@@ -650,7 +655,7 @@ SCIP_RETCODE SCIPapplyRens(
    nfixedvars = 0;
 
    /* compute the number of initial fixings and check if the fixing rate exceeds the minimum fixing rate */
-   SCIP_CALL( computeFixingrate(scip, fixedvars, fixedvals, &nfixedvars, fixedvarssize, minfixingrate, &startsol, &intfixingrate, &success) );
+   SCIP_CALL( computeFixingrate(scip, SCIPheurGetData(heur), fixedvars, fixedvals, &nfixedvars, fixedvarssize, minfixingrate, &startsol, &intfixingrate, &success) );
 
    if( !success )
    {
@@ -715,6 +720,9 @@ SCIP_DECL_HEURFREE(heurFreeRens)
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
 
+   if( heurdata->usednlp )
+      printf("\nNLP heuristic rens: ncalls = %lld, nsolsfound = %lld\n", SCIPheurGetNCalls(heur), SCIPheurGetNSolsFound(heur));
+
    /* free heuristic data */
    SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
@@ -737,6 +745,7 @@ SCIP_DECL_HEURINIT(heurInitRens)
 
    /* initialize data */
    heurdata->usednodes = 0;
+   heurdata->usednlp = FALSE;
 
    return SCIP_OKAY;
 }

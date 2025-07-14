@@ -93,6 +93,13 @@ struct SCIP_NlpiProblem
    /* options that will be passed to CONOPT via callbacks */
    int                   verblevel;          /**< verbosity level, same as in SCIP_NlpParam: 0 off, 1 normal, 2 debug, > 2 more debug */
    SCIP_Real             opttol;
+
+   /* statistics */
+   int                   ncalls;
+   int                   nsuccess;
+   int                   nlocinfeas;
+   int                   nother;
+   int                   nlimit;
 };
 
 
@@ -337,6 +344,7 @@ static int COI_CALLCONV ReadMatrix(
             if( lhs > 0.0 )
                CURR[norigvars + nslackvars] = SCIPrandomGetReal(problem->randnumgen, lhs, lhs + MAXPERTURB*MIN(1.0, rhs-lhs));
             else if( rhs < 0.0 )
+
                CURR[norigvars + nslackvars] = SCIPrandomGetReal(problem->randnumgen, rhs - MAXPERTURB*MIN(1.0, rhs-lhs), rhs);
             else
                CURR[norigvars + nslackvars] = SCIPrandomGetReal(problem->randnumgen,
@@ -403,6 +411,7 @@ static int COI_CALLCONV ReadMatrix(
             NLFLAG[j+objnzcnt] = jacrownlflags[j] ? 1 : 0;
             if( NLFLAG[j+objnzcnt] == 0 )
             {
+               /* for linear terms, compute the (constant) Jacobian values */
                VALUE[j+objnzcnt] = SCIPnlpiOracleGetConstraintCoef(oracle, jacrows[j], nrownz[jacrows[j]]);
                ++(nrownz[jacrows[j]]);
             }
@@ -541,6 +550,8 @@ static int COI_CALLCONV Status(
 {
    SCIP* scip;
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+   SCIP_Bool other = FALSE;
+   SCIP_Bool limit = FALSE;
 
    assert(problem != NULL);
 
@@ -553,39 +564,47 @@ static int COI_CALLCONV Status(
 
    problem->niterations = ITER;
    problem->objval = OBJVAL;
+   ++(problem->ncalls);
 
    switch( MODSTA )
    {
       case 1:
          SCIPdebugMsg(scip, "NLP problem solved to global optimality\n");
          problem->solstat = SCIP_NLPSOLSTAT_GLOBOPT;
+         ++(problem->nsuccess);
          break;
       case 2:
          SCIPdebugMsg(scip, "NLP problem solved to local optimality\n");
          problem->solstat = SCIP_NLPSOLSTAT_LOCOPT;
+         ++(problem->nsuccess);
          break;
       case 3:
          SCIPdebugMsg(scip, "NLP problem unbounded\n");
          problem->solstat = SCIP_NLPSOLSTAT_UNBOUNDED;
+         ++(problem->nsuccess);
          break;
       case 4:
          SCIPdebugMsg(scip, "NLP problem infeasible\n");
          problem->solstat = SCIP_NLPSOLSTAT_GLOBINFEASIBLE;
+         ++(problem->nsuccess);
          break;
       case 5:
          SCIPdebugMsg(scip, "NLP problem locally infeasible\n");
          problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+         ++(problem->nlocinfeas);
          break;
       case 6: /* intermediate infeasible */
-      case 7: /* intermediate non-optimal */
+      case 7: /* intermediate non-optimal */ /* TODO may still use a feasible point */
       case 12: /* unknown error */
       case 13:
          SCIPdebugMsg(scip, "NLP problem status unknown (CONOPT status %d)\n", MODSTA);
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
+         other = TRUE;
          break;
       default:
          SCIPerrorMessage("CONOPT returned an unexpected solution status %d\n", MODSTA);
          problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+         other = TRUE;
    }
 
    switch( SOLSTA )
@@ -597,10 +616,12 @@ static int COI_CALLCONV Status(
       case 2:
          problem->termstat = SCIP_NLPTERMSTAT_ITERLIMIT;
          SCIPdebugMsg(scip, "CONOPT terminated due to an iteration limit.\n");
+         limit = TRUE;
          break;
       case 3:
          problem->termstat = SCIP_NLPTERMSTAT_TIMELIMIT;
          SCIPdebugMsg(scip, "CONOPT terminated due to a time limit.\n");
+         limit = TRUE;
          break;
       case 5:
          problem->termstat = SCIP_NLPTERMSTAT_EVALERROR;
@@ -621,6 +642,14 @@ static int COI_CALLCONV Status(
       default:
          SCIPerrorMessage("CONOPT returned an unexpected termination status %d\n", SOLSTA);
          problem->termstat = SCIP_NLPTERMSTAT_OTHER;
+   }
+
+   if( other )
+   {
+      if( limit )
+         ++(problem->nlimit);
+      else
+         ++(problem->nother);
    }
 
    return 0;
@@ -886,10 +915,6 @@ static SCIP_RETCODE initConopt(
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   // printf("\nInitialising conopt for problem:\n");
-   // SCIPnlpiOraclePrintProblem(scip, problem->oracle, NULL);
-   // printf("\n");
-
    if( data->solvetime == NULL )
       SCIP_CALL( SCIPcreateClock(scip, &(data->solvetime)) );
 
@@ -911,6 +936,10 @@ static SCIP_RETCODE initConopt(
    /* inform CONOPT about problem sizes */
    COI_Error += COIDEF_NumVar(problem->CntVect, nvars + nrangeconss);
    COI_Error += COIDEF_NumCon(problem->CntVect, nconss + 1); /* objective counts as another constraint here */
+
+   // printf("\nInitialising conopt for problem:\n");
+   // SCIPnlpiOraclePrintProblem(scip, problem->oracle, NULL);
+   // printf("\n");
 
    /* jacobian information */
    SCIP_CALL( SCIPnlpiOracleGetJacobianColSparsity(scip, problem->oracle, &jacoffsets, NULL, NULL, &nnlnz) );
@@ -1094,6 +1123,9 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemConopt)
    SCIPfreeMemoryArrayNull(scip, &(*problem)->initguess);
 
    coiFree(&((*problem)->CntVect));
+
+   printf("\nNLP solver CONOPT stats: ncalls = %d, nsuccess = %d, nlimit = %d, nlocinfeas = %d, nother = %d\n",
+         (*problem)->ncalls, (*problem)->nsuccess, (*problem)->nlimit, (*problem)->nlocinfeas, (*problem)->nother);
 
    SCIPfreeBlockMemory(scip, problem);
    *problem = NULL;
