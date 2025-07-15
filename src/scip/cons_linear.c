@@ -18748,6 +18748,35 @@ SCIP_ROW* SCIPgetRowLinear(
    return consdata->row;
 }
 
+/** creates and returns the row of the given linear constraint */
+SCIP_RETCODE SCIPcreateRowLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not linear\n");
+      SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+
+   SCIP_CALL( SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->vals) ) ;
+
+   return SCIP_OKAY;
+}
+
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */
 SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP*                 scip,               /**< SCIP data structure */

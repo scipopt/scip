@@ -5667,6 +5667,35 @@ SCIP_ROW* SCIPgetRowLogicor(
    return consdata->row;
 }
 
+/** creates and returns the row of the given logicor constraint */
+SCIP_RETCODE SCIPcreateRowLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a logic or constraint\n");
+      SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->row == NULL);
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), 1.0, SCIPinfinity(scip),
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+
+   SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
+
+   return SCIP_OKAY;
+}
+
 /** cleans up (multi-)aggregations and fixings from logicor constraints */
 SCIP_RETCODE SCIPcleanupConssLogicor(
    SCIP*                 scip,               /**< SCIP data structure */

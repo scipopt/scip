@@ -288,6 +288,7 @@ set(scipsources
     scip/conflict_general.c
     scip/conflict_graphanalysis.c
     scip/conflict_dualproofanalysis.c
+    scip/conflict_resolution.c
     scip/conflictstore.c
     scip/cons.c
     scip/cutpool.c
@@ -560,6 +561,7 @@ set(scipheaders
     scip/conflict.h
     scip/conflict_graphanalysis.h
     scip/conflict_dualproofanalysis.h
+    scip/conflict_resolution.h
     scip/conflict_general.h
     scip/conflictstore.h
     scip/cons_abspower.h

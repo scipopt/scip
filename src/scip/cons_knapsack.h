@@ -202,6 +202,12 @@ SCIP_ROW* SCIPgetRowKnapsack(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** creates and returns the row of the given knapsack constraint */
+SCIP_RETCODE SCIPcreateRowKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
 /** solves knapsack problem in maximization form exactly using dynamic programming;
  *  if needed, one can provide arrays to store all selected items and all not selected items
  *

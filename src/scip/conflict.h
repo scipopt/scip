@@ -41,5 +41,6 @@
 #include "conflict_general.h"
 #include "conflict_graphanalysis.h"
 #include "conflict_dualproofanalysis.h"
+#include "conflict_resolution.h"
 
 #endif

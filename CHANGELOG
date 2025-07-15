@@ -36,6 +36,7 @@ Features
   stop evaluating further candidates once the expected tree-size reduction no longer justifies the LP evaluation cost.
 - extended the statistics to also include information about the number of variables (per type) affected by symmetry
 - add check that parameter value pointers are unique, i.e., no two are the same
+- added generalized resolution conflict analysis that operates directly on linear constraints instead of conflict graphs.
 
 Performance improvements
 ------------------------
@@ -236,6 +237,8 @@ Interface changes
 - new parameters "branching/relpscost/dynamiclookahead", "branching/relpscost/dynamiclookaheadquot", "branching/relpscost/dynamiclookdistribution",
   and "branching/relpscost/minsamplesize" to configure the dynamic max-lookahead criterion for strong branching: enable flag, fraction threshold,
   distribution choice, and minimum sample size.
+- new parameters "conflict/usegenres", "conflict/reduction", "conflict/mbreduction", "conflict/maxvarsfracres", "conflict/resfuiplevels",
+  "conflict/fixandcontinue", and "conflict/maxcoefquot" to control generalized resolution conflict analysis.
 
 ### Data structures
 
@@ -326,6 +329,10 @@ Interface changes
 
 ### New API functions
 - SCIPdisplaySymmetryGenerators() and SCIPdialogExecDisplaySymmetry() to display generators of symmetry group
+- SCIPconsCreateRow() to create and return the row of a linearly representable constraint
+- SCIPcreateRowKnapsack(), SCIPcreateRowLinear(), SCIPcreateRowLogicor(), SCIPcreateRowSetppc(), SCIPcreateRowVarbound() to create
+  and get the row of linearly representable constraints.
+- SCIPgetNResConflictConssApplied() to return the number of generalized resolution conflict constraints added to the problem
 
 ### Command line interface
 

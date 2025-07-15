@@ -953,6 +953,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/conflict_general.o \
 			scip/conflict_graphanalysis.o \
 			scip/conflict_dualproofanalysis.o \
+			scip/conflict_resolution.o \
 			scip/conflictstore.o \
 			scip/cons.o \
 			scip/cutpool.o \

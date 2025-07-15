@@ -23321,6 +23321,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarIsRelaxationOnly
 #undef SCIPvarMarkRelaxationOnly
 #undef SCIPbdchgidxGetPos
+#undef SCIPbdchgidxGetDepth
 #undef SCIPbdchgidxIsEarlierNonNull
 #undef SCIPbdchgidxIsEarlier
 #undef SCIPbdchginfoGetOldbound
@@ -25024,6 +25025,16 @@ int SCIPbdchgidxGetPos(
    assert(bdchgidx != NULL);
 
    return bdchgidx->pos;
+}
+
+/** returns the depth of the bound change index */
+int SCIPbdchgidxGetDepth(
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
+   )
+{
+   assert(bdchgidx != NULL);
+
+   return bdchgidx->depth;
 }
 
 /** returns whether first bound change index belongs to an earlier applied bound change than second one */

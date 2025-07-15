@@ -919,6 +919,27 @@ SCIP_Longint SCIPgetNConflictConssApplied(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+
+/** get total number of resolution conflict constraints added to the problem
+ *
+ *  @return the total number of resolution conflict constraints added to the problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+SCIP_Longint SCIPgetNResConflictConssApplied(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** get total number of dual proof constraints added to the problem
  *
  *  @return the total number of dual proof constraints added to the problem
