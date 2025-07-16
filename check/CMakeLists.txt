@@ -564,6 +564,7 @@ set(pairs_Issue
     "instances/Issue/3934.cip\;-5007\;conflict_off_reduced_presolving_subrestart"
     "instances/Issue/3935.cip\;-24793.9840277416\;default"
     "instances/Issue/3940.cip\;-2549.22\;unscaled_tolerance"
+    "instances/Issue/3942.cip\;0\;default"
 )
 
 #

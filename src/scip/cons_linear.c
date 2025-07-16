@@ -12205,7 +12205,7 @@ SCIP_RETCODE simplifyInequalities(
                   /* swap bounds for 'standard' form */
                   if( !SCIPisFeasZero(scip, lb) )
                   {
-                     ub = lb;
+                     ub = -lb;
                      val *= -1;
                   }
 
@@ -12298,7 +12298,7 @@ SCIP_RETCODE simplifyInequalities(
                   /* swap bounds for 'standard' form */
                   if( !SCIPisFeasZero(scip, lb) )
                   {
-                     ub = lb;
+                     ub = -lb;
                      val *= -1;
                   }
 
