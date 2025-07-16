@@ -21,6 +21,7 @@ Fixed bugs
 - adjust bound before checking feasibility in SCIPvarAddVlb() and SCIPvarAddVub() to detect integrality cutoff
 - choose incumbent solution as reference in varFixingsRins() and varFixingsDins() of heur_alns.c to ensure integrality
 - consider variable type in selectInitialVariableRandomly() of heur_gins.c to count integral variables
+- correct fractionality sign when standardizing bounds in simplifyInequalities() of cons_linear.c
 
 Build system
 ------------
