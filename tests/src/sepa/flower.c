@@ -22,8 +22,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   multilinear.c
- * @brief  unit tests for multilinear cut separator
+/**@file   flower.c
+ * @brief  unit tests for flower cut separator
  * @author Matthias Walter
  */
 
@@ -202,8 +202,8 @@ void hypergraph1flower(
 
    if( separate )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "separating/multilinear/freq", 1) );
-      SCIP_CALL( SCIPsetIntParam(scip, "separating/multilinear/maxtwoflower", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "separating/flower/freq", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "separating/flower/maxtwoflower", 0) );
    }
 
    /* solve problem (symmetry will be available afterwards) */
@@ -238,10 +238,10 @@ void hypergraph1flower(
 
 
 /* TEST SUITE */
-TestSuite(test_sepa_multilinear, .init = setup, .fini = teardown);
+TestSuite(test_sepa_flower, .init = setup, .fini = teardown);
 
 /* TEST 1 */
-Test(test_sepa_multilinear, 1flower, .description = "trigger separation for a simple hypergraph")
+Test(test_sepa_flower, 1flower, .description = "trigger separation for a simple hypergraph")
 {
    hypergraph1flower(false);
 

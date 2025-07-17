@@ -18660,8 +18660,14 @@ SCIP_Real SCIPvarGetLPSol_rec(
        * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
        * positives and negatives if the parameter <numerics/infinity> is modified by the user
        */
-      assert(lpsolval > -SCIP_DEFAULT_INFINITY);
-      assert(lpsolval < +SCIP_DEFAULT_INFINITY);
+//       assert(lpsolval > -SCIP_DEFAULT_INFINITY);
+//       assert(lpsolval < +SCIP_DEFAULT_INFINITY);
+
+      if( lpsolval >= SCIP_DEFAULT_INFINITY )
+         return (var->data.aggregate.scalar > 0) ? SCIP_DEFAULT_INFINITY : -SCIP_DEFAULT_INFINITY;
+      else if( lpsolval <= -SCIP_DEFAULT_INFINITY )
+         return (var->data.aggregate.scalar > 0) ? -SCIP_DEFAULT_INFINITY : SCIP_DEFAULT_INFINITY;
+
       return var->data.aggregate.scalar * lpsolval + var->data.aggregate.constant;
    }
    case SCIP_VARSTATUS_MULTAGGR:

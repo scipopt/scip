@@ -886,6 +886,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_convexproj.o \
 			scip/sepa_disjunctive.o \
 			scip/sepa_eccuts.o \
+			scip/sepa_flower.o \
 			scip/sepa_gauge.o \
 			scip/sepa_gomory.o \
 			scip/sepa_impliedbounds.o \
@@ -895,7 +896,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_mcf.o \
 			scip/sepa_minor.o \
 			scip/sepa_mixing.o \
-			scip/sepa_multilinear.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_rlt.o \

@@ -22,12 +22,12 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sepa_multilinear.h
+/**@file   sepa_flower.h
  * @ingroup SEPARATORS
- * @brief  multilinear separator
+ * @brief  flower-inequality separator
  * @author Matthias Walter
  *
- * Separator for cutting planes that are valid for the multilinear polytope \f$ P(G) \f$ of a hypergraph
+ * Separator for flower inequalities that are valid for the mulitlinear polytope \f$ P(G) \f$ of a hypergraph
  * \f$ G = (V,E) \f$, defined as the convex hull of all vectors \f$ z \in \{0,1\}^{V + E} \f$ that
  * satisfy \f$ z_e = \prod_{v \in e} z_v \f$ for all \f$ e \in E \f$. In other words, the variable associated with each
  * (hyper-)edge is equal to the product of the variables associated with the vertices.
@@ -75,12 +75,12 @@
 extern "C" {
 #endif
 
-/** creates the multilinear separator and includes it in SCIP
+/** creates the flower separator and includes it in SCIP
  *
  * @ingroup SeparatorIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeSepaMultilinear(
+SCIP_RETCODE SCIPincludeSepaFlower(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
