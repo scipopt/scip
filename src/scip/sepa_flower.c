@@ -22,9 +22,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sepa_multilinear.c
+/**@file   sepa_flower.c
  * @ingroup DEFPLUGINS_SEPA
- * @brief  multilinear separator
+ * @brief  flower-inequality separator
  * @author Matthias Walter
  */
 
@@ -32,7 +32,7 @@
 
 #include <assert.h>
 
-#include "scip/sepa_multilinear.h"
+#include "scip/sepa_flower.h"
 #include "scip/cons_and.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/struct_scip.h"
@@ -41,8 +41,8 @@
 #include "scip/hypergraph.h"
 
 
-#define SEPA_NAME                      "multilinear"
-#define SEPA_DESC                      "multilinear cut separator"
+#define SEPA_NAME                      "flower"
+#define SEPA_DESC                      "flower cut separator"
 #define SEPA_PRIORITY                  100000
 #define SEPA_FREQ                      1
 #define SEPA_MAXBOUNDDIST              1.0
@@ -56,8 +56,8 @@
 #define DEFAULT_MAX_ONEFLOWER          10000000
 #define DEFAULT_MAX_TWOFLOWER          10000000
 #define DEFAULT_DELAY_STANDARD         FALSE
-#define DEFAULT_MAX_USELESS_ONEFLOWER  2 /**< Number of useless separation rounds after which we stop separating. */
-#define DEFAULT_MAX_USELESS_TWOFLOWER  2 /**< Number of useless separation rounds after which we stop separating. */
+#define DEFAULT_MAX_USELESS_ONEFLOWER  1 /**< Number of useless separation rounds after which we stop separating. */
+#define DEFAULT_MAX_USELESS_TWOFLOWER  1 /**< Number of useless separation rounds after which we stop separating. */
 
 /* Define this for quickly testing whether instances are affected at all. */
 // #define PRINT_HYPERGRAPH_AND_EXIT
@@ -102,6 +102,7 @@ struct SCIP_Hypergraph_OverlapData
 struct SCIP_SepaData
 {
    int                   lastrun;            /**< Last run for which we constructed a hypergraph. */
+   SCIP_NODE*            lastnode;           /**< Last node for which we separated. */
    SCIP_Bool             scanand;            /**< Whether to scan AND constraints when constructing a hypergraph. */
    SCIP_Bool             scanproduct;        /**< Whether to scan product expressions when constructing a hypergraph. */
    SCIP_HYPERGRAPH*      hypergraph;         /**< The hypergraph. */
@@ -570,7 +571,7 @@ SCIP_RETCODE separateStandard(
             vars[1] = edgedata->var;
             coefs[0] = 1.0 * vertexdata->coefscale;
             coefs[1] = -1.0 * edgedata->coefscale;
-            SCIPsnprintf(name, SCIP_MAXSTRLEN, "multilinear_%05d_standard", ++sepadata->nsepacuts); /*lint !e534 */
+            SCIPsnprintf(name, SCIP_MAXSTRLEN, "flower_%05d_standard", ++sepadata->nsepacuts); /*lint !e534 */
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &row, sepa, name, 0.0, SCIPinfinity(scip), SCIPgetDepth(scip) > 0,
                FALSE, TRUE) );
             SCIP_CALL( SCIPaddVarsToRow( scip, row, 2, vars, coefs) );
@@ -671,7 +672,7 @@ SCIP_RETCODE separateOneFlowerOld(
             SCIP_ROW* row = NULL;
             char name[SCIP_MAXSTRLEN];
 
-            SCIPsnprintf(name, SCIP_MAXSTRLEN, "multilinear_%05d_1flower", ++sepadata->nsepacuts);
+            SCIPsnprintf(name, SCIP_MAXSTRLEN, "flower_%05d_1flower", ++sepadata->nsepacuts);
             SCIP_CALL( SCIPcreateRowSepa(scip, &row, sepa, name, 0, NULL, NULL, iter.ncommonvertices - nbasevertices,
                SCIPinfinity(scip), SCIPgetDepth(scip) > 0, FALSE, TRUE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -802,7 +803,7 @@ SCIP_RETCODE separateOneFlower(
          noverlapvertices = SCIPhypergraphOverlapSize(hypergraph, bestoverlap);
          adjacent = SCIPhypergraphOverlapData(hypergraph, bestoverlap)->minedge;
          adjacentdata = SCIPhypergraphEdgeData(hypergraph, adjacent);
-         SCIPsnprintf(name, SCIP_MAXSTRLEN, "multilinear_%05d_1flower", ++sepadata->nsepacuts); /*lint !e534*/
+         SCIPsnprintf(name, SCIP_MAXSTRLEN, "flower_%05d_1flower", ++sepadata->nsepacuts); /*lint !e534*/
          SCIP_CALL( SCIPcreateRowSepa(scip, &row, sepa, name, 0, NULL, NULL, 1.0 * (noverlapvertices - nbasevertices),
             SCIPinfinity(scip), SCIPgetDepth(scip) > 0, FALSE, TRUE) );
          SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -967,7 +968,7 @@ SCIP_RETCODE separateTwoFlowerOld(
                char name[SCIP_MAXSTRLEN];
                SCIP_Bool separated;
 
-               SCIPsnprintf(name, SCIP_MAXSTRLEN, "multilinear_%05d_2flower", ++sepadata->nsepacuts);
+               SCIPsnprintf(name, SCIP_MAXSTRLEN, "flower_%05d_2flower", ++sepadata->nsepacuts);
                SCIP_CALL( SCIPcreateRowSepa(scip, &row, sepa, name, 0, NULL, NULL,
                      iter1.ncommonvertices + iter2.ncommonvertices - nbasevertices - 1.0, SCIPinfinity(scip),
                      SCIPgetDepth(scip) > 0, FALSE, TRUE) );
@@ -1163,7 +1164,7 @@ SCIP_RETCODE separateTwoFlower(
          adjacent2 = SCIPhypergraphOverlapData(sepadata->hypergraph, bestoverlap2)->minedge;
          adjacent2data = SCIPhypergraphEdgeData(sepadata->hypergraph, adjacent2);
 
-         SCIPsnprintf(name, SCIP_MAXSTRLEN, "multilinear_%05d_2flower", ++sepadata->nsepacuts); /*lint !e534*/
+         SCIPsnprintf(name, SCIP_MAXSTRLEN, "flower_%05d_2flower", ++sepadata->nsepacuts); /*lint !e534*/
          SCIP_CALL( SCIPcreateRowSepa(scip, &row, sepa, name, 0, NULL, NULL,
                noverlap1vertices + noverlap2vertices - nbasevertices - 1.0, SCIPinfinity(scip), SCIPgetDepth(scip) > 0,
                FALSE, TRUE) );
@@ -1261,6 +1262,15 @@ SCIP_RETCODE separate(
       }
 
       sepadata->lastrun = SCIPgetNRuns(scip);
+      sepadata->nuselessoneflower = 0;
+      sepadata->nuselesstwoflower = 0;
+   }
+
+   if( SCIPgetCurrentNode(scip) != sepadata->lastnode )
+   {
+     sepadata->lastnode = SCIPgetCurrentNode(scip);
+     sepadata->nuselessoneflower = 0;
+     sepadata->nuselesstwoflower = 0;
    }
 
    if( sepadata->hypergraph
@@ -1325,21 +1335,21 @@ SCIP_RETCODE separate(
 
 /** copy method for separator plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_SEPACOPY(sepaCopyMultilinear)
+SCIP_DECL_SEPACOPY(sepaCopyFlower)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
 
    /* call inclusion method of separator */
-   SCIP_CALL( SCIPincludeSepaMultilinear(scip) );
+   SCIP_CALL( SCIPincludeSepaFlower(scip) );
 
    return SCIP_OKAY;
 }
 
 /** Destructor of separator to free user data (called when SCIP is exiting). */
 static
-SCIP_DECL_SEPAFREE(sepaFreeMultilinear)
+SCIP_DECL_SEPAFREE(sepaFreeFlower)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
 
@@ -1356,7 +1366,7 @@ SCIP_DECL_SEPAFREE(sepaFreeMultilinear)
 
 /** Initialization method of separator (called after problem was transformed). */
 static
-SCIP_DECL_SEPAINIT(sepaInitMultilinear)
+SCIP_DECL_SEPAINIT(sepaInitFlower)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
 
@@ -1371,7 +1381,7 @@ SCIP_DECL_SEPAINIT(sepaInitMultilinear)
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
 static
-SCIP_DECL_SEPAEXITSOL(sepaExitsolMultilinear)
+SCIP_DECL_SEPAEXITSOL(sepaExitsolFlower)
 {
    SCIP_SEPADATA* sepadata;
 
@@ -1391,7 +1401,7 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolMultilinear)
 
 /** LP solution separation method of separator. */
 static
-SCIP_DECL_SEPAEXECLP(sepaExeclpMultilinear)
+SCIP_DECL_SEPAEXECLP(sepaExeclpFlower)
 {  /*lint --e{715}*/
 
    SCIP_CALL( separate(scip, sepa, NULL, result) );
@@ -1401,7 +1411,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMultilinear)
 
 /** arbitrary primal solution separation method of separator */
 static
-SCIP_DECL_SEPAEXECSOL(sepaExecsolMultilinear)
+SCIP_DECL_SEPAEXECSOL(sepaExecsolFlower)
 {  /*lint --e{715}*/
 
    SCIP_CALL( separate(scip, sepa, sol, result) );
@@ -1414,17 +1424,18 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolMultilinear)
  * separator specific interface methods
  */
 
-/** creates the multilinear separator and includes it in SCIP */
-SCIP_RETCODE SCIPincludeSepaMultilinear(
+/** creates the flower separator and includes it in SCIP */
+SCIP_RETCODE SCIPincludeSepaFlower(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_SEPADATA* sepadata = NULL;
    SCIP_SEPA* sepa = NULL;
 
-   /* create multilinear separator data */
+   /* create flower separator data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    sepadata->lastrun = -1;
+   sepadata->lastnode = NULL;
    sepadata->hypergraph = NULL;
    sepadata->nsepacuts = 0;
    sepadata->timesepaoneflower = 0.0;
@@ -1438,42 +1449,42 @@ SCIP_RETCODE SCIPincludeSepaMultilinear(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
-         SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpMultilinear, sepaExecsolMultilinear, sepadata) );
+         SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpFlower, sepaExecsolFlower, sepadata) );
 
    assert(sepa != NULL);
 
    /* set non fundamental callbacks via setter functions */
-   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyMultilinear) );
-   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeMultilinear) );
-   SCIP_CALL( SCIPsetSepaInit(scip, sepa, sepaInitMultilinear) );
-   SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolMultilinear) );
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyFlower) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeFlower) );
+   SCIP_CALL( SCIPsetSepaInit(scip, sepa, sepaInitFlower) );
+   SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolFlower) );
 
-   /* add multilinear separator parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/multilinear/scanand",
+   /* add flower separator parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/flower/scanand",
          "Whether to scan AND constraints when constructing hypergraph", &sepadata->scanand, FALSE, DEFAULT_SCAN_AND, 0,
          0) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/multilinear/scanproduct",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/flower/scanproduct",
          "Whether to scan product expressions when constructing hypergraph", &sepadata->scanproduct, FALSE,
          DEFAULT_SCAN_PRODUCT, 0, 0) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/multilinear/maxstandard",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/flower/maxstandard",
          "Maximum number of standard relaxation inequalities per cut round", &sepadata->maxstandard, FALSE,
          DEFAULT_MAX_STANDARD, 0, INT_MAX, 0, 0) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/multilinear/maxoneflower",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/flower/maxoneflower",
          "Maximum number of 1-flower inequalities per cut round", &sepadata->maxoneflower, FALSE, DEFAULT_MAX_ONEFLOWER,
          0, INT_MAX, 0, 0) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/multilinear/maxtwoflower",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/flower/maxtwoflower",
          "Maximum number of 2-flower inequalities per cut round", &sepadata->maxtwoflower, FALSE, DEFAULT_MAX_TWOFLOWER,
          0, INT_MAX, 0, 0) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/multilinear/minnoverlaps",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/flower/minnoverlaps",
          "Minimum number of overlaps necessary to try separation", &sepadata->minnoverlaps, FALSE, DEFAULT_MIN_OVERLAPS,
          0, INT_MAX, 0, 0) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/multilinear/delaystandard",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/flower/delaystandard",
          "Whether to only generate standard inequalities if also flowers were generated", &sepadata->delaystandard,
          FALSE, DEFAULT_DELAY_STANDARD, 0, 0) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/multilinear/maxuselessoneflower",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/flower/maxuselessoneflower",
          "Number of useless separation rounds after which we stop separating 1-flowers", &sepadata->maxuselessoneflower,
          FALSE, DEFAULT_MAX_USELESS_ONEFLOWER, 0, INT_MAX, 0, 0) );
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/multilinear/maxuselesstwoflower",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/flower/maxuselesstwoflower",
          "Number of useless separation rounds after which we stop separating 2-flowers", &sepadata->maxuselesstwoflower,
          FALSE, DEFAULT_MAX_USELESS_TWOFLOWER, 0, INT_MAX, 0, 0) );
 

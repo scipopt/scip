@@ -230,7 +230,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropObbt(scip) );
    SCIP_CALL( SCIPincludePropNlobbt(scip) );
    SCIP_CALL( SCIPincludeSepaClosecuts(scip) );
-   SCIP_CALL( SCIPincludeSepaMultilinear(scip) );
+   SCIP_CALL( SCIPincludeSepaFlower(scip) );
    SCIP_CALL( SCIPincludeSepaRlt(scip) );
    SCIP_CALL( SCIPincludeSepaDisjunctive(scip) );
    SCIP_CALL( SCIPincludeSepaGauge(scip) );
