@@ -361,18 +361,18 @@ Fixed bugs
 - avoid hashmap key error in removal of doubletons and singletons in dual presolve of setppc constraints by skipping tripleton locks
 - when upgrading to xor constraint require parity variable to be enforced integral
 - provide the depth of the applied effective root with SCIPtreeGetEffectiveRootDepth() to avert invalid globalization of constraint set changes
-- disable objective limit during lexicographic dual minimization to keep feasibility status
+- disable objective limit during lexicographic dual minimization to preserve feasibility status
 - declare infinite bound inference infeasible in SCIPinferVarLbCons() and SCIPinferVarUbCons() to maintain correct loose LP values
 - fixed update of consssorted flags in a variable expressions data when adding an additional constraint using this variable
 - corrected computation of number of variables affected by symmetry
 - fixed computation of symmetry group size
 - correct comparison conditions in checkRedundancySide() of cons_varbound.c to ensure pair redundancy
 - also for the initial LP solve force acceptance of Farkas row in SCIPlpGetDualfarkas() if all other means for obtaining a reliable Farkas proof have failed
-- avoid overwriting set cutoff flag in tightenCoefs(), preprocessConstraintPairs(), and applyFixings() of cons_varbound.c to reject infeasible solutions
-- fix memory leak in exprinterpret_cppad.cpp w.r.t. user expressions
+- avoid overwriting the cutoff flag in tightenCoefs(), preprocessConstraintPairs(), and applyFixings() of cons_varbound.c to reject infeasible solutions
+- fix memory leak in CppAD interface w.r.t. user expressions
 - adjust bound before checking feasibility in SCIPvarAddVlb() and SCIPvarAddVub() to detect integrality cutoff
-- choose incumbent solution as reference in varFixingsRins() and varFixingsDins() of heur_alns.c to ensure integrality
-- consider variable type in selectInitialVariableRandomly() of heur_gins.c to count integral variables
+- choose incumbent solution as reference in varFixingsRins() and varFixingsDins() of ALNS heuristic to ensure integrality
+- consider variable type in selectInitialVariableRandomly() of GINS heuristic to count integral variables
 - correct fractionality sign when standardizing bounds in simplifyInequalities() of cons_linear.c
 
 Build system
@@ -381,10 +381,7 @@ Build system
 ### CMake
 
 - disable setting the boolean variable MACOSX_RPATH to a string value to actually enable @rpath usage
-
 - define SOPLEX_NEEDED and ZIMPL_NEEDED to avoid syntax error in configuration file
-
-### Makefile
 
 Miscellaneous
 -------------
