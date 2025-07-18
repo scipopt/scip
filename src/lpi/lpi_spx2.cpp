@@ -1330,11 +1330,17 @@ SCIP_RETCODE SCIPlpiDelCols(
    int                   lastcol             /**< last column to be deleted */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiDelCols()\n");
-
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->numColsReal());
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->spx->numColsReal());
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiDelCols()\n");
+
+   // handle empty range
+   if( firstcol > lastcol )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1462,11 +1468,17 @@ SCIP_RETCODE SCIPlpiDelRows(
    int                   lastrow             /**< last row to be deleted */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiDelRows()\n");
-
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->numRowsReal());
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->spx->numRowsReal());
+   assert(firstrow <= lastrow + 1);
+
+   SCIPdebugMessage("calling SCIPlpiDelRows()\n");
+
+   // handle empty range
+   if( firstrow > lastrow )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1976,13 +1988,15 @@ SCIP_RETCODE SCIPlpiGetCols(
    int i;
    int j;
 
-   SCIPdebugMessage("calling SCIPlpiGetCols()\n");
-
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->numColsReal());
    assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->spx->numColsReal());
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetCols()\n");
 
    if( lb != NULL )
    {
@@ -2084,13 +2098,15 @@ SCIP_RETCODE SCIPlpiGetRows(
    int i;
    int j;
 
-   SCIPdebugMessage("calling SCIPlpiGetRows()\n");
-
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->numRowsReal());
    assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->spx->numRowsReal());
+   assert(firstrow <= lastrow + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetRows()\n");
 
    if( lhs != NULL )
    {
@@ -2183,13 +2199,15 @@ SCIP_RETCODE SCIPlpiGetColNames(
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {
-   assert( lpi != NULL );
-   assert( lpi->spx != NULL );
-   assert( colnames != NULL || namestoragesize == 0 );
-   assert( namestorage != NULL || namestoragesize == 0 );
-   assert( namestoragesize >= 0 );
-   assert( storageleft != NULL );
-   assert( 0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->numColsReal() );
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(colnames != NULL || namestoragesize == 0);
+   assert(namestorage != NULL || namestoragesize == 0);
+   assert(namestoragesize >= 0);
+   assert(storageleft != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->spx->numColsReal());
+   assert(firstcol <= lastcol + 1);
 
    SCIPdebugMessage("getting column names %d to %d\n", firstcol, lastcol);
 
@@ -2209,13 +2227,15 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {
-   assert( lpi != NULL );
-   assert( lpi->spx != NULL );
-   assert( rownames != NULL || namestoragesize == 0 );
-   assert( namestorage != NULL || namestoragesize == 0 );
-   assert( namestoragesize >= 0 );
-   assert( storageleft != NULL );
-   assert( 0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->numRowsReal() );
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(rownames != NULL || namestoragesize == 0);
+   assert(namestorage != NULL || namestoragesize == 0);
+   assert(namestoragesize >= 0);
+   assert(storageleft != NULL);
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->spx->numRowsReal());
+   assert(firstrow <= lastrow + 1);
 
    SCIPdebugMessage("getting row names %d to %d\n", firstrow, lastrow);
 
@@ -2251,12 +2271,14 @@ SCIP_RETCODE SCIPlpiGetObj(
 {
    int i;
 
-   SCIPdebugMessage("calling SCIPlpiGetObj()\n");
-
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->numColsReal());
    assert(vals != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->spx->numColsReal());
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetObj()\n");
 
    for( i = firstcol; i <= lastcol; ++i )
       vals[i-firstcol] = lpi->spx->objReal(i);
@@ -2275,11 +2297,13 @@ SCIP_RETCODE SCIPlpiGetBounds(
 {
    int i;
 
-   SCIPdebugMessage("calling SCIPlpiGetBounds()\n");
-
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->numColsReal());
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->spx->numColsReal());
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetBounds()\n");
 
    for( i = firstcol; i <= lastcol; ++i )
    {
@@ -2303,11 +2327,13 @@ SCIP_RETCODE SCIPlpiGetSides(
 {
    int i;
 
-   SCIPdebugMessage("calling SCIPlpiGetSides()\n");
-
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->numRowsReal());
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->spx->numRowsReal());
+   assert(firstrow <= lastrow + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetSides()\n");
 
    for( i = firstrow; i <= lastrow; ++i )
    {

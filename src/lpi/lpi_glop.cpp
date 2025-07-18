@@ -427,15 +427,21 @@ SCIP_RETCODE SCIPlpiDelCols(
    int                   lastcol             /**< last column to be deleted */
    )
 {
-   assert( lpi != NULL );
-   assert( lpi->linear_program != NULL );
-   assert( 0 <= firstcol && firstcol <= lastcol && lastcol < lpi->linear_program->num_variables() );
+   assert(lpi != NULL);
+   assert(lpi->linear_program != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->linear_program->num_variables());
+   assert(firstcol <= lastcol + 1);
 
    SCIPdebugMessage("deleting columns %d to %d.\n", firstcol, lastcol);
 
+   // handle empty range
+   if( firstcol > lastcol )
+      return SCIP_OKAY;
+
    const ColIndex num_cols = lpi->linear_program->num_variables();
    DenseBooleanRow columns_to_delete(num_cols, false);
-   for (int i = firstcol; i <= lastcol; ++i)
+   for( int i = firstcol; i <= lastcol; ++i )
       columns_to_delete[ColIndex(i)] = true;
 
    lpi->linear_program->DeleteColumns(columns_to_delete);
@@ -585,16 +591,23 @@ SCIP_RETCODE SCIPlpiDelRows(
    int                   lastrow             /**< last row to be deleted */
    )
 {
-   assert( lpi != NULL );
-   assert( lpi->linear_program != NULL );
-   assert( 0 <= firstrow && firstrow <= lastrow && lastrow < lpi->linear_program->num_constraints() );
+   assert(lpi != NULL);
+   assert(lpi->linear_program != NULL);
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->linear_program->num_constraints());
+   assert(firstrow <= lastrow + 1);
+
+   SCIPdebugMessage("deleting rows %d to %d.\n", firstrow, lastrow);
+
+   // handle empty range
+   if( firstrow > lastrow )
+      return SCIP_OKAY;
 
    const RowIndex num_rows = lpi->linear_program->num_constraints();
    DenseBooleanColumn rows_to_delete(num_rows, false);
-   for (int i = firstrow; i <= lastrow; ++i)
+   for( int i = firstrow; i <= lastrow; ++i )
       rows_to_delete[RowIndex(i)] = true;
 
-   SCIPdebugMessage("deleting rows %d to %d.\n", firstrow, lastrow);
    deleteRowsAndUpdateCurrentBasis(lpi, rows_to_delete);
 
    return SCIP_OKAY;
@@ -1010,33 +1023,35 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
-   assert( lpi != NULL );
-   assert( lpi->linear_program != NULL );
-   assert( 0 <= firstcol && firstcol <= lastcol && lastcol < lpi->linear_program->num_variables() );
-   assert( (lb != NULL && ub != NULL) || (lb == NULL && ub == NULL) );
-   assert( (nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL) );
+   assert(lpi != NULL);
+   assert(lpi->linear_program != NULL);
+   assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->linear_program->num_variables());
+   assert(firstcol <= lastcol + 1);
 
    const DenseRow& tmplb = lpi->linear_program->variable_lower_bounds();
    const DenseRow& tmpub = lpi->linear_program->variable_upper_bounds();
 
-   if ( nnonz != NULL )
+   if( nnonz != NULL )
    {
-      assert( beg != NULL );
-      assert( ind != NULL );
-      assert( val != NULL );
+      assert(beg != NULL);
+      assert(ind != NULL);
+      assert(val != NULL);
 
       *nnonz = 0;
       int index = 0;
-      for (ColIndex col(firstcol); col <= ColIndex(lastcol); ++col, ++index)
+      for( ColIndex col(firstcol); col <= ColIndex(lastcol); ++col, ++index )
       {
-         if ( lb != NULL )
+         if( lb != NULL )
             lb[index] = tmplb[col];
-         if ( ub != NULL )
+         if( ub != NULL )
             ub[index] = tmpub[col];
 
          beg[index] = *nnonz;
          const SparseColumn& column = lpi->linear_program->GetSparseColumn(col);
-         for (const SparseColumn::Entry& entry : column)
+         for( const SparseColumn::Entry& entry : column )
          {
             const RowIndex row = entry.row();
             ind[*nnonz] = row.value();
@@ -1048,11 +1063,11 @@ SCIP_RETCODE SCIPlpiGetCols(
    else
    {
       int index = 0;
-      for (ColIndex col(firstcol); col <= ColIndex(lastcol); ++col, ++index)
+      for( ColIndex col(firstcol); col <= ColIndex(lastcol); ++col, ++index )
       {
-         if ( lb != NULL )
+         if( lb != NULL )
             lb[index] = tmplb[col];
-         if ( ub != NULL )
+         if( ub != NULL )
             ub[index] = tmpub[col];
       }
    }
@@ -1076,35 +1091,37 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
-   assert( lpi != NULL );
-   assert( lpi->linear_program != NULL );
-   assert( 0 <= firstrow && firstrow <= lastrow && lastrow < lpi->linear_program->num_constraints() );
-   assert( (lhs == NULL && rhs == NULL) || (rhs != NULL && lhs != NULL) );
-   assert( (nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL) );
+   assert(lpi != NULL);
+   assert(lpi->linear_program != NULL);
+   assert((lhs == NULL && rhs == NULL) || (rhs != NULL && lhs != NULL));
+   assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->linear_program->num_constraints());
+   assert(firstrow <= lastrow + 1);
 
    const DenseColumn& tmplhs = lpi->linear_program->constraint_lower_bounds();
    const DenseColumn& tmprhs = lpi->linear_program->constraint_upper_bounds();
 
-   if ( nnonz != NULL )
+   if( nnonz != NULL )
    {
-      assert( beg != NULL );
-      assert( ind != NULL );
-      assert( val != NULL );
+      assert(beg != NULL);
+      assert(ind != NULL);
+      assert(val != NULL);
 
       const SparseMatrix& matrixtrans = lpi->linear_program->GetTransposeSparseMatrix();
 
       *nnonz = 0;
       int index = 0;
-      for (RowIndex row(firstrow); row <= RowIndex(lastrow); ++row, ++index)
+      for( RowIndex row(firstrow); row <= RowIndex(lastrow); ++row, ++index )
       {
-         if ( lhs != NULL )
+         if( lhs != NULL )
             lhs[index] = tmplhs[row];
-         if ( rhs != NULL )
+         if( rhs != NULL )
             rhs[index] = tmprhs[row];
 
          beg[index] = *nnonz;
          const SparseColumn& column = matrixtrans.column(ColIndex(row.value()));
-         for (const SparseColumn::Entry& entry : column)
+         for( const SparseColumn::Entry& entry : column )
          {
             const RowIndex rowidx = entry.row();
             ind[*nnonz] = rowidx.value();
@@ -1116,11 +1133,11 @@ SCIP_RETCODE SCIPlpiGetRows(
    else
    {
       int index = 0;
-      for (RowIndex row(firstrow); row <= RowIndex(lastrow); ++row, ++index)
+      for( RowIndex row(firstrow); row <= RowIndex(lastrow); ++row, ++index )
       {
-         if ( lhs != NULL )
+         if( lhs != NULL )
             lhs[index] = tmplhs[row];
-         if ( rhs != NULL )
+         if( rhs != NULL )
             rhs[index] = tmprhs[row];
       }
    }
@@ -1139,13 +1156,15 @@ SCIP_RETCODE SCIPlpiGetColNames(
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {
-   assert( lpi != NULL );
-   assert( lpi->linear_program != NULL );
-   assert( colnames != NULL || namestoragesize == 0 );
-   assert( namestorage != NULL || namestoragesize == 0 );
-   assert( namestoragesize >= 0 );
-   assert( storageleft != NULL );
-   assert( 0 <= firstcol && firstcol <= lastcol && lastcol < lpi->linear_program->num_variables() );
+   assert(lpi != NULL);
+   assert(lpi->linear_program != NULL);
+   assert(colnames != NULL || namestoragesize == 0);
+   assert(namestorage != NULL || namestoragesize == 0);
+   assert(namestoragesize >= 0);
+   assert(storageleft != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->linear_program->num_variables());
+   assert(firstcol <= lastcol + 1);
 
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
 
@@ -1163,13 +1182,15 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {
-   assert( lpi != NULL );
-   assert( lpi->linear_program != NULL );
-   assert( rownames != NULL || namestoragesize == 0 );
-   assert( namestorage != NULL || namestoragesize == 0 );
-   assert( namestoragesize >= 0 );
-   assert( storageleft != NULL );
-   assert( 0 <= firstrow && firstrow <= lastrow && lastrow < lpi->linear_program->num_constraints() );
+   assert(lpi != NULL);
+   assert(lpi->linear_program != NULL);
+   assert(rownames != NULL || namestoragesize == 0);
+   assert(namestorage != NULL || namestoragesize == 0);
+   assert(namestoragesize >= 0);
+   assert(storageleft != NULL);
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->linear_program->num_constraints());
+   assert(firstrow <= lastrow + 1);
 
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
 
@@ -1184,15 +1205,17 @@ SCIP_RETCODE SCIPlpiGetObj(
    SCIP_Real*            vals                /**< array to store objective coefficients */
    )
 {
-   assert( lpi != NULL );
-   assert( lpi->linear_program != NULL );
-   assert( firstcol <= lastcol );
-   assert( vals != NULL );
+   assert(lpi != NULL);
+   assert(lpi->linear_program != NULL);
+   assert(vals != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->linear_program->num_variables());
+   assert(firstcol <= lastcol + 1);
 
    SCIPdebugMessage("getting objective values %d to %d\n", firstcol, lastcol);
 
    int index = 0;
-   for (ColIndex col(firstcol); col <= ColIndex(lastcol); ++col)
+   for( ColIndex col(firstcol); col <= ColIndex(lastcol); ++col )
    {
       vals[index] = lpi->linear_program->objective_coefficients()[col];
       ++index;
@@ -1210,19 +1233,21 @@ SCIP_RETCODE SCIPlpiGetBounds(
    SCIP_Real*            ubs                 /**< array to store upper bound values, or NULL */
    )
 {
-   assert( lpi != NULL );
-   assert( lpi->linear_program != NULL );
-   assert( firstcol <= lastcol );
+   assert(lpi != NULL);
+   assert(lpi->linear_program != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->linear_program->num_variables());
+   assert(firstcol <= lastcol + 1);
 
    SCIPdebugMessage("getting bounds %d to %d\n", firstcol, lastcol);
 
    int index = 0;
-   for (ColIndex col(firstcol); col <= ColIndex(lastcol); ++col)
+   for( ColIndex col(firstcol); col <= ColIndex(lastcol); ++col )
    {
-      if ( lbs != NULL )
+      if( lbs != NULL )
          lbs[index] = lpi->linear_program->variable_lower_bounds()[col];
 
-      if ( ubs != NULL )
+      if( ubs != NULL )
          ubs[index] = lpi->linear_program->variable_upper_bounds()[col];
 
       ++index;
@@ -1240,19 +1265,21 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIP_Real*            rhss                /**< array to store right hand side values, or NULL */
    )
 {
-   assert( lpi != NULL );
-   assert( lpi->linear_program != NULL );
-   assert( firstrow <= lastrow );
+   assert(lpi != NULL);
+   assert(lpi->linear_program != NULL);
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->linear_program->num_constraints());
+   assert(firstrow <= lastrow + 1);
 
    SCIPdebugMessage("getting row sides %d to %d\n", firstrow, lastrow);
 
    int index = 0;
-   for (RowIndex row(firstrow); row <= RowIndex(lastrow); ++row)
+   for( RowIndex row(firstrow); row <= RowIndex(lastrow); ++row )
    {
-      if ( lhss != NULL )
+      if( lhss != NULL )
          lhss[index] = lpi->linear_program->constraint_lower_bounds()[row];
 
-      if ( rhss != NULL )
+      if( rhss != NULL )
          rhss[index] = lpi->linear_program->constraint_upper_bounds()[row];
 
       ++index;

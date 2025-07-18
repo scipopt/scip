@@ -840,11 +840,17 @@ SCIP_RETCODE SCIPlpiDelCols(
    int                   lastcol             /**< last column to be deleted */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiDelCols()\n");
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->clp->numberColumns());
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiDelCols()\n");
+
+   // handle empty range
+   if( firstcol > lastcol )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -989,11 +995,17 @@ SCIP_RETCODE SCIPlpiDelRows(
    int                   lastrow             /**< last row to be deleted */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiDelRows() (number: %d)\n", lastrow-firstrow+1);
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->clp->numberRows());
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->clp->numberRows());
+   assert(firstrow <= lastrow + 1);
+
+   SCIPdebugMessage("calling SCIPlpiDelRows() (number: %d)\n", lastrow-firstrow+1);
+
+   // handle empty range
+   if( firstrow > lastrow )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1483,13 +1495,15 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetCols()\n");
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
    assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->clp->numberColumns());
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetCols()\n");
 
    ClpSimplex* clp = lpi->clp;
 
@@ -1547,13 +1561,15 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetRows()\n");
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->clp->numberRows());
    assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->clp->numberRows());
+   assert(firstrow <= lastrow + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetRows()\n");
 
    ClpSimplex* clp = lpi->clp;
    if ( lhs != NULL )
@@ -1612,6 +1628,9 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->clp->numberColumns());
+   assert(firstcol <= lastcol + 1);
 
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
 
@@ -1636,6 +1655,9 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->clp->numberRows());
+   assert(firstrow <= lastrow + 1);
 
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
 
@@ -1690,12 +1712,14 @@ SCIP_RETCODE SCIPlpiGetObj(
    SCIP_Real*            vals                /**< array to store objective coefficients */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetObj()\n");
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
    assert(vals != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->clp->numberColumns());
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetObj()\n");
 
    const double* obj = lpi->clp->getObjCoefficients();    // Here we can use the const versions (see SCIPchgObj)
 
@@ -1714,11 +1738,13 @@ SCIP_RETCODE SCIPlpiGetBounds(
    SCIP_Real*            ubs                 /**< array to store upper bound values, or NULL */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetBounds()\n");
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->clp->numberColumns());
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetBounds()\n");
 
    if ( lbs != 0 )
    {
@@ -1745,11 +1771,13 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIP_Real*            rhss                /**< array to store right hand side values, or NULL */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetSides()\n");
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->clp->numberRows());
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->clp->numberRows());
+   assert(firstrow <= lastrow + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetSides()\n");
 
    if ( lhss != 0 )
    {
