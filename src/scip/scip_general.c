@@ -102,6 +102,7 @@
  */
 
 #undef SCIPgetStage
+#undef SCIPgetStatus
 #undef SCIPhasPerformedPresolve
 #undef SCIPisStopped
 
@@ -565,14 +566,11 @@ SCIP_STATUS SCIPgetStatus(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   if( scip->set->stage == SCIP_STAGE_INIT || scip->set->stage == SCIP_STAGE_FREE )
-      return SCIP_STATUS_UNKNOWN;
-   else
-   {
-      assert(scip->stat != NULL);
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->stat->status == SCIP_STATUS_UNKNOWN || (scip->set->stage != SCIP_STAGE_INIT && scip->set->stage != SCIP_STAGE_FREE));
 
-      return scip->stat->status;
-   }
+   return scip->stat->status;
 }
 
 /** gets name for a solution status */

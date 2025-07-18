@@ -362,7 +362,8 @@ void SCIPprintExternalCodes(
  */
 #ifdef NDEBUG
 
-#define SCIPgetStage(scip)                        (((scip)->set)->stage)
+#define SCIPgetStage(scip)                        ((scip)->set->stage)
+#define SCIPgetStatus(scip)                       ((scip)->stat->status)
 #define SCIPhasPerformedPresolve(scip)            ((scip)->stat->performpresol)
 #define SCIPisStopped(scip)                       SCIPsolveIsStopped((scip)->set, (scip)->stat, 0)
 
