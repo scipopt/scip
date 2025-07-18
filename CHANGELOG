@@ -46,6 +46,7 @@ Performance improvements
 - avoid unnecessary calls of constraint handlers components, benders, benderslp, propagator genvbounds, and heuristics ofins, subnlp, nlpdiving, indicator
 - disable dualsol and dualray conflict upgrades to maintain conflict store
 - apply general conflict upgrades in conflict store
+- inline SCIPgetStatus() to reduce computational overhead
 
 Examples and applications
 -------------------------
