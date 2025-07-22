@@ -6,6 +6,8 @@
 Fixed bugs
 ----------
 
+- fixed bug with counting changes in presolving of cons_nonlinear which resulted in negative values
+
 Build system
 ------------
 
