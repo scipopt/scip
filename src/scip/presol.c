@@ -478,6 +478,17 @@ SCIP_RETCODE SCIPpresolExec(
       SCIPclockStop(presol->presolclock, set);
 
       /* add/count the new changes */
+      assert( *nfixedvars - presol->lastnfixedvars >= 0 );
+      assert( *naggrvars - presol->lastnaggrvars >= 0 );
+      assert( *nchgvartypes - presol->lastnchgvartypes >= 0 );
+      assert( *nchgbds - presol->lastnchgbds >= 0 );
+      assert( *naddholes - presol->lastnaddholes >= 0 );
+      assert( *ndelconss - presol->lastndelconss >= 0 );
+      assert( *naddconss - presol->lastnaddconss >= 0 );
+      assert( *nupgdconss - presol->lastnupgdconss >= 0 );
+      assert( *nchgcoefs - presol->lastnchgcoefs >= 0 );
+      assert( *nchgsides - presol->lastnchgsides >= 0 );
+
       presol->nfixedvars += *nfixedvars - presol->lastnfixedvars;
       presol->naggrvars += *naggrvars - presol->lastnaggrvars;
       presol->nchgvartypes += *nchgvartypes - presol->lastnchgvartypes;
