@@ -4190,6 +4190,17 @@ SCIP_RETCODE SCIPconshdlrPresolve(
          SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
          /* count the new changes */
+         assert( *nfixedvars - conshdlr->lastnfixedvars >= 0 );
+         assert( *naggrvars - conshdlr->lastnaggrvars >= 0 );
+         assert( *nchgvartypes - conshdlr->lastnchgvartypes >= 0 );
+         assert( *nchgbds - conshdlr->lastnchgbds >= 0 );
+         assert( *naddholes - conshdlr->lastnaddholes >= 0 );
+         assert( *ndelconss - conshdlr->lastndelconss >= 0 );
+         assert( *naddconss - conshdlr->lastnaddconss >= 0 );
+         assert( *nupgdconss - conshdlr->lastnupgdconss >= 0 );
+         assert( *nchgcoefs - conshdlr->lastnchgcoefs >= 0 );
+         assert( *nchgsides - conshdlr->lastnchgsides >= 0 );
+
          conshdlr->nfixedvars += *nfixedvars - conshdlr->lastnfixedvars;
          conshdlr->naggrvars += *naggrvars - conshdlr->lastnaggrvars;
          conshdlr->nchgvartypes += *nchgvartypes - conshdlr->lastnchgvartypes;

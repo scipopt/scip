@@ -4922,9 +4922,9 @@ SCIP_RETCODE canonicalizeConstraints(
 
       /* update counters */
       if( naddconss != NULL )
-         *naddconss = tmpnaddconss;
+         *naddconss += tmpnaddconss;
       if( nchgcoefs != NULL )
-         *nchgcoefs = tmpnchgcoefs;
+         *nchgcoefs += tmpnchgcoefs;
 
       /* check whether at least one expression has changed */
       if( tmpnaddconss + tmpnchgcoefs > 0 )

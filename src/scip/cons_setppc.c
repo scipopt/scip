@@ -5069,6 +5069,7 @@ SCIP_RETCODE preprocessCliques(
    SCIP_Bool* undoneaggrtypes;               /* storage for not yet performed aggregation type (x = y or x + y = 1) */
    int saggregations;
    int naggregations;
+   int startndelconss;
 
    assert(scip != NULL);
    assert(conshdlrdata != NULL);
@@ -5116,6 +5117,7 @@ SCIP_RETCODE preprocessCliques(
    nusefulvars = 0;
    nusefulconss = 0;
    maxnvars = 0;
+   startndelconss = *ndelconss;
 
    /* @todo: check for round limit for adding extra clique constraints */
    /* adding clique constraints which arises from global clique information */
@@ -5460,8 +5462,8 @@ SCIP_RETCODE preprocessCliques(
    /* free hashmap */
    SCIPhashmapFree(&vartoindex);
 
-   if( *ndelconss < 0 )
-      *ndelconss = 0;
+   if( *ndelconss < startndelconss )
+      *ndelconss = startndelconss;
 
    return SCIP_OKAY;
 }
