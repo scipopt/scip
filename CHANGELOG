@@ -48,6 +48,8 @@ Miscellaneous
 Fixed bugs
 ----------
 
+- fixed bugs with counting changes in presolving of nonlinear and setppc constraints which resulted in negative values
+
 Build system
 ------------
 
