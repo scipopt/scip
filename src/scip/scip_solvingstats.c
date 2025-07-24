@@ -1137,7 +1137,8 @@ SCIP_Longint SCIPgetNConflictConssFound(
       + SCIPconflictGetNPseudoConflictConss(scip->conflict)
       + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict)
       + SCIPconflictGetNDualproofsBndGlobal(scip->conflict)
-      + SCIPconflictGetNDualproofsInfGlobal(scip->conflict));
+      + SCIPconflictGetNDualproofsInfGlobal(scip->conflict)
+      + SCIPconflictGetNResConflictConss(scip->conflict));
 }
 
 /** get number of conflict constraints found so far at the current node
@@ -1188,6 +1189,29 @@ SCIP_Longint SCIPgetNConflictConssApplied(
    return scip->conflict == NULL ? 0 : SCIPconflictGetNAppliedConss(scip->conflict);
 }
 
+/** get total number of resolution conflict constraints added to the problem
+ *
+ *  @return the total number of resolution conflict constraints added to the problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_Longint SCIPgetNResConflictConssApplied(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNResConflictConssApplied", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->conflict == NULL ? 0 : SCIPconflictGetNAppliedResConss(scip->conflict);
+}
 /** get total number of dual proof constraints added to the problem
  *
  *  @return the total number of dual proof constraints added to the problem
@@ -2693,7 +2717,7 @@ void SCIPprintStatusStatistics(
 
 /** collects status statistics in a SCIP_DATATREE object
  *
- *  This function sets: 
+ *  This function sets:
  *   - status: the current status of the solver
  *   - info: info about the keys and values stored in the datatree
  *
@@ -3508,6 +3532,18 @@ void SCIPprintConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0,
       SCIPconflictGetNDualproofsInfLocal(scip->conflict) + SCIPconflictGetNDualproofsBndLocal(scip->conflict));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Gen. Resolution CA :       Time      Calls    Success  Conflicts  LargeCoef  LongConfs    Length\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  propagation      : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.1f\n",
+      SCIPconflictGetResTime(scip->conflict),
+      SCIPconflictGetNResCalls(scip->conflict),
+      SCIPconflictGetNResSuccess(scip->conflict),
+      SCIPconflictGetNResConflictConss(scip->conflict),
+      SCIPconflictGetNResLargeCoefs(scip->conflict),
+      SCIPconflictGetNResLongConflicts(scip->conflict),
+      SCIPconflictGetNResConflictConss(scip->conflict) > 0
+      ? (SCIP_Real)SCIPconflictGetNResConflictVars(scip->conflict)
+      / (SCIP_Real)SCIPconflictGetNResConflictConss(scip->conflict) : 0
+      );
 }
 
 /** collects conflict statistics in a SCIP_DATATREE object */

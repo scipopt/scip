@@ -12205,7 +12205,7 @@ SCIP_RETCODE simplifyInequalities(
                   /* swap bounds for 'standard' form */
                   if( !SCIPisFeasZero(scip, lb) )
                   {
-                     ub = lb;
+                     ub = -lb;
                      val *= -1;
                   }
 
@@ -12298,7 +12298,7 @@ SCIP_RETCODE simplifyInequalities(
                   /* swap bounds for 'standard' form */
                   if( !SCIPisFeasZero(scip, lb) )
                   {
-                     ub = lb;
+                     ub = -lb;
                      val *= -1;
                   }
 
@@ -12949,13 +12949,10 @@ SCIP_RETCODE aggregateConstraints(
 
       SCIP_CALL( normalizeCons(scip, newcons, infeasible) );
 
-      if( *infeasible )
-         goto TERMINATE;
-
       /* check, if we really want to use the new constraint instead of the old one:
        * use the new one, if the maximum norm doesn't grow too much
        */
-      if( consdataGetMaxAbsval(SCIPconsGetData(newcons)) <= maxaggrnormscale * consdataGetMaxAbsval(consdata0) )
+      if( !(*infeasible) && consdataGetMaxAbsval(SCIPconsGetData(newcons)) <= maxaggrnormscale * consdataGetMaxAbsval(consdata0) )
       {
          SCIPdebugMsg(scip, " -> aggregated to <%s>\n", SCIPconsGetName(newcons));
          SCIPdebugPrintCons(scip, newcons, NULL);
@@ -12965,14 +12962,14 @@ SCIP_RETCODE aggregateConstraints(
             (*nchgcoefs) += consdata0->nvars + consdata1->nvars - nvarscommon;
          *aggregated = TRUE;
 
-         /* delete the old constraint, and add the new linear constraint to the problem */
+         /* add the new linear constraint to the problem and delete the old constraint */
+         SCIP_CALL( SCIPaddUpgrade(scip, cons0, &newcons) );
          SCIP_CALL( SCIPdelCons(scip, cons0) );
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
       }
-
-     TERMINATE:
-      /* release the new constraint */
-      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      else
+      {
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      }
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &newvals);
@@ -16762,9 +16759,8 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             if( upgdcons != NULL )
             {
                /* add the upgraded constraint to the problem */
-               SCIP_CALL( SCIPaddCons(scip, upgdcons) );
-               SCIP_CALL( SCIPreleaseCons(scip, &upgdcons) );
-               (*nupgdconss)++;
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, &upgdcons) );
+               ++(*nupgdconss);
 
                /* mark the linear constraint being upgraded and to be removed after presolving;
                 * don't delete it directly, because it may help to preprocess other linear constraints
@@ -17519,7 +17515,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       }
 
       /* add conflict to SCIP */
-      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+      SCIP_CALL( SCIPaddConflict(scip, node, &cons, validnode, conftype, cutoffinvolved) );
 
       *result = SCIP_CONSADDED;
    }
@@ -18750,6 +18746,35 @@ SCIP_ROW* SCIPgetRowLinear(
    assert(consdata != NULL);
 
    return consdata->row;
+}
+
+/** creates and returns the row of the given linear constraint */
+SCIP_RETCODE SCIPcreateRowLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not linear\n");
+      SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+
+   SCIP_CALL( SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->vals) ) ;
+
+   return SCIP_OKAY;
 }
 
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */

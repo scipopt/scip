@@ -1359,7 +1359,7 @@ SCIP_RETCODE upgradeCons(
    assert(nupgdconss != NULL);
 
    /* we cannot upgrade a modifiable constraint, since we don't know what additional variables to expect */
-   if( SCIPconsIsModifiable(cons) )
+   if( SCIPconsIsModifiable(cons) || SCIPconsGetNUpgradeLocks(cons) >= 1 )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "upgrading or constraint <%s> into equivalent and constraint on negated variables\n",
@@ -1378,11 +1378,11 @@ SCIP_RETCODE upgradeCons(
 
    /* create and add the and constraint */
    SCIP_CALL( SCIPcreateConsAnd(scip, &andcons, SCIPconsGetName(cons), negresvar, consdata->nvars, negvars,
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-         SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-         SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-   SCIP_CALL( SCIPaddCons(scip, andcons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &andcons) );
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+         SCIPconsIsStickingAtNode(cons)) );
+   SCIP_CALL( SCIPaddUpgrade(scip, cons, &andcons) );
 
    /* delete the or constraint */
    SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -1556,9 +1556,9 @@ SCIP_DECL_CONSTRANS(consTransOr)
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
-         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons), SCIPconsIsLocal(sourcecons),
+         SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons),
+         SCIPconsIsStickingAtNode(sourcecons)) );
 
    return SCIP_OKAY;
 }

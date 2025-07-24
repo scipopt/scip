@@ -3693,6 +3693,8 @@ SCIP_RETCODE enforceConstraints(
       {
          SCIPsetDebugMsg(set, "enforce LP solution with value %g\n", SCIPlpGetObjval(lp, set, prob));
 
+         // NOTE: May be called with lp->primalfeasible=FALSE. But then enforcement is called for infinite points?!
+
          assert(lp->flushed);
          assert(lp->solved);
          assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
@@ -5073,7 +5075,8 @@ SCIP_RETCODE addCurrentSolution(
    }
    else if( SCIPtreeHasFocusNodeLP(tree) )
    {
-      assert(lp->primalfeasible);
+      /* Removed assert(lp->primalfeasible); since there can be a solved LP and there is some solution with infinite values,
+       * but the lp is not primal feasible. */
 
       /* start clock for LP solutions */
       SCIPclockStart(stat->lpsoltime, set);

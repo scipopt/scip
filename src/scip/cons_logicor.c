@@ -1106,12 +1106,14 @@ SCIP_RETCODE applyFixings(
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-            SCIP_CALL( SCIPaddCons(scip, newcons) );
 
-            SCIPdebugMsg(scip, "added linear constraint: ");
+            /* add the downgraded constraint to the problem */
+            SCIPdebugMsg(scip, "adding linear constraint: ");
             SCIPdebugPrintCons(scip, newcons, NULL);
+            SCIP_CALL( SCIPaddCons(scip, newcons) );
             SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
+            /* free constraint arrays */
             SCIPfreeBufferArray(scip, &consvals);
             SCIPfreeBufferArray(scip, &consvars);
 
@@ -3632,7 +3634,8 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
                break;
             }
 
-            if( SCIPvarsHaveCommonClique(var1, neg1, var2, neg2, TRUE) && conshdlrsetppc != NULL )
+            if( conshdlrsetppc != NULL && SCIPconsGetNUpgradeLocks(cons) == 0
+               && SCIPvarsHaveCommonClique(var1, neg1, var2, neg2, TRUE) )
             {
                SCIP_CONS* newcons;
                SCIP_VAR* vars[2];
@@ -3659,10 +3662,8 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
                      SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-               SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIPdebugPrintCons(scip, newcons, NULL);
-
-               SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
 
                SCIPdebugMsg(scip, "logicor constraint <%s> is redundant due to negated clique information and will be replaced by a setppc constraint \n",
                   SCIPconsGetName(cons));
@@ -3785,7 +3786,7 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
       }
 
       /* still we have two variables left, we will upgrade this constraint */
-      if( consdata->nvars == 2 && conshdlrsetppc != NULL )
+      if( conshdlrsetppc != NULL && SCIPconsGetNUpgradeLocks(cons) == 0 && consdata->nvars == 2 )
       {
          SCIP_CONS* newcons;
          SCIP_VAR* vars[2];
@@ -3800,10 +3801,8 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugPrintCons(scip, newcons, NULL);
-
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
 
          SCIPdebugMsg(scip, "logicor constraint <%s> was upgraded to a set-packing constraint\n", SCIPconsGetName(cons));
 
@@ -3853,7 +3852,7 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
          SCIP_CONS* conslinear;
          char consname[SCIP_MAXSTRLEN];
 
-         SCIPdebugMsg(scip, " -> variable is multi-aggregated, upgrade to linear constraint <%s> == 1 \n",
+         SCIPdebugMsg(scip, " -> variable is multi-aggregated, convert to linear constraint <%s> == 1 \n",
             SCIPvarGetName(consdata->vars[0]));
 
          coef = 1.0;
@@ -3864,7 +3863,7 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
                SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                SCIPconsIsStickingAtNode(cons)) );
 
-         /* add constraint */
+         /* add the downgraded constraint to the problem */
          SCIP_CALL( SCIPaddCons(scip, conslinear) );
          SCIP_CALL( SCIPreleaseCons(scip, &conslinear) );
          SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -5304,7 +5303,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
       /* add conflict to SCIP */
-      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+      SCIP_CALL( SCIPaddConflict(scip, node, &cons, validnode, conftype, cutoffinvolved) );
 
       *result = SCIP_CONSADDED;
    }
@@ -5666,6 +5665,35 @@ SCIP_ROW* SCIPgetRowLogicor(
    assert(consdata != NULL);
 
    return consdata->row;
+}
+
+/** creates and returns the row of the given logicor constraint */
+SCIP_RETCODE SCIPcreateRowLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a logic or constraint\n");
+      SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->row == NULL);
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), 1.0, SCIPinfinity(scip),
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+
+   SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
+
+   return SCIP_OKAY;
 }
 
 /** cleans up (multi-)aggregations and fixings from logicor constraints */

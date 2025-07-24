@@ -2022,12 +2022,14 @@ SCIP_RETCODE applyFixings(
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-               SCIP_CALL( SCIPaddCons(scip, newcons) );
 
-               SCIPdebugMsg(scip, "added linear constraint: ");
+               /* add the downgraded constraint to the problem */
+               SCIPdebugMsg(scip, "adding linear constraint: ");
                SCIPdebugPrintCons(scip, newcons, NULL);
+               SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
+               /* free constraint arrays */
                SCIPfreeBufferArray(scip, &consvals);
                SCIPfreeBufferArray(scip, &consvars);
 
@@ -9238,7 +9240,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       }
 
       /* add conflict to SCIP */
-      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+      SCIP_CALL( SCIPaddConflict(scip, node, &cons, validnode, conftype, cutoffinvolved) );
 
       *result = SCIP_CONSADDED;
 
@@ -9732,6 +9734,57 @@ SCIP_ROW* SCIPgetRowSetppc(
    assert(consdata != NULL);
 
    return consdata->row;
+}
+
+/** creates and returns the row of the given set partitioning / packing / covering constraint */
+SCIP_RETCODE SCIPcreateRowSetppc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+
+   assert(scip != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
+      SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->row == NULL);
+
+   switch( consdata->setppctype )
+   {
+   case SCIP_SETPPCTYPE_PARTITIONING:
+      lhs = 1.0;
+      rhs = 1.0;
+      break;
+   case SCIP_SETPPCTYPE_PACKING:
+      lhs = -SCIPinfinity(scip);
+      rhs = 1.0;
+      break;
+   case SCIP_SETPPCTYPE_COVERING:
+      lhs = 1.0;
+      rhs = SCIPinfinity(scip);
+      break;
+   default:
+      SCIPerrorMessage("unknown setppc type\n");
+      return SCIP_ERROR;
+   }
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), lhs, rhs,
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+
+   SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
+
+   return SCIP_OKAY;
 }
 
 /** returns current number of variables fixed to one in the constraint  */

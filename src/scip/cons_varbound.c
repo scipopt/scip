@@ -3744,11 +3744,10 @@ SCIP_RETCODE applyFixings(
 	 SCIP_CALL( SCIPaddCoefLinear(scip, newcons, consdata->vbdvar, consdata->vbdcoef) );
       }
 
-      SCIP_CALL( SCIPaddCons(scip, newcons) );
-
       SCIPdebugMsg(scip, "resolved multi aggregation in varbound constraint <%s> by creating a new linear constraint\n", SCIPconsGetName(cons));
       SCIPdebugPrintCons(scip, newcons, NULL);
 
+      SCIP_CALL( SCIPaddCons(scip, newcons) );
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
       redundant = TRUE;
@@ -4379,8 +4378,8 @@ SCIP_RETCODE upgradeConss(
       cons = conss[c];
       assert(cons != NULL);
 
-      if( !SCIPconsIsActive(cons) )
-	 continue;
+      if( !SCIPconsIsActive(cons) || SCIPconsGetNUpgradeLocks(cons) >= 1 )
+         continue;
 
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
@@ -4515,11 +4514,10 @@ SCIP_RETCODE upgradeConss(
 	       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
 	       SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-	 SCIP_CALL( SCIPaddCons(scip, newcons) );
 	 SCIPdebugMsg(scip, "upgraded varbound constraint <%s> to a set-packing constraint\n", SCIPconsGetName(cons));
 	 SCIPdebugPrintCons(scip, newcons, NULL);
 
-	 SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+	 SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
 	 ++(*naddconss);
 
 	 SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -5948,6 +5946,35 @@ SCIP_ROW* SCIPgetRowVarbound(
    assert(consdata != NULL);
 
    return consdata->row;
+}
+
+/** creates and returns the row of the given varbound constraint */
+SCIP_RETCODE SCIPcreateRowVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a variable bound constraint\n");
+      SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->row == NULL);
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+   SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, consdata->var, 1.0) );
+   SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, consdata->vbdvar, consdata->vbdcoef) );
+
+   return SCIP_OKAY;
 }
 
 /** cleans up (multi-)aggregations and fixings from varbound constraints */

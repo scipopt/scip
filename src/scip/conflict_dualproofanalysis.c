@@ -1062,7 +1062,7 @@ SCIP_RETCODE createAndAddProofcons(
    }
 
    /* mark constraint to be a conflict */
-   SCIPconsMarkConflict(cons);
+   SCIP_CALL( SCIPconsMarkConflict(cons) );
 
    /* add constraint to storage */
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )

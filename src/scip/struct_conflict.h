@@ -99,6 +99,28 @@ struct SCIP_ProofSet
    SCIP_Longint          certificateline;
 };
 
+
+/** conflict row of type lhs <= a^Tx, semi-sparse representation */
+struct SCIP_ConflictRow
+{
+   SCIP_Real*            vals;
+   int*                  inds;
+   SCIP_Real             lhs;
+   SCIP_Real             slack;
+   SCIP_Real             coefquotient;
+   int                   nvars;
+   int                   nnz;
+   int                   size;
+   int                   validdepth;
+   int                   conflictdepth;
+   int                   repropdepth;
+   int                   insertdepth;
+   unsigned int          usescutoffbound:1;  /**< is the conflict based on the cutoff bound? */
+   unsigned int          isbinary:1;         /**< is the constraint binary? */
+   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, resolution */
+};
+
+
 /** set of LP bound change */
 struct SCIP_LPBdChgs
 {
@@ -115,6 +137,7 @@ struct SCIP_Conflict
 {
    SCIP_Longint          nglbchgbds;         /**< total number of applied global bound changes */
    SCIP_Longint          nappliedglbconss;   /**< total number of conflict constraints added globally to the problem */
+   SCIP_Longint          nappliedglbresconss;/**< total number of resolution conflict constraints added globally to the problem */
    SCIP_Longint          nappliedglbliterals;/**< total number of literals in globally applied conflict constraints */
    SCIP_Longint          nlocchgbds;         /**< total number of applied local bound changes */
    SCIP_Longint          nappliedlocconss;   /**< total number of conflict constraints added locally to the problem */
@@ -125,6 +148,12 @@ struct SCIP_Conflict
    SCIP_Longint          npropconfliterals;  /**< total number of literals in valid propagation conflict constraints */
    SCIP_Longint          npropreconvconss;   /**< number of reconvergence constraints detected in propagation conflict analysis */
    SCIP_Longint          npropreconvliterals;/**< total number of literals in valid propagation reconvergence constraints */
+   SCIP_Longint          nrescalls;          /**< number of calls to resolution conflict analysis */
+   SCIP_Longint          nressuccess;        /**< number of calls yielding at least one conflict constraint */
+   SCIP_Longint          nreslargecoefs;     /**< number of calls terminating because of large coefficients */
+   SCIP_Longint          nreslongconfs;      /**< number of calls terminating because of long conflict rows */
+   SCIP_Longint          nresconfconss;      /**< number of valid conflict constraints detected in resolution conflict analysis */
+   SCIP_Longint          nresconfvariables;  /**< total number of variables in valid resolution conflict constraints */
    SCIP_Longint          ninflpcalls;        /**< number of calls to infeasible LP conflict analysis */
    SCIP_Longint          ninflpsuccess;      /**< number of calls yielding at least one conflict constraint */
    SCIP_Longint          ninflpconfconss;    /**< number of valid conflict constraints detected in infeasible LP conflict
@@ -172,18 +201,29 @@ struct SCIP_Conflict
    SCIP_CLOCK*           dIBclock;           /**< time used for detect implied bounds */
 
    SCIP_CLOCK*           propanalyzetime;    /**< time used for propagation conflict analysis */
+   SCIP_CLOCK*           resanalyzetime;     /**< time used for resolution conflict analysis */
    SCIP_CLOCK*           inflpanalyzetime;   /**< time used for infeasible LP conflict analysis */
    SCIP_CLOCK*           boundlpanalyzetime; /**< time used for bound exceeding LP conflict analysis */
    SCIP_CLOCK*           sbanalyzetime;      /**< time used for strong branching LP conflict analysis */
    SCIP_CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
    SCIP_PQUEUE*          bdchgqueue;         /**< unprocessed conflict bound changes */
    SCIP_PQUEUE*          forcedbdchgqueue;   /**< unprocessed conflict bound changes that must be resolved */
+   SCIP_PQUEUE*          resbdchgqueue;      /**< unprocessed conflict bound changes used in generalized resolution*/
+   SCIP_PQUEUE*          continuousbdchgqueue;/**< unprocessed bound changes that are continuous */
    SCIP_PROOFSET*        proofset;           /**< proof sets found at the current node */
    SCIP_PROOFSET**       proofsets;          /**< proof sets found at the current node */
+   SCIP_CONFLICTROW*     conflictrow;        /**< conflict row for the current conflict */
+   SCIP_CONFLICTROW*     resolvedconflictrow;/**< conflict row for for current the conflict */
+   SCIP_CONFLICTROW*     reasonrow;          /**< reason row for the latest bound change */
+   SCIP_CONFLICTROW*     reducedreasonrow;   /**< reason row for the latest bound change */
+   SCIP_CONFLICTROW**    conflictrows;       /**< conflict rows found at the current node */
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
    SCIP_CONFLICTSET**    conflictsets;       /**< conflict sets found at the current node */
    SCIP_Real*            conflictsetscores;  /**< score values of the conflict sets found at the current node */
+   SCIP_Real*            conflictvarslbs;    /**< maximal lower bounds of variables in the current resolution conflict */
+   SCIP_Real*            conflictvarsubs;    /**< minimal upper bounds of variables in the current resolution conflict */
    SCIP_BDCHGINFO**      tmpbdchginfos;      /**< temporarily created bound change information data */
+   int                   conflictprobnvars;  /**< number of variables in the current problem where conflict analysis is used */
    int                   conflictsetssize;   /**< size of conflictsets array */
    int                   nconflictsets;      /**< number of available conflict sets (used slots in conflictsets array) */
    int                   proofsetssize;      /**< size of proofsets array */
@@ -191,6 +231,11 @@ struct SCIP_Conflict
    int                   tmpbdchginfossize;  /**< size of tmpbdchginfos array */
    int                   ntmpbdchginfos;     /**< number of temporary created bound change information data */
    int                   count;              /**< conflict set counter to label binary conflict variables with */
+   int                   nconflictrows;      /**< number of available resolution sets */
+   int                   conflictrowssize;   /**< size of conflictrows array */
+   SCIP_Bool             bdchgonlyconfqueue; /**< if true we add bound changes only in graph conflict queues */
+   SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only in generalized resolution queues */
+
 };
 
 #ifdef __cplusplus

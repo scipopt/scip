@@ -137,6 +137,18 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_Real             primalbound         /**< primal bound the conflict depend on (or -SCIPinfinity) */
    );
 
+/** upgrades an unchecked conflict in the conflict store
+ *
+ *  @note this method releases oldcons and captures newcons
+ */
+SCIP_RETCODE SCIPconflictstoreUpgradeConflict(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONS*            oldcons,            /**< underlying constraint to upgrade */
+   SCIP_CONS*            newcons             /**< upgraded constraint to add */
+   );
+
 /** deletes all conflicts depending on a cutoff bound larger than the given bound */
 SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */

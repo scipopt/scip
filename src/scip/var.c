@@ -18660,8 +18660,14 @@ SCIP_Real SCIPvarGetLPSol_rec(
        * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
        * positives and negatives if the parameter <numerics/infinity> is modified by the user
        */
-      assert(lpsolval > -SCIP_DEFAULT_INFINITY);
-      assert(lpsolval < +SCIP_DEFAULT_INFINITY);
+//       assert(lpsolval > -SCIP_DEFAULT_INFINITY);
+//       assert(lpsolval < +SCIP_DEFAULT_INFINITY);
+
+      if( lpsolval >= SCIP_DEFAULT_INFINITY )
+         return (var->data.aggregate.scalar > 0) ? SCIP_DEFAULT_INFINITY : -SCIP_DEFAULT_INFINITY;
+      else if( lpsolval <= -SCIP_DEFAULT_INFINITY )
+         return (var->data.aggregate.scalar > 0) ? -SCIP_DEFAULT_INFINITY : SCIP_DEFAULT_INFINITY;
+
       return var->data.aggregate.scalar * lpsolval + var->data.aggregate.constant;
    }
    case SCIP_VARSTATUS_MULTAGGR:
@@ -23321,6 +23327,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarIsRelaxationOnly
 #undef SCIPvarMarkRelaxationOnly
 #undef SCIPbdchgidxGetPos
+#undef SCIPbdchgidxGetDepth
 #undef SCIPbdchgidxIsEarlierNonNull
 #undef SCIPbdchgidxIsEarlier
 #undef SCIPbdchginfoGetOldbound
@@ -25024,6 +25031,16 @@ int SCIPbdchgidxGetPos(
    assert(bdchgidx != NULL);
 
    return bdchgidx->pos;
+}
+
+/** returns the depth of the bound change index */
+int SCIPbdchgidxGetDepth(
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
+   )
+{
+   assert(bdchgidx != NULL);
+
+   return bdchgidx->depth;
 }
 
 /** returns whether first bound change index belongs to an earlier applied bound change than second one */

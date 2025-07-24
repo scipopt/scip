@@ -7887,10 +7887,11 @@ SCIP_RETCODE upgradeCons(
       SCIPfreeBufferArray(scip, &consvars);
    }
 
-   SCIP_CALL( SCIPaddCons(scip, newcons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+   /* add the upgraded constraint to the problem */
+   SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
    ++(*naddconss);
 
+   /* remove the underlying constraint from the problem */
    SCIP_CALL( SCIPdelCons(scip, cons) );
    ++(*ndelconss);
 
@@ -8085,6 +8086,8 @@ SCIP_RETCODE deleteRedundantVars(
                         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
                         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                         SCIPconsIsStickingAtNode(cons)) );
+
+                  /* add the special constraint to the problem */
                   SCIPdebugMsg(scip, " -> adding clique constraint: ");
                   SCIPdebugPrintCons(scip, cliquecons, NULL);
                   SCIP_CALL( SCIPaddCons(scip, cliquecons) );
@@ -8205,7 +8208,7 @@ SCIP_RETCODE detectRedundantVars(
    assert(v < nvars);
 
    /* all but one variable fit into the knapsack, so we can upgrade this constraint to a logicor */
-   if( v == nvars - 1 )
+   if( SCIPconsGetNUpgradeLocks(cons) == 0 && v == nvars - 1 )
    {
       SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
       assert(SCIPconsIsDeleted(cons));
@@ -8220,7 +8223,7 @@ SCIP_RETCODE detectRedundantVars(
       assert(consdata->nvars > 1);
 
       /* all but one variable fit into the knapsack, so we can upgrade this constraint to a logicor */
-      if( v == consdata->nvars - 1 )
+      if( SCIPconsGetNUpgradeLocks(cons) == 0 && v == consdata->nvars - 1 )
       {
          SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
          assert(SCIPconsIsDeleted(cons));
@@ -8278,7 +8281,7 @@ SCIP_RETCODE detectRedundantVars(
       /* if all items fit, then delete the whole constraint but create clique constraints which led to this
        * information
        */
-      if( conshdlrdata->disaggregation && w == nvars )
+      if( conshdlrdata->disaggregation && SCIPconsGetNUpgradeLocks(cons) == 0 && w == nvars )
       {
          SCIP_VAR** clqvars;
          int nclqvars;
@@ -8318,6 +8321,8 @@ SCIP_RETCODE detectRedundantVars(
                      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
                      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                      SCIPconsIsStickingAtNode(cons)) );
+
+               /* add the special constraint to the problem */
                SCIPdebugMsg(scip, " -> adding clique constraint: ");
                SCIPdebugPrintCons(scip, cliquecons, NULL);
                SCIP_CALL( SCIPaddCons(scip, cliquecons) );
@@ -8327,7 +8332,7 @@ SCIP_RETCODE detectRedundantVars(
          }
 
          /* delete old constraint */
-         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+         SCIP_CALL( SCIPdelCons(scip, cons) );
          ++(*ndelconss);
 
          SCIPfreeBufferArray(scip, &clqvars);
@@ -8452,6 +8457,9 @@ SCIP_RETCODE dualWeightsTightening(
    assert(nchgsides != NULL);
    assert(naddconss != NULL);
 
+   if( SCIPconsGetNUpgradeLocks(cons) >= 1 )
+      return SCIP_OKAY;
+
 #ifndef NDEBUG
    oldnchgsides = *nchgsides;
 #endif
@@ -8488,10 +8496,11 @@ SCIP_RETCODE dualWeightsTightening(
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );
 
-      SCIP_CALL( SCIPaddCons(scip, newcons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      /* add the upgraded constraint to the problem */
+      SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
       ++(*naddconss);
 
+      /* remove the underlying constraint from the problem */
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
 
@@ -8751,7 +8760,8 @@ SCIP_RETCODE dualWeightsTightening(
 
       return SCIP_OKAY;
    }
-   else /* v < nvars - 1 <=> at least two items with weight smaller than the dual capacity */
+   /* at least two items with weight smaller than the dual capacity */
+   else
    {
       /* @todo generalize the following algorithm for more than two variables */
 
@@ -10571,9 +10581,11 @@ SCIP_RETCODE tightenWeights(
    /* apply rule (2) (don't apply, if the knapsack has too many items for applying this costly method) */
    if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
    {
-      if( conshdlrdata->disaggregation && consdata->nvars - pos <= MAX_USECLIQUES_SIZE && consdata->nvars >= 2 &&
-         pos > 0 && (SCIP_Longint)consdata->nvars - pos <= consdata->capacity &&
-         consdata->weights[pos - 1] == consdata->capacity && (pos == consdata->nvars || consdata->weights[pos] == 1) )
+      if( conshdlrdata->disaggregation && SCIPconsGetNUpgradeLocks(cons) == 0
+         && consdata->nvars - pos <= MAX_USECLIQUES_SIZE && consdata->nvars >= 2 && pos > 0
+         && (SCIP_Longint)consdata->nvars - pos <= consdata->capacity
+         && consdata->weights[pos - 1] == consdata->capacity
+         && ( pos == consdata->nvars || consdata->weights[pos] == 1 ) )
       {
          SCIP_VAR** clqvars;
          SCIP_CONS* cliquecons;
@@ -10597,6 +10609,7 @@ SCIP_RETCODE tightenWeights(
                   SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                   SCIPconsIsStickingAtNode(cons)) );
 
+            /* add the upgraded constraint to the problem */
             SCIP_CALL( SCIPaddCons(scip, cliquecons) );
             SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
             ++(*naddconss);
@@ -10655,6 +10668,8 @@ SCIP_RETCODE tightenWeights(
                   SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
                   SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                   SCIPconsIsStickingAtNode(cons)) );
+
+            /* add the special constraint to the problem */
             SCIPdebugMsg(scip, " -> adding clique constraint: ");
             SCIPdebugPrintCons(scip, cliquecons, NULL);
             SCIP_CALL( SCIPaddCons(scip, cliquecons) );
@@ -10840,12 +10855,16 @@ SCIP_RETCODE tightenWeights(
                               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
                               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                               SCIPconsIsStickingAtNode(cons)) );
+
+                        /* add the special constraint to the problem */
                         SCIPdebugMsg(scip, " -> adding clique constraint: ");
                         SCIPdebugPrintCons(scip, cliquecons, NULL);
                         SCIP_CALL( SCIPaddCons(scip, cliquecons) );
                         SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+                        ++(*naddconss);
+
+                        /* free clique array */
                         SCIPfreeBufferArray(scip, &cliquevars);
-                        (*naddconss)++;
                      }
                   }
                }
@@ -12854,6 +12873,10 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
             cons = conss[c];
             assert( cons != NULL );
+
+            if( SCIPconsGetNUpgradeLocks(cons) >= 1 )
+               continue;
+
             consdata = SCIPconsGetData(cons);
             assert( consdata != NULL );
 
@@ -12985,8 +13008,8 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                SCIPprintCons(scip, cardcons, NULL);
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
-               SCIP_CALL( SCIPaddCons(scip, cardcons) );
-               SCIP_CALL( SCIPreleaseCons(scip, &cardcons) );
+               /* add the upgraded constraint to the problem */
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, &cardcons) );
                ++(*nupgdconss);
 
                /* delete oknapsack constraint */
@@ -13962,6 +13985,43 @@ SCIP_ROW* SCIPgetRowKnapsack(
    assert(consdata != NULL);
 
    return consdata->row;
+}
+
+/** creates and returns the row of the given knapsack constraint */
+SCIP_RETCODE SCIPcreateRowKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   assert(scip != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a knapsack\n");
+      SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->row == NULL);
+
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons),
+         -SCIPinfinity(scip), (SCIP_Real)consdata->capacity,
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+
+   SCIP_CALL( SCIPcacheRowExtensions(scip, consdata->row) );
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, consdata->vars[i], (SCIP_Real)consdata->weights[i]) );
+   }
+   SCIP_CALL( SCIPflushRowExtensions(scip, consdata->row) );
+
+   return SCIP_OKAY;
 }
 
 /** cleans up (multi-)aggregations and fixings from knapsack constraints */

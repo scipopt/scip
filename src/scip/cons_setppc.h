@@ -301,6 +301,13 @@ SCIP_ROW* SCIPgetRowSetppc(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** creates and returns the row of the given set partitioning / packing / covering constraint */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateRowSetppc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
 /** returns current number of variables fixed to one in the constraint  */
 SCIP_EXPORT
 int SCIPgetNFixedonesSetppc(

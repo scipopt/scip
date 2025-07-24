@@ -530,7 +530,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
                {
                   nconflicts++;
 
-                  SCIP_CALL( SCIPaddConflict(scip, global ? NULL : SCIPgetCurrentNode(scip), conscopy, NULL,
+                  SCIP_CALL( SCIPaddConflict(scip, global ? NULL : SCIPgetCurrentNode(scip), &conscopy, NULL,
                      SCIP_CONFTYPE_UNKNOWN, FALSE) );
                }
                else

@@ -1,0 +1,14 @@
+STATISTICS
+  Problem name     : instance
+  Variables        : 3 (0 binary, 2 integer, 0 implicit integer, 1 continuous)
+  Constraints      : 0 initial, 2 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [integer] <x0>: obj=-28, original bounds=[-200,200]
+  [integer] <x2>: obj=55, original bounds=[-200,200]
+  [continuous] <x1>: obj=-76, original bounds=[-200,200]
+CONSTRAINTS
+  [linear] <_C2>:  +63.7<x0>[I] +62.68<x2>[I] +42.25<x1>[C] <= -1551.61;
+  [linear] <_C3>:  -10.93<x0>[I] -68.73<x2>[I] -70.88<x1>[C] <= -3174.7;
+END
