@@ -268,6 +268,7 @@ Build system
   of a PaPILO installation without TBB; pointing to the directory of a PaPILO repository still works, but is deprecated
 - removed option to link TBB library, as this is not used by default when PaPILO has not been built via cmake
   (use USRCXXFLAGS=-DPAPILO_TBB USRLDFLAGS=-ltbb to enable TBB for PaPILO)
+- enabled link-time-optimization for OPT=opt builds on Linux and macOS with gcc and clang, use LTO=false to disable
 
 ### Cmake
 
@@ -278,6 +279,7 @@ Build system
   undefined behavior sanitizer is always enabled if not `SANITIZE=off` (the default)
 - scip-config.cmake now defines a variable SCIP_COMPILE_FLAGS, which could be used to compile code that builds against SCIP via cmake;
   currently, this only passes on the sanitizer flags that were used to build libscip
+- enabled link-time-optimization for Release and RelWithDebInfo builds if supported by compiler, use -DLTO=off to disable
 
 Fixed bugs
 ----------

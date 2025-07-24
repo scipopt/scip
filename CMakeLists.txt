@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 # option() honors normal variables.
 if(POLICY CMP0077)
    cmake_policy(SET CMP0077 NEW)
@@ -96,6 +101,29 @@ option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
+option(LTO "Enable Link Time Optimization, aka Interprocedural Optimization" ON)
+
+if(LTO AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT result OUTPUT output)
+    if(result)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        message(STATUS "LTO enabled")
+
+        # with link-time optimization enabled, we get additional warnings at link time on
+        # - reader_nl and presol_milp violating the C++ One Definition Rule (-Wodr) due to
+        #   using struct names SCIP_ProbData and SCIP_PresolData that are also used in objscip (C++ interface)
+        # - some presumed malloc() calls with size 18446744073709551608 ((uint)-1)
+        # - some presumed memmove() calls in boost::container::short_vector via papilo to a 0-length memory
+        # we disable these warnings (need to pass them to the compiler when linking)
+        if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "CLANG"))
+           add_link_options(-Wno-odr -Wno-alloc-size-larger-than -Wno-stringop-overflow)
+        endif()
+    else()
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
+        message(STATUS "LTO is not supported.")
+    endif()
+endif()
 
 set(MPFR AUTO CACHE STRING "should MPFR be linked")
 set_property(CACHE MPFR PROPERTY STRINGS AUTO ON OFF)
@@ -1150,6 +1178,9 @@ if(NOT SYM STREQUAL "sbliss")
 endif()
 if((SYM STREQUAL "nauty" OR SYM STREQUAL "snauty") AND NAUTY_DIR)
   file(APPEND ${CMAKE_BINARY_DIR}/cmake.log " -DNAUTY_DIR=${NAUTY_DIR}")
+endif()
+if(NOT LTO)
+  file(APPEND ${CMAKE_BINARY_DIR}/cmake.log " -DLTO=off")
 endif()
 file(APPEND ${CMAKE_BINARY_DIR}/cmake.log "\n")
 message(STATUS "Written file with changed options to ${CMAKE_BINARY_DIR}/cmake.log.")

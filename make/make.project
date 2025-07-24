@@ -103,6 +103,7 @@ SCIP_VERSION = $(SCIP_VERSION_MAJOR).$(SCIP_VERSION_MINOR).$(SCIP_VERSION_PATCH)
 # compiling and linking parameters
 VERBOSE		=	false
 OPT		=	opt
+LTO		=	true
 COMP		=	gnu
 LPS		=	spx2
 LPSEXACT 	=	auto
