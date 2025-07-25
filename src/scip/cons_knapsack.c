@@ -190,6 +190,8 @@ struct SCIP_ConshdlrData
    int                   bools3size;         /**< size of bools3 array */
    int                   bools4size;         /**< size of bools4 array */
    int                   reals1size;         /**< size of reals1 array */
+   int*                  probtoidxmap;       /**< cleared memory array with default values -1; used for clique partitions */
+   int                   probtoidxmapsize;   /**< size of probtoidxmap */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    SCIP_Real             maxcardbounddist;   /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for separating knapsack cuts */
@@ -490,7 +492,8 @@ SCIP_RETCODE calcCliquepartition(
 
    if( normalclique && ( !consdata->cliquepartitioned || ispartitionoutdated ) )
    {
-      SCIP_CALL( SCIPcalcCliquePartition(scip, consdata->vars, consdata->nvars, consdata->cliquepartition, &consdata->ncliques) );
+      SCIP_CALL( SCIPcalcCliquePartition(scip, consdata->vars, consdata->nvars, &conshdlrdata->probtoidxmap, &conshdlrdata->probtoidxmapsize,
+            consdata->cliquepartition, &consdata->ncliques) );
       consdata->cliquepartitioned = TRUE;
       consdata->ncliqueslastpart = SCIPgetNCliques(scip);
    }
@@ -501,7 +504,8 @@ SCIP_RETCODE calcCliquepartition(
 
    if( negatedclique && (!consdata->negcliquepartitioned || isnegpartitionoutdated) )
    {
-      SCIP_CALL( SCIPcalcNegatedCliquePartition(scip, consdata->vars, consdata->nvars, consdata->negcliquepartition, &consdata->nnegcliques) );
+      SCIP_CALL( SCIPcalcNegatedCliquePartition(scip, consdata->vars, consdata->nvars, &conshdlrdata->probtoidxmap, &conshdlrdata->probtoidxmapsize,
+            consdata->negcliquepartition, &consdata->nnegcliques) );
       consdata->negcliquepartitioned = TRUE;
       consdata->ncliqueslastnegpart = SCIPgetNCliques(scip);
    }
@@ -8020,7 +8024,7 @@ SCIP_RETCODE deleteRedundantVars(
       SCIP_CALL( SCIPallocBufferArray(scip, &clqpart, len) );
 
       /* calculate clique partition */
-      SCIP_CALL( SCIPcalcCliquePartition(scip, &(consdata->vars[splitpos+1]), len, clqpart, &nclq) );
+      SCIP_CALL( SCIPcalcCliquePartition(scip, &(consdata->vars[splitpos+1]), len, &conshdlrdata->probtoidxmap, &conshdlrdata->probtoidxmapsize, clqpart, &nclq) );
 
       /* check if we found at least one clique */
       if( nclq < len )
@@ -10623,7 +10627,7 @@ SCIP_RETCODE tightenWeights(
          SCIP_CALL( SCIPallocBufferArray(scip, &clqpart, len) );
 
          /* calculate clique partition */
-         SCIP_CALL( SCIPcalcCliquePartition(scip, &(consdata->vars[pos]), len, clqpart, &nclq) );
+         SCIP_CALL( SCIPcalcCliquePartition(scip, &(consdata->vars[pos]), len, &conshdlrdata->probtoidxmap, &conshdlrdata->probtoidxmapsize, clqpart, &nclq) );
          assert(nclq <= len);
 
 #ifndef NDEBUG
@@ -12115,6 +12119,7 @@ SCIP_DECL_CONSFREE(consFreeKnapsack)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->probtoidxmap, conshdlrdata->probtoidxmapsize);
    SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
@@ -13511,6 +13516,8 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    conshdlrdata->eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr), EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecKnapsack, eventhdlrdata) );
+   conshdlrdata->probtoidxmap = NULL;
+   conshdlrdata->probtoidxmapsize = 0;
 
    /* get event handler for bound change events */
    if( conshdlrdata->eventhdlr == NULL )
