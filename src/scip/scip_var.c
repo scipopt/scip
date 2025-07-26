@@ -9106,7 +9106,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    /* prepare mapping of probvarindex to indices in given list */
    if ( *probtoidxmapsize < nbinvars )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, probtoidxmap, nbinvars) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, probtoidxmap, *probtoidxmapsize, nbinvars) );
       *probtoidxmapsize = nbinvars;
       for( i = 0; i < nbinvars; ++i )
          (*probtoidxmap)[i] = -1;
