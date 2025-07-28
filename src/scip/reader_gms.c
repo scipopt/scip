@@ -917,7 +917,7 @@ SCIP_RETCODE printExpr(
                      SCIPinfoMessage(scip, file, "-");
                   }
 
-                  SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(activevars[0])) );
+                  SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(activevars[i])) );
                   SCIPinfoMessage(scip, file, "%s", varname);
 
                   needsign = TRUE;
