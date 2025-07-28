@@ -786,7 +786,7 @@ SCIP_RETCODE SCIPaddSymgraphEdge(
    int                   first,              /**< first node index of edge */
    int                   second,             /**< second node index of edge */
    SCIP_Bool             hasval,             /**< whether the edge has a value */
-   SCIP_Real             val                 /**< value of the edge (is it has a value) */
+   SCIP_Real             val                 /**< value of the edge (if it has a value) */
    )
 {
    assert(scip != NULL);
