@@ -34,6 +34,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
+#include "scip/cons_and.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
@@ -787,6 +788,67 @@ SCIP_RETCODE printSOSCons(
       SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, v > 0 ? " + " : NULL, buffer, 1, &vars[v], &coef, transformed) ); /*lint !e613*/
    }
    appendLine(scip, file, linebuffer, &linecnt, ";");
+   endLine(scip, file, linebuffer, &linecnt);
+
+   return SCIP_OKAY;
+}
+
+/** print "and" constraint using a product of binary variables (performing retransformation to active variables) */
+static
+SCIP_RETCODE printAndCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< row name */
+   int                   nvars,              /**< number of variables in and */
+   SCIP_VAR**            vars,               /**< variables in and */
+   SCIP_VAR*             resultant,          /**< resultant variable */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
+   int linecnt;
+   char name[GMS_MAX_NAMELEN + 3];
+   char buffer[GMS_MAX_PRINTLEN + 3];
+   int v;
+
+   assert( scip != NULL );
+   assert( strlen(rowname) > 0 );
+   assert( vars != NULL );
+   assert( nvars > 0 );
+   assert( resultant != NULL );
+
+   clearLine(linebuffer, &linecnt);
+
+   /* start each line with a space */
+   appendLine(scip, file, linebuffer, &linecnt, " ");
+
+   /* print equation name */
+   (void) SCIPsnprintf(buffer, GMS_MAX_NAMELEN + 3, "%s ..", rowname);
+   SCIP_CALL( printConformName(scip, name, GMS_MAX_NAMELEN + 3, buffer) );
+   appendLine(scip, file, linebuffer, &linecnt, name);
+
+   for( v = 0; v < nvars; ++v )
+   {
+      /* if we start a new line, tab this line */
+      if( linecnt == 0 )
+         appendLine(scip, file, linebuffer, &linecnt, "     ");
+
+      SCIP_CALL( printConformName(scip, name, GMS_MAX_NAMELEN, SCIPvarGetName(vars[v])) );
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", name, v < nvars-1 ? " *" : "");
+
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
+   }
+
+   /* if we start a new line, tab this line */
+   if( linecnt == 0 )
+      appendLine(scip, file, linebuffer, &linecnt, "     ");
+
+   /* print right hand side */
+   SCIP_CALL( printConformName(scip, name, GMS_MAX_NAMELEN, SCIPvarGetName(resultant)) );
+   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " =e= %s;", name);
+
+   appendLine(scip, file, linebuffer, &linecnt, buffer);
+
    endLine(scip, file, linebuffer, &linecnt);
 
    return SCIP_OKAY;
@@ -1672,7 +1734,7 @@ SCIP_RETCODE SCIPwriteGms(
       /* we declare only those constraints which we can print in GAMS format */
       if( strcmp(conshdlrname, "knapsack") != 0 && strcmp(conshdlrname, "logicor") != 0 && strcmp(conshdlrname, "setppc") != 0
           && strcmp(conshdlrname, "linear") != 0 && strcmp(conshdlrname, "SOS1") != 0 && strcmp(conshdlrname, "SOS2") != 0
-          && strcmp(conshdlrname, "nonlinear") != 0
+          && strcmp(conshdlrname, "nonlinear") != 0 && strcmp(conshdlrname, "and") != 0
           && strcmp(conshdlrname, "varbound") != 0
           && strcmp(conshdlrname, "indicator") != 0 )
       {
@@ -1846,6 +1908,16 @@ SCIP_RETCODE SCIPwriteGms(
             SCIPgetNVarsSOS2(scip, cons), SCIPgetVarsSOS2(scip, cons), 2,
             transformed) );
          discrete = TRUE;
+      }
+      else if( strcmp(conshdlrname, "and") == 0 )
+      {
+         SCIP_CALL( printAndCons(scip, file, consname,
+            SCIPgetNVarsAnd(scip, cons), SCIPgetVarsAnd(scip, cons), SCIPgetResultantAnd(scip, cons),
+            transformed) );
+         nlcons = TRUE;
+         /* disable nqcons if no longer quadratic */
+         if( SCIPgetNVarsAnd(scip, cons) > 2 )
+            nqcons = FALSE;
       }
       else
       {
