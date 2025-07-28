@@ -58,7 +58,7 @@ SCIP_RETCODE SCIPcreateSymgraph(
 
    assert(scip != NULL);
    assert(graph != NULL);
-   assert(symvars != NULL);
+   assert(symvars != NULL || nsymvars == 0);
    assert(nopnodes >= 0);
    assert(nvalnodes >= 0);
    assert(nconsnodes >= 0);
@@ -121,15 +121,18 @@ SCIP_RETCODE SCIPfreeSymgraph(
    SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->conscolors, (*graph)->nconsnodes);
    SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->valcolors, (*graph)->nvalnodes);
    SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->opcolors, (*graph)->nopnodes);
-   switch( (*graph)->symtype )
+   if( (*graph)->nsymvars > 0 )
    {
-   case SYM_SYMTYPE_PERM:
-      SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->varcolors, (*graph)->nsymvars);
-      break;
-   default:
-      assert((*graph)->symtype == SYM_SYMTYPE_SIGNPERM);
-      SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->varcolors, 2 * (*graph)->nsymvars);
-   } /*lint !e788*/
+      switch( (*graph)->symtype )
+      {
+      case SYM_SYMTYPE_PERM:
+         SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->varcolors, (*graph)->nsymvars);
+         break;
+      default:
+         assert((*graph)->symtype == SYM_SYMTYPE_SIGNPERM);
+         SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->varcolors, 2 * (*graph)->nsymvars);
+      } /*lint !e788*/
+   }
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->consnodeperm, (*graph)->nconsnodes);
    SCIPfreeBlockMemoryArray(scip, &(*graph)->isfixedvar, (*graph)->nsymvars);
@@ -179,15 +182,18 @@ SCIP_RETCODE SCIPclearSymgraph(
    SCIPfreeBlockMemoryArrayNull(scip, &graph->conscolors, graph->nconsnodes);
    SCIPfreeBlockMemoryArrayNull(scip, &graph->valcolors, graph->nvalnodes);
    SCIPfreeBlockMemoryArrayNull(scip, &graph->opcolors, graph->nopnodes);
-   switch( graph->symtype )
+   if( graph->nsymvars > 0 )
    {
-   case SYM_SYMTYPE_PERM:
-      SCIPfreeBlockMemoryArrayNull(scip, &graph->varcolors, graph->nsymvars);
-      break;
-   default:
-      assert(graph->symtype == SYM_SYMTYPE_SIGNPERM);
-      SCIPfreeBlockMemoryArrayNull(scip, &graph->varcolors, 2 * graph->nsymvars);
-   } /*lint !e788*/
+      switch( graph->symtype )
+      {
+      case SYM_SYMTYPE_PERM:
+         SCIPfreeBlockMemoryArrayNull(scip, &graph->varcolors, graph->nsymvars);
+         break;
+      default:
+         assert(graph->symtype == SYM_SYMTYPE_SIGNPERM);
+         SCIPfreeBlockMemoryArrayNull(scip, &graph->varcolors, 2 * graph->nsymvars);
+      } /*lint !e788*/
+   }
 
    graph->opcolors = NULL;
    graph->valcolors = NULL;
@@ -218,7 +224,7 @@ SCIP_RETCODE SCIPcopySymgraph(
    assert(scip != NULL);
    assert(graph != NULL);
    assert(origgraph != NULL);
-   assert(perm != NULL);
+   assert(perm != NULL || origgraph->nsymvars == 0);
 
    SCIP_CALL( SCIPcreateSymgraph(scip, origgraph->symtype, graph, origgraph->symvars, origgraph->nsymvars,
          origgraph->nopnodes, origgraph->nvalnodes, origgraph->nconsnodes, origgraph->nedges) );
@@ -251,6 +257,8 @@ SCIP_RETCODE SCIPcopySymgraph(
    {
       first = SCIPgetSymgraphEdgeFirst(origgraph, i);
       second = SCIPgetSymgraphEdgeSecond(origgraph, i);
+      assert(first >= 0 || origgraph->nsymvars > 0);
+      assert(second >= 0 || origgraph->nsymvars > 0);
 
       /* possibly adapt edges due to permutation of variables */
       if( first < 0 )
@@ -350,6 +358,8 @@ SCIP_RETCODE SCIPcopySymgraphAsSubgraph(
    {
       first = SCIPgetSymgraphEdgeFirst(sourcegraph, i);
       second = SCIPgetSymgraphEdgeSecond(sourcegraph, i);
+      assert(first >= 0 || sourcegraph->nsymvars > 0);
+      assert(second >= 0 || sourcegraph->nsymvars > 0);
 
       /* adapt indices from source graph to target graph in case of non-variable nodes  */
       if( first >= 0 )
@@ -791,6 +801,8 @@ SCIP_RETCODE SCIPaddSymgraphEdge(
 {
    assert(scip != NULL);
    assert(graph != NULL);
+   assert(first >= 0 || graph->nsymvars > 0);
+   assert(second >= 0 || graph->nsymvars > 0);
 
    /* we can only add edges if symmetry colors have not been computed yet */
    if( graph->islocked )
@@ -1381,7 +1393,10 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
    } /*lint !e788*/
 
    /* allocate memory for colors */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->varcolors, nusedvars) );
+   if( nusedvars > 0 )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->varcolors, nusedvars) );
+   }
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->opcolors, graph->nopnodes) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->valcolors, graph->nvalnodes) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->conscolors, graph->nconsnodes) );
@@ -1401,70 +1416,72 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, len) );
 
    /* find colors of variable nodes */
-   assert(graph->nsymvars > 0);
-   switch( graph->symtype )
+   if( graph->nsymvars > 0 )
    {
-   case SYM_SYMTYPE_PERM:
-      SCIPsort(perm, SYMsortVarnodesPermsym, (void*) graph, nusedvars);
-
-      graph->varcolors[perm[0]] = color;
-      prevvar = graph->symvars[perm[0]];
-
-      for( i = 1; i < nusedvars; ++i )
+      switch( graph->symtype )
       {
-         thisvar = graph->symvars[perm[i]];
+      case SYM_SYMTYPE_PERM:
+         SCIPsort(perm, SYMsortVarnodesPermsym, (void*) graph, nusedvars);
 
-         if( graph->isfixedvar[i] || compareVars(scip, prevvar, thisvar) != 0 )
-            ++color;
-
-         graph->varcolors[perm[i]] = color;
-         prevvar = thisvar;
-      }
-      graph->nvarcolors = color;
-      break;
-   default:
-      assert(graph->symtype == SYM_SYMTYPE_SIGNPERM);
-
-      SCIPsort(perm, SYMsortVarnodesSignedPermsym, (void*) graph, nusedvars);
-
-      graph->varcolors[perm[0]] = color;
-
-      /* store information about first variable */
-      if( perm[0] < graph->nsymvars )
-      {
-         previsneg = FALSE;
+         graph->varcolors[perm[0]] = color;
          prevvar = graph->symvars[perm[0]];
-      }
-      else
-      {
-         previsneg = TRUE;
-         prevvar = graph->symvars[perm[0] - graph->nsymvars];
-      }
 
-      /* compute colors of remaining variables */
-      for( i = 1; i < nusedvars; ++i )
-      {
-         if( perm[i] < graph->nsymvars )
+         for( i = 1; i < nusedvars; ++i )
          {
-            thisisneg = FALSE;
             thisvar = graph->symvars[perm[i]];
+
+            if( graph->isfixedvar[i] || compareVars(scip, prevvar, thisvar) != 0 )
+               ++color;
+
+            graph->varcolors[perm[i]] = color;
+            prevvar = thisvar;
+         }
+         graph->nvarcolors = color;
+         break;
+      default:
+         assert(graph->symtype == SYM_SYMTYPE_SIGNPERM);
+
+         SCIPsort(perm, SYMsortVarnodesSignedPermsym, (void*) graph, nusedvars);
+
+         graph->varcolors[perm[0]] = color;
+
+         /* store information about first variable */
+         if( perm[0] < graph->nsymvars )
+         {
+            previsneg = FALSE;
+            prevvar = graph->symvars[perm[0]];
          }
          else
          {
-            thisisneg = TRUE;
-            thisvar = graph->symvars[perm[i] - graph->nsymvars];
+            previsneg = TRUE;
+            prevvar = graph->symvars[perm[0] - graph->nsymvars];
          }
 
-         if( graph->isfixedvar[i % graph->nsymvars]
-            || compareVarsSignedPerm(scip, prevvar, thisvar, previsneg, thisisneg, graph->infinity) != 0 )
-            ++color;
+         /* compute colors of remaining variables */
+         for( i = 1; i < nusedvars; ++i )
+         {
+            if( perm[i] < graph->nsymvars )
+            {
+               thisisneg = FALSE;
+               thisvar = graph->symvars[perm[i]];
+            }
+            else
+            {
+               thisisneg = TRUE;
+               thisvar = graph->symvars[perm[i] - graph->nsymvars];
+            }
 
-         graph->varcolors[perm[i]] = color;
-         prevvar = thisvar;
-         previsneg = thisisneg;
-      }
-      graph->nvarcolors = color;
-   } /*lint !e788*/
+            if( graph->isfixedvar[i % graph->nsymvars]
+               || compareVarsSignedPerm(scip, prevvar, thisvar, previsneg, thisisneg, graph->infinity) != 0 )
+               ++color;
+
+            graph->varcolors[perm[i]] = color;
+            prevvar = thisvar;
+            previsneg = thisisneg;
+         }
+         graph->nvarcolors = color;
+      } /*lint !e788*/
+   }
 
    /* find colors of operator nodes */
    if( graph->nopnodes > 0 )
@@ -1668,6 +1685,7 @@ int SCIPgetSymgraphVarnodeColor(
 {
    assert(graph != NULL);
    assert(graph->islocked);
+   assert(graph->nsymvars > 0);
 
    switch( graph->symtype )
    {
@@ -1754,6 +1772,7 @@ int SCIPgetSymgraphNVarcolors(
    )
 {
    assert(graph != NULL);
+   assert(graph->nsymvars > 0);
 
    if( graph->nvarcolors < 0 )
       return graph->nsymvars;
