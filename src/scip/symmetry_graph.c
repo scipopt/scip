@@ -51,7 +51,8 @@ SCIP_RETCODE SCIPcreateSymgraph(
    int                   nopnodes,           /**< number of operator nodes */
    int                   nvalnodes,          /**< number of value nodes */
    int                   nconsnodes,         /**< number of constraint nodes */
-   int                   nedges              /**< number of edges */
+   int                   nedges,             /**< number of edges */
+   SCIP_Real             eps                 /**< epsilon value used in comparisons */
    )
 {
    int nnodes;
@@ -63,6 +64,7 @@ SCIP_RETCODE SCIPcreateSymgraph(
    assert(nvalnodes >= 0);
    assert(nconsnodes >= 0);
    assert(nedges >= 0);
+   assert(eps >= 0);
 
    nnodes = nopnodes + nvalnodes + nconsnodes;
 
@@ -97,6 +99,7 @@ SCIP_RETCODE SCIPcreateSymgraph(
    (*graph)->symtype = symtype;
    (*graph)->infinity = SCIPinfinity(scip);
    (*graph)->consnodeperm = NULL;
+   (*graph)->eps = eps;
 
    /* to avoid reallocation, allocate memory for colors later */
    (*graph)->varcolors = NULL;
@@ -177,6 +180,7 @@ SCIP_RETCODE SCIPclearSymgraph(
    graph->infinity = SCIPinfinity(scip);
    SCIPfreeBlockMemoryArrayNull(scip, &graph->consnodeperm, graph->nconsnodes);
    graph->consnodeperm = NULL;
+   graph->eps = 0.0;
 
    SCIPfreeBlockMemoryArrayNull(scip, &graph->edgecolors, graph->nedges);
    SCIPfreeBlockMemoryArrayNull(scip, &graph->conscolors, graph->nconsnodes);
@@ -227,7 +231,7 @@ SCIP_RETCODE SCIPcopySymgraph(
    assert(perm != NULL || origgraph->nsymvars == 0);
 
    SCIP_CALL( SCIPcreateSymgraph(scip, origgraph->symtype, graph, origgraph->symvars, origgraph->nsymvars,
-         origgraph->nopnodes, origgraph->nvalnodes, origgraph->nconsnodes, origgraph->nedges) );
+         origgraph->nopnodes, origgraph->nvalnodes, origgraph->nconsnodes, origgraph->nedges, origgraph->eps) );
 
    /* copy nodes */
    nnodes = origgraph->nnodes;
@@ -841,13 +845,14 @@ SCIP_RETCODE SCIPaddSymgraphEdge(
  */
 static
 int compareVars(
-   SCIP*                 scip,               /**< SCIP pointer (or NULL for exact comparison) */
    SCIP_VAR*             var1,               /**< first variable for comparison */
-   SCIP_VAR*             var2                /**< second variable for comparison */
+   SCIP_VAR*             var2,               /**< second variable for comparison */
+   SCIP_Real             eps                 /**< epsilon value used in comparisons */
    )
 {
    assert(var1 != NULL);
    assert(var2 != NULL);
+   assert(eps >= 0);
 
    SCIP_VARTYPE type1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var1);
    SCIP_VARTYPE type2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var2);
@@ -856,41 +861,20 @@ int compareVars(
    if( type1 > type2 )
       return 1;
 
-   /* use SCIP's comparison functions if available */
-   if( scip == NULL )
-   {
-      if( SCIPvarGetObj(var1) < SCIPvarGetObj(var2) )
-         return -1;
-      if( SCIPvarGetObj(var1) > SCIPvarGetObj(var2) )
-         return 1;
+   if( SCIPvarGetObj(var1) < SCIPvarGetObj(var2) - eps )
+      return -1;
+   if( SCIPvarGetObj(var1) > SCIPvarGetObj(var2) + eps )
+      return 1;
 
-      if( SCIPvarGetLbGlobal(var1) < SCIPvarGetLbGlobal(var2) )
-         return -1;
-      if( SCIPvarGetLbGlobal(var1) > SCIPvarGetLbGlobal(var2) )
-         return 1;
+   if( SCIPvarGetLbGlobal(var1) < SCIPvarGetLbGlobal(var2) - eps )
+      return -1;
+   if( SCIPvarGetLbGlobal(var1) > SCIPvarGetLbGlobal(var2) + eps)
+      return 1;
 
-      if( SCIPvarGetUbGlobal(var1) < SCIPvarGetUbGlobal(var2) )
-         return -1;
-      if( SCIPvarGetUbGlobal(var1) > SCIPvarGetUbGlobal(var2) )
-         return 1;
-   }
-   else
-   {
-      if( SCIPisLT(scip, SCIPvarGetObj(var1), SCIPvarGetObj(var2)) )
-         return -1;
-      if( SCIPisGT(scip, SCIPvarGetObj(var1), SCIPvarGetObj(var2)) )
-         return 1;
-
-      if( SCIPisLT(scip, SCIPvarGetLbGlobal(var1), SCIPvarGetLbGlobal(var2)) )
-         return -1;
-      if( SCIPisGT(scip, SCIPvarGetLbGlobal(var1), SCIPvarGetLbGlobal(var2)) )
-         return 1;
-
-      if( SCIPisLT(scip, SCIPvarGetUbGlobal(var1), SCIPvarGetUbGlobal(var2)) )
-         return -1;
-      if( SCIPisGT(scip, SCIPvarGetUbGlobal(var1), SCIPvarGetUbGlobal(var2)) )
-         return 1;
-   }
+   if( SCIPvarGetUbGlobal(var1) < SCIPvarGetUbGlobal(var2) - eps )
+      return -1;
+   if( SCIPvarGetUbGlobal(var1) > SCIPvarGetUbGlobal(var2) + eps )
+      return 1;
 
    return 0;
 }
@@ -907,11 +891,11 @@ int compareVars(
  */
 static
 int compareVarsFixed(
-   SCIP*                 scip,               /**< SCIP pointer (or NULL for exact comparison) */
    SCIP_VAR*             var1,               /**< first variable for comparison */
    SCIP_VAR*             var2,               /**< second variable for comparison */
    SCIP_Bool             isfixed1,           /**< whether var1 needs to be fixed */
-   SCIP_Bool             isfixed2            /**< whether var2 needs to be fixed */
+   SCIP_Bool             isfixed2,           /**< whether var2 needs to be fixed */
+   SCIP_Real             eps                 /**< epsilon value for comparisons */
    )
 {
    assert(var1 != NULL);
@@ -922,7 +906,7 @@ int compareVarsFixed(
    if( isfixed1 && (! isfixed2) )
       return 1;
 
-   return compareVars(scip, var1, var2);
+   return compareVars(var1, var2, eps);
 }
 
 /** sorts nodes of a permutation symmetry detection graph
@@ -951,7 +935,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortVarnodesPermsym)
    isfixedvar = graph->isfixedvar;
    assert(isfixedvar != NULL);
 
-   return compareVarsFixed(NULL, vars[ind1], vars[ind2], isfixedvar[ind1], isfixedvar[ind2]);
+   return compareVarsFixed(vars[ind1], vars[ind2], isfixedvar[ind1], isfixedvar[ind2], graph->eps);
 }
 
 /** compares two variables for signed permutation symmetry detection
@@ -968,12 +952,12 @@ SCIP_DECL_SORTINDCOMP(SYMsortVarnodesPermsym)
  */
 static
 int compareVarsSignedPerm(
-   SCIP*                 scip,               /**< SCIP pointer (or NULL for exact comparison) */
    SCIP_VAR*             var1,               /**< first variable for comparison */
    SCIP_VAR*             var2,               /**< second variable for comparison */
    SCIP_Bool             isneg1,             /**< whether var1 needs to be negated */
    SCIP_Bool             isneg2,             /**< whether var2 needs to be negated */
-   SCIP_Real             infinity            /**< values as least as large as this are regarded as infinite */
+   SCIP_Real             infinity,           /**< values as least as large as this are regarded as infinite */
+   SCIP_Real             eps                 /**< epsilon value used in comparisons */
    )
 {
    SCIP_Real ub1;
@@ -997,21 +981,10 @@ int compareVarsSignedPerm(
    obj1 = isneg1 ? -SCIPvarGetObj(var1) : SCIPvarGetObj(var1);
    obj2 = isneg2 ? -SCIPvarGetObj(var2) : SCIPvarGetObj(var2);
 
-   /* use SCIP's comparison functions if available */
-   if( scip == NULL )
-   {
-      if( obj1 < obj2 )
-         return -1;
-      if( obj1 > obj2 )
-         return 1;
-   }
-   else
-   {
-      if( SCIPisLT(scip, obj1, obj2) )
-         return -1;
-      if( SCIPisGT(scip, obj1, obj2) )
-         return 1;
-   }
+   if( obj1 < obj2 - eps )
+      return -1;
+   if( obj1 > obj2 + eps )
+      return 1;
 
    /* adapt lower and upper bounds if domain is finite */
    lb1 = SCIPvarGetLbGlobal(var1);
@@ -1045,31 +1018,15 @@ int compareVarsSignedPerm(
       ub2 = -mid;
    }
 
-   /* use SCIP's comparison functions if available */
-   if( scip == NULL )
-   {
-      if( lb1 < lb2 )
-         return -1;
-      if( lb1 > lb2 )
-         return 1;
+   if( lb1 < lb2 - eps )
+      return -1;
+   if( lb1 > lb2 + eps )
+      return 1;
 
-      if( ub1 < ub2 )
-         return -1;
-      if( ub1 > ub2 )
-         return 1;
-   }
-   else
-   {
-      if( SCIPisLT(scip, lb1, lb2) )
-         return -1;
-      if( SCIPisGT(scip, lb1, lb2) )
-         return 1;
-
-      if( SCIPisLT(scip, ub1, ub2) )
-         return -1;
-      if( SCIPisGT(scip, ub1, ub2) )
-         return 1;
-   }
+   if( ub1 < ub2 - eps )
+      return -1;
+   if( ub1 > ub2 + eps )
+      return 1;
 
    return 0;
 }
@@ -1088,14 +1045,14 @@ int compareVarsSignedPerm(
  */
 static
 int compareVarsFixedSignedPerm(
-   SCIP*                 scip,               /**< SCIP pointer (or NULL for exact comparison) */
    SCIP_VAR*             var1,               /**< first variable for comparison */
    SCIP_VAR*             var2,               /**< second variable for comparison */
    SCIP_Bool             isfixed1,           /**< whether var1 needs to be fixed */
    SCIP_Bool             isfixed2,           /**< whether var2 needs to be fixed */
    SCIP_Bool             isneg1,             /**< whether var1 needs to be negated */
    SCIP_Bool             isneg2,             /**< whether var2 needs to be negated */
-   SCIP_Real             infinity            /**< values as least as large as this are regarded as infinite */
+   SCIP_Real             infinity,           /**< values as least as large as this are regarded as infinite */
+   SCIP_Real             eps                 /**< epsilon value used in comparisons */
    )
 {
    assert(var1 != NULL);
@@ -1106,7 +1063,7 @@ int compareVarsFixedSignedPerm(
    if( isfixed1 && (! isfixed2) )
       return 1;
 
-   return compareVarsSignedPerm(scip, var1, var2, isneg1, isneg2, infinity);
+   return compareVarsSignedPerm(var1, var2, isneg1, isneg2, infinity, eps);
 }
 
 /** sorts nodes of a signed permutation symmetry detection graph
@@ -1157,8 +1114,8 @@ SCIP_DECL_SORTINDCOMP(SYMsortVarnodesSignedPermsym)
       locind2 -= nsymvars;
    }
 
-   return compareVarsFixedSignedPerm(NULL, vars[locind1], vars[locind2], isfixedvar[locind1], isfixedvar[locind2],
-      isneg1, isneg2, graph->infinity);
+   return compareVarsFixedSignedPerm(vars[locind1], vars[locind2], isfixedvar[locind1], isfixedvar[locind2],
+      isneg1, isneg2, graph->infinity, graph->eps);
 }
 
 /** compares two operators
@@ -1234,7 +1191,6 @@ SCIP_DECL_SORTINDCOMP(SYMsortReals)
  */
 static
 int compareConsnodes(
-   SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph,              /**< underlying symmetry detection graph */
    int                   ind1,               /**< index of first constraint node */
    int                   ind2                /**< index of second constraint node */
@@ -1255,31 +1211,15 @@ int compareConsnodes(
    if( SCIPconsGetHdlr(cons1) > SCIPconsGetHdlr(cons2) )
       return 1;
 
-   /* use SCIP's comparison functions if available */
-   if( scip != NULL )
-   {
-      if( SCIPisLT(scip, graph->lhs[ind1], graph->lhs[ind2]) )
-         return -1;
-      if( SCIPisGT(scip, graph->lhs[ind1], graph->lhs[ind2]) )
-         return 1;
+   if( graph->lhs[ind1] < graph->lhs[ind2] - graph->eps )
+      return -1;
+   if( graph->lhs[ind1] > graph->lhs[ind2] + graph->eps )
+      return 1;
 
-      if( SCIPisLT(scip, graph->rhs[ind1], graph->rhs[ind2]) )
-         return -1;
-      if( SCIPisGT(scip, graph->rhs[ind1], graph->rhs[ind2]) )
-         return 1;
-   }
-   else
-   {
-      if( graph->lhs[ind1] < graph->lhs[ind2] )
-         return -1;
-      if( graph->lhs[ind1] > graph->lhs[ind2] )
-         return 1;
-
-      if( graph->rhs[ind1] < graph->rhs[ind2] )
-         return -1;
-      if( graph->rhs[ind1] > graph->rhs[ind2] )
-         return 1;
-   }
+   if( graph->rhs[ind1] < graph->rhs[ind2] - graph->eps )
+      return -1;
+   if( graph->rhs[ind1] > graph->rhs[ind2] + graph->eps )
+      return 1;
 
    return 0;
 }
@@ -1296,7 +1236,7 @@ int compareConsnodes(
 static
 SCIP_DECL_SORTINDCOMP(SYMsortConsnodes)
 {
-   return compareConsnodes(NULL, (SYM_GRAPH*) dataptr, ind1, ind2);
+   return compareConsnodes((SYM_GRAPH*) dataptr, ind1, ind2);
 }
 
 /** sorts edges
@@ -1315,9 +1255,9 @@ SCIP_DECL_SORTINDCOMP(SYMsortEdges)
 
    G = (SYM_GRAPH*) dataptr;
 
-   if( G->edgevals[ind1] < G->edgevals[ind2] )
+   if( G->edgevals[ind1] < G->edgevals[ind2] - G->eps )
       return -1;
-   if( G->edgevals[ind1] > G->edgevals[ind2] )
+   if( G->edgevals[ind1] > G->edgevals[ind2] + G->eps )
       return 1;
 
    return 0;
@@ -1339,6 +1279,21 @@ SCIP_Bool isFixedVar(
    if( (fixedtype & SYM_SPEC_REAL) && ( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(var) ) )
       return TRUE;
    return FALSE;
+}
+
+/** returns whether two numbers are equal (up to epsilon) */
+static
+SCIP_Bool isEQ(
+   SCIP_Real             num1,               /**< first number */
+   SCIP_Real             num2,               /**< second number */
+   SCIP_Real             eps                 /**< epsilon value for comparison */
+   )
+{
+   assert(eps >= 0.0);
+
+   if( (num1 < num2 - eps) || (num2 < num1 - eps) )
+      return FALSE;
+   return TRUE;
 }
 
 /** computes colors of nodes and edges
@@ -1430,7 +1385,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
          {
             thisvar = graph->symvars[perm[i]];
 
-            if( graph->isfixedvar[i] || compareVars(scip, prevvar, thisvar) != 0 )
+            if( graph->isfixedvar[i] || compareVars(prevvar, thisvar, graph->eps) != 0 )
                ++color;
 
             graph->varcolors[perm[i]] = color;
@@ -1472,7 +1427,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
             }
 
             if( graph->isfixedvar[i % graph->nsymvars]
-               || compareVarsSignedPerm(scip, prevvar, thisvar, previsneg, thisisneg, graph->infinity) != 0 )
+               || compareVarsSignedPerm(prevvar, thisvar, previsneg, thisisneg, graph->infinity, graph->eps) != 0 )
                ++color;
 
             graph->varcolors[perm[i]] = color;
@@ -1518,7 +1473,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
       {
          thisval = graph->vals[perm[i]];
 
-         if( ! SCIPisEQ(scip, prevval, thisval) )
+         if( ! isEQ(prevval, thisval, graph->eps) )
             ++color;
 
          graph->valcolors[perm[i]] = color;
@@ -1535,7 +1490,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
 
       for( i = 1; i < graph->nconsnodes; ++i )
       {
-         if( compareConsnodes(scip, graph, perm[i-1], perm[i]) != 0 )
+         if( compareConsnodes(graph, perm[i-1], perm[i]) != 0 )
             ++color;
 
          graph->conscolors[perm[i]] = color;
@@ -1568,7 +1523,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
             if( SCIPisInfinity(scip, thisval) )
                break;
 
-            if( ! SCIPisEQ(scip, prevval, thisval) )
+            if( ! isEQ(prevval, thisval, graph->eps) )
                ++color;
 
             graph->edgecolors[perm[i]] = color;

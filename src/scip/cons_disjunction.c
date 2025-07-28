@@ -461,6 +461,7 @@ SCIP_RETCODE addSymmetryInformation(
    SYM_GRAPH* symgraph;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
+   SCIP_Real eps;
    int rootnode;
    int subroot = -1;
    int c;
@@ -502,8 +503,9 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &rootnode) );
 
    /* copy of graph: most constraints are linear, use modest estimation of number of nodes */
+   SCIP_CALL( SCIPgetRealParam(scip, "numerics/epsilon", &eps) );
    SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &symgraph, SCIPgetVars(scip), SCIPgetNVars(scip),
-         5, 5, 1, SCIPgetNVars(scip)) );
+         5, 5, 1, SCIPgetNVars(scip), eps) );
 
    /* for each constraint, build the symmetry detection graph and copy it to the global graph */
    for( c = 0; c < consdata->nconss && *success; ++c )

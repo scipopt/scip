@@ -1661,6 +1661,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    SCIP_CONS** conss;
    SCIP_VAR** symvars;
    SCIP_Bool success;
+   SCIP_Real eps;
    int* graphperm;
    int* groupbegins;
    int ngroups = 1;
@@ -1689,10 +1690,11 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    assert( nsymvars == npermvars );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &graphs, nconss) );
+   SCIP_CALL( SCIPgetRealParam(scip, "numerics/epsilon", &eps) );
 
    for (c = 0; c < nconss; ++c)
    {
-      SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &graphs[c], symvars, nsymvars, 10, 10, 1, 100) );
+      SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &graphs[c], symvars, nsymvars, 10, 10, 1, 100, eps) );
 
       success = FALSE;
       switch ( symtype )
@@ -1855,6 +1857,7 @@ SCIP_RETCODE computeSymmetryGroup(
 {
    SCIP_CONS** conss;
    SYM_GRAPH* graph;
+   SCIP_Real eps;
    int nconsnodes = 0;
    int nvalnodes = 0;
    int nopnodes = 0;
@@ -1911,8 +1914,9 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( estimateSymgraphSize(scip, &nopnodes, &nvalnodes, &nconsnodes, &nedges) );
 
    /* create graph */
+   SCIP_CALL( SCIPgetRealParam(scip, "numerics/epsilon", &eps) );
    SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &graph, SCIPgetVars(scip), SCIPgetNVars(scip),
-         nopnodes, nvalnodes, nconsnodes, nedges) );
+         nopnodes, nvalnodes, nconsnodes, nedges, eps) );
 
    *success = TRUE;
    for (c = 0; c < nconss && *success; ++c)

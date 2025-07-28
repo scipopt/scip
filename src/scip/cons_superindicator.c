@@ -819,6 +819,7 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Real constant;
+   SCIP_Real eps;
    int nlocvars;
    int rootnode;
    int subroot = -1;
@@ -850,8 +851,9 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &rootnode) );
 
    /* copy symmetry detection graph of slackcons, use modest estimation for graph size */
+   SCIP_CALL( SCIPgetRealParam(scip, "numerics/epsilon", &eps) );
    SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &symgraph, SCIPgetVars(scip), SCIPgetNVars(scip),
-         15, 15, 1, SCIPgetNVars(scip)) );
+         15, 15, 1, SCIPgetNVars(scip), eps) );
 
    if( symtype == SYM_SYMTYPE_PERM )
    {
