@@ -1252,7 +1252,8 @@ SCIP_RETCODE SCIPnodeCutoff(
    assert(set != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
-   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
+   assert(set->stage < SCIP_STAGE_INITSOLVE
+      || (tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
       || !set->misc_calcintegral || SCIPsetIsRelEQ(set, SCIPtreeGetLowerbound(tree, set), stat->lastlowerbound));
 
    SCIPsetDebugMsg(set, "cutting off %s node #%" SCIP_LONGINT_FORMAT " at depth %d (cutoffdepth: %d)\n",
@@ -1278,7 +1279,9 @@ SCIP_RETCODE SCIPnodeCutoff(
    if( node->depth == 0 )
       stat->rootlowerbound = SCIPsetInfinity(set);
 
-   if( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING )
+   /* update lower bound statistics during solving */
+   if( !stat->inrestart && set->stage >= SCIP_STAGE_INITSOLVE
+      && ( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING ) )
    {
       /* update primal-dual integrals */
       if( set->misc_calcintegral )
@@ -2390,7 +2393,8 @@ void SCIPnodeUpdateLowerbound(
    assert(stat != NULL);
    assert(set != NULL);
    assert(!SCIPsetIsInfinity(set, newbound));
-   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
+   assert(set->stage < SCIP_STAGE_INITSOLVE
+      || (tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
       || !set->misc_calcintegral || SCIPsetIsRelEQ(set, SCIPtreeGetLowerbound(tree, set), stat->lastlowerbound));
 
    if( SCIPnodeGetLowerbound(node) < newbound )
@@ -2407,7 +2411,9 @@ void SCIPnodeUpdateLowerbound(
       if( node->depth == 0 )
          stat->rootlowerbound = newbound;
 
-      if( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING )
+      /* update lower bound statistics during solving */
+      if( !stat->inrestart && set->stage >= SCIP_STAGE_INITSOLVE
+         && ( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING ) )
       {
          SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
 
@@ -2969,7 +2975,6 @@ void treeFindSwitchForks(
       *cutoff = TRUE;
       return;
    }
-   tree->cutoffdepth = INT_MAX;
 
    /* if not already found, continue searching the LP defining fork; it cannot be deeper than the common fork */
    if( lpfork == NULL )
@@ -3122,6 +3127,7 @@ SCIP_RETCODE treeSwitchPath(
 
    assert(tree != NULL);
    assert(fork == NULL || (fork->active && !fork->cutoff));
+   assert(fork == NULL || fork->depth < tree->cutoffdepth);
    assert(fork == NULL || focusnode != NULL);
    assert(focusnode == NULL || (!focusnode->active && !focusnode->cutoff));
    assert(focusnode == NULL || SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
@@ -3212,6 +3218,7 @@ SCIP_RETCODE treeSwitchPath(
 
    /* apply effective root shift up to the new focus node */
    *cutoff = FALSE;
+   tree->cutoffdepth = INT_MAX;
    neweffectiverootdepth = MIN(tree->updatedeffectiverootdepth, focusnodedepth);
 
    /* promote the constraint set and bound changes up to the new effective root to be global changes */
@@ -3287,12 +3294,6 @@ SCIP_RETCODE treeSwitchPath(
       assert(!tree->path[tree->pathlen - 1]->cutoff);
       SCIP_CALL( nodeActivate(tree->path[tree->pathlen - 1], blkmem, set, stat, transprob, origprob, primal, tree, reopt,
             lp, branchcand, conflict, eventfilter, eventqueue, cliquetable, cutoff) );
-   }
-
-   /* mark new focus node to be cut off, if a cutoff was found */
-   if( *cutoff )
-   {
-      SCIP_CALL( SCIPnodeCutoff(tree->focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
    }
 
    /* count the new LP sizes of the path */
@@ -3964,6 +3965,9 @@ SCIP_RETCODE focusnodeToDeadend(
    SCIPsetDebugMsg(set, "focusnode #%" SCIP_LONGINT_FORMAT " to dead-end at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
+   /* delete focus node due to cut off */
+   SCIP_CALL( SCIPnodeCutoff(tree->focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+
    /* remove variables from the problem that are marked as deletable and were created at this node */
    SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp, branchcand, cliquetable, TRUE) );
 
@@ -4432,7 +4436,6 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_NODE* lpstatefork;
    SCIP_NODE* subroot;
    SCIP_NODE* childrenlpstatefork;
-   int oldcutoffdepth;
 
    assert(node != NULL);
    assert(*node == NULL
@@ -4457,9 +4460,6 @@ SCIP_RETCODE SCIPnodeFocus(
       *node != NULL ? SCIPnodeGetNumber(*node) : -1, *node != NULL ? (int)SCIPnodeGetType(*node) : 0,
       *node != NULL ? SCIPnodeGetDepth(*node) : -1);
 
-   /* remember old cutoff depth in order to know, whether the children and siblings can be deleted */
-   oldcutoffdepth = tree->cutoffdepth;
-
    /* find the common fork node, the new LP defining fork, and the new focus subroot,
     * thereby checking, if the new node can be cut off
     */
@@ -4473,7 +4473,6 @@ SCIP_RETCODE SCIPnodeFocus(
    if( *cutoff )
    {
       assert(*node != NULL);
-      assert(tree->cutoffdepth == oldcutoffdepth);
 
       /* cut off node */
       if( SCIPnodeGetType(*node) == SCIP_NODETYPE_LEAF )
@@ -4526,7 +4525,6 @@ SCIP_RETCODE SCIPnodeFocus(
       return SCIP_OKAY;
    }
 
-   assert(tree->cutoffdepth == INT_MAX);
    assert(fork == NULL || fork->active);
    assert(lpstatefork == NULL || lpfork != NULL);
    assert(subroot == NULL || lpstatefork != NULL);
@@ -4567,9 +4565,9 @@ SCIP_RETCODE SCIPnodeFocus(
     * if the old focus node's parent was cut off, we can also delete the focus node's siblings
     */
    /* coverity[var_compare_op] */
-   if( tree->focusnode != NULL && oldcutoffdepth <= (int)tree->focusnode->depth )
+   if( tree->focusnode != NULL && tree->cutoffdepth <= tree->focusnode->depth )
    {
-      SCIPsetDebugMsg(set, "path to old focus node of depth %u was cut off at depth %d\n", tree->focusnode->depth, oldcutoffdepth);
+      SCIPsetDebugMsg(set, "path to old focus node of depth %u was cut off at depth %d\n", tree->focusnode->depth, tree->cutoffdepth);
 
       /* delete the focus node's children by converting them to leaves with a cutoffbound of -SCIPsetInfinity(set);
        * we cannot delete them directly, because in SCIPnodeFree(), the children array is changed, which is the
@@ -4580,7 +4578,7 @@ SCIP_RETCODE SCIPnodeFocus(
       SCIP_CALL( treeNodesToQueue(tree, reopt, blkmem, set, stat, eventfilter, eventqueue, lp, tree->children, &tree->nchildren, NULL, -SCIPsetInfinity(set)) );
       assert(tree->nchildren == 0);
 
-      if( oldcutoffdepth < (int)tree->focusnode->depth )
+      if( tree->cutoffdepth < tree->focusnode->depth )
       {
          /* delete the focus node's siblings by converting them to leaves with a cutoffbound of -SCIPsetInfinity(set);
           * we cannot delete them directly, because in SCIPnodeFree(), the siblings array is changed, which is the
@@ -4633,7 +4631,6 @@ SCIP_RETCODE SCIPnodeFocus(
 
       assert(tree->focusnode != NULL);
       assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
-      assert(oldcutoffdepth == INT_MAX);
 
       /* check whether the next focus node is a child of the old focus node */
       selectedchild = (*node != NULL && SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD);
