@@ -7,6 +7,7 @@ Fixed bugs
 ----------
 
 - fixed bugs with counting changes in presolving of nonlinear and setppc constraints which resulted in negative values
+- cut off dead end node to correctly track dual bound update during solving
 
 Build system
 ------------
