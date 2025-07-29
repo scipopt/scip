@@ -500,28 +500,11 @@ SCIP_RETCODE initPresolve(
    /* initialize lower bound of the presolving root node if a valid dual bound is at hand */
    if( scip->transprob->dualbound != SCIP_INVALID ) /*lint !e777*/
    {
-      SCIP_EVENT event;
-
       scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
       if( scip->set->exact_enable )
          SCIPrationalSetReal(scip->tree->root->lowerboundexact, scip->tree->root->lowerbound);
-
-      /* throw improvement event */
-      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
-      SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
-
-      /* update primal-dual integrals */
-      if( scip->set->misc_calcintegral )
-      {
-         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
-         assert(scip->stat->lastlowerbound == scip->tree->root->lowerbound); /*lint !e777*/
-      }
-      else
-         scip->stat->lastlowerbound = scip->tree->root->lowerbound;
-      if( scip->set->exact_enable )
-         SCIPrationalSetRational(scip->stat->lastlowerboundexact, scip->tree->root->lowerboundexact);
    }
 
    /* GCG wants to perform presolving during the reading process of a file reader;
