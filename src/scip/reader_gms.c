@@ -814,7 +814,8 @@ SCIP_RETCODE printAndCons(
    int nactivevars;
    int activevarssize;
    SCIP_Real activeconstant = 0.0;
-   int v;
+   SCIP_Bool needsign;
+   int i, v;
 
    assert( scip != NULL );
    assert( strlen(rowname) > 0 );
@@ -856,11 +857,9 @@ SCIP_RETCODE printAndCons(
       }
       else
       {
-         SCIP_Bool needsign = FALSE;
-         int i;
-
          appendLine(scip, file, linebuffer, &linecnt, " (");
 
+         needsign = FALSE;
          if( activeconstant != 0.0 )
          {
             (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g", activeconstant);
@@ -902,11 +901,45 @@ SCIP_RETCODE printAndCons(
       appendLine(scip, file, linebuffer, &linecnt, "     ");
 
    /* print right hand side */
-   SCIP_CALL( printConformName(scip, name, GMS_MAX_NAMELEN, SCIPvarGetName(resultant)) );
-   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " =e= %s;", name);
+   appendLine(scip, file, linebuffer, &linecnt, " =e= ");
 
-   appendLine(scip, file, linebuffer, &linecnt, buffer);
+   activevars[0] = resultant;
+   activecoefs[0] = 1.0;
+   nactivevars = 1;
 
+   SCIP_CALL( getActiveVariables(scip, &activevars, &activecoefs, &nactivevars, &activevarssize, &activeconstant, transformed) );
+
+   needsign = FALSE;
+   if( activeconstant != 0.0 )
+   {
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g", activeconstant);
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
+      needsign = TRUE;
+   }
+
+   for( i = 0; i < nactivevars; ++i )
+   {
+      if( REALABS(activecoefs[i]) != 1.0 )
+      {
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, needsign ? "%+.15g*" : "%.15g*", activecoefs[i]);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
+      }
+      else if( activecoefs[i] == 1.0 && needsign )
+      {
+         appendLine(scip, file, linebuffer, &linecnt, "+");
+      }
+      else if( activecoefs[i] == -1.0 )
+      {
+         appendLine(scip, file, linebuffer, &linecnt, "-");
+      }
+
+      SCIP_CALL( printConformName(scip, name, GMS_MAX_NAMELEN, SCIPvarGetName(activevars[i])) );
+      appendLine(scip, file, linebuffer, &linecnt, name);
+
+      needsign = TRUE;
+   }
+
+   appendLine(scip, file, linebuffer, &linecnt, ";");
    endLine(scip, file, linebuffer, &linecnt);
 
    SCIPfreeBufferArray(scip, &activecoefs);
