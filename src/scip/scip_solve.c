@@ -478,9 +478,6 @@ SCIP_RETCODE initPresolve(
       scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
-
-      if( scip->set->misc_calcintegral )
-         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
    }
 
    /* GCG wants to perform presolving during the reading process of a file reader;
