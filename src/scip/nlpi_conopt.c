@@ -96,11 +96,11 @@ struct SCIP_NlpiProblem
    SCIP_Real             opttol;
 
    /* statistics */
-   int                   ncalls;
-   int                   nsuccess;
-   int                   nlocinfeas;
-   int                   nother;
-   int                   nlimit;
+   int                   ncalls;             /**< overall number of solver calls */
+   int                   nsuccess;           /**< number of successes (optimal or feasible solution found or proven unbounded) */
+   int                   nlocinfeas;         /**< number of calls resulting in local infeasibility */
+   int                   nother;             /**< number of other calls */
+   int                   nlimit;             /**< number of calls where the solver terminated due to a time or iteration limit */
 };
 
 
@@ -1073,6 +1073,11 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemConopt)
 
    SCIPfreeBlockMemory(scip, problem);
    *problem = NULL;
+
+#ifdef PRINT_NLPSTATS
+   SCIPinfoMessage(scip, NULL, "\nNLP solver CONOPT stats: ncalls = %d, nsuccess = %d, nlimit = %d, nlocinfeas = %d, nother = %d\n",
+      (*problem)->ncalls, (*problem)->nsuccess, (*problem)->nlimit, (*problem)->nlocinfeas, (*problem)->nother);
+#endif
 
    return SCIP_OKAY;
 }  /*lint !e715*/
