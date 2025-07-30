@@ -45,6 +45,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_message.h"
 #include "scip/type_clock.h"
+#include "scip/scip_general.h"
 
 #include "coiheader.h"
 #include "scip_message.h"
@@ -497,7 +498,6 @@ static int COI_CALLCONV Message(
    void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
 {
-   /* TODO how to handle status and documentation messages? */
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
 
    assert(problem != NULL);
@@ -810,7 +810,7 @@ static int COI_CALLCONV LagrVal(
       return 0;
    }
 
-   /* TODO better handling for isnew */
+   /* TODO better handling for isnew? */
    if( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, X, TRUE, TRUE, U[NUMCON-1], U, hessvals, TRUE)
          != SCIP_OKAY )
    {
@@ -826,51 +826,6 @@ static int COI_CALLCONV LagrVal(
 
    return 0;
 }
-
-#ifdef DISABLED_CODE
-/** CONOPT callback to provide interval information
- *
- *  The callback has three modes (indicated by the argument MODE):
- *    1: Only evaluate the bounds on the sum of the nonlinear terms in row ROWNO and return the interval in [GMIN, GMAX].
- *    2: Only evaluate the bounds on the nonlinear Jacobian elements in row ROWNO and return the intervals in [JMIN, JMAX].
- *    3: Perform both option 1 and 2. (Currently, MODE = 3 is not used).
- *
- *  TODO this is work in progress
- */
-static int COI_CALLCONV FDInterval(
-   const double*         XMIN,               /**< vector of lower bounds on variables (provided by CONOPT) */
-   const double*         XMAX,               /**< vector of upper bounds on variables (provided by CONOPT) */
-   double*               GMIN,               /**< pointer to store a lower bound on the function value in constraint ROWNO if MODE = 1 or 3 */
-   double*               GMAX,               /**< pointer to store an upper bound on the function value in constraint ROWNO if MODE = 1 or 3 */
-   double*               JMIN,               /**< if MODE = 2 or 3, lower bound on the derivative of row ROWNO with respect to variable I may be returned in JMIN(I) */
-   double*               JAMX,               /**< if MODE = 2 or 3, upper bound on the derivative of row ROWNO with respect to variable I may be returned in JMIN(I) */
-   int                   ROWNO,              /**< number of the current (nonlinear) constraint (provided by CONOPT) */
-   const int*            JCNM,               /**< list of column numbers of nonlinear nonzeroes of the Jacobian in the current row, only defined when MODE = 2 or 3 */
-   int                   MODE,               /**< indicator for mode of evaluation (provided by CONOPT) */
-   double                PINF,               /**< CONOPT's plus infinity (provided by CONOPT) */
-   int                   N,                  /**< number of variables in the model (provided by CONOPT) */
-   int                   NJ,                 /**< number of nonlinear nonzeroes in the Jacobian in current row, only defined when MODE = 2 or 3 */
-   void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
-   )
-{
-   SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
-   SCIP_NLPIORACLE* oracle;
-
-   assert(problem != NULL);
-
-   oracle = problem->oracle;
-   assert(oracle != NULL);
-
-
-
-   if( MODE == 1 )
-   { /* evaluate the bounds on the sum of the nonlinear terms in row ROWNO and return the interval in [GMIN, GMAX] */
-
-   }
-
-   return 0;
-}
-#endif
 
 /* NLPI local methods */
 
@@ -937,10 +892,6 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_NumVar(problem->CntVect, nvars + nrangeconss);
    COI_Error += COIDEF_NumCon(problem->CntVect, nconss + 1); /* objective counts as another constraint here */
 
-   // printf("\nInitialising conopt for problem:\n");
-   // SCIPnlpiOraclePrintProblem(scip, problem->oracle, NULL);
-   // printf("\n");
-
    /* jacobian information */
    SCIP_CALL( SCIPnlpiOracleGetJacobianColSparsity(scip, problem->oracle, &jacoffsets, NULL, NULL, &nnlnz) );
    SCIP_CALL( SCIPnlpiOracleGetObjGradientNnz(scip, problem->oracle, &objgradnz, &objnl, &nobjgradnz, &nobjgradnls) );
@@ -973,7 +924,6 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_Option(problem->CntVect, &Option);
    COI_Error += COIDEF_2DLagrStr(problem->CntVect, &LagrStr);
    COI_Error += COIDEF_2DLagrVal(problem->CntVect, &LagrVal);
-   /* TODO complete and add the interval callback */
 
    COI_Error += COIDEF_FVincLin(problem->CntVect, 1);
 
@@ -981,7 +931,6 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_UsrMem(problem->CntVect, (void*)problem);
 
    /* register license */
-   /* TODO make sure the license error gets printed by CONOPT if no valid license (even with reduced output) */
 #if defined(LICENSE_INT_1) && defined(LICENSE_INT_2) && defined(LICENSE_INT_3) && defined(LICENSE_TEXT)
    COI_Error += COIDEF_License(problem->CntVect, LICENSE_INT_1, LICENSE_INT_2, LICENSE_INT_3, LICENSE_TEXT);
 #endif
@@ -1021,8 +970,6 @@ static void handleConoptParam(
    /* options that need to be handled in callbacks */
    problem->verblevel = param.verblevel;
    problem->opttol = param.opttol;
-
-   /* TODO enable memory limits in NLPIs? */
 
    if( COI_Error )
       SCIPinfoMessage(problem->scip, NULL, "Errors encountered during setting parameters, %d\n", COI_Error);
@@ -1123,9 +1070,6 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemConopt)
    SCIPfreeMemoryArrayNull(scip, &(*problem)->initguess);
 
    coiFree(&((*problem)->CntVect));
-
-   printf("\nNLP solver CONOPT stats: ncalls = %d, nsuccess = %d, nlimit = %d, nlocinfeas = %d, nother = %d\n",
-         (*problem)->ncalls, (*problem)->nsuccess, (*problem)->nlimit, (*problem)->nlocinfeas, (*problem)->nother);
 
    SCIPfreeBlockMemory(scip, problem);
    *problem = NULL;
@@ -1482,6 +1426,8 @@ SCIP_RETCODE SCIPincludeNlpSolverConopt(
          nlpiGetSolstatConopt, nlpiGetTermstatConopt, nlpiGetSolutionConopt, nlpiGetStatisticsConopt,
          nlpidata) );
 
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameConopt(), SCIPgetSolverDescConopt()) );
+
    return SCIP_OKAY;
 }
 
@@ -1495,14 +1441,12 @@ const char* SCIPgetSolverNameConopt(
    return "CONOPT";
 }
 
-/** gets string that describes CONOPT (version number)
- *  TODO: write a proper description
- */
+/** gets string that describes CONOPT (version number) */
 const char* SCIPgetSolverDescConopt(
    void
    )
 {
-   return "This is CONOPT";
+   return "Feasible path solver for large-scale nonlinear problems";
 }
 
 /** returns whether CONOPT is available, i.e., whether it has been linked in */
