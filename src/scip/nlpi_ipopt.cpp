@@ -199,11 +199,11 @@ public:
    int                         lastniter;    /**< number of iterations in last run */
    SCIP_Real                   lasttime;     /**< time spend in last run */
 
-   int                   ncalls;
-   int                   nsuccess;
-   int                   nlocinfeas;
-   int                   nother;
-   int                   nlimit;
+   int                         ncalls;       /**< overall number of solver calls */
+   int                         nsuccess;     /**< number of successes (optimal or feasible solution found or proven unbounded) */
+   int                         nlocinfeas;   /**< number of calls resulting in local infeasibility */
+   int                         nother;       /**< number of other calls */
+   int                         nlimit;       /**< number of calls where the solver terminated due to a time or iteration limit */
 
    /** constructor */
    SCIP_NlpiProblem()
@@ -213,7 +213,7 @@ public:
         solprimalvalid(false), solprimalgiven(false), soldualvalid(false), soldualgiven(false),
         solprimals(NULL), soldualcons(NULL), soldualvarlb(NULL), soldualvarub(NULL),
         solobjval(SCIP_INVALID), solconsviol(SCIP_INVALID), solboundviol(SCIP_INVALID),
-        lastniter(-1), lasttime(-1.0), ncalls(0), nsuccess(0), nlocinfeas(0), nother(0)
+        lastniter(-1), lasttime(-1.0), ncalls(0), nsuccess(0), nlocinfeas(0), nother(0), nlimit(0)
    { }
 };
 
@@ -1064,8 +1064,10 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
       SCIPfreeRandom(scip, &(*problem)->randnumgen);
    }
 
-   printf("\nNLP solver IPOPT stats: ncalls = %d, nsuccess = %d, nlimit = %d, nlocinfeas = %d, nother = %d\n",
-      (*problem)->ncalls, (*problem)->nsuccess, (*problem)->nlimit, (*problem)->nlocinfeas, (*problem)->nother);
+#ifdef PRINT_NLPSTATS
+   SCIPinfoMessage(scip, NULL, "\nNLP solver IPOPT stats: ncalls = %d, nsuccess = %d, nlimit = %d, nlocinfeas = %d, nother = %d\n",
+         (*problem)->ncalls, (*problem)->nsuccess, (*problem)->nlimit, (*problem)->nlocinfeas, (*problem)->nother);
+#endif
 
    delete *problem;
    *problem = NULL;
