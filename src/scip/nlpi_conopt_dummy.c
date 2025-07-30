@@ -43,13 +43,13 @@ SCIP_RETCODE SCIPincludeNlpSolverConopt(
    return SCIP_OKAY;
 }
 
-/** gets string that identifies CONOPT (version number) */
+/** gets string that identifies CONOPT */
 const char* SCIPgetSolverNameConopt(void)
 {
    return "CONOPT";
 }
 
-/** gets string that describes CONOPT (version number) */
+/** gets string that describes CONOPT */
 const char* SCIPgetSolverDescConopt(void)
 {
    return "this is CONOPT";
