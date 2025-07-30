@@ -398,8 +398,7 @@ do
             # we add 10% to the hard memory limit and additional 100MB to the memory limit
             HARDMEMLIMIT=$(((MEMLIMIT + 100) + (MEMLIMIT / 10)))
 
-        # hard timelimit could be set via --time=0:${HARDTIMELIMIT}
-        sbatchret=$(sbatch --job-name="${SHORTFILENAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" --constraint="${CONSTRAINT}" -A "${ACCOUNT}" ${EXCLUSIVE} ${NICE} --output=/dev/null rungamscluster.sh)
+        sbatchret=$(sbatch --job-name="${SHORTFILENAME}" --mem="${HARDMEMLIMIT}" --time="0:${HARDTIMELIMIT}" -p "${CLUSTERQUEUE}" --constraint="${CONSTRAINT}" -A "${ACCOUNT}" ${EXCLUSIVE} ${NICE} --output=/dev/null rungamscluster.sh)
         echo "${sbatchret}"
         FINISHDEPEND="${FINISHDEPEND}":$(echo "${sbatchret}" | cut -d " " -f 4)
         ;;
