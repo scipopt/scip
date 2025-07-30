@@ -22,9 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* This is a TEMPLATE for a NLPI. Use this as starting point to implement your own NLPI.
- * Copy the file, rename it, and replace all occurences of XYZ by the name of your NLP solver.
- */
+/* NLP interface for the CONOPT solver. */
 
 /**@file    nlpi_conopt.h
  * @brief   CONOPT NLP interface
@@ -56,13 +54,13 @@ SCIP_RETCODE SCIPincludeNlpSolverConopt(
  * @{
  */
 
- /** gets string that identifies CONOPT (version number) */
+ /** gets string that identifies CONOPT */
 SCIP_EXPORT
 const char* SCIPgetSolverNameConopt(
    void
    );
 
-/** gets string that describes Conopt (version number) */
+/** gets string that describes Conopt */
 SCIP_EXPORT
 const char* SCIPgetSolverDescConopt(
    void
