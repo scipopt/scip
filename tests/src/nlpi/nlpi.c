@@ -161,6 +161,10 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    linvals[1] = 1;
    SCIP_CALL( SCIPaddNlpiConstraints(scip, nlpi, nlpiprob, 1, &lhss[2], &rhss[2], &nlinds, &lininds, &linvals, NULL, &consnames[2]) );
 
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, 1) );
+#endif
+
    /* set a starting point close to solution to improve likelihood to converge to expected solution on this nonconvex NLP */
    SCIP_CALL( SCIPsetNlpiInitialGuess(scip, nlpi, nlpiprob, start, NULL, NULL, NULL) );
 
@@ -458,6 +462,13 @@ Test(nlpi, solveQP, .init = setup, .fini = teardown,
          ipoptsolstat == SCIP_NLPSOLSTAT_LOCOPT && worhpsqpsolstat == SCIP_NLPSOLSTAT_LOCOPT )
       {
          cr_assert(SCIPisFeasLE(scip, worhpsqpval, ipoptval));
+      }
+
+      /* compare the solution values of CONOPT and Ipopt */
+      if( ipopt != NULL && conopt != NULL &&
+         ipoptsolstat == SCIP_NLPSOLSTAT_LOCOPT && conoptsolstat == SCIP_NLPSOLSTAT_LOCOPT )
+      {
+         cr_assert(SCIPisFeasLE(scip, conoptval, ipoptval));
       }
    }
 }
