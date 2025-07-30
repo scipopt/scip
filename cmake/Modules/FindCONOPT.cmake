@@ -1,7 +1,7 @@
 find_path(CONOPT_INCLUDE_DIRS
-    NAMES conopt.f90
+    NAMES coidef.f90
     HINTS ${CONOPT_DIR} $ENV{CONOPT_DIR}
-    PATH_SUFFIXES src)
+    PATH_SUFFIXES include)
 
 find_library(CONOPT_LIBRARY
     NAMES conopt4
