@@ -2731,9 +2731,6 @@ SCIP_DECL_HEUREXIT(heurExitDualval)
    assert(heurdata->varsubsciptoscip == NULL);
    assert(heurdata->varsciptosubscip == NULL);
 
-   if( heurdata->isnlp )
-      printf("\nNLP heuristic dualval: ncalls = %lld, nsolsfound = %lld\n", SCIPheurGetNCalls(heur), SCIPheurGetNSolsFound(heur));
-
    return SCIP_OKAY;
 }
 

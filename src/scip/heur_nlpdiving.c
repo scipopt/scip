@@ -1606,8 +1606,6 @@ SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
       }
       );
 
-   printf("\nNLP heuristic nlpdiving: ncalls = %lld, nsolsfound = %lld\n", SCIPheurGetNCalls(heur), SCIPheurGetNSolsFound(heur));
-
    return SCIP_OKAY;
 }
 

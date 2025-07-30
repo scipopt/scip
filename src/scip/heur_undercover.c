@@ -2886,6 +2886,8 @@ SCIP_DECL_HEUREXIT(heurExitUndercover)
    /* free random number generator */
    SCIPfreeRandom(scip, &heurdata->randnumgen);
 
+   printf("\nNLP heuristic undercover: ncalls = %lld, nsolsfound = %lld\n", SCIPheurGetNCalls(heur), SCIPheurGetNSolsFound(heur));
+
    return SCIP_OKAY;
 }
 

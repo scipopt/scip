@@ -1533,8 +1533,6 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
 
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
-   printf("\nNLP heuristic subnlp: ncalls = %lld, nsolsfound = %lld\n", SCIPheurGetNCalls(heur), SCIPheurGetNSolsFound(heur));
-
    return SCIP_OKAY;
 }
 
