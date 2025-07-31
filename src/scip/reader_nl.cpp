@@ -1785,7 +1785,7 @@ private:
       {
          SCIP_VAR* var = (i < nactivevars ? activevars[i] : fixedvars[i-nactivevars]);
          SCIP_Bool isdiscrete;
-         SCIP_Bool isnonlinear;
+         SCIP_Bool isnonlinear = FALSE;
 
          if( SCIPvarGetObj(var) != 0.0 )
             ++nlheader.num_obj_nonzeros;
@@ -1795,8 +1795,15 @@ private:
          /* we think of a variable as nonlinear if cons_nonlinear has a SCIP_EXPR* for this variable
           * this is usually an overestimation, since also variables that appear only linearly in nonlinear constraints
           * are regarded as nonlinear this way
+          * we also consider variables as nonlinear when only its negation appears in a nonlinear constraint,
+          * since we will write out the negation of var as 1-var into the nl file
           */
-         isnonlinear = var2expr != NULL && SCIPhashmapExists(var2expr, (void*)var);
+         if( var2expr != NULL )
+         {
+            isnonlinear = SCIPhashmapExists(var2expr, (void*)var);
+            if( !isnonlinear && SCIPvarGetNegatedVar(var) != NULL )
+               isnonlinear = SCIPhashmapExists(var2expr, (void*)SCIPvarGetNegatedVar(var));
+         }
 
          /* this is how Pyomo counts vars (nlvars_* = nlvb,c,o) when writing NL
           * https://github.com/Pyomo/pyomo/blob/main/pyomo/repn/plugins/ampl/ampl_.py#L1202
@@ -1934,7 +1941,7 @@ private:
          }
          else
          {
-            /* negated variables in may not show up in fixedvars
+            /* negated variables may not show up in fixedvars
              * so we instead replace the negation when providing the coefficients of the linear constraint
              * this means additional constants to subtract from lhs/rhs
              */
@@ -2518,9 +2525,17 @@ public:
 
                if( SCIPisExprVar(scip, expr) )
                {
-                  // TODO handle negated
                   SCIP_VAR* var = SCIPgetVarExprVar(expr);
-                  parentew->VPut(getVarAMPLIndex(var), SCIPvarGetName(var));
+                  if( SCIPvarIsNegated(var) )
+                  {
+                     ConExprWriter ew(parentew->OPut2(mp::nl::SUB));
+                     ew.NPut(SCIPvarGetNegationConstant(var));
+                     ew.VPut(getVarAMPLIndex(SCIPvarGetNegatedVar(var)), SCIPvarGetName(SCIPvarGetNegatedVar(var)));
+                  }
+                  else
+                  {
+                     parentew->VPut(getVarAMPLIndex(var), SCIPvarGetName(var));
+                  }
                }
                else if( SCIPisExprValue(scip, expr) )
                {
