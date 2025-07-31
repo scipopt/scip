@@ -2950,7 +2950,7 @@ SCIP_DECL_READERWRITE(readerWriteNl)
       }
 
       while( (n=fread(buf, 1, sizeof(buf), tempfile)) != 0 )
-         fwrite(buf, 1, n, file);
+         fwrite(buf, 1, n, file != NULL ? file : stdout);
 
       fclose(tempfile);
       remove(tempname2);
