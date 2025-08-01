@@ -1122,21 +1122,41 @@ void consdataRecomputeMinactivity(
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
 {
-   int i;
-   SCIP_Real bound;
    SCIP_ROUNDMODE prevmode;
+   SCIP_Real contribution;
+   int i;
 
-   consdata->minactivity = 0;
-
+   consdata->minactivity = 0.0;
    prevmode = SCIPintervalGetRoundingMode();
    SCIPintervalSetRoundingModeDownwards();
 
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
-      bound = (consdata->valsreal[i].inf > 0.0 ) ? SCIPvarGetLbLocal(consdata->vars[i]) : SCIPvarGetUbLocal(consdata->vars[i]);
-      if( !SCIPisInfinity(scip, bound) && !SCIPisInfinity(scip, -bound)
-         && !SCIPisHugeValue(scip, consdata->valsreal[i].inf * bound) && !SCIPisHugeValue(scip, -consdata->valsreal[i].inf * bound) )
-         consdata->minactivity += consdata->valsreal[i].inf * bound;
+      if( consdata->valsreal[i].sup < 0.0 )
+      {
+         assert(consdata->valsreal[i].inf <= 0.0);
+
+         contribution = SCIPvarGetUbLocal(consdata->vars[i]);
+
+         if( SCIPisInfinity(scip, contribution) )
+            continue;
+      }
+      else
+      {
+         assert(consdata->valsreal[i].inf >= 0.0);
+
+         contribution = SCIPvarGetLbLocal(consdata->vars[i]);
+
+         if( SCIPisInfinity(scip, -contribution) )
+            continue;
+      }
+
+      contribution *= contribution < 0.0 ? consdata->valsreal[i].sup : consdata->valsreal[i].inf;
+
+      if( SCIPisHugeValue(scip, REALABS(contribution)) )
+         continue;
+
+      consdata->minactivity += contribution;
    }
 
    /* the activity was just computed from scratch and is valid now */
@@ -1154,9 +1174,9 @@ void consdataRecomputeMaxactivity(
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
 {
-   int i;
-   SCIP_Real bound;
    SCIP_ROUNDMODE prevmode;
+   SCIP_Real contribution;
+   int i;
 
    consdata->maxactivity = 0.0;
    prevmode = SCIPintervalGetRoundingMode();
@@ -1164,10 +1184,31 @@ void consdataRecomputeMaxactivity(
 
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
-      bound = (consdata->valsreal[i].sup > 0.0 ) ? SCIPvarGetUbLocal(consdata->vars[i]) : SCIPvarGetLbLocal(consdata->vars[i]);
-      if( !SCIPisInfinity(scip, bound) && !SCIPisInfinity(scip, -bound)
-         && !SCIPisHugeValue(scip, consdata->valsreal[i].sup * bound) && !SCIPisHugeValue(scip, -consdata->valsreal[i].sup * bound) )
-         consdata->maxactivity += consdata->valsreal[i].sup * bound;
+      if( consdata->valsreal[i].sup < 0.0 )
+      {
+         assert(consdata->valsreal[i].inf <= 0.0);
+
+         contribution = SCIPvarGetLbLocal(consdata->vars[i]);
+
+         if( SCIPisInfinity(scip, -contribution) )
+            continue;
+      }
+      else
+      {
+         assert(consdata->valsreal[i].inf >= 0.0);
+
+         contribution = SCIPvarGetUbLocal(consdata->vars[i]);
+
+         if( SCIPisInfinity(scip, contribution) )
+            continue;
+      }
+
+      contribution *= contribution < 0.0 ? consdata->valsreal[i].inf : consdata->valsreal[i].sup;
+
+      if( SCIPisHugeValue(scip, REALABS(contribution)) )
+         continue;
+
+      consdata->maxactivity += contribution;
    }
 
    /* the activity was just computed from scratch and is valid now */
@@ -1186,22 +1227,41 @@ void consdataRecomputeGlbMinactivity(
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
 {
-   int i;
-   SCIP_Real bound;
    SCIP_ROUNDMODE prevmode;
+   SCIP_Real contribution;
+   int i;
 
+   consdata->glbminactivity = 0.0;
    prevmode = SCIPintervalGetRoundingMode();
    SCIPintervalSetRoundingModeDownwards();
 
-   consdata->glbminactivity = 0;
-
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
-      assert(consdata->vars[i] == consdata->vars[i]);
-      bound = (consdata->valsreal[i].inf > 0.0 ) ? SCIPvarGetLbGlobal(consdata->vars[i]) : SCIPvarGetUbGlobal(consdata->vars[i]);
-      if( !SCIPisInfinity(scip, bound) && !SCIPisInfinity(scip, -bound)
-         && !SCIPisHugeValue(scip, consdata->valsreal[i].inf * bound) && !SCIPisHugeValue(scip, -consdata->valsreal[i].inf * bound) )
-         consdata->glbminactivity += consdata->valsreal[i].inf * bound;
+      if( consdata->valsreal[i].sup < 0.0 )
+      {
+         assert(consdata->valsreal[i].inf <= 0.0);
+
+         contribution = SCIPvarGetUbGlobal(consdata->vars[i]);
+
+         if( SCIPisInfinity(scip, contribution) )
+            continue;
+      }
+      else
+      {
+         assert(consdata->valsreal[i].inf >= 0.0);
+
+         contribution = SCIPvarGetLbGlobal(consdata->vars[i]);
+
+         if( SCIPisInfinity(scip, -contribution) )
+            continue;
+      }
+
+      contribution *= contribution < 0.0 ? consdata->valsreal[i].sup : consdata->valsreal[i].inf;
+
+      if( SCIPisHugeValue(scip, REALABS(contribution)) )
+         continue;
+
+      consdata->glbminactivity += contribution;
    }
 
    /* the activity was just computed from scratch and is valid now */
@@ -1220,20 +1280,41 @@ void consdataRecomputeGlbMaxactivity(
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
 {
-   int i;
-   SCIP_Real bound;
    SCIP_ROUNDMODE prevmode;
+   SCIP_Real contribution;
+   int i;
 
+   consdata->glbmaxactivity = 0.0;
    prevmode = SCIPintervalGetRoundingMode();
    SCIPintervalSetRoundingModeUpwards();
 
-   consdata->glbmaxactivity = 0.0;
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
-      bound = (consdata->valsreal[i].sup > 0.0 ) ? SCIPvarGetUbGlobal(consdata->vars[i]) : SCIPvarGetLbGlobal(consdata->vars[i]);
-      if( !SCIPisInfinity(scip, bound) && !SCIPisInfinity(scip, -bound)
-         && !SCIPisHugeValue(scip, consdata->valsreal[i].sup * bound) && !SCIPisHugeValue(scip, -consdata->valsreal[i].sup * bound) )
-         consdata->glbmaxactivity += consdata->valsreal[i].sup * bound;
+      if( consdata->valsreal[i].sup < 0.0 )
+      {
+         assert(consdata->valsreal[i].inf <= 0.0);
+
+         contribution = SCIPvarGetLbGlobal(consdata->vars[i]);
+
+         if( SCIPisInfinity(scip, -contribution) )
+            continue;
+      }
+      else
+      {
+         assert(consdata->valsreal[i].inf >= 0.0);
+
+         contribution = SCIPvarGetUbGlobal(consdata->vars[i]);
+
+         if( SCIPisInfinity(scip, contribution) )
+            continue;
+      }
+
+      contribution *= contribution < 0.0 ? consdata->valsreal[i].inf : consdata->valsreal[i].sup;
+
+      if( SCIPisHugeValue(scip, REALABS(contribution)) )
+         continue;
+
+      consdata->glbmaxactivity += contribution;
    }
 
    /* the activity was just computed from scratch and is valid now */
@@ -1437,7 +1518,8 @@ void consdataUpdateActivities(
    SCIP_Bool validact;
    SCIP_Bool finitenewbound;
    SCIP_Bool hugevalnewcont;
-   SCIP_Real val;
+   SCIP_Real oldval;
+   SCIP_Real newval;
    SCIP_ROUNDMODE prevmode;
 
    prevmode = SCIPintervalGetRoundingMode();
@@ -1484,20 +1566,10 @@ void consdataUpdateActivities(
        */
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
-         if( valrange.sup > 0.0 )
+         if( valrange.sup < 0.0 )
          {
-            activity = &(consdata->glbminactivity);
-            lastactivity = &(consdata->lastglbminactivity);
-            activityposinf = &(consdata->glbminactivityposinf);
-            activityneginf = &(consdata->glbminactivityneginf);
-            activityposhuge = &(consdata->glbminactivityposhuge);
-            activityneghuge = &(consdata->glbminactivityneghuge);
-            validact = consdata->validglbminact;
-            SCIPintervalSetRoundingModeDownwards();
-            val = valrange.inf;
-         }
-         else
-         {
+            assert(valrange.inf <= 0.0);
+
             activity = &(consdata->glbmaxactivity);
             lastactivity = &(consdata->lastglbmaxactivity);
             activityposinf = &(consdata->glbmaxactivityneginf);
@@ -1506,25 +1578,31 @@ void consdataUpdateActivities(
             activityneghuge = &(consdata->glbmaxactivityneghuge);
             validact = consdata->validglbmaxact;
             SCIPintervalSetRoundingModeUpwards();
-            val = valrange.sup;
+            oldval = oldbound < 0.0 ? valrange.inf : valrange.sup;
+            newval = newbound < 0.0 ? valrange.inf : valrange.sup;
+         }
+         else
+         {
+            assert(valrange.inf >= 0.0);
+
+            activity = &(consdata->glbminactivity);
+            lastactivity = &(consdata->lastglbminactivity);
+            activityposinf = &(consdata->glbminactivityposinf);
+            activityneginf = &(consdata->glbminactivityneginf);
+            activityposhuge = &(consdata->glbminactivityposhuge);
+            activityneghuge = &(consdata->glbminactivityneghuge);
+            validact = consdata->validglbminact;
+            SCIPintervalSetRoundingModeDownwards();
+            oldval = oldbound < 0.0 ? valrange.sup : valrange.inf;
+            newval = newbound < 0.0 ? valrange.sup : valrange.inf;
          }
       }
       else
       {
-         if( valrange.sup > 0.0 )
+         if( valrange.sup < 0.0 )
          {
-            activity = &(consdata->glbmaxactivity);
-            lastactivity = &(consdata->lastglbmaxactivity);
-            activityposinf = &(consdata->glbmaxactivityposinf);
-            activityneginf = &(consdata->glbmaxactivityneginf);
-            activityposhuge = &(consdata->glbmaxactivityposhuge);
-            activityneghuge = &(consdata->glbmaxactivityneghuge);
-            validact = consdata->validglbmaxact;
-            SCIPintervalSetRoundingModeUpwards();
-            val = valrange.sup;
-         }
-         else
-         {
+            assert(valrange.inf <= 0.0);
+
             activity = &(consdata->glbminactivity);
             lastactivity = &(consdata->lastglbminactivity);
             activityposinf = &(consdata->glbminactivityneginf);
@@ -1533,7 +1611,23 @@ void consdataUpdateActivities(
             activityneghuge = &(consdata->glbminactivityneghuge);
             validact = consdata->validglbminact;
             SCIPintervalSetRoundingModeDownwards();
-            val = valrange.inf;
+            oldval = oldbound < 0.0 ? valrange.sup : valrange.inf;
+            newval = newbound < 0.0 ? valrange.sup : valrange.inf;
+         }
+         else
+         {
+            assert(valrange.inf >= 0.0);
+
+            activity = &(consdata->glbmaxactivity);
+            lastactivity = &(consdata->lastglbmaxactivity);
+            activityposinf = &(consdata->glbmaxactivityposinf);
+            activityneginf = &(consdata->glbmaxactivityneginf);
+            activityposhuge = &(consdata->glbmaxactivityposhuge);
+            activityneghuge = &(consdata->glbmaxactivityneghuge);
+            validact = consdata->validglbmaxact;
+            SCIPintervalSetRoundingModeUpwards();
+            oldval = oldbound < 0.0 ? valrange.inf : valrange.sup;
+            newval = newbound < 0.0 ? valrange.inf : valrange.sup;
          }
       }
    }
@@ -1548,20 +1642,10 @@ void consdataUpdateActivities(
        */
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
-         if( valrange.sup > 0.0 )
+         if( valrange.sup < 0.0 )
          {
-            activity = &(consdata->minactivity);
-            lastactivity = &(consdata->lastminactivity);
-            activityposinf = &(consdata->minactivityposinf);
-            activityneginf = &(consdata->minactivityneginf);
-            activityposhuge = &(consdata->minactivityposhuge);
-            activityneghuge = &(consdata->minactivityneghuge);
-            validact = consdata->validminact;
-            SCIPintervalSetRoundingModeDownwards();
-            val = valrange.inf;
-         }
-         else
-         {
+            assert(valrange.inf <= 0.0);
+
             activity = &(consdata->maxactivity);
             lastactivity = &(consdata->lastmaxactivity);
             activityposinf = &(consdata->maxactivityneginf);
@@ -1570,25 +1654,31 @@ void consdataUpdateActivities(
             activityneghuge = &(consdata->maxactivityneghuge);
             validact = consdata->validmaxact;
             SCIPintervalSetRoundingModeUpwards();
-            val = valrange.sup;
+            oldval = oldbound < 0.0 ? valrange.inf : valrange.sup;
+            newval = newbound < 0.0 ? valrange.inf : valrange.sup;
+         }
+         else
+         {
+            assert(valrange.inf >= 0.0);
+
+            activity = &(consdata->minactivity);
+            lastactivity = &(consdata->lastminactivity);
+            activityposinf = &(consdata->minactivityposinf);
+            activityneginf = &(consdata->minactivityneginf);
+            activityposhuge = &(consdata->minactivityposhuge);
+            activityneghuge = &(consdata->minactivityneghuge);
+            validact = consdata->validminact;
+            SCIPintervalSetRoundingModeDownwards();
+            oldval = oldbound < 0.0 ? valrange.sup : valrange.inf;
+            newval = newbound < 0.0 ? valrange.sup : valrange.inf;
          }
       }
       else
       {
-         if( valrange.sup > 0.0 )
+         if( valrange.sup < 0.0 )
          {
-            activity = &(consdata->maxactivity);
-            lastactivity = &(consdata->lastmaxactivity);
-            activityposinf = &(consdata->maxactivityposinf);
-            activityneginf = &(consdata->maxactivityneginf);
-            activityposhuge = &(consdata->maxactivityposhuge);
-            activityneghuge = &(consdata->maxactivityneghuge);
-            validact = consdata->validmaxact;
-            SCIPintervalSetRoundingModeUpwards();
-            val = valrange.sup;
-         }
-         else
-         {
+            assert(valrange.inf <= 0.0);
+
             activity = &(consdata->minactivity);
             lastactivity = &(consdata->lastminactivity);
             activityposinf = &(consdata->minactivityneginf);
@@ -1597,13 +1687,29 @@ void consdataUpdateActivities(
             activityneghuge = &(consdata->minactivityneghuge);
             validact = consdata->validminact;
             SCIPintervalSetRoundingModeDownwards();
-            val = valrange.inf;
+            oldval = oldbound < 0.0 ? valrange.sup : valrange.inf;
+            newval = newbound < 0.0 ? valrange.sup : valrange.inf;
+         }
+         else
+         {
+            assert(valrange.inf >= 0.0);
+
+            activity = &(consdata->maxactivity);
+            lastactivity = &(consdata->lastmaxactivity);
+            activityposinf = &(consdata->maxactivityposinf);
+            activityneginf = &(consdata->maxactivityneginf);
+            activityposhuge = &(consdata->maxactivityposhuge);
+            activityneghuge = &(consdata->maxactivityneghuge);
+            validact = consdata->validmaxact;
+            SCIPintervalSetRoundingModeUpwards();
+            oldval = oldbound < 0.0 ? valrange.inf : valrange.sup;
+            newval = newbound < 0.0 ? valrange.inf : valrange.sup;
          }
       }
    }
 
-   oldcontribution = SCIPintervalNegateReal(val) * oldbound;
-   newcontribution = val * newbound;
+   oldcontribution = SCIPintervalNegateReal(oldval) * oldbound;
+   newcontribution = newval * newbound;
    hugevalnewcont = SCIPisHugeValue(scip, REALABS(newcontribution));
    finitenewbound = !SCIPisInfinity(scip, REALABS(newbound));
 
@@ -2653,17 +2759,21 @@ void consdataGetActivityResiduals(
    assert(consdata->maxactivityneghuge >= 0);
    assert(consdata->maxactivityposhuge >= 0);
 
-   if( val.sup > 0.0 )
+   if( val.sup < 0.0 )
    {
-      minactbound = SCIPvarGetLbLocal(var);
-      maxactbound = SCIPvarGetUbLocal(var);
-      absval = val.sup;
-   }
-   else
-   {
+      assert(val.inf <= 0.0);
+
       minactbound = -SCIPvarGetUbLocal(var);
       maxactbound = -SCIPvarGetLbLocal(var);
       absval = -val.inf;
+   }
+   else
+   {
+      assert(val.inf >= 0.0);
+
+      minactbound = SCIPvarGetLbLocal(var);
+      maxactbound = SCIPvarGetUbLocal(var);
+      absval = val.sup;
    }
 
    /* get/compute minactivity by calling getMinActivity() with updated counters for infinite and huge values
@@ -5046,30 +5156,32 @@ SCIP_RETCODE propagateCons(
          consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax,
             &isminsettoinfinity, &ismaxsettoinfinity);
 
-         if( minactivity > consdata->rhsreal )
-         {
-            SCIPrationalDebugMessage("linear constraint <%s> is infeasible (rhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
-            SCIP_CALL( printActivityConflictToCertificate(scip, cons, consdata, TRUE) );
-
-            /**@todo analyze conflict detected in exactlinear constraint handler */
-            SCIP_CALL( SCIPresetConsAge(scip, cons) );
-            *cutoff = TRUE;
-         }
-         else if( maxactivity < consdata->lhsreal )
+         if( SCIPrationalIsGTReal(consdata->lhs, maxactivity) )
          {
             SCIPrationalDebugMessage("linear constraint <%s> is infeasible (lhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhsreal, consdata->rhsreal);
+                  SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+
             SCIP_CALL( printActivityConflictToCertificate(scip, cons, consdata, FALSE) );
 
             /**@todo analyze conflict detected in exactlinear constraint handler */
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
          }
-         else if( minactivity >= consdata->lhsreal && maxactivity <= consdata->rhsreal )
+         else if( SCIPrationalIsLTReal(consdata->rhs, minactivity) )
          {
-            SCIPdebugMsg(scip, "linear constraint <%s> is redundant: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
-               SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhsreal, consdata->rhsreal);
+            SCIPrationalDebugMessage("linear constraint <%s> is infeasible (rhs): activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
+                  SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
+
+            SCIP_CALL( printActivityConflictToCertificate(scip, cons, consdata, TRUE) );
+
+            /**@todo analyze conflict detected in exactlinear constraint handler */
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+            *cutoff = TRUE;
+         }
+         else if( SCIPrationalIsLEReal(consdata->lhs, minactivity) && SCIPrationalIsGEReal(consdata->rhs, maxactivity) )
+         {
+            SCIPrationalDebugMessage("linear constraint <%s> is redundant: activitybounds=[%.15g,%.15g], sides=[%q,%q]\n",
+                  SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
 
             /* remove the constraint locally unless it has become empty, in which case it is removed globally */
             if( consdata->nvars > 0 )
