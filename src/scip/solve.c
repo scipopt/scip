@@ -4432,7 +4432,7 @@ SCIP_RETCODE solveNode(
     * - don't solve the node if its cut off by the pseudo objective value anyway
     */
    focusnodehaslp = (set->lp_solvedepth == -1 || actdepth <= set->lp_solvedepth);
-   focusnodehaslp = focusnodehaslp && (set->lp_minsolvedepth == -1 || actdepth >= set->lp_minsolvedepth);
+   focusnodehaslp = focusnodehaslp && (actdepth >= set->lp_minsolvedepth);
    focusnodehaslp = focusnodehaslp && (set->lp_solvefreq >= 1 && actdepth % set->lp_solvefreq == 0);
    focusnodehaslp = focusnodehaslp || (actdepth == 0 && set->lp_solvefreq == 0);
    focusnodehaslp = focusnodehaslp && SCIPsetIsLT(set, SCIPlpGetPseudoObjval(lp, set, transprob), primal->cutoffbound);
