@@ -570,8 +570,6 @@ SCIP_RETCODE writeProblem(
 
    if( filename != NULL && filename[0] != '\0' )
    {
-      int success;
-
       file = fopen(filename, "w");
       if( file == NULL )
       {
@@ -603,28 +601,22 @@ SCIP_RETCODE writeProblem(
       {
          SCIPmessagePrintWarning(scip->messagehdlr, "filename <%s> has no file extension, select default <cip> format for writing\n", filename);
       }
+   }
 
-      if( transformed )
-         retcode = SCIPprintTransProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
-      else
-         retcode = SCIPprintOrigProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
+   retcode = printProblem(scip, transformed ? scip->transprob : scip->origprob, file, filename, extension != NULL ? extension : fileextension, genericnames);
+
+   if( tmpfilename != NULL )
+   {
+      assert(filename != NULL);
+      assert(file != NULL);
 
       BMSfreeMemoryArray(&tmpfilename);
 
-      success = fclose(file);
-      if( success != 0 )
+      if( fclose(file) != 0 )
       {
          SCIPerrorMessage("An error occurred while closing file <%s>\n", filename);
          return SCIP_FILECREATEERROR;
       }
-   }
-   else
-   {
-      /* print to stdout */
-      if( transformed )
-         retcode = SCIPprintTransProblem(scip, NULL, extension, genericnames);
-      else
-         retcode = SCIPprintOrigProblem(scip, NULL, extension, genericnames);
    }
 
    /* check for write errors */
