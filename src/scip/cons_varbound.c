@@ -1457,21 +1457,32 @@ SCIP_RETCODE propagateCons(
    int*                  ndelconss           /**< pointer to count number of deleted constraints, or NULL */
    )
 {
+   SCIP_VAR** vars;
    SCIP_CONSDATA* consdata;
+   SCIP_Real* scalars;
    SCIP_Real xlb;
    SCIP_Real xub;
    SCIP_Real ylb;
    SCIP_Real yub;
    SCIP_Real newlb;
    SCIP_Real newub;
+   SCIP_Real constant;
+   SCIP_Real bound;
+   SCIP_Real QUAD(activity);
    SCIP_Bool tightened;
    SCIP_Bool tightenedround;
+   SCIP_Bool islhsredundant;
+   SCIP_Bool isrhsredundant;
+   int nvars;
+   int requiredsize;
+   int i;
 
    assert(cutoff != NULL);
    assert(nchgbds != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(!SCIPisInfinity(scip, -consdata->lhs) || !SCIPisInfinity(scip, consdata->rhs));
 
    SCIPdebugMsg(scip, "propagating variable bound constraint <%s>: %.15g <= <%s>[%.9g, %.9g] + %.15g<%s>[%.9g, %.9g] <= %.15g\n",
       SCIPconsGetName(cons), consdata->lhs, SCIPvarGetName(consdata->var), SCIPvarGetLbLocal(consdata->var),
@@ -1805,92 +1816,198 @@ SCIP_RETCODE propagateCons(
    while( tightenedround );
 
    /* check for redundant sides */
-   if( !(*cutoff) && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !SCIPinProbing(scip) )
+   if( !(*cutoff) )
    {
-      /* check left hand side for redundancy */
-      if( !SCIPisInfinity(scip, -consdata->lhs) &&
-         ((consdata->vbdcoef > 0.0 && SCIPisGE(scip, xlb + consdata->vbdcoef * ylb, consdata->lhs))
-            || (consdata->vbdcoef < 0.0 && SCIPisGE(scip, xlb + consdata->vbdcoef * yub, consdata->lhs))) )
-      {
-         SCIPdebugMsg(scip, "left hand side of variable bound constraint <%s> is redundant\n", SCIPconsGetName(cons));
+      islhsredundant = TRUE;
+      isrhsredundant = TRUE;
+      nvars = 2;
 
-         SCIP_CALL( chgLhs(scip, cons, -SCIPinfinity(scip)) );
-         ++(*nchgsides);
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &scalars, nvars) );
+
+      constant = 0.0;
+      vars[0] = consdata->var;
+      vars[1] = consdata->vbdvar;
+      scalars[0] = 1.0;
+      scalars[1] = consdata->vbdcoef;
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, &nvars, nvars, &constant, &requiredsize, TRUE) );
+
+      if( requiredsize > nvars )
+      {
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
+
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, &nvars, requiredsize, &constant, &requiredsize, TRUE) );
+         assert(requiredsize <= nvars);
       }
 
-      /* check right hand side for redundancy */
-      if( !SCIPisInfinity(scip, consdata->rhs) &&
-         ((consdata->vbdcoef > 0.0 && SCIPisLE(scip, xub + consdata->vbdcoef * yub, consdata->rhs))
-            || (consdata->vbdcoef < 0.0 && SCIPisLE(scip, xub + consdata->vbdcoef * ylb, consdata->rhs))) )
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
       {
-         SCIPdebugMsg(scip, "right hand side of variable bound constraint <%s> is redundant\n", SCIPconsGetName(cons));
+         QUAD_ASSIGN(activity, constant);
 
-         SCIP_CALL( chgRhs(scip, cons, SCIPinfinity(scip)) );
-         ++(*nchgsides);
+         for( i = 0; i < nvars; ++i )
+         {
+            assert(scalars[i] != 0.0);
+            if( scalars[i] > 0.0 )
+            {
+               bound = SCIPvarGetLbLocal(vars[i]);
+
+               if( SCIPisInfinity(scip, -bound) )
+               {
+                  islhsredundant = FALSE;
+                  break;
+               }
+            }
+            else
+            {
+               bound = SCIPvarGetUbLocal(vars[i]);
+
+               if( SCIPisInfinity(scip, bound) )
+               {
+                  islhsredundant = FALSE;
+                  break;
+               }
+            }
+
+            SCIPquadprecSumQD(activity, activity, scalars[i] * bound);
+         }
+
+         if( islhsredundant && SCIPisLT(scip, QUAD_TO_DBL(activity), consdata->lhs) )
+            islhsredundant = FALSE;
       }
-   }
-   /* check varbound constraint for redundancy */
-   if( !(*cutoff) && (SCIPisInfinity(scip, -consdata->lhs)
-         || (consdata->vbdcoef > 0.0 && SCIPisGE(scip, xlb + consdata->vbdcoef * ylb, consdata->lhs))
-         || (consdata->vbdcoef < 0.0 && SCIPisGE(scip, xlb + consdata->vbdcoef * yub, consdata->lhs)))
-      && (SCIPisInfinity(scip, consdata->rhs)
-         || (consdata->vbdcoef > 0.0 && SCIPisLE(scip, xub + consdata->vbdcoef * yub, consdata->rhs))
-         || (consdata->vbdcoef < 0.0 && SCIPisLE(scip, xub + consdata->vbdcoef * ylb, consdata->rhs))) )
-   {
-      SCIPdebugMsg(scip, "variable bound constraint <%s> is redundant: <%s>[%.15g,%.15g], <%s>[%.15g,%.15g]\n",
-         SCIPconsGetName(cons),
-         SCIPvarGetName(consdata->var), SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var),
-         SCIPvarGetName(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
-      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
 
-      /* this did not seem to help but should be tested again, there might also still be a bug in there */
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+      {
+         QUAD_ASSIGN(activity, constant);
+
+         for( i = 0; i < nvars; ++i )
+         {
+            assert(scalars[i] != 0.0);
+            if( scalars[i] > 0.0 )
+            {
+               bound = SCIPvarGetUbLocal(vars[i]);
+
+               if( SCIPisInfinity(scip, bound) )
+               {
+                  isrhsredundant = FALSE;
+                  break;
+               }
+            }
+            else
+            {
+               bound = SCIPvarGetLbLocal(vars[i]);
+
+               if( SCIPisInfinity(scip, -bound) )
+               {
+                  isrhsredundant = FALSE;
+                  break;
+               }
+            }
+
+            SCIPquadprecSumQD(activity, activity, scalars[i] * bound);
+         }
+
+         if( isrhsredundant && SCIPisGT(scip, QUAD_TO_DBL(activity), consdata->rhs) )
+            isrhsredundant = FALSE;
+      }
+
+      SCIPfreeBufferArray(scip, &scalars);
+      SCIPfreeBufferArray(scip, &vars);
+
+      /* check varbound constraint for redundancy */
+      if( islhsredundant && isrhsredundant )
+      {
+         SCIPdebugMsg(scip, "variable bound constraint <%s> is redundant: sides=[%.15g,%.15g]\n",
+            SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+
+         /* remove the constraint locally unless it has become empty, in which case it is removed globally */
+         if( nvars > 0 )
+            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+         else
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+
+         /* this did not seem to help but should be tested again, there might also still be a bug in there */
 #ifdef SCIP_DISABLED_CODE
-      /* local duality fixing of variables in the constraint */
-      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->vbdvar))
-         && SCIPvarGetNLocksDownType(consdata->vbdvar, SCIP_LOCKTYPE_MODEL) == 1
-         && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->vbdvar))
-         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
-         && ((consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
-            || (consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, consdata->rhs))) )
-      {
-         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
-            SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar));
-         SCIP_CALL( SCIPchgVarUb(scip, consdata->vbdvar, SCIPvarGetLbLocal(consdata->vbdvar)) );
-      }
-      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->vbdvar))
-         && SCIPvarGetNLocksUpType(consdata->vbdvar, SCIP_LOCKTYPE_MODEL) == 1
-         && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->vbdvar))
-         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
-         && ((consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
-            || (consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, consdata->rhs))) )
-      {
-         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
-            SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
-         SCIP_CALL( SCIPchgVarLb(scip, consdata->vbdvar, SCIPvarGetUbLocal(consdata->vbdvar)) );
-      }
-      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->var))
-         && SCIPvarGetNLocksDownType(consdata->var, SCIP_LOCKTYPE_MODEL) == 1
-         && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->var))
-         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
-         && !SCIPisInfinity(scip, -consdata->lhs) )
-      {
-         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
-            SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetLbLocal(consdata->var));
-         SCIP_CALL( SCIPchgVarUb(scip, consdata->var, SCIPvarGetLbLocal(consdata->var)) );
-      }
-      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->var))
-         && SCIPvarGetNLocksUpType(consdata->var, SCIP_LOCKTYPE_MODEL) == 1
-         && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->var))
-         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
-         && !SCIPisInfinity(scip, consdata->rhs) )
-      {
-         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
-            SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var));
-         SCIP_CALL( SCIPchgVarLb(scip, consdata->var, SCIPvarGetUbLocal(consdata->var)) );
-      }
+         /* local duality fixing of variables in the constraint */
+         if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->vbdvar))
+            && SCIPvarGetNLocksDownType(consdata->vbdvar, SCIP_LOCKTYPE_MODEL) == 1
+            && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->vbdvar))
+            && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
+            && ((consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
+               || (consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, consdata->rhs))) )
+         {
+            SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
+               SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar));
+            SCIP_CALL( SCIPchgVarUb(scip, consdata->vbdvar, SCIPvarGetLbLocal(consdata->vbdvar)) );
+         }
+         else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->vbdvar))
+            && SCIPvarGetNLocksUpType(consdata->vbdvar, SCIP_LOCKTYPE_MODEL) == 1
+            && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->vbdvar))
+            && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
+            && ((consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
+               || (consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, consdata->rhs))) )
+         {
+            SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
+               SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
+            SCIP_CALL( SCIPchgVarLb(scip, consdata->vbdvar, SCIPvarGetUbLocal(consdata->vbdvar)) );
+         }
+         if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->var))
+            && SCIPvarGetNLocksDownType(consdata->var, SCIP_LOCKTYPE_MODEL) == 1
+            && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->var))
+            && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
+            && !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
+               SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetLbLocal(consdata->var));
+            SCIP_CALL( SCIPchgVarUb(scip, consdata->var, SCIPvarGetLbLocal(consdata->var)) );
+         }
+         else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->var))
+            && SCIPvarGetNLocksUpType(consdata->var, SCIP_LOCKTYPE_MODEL) == 1
+            && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->var))
+            && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
+            && !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
+               SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var));
+            SCIP_CALL( SCIPchgVarLb(scip, consdata->var, SCIPvarGetUbLocal(consdata->var)) );
+         }
 #endif
-      if( ndelconss != NULL )
-         (*ndelconss)++;
+         if( ndelconss != NULL )
+            ++(*ndelconss);
+      }
+      else if( !SCIPinProbing(scip) && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+      {
+         /* check left hand side for redundancy */
+         if( islhsredundant )
+         {
+            assert(!isrhsredundant);
+
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
+            {
+               SCIPdebugMsg(scip, "left hand side of variable bound constraint <%s> is redundant\n", SCIPconsGetName(cons));
+
+               SCIP_CALL( chgLhs(scip, cons, -SCIPinfinity(scip)) );
+
+               if( nchgsides != NULL )
+                  ++(*nchgsides);
+            }
+         }
+         /* check right hand side for redundancy */
+         else if( isrhsredundant )
+         {
+            assert(!islhsredundant);
+
+            if( !SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIPdebugMsg(scip, "right hand side of variable bound constraint <%s> is redundant\n", SCIPconsGetName(cons));
+
+               SCIP_CALL( chgRhs(scip, cons, SCIPinfinity(scip)) );
+
+               if( nchgsides != NULL )
+                  ++(*nchgsides);
+            }
+         }
+      }
    }
 
    SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
