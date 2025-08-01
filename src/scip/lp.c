@@ -16563,7 +16563,6 @@ SCIP_RETCODE SCIPlpWrite(
    )
 {
    assert(lp != NULL);
-   assert(lp->flushed);
    assert(fname != NULL);
 
    SCIP_CALL( SCIPlpiWriteLP(lp->lpi, fname) );
@@ -16593,7 +16592,6 @@ SCIP_RETCODE SCIPlpWriteMip(
    SCIP_Real coeff;
 
    assert(lp != NULL);
-   assert(lp->flushed);
    assert(fname != NULL);
 
    SCIPsetDebugMsg(set, "Start to write MIP to file <%s>\n", fname);
