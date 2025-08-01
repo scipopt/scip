@@ -1882,7 +1882,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/minsolvedepth",
          "minimal depth for solving LP at the nodes (-1: no depth limit)",
-         &(*set)->lp_solvedepth, FALSE, SCIP_DEFAULT_LP_MINSOLVEDEPTH, -1, SCIP_MAXTREEDEPTH,
+         &(*set)->lp_minsolvedepth, FALSE, SCIP_DEFAULT_LP_MINSOLVEDEPTH, -1, SCIP_MAXTREEDEPTH,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "lp/initalgorithm",
