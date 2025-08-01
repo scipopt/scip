@@ -889,7 +889,7 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
          "should a solution be checked in floating-point arithmetic prior to being processed?",
          &conshdlrdata->checkfpfeasibility, TRUE, DEFAULT_CHECKFPFEASIBILITY, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/" CONSHDLR_NAME "/checkimpliedintegrality",
+         "constraints/" CONSHDLR_NAME "/checkcontimplint",
          "should integrality of continuous implied integral variables be ensured?",
          &conshdlrdata->checkcontimplint, TRUE, DEFAULT_CHECKCONTIMPLINT, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
