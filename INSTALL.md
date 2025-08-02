@@ -200,6 +200,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `MT`                   | `on`, `off`                        |                            | use static runtime libraries for Visual Studio compiler on Windows |
 | `THREADSAFE`           | `on`, `off`                        | `THREADSAFE=[true,false]`  | thread safe compilation                                            |
 | `SANITIZE`             | `on`, `off`, `thread`, `address`, `memory` | `SANITIZE=...`     | sanitizers to enable; if not `off` (default), then enables undefined-behavior sanitizer, `thread` enables also thread sanitizer, `address` enables also address sanitizer, `memory` enables also memory sanitizer |
+| `LTO`                  | `on`, `off`                        | `LTO=[true,false]`         | enable link-time-optimization for OPT=opt on Linux/MacOS and gcc/clang |
 | `TPI`                  | `tny`, `omp`, `none`               | `TPI=[tny,omp,none]`       | enable task processing interface required for concurrent solver    |
 
 Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing configuration.
@@ -333,6 +334,7 @@ In your SCIP main directory, enter `make [options]` with the following options:
 | `LAPACK=false`        | `[false, true]`      | link with Lapack; requires Lapack to be installed on the system                                  |
 | `LPS=spx`             | `[spx1, cpx, grb, xprs, msk, clp, glop, qso, highs, none]` | determines the LP-Solver, should be installed seperately. Options to use SoPlex (> version 2.0), SoPlex (>= version 1.4), CPLEX, Gurobi, XPRESS, MOSEK, CLP, Glop, QSopt, HiGHS as LP solver, no LP solver  |
 | `LPSOPT=opt`          | `[opt, dbg, opt-gccold]` | Choose the debug or optimized version (or old GCC optimized) version of the LP-solver (currently only available for SoPlex and CLP). |
+| `LTO=true     `       | `[false, true]`      | enable link-time-optimization for OPT=opt on Linux/MacOS and gcc/clang                           |
 | `NOBLKMEM=false`      | `[false, true]`      | Turns the internal SCIP block memory off or on.                                                  |
 | `NOBUFMEM=false`      | `[false, true]`      | Turns the internal SCIP buffer memory off or on.                                                 |
 | `NOBLKBUFMEM=false`   | `[false, true]`      | Turns the internal SCIP block and buffer memory off or on. This way the code can be checked by valgrind or similar tools. |
