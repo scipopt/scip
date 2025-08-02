@@ -816,6 +816,14 @@ Also removing `$(LINKCXX_l)bz2$(LINKLIBSUFFIX)` may help in some cases.
 If you encounter other compiler or linker errors, you should recompile with `make VERBOSE=true ...` in order to get the full compiler invocation.
 This might help to fix the corresponding machine dependent makefile in the make subdirectory.
 
+### Linking takes so long
+
+By default, optimized builds of SCIP (`OPT=opt`, `CMAKE_BUILD_TYPE=Release`) are build with link-time-optimization enabled.
+This way, the compiler additionally optimizes the complete code base that makes up the SCIP library across object-file boundaries.
+While this can lead to runtime improvements of a few percent, it also leads to much higher linking times (and memory use).
+Setting `LTO=false` (Makefile) or `LTO=off` (cmake) turns off link-time-optimization.
+In our experiments, this link-time-optimization did not affect the algorithmic decisions of the solving process, but only lead to slightly faster running times.
+
 Remarks on Installing under Windows using MinGW
 -----------------------------------------------
 
