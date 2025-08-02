@@ -584,9 +584,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
    while( conshdlrdata->nbufferedsols > 0 && !foundsol )
    {
-      /* reset reparation result */
-      *result = SCIP_FEASIBLE;
-
       /* best solution is last in solubuffer */
       worksol = conshdlrdata->solubuffer[conshdlrdata->nbufferedsols - 1];
 
