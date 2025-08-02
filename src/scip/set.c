@@ -246,7 +246,7 @@
 #define SCIP_DEFAULT_LP_ITERLIM            -1LL /**< iteration limit for each single LP solve; -1: no limit */
 #define SCIP_DEFAULT_LP_ROOTITERLIM        -1LL /**< iteration limit for initial root LP solve; -1: no limit */
 #define SCIP_DEFAULT_LP_SOLVEDEPTH           -1 /**< maximal depth for solving LPs (-1: no depth limit) */
-#define SCIP_DEFAULT_LP_MINSOLVEDEPTH        -1 /**< minimal depth for solving LPs (-1: no depth limit) */
+#define SCIP_DEFAULT_LP_MINSOLVEDEPTH         0 /**< minimal depth for solving LPs */
 #define SCIP_DEFAULT_LP_INITALGORITHM       's' /**< LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier,
                                                  *   barrier with 'c'rossover) */
 #define SCIP_DEFAULT_LP_RESOLVEALGORITHM    's' /**< LP algorithm for resolving LP relaxations if a starting basis exists
