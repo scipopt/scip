@@ -2272,7 +2272,7 @@ public:
       int
    )
    {
-      return SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ? 1 : 0;
+      return objsense == SCIP_OBJSENSE_MAXIMIZE ? 1 : 0;
    }
 
    template <class ObjGradWriter>
