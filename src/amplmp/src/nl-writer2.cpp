@@ -44,6 +44,11 @@
 #include <cstring>
 #include <string>
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 #include "mp/nl-writer2.h"
 #include "mp/nl-writer2.hpp"
 
@@ -284,6 +289,7 @@ apr(File& f, const char *fmt, ...)
     default:
       Utils().myexit("bprintf bug: unexpected fmt: " +
                      std::string(fmt-1));
+#define AVOID_BOGUS_WARNINGS
 #ifdef AVOID_BOGUS_WARNINGS
       len = 0;
 #endif
@@ -447,7 +453,7 @@ void gfmt(char *b, size_t sz, double x, int prec) {
         break;
     }
     do {
-      std::snprintf(b, sz, "%.*g", i, x);
+      if (b) std::snprintf(b, sz, "%.*g", i, x);
       if (i>=prec)
         break;
       auto x1 = std::stod(b);

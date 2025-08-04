@@ -428,14 +428,14 @@ void NLWriter2<Params>::WriteFunctions() {
 
 template <typename Params>
 void NLWriter2<Params>::
-WriteSparseEntry(File& nm, int i, int v) {
-  apr(nm, "%d %d\n", i, v);
+WriteSparseEntry(File& nm_, int i, int v) {
+  apr(nm_, "%d %d\n", i, v);
 }
 
 template <typename Params>
 void NLWriter2<Params>::
-WriteSparseEntry(File& nm, int i, double x) {
-  apr(nm, "%d %g\n", i, x);
+WriteSparseEntry(File& nm_, int i, double x) {
+  apr(nm_, "%d %g\n", i, x);
 }
 
 template <typename Params>
@@ -486,30 +486,30 @@ void NLWriter2<Params>::WriteDualInitialGuesses() {
 
 template <typename Params>
 void NLWriter2<Params>::WriteBndRangeOrCompl(
-    File& nm,
+    File& nm_,
     double L, double U, int k, int cvar) {
   if (k<=0) {          // normal algebraic constraint
     if (L <= NegInfty())
-      apr(nm, U >= Infty()
+      apr(nm_, U >= Infty()
           ? "3\n" : "1 %.16g\n", U);
     else
-      apr(nm, U >= Infty() ? "2 %.16g\n"
+      apr(nm_, U >= Infty() ? "2 %.16g\n"
                            : L == U ? "4 %.16g\n"
                                     : "0 %.16g %.16g\n",
           L, U);
   } else {             // complementarity
-    apr(nm, "5 %d %d\n", k, cvar + 1);   // add +1 here
+    apr(nm_, "5 %d %d\n", k, cvar + 1);   // add +1 here
   }
 }
 
 
 template <typename Params>
 template <class ExprArgsFeeder>
-void NLWriter2<Params>::WriteExprArgs(File& nm,
+void NLWriter2<Params>::WriteExprArgs(File& nm_,
                                       ExprArgsFeeder&& args) {
   while (args) {
     auto e = args.Next();
-    WriteExpression(nm, e);
+    WriteExpression(nm_, e);
   }
 }
 

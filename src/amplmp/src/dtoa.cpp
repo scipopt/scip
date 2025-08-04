@@ -209,6 +209,12 @@
  *	used for input more than STRTOD_DIGLIM digits long (default 40).
  */
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wcast-align"
+#endif
+
 #ifndef Long
 #define Long int
 #endif
@@ -1505,7 +1511,7 @@ static unsigned int maxthreads = 0;
 #define Kmax 7
 
 #ifdef __cplusplus
-extern "C" double strtod(const char *s00, char **se);
+/* extern "C" double strtod(const char *s00, char **se); */
 extern "C" char *dtoa_nlw2(double d, int mode, int ndigits,
 			int *decpt, int *sign, char **rve);
 #endif
@@ -1600,7 +1606,7 @@ Balloc(int k MTd)
 #else
 		len = (sizeof(Bigint) + (x-1)*sizeof(ULong) + sizeof(double) - 1)
 			/sizeof(double);
-		if (k <= Kmax && pmem_next - private_mem + len <= PRIVATE_mem
+		if (k <= Kmax && pmem_next - private_mem + len <= (long int)PRIVATE_mem
 #ifdef MULTIPLE_THREADS
 			&& TI == TI1
 #endif
@@ -1703,7 +1709,7 @@ multadd(Bigint *b, int m, int a MTd)	/* multiply by m and add a */
 	return b;
 	}
 
- static Bigint *
+static Bigint *
 s2b(const char *s, int nd0, int nd, ULong y9, int dplen MTd)
 {
 	Bigint *b;
@@ -2395,7 +2401,10 @@ d2b(U *d, int *e, int *bits MTd)
 #undef d0
 #undef d1
 
- static double
+#if __cplusplus >= 201703L
+[[maybe_unused]]
+#endif
+static double
 ratio(Bigint *a, Bigint *b)
 {
 	U da, db;
@@ -2430,7 +2439,7 @@ ratio(Bigint *a, Bigint *b)
 #endif
 	return dval(&da) / dval(&db);
 	}
-
+#if 0
  static const double
 tens[] = {
 		1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9,
@@ -2465,6 +2474,7 @@ static const double tinytens[] = { 1e-16, 1e-32, 1e-64 };
 bigtens[] = { 1e16, 1e32 };
 static const double tinytens[] = { 1e-16, 1e-32 };
 #define n_bigtens 2
+#endif
 #endif
 #endif
 
@@ -2718,6 +2728,9 @@ enum {	/* rounding values: same as FLT_ROUNDS */
 	Round_down = 3
 	};
 
+#if __cplusplus >= 201703L
+[[maybe_unused]]
+#endif
 static void
 gethex( const char **sp, U *rvp, int rounding, int sign MTd)
 {
@@ -2842,9 +2855,9 @@ gethex( const char **sp, U *rvp, int rounding, int sign MTd)
 			e1 = -e1;
 		e += e1;
 	  }
-	*sp = (char*)s;
+	*sp = reinterpret_cast<char*>(const_cast<unsigned char*>(s));
 	if (!havedig)
-		*sp = (char*)s0 - 1;
+		*sp = reinterpret_cast<char*>(const_cast<unsigned char*>(s0)) - 1;
 	if (zret)
 		goto retz1;
 	if (big) {
@@ -3211,7 +3224,10 @@ quorem(Bigint *b, Bigint *S)
 	}
 
 #if defined(Avoid_Underflow) || !defined(NO_STRTOD_BIGCOMP) /*{*/
- static double
+#if __cplusplus >= 201703L
+[[maybe_unused]]
+#endif
+static double
 sulp(U *x, BCinfo *bc)
 {
 	U u;
@@ -4867,7 +4883,7 @@ rv_alloc(int i MTd)
 
 	j = sizeof(ULong);
 	for(k = 0;
-		sizeof(Bigint) - sizeof(ULong) - sizeof(int) + j <= i;
+		sizeof(Bigint) - sizeof(ULong) - sizeof(int) + j <= (size_t)i;
 		j <<= 1)
 			k++;
 	r = (int*)Balloc(k MTa);
@@ -4886,7 +4902,7 @@ nrv_alloc(const char *s, char *s0, size_t s0len, char **rve, int n MTd)
 
 	if (!s0)
 		s0 = rv_alloc(n MTa);
-	else if (s0len <= n) {
+	else if (s0len <= (size_t)n) {
 		rv = 0;
 		t = rv + n;
 		goto rve_chk;
@@ -5282,7 +5298,7 @@ dtoa_r_dmgay(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve
 		buf = rv_alloc(i MTb);
 		blen = sizeof(Bigint) + ((1 << ((int*)buf)[-1]) - 1)*sizeof(ULong) - sizeof(int);
 		}
-	else if (blen <= i) {
+	else if (blen <= (size_t)i) {
 		buf = 0;
 		if (rve)
 			*rve = buf + i;
