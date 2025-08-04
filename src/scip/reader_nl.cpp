@@ -1730,7 +1730,6 @@ private:
    SCIP*                 scip;               ///< SCIP data structure (problem to write)
    bool                  nlcomments;         ///< whether to write nl files with comments
    const char*           probname;           ///< problem name
-   SCIP_Bool             transformed;        ///< is transformed problem written
    SCIP_OBJSENSE         objsense;           ///< objective sense
    SCIP_Real             objscale;           ///< objective scale
    SCIP_Real             objoffset;          ///< objective offset
@@ -2162,7 +2161,6 @@ public:
       SCIP_Bool          nlbinary_,          ///< whether to write binary or text nl
       SCIP_Bool          nlcomments_,        ///< whether to include comments into nl
       const char*        probname_,          ///< problem name
-      SCIP_Bool          transformed_,       ///< is transformed problem written
       SCIP_OBJSENSE      objsense_,          ///< objective sense
       SCIP_Real          objscale_,          ///< objective scale
       SCIP_Real          objoffset_,         ///< objective offset
@@ -2177,7 +2175,6 @@ public:
    : scip(scip_),
      nlcomments(nlcomments_),
      probname(probname_),
-     transformed(transformed_),
      objsense(objsense_),
      objscale(objscale_),
      objoffset(objoffset_),
@@ -2944,7 +2941,7 @@ SCIP_DECL_READERWRITE(readerWriteNl)
    *result = SCIP_DIDNOTRUN;
 
    SCIPNLFeeder nlf(scip, FALSE, TRUE,
-      name, transformed, objsense, objscale, objoffset,
+      name, objsense, objscale, objoffset,
       vars, nvars, fixedvars, nfixedvars,
       conss, nconss, genericnames);
 
