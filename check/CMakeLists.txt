@@ -1069,9 +1069,8 @@ set(linclass_bell5
   "total             :         91"
   "singleton         :          2"
   "precedence        :         17"
-  "varbound          :         18"
-  "mixedbinary       :         26"
-  "general           :         28"
+  "mixedbinary       :         30"
+  "general           :         42"
   )
 
 set(linclass_blend2
@@ -1113,9 +1112,8 @@ set(linclass_flugpl
     "empty             :          0"
     "free              :          0"
     "singleton         :          1"
-    "varbound          :          6"
-    "mixedbinary       :          0"
-    "general           :         11"
+    "mixedbinary       :          1"
+    "general           :         16"
     )
 
 set(linclass_gt2
