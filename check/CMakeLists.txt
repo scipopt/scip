@@ -579,6 +579,7 @@ set(reader_extensions_MIP
   "pip"
   "fzn"
   "rlp"
+  "nl"
   )
 
 #
