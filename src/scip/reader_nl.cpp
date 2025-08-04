@@ -2001,6 +2001,8 @@ private:
                      lhs = -SCIPinfinity(scip);
                      rhs = 1.0 - negconstant;
                      break;
+                  default:
+                     throw mp::UnsupportedError("Unexpected SETPPC type");
                }
             }
             else if( conshdlr == conshdlr_logicor )
