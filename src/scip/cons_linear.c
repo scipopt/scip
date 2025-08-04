@@ -15427,26 +15427,26 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
       /* is constraint of type SCIP_CONSTYPE_{VARBOUND,PRECEDENCE}? */
       if( consdata->nvars == 2 )
       {
-         SCIP_LINCONSTYPE constype;
-
-         /* precedence constraints have the same coefficient, but with opposite sign for the same variable type */
-         if( SCIPisEQ(scip, consdata->vals[0], -consdata->vals[1])
-            && SCIPvarIsImpliedIntegral(consdata->vars[0]) == SCIPvarIsImpliedIntegral(consdata->vars[1])
-            && ( SCIPvarIsImpliedIntegral(consdata->vars[0]) || SCIPvarGetType(consdata->vars[0]) == SCIPvarGetType(consdata->vars[1]) ) )
+         /* precedence constraints have same variable type and same absolute coefficient with opposite sign */
+         if( SCIPvarGetType(consdata->vars[0]) == SCIPvarGetType(consdata->vars[1])
+            && SCIPisEQ(scip, consdata->vals[0], -consdata->vals[1]) )
          {
-            constype = SCIP_LINCONSTYPE_PRECEDENCE;
             SCIPdebugMsg(scip, "classified as PRECEDENCE: ");
+            SCIPdebugPrintCons(scip, cons, NULL);
+            SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_PRECEDENCE, isRangedRow(scip, lhs, rhs) ? 2 : 1);
+
+            continue;
          }
-         else
+         /* varbound constraints have otherwise a binary variable */
+         else if( SCIPvarGetType(consdata->vars[0]) == SCIP_VARTYPE_BINARY
+            || SCIPvarGetType(consdata->vars[1]) == SCIP_VARTYPE_BINARY )
          {
-            constype = SCIP_LINCONSTYPE_VARBOUND;
             SCIPdebugMsg(scip, "classified as VARBOUND: ");
+            SCIPdebugPrintCons(scip, cons, NULL);
+            SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_VARBOUND, isRangedRow(scip, lhs, rhs) ? 2 : 1);
+
+            continue;
          }
-         SCIPdebugPrintCons(scip, cons, NULL);
-
-         SCIPlinConsStatsIncTypeCount(linconsstats, constype, isRangedRow(scip, lhs, rhs) ? 2 : 1);
-
-         continue;
       }
 
       /* is constraint of type SCIP_CONSTYPE_{SETPARTITION, SETPACKING, SETCOVERING, CARDINALITY, INVKNAPSACK}? */
