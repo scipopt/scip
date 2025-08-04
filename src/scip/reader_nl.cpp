@@ -37,6 +37,21 @@
 #include <sstream>
 #include <vector>
 #include <map>
+#include <cstdlib>
+#ifdef _WIN32
+#include <windows.h> // to be able to do the includes below
+#include <io.h>      // for _mktemp_s
+#include <direct.h>  // for _mkdir
+#include <fileapi.h> // for GetTempPath
+#ifdef max
+#undef max   // undo definition of max in windows.h
+#endif
+#ifdef IGNORE
+#undef IGNORE // undo definition of IGNORE in windows.h
+#endif
+#else
+#include <unistd.h>  // for mkdtemp on macOS
+#endif
 
 #include "scip/reader_nl.h"
 #include "scip/cons_linear.h"
@@ -2198,7 +2213,8 @@ public:
       SCIPfreeBlockMemoryArrayNull(scip, &algconsslhs, nallconss);
       SCIPfreeBlockMemoryArrayNull(scip, &algconss, nallconss);
       SCIPfreeBlockMemoryArrayNull(scip, &vars, nactivevars + nfixedvars);
-      SCIPhashmapFree(&var2idx);
+      if( var2idx != NULL )
+         SCIPhashmapFree(&var2idx);
    }
 
    /** Provide NLHeader.
@@ -2905,11 +2921,23 @@ SCIP_DECL_READERREAD(readerReadNl)
    return SCIP_OKAY;
 }
 
+#ifdef _WIN32
+#define PATHSEP "\\"
+#else
+#define PATHSEP "/"
+#endif
+
 /** problem writing method of reader */
 static
 SCIP_DECL_READERWRITE(readerWriteNl)
 {  /*lint --e{715}*/
    mp::WriteNLResult writerresult;
+   char* tempdir = NULL;
+   char* tempnamestub = NULL;
+   char* tempname = NULL;
+   FILE* tempfile = NULL;
+   int templen;
+   SCIP_RETCODE rc = SCIP_OKAY;
 
    *result = SCIP_DIDNOTRUN;
 
@@ -2921,23 +2949,64 @@ SCIP_DECL_READERWRITE(readerWriteNl)
    try
    {
       /* we need to give the NLWriter a filename, but can only rely on the FILE* from SCIP
-       * so we let the NLWriter write to a temporary file and then copy its content to file
+       * so we let the NLWriter write to a temporary file and then copy its content to file;
        * if we also have a filename, then we do the same for the row/col files
        */
-      char tempname[L_tmpnam];
-      char tempname2[L_tmpnam+5];
-      FILE* tempfile;
+      mp::NLUtils nlutils;
       char buf[1024];
       int n;
 
-      if( std::tmpnam(tempname) == NULL )
+      /* construct a temporary directory in /tmp/scipnlwrite-XXXXXX */
+#ifdef _WIN32
+      TCHAR systemtmp[MAX_PATH + 1];
+      if( GetTempPath(MAX_PATH + 1, systemtmp) != ERROR_SUCCESS )
       {
-         SCIPerrorMessage("Cannot generate name for temporary file: error %d\n", errno);
-         return SCIP_FILECREATEERROR;
+         SCIPerrorMessage("Cannot get name of directory for temporary files: error %d\n", errno);
+         rc = SCIP_FILECREATEERROR;
+         goto TERMINATE;
       }
+#else
+      const char* systemtmp = getenv("TMPDIR");
+      if( systemtmp == NULL )
+         systemtmp = "/tmp";
+#endif
+      templen = strlen(systemtmp) + 30;
+      SCIP_CALL( SCIPallocBufferArray(scip, &tempdir, templen) );
+      (void) SCIPsnprintf(tempdir, templen, "%s" PATHSEP "scipnlwrite-XXXXXX", systemtmp);
 
-      mp::NLUtils nlutils;
-      writerresult = mp::WriteNLFile(tempname, nlf, nlutils);
+#ifdef _WIN32
+      if( _mktemp_s(tempdir, templen) )
+      {
+         SCIPerrorMessage("Cannot generate name for temporary directory from template <%s>: error %d\n", tempdir, errno);
+         rc = SCIP_FILECREATEERROR;
+         goto TERMINATE;
+      }
+      if( _mkdir(tempdir) )
+      {
+         SCIPerrorMessage("Cannot create temporary directory with name <%s>: error %d\n", tempdir, errno);
+         rc = SCIP_FILECREATEERROR;
+         goto TERMINATE;
+      }
+#else
+      if( mkdtemp(tempdir) == NULL )
+      {
+         SCIPerrorMessage("Cannot generate temporary directory from template <%s>: error %d\n", tempdir, errno);
+         rc = SCIP_FILECREATEERROR;
+         goto TERMINATE;
+      }
+#endif
+
+      /* stub for temporary file: /tmp/scipnlwrite-XXXXXX/prob */
+      SCIP_CALL( SCIPallocBufferArray(scip, &tempnamestub, templen) );
+      (void) SCIPsnprintf(tempnamestub, templen, "%s" PATHSEP "prob", tempdir);
+
+      SCIPdebugMsg(scip, "Temporary file stub for NL writing: %s\n", tempnamestub);
+
+      writerresult = mp::WriteNLFile(tempnamestub, nlf, nlutils);
+
+      /* name of nl file that was (possibly) written: tempnamestub + .nl */
+      SCIP_CALL( SCIPallocBufferArray(scip, &tempname, templen) );
+      (void) SCIPsnprintf(tempname, templen, "%s.nl", tempnamestub);
 
       switch( writerresult.first )
       {
@@ -2945,22 +3014,24 @@ SCIP_DECL_READERWRITE(readerWriteNl)
             break;
          case NLW2_WriteNL_CantOpen:
             SCIPerrorMessage("%s\n", writerresult.second.c_str());
-            return SCIP_FILECREATEERROR;
+            rc = SCIP_FILECREATEERROR;
+            goto TERMINATE;
          case NLW2_WriteNL_Failed:
             SCIPerrorMessage("%s\n", writerresult.second.c_str());
-            return SCIP_WRITEERROR;
+            rc = SCIP_WRITEERROR;
+            goto TERMINATE;
          case NLW2_WriteNL_Unset:
          default:
             SCIPerrorMessage("%s\n", writerresult.second.c_str());
-            return SCIP_ERROR;
+            rc = SCIP_ERROR;
+            goto TERMINATE;
       }
 
       /* copy temporary file into file */
-      SCIPsnprintf(tempname2, sizeof(tempname2), "%s.nl", tempname);
-      tempfile = fopen(tempname2, "rb");
+      tempfile = fopen(tempname, "rb");
       if( tempfile == NULL )
       {
-         SCIPerrorMessage("Cannot open temporary file <%s> for reading: error %d\n", tempname2, errno);
+         SCIPerrorMessage("Cannot open temporary file <%s> for reading: error %d\n", tempname, errno);
          return SCIP_NOFILE;
       }
 
@@ -2968,14 +3039,16 @@ SCIP_DECL_READERWRITE(readerWriteNl)
          fwrite(buf, 1, n, file != NULL ? file : stdout);
 
       fclose(tempfile);
-      remove(tempname2);
 
       /* move col/row files */
       if( !genericnames && filename != NULL )
       {
-         char* filename2;
+         char* filename2 = NULL;
          FILE* file2;
          int filenamelen;
+
+         /* before overwriting tempname, remove .nl file */
+         remove(tempname);
 
          /* make filename2 same as filename, but with .nl removed, if present */
          filenamelen = strlen(filename);
@@ -2988,13 +3061,13 @@ SCIP_DECL_READERWRITE(readerWriteNl)
          }
 
          /* copy row file from temporary to current location */
-         SCIPsnprintf(tempname2, sizeof(tempname2), "%s.row", tempname);
+         SCIPsnprintf(tempname, templen, "%s.row", tempnamestub);
          strcpy(filename2 + filenamelen, ".row");
 
-         tempfile = fopen(tempname2, "rb");
+         tempfile = fopen(tempname, "rb");
          if( tempfile == NULL )
          {
-            SCIPerrorMessage("Cannot open temporary file <%s> for reading: error %d\n", tempname2, errno);
+            SCIPerrorMessage("Cannot open temporary file <%s> for reading: error %d\n", tempname, errno);
             return SCIP_NOFILE;
          }
          file2 = fopen(filename2, "wb");
@@ -3009,16 +3082,16 @@ SCIP_DECL_READERWRITE(readerWriteNl)
 
          fclose(file2);
          fclose(tempfile);
-         remove(tempname2);
+         remove(tempname);  /* remove .row file */
 
          /* copy col file from temporary to current location */
-         SCIPsnprintf(tempname2, sizeof(tempname2), "%s.col", tempname);
+         SCIPsnprintf(tempname, templen, "%s.col", tempnamestub);
          strcpy(filename2 + filenamelen, ".col");
 
-         tempfile = fopen(tempname2, "rb");
+         tempfile = fopen(tempname, "rb");
          if( tempfile == NULL )
          {
-            SCIPerrorMessage("Cannot open temporary file <%s> for reading: error %d\n", tempname2, errno);
+            SCIPerrorMessage("Cannot open temporary file <%s> for reading: error %d\n", tempname, errno);
             return SCIP_NOFILE;
          }
          file2 = fopen(filename2, "wb");
@@ -3033,42 +3106,59 @@ SCIP_DECL_READERWRITE(readerWriteNl)
 
          fclose(file2);
          fclose(tempfile);
-         remove(tempname2);
+         /* .col file will be removed further down */
 
          SCIPfreeBufferArray(scip, &filename2);
       }
+
+      *result = SCIP_SUCCESS;
+
+      TERMINATE: ;
    }
    catch( const mp::UnsupportedError& e )
    {
       SCIPerrorMessage("constraint not writable as AMPL .nl: %s\n", e.what());
-      return SCIP_WRITEERROR;
+      rc = SCIP_WRITEERROR;
    }
    catch( const mp::Error& e )
    {
       // some other error from ampl/mp
       SCIPerrorMessage("%s\n", e.what());
-      return SCIP_WRITEERROR;
+      rc = SCIP_WRITEERROR;
    }
    catch( const fmt::SystemError& e )
    {
       // probably a file open error
       SCIPerrorMessage("%s\n", e.what());
-      return SCIP_FILECREATEERROR;
+      rc = SCIP_FILECREATEERROR;
    }
    catch( const std::bad_alloc& e )
    {
       SCIPerrorMessage("Out of memory: %s\n", e.what());
-      return SCIP_NOMEMORY;
+      rc = SCIP_NOMEMORY;
    }
    catch( const std::exception& e )
    {
       SCIPerrorMessage("%s\n", e.what());
-      return SCIP_ERROR;
+      rc = SCIP_ERROR;
    }
 
-   *result = SCIP_SUCCESS;
+   /* remove file with tempname, or fail trying */
+   if( tempname != NULL )
+   {
+      remove(tempname);
+      SCIPfreeBufferArray(scip, &tempname);
+   }
 
-   return SCIP_OKAY;
+   SCIPfreeBufferArrayNull(scip, &tempnamestub);
+
+   if( tempdir != NULL )
+   {
+      remove(tempdir);
+      SCIPfreeBufferArray(scip, &tempdir);
+   }
+
+   return rc;
 }
 
 /*
