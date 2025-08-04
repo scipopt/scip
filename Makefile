@@ -90,6 +90,7 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		MPFR=$(MPFR)\\n\
 		EXACTSOLVE=$(EXACTSOLVE)\\n\
 		IPOPTOPT=$(IPOPTOPT)\\n\
+		CONOPTOPT=$(CONOPTOPT)\\n\
 		LAPACK=$(LAPACK)\\n\
 		LPSCHECK=$(LPSCHECK)\\n\
 		LPSOPT=$(LPSOPT)\\n\
@@ -592,6 +593,12 @@ SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
 LPIINSTMSG	+=	"\n  -> \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)\" is a directory containing the ipopt installation, i.e., \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin/IpIpoptApplication.hpp\", \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/libipopt*\", ... should exist.\n"
 endif
 
+# CONOPT provides only shared libraries
+ifeq ($(CONOPT),true)
+SOFTLINKS	+=	$(LIBDIR)/shared/conoptdir
+LPIINSTMSG	+=	"\n  -> \"conoptdir\" is a directory containing the conopt installation, i.e., \"conoptdir/include/coidef.f90\", \"conoptdir/lib/libconopt*\", ... should exist.\n"
+endif
+
 ifeq ($(FILTERSQP),true)
 FLAGS		+=	-DFNAME_$(FORTRAN_NAMING_CONVENTION)
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
@@ -614,10 +621,15 @@ LINKER		=	CPP
 endif
 
 ifeq ($(SHARED),true)
-SCIPLIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(IPOPTLIBS) $(FILTERSQPLIBS)
+SCIPLIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(IPOPTLIBS) $(CONOPTLIBS) $(FILTERSQPLIBS)
 ifeq ($(IPOPT),true)
 ifneq ($(LINKRPATH),)
 SCIPLIBEXTLIBS	+=	 $(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib)
+endif
+endif
+ifeq ($(CONOPT),true)
+ifneq ($(LINKRPATH),)
+SCIPLIBEXTLIBS	+=	 $(LINKRPATH)$(realpath $(LIBDIR)/shared/conoptdir/lib)
 endif
 endif
 ifeq ($(WORHP),true)
@@ -920,6 +932,12 @@ else
 SCIPPLUGINLIBOBJ	+= 	scip/nlpi_ipopt_dummy.o
 endif
 
+ifeq ($(CONOPT),true)
+SCIPPLUGINLIBCPPOBJ	+= 	scip/nlpi_conopt.o
+else
+SCIPPLUGINLIBOBJ	+= 	scip/nlpi_conopt_dummy.o
+endif
+
 ifeq ($(FILTERSQP),true)
 SCIPPLUGINLIBOBJ	+= scip/nlpi_filtersqp.o
 else
@@ -1176,7 +1194,7 @@ else
 WINLIBFILENAME	=	lib$(MAINNAME).$(BASE).$(LPS).lib
 endif
 
-LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(FILTERSQP).$(SYM).$(PAPILO)
+LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(CONOPT)-$(CONOPTOPT).$(FILTERSQP).$(SYM).$(PAPILO)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -1621,12 +1639,13 @@ endif
 				echo "-> generating $(SCIPGITHASHFILE)" ; \
 				$(MAKE) githash ; \
 			fi'
-ifneq ($(subst \\n,\n,$(BUILDFLAGS)$(LPS)$(IPOPT)),$(LAST_BUILDFLAGS)$(LAST_LPS)$(LAST_IPOPT))
+ifneq ($(subst \\n,\n,$(BUILDFLAGS)$(LPS)$(IPOPT)$(CONOPT)),$(LAST_BUILDFLAGS)$(LAST_LPS)$(LAST_IPOPT)$(LAST_CONOPT))
 		@mkdir -p $(OBJDIR)/include/scip
 		@echo "#define SCIP_BUILDFLAGS \"$(BUILDFLAGS)\"" > $(SCIPBUILDFLAGSFILE)
 		@echo "#define SCIP_LPS \"$(LPS)\"" >> $(SCIPBUILDFLAGSFILE)
 		@echo "#define SCIP_LPSEXACT \"$(LPSEXACT)\"" >> $(SCIPBUILDFLAGSFILE)
 		@echo "#define SCIP_IPOPT \"$(IPOPT)\"" >> $(SCIPBUILDFLAGSFILE)
+		@echo "#define SCIP_CONOPT \"$(CONOPT)\"" >> $(SCIPBUILDFLAGSFILE)
 endif
 ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
 		@rm -f $(SCIPCONFIGHFILE)
@@ -1641,6 +1660,7 @@ endif
 		@echo "LAST_LPS=\"$(LPS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_LPSEXACT=\"$(LPSEXACT)\"" >> $(LASTSETTINGS)
 		@echo "LAST_IPOPT=\"$(IPOPT)\"" >> $(LASTSETTINGS)
+		@echo "LAST_CONOPT=\"$(CONOPT)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SANITIZE=$(SANITIZE)" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
 
@@ -1650,6 +1670,7 @@ $(SCIPBUILDFLAGSFILE) :
 		@echo "#define SCIP_LPS \"$(LPS)\"" >> $(SCIPBUILDFLAGSFILE)
 		@echo "#define SCIP_LPSEXACT \"$(LPSEXACT)\"" >> $(SCIPBUILDFLAGSFILE)
 		@echo "#define SCIP_IPOPT \"$(IPOPT)\"" >> $(SCIPBUILDFLAGSFILE)
+		@echo "#define SCIP_CONOPT \"$(CONOPT)\"" >> $(SCIPBUILDFLAGSFILE)
 
 $(SCIPCONFIGHFILE) :
 		@echo "-> writing $(SCIPCONFIGHFILE)"
@@ -1744,7 +1765,7 @@ links:		| $(LIBDIR)/static $(LIBDIR)/shared $(LIBDIR)/include $(DIRECTORIES) ech
 .PHONY: echosoftlinks
 echosoftlinks:
 		@echo
-		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SHARED=$(SHARED) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT) AMPL=$(AMPL) IPOPT=$(IPOPT) IPOPTOPT=$(IPOPTOPT) WORHP=$(WORHP) WORHPOPT=$(WORHPOPT) FILTERSQP=$(FILTERSQP) EXPRINT=$(EXPRINT) SYM=$(SYM)"
+		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SHARED=$(SHARED) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT) AMPL=$(AMPL) IPOPT=$(IPOPT) IPOPTOPT=$(IPOPTOPT) CONOPT=$(CONOPT) CONOPTOPT=$(CONOPTOPT) WORHP=$(WORHP) WORHPOPT=$(WORHPOPT) FILTERSQP=$(FILTERSQP) EXPRINT=$(EXPRINT) SYM=$(SYM)"
 		@echo
 		@echo "* SCIP needs some softlinks to external programs, in particular, LP-solvers."
 		@echo "* Please insert the paths to the corresponding directories/libraries below."
@@ -1840,6 +1861,11 @@ endif
 ifneq ($(IPOPT),true)
 ifneq ($(IPOPT),false)
 		$(error invalid IPOPT flag selected: IPOPT=$(IPOPT). Possible options are: true false)
+endif
+endif
+ifneq ($(CONOPT),true)
+ifneq ($(CONOPT),false)
+		$(error invalid CONOPT flag selected: CONOPT=$(CONOPT). Possible options are: true false)
 endif
 endif
 ifneq ($(FILTERSQP),true)
@@ -1973,6 +1999,7 @@ help:
 		@echo "  - MPFR=<true|false|auto>: Turns MPFR on (required for exact solving mode and if SoPlex is built with MPFR; must be installed on the system), off, or to the same value as BOOST (default)."
 		@echo "  - EXACTSOLVE=<true|false|auto>: Turns exact solving mode on, off, or turns it on if all necessary dependencies are available (default)."
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
+		@echo "  - CONOPT=<true|false>: Turns support of CONOPT on or off (default)."
 		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
 		@echo "  - SANITIZE=<false|true|thread|address|memory>: To choose type of sanitizer."

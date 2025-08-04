@@ -158,12 +158,14 @@ BOOST    	=  	false
 ZIMPL		=	false
 AMPL		=	true
 IPOPT		=	false
+CONOPT		=	false
 FILTERSQP	=	false
 WORHP		=	false
 EXPRINT 	=	cppad
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
+CONOPTOPT	=	opt
 WORHPOPT	=	opt
 LPSCHECK        =	false
 
@@ -723,6 +725,20 @@ ifneq ($(SCIPINTERNAL),)
 LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
 else
 LDFLAGS		+=	$(LINKRPATH)\$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
+endif
+endif
+endif
+
+# define flags for CONOPT
+ifeq ($(CONOPT),true)
+FLAGS += -I$(SCIPDIR)/$(LIBDIR)/shared/conoptdir/include $(CONOPT_FLAGS)
+CONOPTLIBS := $(LINKCC_L)$(SCIPDIR)$(LIBDIR)/shared/conoptdir/lib $(LINKCC_l)conopt4
+LDFLAGS		+=	$(CONOPTLIBS)
+ifneq ($(LINKRPATH),)
+ifneq ($(SCIPINTERNAL),)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/shared/conoptdir/lib
+else
+LDFLAGS		+=	$(LINKRPATH)\$(SCIPREALPATH)/$(LIBDIR)/shared/conoptdir/lib
 endif
 endif
 endif
