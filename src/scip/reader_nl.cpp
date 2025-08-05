@@ -29,6 +29,10 @@
  *
  * For documentation on ampl::mp, see https://ampl.github.io and https://www.zverovich.net/2014/09/19/reading-nl-files.html.
  * For documentation on .nl files, see https://ampl.com/REFS/hooking2.pdf.
+ *
+ * TODO:
+ * - writing of logical constraints (and, or, xor)
+ * - writing of SOS constraints (into suffixes)
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

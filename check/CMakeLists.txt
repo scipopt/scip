@@ -883,6 +883,14 @@ set(basenames_lp_wrongformat
 set(message_format_lp "WARNING: violation of LP format - a constraint name starts with a digit; it is not possible to read the generated LP file with SCIP; use write/genproblem or write/gentransproblem for generic variable names")
 
 #
+# the following instances have constraints that cannot or cannot yet be written out in nl format
+#
+set(basenames_nl_wrongformat
+    bip_cross_min.10.10.10.1.pip
+    )
+set(message_format_nl "WARNING: constraint .* of type <.*> cannot be printed in requested format")
+
+#
 # test writing and reading from and to different file extensions for MIP
 #
 foreach(instance ${instances_MIP_write})
