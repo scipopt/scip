@@ -2976,6 +2976,7 @@ static
 SCIP_DECL_READERWRITE(readerWriteNl)
 {  /*lint --e{715}*/
    mp::WriteNLResult writerresult;
+   SCIP_Bool binary;
    SCIP_Bool comments;
    char* tempdir = NULL;
    char* tempnamestub = NULL;
@@ -2986,13 +2987,14 @@ SCIP_DECL_READERWRITE(readerWriteNl)
 
    *result = SCIP_DIDNOTRUN;
 
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/" READER_NAME "/binary", &binary) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/" READER_NAME "/comments", &comments) );
 
    SCIPNLFeeder nlf(scip,
       name, objsense, objscale, objoffset,
       vars, nvars, fixedvars, nfixedvars,
       conss, nconss,
-      FALSE, comments, genericnames);
+      binary, comments, genericnames);
 
    try
    {
@@ -3230,6 +3232,9 @@ SCIP_RETCODE SCIPincludeReaderNl(
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteNl) );
 
    /* add nl reader parameters for writing routines */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/" READER_NAME "/binary", "should nl files be written in binary format",
+         NULL, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/" READER_NAME "/comments", "should comments be written to nl files",
          NULL, FALSE, FALSE, NULL, NULL) );
