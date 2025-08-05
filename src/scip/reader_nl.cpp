@@ -2293,6 +2293,10 @@ public:
    )
    {
       assert(i == 0);
+
+      if( nlheader.num_obj_nonzeros == 0 )
+         return;
+
       auto gvw = gw.MakeVectorWriter(nlheader.num_obj_nonzeros);
       for( int v = 0; v < nvars; ++v )
       {
@@ -2406,29 +2410,30 @@ public:
             SCIP_VAR** consvars = SCIPgetVarsLinear(scip, cons);
             int nconsvars = SCIPgetNVarsLinear(scip, cons);
 
+            /* if we write 0 coefficients, then this gives an error when reading
+             * (nl-reader.h: NLReader<Reader, Handler>::ReadLinearExpr(): ReadUInt(1, ...)
+             *  says that the expected number of coefs is at least 1)
+             */
+            if( nconsvars == 0 )
+               return;
+
             auto vw = clw.MakeVectorWriter(nconsvars);
             for( int v = 0; v < nconsvars; ++v )
                if( SCIPvarIsNegated(consvars[v]) )
                   vw.Write(getVarAMPLIndex(SCIPvarGetNegationVar(consvars[v])), -conscoefs[v]);
                else
                   vw.Write(getVarAMPLIndex(consvars[v]), conscoefs[v]);
+
+            return;
          }
-         else if( conshdlr == conshdlr_setppc )
+
+         if( conshdlr == conshdlr_setppc )
          {
             SCIP_VAR** consvars = SCIPgetVarsSetppc(scip, cons);
             int nconsvars = SCIPgetNVarsSetppc(scip, cons);
 
-            auto vw = clw.MakeVectorWriter(nconsvars);
-            for( int v = 0; v < nconsvars; ++v )
-               if( SCIPvarIsNegated(consvars[v]) )
-                  vw.Write(getVarAMPLIndex(SCIPvarGetNegationVar(consvars[v])), -1.0);
-               else
-                  vw.Write(getVarAMPLIndex(consvars[v]), 1.0);
-         }
-         else if( conshdlr == conshdlr_logicor )
-         {
-            SCIP_VAR** consvars = SCIPgetVarsLogicor(scip, cons);
-            int nconsvars = SCIPgetNVarsLogicor(scip, cons);
+            if( nconsvars == 0 )
+               return;
 
             auto vw = clw.MakeVectorWriter(nconsvars);
             for( int v = 0; v < nconsvars; ++v )
@@ -2436,12 +2441,36 @@ public:
                   vw.Write(getVarAMPLIndex(SCIPvarGetNegationVar(consvars[v])), -1.0);
                else
                   vw.Write(getVarAMPLIndex(consvars[v]), 1.0);
+
+            return;
          }
-         else if( conshdlr == conshdlr_knapsack )
+
+         if( conshdlr == conshdlr_logicor )
+         {
+            SCIP_VAR** consvars = SCIPgetVarsLogicor(scip, cons);
+            int nconsvars = SCIPgetNVarsLogicor(scip, cons);
+
+            if( nconsvars == 0 )
+               return;
+
+            auto vw = clw.MakeVectorWriter(nconsvars);
+            for( int v = 0; v < nconsvars; ++v )
+               if( SCIPvarIsNegated(consvars[v]) )
+                  vw.Write(getVarAMPLIndex(SCIPvarGetNegationVar(consvars[v])), -1.0);
+               else
+                  vw.Write(getVarAMPLIndex(consvars[v]), 1.0);
+
+            return;
+         }
+
+         if( conshdlr == conshdlr_knapsack )
          {
             SCIP_Longint* weights = SCIPgetWeightsKnapsack(scip, cons);
             SCIP_VAR** consvars = SCIPgetVarsKnapsack(scip, cons);
             int nconsvars = SCIPgetNVarsKnapsack(scip, cons);
+
+            if( nconsvars == 0 )
+               return;
 
             auto vw = clw.MakeVectorWriter(nconsvars);
             for( int v = 0; v < nconsvars; ++v )
@@ -2449,22 +2478,22 @@ public:
                   vw.Write(getVarAMPLIndex(SCIPvarGetNegationVar(consvars[v])), -(SCIP_Real)weights[v]);
                else
                   vw.Write(getVarAMPLIndex(consvars[v]), (SCIP_Real)weights[v]);
+
+            return;
          }
+
+         assert(conshdlr == conshdlr_varbound);
+
+         auto vw = clw.MakeVectorWriter(2);
+         if( SCIPvarIsNegated(SCIPgetVarVarbound(scip, cons)) )
+            vw.Write(getVarAMPLIndex(SCIPvarGetNegationVar(SCIPgetVarVarbound(scip, cons))), -1.0);
          else
-         {
-            assert(conshdlr == conshdlr_varbound);
+            vw.Write(getVarAMPLIndex(SCIPgetVarVarbound(scip, cons)), 1.0);
 
-            auto vw = clw.MakeVectorWriter(2);
-            if( SCIPvarIsNegated(SCIPgetVarVarbound(scip, cons)) )
-               vw.Write(getVarAMPLIndex(SCIPvarGetNegationVar(SCIPgetVarVarbound(scip, cons))), -1.0);
-            else
-               vw.Write(getVarAMPLIndex(SCIPgetVarVarbound(scip, cons)), 1.0);
-
-            if( SCIPvarIsNegated(SCIPgetVbdvarVarbound(scip, cons)) )
-               vw.Write(getVarAMPLIndex(SCIPvarGetNegationVar(SCIPgetVbdvarVarbound(scip, cons))), -SCIPgetVbdcoefVarbound(scip, cons));
-            else
-               vw.Write(getVarAMPLIndex(SCIPgetVbdvarVarbound(scip, cons)), SCIPgetVbdcoefVarbound(scip, cons));
-         }
+         if( SCIPvarIsNegated(SCIPgetVbdvarVarbound(scip, cons)) )
+            vw.Write(getVarAMPLIndex(SCIPvarGetNegationVar(SCIPgetVbdvarVarbound(scip, cons))), -SCIPgetVbdcoefVarbound(scip, cons));
+         else
+            vw.Write(getVarAMPLIndex(SCIPgetVbdvarVarbound(scip, cons)), SCIPgetVbdcoefVarbound(scip, cons));
 
          return;
       }
