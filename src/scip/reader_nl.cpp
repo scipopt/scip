@@ -1739,7 +1739,6 @@ class SCIPNLFeeder : public mp::NLFeeder<SCIPNLFeeder, SCIP_EXPR*>
 {
 private:
    SCIP*                 scip;               ///< SCIP data structure (problem to write)
-   bool                  nlcomments;         ///< whether to write nl files with comments
    const char*           probname;           ///< problem name
    SCIP_OBJSENSE         objsense;           ///< objective sense
    SCIP_Real             objscale;           ///< objective scale
@@ -1750,6 +1749,8 @@ private:
    int                   nfixedvars;         ///< number of fixed variables
    SCIP_CONS**           allconss;           ///< all constraints given to writer
    int                   nallconss;          ///< number of all constraints
+
+   bool                  nlcomments;         ///< whether to write nl files with comments
    SCIP_Bool             genericnames;       ///< are generic names used
 
    SCIP_CONSHDLR*        conshdlr_nonlinear; ///< nonlinear constraints handler
@@ -2169,8 +2170,6 @@ public:
    /// Constructor
    SCIPNLFeeder(
       SCIP*              scip_,              ///< SCIP data structure
-      SCIP_Bool          nlbinary_,          ///< whether to write binary or text nl
-      SCIP_Bool          nlcomments_,        ///< whether to include comments into nl
       const char*        probname_,          ///< problem name
       SCIP_OBJSENSE      objsense_,          ///< objective sense
       SCIP_Real          objscale_,          ///< objective scale
@@ -2181,10 +2180,11 @@ public:
       int                nfixedvars_,        ///< number of fixed variables
       SCIP_CONS**        conss_,             ///< constraints
       int                nconss_,            ///< number of constraints
+      SCIP_Bool          nlbinary_,          ///< whether to write binary or text nl
+      SCIP_Bool          nlcomments_,        ///< whether to include comments into nl
       SCIP_Bool          genericnames_       ///< are generic names used
    )
    : scip(scip_),
-     nlcomments(nlcomments_),
      probname(probname_),
      objsense(objsense_),
      objscale(objscale_),
@@ -2195,6 +2195,7 @@ public:
      nfixedvars(nfixedvars_),
      allconss(conss_),
      nallconss(nconss_),
+     nlcomments(nlcomments_),
      genericnames(genericnames_),
      vars(NULL),
      nvars(0),
@@ -2980,10 +2981,11 @@ SCIP_DECL_READERWRITE(readerWriteNl)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPNLFeeder nlf(scip, FALSE, TRUE,
+   SCIPNLFeeder nlf(scip,
       name, objsense, objscale, objoffset,
       vars, nvars, fixedvars, nfixedvars,
-      conss, nconss, genericnames);
+      conss, nconss,
+      FALSE, TRUE, genericnames);
 
    try
    {
