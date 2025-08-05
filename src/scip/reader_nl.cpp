@@ -904,12 +904,23 @@ public:
       }
       else
       {
+         /* there are asserts in cons_linear.c:chgLhs/chgRhs to forbid changing a side
+          * from one infinity to another; to workaround this, we change the side to 0.0 first
+          */
          if( !SCIPisInfinity(scip, -lb) )
          {
+            if( SCIPisInfinity(scip, lb) )
+            {
+               SCIP_CALL_THROW( SCIPchgLhsLinear(scip, probdata->conss[index], 0.0) );
+            }
             SCIP_CALL_THROW( SCIPchgLhsLinear(scip, probdata->conss[index], lb) );
          }
          if( !SCIPisInfinity(scip,  ub) )
          {
+            if( SCIPisInfinity(scip, -ub) )
+            {
+               SCIP_CALL_THROW( SCIPchgRhsLinear(scip, probdata->conss[index], 0.0) );
+            }
             SCIP_CALL_THROW( SCIPchgRhsLinear(scip, probdata->conss[index], ub) );
          }
       }
