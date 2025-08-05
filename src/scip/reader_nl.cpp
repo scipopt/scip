@@ -2976,6 +2976,7 @@ static
 SCIP_DECL_READERWRITE(readerWriteNl)
 {  /*lint --e{715}*/
    mp::WriteNLResult writerresult;
+   SCIP_Bool comments;
    char* tempdir = NULL;
    char* tempnamestub = NULL;
    char* tempname = NULL;
@@ -2985,11 +2986,13 @@ SCIP_DECL_READERWRITE(readerWriteNl)
 
    *result = SCIP_DIDNOTRUN;
 
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/" READER_NAME "/comments", &comments) );
+
    SCIPNLFeeder nlf(scip,
       name, objsense, objscale, objoffset,
       vars, nvars, fixedvars, nfixedvars,
       conss, nconss,
-      FALSE, TRUE, genericnames);
+      FALSE, comments, genericnames);
 
    try
    {
@@ -3225,6 +3228,11 @@ SCIP_RETCODE SCIPincludeReaderNl(
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyNl) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadNl) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteNl) );
+
+   /* add nl reader parameters for writing routines */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/" READER_NAME "/comments", "should comments be written to nl files",
+         NULL, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 4.0.0", "AMPL .nl file reader library (github.com/ampl/mp)") );
 
