@@ -95,6 +95,7 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  *  - scip            : SCIP main data structure
  *  - reader          : the reader itself
  *  - file            : output file, or NULL if standard output should be used
+ *  - filename        : name of output file, if available, otherwise NULL
  *  - name            : problem name
  *  - probdata        : user problem data set by the reader
  *  - transformed     : TRUE iff problem is the transformed problem
@@ -128,7 +129,7 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  *  If the reader detected an error while writing the output file, it should return with RETCODE SCIP_WRITEERROR 
  */
 #define SCIP_DECL_READERWRITE(x) SCIP_RETCODE x (SCIP* scip, SCIP_READER* reader, FILE* file, \
-      const char* name, SCIP_PROBDATA* probdata, SCIP_Bool transformed, \
+      const char* filename, const char* name, SCIP_PROBDATA* probdata, SCIP_Bool transformed, \
       SCIP_OBJSENSE objsense, SCIP_Real objoffset, SCIP_Real objscale, \
       SCIP_RATIONAL* objoffsetexact, SCIP_RATIONAL* objscaleexact, \
       SCIP_VAR** vars, int nvars, int nbinvars, int nintvars, int nimplvars, int ncontvars, \

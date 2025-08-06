@@ -494,6 +494,56 @@ SCIP_RETCODE SCIPreadProb(
    return retcode;
 }
 
+/** outputs problem to file stream */
+static
+SCIP_RETCODE printProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROB*            prob,               /**< problem data */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           filename,           /**< name of output file, or NULL if not available */
+   const char*           extension,          /**< file format (or NULL for default CIP format) */
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
+   )
+{
+   SCIP_RESULT result;
+   int i;
+   assert(scip != NULL);
+   assert(prob != NULL);
+
+   /* try all readers until one could read the file */
+   result = SCIP_DIDNOTRUN;
+   for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
+   {
+      SCIP_RETCODE retcode;
+
+      if( extension != NULL )
+         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, scip->messagehdlr, file, filename, extension, genericnames, &result);
+      else
+         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, scip->messagehdlr, file, filename, "cip", genericnames, &result);
+
+      /* check for reader errors */
+      if( retcode == SCIP_WRITEERROR )
+         return retcode;
+
+      SCIP_CALL( retcode );
+   }
+
+   switch( result )
+   {
+   case SCIP_DIDNOTRUN:
+      return SCIP_PLUGINNOTFOUND;
+
+   case SCIP_SUCCESS:
+      return SCIP_OKAY;
+
+   default:
+      assert(i < scip->set->nreaders);
+      SCIPerrorMessage("invalid result code <%d> from reader <%s> writing <%s> format\n",
+         result, SCIPreaderGetName(scip->set->readers[i]), extension);
+      return SCIP_READERROR;
+   }  /*lint !e788*/
+}
+
 /** write original or transformed problem */
 static
 SCIP_RETCODE writeProblem(
@@ -518,10 +568,8 @@ SCIP_RETCODE writeProblem(
    file = NULL;
    tmpfilename = NULL;
 
-   if( filename != NULL &&  filename[0] != '\0' )
+   if( filename != NULL && filename[0] != '\0' )
    {
-      int success;
-
       file = fopen(filename, "w");
       if( file == NULL )
       {
@@ -553,29 +601,113 @@ SCIP_RETCODE writeProblem(
       {
          SCIPmessagePrintWarning(scip->messagehdlr, "filename <%s> has no file extension, select default <cip> format for writing\n", filename);
       }
+   }
 
-      if( transformed )
-         retcode = SCIPprintTransProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
-      else
-         retcode = SCIPprintOrigProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
+   retcode = printProblem(scip, transformed ? scip->transprob : scip->origprob, file, filename, extension != NULL ? extension : fileextension, genericnames);
+
+   if( tmpfilename != NULL )
+   {
+      assert(filename != NULL);
+      assert(file != NULL);
 
       BMSfreeMemoryArray(&tmpfilename);
 
-      success = fclose(file);
-      if( success != 0 )
+      if( fclose(file) != 0 )
       {
          SCIPerrorMessage("An error occurred while closing file <%s>\n", filename);
          return SCIP_FILECREATEERROR;
       }
    }
+
+   /* check for write errors */
+   if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
+      return retcode;
    else
    {
-      /* print to stdout */
-      if( transformed )
-         retcode = SCIPprintTransProblem(scip, NULL, extension, genericnames);
-      else
-         retcode = SCIPprintOrigProblem(scip, NULL, extension, genericnames);
+      SCIP_CALL( retcode );
    }
+
+   return SCIP_OKAY;
+}
+
+/** outputs original problem to file stream
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_RETCODE SCIPprintOrigProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           extension,          /**< file format (or NULL for default CIP format)*/
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
+   )
+{
+   SCIP_RETCODE retcode;
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintOrigProblem", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   assert(scip != NULL);
+   assert( scip->origprob != NULL );
+
+   retcode = printProblem(scip, scip->origprob, file, NULL, extension, genericnames);
+
+   /* check for write errors */
+   if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
+      return retcode;
+   else
+   {
+      SCIP_CALL( retcode );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** outputs transformed problem of the current node to file stream
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_RETCODE SCIPprintTransProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           extension,          /**< file format (or NULL for default CIP format)*/
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
+   )
+{
+   SCIP_RETCODE retcode;
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintTransProblem", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   assert(scip != NULL);
+   assert(scip->transprob != NULL );
+
+   retcode = printProblem(scip, scip->transprob, file, NULL, extension, genericnames);
 
    /* check for write errors */
    if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
