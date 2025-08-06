@@ -157,12 +157,25 @@ have_i:
       while (*fmt++ != 'g');
     case 'g':
       x = va_arg(ap, double);
-#ifdef NL_LIB_USE_SPRINTF
-      snprintf(s = buf,
-               sizeof(buf), "%.*g", output_prec, x);
-#elif NL_LIB_USE_OWN_GFMT
+#define NLW2_LIB_DMGAY_DTOA  //SV
+#ifndef NLW2_LIB_DMGAY_DTOA
+#ifndef NL_LIB_USE_OWN_GFMT
+      std::to_chars_result res;
+      if (output_prec <= 0)             // shortest representation
+        res = std::to_chars(s = buf, buf+sizeof(buf)-1, x);
+      else                              // 24 characters enough IEEE 754
+        res = std::to_chars(s = buf, buf+sizeof(buf)-1, x,
+                            std::chars_format::general,
+                            output_prec);
+      if (res.ec == std::errc())        // OK
+        *res.ptr = '\0';
+      else
+        Utils().myexit("aprintf / to_chars bug: " +
+                       std::make_error_code(res.ec).message());
+#else  // NL_LIB_USE_OWN_GFMT
       NL_LIB_GFMT::gfmt(s = buf, sizeof(buf), x, output_prec);
-#else
+#endif  // NL_LIB_USE_OWN_GFMT
+#else  // NLW2_LIB_DMGAY_DTOA
       s = DAVID_GAY_GFMT::gfmt(x, output_prec);
 #endif
       goto have_s;
@@ -312,6 +325,8 @@ s_written:
 } // namespace mp
 
 
+#ifdef NLW2_LIB_DMGAY_DTOA
+
 extern "C" {
 char *
 dtoa_r_dmgay(double dd, int mode, int ndigits,
@@ -408,6 +423,10 @@ gfmt(double x, int prec)
 
 }  // namespace DAVID_GAY_GFMT
 
+#endif  // NLW2_LIB_DMGAY_DTOA
+
+
+#ifdef NL_LIB_USE_OWN_GFMT
 
 namespace NL_LIB_GFMT {
 
@@ -465,3 +484,5 @@ void gfmt(char *b, size_t sz, double x, int prec) {
 }
 
 }  // namespace NL_LIB_GFMT
+
+#endif  // NL_LIB_USE_OWN_GFMT

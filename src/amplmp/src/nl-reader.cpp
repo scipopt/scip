@@ -359,12 +359,12 @@ fmt::StringRef mp::NameProvider::name(
     const char *name = names_[index];
     const auto* pos1past = names_[index + 1] - 1;
     assert( ('\n' == *pos1past) || ('\r' == *pos1past));
-    if ('\r' == *(pos1past-1))            // Windows
+    if (pos1past>name && '\r' == *(pos1past-1))            // Windows
       --pos1past;
     return fmt::StringRef(name, pos1past - name);
   }
   writer_.clear();
-  if (/*SV always true: i2>=0 &&*/ index>=i2)
+  if (index>=i2)
     writer_ << gen_name_2_ << '[' << (index - i2 + 1) << ']';
   else
     writer_ << gen_name_ << '[' << (index + 1) << ']';
