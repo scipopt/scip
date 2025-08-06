@@ -36,7 +36,7 @@
 #include "scip/reader_rlp.h"
 #include "scip/scip_message.h"
 #include "scip/scip_reader.h"
-#include "scip/scip_solvingstats.h"
+#include "scip/scip_prob.h"
 #include <string.h>
 
 #define READER_NAME             "rlpreader"

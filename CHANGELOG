@@ -38,6 +38,7 @@ Features
 - add check that parameter value pointers are unique, i.e., no two are the same
 - added generalized resolution conflict analysis that operates directly on linear constraints instead of conflict graphs.
 - added support for AND-constraints to GAMS writer
+- added writing support for AMPL NL writer: currently only general and specialized linear and nonlinear constraints can be written
 
 Performance improvements
 ------------------------
@@ -85,7 +86,8 @@ Interface changes
 - new event SCIP_EVENTTYPE_DUALBOUNDIMPROVED is generated whenever the global dual bound is improved
 - new event mask SCIP_EVENTTYPE_GAPUPDATED for catching updates in primal or dual bound
 - added new sorting functions SCIPsortRealPtrPtr(), ...
-- the callback SCIP_DECL_READERWRITE is equipped with objoffset, objscale, objoffsetexact, objscaleexact as arguments 8 through 11 to write the exact objective offset and scale in exact mode
+- added argument filename to the SCIP_DECL_READERWRITE callback in the 4th position
+- the callback SCIP_DECL_READERWRITE is equipped with objoffset, objscale, objoffsetexact, objscaleexact as arguments 9 through 12 to write the exact objective offset and scale in exact mode
 
 ### Deleted and changed API methods
 
@@ -126,6 +128,7 @@ Interface changes
   SCIPallocateSymgraphConsnodeperm()
   SCIPvarGetOrigIndex()
   SCIPwriteSto()
+- the declaration of SCIPprintOrigProblem() and SCIPprintTransProblem() moved from scip_solvingstats.h to scip_prob.h
 
 ### New API functions
 

@@ -24,7 +24,7 @@
 
 /**@file   reader_nl.h
  * @ingroup FILEREADERS
- * @brief  AMPL .nl file reader
+ * @brief  AMPL .nl file reader and writer
  * @author Stefan Vigerske
  */
 
