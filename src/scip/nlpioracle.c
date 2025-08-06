@@ -2312,7 +2312,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianRowSparsity(
 
 /** gets sparsity pattern (columnwise) of Jacobian matrix
  *
- *  Note that internal data is returned in *coloffsets and *rows, thus the user does not need to allocate memory there.
+ *  Note that internal data is returned in *coloffsets, *rows, and *rownlflags, thus the user does not need to allocate memory there.
  *  Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary.
  */
 SCIP_RETCODE SCIPnlpiOracleGetJacobianColSparsity(
