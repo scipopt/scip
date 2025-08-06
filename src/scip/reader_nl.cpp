@@ -24,7 +24,7 @@
 
 /**@file   reader_nl.cpp
  * @ingroup DEFPLUGINS_READER
- * @brief  AMPL .nl file reader
+ * @brief  AMPL .nl file reader and writer
  * @author Stefan Vigerske
  *
  * For documentation on ampl::mp, see https://ampl.github.io and https://www.zverovich.net/2014/09/19/reading-nl-files.html.
