@@ -269,10 +269,10 @@ char* SCIPnlpiOracleGetConstraintName(
 
 /** gives linear coefficient of a given variable in a constraint */
 SCIP_EXPORT
-SCIP_Real SCIPnlpiOracleGetConstraintCoef(
+SCIP_Real SCIPnlpiOracleGetConstraintLinearCoef(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   considx,            /**< constraint index */
-   int                   varpos              /**< variable's position in the constraint's variable array */
+   int                   considx,            /**< constraint index, or -1 for objective */
+   int                   varpos              /**< position in the constraint's linear coefficient array */
    );
 
 /** indicates whether constraint is nonlinear */
