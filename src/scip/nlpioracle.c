@@ -2364,14 +2364,15 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianColSparsity(
    int considx = 0;
    for( i = 0; i < nnz; ++i )
    {
-      int coloffset = oracle->jaccoloffsets[oracle->jaccols[i]]; /* this gives us the offset corresponding to the index of the nnz variable */
+      int col = oracle->jaccols[i];
+      int coloffset = oracle->jaccoloffsets[col]; /* this gives us the offset corresponding to the index of the nnz variable */
 
       if( i == oracle->jacrowoffsets[considx] )
          ++considx;
 
-      oracle->jacrows[coloffset + nvarnnz[oracle->jaccols[i]]] = considx-1;
-      oracle->jacrownlflags[coloffset + nvarnnz[oracle->jaccols[i]]] = oracle->jaccolnlflags[i];
-      nvarnnz[oracle->jaccols[i]]++;
+      oracle->jacrows[coloffset + nvarnnz[col]] = considx-1;
+      oracle->jacrownlflags[coloffset + nvarnnz[col]] = oracle->jaccolnlflags[i];
+      nvarnnz[col]++;
    }
 
    SCIPfreeBlockMemoryArray(scip, &nvarnnz, oracle->nvars);
