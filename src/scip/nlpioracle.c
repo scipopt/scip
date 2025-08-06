@@ -2273,8 +2273,9 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianRowSparsity(
 
    SCIPdebugMessage("%p get jacobian sparsity\n", (void*)oracle);
 
-   if( oracle->jacrowoffsets != NULL )
+   if( oracle->jacrowoffsets != NULL || oracle->nvars == 0 || oracle->nconss == 0 )
    {
+      /* sparsity already computed or no variables or no constraints */
       assert(oracle->jaccols != NULL);
       if( rowoffsets != NULL )
          *rowoffsets = oracle->jacrowoffsets;
@@ -2284,19 +2285,6 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianRowSparsity(
    }
 
    SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
-
-   if( oracle->nvars == 0 || oracle->nconss == 0 )
-   {
-      /* no variables or no constraints */
-      if( rowoffsets != NULL )
-         *rowoffsets = oracle->jacrowoffsets;
-      if( cols != NULL )
-         *cols = oracle->jaccols;
-
-      SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
-
-      return SCIP_OKAY;
-   }
 
    SCIP_CALL( computeRowJacobianSparsity(scip, oracle, &nnz, NULL, &nnlnz) );
 
