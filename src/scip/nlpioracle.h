@@ -378,7 +378,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianColSparsity(
 
 /** gets nonzero indices in the objective gradient
  *
- *  Note that internal data is returned in *nz, thus the user does not need to allocate memory there.
+ *  Note that internal data is returned in *nz and *nlnz, thus the user does not need to allocate memory there.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
