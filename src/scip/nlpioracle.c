@@ -2324,9 +2324,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianColSparsity(
 
    *nnlnz = 0;
 
-   if( oracle->jacrowoffsets != NULL )
+   if( oracle->jacrowoffsets != NULL || oracle->nvars == 0 || oracle->nconss == 0 )
    {
-      assert(oracle->jaccols != NULL);
       assert(oracle->jacrows != NULL);
       if( coloffsets != NULL )
          *coloffsets = oracle->jaccoloffsets;
@@ -2334,25 +2333,11 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianColSparsity(
          *rows = oracle->jacrows;
       if( rownlflags != NULL )
          *rownlflags = oracle->jacrownlflags;
+
       return SCIP_OKAY;
    }
 
    SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
-
-   if( oracle->nvars == 0 || oracle->nconss == 0 )
-   {
-      /* no variables or no constraints */
-      if( coloffsets != NULL )
-         *coloffsets = NULL;
-      if( rows != NULL )
-         *rows = NULL;
-      if( rownlflags != NULL )
-         *rownlflags = oracle->jacrownlflags;
-
-      SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
-
-      return SCIP_OKAY;
-   }
 
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &nvarnnz, oracle->nvars) );
 
