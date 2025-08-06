@@ -2263,7 +2263,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianRowSparsity(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int**           rowoffsets,         /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
    const int**           cols                /**< pointer to store pointer that stores the indices of variables that appear in each row,
-                                              *   rowoffset[nconss] gives length of col, can be NULL */
+                                              *   rowoffsets[nconss] gives length of col, can be NULL */
    )
 {
    int nnz;
