@@ -211,7 +211,7 @@ SCIP_RETCODE ensureIntArraySize(
    return SCIP_OKAY;
 }
 
-/** ensures that a given array of integers has at least a given length, and clears the newly allocated memory */
+/** ensures that a given array of booleans has at least a given length, and clears the newly allocated memory */
 static
 SCIP_RETCODE ensureClearBoolArraySize(
    SCIP*                 scip,               /**< SCIP data structure */
