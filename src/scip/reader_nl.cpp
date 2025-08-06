@@ -3239,7 +3239,7 @@ SCIP_RETCODE SCIPincludeReaderNl(
          "reading/" READER_NAME "/comments", "should comments be written to nl files",
          NULL, FALSE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 4.0.0", "AMPL .nl file reader library (github.com/ampl/mp)") );
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 4.0.3", "AMPL .nl file reader library (github.com/ampl/mp)") );
 
    return SCIP_OKAY;
 }

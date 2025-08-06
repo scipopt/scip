@@ -112,7 +112,7 @@ namespace mp {
     }
 
     template <class AR>
-    void init_from_rvalue(AR&& other) {
+    void init_from_rvalue(AR&& other) noexcept {
       if (other.save_.size()) {
         save_ = std::move(other.save_);
         data_ = save_.data();

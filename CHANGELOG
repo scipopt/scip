@@ -306,7 +306,7 @@ Miscellaneous
 
 - add objective offset instead of objective offset variable in cip reader
 - the solchecker tool is extended for rational values
-- updated ampl/mp to v4.0.0
+- updated ampl/mp to v4.0.3
 - removed 4th number in SCIP version; new format is major.minor.patch
 - classify as varbound only with a binary variable in SCIPclassifyConstraintTypesLinear()
 
