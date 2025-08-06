@@ -2276,7 +2276,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianRowSparsity(
    if( oracle->jacrowoffsets != NULL || oracle->nvars == 0 || oracle->nconss == 0 )
    {
       /* sparsity already computed or no variables or no constraints */
-      assert(oracle->jaccols != NULL);
+      assert(oracle->jaccols != NULL || oracle->nvars == 0 || oracle->nconss == 0);
       if( rowoffsets != NULL )
          *rowoffsets = oracle->jacrowoffsets;
       if( cols != NULL )
