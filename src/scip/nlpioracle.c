@@ -849,11 +849,9 @@ static SCIP_RETCODE computeRowJacobianSparsity(
             BMScopyMemoryArray(&oracle->jaccols[*nnz], cons->linidxs, cons->nlinidxs);
             (*nnz) += cons->nlinidxs;
 
-            for( int j = 0; j < cons->nlinidxs; ++j )
-            {
-               if( nvarnnz != NULL )
+            if( nvarnnz != NULL )
+               for( int j = 0; j < cons->nlinidxs; ++j )
                   ++nvarnnz[cons->linidxs[j]];
-            }
          }
          continue;
       }
