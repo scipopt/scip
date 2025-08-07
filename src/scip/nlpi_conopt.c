@@ -872,7 +872,10 @@ static SCIP_RETCODE initConopt(
    assert(problem->oracle != NULL);
 
    if( data->solvetime == NULL )
+   if( data->solvetime == NULL )
+   {
       SCIP_CALL( SCIPcreateClock(scip, &(data->solvetime)) );
+   }
 
    nconss = SCIPnlpiOracleGetNConstraints(problem->oracle);
    nvars = SCIPnlpiOracleGetNVars(problem->oracle);
