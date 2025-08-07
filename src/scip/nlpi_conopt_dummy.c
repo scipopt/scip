@@ -52,7 +52,7 @@ const char* SCIPgetSolverNameConopt(void)
 /** gets string that describes CONOPT */
 const char* SCIPgetSolverDescConopt(void)
 {
-   return "this is CONOPT";
+   return "CONOPT not available";
 }
 
 /** returns whether CONOPT is available, i.e., whether it has been linked in */
