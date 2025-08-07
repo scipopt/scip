@@ -2475,13 +2475,15 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
       {
          if( SCIPisExprVaridx(scip, expr) )
          {
-            assert(SCIPgetIndexExprVaridx(expr) < oracle->nvars);
-            if( !nzflag[SCIPgetIndexExprVaridx(expr)] )
+            int varidx = SCIPgetIndexExprVaridx(expr);
+
+            assert(varidx < oracle->nvars);
+            if( !nzflag[varidx] )
             {
-               nzflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
+               nzflag[varidx] = TRUE;
                ++maxnnz;
             }
-            nlflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
+            nlflag[varidx] = TRUE;
          }
       }
 
