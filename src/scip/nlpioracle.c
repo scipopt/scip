@@ -2487,7 +2487,6 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
 
       SCIPfreeExpriter(&it);
 
-      maxnnz = MIN(maxnnz, oracle->nvars);
       SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->objgradnz), maxnnz) );
       SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->objnlflags), maxnnz) );
 
@@ -2511,13 +2510,6 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
 
       SCIPfreeCleanBufferArray(scip, &nlflag);
       SCIPfreeCleanBufferArray(scip, &nzflag);
-
-      /* shrink objgradnz and objnlflags array to nobjgradnz */
-      if( oracle->nobjgradnz < maxnnz )
-      {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(oracle->objgradnz), maxnnz, oracle->nobjgradnz) );
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(oracle->objnlflags), maxnnz, oracle->nobjgradnz) );
-      }
    }
 
    *nz = oracle->objgradnz;
