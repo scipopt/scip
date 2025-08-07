@@ -890,6 +890,7 @@ static SCIP_RETCODE initConopt(
          nrangeconss++;
    }
 
+   /* tell CONOPT that we may have empty columns */
    COI_Error += COIDEF_EmptyCol(problem->CntVect, 1);
 
    /* inform CONOPT about problem sizes */
