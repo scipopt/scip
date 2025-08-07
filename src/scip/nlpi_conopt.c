@@ -95,7 +95,7 @@ struct SCIP_NlpiProblem
 
    /* options that will be passed to CONOPT via callbacks */
    int                   verblevel;          /**< verbosity level, same as in SCIP_NlpParam: 0 off, 1 normal, 2 debug, > 2 more debug */
-   SCIP_Real             opttol;
+   SCIP_Real             opttol;             /**< optimality tolerance */
 
    /* statistics */
    int                   ncalls;             /**< overall number of solver calls */
