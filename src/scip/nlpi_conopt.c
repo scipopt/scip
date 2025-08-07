@@ -347,7 +347,6 @@ static int COI_CALLCONV ReadMatrix(
             if( lhs > 0.0 )
                CURR[norigvars + nslackvars] = SCIPrandomGetReal(problem->randnumgen, lhs, lhs + MAXPERTURB*MIN(1.0, rhs-lhs));
             else if( rhs < 0.0 )
-
                CURR[norigvars + nslackvars] = SCIPrandomGetReal(problem->randnumgen, rhs - MAXPERTURB*MIN(1.0, rhs-lhs), rhs);
             else
                CURR[norigvars + nslackvars] = SCIPrandomGetReal(problem->randnumgen,
