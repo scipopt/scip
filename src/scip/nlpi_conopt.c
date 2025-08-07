@@ -1462,7 +1462,7 @@ const char* SCIPgetSolverDescConopt(
    void
    )
 {
-   return "Feasible path solver for large-scale nonlinear problems";
+   return "Feasible path solver for large-scale nonlinear problems (conopt.com)";
 }
 
 /** returns whether CONOPT is available, i.e., whether it has been linked in */
