@@ -929,6 +929,7 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_2DLagrStr(problem->CntVect, &LagrStr);
    COI_Error += COIDEF_2DLagrVal(problem->CntVect, &LagrVal);
 
+   /* tell CONOPT that our function evaluations include the linear terms */
    COI_Error += COIDEF_FVincLin(problem->CntVect, 1);
 
    /* pass the problem pointer to CONOPT, so that it may be used in CONOPT callbacks */
