@@ -55,7 +55,7 @@
 
 #define NLPI_NAME              "conopt"                    /**< short concise name of solver */
 #define NLPI_DESC              "CONOPT interface"          /**< description of solver */
-#define NLPI_PRIORITY          0                           /**< priority of NLP solver */
+#define NLPI_PRIORITY          500                         /**< priority of NLP solver */
 
 #define DEFAULT_RANDSEED       107                         /**< initial random seed */
 #define MAXPERTURB             0.01                        /**< maximal perturbation of bounds in starting point heuristic */
