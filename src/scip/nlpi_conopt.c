@@ -48,8 +48,10 @@
 #include "scip/scip_general.h"
 
 #include "coiheader.h"
-#include "scip_message.h"
-#include "scip_timing.h"
+#include "scip/scip_message.h"
+#include "scip/scip_timing.h"
+
+#include "coiheader.h"
 
 #define NLPI_NAME              "conopt"                    /**< short concise name of solver */
 #define NLPI_DESC              "solver interface template" /**< description of solver */
