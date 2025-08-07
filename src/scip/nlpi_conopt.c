@@ -419,7 +419,7 @@ static int COI_CALLCONV ReadMatrix(
             if( NLFLAG[j+objnzcnt] == 0 )
             {
                /* for linear terms, compute the (constant) Jacobian values */
-               VALUE[j+objnzcnt] = SCIPnlpiOracleGetConstraintCoef(oracle, jacrows[j], nrownz[jacrows[j]]);
+               VALUE[j+objnzcnt] = SCIPnlpiOracleGetConstraintLinearCoef(oracle, jacrows[j], nrownz[jacrows[j]]);
                ++(nrownz[jacrows[j]]);
             }
          }
@@ -435,7 +435,7 @@ static int COI_CALLCONV ReadMatrix(
          if( NLFLAG[idx] == 0 )
          {
             /* in the oracle, index -1 is used for the objective */
-            VALUE[idx] = SCIPnlpiOracleGetConstraintCoef(oracle, -1, nrownz[NUMCON-1]);
+            VALUE[idx] = SCIPnlpiOracleGetConstraintLinearCoef(oracle, -1, nrownz[NUMCON-1]);
             ++(nrownz[NUMCON-1]);
          }
          ++objnzcnt;
