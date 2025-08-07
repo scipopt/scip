@@ -680,7 +680,8 @@ SCIP_RETCODE handleNlpParam(
          }
 
          const int* offset;
-         SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &offset, NULL) );
+         int nnlnz;
+         SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &offset, NULL, NULL, &nnlnz) );
          jacnnz = offset[m];
 
          /* fitting data from NLP runs gave the following coefficients (see also !2634):
@@ -849,7 +850,8 @@ void collectStatistic(
 
    const int* offset;
    const int* col;
-   SCIP_CALL_ABORT( SCIPnlpiOracleGetJacobianRowSparsity(scip, problem->oracle, &offset, NULL) );
+   int nnlnz;
+   SCIP_CALL_ABORT( SCIPnlpiOracleGetJacobianRowSparsity(scip, problem->oracle, &offset, NULL, NULL, &nnlnz) );
    jacnnz = offset[m];
 
    SCIP_CALL_ABORT( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &col, FALSE) );
@@ -1889,6 +1891,7 @@ bool ScipNLP::get_nlp_info(
 {
    const int* offset;
    SCIP_RETCODE retcode;
+   int nnlnz;
 
    assert(nlpiproblem != NULL);
    assert(nlpiproblem->oracle != NULL);
@@ -1896,7 +1899,7 @@ bool ScipNLP::get_nlp_info(
    n = SCIPnlpiOracleGetNVars(nlpiproblem->oracle);
    m = SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle);
 
-   retcode = SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &offset, NULL);
+   retcode = SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &offset, NULL, NULL, &nnlnz);
    if( retcode != SCIP_OKAY )
       return false;
 
@@ -2221,11 +2224,12 @@ bool ScipNLP::eval_jac_g(
       const int* jaccol;
       int j;
       int i;
+      int nnlnz;
 
       assert(iRow != NULL);
       assert(jCol != NULL);
 
-      if( SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &jacoffset, &jaccol) != SCIP_OKAY )
+      if( SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &jacoffset, &jaccol, NULL, &nnlnz) != SCIP_OKAY )
          return false;
 
       if( jacoffset != NULL )

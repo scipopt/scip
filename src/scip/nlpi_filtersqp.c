@@ -540,6 +540,7 @@ SCIP_RETCODE setupGradients(
    int ncons;
    int i;
    int c;
+   int nnlnz;
 
    assert(la != NULL);
    assert(lasize != NULL);
@@ -551,7 +552,7 @@ SCIP_RETCODE setupGradients(
    ncons = SCIPnlpiOracleGetNConstraints(oracle);
 
    /* get jacobian sparsity in oracle format: offset are rowstarts in col and col are column indices */
-   SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, oracle, &offset, &col) );
+   SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, oracle, &offset, &col, NULL, &nnlnz) );
    nnz = offset[ncons];
 
    /* la stores both column indices (first) and rowstarts (at the end) of the objective gradient and Jacobian

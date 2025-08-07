@@ -656,6 +656,7 @@ SCIP_RETCODE initWorhp(
    const int* cols;
    int i;
    int j;
+   int nnlnz;
 
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -682,7 +683,7 @@ SCIP_RETCODE initWorhp(
    wsp->DF.nnz = opt->n;
 
    /* get number of non-zero entries in Jacobian */
-   SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, problem->oracle, &offset, NULL) );
+   SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, problem->oracle, &offset, NULL, NULL, &nnlnz) );
    wsp->DG.nnz = offset[opt->m];
    SCIPdebugMsg(scip, "nnonz jacobian %d\n", wsp->DG.nnz);
 
@@ -768,7 +769,7 @@ SCIP_RETCODE initWorhp(
    {
       int nnonz;
 
-      SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, problem->oracle, &offset, &cols) );
+      SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, problem->oracle, &offset, &cols, NULL, &nnlnz) );
       assert(offset[opt->m] == wsp->DG.nnz);
 
       nnonz = 0;

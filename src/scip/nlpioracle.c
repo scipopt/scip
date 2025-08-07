@@ -2262,12 +2262,13 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianRowSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int**           rowoffsets,         /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
-   const int**           cols                /**< pointer to store pointer that stores the indices of variables that appear in each row,
+   const int**           cols,               /**< pointer to store pointer that stores the indices of variables that appear in each row,
                                               *   rowoffsets[nconss] gives length of col, can be NULL */
+   const SCIP_Bool**     colnlflags,         /**< flags indicating whether an entry in nonlinear (sorted row-wise) */
+   int*                  nnlnz               /**< number of nonlinear nonzeroes */
    )
 {
    int nnz;
-   int nnlnz = 0;
 
    assert(oracle != NULL);
 
@@ -2281,17 +2282,21 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianRowSparsity(
          *rowoffsets = oracle->jacrowoffsets;
       if( cols != NULL )
          *cols = oracle->jaccols;
+      if( colnlflags != NULL )
+         *colnlflags = oracle->jaccolnlflags;
       return SCIP_OKAY;
    }
 
    SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
 
-   SCIP_CALL( computeRowJacobianSparsity(scip, oracle, &nnz, NULL, &nnlnz) );
+   SCIP_CALL( computeRowJacobianSparsity(scip, oracle, &nnz, NULL, nnlnz) );
 
    if( rowoffsets != NULL )
       *rowoffsets = oracle->jacrowoffsets;
    if( cols != NULL )
       *cols = oracle->jaccols;
+   if( colnlflags != NULL )
+      *colnlflags = oracle->jaccolnlflags;
 
    SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
