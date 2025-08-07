@@ -379,7 +379,12 @@ static int COI_CALLCONV ReadMatrix(
 
    /* Jacobian information */
 
-   SCIP_CALL( SCIPnlpiOracleGetJacobianColSparsity(scip, oracle, &jaccoloffsets, &jacrows, &jacrownlflags, &njacnlnnz) );
+   retcode = SCIPnlpiOracleGetJacobianColSparsity(scip, oracle, &jaccoloffsets, &jacrows, &jacrownlflags, &njacnlnnz);
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPerrorMessage("Error in Jacobian sparsity computation\n");
+      return retcode;
+   }
    assert(jaccoloffsets == NULL || jaccoloffsets[norigvars] <= NUMNZ);
 
    /* move structure info into COLSTA and ROWNO; while doing so, also add nonzeroes for the objective
