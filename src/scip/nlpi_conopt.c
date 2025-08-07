@@ -54,7 +54,7 @@
 #include "coiheader.h"
 
 #define NLPI_NAME              "conopt"                    /**< short concise name of solver */
-#define NLPI_DESC              "solver interface template" /**< description of solver */
+#define NLPI_DESC              "CONOPT interface"          /**< description of solver */
 #define NLPI_PRIORITY          0                           /**< priority of NLP solver */
 
 #define DEFAULT_RANDSEED       107                         /**< initial random seed */
