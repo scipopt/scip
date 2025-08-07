@@ -1004,7 +1004,10 @@ SCIP_DECL_NLPIFREE(nlpiFreeConopt)
    assert(*nlpidata != NULL);
 
    if( (*nlpidata)->solvetime != NULL )
+   if( (*nlpidata)->solvetime != NULL )
+   {
       SCIP_CALL( SCIPfreeClock(scip, &((*nlpidata)->solvetime)) );
+   }
 
    SCIPfreeBlockMemory(scip, nlpidata);
    assert(*nlpidata == NULL);
