@@ -2476,9 +2476,12 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
          if( SCIPisExprVaridx(scip, expr) )
          {
             assert(SCIPgetIndexExprVaridx(expr) < oracle->nvars);
-            nzflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
+            if( !nzflag[SCIPgetIndexExprVaridx(expr)] )
+            {
+               nzflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
+               ++maxnnz;
+            }
             nlflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
-            ++maxnnz;
          }
       }
 
