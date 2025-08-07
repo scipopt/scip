@@ -738,7 +738,7 @@ static int COI_CALLCONV Option(
          *RVAL = problem->opttol;
          break;
       default:
-         strcpy(NAME,"");
+         *NAME = '\0';
    }
 
    return 0;
