@@ -1275,7 +1275,9 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessConopt)
    if( primalvalues != NULL )
    {
       if( !problem->initguess )
+      {
          SCIP_CALL( SCIPduplicateMemoryArray(scip, &problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle)) );
+      }
       else
          BMScopyMemoryArray(problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle));
    }
