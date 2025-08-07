@@ -599,8 +599,10 @@ static int COI_CALLCONV Status(
          problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
          ++(problem->nlocinfeas);
          break;
+      case 7: /* intermediate non-optimal */
+         problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
+         break;
       case 6: /* intermediate infeasible */
-      case 7: /* intermediate non-optimal */ /* TODO may still use a feasible point */
       case 12: /* unknown error */
       case 13:
          SCIPdebugMsg(scip, "NLP problem status unknown (CONOPT status %d)\n", MODSTA);
