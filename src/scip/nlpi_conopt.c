@@ -692,7 +692,7 @@ static int COI_CALLCONV FDEval(
    assert(problem != NULL);
    assert(ROWNO <= SCIPnlpiOracleGetNConstraints(problem->oracle));
 
-   if( MODE == 1 || MODE == 3 )
+   if( MODE == 1 )
    {
       /* the last 'constraint' is the objective */
       retcode = ROWNO < SCIPnlpiOracleGetNConstraints(problem->oracle) ?
@@ -704,12 +704,10 @@ static int COI_CALLCONV FDEval(
 
    if( MODE == 2 || MODE == 3 )
    {
-      SCIP_Real conval;
-
       /* the last 'constraint' is the objective */
       retcode = ROWNO < SCIPnlpiOracleGetNConstraints(problem->oracle) ?
-            SCIPnlpiOracleEvalConstraintGradient(problem->scip, problem->oracle, ROWNO, X, TRUE, &conval, JAC) :
-            SCIPnlpiOracleEvalObjectiveGradient(problem->scip, problem->oracle, X, TRUE, &conval, JAC);
+            SCIPnlpiOracleEvalConstraintGradient(problem->scip, problem->oracle, ROWNO, X, TRUE, G, JAC) :
+            SCIPnlpiOracleEvalObjectiveGradient(problem->scip, problem->oracle, X, TRUE, G, JAC);
       if( retcode != SCIP_OKAY )
          *ERRCNT = 1;
    }
