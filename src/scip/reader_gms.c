@@ -807,8 +807,8 @@ SCIP_RETCODE printAndCons(
 {
    char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
-   char name[GMS_MAX_NAMELEN + 3];
-   char buffer[GMS_MAX_PRINTLEN + 3];
+   char name[GMS_MAX_NAMELEN];
+   char buffer[GMS_MAX_PRINTLEN];
    SCIP_VAR** activevars = NULL;
    SCIP_Real* activecoefs = NULL;
    int nactivevars;
@@ -833,8 +833,8 @@ SCIP_RETCODE printAndCons(
    appendLine(scip, file, linebuffer, &linecnt, " ");
 
    /* print equation name */
-   (void) SCIPsnprintf(buffer, GMS_MAX_NAMELEN + 3, "%s ..", rowname);
-   SCIP_CALL( printConformName(scip, name, GMS_MAX_NAMELEN + 3, buffer) );
+   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s ..", rowname);
+   SCIP_CALL( printConformName(scip, name, GMS_MAX_NAMELEN, buffer) );
    appendLine(scip, file, linebuffer, &linecnt, name);
 
    for( v = 0; v < nvars; ++v )

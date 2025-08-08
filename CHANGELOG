@@ -245,6 +245,7 @@ Interface changes
 - new parameters "conflict/usegenres", "conflict/reduction", "conflict/mbreduction", "conflict/maxvarsfracres", "conflict/resfuiplevels",
   "conflict/fixandcontinue", and "conflict/maxcoefquot" to control generalized resolution conflict analysis.
 - new parameter "lp/minsolvedepth" to give a lower bound on the depth at which LPs are solved
+- new parameters "reading/nlreader/binary" and "reading/nlreader/comments" to adjust writing of nl files
 
 ### Data structures
 
