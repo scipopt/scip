@@ -8940,11 +8940,11 @@ void addLargestCliquePart(
 
       nvarcliques = SCIPvarGetNCliques(var, value);
 
-      if( nvarcliques > 0 )
+      if( nvarcliques > 0 && nvarcliques < MAXNUMEARCHCLIQUE )
       {
          SCIP_CLIQUE** varcliques;
          int selectedidx = -1;
-         int selectedsmallestidx = nbinvars + 1;
+         int selectedsmallestidx = nvars + 1;
          int l;
 
          varcliques = SCIPvarGetCliques(var, value);
@@ -8955,14 +8955,16 @@ void addLargestCliquePart(
          {
             SCIP_VAR** cliquevars;
             SCIP_Bool* cliquevals;
+            SCIP_CLIQUE* clique;
             int nvarclique;
-            int smallestidx = nbinvars + 1;
+            int smallestidx = nvars + 1;
             int k;
 
-            assert( varcliques[l] != NULL );
-            nvarclique = SCIPcliqueGetNVars(varcliques[l]);
-            cliquevars = SCIPcliqueGetVars(varcliques[l]);
-            cliquevals = SCIPcliqueGetValues(varcliques[l]);
+            clique = varcliques[l];
+            assert( clique != NULL );
+            nvarclique = SCIPcliqueGetNVars(clique);
+            cliquevars = SCIPcliqueGetVars(clique);
+            cliquevals = SCIPcliqueGetValues(clique);
 
             /* loop through clique */
             for( k = 0; k < nvarclique; ++k )
@@ -9013,16 +9015,19 @@ void addLargestCliquePart(
          }
 
          /* add clique */
-         if( selectedidx > 0 )
+         if( selectedidx >= 0 )
          {
             SCIP_VAR** cliquevars;
             SCIP_Bool* cliquevals;
+            SCIP_CLIQUE* clique;
             int nvarclique;
             int k;
 
-            nvarclique = SCIPcliqueGetNVars(varcliques[selectedidx]);
-            cliquevars = SCIPcliqueGetVars(varcliques[selectedidx]);
-            cliquevals = SCIPcliqueGetValues(varcliques[selectedidx]);
+            assert( selectedidx <= nvarcliques );
+            clique = varcliques[selectedidx];
+            nvarclique = SCIPcliqueGetNVars(clique);
+            cliquevars = SCIPcliqueGetVars(clique);
+            cliquevals = SCIPcliqueGetValues(clique);
 
             /* loop through clique and add it to part */
             for( k = 0; k < nvarclique; ++k )
@@ -9093,7 +9098,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
 
    /* allocate temporary memory for storing the number of neighors in the parts */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &marked, nvars) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &nneigh, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nneigh, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &ncliqueparts, nvars) );
 
    /* all variables which are of integral type can be potentially of binary type; this can be checked via the method SCIPvarIsBinary(var) */
@@ -9104,10 +9109,12 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, probtoidxmap, *probtoidxmapsize, nbinvars) );
       *probtoidxmapsize = nbinvars;
+      idx = *probtoidxmap;
       for( i = 0; i < nbinvars; ++i )
-         (*probtoidxmap)[i] = -1;
+         idx[i] = -1;
    }
-   idx = *probtoidxmap;
+   else
+      idx = *probtoidxmap;
    assert( idx != NULL );
 
 #ifndef NDEBUG
