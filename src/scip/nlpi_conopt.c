@@ -806,29 +806,13 @@ static int COI_CALLCONV LagrVal(
    )
 {
    SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
-   SCIP_Real* hessvals;
 
    assert(problem != NULL);
 
-   if( SCIPallocBlockMemoryArray(problem->scip, &hessvals, NHESS) != SCIP_OKAY )
-   {
-      *NODRV = 1;
-      return 0;
-   }
-
    /* TODO better handling for isnew? */
-   if( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, X, TRUE, TRUE, U[NUMCON-1], U, hessvals, TRUE)
+   if( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, X, TRUE, TRUE, U[NUMCON-1], U, HSVL, TRUE)
          != SCIP_OKAY )
-   {
-      SCIPfreeBlockMemoryArray(problem->scip, &hessvals, NHESS);
       *NODRV = 1;
-      return 0;
-   }
-
-   for( int i = 0; i < NHESS; i++ )
-      HSVL[i] = hessvals[i];
-
-   SCIPfreeBlockMemoryArray(problem->scip, &hessvals, NHESS);
 
    return 0;
 }
