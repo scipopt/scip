@@ -926,8 +926,10 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_UsrMem(problem->CntVect, (void*)problem);
 
    /* register license */
-#if defined(LICENSE_INT_1) && defined(LICENSE_INT_2) && defined(LICENSE_INT_3) && defined(LICENSE_TEXT)
-   COI_Error += COIDEF_License(problem->CntVect, LICENSE_INT_1, LICENSE_INT_2, LICENSE_INT_3, LICENSE_TEXT);
+#if defined(CONOPT_LICENSE_INT_1) && defined(CONOPT_LICENSE_INT_2) && defined(CONOPT_LICENSE_INT_3) && \
+    defined(CONOPT_LICENSE_TEXT)
+   COI_Error += COIDEF_License(problem->CntVect, CONOPT_LICENSE_INT_1, CONOPT_LICENSE_INT_2, CONOPT_LICENSE_INT_3,
+         CONOPT_LICENSE_TEXT);
 #endif
 
    if( COI_Error )

@@ -10,14 +10,14 @@ find_library(CONOPT_LIBRARY
 
 set(CONOPT_LIBRARIES ${CONOPT_LIBRARY})
 
-if(DEFINED ENV{LICENSE_INT_1} AND DEFINED ENV{LICENSE_INT_2} AND DEFINED ENV{LICENSE_INT_3} AND DEFINED ENV{LICENSE_TEXT})
+if(DEFINED ENV{CONOPT_LICENSE_INT_1} AND DEFINED ENV{CONOPT_LICENSE_INT_2} AND DEFINED ENV{CONOPT_LICENSE_INT_3} AND DEFINED ENV{CONOPT_LICENSE_TEXT})
    message("CONOPT license found")
-   add_compile_definitions(LICENSE_INT_1=$ENV{LICENSE_INT_1})
-   add_compile_definitions(LICENSE_INT_2=$ENV{LICENSE_INT_2})
-   add_compile_definitions(LICENSE_INT_3=$ENV{LICENSE_INT_3})
-   add_compile_definitions(LICENSE_TEXT=\"$ENV{LICENSE_TEXT}\")
+   add_compile_definitions(CONOPT_LICENSE_INT_1=$ENV{CONOPT_LICENSE_INT_1})
+   add_compile_definitions(CONOPT_LICENSE_INT_2=$ENV{CONOPT_LICENSE_INT_2})
+   add_compile_definitions(CONOPT_LICENSE_INT_3=$ENV{CONOPT_LICENSE_INT_3})
+   add_compile_definitions(CONOPT_LICENSE_TEXT=\"$ENV{CONOPT_LICENSE_TEXT}\")
 else()
-   message("CONOPT license not found. The license needs to be specified in environment variables LICENSE_INT_1, LICENSE_INT_2, LICENSE_INT_3 and LICENSE_TEXT.")
+   message("CONOPT license not found. The license needs to be specified in environment variables CONOPT_LICENSE_INT_1, CONOPT_LICENSE_INT_2, CONOPT_LICENSE_INT_3 and CONOPT_LICENSE_TEXT.")
 endif()
 
 include(FindPackageHandleStandardArgs)
