@@ -9225,7 +9225,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
                   othervar = cliquevars[k];
                   assert( othervar != NULL );
 
-                  if ( othervar == var && ! SCIPvarIsActive(othervar) )
+                  if ( othervar == var || ! SCIPvarIsActive(othervar) )
                      continue;
 
                   probidx = SCIPvarGetProbindex(othervar);
