@@ -358,7 +358,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianRowSparsity(
    const int**           rowoffsets,         /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
    const int**           cols,               /**< pointer to store pointer that stores the indices of variables that appear in each row,
                                               *   rowoffset[nconss] gives length of col, can be NULL */
-   const SCIP_Bool**     colnlflags,         /**< flags indicating whether an entry in nonlinear (sorted row-wise) */
+   const SCIP_Bool**     colnlflags,         /**< flags indicating whether an entry in nonlinear (sorted row-wise), can be NULL */
    int*                  nnlnz               /**< number of nonlinear nonzeroes */
    );
 
