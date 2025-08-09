@@ -105,7 +105,7 @@ option(LTO "Enable Link Time Optimization, aka Interprocedural Optimization" ON)
 
 if(LTO AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
     include(CheckIPOSupported)
-    check_ipo_supported(RESULT result OUTPUT output)
+    check_ipo_supported(RESULT result LANGUAGES C OUTPUT output)
     if(result)
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
         message(STATUS "LTO enabled")
@@ -121,7 +121,7 @@ if(LTO AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Re
         endif()
     else()
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
-        message(STATUS "LTO is not supported.")
+        message(STATUS "${output}")
     endif()
 endif()
 
