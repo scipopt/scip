@@ -42,6 +42,10 @@ Predefined presets for different use cases are also included in the `CMakePreset
 To use them, specify `--preset <preset>` as argument to `cmake`.
 For example, to build only with dependencies needed for a MIP solver, use `--preset mip`.
 
+A minor speed-up of SCIP can be obtained by enabling link-time-optimization via `-DLTO=on`.
+This way, the compiler additionally optimizes the complete code base across object-file boundaries, which means much higher linking times (and memory use).
+In our experiments, enabling link-time-optimization did not affect the algorithmic decisions of the solving process, but lead to slightly faster running times.
+
 The available presets can be listed with
 ```
 cmake --list-presets
@@ -375,6 +379,9 @@ In the above example add the settings:
 ```
 USRFLAGS=-I/sw/include USRCPPFLAGS=-I/sw/include USRCFLAGS=-I/sw/include USRLDFLAGS=-L/sw/lib.
 ```
+
+A minor speed-up of SCIP can be obtained by enabling link-time-optimization via `LTO=true`.
+This leads to much higher linking times (and memory use).
 
 ### 2. Installing SCIP
 
