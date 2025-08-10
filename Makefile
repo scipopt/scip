@@ -1990,7 +1990,7 @@ help:
 		@echo "  - NOBUFMEM=<true|false>>: Turn off buffer memory or on (default)."
 		@echo "  - NOBLKBUFMEM=<true|false>: Turn usage of internal memory functions off or on (default)."
 		@echo "  - VERBOSE=<true|false>: Turn on verbose messages of makefile or off (default)."
-		@echo "  - LTO=<true|false>: if OPT=opt for linux/macOS with gcc/clang, enable link-time-optimization (default)."
+		@echo "  - LTO=<true|false>: Turn on or off (default) link-time-optimization for linux/macOS with gcc/clang."
 		@echo
 		@echo "  Main targets:"
 		@echo "  - all (default): Build SCIP libraries and binary."
