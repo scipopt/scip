@@ -25,5 +25,14 @@ FLAGS		+=	-fPIC
 endif
 LINK_shared		=	-shared
 
+ifeq ($(LTO),true)
+  CFLAGS	+=	-flto
+  CXXFLAGS	+=	-flto
+  LDFLAGS	+=	-flto
+ifeq ($(SHARED),true)
+  LIBBUILDFLAGS +=	-flto
+endif
+endif
+
 FORTRANLIBS	=	-lgfortran
 FORTRAN_NAMING_CONVENTION = LCASE_DECOR

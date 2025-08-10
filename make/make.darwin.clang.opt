@@ -2,12 +2,3 @@ FLAGS		+=	-DNDEBUG -DSCIP_ROUNDING_FE
 OFLAGS		+=	-O3 -mtune=native -fomit-frame-pointer
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing
-
-ifeq ($(LTO),true)
-  CFLAGS	+=	-flto
-  CXXFLAGS	+=	-flto
-  LDFLAGS	+=	-flto
-ifeq ($(SHARED),true)
-  LIBBUILDFLAGS +=	-flto
-endif
-endif
