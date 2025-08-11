@@ -1165,11 +1165,51 @@ SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsConopt)
 static
 SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesConopt)
 {
+   SCIP_NLPIORACLE* oracle;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
-   assert(problem->oracle != NULL);
 
-   SCIP_CALL( SCIPnlpiOracleChgConsSides(scip, problem->oracle, nconss, indices, lhss, rhss) );
+   oracle = problem->oracle;
+   assert(oracle != NULL);
+
+   /* check if any range constraints appear or disappear; if they do, this means new slack variables,
+    * and thus a change in problem structure */
+   for( int i = 0; i < nconss; ++i )
+   {
+      SCIP_Real oldlhs;
+      SCIP_Real oldrhs;
+
+      assert(indices != NULL);
+      assert(indices[i] >= 0);
+      assert(indices[i] < SCIPnlpiOracleGetNConstraints(oracle));
+
+      oldlhs = SCIPnlpiOracleGetConstraintLhs(oracle, indices[i]);
+      oldrhs = SCIPnlpiOracleGetConstraintRhs(oracle, indices[i]);
+
+      if( !SCIPisInfinity(scip, -oldlhs) && !SCIPisInfinity(scip, oldrhs) && SCIPisLT(scip, oldlhs, oldrhs) )
+      {
+         /* the old constraint is a range constraint, check if this changes with the new sides */
+         if( lhss == NULL || rhss == NULL || SCIPisInfinity(scip, -lhss[i]) || SCIPisInfinity(scip, rhss[i]) ||
+               SCIPisEQ(scip, lhss[i], rhss[i]) )
+         {
+            problem->firstrun = TRUE;
+            break;
+         }
+      }
+      else
+      {
+         /* the old constraint is not a range constraint, check if this changes with the new sides */
+         if( lhss != NULL && rhss != NULL && !SCIPisInfinity(scip, -lhss[i]) && !SCIPisInfinity(scip, rhss[i]) &&
+               SCIPisLT(scip, lhss[i], rhss[i]) )
+         {
+            problem->firstrun = TRUE;
+            break;
+         }
+      }
+   }
+
+   SCIP_CALL( SCIPnlpiOracleChgConsSides(scip, oracle, nconss, indices, lhss, rhss) );
 
    invalidateSolution(problem);
 
