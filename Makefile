@@ -595,7 +595,7 @@ endif
 # CONOPT provides only shared libraries
 ifeq ($(CONOPT),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/conoptdir
-LPIINSTMSG	+=	"\n  -> \"conoptdir\" is a directory containing the conopt installation, i.e., \"conoptdir/include/coidef.f90\", \"conoptdir/lib/libconopt*\", ... should exist.\n"
+LPIINSTMSG	+=	"\n  -> \"conoptdir\" is a directory containing the conopt installation, i.e., \"conoptdir/include/conopt.h\", \"conoptdir/lib/libconopt.so\", ... should exist.\n"
 endif
 
 ifeq ($(FILTERSQP),true)

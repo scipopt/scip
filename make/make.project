@@ -731,7 +731,7 @@ endif
 # define flags for CONOPT
 ifeq ($(CONOPT),true)
 FLAGS += -I$(SCIPDIR)/$(LIBDIR)/shared/conoptdir/include $(CONOPT_FLAGS)
-CONOPTLIBS := $(LINKCC_L)$(SCIPDIR)$(LIBDIR)/shared/conoptdir/lib $(LINKCC_l)conopt4
+CONOPTLIBS := $(LINKCC_L)$(SCIPDIR)$(LIBDIR)/shared/conoptdir/lib $(LINKCC_l)conopt
 LDFLAGS		+=	$(CONOPTLIBS)
 ifneq ($(LINKRPATH),)
 ifneq ($(SCIPINTERNAL),)

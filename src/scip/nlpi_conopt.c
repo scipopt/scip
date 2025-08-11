@@ -47,11 +47,10 @@
 #include "scip/type_clock.h"
 #include "scip/scip_general.h"
 
-#include "coiheader.h"
 #include "scip/scip_message.h"
 #include "scip/scip_timing.h"
 
-#include "coiheader.h"
+#include "conopt.h"
 
 #define NLPI_NAME              "conopt"                    /**< short concise name of solver */
 #define NLPI_DESC              "CONOPT interface"          /**< description of solver */
@@ -1037,7 +1036,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemConopt)
    SCIP_CALL( SCIPnlpiOracleCreate(scip, &(*problem)->oracle) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName(scip, (*problem)->oracle, name) );
 
-   coiCreate(&((*problem)->CntVect));
+   COI_Create(&((*problem)->CntVect));
 
    if( (*problem)->CntVect == NULL )
    {
@@ -1069,7 +1068,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemConopt)
    SCIPfreeRandom(scip, &(*problem)->randnumgen);
    SCIPfreeMemoryArrayNull(scip, &(*problem)->initguess);
 
-   coiFree(&((*problem)->CntVect));
+   COI_Free(&((*problem)->CntVect));
 
    SCIPfreeBlockMemory(scip, problem);
    *problem = NULL;
