@@ -165,7 +165,6 @@ EXPRINT 	=	cppad
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
-CONOPTOPT	=	opt
 WORHPOPT	=	opt
 LPSCHECK        =	false
 
