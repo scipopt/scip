@@ -3499,14 +3499,15 @@ SCIP_RETCODE applyFixings(
          /* the variable being fixed or corresponding to an aggregation might lead to numerical difficulties */
          if( SCIPisZero(scip, consdata->vbdcoef * vbdvarscalar) )
          {
-            assert(SCIPisEQ(scip, varconstant, SCIPvarGetLbGlobal(consdata->var)));
-            assert(SCIPisEQ(scip, varconstant, SCIPvarGetUbGlobal(consdata->var)));
-            assert(SCIPisEQ(scip, vbdvarconstant, SCIPvarGetLbGlobal(consdata->vbdvar)));
-            assert(SCIPisEQ(scip, vbdvarconstant, SCIPvarGetUbGlobal(consdata->vbdvar)));
             SCIP_Real activity = varconstant + consdata->vbdcoef * vbdvarconstant;
 
             SCIPdebugMsg(scip, "variable bound constraint <%s>: variable <%s> is fixed to %.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(consdata->var), varconstant);
+
+            assert(SCIPisGE(scip, varconstant, SCIPvarGetLbGlobal(consdata->var)));
+            assert(SCIPisLE(scip, varconstant, SCIPvarGetUbGlobal(consdata->var)));
+            assert(SCIPisGE(scip, vbdvarconstant, SCIPvarGetLbGlobal(consdata->vbdvar)));
+            assert(SCIPisLE(scip, vbdvarconstant, SCIPvarGetUbGlobal(consdata->vbdvar)));
 
             if( ( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasLT(scip, activity, consdata->lhs) )
                || ( !SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasGT(scip, activity, consdata->rhs) ) )
