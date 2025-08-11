@@ -1138,12 +1138,10 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveConopt)
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   if( expr != NULL || SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, -1) )
-      problem->firstrun = TRUE;
-
    SCIP_CALL( SCIPnlpiOracleSetObjective(scip, problem->oracle, constant, nlins, lininds, linvals, expr) );
 
    invalidateSolution(problem);
+   problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
