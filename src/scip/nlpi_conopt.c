@@ -909,15 +909,15 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_ObjCon(problem->CntVect, nconss);
 
    /* register callback routines */
-   COI_Error += COIDEF_Message(problem->CntVect, &Message);
-   COI_Error += COIDEF_ErrMsg(problem->CntVect, &ErrMsg);
-   COI_Error += COIDEF_Status(problem->CntVect, &Status);
-   COI_Error += COIDEF_Solution(problem->CntVect, &Solution);
-   COI_Error += COIDEF_ReadMatrix(problem->CntVect, &ReadMatrix);
-   COI_Error += COIDEF_FDEval(problem->CntVect, &FDEval);
-   COI_Error += COIDEF_Option(problem->CntVect, &Option);
-   COI_Error += COIDEF_2DLagrStr(problem->CntVect, &LagrStr);
-   COI_Error += COIDEF_2DLagrVal(problem->CntVect, &LagrVal);
+   COI_Error += COIDEF_Message(problem->CntVect, Message);
+   COI_Error += COIDEF_ErrMsg(problem->CntVect, ErrMsg);
+   COI_Error += COIDEF_Status(problem->CntVect, Status);
+   COI_Error += COIDEF_Solution(problem->CntVect, Solution);
+   COI_Error += COIDEF_ReadMatrix(problem->CntVect, ReadMatrix);
+   COI_Error += COIDEF_FDEval(problem->CntVect, FDEval);
+   COI_Error += COIDEF_Option(problem->CntVect, Option);
+   COI_Error += COIDEF_2DLagrStr(problem->CntVect, LagrStr);
+   COI_Error += COIDEF_2DLagrVal(problem->CntVect, LagrVal);
 
    /* tell CONOPT that our function evaluations include the linear terms */
    COI_Error += COIDEF_FVincLin(problem->CntVect, 1);
