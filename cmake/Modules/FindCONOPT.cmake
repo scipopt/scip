@@ -4,7 +4,7 @@ find_path(CONOPT_INCLUDE_DIRS
     PATH_SUFFIXES include)
 
 find_library(CONOPT_LIBRARY
-    NAMES conopt
+    NAMES conopt conopt4
     HINTS ${CONOPT_DIR} $ENV{CONOPT_DIR}
     PATH_SUFFIXES lib)
 
