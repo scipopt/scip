@@ -159,7 +159,7 @@ static int COI_CALLCONV Solution(
                SCIPallocClearBlockMemoryArray(problem->scip, &problem->lastdualub, noraclevars) != SCIP_OKAY )
          {
             SCIPerrorMessage("Failed to allocate memory for a solution from CONOPT\n");
-            return SCIP_NOMEMORY;
+            return 1;
          }
          problem->varsolsize = noraclevars;
       }
@@ -168,7 +168,7 @@ static int COI_CALLCONV Solution(
          if( SCIPduplicateBlockMemoryArray(problem->scip, &problem->lastdualcons, YMAR, noracleconss) != SCIP_OKAY )
          {
             SCIPerrorMessage("Failed to allocate memory for a solution from CONOPT\n");
-            return SCIP_NOMEMORY;
+            return 1;
          }
          problem->conssolsize = noracleconss;
       }
@@ -191,7 +191,7 @@ static int COI_CALLCONV Solution(
          if( SCIPduplicateMemoryArray(problem->scip, &problem->initguess, problem->lastprimal, noraclevars) != SCIP_OKAY )
          {
             SCIPerrorMessage("Failed to allocate memory for an initial guess from\n");
-            return SCIP_NOMEMORY;
+            return 1;
          }
       }
       else
@@ -1372,7 +1372,16 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
    /* CONOPT may return either a positive error code, which is one of its own error codes,
     * or a negative error code that is a SCIP_RETCODE returned from one of the callbacks */
    if( COI_Error )
-      SCIPinfoMessage(scip, NULL, "Errors encountered in CONOPT during solution, %d\n", COI_Error);
+   {
+      switch( COI_Error )
+      {
+         case -1:
+            SCIPdebugMsg(scip, "Insufficient memory in CONOPT callback\n");
+            break;
+         default:
+            SCIPdebugMsg(scip, "Errors encountered in CONOPT during solution, %d\n", COI_Error);
+      }
+   }
 #else
    COI_Solve(problem->CntVect);
 #endif
