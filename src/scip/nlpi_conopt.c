@@ -275,7 +275,7 @@ static int COI_CALLCONV ReadMatrix(
       if( retcode != SCIP_OKAY )
       {
          SCIPerrorMessage("No memory in a callback of CONOPT\n");
-         return retcode;
+         return 1;
       }
    }
 
@@ -382,7 +382,7 @@ static int COI_CALLCONV ReadMatrix(
    if( retcode != SCIP_OKAY )
    {
       SCIPerrorMessage("Error in Jacobian sparsity computation\n");
-      return retcode;
+      return 2;
    }
    assert(jaccoloffsets == NULL || jaccoloffsets[norigvars] <= NUMNZ);
 
@@ -392,7 +392,7 @@ static int COI_CALLCONV ReadMatrix(
    if( retcode != SCIP_OKAY )
    {
       SCIPerrorMessage("No memory in a callback of CONOPT\n");
-      return retcode;
+      return 1;
    }
 
    retcode = SCIPnlpiOracleGetObjGradientNnz(scip, oracle, &objnz, &objnlflags, &nobjnz, &nobjnlnz);
@@ -400,7 +400,7 @@ static int COI_CALLCONV ReadMatrix(
    if( retcode != SCIP_OKAY )
    {
       SCIPerrorMessage("Error in the ReadMatrix callback of CONOPT\n");
-      return retcode;
+      return 2;
    }
 
    for( int i = 0; i < norigvars; i++ )
@@ -1377,6 +1377,9 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
       {
          case -1:
             SCIPdebugMsg(scip, "Insufficient memory in CONOPT callback\n");
+            break;
+         case -2:
+            SCIPdebugMsg(scip, "Problem structure computation error in CONOPT's ReadMatrix callback\n");
             break;
          default:
             SCIPdebugMsg(scip, "Errors encountered in CONOPT during solution, %d\n", COI_Error);
