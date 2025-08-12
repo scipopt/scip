@@ -2457,8 +2457,8 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
       /* for a linear objective, we can just copy the linear indices from the objective into the sparsity pattern */
       if( obj->nlinidxs > 0 )
       {
-         SCIPduplicateBlockMemoryArray(scip, &(oracle->objgradnz), obj->linidxs, obj->nlinidxs);
-         SCIPallocClearBlockMemoryArray(scip, &(oracle->objnlflags), obj->nlinidxs);
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(oracle->objgradnz), obj->linidxs, obj->nlinidxs) );
+         SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(oracle->objnlflags), obj->nlinidxs) );
          oracle->nobjgradnz = obj->nlinidxs;
          oracle->nobjgradnlnz = 0;
       }
