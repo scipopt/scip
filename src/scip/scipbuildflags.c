@@ -38,5 +38,5 @@ const char* SCIPgetBuildFlags(
    void
    )
 {
-   return SCIP_BUILDFLAGS "\n LPS=" SCIP_LPS "\n IPOPT=" SCIP_IPOPT;
+   return SCIP_BUILDFLAGS "\n LPS=" SCIP_LPS "\n IPOPT=" SCIP_IPOPT "\n CONOPT=" SCIP_CONOPT;
 }
