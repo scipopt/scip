@@ -121,11 +121,11 @@ static int COI_CALLCONV Solution(
    const double          XVAL[],             /**< solution values of the variables (provided by CONOPT) */
    const double          XMAR[],             /**< marginal values (provided by CONOPT) */
    const int             XBAS[],             /**< basis indicators for the variables (provided by CONOPT) */
-   const int             XSTA[],             /**< status values for the variables (provided by CONOPT) */ /*lint !e715*/
-   const double          YVAL[],             /**< values of the left hand sides of all rows in the optimal solution (provided by CONOPT) */ /*lint !e715*/
+   const int             XSTA[],             /**< status values for the variables (provided by CONOPT) */
+   const double          YVAL[],             /**< values of the left hand sides of all rows in the optimal solution (provided by CONOPT) */
    const double          YMAR[],             /**< marginal values corresponding to rows (provided by CONOPT) */
-   const int             YBAS[],             /**< basis indicators for the rows or constraints (provided by CONOPT) */ /*lint !e715*/
-   const int             YSTA[],             /**< status values for the rows or constraints (provided by CONOPT) */ /*lint !e715*/
+   const int             YBAS[],             /**< basis indicators for the rows or constraints (provided by CONOPT) */
+   const int             YSTA[],             /**< status values for the rows or constraints (provided by CONOPT) */
    int                   NUMVAR,             /**< number of variables (provided by CONOPT) */
    int                   NUMCON,             /**< number of constraints (provided by CONOPT) */
    void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
@@ -211,7 +211,7 @@ static int COI_CALLCONV Solution(
       (problem->lastdualcons[i]) *= -1;
 
    return 0;
-}
+} /*lint !e715*/
 
 /** CONOPT callback to pass variable bounds, constraint types and sides
  * and Jacobian structure and constant values to CONOPT
@@ -220,10 +220,10 @@ static int COI_CALLCONV ReadMatrix(
    double                LOWER[],            /**< lower bounds on the variables (set to CONOPT's minus infinity before callback is issued */
    double                CURR[],             /**< initial values of the variables (set to zero before callback is issued */
    double                UPPER[],            /**< upper bounds on the variables (set to CONOPT's plus infinity before callback is issued */
-   int                   VSTA[],             /**< initial status values for the variable (used if coidef_inistat() was called with IniStat = 1 or 2) */ /*lint !e715*/
+   int                   VSTA[],             /**< initial status values for the variable (used if coidef_inistat() was called with IniStat = 1 or 2) */
    int                   TYPE[],             /**< constraint types (equation, inequality, free) */
    double                RHS[],              /**< right hand sides values of constraints (default is zero) */
-   int                   ESTA[],             /**<initial status values for constraint slacks (used if coidef_inistat() was called with IniStat = 1 or 2) */ /*lint !e715*/
+   int                   ESTA[],             /**<initial status values for constraint slacks (used if coidef_inistat() was called with IniStat = 1 or 2) */
    int                   COLSTA[],           /**< starting indices of Jacobian columns in ROWNO */
    int                   ROWNO[],            /**< row numbers of Jacobian nonzeros */
    double                VALUE[],            /**< values of the Jacobian elements (defined for all constant Jacobian elements) */
@@ -492,13 +492,13 @@ static int COI_CALLCONV ReadMatrix(
 #endif
 
    return 0;
-}
+} /*lint !e715*/
 
 /** callback for CONOPT's standard output */
 static int COI_CALLCONV Message(
    int                   SMSG,               /**< number of lines in the message that should go to the Screen file, between 0 and 30 */
-   int                   DMSG,               /**< number of lines in the message that should go to the Status file, between 0 and 30 */ /*lint !e715*/
-   int                   NMSG,               /**< number of lines in the message that should go to the Documentation file, between 0 and 30 */ /*lint !e715*/
+   int                   DMSG,               /**< number of lines in the message that should go to the Status file, between 0 and 30 */
+   int                   NMSG,               /**< number of lines in the message that should go to the Documentation file, between 0 and 30 */
    char*                 MSGV[],             /**< array with the lengths of the individual message lines, the lengths are between 1 and 132 */
    void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
@@ -515,7 +515,7 @@ static int COI_CALLCONV Message(
    }
 
    return 0;
-}
+} /*lint !e715*/
 
 /** callback for CONOPT's standard error output */
 static int COI_CALLCONV ErrMsg(
@@ -676,13 +676,13 @@ static int COI_CALLCONV FDEval(
    double                JAC[],              /**< vector of Jacobian values */
    int                   ROWNO,              /**< number of the row for which nonlinearities are to be evaluated (provided by CONOPT) */
    const int             JACNUM[],           /**< list of column numbers for the nonlinear nonzero Jacobian elements in
-                                                  the current row (provided by CONOPT when MODE = 2 or 3) */ /*lint !e715*/
+                                                  the current row (provided by CONOPT when MODE = 2 or 3) */
    int                   MODE,               /**< indicator for mode of evaluation (provided by CONOPT) */
-   int                   IGNERR,             /**< indicator whether CONOPT assumes the point to be safe (0) or potentially unsafe (1) */ /*lint !e715*/
+   int                   IGNERR,             /**< indicator whether CONOPT assumes the point to be safe (0) or potentially unsafe (1) */
    int*                  ERRCNT,             /**< scalar function evaluation error indicator (set to 1 if a function value cannot be computed */
-   int                   NUMVAR,             /**< number of variables (provided by CONOPT) */ /*lint !e715*/
-   int                   NUMJAC,             /**< number of nonlinear nonzero Jacobian elements in the current row */ /*lint !e715*/
-   int                   THREAD,             /**< only relevant in multi-threading environments */ /*lint !e715*/
+   int                   NUMVAR,             /**< number of variables (provided by CONOPT) */
+   int                   NUMJAC,             /**< number of nonlinear nonzero Jacobian elements in the current row */
+   int                   THREAD,             /**< only relevant in multi-threading environments */
    void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
 {
@@ -713,14 +713,14 @@ static int COI_CALLCONV FDEval(
    }
 
    return 0;
-}
+} /*lint !e715*/
 
 /** CONOPT callback to pass some of the options (not supported via COIDEF_* functions) to CONOPT */
 static int COI_CALLCONV Option(
    int                   NCALL,              /** number of callback call (provided by CONOPT) */
    double*               RVAL,               /** pointer to set the value of a real option */
    int*                  IVAL,               /** pointer to set the value of an integer option */
-   int*                  LVAL,               /** pointer to set the value of a binary option */ /*lint !e715*/
+   int*                  LVAL,               /** pointer to set the value of a binary option */
    char*                 NAME,               /** pointer to set the name of the option */
    void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
@@ -747,7 +747,7 @@ static int COI_CALLCONV Option(
    }
 
    return 0;
-}
+} /*lint !e715*/
 
 /** CONOPT callback to define structure of the Hessian of the Lagrangian */
 static int COI_CALLCONV LagrStr(
@@ -755,8 +755,8 @@ static int COI_CALLCONV LagrStr(
    int                   HSCL[],             /**< column numbers of the lower triangular part of the Hessian; elements must be
                                                   sorted column-wise, and within each column, row-wise */
    int*                  NODRV,              /**< can be set to 1 if the derivatives could not be computed */
-   int                   NUMVAR,             /**< number of variables as defined in coidef_numvar() (provided by CONOPT) */ /*lint !e715*/
-   int                   NUMCON,             /**< number of constraints as defined in coidef_numcon() (provided by CONOPT) */ /*lint !e715*/
+   int                   NUMVAR,             /**< number of variables as defined in coidef_numvar() (provided by CONOPT) */
+   int                   NUMCON,             /**< number of constraints as defined in coidef_numcon() (provided by CONOPT) */
    int                   NHESS,              /**< number of nonzero elements in the Hessian (provided by CONOPT) */
    void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
@@ -785,7 +785,7 @@ static int COI_CALLCONV LagrStr(
    }
 
    return 0;
-}
+} /*lint !e715*/
 
 /** CONOPT callback to compute the Hessian of the Lagrangian
  *
@@ -794,14 +794,14 @@ static int COI_CALLCONV LagrStr(
 static int COI_CALLCONV LagrVal(
    const double          X[],                /**< point in which the Hessian should be computed (provided by CONOPT) */
    const double          U[],                /**< vector of weights on the individual constraints (provided by CONOPT) */
-   const int             HSRW[],             /**< row numbers of the lower triangular part of the Hessian (provided by CONOPT) */ /*lint !e715*/
+   const int             HSRW[],             /**< row numbers of the lower triangular part of the Hessian (provided by CONOPT) */
    const int             HSCL[],             /**< column numbers of the lower triangular part of the Hessian; elements must be
-                                                  sorted column-wise, and within each column, row-wise (provided by CONOPT) */ /*lint !e715*/
+                                                  sorted column-wise, and within each column, row-wise (provided by CONOPT) */
    double                HSVL[],             /**< values of Hessian entries */
    int*                  NODRV,              /**< can be set to 1 if the derivatives could not be computed */
-   int                   NUMVAR,             /**< number of variables as defined in coidef_numvar() (provided by CONOPT) */ /*lint !e715*/
+   int                   NUMVAR,             /**< number of variables as defined in coidef_numvar() (provided by CONOPT) */
    int                   NUMCON,             /**< number of constraints as defined in coidef_numcon() (provided by CONOPT) */
-   int                   NHESS,              /**< number of nonzero elements in the Hessian (provided by CONOPT) */ /*lint !e715*/
+   int                   NHESS,              /**< number of nonzero elements in the Hessian (provided by CONOPT) */
    void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
 {
@@ -815,7 +815,7 @@ static int COI_CALLCONV LagrVal(
       *NODRV = 1;
 
    return 0;
-}
+} /*lint !e715*/
 
 /* NLPI local methods */
 
