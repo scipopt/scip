@@ -1475,17 +1475,17 @@ SCIP_RETCODE SCIPincludeNlpSolverConopt(
    return SCIP_OKAY;
 }
 
-/** gets string that identifies CONOPT (version number)
- *  TODO: get the version number
- */
+/** gets string that identifies CONOPT */
 const char* SCIPgetSolverNameConopt(
    void
    )
 {
-   return "CONOPT";
+   static char solvername[20];
+   sprintf(solvername, "CONOPT %d.%d.%d", CONOPT_VERSION_MAJOR, CONOPT_VERSION_MINOR, CONOPT_VERSION_PATCH);
+   return solvername;
 }
 
-/** gets string that describes CONOPT (version number) */
+/** gets string that describes CONOPT */
 const char* SCIPgetSolverDescConopt(
    void
    )
