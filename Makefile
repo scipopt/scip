@@ -97,6 +97,7 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		NOBLKMEM=$(NOBLKMEM)\\n\
 		NOBUFMEM=$(NOBUFMEM)\\n\
 		OPT=$(OPT)\\n\
+		LTO=$(LTO)\\n\
 		OSTYPE=$(OSTYPE)\\n\
 		THREADSAFE=$(THREADSAFE)\\n\
 		PAPILO=$(PAPILO)\\n\
@@ -897,6 +898,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_convexproj.o \
 			scip/sepa_disjunctive.o \
 			scip/sepa_eccuts.o \
+			scip/sepa_flower.o \
 			scip/sepa_gauge.o \
 			scip/sepa_gomory.o \
 			scip/sepa_impliedbounds.o \
@@ -906,7 +908,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_mcf.o \
 			scip/sepa_minor.o \
 			scip/sepa_mixing.o \
-			scip/sepa_multilinear.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_rlt.o \
@@ -951,7 +952,7 @@ endif
 
 ifeq ($(AMPL),true)
 SCIPPLUGINLIBCPPOBJ += scip/reader_nl.o
-SCIPPLUGINLIBCPPOBJ += amplmp/src/format.o amplmp/src/expr-info.o amplmp/src/nl-reader.o amplmp/src/os.o amplmp/src/posix.o
+SCIPPLUGINLIBCPPOBJ += amplmp/src/dtoa.o amplmp/src/format.o amplmp/src/expr-info.o amplmp/src/nl-reader.o amplmp/src/nl-utils.o amplmp/src/nl-writer2.o amplmp/src/os.o amplmp/src/posix.o
 endif
 
 SCIPLIBOBJ	=	scip/boundstore.o \
@@ -970,6 +971,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/conflict_general.o \
 			scip/conflict_graphanalysis.o \
 			scip/conflict_dualproofanalysis.o \
+			scip/conflict_resolution.o \
 			scip/conflictstore.o \
 			scip/cons.o \
 			scip/cutpool.o \
@@ -1147,6 +1149,7 @@ OBJSCIPLIBOBJ	=	objscip/objbenders.o \
 			objscip/objconshdlr.o \
 			objscip/objdialog.o \
 			objscip/objdisp.o \
+			objscip/objexprhdlr.o \
 			objscip/objeventhdlr.o \
 			objscip/objheur.o \
 			objscip/objmessagehdlr.o \
@@ -2009,6 +2012,7 @@ help:
 		@echo "  - NOBUFMEM=<true|false>>: Turn off buffer memory or on (default)."
 		@echo "  - NOBLKBUFMEM=<true|false>: Turn usage of internal memory functions off or on (default)."
 		@echo "  - VERBOSE=<true|false>: Turn on verbose messages of makefile or off (default)."
+		@echo "  - LTO=<true|false>: if OPT=opt for linux/macOS with gcc/clang, enable link-time-optimization (default)."
 		@echo
 		@echo "  Main targets:"
 		@echo "  - all (default): Build SCIP libraries and binary."

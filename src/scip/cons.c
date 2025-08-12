@@ -3299,7 +3299,7 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
    /* constraint handlers without constraints should only be called once */
    if( nconss > 0 || (!conshdlr->needscons && relaxchanged) )
    {
-      SCIP_CONS** conss;
+      SCIP_CONS** conss = NULL;
       SCIP_Longint oldndomchgs;
       SCIP_Longint oldnprobdomchgs;
       int oldncuts;
@@ -3317,7 +3317,11 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
       conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
 
       /* get the array of the constraints to be processed */
-      conss = &(conshdlr->enfoconss[firstcons]);
+      if( conshdlr->needscons )
+      {
+         assert(conshdlr->enfoconss != NULL);
+         conss = conshdlr->enfoconss + firstcons;
+      }
 
       oldncuts = SCIPsepastoreGetNCuts(sepastore);
       oldnactiveconss = stat->nactiveconss;
@@ -3714,7 +3718,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       /* constraint handlers without constraints should only be called once */
       if( nconss > 0 || (!conshdlr->needscons && pschanged) )
       {
-         SCIP_CONS** conss;
+         SCIP_CONS** conss = NULL;
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
 
@@ -3727,7 +3731,11 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
 
          /* get the array of the constraints to be processed */
-         conss = &(conshdlr->enfoconss[firstcons]);
+         if( conshdlr->needscons )
+         {
+            assert(conshdlr->enfoconss != NULL);
+            conss = conshdlr->enfoconss + firstcons;
+         }
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
@@ -4182,6 +4190,17 @@ SCIP_RETCODE SCIPconshdlrPresolve(
          SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
          /* count the new changes */
+         assert( *nfixedvars - conshdlr->lastnfixedvars >= 0 );
+         assert( *naggrvars - conshdlr->lastnaggrvars >= 0 );
+         assert( *nchgvartypes - conshdlr->lastnchgvartypes >= 0 );
+         assert( *nchgbds - conshdlr->lastnchgbds >= 0 );
+         assert( *naddholes - conshdlr->lastnaddholes >= 0 );
+         assert( *ndelconss - conshdlr->lastndelconss >= 0 );
+         assert( *naddconss - conshdlr->lastnaddconss >= 0 );
+         assert( *nupgdconss - conshdlr->lastnupgdconss >= 0 );
+         assert( *nchgcoefs - conshdlr->lastnchgcoefs >= 0 );
+         assert( *nchgsides - conshdlr->lastnchgsides >= 0 );
+
          conshdlr->nfixedvars += *nfixedvars - conshdlr->lastnfixedvars;
          conshdlr->naggrvars += *naggrvars - conshdlr->lastnaggrvars;
          conshdlr->nchgvartypes += *nchgvartypes - conshdlr->lastnchgvartypes;
@@ -5289,6 +5308,17 @@ SCIP_Bool SCIPconshdlrNeedsCons(
    return conshdlr->needscons;
 }
 
+/** sets the needscons flag of constraint handler, for example to disable without constraints */
+void SCIPconshdlrSetNeedsCons(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_Bool             needscons           /**< should be skipped, if no constraints are available? */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->needscons = needscons;
+}
+
 /** does the constraint handler perform presolving? */
 SCIP_Bool SCIPconshdlrDoesPresolve(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -6056,6 +6086,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->enfoconsspos = -1;
    (*cons)->checkconsspos = -1;
    (*cons)->propconsspos = -1;
+   (*cons)->confconsspos = -1;
    (*cons)->activedepth = -2;
    (*cons)->validdepth = (local ? -1 : 0);
    (*cons)->age = 0.0;
@@ -6383,6 +6414,7 @@ SCIP_RETCODE SCIPconsFree(
       checkConssArrays((*cons)->conshdlr);
    }
    assert((*cons)->consspos == -1);
+   assert((*cons)->confconsspos == -1);
 
    /* free constraint */
    BMSfreeBlockMemoryArray(blkmem, &(*cons)->name, strlen((*cons)->name)+1);
@@ -7258,13 +7290,15 @@ SCIP_RETCODE SCIPconsDisablePropagation(
 }
 
 /** marks the constraint to be a conflict */
-void SCIPconsMarkConflict(
+SCIP_RETCODE SCIPconsMarkConflict(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
 
    cons->conflict = TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** marks the constraint to be propagated (update might be delayed) */
@@ -8798,8 +8832,9 @@ void SCIPconsAddUpgradeLocks(
 {
    assert(cons != NULL);
 
-   assert(cons->nupgradelocks < (1 << 28) - nlocks); /*lint !e574*/
-   cons->nupgradelocks += (unsigned int) nlocks;
+   assert(cons->nupgradelocks >= -nlocks);
+   cons->nupgradelocks += nlocks;
+   assert(cons->nupgradelocks >= nlocks);
 }
 
 /** gets number of locks against upgrading the constraint, 0 means this constraint can be upgraded */

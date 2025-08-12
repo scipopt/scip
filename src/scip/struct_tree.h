@@ -228,8 +228,8 @@ struct SCIP_Tree
    int                   nsiblings;          /**< number of siblings of focus node (number of used slots in siblings vector) */
    int                   pathlen;            /**< length of the current path */
    int                   pathsize;           /**< number of available slots in path arrays */
-   int                   effectiverootdepth; /**< first depth with node with at least two children */
-   int                   appliedeffectiverootdepth; /**< the effective root depth which was already enforced (that is constraint and bound changes were made global) */
+   int                   effectiverootdepth; /**< the effective root depth which was already enforced */
+   int                   updatedeffectiverootdepth; /**< first depth of node with at least two children or focus node */
    int                   correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */
    int                   cutoffdepth;        /**< depth of first node in active path that is marked being cutoff */
    int                   repropdepth;        /**< depth of first node in active path that has to be propagated again */

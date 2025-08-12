@@ -155,6 +155,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
+   int*                  probtoidxmap;       /**< cleared memory array with default values -1; used for clique partitions */
+   int                   probtoidxmapsize;   /**< size of probtoidxmap */
 };
 
 /** constraint data for set partitioning / packing / covering constraints */
@@ -392,6 +394,8 @@ SCIP_RETCODE conshdlrdataCreate(
    /* set event handler for bound change events */
    (*conshdlrdata)->eventhdlr = eventhdlr;
    (*conshdlrdata)->nsetpart = 0;
+   (*conshdlrdata)->probtoidxmap = NULL;
+   (*conshdlrdata)->probtoidxmapsize = 0;
 
    /* create a random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &(*conshdlrdata)->randnumgen,
@@ -417,6 +421,7 @@ SCIP_RETCODE conshdlrdataFree(
    /* free random number generator */
    SCIPfreeRandom(scip, &(*conshdlrdata)->randnumgen);
 
+   SCIPfreeBlockMemoryArrayNull(scip, &(*conshdlrdata)->probtoidxmap, (*conshdlrdata)->probtoidxmapsize);
    SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
@@ -2017,12 +2022,14 @@ SCIP_RETCODE applyFixings(
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-               SCIP_CALL( SCIPaddCons(scip, newcons) );
 
-               SCIPdebugMsg(scip, "added linear constraint: ");
+               /* add the downgraded constraint to the problem */
+               SCIPdebugMsg(scip, "adding linear constraint: ");
                SCIPdebugPrintCons(scip, newcons, NULL);
+               SCIP_CALL( SCIPaddCons(scip, newcons) );
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
+               /* free constraint arrays */
                SCIPfreeBufferArray(scip, &consvals);
                SCIPfreeBufferArray(scip, &consvars);
 
@@ -5067,6 +5074,7 @@ SCIP_RETCODE preprocessCliques(
    SCIP_Bool* undoneaggrtypes;               /* storage for not yet performed aggregation type (x = y or x + y = 1) */
    int saggregations;
    int naggregations;
+   int startndelconss;
 
    assert(scip != NULL);
    assert(conshdlrdata != NULL);
@@ -5114,6 +5122,7 @@ SCIP_RETCODE preprocessCliques(
    nusefulvars = 0;
    nusefulconss = 0;
    maxnvars = 0;
+   startndelconss = *ndelconss;
 
    /* @todo: check for round limit for adding extra clique constraints */
    /* adding clique constraints which arises from global clique information */
@@ -5139,7 +5148,7 @@ SCIP_RETCODE preprocessCliques(
        * and add them to the usefulconss array and adjust all necessary data this will hopefully lead to faster
        * detection of redundant constraints
        */
-      SCIP_CALL( SCIPcalcCliquePartition(scip, binvars, nbinvars, cliquepartition, &ncliques) );
+      SCIP_CALL( SCIPcalcCliquePartition(scip, binvars, nbinvars, &conshdlrdata->probtoidxmap, &conshdlrdata->probtoidxmapsize, cliquepartition, &ncliques) );
 
       /* resize usefulconss array if necessary */
       SCIP_CALL( SCIPreallocBufferArray(scip, &usefulconss, nconss + ncliques) );
@@ -5458,8 +5467,8 @@ SCIP_RETCODE preprocessCliques(
    /* free hashmap */
    SCIPhashmapFree(&vartoindex);
 
-   if( *ndelconss < 0 )
-      *ndelconss = 0;
+   if( *ndelconss < startndelconss )
+      *ndelconss = startndelconss;
 
    return SCIP_OKAY;
 }
@@ -6247,8 +6256,21 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             {
                assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING);
 
-               /* the negated variable did not occur in a set partitioning constraint (those will be iterated over
-                * first), so we cannot aggregate this variable
+               /* if the negated variable occurs in an additional packing constraint,
+                * then we are no longer in a doubleton or singleton case;
+                * this case of two packing and one partitioning constraint (thus,
+                * 2 down- and 2 uplocks) cannot be handled by this routine, so the
+                * variable cannot be aggregated, see also #3752 and !3832;
+                * this situation is characterized by having 2 downlocks (one from the
+                * partitioning constraint, one from the negated variable in the other
+                * packing constraint; the current packing constraint (cons) does not
+                * contribute a downlock)
+                */
+               if( ndownlocks >= 2 )
+                  continue;
+
+               /* if the negated variable did not occur in a set partitioning constraint
+                * (those will be iterated over first), we cannot aggregate this variable
                 */
                if( !SCIPhashmapExists(vartoindex, (void*) negvar) )
                   continue;
@@ -7082,6 +7104,7 @@ SCIP_RETCODE createConsSetppc(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
 
    assert(scip != NULL);
 
@@ -7091,6 +7114,17 @@ SCIP_RETCODE createConsSetppc(
    {
       SCIPerrorMessage("set partitioning / packing / covering constraint handler not found\n");
       return SCIP_INVALIDCALL;
+   }
+
+   /* check whether all variables are binary */
+   assert(vars != NULL || nvars == 0);
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPvarIsBinary(vars[i]) )
+      {
+         SCIPerrorMessage("operand <%s> is not binary\n", SCIPvarGetName(vars[i]));
+         return SCIP_INVALIDDATA;
+      }
    }
 
    /* create the constraint specific data */
@@ -9208,7 +9242,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       }
 
       /* add conflict to SCIP */
-      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+      SCIP_CALL( SCIPaddConflict(scip, node, &cons, validnode, conftype, cutoffinvolved) );
 
       *result = SCIP_CONSADDED;
 
@@ -9702,6 +9736,57 @@ SCIP_ROW* SCIPgetRowSetppc(
    assert(consdata != NULL);
 
    return consdata->row;
+}
+
+/** creates and returns the row of the given set partitioning / packing / covering constraint */
+SCIP_RETCODE SCIPcreateRowSetppc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+
+   assert(scip != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
+      SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->row == NULL);
+
+   switch( consdata->setppctype )
+   {
+   case SCIP_SETPPCTYPE_PARTITIONING:
+      lhs = 1.0;
+      rhs = 1.0;
+      break;
+   case SCIP_SETPPCTYPE_PACKING:
+      lhs = -SCIPinfinity(scip);
+      rhs = 1.0;
+      break;
+   case SCIP_SETPPCTYPE_COVERING:
+      lhs = 1.0;
+      rhs = SCIPinfinity(scip);
+      break;
+   default:
+      SCIPerrorMessage("unknown setppc type\n");
+      return SCIP_ERROR;
+   }
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), lhs, rhs,
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+
+   SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
+
+   return SCIP_OKAY;
 }
 
 /** returns current number of variables fixed to one in the constraint  */

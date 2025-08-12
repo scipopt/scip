@@ -499,6 +499,9 @@ class NLHandler {
     \rst
     Receives notification of a `common expression <mp::expr::COMMON_EXPR>`
     (defined variable) reference.
+    It's up to the Handler to check
+    that the CommonExpr has been provided
+    (according to the NL spec, actually before first use.)
     \endrst
    */
   Reference OnCommonExprRef(int expr_index) {
@@ -2131,7 +2134,8 @@ class NLProblemBuilder {
   /// Add variables
   void AddVariables(const NLHeader& h) {
     // Distinguish NL variable order
-    // See D.M.Gay, Hooking Your Solver to AMPL; and Writing .NL Files,
+    // See D.M.Gay, Hooking Your Solver to AMPL;
+    //     D.M.Gay, Writing .NL Files;
     // and, e.g.,
     // github.com/jump-dev/MathOptInterface.jl/blob/master/src/FileFormats/NL/README.md
     int k=0;                             // current block position
@@ -2293,6 +2297,9 @@ class NLProblemBuilder {
     return builder_.MakeVariable(var_index);
   }
 
+  /// It's up to the Handler to check
+  /// that the CommonExpr has been provided
+  /// (according to the NL spec, actually before first use.)
   Reference OnCommonExprRef(int expr_index) {
     return builder_.MakeCommonExpr(expr_index);
   }
@@ -2536,7 +2543,7 @@ public:
 
 private:
   std::vector<const char *> names_;
-  std::string gen_name_, gen_name_2_;
+  std::string gen_name_ {"_std_"}, gen_name_2_ {"_extra_"};
   internal::NameReader reader_;
   fmt::MemoryWriter writer_;
 };

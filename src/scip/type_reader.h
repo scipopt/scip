@@ -39,6 +39,7 @@
 #define __SCIP_TYPE_READER_H__
 
 #include "scip/def.h"
+#include "scip/type_rational.h"
 #include "scip/type_cons.h"
 #include "scip/type_retcode.h"
 #include "scip/type_result.h"
@@ -94,13 +95,17 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  *  - scip            : SCIP main data structure
  *  - reader          : the reader itself
  *  - file            : output file, or NULL if standard output should be used
+ *  - filename        : name of output file, if available, otherwise NULL
  *  - name            : problem name
  *  - probdata        : user problem data set by the reader
  *  - transformed     : TRUE iff problem is the transformed problem
  *  - objsense        : objective sense
+ *  - objoffset       : objective offset from bound shifting and fixing
  *  - objscale        : scalar applied to objective function; external objective value is
                         extobj = objsense * objscale * (intobj + objoffset)
- *  - objoffset       : objective offset from bound shifting and fixing 
+ *  - objoffsetexact  : exact objective offset from bound shifting and fixing
+ *  - objscaleexact   : exact scalar applied to objective function; external objective value is
+                        extobjexact = objsense * objscaleexact * (intobjexact + objoffsetexact)
  *  - vars            : array with active variables ordered binary, integer, implicit, continuous 
  *  - nvars           : number of active variables in the problem
  *  - nbinvars        : number of binary variables
@@ -124,8 +129,9 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  *  If the reader detected an error while writing the output file, it should return with RETCODE SCIP_WRITEERROR 
  */
 #define SCIP_DECL_READERWRITE(x) SCIP_RETCODE x (SCIP* scip, SCIP_READER* reader, FILE* file, \
-      const char* name, SCIP_PROBDATA* probdata, SCIP_Bool transformed, \
-      SCIP_OBJSENSE objsense, SCIP_Real objscale, SCIP_Real objoffset,  \
+      const char* filename, const char* name, SCIP_PROBDATA* probdata, SCIP_Bool transformed, \
+      SCIP_OBJSENSE objsense, SCIP_Real objoffset, SCIP_Real objscale, \
+      SCIP_RATIONAL* objoffsetexact, SCIP_RATIONAL* objscaleexact, \
       SCIP_VAR** vars, int nvars, int nbinvars, int nintvars, int nimplvars, int ncontvars, \
       SCIP_VAR** fixedvars, int nfixedvars, int startnvars, \
       SCIP_CONS** conss, int nconss, int maxnconss, int startnconss, \

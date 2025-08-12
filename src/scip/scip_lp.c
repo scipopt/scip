@@ -56,6 +56,7 @@
 #include "scip/scip_lpexact.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
+#include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
@@ -908,19 +909,16 @@ SCIP_RETCODE SCIPwriteLP(
    const char*           filename            /**< file name */
    )
 {
-   SCIP_Bool cutoff;
-
    SCIP_CALL( SCIPcheckStage(scip, "SCIPwriteLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
-      SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool, scip->branchcand,
-            scip->eventqueue, scip->eventfilter, scip->cliquetable, FALSE, &cutoff) );
+      SCIPerrorMessage("LP not constructed\n");
+      return SCIP_INVALIDDATA;
    }
 
-   /* we need a flushed lp to write the current lp */
-   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->probmem, scip->set, scip->transprob, scip->eventqueue) );
+   if( !scip->lp->flushed )
+      SCIPwarningMessage(scip, "LP not flushed\n");
 
    SCIP_CALL( SCIPlpWrite(scip->lp, filename) );
 
@@ -948,8 +946,14 @@ SCIP_RETCODE SCIPwriteMIP(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPwriteMIP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   /* we need a flushed lp to write the current mip */
-   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->probmem, scip->set, scip->transprob, scip->eventqueue) );
+   if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
+   {
+      SCIPerrorMessage("LP not constructed\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( !scip->lp->flushed )
+      SCIPwarningMessage(scip, "LP not flushed\n");
 
    SCIP_CALL( SCIPlpWriteMip(scip->lp, scip->set, scip->messagehdlr, filename, genericnames,
          origobj, scip->origprob->objsense, scip->transprob->objscale, scip->transprob->objoffset, lazyconss) );
@@ -1896,6 +1900,24 @@ int SCIPgetRowNumIntCols(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowNumIntCols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIProwGetNumIntCols(row, scip->set);
+}
+
+/** returns number of implied integral columns in the row
+ *
+ *  @return number of implied integral columns in the row
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+int SCIPgetRowNumImpliedIntCols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowNumImpliedIntCols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIProwGetNumImpliedIntCols(row, scip->set);
 }
 
 /** returns minimal absolute value of row vector's non-zero coefficients

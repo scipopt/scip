@@ -137,36 +137,43 @@ SCIP_RETCODE checkDivingCandidates(
 #endif
    int i;
 
-   *success = TRUE;
-
+   assert(scip != NULL);
    assert(heurdata != NULL);
    assert(divecandvars != NULL);
    assert(ndivecands >= 0);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* terminate without candidates */
+   if( ndivecands == 0 )
+      return SCIP_OKAY;
+
+   /* terminate without objective */
+   if( SCIPgetNObjVars(scip) == 0 )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &objcoefs, ndivecands) );
 
    /* collect and count all non-zero absolute values of objective coefficients for diving candidates */
    nnzobjcoefs = 0;
-   if( SCIPgetNObjVars(scip) > 0 )
+   for( i = 0; i < ndivecands; ++i )
    {
-      for( i = 0; i < ndivecands; i++ )
-      {
-         SCIP_Real obj = SCIPvarGetObj(divecandvars[i]);
+      SCIP_Real obj = SCIPvarGetObj(divecandvars[i]);
 
-         if( SCIPisZero(scip, obj) )
-            continue;
+      if( SCIPisZero(scip, obj) )
+         continue;
 
-         objcoefs[nnzobjcoefs] = REALABS(obj);
-         ++nnzobjcoefs;
-      }
+      objcoefs[nnzobjcoefs] = REALABS(obj);
+      ++nnzobjcoefs;
    }
 
+   /* terminate without objcands */
    if( nnzobjcoefs == 0 )
-   {
-      *success = FALSE;
       goto TERMINATE;
-   }
-   assert(nnzobjcoefs > 0);
+   assert(nnzobjcoefs >= 1);
+
+   *success = TRUE;
 
    /* skip here if we are cheching the global properties and want to check the local candidates, too */
    if( !heurdata->glbchecked && heurdata->checkcands )
@@ -241,37 +248,6 @@ SCIP_RETCODE checkDivingCandidates(
    return SCIP_OKAY;
 }
 
-
-/** check whether the objective functions has nonzero coefficients corresponding to binary and integer variables */
-static
-SCIP_RETCODE checkGlobalProperties(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
-   )
-{
-   SCIP_VAR** vars;
-   SCIP_Bool success;
-   int nenfovars;
-
-   assert(scip != NULL);
-   assert(heurdata != NULL);
-
-   vars = SCIPgetVars(scip);
-   nenfovars = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
-   assert(nenfovars >= 0);
-
-   SCIP_CALL( checkDivingCandidates(scip, heurdata, vars, nenfovars, &success) );
-
-   if( !success )
-   {
-      SCIPdebugMsg(scip, " ---> disable farkasdiving (at least one global property is violated)\n");
-      heurdata->disabled = TRUE;
-   }
-
-   heurdata->glbchecked = TRUE;
-
-   return SCIP_OKAY;
-}
 
 /*
  * Callback methods
@@ -382,32 +358,34 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
    SCIP_DIVESET* diveset;
    SCIP_Bool success;
 
-   heurdata = SCIPheurGetData(heur);
-   assert(SCIPheurGetNDivesets(heur) > 0);
-   assert(SCIPheurGetDivesets(heur) != NULL);
-
-   diveset = SCIPheurGetDivesets(heur)[0];
-   assert(diveset != NULL);
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
 
-   /* check some simple global properties that are needed to run this heuristic */
-   if( !heurdata->glbchecked )
-   {
-      SCIP_CALL( checkGlobalProperties(scip, heurdata) );
-   }
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
 
    /* terminate if the heuristic has been disabled */
    if( heurdata->disabled )
       return SCIP_OKAY;
 
-   if( heurdata->rootsuccess && !heurdata->foundrootsol && SCIPgetDepth(scip) > 0 )
+   /* check some simple global properties that are needed to run this heuristic */
+   success = !heurdata->rootsuccess || heurdata->foundrootsol || SCIPgetDepth(scip) < 1;
+   if( success && !heurdata->glbchecked )
+   {
+      SCIP_CALL( checkDivingCandidates(scip, heurdata, SCIPgetVars(scip),
+            SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip), &success) );
+      heurdata->glbchecked = TRUE;
+   }
+
+   /* disable heuristic if requirements missing */
+   if( !success )
    {
       heurdata->disabled = TRUE;
       return SCIP_OKAY;
    }
-
-   success = TRUE;
 
    /* check diving candidates in detail */
    if( heurdata->checkcands )
@@ -430,6 +408,11 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
 
    if( success )
    {
+      assert(SCIPheurGetDivesets(heur) != NULL);
+      assert(SCIPheurGetNDivesets(heur) >= 1);
+      diveset = SCIPheurGetDivesets(heur)[0];
+      assert(diveset != NULL);
+
       SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, -1, -1.0, SCIP_DIVECONTEXT_SINGLE) );
 
       if( heurdata->rootsuccess && SCIPgetDepth(scip) == 0 && SCIPdivesetGetNSols(diveset, SCIP_DIVECONTEXT_SINGLE) > 0 )

@@ -1,4 +1,9 @@
 read "${PROJECT_SOURCE_DIR}"/check/"${path}"
 write problem temp/${basename}.${extension}
 
+set heur emph off
+read "${PROJECT_SOURCE_DIR}"/check/"${path}"
+presolve
+write transproblem temp/${basename}_trans.${extension}
+
 quit

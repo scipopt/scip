@@ -1,0 +1,3 @@
+lp/scaling = 0
+numerics/sumepsilon = 1e-9
+numerics/feastol = 1e-9

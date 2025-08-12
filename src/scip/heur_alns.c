@@ -1339,7 +1339,7 @@ SCIP_Real getVariablePscostScore(
    SCIP_Bool             uselocallpsol       /**< should local LP solution be used? */
    )
 {
-   SCIP_Real lpsolval;
+   SCIP_Real soldiff;
 
    assert(scip != NULL);
    assert(var != NULL);
@@ -1348,13 +1348,13 @@ SCIP_Real getVariablePscostScore(
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
       return 0.0;
 
-   lpsolval = uselocallpsol ? SCIPvarGetLPSol(var) : SCIPvarGetRootSol(var);
+   soldiff = refsolval - (uselocallpsol ? SCIPvarGetLPSol(var) : SCIPvarGetRootSol(var));
 
    /* the score is 0.0 if the values are equal */
-   if( SCIPisEQ(scip, lpsolval, refsolval) )
+   if( SCIPisFeasZero(scip, soldiff) )
       return 0.0;
    else
-      return SCIPgetVarPseudocostVal(scip, var, refsolval - lpsolval);
+      return SCIPgetVarPseudocostVal(scip, var, soldiff);
 }
 
 /** add variable and solution value to buffer data structure for variable fixings. The method checks if
@@ -1371,12 +1371,8 @@ void tryAdd2variableBuffer(
    SCIP_Bool             integer             /**< is this an integer variable? */
    )
 {
-   /* todo: this assert can fail when there was a dual reduction that changed a variable to
-    * an integral type after the reference solution was found and the variable has a fractional
-    * value in this solution, e.g., for boxQP instances (spar*)
-    * implicit integer variables could also be an issue, as they can take fractional values in feasible solutions
-    */
-   assert(SCIPisFeasIntegral(scip, val) || ! SCIPvarIsIntegral(var));
+   assert(integer == (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER));
+   assert(!integer || SCIPisFeasIntegral(scip, val));
    assert(*nfixings < SCIPgetNVars(scip));
 
    /* round the value to its nearest integer */
@@ -2775,9 +2771,13 @@ DECL_VARFIXINGS(varFixingsRens)
    /* loop over binary and integer variables; determine those that should be fixed in the sub-SCIP */
    for( nfracs = 0, i = 0; i < nbinvars + nintvars; ++i )
    {
-      SCIP_VAR* var = vars[i];
-      SCIP_Real lpsolval = SCIPvarGetLPSol(var);
-      assert((i < nbinvars && SCIPvarIsBinary(var)) || (i >= nbinvars && SCIPvarIsIntegral(var)));
+      SCIP_VAR* var;
+      SCIP_Real lpsolval;
+
+      var = vars[i];
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+      assert((i < nbinvars) == (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY));
+      lpsolval = SCIPvarGetLPSol(var);
 
       /* fix all binary and integer variables with integer LP solution value */
       if( SCIPisFeasIntegral(scip, lpsolval) )
@@ -2898,19 +2898,19 @@ SCIP_RETCODE fixMatchingSolutionValues(
    /* loop over integer and binary variables and check if their solution values match in all solutions */
    for( v = 0; v < nvars; ++v )
    {
-      SCIP_Real solval;
       SCIP_VAR* var;
+      SCIP_Real solval;
       int s;
 
       var = vars[v];
-      assert((v < SCIPgetNBinVars(scip) && SCIPvarIsBinary(var)) || (v >= SCIPgetNBinVars(scip) && SCIPvarIsIntegral(var)));
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+      assert((v < SCIPgetNBinVars(scip)) == (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY));
       solval = SCIPgetSolVal(scip, firstsol, var);
 
       /* determine if solution values match in all given solutions */
       for( s = 1; s < nsols; ++s )
       {
-         SCIP_Real solval2 = SCIPgetSolVal(scip, sols[s], var);
-         if( ! SCIPisEQ(scip, solval, solval2) )
+         if( !SCIPisFeasZero(scip, solval - SCIPgetSolVal(scip, sols[s], var)) )
             break;
       }
 
@@ -2962,8 +2962,9 @@ DECL_VARFIXINGS(varFixingsRins)
    if( nbinvars + nintvars == 0 )
       return SCIP_OKAY;
 
-   sols[0] = NULL;
-   sols[1] = incumbent;
+   /* incumbent is reference */
+   sols[0] = incumbent;
+   sols[1] = NULL;
 
    SCIP_CALL( fixMatchingSolutionValues(scip, sols, 2, vars, nbinvars + nintvars, varbuf, valbuf, nfixings) );
 
@@ -3519,11 +3520,11 @@ DECL_VARFIXINGS(varFixingsDins)
    nsols = nmipsols + 2;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &sols, nsols) );
-   sols[0] = NULL; /* node LP solution */
-   sols[1] = rootlpsol;
 
-   /* copy the remaining MIP solutions after the LP solutions */
-   BMScopyMemoryArray(&sols[2], SCIPgetSols(scip), nmipsols); /*lint !e866*/
+   /* incumbent is reference */
+   BMScopyMemoryArray(sols, SCIPgetSols(scip), nmipsols); /*lint !e866*/
+   sols[nmipsols] = NULL;
+   sols[nmipsols + 1] = rootlpsol;
 
    /* 1. Binary variables are fixed if their values agree in all the solutions */
    if( nbinvars > 0 )

@@ -1784,8 +1784,7 @@ SCIP_RETCODE presolRoundConsSOS1(
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
                SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-         SCIP_CALL( SCIPaddCons(scip, setpackcons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &setpackcons) );
+         SCIP_CALL( SCIPaddUpgrade(scip, cons, &setpackcons) );
 
          SCIPdebugMsg(scip, "Upgrading SOS1 constraint <%s> to set packing constraint.\n", SCIPconsGetName(cons));
 
@@ -10385,6 +10384,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    conshdlrdata->tcliquedata = NULL;
    conshdlrdata->cntextsos1 = -1;
    conshdlrdata->varhash = NULL;
+   conshdlrdata->nsos1vars = 0;
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecSOS1, NULL) );

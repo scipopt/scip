@@ -88,7 +88,7 @@
 
 #define BOUNDSWITCH                0.51 /**< threshold for bound switching - see cuts.c */
 #define POSTPROCESS               FALSE /**< apply postprocessing to the cut - see cuts.c */
-#define USEVBDS                   FALSE /**< use variable bounds - see cuts.c */
+#define VARTYPEUSEVBDS                0 /**< We do not allow variable bound substitution - see cuts.c for more information. */
 #define ALLOWLOCAL                FALSE /**< allow to generate local cuts - see cuts. */
 #define MINFRAC                   0.05  /**< minimal fractionality of floor(rhs) - see cuts.c */
 #define MAXFRAC                   0.999 /**< maximal fractionality of floor(rhs) - see cuts.c */
@@ -1062,7 +1062,7 @@ SCIP_RETCODE createAndAddProofcons(
    }
 
    /* mark constraint to be a conflict */
-   SCIPconsMarkConflict(cons);
+   SCIP_CALL( SCIPconsMarkConflict(cons) );
 
    /* add constraint to storage */
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
@@ -1439,7 +1439,7 @@ SCIP_RETCODE separateAlternativeProofs(
    success = cutsuccess;
 
    /* apply MIR */
-   SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, INT_MAX, \
+   SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, VARTYPEUSEVBDS, ALLOWLOCAL, INT_MAX, \
          NULL, NULL, MINFRAC, MAXFRAC, proofrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, \
          &islocal, &cutsuccess) );
    success = (success || cutsuccess);

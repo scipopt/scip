@@ -90,7 +90,14 @@ SCIP_RETCODE SCIPdebugFree(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** checks for validity of the debugging solution in given constraints */
+/** checks for validity of the debugging solution in given active constraints */
+SCIP_RETCODE SCIPdebugCheckActiveConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints to check for validity */
+   int                   nconss              /**< number of given constraints */
+   );
+
+/** checks for validity of the debugging solution for any globally valid constraints. */
 SCIP_RETCODE SCIPdebugCheckConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints to check for validity */
@@ -285,6 +292,7 @@ SCIP_Bool SCIPwithDebugSol(void);
 #define SCIPdebugReset(set) SCIP_OKAY
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
 #define SCIPdebugFree(set) SCIP_OKAY
+#define SCIPdebugCheckActiveConss(scip,conss,nconss) SCIP_OKAY
 #define SCIPdebugCheckConss(scip,conss,nconss) SCIP_OKAY
 #define SCIPdebugCheckRow(set,row) SCIP_OKAY
 #define SCIPdebugCheckLbGlobal(scip,var,lb) SCIP_OKAY
@@ -311,10 +319,10 @@ SCIP_Bool SCIPwithDebugSol(void);
 #endif
 
 
-/* 
- * debug method for LP interface, to check if the LP interface works correct 
+/*
+ * debug method for LP interface, to check if the LP interface works correct
  */
-#ifdef SCIP_DEBUG_LP_INTERFACE 
+#ifdef SCIP_DEBUG_LP_INTERFACE
 
 /* check if the coef is the r-th line of the inverse matrix B^-1; this is
  * the case if (coef * B) is the r-th unit vector */

@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 project(CallableLibrary)
 include(CTest)
 
@@ -64,6 +69,7 @@ macro(addbuildandtest target)
             )
     set_tests_properties(examples-callablelibrary_${target}
                         PROPERTIES
+			    FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS examples-callablelibrary_${target}-build
                         )
     if(WIN32)

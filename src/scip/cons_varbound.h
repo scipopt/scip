@@ -193,6 +193,13 @@ SCIP_ROW* SCIPgetRowVarbound(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** creates and returns the row of the given varbound constraint */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateRowVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
 /** cleans up (multi-)aggregations and fixings from varbound constraints */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcleanupConssVarbound(

@@ -50,8 +50,8 @@
 #include "scip/pub_cons.h"
 #include "scip/cons.h"
 #include "scip/pub_message.h"
-
 #include "scip/struct_reader.h"
+#include "scip/scip_mem.h"
 
 
 /** copies the given reader to a new scip */
@@ -281,6 +281,7 @@ SCIP_RETCODE SCIPreaderWrite(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     msghdlr,            /**< message handler */
    FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           filename,           /**< name of output file, or NULL if not available */
    const char*           extension,          /**< file format */
    SCIP_Bool             genericnames,       /**< using generic variable and constraint names? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
@@ -297,15 +298,18 @@ SCIP_RETCODE SCIPreaderWrite(
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) && reader->readerwrite != NULL )
    {
-      const char* consname;
-      const char** varnames = NULL;
-      const char** fixedvarnames = NULL;
-      const char** consnames = NULL;
       SCIP_VAR** vars;
       SCIP_VAR** fixedvars;
       SCIP_CONS** conss;
       SCIP_CONS* cons;
+      SCIP_Real objoffset;
       SCIP_Real objscale;
+      SCIP_RATIONAL* objoffsetexact;
+      SCIP_RATIONAL* objscaleexact;
+      const char* consname;
+      const char** varnames = NULL;
+      const char** fixedvarnames = NULL;
+      const char** consnames = NULL;
       char* name;
       int nfixedvars;
       int nconss;
@@ -508,17 +512,46 @@ SCIP_RETCODE SCIPreaderWrite(
          }
       }
 
-      /* adapt objective scale for transformed problem (for the original no change is necessary) */
-      objscale = SCIPprobGetObjscale(prob);
-      if( SCIPprobIsTransformed(prob) && SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
-         objscale *= -1.0;
+      /* get exact objective offset and scale */
+      if( set->exact_enable )
+      {
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &objoffsetexact) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &objscaleexact) );
+
+         /* floating-point values should not be used, so set to dummy values */
+         objoffset = 0.0;
+         objscale = 1.0;
+         SCIPrationalSetRational(objoffsetexact, SCIPprobGetObjoffsetExact(prob));
+         SCIPrationalSetRational(objscaleexact, SCIPprobGetObjscaleExact(prob));
+
+         /* adapt exact objective scale for transformed problem (for the original no change is necessary) */
+         if( SCIPprobIsTransformed(prob) && SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
+            SCIPrationalMultReal(objscaleexact, objscaleexact, -1.0);
+      }
+      /* get real objective offset and scale */
+      else
+      {
+         objoffset = SCIPprobGetObjoffset(prob);
+         objscale = SCIPprobGetObjscale(prob);
+         objoffsetexact = NULL;
+         objscaleexact = NULL;
+
+         /* adapt real objective scale for transformed problem (for the original no change is necessary) */
+         if( SCIPprobIsTransformed(prob) && SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
+            objscale *= -1.0;
+      }
 
       /* call reader to write problem */
-      retcode = reader->readerwrite(set->scip, reader, file, SCIPprobGetName(prob), SCIPprobGetData(prob), SCIPprobIsTransformed(prob),
-         SCIPprobGetObjsense(prob), objscale, SCIPprobGetObjoffset(prob),
-         vars, nvars, SCIPprobGetNBinVars(prob), SCIPprobGetNIntVars(prob), SCIPprobGetNImplVars(prob), SCIPprobGetNContVars(prob),
-         fixedvars, nfixedvars, SCIPprobGetStartNVars(prob),
-         conss, nconss, SCIPprobGetMaxNConss(prob), SCIPprobGetStartNConss(prob), genericnames, result);
+      retcode = reader->readerwrite(set->scip, reader, file, filename, SCIPprobGetName(prob), SCIPprobGetData(prob),
+            SCIPprobIsTransformed(prob), SCIPprobGetObjsense(prob), objoffset, objscale, objoffsetexact, objscaleexact,
+            vars, nvars, SCIPprobGetNBinVars(prob), SCIPprobGetNIntVars(prob), SCIPprobGetNImplVars(prob),
+            SCIPprobGetNContVars(prob), fixedvars, nfixedvars, SCIPprobGetStartNVars(prob), conss, nconss,
+            SCIPprobGetMaxNConss(prob), SCIPprobGetStartNConss(prob), genericnames, result);
+
+      if( objscaleexact != NULL )
+         SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &objscaleexact);
+      if( objoffsetexact != NULL )
+         SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &objoffsetexact);
 
       /* reset variable and constraint names to original names */
       if( genericnames )

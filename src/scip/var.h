@@ -261,7 +261,12 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    );
 
-/** create and set the exact variable bounds and objective value */
+/** creates and sets the exact variable bounds and objective value (using floating-point data if value pointer is NULL)
+ *
+ *  @note an inactive integer variable with bounds zero and one is automatically converted into a binary variable
+ *
+ *  @note if exact data is provided, the corresponding floating-point data is overwritten
+ */
 SCIP_RETCODE SCIPvarAddExactData(
    SCIP_VAR*             var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -270,7 +275,10 @@ SCIP_RETCODE SCIPvarAddExactData(
    SCIP_RATIONAL*        obj                 /**< objective function value */
    );
 
-/** copy exact variable data from one variable to another */
+/** copies exact variable data from one variable to another
+ *
+ *  @note This method cannot be integrated into SCIPvarCopy() because it is needed, e.g., when transforming vars.
+ */
 SCIP_RETCODE SCIPvarCopyExactData(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             targetvar,          /**< variable that gets the exact data */
@@ -755,13 +763,16 @@ void SCIPvarSetNamePointer(
  *  variable bounds and implication data structures of the variable are freed. Since in the final removal
  *  of all variables from the transformed problem, this deletes the implication graph completely and is faster
  *  than removing the variables one by one, each time updating all lists of the other variables.
+ *  If 'keepimplics' is TRUE, the implications, variable bounds and cliques are kept. This should be used when the
+ *  variable type is upgraded, i.e. when it gains (implied) integrality, so that existing implications are not lost.
  */
 SCIP_RETCODE SCIPvarRemove(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             final               /**< is this the final removal of all problem variables? */
+   SCIP_Bool             final,              /**< is this the final removal of all problem variables? */
+   SCIP_Bool             keepimplics         /**< should the implications be kept? */
    );
 
 /** marks the variable to be deleted from the problem */
@@ -1978,6 +1989,11 @@ int SCIPbdchgidxGetPos(
    SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
    );
 
+/** returns the depth of the bound change index */
+int SCIPbdchgidxGetDepth(
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
+   );
+
 /** removes (redundant) cliques, implications and variable bounds of variable from all other variables' implications and variable
  *  bounds arrays, and optionally removes them also from the variable itself
  */
@@ -2027,7 +2043,7 @@ void SCIPvarSetLbCertificateIndexLocal(
 #define SCIPvarGetVSIDS(var, stat, dir)    ((var)->varstatus == SCIP_VARSTATUS_LOOSE || (var)->varstatus == SCIP_VARSTATUS_COLUMN ? \
       SCIPhistoryGetVSIDS(var->history, dir)/stat->vsidsweight : SCIPvarGetVSIDS_rec(var, stat, dir))
 #define SCIPbdchgidxGetPos(bdchgidx) ((bdchgidx)->pos)
-
+#define SCIPbdchgidxGetDepth(bdchgidx) ((bdchgidx)->depth)
 #endif
 
 /*

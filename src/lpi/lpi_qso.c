@@ -730,18 +730,22 @@ SCIP_RETCODE SCIPlpiDelCols(
    int                   lastcol             /**< last column to be deleted */
    )
 {
-   int len;
+   const int len = lastcol - firstcol + 1;
    register int i;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
-
-   len = lastcol - firstcol +1;
-   lpi->solstat = 0;
-
-   assert(0 <= firstcol && len > 0 && lastcol < QSget_colcount(lpi->prob));
+   assert(firstcol >= 0);
+   assert(lastcol < QSget_colcount(lpi->prob));
+   assert(len >= 0);
 
    SCIPdebugMessage("deleting %d columns from QSopt\n", len);
+
+   /* handle empty range */
+   if( len <= 0 )
+      return SCIP_OKAY;
+
+   lpi->solstat = 0;
 
    SCIP_CALL( ensureColMem(lpi, len) );
    for( i = firstcol ; i <= lastcol ; i++ )
@@ -895,7 +899,9 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < QSget_colcount(lpi->prob));
+   assert(firstcol >= 0);
+   assert(lastcol < QSget_colcount(lpi->prob));
+   assert(firstcol <= lastcol + 1);
 
    SCIPdebugMessage("getting column names %d to %d\n", firstcol, lastcol);
 
@@ -958,7 +964,9 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < QSget_rowcount(lpi->prob));
+   assert(firstrow >= 0);
+   assert(lastrow < QSget_rowcount(lpi->prob));
+   assert(firstrow <= lastrow + 1);
 
    SCIPdebugMessage("getting row names %d to %d\n", firstrow, lastrow);
 
@@ -1003,17 +1011,22 @@ SCIP_RETCODE SCIPlpiDelRows(
    int                   lastrow             /**< last row to be deleted */
    )
 {
-   const int len = lastrow - firstrow +1;
+   const int len = lastrow - firstrow + 1;
    register int i;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
-
-   lpi->solstat = 0;
-
-   assert(0 <= firstrow && len > 0 && lastrow < QSget_rowcount (lpi->prob));
+   assert(firstrow >= 0);
+   assert(lastrow < QSget_rowcount(lpi->prob));
+   assert(len >= 0);
 
    SCIPdebugMessage("deleting %d rows from QSopt\n", len);
+
+   /* handle empty range */
+   if( len <= 0 )
+      return SCIP_OKAY;
+
+   lpi->solstat = 0;
 
    SCIP_CALL( ensureRowMem(lpi, len) );
    for( i = firstrow; i <= lastrow; i++ )
@@ -1523,7 +1536,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
-   int len;
+   const int len = lastcol - firstcol + 1;
    register int i;
    double* lval = NULL;
    double* llb = NULL;
@@ -1535,15 +1548,15 @@ SCIP_RETCODE SCIPlpiGetCols(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < QSget_colcount(lpi->prob));
    assert((lb == NULL && ub == NULL) || (lb != NULL && ub != NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+   assert(firstcol >= 0);
+   assert(lastcol < QSget_colcount(lpi->prob));
+   assert(len >= 0);
 
    SCIPdebugMessage("getting columns %d to %d\n", firstcol, lastcol);
 
    /* build col-list */
-   len = lastcol - firstcol + 1;
-   assert( len > 0 );
    SCIP_CALL( ensureColMem(lpi, len) );
    for( i = 0; i < len; ++i )
       lpi->iccnt[i] = i + firstcol;
@@ -1640,9 +1653,11 @@ SCIP_RETCODE SCIPlpiGetRows(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < QSget_rowcount (lpi->prob));
    assert((lhs == NULL && rhs == NULL) || (rhs != NULL && lhs != NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+   assert(firstrow >= 0);
+   assert(lastrow < QSget_rowcount(lpi->prob));
+   assert(len >= 0);
 
    SCIPdebugMessage("getting rows %d to %d\n", firstrow, lastrow);
 
@@ -1766,19 +1781,20 @@ SCIP_RETCODE SCIPlpiGetObj(
    SCIP_Real*            vals                /**< array to store objective coefficients */
    )
 {  /*lint --e{715}*/
-   int len;
+   const int len = lastcol - firstcol + 1;
    register int i;
    double* qsoptvals;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
    assert(vals != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < QSget_colcount (lpi->prob));
+   assert(firstcol >= 0);
+   assert(lastcol < QSget_colcount(lpi->prob));
+   assert(len >= 0);
 
    SCIPdebugMessage("getting objective values %d to %d\n", firstcol, lastcol);
 
    /* build col-list */
-   len = lastcol - firstcol + 1;
    SCIP_CALL(ensureColMem(lpi,len));
    for( i = 0; i < len; ++i )
       lpi->iccnt[i] = i + firstcol;
@@ -1813,7 +1829,9 @@ SCIP_RETCODE SCIPlpiGetBounds(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol&& lastcol < QSget_colcount (lpi->prob));
+   assert(firstcol >= 0);
+   assert(lastcol < QSget_colcount(lpi->prob));
+   assert(len >= 0);
 
    SCIPdebugMessage("getting bound values %d to %d\n", firstcol, lastcol);
 
@@ -1845,9 +1863,11 @@ SCIP_RETCODE SCIPlpiGetSides(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < QSget_rowcount (lpi->prob));
    assert(rhss != NULL);
    assert(lhss != NULL);
+   assert(firstrow >= 0);
+   assert(lastrow < QSget_rowcount(lpi->prob));
+   assert(len >= 0);
 
    SCIPdebugMessage("getting row sides %d to %d\n", firstrow, lastrow);
 

@@ -776,8 +776,8 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
       SCIP_Real oldbound;
       SCIP_Real newbound;
 
-      assert( SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_BINARY &&
-            !SCIPvarIsImpliedIntegral(SCIPeventGetVar(event)) );
+      assert( SCIPvarIsBinary(SCIPeventGetVar(event)) );
+      assert( !SCIPvarIsImpliedIntegral(SCIPeventGetVar(event)) );
       oldbound = SCIPeventGetOldbound(event);
       newbound = SCIPeventGetNewbound(event);
       assert( SCIPisIntegral(scip, oldbound) );
@@ -1027,7 +1027,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
 #endif
 
          /* add constraint to SCIP */
-         SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+         SCIP_CALL( SCIPaddConflict(scip, node, &cons, validnode, conftype, cutoffinvolved) );
 
          *result = SCIP_CONSADDED;
       }
@@ -3372,13 +3372,12 @@ SCIP_RETCODE consdataCreate(
    assert( slackvar != NULL );
    assert( eventhdlrrestart != NULL );
 
-   /* if active on 0, a provided binary variable is reversed */
+   /* if active on 0, a provided binary variable is negated */
    if ( activeone || binvar == NULL )
-   {
       binvarinternal = binvar;
-   }
    else
    {
+      assert( SCIPvarIsBinary(binvar) );
       SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
@@ -3411,7 +3410,7 @@ SCIP_RETCODE consdataCreate(
          (*consdata)->binvar = var;
 
          /* check type */
-         if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
+         if ( !SCIPvarIsBinary(var) || SCIPvarIsImpliedIntegral(var) )
          {
             SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(var), SCIPvarGetType(var));
             return SCIP_ERROR;
@@ -4639,11 +4638,8 @@ SCIP_RETCODE separateIISRounding(
 
          /* check whether complementary (negated) variable is present as well */
          binvarneg = SCIPvarGetNegatedVar(consdata->binvar);
-         assert( binvarneg != NULL );
-
-         /* negated variable is present as well */
          assert( conshdlrdata->binvarhash != NULL );
-         if ( SCIPhashmapExists(conshdlrdata->binvarhash, (void*) binvarneg) )
+         if ( binvarneg != NULL && SCIPhashmapExists(conshdlrdata->binvarhash, (void*) binvarneg) )
          {
             SCIP_Real binvarnegval = SCIPgetVarSol(scip, binvarneg);
 
@@ -8061,11 +8057,12 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       }
    }
 
-   /* if active on 0, a provided binary variable is reversed */
+   /* if active on 0, a provided binary variable is negated */
    if ( activeone || binvar == NULL )
       binvarinternal = binvar;
    else
    {
+      assert( SCIPvarIsBinary(binvar) );
       SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
@@ -8388,15 +8385,14 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
 
       SCIP_Real val = 1.0;
 
-      /* if active on 0, the binary variable is reversed */
+      /* if active on 0, the binary variable is negated */
       SCIP_VAR* binvarinternal;
       if ( activeone )
-      {
          binvarinternal = binvar;
-      }
       else
       {
-         SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
+         assert( SCIPvarIsBinary(binvar) );
+         SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
       }
 
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
@@ -8630,11 +8626,12 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       }
    }
 
-   /* if active on 0, the binary variable is reversed */
+   /* if active on 0, the binary variable is negated */
    if ( activeone )
       binvarinternal = binvar;
    else
    {
+      assert( SCIPvarIsBinary(binvar) );
       SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
@@ -8956,7 +8953,7 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
    assert( consdata != NULL );
 
    /* check type */
-   if ( SCIPvarGetType(binvar) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(binvar) )
+   if ( !SCIPvarIsBinary(binvar) || SCIPvarIsImpliedIntegral(binvar) )
    {
       SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(binvar), SCIPvarGetType(binvar));
       return SCIP_ERROR;

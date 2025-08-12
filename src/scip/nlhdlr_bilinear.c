@@ -1727,6 +1727,8 @@ SCIP_RETCODE SCIPaddIneqBilinear(
       nineqs = nlhdlrexprdata->noverineqs;
    }
    assert( nineqs >= 0 );
+   assert( ineqs != NULL );
+   assert( 3 * nineqs <= 6 );
 
    /* check for a duplicate */
    for( i = 0; i < nineqs; ++i )
@@ -1745,7 +1747,7 @@ SCIP_RETCODE SCIPaddIneqBilinear(
       SCIP_Real ineqviol1;
       SCIP_Real ineqviol2;
 
-      getIneqViol(x, y, ineqs[3*i], ineqs[3*i+1], ineqs[3*i+2], &ineqviol1, &ineqviol2);
+      getIneqViol(x, y, ineqs[3*i], ineqs[3*i+1], ineqs[3*i+2], &ineqviol1, &ineqviol2); /*lint !e661*/
 
       /* check whether an existing inequality is dominating the candidate */
       if( SCIPisGE(scip, ineqviol1, viol1) && SCIPisGE(scip, ineqviol2, viol2) )

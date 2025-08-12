@@ -54,6 +54,16 @@ SCIP_RETCODE SCIPcreateMessagehdlrPbSolver(
    SCIP_Bool quiet                           /**< should screen messages be suppressed? */
    );
 
+/** prints that the problem instance is unsupported */
+SCIP_RETCODE SCIPprintUnsupportedPbSolver(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** prints the best primal solution */
+SCIP_RETCODE SCIPprintSolutionPbSolver(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 #ifdef __cplusplus
 }
 #endif

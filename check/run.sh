@@ -238,18 +238,3 @@ echo "-----------------------------"  >> "${OUTFILE}"
 date                                  >> "${ERRFILE}"
 echo                                  >> "${OUTFILE}"
 echo "=ready="                        >> "${OUTFILE}"
-
-mv "${OUTFILE}" $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
-mv "${ERRFILE}" $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
-
-# move a possible data file
-if [ -f "${DATFILE}" ]
-then
-    mv "{$DATFILE}" $SOLVERPATH/$OUTPUTDIR/$BASENAME.dat
-fi
-
-rm -f $TMPFILE
-rm -f $SOLFILE
-#chmod g+r $ERRFILE
-#chmod g+r $SCIPPATH/$OUTPUTDIR/$BASENAME.out
-#chmod g+r $SCIPPATH/$OUTPUTDIR/$BASENAME.set

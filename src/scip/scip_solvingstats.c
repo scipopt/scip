@@ -1137,7 +1137,8 @@ SCIP_Longint SCIPgetNConflictConssFound(
       + SCIPconflictGetNPseudoConflictConss(scip->conflict)
       + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict)
       + SCIPconflictGetNDualproofsBndGlobal(scip->conflict)
-      + SCIPconflictGetNDualproofsInfGlobal(scip->conflict));
+      + SCIPconflictGetNDualproofsInfGlobal(scip->conflict)
+      + SCIPconflictGetNResConflictConss(scip->conflict));
 }
 
 /** get number of conflict constraints found so far at the current node
@@ -1188,6 +1189,29 @@ SCIP_Longint SCIPgetNConflictConssApplied(
    return scip->conflict == NULL ? 0 : SCIPconflictGetNAppliedConss(scip->conflict);
 }
 
+/** get total number of resolution conflict constraints added to the problem
+ *
+ *  @return the total number of resolution conflict constraints added to the problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_Longint SCIPgetNResConflictConssApplied(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNResConflictConssApplied", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->conflict == NULL ? 0 : SCIPconflictGetNAppliedResConss(scip->conflict);
+}
 /** get total number of dual proof constraints added to the problem
  *
  *  @return the total number of dual proof constraints added to the problem
@@ -2521,145 +2545,6 @@ SCIP_Real SCIPgetDeterministicTime(
           0.0011123144764 * scip->stat->nisstoppedcalls );
 }
 
-/** outputs problem to file stream */
-static
-SCIP_RETCODE printProblem(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROB*            prob,               /**< problem data */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           extension,          /**< file format (or NULL for default CIP format) */
-   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
-   )
-{
-   SCIP_RESULT result;
-   int i;
-   assert(scip != NULL);
-   assert(prob != NULL);
-
-   /* try all readers until one could read the file */
-   result = SCIP_DIDNOTRUN;
-   for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
-   {
-      SCIP_RETCODE retcode;
-
-      if( extension != NULL )
-         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, scip->messagehdlr, file, extension, genericnames, &result);
-      else
-         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, scip->messagehdlr, file, "cip", genericnames, &result);
-
-      /* check for reader errors */
-      if( retcode == SCIP_WRITEERROR )
-         return retcode;
-
-      SCIP_CALL( retcode );
-   }
-
-   switch( result )
-   {
-   case SCIP_DIDNOTRUN:
-      return SCIP_PLUGINNOTFOUND;
-
-   case SCIP_SUCCESS:
-      return SCIP_OKAY;
-
-   default:
-      assert(i < scip->set->nreaders);
-      SCIPerrorMessage("invalid result code <%d> from reader <%s> writing <%s> format\n",
-         result, SCIPreaderGetName(scip->set->readers[i]), extension);
-      return SCIP_READERROR;
-   }  /*lint !e788*/
-}
-
-/** outputs original problem to file stream
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- */
-SCIP_RETCODE SCIPprintOrigProblem(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           extension,          /**< file format (or NULL for default CIP format)*/
-   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
-   )
-{
-   SCIP_RETCODE retcode;
-
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintOrigProblem", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-
-   assert(scip != NULL);
-   assert( scip->origprob != NULL );
-
-   retcode = printProblem(scip, scip->origprob, file, extension, genericnames);
-
-   /* check for write errors */
-   if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
-      return retcode;
-   else
-   {
-      SCIP_CALL( retcode );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** outputs transformed problem of the current node to file stream
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- */
-SCIP_RETCODE SCIPprintTransProblem(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           extension,          /**< file format (or NULL for default CIP format)*/
-   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
-   )
-{
-   SCIP_RETCODE retcode;
-
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintTransProblem", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-
-   assert(scip != NULL);
-   assert(scip->transprob != NULL );
-
-   retcode = printProblem(scip, scip->transprob, file, extension, genericnames);
-
-   /* check for write errors */
-   if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
-      return retcode;
-   else
-   {
-      SCIP_CALL( retcode );
-   }
-
-   return SCIP_OKAY;
-}
-
 /** outputs status statistics
  *
  *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
@@ -2693,7 +2578,7 @@ void SCIPprintStatusStatistics(
 
 /** collects status statistics in a SCIP_DATATREE object
  *
- *  This function sets: 
+ *  This function sets:
  *   - status: the current status of the solver
  *   - info: info about the keys and values stored in the datatree
  *
@@ -3508,6 +3393,18 @@ void SCIPprintConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0,
       SCIPconflictGetNDualproofsInfLocal(scip->conflict) + SCIPconflictGetNDualproofsBndLocal(scip->conflict));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Gen. Resolution CA :       Time      Calls    Success  Conflicts  LargeCoef  LongConfs    Length\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  propagation      : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.1f\n",
+      SCIPconflictGetResTime(scip->conflict),
+      SCIPconflictGetNResCalls(scip->conflict),
+      SCIPconflictGetNResSuccess(scip->conflict),
+      SCIPconflictGetNResConflictConss(scip->conflict),
+      SCIPconflictGetNResLargeCoefs(scip->conflict),
+      SCIPconflictGetNResLongConflicts(scip->conflict),
+      SCIPconflictGetNResConflictConss(scip->conflict) > 0
+      ? (SCIP_Real)SCIPconflictGetNResConflictVars(scip->conflict)
+      / (SCIP_Real)SCIPconflictGetNResConflictConss(scip->conflict) : 0
+      );
 }
 
 /** collects conflict statistics in a SCIP_DATATREE object */

@@ -5037,6 +5037,7 @@ void rowCalcIdxsAndVals(
    row->maxval = 0.0;
    row->nummaxval = 1;
    row->numintcols = 0;
+   row->numimplintcols = 0;
    row->minval = SCIPsetInfinity(set);
    row->numminval = 1;
    row->minidx = INT_MAX;
@@ -5056,7 +5057,12 @@ void rowCalcIdxsAndVals(
       /* update min/maxidx */
       row->minidx = MIN(row->minidx, col->index);
       row->maxidx = MAX(row->maxidx, col->index);
-      row->numintcols += SCIPcolIsIntegral(col); /*lint !e713*/
+      if( SCIPcolIsIntegral(col) )
+      {
+         ++row->numintcols;
+         if( SCIPcolIsImpliedIntegral(col) )
+            ++row->numimplintcols;
+      }
 
       /* update maximal and minimal non-zero value */
       if( row->nummaxval > 0 )
@@ -5409,6 +5415,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->nummaxval = 0;
    (*row)->numminval = 0;
    (*row)->numintcols = -1;
+   (*row)->numimplintcols = -1;
    (*row)->validactivitylp = -1;
    (*row)->validpsactivitydomchg = -1;
    (*row)->validactivitybdsdomchg = -1;
@@ -5972,7 +5979,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
 #endif
    SCIP_Longint gcd;
    SCIP_Longint scm;
-   SCIP_Longint nominator;
+   SCIP_Longint numerator;
    SCIP_Longint denominator;
    SCIP_Real val;
    SCIP_Real absval;
@@ -6136,15 +6143,15 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
       if( usecontvars || SCIPcolIsIntegral(row->cols[c]) )
       {
          val = row->vals[c];
-         rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
-         if( rational && nominator != 0 )
+         rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &numerator, &denominator);
+         if( rational && numerator != 0 )
          {
             assert(denominator > 0);
-            gcd = ABS(nominator);
+            gcd = ABS(numerator);
             scm = denominator;
             rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
             SCIPsetDebugMsg(set, " -> first rational: val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
-               val, nominator, denominator, gcd, scm, rational);
+               val, numerator, denominator, gcd, scm, rational);
             break;
          }
       }
@@ -6156,15 +6163,15 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
       if( usecontvars || SCIPcolIsIntegral(row->cols[c]) )
       {
          val = row->vals[c];
-         rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
-         if( rational && nominator != 0 )
+         rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &numerator, &denominator);
+         if( rational && numerator != 0 )
          {
             assert(denominator > 0);
-            gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
+            gcd = SCIPcalcGreComDiv(gcd, ABS(numerator));
             scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
             rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
             SCIPsetDebugMsg(set, " -> next rational : val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
-               val, nominator, denominator, gcd, scm, rational);
+               val, numerator, denominator, gcd, scm, rational);
          }
       }
    }
@@ -6970,6 +6977,22 @@ int SCIProwGetNumIntCols(
    assert(row->numintcols <= row->len && row->numintcols >= 0);
 
    return row->numintcols;
+}
+
+/** gets number of implied integral columns in row */
+int SCIProwGetNumImpliedIntCols(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(row != NULL);
+
+   if( row->numimplintcols == -1 )
+      rowCalcIdxsAndVals(row, set);
+
+   assert(row->numimplintcols <= row->len && row->numimplintcols >= 0);
+
+   return row->numimplintcols;
 }
 
 /** returns row's cutoff distance in the direction of the given primal solution */
@@ -11016,7 +11039,6 @@ SCIP_RETCODE lpLexDualSimplex(
    /* search for lexicographically minimal optimal solution */
    if( !lp->diving && !lp->probing && SCIPlpiIsOptimal(lp->lpi) )
    {
-      SCIP_Bool chooseBasic;
       SCIP_Real* primsol;
       SCIP_Real* dualsol;
       SCIP_Real* redcost;
@@ -11038,6 +11060,8 @@ SCIP_RETCODE lpLexDualSimplex(
       int* indrow;
       int* indallcol;
       int* indallrow;
+      SCIP_Bool chooseBasic;
+      SCIP_Bool success;
       int nDualDeg;
       int r, c;
       int cntcol;
@@ -11164,6 +11188,10 @@ SCIP_RETCODE lpLexDualSimplex(
          }
       }
 #endif
+
+      /* disable objective limit */
+      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_OBJLIM, SCIPlpiInfinity(lp->lpi), &success) );
+      assert(success);
 
       /* perform lexicographic rounds */
       pos = -1;
@@ -11403,7 +11431,7 @@ SCIP_RETCODE lpLexDualSimplex(
       SCIP_CALL( SCIPlpiChgSides(lp->lpi, lp->nlpirows, indallrow, oldlhs, oldrhs) );
       SCIP_CALL( SCIPlpiChgObj(lp->lpi, lp->nlpicols, indallcol, oldobj) );
 
-      /* resolve to update solvers internal data structures - should only produce few pivots - is this needed? */
+      /* resolve to update solvers internal data structures - should only produce few pivots */
       retcode = SCIPlpiSolveDual(lp->lpi);
       if( retcode == SCIP_LPERROR )
       {
@@ -11415,6 +11443,12 @@ SCIP_RETCODE lpLexDualSimplex(
          SCIP_CALL( retcode );
       }
       assert(SCIPlpiIsOptimal(lp->lpi));
+
+      /* reset objective limit */
+      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_OBJLIM, lp->lpiobjlim, &success) );
+      assert(success);
+
+      /* add LP iterations */
       SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
       lexIterations += iterations;
 
@@ -13858,33 +13892,30 @@ void getObjvalDeltaLb(
    int*                  deltainf            /**< pointer to store the number of variables with infinite best bound */
    )
 {
-   assert(!SCIPsetIsInfinity(set, REALABS(obj)));
+   assert(obj > 0.0);
+   assert(!SCIPsetIsInfinity(set, obj));
    assert(!SCIPsetIsInfinity(set, oldlb));
-   assert(!SCIPsetIsInfinity(set, -oldlb) || !SCIPsetIsInfinity(set, -newlb));
-   assert(SCIPsetIsPositive(set, obj)); /* we only need to update if the objective is positive */
+   assert(!SCIPsetIsInfinity(set, newlb));
+   assert(newlb != oldlb); /*lint !e777*/
 
-   if( SCIPsetIsInfinity(set, -oldlb) )
+   if( SCIPsetIsInfinity(set, -newlb) )
    {
-      if( !SCIPsetIsInfinity(set, newlb) )
-      {
-         (*deltainf) = -1;
-         (*deltaval) = newlb * obj;
-      }
-      else
-      {
-         (*deltainf) = 0;
-         (*deltaval) = 0.0;
-      }
+      assert(!SCIPsetIsInfinity(set, -oldlb));
+
+      *deltainf = 1;
+      *deltaval = -obj * oldlb;
    }
-   else if( SCIPsetIsInfinity(set, REALABS(newlb)) )
+   else if( SCIPsetIsInfinity(set, -oldlb) )
    {
-      (*deltainf) = 1;
-      (*deltaval) = -oldlb * obj;
+      assert(!SCIPsetIsInfinity(set, -newlb));
+
+      *deltainf = -1;
+      *deltaval = obj * newlb;
    }
    else
    {
-      (*deltainf) = 0;
-      (*deltaval) = obj * (newlb - oldlb);
+      *deltainf = 0;
+      *deltaval = obj * (newlb - oldlb);
    }
 }
 
@@ -13899,33 +13930,30 @@ void getObjvalDeltaUb(
    int*                  deltainf            /**< pointer to store the number of variables with infinite best bound */
    )
 {
-   assert(!SCIPsetIsInfinity(set, REALABS(obj)));
+   assert(obj < 0.0);
+   assert(!SCIPsetIsInfinity(set, -obj));
    assert(!SCIPsetIsInfinity(set, -oldub));
-   assert(!SCIPsetIsInfinity(set, oldub) || !SCIPsetIsInfinity(set, newub));
-   assert(SCIPsetIsNegative(set, obj)); /* we only need to update if the objective is negative */
+   assert(!SCIPsetIsInfinity(set, -newub));
+   assert(newub != oldub); /*lint !e777*/
 
-   if( SCIPsetIsInfinity(set, oldub) )
+   if( SCIPsetIsInfinity(set, newub) )
    {
-      if( !SCIPsetIsInfinity(set, -newub) )
-      {
-         (*deltainf) = -1;
-         (*deltaval) = newub * obj;
-      }
-      else
-      {
-         (*deltainf) = 0;
-         (*deltaval) = 0.0;
-      }
+      assert(!SCIPsetIsInfinity(set, oldub));
+
+      *deltainf = 1;
+      *deltaval = -obj * oldub;
    }
-   else if( SCIPsetIsInfinity(set, REALABS(newub)) )
+   else if( SCIPsetIsInfinity(set, oldub) )
    {
-      (*deltainf) = 1;
-      (*deltaval) = -oldub * obj;
+      assert(!SCIPsetIsInfinity(set, newub));
+
+      *deltainf = -1;
+      *deltaval = obj * newub;
    }
    else
    {
-      (*deltainf) = 0;
-      (*deltaval) = obj * (newub - oldub);
+      *deltainf = 0;
+      *deltaval = obj * (newub - oldub);
    }
 }
 
@@ -16888,7 +16916,6 @@ SCIP_RETCODE SCIPlpWrite(
    )
 {
    assert(lp != NULL);
-   assert(lp->flushed);
    assert(fname != NULL);
 
    SCIP_CALL( SCIPlpiWriteLP(lp->lpi, fname) );
@@ -16918,7 +16945,6 @@ SCIP_RETCODE SCIPlpWriteMip(
    SCIP_Real coeff;
 
    assert(lp != NULL);
-   assert(lp->flushed);
    assert(fname != NULL);
 
    SCIPsetDebugMsg(set, "Start to write MIP to file <%s>\n", fname);

@@ -71,6 +71,12 @@
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define DEFAULT_CHECKFPFEASIBILITY TRUE /**< should a solution be checked in floating-point arithmetic prior to being processed? */
+/**@todo determine checkcontimplint default */
+#define DEFAULT_CHECKCONTIMPLINT   TRUE /**< should integrality of continuous implied integral variables be ensured? */
+/**@todo tune abortfrac default */
+#define DEFAULT_ABORTFRAC          1e-9 /**< fractionality of enforced integral value above which reparation is aborted */
+/**@todo tune unfixfrac default */
+#define DEFAULT_UNFIXFRAC           0.0 /**< fractionality of weakly implied value up to which reparation fixes variable */
 #define DEFAULT_MAXSTALLS          1000 /**< maximal number of consecutive repair calls without success */
 #define DEFAULT_SOLBUFSIZE           10 /**< size of solution buffer */
 #define DEFAULT_MINIMPROVE          0.2 /**< minimal percentage of primal improvement to trigger solution processing */
@@ -96,6 +102,9 @@ struct SCIP_ConshdlrData
    int                   probhasconteqs;     /**< does the problem have equations with continuous variables? (-1 unknown, 0 no, 1 yes) */
    int                   ncurrentstalls;     /**< number of times the exact lp was solved unsuccessfully in a row */
    SCIP_Bool             checkfpfeasibility; /**< should a solution be checked in floating-point arithmetic prior to being processed? */
+   SCIP_Bool             checkcontimplint;   /**< should integrality of continuous implied integral variables be ensured? */
+   SCIP_Real             abortfrac;          /**< fractionality of enforced integral value above which reparation is aborted */
+   SCIP_Real             unfixfrac;          /**< fractionality of weakly implied value up to which reparation fixes variable */
    int                   maxstalls;          /**< maximal number of consecutive repair calls without success */
    int                   solbufsize;         /**< size of solution buffer */
    SCIP_Real             minimprove;         /**< minimal percentage of primal improvement to trigger solution processing */
@@ -203,12 +212,11 @@ static
 SCIP_RETCODE solCreateSolAssignment(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution to create assignment for */
+   SCIP_Bool             checkcontimplint,   /**< whether continuous implied integral variables should be included */
    SOLINTASSIGNMENT**    assignment          /**< address of assignment */
    )
 { /*lint --e{522, 776}*/
    SCIP_VAR** vars;
-   int nvars;
-   int ncontvars;
    int nintegers;
    int i;
 
@@ -216,8 +224,21 @@ SCIP_RETCODE solCreateSolAssignment(
    assert(scip != NULL);
 
    /* get all problem variables and integer region in vars array */
-   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nvars, NULL, NULL, NULL, NULL, NULL, &ncontvars) );
-   nintegers = nvars - ncontvars;
+   if( checkcontimplint )
+   {
+      int nvars;
+      int ncontvars;
+      SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nvars, NULL, NULL, NULL, NULL, NULL, &ncontvars) );
+      nintegers = nvars - ncontvars;
+   }
+   else
+   {
+      int nvars;
+      int ncontimplvars;
+      int ncontvars;
+      SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nvars, NULL, NULL, NULL, NULL, &ncontimplvars, &ncontvars) );
+      nintegers = nvars - ncontvars - ncontimplvars;
+   }
    assert(nintegers >= 0);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, assignment) );
@@ -317,6 +338,9 @@ void checkProbHasContEqs(
 static
 SCIP_DECL_CONSENFOLP(consEnfolpExactSol)
 {  /*lint --e{715}*/
+   assert(result != NULL);
+   assert(SCIPisExact(scip));
+
    /* returning feasible since we can't enforce anything */
    *result = SCIP_FEASIBLE;
 
@@ -327,6 +351,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactSol)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxExactSol)
 {  /*lint --e{715}*/
+   assert(result != NULL);
+   assert(SCIPisExact(scip));
+
    /* returning feasible since we can't enforce anything */
    *result = SCIP_FEASIBLE;
 
@@ -337,6 +364,9 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxExactSol)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsExactSol)
 {  /*lint --e{715}*/
+   assert(result != NULL);
+   assert(SCIPisExact(scip));
+
    /* returning feasible since we can't enforce anything */
    *result = SCIP_FEASIBLE;
 
@@ -369,14 +399,14 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
-   foundsol = FALSE;
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-   assert(conshdlrdata != NULL);
-
-   /* if we are not solving exactly, we have nothing to check */
    if( !SCIPisExact(scip) )
       return SCIP_OKAY;
+
+   foundsol = FALSE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    /**@todo add event handler to check again if constraints were added/modified or a variable (impl) type changed */
    if( conshdlrdata->probhasconteqs == -1 )
@@ -470,7 +500,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    }
 
    /* first, check if we already tried a solution with this integer assignment */
-   SCIP_CALL( solCreateSolAssignment(scip, sol, &assignment) );
+   SCIP_CALL( solCreateSolAssignment(scip, sol, conshdlrdata->checkcontimplint, &assignment) );
    if( assignment != NULL && SCIPhashtableExists(conshdlrdata->solhash, (void*) assignment) )
    {
       SCIPdebugMessage("rejecting solution that was already checked\n");
@@ -527,13 +557,20 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    /* start exact diving and set global bounds of continuous variables */
    SCIP_CALL( SCIPstartExactDive(scip) );
 
+   /* get all problem variables and integer region in vars array */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   nintegers = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   nintegers = nvars - SCIPgetNContVars(scip);
+   if( !conshdlrdata->checkcontimplint )
+      nintegers -= SCIPgetNContImplVars(scip);
+   assert(nintegers >= 0);
+
    for( i = nintegers; i < nvars; ++i )
    {
       if( SCIPvarGetStatusExact(vars[i]) == SCIP_VARSTATUS_COLUMN )
       {
+         assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS);
+
          SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
          SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
 
@@ -574,15 +611,29 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
             assert(SCIPrationalIsLE(SCIPvarGetLbLocalExact(vars[i]), SCIPvarGetUbLocalExact(vars[i])));
 
-            /* check if solution value is integral and abort if not, except if integrality is weakly implied: then the
-             * solution value could be fractional in a floating-point feasible solution and we know that an optimal
-             * solution with integral value exist; in this case we currently round and fix its value
+            /* for all integer and implied integer variables we check if their solution value is near-integral and abort
+             * if not, except for continuous variables whose integrality is weakly implied: then the solution value
+             * could be fractional in a floating-point feasible solution and we only know that a feasible solution with
+             * integral value exists; in this case we leave it unfixed to avoid infeasibility
              */
-            /**@todo once implied integrality detection is made exact, test whether it improves performance to leave
-             *       continuous implied integral variables unfixed or fix them only if they take a nearly integral value
-             */
-            if( SCIPisIntegral(scip, solval) || SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK )
+            if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS && !EPSISINT(solval, conshdlrdata->abortfrac) )
             {
+               *result = SCIP_INFEASIBLE;
+               break;
+            }
+            else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS
+               && SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK && !EPSISINT(solval, conshdlrdata->unfixfrac) )
+            {
+               SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
+               SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
+
+               SCIP_CALL( SCIPchgVarLbExactDive(scip, vars[i], SCIPvarGetLbGlobalExact(vars[i])) );
+               SCIP_CALL( SCIPchgVarUbExactDive(scip, vars[i], SCIPvarGetUbGlobalExact(vars[i])) );
+            }
+            else
+            {
+               assert(SCIPvarIsIntegral(vars[i]));
+
                SCIP_RATIONAL* newbound;
 
                SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &newbound) );
@@ -599,8 +650,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
                SCIPrationalFreeBuffer(SCIPbuffer(scip), &newbound);
             }
-            else
-               *result = SCIP_INFEASIBLE;
          }
       }
 
@@ -680,7 +729,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 static
 SCIP_DECL_CONSLOCK(consLockExactSol)
 {  /*lint --e{715}*/
-
    /* do nothing since we are not handling constraints */
    return SCIP_OKAY;
 }
@@ -709,10 +757,14 @@ SCIP_DECL_CONSINIT(consInitExactSol)
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL );
+   assert(conshdlr != NULL);
 
+   /* disable exactsol handler */
    if( !SCIPisExact(scip) )
+   {
+      SCIPconshdlrSetNeedsCons(conshdlr, TRUE);
       return SCIP_OKAY;
+   }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -742,11 +794,16 @@ SCIP_DECL_CONSEXIT(consExitExactSol)
    SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
 
-   if( !SCIPisExact(scip) )
+   /* reenable exactsol handler */
+   if( SCIPconshdlrNeedsCons(conshdlr) )
+   {
+      assert(!SCIPisExact(scip));
+      SCIPconshdlrSetNeedsCons(conshdlr, FALSE);
       return SCIP_OKAY;
+   }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -828,6 +885,18 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
          "constraints/" CONSHDLR_NAME "/checkfpfeasibility",
          "should a solution be checked in floating-point arithmetic prior to being processed?",
          &conshdlrdata->checkfpfeasibility, TRUE, DEFAULT_CHECKFPFEASIBILITY, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/checkcontimplint",
+         "should integrality of continuous implied integral variables be ensured?",
+         &conshdlrdata->checkcontimplint, TRUE, DEFAULT_CHECKCONTIMPLINT, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/" CONSHDLR_NAME "/abortfrac",
+         "fractionality of enforced integral value above which reparation is aborted",
+         &conshdlrdata->abortfrac, TRUE, DEFAULT_ABORTFRAC, 0.0, 0.5, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/" CONSHDLR_NAME "/unfixfrac",
+         "fractionality of weakly implied value up to which reparation fixes variable",
+         &conshdlrdata->unfixfrac, TRUE, DEFAULT_UNFIXFRAC, 0.0, 0.5, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/" CONSHDLR_NAME "/maxstalls",
          "maximal number of consecutive repair calls without success",

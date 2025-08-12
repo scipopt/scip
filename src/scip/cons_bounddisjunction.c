@@ -1250,12 +1250,13 @@ SCIP_RETCODE upgradeCons(
 	       SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       }
 
-      SCIPdebugMsg(scip, "updated constraint <%s> to the following %s constraint\n", SCIPconsGetName(cons), (nvars == 2 ? "setppc" : "logicor"));
+      /* add the upgraded constraint to the problem */
+      SCIPdebugMsg(scip, "upgrading constraint <%s> to the following %s constraint\n", SCIPconsGetName(cons), (nvars == 2 ? "setppc" : "logicor"));
       SCIPdebugPrintCons(scip, newcons, NULL);
-      SCIP_CALL( SCIPaddCons(scip, newcons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
       ++(*naddconss);
 
+      /* remove the underlying constraint from the problem */
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
    }
@@ -2529,7 +2530,11 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
-         else if( consdata->nvars == 1 )
+
+         if( SCIPconsGetNUpgradeLocks(cons) >= 1 )
+            continue;
+
+         if( consdata->nvars == 1 )
          {
             SCIPdebugMsg(scip, "bound disjunction constraint <%s> has only one undecided literal\n",
                SCIPconsGetName(cons));
@@ -2584,9 +2589,10 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
                      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                      SCIPconsIsStickingAtNode(cons)) );
                }
-               SCIP_CALL( SCIPaddCons(scip, lincons) );
-               SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-               (*nupgdconss)++;
+
+               /* add the upgraded constraint to the problem */
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, &lincons) );
+               ++(*nupgdconss);
             }
 
             SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -3203,7 +3209,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
             FALSE, FALSE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
       /* add conflict to SCIP */
-      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+      SCIP_CALL( SCIPaddConflict(scip, node, &cons, validnode, conftype, cutoffinvolved) );
       SCIPdebugMsg(scip, "added conflict\n");
       *result = SCIP_CONSADDED;
    }

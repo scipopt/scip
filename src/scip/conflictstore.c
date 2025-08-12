@@ -157,17 +157,7 @@ SCIP_DECL_SORTPTRCOMP(compareConss)
          return +1;
    }
 #else
-   {
-      SCIP_CONSHDLR* conshdlr1 = SCIPconsGetHdlr(cons1);
-      SCIP_CONSHDLR* conshdlr2 = SCIPconsGetHdlr(cons2);
-
-      if( strcmp(SCIPconshdlrGetName(conshdlr1), "linear") == strcmp(SCIPconshdlrGetName(conshdlr2), "linear") )
-         return 0;
-      else if( strcmp(SCIPconshdlrGetName(conshdlr1), "linear") == 0 )
-         return -1;
-      else
-         return +1;
-   }
+      return 0;
 #endif
 }
 
@@ -246,9 +236,7 @@ SCIP_RETCODE conflictstoreEnsureMem(
    if( num > conflictstore->conflictsize )
    {
       int newsize;
-#ifndef NDEBUG
-      int i;
-#endif
+
       /* initialize the complete data structure */
       if( conflictstore->conflictsize == 0 )
       {
@@ -269,13 +257,6 @@ SCIP_RETCODE conflictstoreEnsureMem(
                newsize) );
       }
 
-#ifndef NDEBUG
-      for( i = conflictstore->nconflicts; i < newsize; i++ )
-      {
-         conflictstore->conflicts[i] = NULL;
-         conflictstore->confprimalbnds[i] = -SCIPsetInfinity(set);
-      }
-#endif
       conflictstore->conflictsize = newsize;
    }
    assert(num <= conflictstore->conflictsize || conflictstore->conflictsize == conflictstore->maxstoresize);
@@ -330,10 +311,8 @@ SCIP_RETCODE removeExactConflictFromCertificateHashmap(
 
    certificate = SCIPgetCertificate(set->scip);
    assert(certificate != NULL);
-   assert(certificate->rowdatahash != NULL);
 
-   /* only do something if constraint does not already exist */
-   if( SCIPhashmapExists(certificate->rowdatahash, (void*) cons) )
+   if( certificate->rowdatahash != NULL && SCIPhashmapExists(certificate->rowdatahash, (void*) cons) )
    {
       SCIP_CALL( SCIPhashmapRemove(certificate->rowdatahash, (void*) cons) );
    }
@@ -374,6 +353,10 @@ SCIP_RETCODE delPosConflict(
    /* remove conflict locks */
    SCIP_CALL( SCIPconsAddLocks(conflict, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
 
+   /* invalidate conflict position */
+   assert(conflictstore->conflicts[pos]->confconsspos == pos);
+   conflictstore->conflicts[pos]->confconsspos = -1;
+
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(conflict) )
    {
@@ -386,14 +369,11 @@ SCIP_RETCODE delPosConflict(
    /* replace with conflict at the last position */
    if( pos < lastpos )
    {
+      assert(conflictstore->conflicts[lastpos] != NULL);
       conflictstore->conflicts[pos] = conflictstore->conflicts[lastpos];
+      conflictstore->conflicts[pos]->confconsspos = pos;
       conflictstore->confprimalbnds[pos] = conflictstore->confprimalbnds[lastpos];
    }
-
-#ifndef NDEBUG
-   conflictstore->conflicts[lastpos] = NULL;
-   conflictstore->confprimalbnds[lastpos] = -SCIPsetInfinity(set);
-#endif
 
    /* decrease number of conflicts */
    --conflictstore->nconflicts;
@@ -434,6 +414,9 @@ SCIP_RETCODE delPosDualray(
    SCIPsetDebugMsg(set, "-> remove dual proof (ray) at pos=%d age=%g nvars=%d\n", pos, SCIPconsGetAge(dualproof), nvars);
 #endif
 
+   /**@todo implement dualraycons upgrade */
+   SCIPconsAddUpgradeLocks(dualproof, -1);
+
    /* remove conflict locks */
    SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
 
@@ -451,11 +434,6 @@ SCIP_RETCODE delPosDualray(
    {
       conflictstore->dualrayconfs[pos] = conflictstore->dualrayconfs[lastpos];
       conflictstore->drayrelaxonly[pos] = conflictstore->drayrelaxonly[lastpos];
-
-#ifndef NDEBUG
-      conflictstore->dualrayconfs[lastpos] = NULL;
-      conflictstore->drayrelaxonly[lastpos] = TRUE;
-#endif
    }
 
    /* decrease number of dual rays */
@@ -498,6 +476,9 @@ SCIP_RETCODE delPosDualsol(
    SCIPsetDebugMsg(set, "-> remove dual proof (sol) at pos=%d age=%g nvars=%d\n", pos, SCIPconsGetAge(dualproof), nvars);
 #endif
 
+   /**@todo implement dualsolcons upgrade */
+   SCIPconsAddUpgradeLocks(dualproof, -1);
+
    /* remove conflict locks */
    SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
 
@@ -518,14 +499,6 @@ SCIP_RETCODE delPosDualsol(
       conflictstore->scalefactors[pos] = conflictstore->scalefactors[lastpos];
       conflictstore->updateside[pos] = conflictstore->updateside[lastpos];
       conflictstore->dsolrelaxonly[pos] = conflictstore->dsolrelaxonly[lastpos];
-
-#ifndef NDEBUG
-      conflictstore->dualsolconfs[lastpos] = NULL;
-      conflictstore->dualprimalbnds[lastpos] = SCIP_UNKNOWN;
-      conflictstore->scalefactors[lastpos] = 1.0;
-      conflictstore->updateside[lastpos] = FALSE;
-      conflictstore->dsolrelaxonly[lastpos] = TRUE;
-#endif
    }
 
    /* decrease number of dual rays */
@@ -658,6 +631,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    )
 {
    int ndelconfs;
+   int i;
 
    assert(conflictstore != NULL);
    assert(blkmem != NULL);
@@ -669,6 +643,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    if( conflictstore->nconflicts == 0 )
       return SCIP_OKAY;
    assert(conflictstore->nconflicts >= 1);
+   assert(conflictstore->conflicts != NULL);
 
    ndelconfs = 0;
 
@@ -686,10 +661,23 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    /* resort the array regularly */
    if( conflictstore->ncleanups % CONFLICTSTORE_SORTFREQ == 0 )
    {
-      /* sort conflict */
+#ifndef NDEBUG
+      /* check conflict positions */
+      for( i = 0; i < conflictstore->nconflicts; ++i )
+      {
+         assert(conflictstore->conflicts[i] != NULL);
+         assert(conflictstore->conflicts[i]->confconsspos == i);
+      }
+#endif
+
+      /* sort conflict constraints */
       SCIPsortPtrReal((void**)conflictstore->conflicts, conflictstore->confprimalbnds, compareConss, conflictstore->nconflicts);
       assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->conflicts[0]),
             SCIPconsGetAge(conflictstore->conflicts[conflictstore->nconflicts-1])));
+
+      /* update conflict positions */
+      for( i = 0; i < conflictstore->nconflicts; ++i )
+         conflictstore->conflicts[i]->confconsspos = i;
    }
    assert(conflictstore->nconflicts > 0);
 
@@ -702,7 +690,6 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    {
       SCIP_Real maxage;
       int oldest_i;
-      int i;
 
       assert(!SCIPconsIsDeleted(conflictstore->conflicts[0]));
 
@@ -710,7 +697,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
       oldest_i = 0;
 
       /* check the first 10% of conflicts and find the oldest */
-      for( i = 1; i < 0.1 * conflictstore->nconflicts; i++ )
+      for( i = 1; i < 0.1 * conflictstore->nconflicts; ++i )
       {
          assert(!SCIPconsIsDeleted(conflictstore->conflicts[i]));
 
@@ -1015,7 +1002,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    assert(conflictstore->ndualrayconfs <= CONFLICTSTORE_DUALRAYSIZE);
 
    /* mark the constraint to be a conflict */
-   SCIPconsMarkConflict(dualproof);
+   SCIP_CALL( SCIPconsMarkConflict(dualproof) );
 
    /* create an array to store constraints based on dual rays */
    if( conflictstore->dualrayconfs == NULL )
@@ -1072,6 +1059,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    /* add conflict locks */
    SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
+   /**@todo implement dualraycons upgrade */
+   SCIPconsAddUpgradeLocks(dualproof, +1);
+
    /* increase the number of non-zeros */
    SCIP_CALL( SCIPconsGetNVars(dualproof, set, &nvars, &success) );
    assert(success);
@@ -1105,7 +1095,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    assert(conflictstore->ndualsolconfs <= CONFLICTSTORE_DUALSOLSIZE);
 
    /* mark the constraint to be a conflict */
-   SCIPconsMarkConflict(dualproof);
+   SCIP_CALL( SCIPconsMarkConflict(dualproof) );
 
    /* create an array to store constraints based on dual rays */
    if( conflictstore->dualsolconfs == NULL )
@@ -1169,6 +1159,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    /* add conflict locks */
    SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
+   /**@todo implement dualsolcons upgrade */
+   SCIPconsAddUpgradeLocks(dualproof, +1);
+
    /* increase the number of non-zeros */
    SCIP_CALL( SCIPconsGetNVars(dualproof, set, &nvars, &success) );
    assert(success);
@@ -1209,7 +1202,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    assert(!cutoffinvolved || !SCIPsetIsInfinity(set, REALABS(primalbound)));
 
    /* mark the constraint to be a conflict */
-   SCIPconsMarkConflict(cons);
+   SCIP_CALL( SCIPconsMarkConflict(cons) );
 
    /* add the constraint to a special store */
    if( SCIPconsIsOriginal(cons) )
@@ -1254,6 +1247,10 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    /* update the last seen node */
    conflictstore->lastnodenum = curnodenum;
 
+   /* validate conflict position */
+   assert(cons->confconsspos == -1);
+   cons->confconsspos = conflictstore->nconflicts;
+
    SCIPconsCapture(cons);
    conflictstore->conflicts[conflictstore->nconflicts] = cons;
    conflictstore->confprimalbnds[conflictstore->nconflicts] = primalbound;
@@ -1271,6 +1268,61 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    if( cutoffinvolved )
       SCIPsetDebugMsg(set, " -> current primal bound: %g\n", primalbound);
 #endif
+
+   return SCIP_OKAY;
+}
+
+/** upgrades an unchecked conflict in the conflict store
+ *
+ *  @note this method releases oldcons and captures newcons
+ */
+SCIP_RETCODE SCIPconflictstoreUpgradeConflict(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONS*            oldcons,            /**< underlying constraint to upgrade */
+   SCIP_CONS*            newcons             /**< upgraded constraint to add */
+   )
+{
+   assert(conflictstore != NULL);
+   assert(conflictstore->conflicts != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(SCIPconsIsConflict(oldcons));
+   assert(!SCIPconsIsDeleted(oldcons));
+   assert(oldcons->confconsspos >= -1);
+   assert(!SCIPconsIsDeleted(newcons));
+   assert(newcons->confconsspos == -1);
+
+   /* multiple upgrades unsupported */
+   if( oldcons->confconsspos == -1 || SCIPconsIsChecked(oldcons) )
+   {
+      assert(SCIPconsIsChecked(oldcons));
+      assert(SCIPconsIsChecked(newcons));
+      return SCIP_OKAY;
+   }
+
+   assert(!SCIPconsIsChecked(oldcons));
+   assert(!SCIPconsIsChecked(newcons));
+   assert(oldcons->confconsspos >= 0);
+   assert(oldcons->confconsspos < conflictstore->nconflicts);
+   assert(conflictstore->conflicts[oldcons->confconsspos] == oldcons);
+
+   /* mark constraint conflict */
+   SCIP_CALL( SCIPconsMarkConflict(newcons) );
+
+   /* replace conflict constraint */
+   conflictstore->conflicts[oldcons->confconsspos] = newcons;
+   newcons->confconsspos = oldcons->confconsspos;
+   oldcons->confconsspos = -1;
+
+   /* transfer conflict locks */
+   SCIP_CALL( SCIPconsAddLocks(newcons, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
+   SCIP_CALL( SCIPconsAddLocks(oldcons, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
+
+   /* update conflict usage */
+   SCIPconsCapture(newcons);
+   SCIP_CALL( SCIPconsRelease(&oldcons, blkmem, set) );
 
    return SCIP_OKAY;
 }

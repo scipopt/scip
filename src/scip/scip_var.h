@@ -2937,6 +2937,8 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
    int                   nvars,              /**< number of variables in the clique */
+   int**                 probtoidxmap,       /**< cleared memory array with default values -1 */
+   int*                  probtoidxmapsize,   /**< returns size of probtoidxmap */
    int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
    int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    );
@@ -2963,6 +2965,8 @@ SCIP_RETCODE SCIPcalcNegatedCliquePartition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
    int                   nvars,              /**< number of variables in the clique */
+   int**                 probtoidxmap,       /**< cleared memory array with default values -1 */
+   int*                  probtoidxmapsize,   /**< returns size of probtoidxmap */
    int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
    int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    );

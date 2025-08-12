@@ -549,12 +549,23 @@ set(pairs_Issue
     "instances/Issue/3727.cip\;1922\;vanillafullstrong_reduced_presolving_separating_heuristics"
     "instances/Issue/3728.cip\;0\;reduced_presolving_heuristics"
     "instances/Issue/3746.cip\;0\;seed_1"
-    "instances/Issue/3752.cip\;28066\;default"
+    "instances/Issue/3752_1.cip\;28066\;default"
+    "instances/Issue/3752_2.cip\;0\;default"
     "instances/Issue/3787.lp\;1\;default"
     "instances/Issue/3832.cip\;0\;default"
     # Test currently not working since problems with the relative check for presolved problems appear: https://git.zib.de/integer/scip/-/issues/3819
     # "instances/Issue/3842.cip\;-16812.7692740365\;default"
     "instances/Issue/3870.cip\;5133546551065818\;default"
+    "instances/Issue/3908.cip\;-20317.1313131313\;subrestart"
+    "instances/Issue/3911.cip\;-30386.2338470598\;lexdual"
+    "instances/Issue/3917.cip\;+infinity\;default"
+    "instances/Issue/3920.cip\;0\;presolving_milp_off"
+    "instances/Issue/3932.cip\;+infinity\;reduced_tolerance"
+    "instances/Issue/3934.cip\;-5007\;conflict_off_reduced_presolving_subrestart"
+    "instances/Issue/3935.cip\;-24793.9840277416\;default"
+    "instances/Issue/3939.cip\;-24000\;lexdual"
+    "instances/Issue/3940.cip\;-2549.22\;unscaled_tolerance"
+    "instances/Issue/3942.cip\;0\;default"
 )
 
 #
@@ -568,6 +579,15 @@ set(reader_extensions_MIP
   "pip"
   "fzn"
   "rlp"
+  "nl"
+  )
+
+#
+# available reader file extensions for MINLP problems
+#
+set(reader_extensions_MINLP
+  "cip"
+  "nl"
   )
 
 #
@@ -710,6 +730,7 @@ macro(add_pairtests pairs prefix)
     foreach(pair ${${pairs}})
         split_pair(pair)
         if(NOT ((${basename} STREQUAL "3727.cip") AND (${LPS} STREQUAL "xprs")))
+        if(NOT ((${basename} STREQUAL "3935.cip") AND (${LPS} STREQUAL "msk")))
         #
         # add the test
         #
@@ -722,6 +743,7 @@ macro(add_pairtests pairs prefix)
                                 FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                 DEPENDS scip-build
                             )
+        endif() # left hand side of _C16 violated by 0.01411 with Mosek 10.2.2
         endif() # LP error 11 from Xpress (but SCIP recovers), #3724
     endforeach(pair)
 endmacro(add_pairtests)
@@ -826,7 +848,6 @@ set(basenames_opb_wrongformat
     flugpl_rational.mps
     gt2.mps
     lseu_dcmulti.cip
-    MANN_a9.clq.lp
     misc03.mps
     misc03.zpl
     rgn.mps
@@ -860,6 +881,14 @@ set(basenames_lp_wrongformat
     rgn.zpl
     )
 set(message_format_lp "WARNING: violation of LP format - a constraint name starts with a digit; it is not possible to read the generated LP file with SCIP; use write/genproblem or write/gentransproblem for generic variable names")
+
+#
+# the following instances have constraints that cannot or cannot yet be written out in nl format
+#
+set(basenames_nl_wrongformat
+    bip_cross_min.10.10.10.1.pip
+    )
+set(message_format_nl "WARNING: constraint .* of type <.*> cannot be printed in requested format")
 
 #
 # test writing and reading from and to different file extensions for MIP
@@ -906,6 +935,39 @@ foreach(instance ${instances_MIP})
                 COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
                 )
         set_tests_properties(MIP-readertest-${extension}-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION ${regex}
+                                FAIL_REGULAR_EXPRESSION "ERROR"
+                                DEPENDS scip-build
+                            )
+    endforeach(extension)
+endforeach(instance)
+
+#
+# test writing and reading from and to different file extensions for MINLP (only without original objective offset)
+#
+foreach(instance ${instances_MINLP})
+    split_instance(instance)
+    foreach(extension ${reader_extensions_MINLP})
+        #
+        # configure the batch file for this test by substituting placeholders in the in.file
+        #
+        # does this instance match the requirements of this format?
+        list(FIND basenames_${extension}_wrongformat ${basename} wrongformat)
+        #
+        # use different template batch files depending on the format requirements
+        #
+        if( wrongformat EQUAL -1 )
+            configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+            set(regex "Validation         : Success.*Validation         : Success")
+        else()
+            configure_file(interactiveshell/readertest-wrongformat.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+            set(regex "${message_format_${extension}}")
+        endif()
+        add_test(NAME MINLP-readertest-${extension}-${basename}
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
+                )
+        set_tests_properties(MINLP-readertest-${extension}-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION ${regex}
                                 FAIL_REGULAR_EXPRESSION "ERROR"
@@ -1057,9 +1119,8 @@ set(linclass_bell5
   "total             :         91"
   "singleton         :          2"
   "precedence        :         17"
-  "varbound          :         18"
-  "mixedbinary       :         26"
-  "general           :         28"
+  "mixedbinary       :         30"
+  "general           :         42"
   )
 
 set(linclass_blend2
@@ -1101,9 +1162,8 @@ set(linclass_flugpl
     "empty             :          0"
     "free              :          0"
     "singleton         :          1"
-    "varbound          :          6"
-    "mixedbinary       :          0"
-    "general           :         11"
+    "mixedbinary       :          1"
+    "general           :         16"
     )
 
 set(linclass_gt2
@@ -1268,6 +1328,7 @@ if(SCIP_WITH_EXACTSOLVE)
                 configure_file(interactiveshell/readertest-wrongformat.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
                 set(regex "${message_format_${extension}}")
             endif()
+            if(NOT ((${extension} STREQUAL "cip") AND (${basename} STREQUAL "rgn.zpl") AND (${LPS} STREQUAL "xprs")))
             add_test(NAME MIPEX-readertest-${extension}-${basename}
                     COMMAND $<TARGET_FILE:scip>
                     -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/exact-default.set"
@@ -1279,6 +1340,7 @@ if(SCIP_WITH_EXACTSOLVE)
                                     FAIL_REGULAR_EXPRESSION "ERROR"
                                     DEPENDS scip-build
                                 )
+            endif()  # LP Error: Xpress returned 11, #3724
         endforeach(extension)
     endforeach(instance)
     #
@@ -1343,6 +1405,7 @@ if(SCIP_WITH_EXACTSOLVE)
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
 
+               if(NOT ((${setting} STREQUAL "exact-projshift") AND (${basename} STREQUAL "misc03.zpl") AND (${LPS} STREQUAL "xprs")))
                add_test(NAME MIPEX-${setting}-${basename}-vipr
                      COMMAND ${VIPRCHK} ${basename}.${setting}_complete.vipr)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr
@@ -1351,13 +1414,14 @@ if(SCIP_WITH_EXACTSOLVE)
                                  PASS_REGULAR_EXPRESSION "Successfully verified;Infeasibility verified"
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
+               endif() # verification fails with Failed to derive constraint DualBound_12055, #3724
 
                add_test(NAME MIPEX-${setting}-${basename}-vipr_ori
                      COMMAND ${VIPRCHK} ${basename}.${setting}.vipr_ori)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr_ori
                                  PROPERTIES
                                  DEPENDS MIPEX-${setting}-${basename}-certified
-                                 PASS_REGULAR_EXPRESSION "Successfully checked solution for feasibility"
+                                 PASS_REGULAR_EXPRESSION "Successfully verified"
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
             endif()

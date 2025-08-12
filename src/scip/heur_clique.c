@@ -477,8 +477,8 @@ SCIP_RETCODE applyCliqueFixings(
                      /* create conflict constraint */
                      SCIP_CALL( SCIPcreateConsLogicor(scip, &conflictcons, consname, *nonefixvars, onefixvars,
                            FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
-                     SCIP_CALL( SCIPaddConflict(scip, SCIPgetFocusNode(scip), conflictcons, NULL, SCIP_CONFTYPE_PROPAGATION, FALSE) );
                      SCIPdebugPrintCons(scip, conflictcons, NULL);
+                     SCIP_CALL( SCIPaddConflict(scip, SCIPgetFocusNode(scip), &conflictcons, NULL, SCIP_CONFTYPE_PROPAGATION, FALSE) );
                   }
 #endif
                   break;
@@ -853,8 +853,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* create conflict constraint */
       SCIP_CALL( SCIPcreateConsLogicor(scip, &conflictcons, consname, nonefixvars, onefixvars,
             FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
-      SCIP_CALL( SCIPaddConflict(scip, SCIPgetFocusNode(scip), conflictcons, NULL, SCIP_CONFTYPE_INFEASLP, FALSE) );
       SCIPdebugPrintCons(scip, conflictcons, NULL);
+      SCIP_CALL( SCIPaddConflict(scip, SCIPgetFocusNode(scip), &conflictcons, NULL, SCIP_CONFTYPE_INFEASLP, FALSE) );
 #endif
       goto TERMINATE;
    }

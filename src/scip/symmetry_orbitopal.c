@@ -2151,16 +2151,24 @@ SCIP_RETCODE SCIPorbitopalReductionPropagate(
 
    assert( scip != NULL );
    assert( orbireddata != NULL );
-   assert( (orbireddata->norbitopes == 0) == (orbireddata->orbitopes == NULL) );
+   assert( (orbireddata->orbitopes == NULL) == (orbireddata->norbitopes == 0) );
+   assert( orbireddata->norbitopes >= 0 );
+   assert( orbireddata->norbitopes <= orbireddata->maxnorbitopes );
    assert( infeasible != NULL );
    assert( nred != NULL );
+   assert( didrun != NULL );
 
    *infeasible = FALSE;
    *nred = 0;
+   *didrun = FALSE;
+
+   /* early termination */
+   if ( orbireddata->norbitopes == 0 )
+      return SCIP_OKAY;
 
    /* @todo Can the following be removed? */
    /* @todo shouldn't this be SCIPallowWeakDualReds, since we do not regard the objective */
-   if ( ! SCIPallowStrongDualReds(scip) )
+   if ( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    /* cannot do anything during probing

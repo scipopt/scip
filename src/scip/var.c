@@ -2318,7 +2318,6 @@ SCIP_RETCODE varSetName(
    return SCIP_OKAY;
 }
 
-
 /** creates variable; if variable is of integral type, fractional bounds are automatically rounded; an integer variable
  *  with bounds zero and one is automatically converted into a binary variable
  */
@@ -2351,30 +2350,33 @@ SCIP_RETCODE varCreate(
    assert(stat != NULL);
    assert(vartype != SCIP_DEPRECATED_VARTYPE_IMPLINT);
 
-   /* adjust bounds of variable */
-   integral = vartype != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_IMPLINTTYPE_NONE;
-   lb = adjustedLb(set, integral, lb);
-   ub = adjustedUb(set, integral, ub);
+   /* exact bounds may follow later */
+   if( !set->exact_enable )
+   {
+      /* adjust bounds of variable */
+      integral = vartype != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_IMPLINTTYPE_NONE;
+      lb = adjustedLb(set, integral, lb);
+      ub = adjustedUb(set, integral, ub);
 
-   /* convert [0,1]-integers into binary variables and check that binary variables have correct bounds */
-   if( (SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0))
-      && (SCIPsetIsEQ(set, ub, 0.0) || SCIPsetIsEQ(set, ub, 1.0)) )
-   {
-      if( vartype == SCIP_VARTYPE_INTEGER )
-         vartype = SCIP_VARTYPE_BINARY;
-   }
-   else
-   {
-      if( vartype == SCIP_VARTYPE_BINARY )
+      /* convert [0,1]-integers into binary variables and check that binary variables have correct bounds */
+      if( ( lb == 0.0 || lb == 1.0 ) && ( ub == 0.0 || ub == 1.0 ) ) /*lint !e777*/
       {
-         SCIPerrorMessage("invalid bounds [%.2g,%.2g] for binary variable <%s>\n", lb, ub, name);
-         return SCIP_INVALIDDATA;
+         if( vartype == SCIP_VARTYPE_INTEGER )
+            vartype = SCIP_VARTYPE_BINARY;
       }
-   }
+      else
+      {
+         if( vartype == SCIP_VARTYPE_BINARY )
+         {
+            SCIPerrorMessage("invalid bounds [%.2g,%.2g] for binary variable <%s>\n", lb, ub, name);
+            return SCIP_INVALIDDATA;
+         }
+      }
 
-   assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0));
-   assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, ub, 0.0) || SCIPsetIsEQ(set, ub, 1.0));
-   assert(vartype != SCIP_DEPRECATED_VARTYPE_IMPLINT);
+      assert(vartype != SCIP_VARTYPE_BINARY || lb == 0.0 || lb == 1.0); /*lint !e777*/
+      assert(vartype != SCIP_VARTYPE_BINARY || ub == 0.0 || ub == 1.0); /*lint !e777*/
+      assert(vartype != SCIP_DEPRECATED_VARTYPE_IMPLINT);
+   }
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, var) );
 
@@ -2558,7 +2560,12 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    return SCIP_OKAY;
 }
 
-/** create and set the exact variable bounds and objective value, if a value is NULL, the floating-point data is used */
+/** creates and sets the exact variable bounds and objective value (using floating-point data if value pointer is NULL)
+ *
+ *  @note an inactive integer variable with bounds zero and one is automatically converted into a binary variable
+ *
+ *  @note if exact data is provided, the corresponding floating-point data is overwritten
+ */
 SCIP_RETCODE SCIPvarAddExactData(
    SCIP_VAR*             var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2570,61 +2577,71 @@ SCIP_RETCODE SCIPvarAddExactData(
    assert(var != NULL);
    assert(blkmem != NULL);
 
-   assert(ub == NULL || var->glbdom.ub == SCIPrationalRoundReal(ub, SCIP_R_ROUND_UPWARDS)); /*lint !e777*/
-   assert(lb == NULL || var->glbdom.lb == SCIPrationalRoundReal(lb, SCIP_R_ROUND_DOWNWARDS)); /*lint !e777*/
-
+   assert(var->exactdata == NULL);
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(var->exactdata)) );
 
    if( lb != NULL )
    {
+      var->data.original.origdom.lb = SCIPrationalRoundReal(lb, SCIP_R_ROUND_DOWNWARDS);
+      var->glbdom.lb = var->data.original.origdom.lb;
+      var->locdom.lb = var->data.original.origdom.lb;
+
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->origdom.lb, lb) );
       SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->glbdom.lb, lb) );
       SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->locdom.lb, lb) );
-      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->origdom.lb, lb) );
    }
    else
    {
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->origdom.lb) );
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->glbdom.lb) );
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->locdom.lb) );
-      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->origdom.lb) );
 
+      SCIPrationalSetReal(var->exactdata->origdom.lb, var->data.original.origdom.lb);
       SCIPrationalSetReal(var->exactdata->glbdom.lb, var->glbdom.lb);
       SCIPrationalSetReal(var->exactdata->locdom.lb, var->locdom.lb);
-      SCIPrationalSetReal(var->exactdata->origdom.lb, var->glbdom.lb);
    }
 
    if( ub != NULL )
    {
+      var->data.original.origdom.ub = SCIPrationalRoundReal(ub, SCIP_R_ROUND_UPWARDS);
+      var->glbdom.ub = var->data.original.origdom.ub;
+      var->locdom.ub = var->data.original.origdom.ub;
+
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->origdom.ub, ub) );
       SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->glbdom.ub, ub) );
       SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->locdom.ub, ub) );
-      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->origdom.ub, ub) );
    }
    else
    {
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->origdom.ub) );
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->glbdom.ub) );
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->locdom.ub) );
-      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->origdom.ub) );
 
+      SCIPrationalSetReal(var->exactdata->origdom.ub, var->data.original.origdom.ub);
       SCIPrationalSetReal(var->exactdata->glbdom.ub, var->glbdom.ub);
       SCIPrationalSetReal(var->exactdata->locdom.ub, var->locdom.ub);
-      SCIPrationalSetReal(var->exactdata->origdom.ub, var->glbdom.ub);
    }
 
    if( obj != NULL )
    {
+      var->unchangedobj = SCIPrationalGetReal(obj);
+      var->obj = var->unchangedobj;
+
       SCIP_CALL( SCIPrationalCopyBlock(blkmem, &var->exactdata->obj, obj) );
       SCIPintervalSetRational(&var->exactdata->objinterval, obj);
    }
    else
    {
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->obj) );
+
       SCIPrationalSetReal(var->exactdata->obj, var->obj);
-      SCIPintervalSet(&var->exactdata->objinterval, 0.0);
+      SCIPintervalSet(&var->exactdata->objinterval, var->obj);
    }
 
-   var->exactdata->locdom.lbcertificateidx = -1;
-   var->exactdata->locdom.ubcertificateidx = -1;
    var->exactdata->glbdom.lbcertificateidx = -1;
    var->exactdata->glbdom.ubcertificateidx = -1;
+   var->exactdata->locdom.lbcertificateidx = -1;
+   var->exactdata->locdom.ubcertificateidx = -1;
    var->exactdata->colexact = NULL;
    var->exactdata->varstatusexact = SCIPvarGetStatus(var);
    var->exactdata->certificateindex = -1;
@@ -2632,13 +2649,30 @@ SCIP_RETCODE SCIPvarAddExactData(
    var->exactdata->multaggr.constant = NULL;
    var->exactdata->aggregate.constant = NULL;
    var->exactdata->aggregate.scalar = NULL;
+   var->primsolavg = 0.5 * (var->data.original.origdom.lb + var->data.original.origdom.ub);
+
+   /* convert inactive [0,1]-integers into binary variables and check that binary variables have correct bounds */
+   if( ( SCIPrationalIsZero(var->exactdata->origdom.lb) || SCIPrationalIsEQReal(var->exactdata->origdom.lb, 1.0) )
+      && ( SCIPrationalIsZero(var->exactdata->origdom.ub) || SCIPrationalIsEQReal(var->exactdata->origdom.ub, 1.0) ) )
+   {
+      if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && var->probindex == -1 )
+         var->vartype = (unsigned int)SCIP_VARTYPE_BINARY;
+   }
+   else
+   {
+      if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_BINARY )
+      {
+         SCIPerrorMessage("invalid bounds [%.2g,%.2g] for binary variable <%s>\n", var->data.original.origdom.lb, var->data.original.origdom.ub, var->name);
+         return SCIP_INVALIDDATA;
+      }
+   }
 
    return SCIP_OKAY;
 }
 
-/** copies exact variable data from one variable to another;
+/** copies exact variable data from one variable to another
  *
- *  Cannot be integrated into varCopy because it is needed, e.g., when transforming vars.
+ *  @note This method cannot be integrated into SCIPvarCopy() because it is needed, e.g., when transforming vars.
  */
 SCIP_RETCODE SCIPvarCopyExactData(
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -3238,22 +3272,19 @@ SCIP_RETCODE SCIPvarParseOriginal(
       if( *success ) /*lint !e774*/
       {
          /* create variable */
-         SCIP_CALL( varCreate(var, blkmem, set, stat, name, SCIPrationalRoundReal(lb, SCIP_R_ROUND_DOWNWARDS),
-               SCIPrationalRoundReal(ub, SCIP_R_ROUND_UPWARDS), SCIPrationalRoundReal(obj, SCIP_R_ROUND_NEAREST),
-               vartype, impltype, initial, removable, varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+         SCIP_CALL( varCreate(var, blkmem, set, stat, name, 0.0, 0.0, 0.0, vartype, impltype, initial, removable,
+               varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+
+         /* set variable status */
+         SCIPvarAdjustLbExact(*var, set, lb);
+         SCIPvarAdjustUbExact(*var, set, ub);
+         (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_ORIGINAL;
+         (*var)->data.original.origdom.holelist = NULL;
+         (*var)->data.original.transvar = NULL;
 
          /* add exact data */
          SCIP_CALL( SCIPvarAddExactData(*var, blkmem, lb, ub, obj) );
 
-         /* set variable status and data */
-         assert(*var != NULL);
-         assert((*var)->exactdata != NULL);
-         (*var)->exactdata->varstatusexact = SCIP_VARSTATUS_ORIGINAL;
-         (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_ORIGINAL;
-         (*var)->data.original.origdom.holelist = NULL;
-         (*var)->data.original.origdom.lb = (*var)->glbdom.lb;
-         (*var)->data.original.origdom.ub = (*var)->glbdom.ub;
-         (*var)->data.original.transvar = NULL;
          /**@todo implement lazy bounds in exact solving mode (and adjust values before setting them) */
          if( !SCIPrationalIsNegInfinity(lazylb) || !SCIPrationalIsInfinity(lazyub) )
          {
@@ -3289,7 +3320,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
          SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
                varcopy, vardelorig, vartrans, vardeltrans, vardata) );
 
-         /* set variable status and data */
+         /* set variable status */
          assert(*var != NULL);
          (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_ORIGINAL;
          (*var)->data.original.origdom.holelist = NULL;
@@ -3363,18 +3394,17 @@ SCIP_RETCODE SCIPvarParseTransformed(
       if( *success ) /*lint !e774*/
       {
          /* create variable */
-         SCIP_CALL( varCreate(var, blkmem, set, stat, name, SCIPrationalRoundReal(lb, SCIP_R_ROUND_DOWNWARDS),
-               SCIPrationalRoundReal(ub, SCIP_R_ROUND_UPWARDS), SCIPrationalRoundReal(obj, SCIP_R_ROUND_NEAREST),
-               vartype, impltype, initial, removable, varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+         SCIP_CALL( varCreate(var, blkmem, set, stat, name, 0.0, 0.0, 0.0, vartype, impltype, initial, removable,
+               varcopy, vardelorig, vartrans, vardeltrans, vardata) );
+
+         /* set variable status */
+         SCIPvarAdjustLbExact(*var, set, lb);
+         SCIPvarAdjustUbExact(*var, set, ub);
+         (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_LOOSE;
 
          /* add exact data */
          SCIP_CALL( SCIPvarAddExactData(*var, blkmem, lb, ub, obj) );
 
-         /* set variable status and data */
-         assert(*var != NULL);
-         assert((*var)->exactdata != NULL);
-         (*var)->exactdata->varstatusexact = SCIP_VARSTATUS_LOOSE;
-         (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_LOOSE;
          /**@todo implement lazy bounds in exact solving mode */
          if( !SCIPrationalIsNegInfinity(lazylb) || !SCIPrationalIsInfinity(lazyub) )
          {
@@ -3414,7 +3444,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
          SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
                varcopy, vardelorig, vartrans, vardeltrans, vardata) );
 
-         /* set variable status and data */
+         /* set variable status */
          assert(*var != NULL);
          (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_LOOSE;
          (*var)->lazylb = lazylb;
@@ -8967,9 +8997,6 @@ void varSetProbindex(
    )
 {
    assert(var != NULL);
-   assert(probindex >= 0 || var->vlbs == NULL);
-   assert(probindex >= 0 || var->vubs == NULL);
-   assert(probindex >= 0 || var->implics == NULL);
 
    var->probindex = probindex;
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -9012,13 +9039,16 @@ void SCIPvarSetNamePointer(
  *  variable bounds and implication data structures of the variable are freed. Since in the final removal
  *  of all variables from the transformed problem, this deletes the implication graph completely and is faster
  *  than removing the variables one by one, each time updating all lists of the other variables.
+ *  If 'keepimplics' is TRUE, the implications, variable bounds and cliques are kept. This should be used when the
+ *  variable type is upgraded, i.e. when it gains (implied) integrality, so that existing implications are not lost.
  */
 SCIP_RETCODE SCIPvarRemove(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             final               /**< is this the final removal of all problem variables? */
+   SCIP_Bool             final,              /**< is this the final removal of all problem variables? */
+   SCIP_Bool             keepimplics         /**< should the implications be kept? */
    )
 {
    assert(SCIPvarGetProbindex(var) >= 0);
@@ -9035,7 +9065,7 @@ SCIP_RETCODE SCIPvarRemove(
          SCIPvboundsFree(&var->vubs, blkmem);
          SCIPimplicsFree(&var->implics, blkmem);
       }
-      else
+      else if( !keepimplics )
       {
          /* unlink the variable from all other variables' lists and free the data structures */
          SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, TRUE) );
@@ -15279,18 +15309,19 @@ SCIP_RETCODE SCIPvarAddVlb(
             /* the variable bound constraint defines a new upper bound */
             if( SCIPsetIsGT(set, vlbcoef, 1.0) )
             {
-               SCIP_Real newub = vlbconstant / (1.0 - vlbcoef);
+               /* bound might be adjusted due to integrality condition */
+               SCIP_Real newub = adjustedUb(set, SCIPvarIsIntegral(var), vlbconstant / (1.0 - vlbcoef));
 
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasLT(set, newub, lb) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
-               else if( SCIPsetIsFeasLT(set, newub, ub) )
-               {
-                  /* bound might be adjusted due to integrality condition */
-                  newub = adjustedUb(set, SCIPvarIsIntegral(var), newub);
 
+               /* improve global upper bound of variable */
+               if( SCIPsetIsFeasLT(set, newub, ub) )
+               {
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15315,22 +15346,21 @@ SCIP_RETCODE SCIPvarAddVlb(
             /* the variable bound constraint defines a new lower bound */
             else
             {
-               SCIP_Real newlb;
-
                assert(SCIPsetIsLT(set, vlbcoef, 1.0));
 
-               newlb = vlbconstant / (1.0 - vlbcoef);
+               /* bound might be adjusted due to integrality condition */
+               SCIP_Real newlb = adjustedLb(set, SCIPvarIsIntegral(var), vlbconstant / (1.0 - vlbcoef));
 
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasGT(set, newlb, ub) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
-               else if( SCIPsetIsFeasGT(set, newlb, lb) )
-               {
-                  /* bound might be adjusted due to integrality condition */
-                  newlb = adjustedLb(set, SCIPvarIsIntegral(var), newlb);
 
+               /* improve global lower bound of variable */
+               if( SCIPsetIsFeasGT(set, newlb, lb) )
+               {
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15405,27 +15435,21 @@ SCIP_RETCODE SCIPvarAddVlb(
          /* improve global bounds of vlb variable, and calculate minimal and maximal value of variable bound */
          if( vlbcoef >= 0.0 )
          {
-            SCIP_Real newzub;
-
             if( !SCIPsetIsInfinity(set, xub) )
             {
                /* x >= b*z + d  ->  z <= (x-d)/b */
-               newzub = (xub - vlbconstant)/vlbcoef;
+               SCIP_Real newzub = adjustedUb(set, SCIPvarIsIntegral(vlbvar), (xub - vlbconstant) / vlbcoef);
 
-               /* return if the new bound is less than -infinity */
-               if( SCIPsetIsInfinity(set, REALABS(newzub)) )
-                  return SCIP_OKAY;
-
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasLT(set, newzub, zlb) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
+
+               /* improve global upper bound of variable */
                if( SCIPsetIsFeasLT(set, newzub, zub) )
                {
-                  /* bound might be adjusted due to integrality condition */
-                  newzub = adjustedUb(set, SCIPvarIsIntegral(vlbvar), newzub);
-
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15461,27 +15485,21 @@ SCIP_RETCODE SCIPvarAddVlb(
          }
          else
          {
-            SCIP_Real newzlb;
-
             if( !SCIPsetIsInfinity(set, xub) )
             {
                /* x >= b*z + d  ->  z >= (x-d)/b */
-               newzlb = (xub - vlbconstant)/vlbcoef;
+               SCIP_Real newzlb = adjustedLb(set, SCIPvarIsIntegral(vlbvar), (xub - vlbconstant) / vlbcoef);
 
-               /* return if the new bound is larger than infinity */
-               if( SCIPsetIsInfinity(set, REALABS(newzlb)) )
-                  return SCIP_OKAY;
-
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasGT(set, newzlb, zub) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
+
+               /* improve global lower bound of variable */
                if( SCIPsetIsFeasGT(set, newzlb, zlb) )
                {
-                  /* bound might be adjusted due to integrality condition */
-                  newzlb = adjustedLb(set, SCIPvarIsIntegral(vlbvar), newzlb);
-
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15528,12 +15546,10 @@ SCIP_RETCODE SCIPvarAddVlb(
             *infeasible = TRUE;
             return SCIP_OKAY;
          }
+
          /* improve global lower bound of variable */
          if( SCIPsetIsFeasGT(set, minvlb, xlb) )
          {
-            /* bound might be adjusted due to integrality condition */
-            minvlb = adjustedLb(set, SCIPvarIsIntegral(var), minvlb);
-
             /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
              * with the local bound, in this case we need to store the bound change as pending bound change
              */
@@ -15755,18 +15771,19 @@ SCIP_RETCODE SCIPvarAddVub(
             /* the variable bound constraint defines a new lower bound */
             if( SCIPsetIsGT(set, vubcoef, 1.0) )
             {
-               SCIP_Real newlb = vubconstant / (1.0 - vubcoef);
+               /* bound might be adjusted due to integrality condition */
+               SCIP_Real newlb = adjustedLb(set, SCIPvarIsIntegral(var), vubconstant / (1.0 - vubcoef));
 
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasGT(set, newlb, ub) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
-               else if( SCIPsetIsFeasGT(set, newlb, lb) )
-               {
-                  /* bound might be adjusted due to integrality condition */
-                  newlb = adjustedLb(set, SCIPvarIsIntegral(var), newlb);
 
+               /* improve global lower bound of variable */
+               if( SCIPsetIsFeasGT(set, newlb, lb) )
+               {
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15791,22 +15808,21 @@ SCIP_RETCODE SCIPvarAddVub(
             /* the variable bound constraint defines a new upper bound */
             else
             {
-               SCIP_Real newub;
-
                assert(SCIPsetIsLT(set, vubcoef, 1.0));
 
-               newub = vubconstant / (1.0 - vubcoef);
+               /* bound might be adjusted due to integrality condition */
+               SCIP_Real newub = adjustedUb(set, SCIPvarIsIntegral(var), vubconstant / (1.0 - vubcoef));
 
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasLT(set, newub, lb) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
-               else if( SCIPsetIsFeasLT(set, newub, ub) )
-               {
-                  /* bound might be adjusted due to integrality condition */
-                  newub = adjustedUb(set, SCIPvarIsIntegral(var), newub);
 
+               /* improve global upper bound of variable */
+               if( SCIPsetIsFeasLT(set, newub, ub) )
+               {
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15881,22 +15897,21 @@ SCIP_RETCODE SCIPvarAddVub(
          /* improve global bounds of vub variable, and calculate minimal and maximal value of variable bound */
          if( vubcoef >= 0.0 )
          {
-            SCIP_Real newzlb;
-
             if( !SCIPsetIsInfinity(set, -xlb) )
             {
                /* x <= b*z + d  ->  z >= (x-d)/b */
-               newzlb = (xlb - vubconstant)/vubcoef;
+               SCIP_Real newzlb = adjustedLb(set, SCIPvarIsIntegral(vubvar), (xlb - vubconstant) / vubcoef);
+
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasGT(set, newzlb, zub) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
+
+               /* improve global lower bound of variable */
                if( SCIPsetIsFeasGT(set, newzlb, zlb) )
                {
-                  /* bound might be adjusted due to integrality condition */
-                  newzlb = adjustedLb(set, SCIPvarIsIntegral(vubvar), newzlb);
-
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15932,22 +15947,21 @@ SCIP_RETCODE SCIPvarAddVub(
          }
          else
          {
-            SCIP_Real newzub;
-
             if( !SCIPsetIsInfinity(set, -xlb) )
             {
                /* x <= b*z + d  ->  z <= (x-d)/b */
-               newzub = (xlb - vubconstant)/vubcoef;
+               SCIP_Real newzub = adjustedUb(set, SCIPvarIsIntegral(vubvar), (xlb - vubconstant) / vubcoef);
+
+               /* check bounds for feasibility */
                if( SCIPsetIsFeasLT(set, newzub, zlb) )
                {
                   *infeasible = TRUE;
                   return SCIP_OKAY;
                }
+
+               /* improve global upper bound of variable */
                if( SCIPsetIsFeasLT(set, newzub, zub) )
                {
-                  /* bound might be adjusted due to integrality condition */
-                  newzub = adjustedUb(set, SCIPvarIsIntegral(vubvar), newzub);
-
                   /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
                    * with the local bound, in this case we need to store the bound change as pending bound change
                    */
@@ -15998,9 +16012,6 @@ SCIP_RETCODE SCIPvarAddVub(
          /* improve global upper bound of variable */
          if( SCIPsetIsFeasLT(set, maxvub, xub) )
          {
-            /* bound might be adjusted due to integrality condition */
-            maxvub = adjustedUb(set, SCIPvarIsIntegral(var), maxvub);
-
             /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
              * with the local bound, in this case we need to store the bound change as pending bound change
              */
@@ -18649,8 +18660,14 @@ SCIP_Real SCIPvarGetLPSol_rec(
        * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
        * positives and negatives if the parameter <numerics/infinity> is modified by the user
        */
-      assert(lpsolval > -SCIP_DEFAULT_INFINITY);
-      assert(lpsolval < +SCIP_DEFAULT_INFINITY);
+//       assert(lpsolval > -SCIP_DEFAULT_INFINITY);
+//       assert(lpsolval < +SCIP_DEFAULT_INFINITY);
+
+      if( lpsolval >= SCIP_DEFAULT_INFINITY )
+         return (var->data.aggregate.scalar > 0) ? SCIP_DEFAULT_INFINITY : -SCIP_DEFAULT_INFINITY;
+      else if( lpsolval <= -SCIP_DEFAULT_INFINITY )
+         return (var->data.aggregate.scalar > 0) ? -SCIP_DEFAULT_INFINITY : SCIP_DEFAULT_INFINITY;
+
       return var->data.aggregate.scalar * lpsolval + var->data.aggregate.constant;
    }
    case SCIP_VARSTATUS_MULTAGGR:
@@ -23310,6 +23327,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarIsRelaxationOnly
 #undef SCIPvarMarkRelaxationOnly
 #undef SCIPbdchgidxGetPos
+#undef SCIPbdchgidxGetDepth
 #undef SCIPbdchgidxIsEarlierNonNull
 #undef SCIPbdchgidxIsEarlier
 #undef SCIPbdchginfoGetOldbound
@@ -24354,7 +24372,7 @@ SCIP_RATIONAL* SCIPvarGetBestBoundGlobalExact(
    assert(var->exactdata->glbdom.ub != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return var->exactdata->glbdom.lb;
    else
       return var->exactdata->glbdom.ub;
@@ -24384,7 +24402,7 @@ SCIP_RATIONAL* SCIPvarGetWorstBoundGlobalExact(
    assert(var->exactdata->glbdom.ub != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return var->exactdata->glbdom.ub;
    else
       return var->exactdata->glbdom.lb;
@@ -24492,7 +24510,7 @@ SCIP_RATIONAL* SCIPvarGetBestBoundLocalExact(
    assert(var->exactdata->locdom.ub != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return var->exactdata->locdom.lb;
    else
       return var->exactdata->locdom.ub;
@@ -24522,7 +24540,7 @@ SCIP_RATIONAL* SCIPvarGetWorstBoundLocalExact(
    assert(var->exactdata->locdom.ub != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return var->exactdata->locdom.ub;
    else
       return var->exactdata->locdom.lb;
@@ -24550,7 +24568,7 @@ SCIP_BOUNDTYPE SCIPvarGetBestBoundTypeExact(
    assert(var->exactdata != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return SCIP_BOUNDTYPE_LOWER;
    else
       return SCIP_BOUNDTYPE_UPPER;
@@ -24578,7 +24596,7 @@ SCIP_BOUNDTYPE SCIPvarGetWorstBoundTypeExact(
    assert(var->exactdata != NULL);
    assert(var->exactdata->obj != NULL);
 
-   if( SCIPrationalIsPositive(var->exactdata->obj) || SCIPrationalIsZero(var->exactdata->obj) )
+   if( !SCIPrationalIsNegative(var->exactdata->obj) )
       return SCIP_BOUNDTYPE_UPPER;
    else
       return SCIP_BOUNDTYPE_LOWER;
@@ -25013,6 +25031,16 @@ int SCIPbdchgidxGetPos(
    assert(bdchgidx != NULL);
 
    return bdchgidx->pos;
+}
+
+/** returns the depth of the bound change index */
+int SCIPbdchgidxGetDepth(
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
+   )
+{
+   assert(bdchgidx != NULL);
+
+   return bdchgidx->depth;
 }
 
 /** returns whether first bound change index belongs to an earlier applied bound change than second one */

@@ -1581,6 +1581,7 @@ SCIP_RETCODE solveNodeInitialLP(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             newinitconss,       /**< do we have to add new initial constraints? */
+   SCIP_Bool             forcedlpsolve,      /**< would SCIP abort if the LP is not solved? */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
@@ -1623,7 +1624,7 @@ SCIP_RETCODE solveNodeInitialLP(
    /* solve initial LP */
    SCIPsetDebugMsg(set, "node: solve initial LP\n");
    SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
-         SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) == 0 ? set->lp_rootiterlim : set->lp_iterlim, TRUE, TRUE, FALSE, FALSE, lperror) );
+         SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) == 0 ? set->lp_rootiterlim : set->lp_iterlim, TRUE, TRUE, FALSE, forcedlpsolve, lperror) );
    assert(lp->flushed);
    assert(lp->solved || *lperror);
 
@@ -2322,24 +2323,42 @@ SCIP_RETCODE SCIPpriceLoop(
       for( p = 0; p < set->nactivepricers && !enoughvars; ++p )
       {
          SCIP_CALL( SCIPpricerExec(set->pricers[p], set, transprob, lp, pricestore, &lb, &stopearly, &result) );
-         assert(result == SCIP_DIDNOTRUN || result == SCIP_SUCCESS);
-         SCIPsetDebugMsg(set, "pricing: pricer %s returned result = %s, lowerbound = %f\n",
-            SCIPpricerGetName(set->pricers[p]), (result == SCIP_DIDNOTRUN ? "didnotrun" : "success"), lb);
-         enoughvars = enoughvars || (SCIPsetGetPriceMaxvars(set, pretendroot) == INT_MAX ?
-               FALSE : SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot) + 1);
-         *aborted = ( (*aborted) || (result == SCIP_DIDNOTRUN) );
+         switch ( result )
+         {
+            case SCIP_DIDNOTRUN:
+            {
+               /* pricer did not run */
+               SCIPsetDebugMsg(set, "pricing: pricer %s did not run\n", SCIPpricerGetName(set->pricers[p]));
+               *aborted = TRUE;
+               break;
+            }
+            case SCIP_SUCCESS:
+            {
+               /* pricer found new variables or proved that no variable with negative reduced cost exists */
+               SCIPsetDebugMsg(set, "pricing: pricer %s succeeded, lowerbound = %f\n",
+                  SCIPpricerGetName(set->pricers[p]), lb);
 
-         /* set stoppricing to TRUE, if the first pricer wants to stop pricing */
-         if( p == 0 && stopearly )
-            stoppricing = TRUE;
+               enoughvars = SCIPpricestoreGetNVars(pricestore) > SCIPsetGetPriceMaxvars(set, pretendroot);
 
-         /* stoppricing only remains TRUE, if all other pricers want to stop pricing as well */
-         if( stoppricing && !stopearly )
-            stoppricing = FALSE;
+               /* set stoppricing to TRUE, if the first pricer wants to stop pricing */
+               if( p == 0 && stopearly )
+                  stoppricing = TRUE;
 
-         /* update lower bound w.r.t. the lower bound given by the pricer */
-         SCIP_CALL( SCIPnodeUpdateLowerbound(currentnode, stat, set, eventfilter, tree, transprob, origprob, lb, NULL) );
-         SCIPsetDebugMsg(set, " -> new lower bound given by pricer %s: %g\n", SCIPpricerGetName(set->pricers[p]), lb);
+               /* stoppricing only remains TRUE, if all other pricers want to stop pricing as well */
+               if( stoppricing && !stopearly )
+                  stoppricing = FALSE;
+
+               /* update lower bound w.r.t. the lower bound given by the pricer */
+               SCIP_CALL( SCIPnodeUpdateLowerbound(currentnode, stat, set, eventfilter, tree, transprob, origprob, lb, NULL) );
+               SCIPsetDebugMsg(set, " -> new lower bound given by pricer %s: %g", SCIPpricerGetName(set->pricers[p]), lb);
+               break;
+            }
+            default:
+            {
+               SCIPerrorMessage("pricer <%s> returned invalid result <%d>\n", SCIPpricerGetName(set->pricers[p]), result);
+               return SCIP_INVALIDRESULT;
+            }
+         } /*lint !e788*/
       }
 
       /* apply the priced variables to the LP */
@@ -3239,7 +3258,8 @@ SCIP_RETCODE solveNodeLP(
    {
       /* load and solve the initial LP of the node */
       SCIP_CALL( solveNodeInitialLP(blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt, lp,
-            pricestore, sepastore, cutpool, branchcand, eventqueue, eventfilter, cliquetable, newinitconss, cutoff, lperror) );
+            pricestore, sepastore, cutpool, branchcand, eventqueue, eventfilter, cliquetable, newinitconss,
+            forcedlpsolve, cutoff, lperror) );
 
       assert(*cutoff || *lperror || (lp->flushed && lp->solved));
       SCIPsetDebugMsg(set, "price-and-cut-loop: initial LP status: %d, LP obj: %g\n",
@@ -3672,6 +3692,8 @@ SCIP_RETCODE enforceConstraints(
       else if( SCIPtreeHasFocusNodeLP(tree) )
       {
          SCIPsetDebugMsg(set, "enforce LP solution with value %g\n", SCIPlpGetObjval(lp, set, prob));
+
+         // NOTE: May be called with lp->primalfeasible=FALSE. But then enforcement is called for infinite points?!
 
          assert(lp->flushed);
          assert(lp->solved);
@@ -4410,6 +4432,7 @@ SCIP_RETCODE solveNode(
     * - don't solve the node if its cut off by the pseudo objective value anyway
     */
    focusnodehaslp = (set->lp_solvedepth == -1 || actdepth <= set->lp_solvedepth);
+   focusnodehaslp = focusnodehaslp && (actdepth >= set->lp_minsolvedepth);
    focusnodehaslp = focusnodehaslp && (set->lp_solvefreq >= 1 && actdepth % set->lp_solvefreq == 0);
    focusnodehaslp = focusnodehaslp || (actdepth == 0 && set->lp_solvefreq == 0);
    focusnodehaslp = focusnodehaslp && SCIPsetIsLT(set, SCIPlpGetPseudoObjval(lp, set, transprob), primal->cutoffbound);
@@ -5053,7 +5076,8 @@ SCIP_RETCODE addCurrentSolution(
    }
    else if( SCIPtreeHasFocusNodeLP(tree) )
    {
-      assert(lp->primalfeasible);
+      /* Removed assert(lp->primalfeasible); since there can be a solved LP and there is some solution with infinite values,
+       * but the lp is not primal feasible. */
 
       /* start clock for LP solutions */
       SCIPclockStart(stat->lpsoltime, set);

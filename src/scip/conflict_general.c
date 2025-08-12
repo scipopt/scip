@@ -112,6 +112,21 @@
  */
 #define SOLSTOP 10000000.0
 
+/** return TRUE if conflict analysis is applicable; In case the function returns FALSE there is no need to initialize the
+ *  conflict analysis since it will not be applied
+ */
+SCIP_Bool SCIPconflictApplicable(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+   /* check, if resolution or propagation conflict analysis is enabled */
+   if( !set->conf_enable || !( set->conf_useprop || set->conf_usegenres ) )
+      return FALSE;
+
+   return TRUE;
+}
+
 /** returns the current number of conflict sets in the conflict set storage */
 int SCIPconflictGetNConflicts(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -130,6 +145,16 @@ SCIP_Longint SCIPconflictGetNAppliedConss(
    assert(conflict != NULL);
 
    return conflict->nappliedglbconss + conflict->nappliedlocconss;
+}
+
+/** returns the total number of resolution conflict constraints that were added to the problem */
+SCIP_Longint SCIPconflictGetNAppliedResConss(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nappliedglbresconss;
 }
 
 /** returns the total number of literals in conflict constraints that were added to the problem */
@@ -239,6 +264,7 @@ void SCIPconflictEnableOrDisableClocks(
    SCIPclockEnableOrDisable(conflict->dIBclock, enable);
    SCIPclockEnableOrDisable(conflict->inflpanalyzetime, enable);
    SCIPclockEnableOrDisable(conflict->propanalyzetime, enable);
+   SCIPclockEnableOrDisable(conflict->resanalyzetime, enable);
    SCIPclockEnableOrDisable(conflict->pseudoanalyzetime, enable);
    SCIPclockEnableOrDisable(conflict->sbanalyzetime, enable);
 }
@@ -256,6 +282,7 @@ SCIP_RETCODE SCIPconflictCreate(
 
    SCIP_CALL( SCIPclockCreate(&(*conflict)->dIBclock, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->propanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*conflict)->resanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->inflpanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->boundlpanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->sbanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -268,12 +295,21 @@ SCIP_RETCODE SCIPconflictCreate(
          conflictBdchginfoComp, NULL) );
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->forcedbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
          conflictBdchginfoComp, NULL) );
+   SCIP_CALL( SCIPpqueueCreate(&(*conflict)->resbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
+         conflictBdchginfoComp, NULL) );
+   SCIP_CALL( SCIPpqueueCreate(&(*conflict)->continuousbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
+         conflictBdchginfoComp, NULL) );
    SCIP_CALL( SCIPconflictsetCreate(&(*conflict)->conflictset, blkmem) );
    (*conflict)->conflictsets = NULL;
    (*conflict)->conflictsetscores = NULL;
+   (*conflict)->conflictvarslbs = NULL;
+   (*conflict)->conflictvarsubs = NULL;
    (*conflict)->tmpbdchginfos = NULL;
+   (*conflict)->conflictprobnvars = 0;
    (*conflict)->conflictsetssize = 0;
    (*conflict)->nconflictsets = 0;
+   (*conflict)->conflictrows = NULL;
+   (*conflict)->nconflictrows = 0;
    (*conflict)->proofsets = NULL;
    (*conflict)->proofsetssize = 0;
    (*conflict)->nproofsets = 0;
@@ -282,6 +318,7 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->count = 0;
    (*conflict)->nglbchgbds = 0;
    (*conflict)->nappliedglbconss = 0;
+   (*conflict)->nappliedglbresconss = 0;
    (*conflict)->nappliedglbliterals = 0;
    (*conflict)->nlocchgbds = 0;
    (*conflict)->nappliedlocconss = 0;
@@ -327,6 +364,17 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->ndualproofsbndlocal = 0;
    (*conflict)->ndualproofsbndsuccess = 0;
    (*conflict)->dualproofsbndnnonzeros = 0;
+   (*conflict)->nrescalls = 0;
+   (*conflict)->nressuccess = 0;
+   (*conflict)->nreslargecoefs = 0;
+   (*conflict)->nreslongconfs = 0;
+   (*conflict)->nresconfconss = 0;
+   (*conflict)->nresconfvariables = 0;
+   (*conflict)->conflictrowssize = 0;
+   (*conflict)->bdchgonlyresqueue = FALSE;
+   (*conflict)->bdchgonlyconfqueue = FALSE;
+
+   SCIP_CALL( SCIPconflictInitRows((*conflict), blkmem) );
 
    SCIP_CALL( SCIPconflictInitProofset((*conflict), blkmem) );
 
@@ -350,20 +398,43 @@ SCIP_RETCODE SCIPconflictFree(
 
    SCIPclockFree(&(*conflict)->dIBclock);
    SCIPclockFree(&(*conflict)->propanalyzetime);
+   SCIPclockFree(&(*conflict)->resanalyzetime);
    SCIPclockFree(&(*conflict)->inflpanalyzetime);
    SCIPclockFree(&(*conflict)->boundlpanalyzetime);
    SCIPclockFree(&(*conflict)->sbanalyzetime);
    SCIPclockFree(&(*conflict)->pseudoanalyzetime);
    SCIPpqueueFree(&(*conflict)->bdchgqueue);
    SCIPpqueueFree(&(*conflict)->forcedbdchgqueue);
+   SCIPpqueueFree(&(*conflict)->resbdchgqueue);
+   SCIPpqueueFree(&(*conflict)->continuousbdchgqueue);
    SCIPconflictsetFree(&(*conflict)->conflictset, blkmem);
+   SCIPconflictRowFree(&(*conflict)->conflictrow, blkmem);
+   SCIPconflictRowFree(&(*conflict)->resolvedconflictrow, blkmem);
+   SCIPconflictRowFree(&(*conflict)->reasonrow, blkmem);
+   SCIPconflictRowFree(&(*conflict)->reducedreasonrow, blkmem);
    SCIPproofsetFree(&(*conflict)->proofset, blkmem);
 
    BMSfreeMemoryArrayNull(&(*conflict)->conflictsets);
    BMSfreeMemoryArrayNull(&(*conflict)->conflictsetscores);
+   BMSfreeMemoryArrayNull(&(*conflict)->conflictvarslbs);
+   BMSfreeMemoryArrayNull(&(*conflict)->conflictvarsubs);
    BMSfreeMemoryArrayNull(&(*conflict)->proofsets);
+   BMSfreeMemoryArrayNull(&(*conflict)->conflictrows);
    BMSfreeMemoryArrayNull(&(*conflict)->tmpbdchginfos);
    BMSfreeMemory(conflict);
+
+   return SCIP_OKAY;
+}
+
+/** clears conflict analysis  bound changes queues for propagation conflicts */
+SCIP_RETCODE SCIPconflictClearQueues(
+   SCIP_CONFLICT*        conflict            /**< pointer to conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   SCIPpqueueClear(conflict->bdchgqueue);
+   SCIPpqueueClear(conflict->forcedbdchgqueue);
 
    return SCIP_OKAY;
 }
@@ -422,6 +493,16 @@ SCIP_Real SCIPconflictGetPropTime(
    return SCIPclockGetTime(conflict->propanalyzetime);
 }
 
+/** gets time in seconds used for analyzing propagation conflicts with generalized resolution */
+SCIP_Real SCIPconflictGetResTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return SCIPclockGetTime(conflict->resanalyzetime);
+}
+
 /** gets number of calls to propagation conflict analysis */
 SCIP_Longint SCIPconflictGetNPropCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -460,6 +541,16 @@ SCIP_Longint SCIPconflictGetNPropConflictLiterals(
    assert(conflict != NULL);
 
    return conflict->npropconfliterals;
+}
+
+/** returns total number of variables in resolution conflict constraints created in propagation conflict analysis */
+SCIP_Longint SCIPconflictGetNResConflictVars(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nresconfvariables;
 }
 
 /** gets number of reconvergence constraints detected in propagation conflict analysis */
@@ -819,6 +910,7 @@ SCIP_RETCODE addRowToAggrRow(
    assert(row != NULL);
    assert(weight != 0.0);
    assert(safely == set->exact_enable);
+   assert(success != NULL);
 
    /* add minimal value to dual row's left hand side: y_i < 0 -> lhs, y_i > 0 -> rhs */
    negated = weight < 0.0;
@@ -2044,6 +2136,8 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       int nreconvconss;
       int nreconvliterals;
 
+      conflict->bdchgonlyconfqueue = TRUE;
+
       /* undo bound changes without destroying the infeasibility proof */
       SCIP_CALL( SCIPundoBdchgsProof(set, transprob, SCIPtreeGetCurrentDepth(tree), pseudocoefs, pseudolhs, &pseudoact,
             curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, NULL, NULL, NULL, lp->lpi) );
@@ -2058,6 +2152,8 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       conflict->npseudoreconvliterals += nreconvliterals;
       if( success != NULL )
          *success = (nconss > 0);
+
+      conflict->bdchgonlyconfqueue = FALSE;
    }
 
    /* free temporary memory */
@@ -2431,18 +2527,23 @@ SCIP_RETCODE conflictAnalyzeLP(
             blkmem, farkascoefs, &farkaslhs, &farkasactivity, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, iterations,
             marklpunsolved, dualproofsuccess, &valid) );
 
+      conflict->bdchgonlyconfqueue = FALSE;
+
       SCIPsetFreeBufferArray(set, &farkascoefs);
 
       if( !valid )
          goto FLUSHPROOFSETS;
 
+      conflict->bdchgonlyconfqueue = TRUE;
+
       /* analyze the conflict starting with remaining bound changes */
       SCIP_CALL( SCIPconflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, transprob, tree, diving,
             lbchginfoposs, ubchginfoposs, nconss, nliterals, nreconvconss, nreconvliterals) );
 
-      /* flush conflict set storage */
       SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
             eventqueue, eventfilter, cliquetable) );
+
+      conflict->bdchgonlyconfqueue = FALSE;
    }
 
   FLUSHPROOFSETS:
@@ -2765,7 +2866,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    /* start timing */
    SCIPclockStart(conflict->inflpanalyzetime, set);
    conflict->ninflpcalls++;
-
+   /**@todo reset usescutoffbound flag */
    conflict->conflictset->conflicttype = SCIP_CONFTYPE_INFEASLP;
 
    olddualproofsuccess = conflict->ndualproofsinfsuccess;

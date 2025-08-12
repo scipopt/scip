@@ -1074,26 +1074,9 @@ SCIP_RETCODE applyFixings(
 
             if( aggregated )
             {
-               (*naggrvars)++;
-
-               if( SCIPvarIsActive(newvar) )
-               {
-                  SCIP_CALL( setIntvar(scip, cons, newvar) );
-                  SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
-               }
-               /* the new variable should only by inactive if it was fixed due to the aggregation, so also the old variable
-                * should be fixed now.
-                *
-                * @todo if newvar is not active we may want to transform the xor into a linear constraint
-                */
-               else
-               {
-                  assert(SCIPvarGetStatus(newvar) == SCIP_VARSTATUS_FIXED);
-                  assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->intvar), SCIPvarGetUbGlobal(consdata->intvar)));
-
-                  SCIP_CALL( setIntvar(scip, cons, newvar) );
-                  SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
-               }
+               ++(*naggrvars);
+               SCIP_CALL( setIntvar(scip, cons, newvar) );
+               SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
             }
             else
             {
@@ -4306,7 +4289,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 
                   if( aggregated )
                   {
-                     (*naggrvars)++;
+                     ++(*naggrvars);
                      assert(SCIPvarIsActive(consdata0->intvar));
                   }
                   else
@@ -4460,7 +4443,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          *cutoff = *cutoff || infeasible;
          if( aggregated )
-            (*naggrvars)++;
+            ++(*naggrvars);
 
          if( redundant )
          {
@@ -4483,7 +4466,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 
                   *cutoff = *cutoff || infeasible;
                   if( aggregated )
-                     (*naggrvars)++;
+                     ++(*naggrvars);
                }
             }
          }
@@ -4521,7 +4504,7 @@ SCIP_RETCODE createConsXorIntvar(
    SCIP_Bool             rhs,                /**< right hand side of the constraint */
    int                   nvars,              /**< number of operator variables in the constraint */
    SCIP_VAR**            vars,               /**< array with operator variables of constraint */
-   SCIP_VAR*             intvar,             /**< artificial integer variable for linear relaxation */
+   SCIP_VAR*             intvar,             /**< integer variable for linear relaxation or NULL if artificial */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -4549,6 +4532,8 @@ SCIP_RETCODE createConsXorIntvar(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
+   SCIP_VARTYPE intvartype;
+   int i;
 
    /* find the xor constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -4556,6 +4541,29 @@ SCIP_RETCODE createConsXorIntvar(
    {
       SCIPerrorMessage("xor constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* check whether int variable is integral */
+   if( intvar != NULL )
+   {
+      intvartype = SCIPvarGetType(intvar);
+
+      if( intvartype != SCIP_VARTYPE_BINARY && intvartype != SCIP_VARTYPE_INTEGER )
+      {
+         SCIPerrorMessage("intvar <%s> is not enforced integral\n", SCIPvarGetName(intvar));
+         return SCIP_INVALIDDATA;
+      }
+   }
+
+   /* check whether all variables are binary */
+   assert(vars != NULL || nvars == 0);
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPvarIsBinary(vars[i]) )
+      {
+         SCIPerrorMessage("operand <%s> is not binary\n", SCIPvarGetName(vars[i]));
+         return SCIP_INVALIDDATA;
+      }
    }
 
    /* create constraint data */
@@ -4628,6 +4636,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
       {
          SCIP_VAR** xorvars;
          SCIP_VAR* parityvar = NULL;
+         SCIP_VARTYPE parityvartype;
          SCIP_Bool postwo = FALSE;
          int cnt = 0;
          int j;
@@ -4640,6 +4649,15 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXor)
             if( SCIPisEQ(scip, REALABS(vals[j]), 2.0) )
             {
                parityvar = vars[j];
+               parityvartype = SCIPvarGetType(parityvar);
+
+               /* parity variable requires enforced integrality */
+               if( parityvartype != SCIP_VARTYPE_BINARY && parityvartype != SCIP_VARTYPE_INTEGER )
+               {
+                  parityvar = NULL;
+                  break;
+               }
+
                postwo = (vals[j] > 0.0);
             }
             else if( !SCIPisEQ(scip, REALABS(vals[j]), 1.0) )
@@ -5381,7 +5399,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
             if( aggregated )
             {
                assert(redundant);
-               (*naggrvars)++;
+               ++(*naggrvars);
             }
 
             /* the constraint can be deleted if the intvar is fixed or NULL */
@@ -6014,6 +6032,7 @@ SCIP_RETCODE SCIPcreateConsXor(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
+   int i;
 
    /* find the xor constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -6021,6 +6040,17 @@ SCIP_RETCODE SCIPcreateConsXor(
    {
       SCIPerrorMessage("xor constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* check whether all variables are binary */
+   assert(vars != NULL || nvars == 0);
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPvarIsBinary(vars[i]) )
+      {
+         SCIPerrorMessage("operand <%s> is not binary\n", SCIPvarGetName(vars[i]));
+         return SCIP_INVALIDDATA;
+      }
    }
 
    /* create constraint data */

@@ -5,8 +5,7 @@ include(GNUInstallDirs)
 
 function(setLibProperties targetname outputname)
     set_target_properties(${targetname} PROPERTIES
-        OUTPUT_NAME ${outputname}
-        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+        OUTPUT_NAME ${outputname})
 endfunction(setLibProperties)
 
 set(CMAKE_C_STANDARD 99)
@@ -255,6 +254,7 @@ set(scipsources
     scip/sepa_convexproj.c
     scip/sepa_disjunctive.c
     scip/sepa_eccuts.c
+    scip/sepa_flower.c
     scip/sepa_gauge.c
     scip/sepa_gomory.c
     scip/sepa_impliedbounds.c
@@ -264,7 +264,6 @@ set(scipsources
     scip/sepa_mcf.c
     scip/sepa_minor.c
     scip/sepa_mixing.c
-    scip/sepa_multilinear.c
     scip/sepa_oddcycle.c
     scip/sepa_rapidlearning.c
     scip/sepa_rlt.c
@@ -289,6 +288,7 @@ set(scipsources
     scip/conflict_general.c
     scip/conflict_graphanalysis.c
     scip/conflict_dualproofanalysis.c
+    scip/conflict_resolution.c
     scip/conflictstore.c
     scip/cons.c
     scip/cutpool.c
@@ -427,6 +427,7 @@ set(objscipsources
     objscip/objdialog.cpp
     objscip/objdisp.cpp
     objscip/objeventhdlr.cpp
+    objscip/objexprhdlr.cpp
     objscip/objheur.cpp
     objscip/objiisfinder.cpp
     objscip/objmessagehdlr.cpp
@@ -494,6 +495,7 @@ set(objscipheaders
     objscip/objdialog.h
     objscip/objdisp.h
     objscip/objeventhdlr.h
+    objscip/objexprhdlr.h
     objscip/objheur.h
     objscip/objiisfinder.h
     objscip/objmessagehdlr.h
@@ -559,6 +561,7 @@ set(scipheaders
     scip/conflict.h
     scip/conflict_graphanalysis.h
     scip/conflict_dualproofanalysis.h
+    scip/conflict_resolution.h
     scip/conflict_general.h
     scip/conflictstore.h
     scip/cons_abspower.h
@@ -919,6 +922,7 @@ set(scipheaders
     scip/sepa_convexproj.h
     scip/sepa_disjunctive.h
     scip/sepa_eccuts.h
+    scip/sepa_flower.h
     scip/sepa_gauge.h
     scip/sepa_gomory.h
     scip/sepa.h
@@ -929,7 +933,6 @@ set(scipheaders
     scip/sepa_mcf.h
     scip/sepa_minor.h
     scip/sepa_mixing.h
-    scip/sepa_multilinear.h
     scip/sepa_oddcycle.h
     scip/sepa_rapidlearning.h
     scip/sepa_rlt.h
@@ -1161,14 +1164,18 @@ target_link_libraries(libscip
     ${LAPACK_LIBRARIES}
 )
 
+set(SOPLEX_NEEDED 0)
+set(ZIMPL_NEEDED 0)
 if(SHARED)
-    set(SOPLEX_NEEDED 0)
-    set(ZIMPL_NEEDED 0)
     target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES})
     add_executable(scip main.c ${scipsources} ${objscipsources} ${lpisources} ${lpiexactsources} ${rectlusources} ${tpisources} ${symsources})
 else()
-    set(SOPLEX_NEEDED ${SOPLEX_FOUND})
-    set(ZIMPL_NEEDED ${ZIMPL_FOUND})
+    if(SOPLEX_FOUND)
+        set(SOPLEX_NEEDED 1)
+    endif()
+    if(ZIMPL_FOUND)
+        set(ZIMPL_NEEDED 1)
+    endif()
     target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
     add_executable(scip main.c)
     target_link_libraries(scip PUBLIC libscip)

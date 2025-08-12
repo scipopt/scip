@@ -1030,7 +1030,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    SCIP_Real currentdepth;
    SCIP_Real currenttreesize;
    SCIP_Real absdualgap;
-   SCIP_Real gaptoclose;
+   SCIP_Real gaptoclose = -1.0;
 
    /* default values never used */
    SCIP_Real logmeangain = 0.0;
@@ -1061,6 +1061,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    else
       return TRUE;
 
+   assert(gaptoclose >= 0.0);
    assert(!SCIPisInfinity(scip, -maxmeangain));
 
    SCIP_Real zeroprob = (SCIP_Real) branchruledata->nzerogains / (branchruledata->nzerogains + branchruledata->currndualgains);
@@ -1087,7 +1088,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    }
 
    /* Continue strong branching since we do not have good enough gains in this case */
-   currentdepth = strongBranchingDepth(gaptoclose, maxmeangain);
+   currentdepth = strongBranchingDepth(gaptoclose, maxmeangain); /*lint !e644*/
 
    if (currentdepth >= 50)
       return TRUE;

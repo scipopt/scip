@@ -373,7 +373,9 @@ SCIP_RETCODE createPresoldata(
       {
          assert(SCIPconsIsActive(setppcs[c]));
 
-         if( SCIPgetTypeSetppc(scip, setppcs[c]) == SCIP_SETPPCTYPE_PACKING && SCIPgetNVarsSetppc(scip, setppcs[c]) == 2 && !SCIPconsIsModifiable(setppcs[c]) )
+         if( !SCIPconsIsModifiable(setppcs[c]) && SCIPconsGetNUpgradeLocks(setppcs[c]) == 0
+            && SCIPgetTypeSetppc(scip, setppcs[c]) == SCIP_SETPPCTYPE_PACKING
+            && SCIPgetNVarsSetppc(scip, setppcs[c]) == 2 )
          {
             /* insert new element in hashtable */
             SCIP_CALL( SCIPhashtableInsert(presoldata->setppchashtable, (void*) setppcs[c]) );
@@ -450,7 +452,8 @@ SCIP_RETCODE createPresoldata(
       {
          assert(SCIPconsIsActive(logicors[c]));
 
-         if( !SCIPconsIsModifiable(logicors[c]) && SCIPgetNVarsLogicor(scip, logicors[c]) >= 3 )
+         if( !SCIPconsIsModifiable(logicors[c]) && SCIPconsGetNUpgradeLocks(logicors[c]) == 0
+            && SCIPgetNVarsLogicor(scip, logicors[c]) >= 3 )
          {
             /* insert new element in hashtable */
             SCIP_CALL( SCIPhashtableInsert(presoldata->logicorhashtable, (void*) logicors[c]) );
@@ -505,8 +508,11 @@ SCIP_RETCODE cleanupHashDatas(
 
          assert(presoldata->setppchashdatas[c].cons != NULL);
 
-         if( SCIPconsIsDeleted(presoldata->setppchashdatas[c].cons) || SCIPconsIsModifiable(presoldata->setppchashdatas[c].cons)
-               || SCIPgetTypeSetppc(scip, presoldata->setppchashdatas[c].cons) != SCIP_SETPPCTYPE_PACKING || SCIPgetNVarsSetppc(scip, presoldata->setppchashdatas[c].cons) != 2 )
+         if( SCIPconsIsDeleted(presoldata->setppchashdatas[c].cons)
+            || SCIPconsIsModifiable(presoldata->setppchashdatas[c].cons)
+            || SCIPconsGetNUpgradeLocks(presoldata->setppchashdatas[c].cons) >= 1
+            || SCIPgetTypeSetppc(scip, presoldata->setppchashdatas[c].cons) != SCIP_SETPPCTYPE_PACKING
+            || SCIPgetNVarsSetppc(scip, presoldata->setppchashdatas[c].cons) != 2 )
          {
             removeentry = TRUE;
          }
@@ -646,7 +652,9 @@ SCIP_RETCODE correctPresoldata(
    {
       assert(SCIPconsIsActive(setppcs[c]));
 
-      if( SCIPgetTypeSetppc(scip, setppcs[c]) == SCIP_SETPPCTYPE_PACKING && SCIPgetNVarsSetppc(scip, setppcs[c]) == 2 && !SCIPconsIsModifiable(setppcs[c]) )
+      if( !SCIPconsIsModifiable(setppcs[c]) && SCIPconsGetNUpgradeLocks(setppcs[c]) == 0
+         && SCIPgetTypeSetppc(scip, setppcs[c]) == SCIP_SETPPCTYPE_PACKING
+         && SCIPgetNVarsSetppc(scip, setppcs[c]) == 2 )
       {
          /* check if constraint is new, and correct array size if necessary */
          if( !SCIPhashtableExists(presoldata->setppchashtable, (void*) setppcs[c]) )
@@ -741,7 +749,9 @@ SCIP_RETCODE correctPresoldata(
       if( presoldata->maxnvarslogicor < SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]) )
          presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]);
 
-      if( !SCIPconsIsActive(presoldata->usefullogicor[c]) || SCIPconsIsModifiable(presoldata->usefullogicor[c]) || SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]) < 3 )
+      if( !SCIPconsIsActive(presoldata->usefullogicor[c]) || SCIPconsIsModifiable(presoldata->usefullogicor[c])
+         || SCIPconsGetNUpgradeLocks(presoldata->usefullogicor[c]) >= 1
+         || SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]) < 3 )
       {
          SCIP_CALL( SCIPhashtableRemove(presoldata->logicorhashtable, (void*) presoldata->usefullogicor[c]) );
          SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->usefullogicor[c])) );
@@ -759,7 +769,8 @@ SCIP_RETCODE correctPresoldata(
    {
       assert(SCIPconsIsActive(logicors[c]));
 
-      if( !SCIPconsIsModifiable(logicors[c]) && SCIPgetNVarsLogicor(scip, logicors[c]) >= 3 )
+      if( !SCIPconsIsModifiable(logicors[c]) && SCIPconsGetNUpgradeLocks(logicors[c]) == 0
+         && SCIPgetNVarsLogicor(scip, logicors[c]) >= 3 )
       {
          /* check if constraint is new, and correct array size if necessary */
          if( !SCIPhashtableExists(presoldata->logicorhashtable, (void*) logicors[c]) )
@@ -1083,17 +1094,16 @@ SCIP_RETCODE extractGates(
                initial, separate, enforce, check, propagate,
                local, modifiable, dynamic, removable, stickingatnode) );
 
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugMsg(scip, "-------------->\n");
          SCIPdebugPrintCons(scip, newcons, NULL);
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
          ++(*naddconss);
          ++(presoldata->ngates);
 
          SCIP_CALL( SCIPdelCons(scip, logicor) );
          ++(*ndelconss);
-
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
          SCIPfreeBufferArray(scip, &consvars);
       }
@@ -1107,17 +1117,16 @@ SCIP_RETCODE extractGates(
                initial, separate, enforce, check, propagate,
                local, modifiable, dynamic, removable, stickingatnode) );
 
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugMsg(scip, "-------------->\n");
          SCIPdebugPrintCons(scip, newcons, NULL);
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
          ++(*naddconss);
          ++(presoldata->ngates);
 
          SCIP_CALL( SCIPdelCons(scip, logicor) );
          ++(*ndelconss);
-
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
       }
    }
 
@@ -1496,7 +1505,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
          setppc = setppcconss[d];
          assert(setppc != NULL);
 
-         if( SCIPconsIsDeleted(setppc) )
+         if( SCIPconsIsDeleted(setppc) || SCIPconsIsModifiable(setppc) || SCIPconsGetNUpgradeLocks(setppc) >= 1 )
             continue;
 
          /* @todo if of interest could also be implemented for set-covering constraints */
@@ -1507,14 +1516,8 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
          nsetppcvars = SCIPgetNVarsSetppc(scip, setppc);
 
-         if( nsetppcvars < 2 )
-            continue;
-
-         if( SCIPconsIsModifiable(setppc) )
-            continue;
-
          /* to big setppc constraints are picked out */
-         if( nsetppcvars > size )
+         if( nsetppcvars < 2 || nsetppcvars > size )
             continue;
 
          setppcvars = SCIPgetVarsSetppc(scip, setppc);
@@ -1564,15 +1567,12 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
          logicor = logicorconss[c];
          assert(logicor != NULL);
 
-         if( SCIPconsIsDeleted(logicor) )
+         if( SCIPconsIsDeleted(logicor) || SCIPconsIsModifiable(logicor) || SCIPconsGetNUpgradeLocks(logicor) >= 1 )
             continue;
 
          nlogicorvars = SCIPgetNVarsLogicor(scip, logicor);
 
          if( nlogicorvars < 2 )
-            continue;
-
-         if( SCIPconsIsModifiable(logicor) )
             continue;
 
          assert(nlogicorvars <= size);
@@ -1667,9 +1667,10 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
                         initial, separate, enforce, check, propagate,
                         local, modifiable, dynamic, removable, stickingatnode) );
 
-                  SCIP_CALL( SCIPaddCons(scip, newcons) );
                   SCIPdebugMsg(scip, "-------------->\n");
                   SCIPdebugPrintCons(scip, newcons, NULL);
+                  SCIP_CALL( SCIPaddCons(scip, newcons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
                   ++(*naddconss);
                   ++(presoldata->ngates);
@@ -1677,8 +1678,6 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
                   /* delete redundant set-packing constraint */
                   SCIP_CALL( SCIPdelCons(scip, setppc) );
                   ++(*ndelconss);
-
-                  SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
                }
 
                /* delete redundant logicor constraint */
