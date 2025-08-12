@@ -1488,14 +1488,15 @@ SCIP_RETCODE SCIPincludeNlpSolverConopt(
    return SCIP_OKAY;
 }
 
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
 /** gets string that identifies CONOPT */
 const char* SCIPgetSolverNameConopt(
    void
    )
 {
-   static char solvername[20];
-   sprintf(solvername, "CONOPT %d.%d.%d", CONOPT_VERSION_MAJOR, CONOPT_VERSION_MINOR, CONOPT_VERSION_PATCH);
-   return solvername;
+   return "CONOPT " STR(CONOPT_VERSION_MAJOR) "." STR(CONOPT_VERSION_MINOR) "." STR(CONOPT_VERSION_PATCH);
 }
 
 /** gets string that describes CONOPT */
