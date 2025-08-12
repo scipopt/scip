@@ -44,6 +44,7 @@ const char* SCIPgetBuildFlags(
  EXPRINT=@EXPRINT@\n\
  SYM=@SYM@\n\
  GMP=@GMP@\n\
+ CONOPT=@CONOPT@\n\
  IPOPT=@IPOPT@\n\
  WORHP=@WORHP@\n\
  LPS=@LPS@\n\
