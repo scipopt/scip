@@ -15,7 +15,8 @@
         "AUTOBUILD": "Off",
         "IPOPT": "Off",
         "PAPILO": "On",
-        "SYM": "snauty"
+        "SYM": "snauty",
+        "LTO": "On"
       }
     },
     {
@@ -37,7 +38,8 @@
       "description": "User interface configuration",
       "cacheVariables": {
         "AUTOBUILD": "Off",
-        "CHECKSTAGE": "On"
+        "CHECKSTAGE": "On",
+        "LTO": "On"
       }
     }
   ]
