@@ -266,11 +266,11 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
    SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
    SCIP_CALL( SCIPincludeExprhdlrVaridx(scip) );
+   SCIP_CALL( SCIPincludeNlpSolverConopt(scip) );
    SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
    SCIP_CALL( SCIPincludeNlpSolverFilterSQP(scip) );
    SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, TRUE) );
    SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, FALSE) );
-   SCIP_CALL( SCIPincludeNlpSolverConopt(scip) );
    SCIP_CALL( SCIPincludeNlpSolverAll(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
    SCIP_CALL( SCIPincludeTableDefault(scip) );
