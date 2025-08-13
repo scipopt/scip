@@ -1326,7 +1326,7 @@ static
 SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
 {
    SCIP_NLPIDATA* data;
-   int COI_Error = 0; /* CONOPT error counter */
+   int COI_Error; /* CONOPT error counter */
 
    assert(nlpi != NULL);
    assert(problem != NULL);
