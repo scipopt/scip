@@ -262,6 +262,7 @@ Build system
 ------------
 
 - changed the default for TPI to tny
+- added build flag CHECKSTAGE=auto to control stage checks in API function calls
 
 ### Makefile
 

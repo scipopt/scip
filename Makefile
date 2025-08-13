@@ -82,6 +82,7 @@ MAKESOFTLINKS	=	true
 # define build flags
 #-----------------------------------------------------------------------------
 BUILDFLAGS =	" ARCH=$(ARCH)\\n\
+		CHECKSTAGE=$(CHECKSTAGE)\\n\
 		COMP=$(COMP)\\n\
 		DEBUGSOL=$(DEBUGSOL)\\n\
 		EXPRINT=$(EXPRINT)\\n\
@@ -1726,6 +1727,9 @@ ifeq ($(ZIMPL),true)
 endif
 ifeq ($(AMPL),true)
 		@echo "#define SCIP_WITH_AMPL" >> $@
+endif
+ifeq ($(CHECKSTAGE),true)
+		@echo "#define SCIP_CHECK_STAGE" >> $@
 endif
 		@echo >> $@
 		@echo "#endif /* SCIP_CONFIG_H */" >> $@

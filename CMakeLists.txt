@@ -133,6 +133,10 @@ set(EXACTSOLVE AUTO CACHE STRING "compile with support for exact rational solve 
 set_property(CACHE EXACTSOLVE PROPERTY STRINGS AUTO ON OFF)
 string(TOUPPER ${EXACTSOLVE} EXACTSOLVE_UPPER) # Also allow "auto"
 
+set(CHECKSTAGE AUTO CACHE STRING "enable stage checks")
+set_property(CACHE CHECKSTAGE PROPERTY STRINGS AUTO ON OFF)
+string(TOUPPER ${CHECKSTAGE} CHECKSTAGE)
+
 # Initialize SCIP_WITH_EXACTSOLVE.
 if(EXACTSOLVE)
     set(SCIP_WITH_EXACTSOLVE ON) # We disable it later if dependencies are missing.
@@ -960,6 +964,15 @@ else()
     endif()
 endif()
 
+if((CHECKSTAGE STREQUAL "AUTO" AND CMAKE_BUILD_TYPE STREQUAL "Debug") OR (NOT CHECKSTAGE STREQUAL "AUTO" AND CHECKSTAGE))
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message(STATUS "Enabling stage checks")
+    else()
+        message(WARNING "Enabling stage checks decreases performance")
+    endif()
+    set(SCIP_CHECK_STAGE on)
+endif()
+
 message(STATUS "Finding CRITERION")
 find_package(CRITERION)
 if(CRITERION_FOUND)
@@ -1033,6 +1046,7 @@ endmacro()
 log_option(EXACTSOLVE)
 log_option(LPSEXACT)
 log_option(MPFR)
+log_option(CHECKSTAGE)
 
 if(AUTOBUILD)
   file(APPEND ${CMAKE_BINARY_DIR}/cmake.log "-DAUTOBUILD=on")
