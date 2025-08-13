@@ -968,7 +968,7 @@ if((CHECKSTAGE STREQUAL "AUTO" AND CMAKE_BUILD_TYPE STREQUAL "Debug") OR (NOT CH
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         message(STATUS "Enabling stage checks")
     else()
-        message(WARNING "Enabling stage checks impedes performance")
+        message(WARNING "Enabling stage checks decreases performance")
     endif()
     set(SCIP_CHECK_STAGE on)
 endif()
