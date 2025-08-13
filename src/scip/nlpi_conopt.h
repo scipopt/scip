@@ -54,19 +54,29 @@ SCIP_RETCODE SCIPincludeNlpSolverConopt(
  * @{
  */
 
- /** gets string that identifies CONOPT */
+/** sets the license to be passed to CONOPT's COIDEF_License */
+SCIP_EXPORT
+void SCIPsetLicenseConopt(
+   SCIP_NLPI*            nlpi,               /**< CONOPT NLPI */
+   int                   integer_1,          /**< CONOPT_LICENSE_INT_1 */
+   int                   integer_2,          /**< CONOPT_LICENSE_INT_2 */
+   int                   integer_3,          /**< CONOPT_LICENSE_INT_3 */
+   const char*           text                /**< CONOPT_LICENSE_TEXT */
+   );
+
+/** gets string that identifies CONOPT */
 SCIP_EXPORT
 const char* SCIPgetSolverNameConopt(
    void
    );
 
-/** gets string that describes Conopt */
+/** gets string that describes CONOPT */
 SCIP_EXPORT
 const char* SCIPgetSolverDescConopt(
    void
    );
 
-/** returns whether Conopt is available, i.e., whether it has been linked in */
+/** returns whether CONOPT is available, i.e., whether it has been linked in */
 SCIP_EXPORT
 SCIP_Bool SCIPisConoptAvailableConopt(
    void

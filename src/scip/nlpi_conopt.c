@@ -66,6 +66,10 @@
 struct SCIP_NlpiData
 {
    SCIP_CLOCK*           solvetime;          /**< clock for measuring solving time */
+   int                   license_int_1;      /**< integer 1 of CONOPT license */
+   int                   license_int_2;      /**< integer 2 of CONOPT license */
+   int                   license_int_3;      /**< integer 3 of CONOPT license */
+   char                  license_text[81];   /**< text of CONOPT license */
 };
 
 struct SCIP_NlpiProblem
@@ -103,7 +107,6 @@ struct SCIP_NlpiProblem
    int                   nother;             /**< number of other calls */
    int                   nlimit;             /**< number of calls where the solver terminated due to a time or iteration limit */
 };
-
 
 /*
  * Local methods
@@ -925,12 +928,9 @@ static SCIP_RETCODE initConopt(
    /* pass the problem pointer to CONOPT, so that it may be used in CONOPT callbacks */
    COI_Error += COIDEF_UsrMem(problem->CntVect, (void*)problem);
 
-   /* register license */
-#if defined(CONOPT_LICENSE_INT_1) && defined(CONOPT_LICENSE_INT_2) && defined(CONOPT_LICENSE_INT_3) && \
-    defined(CONOPT_LICENSE_TEXT)
-   COI_Error += COIDEF_License(problem->CntVect, CONOPT_LICENSE_INT_1, CONOPT_LICENSE_INT_2, CONOPT_LICENSE_INT_3,
-         CONOPT_LICENSE_TEXT);
-#endif
+   /* register license, if available */
+   if( data->license_text[0] != '\0' )
+      COI_Error += COIDEF_License(problem->CntVect, data->license_int_1, data->license_int_2, data->license_int_3, data->license_text);
 
    if( COI_Error )
       SCIPinfoMessage(scip, NULL, "Error %d encountered during initialising CONOPT\n", COI_Error);
@@ -981,7 +981,24 @@ static void handleConoptParam(
 static
 SCIP_DECL_NLPICOPY(nlpiCopyConopt)
 {
+   SCIP_NLPI* targetnlpi;
+   SCIP_NLPIDATA* sourcenlpidata;
+
    SCIP_CALL( SCIPincludeNlpSolverConopt(scip) );
+
+   /* if license is set in source NLPI, maybe set via SCIPsetLicenseConopt(),
+    * then pass it on to the copy
+    */
+   sourcenlpidata = SCIPnlpiGetData(sourcenlpi);
+   assert(sourcenlpidata != NULL);
+   if( sourcenlpidata->license_text[0] != '\0' )
+   {
+      targetnlpi = SCIPfindNlpi(scip, NLPI_NAME);
+      assert(targetnlpi != NULL);
+
+      SCIPsetLicenseConopt(targetnlpi, sourcenlpidata->license_int_1,
+         sourcenlpidata->license_int_2, sourcenlpidata->license_int_3, sourcenlpidata->license_text);
+   }
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -1467,6 +1484,14 @@ SCIP_RETCODE SCIPincludeNlpSolverConopt(
    /* create Conopt solver interface data */
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &nlpidata) );
 
+#if defined(CONOPT_LICENSE_INT_1) && defined(CONOPT_LICENSE_INT_2) && defined(CONOPT_LICENSE_INT_3) && \
+    defined(CONOPT_LICENSE_TEXT)
+   nlpidata->license_int_1 = CONOPT_LICENSE_INT_1;
+   nlpidata->license_int_2 = CONOPT_LICENSE_INT_2;
+   nlpidata->license_int_3 = CONOPT_LICENSE_INT_3;
+   (void) SCIPsnprintf(data->license_text, sizeof(data->license_text), "%s", CONOPT_LICENSE_TEXT);
+#endif
+
    /* create and include solver interface */
    SCIP_CALL( SCIPincludeNlpi(scip,
          NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
@@ -1482,6 +1507,27 @@ SCIP_RETCODE SCIPincludeNlpSolverConopt(
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameConopt(), SCIPgetSolverDescConopt()) );
 
    return SCIP_OKAY;
+}
+
+/** sets the license to be passed to CONOPT's COIDEF_License */
+void SCIPsetLicenseConopt(
+   SCIP_NLPI*            nlpi,               /**< CONOPT NLPI */
+   int                   integer_1,          /**< CONOPT_LICENSE_INT_1 */
+   int                   integer_2,          /**< CONOPT_LICENSE_INT_2 */
+   int                   integer_3,          /**< CONOPT_LICENSE_INT_3 */
+   const char*           text                /**< CONOPT_LICENSE_TEXT */
+   )
+{
+   SCIP_NLPIDATA* data;
+   assert(nlpi != NULL);
+
+   data = SCIPnlpiGetData(nlpi);
+   assert(data != NULL);
+
+   data->license_int_1 = integer_1;
+   data->license_int_2 = integer_2;
+   data->license_int_3 = integer_3;
+   (void) SCIPsnprintf(data->license_text, sizeof(data->license_text), "%s", text);
 }
 
 #define STR_HELPER(x) #x

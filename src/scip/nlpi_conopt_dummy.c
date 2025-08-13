@@ -60,3 +60,13 @@ SCIP_Bool SCIPisConoptAvailableConopt(void)
 {
    return FALSE;
 }
+
+/** sets the license to be passed to CONOPT's COIDEF_License */
+void SCIPsetLicenseConopt(
+   SCIP_NLPI*            nlpi,               /**< CONOPT NLPI */
+   int                   integer_1,          /**< CONOPT_LICENSE_INT_1 */
+   int                   integer_2,          /**< CONOPT_LICENSE_INT_2 */
+   int                   integer_3,          /**< CONOPT_LICENSE_INT_3 */
+   const char*           text                /**< CONOPT_LICENSE_TEXT */
+   )
+{ }
