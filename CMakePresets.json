@@ -31,6 +31,14 @@
         "GMP": "Off",
         "LPS": "none"
       }
+    },
+    {
+      "name": "interface",
+      "description": "User interface configuration",
+      "cacheVariables": {
+        "AUTOBUILD": "Off",
+        "CHECKSTAGE": "On"
+      }
     }
   ]
 }
