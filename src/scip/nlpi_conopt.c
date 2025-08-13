@@ -1037,9 +1037,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemConopt)
    SCIP_CALL( SCIPnlpiOracleCreate(scip, &(*problem)->oracle) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName(scip, (*problem)->oracle, name) );
 
-   COI_Create(&((*problem)->CntVect));
-
-   if( (*problem)->CntVect == NULL )
+   if( COI_Create(&((*problem)->CntVect)) || (*problem)->CntVect == NULL )
    {
       SCIPerrorMessage("Could not create CONOPT control vector\n");
       return SCIP_ERROR;
@@ -1069,7 +1067,11 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemConopt)
    SCIPfreeRandom(scip, &(*problem)->randnumgen);
    SCIPfreeMemoryArrayNull(scip, &(*problem)->initguess);
 
-   COI_Free(&((*problem)->CntVect));
+   if( COI_Free(&((*problem)->CntVect)) )
+   {
+      SCIPerrorMessage("Error when freeing CONOPT control vector\n");
+      return SCIP_ERROR;
+   }
 
    SCIPfreeBlockMemory(scip, problem);
    *problem = NULL;
@@ -1324,9 +1326,7 @@ static
 SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
 {
    SCIP_NLPIDATA* data;
-#ifdef SCIP_DEBUG
    int COI_Error = 0; /* CONOPT error counter */
-#endif
 
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -1358,16 +1358,15 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
    /* initialize Conopt data if necessary */
    if( problem->firstrun )
    {
-      initConopt(scip, data, problem);
+      SCIP_CALL( initConopt(scip, data, problem) );
       problem->firstrun = FALSE;
    }
 
    /* measure time */
-   SCIPresetClock(scip, data->solvetime);
-   SCIPstartClock(scip, data->solvetime);
+   SCIP_CALL( SCIPresetClock(scip, data->solvetime) );
+   SCIP_CALL( SCIPstartClock(scip, data->solvetime) );
 
    /* optimize */
-#ifdef SCIP_DEBUG
    COI_Error = COI_Solve(problem->CntVect);
 
    /* CONOPT may return either a positive error code, which is one of its own error codes,
@@ -1386,9 +1385,6 @@ SCIP_DECL_NLPISOLVE(nlpiSolveConopt)
             SCIPdebugMsg(scip, "Errors encountered in CONOPT during solution, %d\n", COI_Error);
       }
    }
-#else
-   COI_Solve(problem->CntVect);
-#endif
 
    /* store statistics (some statistics are passed back to SCIP by the Status callback) */
    problem->solvetime = SCIPgetClockTime(scip, data->solvetime);
