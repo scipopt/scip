@@ -506,8 +506,7 @@ Note that ZIMPL needs the GNU multiprecision library (GMP) to be installed on yo
 ln -s <path to CONOPT installation> <path to SCIP>/lib/shared/conoptdir
 (e.g. `cd scip; ln -s /Conopt lib/shared/conoptdir
 ```
-The path to the CONOPT installation is the path under where the CONOPT build has been installed.
-It should contain the directories `include/conopt.h` with the CONOPT header files and the directory `lib` with the CONOPT libraries.
+The path to the CONOPT installation is the directory that should contain `include/conopt.h` with the CONOPT header files and the directory `lib` with the CONOPT libraries.
 
 #### j) to use IPOPT as NLP solver
 
