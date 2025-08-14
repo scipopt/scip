@@ -180,7 +180,7 @@ Interface changes
 - SCIPpropSetTimingmask() to set timing mask of a propagator
 - added C++ interface for expression handlers: src/objscip/objexprhdlr.h
 - SCIPaddUpgrade() to add constraint upgrades while especially informing the conflict store
-- SCIPsetLicenseConopt(), SCIPgetSolverNameConopt(), SCIPgetSolverDescConopt() and SCIPisConoptAvailableConopt() to interact with the CONOPT interface
+- SCIPincludeNlpSolverConopt(), SCIPsetLicenseConopt(), SCIPgetSolverNameConopt(), SCIPgetSolverDescConopt(), and SCIPisConoptAvailableConopt() to interact with the CONOPT interface
 - SCIPnlpiOracleGetConstraintLinearCoef() to get a linear coefficient of a variable in a given constraint in the NLP oracle
 - SCIPnlpiOracleGetJacobianColSparsity() to get the columnwise sparsity pattern of the Jacobian from the NLP oracle
 - SCIPnlpiOracleGetObjGradientNnz() to get indices of nonzeroes in the objective gradient
