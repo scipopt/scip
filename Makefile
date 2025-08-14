@@ -598,6 +598,15 @@ endif
 ifeq ($(CONOPT),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/conoptdir
 LPIINSTMSG	+=	"\n  -> \"conoptdir\" is a directory containing the conopt installation, i.e., \"conoptdir/include/conopt.h\", \"conoptdir/lib/libconopt.so\", ... should exist.\n"
+ifneq ($(CONOPT_LICENSE_INT_1),)
+ifneq ($(CONOPT_LICENSE_INT_2),)
+ifneq ($(CONOPT_LICENSE_INT_3),)
+ifneq ($(CONOPT_LICENSE_TEXT),)
+CFLAGS		+=	-DCONOPT_LICENSE_INT_1=$(CONOPT_LICENSE_INT_1) -DCONOPT_LICENSE_INT_2=$(CONOPT_LICENSE_INT_2) -DCONOPT_LICENSE_INT_3=$(CONOPT_LICENSE_INT_3) -DCONOPT_LICENSE_TEXT="\"$(CONOPT_LICENSE_TEXT)\""
+endif
+endif
+endif
+endif
 endif
 
 ifeq ($(FILTERSQP),true)
