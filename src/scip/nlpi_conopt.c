@@ -633,6 +633,10 @@ static int COI_CALLCONV Status(
          SCIPdebugMsg(scip, "CONOPT terminated due to a time limit.\n");
          limit = TRUE;
          break;
+      case 4: /* terminated by solver */
+         problem->termstat = SCIP_NLPTERMSTAT_NUMERICERROR;
+         SCIPdebugMsg(scip, "CONOPT terminated due to numerical trouble.\n");
+         break;
       case 5:
          problem->termstat = SCIP_NLPTERMSTAT_EVALERROR;
          SCIPdebugMsg(scip, "CONOPT terminated due to evaluation errors.\n");
@@ -641,7 +645,6 @@ static int COI_CALLCONV Status(
          problem->termstat = SCIP_NLPTERMSTAT_INTERRUPT;
          SCIPdebugMsg(scip, "CONOPT interrupted by user.\n");
          break;
-      case 4: /* terminated by solver */
       case 6: /* unknown */
       case 9: /* error: setup failure */
       case 10: /* error: solver failure */
