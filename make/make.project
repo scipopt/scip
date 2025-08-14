@@ -123,6 +123,7 @@ NOBUFMEM	=	false
 NOBLKBUFMEM	=	false
 NAUTYEXTERNAL	=	false
 DEJAVUEXTERNAL	=	false
+CHECKSTAGE	=	auto
 
 # if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
 LIBEXTFORCESTATIC =	false
@@ -769,6 +770,14 @@ endif
 
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
+endif
+
+ifeq ($(CHECKSTAGE),auto)
+ ifeq ($(OPT),dbg)
+  CHECKSTAGE = true
+ else
+  CHECKSTAGE = false
+ endif
 endif
 
 #-----------------------------------------------------------------------------
