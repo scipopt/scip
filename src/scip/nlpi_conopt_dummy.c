@@ -69,4 +69,4 @@ void SCIPsetLicenseConopt(
    int                   integer_3,          /**< CONOPT_LICENSE_INT_3 */
    const char*           text                /**< CONOPT_LICENSE_TEXT */
    )
-{ }
+{ } /*lint !e715*/

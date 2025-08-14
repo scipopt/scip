@@ -1489,7 +1489,7 @@ SCIP_RETCODE SCIPincludeNlpSolverConopt(
    nlpidata->license_int_1 = CONOPT_LICENSE_INT_1;
    nlpidata->license_int_2 = CONOPT_LICENSE_INT_2;
    nlpidata->license_int_3 = CONOPT_LICENSE_INT_3;
-   (void) SCIPsnprintf(data->license_text, sizeof(data->license_text), "%s", CONOPT_LICENSE_TEXT);
+   (void) SCIPsnprintf(data->license_text, (int)sizeof(data->license_text), "%s", CONOPT_LICENSE_TEXT);
 #endif
 
    /* create and include solver interface */
@@ -1527,7 +1527,7 @@ void SCIPsetLicenseConopt(
    data->license_int_1 = integer_1;
    data->license_int_2 = integer_2;
    data->license_int_3 = integer_3;
-   (void) SCIPsnprintf(data->license_text, sizeof(data->license_text), "%s", text);
+   (void) SCIPsnprintf(data->license_text, (int)sizeof(data->license_text), "%s", text);
 }
 
 #define STR_HELPER(x) #x
