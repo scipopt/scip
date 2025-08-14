@@ -130,8 +130,8 @@ Interface changes
   SCIPvarGetOrigIndex()
   SCIPwriteSto()
 - the declaration of SCIPprintOrigProblem() and SCIPprintTransProblem() moved from scip_solvingstats.h to scip_prob.h
-- SCIPnlpiOracleGetJacobianSparsity() has been renamed to SCIPnlpiOracleGetJacobianRowSparsity and now expected two more arguments: colnlflags and nnlnz
-- SCIPnlpiOracleGetHessianLagSparsity() and SCIPnlpiOracleEvalHessianLag() now expect one more argument, colwise
+- SCIPnlpiOracleGetJacobianSparsity() has been renamed to SCIPnlpiOracleGetJacobianRowSparsity() and now expect two more arguments: colnlflags and nnlnz
+- SCIPnlpiOracleGetHessianLagSparsity() and SCIPnlpiOracleEvalHessianLag() now expect one more argument: colwise
 
 ### New API functions
 
