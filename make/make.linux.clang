@@ -54,3 +54,12 @@ LDFLAGS += $(SANITIZERFLAGS)
 ifeq ($(SHARED),true)
   LIBBUILDFLAGS += $(SANITIZERFLAGS)
 endif
+
+ifeq ($(LTO),true)
+  CFLAGS	+=	-flto
+  CXXFLAGS	+=	-flto
+  LDFLAGS	+=	-flto
+ifeq ($(SHARED),true)
+  LIBBUILDFLAGS +=	-flto
+endif
+endif
