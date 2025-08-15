@@ -4059,8 +4059,17 @@ SCIP_DECL_HEURINIT(heurInitScheduler)
    /* note: diving heuristics data will be initialized when executing scheduler */
    if( heurdata->divingheurs != NULL )
    {
+      int j;
+
+      for( j = 0; j < heurdata->ndiving; ++j )
+      {
+         SCIP_CALL( schedulerFreeDivingHeur(scip, &(heurdata->divingheurs[j])) );
+      }
+
       SCIPfreeBlockMemoryArray(scip, &heurdata->divingheurs, heurdata->divingheurssize);
-      assert(heurdata->divingheurs == NULL);
+
+      if( heurdata->defaultroot )
+         SCIPfreeBlockMemoryArray(scip, &heurdata->sortedindices, heurdata->ndiving + heurdata->nneighborhoods);
    }
 
    /* create working solution */
