@@ -12550,8 +12550,8 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          &conshdlrdata->linearizeheursol, FALSE, 'o', "oie", NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/assumeconvex",
-         "whether to assume that any constraint is convex",
-         &conshdlrdata->assumeconvex, FALSE, FALSE, NULL, NULL) );
+         "whether to assume that any constraint in the presolved problem is convex",
+         &conshdlrdata->assumeconvex, TRUE, FALSE, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
