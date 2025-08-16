@@ -1841,6 +1841,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    assert(nreconvconss != NULL);
    assert(nreconvliterals != NULL);
 
+   *dualproofsuccess = FALSE;
    *iterations = 0;
    *nconss = 0;
    *nliterals = 0;
