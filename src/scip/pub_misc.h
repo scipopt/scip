@@ -2139,23 +2139,6 @@ void SCIPswapPointers(
    void**                pointer2            /**< second pointer */
    );
 
-/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm
- *
- *  @deprecated Please use SCIPrandomPermuteIntArray()
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-void SCIPpermuteIntArray(
-   int*                  array,              /**< array to be shuffled */
-   int                   begin,              /**< first included index that should be subject to shuffling
-                                              *   (0 for first array entry)
-                                              */
-   int                   end,                /**< first excluded index that should not be subject to shuffling
-                                              *   (array size for last array entry)
-                                              */
-   unsigned int*         randseed            /**< seed value for the random generator */
-   );
-
 /** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
 SCIP_EXPORT
 void SCIPrandomPermuteIntArray(
@@ -2182,23 +2165,6 @@ void SCIPrandomPermuteArray(
                                               */
    );
 
-/** randomly shuffles parts of an array using the Fisher-Yates algorithm
- *
- *  @deprecated Please use SCIPrandomPermuteArray()
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-void SCIPpermuteArray(
-   void**                array,              /**< array to be shuffled */
-   int                   begin,              /**< first included index that should be subject to shuffling
-                                              *   (0 for first array entry)
-                                              */
-   int                   end,                /**< first excluded index that should not be subject to shuffling
-                                              *   (array size for last array entry)
-                                              */
-   unsigned int*         randseed            /**< pointer to seed value for the random generator */
-   );
-
 /**@} */
 
 
@@ -2212,24 +2178,6 @@ void SCIPpermuteArray(
  *
  * @{
  */
-
-
-/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly
- *
- * @deprecated Switch to SCIPcomputeArraysIntersectionInt().
- */
-SCIP_DEPRECATED
-SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeArraysIntersection(
-   int*                  array1,             /**< first array (in ascending order) */
-   int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (in ascending order) */
-   int                   narray2,            /**< number of entries of second array */
-   int*                  intersectarray,     /**< intersection of array1 and array2
-                                              *   (note: it is possible to use array1 for this input argument) */
-   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
-                                              *   (note: it is possible to use narray1 for this input argument) */
-   );
 
 /** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
 SCIP_EXPORT
@@ -2257,23 +2205,6 @@ void SCIPcomputeArraysIntersectionPtr(
    int*                  nintersectarray     /**< pointer to store number of entries of intersection array
                                               *   (note: it is possible to use narray1 for this input argument) */
 );
-
-/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly
- *
- * @deprecated Switch to SCIPcomputeArraysSetminusInt().
- */
-SCIP_DEPRECATED
-SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeArraysSetminus(
-   int*                  array1,             /**< first array (in ascending order) */
-   int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (in ascending order) */
-   int                   narray2,            /**< number of entries of second array */
-   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
-                                              *   (note: it is possible to use array1 for this input argument) */
-   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
-                                              *   (note: it is possible to use narray1 for this input argument) */
-   );
 
 /** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
 SCIP_EXPORT

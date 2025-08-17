@@ -10636,73 +10636,6 @@ void SCIPswapPointers(
    *pointer2 = tmp;
 }
 
-/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm
- *
- *  @deprecated Please use SCIPrandomPermuteIntArray()
- */
-void SCIPpermuteIntArray(
-   int*                  array,              /**< array to be shuffled */
-   int                   begin,              /**< first included index that should be subject to shuffling
-                                              *   (0 for first array entry)
-                                              */
-   int                   end,                /**< first excluded index that should not be subject to shuffling
-                                              *   (array size for last array entry)
-                                              */
-   unsigned int*         randseed            /**< seed value for the random generator */
-   )
-{
-   int tmp;
-   int i;
-
-   /* loop backwards through all elements and always swap the current last element to a random position */
-   while( end > begin+1 )
-   {
-      --end;
-
-      /* get a random position into which the last entry should be shuffled */
-      i = getRandomInt(begin, end, randseed);
-
-      /* swap the last element and the random element */
-      tmp = array[i];
-      array[i] = array[end];
-      array[end] = tmp;
-   }
-}
-
-
-/** randomly shuffles parts of an array using the Fisher-Yates algorithm
- *
- *  @deprecated Please use SCIPrandomPermuteArray()
- */
-void SCIPpermuteArray(
-   void**                array,              /**< array to be shuffled */
-   int                   begin,              /**< first included index that should be subject to shuffling
-                                              *   (0 for first array entry)
-                                              */
-   int                   end,                /**< first excluded index that should not be subject to shuffling
-                                              *   (array size for last array entry)
-                                              */
-   unsigned int*         randseed            /**< seed value for the random generator */
-   )
-{
-   void* tmp;
-   int i;
-
-   /* loop backwards through all elements and always swap the current last element to a random position */
-   while( end > begin+1 )
-   {
-      end--;
-
-      /* get a random position into which the last entry should be shuffled */
-      i = getRandomInt(begin, end, randseed);
-
-      /* swap the last element and the random element */
-      tmp = array[i];
-      array[i] = array[end];
-      array[end] = tmp;
-   }
-}
-
 /** draws a random subset of disjoint elements from a given set of disjoint elements;
  *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
  *
@@ -10766,25 +10699,6 @@ SCIP_RETCODE SCIPgetRandomSubset(
  * Arrays
  */
 
-/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly
- *
- * @deprecated Switch to SCIPcomputeArraysIntersectionInt().
- */
-SCIP_RETCODE SCIPcomputeArraysIntersection(
-   int*                  array1,             /**< first array (in ascending order) */
-   int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (in ascending order) */
-   int                   narray2,            /**< number of entries of second array */
-   int*                  intersectarray,     /**< intersection of array1 and array2
-                                              *   (note: it is possible to use array1 for this input argument) */
-   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
-                                              *   (note: it is possible to use narray1 for this input argument) */
-   )
-{
-   SCIPcomputeArraysIntersectionInt(array1, narray1, array2, narray2, intersectarray, nintersectarray);
-
-   return SCIP_OKAY;
-}
 
 /** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
 void SCIPcomputeArraysIntersectionInt(
@@ -10893,27 +10807,6 @@ void SCIPcomputeArraysIntersectionPtr(
 
    /* store size of intersection array */
    *nintersectarray = cnt;
-}
-
-
-/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly
- *
- * @deprecated Switch to SCIPcomputeArraysSetminusInt().
- */
-SCIP_RETCODE SCIPcomputeArraysSetminus(
-   int*                  array1,             /**< first array (in ascending order) */
-   int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (in ascending order) */
-   int                   narray2,            /**< number of entries of second array */
-   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
-                                              *   (note: it is possible to use array1 for this input argument) */
-   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
-                                              *   (note: it is possible to use narray1 for this input argument) */
-   )
-{
-   SCIPcomputeArraysSetminusInt(array1, narray1, array2, narray2, setminusarray, nsetminusarray);
-
-   return SCIP_OKAY;
 }
 
 /** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
