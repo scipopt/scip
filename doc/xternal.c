@@ -530,7 +530,7 @@
  *          <li>Test instances are available at <code>check/instances/MINLP/</code>.</li>
  *       </ul>
  *    </td>
- * </td>
+ * </tr>
  * <tr>
  *    <td>Constraint Integer Program (CIP)</td>
  *    <td>\f{align*}{
@@ -568,7 +568,7 @@
  *          <li>Test instances are available at <code>check/instances/MINLP/circle.lp</code>.</li>
  *       </ul>
  *    </td>
- * </td>
+ * </tr>
  * <tr>
  *    <td>Linear program (LP)</td>
  *    <td>\f{align*}{
@@ -579,7 +579,7 @@
  *    </td>
  *    <td>see MIP formats</td>
  *    <td>See <a href="FAQ\FILEEXT#scipaslpsolver">Can I use \SCIP as a pure LP solver</a> in the FAQ.</td>
- * </td>
+ * </tr>
  * <tr>
  *    <td>Pseudoboolean optimization</td>
  *    <td>\f{align*}{
