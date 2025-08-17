@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   compr_xyz.c
- * @ingroup OTHER_CFILES
+ * @ingroup DEFPLUGINS_COMPRESSION
  * @brief  xyz tree compression
  * @author Jakob Witzig
  */

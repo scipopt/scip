@@ -9499,6 +9499,11 @@
  *
  */
 
+/**@defgroup TASKINTERFACE Parallel task interface methods
+ * @ingroup INTERNALAPI
+ * @brief headers and methods for the parallel task interface of \SCIP
+ */
+
 /**@defgroup PublicSymmetryMethods Symmetry
  * @ingroup PUBLICCOREAPI
  * @brief methods for symmetry handling
@@ -9515,7 +9520,7 @@
  */
 
 /**@defgroup LPIS LP Solver Interface
- * @ingroup PUBLICPLUGINLPI
+ * @ingroup PUBLICPLUGINAPI
  * @brief methods and files provided by the LP solver interface of \SCIP
  *
  * \SCIP uses external tools to solve LP relaxations. The communication

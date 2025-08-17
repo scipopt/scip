@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_softtimelimit.h
+ * @ingroup DEFPLUGINS_EVENT
  * @brief  eventhdlr for soft time limit
  * @author Gerald Gamrath
  */

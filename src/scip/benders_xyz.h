@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benders_xyz.h
- * @ingroup BENDERSDECOMPOSITION
+ * @ingroup DEFPLUGINS_BENDERS
  * @brief  xyz Benders' decomposition
  * @author Stephen J. Maher
  */
