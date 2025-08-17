@@ -2038,18 +2038,6 @@ SCIP_Real SCIPcomputeGap(
  *@{
  */
 
-/** returns a random integer between minrandval and maxrandval
- *
- *  @deprecated Please use SCIPrandomGetInt() to request a random integer.
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-int SCIPgetRandomInt(
-   int                   minrandval,         /**< minimal value to return */
-   int                   maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   );
-
 /** returns a random integer between minrandval and maxrandval */
 SCIP_EXPORT
 int SCIPrandomGetInt(
@@ -2076,33 +2064,6 @@ SCIP_Real SCIPrandomGetReal(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator data */
    SCIP_Real             minrandval,         /**< minimal value to return */
    SCIP_Real             maxrandval          /**< maximal value to return */
-   );
-
-/** returns a random real between minrandval and maxrandval
- *
- *  @deprecated Please use SCIPrandomGetReal() to request a random real.
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-SCIP_Real SCIPgetRandomReal(
-   SCIP_Real             minrandval,         /**< minimal value to return */
-   SCIP_Real             maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   );
-
-/** draws a random subset of disjoint elements from a given set of disjoint elements;
- *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
- *
- *  @deprecated Please use SCIPrandomGetSubset()
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-SCIP_RETCODE SCIPgetRandomSubset(
-   void**                set,                /**< original set, from which elements should be drawn */
-   int                   nelems,             /**< number of elements in original set */
-   void**                subset,             /**< subset in which drawn elements should be stored */
-   int                   nsubelems,          /**< number of elements that should be drawn and stored */
-   unsigned int          randseed            /**< seed value for random generator */
    );
 
 /**@} */
