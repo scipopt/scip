@@ -619,9 +619,9 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    {
       for (j = 0; j < ncols; ++j)
       {
-         if ( SCIPvarGetLbAtIndex(vars[i][j], bdchgidx, FALSE) > 0.5 )
+         if ( SCIPgetVarLbAtIndex(scip, vars[i][j], bdchgidx, FALSE) > 0.5 )
             lexminfixes[i][j] = 1;
-         else if ( SCIPvarGetUbAtIndex(vars[i][j], bdchgidx, FALSE) < 0.5 || j == ncols - 1 )
+         else if ( SCIPgetVarUbAtIndex(scip, vars[i][j], bdchgidx, FALSE) < 0.5 || j == ncols - 1 )
             lexminfixes[i][j] = 0;
          else
             lexminfixes[i][j] = 2;
@@ -651,9 +651,9 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    {
       for (j = 0; j < ncols; ++j)
       {
-         if ( SCIPvarGetUbAtIndex(vars[i][j], bdchgidx, FALSE) < 0.5 )
+         if ( SCIPgetVarUbAtIndex(scip, vars[i][j], bdchgidx, FALSE) < 0.5 )
             lexmaxfixes[i][j] = 0;
-         else if ( SCIPvarGetLbAtIndex(vars[i][j], bdchgidx, FALSE) > 0.5 || j == 0 )
+         else if ( SCIPgetVarLbAtIndex(scip, vars[i][j], bdchgidx, FALSE) > 0.5 || j == 0 )
             lexmaxfixes[i][j] = 1;
          else
             lexmaxfixes[i][j] = 2;
@@ -675,8 +675,8 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
 
       for (i = 0; i <= ub; ++i)
       {
-         if ( SCIPvarGetLbAtIndex(vars[i][j], bdchgidx, FALSE) > 0.5 ||
-            SCIPvarGetUbAtIndex(vars[i][j], bdchgidx, FALSE) < 0.5 )
+         if ( SCIPgetVarLbAtIndex(scip, vars[i][j], bdchgidx, FALSE) > 0.5 ||
+            SCIPgetVarUbAtIndex(scip, vars[i][j], bdchgidx, FALSE) < 0.5 )
          {
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
             *result = SCIP_SUCCESS;

@@ -1897,7 +1897,7 @@
  * variables are 0.0). It uses <code>SCIPinferVarLbCons(scip, z, 1.0, c, 0)</code> to apply this assignment (an
  * inference information tag is not needed by the constraint handler and is set to 0).  In the conflict analysis, the
  * constraint handler may be asked to resolve the lower bound change on \f$z\f$ with constraint \f$c\f$, that was
- * applied at a time given by a bound change index "bdchgidx".  With a call to <code>SCIPvarGetLbAtIndex(z,
+ * applied at a time given by a bound change index "bdchgidx".  With a call to <code>SCIPgetVarLbAtIndex(z,
  * bdchgidx)</code>, the handler can find out, that the lower bound of variable \f$z\f$ was set to 1.0 at the given
  * point of time, and should call <code>SCIPaddConflictUb(scip, x, bdchgidx)</code> and <code>SCIPaddConflictUb(scip, y,
  * bdchgidx)</code> to tell SCIP, that the upper bounds of \f$x\f$ and \f$y\f$ at this point of time were the reason for
@@ -7228,7 +7228,7 @@
  * infervar), the corresponding bound change (@p bdchgidx, @p boundtype), and the integer (@p inferinfo) that has been
  * supplied during propagation.
  *
- * One can use SCIPvarGetUbAtIndex() or SCIPvarGetLbAtIndex() to detect the bounds before or after the propagation that
+ * One can use SCIPgetVarUbAtIndex() or SCIPgetVarLbAtIndex() to detect the bounds before or after the propagation that
  * should be investigated. Then the bounds that were involved should be passed to SCIP via SCIPaddConflictLb() and
  * SCIPaddConflictUb().  If there is more than one valid explanation of infeasibility, either one can be used.
  * Typically, smaller explanations tend to be better.
