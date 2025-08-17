@@ -59,7 +59,7 @@ extern "C" {
 /** creates the handler for linear constraints and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
- * */
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrExactLinear(
    SCIP*                 scip                /**< SCIP data structure */

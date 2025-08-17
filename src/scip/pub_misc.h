@@ -1931,7 +1931,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 /** tries to find a value, such that all given values, if scaled with this value become integral */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcalcIntegralScalarExact(
-   BMS_BUFMEM*           buffer,
+   BMS_BUFMEM*           buffer,             /**< buffer memory */
    SCIP_RATIONAL**       vals,               /**< values to scale */
    int                   nvals,              /**< number of values to scale */
    SCIP_Real             maxscale,           /**< maximal allowed scalar */

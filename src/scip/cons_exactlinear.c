@@ -1070,7 +1070,7 @@ void consdataInvalidateActivities(
 static
 void consdataComputePseudoActivity(
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
-   SCIP_RATIONAL*        pseudoactivity
+   SCIP_RATIONAL*        pseudoactivity      /**< buffer to store pseudoactivity */
    )
 {
    int i;
@@ -4194,13 +4194,13 @@ SCIP_RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
-/** prints activity conflict to  certificate file */
+/** prints activity conflict to certificate file */
 static
 SCIP_RETCODE printActivityConflictToCertificate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
-   SCIP_Bool rhs
+   SCIP_Bool             rhs                 /**< right-hand side */
    )
 {
    SCIP_Real side;
