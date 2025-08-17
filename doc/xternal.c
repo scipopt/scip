@@ -126,15 +126,6 @@
  * `msk`    | Mosek (version at least 7.0.0 required)
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
- *
- * There are two different interfaces for SoPlex. The default one (`spx`) uses an updated interface that is provided
- * by SoPlex itself (since version 2.0), resulting in a slimmer LPI that is similiar to those for CPLEX or XPRESS.
- * The other one - `spx1` - is the older LPI that directly interfaces the internal simplex solver of SoPlex and
- * therefore needs to duplicate some features in the LPI that are already available in SoPlex itself. It lacks some
- * features like persistent scaling which are only available in the modern interface. Upcoming features may not be
- * supported. Old compilers might have difficulties with the new interface because some C++11 features are required
- * that may not be supported.
- *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
