@@ -265,7 +265,7 @@ BEGIN {
 
    if( $3 == "==MISSING==" )
    {
-      # if out was missing, then we now have something like bzfviger.MINLP_convex.463_polygon75.scip-6.0.1.3.linux.x86_64.gnu.dbg.spx2.none.opt.minlp
+      # if out was missing, then we now have something like bzfviger.MINLP_convex.463_polygon75.scip-6.0.1.3.linux.x86_64.gnu.dbg.spx.none.opt.minlp
       # take the 3rd entry, hoping that the instance name didn't have a dot
       prob = b[3];
       # now remove the number at the begin

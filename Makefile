@@ -172,8 +172,8 @@ LPIINSTMSG	+=	" -> \"libiomp5.*\" is the path to the Intel OpenMP library, e.g.,
 LPIINSTMSG	+=	" -> \"libcilkrts.*\" is the path to the cilk library, e.g., \"<Mosek-path>/tools/platform/linux64x86/bin/libcilkrts.so.5\" (required for Mosek < 10.0 only).\n"
 endif
 
-LPSOPTIONS	+=	spx ( = spx2)
-ifeq ($(LPS),spx2)
+LPSOPTIONS	+=	spx
+ifeq ($(LPS),spx)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
 ifeq ($(MPFR),true)
@@ -295,13 +295,11 @@ endif
 LPIEXLIBOBJ	+=	lpiexact/lpiexact_spx.o
 LPIEXLIBSRC	+=	$(SRCDIR)/lpiexact/lpiexact_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
 ifneq ($(LPS),spx)
-ifneq ($(LPS),spx2)
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
-endif
 endif
 endif
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"<SoPlex-path>/src\".\n"
@@ -1880,8 +1878,8 @@ ifeq ($(GMP),true)
 		@echo "build failed with GMP=true: if GMP is not available, try building with GMP=false (note that this will deactivate Zimpl support)"
 endif
 ifeq ($(GMP),false)
-ifeq ($(LPS),spx2)
-		@echo "build failed with GMP=false and LPS=spx2: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
+ifeq ($(LPS),spx)
+		@echo "build failed with GMP=false and LPS=spx: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
 endif
 endif
 ifeq ($(BOOST),true)
@@ -1891,8 +1889,8 @@ ifeq ($(MPFR),true)
 		@echo "build failed with MPFR=true: if MPFR is not available, try building with MPFR=false (note that this will deactivate exact solving support)"
 endif
 ifeq ($(MPFR),false)
-ifeq ($(LPS),spx2)
-		@echo "build failed with MPFR=false and LPS=spx2: use MPFR=true or make sure that SoPlex is also built without MPFR support (make MPFR=false)"
+ifeq ($(LPS),spx)
+		@echo "build failed with MPFR=false and LPS=spx: use MPFR=true or make sure that SoPlex is also built without MPFR support (make MPFR=false)"
 endif
 endif
 

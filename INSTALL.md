@@ -704,7 +704,7 @@ Typing `make IPOPT=true WORHP=true FILTERSQP=true` uses SoPlex as LP solver, and
 You will be asked the following questions on the first call to `make` (example answers are already given):
 
 ```
-- Current settings: LPS=spx2 OSTYPE=linux ARCH=x86_64 COMP=gnu SHARED=false SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=true IPOPTOPT=opt FILTERSQP=true EXPRINT=cppad GAMS=false
+- Current settings: LPS=spx OSTYPE=linux ARCH=x86_64 COMP=gnu SHARED=false SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=true IPOPTOPT=opt FILTERSQP=true EXPRINT=cppad GAMS=false
 
 * SCIP needs some softlinks to external programs, in particular, LP-solvers.
 * Please insert the paths to the corresponding directories/libraries below.
