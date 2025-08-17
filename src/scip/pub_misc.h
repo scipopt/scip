@@ -625,19 +625,6 @@ void SCIPhashtableFree(
    SCIP_HASHTABLE**      hashtable           /**< pointer to the hash table */
    );
 
-/** removes all elements of the hash table
- *
- *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
- *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
- *
- *  @deprecated Please use SCIPhashtableRemoveAll()
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-void SCIPhashtableClear(
-   SCIP_HASHTABLE*       hashtable           /**< hash table */
-   );
-
 /** inserts element in hash table (multiple inserts of same element override the previous entry) */
 SCIP_EXPORT
 SCIP_RETCODE SCIPhashtableInsert(

@@ -2392,20 +2392,6 @@ void SCIPhashtableFree(
    BMSfreeBlockMemory((*hashtable)->blkmem, hashtable);
 }
 
-/** removes all elements of the hash table
- *
- *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
- *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
- *
- *  @deprecated Please use SCIPhashtableRemoveAll()
- */
-void SCIPhashtableClear(
-   SCIP_HASHTABLE*       hashtable           /**< hash table */
-   )
-{
-   SCIPhashtableRemoveAll(hashtable);
-}
-
 /* computes the distance from it's desired position for the element stored at pos */
 #define ELEM_DISTANCE(pos) (((pos) + hashtable->mask + 1 - (hashtable->hashes[(pos)]>>(hashtable->shift))) & hashtable->mask)
 
