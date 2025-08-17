@@ -335,9 +335,8 @@ SCIP_RETCODE SCIPcertifyConsOrigExactLinear(
    SCIP_CONS*            cons
    );
 
-/* @} */
-
-/* @} */
+/** @} */
+/** @} */
 
 #ifdef __cplusplus
 }
