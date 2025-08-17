@@ -179,8 +179,8 @@ FLAGS		+=	-I$(LIBDIR)/include/spxinc
 ifeq ($(MPFR),true)
 LPSLDFLAGS	+=	$(MPFR_LDFLAGS)
 endif
-LPILIBOBJ	=	lpi/lpi_spx2.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
-LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx2.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
+LPILIBOBJ	=	lpi/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
+LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
