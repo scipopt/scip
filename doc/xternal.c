@@ -1068,6 +1068,8 @@
 
  * \SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
  * problem instance in another file format (the LP format is much more human readable than the MPS format, for example).
+ * Since stein27.fzn has many constraints with the same name, which would result in an unusable LP file, we write out
+ * the problem with generic variable and constraint names (x1, x2, x3, ...; c1, c2, c3, ...) here.
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetWriteSolutions
  *
