@@ -7346,7 +7346,7 @@
  * on one problem in parallel. To use this feature \SCIP has to be compiled with an additional make option to
  * enable the threading functionality (e.g. TPI=tny, see \ref MAKE).
  * Then, a concurrent solve can be started by using the <code>concurrentopt</code> command instead of the <code>optimize</code> command
- * in the \SCIP shell, or by calling the interface function SCIPsolveParallel().
+ * in the \SCIP shell, or by calling the interface function SCIPsolveConcurrent().
  * To configure the behavior of the concurrent solving mode there are new parameters in the category <code>concurrent/</code>
  * and <code>parallel/</code> which will be explained here shortly.
  *
