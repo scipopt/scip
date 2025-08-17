@@ -9776,7 +9776,22 @@
  * This module contains methods to include specific file readers into \SCIP.
  *
  * @note All default plugins can be included at once (including all default file readers) using SCIPincludeDefaultPlugins()
+ */
+
+/**@defgroup IISFINDERS IIS Finders
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default IIS finders of \SCIP
  *
+ * A detailed description what an IIS finder does and how to add a IIS finder to SCIP can be found \ref IISFINDER "here".
+ */
+
+/**@defgroup IISfinderIncludes Inclusion methods
+ * @ingroup IISFINDERS
+ * @brief methods to include specific IIS finders into \SCIP
+ *
+ * This module contains methods to include specific IIS finders into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default file readers) using SCIPincludeDefaultPlugins()
  */
 
 /**@defgroup PARALLEL Parallel interface methods
