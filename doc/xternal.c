@@ -1796,7 +1796,7 @@
  * The CONSINITLP callback is executed before the first LP relaxation is solved.
  * It should add the LP relaxations of all "initial" constraints to the LP. The method should scan the constraints
  * array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the LP relaxation
- * of all initial constraints to the LP with calls to SCIPaddCut().
+ * of all initial constraints to the LP with calls to SCIPaddRow().
  *
  * @subsection CONSSEPALP
  *
@@ -1805,7 +1805,7 @@
  * the current LP solution.
  * The method is called in the LP solution loop, which means that a valid LP solution exists.
  *
- * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
  * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
@@ -1833,7 +1833,7 @@
  * the given primal solution.
  * The method is not called in the LP solution loop, which means that there is no valid LP solution.
  *
- * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
  * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
@@ -2697,7 +2697,7 @@
  * It should try to generate general purpose cutting planes in order to separate the current LP solution.
  * The method is called in the LP solution loop, which means that a valid LP solution exists.
  *
- * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
  * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
@@ -2726,7 +2726,7 @@
  * relaxations that want to separate an intermediate primal solution vector. Thus, if you do not want to support
  * such external plugins, you do not need to implement this callback method.
  *
- * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
  * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
