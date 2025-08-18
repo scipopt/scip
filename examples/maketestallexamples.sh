@@ -15,7 +15,7 @@ EXAMPLES=$(for f in *;do if [[ -d $f  ]]; then echo $f;fi; done)
 # Sudoku doesn't have a test
 EXAMPLES=$(echo "$EXAMPLES" |grep -v Sudoku)
 
-LPSOLVERS=(spx2)
+LPSOLVERS=(spx)
 OPTS=(dbg)
 
 # parse command line
