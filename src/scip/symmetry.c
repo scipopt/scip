@@ -2042,7 +2042,7 @@ SCIP_RETCODE isDoublelLexSym(
          for (j = (*colsbegin)[c]; j < (*colsbegin)[c + 1] - 1; ++j)
          {
             assert( idxtomatrix1[(*doublelexmatrix)[i][j]] == idxtomatrix1[(*doublelexmatrix)[i][j + 1]] );
-            if( idxtorow1[(*doublelexmatrix)[i][j]] == idxtorow1[(*doublelexmatrix)[i][j + 1]] )
+            if( idxtorow1[(*doublelexmatrix)[i][j]] != idxtorow1[(*doublelexmatrix)[i][j + 1]] )
             {
                *success = FALSE;
                goto FREEMEMORY;
@@ -2059,7 +2059,7 @@ SCIP_RETCODE isDoublelLexSym(
          for (j = (*rowsbegin)[c]; j < (*rowsbegin)[c + 1] - 1; ++j)
          {
             assert( idxtomatrix2[(*doublelexmatrix)[j][i]] == idxtomatrix2[(*doublelexmatrix)[j + 1][i]] );
-            if( idxtorow2[(*doublelexmatrix)[j][i]] == idxtorow2[(*doublelexmatrix)[j + 1][i]] )
+            if( idxtorow2[(*doublelexmatrix)[j][i]] != idxtorow2[(*doublelexmatrix)[j + 1][i]] )
             {
                *success = FALSE;
                goto FREEMEMORY;
