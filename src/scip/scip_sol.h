@@ -650,9 +650,7 @@ SCIP_Real SCIPgetSolVal(
    SCIP_VAR*             var                 /**< variable to get value for */
    );
 
-/** returns value of variable in primal CIP solution, or in current LP/pseudo solution
- *
- *  @return value of variable in primal CIP solution, or in current LP/pseudo solution
+/** gets value of variable in primal CIP solution, or in current LP/pseudo solution
  *
  *  @pre In case the solution pointer @p sol is @b NULL, that means it is asked for the LP or pseudo solution, this method
  *       can only be called if @p scip is in the solving stage \ref SCIP_STAGE_SOLVING. In any other case, this method
@@ -730,9 +728,7 @@ SCIP_Real SCIPgetSolOrigObj(
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    );
 
-/** returns exact objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
- *
- *  @return exact objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
+/** gets exact objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -778,9 +774,7 @@ SCIP_Real SCIPgetSolTransObj(
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    );
 
-/** returns transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
- *
- *  @return transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
+/** gets transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMING

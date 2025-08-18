@@ -434,8 +434,6 @@ SCIP_RETCODE SCIPprintRowExact(
 
 /** gets objective value of current exact LP (which is the sum of column and loose objective value)
  *
- *  @return the objective value of current exact LP (which is the sum of column and loose objective value).
- *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *

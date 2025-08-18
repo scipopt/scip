@@ -333,17 +333,18 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadScale(
 /** add a scaled row to a dense vector indexed over the problem variables and keep the index of non-zeros up-to-date
  *
  *  In the safe variant, we need to transform all variables (implicitly) to nonnegative variables using their
- *  upper/lower bounds.  When adding \lambda * (c^Tx \le d) to a^Tx \le b, this results in:
+ *  upper/lower bounds.  When adding \f$\lambda * (c^Tx \le d)\f$ to \f$a^Tx \le b\f$, this results in:
  *
- *    Define m_i=a_i+\lambda c_i
- *           U \cap L = \empty
- *           U = \{ i : x_i \le u_i\}
- *           L = \{ i : x_i \ge l_i\}
+ *    \f{align*}{
+ *      m_i & =a_i+\lambda c_i \\
+ *      U \cap L & = \emptyset \\
+ *      U & = \{ i : x_i \le u_i\} \\
+ *      L & = \{ i : x_i \ge l_i\} \\
+ *      \sum_{i \in U} \overline{m_i}x_i + \sum_{i \in L}\underline{m_i}x_i
+ *                    & \le b+ \lambda d + \sum_{i \in U, u_i > 0}(\overline{m_i}-\underline{m_i})u_i + \sum_{i \in L, l_i < 0}(\underline{m_i}-\overline{m_i})l_i
+ *    \f}
  *
- *    \sum_{i \in U} \overline{m_i}x_i + \sum_{i \in L}\underline{m_i}x_i
- *                     \le b+ \lambda d + \sum_{i \in U, u_i > 0}(\overline{m_i}-\underline{m_i})u_i + \sum_{i \in L, l_i < 0}(\underline{m_i}-\overline{m_i})l_i}
- *
- *  This methods sums up the left hand side, and stores the change of the rhs due to the variable bounds in @param rhschange.
+ *  This methods sums up the left hand side, and stores the change of the rhs due to the variable bounds in rhschange.
  *
  *  @note this method is safe for usage in exact solving mode
  */

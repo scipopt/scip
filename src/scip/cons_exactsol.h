@@ -49,15 +49,11 @@ extern "C" {
 /** creates the handler for ExactSol constraints and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
- * */
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrExactSol(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
-/** @} */
-
-/** @} */
 
 #ifdef __cplusplus
 }
