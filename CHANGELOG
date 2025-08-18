@@ -199,6 +199,8 @@ Interface changes
 
 ### Interfaces to external software
 
+- removed LP solver interface lpi_spx1 that used the old SoPlex interface; renamed lpi_spx2 to lpi_spx
+
 ### Changed parameters
 
 - heuristics/scheduler/heurtimelimit removed to avoid indeterministic behavior of scheduler heuristic, uses main time limit instead
@@ -255,6 +257,8 @@ Interface changes
 Deleted files
 -------------
 
+- removed lpi_spx1.cpp
+
 Testing
 -------
 
@@ -263,6 +267,7 @@ Build system
 
 - changed the default for TPI to tny
 - added build flag CHECKSTAGE=auto to control stage checks in API function calls
+- removed LPS options spx1 and spx2, only LPS=spx is available to select SoPlex now
 
 ### Makefile
 
@@ -276,6 +281,7 @@ Build system
 - removed option to link TBB library, as this is not used by default when PaPILO has not been built via cmake
   (use USRCXXFLAGS=-DPAPILO_TBB USRLDFLAGS=-ltbb to enable TBB for PaPILO)
 - link-time-optimization can be enabled on Linux and macOS with gcc and clang by setting LTO=true, default is false
+- LPS=spx is no longer mapped to LPS=spx2, which changes the name of the generated LPI libraries and binaries when using SoPlex
 
 ### Cmake
 
@@ -287,6 +293,7 @@ Build system
 - scip-config.cmake now defines a variable SCIP_COMPILE_FLAGS, which could be used to compile code that builds against SCIP via cmake;
   currently, this only passes on the sanitizer flags that were used to build libscip
 - link-time-optimization can be enabled if supported by compiler by using -DLTO=on, default is off
+- removed option LEGACY
 
 Fixed bugs
 ----------

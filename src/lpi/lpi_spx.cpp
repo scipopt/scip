@@ -22,16 +22,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   lpi_spx2.cpp
+/**@file   lpi_spx.cpp
  * @ingroup LPIS
- * @brief  LP interface for SoPlex version 2.0 and higher
+ * @brief  LP interface for SoPlex
  * @author Matthias Miltenberger
  * @author Ambros Gleixner
  *
- * This is an implementation of SCIP's LP interface for SoPlex using the extended and improved interface of SoPlex 2.0
+ * This is an implementation of SCIP's LP interface for SoPlex.
  *
  * For debugging purposes, the SoPlex results can be double checked with CPLEX if SCIP_WITH_LPSCHECK is defined. This may
- * yield false positives, since the LP is dumped to a file for transfering it to CPLEX, hence, precision may be lost.
+ * yield false positives, since the LP is dumped to a file for transferring it to CPLEX, hence, precision may be lost.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
