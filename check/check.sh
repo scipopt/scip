@@ -226,12 +226,7 @@ do
 
                 if test "$WRITESETTINGS" = "true"
                 then
-                    if [ $MAXJOBS -eq 1 ]
-                    then
-                        bash write-settings.sh
-                    else
-                        bash write-settings.sh &
-                    fi
+                    bash write-settings.sh
                 fi
 
                 echo "Solving instance ${INSTANCE} with settings ${SETNAME}, hard time ${HARDTIMELIMIT}, hard mem ${HARDMEMLIMIT}"
