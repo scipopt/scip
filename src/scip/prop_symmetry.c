@@ -5971,7 +5971,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "doublelex_cols_%d_%d", id, p);
       SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
-            nrows, colsbegin[p + 1] - colsbegin[p], FALSE, FALSE, TRUE, FALSE,
+            nrows, colsbegin[p + 1] - colsbegin[p], FALSE, TRUE, TRUE, FALSE,
             propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       propdata->genorbconss[(propdata->ngenorbconss)++] = cons;
@@ -5992,7 +5992,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "doublelex_rows_%d_%d", id, p);
       SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
-            ncols, rowsbegin[p + 1] - rowsbegin[p], FALSE, FALSE, TRUE, FALSE,
+            ncols, rowsbegin[p + 1] - rowsbegin[p], FALSE, TRUE, TRUE, FALSE,
             propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
       propdata->genorbconss[(propdata->ngenorbconss)++] = cons;
