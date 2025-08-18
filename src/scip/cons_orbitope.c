@@ -383,7 +383,7 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
     * This is only possible if the orbitope's symmetries do not interact with other symmetry handling
     * methods (otherwise, dropping rows might change the variable order).
     */
-   if ( npprows >= 3 && ! mayinteract )
+   if ( (npprows >= 3 && ! mayinteract) || npprows == *nrows )
    {
       int r = *nrows - 1;
       int i;
