@@ -2303,62 +2303,70 @@ SCIP_RETCODE treeApplyPendingBdchgs(
 
    assert(tree != NULL);
 
-   npendingbdchgs = tree->npendingbdchgs;
-   for( i = 0; i < npendingbdchgs; ++i )
+   if( tree->cutoffdepth > tree->effectiverootdepth )
    {
-      var = tree->pendingbdchgs[i].var;
-      assert(SCIPnodeGetDepth(tree->pendingbdchgs[i].node) < tree->cutoffdepth);
-
-      conflictdepth = SCIPvarGetConflictingBdchgDepth(var, set, tree->pendingbdchgs[i].boundtype,
-         tree->pendingbdchgs[i].newbound);
-
-      /* It can happen, that a pending bound change conflicts with the global bounds, because when it was collected, it
-       * just conflicted with the local bounds, but a conflicting global bound change was applied afterwards. In this
-       * case, we can cut off the node where the pending bound change should be applied.
-       */
-      if( conflictdepth == 0 )
+      npendingbdchgs = tree->npendingbdchgs;
+      for( i = 0; i < npendingbdchgs; ++i )
       {
-         SCIP_CALL( SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+         assert(tree->pendingbdchgs[i].node != NULL);
+         if( tree->pendingbdchgs[i].node->cutoff )
+            continue;
+         assert(tree->pendingbdchgs[i].node->depth < tree->cutoffdepth);
+         assert(tree->effectiverootdepth < tree->cutoffdepth);
 
-         if( ((int) tree->pendingbdchgs[i].node->depth) <= tree->effectiverootdepth )
-            break; /* break here to clear all pending bound changes */
+         var = tree->pendingbdchgs[i].var;
+         conflictdepth = SCIPvarGetConflictingBdchgDepth(var, set, tree->pendingbdchgs[i].boundtype,
+            tree->pendingbdchgs[i].newbound);
+
+         /* It can happen, that a pending bound change conflicts with the global bounds, because when it was collected, it
+          * just conflicted with the local bounds, but a conflicting global bound change was applied afterwards. In this
+          * case, we can cut off the node where the pending bound change should be applied.
+          */
+         if( conflictdepth == 0 )
+         {
+            SCIP_CALL( SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+
+            /* break here to clear all pending bound changes below */
+            if( tree->effectiverootdepth >= tree->cutoffdepth )
+               break;
+            else
+               continue;
+         }
+
+         assert(conflictdepth == -1);
+
+         SCIPsetDebugMsg(set, "applying pending bound change <%s>[%g,%g] %s %g\n", SCIPvarGetName(var),
+            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+            tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            tree->pendingbdchgs[i].newbound);
+
+         /* ignore bounds that are now redundant (for example, multiple entries in the pendingbdchgs for the same
+          * variable)
+          */
+         if( tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER )
+         {
+            SCIP_Real lb;
+
+            lb = SCIPvarGetLbLocal(var);
+            if( !SCIPsetIsGT(set, tree->pendingbdchgs[i].newbound, lb) )
+               continue;
+         }
          else
-            continue;
+         {
+            SCIP_Real ub;
+
+            assert(tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_UPPER);
+            ub = SCIPvarGetUbLocal(var);
+            if( !SCIPsetIsLT(set, tree->pendingbdchgs[i].newbound, ub) )
+               continue;
+         }
+
+         SCIP_CALL( SCIPnodeAddBoundinfer(tree->pendingbdchgs[i].node, blkmem, set, stat, transprob, origprob, tree, reopt,
+               lp, branchcand, eventqueue, cliquetable, var, tree->pendingbdchgs[i].newbound, tree->pendingbdchgs[i].boundtype,
+               tree->pendingbdchgs[i].infercons, tree->pendingbdchgs[i].inferprop, tree->pendingbdchgs[i].inferinfo,
+               tree->pendingbdchgs[i].probingchange) );
+         assert(tree->npendingbdchgs == npendingbdchgs); /* this time, the bound change can be applied! */
       }
-
-      assert(conflictdepth == -1);
-
-      SCIPsetDebugMsg(set, "applying pending bound change <%s>[%g,%g] %s %g\n", SCIPvarGetName(var),
-         SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-         tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-         tree->pendingbdchgs[i].newbound);
-
-      /* ignore bounds that are now redundant (for example, multiple entries in the pendingbdchgs for the same
-       * variable)
-       */
-      if( tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER )
-      {
-         SCIP_Real lb;
-
-         lb = SCIPvarGetLbLocal(var);
-         if( !SCIPsetIsGT(set, tree->pendingbdchgs[i].newbound, lb) )
-            continue;
-      }
-      else
-      {
-         SCIP_Real ub;
-
-         assert(tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_UPPER);
-         ub = SCIPvarGetUbLocal(var);
-         if( !SCIPsetIsLT(set, tree->pendingbdchgs[i].newbound, ub) )
-            continue;
-      }
-
-      SCIP_CALL( SCIPnodeAddBoundinfer(tree->pendingbdchgs[i].node, blkmem, set, stat, transprob, origprob, tree, reopt,
-            lp, branchcand, eventqueue, cliquetable, var, tree->pendingbdchgs[i].newbound, tree->pendingbdchgs[i].boundtype,
-            tree->pendingbdchgs[i].infercons, tree->pendingbdchgs[i].inferprop, tree->pendingbdchgs[i].inferinfo,
-            tree->pendingbdchgs[i].probingchange) );
-      assert(tree->npendingbdchgs == npendingbdchgs); /* this time, the bound change can be applied! */
    }
 
    /* clear pending bound changes */
@@ -2848,7 +2856,6 @@ void treeFindSwitchForks(
     */
    if( node == NULL )
    {
-      tree->cutoffdepth = INT_MAX;
       tree->repropdepth = INT_MAX;
       return;
    }
