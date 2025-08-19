@@ -10,6 +10,7 @@ Fixed bugs
 - cut off dead end node to correctly track dual bound update during solving
 - avoid constructing and flushing the LP in SCIPwriteLP() and SCIPwriteMIP() to avert unexpected affection
 - apply multi-aggregations before detecting redundancy in propagateCons() of cons_varbound.c to keep bound implications
+- skip bound changes for cutoff subtree in treeApplyPendingBdchgs()
 
 Build system
 ------------
