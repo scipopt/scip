@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_globalbnd.h
- * @ingroup EVENTS
+ * @ingroup DEFPLUGINS_EVENT
  * @brief  eventhdlr for storing all global bound changes
  * @author Leona Gottwald
  *

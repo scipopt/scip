@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benders_default.c
- * @ingroup OTHER_CFILES
+ * @ingroup DEFPLUGINS_BENDERS
  * @brief  default Benders' decomposition plugin
  * @author Stephen J. Maher
  *

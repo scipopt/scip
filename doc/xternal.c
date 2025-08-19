@@ -530,7 +530,7 @@
  *          <li>Test instances are available at <code>check/instances/MINLP/</code>.</li>
  *       </ul>
  *    </td>
- * </td>
+ * </tr>
  * <tr>
  *    <td>Constraint Integer Program (CIP)</td>
  *    <td>\f{align*}{
@@ -568,7 +568,7 @@
  *          <li>Test instances are available at <code>check/instances/MINLP/circle.lp</code>.</li>
  *       </ul>
  *    </td>
- * </td>
+ * </tr>
  * <tr>
  *    <td>Linear program (LP)</td>
  *    <td>\f{align*}{
@@ -579,7 +579,7 @@
  *    </td>
  *    <td>see MIP formats</td>
  *    <td>See <a href="FAQ\FILEEXT#scipaslpsolver">Can I use \SCIP as a pure LP solver</a> in the FAQ.</td>
- * </td>
+ * </tr>
  * <tr>
  *    <td>Pseudoboolean optimization</td>
  *    <td>\f{align*}{
@@ -1068,6 +1068,8 @@
 
  * \SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
  * problem instance in another file format (the LP format is much more human readable than the MPS format, for example).
+ * Since stein27.fzn has many constraints with the same name, which would result in an unusable LP file, we write out
+ * the problem with generic variable and constraint names (x1, x2, x3, ...; c1, c2, c3, ...) here.
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetWriteSolutions
  *
@@ -9499,6 +9501,11 @@
  *
  */
 
+/**@defgroup TASKINTERFACE Parallel task interface methods
+ * @ingroup INTERNALAPI
+ * @brief headers and methods for the parallel task interface of \SCIP
+ */
+
 /**@defgroup PublicSymmetryMethods Symmetry
  * @ingroup PUBLICCOREAPI
  * @brief methods for symmetry handling
@@ -9515,7 +9522,7 @@
  */
 
 /**@defgroup LPIS LP Solver Interface
- * @ingroup PUBLICPLUGINLPI
+ * @ingroup PUBLICPLUGINAPI
  * @brief methods and files provided by the LP solver interface of \SCIP
  *
  * \SCIP uses external tools to solve LP relaxations. The communication

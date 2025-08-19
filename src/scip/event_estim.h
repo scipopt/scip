@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_estim.h
- * @ingroup EVENTS
+ * @ingroup DEFPLUGINS_EVENT
  * @brief  event handler for tree size estimation and restarts
  *
  * This event handler plugin provides different methods for approximating the current fraction of the search
