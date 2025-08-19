@@ -23,11 +23,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   compr_largestrepr.h
- * @ingroup COMPRESSION
+ * @ingroup DEFPLUGINS_COMPRESSION
  * @brief  largestrepr tree compression
  * @author Jakob Witzig
- *
- * template file for tree compression plugins
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
