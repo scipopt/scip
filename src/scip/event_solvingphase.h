@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_solvingphase.h
- * @ingroup EVENTS
+ * @ingroup DEFPLUGINS_EVENT
  * @brief  eventhdlr for solving phase dependent parameter adjustment
  * @author Gregor Hendel
  *

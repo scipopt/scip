@@ -23,7 +23,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_newsol.h
- * @ingroup EVENTS
  * @brief  eventhdlr that adds new solutions to the candidate pool for the exchange heuristic
  * @author Leon Eifler
  */

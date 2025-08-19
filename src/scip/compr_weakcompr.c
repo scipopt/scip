@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   compr_weakcompr.c
- * @ingroup OTHER_CFILES
+ * @ingroup DEFPLUGINS_COMPRESSION
  * @brief  weakcompr tree compression
  * @author Jakob Witzig
  */
