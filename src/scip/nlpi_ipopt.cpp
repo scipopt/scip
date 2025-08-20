@@ -2610,8 +2610,9 @@ void ScipNLP::finalize_solution(
    }
    catch(...)
    {
-      /* with clang++, an IpoptNLP::Eval_Error wasn't catched by the catch-block above
-       * I don't know why, but this should work around it
+      /* with clang++, an IpoptNLP::Eval_Error wasn't catched by the catch-block above for Ipopt < 3.14.20
+       * if visibility attributes of the Ipopt exception classes in the Ipopt and SCIP libs differed,
+       * we we also catch any exception here
        */
       SCIPdebugMsg(scip, "Unknown exception when checking constraint viol\n");
       assert(status == INVALID_NUMBER_DETECTED);

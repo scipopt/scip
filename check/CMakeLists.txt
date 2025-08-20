@@ -566,6 +566,7 @@ set(pairs_Issue
     "instances/Issue/3939.cip\;-24000\;lexdual"
     "instances/Issue/3940.cip\;-2549.22\;unscaled_tolerance"
     "instances/Issue/3942.cip\;0\;default"
+    "instances/Issue/3949.cip\;+infinity\;presolving_milp_off"
 )
 
 #
