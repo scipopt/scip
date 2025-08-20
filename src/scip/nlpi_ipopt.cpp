@@ -199,6 +199,12 @@ public:
    int                         lastniter;    /**< number of iterations in last run */
    SCIP_Real                   lasttime;     /**< time spend in last run */
 
+   int                         ncalls;       /**< overall number of solver calls */
+   int                         nsuccess;     /**< number of successes (optimal or feasible solution found or proven unbounded) */
+   int                         nlocinfeas;   /**< number of calls resulting in local infeasibility */
+   int                         nother;       /**< number of other calls */
+   int                         nlimit;       /**< number of calls where the solver terminated due to a time or iteration limit */
+
    /** constructor */
    SCIP_NlpiProblem()
       : oracle(NULL), randnumgen(NULL),
@@ -207,7 +213,7 @@ public:
         solprimalvalid(false), solprimalgiven(false), soldualvalid(false), soldualgiven(false),
         solprimals(NULL), soldualcons(NULL), soldualvarlb(NULL), soldualvarub(NULL),
         solobjval(SCIP_INVALID), solconsviol(SCIP_INVALID), solboundviol(SCIP_INVALID),
-        lastniter(-1), lasttime(-1.0)
+        lastniter(-1), lasttime(-1.0), ncalls(0), nsuccess(0), nlocinfeas(0), nother(0), nlimit(0)
    { }
 };
 
@@ -674,7 +680,8 @@ SCIP_RETCODE handleNlpParam(
          }
 
          const int* offset;
-         SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, nlpiproblem->oracle, &offset, NULL) );
+         int nnlnz;
+         SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &offset, NULL, NULL, &nnlnz) );
          jacnnz = offset[m];
 
          /* fitting data from NLP runs gave the following coefficients (see also !2634):
@@ -843,10 +850,11 @@ void collectStatistic(
 
    const int* offset;
    const int* col;
-   SCIP_CALL_ABORT( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &offset, NULL) );
+   int nnlnz;
+   SCIP_CALL_ABORT( SCIPnlpiOracleGetJacobianRowSparsity(scip, problem->oracle, &offset, NULL, NULL, &nnlnz) );
    jacnnz = offset[m];
 
-   SCIP_CALL_ABORT( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &col) );
+   SCIP_CALL_ABORT( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &col, FALSE) );
    hesnnz = offset[n];
 
    // number of nonzeros of matrix in linear system of barrier problem ((11) in Ipopt paper):
@@ -1057,6 +1065,11 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
    {
       SCIPfreeRandom(scip, &(*problem)->randnumgen);
    }
+
+#ifdef PRINT_NLPSTATS
+   SCIPinfoMessage(scip, NULL, "\nNLP solver IPOPT stats: ncalls = %d, nsuccess = %d, nlimit = %d, nlocinfeas = %d, nother = %d\n",
+         (*problem)->ncalls, (*problem)->nsuccess, (*problem)->nlimit, (*problem)->nlocinfeas, (*problem)->nother);
+#endif
 
    delete *problem;
    *problem = NULL;
@@ -1878,6 +1891,7 @@ bool ScipNLP::get_nlp_info(
 {
    const int* offset;
    SCIP_RETCODE retcode;
+   int nnlnz;
 
    assert(nlpiproblem != NULL);
    assert(nlpiproblem->oracle != NULL);
@@ -1885,15 +1899,15 @@ bool ScipNLP::get_nlp_info(
    n = SCIPnlpiOracleGetNVars(nlpiproblem->oracle);
    m = SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle);
 
-   retcode = SCIPnlpiOracleGetJacobianSparsity(scip, nlpiproblem->oracle, &offset, NULL);
+   retcode = SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &offset, NULL, NULL, &nnlnz);
    if( retcode != SCIP_OKAY )
       return false;
-   assert(offset != NULL);
-   nnz_jac_g = offset[m];
+
+   nnz_jac_g = offset == NULL ? 0 : offset[m];
 
    if( !approxhessian )
    {
-      retcode = SCIPnlpiOracleGetHessianLagSparsity(scip, nlpiproblem->oracle, &offset, NULL);
+      retcode = SCIPnlpiOracleGetHessianLagSparsity(scip, nlpiproblem->oracle, &offset, NULL, FALSE);
       if( retcode != SCIP_OKAY )
          return false;
       assert(offset != NULL);
@@ -2210,21 +2224,25 @@ bool ScipNLP::eval_jac_g(
       const int* jaccol;
       int j;
       int i;
+      int nnlnz;
 
       assert(iRow != NULL);
       assert(jCol != NULL);
 
-      if( SCIPnlpiOracleGetJacobianSparsity(scip, nlpiproblem->oracle, &jacoffset, &jaccol) != SCIP_OKAY )
+      if( SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &jacoffset, &jaccol, NULL, &nnlnz) != SCIP_OKAY )
          return false;
 
-      assert(jacoffset[0] == 0);
-      assert(jacoffset[m] == nele_jac);
-      j = jacoffset[0];
-      for( i = 0; i < m; ++i )
-         for( ; j < jacoffset[i+1]; ++j )
-            iRow[j] = i;
+      if( jacoffset != NULL )
+      {
+         assert(jacoffset[0] == 0);
+         assert(jacoffset[m] == nele_jac);
+         j = jacoffset[0];
+         for( i = 0; i < m; ++i )
+            for( ; j < jacoffset[i+1]; ++j )
+               iRow[j] = i;
 
-      BMScopyMemoryArray(jCol, jaccol, nele_jac);
+         BMScopyMemoryArray(jCol, jaccol, nele_jac);
+      }
    }
    else
    {
@@ -2280,7 +2298,7 @@ bool ScipNLP::eval_h(
       assert(iRow != NULL);
       assert(jCol != NULL);
 
-      if( SCIPnlpiOracleGetHessianLagSparsity(scip, nlpiproblem->oracle, &heslagoffset, &heslagcol) != SCIP_OKAY )
+      if( SCIPnlpiOracleGetHessianLagSparsity(scip, nlpiproblem->oracle, &heslagoffset, &heslagcol, FALSE) != SCIP_OKAY )
          return false;
 
       assert(heslagoffset[0] == 0);
@@ -2309,7 +2327,8 @@ bool ScipNLP::eval_h(
       last_f_eval_x = current_x;
       last_g_eval_x = current_x;
 
-      if( SCIPnlpiOracleEvalHessianLag(scip, nlpiproblem->oracle, x, new_x_obj, new_x_cons, obj_factor, lambda, values) != SCIP_OKAY )
+      if( SCIPnlpiOracleEvalHessianLag(scip, nlpiproblem->oracle, x, new_x_obj, new_x_cons, obj_factor, lambda, values,
+            FALSE) != SCIP_OKAY )
          return false;
    }
 
@@ -2453,11 +2472,13 @@ void ScipNLP::finalize_solution(
    assert(m == SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle));
 
    bool check_feasibility = false; // whether we should check x for feasibility, if not NULL
+   ++(nlpiproblem->ncalls);
    switch( status )
    {
    case SUCCESS:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_LOCOPT;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
+      ++(nlpiproblem->nsuccess);
       assert(x != NULL);
       break;
 
@@ -2466,6 +2487,7 @@ void ScipNLP::finalize_solution(
    case FEASIBLE_POINT_FOUND:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
+      ++(nlpiproblem->nsuccess);
       assert(x != NULL);
       break;
 
@@ -2473,6 +2495,7 @@ void ScipNLP::finalize_solution(
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_ITERLIMIT;
+      ++(nlpiproblem->nlimit);
       break;
 
    case CPUTIME_EXCEEDED:
@@ -2482,6 +2505,7 @@ void ScipNLP::finalize_solution(
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_TIMELIMIT;
+      ++(nlpiproblem->nlimit);
       break;
 
    case STOP_AT_TINY_STEP:
@@ -2490,11 +2514,13 @@ void ScipNLP::finalize_solution(
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_NUMERICERROR;
+      ++(nlpiproblem->nother);
       break;
 
    case LOCAL_INFEASIBILITY:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
+      ++(nlpiproblem->nlocinfeas);
       break;
 
    case USER_REQUESTED_STOP:
@@ -2504,6 +2530,7 @@ void ScipNLP::finalize_solution(
    case DIVERGING_ITERATES:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
+      ++(nlpiproblem->nsuccess);
       break;
 
    // for the following status codes, if we get called here at all,
@@ -2517,6 +2544,7 @@ void ScipNLP::finalize_solution(
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_EVALERROR;
+      ++(nlpiproblem->nother);
       break;
 
    case TOO_FEW_DEGREES_OF_FREEDOM:
@@ -2524,17 +2552,20 @@ void ScipNLP::finalize_solution(
    case INVALID_OPTION:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OTHER;
+      ++(nlpiproblem->nother);
       break;
 
    case OUT_OF_MEMORY:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OUTOFMEMORY;
+      ++(nlpiproblem->nother);
       break;
 
    default:
       SCIPerrorMessage("Ipopt returned with unknown solution status %d\n", status);
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OTHER;
+      ++(nlpiproblem->nother);
       break;
    }
 

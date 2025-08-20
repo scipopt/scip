@@ -266,6 +266,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
    SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
    SCIP_CALL( SCIPincludeExprhdlrVaridx(scip) );
+   SCIP_CALL( SCIPincludeNlpSolverConopt(scip) );
    SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
    SCIP_CALL( SCIPincludeNlpSolverFilterSQP(scip) );
    SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, TRUE) );

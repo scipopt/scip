@@ -39,6 +39,7 @@ Features
 - added generalized resolution conflict analysis that operates directly on linear constraints instead of conflict graphs.
 - added support for AND-constraints to GAMS writer
 - added writing support for AMPL NL writer: currently only general and specialized linear and nonlinear constraints can be written
+- implemented columnwise Jacobian sparsity computation in the NLP oracle
 
 Performance improvements
 ------------------------
@@ -129,6 +130,8 @@ Interface changes
   SCIPvarGetOrigIndex()
   SCIPwriteSto()
 - the declaration of SCIPprintOrigProblem() and SCIPprintTransProblem() moved from scip_solvingstats.h to scip_prob.h
+- SCIPnlpiOracleGetJacobianSparsity() has been renamed to SCIPnlpiOracleGetJacobianRowSparsity() and now expect two more arguments: colnlflags and nnlnz
+- SCIPnlpiOracleGetHessianLagSparsity() and SCIPnlpiOracleEvalHessianLag() now expect one more argument: colwise
 
 ### New API functions
 
@@ -177,6 +180,10 @@ Interface changes
 - SCIPpropSetTimingmask() to set timing mask of a propagator
 - added C++ interface for expression handlers: src/objscip/objexprhdlr.h
 - SCIPaddUpgrade() to add constraint upgrades while especially informing the conflict store
+- SCIPincludeNlpSolverConopt(), SCIPsetLicenseConopt(), SCIPgetSolverNameConopt(), SCIPgetSolverDescConopt(), and SCIPisConoptAvailableConopt() to interact with the CONOPT interface
+- SCIPnlpiOracleGetConstraintLinearCoef() to get a linear coefficient of a variable in a given constraint in the NLP oracle
+- SCIPnlpiOracleGetJacobianColSparsity() to get the columnwise sparsity pattern of the Jacobian from the NLP oracle
+- SCIPnlpiOracleGetObjGradientNnz() to get indices of nonzeroes in the objective gradient
 
 ### Changes in preprocessor macros
 
@@ -199,6 +206,7 @@ Interface changes
 
 ### Interfaces to external software
 
+- added an interface to the CONOPT NLP solver
 - removed LP solver interface lpi_spx1 that used the old SoPlex interface; renamed lpi_spx2 to lpi_spx
 
 ### Changed parameters
@@ -248,6 +256,7 @@ Interface changes
   "conflict/fixandcontinue", and "conflict/maxcoefquot" to control generalized resolution conflict analysis.
 - new parameter "lp/minsolvedepth" to give a lower bound on the depth at which LPs are solved
 - new parameters "reading/nlreader/binary" and "reading/nlreader/comments" to adjust writing of nl files
+- new parameter "nlpi/conopt/priority" to set the priority of the CONOPT NLP solver
 
 ### Data structures
 
@@ -280,7 +289,9 @@ Build system
   of a PaPILO installation without TBB; pointing to the directory of a PaPILO repository still works, but is deprecated
 - removed option to link TBB library, as this is not used by default when PaPILO has not been built via cmake
   (use USRCXXFLAGS=-DPAPILO_TBB USRLDFLAGS=-ltbb to enable TBB for PaPILO)
+- enabled link-time-optimization for OPT=opt builds on Linux and macOS with gcc and clang, use LTO=false to disable
 - link-time-optimization can be enabled on Linux and macOS with gcc and clang by setting LTO=true, default is false
+- added build flag CONOPT (default: false) to link to the CONOPT NLP solver
 - LPS=spx is no longer mapped to LPS=spx2, which changes the name of the generated LPI libraries and binaries when using SoPlex
 
 ### Cmake
@@ -292,7 +303,9 @@ Build system
   undefined behavior sanitizer is always enabled if not `SANITIZE=off` (the default)
 - scip-config.cmake now defines a variable SCIP_COMPILE_FLAGS, which could be used to compile code that builds against SCIP via cmake;
   currently, this only passes on the sanitizer flags that were used to build libscip
+- enabled link-time-optimization for Release and RelWithDebInfo builds if supported by compiler, use -DLTO=off to disable
 - link-time-optimization can be enabled if supported by compiler by using -DLTO=on, default is off
+- added build flag CONOPT (default: off) to link to the CONOPT NLP solver and variable CONOPT_DIR to specify the path to CONOPT
 - removed option LEGACY
 
 Fixed bugs
