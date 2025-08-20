@@ -377,8 +377,8 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
  * \param[in] problem datastructure for problem instance
  * \param[in] nconss  number of constraints to change sides
  * \param[in] indices indices of constraints to change sides
- * \param[in] lhss    new left hand sides
- * \param[in] rhss    new right hand sides
+ * \param[in] lhss    new left hand sides (NULL means minus infinity)
+ * \param[in] rhss    new right hand sides (NULL means infinity)
  */
 #define SCIP_DECL_NLPICHGCONSSIDES(x) SCIP_RETCODE x (\
    SCIP*             scip,    \

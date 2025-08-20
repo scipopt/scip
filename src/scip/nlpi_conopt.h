@@ -22,21 +22,70 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scipbuildflags.c
- * @ingroup OTHER_CFILES
- * @brief  build flags methods
- * @author Felipe Serrano
+/* NLP interface for the CONOPT solver. */
+
+/**@file    nlpi_conopt.h
+ * @brief   CONOPT NLP interface
+ * @ingroup NLPIS
+ * @author  Ksenia Bestuzheva
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/scipbuildflags.h"
-#include "scip/buildflags.h"
+#ifndef __SCIP_NLPI_CONOPT_H__
+#define __SCIP_NLPI_CONOPT_H__
 
-/** returns the flags that were used to build SCIP */
-const char* SCIPgetBuildFlags(
+#include "scip/type_nlpi.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** create solver interface for CONOPT solver and includes it into SCIP
+ *
+ * @ingroup NLPIIncludes
+ */
+SCIP_RETCODE SCIPincludeNlpSolverConopt(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup NLPIS
+ *
+ * @{
+ */
+
+/** sets the license to be passed to CONOPT's COIDEF_License */
+SCIP_EXPORT
+void SCIPsetLicenseConopt(
+   SCIP_NLPI*            nlpi,               /**< CONOPT NLPI */
+   int                   integer_1,          /**< CONOPT_LICENSE_INT_1 */
+   int                   integer_2,          /**< CONOPT_LICENSE_INT_2 */
+   int                   integer_3,          /**< CONOPT_LICENSE_INT_3 */
+   const char*           text                /**< CONOPT_LICENSE_TEXT */
+   );
+
+/** gets string that identifies CONOPT */
+SCIP_EXPORT
+const char* SCIPgetSolverNameConopt(
    void
-   )
-{
-   return SCIP_BUILDFLAGS "\n LPS=" SCIP_LPS "\n IPOPT=" SCIP_IPOPT "\n CONOPT=" SCIP_CONOPT;
+   );
+
+/** gets string that describes CONOPT */
+SCIP_EXPORT
+const char* SCIPgetSolverDescConopt(
+   void
+   );
+
+/** returns whether CONOPT is available, i.e., whether it has been linked in */
+SCIP_EXPORT
+SCIP_Bool SCIPisConoptAvailableConopt(
+   void
+   );
+
+/** @} */
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* __SCIP_NLPI_CONOPT_H__ */

@@ -80,7 +80,8 @@ SECTION: General Questions about SCIP
     </ul>
     <p>
       If you want to use SCIP for mixed integer nonlinear programming, you might want to use an underlying NLP solver (e.g.,
-      <a href="https://projects.coin-or.org/Ipopt">Ipopt</a>). SCIP already comes with the CppAD expression interpreter (e.g., <a href="http://www.coin-or.org/CppAD/">CppAD</a>) as part of the source code.
+      <a href="https://projects.coin-or.org/Ipopt">Ipopt</a> or <a href="https://www.conopt.com">CONOPT</a>). SCIP already
+      comes with the CppAD expression interpreter (e.g., <a href="http://www.coin-or.org/CppAD/">CppAD</a>) as part of the source code.
     </p>
     <p>
       Besides that, you might need a modeling language like <a href="https://zimpl.zib.de/">ZIMPL</a> to generate *.mps

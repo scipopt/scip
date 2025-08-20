@@ -61,7 +61,7 @@ apt-get install wget cmake g++ m4 xz-utils libgmp-dev unzip zlib1g-dev libboost-
 ```
 Additionally the following dependencies need to be downloaded, compiled and installed:
  - [Hmetis](http://glaros.dtc.umn.edu/gkhome/metis/hmetis/download)
- - [Ipopt](https://github.com/coin-or/Ipopt/releases) with [Mumps](https://github.com/coin-or-tools/ThirdParty-Mumps/releases)
+ - [Ipopt](https://github.com/coin-or/Ipopt/releases) with [Mumps](https://github.com/coin-or-tools/ThirdParty-Mumps/releases) or a different NLP solver
  - [GMP](https://gmplib.org/#DOWNLOAD)
 
 
@@ -181,6 +181,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `AUTOBUILD`            | `on`, `off`                        | --                         | automatically find dependencies on availability, ignores individual flags of these packages |
 | `CMAKE_BUILD_TYPE`     | `Release`, `Debug`, ...            | `OPT=[opt, dbg]`           |                                                                    |
 | `GMP`                  | `on`, `off`                        | `GMP=[true, false]`        | specify `GMP_DIR` if not found automatically                       |
+| `CONOPT`               | `on`, `off`                        | `CONOPT=[true,false]`      | specify `CONOPT_DIR` if not found automatically                    |
 | `IPOPT`                | `on`, `off`                        | `IPOPT=[true,false]`       | requires IPOPT version >= 3.12.0; specify `IPOPT_DIR` if not found automatically |
 | `LAPACK`               | `on`, `off`                        | `LAPACK=[true,false]`      | requires Lapack to be installed on the system                      |
 | `LPS`                  | `spx`, `cpx`, `grb`, `xprs`, ...   | `LPS=...`                  | specify `SOPLEX_DIR`, `CPLEX_DIR`, `MOSEK_DIR`, ... if LP solver is not found automatically |
@@ -328,13 +329,14 @@ In your SCIP main directory, enter `make [options]` with the following options:
 
 | parameter and default | options              | description                                                                                      |
 |-----------------------|----------------------|--------------------------------------------------------------------------------------------------|
-| `ARCH=x86_64`         | `[x86_64, x86, sparc, mips, hppa, ppc, pwr4]` | the architecture: try to autodetect                      |
+| `ARCH=x86_64`         | `[x86_64, x86, sparc, mips, hppa, ppc, pwr4]` | the architecture: try to autodetect                                     |
 | `AMPL=true`           | `[true, false]`      | to enable or disable AMPL .nl file reader and support for using SCIP executable as solver in AMPL|
 | `COMP=gnu`            | `[gnu, clang, intel]`| Use Gnu, Clang or Intel compiler.                                                                |
 | `EXPRINT=cppad`       | `[cppad, none]`      | to use CppAD as expressions interpreter                                                          |
 | `FILTERSQP=false`     | `[false, true]`      | to enable or disable FilterSQP interface                                                         |
 | `GMP=true`            | `[true, false]`      | to enable or disable GMP library for exact counting and Zimpl support                            |
 | `IPOPT=false`         | `[false, true]`      | to disable or enable IPOPT interface (needs IPOPT >= 3.12.0)                                     |
+| `CONOPT=false`        | `[false, true]`      | to enable or disable the CONOPT interface                                                            |
 | `LAPACK=false`        | `[false, true]`      | link with Lapack; requires Lapack to be installed on the system                                  |
 | `LPS=spx`             | `[spx, cpx, grb, xprs, msk, clp, glop, qso, highs, none]` | determines the LP-Solver, should be installed seperately. Options to use SoPlex, CPLEX, Gurobi, XPRESS, MOSEK, CLP, Glop, QSopt, HiGHS as LP solver, no LP solver  |
 | `LPSOPT=opt`          | `[opt, dbg, opt-gccold]` | Choose the debug or optimized version (or old GCC optimized) version of the LP-solver (currently only available for SoPlex and CLP). |
@@ -505,7 +507,15 @@ ln -s <file libzimpl-<version>.<options>.a> <path to SCIP>/lib/static/libzimpl.$
 ```
 Note that ZIMPL needs the GNU multiprecision library (GMP) to be installed on your system.
 
-#### i) to use IPOPT as NLP solver
+#### i) to use CONOPT as NLP solver
+
+```
+ln -s <path to CONOPT installation> <path to SCIP>/lib/shared/conoptdir
+(e.g. `cd scip; ln -s /Conopt lib/shared/conoptdir
+```
+The path to the CONOPT installation is the directory that should contain `include/conopt.h` with the CONOPT header files and the directory `lib` with the CONOPT libraries.
+
+#### j) to use IPOPT as NLP solver
 
 ```
 ln -s <path to IPOPT installation> <path to SCIP>/lib/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
@@ -514,7 +524,7 @@ ln -s <path to IPOPT installation> <path to SCIP>/lib/ipopt.$(OSTYPE).$(ARCH).$(
 The path to the IPOPT installation is the path under where the Ipopt build has been installed.
 It should contain the directories `include/coin-or` with the Ipopt header files, the directory `lib` with the Ipopt libraries, and the file `lib/pkgconfig/ipopt.pc`.
 
-#### j) to use WORHP as NLP solver
+#### k) to use WORHP as NLP solver
 
 ```
 ln -s <path to WORHP installation> <path to SCIP>/lib/shared/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)
@@ -527,7 +537,7 @@ ln -s /Worhp lib/shared/worhp.linux.x86.gnu.opt
 The path to the WORHP installation is the path under where the Worhp build has been installed.
 It should contain the directories `include/worhp` with the WORHP header files and the directory `lib` with the WORHP libraries.
 
-#### k) to use FilterSQP as NLP solver
+#### l) to use FilterSQP as NLP solver
 
 ```
 ln -s <path to FilterSQP library> <path to SCIP>/lib/libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).a
@@ -535,14 +545,14 @@ ln -s <path to BQPD library> <path to SCIP>/lib/libbqpd.$(OSTYPE).$(ARCH).$(COMP
 ```
 Make sure to replace the paths with your installation location.
 
-#### l) to use GAMS
+#### m) to use GAMS
 
 ```
 ln -s <path to GAMS system directory> <path to SCIP>/lib/shared/gams.$(OSTYPE).$(ARCH).$(COMP)
 ```
 Make sure to replace the paths with your installation location.
 
-#### m) to use HiGHS
+#### n) to use HiGHS
 
 ```
 export LIBRARY_PATH=<path to HiGHS>/lib
@@ -698,13 +708,13 @@ make[1]: Entering directory '/sw/scip'
 make[1]: Leaving directory '/sw/scip'
 ```
 
-### Example 4 (default: SoPlex, IPOPT, WORHP, FILTERSQP):
+### Example 4 (default: SoPlex, CONOPT, IPOPT, WORHP, FILTERSQP):
 
-Typing `make IPOPT=true WORHP=true FILTERSQP=true` uses SoPlex as LP solver, and activates the interfaces to IPOPT, WORHP, and FilterSQP.
+Typing `make CONOPT=true, IPOPT=true WORHP=true FILTERSQP=true` uses SoPlex as LP solver, and activates the interfaces to CONOPT, IPOPT, WORHP, and FilterSQP.
 You will be asked the following questions on the first call to `make` (example answers are already given):
 
 ```
-- Current settings: LPS=spx OSTYPE=linux ARCH=x86_64 COMP=gnu SHARED=false SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=true IPOPTOPT=opt FILTERSQP=true EXPRINT=cppad GAMS=false
+- Current settings: LPS=spx OSTYPE=linux ARCH=x86_64 COMP=gnu SHARED=false SUFFIX= ZIMPL=false ZIMPLOPT=opt CONOPT=true IPOPT=true IPOPTOPT=opt FILTERSQP=true EXPRINT=cppad GAMS=false
 
 * SCIP needs some softlinks to external programs, in particular, LP-solvers.
 * Please insert the paths to the corresponding directories/libraries below.
@@ -714,6 +724,7 @@ You will be asked the following questions on the first call to `make` (example a
   -> 'spxinc' is the path to the SoPlex 'src' directory, e.g., '<SoPlex-path>/src'.
   -> 'libsoplex.*' is the path to the SoPlex library, e.g., '<SoPlex-path>/lib/libsoplex.linux.x86.gnu.opt.a'
   -> 'ipopt.linux.x86_64.gnu.opt' is a directory containing the ipopt installation, i.e., 'ipopt.linux.x86_64.gnu.opt/include/coin/IpIpoptApplication.hpp', 'ipopt.linux.x86_64.gnu.opt/lib/libipopt*', ... should exist.
+  -> "conoptdir" is a directory containing the conopt installation, i.e., "conoptdir/include/conopt.h", "conoptdir/lib/libconopt.so", ... should exist.
   -> 'libfiltersqp.linux.x86_64.gnu.*' is the path to the filterSQP library.
   -> 'libbqpd.linux.x86_64.gnu.*' is the path to the BQPD library.
   -> 'worhp.linux.x86_64.gnu.opt' is a directory containing the WORHP installation, i.e., 'worhp.linux.x86_64.gnu.opt/include/worhp/worhp.h' should exist.
@@ -722,6 +733,10 @@ You will be asked the following questions on the first call to `make` (example a
 > Enter soft-link target file or directory for 'lib/static/ipopt.linux.x86_64.gnu.opt' (return if not needed):
 > /sw/ipopt-3.12.5
 -> creating softlink 'lib/static/ipopt.linux.x86_64.gnu.opt' -> '/sw/ipopt-3.12.5'
+
+> Enter soft-link target file or directory for "lib/shared/conoptdir" (return if not needed):
+> /sw/conopt-4_37-linux-x86_64
+-> creating softlink "lib/shared/conoptdir" -> "/sw/conopt-4_37-linux-x86_64"
 
 > Enter soft-link target file or directory for 'lib/static/libfiltersqp.linux.x86_64.gnu.a' (return if not needed):
 > /sw/libfiltersqp.a

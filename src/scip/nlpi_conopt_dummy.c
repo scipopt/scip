@@ -22,21 +22,51 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scipbuildflags.c
- * @ingroup OTHER_CFILES
- * @brief  build flags methods
- * @author Felipe Serrano
+/**@file    nlpi_conopt_dummy.c
+ * @ingroup DEFPLUGINS_NLPI
+ * @brief   dummy CONOPT NLP interface
+ * @author  Ksenia Bestuzheva
+ *
+ * This file contains dummy implementations of the interface methods for the CONOPT interface.
+ * It is used when SCIP is build without CONOPT.
  */
 
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#include "scip/nlpi_conopt.h"
 
-#include "scip/scipbuildflags.h"
-#include "scip/buildflags.h"
-
-/** returns the flags that were used to build SCIP */
-const char* SCIPgetBuildFlags(
-   void
+/** create solver interface for CONOPT solver and includes it into SCIP, if CONOPT is available */  /*lint -e{715}*/
+SCIP_RETCODE SCIPincludeNlpSolverConopt(
+   SCIP*                 scip                /**< SCIP data structure */
    )
-{
-   return SCIP_BUILDFLAGS "\n LPS=" SCIP_LPS "\n IPOPT=" SCIP_IPOPT "\n CONOPT=" SCIP_CONOPT;
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+
+   return SCIP_OKAY;
 }
+
+/** gets string that identifies CONOPT */
+const char* SCIPgetSolverNameConopt(void)
+{
+   return "CONOPT";
+}
+
+/** gets string that describes CONOPT */
+const char* SCIPgetSolverDescConopt(void)
+{
+   return "CONOPT not available";
+}
+
+/** returns whether CONOPT is available, i.e., whether it has been linked in */
+SCIP_Bool SCIPisConoptAvailableConopt(void)
+{
+   return FALSE;
+}
+
+/** sets the license to be passed to CONOPT's COIDEF_License */
+void SCIPsetLicenseConopt(
+   SCIP_NLPI*            nlpi,               /**< CONOPT NLPI */
+   int                   integer_1,          /**< CONOPT_LICENSE_INT_1 */
+   int                   integer_2,          /**< CONOPT_LICENSE_INT_2 */
+   int                   integer_3,          /**< CONOPT_LICENSE_INT_3 */
+   const char*           text                /**< CONOPT_LICENSE_TEXT */
+   )
+{ } /*lint !e715*/

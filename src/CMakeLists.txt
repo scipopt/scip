@@ -731,6 +731,7 @@ set(scipheaders
     scip/nlpi_filtersqp.h
     scip/nlpi_ipopt.h
     scip/nlpi_worhp.h
+    scip/nlpi_conopt.h
     scip/nodesel_bfs.h
     scip/nodesel_breadthfirst.h
     scip/nodesel_dfs.h
