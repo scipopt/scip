@@ -44,6 +44,7 @@ Fixed bugs
 - choose incumbent solution as reference in varFixingsRins() and varFixingsDins() of ALNS heuristic to ensure integrality
 - consider variable type in selectInitialVariableRandomly() of GINS heuristic to count integral variables
 - correct fractionality sign when standardizing bounds in simplifyInequalities() of cons_linear.c
+- correct detection of doublelex matrices and handling them via orbitope constraints
 
 Build system
 ------------
