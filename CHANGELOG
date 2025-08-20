@@ -11,6 +11,7 @@ Fixed bugs
 - avoid constructing and flushing the LP in SCIPwriteLP() and SCIPwriteMIP() to avert unexpected affection
 - apply multi-aggregations before detecting redundancy in propagateCons() of cons_varbound.c to keep bound implications
 - skip bound changes for cutoff subtree in treeApplyPendingBdchgs()
+- correct detection of doublelex matrices and handling them via orbitope constraints
 
 Build system
 ------------
@@ -44,7 +45,6 @@ Fixed bugs
 - choose incumbent solution as reference in varFixingsRins() and varFixingsDins() of ALNS heuristic to ensure integrality
 - consider variable type in selectInitialVariableRandomly() of GINS heuristic to count integral variables
 - correct fractionality sign when standardizing bounds in simplifyInequalities() of cons_linear.c
-- correct detection of doublelex matrices and handling them via orbitope constraints
 
 Build system
 ------------
