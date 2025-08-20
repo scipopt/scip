@@ -3,7 +3,7 @@ read check/instances/MIP/stein27.fzn
 optimize
 display solution
 write solution stein27.sol
-write problem stein27.lp
+write genproblem stein27.lp
 set save settingsfile.set
 set diffsave settingsfile.set
 set load settingsfile.set

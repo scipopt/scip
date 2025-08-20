@@ -105,7 +105,7 @@ VERBOSE		=	false
 OPT		=	opt
 LTO		=	false
 COMP		=	gnu
-LPS		=	spx2
+LPS		=	spx
 LPSEXACT 	=	auto
 EXACTSOLVE  	=  	auto
 TPI		=	tny
@@ -365,11 +365,6 @@ endif
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
-# redefine old LP-solver "spx" by "spx2"
-ifeq ($(LPS),spx)
-override LPS	=	spx2
-endif
-
 #-------------------------------------------------------
 # define flags for CPLEX
 ifeq ($(LPS),cpx)
@@ -430,21 +425,8 @@ endif
 endif
 
 #-------------------------------------------------------
-# define flags for SoPlex - old interface spx1
-ifeq ($(LPS),spx1)
-LPSLDFLAGS	=	$(LINKCXX_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
-LPSLIBFILES	=	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
-
-# if using the LP-check, also add Cplex flags
-ifeq ($(LPSCHECK),true)
-LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
-LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
-endif
-endif
-
-#-------------------------------------------------------
-# define flags for SoPlex - new interface spx2
-ifeq ($(LPS),spx2)
+# define flags for SoPlex
+ifeq ($(LPS),spx)
 LPSLDFLAGS	=	$(LINKCXX_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 LPSLIBFILES	=	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 
@@ -521,9 +503,6 @@ ifeq ($(LPSEXACT),auto)
 LPSEXACT =  none
 ifeq ($(BOOST),true)
 ifeq ($(LPS),spx)
-LPSEXACT		=	spx
-endif
-ifeq ($(LPS),spx2)
 LPSEXACT		=	spx
 endif
 endif

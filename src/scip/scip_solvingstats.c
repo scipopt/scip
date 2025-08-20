@@ -1413,8 +1413,6 @@ SCIP_Real SCIPgetDualbound(
 
 /** gets global exact dual bound
  *
- *  @return the exact global dual bound
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -1504,8 +1502,6 @@ SCIP_Real SCIPgetLowerbound(
 }
 
 /** gets global exact lower (dual) bound in transformed problem
- *
- *  @return the global exact lower (dual) bound in transformed problem
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -1672,8 +1668,6 @@ SCIP_Real SCIPgetPrimalbound(
 
 /** gets global primal bound (objective value of best solution or user objective limit) for the original problem
  *
- *  @return the global primal bound (objective value of best solution or user objective limit) for the original problem
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -1723,8 +1717,6 @@ SCIP_Real SCIPgetUpperbound(
 }
 
 /** gets global exact upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
- *
- *  @return the global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED

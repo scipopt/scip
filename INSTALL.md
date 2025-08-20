@@ -338,7 +338,7 @@ In your SCIP main directory, enter `make [options]` with the following options:
 | `IPOPT=false`         | `[false, true]`      | to disable or enable IPOPT interface (needs IPOPT >= 3.12.0)                                     |
 | `CONOPT=false`        | `[false, true]`      | to enable or disable the CONOPT interface                                                            |
 | `LAPACK=false`        | `[false, true]`      | link with Lapack; requires Lapack to be installed on the system                                  |
-| `LPS=spx`             | `[spx1, cpx, grb, xprs, msk, clp, glop, qso, highs, none]` | determines the LP-Solver, should be installed seperately. Options to use SoPlex (> version 2.0), SoPlex (>= version 1.4), CPLEX, Gurobi, XPRESS, MOSEK, CLP, Glop, QSopt, HiGHS as LP solver, no LP solver  |
+| `LPS=spx`             | `[spx, cpx, grb, xprs, msk, clp, glop, qso, highs, none]` | determines the LP-Solver, should be installed seperately. Options to use SoPlex, CPLEX, Gurobi, XPRESS, MOSEK, CLP, Glop, QSopt, HiGHS as LP solver, no LP solver  |
 | `LPSOPT=opt`          | `[opt, dbg, opt-gccold]` | Choose the debug or optimized version (or old GCC optimized) version of the LP-solver (currently only available for SoPlex and CLP). |
 | `LTO=false`           | `[false, true]`      | enable link-time-optimization on Linux/MacOS and gcc/clang                                       |
 | `NOBLKMEM=false`      | `[false, true]`      | Turns the internal SCIP block memory off or on.                                                  |
@@ -714,7 +714,7 @@ Typing `make CONOPT=true, IPOPT=true WORHP=true FILTERSQP=true` uses SoPlex as L
 You will be asked the following questions on the first call to `make` (example answers are already given):
 
 ```
-- Current settings: LPS=spx2 OSTYPE=linux ARCH=x86_64 COMP=gnu SHARED=false SUFFIX= ZIMPL=false ZIMPLOPT=opt CONOPT=true IPOPT=true IPOPTOPT=opt FILTERSQP=true EXPRINT=cppad GAMS=false
+- Current settings: LPS=spx OSTYPE=linux ARCH=x86_64 COMP=gnu SHARED=false SUFFIX= ZIMPL=false ZIMPLOPT=opt CONOPT=true IPOPT=true IPOPTOPT=opt FILTERSQP=true EXPRINT=cppad GAMS=false
 
 * SCIP needs some softlinks to external programs, in particular, LP-solvers.
 * Please insert the paths to the corresponding directories/libraries below.

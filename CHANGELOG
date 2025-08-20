@@ -207,6 +207,7 @@ Interface changes
 ### Interfaces to external software
 
 - added an interface to the CONOPT NLP solver
+- removed LP solver interface lpi_spx1 that used the old SoPlex interface; renamed lpi_spx2 to lpi_spx
 
 ### Changed parameters
 
@@ -265,6 +266,8 @@ Interface changes
 Deleted files
 -------------
 
+- removed lpi_spx1.cpp
+
 Testing
 -------
 
@@ -273,6 +276,7 @@ Build system
 
 - changed the default for TPI to tny
 - added build flag CHECKSTAGE=auto to control stage checks in API function calls
+- removed LPS options spx1 and spx2, only LPS=spx is available to select SoPlex now
 
 ### Makefile
 
@@ -288,6 +292,7 @@ Build system
 - enabled link-time-optimization for OPT=opt builds on Linux and macOS with gcc and clang, use LTO=false to disable
 - link-time-optimization can be enabled on Linux and macOS with gcc and clang by setting LTO=true, default is false
 - added build flag CONOPT (default: false) to link to the CONOPT NLP solver
+- LPS=spx is no longer mapped to LPS=spx2, which changes the name of the generated LPI libraries and binaries when using SoPlex
 
 ### Cmake
 
@@ -301,6 +306,7 @@ Build system
 - enabled link-time-optimization for Release and RelWithDebInfo builds if supported by compiler, use -DLTO=off to disable
 - link-time-optimization can be enabled if supported by compiler by using -DLTO=on, default is off
 - added build flag CONOPT (default: off) to link to the CONOPT NLP solver and variable CONOPT_DIR to specify the path to CONOPT
+- removed option LEGACY
 
 Fixed bugs
 ----------

@@ -800,8 +800,10 @@ SCIP_RETCODE applyBdchgs(
    return SCIP_OKAY;
 }
 
-/* Update the min/max gain, and the mean of all gains computed so far. This mean is used in the
- * definition of the exponential distribution */
+/** Update the min/max gain, and the mean of all gains computed so far.
+ *
+ * This mean is used in the definition of the exponential distribution.
+ */
 static
 SCIP_RETCODE updateMinMaxMeanGain(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -859,7 +861,7 @@ SCIP_RETCODE updateMinMaxMeanGain(
    return SCIP_OKAY;
 }
 
-/* Compute the depth of the tree with the assumption that left and right dual gains are equal */
+/** compute the depth of the tree with the assumption that left and right dual gains are equal */
 static
 SCIP_Real strongBranchingDepth(
    SCIP_Real             gap,                /**< gap to be closed */
@@ -873,7 +875,7 @@ SCIP_Real strongBranchingDepth(
    return depth;
 }
 
-/* Compute the size of the tree with the assumption that left and right dual gains are equal */
+/** compute the size of the tree with the assumption that left and right dual gains are equal */
 static
 SCIP_Real strongBranchingTreeSize(
    SCIP_Real             estimatedepth       /**< estimated depth of the tree */
@@ -882,16 +884,16 @@ SCIP_Real strongBranchingTreeSize(
    return pow(2.0, estimatedepth + 1.0) - 1.0;
 }
 
-/* Calculate the cumulative distribution function (CDF) value for a mixture of a Dirac at zero and a continuous distribution (depending on distributioncdf) */
+/** calculate the cumulative distribution function (CDF) value for a mixture of a Dirac at zero and a continuous distribution (depending on distributioncdf) */
 static
 SCIP_Real cdfProbability(
-   SCIP_Real             rate,               /** rate of the distribution */
-   SCIP_Real             zeroprob,           /** probability of zero gain */
-   SCIP_Real             proposedgain,       /** proposed gain */
-   SCIP_Real             mingain,            /** minimum gain */
-   SCIP_Real             logmeangain,        /** logarithm og mean gain */
-   SCIP_Real             logstdevgain,       /** logarithm of standard deviation of gain */
-   int                   distributioncdf     /** distribution type (PARETODISTRIBUTION, EXPONENTIALDISTRIBUTION, LOGNORMALDISTRIBUTION) */
+   SCIP_Real             rate,               /**< rate of the distribution */
+   SCIP_Real             zeroprob,           /**< probability of zero gain */
+   SCIP_Real             proposedgain,       /**< proposed gain */
+   SCIP_Real             mingain,            /**< minimum gain */
+   SCIP_Real             logmeangain,        /**< logarithm og mean gain */
+   SCIP_Real             logstdevgain,       /**< logarithm of standard deviation of gain */
+   int                   distributioncdf     /**< distribution type (PARETODISTRIBUTION, EXPONENTIALDISTRIBUTION, LOGNORMALDISTRIBUTION) */
    )
 {
    if(distributioncdf == PARETODISTRIBUTION)
@@ -914,18 +916,18 @@ SCIP_Real cdfProbability(
    }
 }
 
-/* Calculate the expected size of a tree with one more iteration of strong branching */
+/** calculate the expected size of a tree with one more iteration of strong branching */
 static
 SCIP_Real expectedTreeSize(
-   SCIP*                 scip,               /** SCIP data structure */
-   SCIP_Real             gap,                /** gap to be closed */
-   SCIP_Real             zeroprob,           /** probability of zero gain */
-   SCIP_Real             currentdepth,       /** current depth of the tree */
-   SCIP_Real             lambda,             /** rate of the distribution */
-   SCIP_Real             mingain,            /** minimum gain */
-   SCIP_Real             logmeangain,        /** logarithm of mean gain */
-   SCIP_Real             logstdevgain,       /** logarithm of standard deviation of gain */
-   int                   distributioncdf     /** distribution type (PARETODISTRIBUTION, EXPONENTIALDISTRIBUTION, LOGNORMALDISTRIBUTION) */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             gap,                /**< gap to be closed */
+   SCIP_Real             zeroprob,           /**< probability of zero gain */
+   SCIP_Real             currentdepth,       /**< current depth of the tree */
+   SCIP_Real             lambda,             /**< rate of the distribution */
+   SCIP_Real             mingain,            /**< minimum gain */
+   SCIP_Real             logmeangain,        /**< logarithm of mean gain */
+   SCIP_Real             logstdevgain,       /**< logarithm of standard deviation of gain */
+   int                   distributioncdf     /**< distribution type (PARETODISTRIBUTION, EXPONENTIALDISTRIBUTION, LOGNORMALDISTRIBUTION) */
    )
 {
 
@@ -996,7 +998,7 @@ SCIP_Real expectedTreeSize(
    return nexttreesize;
 }
 
-/* Decide if we continue strong branching based based on lookahead */
+/** decide if we continue strong branching based based on lookahead */
 static
 SCIP_Bool continueStrongBranchingLookahead(
    SCIP*                 scip,               /**< SCIP data structure */

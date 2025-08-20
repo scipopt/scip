@@ -126,15 +126,6 @@
  * `msk`    | Mosek (version at least 7.0.0 required)
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
- *
- * There are two different interfaces for SoPlex. The default one (`spx`) uses an updated interface that is provided
- * by SoPlex itself (since version 2.0), resulting in a slimmer LPI that is similiar to those for CPLEX or XPRESS.
- * The other one - `spx1` - is the older LPI that directly interfaces the internal simplex solver of SoPlex and
- * therefore needs to duplicate some features in the LPI that are already available in SoPlex itself. It lacks some
- * features like persistent scaling which are only available in the modern interface. Upcoming features may not be
- * supported. Old compilers might have difficulties with the new interface because some C++11 features are required
- * that may not be supported.
- *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -540,7 +531,7 @@
  *          <li>Test instances are available at <code>check/instances/MINLP/</code>.</li>
  *       </ul>
  *    </td>
- * </td>
+ * </tr>
  * <tr>
  *    <td>Constraint Integer Program (CIP)</td>
  *    <td>\f{align*}{
@@ -578,7 +569,7 @@
  *          <li>Test instances are available at <code>check/instances/MINLP/circle.lp</code>.</li>
  *       </ul>
  *    </td>
- * </td>
+ * </tr>
  * <tr>
  *    <td>Linear program (LP)</td>
  *    <td>\f{align*}{
@@ -589,7 +580,7 @@
  *    </td>
  *    <td>see MIP formats</td>
  *    <td>See <a href="FAQ\FILEEXT#scipaslpsolver">Can I use \SCIP as a pure LP solver</a> in the FAQ.</td>
- * </td>
+ * </tr>
  * <tr>
  *    <td>Pseudoboolean optimization</td>
  *    <td>\f{align*}{
@@ -1092,6 +1083,8 @@
 
  * \SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
  * problem instance in another file format (the LP format is much more human readable than the MPS format, for example).
+ * Since stein27.fzn has many constraints with the same name, which would result in an unusable LP file, we write out
+ * the problem with generic variable and constraint names (x1, x2, x3, ...; c1, c2, c3, ...) here.
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetWriteSolutions
  *
@@ -9783,13 +9776,33 @@
  * This module contains methods to include specific file readers into \SCIP.
  *
  * @note All default plugins can be included at once (including all default file readers) using SCIPincludeDefaultPlugins()
+ */
+
+/**@defgroup IISFINDERS IIS Finders
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default IIS finders of \SCIP
  *
+ * A detailed description what an IIS finder does and how to add a IIS finder to SCIP can be found \ref IISFINDER "here".
+ */
+
+/**@defgroup IISfinderIncludes Inclusion methods
+ * @ingroup IISFINDERS
+ * @brief methods to include specific IIS finders into \SCIP
+ *
+ * This module contains methods to include specific IIS finders into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default file readers) using SCIPincludeDefaultPlugins()
  */
 
 /**@defgroup PARALLEL Parallel interface methods
  * @ingroup INTERNALAPI
  * @brief headers and methods for the parallel interface of \SCIP
  *
+ */
+
+/**@defgroup TASKINTERFACE Parallel task interface methods
+ * @ingroup INTERNALAPI
+ * @brief headers and methods for the parallel task interface of \SCIP
  */
 
 /**@defgroup PublicSymmetryMethods Symmetry
@@ -9808,7 +9821,7 @@
  */
 
 /**@defgroup LPIS LP Solver Interface
- * @ingroup PUBLICPLUGINLPI
+ * @ingroup PUBLICPLUGINAPI
  * @brief methods and files provided by the LP solver interface of \SCIP
  *
  * \SCIP uses external tools to solve LP relaxations. The communication

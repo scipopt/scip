@@ -121,7 +121,7 @@ compilation settings:
              `dbg`, `opt`, or `prf`
 
 - `LPS`:    the LP solver to use
-             `spx` (= `spx2`), `spx1`, `clp`, `cpx`, `xprs`, `msk`, `grb`, `glop`, `qso`, `none`
+             `spx`, `clp`, `cpx`, `xprs`, `msk`, `grb`, `glop`, `qso`, `none`
 
 For example, if you want to install SCIP on a Linux system with a x86 processor
 using the gnu compiler in debug mode, and using Soplex version >= 1.4.0
@@ -145,8 +145,7 @@ Here is what you have to do to compile and run the application or example projec
    - `OPT=opt`       to use optimized compilation mode (default)
    - `OPT=dbg`       to use debug compilation mode
    - `OPT=prf`       to use performance analysis compilation mode
-   - `LPS=spx`       to use %SoPlex as LP solver (based on the new interface available since version 2.0, default)
-   - `LPS=spx1`      to use %SoPlex as LP solver (based on the old interface for versions >= 1.4)
+   - `LPS=spx`       to use %SoPlex as LP solver
    - `LPS=cpx`       to use CPLEX as LP solver
    - `LPS=grb`       to use Gurobi as LP solver
    - `LPS=xprs`      to use XPRESS as LP solver

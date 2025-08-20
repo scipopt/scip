@@ -4,7 +4,7 @@
 set -e
 
 EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens Relaxator SCFLP TSP VRP)
-LPSOLVERS=(spx2 cpx none)
+LPSOLVERS=(spx cpx none)
 OPTS=(opt dbg)
 SHARED=(true false)
 

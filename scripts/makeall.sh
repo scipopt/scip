@@ -5,7 +5,7 @@
 
 MAKEFLAG=$1
 
-LPSS=(cpx spx spx2 xprs msk clp grb qso)
+LPSS=(cpx spx xprs msk clp grb qso)
 OPTS=(opt dbg prf)
 
 # check if zimpl is available

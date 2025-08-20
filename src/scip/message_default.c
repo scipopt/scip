@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   message_default.c
- * @ingroup PUBLICMETHODS
+ * @ingroup DEFPLUGINS_MSGHDLR
  * @brief  default message handler
  * @author Stefan Heinz
  */
