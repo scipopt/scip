@@ -83,6 +83,7 @@ Test(deletevar, basictest)
    retcode = SCIPsolve(scip);
    cr_assert_eq(retcode, SCIP_INVALIDDATA);
 
+   SCIP_CALL( SCIPfreeTransform(scip) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseVar(scip, &xvar) );
    SCIP_CALL( SCIPreleaseVar(scip, &yvar) );
