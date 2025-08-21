@@ -395,6 +395,8 @@ Fixed bugs
 - apply multi-aggregations before detecting redundancy in propagateCons() of cons_varbound.c to keep bound implications
 - skip bound changes for cutoff subtree in treeApplyPendingBdchgs()
 - correct detection of doublelex matrices and handling them via orbitope constraints
+- skip attempting to free transformed problem if SCIPtransformProb() failed with an error in SCIPpresolve(), since freeing
+  the transformed problem is likely to fail as well
 
 Build system
 ------------
