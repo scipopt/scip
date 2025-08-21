@@ -1330,8 +1330,8 @@ SCIP_RETCODE separateCuts(
          }
       }
 
-      SCIPdebugMsg(scip, " -> row %d <%s>: lhsscore=%g rhsscore=%g maxscore=%g\n", r, SCIProwGetName(rows[r]),
-         rowlhsscores[r], rowrhsscores[r], rowscores[r]);
+      SCIPdebugMsg(scip, " -> row %d <%s>: lhsscore=%g rhsscore=%g\n", r, SCIProwGetName(rows[r]),
+         rowlhsscores[r], rowrhsscores[r]);
    }
    assert(nnonzrows <= nrows);
 
