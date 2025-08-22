@@ -14,6 +14,7 @@ Fixed bugs
 - correct detection of doublelex matrices and handling them via orbitope constraints
 - skip attempting to free transformed problem if SCIPtransformProb() failed with an error in SCIPpresolve(), since freeing
   the transformed problem is likely to fail as well
+- fixed memory leak in primal heuristic scheduler when there is a restart
 
 Build system
 ------------
