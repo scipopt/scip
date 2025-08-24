@@ -1455,7 +1455,6 @@ SCIP_RETCODE subtreeSumGapUpdate(
    SCIP_Longint          nsolvednodes        /**< number of solved nodes so far, used as a time stamp */
    )
 {
-   SCIP_Bool updatescaling = FALSE;
    SCIP_Bool insertchildren = (ssg->nsubtrees > 1 && nchildren > 0);
 
    /* if the instance is solved or a node is cutoff at the initsolve stage or we are unbounded, the ssg is 0 */
@@ -1507,10 +1506,8 @@ SCIP_RETCODE subtreeSumGapUpdate(
 
       ssg->pblastsplit = SCIPgetPrimalbound(scip);
 
-      updatescaling = TRUE;
-
       /* compute the current SSG value from scratch */
-      SCIP_CALL( subtreeSumGapComputeFromScratchEfficiently(scip, ssg, updatescaling) );
+      SCIP_CALL( subtreeSumGapComputeFromScratchEfficiently(scip, ssg, TRUE) );
    }
    /* otherwise, if new children have been created, label them */
    else if( insertchildren )
