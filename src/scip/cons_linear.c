@@ -7098,9 +7098,9 @@ SCIP_RETCODE tightenBounds(
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
-   oldnchgbds = 0;
 
 #ifndef SCIP_DEBUG
+   oldnchgbds = 0;
    oldnchgbdstotal = *nchgbds;
 #endif
 
@@ -11543,9 +11543,6 @@ SCIP_RETCODE simplifyInequalities(
       hasrhs = TRUE;
    else
       hasrhs = FALSE;
-
-   SCIPdebug( oldnchgcoefs = *nchgcoefs; )
-   SCIPdebug( oldnchgsides = *nchgsides; )
 
    /* @todo extend both-sided simplification */
    if( haslhs && hasrhs )
