@@ -387,8 +387,6 @@ SCIP_RETCODE calcBranchScore(
    int ncolrows;
    int i;
 
-   SCIP_Bool onlyactiverows; /* should only rows which are active at the current node be considered? */
-
    assert(scip != NULL);
    assert(var != NULL);
    assert(upscore != NULL);
@@ -438,8 +436,6 @@ SCIP_RETCODE calcBranchScore(
    *upscore = 0.0;
    *downscore = 0.0;
 
-   onlyactiverows = FALSE;
-
    /* loop over the variable rows and calculate the up and down score */
    for( i = 0; i < ncolrows; ++i )
    {
@@ -464,9 +460,10 @@ SCIP_RETCODE calcBranchScore(
       /* we access the rows by their index */
       rowpos = SCIProwGetIndex(row);
 
-      /* skip non-active rows if the user parameter was set this way */
-      if( onlyactiverows && SCIPisSumPositive(scip, SCIPgetRowLPFeasibility(scip, row)) )
+      /* TODO add possibility to skip non-active rows by setting a user parameter */
+      /* if( SCIPisSumPositive(scip, SCIPgetRowLPFeasibility(scip, row)) )
          continue;
+      */
 
       /* call method to ensure sufficient data capacity */
       SCIP_CALL( heurdataEnsureArraySize(scip, heurdata, rowpos) );
