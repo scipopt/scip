@@ -567,7 +567,6 @@ SCIP_RETCODE performBranchingNoSol(
 
    bestbranchpoint = SCIP_UNKNOWN;
    bestbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
-   bestvaluescore = 0.0;
    bestvaluecand = NULL;
 
    assert(ncands > 0);
