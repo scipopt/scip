@@ -383,7 +383,6 @@ SYMOBJ		=	symmetry/compute_symmetry_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.c))
 ifeq ($(NAUTYEXTERNAL),false)
-FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
 LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/nauty
 NAUTYOBJ	=	nauty/nauty.o
 NAUTYOBJ	+=      nauty/nautil.o
@@ -413,7 +412,6 @@ SYMOBJ		+=	symmetry/compute_symmetry_sassy_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(NAUTYEXTERNAL),false)
-FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
 LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/nauty
 NAUTYOBJ	=	nauty/nauty.o
 NAUTYOBJ	+=      nauty/nautil.o
