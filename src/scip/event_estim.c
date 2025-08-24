@@ -2535,7 +2535,7 @@ SCIP_RETCODE updateTimeseries(
 
 /** print a treesize estimation report into the string buffer */
 static
-char* printReport(
+void printReport(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata,      /**< event handler data */
    char*                 strbuf,             /**< string buffer */
@@ -2616,8 +2616,6 @@ char* printReport(
 
    if( reportnum > 0 )
       (void) SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "End of Report %d\n", reportnum);
-
-   return strbuf;
 }
 
 
@@ -2788,7 +2786,8 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
          (eventhdlrdata->reportfreq == 0
          || treedata->weight >= eventhdlrdata->weightlastreport + 1.0 / (SCIP_Real)eventhdlrdata->reportfreq) )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s\n", printReport(scip, eventhdlrdata, strbuf, ++eventhdlrdata->nreports));
+         printReport(scip, eventhdlrdata, strbuf, ++eventhdlrdata->nreports);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s\n", strbuf);
 
          if( eventhdlrdata->reportfreq > 0 )
             eventhdlrdata->weightlastreport = 1 / (SCIP_Real)eventhdlrdata->reportfreq * SCIPfloor(scip, ((SCIP_Real)treedata->weight * eventhdlrdata->reportfreq));
@@ -2841,7 +2840,6 @@ SCIP_DECL_TABLEOUTPUT(tableOutputEstim)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
-   char strbuf[SCIP_MAXSTRLEN];
 
    eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);
@@ -2850,7 +2848,11 @@ SCIP_DECL_TABLEOUTPUT(tableOutputEstim)
    assert(eventhdlrdata != NULL);
 
    if( eventhdlrdata->showstats )
-      SCIPinfoMessage(scip, file, "%s", printReport(scip, eventhdlrdata, strbuf, 0));
+   {
+      char strbuf[SCIP_MAXSTRLEN];
+      printReport(scip, eventhdlrdata, strbuf, 0);
+      SCIPinfoMessage(scip, file, "%s", strbuf);
+   }
 
    return SCIP_OKAY;
 }
