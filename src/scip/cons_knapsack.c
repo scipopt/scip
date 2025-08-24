@@ -12782,7 +12782,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       oldnchgsides = *nchgsides;
       oldnchgcoefs = *nchgcoefs;
 
-      for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
+      for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
       {
          cons = conss[c];
          if( !SCIPconsIsActive(cons) || SCIPconsIsModifiable(cons) )
