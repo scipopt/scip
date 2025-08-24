@@ -2229,7 +2229,7 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
          /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique and
           * if the variable has LP value 1 we do not want it to be in nontrivial cliques
           */
-         if( SCIPvarIsActive(tmpvars[varseq[i]]) && i < nvarsused )
+         if( i < nvarsused && SCIPvarIsActive(tmpvars[varseq[i]]) )
          {
             /* greedily fill up the clique */
             for( j = i + 1; j < nvarsused; ++j )
