@@ -14215,7 +14215,6 @@ SCIP_RETCODE presolStuffing(
          SCIP_Bool tightened;
 #ifdef SCIP_DEBUG
          int oldnfixedvars = *nfixedvars;
-         int oldnchgbds = *nchgbds;
 #endif
 
          SCIPsortRealInt(ratios, varpos, nsingletons);
@@ -14302,9 +14301,9 @@ SCIP_RETCODE presolStuffing(
          }
 
 #ifdef SCIP_DEBUG
-         if( *nfixedvars - oldnfixedvars > 0 || *nchgbds - oldnchgbds > 0 )
+         if( *nfixedvars - oldnfixedvars > 0 )
          {
-            SCIPdebugMsg(scip, "### stuffing fixed %d variables and changed %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
+            SCIPdebugMsg(scip, "### stuffing fixed %d variables\n", *nfixedvars - oldnfixedvars);
          }
 #endif
       }
