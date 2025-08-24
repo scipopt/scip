@@ -7650,7 +7650,7 @@ SCIP_RETCODE propagateCons(
                   SCIPdebugMsg(scip, " -> fixing variable <%s> to 0\n", SCIPvarGetName(maxvar));
                   SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   SCIP_CALL( SCIPinferBinvarCons(scip, maxvar, FALSE, cons, cliquestartposs[c], &infeasible, &tightened) );
-                  assert(consdata->onesweightsum == oldonesweightsum);
+                  assert(consdata->onesweightsum == oldonesweightsum);  /* cppcheck-suppress knownConditionTrueFalse */
                   assert(!infeasible);
                   assert(tightened);
                   (*nfixedvars)++;
