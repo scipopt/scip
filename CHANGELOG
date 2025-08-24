@@ -16,6 +16,7 @@ Fixed bugs
   the transformed problem is likely to fail as well
 - fixed memory leak in primal heuristic scheduler when there is a restart
 - fixed stopping when there is a candidate with a change in the LP bound for both children in strong branching of branch_fullstrong
+- fixed detection of sinks in varbound detection from cumulative constraints
 
 Build system
 ------------
