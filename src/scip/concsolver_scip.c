@@ -225,7 +225,7 @@ SCIP_RETCODE setChildSelRule(
    )
 {
    SCIP_CONCSOLVERDATA*  data;
-   static char childsel[] = { 'h', 'i', 'p', 'r', 'l', 'd', 'u' };
+   static const char childsel[] = { 'h', 'i', 'p', 'r', 'l', 'd', 'u' };
 
    assert(concsolver != NULL);
 
