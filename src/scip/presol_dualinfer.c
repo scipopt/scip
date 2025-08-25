@@ -1653,11 +1653,10 @@ SCIP_RETCODE dualBoundStrengthening(
          {
             implubvars[nimplubvars] = i;
             nimplubvars++;
-         }
 
-         /* reset implied bounds for further detections of other implied bounds */
-         if( isubimplied[i] )
+            /* reset implied bounds for further detections of other implied bounds */
             tmpubs[i] = SCIPinfinity(scip);
+         }
 
          if( islbimplied[i] )
             tmplbs[i] = -SCIPinfinity(scip);
