@@ -1316,8 +1316,8 @@ int SCIPprofileGetEarliestFeasibleStart(
 SCIP_EXPORT
 int SCIPprofileGetLatestFeasibleStart(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
-   int                   lb,                 /**< earliest possible start point */
-   int                   ub,                 /**< latest possible start point */
+   int                   est,                /**< earliest possible start point */
+   int                   lst,                /**< latest possible start point */
    int                   duration,           /**< duration of the core */
    int                   height,             /**< height of the core */
    SCIP_Bool*            infeasible          /**< pointer store if the core cannot be inserted */
