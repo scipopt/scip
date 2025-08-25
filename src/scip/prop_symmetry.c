@@ -3107,7 +3107,7 @@ SCIP_RETCODE addStrongSBCsSubgroup(
    {
       if ( *maxnvarsorder == 0 )
       {
-         *maxnvarsorder = graphcompbegins[graphcompidx + 1] - graphcompbegins[graphcompidx + 1];
+         *maxnvarsorder = graphcompbegins[graphcompidx + 1] - graphcompbegins[graphcompidx];
          *nvarsorder = 0;
 
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, lexorder, *maxnvarsorder) );
@@ -3116,7 +3116,7 @@ SCIP_RETCODE addStrongSBCsSubgroup(
       {
          assert( *nvarsorder == *maxnvarsorder );
 
-         *maxnvarsorder += graphcompbegins[graphcompidx + 1] - graphcompbegins[graphcompidx + 1];
+         *maxnvarsorder += graphcompbegins[graphcompidx + 1] - graphcompbegins[graphcompidx];
 
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, lexorder, *nvarsorder, *maxnvarsorder) );
       }
