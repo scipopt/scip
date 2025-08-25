@@ -3214,7 +3214,7 @@ SCIP_RETCODE solveBendersSubproblems(
           */
          if( solveloop == SCIP_BENDERSSOLVELOOP_CIP )
          {
-            if( convexsub || (*substatus)[i] == SCIP_BENDERSSUBSTATUS_INFEAS )
+            if( convexsub )
                solvesub = FALSE;
             else
             {
