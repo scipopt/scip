@@ -4442,7 +4442,7 @@ SCIP_RETCODE dryBranch(
 
       /* find the position in the childid array */
       c = 0;
-      while( reoptnode->childids[c] != cutoffchilds[ncutoffchilds-1] && c < reoptnode->nchilds )
+      while( c < reoptnode->nchilds && reoptnode->childids[c] != cutoffchilds[ncutoffchilds-1] )
          ++c;
       assert(reoptnode->childids[c] == cutoffchilds[ncutoffchilds-1]);
 
@@ -4459,7 +4459,7 @@ SCIP_RETCODE dryBranch(
    {
       /* find the position in the childid array */
       c = 0;
-      while( reoptnode->childids[c] != redchilds[nredchilds-1] && c < reoptnode->nchilds )
+      while( c < reoptnode->nchilds && reoptnode->childids[c] != redchilds[nredchilds-1] )
          ++c;
       assert(reoptnode->childids[c] == redchilds[nredchilds-1]);
 
