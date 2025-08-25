@@ -878,7 +878,7 @@ size_t BMSgetNUsedBufferMemory(
 /** returns the number of allocated bytes in the buffer memory */
 SCIP_EXPORT
 long long BMSgetBufferMemoryUsed(
-   const BMS_BUFMEM*     bufmem              /**< buffer memory */
+   const BMS_BUFMEM*     buffer              /**< buffer memory */
    );
 
 /** outputs statistics about currently allocated buffers to the screen */
