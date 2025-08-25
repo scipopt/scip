@@ -610,7 +610,6 @@ SCIP_RETCODE addConsTerm(
                mfun = mono_get_function(mono);
                if (mfun == MFUN_TRUE || mfun == MFUN_FALSE)
                {
-                  scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
                   SCIP_CALL( SCIPsetBinaryVarIndicator(scip, cons, scipvar) );
                }
                else
@@ -646,7 +645,6 @@ SCIP_RETCODE addConsTerm(
                mfun = mono_get_function(mono);
                if (mfun == MFUN_TRUE || mfun == MFUN_FALSE)
                {
-                  scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
                   SCIP_CALL( SCIPsetBinaryVarIndicator(scip, cons, scipvar) );
                }
                else
