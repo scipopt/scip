@@ -11097,9 +11097,9 @@ SCIP_RETCODE lpLexDualSimplex(
             SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
             lexIterations += iterations;
 
-#ifdef DEBUG_LEXDUAL
             if( iterations > 0 )
             {
+#ifdef DEBUG_LEXDUAL
                int j;
 
                if( !chooseBasic )
@@ -11157,12 +11157,12 @@ SCIP_RETCODE lpLexDualSimplex(
                   SCIPsetFreeBufferArray(set, &primsol);
                   assert(primsol == NULL);
                }
-            }
 #endif
 
-            /* count only as round if iterations have been performed */
-            if( iterations > 0 )
+               /* count only as round if iterations have been performed */
                ++rounds;
+            }
+
             ++nruns;
          }
       }
