@@ -2728,30 +2728,18 @@ SCIP_RETCODE addNode(
       SCIPsetDebugMsg(set, " -> reopttype: %d, lowerbound: %g\n", reopttype, reopt->reopttree->reoptnodes[id]->lowerbound);
 
 #ifdef SCIP_MORE_DEBUG
+      SCIPsetDebugMsg(set, " -> saved variables:\n");
+      for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; ++varnr )
       {
-         SCIPsetDebugMsg(set, " -> saved variables:\n");
-         for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; ++varnr )
-         {
-            SCIPsetDebugMsg(set, "  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
-               reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-               "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
-         }
-         for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; ++varnr )
-         {
-            SCIPsetDebugMsg(set, " -> saved variables:\n");
-            for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; ++varnr )
-            {
-               SCIPsetDebugMsg(set, "  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
-                  reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
-            }
-            for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; ++varnr )
-            {
-               SCIPsetDebugMsg(set, "  <%s> %s %g (after dual red.)\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
-                  reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
-            }
-         }
+         SCIPsetDebugMsg(set, "  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
+            reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+            "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
+      }
+      for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; ++varnr )
+      {
+         SCIPsetDebugMsg(set, "  <%s> %s %g (after dual red.)\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
+            reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+            "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
       }
 #endif
 
@@ -3076,23 +3064,18 @@ SCIP_RETCODE addNode(
          reopt->reopttree->reoptnodes[id]->nconss, reopt->reopttree->reoptnodes[id]->parentID,
          reopttype, reopt->reopttree->reoptnodes[id]->lowerbound);
 #ifdef SCIP_MORE_DEBUG
+      for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; ++varnr )
       {
-         for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; ++varnr )
-         {
-            for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; ++varnr )
-            {
-               SCIPsetDebugMsg(set, "  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
-                  reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
-            }
-            for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; ++varnr )
-            {
-               SCIPsetDebugMsg(set, "  <%s> %s %g (after dual red.)\n",
-                  SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
-                  reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
-            }
-         }
+         SCIPsetDebugMsg(set, "  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
+            reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+            "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
+      }
+      for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; ++varnr )
+      {
+         SCIPsetDebugMsg(set, "  <%s> %s %g (after dual red.)\n",
+            SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
+            reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+            "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
       }
 #endif
    } /*lint !e438*/
