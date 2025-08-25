@@ -2113,11 +2113,11 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 
    varcount = 0;
 
-   /* 1.stage: search dominance relations of parallel columns
-      *          within equalities and ranged rows
-      */
    if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
+      /* 1.stage: search dominance relations of parallel columns
+         *          within equalities and ranged rows
+         */
       SCIP_CALL( detectParallelCols(scip, matrix, pclass, varineq) );
       SCIPsortIntInt(pclass, colidx, ncols);
 
@@ -2216,13 +2216,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
          if( varcount >= ncols )
             break;
       }
-   }
 
-   /* 2.stage: search dominance relations for the remaining columns
-      *          by increasing row-sparsity
-      */
-   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
-   {
+      /* 2.stage: search dominance relations for the remaining columns
+       *          by increasing row-sparsity
+       */
       SCIPsortIntInt(rowsparsity, rowidxsorted, nrows);
 
       for( r = 0; r < nrows; ++r )
