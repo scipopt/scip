@@ -2939,7 +2939,6 @@ SCIP_RETCODE hashmapInsert(
       {
          if( override )
          {
-            hashmap->slots[pos].origin = origin;
             hashmap->slots[pos].image = image;
             hashmap->hashes[pos] = hashval;
             return SCIP_OKAY;
