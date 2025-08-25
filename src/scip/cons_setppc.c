@@ -2230,7 +2230,7 @@ SCIP_RETCODE processFixings(
 #ifndef NDEBUG
             fixedonefound = FALSE;
 #endif
-            for( v = 0; v < nvars && consdata->nfixedones == 1; ++v )
+            for( v = 0; v < nvars && consdata->nfixedones == 1; ++v )  /* cppcheck-suppress knownConditionTrueFalse */
             {
                var = vars[v];
                assert(SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), 1.0));

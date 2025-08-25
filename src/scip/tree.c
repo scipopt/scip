@@ -7639,9 +7639,9 @@ void SCIPnodeGetNDomchg(
    if( count_branchings )
       *nbranchings = 0;
    if( count_consprop )
-      *nconsprop = 0;
+      *nconsprop = 0;  /* cppcheck-suppress nullPointer */
    if( count_prop )
-      *nprop = 0;
+      *nprop = 0;  /* cppcheck-suppress nullPointer */
 
    if( node->domchg == NULL )
       return;

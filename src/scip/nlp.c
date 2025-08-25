@@ -3488,7 +3488,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    }
    else if( SCIP_EVENTTYPE_BOUNDCHANGED & etype )
    {
-      SCIPdebugMessage("-> handling bound changed event %" SCIP_EVENTTYPE_FORMAT ", variable <%s>\n", etype, SCIPvarGetName(var) );
+      SCIPdebugMessage("-> handling bound changed event %" SCIP_EVENTTYPE_FORMAT ", variable <%s>\n", etype, SCIPvarGetName(var) );  /* cppcheck-suppress invalidPrintfArgType_uint */
       SCIP_CALL( nlpUpdateVarBounds(scip->nlp, scip->set, var, (SCIP_Bool)(SCIP_EVENTTYPE_BOUNDTIGHTENED & etype)) );
    }
    else if( SCIP_EVENTTYPE_OBJCHANGED & etype )

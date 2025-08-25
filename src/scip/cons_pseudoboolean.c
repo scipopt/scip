@@ -70,7 +70,7 @@
 #include <string.h>
 
 #ifdef WITHEQKNAPSACK
-#include "scip/cons_eqknapsack.h"
+#include "scip/cons_eqknapsack.h"   /* cppcheck-suppress missingInclude */
 #endif
 
 /* constraint handler properties */
@@ -3871,7 +3871,7 @@ SCIP_RETCODE copyConsPseudoboolean(
          assert(ntargetandconss <= ntargetlinvars);
       }
 
-      if( *valid )
+      if( *valid )  /* cppcheck-suppress duplicateCondition */
       {
          SCIP_Real targetrhs;
          SCIP_Real targetlhs;

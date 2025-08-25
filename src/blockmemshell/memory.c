@@ -2410,7 +2410,7 @@ void BMSdisplayBlockMemory_call(
       totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0,
       (double)allocedmem/(1024.0*1024.0));
 #endif
-   printInfo("%d blocks (%d unused), %" LONGINT_FORMAT " bytes allocated, %" LONGINT_FORMAT " bytes free",
+   printInfo("%d blocks (%d unused), %" LONGINT_FORMAT " bytes allocated, %" LONGINT_FORMAT " bytes free",   /* cppcheck-suppress syntaxError */
       nblocks + nunusedblocks, nunusedblocks, allocedmem, freemem);
    if( allocedmem > 0 )
       printInfo(" (%.1f%%)", 100.0 * (double) freemem / (double) allocedmem);

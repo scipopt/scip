@@ -742,7 +742,7 @@ SCIP_RETCODE primalAddSol(
    }
    else
    {
-      if( primal->nsols == set->limit_maxsol )
+      if( primal->nsols == set->limit_maxsol )  /* cppcheck-suppress knownConditionTrueFalse */
       {
          SCIP_CALL( SCIPsolFree(&primal->sols[set->limit_maxsol - 1], blkmem, primal) );
       }

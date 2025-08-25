@@ -1103,7 +1103,7 @@ private:
       size_t             p,                  /**< highest order Taylor coefficient that we are evaluating */
       const CppAD::vector<SCIP_Real>& tx,    /**< values for taylor coefficients of x */
       const CppAD::vector<SCIP_Real>& ty,    /**< values for taylor coefficients of y */
-      CppAD::vector<SCIP_Real>& px,          /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
+      CppAD::vector<SCIP_Real>& px,          /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */  /* cppcheck-suppress constParameterReference */
       const CppAD::vector<SCIP_Real>& py     /**< values for partial derivatives of g(x) w.r.t. y */
       )
    {

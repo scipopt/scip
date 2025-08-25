@@ -1635,7 +1635,7 @@ public:
          for( size_t i = 0; i < sosit->second.size(); ++i )
          {
             int varidx = sosit->second[i];
-            setvars[i] = probdata->vars[varidx];
+            setvars[i] = probdata->vars[varidx];  /* cppcheck-suppress unreadVariable */
 
             if( issos2 && sosweights[varidx] == 0 )
                // 0 is the default if no ref was given for a variable; we don't allow this for SOS2

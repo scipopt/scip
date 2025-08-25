@@ -3163,7 +3163,7 @@ SCIP_RETCODE solveBendersSubproblems(
     */
 #ifdef _OPENMP
    SCIP_CALL( SCIPsetGetIntParam(set, "parallel/maxnthreads", &maxnthreads) );
-   numthreads = MIN(benders->numthreads, maxnthreads);
+   numthreads = MIN(benders->numthreads, maxnthreads);  /* cppcheck-suppress unreadVariable */
 #endif
 
    /* in the case of an LNS check, only the convex relaxations of the subproblems will be solved. This is a performance
