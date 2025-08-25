@@ -849,6 +849,8 @@ DECL_CURVCHECK(curvCheckExprhdlr)
       return SCIP_OKAY;
    }
 
+   *success = FALSE;
+
    /* ignore sums if > 1 children
     * NOTE: this means that for something like 1+f(x), even if f is a trivial convex expression, we would handle 1+f(x)
     * with this nlhdlr, instead of formulating this as 1+z and handling z=f(x) with the default nlhdlr, i.e., the exprhdlr
@@ -1015,7 +1017,7 @@ SCIP_RETCODE constructExpr(
       else if( SCIPexprGetCurvature(nlexpr) != SCIP_EXPRCURV_UNKNOWN && !assumecurvature )
       {
          /* if we are here, either convexity or concavity is required; try to check for this curvature */
-         SCIP_Bool success;
+         SCIP_Bool success = FALSE;
          int method;
 
          /* try through curvature check methods until one succeeds */
