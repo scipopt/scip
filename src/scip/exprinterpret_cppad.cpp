@@ -1502,7 +1502,7 @@ SCIP_RETCODE SCIPexprintCreate(
 {
    assert(exprint != NULL);
 
-   *exprint = (SCIP_EXPRINT*)1u;  /* some code checks that a non-NULL pointer is returned here, even though it may not point anywhere */
+   *exprint = (SCIP_EXPRINT*)(size_t)1u;  /* some code checks that a non-NULL pointer is returned here, even though it may not point anywhere */
 
    return SCIP_OKAY;
 }
