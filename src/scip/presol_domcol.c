@@ -125,7 +125,6 @@ void printRow(
    char relation;
    SCIP_VAR* var;
 
-   relation='-';
    if( !SCIPmatrixIsRowRhsInfinity(matrix, row) &&
       SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, row), SCIPmatrixGetRowRhs(matrix, row)) )
    {
