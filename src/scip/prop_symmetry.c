@@ -3666,11 +3666,12 @@ SCIP_RETCODE detectAndHandleSubgroups(
    SCIP_Bool* used;
    int perm;
    int p;
-   int k;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &used, propdata->npermvars) );
    for (p = propdata->componentbegins[cidx]; p < propdata->componentbegins[cidx+1]; ++p)
    {
+      int k;
+
       perm = propdata->components[p];
 
       for (k = 0; k < propdata->npermvars; ++k)
