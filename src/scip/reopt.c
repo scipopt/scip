@@ -6369,9 +6369,11 @@ SCIP_RETCODE SCIPreoptGetChildIDs(
    if( node == NULL )
       id = 0;
    else
+   {
       id = SCIPnodeGetReoptID(node);
+      assert(id >= 1 || SCIPnodeGetDepth(node) == 0);
+   }
 
-   assert(id >= 1 || SCIPnodeGetDepth(node) == 0);
    assert(id < reopt->reopttree->reoptnodessize);
    assert(reopt->reopttree->reoptnodes[id] != NULL);
 
