@@ -118,8 +118,8 @@ void SCIPstatUpdatePrimalDualIntegrals(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_Real             primalbound,        /**< current primal bound in transformed problem, or infinity */
-   SCIP_Real             dualbound           /**< current lower bound in transformed space, or -infinity */
+   SCIP_Real             upperbound,         /**< current upper bound in transformed problem, or infinity */
+   SCIP_Real             lowerbound          /**< current lower bound in transformed space, or -infinity */
    );
 
 /** optionally update and return the reference-dual integral statistic */
