@@ -589,17 +589,8 @@ SCIP_RETCODE combineCols(
             for( j = 0; j < nvars; j++ )
             {
 #ifdef SCIP_MORE_DEBUG
-               SCIP_Real oldlb;
-               SCIP_Real oldub;
-#endif
-
-               /* catch the special case where the entire remaining constraint is cancelled */
-               if( j >= nvars )
-                  break;
-
-#ifdef SCIP_MORE_DEBUG
-               oldlb = newlbs[j];
-               oldub = newubs[j];
+               SCIP_Real oldlb = newlbs[j];
+               SCIP_Real oldub = newubs[j];
 #endif
 
                idx = varinds[j];
