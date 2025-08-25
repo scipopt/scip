@@ -1283,7 +1283,7 @@ SCIP_RETCODE SCIPprofileInsertCore(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   left,               /**< left side of the core  */
    int                   right,              /**< right side of the core */
-   int                   height,             /**< height of the core */
+   int                   demand,             /**< demand of the core */
    int*                  pos,                /**< pointer to store the first position were it gets infeasible */
    SCIP_Bool*            infeasible          /**< pointer to store if the core does not fit due to capacity */
    );
@@ -1294,7 +1294,7 @@ SCIP_RETCODE SCIPprofileDeleteCore(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   left,               /**< left side of the core  */
    int                   right,              /**< right side of the core */
-   int                   height              /**< height of the core */
+   int                   demand              /**< demand of the core */
    );
 
 /** return the earliest possible starting point within the time interval [lb,ub] for a given core (given by its height
@@ -1306,7 +1306,7 @@ int SCIPprofileGetEarliestFeasibleStart(
    int                   est,                /**< earliest starting time of the given core */
    int                   lst,                /**< latest starting time of the given core */
    int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
+   int                   demand,             /**< demand of the core */
    SCIP_Bool*            infeasible          /**< pointer store if the corer cannot be inserted */
    );
 
@@ -1319,7 +1319,7 @@ int SCIPprofileGetLatestFeasibleStart(
    int                   est,                /**< earliest possible start point */
    int                   lst,                /**< latest possible start point */
    int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
+   int                   demand,             /**< demand of the core */
    SCIP_Bool*            infeasible          /**< pointer store if the core cannot be inserted */
    );
 
