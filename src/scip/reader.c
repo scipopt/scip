@@ -273,7 +273,7 @@ SCIP_RETCODE SCIPreaderWrite(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     msghdlr,            /**< message handler */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           extension,          /**< file format */
+   const char*           format,             /**< file format */
    SCIP_Bool             genericnames,       /**< using generic variable and constraint names? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -283,11 +283,11 @@ SCIP_RETCODE SCIPreaderWrite(
    assert(reader != NULL);
    assert(set != NULL);
    assert(set->buffer != NULL);
-   assert(extension != NULL);
+   assert(format != NULL);
    assert(result != NULL);
 
    /* check, if reader is applicable on the given file */
-   if( readerIsApplicable(reader, extension) && reader->readerwrite != NULL )
+   if( readerIsApplicable(reader, format) && reader->readerwrite != NULL )
    {
       const char* consname;
       const char** varnames = NULL;
