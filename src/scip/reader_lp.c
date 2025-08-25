@@ -3187,7 +3187,7 @@ SCIP_RETCODE printAggregatedCons(
    SCIP_VAR** activevars;
    SCIP_Real* activevals;
    int nactivevars;
-   SCIP_Real activeconstant = 0.0;
+   SCIP_Real activeconstant;
    char consname[LP_MAX_NAMELEN];
 
    assert( scip != NULL );
