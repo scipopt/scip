@@ -1069,7 +1069,6 @@ SCIP_RETCODE freeSymmetryData(
 
       propdata->npermvars = 0;
       propdata->nbinpermvars = 0;
-      propdata->nperms = -1;
       propdata->nmaxperms = 0;
       propdata->nmovedpermvars = -1;
       propdata->nmovedbinpermvars = 0;
