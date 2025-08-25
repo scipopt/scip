@@ -1490,10 +1490,11 @@ void BMSclearChunkMemory_call(
    int                   line                /**< line number in source file of the function call */
    )
 {
-   debugMessage("clearing chunk memory %p [elemsize: %d]\n", (void*)chkmem, chkmem->elemsize);
-
    if( chkmem != NULL )
+   {
+      debugMessage("clearing chunk memory %p [elemsize: %d]\n", (void*)chkmem, chkmem->elemsize);
       clearChkmem(chkmem, NULL);
+   }
    else
    {
       printErrorHeader(filename, line);
@@ -1510,10 +1511,11 @@ void BMSdestroyChunkMemory_call(
 {
    assert(chkmem != NULL);
 
-   debugMessage("destroying chunk memory %p [elemsize: %d]\n", (void*)*chkmem, (*chkmem)->elemsize);
-
    if( *chkmem != NULL )
+   {
+      debugMessage("destroying chunk memory %p [elemsize: %d]\n", (void*)*chkmem, (*chkmem)->elemsize);
       destroyChkmem(chkmem, NULL);
+   }
    else
    {
       printErrorHeader(filename, line);
