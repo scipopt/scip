@@ -4351,10 +4351,6 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
 
    *lperror = FALSE;
 
-   sbdown = col->sbdown;
-   sbup = col->sbup;
-   sbdownvalid = col->sbdownvalid;
-   sbupvalid = col->sbupvalid;
    sbitlim = col->sbitlim;
    nsbcalls = col->nsbcalls;
 
@@ -4389,6 +4385,8 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
 
       sbdown = lp->lpobjval;
       sbup = lp->lpobjval;
+      sbdownvalid = col->sbdownvalid;
+      sbupvalid = col->sbupvalid;
 
       if( integral )
          retcode = SCIPlpiStrongbranchInt(lp->lpi, col->lpipos, col->primsol, itlim, down  == NULL ? NULL : &sbdown, up  == NULL ? NULL : &sbup, &sbdownvalid, &sbupvalid, &iter);
