@@ -2081,10 +2081,11 @@ SCIP_RETCODE createAndAddAndCons(
 #ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
-         SCIP_Real val;
+         SCIP_Real val = 1.0;
          SCIP_Real debugsolval;
          int v;
 
+         assert(nvars >= 1);
          for( v = nvars - 1; v >= 0; --v )
          {
             SCIP_CALL( SCIPdebugGetSolVal(scip, vars[v], &val) );
