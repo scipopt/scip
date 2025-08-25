@@ -1767,18 +1767,16 @@ TERMINATE:
          SCIPbendersSetSubproblemType(benders, probnumber, SCIP_BENDERSSUBTYPE_NONCONVEXDIS);
       else
          SCIPABORT();
-   }
 
-   /* setting the non-linear subproblem flag */
-   if( probnumber >= 0 )
+      /* setting the non-linear subproblem flag */
       SCIPbendersSetSubproblemIsNonlinear(benders, probnumber, isnonlinear);
-   else
-      SCIPbendersSetMasterIsNonlinear(benders, isnonlinear);
 
-   if( probnumber >= 0 )
-   {
       SCIPsetDebugMsg(set, "subproblem <%s> has been found to be of type %d\n", SCIPgetProbName(subproblem),
          SCIPbendersGetSubproblemType(benders, probnumber));
+   }
+   else
+   {
+      SCIPbendersSetMasterIsNonlinear(benders, isnonlinear);
    }
 
    /* releasing the fixed variable hashmap */
