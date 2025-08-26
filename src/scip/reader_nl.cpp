@@ -309,7 +309,7 @@ public:
    /// destructor
    ///
    /// only asserts that cleanup() has been called, as we cannot throw an exception or return a SCIP_RETCODE here
-   ~AMPLProblemHandler()
+   ~AMPLProblemHandler() override
    {
       // exprs and linear constraint arrays should have been cleared up in cleanup()
       assert(varexprs.empty());
@@ -642,7 +642,7 @@ public:
       std::shared_ptr<std::vector<SCIP_EXPR*> > v;
 
       /// constructor
-      NumericArgHandler(
+      explicit NumericArgHandler(
          int             num_args            ///< number of terms to expect
          )
       : v(new std::vector<SCIP_EXPR*>())
