@@ -26,6 +26,8 @@ Build system
 
 ### Makefile
 
+- added experimental target to run cppcheck
+
 Miscellaneous
 -------------
 
