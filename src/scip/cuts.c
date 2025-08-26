@@ -1455,6 +1455,8 @@ SCIP_RETCODE cutTightenCoefsQuad(
    if( SCIPisGT(scip, maxact - maxabsintval, QUAD_TO_DBL(*cutrhs)) )
       return SCIP_OKAY;
 
+   /* first sort indices, so that in the following sort, the order for coefficients with same absolute value does not depend on how cutinds was initially ordered */
+   SCIPsortInt(cutinds, *cutnnz);
    SCIPsortDownInd(cutinds, compareAbsCoefsQuad, (void*) cutcoefs, *cutnnz);
 
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
@@ -2336,6 +2338,8 @@ SCIP_RETCODE cutTightenCoefs(
    if( SCIPisGT(scip, maxact - maxabsintval, QUAD_TO_DBL(*cutrhs)) )
       return SCIP_OKAY;
 
+   /* first sort indices, so that in the following sort, the order for coefficients with same absolute value does not depend on how cutinds was initially ordered */
+   SCIPsortInt(cutinds, *cutnnz);
    SCIPsortDownInd(cutinds, compareAbsCoefs, (void*) cutcoefs, *cutnnz);
 
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
