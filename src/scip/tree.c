@@ -6749,7 +6749,6 @@ SCIP_RETCODE SCIPtreeMarkProbingNodeHasLP(
    assert(node->data.probingnode != NULL);
 
    /* update LP information in probingnode data */
-   /* cppcheck-suppress nullPointer */
    SCIP_CALL( probingnodeUpdate(node->data.probingnode, blkmem, tree, lp) );
 
    return SCIP_OKAY;

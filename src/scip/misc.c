@@ -8072,7 +8072,6 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    /* the articulation points are now up-to-date */
    digraph->articulationscheck = TRUE;
 
-/* cppcheck-suppress unusedLabel */
 TERMINATE:
    BMSfreeMemoryArrayNull(&articulationflag);
    BMSfreeMemoryArrayNull(&parent);

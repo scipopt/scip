@@ -5345,7 +5345,6 @@ SCIP_RETCODE SCIPreoptAddOptSol(
    int                   nvars               /**< number of original problem variables */
    )
 {
-   /* cppcheck-suppress unassignedVariable */
    SCIP_SOL* solcopy;
 
    assert(reopt != NULL);

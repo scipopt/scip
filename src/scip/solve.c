@@ -1526,12 +1526,10 @@ SCIP_RETCODE solveNodeInitialLP(
 
    if( !(*lperror) )
    {
-      /* cppcheck-suppress unassignedVariable */
-      SCIP_EVENT event;
-
       if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_ITERLIMIT && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_TIMELIMIT )
       {
          /* issue FIRSTLPSOLVED event */
+         SCIP_EVENT event;
          SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
          SCIP_CALL( SCIPeventChgNode(&event, SCIPtreeGetFocusNode(tree)) );
          SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
@@ -2410,7 +2408,6 @@ SCIP_RETCODE priceAndCutLoop(
    )
 {
    SCIP_NODE* focusnode;
-   /* cppcheck-suppress unassignedVariable */
    SCIP_EVENT event;
    SCIP_LPSOLSTAT stalllpsolstat;
    SCIP_Real loclowerbound;
@@ -3971,7 +3968,6 @@ SCIP_RETCODE propAndSolve(
       /* check if primal heuristics found a solution and we therefore reached a solution limit */
       if( SCIPsolveIsStopped(set, stat, FALSE) )
       {
-         /* cppcheck-suppress unassignedVariable */
          SCIP_NODE* node;
 
          /* we reached a solution limit and do not want to continue the processing of the current node, but in order to

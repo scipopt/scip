@@ -650,7 +650,6 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
          "weight of incumbent solutions compared to other solutions in computation of LP iteration limit",
          &heurdata->bestsolweight, FALSE, DEFAULT_BESTSOLWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
-/* cppcheck-suppress unusedLabel */
 TERMINATE:
    if( retcode != SCIP_OKAY )
    {
