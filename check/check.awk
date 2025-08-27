@@ -349,6 +349,7 @@ BEGIN {
    niter = 0;
    certified = 0;
    certified_ori = 0;
+   certified_fail = 0;
    vipr_ori = 0;
 }
 
@@ -820,6 +821,7 @@ BEGIN {
 }
 /(Failed|failed)/           {
    vipr_ori = 0;
+   certified_fail = 1
 }
 /^presolving detected infeasibility/           {
    certified = 1;
@@ -1125,6 +1127,11 @@ BEGIN {
       else if( certified && certified_ori )
       {
          status = "ok (vipr-verified)";
+         pass++;
+      }
+      else if( certified_fail )
+      {
+         status = "fail (vipr-failed)";
          pass++;
       }
       else if( !feasible && !isLimitReached() && solstatus[prob] != "inf" && solstatus[prob] != "unkn" )
