@@ -241,7 +241,6 @@ SCIP_RETCODE readSolfile(
          val = -SCIPsetInfinity(set);
       else
       {
-         /* cppcheck-suppress invalidscanf */
          nread = sscanf(valuestring, "%lf", &val);
          if( nread != 1 )
          {

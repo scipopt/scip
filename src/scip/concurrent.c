@@ -531,7 +531,6 @@ SCIP_RETCODE SCIPconcurrentSolve(
       {
          for( i = 0; i < nconcsolvers; ++i )
          {
-            /* cppcheck-suppress unassignedVariable */
             SCIP_JOB*         job;
             SCIP_SUBMITSTATUS status;
 

@@ -1307,7 +1307,6 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
       SCIP_CONSHDLR* conshdlrknapsack;
       SCIP_CONS** knapsackconss;
       int nknapsackconss;
-      SCIP_VAR** vars;
       SCIP_Longint* vals;
       SCIP_Longint capacity;
       int nvars;
@@ -1327,7 +1326,6 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
          nvars = SCIPgetNVarsKnapsack(scip, knapsackconss[c]);
          vals = SCIPgetWeightsKnapsack(scip, knapsackconss[c]);
-         vars = SCIPgetVarsKnapsack(scip, knapsackconss[c]);
          capacity = SCIPgetCapacityKnapsack(scip, knapsackconss[c]);
 
          if( nvars > 1 && capacity == nvars - 1 && vals[0] == capacity && vals[1] == 1 )

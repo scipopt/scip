@@ -70,7 +70,7 @@
 #include <string.h>
 
 #ifdef WITHEQKNAPSACK
-#include "scip/cons_eqknapsack.h"
+#include "scip/cons_eqknapsack.h"   /* cppcheck-suppress missingInclude */
 #endif
 
 /* constraint handler properties */
@@ -2081,10 +2081,11 @@ SCIP_RETCODE createAndAddAndCons(
 #ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
-         SCIP_Real val;
+         SCIP_Real val = 1.0;
          SCIP_Real debugsolval;
          int v;
 
+         assert(nvars >= 1);
          for( v = nvars - 1; v >= 0; --v )
          {
             SCIP_CALL( SCIPdebugGetSolVal(scip, vars[v], &val) );
@@ -3870,7 +3871,7 @@ SCIP_RETCODE copyConsPseudoboolean(
          assert(ntargetandconss <= ntargetlinvars);
       }
 
-      if( *valid )
+      if( *valid )  /* cppcheck-suppress duplicateCondition */
       {
          SCIP_Real targetrhs;
          SCIP_Real targetlhs;

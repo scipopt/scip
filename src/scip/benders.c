@@ -1767,18 +1767,16 @@ TERMINATE:
          SCIPbendersSetSubproblemType(benders, probnumber, SCIP_BENDERSSUBTYPE_NONCONVEXDIS);
       else
          SCIPABORT();
-   }
 
-   /* setting the non-linear subproblem flag */
-   if( probnumber >= 0 )
+      /* setting the non-linear subproblem flag */
       SCIPbendersSetSubproblemIsNonlinear(benders, probnumber, isnonlinear);
-   else
-      SCIPbendersSetMasterIsNonlinear(benders, isnonlinear);
 
-   if( probnumber >= 0 )
-   {
       SCIPsetDebugMsg(set, "subproblem <%s> has been found to be of type %d\n", SCIPgetProbName(subproblem),
          SCIPbendersGetSubproblemType(benders, probnumber));
+   }
+   else
+   {
+      SCIPbendersSetMasterIsNonlinear(benders, isnonlinear);
    }
 
    /* releasing the fixed variable hashmap */
@@ -2345,15 +2343,13 @@ SCIP_RETCODE checkSubproblemIndependence(
    /* looping over all subproblems to check whether there exists at least one master problem variable */
    for( i = 0; i < nsubproblems; i++ )
    {
-      SCIP_Bool independent = FALSE;
-
       /* if there are user defined solving or freeing functions, then it is not possible to declare the independence of
        * the subproblems.
        */
       if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL
          && benders->bendersfreesub == NULL )
       {
-         independent = TRUE;
+         SCIP_Bool independent = TRUE;
 
          for( j = 0; j < nvars; j++ )
          {
@@ -3167,7 +3163,7 @@ SCIP_RETCODE solveBendersSubproblems(
     */
 #ifdef _OPENMP
    SCIP_CALL( SCIPsetGetIntParam(set, "parallel/maxnthreads", &maxnthreads) );
-   numthreads = MIN(benders->numthreads, maxnthreads);
+   numthreads = MIN(benders->numthreads, maxnthreads);  /* cppcheck-suppress unreadVariable */
 #endif
 
    /* in the case of an LNS check, only the convex relaxations of the subproblems will be solved. This is a performance
@@ -3218,7 +3214,7 @@ SCIP_RETCODE solveBendersSubproblems(
           */
          if( solveloop == SCIP_BENDERSSOLVELOOP_CIP )
          {
-            if( convexsub || (*substatus)[i] == SCIP_BENDERSSUBSTATUS_INFEAS )
+            if( convexsub )
                solvesub = FALSE;
             else
             {

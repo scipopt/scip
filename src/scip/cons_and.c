@@ -3058,17 +3058,12 @@ SCIP_RETCODE cliquePresolve(
 	    return SCIP_OKAY;
 	 }
       }
-
-      /* due to SCIPvarsHaveCommonClique() returns on two same variables that they are in a clique, we need to handle
-       * it explicitly
-       */
-      if( var1 == var2 && value1 == value2 )
-	 continue;
+      assert(var1 != var2);
 
       /* due to SCIPvarsHaveCommonClique() returns on two negated variables that they are not in a clique, we need to
        * handle it explicitly
        */
-      if( (var1 == var2 && value1 != value2) || SCIPvarsHaveCommonClique(var1, value1, var2, value2, TRUE) )
+      if( SCIPvarsHaveCommonClique(var1, value1, var2, value2, TRUE) )
       {
 	 SCIPdebugMsg(scip, "in constraint <%s> the resultant <%s> can be fixed to 0 because it is in a clique with operand <%s>\n",
 	    SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));

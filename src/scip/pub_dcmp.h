@@ -115,7 +115,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPdecompGetVarsSize(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    int*                  varssize,           /**< array to store variable sizes of blocks*/
-   int                   nblocks             /**< length of variable sizes array */
+   int                   nlabels             /**< length of variable sizes array */
    );
 
 /** gets constraint size for each block, sorted by increasing block label
@@ -130,7 +130,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPdecompGetConssSize(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    int*                  consssize,          /**< array to store constraint sizes of blocks*/
-   int                   nblocks             /**< length of constraint sizes array */
+   int                   nlabels             /**< length of constraint sizes array */
    );
 
 /** gets number of border variables of this decomposition

@@ -327,21 +327,16 @@ SCIP_Longint getLPIterlimit(
 #ifdef SCIP_DEBUG
 /** print array for debug purpose */
 static
-char* printRealArray(
+void printRealArray(
    char*                 strbuf,             /**< string buffer array */
    SCIP_Real*            elems,              /**< array elements */
    int                   nelems              /**< number of elements */
    )
 {
    int c;
-   char* pos = strbuf;
 
    for( c = 0; c < nelems; ++c )
-   {
-      pos += sprintf(pos, "%.4f ", elems[c]);
-   }
-
-   return strbuf;
+      strbuf += sprintf(strbuf, "%.4f ", elems[c]);
 }
 #endif
 
@@ -359,7 +354,8 @@ int sampleWeighted(
    int w;
 #ifdef SCIP_DEBUG
    char strbuf[SCIP_MAXSTRLEN];
-   SCIPdebugMsg(scip, "Weights: %s\n", printRealArray(strbuf, weights, nweights));
+   printRealArray(strbuf, weights, nweights);
+   SCIPdebugMsg(scip, "Weights: %s\n", strbuf);
 #endif
 
    weightsum = 0.0;
@@ -654,7 +650,6 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
          "weight of incumbent solutions compared to other solutions in computation of LP iteration limit",
          &heurdata->bestsolweight, FALSE, DEFAULT_BESTSOLWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
-/* cppcheck-suppress unusedLabel */
 TERMINATE:
    if( retcode != SCIP_OKAY )
    {

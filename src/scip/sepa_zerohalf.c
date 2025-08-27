@@ -54,7 +54,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "string.h"
+#include <string.h>
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipdefplugins.h"
 #include "scip/cutsel_hybrid.h"
@@ -1354,7 +1354,6 @@ void mod2matrixRemoveCol(
 
    assert(col != NULL);
 
-   /* cppcheck-suppress nullPointer */
    position = col->pos;
 
    /* remove column from arrays */
@@ -1362,9 +1361,7 @@ void mod2matrixRemoveCol(
    mod2matrix->cols[position] = mod2matrix->cols[mod2matrix->ncols];
    mod2matrix->cols[position]->pos = position;
 
-   /* cppcheck-suppress nullPointer */
    nslots = SCIPhashsetGetNSlots(col->nonzrows);
-   /* cppcheck-suppress nullPointer */
    rows = (MOD2_ROW**) SCIPhashsetGetSlots(col->nonzrows);
 
    /* adjust rows of column */
@@ -2287,9 +2284,7 @@ SCIP_RETCODE doSeparation(
             ++sepadata->nreductions;
 
             nnonzrows = 0;
-            /* cppcheck-suppress nullPointer */
             nslots = SCIPhashsetGetNSlots(col->nonzrows);
-            /* cppcheck-suppress nullPointer */
             rows = (MOD2_ROW**) SCIPhashsetGetSlots(col->nonzrows);
 
             for( j = 0; j < nslots; ++j )
@@ -2303,7 +2298,6 @@ SCIP_RETCODE doSeparation(
                SCIP_CALL( mod2rowAddRow(scip, SCIPblkmem(scip), &mod2matrix, nonzrows[j], row) );
             }
 
-            /* cppcheck-suppress nullPointer */
             row->slack = col->solval;
             --mod2matrix.nzeroslackrows;
 

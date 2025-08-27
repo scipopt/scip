@@ -1675,7 +1675,7 @@ SCIP_RETCODE checkConsQuadraticProblem(
 
    if( maydecrease == NULL && mayincrease == NULL )
       return SCIP_OKAY;
-   else if( maydecrease != NULL )
+   if( maydecrease != NULL )
    {
       *objvar = maydecrease;
       coef = maydecreasecoef;
@@ -1692,6 +1692,7 @@ SCIP_RETCODE checkConsQuadraticProblem(
       *objvar = mayincrease;
       coef = mayincreasecoef;
    }
+   assert(*objvar != NULL);
    obj = SCIPvarGetObj(*objvar);
 
    /* check sign of coefficient */
@@ -1715,7 +1716,7 @@ SCIP_RETCODE checkConsQuadraticProblem(
    }
    else
       return SCIP_OKAY;
-   assert( *objvar != NULL && ! SCIPisFeasZero(scip, SCIPvarGetObj(*objvar)) );
+   assert( ! SCIPisFeasZero(scip, SCIPvarGetObj(*objvar)) );
    assert( ! SCIPisFeasZero(scip, *scale) );
 
    /* scale the right hand side of the objective constraint */

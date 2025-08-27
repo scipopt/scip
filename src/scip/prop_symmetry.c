@@ -1069,7 +1069,6 @@ SCIP_RETCODE freeSymmetryData(
 
       propdata->npermvars = 0;
       propdata->nbinpermvars = 0;
-      propdata->nperms = -1;
       propdata->nmaxperms = 0;
       propdata->nmovedpermvars = -1;
       propdata->nmovedbinpermvars = 0;
@@ -3107,7 +3106,7 @@ SCIP_RETCODE addStrongSBCsSubgroup(
    {
       if ( *maxnvarsorder == 0 )
       {
-         *maxnvarsorder = graphcompbegins[graphcompidx + 1] - graphcompbegins[graphcompidx + 1];
+         *maxnvarsorder = graphcompbegins[graphcompidx + 1] - graphcompbegins[graphcompidx];
          *nvarsorder = 0;
 
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, lexorder, *maxnvarsorder) );
@@ -3116,7 +3115,7 @@ SCIP_RETCODE addStrongSBCsSubgroup(
       {
          assert( *nvarsorder == *maxnvarsorder );
 
-         *maxnvarsorder += graphcompbegins[graphcompidx + 1] - graphcompbegins[graphcompidx + 1];
+         *maxnvarsorder += graphcompbegins[graphcompidx + 1] - graphcompbegins[graphcompidx];
 
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, lexorder, *nvarsorder, *maxnvarsorder) );
       }
@@ -3667,11 +3666,12 @@ SCIP_RETCODE detectAndHandleSubgroups(
    SCIP_Bool* used;
    int perm;
    int p;
-   int k;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &used, propdata->npermvars) );
    for (p = propdata->componentbegins[cidx]; p < propdata->componentbegins[cidx+1]; ++p)
    {
+      int k;
+
       perm = propdata->components[p];
 
       for (k = 0; k < propdata->npermvars; ++k)

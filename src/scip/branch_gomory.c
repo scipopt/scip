@@ -118,7 +118,7 @@ struct SCIP_BranchruleData
     * to that form. Specifically, non-basic variables at their lower bound are shifted so that the lower
     * bound is 0 and non-basic at their upper bound are complemented. */
 static
-SCIP_Bool getGMIFromRow(
+void getGMIFromRow(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   ncols,              /**< Number of columns (original variables) in the LP */
    int                   nrows,              /**< Number of rows (slack variables) in the LP */
@@ -334,8 +334,6 @@ SCIP_Bool getGMIFromRow(
          }
       }
    }
-
-   return TRUE;
 }
 
 
@@ -397,7 +395,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    SCIP_Real cutrhs;
    SCIP_Real score;
    SCIP_Real bestscore;
-   SCIP_Bool success;
    int nlpcands;
    int maxncands;
    int ncols;
@@ -506,37 +503,33 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
       SCIP_CALL(SCIPgetLPBInvARow(scip, basicvarpos2tableaurow[lppos], binvrow, binvarow, inds, &ninds));
 
       /* Compute the GMI cut */
-      success = getGMIFromRow(scip, ncols, nrows, cols, rows, binvrow, binvarow, &lpcandssol[i], cutcoefs,
+      getGMIFromRow(scip, ncols, nrows, cols, rows, binvrow, binvarow, &lpcandssol[i], cutcoefs,
          &cutrhs, branchruledata->useweakercuts);
 
       /* Calculate the weighted sum score of measures */
-      if ( success )
+      cut = NULL;
+      SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &cut, name, -SCIPinfinity(scip), cutrhs, TRUE, FALSE, TRUE) );
+      for( j = 0; j < ncols; ++j )
       {
-         cut = NULL;
-         SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &cut, name, -SCIPinfinity(scip), cutrhs, TRUE,
-                   FALSE, TRUE) );
-         for( j = 0; j < ncols; ++j )
+         if( !SCIPisZero(scip, cutcoefs[j]) )
          {
-            if( !SCIPisZero(scip, cutcoefs[j]) )
-            {
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, SCIPcolGetVar(cols[j]),
-                                          cutcoefs[SCIPcolGetLPPos(cols[j])]) );
-            }
+            SCIP_CALL( SCIPaddVarToRow(scip, cut, SCIPcolGetVar(cols[j]), cutcoefs[SCIPcolGetLPPos(cols[j])]) );
          }
-         assert( SCIPgetCutEfficacy(scip, NULL, cut) >= -SCIPfeastol(scip) );
-         if ( branchruledata-> efficacyweight != 0 )
-            score += branchruledata->efficacyweight * SCIPgetCutEfficacy(scip, NULL, cut);
-         if ( branchruledata->objparallelweight != 0 )
-            score += branchruledata->objparallelweight * SCIPgetRowObjParallelism(scip, cut);
-         if ( branchruledata->intsupportweight != 0 )
-            score += branchruledata->intsupportweight * SCIPgetRowNumIntCols(scip, cut) / (SCIP_Real) SCIProwGetNNonz(cut);
-         SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+      }
+      assert( SCIPgetCutEfficacy(scip, NULL, cut) >= -SCIPfeastol(scip) );
+      if ( branchruledata-> efficacyweight != 0 )
+         score += branchruledata->efficacyweight * SCIPgetCutEfficacy(scip, NULL, cut);
+      if ( branchruledata->objparallelweight != 0 )
+         score += branchruledata->objparallelweight * SCIPgetRowObjParallelism(scip, cut);
+      if ( branchruledata->intsupportweight != 0 )
+         score += branchruledata->intsupportweight * SCIPgetRowNumIntCols(scip, cut) / (SCIP_Real) SCIProwGetNNonz(cut);
+      SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 
-         /* Replace the best cut if score is higher */
-         if (score > bestscore) {
-            bestscore = score;
-            bestcand = i;
-         }
+      /* Replace the best cut if score is higher */
+      if (score > bestscore)
+      {
+         bestscore = score;
+         bestcand = i;
       }
    }
 

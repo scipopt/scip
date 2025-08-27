@@ -946,19 +946,16 @@ SCIP_RETCODE aggregation(
 
       if( cmirsuccess )
       {
-         /* cppcheck-suppress uninitvar */
          SCIP_CALL( addCut(scip, sol, sepadata->cmir, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy,
                cmircutislocal, sepadata->dynamiccuts, cutrank, startrow < 0 ? "objcmir" : "cmir", cutoff, ncuts, &cut) ); /*lint !e644*/
       }
       else if ( knapsackcoversuccess )
       {
-         /* cppcheck-suppress uninitvar */
          SCIP_CALL( addCut(scip, sol, sepadata->knapsackcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy,
                knapsackcovercutislocal, sepadata->dynamiccuts, cutrank, startrow < 0 ? "objlci" : "lci", cutoff, ncuts, &cut) ); /*lint !e644*/
       }
       else if ( flowcoversuccess )
       {
-         /* cppcheck-suppress uninitvar */
          SCIP_CALL( addCut(scip, sol, sepadata->flowcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy,
                flowcovercutislocal, sepadata->dynamiccuts, cutrank, startrow < 0 ? "objflowcover" : "flowcover", cutoff, ncuts, &cut) ); /*lint !e644*/
       }

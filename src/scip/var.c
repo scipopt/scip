@@ -2862,7 +2862,7 @@ void SCIPvarCapture(
 #endif
    )
    {
-      printf("Captured variable " DEBUGUSES_VARNAME " in SCIP %p, now %d uses; captured at\n", (void*)var->scip, var->nuses);
+      printf("Captured variable " DEBUGUSES_VARNAME " in SCIP %p, now %d uses; captured at\n", (void*)var->scip, var->nuses);  /* cppcheck-suppress syntaxError */
       print_backtrace();
    }
 #endif
@@ -7499,7 +7499,7 @@ SCIP_RETCODE SCIPvarChgLbLazy(
 SCIP_RETCODE SCIPvarChgUbLazy(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             lazyub              /**< the lazy lower bound to be set */
+   SCIP_Real             lazyub              /**< the lazy upper bound to be set */
    )
 {
    assert(var != NULL);

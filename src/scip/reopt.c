@@ -2728,30 +2728,18 @@ SCIP_RETCODE addNode(
       SCIPsetDebugMsg(set, " -> reopttype: %d, lowerbound: %g\n", reopttype, reopt->reopttree->reoptnodes[id]->lowerbound);
 
 #ifdef SCIP_MORE_DEBUG
+      SCIPsetDebugMsg(set, " -> saved variables:\n");
+      for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; ++varnr )
       {
-         SCIPsetDebugMsg(set, " -> saved variables:\n");
-         for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; ++varnr )
-         {
-            SCIPsetDebugMsg(set, "  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
-               reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-               "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
-         }
-         for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; ++varnr )
-         {
-            SCIPsetDebugMsg(set, " -> saved variables:\n");
-            for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; ++varnr )
-            {
-               SCIPsetDebugMsg(set, "  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
-                  reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
-            }
-            for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; ++varnr )
-            {
-               SCIPsetDebugMsg(set, "  <%s> %s %g (after dual red.)\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
-                  reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
-            }
-         }
+         SCIPsetDebugMsg(set, "  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
+            reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+            "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
+      }
+      for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; ++varnr )
+      {
+         SCIPsetDebugMsg(set, "  <%s> %s %g (after dual red.)\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
+            reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+            "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
       }
 #endif
 
@@ -3076,23 +3064,18 @@ SCIP_RETCODE addNode(
          reopt->reopttree->reoptnodes[id]->nconss, reopt->reopttree->reoptnodes[id]->parentID,
          reopttype, reopt->reopttree->reoptnodes[id]->lowerbound);
 #ifdef SCIP_MORE_DEBUG
+      for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; ++varnr )
       {
-         for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; ++varnr )
-         {
-            for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; ++varnr )
-            {
-               SCIPsetDebugMsg(set, "  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
-                  reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
-            }
-            for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; ++varnr )
-            {
-               SCIPsetDebugMsg(set, "  <%s> %s %g (after dual red.)\n",
-                  SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
-                  reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
-                  "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
-            }
-         }
+         SCIPsetDebugMsg(set, "  <%s> %s %g\n", SCIPvarGetName(reopt->reopttree->reoptnodes[id]->vars[varnr]),
+            reopt->reopttree->reoptnodes[id]->varboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+            "=>" : "<=", reopt->reopttree->reoptnodes[id]->varbounds[varnr]);
+      }
+      for( int varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; ++varnr )
+      {
+         SCIPsetDebugMsg(set, "  <%s> %s %g (after dual red.)\n",
+            SCIPvarGetName(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]),
+            reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
+            "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
       }
 #endif
    } /*lint !e438*/
@@ -4459,7 +4442,7 @@ SCIP_RETCODE dryBranch(
 
       /* find the position in the childid array */
       c = 0;
-      while( reoptnode->childids[c] != cutoffchilds[ncutoffchilds-1] && c < reoptnode->nchilds )
+      while( c < reoptnode->nchilds && reoptnode->childids[c] != cutoffchilds[ncutoffchilds-1] )
          ++c;
       assert(reoptnode->childids[c] == cutoffchilds[ncutoffchilds-1]);
 
@@ -4476,7 +4459,7 @@ SCIP_RETCODE dryBranch(
    {
       /* find the position in the childid array */
       c = 0;
-      while( reoptnode->childids[c] != redchilds[nredchilds-1] && c < reoptnode->nchilds )
+      while( c < reoptnode->nchilds && reoptnode->childids[c] != redchilds[nredchilds-1] )
          ++c;
       assert(reoptnode->childids[c] == redchilds[nredchilds-1]);
 
@@ -5362,7 +5345,6 @@ SCIP_RETCODE SCIPreoptAddOptSol(
    int                   nvars               /**< number of original problem variables */
    )
 {
-   /* cppcheck-suppress unassignedVariable */
    SCIP_SOL* solcopy;
 
    assert(reopt != NULL);
@@ -6386,9 +6368,11 @@ SCIP_RETCODE SCIPreoptGetChildIDs(
    if( node == NULL )
       id = 0;
    else
+   {
       id = SCIPnodeGetReoptID(node);
+      assert(id >= 1 || SCIPnodeGetDepth(node) == 0);
+   }
 
-   assert(id >= 1 || SCIPnodeGetDepth(node) == 0);
    assert(id < reopt->reopttree->reoptnodessize);
    assert(reopt->reopttree->reoptnodes[id] != NULL);
 
