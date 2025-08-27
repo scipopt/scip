@@ -49,7 +49,6 @@ set(scipsources
     scip/compr_largestrepr.c
     scip/compr_weakcompr.c
     scip/concsolver_scip.c
-    scip/cons_abspower.c
     scip/cons_and.c
     scip/cons_benders.c
     scip/cons_benderslp.c
@@ -76,9 +75,7 @@ set(scipsources
     scip/cons_orbitope_full.c
     scip/cons_orbitope_pp.c
     scip/cons_pseudoboolean.c
-    scip/cons_quadratic.c
     scip/cons_setppc.c
-    scip/cons_soc.c
     scip/cons_sos1.c
     scip/cons_sos2.c
     scip/cons_superindicator.c
@@ -564,7 +561,6 @@ set(scipheaders
     scip/conflict_resolution.h
     scip/conflict_general.h
     scip/conflictstore.h
-    scip/cons_abspower.h
     scip/cons_and.h
     scip/cons_benders.h
     scip/cons_benderslp.h
@@ -592,9 +588,7 @@ set(scipheaders
     scip/cons_orbitope_pp.h
     scip/cons_or.h
     scip/cons_pseudoboolean.h
-    scip/cons_quadratic.h
     scip/cons_setppc.h
-    scip/cons_soc.h
     scip/cons_sos1.h
     scip/cons_sos2.h
     scip/cons_superindicator.h

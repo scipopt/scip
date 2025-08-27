@@ -2392,20 +2392,6 @@ void SCIPhashtableFree(
    BMSfreeBlockMemory((*hashtable)->blkmem, hashtable);
 }
 
-/** removes all elements of the hash table
- *
- *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
- *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
- *
- *  @deprecated Please use SCIPhashtableRemoveAll()
- */
-void SCIPhashtableClear(
-   SCIP_HASHTABLE*       hashtable           /**< hash table */
-   )
-{
-   SCIPhashtableRemoveAll(hashtable);
-}
-
 /* computes the distance from it's desired position for the element stored at pos */
 #define ELEM_DISTANCE(pos) (((pos) + hashtable->mask + 1 - (hashtable->hashes[(pos)]>>(hashtable->shift))) & hashtable->mask)
 
@@ -10143,106 +10129,6 @@ SCIP_Real SCIPcalcRootNewton(
  * Random Numbers
  */
 
-#if defined(NO_RAND_R) || defined(_WIN32) || defined(_WIN64)
-
-#define SCIP_RAND_MAX 32767
-/** returns a random number between 0 and SCIP_RAND_MAX */
-static
-int getRand(
-   unsigned int*         seedp               /**< pointer to seed value */
-   )
-{
-   SCIP_Longint nextseed;
-
-   assert(seedp != NULL);
-
-   nextseed = (*seedp) * (SCIP_Longint)1103515245 + 12345;
-   *seedp = (unsigned int)nextseed;
-
-   return (int)((unsigned int)(nextseed/(2*(SCIP_RAND_MAX+1))) % (SCIP_RAND_MAX+1));
-}
-
-#else
-
-#define SCIP_RAND_MAX RAND_MAX
-
-/** returns a random number between 0 and SCIP_RAND_MAX */
-static
-int getRand(
-   unsigned int*         seedp               /**< pointer to seed value */
-   )
-{
-   return rand_r(seedp);
-}
-
-#endif
-
-/** returns a random integer between minrandval and maxrandval */
-static
-int getRandomInt(
-   int                   minrandval,         /**< minimal value to return */
-   int                   maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   )
-{
-   SCIP_Real randnumber;
-
-   randnumber = (SCIP_Real)getRand(seedp)/(SCIP_RAND_MAX+1.0);
-   assert(randnumber >= 0.0);
-   assert(randnumber < 1.0);
-
-   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than INT_MAX
-    * apart
-    */
-   return (int) (minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
-}
-
-/** returns a random real between minrandval and maxrandval */
-static
-SCIP_Real getRandomReal(
-   SCIP_Real             minrandval,         /**< minimal value to return */
-   SCIP_Real             maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   )
-{
-   SCIP_Real randnumber;
-
-   randnumber = (SCIP_Real)getRand(seedp)/(SCIP_Real)SCIP_RAND_MAX;
-   assert(randnumber >= 0.0);
-   assert(randnumber <= 1.0);
-
-   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than
-    * SCIP_REAL_MAX apart
-    */
-   return minrandval*(1.0 - randnumber) + maxrandval*randnumber;
-}
-
-/** returns a random integer between minrandval and maxrandval
- *
- *  @deprecated Please use SCIPrandomGetInt() to request a random integer.
- */
-int SCIPgetRandomInt(
-   int                   minrandval,         /**< minimal value to return */
-   int                   maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   )
-{
-   return getRandomInt(minrandval, maxrandval, seedp);
-}
-
-/** returns a random real between minrandval and maxrandval
- *
- *  @deprecated Please use SCIPrandomGetReal() to request a random real.
- */
-SCIP_Real SCIPgetRandomReal(
-   SCIP_Real             minrandval,         /**< minimal value to return */
-   SCIP_Real             maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   )
-{
-   return getRandomReal(minrandval, maxrandval, seedp);
-}
-
 
 /* initial seeds for KISS random number generator */
 #define DEFAULT_SEED UINT32_C(123456789)
@@ -10636,155 +10522,11 @@ void SCIPswapPointers(
    *pointer2 = tmp;
 }
 
-/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm
- *
- *  @deprecated Please use SCIPrandomPermuteIntArray()
- */
-void SCIPpermuteIntArray(
-   int*                  array,              /**< array to be shuffled */
-   int                   begin,              /**< first included index that should be subject to shuffling
-                                              *   (0 for first array entry)
-                                              */
-   int                   end,                /**< first excluded index that should not be subject to shuffling
-                                              *   (array size for last array entry)
-                                              */
-   unsigned int*         randseed            /**< seed value for the random generator */
-   )
-{
-   int tmp;
-   int i;
-
-   /* loop backwards through all elements and always swap the current last element to a random position */
-   while( end > begin+1 )
-   {
-      --end;
-
-      /* get a random position into which the last entry should be shuffled */
-      i = getRandomInt(begin, end, randseed);
-
-      /* swap the last element and the random element */
-      tmp = array[i];
-      array[i] = array[end];
-      array[end] = tmp;
-   }
-}
-
-
-/** randomly shuffles parts of an array using the Fisher-Yates algorithm
- *
- *  @deprecated Please use SCIPrandomPermuteArray()
- */
-void SCIPpermuteArray(
-   void**                array,              /**< array to be shuffled */
-   int                   begin,              /**< first included index that should be subject to shuffling
-                                              *   (0 for first array entry)
-                                              */
-   int                   end,                /**< first excluded index that should not be subject to shuffling
-                                              *   (array size for last array entry)
-                                              */
-   unsigned int*         randseed            /**< seed value for the random generator */
-   )
-{
-   void* tmp;
-   int i;
-
-   /* loop backwards through all elements and always swap the current last element to a random position */
-   while( end > begin+1 )
-   {
-      end--;
-
-      /* get a random position into which the last entry should be shuffled */
-      i = getRandomInt(begin, end, randseed);
-
-      /* swap the last element and the random element */
-      tmp = array[i];
-      array[i] = array[end];
-      array[end] = tmp;
-   }
-}
-
-/** draws a random subset of disjoint elements from a given set of disjoint elements;
- *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
- *
- *  @deprecated Please use SCIPrandomGetSubset()
- */
-SCIP_RETCODE SCIPgetRandomSubset(
-   void**                set,                /**< original set, from which elements should be drawn */
-   int                   nelems,             /**< number of elements in original set */
-   void**                subset,             /**< subset in which drawn elements should be stored */
-   int                   nsubelems,          /**< number of elements that should be drawn and stored */
-   unsigned int          randseed            /**< seed value for random generator */
-   )
-{
-   int i;
-   int j;
-
-   /* if both sets are of equal size, we just copy the array */
-   if( nelems == nsubelems)
-   {
-      BMScopyMemoryArray(subset,set,nelems);
-      return SCIP_OKAY;
-   }
-
-   /* abort, if size of subset is too big */
-   if( nsubelems > nelems )
-   {
-      SCIPerrorMessage("Cannot create %d-elementary subset of %d-elementary set.\n", nsubelems, nelems);
-      return SCIP_INVALIDDATA;
-   }
-#ifndef NDEBUG
-   for( i = 0; i < nsubelems; i++ )
-      for( j = 0; j < i; j++ )
-         assert(set[i] != set[j]);
-#endif
-
-   /* draw each element individually */
-   i = 0;
-   while( i < nsubelems )
-   {
-      int r;
-
-      r = getRandomInt(0, nelems-1, &randseed);
-      subset[i] = set[r];
-
-      /* if we get an element that we already had, we will draw again */
-      for( j = 0; j < i; j++ )
-      {
-         if( subset[i] == subset[j] )
-         {
-            --i;
-            break;
-         }
-      }
-      ++i;
-   }
-   return SCIP_OKAY;
-}
-
 
 /*
  * Arrays
  */
 
-/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly
- *
- * @deprecated Switch to SCIPcomputeArraysIntersectionInt().
- */
-SCIP_RETCODE SCIPcomputeArraysIntersection(
-   int*                  array1,             /**< first array (in ascending order) */
-   int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (in ascending order) */
-   int                   narray2,            /**< number of entries of second array */
-   int*                  intersectarray,     /**< intersection of array1 and array2
-                                              *   (note: it is possible to use array1 for this input argument) */
-   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
-                                              *   (note: it is possible to use narray1 for this input argument) */
-   )
-{
-   SCIPcomputeArraysIntersectionInt(array1, narray1, array2, narray2, intersectarray, nintersectarray);
-
-   return SCIP_OKAY;
-}
 
 /** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
 void SCIPcomputeArraysIntersectionInt(
@@ -10893,27 +10635,6 @@ void SCIPcomputeArraysIntersectionPtr(
 
    /* store size of intersection array */
    *nintersectarray = cnt;
-}
-
-
-/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly
- *
- * @deprecated Switch to SCIPcomputeArraysSetminusInt().
- */
-SCIP_RETCODE SCIPcomputeArraysSetminus(
-   int*                  array1,             /**< first array (in ascending order) */
-   int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (in ascending order) */
-   int                   narray2,            /**< number of entries of second array */
-   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
-                                              *   (note: it is possible to use array1 for this input argument) */
-   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
-                                              *   (note: it is possible to use narray1 for this input argument) */
-   )
-{
-   SCIPcomputeArraysSetminusInt(array1, narray1, array2, narray2, setminusarray, nsetminusarray);
-
-   return SCIP_OKAY;
 }
 
 /** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */

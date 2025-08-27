@@ -111,7 +111,7 @@
 #define NOINIT    0                     /* A dummy entry for non-initialized variables.
                                          * Must have value 0 because of SCIPallocCleanBufferArray. */
 /* A macro for checking if a variable was fixed during a bound change */
-#define ISFIXED(x, bdchgidx)   (SCIPvarGetUbAtIndex(x, bdchgidx, FALSE) - SCIPvarGetLbAtIndex(x, bdchgidx, FALSE) < 0.5)
+#define ISFIXED(scip, x, bdchgidx)   (SCIPgetVarUbAtIndex(scip, x, bdchgidx, FALSE) - SCIPgetVarLbAtIndex(scip, x, bdchgidx, FALSE) < 0.5)
 
 
 
@@ -2573,12 +2573,12 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
       assert( i != invperm[i] );
 
       /* Up to entry varrow the vectors x and perm[x] are fixed to the same value. */
-      assert( ISFIXED(vars[i], bdchgidx) );
-      assert( ISFIXED(vars[invperm[i]], bdchgidx) );
-      assert( REALABS(SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) -
-         SCIPvarGetUbAtIndex(vars[invperm[i]], bdchgidx, FALSE)) < 0.5 );
-      assert( REALABS(SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) -
-         SCIPvarGetLbAtIndex(vars[invperm[i]], bdchgidx, FALSE)) < 0.5 );
+      assert( ISFIXED(scip, vars[i], bdchgidx) );
+      assert( ISFIXED(scip, vars[invperm[i]], bdchgidx) );
+      assert( REALABS(SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) -
+         SCIPgetVarUbAtIndex(scip, vars[invperm[i]], bdchgidx, FALSE)) < 0.5 );
+      assert( REALABS(SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) -
+         SCIPgetVarLbAtIndex(scip, vars[invperm[i]], bdchgidx, FALSE)) < 0.5 );
 
       /* At iteration i the vars x[i] and x[invperm[i]] are fixed.
        * So only new information is received if i < perm[i] (i.e. there is no j < i with j = invperm[i])
@@ -2619,13 +2619,13 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
           * Thus, between entries varrow and infrow of vectorx x and gamma(x) the entries do not have to be fixed.
           * For conflict analysis, only the fixed entries matter.
           */
-         if ( ( i < perm[i] || i == invperm[varrow] ) && ISFIXED(vars[i], bdchgidx) )
+         if ( ( i < perm[i] || i == invperm[varrow] ) && ISFIXED(scip, vars[i], bdchgidx) )
          {
             assert( vars[i] != infervar );
             SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
             SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
          }
-         if ( ( invperm[i] > i || invperm[i] == varrow ) && ISFIXED(vars[invperm[i]], bdchgidx) )
+         if ( ( invperm[i] > i || invperm[i] == varrow ) && ISFIXED(scip, vars[invperm[i]], bdchgidx) )
          {
             assert( vars[invperm[i]] != infervar );
             SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
@@ -2642,7 +2642,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
       {
          /* Changed the lower bound of infervar to 1. That means that this fixing is due to (_, 1) */
          assert( infervar == vars[varrow] );
-         assert( ISFIXED(vars[invperm[varrow]], bdchgidx) );
+         assert( ISFIXED(scip, vars[invperm[varrow]], bdchgidx) );
 
          if ( invperm[varrow] > varrow )
          {
@@ -2654,7 +2654,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
       {
          /* Changed the lower bound of infervar to 0. That means that this fixing is due to (0, _) */
          assert( infervar == vars[invperm[varrow]] );
-         assert( ISFIXED(vars[varrow], bdchgidx) );
+         assert( ISFIXED(scip, vars[varrow], bdchgidx) );
 
          if ( varrow < perm[varrow] )
          {
