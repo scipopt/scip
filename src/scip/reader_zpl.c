@@ -249,7 +249,7 @@ Lps* xlp_alloc(
 
 /** free storage for mathematical program. xlp_free() is the last xlpglue routine that will be called by Zimpl */
 void xlp_free(
-   Lps*                  data                /**< pointer to reader data */
+   Lps*                  lp                  /**< pointer to reader data */
    )
 {  /*lint --e{715}*/
    /* nothing to be done here */
@@ -257,17 +257,17 @@ void xlp_free(
 
 /** does there already exists a constraint with the given name? */
 bool xlp_conname_exists(
-   const Lps*            data,               /**< pointer to reader data */
-   const char*           name                /**< constraint name to check */
+   const Lps*            lp,                 /**< pointer to reader data */
+   const char*           conname             /**< constraint name to check */
    )
 {
    SCIP_READERDATA* readerdata;
 
-   readerdata = (SCIP_READERDATA*)data;
+   readerdata = (SCIP_READERDATA*)lp;
    assert(readerdata != NULL);
 
    /* check if constraint with the given name already exists */
-   return (SCIPfindCons(readerdata->scip, name) != NULL);
+   return (SCIPfindCons(readerdata->scip, conname) != NULL);
 }
 
 /** create a SCIP expression from a ZIMPL term
@@ -710,7 +710,6 @@ SCIP_RETCODE addConsTerm(
                mfun = mono_get_function(mono);
                if (mfun == MFUN_TRUE || mfun == MFUN_FALSE)
                {
-                  scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
                   SCIP_CALL( SCIPsetBinaryVarIndicator(scip, cons, scipvar) );
                }
                else
@@ -746,7 +745,6 @@ SCIP_RETCODE addConsTerm(
                mfun = mono_get_function(mono);
                if (mfun == MFUN_TRUE || mfun == MFUN_FALSE)
                {
-                  scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
                   SCIP_CALL( SCIPsetBinaryVarIndicator(scip, cons, scipvar) );
                }
                else
@@ -1026,7 +1024,7 @@ SCIP_RETCODE addObjTerm(
  *  @note this method is used by ZIMPL beginning from version 3.00
  */
 bool xlp_addcon_term(
-   Lps*                  data,               /**< pointer to reader data */
+   Lps*                  lp,                 /**< pointer to reader data */
    const char*           name,               /**< constraint name */
    ConType               type,               /**< constraint type (LHS, RHS, EQUAL, RANGE, etc) */
    const Numb*           lhs,                /**< left hand side */
@@ -1039,7 +1037,7 @@ bool xlp_addcon_term(
    SCIP_READERDATA* readerdata;
    SCIP_Bool created = FALSE;
 
-   readerdata = (SCIP_READERDATA*)data;
+   readerdata = (SCIP_READERDATA*)lp;
    assert(readerdata != NULL);
 
    scip = readerdata->scip;
@@ -1260,7 +1258,7 @@ SCIP_RETCODE addVar(
 
 /** method adds a variable; is called directly by ZIMPL */
 Var* xlp_addvar(
-   Lps*                  data,               /**< pointer to reader data */
+   Lps*                  lp,                 /**< pointer to reader data */
    const char*           name,               /**< variable name */
    VarClass              usevarclass,        /**< variable type */
    const Bound*          lower,              /**< lower bound */
@@ -1273,7 +1271,7 @@ Var* xlp_addvar(
    SCIP_READERDATA* readerdata;
    Var* zplvar;
 
-   readerdata = (SCIP_READERDATA*)data;
+   readerdata = (SCIP_READERDATA*)lp;
    assert(readerdata != NULL);
 
    scip = readerdata->scip;
@@ -1374,7 +1372,7 @@ SCIP_RETCODE addSOS(
 
 /** add a SOS constraint. Add a given a Zimpl term as an SOS constraint to the mathematical program */
 int xlp_addsos_term(
-   Lps*                  data,               /**< pointer to reader data */
+   Lps*                  lp,                 /**< pointer to reader data */
    const char*           name,               /**< constraint name */
    SosType               type,               /**< SOS type */
    const Numb*           priority,           /**< priority */
@@ -1385,7 +1383,7 @@ int xlp_addsos_term(
    SCIP* scip;
    SCIP_READERDATA* readerdata;
 
-   readerdata = (SCIP_READERDATA*)data;
+   readerdata = (SCIP_READERDATA*)lp;
    assert(readerdata != NULL);
 
    scip = readerdata->scip;
@@ -1401,7 +1399,7 @@ int xlp_addsos_term(
 
 /** returns the variable name */
 const char* xlp_getvarname(
-   const Lps*            data,               /**< pointer to reader data */
+   const Lps*            lp,                 /**< pointer to reader data */
    const Var*            var                 /**< variable */
    )
 {
@@ -1409,7 +1407,7 @@ const char* xlp_getvarname(
    SCIP* scip;
    SCIP_READERDATA* readerdata;
 
-   readerdata = (SCIP_READERDATA*)data;
+   readerdata = (SCIP_READERDATA*)lp;
    assert(readerdata != NULL);
 
    scip = readerdata->scip;
@@ -1421,11 +1419,11 @@ const char* xlp_getvarname(
 
 /** return variable type */
 VarClass xlp_getclass(
-   const Lps*            data,               /**< pointer to reader data */
+   const Lps*            lp,                 /**< pointer to reader data */
    const Var*            var                 /**< variable */
    )
 {
-   SCIP_READERDATA* readerdata = (SCIP_READERDATA*)data;
+   SCIP_READERDATA* readerdata = (SCIP_READERDATA*)lp;
    SCIP_VAR* scipvar = (SCIP_VAR*)var;
    int implintlevel;
 
@@ -1455,7 +1453,7 @@ VarClass xlp_getclass(
 
 /** returns lower bound */
 Bound* xlp_getlower(
-   const Lps*            data,               /**< pointer to reader data */
+   const Lps*            lp,                 /**< pointer to reader data */
    const Var*            var                 /**< variable */
    )
 {
@@ -1468,7 +1466,7 @@ Bound* xlp_getlower(
    Numb* numb;
    Bound* bound;
 
-   readerdata = (SCIP_READERDATA*)data;
+   readerdata = (SCIP_READERDATA*)lp;
    assert(readerdata != NULL);
 
    scip = readerdata->scip;
@@ -1512,7 +1510,7 @@ Bound* xlp_getlower(
 
 /** returns upper bound */
 Bound* xlp_getupper(
-   const Lps*            data,               /**< pointer to reader data */
+   const Lps*            lp,                 /**< pointer to reader data */
    const Var*            var                 /**< variable */
    )
 {
@@ -1525,7 +1523,7 @@ Bound* xlp_getupper(
    Numb* numb;
    Bound* bound;
 
-   readerdata = (SCIP_READERDATA*)data;
+   readerdata = (SCIP_READERDATA*)lp;
    assert(readerdata != NULL);
 
    scip = readerdata->scip;
@@ -1569,7 +1567,7 @@ Bound* xlp_getupper(
  *  Coefficents of the objective function will be set to all zero.
  */
 bool xlp_setobj(
-   Lps*                  data,               /**< pointer to reader data */
+   Lps*                  lp,                 /**< pointer to reader data */
    const char*           name,               /**< name of the objective function */
    bool                  minimize            /**< True if the problem should be minimized, False if it should be maximized  */
    )
@@ -1578,7 +1576,7 @@ bool xlp_setobj(
    SCIP_READERDATA* readerdata;
    SCIP_OBJSENSE objsense;
 
-   readerdata = (SCIP_READERDATA*)data;
+   readerdata = (SCIP_READERDATA*)lp;
    assert(readerdata != NULL);
 
    scip = readerdata->scip;
@@ -1595,14 +1593,14 @@ bool xlp_setobj(
 
 /** adds objective function */
 void xlp_addtoobj(
-   Lps*                  data,               /**< pointer to reader data */
+   Lps*                  lp,                 /**< pointer to reader data */
    const Term*           term                /**< objective term */
    )
 {
    SCIP* scip;
    SCIP_READERDATA* readerdata;
 
-   readerdata = (SCIP_READERDATA*)data;
+   readerdata = (SCIP_READERDATA*)lp;
    assert(readerdata != NULL);
 
    scip = readerdata->scip;

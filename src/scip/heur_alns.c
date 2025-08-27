@@ -1564,11 +1564,11 @@ SCIP_RETCODE alnsFixMoreVariables(
    varprio.redcostscores = redcostscores;
    varprio.pscostscores = pscostscores;
 
-   nvarstoadd = MIN(nunfixedvars, nvarstoadd);
-
    /* select the first nvarstoadd many variables according to the score */
    if( nvarstoadd < nunfixedvars )
       SCIPselectInd(perm, sortIndCompAlns, &varprio, nvarstoadd, nunfixedvars);
+   else
+      nvarstoadd = nunfixedvars;
 
    /* loop over the first elements of the selection defined in permutation. They represent the best variables */
    for( b = 0; b < nvarstoadd; ++b )

@@ -592,6 +592,7 @@ The SCIP makefile supports several targets (used via `make ... "target"`):
 | `depend` | Updates dependencies files. This is only needed if you add checks for preprocessor-defines `WITH_*` in source files. |
 | `check`  | or `test`. Runs the check script.                                         |
 | `lint`   | Statically checks the code via flexelint. The call produces the file `lint.out` which contains all the detected warnings. |
+| `cppcheck` | Statically checks the code via cppcheck. The call produces the file `cppcheck.log` which contains the cppcheck output. |
 | `tags`   | Generates tags which can be used in the editor **emacs** and **xemacs**. |
 
 The SCIP makefiles are structured as follows.

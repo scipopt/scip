@@ -71,7 +71,7 @@
 #include <string.h>
 
 #ifdef ALLDIFFERENT
-#include "scip/cons_alldifferent.h"
+#include "scip/cons_alldifferent.h"   /* cppcheck-suppress missingInclude */
 #endif
 
 #define READER_NAME             "fznreader"

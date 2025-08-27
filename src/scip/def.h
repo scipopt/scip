@@ -199,13 +199,9 @@
 #define SQR(x)        ((x)*(x))
 #endif
 
-/* platform-dependent specification of the log1p, which is numerically more stable around x = 0.0 */
+/* specification of log1p, which is numerically more stable around x = 0.0 */
 #ifndef LOG1P
-#ifdef _WIN32
-#define LOG1P(x) (log(1.0+x))
-#else
 #define LOG1P(x) (log1p(x))
-#endif
 #endif
 
 #ifndef LOG2

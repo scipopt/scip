@@ -7083,9 +7083,9 @@ SCIP_RETCODE tightenBounds(
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
-   oldnchgbds = 0;
 
 #ifndef SCIP_DEBUG
+   oldnchgbds = 0;
    oldnchgbdstotal = *nchgbds;
 #endif
 
@@ -11543,9 +11543,6 @@ SCIP_RETCODE simplifyInequalities(
    else
       hasrhs = FALSE;
 
-   SCIPdebug( oldnchgcoefs = *nchgcoefs; )
-   SCIPdebug( oldnchgsides = *nchgsides; )
-
    /* @todo extend both-sided simplification */
    if( haslhs && hasrhs )
    {
@@ -14211,7 +14208,6 @@ SCIP_RETCODE presolStuffing(
          SCIP_Bool tightened;
 #ifdef SCIP_DEBUG
          int oldnfixedvars = *nfixedvars;
-         int oldnchgbds = *nchgbds;
 #endif
 
          SCIPsortRealInt(ratios, varpos, nsingletons);
@@ -14298,9 +14294,9 @@ SCIP_RETCODE presolStuffing(
          }
 
 #ifdef SCIP_DEBUG
-         if( *nfixedvars - oldnfixedvars > 0 || *nchgbds - oldnchgbds > 0 )
+         if( *nfixedvars - oldnfixedvars > 0 )
          {
-            SCIPdebugMsg(scip, "### stuffing fixed %d variables and changed %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
+            SCIPdebugMsg(scip, "### stuffing fixed %d variables\n", *nfixedvars - oldnfixedvars);
          }
 #endif
       }

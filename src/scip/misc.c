@@ -2940,7 +2940,6 @@ SCIP_RETCODE hashmapInsert(
       {
          if( override )
          {
-            hashmap->slots[pos].origin = origin;
             hashmap->slots[pos].image = image;
             hashmap->hashes[pos] = hashval;
             return SCIP_OKAY;
@@ -8164,7 +8163,6 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    /* the articulation points are now up-to-date */
    digraph->articulationscheck = TRUE;
 
-/* cppcheck-suppress unusedLabel */
 TERMINATE:
    BMSfreeMemoryArrayNull(&articulationflag);
    BMSfreeMemoryArrayNull(&parent);

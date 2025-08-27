@@ -98,7 +98,7 @@ SCIP_Real SCIPgetShadowTreeEventHandlerExecutionTime(
 SCIP_EXPORT
 SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNodeFromNodeNumber(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to the shadow tree */
-   SCIP_Longint          nodeno              /**< index of the node, equivalent to the standard branch-and-bound tree */
+   SCIP_Longint          nodeid              /**< index of the node, equivalent to the standard branch-and-bound tree */
 );
 
 /** given a node, returns the node in the shadowtree, or NULL if it doesn't exist */

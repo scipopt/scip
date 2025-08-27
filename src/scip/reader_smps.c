@@ -421,7 +421,6 @@ SCIP_DECL_READERREAD(readerReadSmps)
 
    SCIPfclose(fp);
 
- /* cppcheck-suppress unusedLabel */
 TERMINATE:
    smpsinputFree(scip, &smpsi);
 

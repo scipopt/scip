@@ -1,22 +1,48 @@
-// errors
 // it is possible to call va_copy() first
 va_list_usedBeforeStarted:src/scip/message.c
-unreadVariable:src/scip/sorttpl.c
-constStatement:src/scip/sorttpl.c
-strncatUsage:src/scip/cons_orbitope.c
-nullPointer:src/objscip/objmessagehdlr.cpp
-preprocessorErrorDirective
 
-// style
-// unusedFunction doesn't work for libraries
+// false warnings for use of SCIP memory alloc functions
+legacyUninitvar
+
+// for a library, or when checking only a subset of source, not all functions need to be used
 unusedFunction
+
+// ignore possibilities to reduce variable scope
 variableScope
 
-// information
-unmatchedSuppression
-ConfigurationNotChecked
-missingInclude
-toomanyconfigs
+// style suffers with templating
+unreadVariable:src/scip/sorttpl.c
+constStatement:src/scip/sorttpl.c
+funcArgNamesDifferent:src/scip/sorttpl.c
+funcArgOrderDifferent:src/scip/sorttpl.c
+
+// objscip could be updated to C++11 by adding override keywords
+missingOverride:src/objscip/*
+
+// C++ code uses SCIP memory macros
+cstyleCast:*.cpp
+
+// potential possibilities to improve C++ code - check later
+functionStatic:src/scip/reader_nl.cpp
+duplInheritedMember:src/scip/reader_nl.cpp
+
+// cppcheck may not find system header files, and not all are available on all systems (e.g., windows.h)
+missingIncludeSystem
+
+// various suggestions to add consts
+constParameterCallback
+constParameterPointer
+constParameter
+constVariablePointer
+constVariable
+
+// cppcheck informing that it didn't explore all branches in the code
+normalCheckLevelMaxBranches
+checkLevelNormal
 
 // third-party code
+*:src/amplmp/*
 *:src/cppad/*
+*:src/nauty/*
+*:src/sassy/*
+*:lib/include/*

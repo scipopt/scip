@@ -2233,7 +2233,7 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
          /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique and
           * if the variable has LP value 1 we do not want it to be in nontrivial cliques
           */
-         if( SCIPvarIsActive(tmpvars[varseq[i]]) && i < nvarsused )
+         if( i < nvarsused && SCIPvarIsActive(tmpvars[varseq[i]]) )
          {
             /* greedily fill up the clique */
             for( j = i + 1; j < nvarsused; ++j )
@@ -7654,7 +7654,7 @@ SCIP_RETCODE propagateCons(
                   SCIPdebugMsg(scip, " -> fixing variable <%s> to 0\n", SCIPvarGetName(maxvar));
                   SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   SCIP_CALL( SCIPinferBinvarCons(scip, maxvar, FALSE, cons, cliquestartposs[c], &infeasible, &tightened) );
-                  assert(consdata->onesweightsum == oldonesweightsum);
+                  assert(consdata->onesweightsum == oldonesweightsum);  /* cppcheck-suppress knownConditionTrueFalse */
                   assert(!infeasible);
                   assert(tightened);
                   (*nfixedvars)++;
@@ -12806,7 +12806,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       oldnchgsides = *nchgsides;
       oldnchgcoefs = *nchgcoefs;
 
-      for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
+      for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
       {
          cons = conss[c];
          if( !SCIPconsIsActive(cons) || SCIPconsIsModifiable(cons) )

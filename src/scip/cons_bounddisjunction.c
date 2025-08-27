@@ -1997,7 +1997,7 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Real constant;
-   SCIP_Real bound = 0.0;
+   SCIP_Real bound;
    int consnodeidx;
    int opnodeidx;
    int nodeidx;

@@ -872,7 +872,6 @@ SCIP_RETCODE primalAddSol(
    )
 {
    SCIP_SOL* sol;
-   /* cppcheck-suppress unassignedVariable */
    SCIP_EVENT event;
    SCIP_Real obj;
    int pos;
@@ -1017,7 +1016,7 @@ SCIP_RETCODE primalAddSol(
    }
    else
    {
-      if( primal->nsols == set->limit_maxsol )
+      if( primal->nsols == set->limit_maxsol )  /* cppcheck-suppress knownConditionTrueFalse */
       {
          SCIP_CALL( SCIPsolFree(&primal->sols[set->limit_maxsol - 1], blkmem, primal) );
       }

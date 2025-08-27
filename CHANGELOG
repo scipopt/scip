@@ -398,6 +398,9 @@ Fixed bugs
 - skip attempting to free transformed problem if SCIPtransformProb() failed with an error in SCIPpresolve(), since freeing
   the transformed problem is likely to fail as well
 - fixed memory leak in primal heuristic scheduler when there is a restart
+- fixed stopping when there is a candidate with a change in the LP bound for both children in strong branching of branch_fullstrong
+- fixed detection of sinks in varbound detection from cumulative constraints
+- fixed memory allocation when adding strong SBCs for enclosing orbit of symmetric subgroups (disabled by default)
 
 Build system
 ------------
@@ -405,6 +408,8 @@ Build system
 ### CMake
 
 ### Makefile
+
+- added experimental target to run cppcheck
 
 Miscellaneous
 -------------

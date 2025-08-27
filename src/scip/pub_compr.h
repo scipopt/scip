@@ -71,7 +71,7 @@ void SCIPcomprSetData(
 /** gets name of tree compression */
 SCIP_EXPORT
 const char* SCIPcomprGetName(
-   SCIP_COMPR*           heur                /**< tree compression */
+   SCIP_COMPR*           compr               /**< tree compression */
    );
 
 /** gets description of tree compression */
