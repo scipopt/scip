@@ -819,6 +819,10 @@ BEGIN {
    else
       certified = 1;
 }
+/Variables : 0 (0 binary, 0 integer, 0 continuous) Constraints : 0 initial, 0 maximal/      {
+   if( !vipr_ori )
+      certified = 1;
+}
 /(Failed|failed)/           {
    vipr_ori = 0;
    certified_fail = 1
