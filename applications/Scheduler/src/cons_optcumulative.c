@@ -3626,7 +3626,7 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
    /* collect all activities which are were locally assigned to that machine before the bound change was made */
    for( v = 0; v < consdata->nvars; ++v )
    {
-      if( SCIPvarGetLbAtIndex(consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
+      if( SCIPgetVarLbAtIndex(scip, consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
       {
          vars[nvars] = consdata->vars[v];
          binvars[nvars] = consdata->binvars[v];
@@ -3644,7 +3644,7 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
    {
       for( v = 0; v < consdata->nvars; ++v )
       {
-         if( SCIPvarGetLbAtIndex(consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
+         if( SCIPgetVarLbAtIndex(scip, consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
          {
             SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[v]) );
 

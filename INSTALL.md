@@ -802,12 +802,6 @@ On some systems, the `sigaction()` method is not available.
 In this case, you have to either add `-DNO_SIGACTION` to the FLAGS in the appropriate `make/make.*` file, or to compile with `make USRFLAGS=-DNO_SIGACTION`.
 Make sure, the file `src/scip/interrupt.c` is recompiled.
 
-### No support for rand_r method
-
-On some systems, the `rand_r()` method is not available.
-In this case, you have to either add `-DNO_RAND_R` to the FLAGS in the appropriate `make/make.*` file, or to compile with `make USRFLAGS=-DNO_RAND_R`.
-Make sure, the file `src/scip/misc.c` is recompiled.
-
 ### No support for strtok_r method
 
 On some systems, the `strtok_r()` method is not available.

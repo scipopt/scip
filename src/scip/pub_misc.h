@@ -625,19 +625,6 @@ void SCIPhashtableFree(
    SCIP_HASHTABLE**      hashtable           /**< pointer to the hash table */
    );
 
-/** removes all elements of the hash table
- *
- *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
- *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
- *
- *  @deprecated Please use SCIPhashtableRemoveAll()
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-void SCIPhashtableClear(
-   SCIP_HASHTABLE*       hashtable           /**< hash table */
-   );
-
 /** inserts element in hash table (multiple inserts of same element override the previous entry) */
 SCIP_EXPORT
 SCIP_RETCODE SCIPhashtableInsert(
@@ -2038,18 +2025,6 @@ SCIP_Real SCIPcomputeGap(
  *@{
  */
 
-/** returns a random integer between minrandval and maxrandval
- *
- *  @deprecated Please use SCIPrandomGetInt() to request a random integer.
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-int SCIPgetRandomInt(
-   int                   minrandval,         /**< minimal value to return */
-   int                   maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   );
-
 /** returns a random integer between minrandval and maxrandval */
 SCIP_EXPORT
 int SCIPrandomGetInt(
@@ -2076,33 +2051,6 @@ SCIP_Real SCIPrandomGetReal(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator data */
    SCIP_Real             minrandval,         /**< minimal value to return */
    SCIP_Real             maxrandval          /**< maximal value to return */
-   );
-
-/** returns a random real between minrandval and maxrandval
- *
- *  @deprecated Please use SCIPrandomGetReal() to request a random real.
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-SCIP_Real SCIPgetRandomReal(
-   SCIP_Real             minrandval,         /**< minimal value to return */
-   SCIP_Real             maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   );
-
-/** draws a random subset of disjoint elements from a given set of disjoint elements;
- *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
- *
- *  @deprecated Please use SCIPrandomGetSubset()
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-SCIP_RETCODE SCIPgetRandomSubset(
-   void**                set,                /**< original set, from which elements should be drawn */
-   int                   nelems,             /**< number of elements in original set */
-   void**                subset,             /**< subset in which drawn elements should be stored */
-   int                   nsubelems,          /**< number of elements that should be drawn and stored */
-   unsigned int          randseed            /**< seed value for random generator */
    );
 
 /**@} */
@@ -2139,23 +2087,6 @@ void SCIPswapPointers(
    void**                pointer2            /**< second pointer */
    );
 
-/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm
- *
- *  @deprecated Please use SCIPrandomPermuteIntArray()
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-void SCIPpermuteIntArray(
-   int*                  array,              /**< array to be shuffled */
-   int                   begin,              /**< first included index that should be subject to shuffling
-                                              *   (0 for first array entry)
-                                              */
-   int                   end,                /**< first excluded index that should not be subject to shuffling
-                                              *   (array size for last array entry)
-                                              */
-   unsigned int*         randseed            /**< seed value for the random generator */
-   );
-
 /** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
 SCIP_EXPORT
 void SCIPrandomPermuteIntArray(
@@ -2182,23 +2113,6 @@ void SCIPrandomPermuteArray(
                                               */
    );
 
-/** randomly shuffles parts of an array using the Fisher-Yates algorithm
- *
- *  @deprecated Please use SCIPrandomPermuteArray()
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-void SCIPpermuteArray(
-   void**                array,              /**< array to be shuffled */
-   int                   begin,              /**< first included index that should be subject to shuffling
-                                              *   (0 for first array entry)
-                                              */
-   int                   end,                /**< first excluded index that should not be subject to shuffling
-                                              *   (array size for last array entry)
-                                              */
-   unsigned int*         randseed            /**< pointer to seed value for the random generator */
-   );
-
 /**@} */
 
 
@@ -2212,24 +2126,6 @@ void SCIPpermuteArray(
  *
  * @{
  */
-
-
-/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly
- *
- * @deprecated Switch to SCIPcomputeArraysIntersectionInt().
- */
-SCIP_DEPRECATED
-SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeArraysIntersection(
-   int*                  array1,             /**< first array (in ascending order) */
-   int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (in ascending order) */
-   int                   narray2,            /**< number of entries of second array */
-   int*                  intersectarray,     /**< intersection of array1 and array2
-                                              *   (note: it is possible to use array1 for this input argument) */
-   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
-                                              *   (note: it is possible to use narray1 for this input argument) */
-   );
 
 /** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
 SCIP_EXPORT
@@ -2257,23 +2153,6 @@ void SCIPcomputeArraysIntersectionPtr(
    int*                  nintersectarray     /**< pointer to store number of entries of intersection array
                                               *   (note: it is possible to use narray1 for this input argument) */
 );
-
-/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly
- *
- * @deprecated Switch to SCIPcomputeArraysSetminusInt().
- */
-SCIP_DEPRECATED
-SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeArraysSetminus(
-   int*                  array1,             /**< first array (in ascending order) */
-   int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (in ascending order) */
-   int                   narray2,            /**< number of entries of second array */
-   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
-                                              *   (note: it is possible to use array1 for this input argument) */
-   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
-                                              *   (note: it is possible to use narray1 for this input argument) */
-   );
 
 /** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
 SCIP_EXPORT

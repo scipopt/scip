@@ -1446,14 +1446,14 @@ SCIP_RETCODE MirReduction(
          SCIP_CALL( computeSlack(set, vars, reasonrow, currbdchginfo, NULL, NULL) );
          if( coef > 0.0 )
          {
-            fracval = SCIPvarGetUbAtIndex(vars[idx], currbdchgidx, FALSE) - reasonrow->slack / coef;
+            fracval = SCIPgetVarUbAtIndex(set->scip, vars[idx], currbdchgidx, FALSE) - reasonrow->slack / coef;
             bnd = SCIPvarGetUbGlobal(vars[idx]);
             fracval = MIN(fracval, bnd);
          }
          else
          {
             assert(coef < 0.0);
-            fracval = SCIPvarGetLbAtIndex(vars[idx], currbdchgidx, FALSE) - reasonrow->slack / coef;
+            fracval = SCIPgetVarLbAtIndex(set->scip, vars[idx], currbdchgidx, FALSE) - reasonrow->slack / coef;
             bnd = SCIPvarGetLbGlobal(vars[idx]);
             fracval = MAX(fracval, bnd);
          }
@@ -1462,9 +1462,9 @@ SCIP_RETCODE MirReduction(
       else
       {
          if( coef > 0.0 )
-            SCIP_CALL( SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetUbAtIndex(vars[idx], currbdchgidx, FALSE)) );
+            SCIP_CALL( SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPgetVarUbAtIndex(set->scip, vars[idx], currbdchgidx, FALSE)) );
          else
-            SCIP_CALL( SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetLbAtIndex(vars[idx], currbdchgidx, FALSE)) );
+            SCIP_CALL( SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPgetVarLbAtIndex(set->scip, vars[idx], currbdchgidx, FALSE)) );
       }
    }
 

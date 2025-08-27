@@ -175,22 +175,6 @@ SCIP_Real SCIPfeastol(
    return SCIPsetFeastol(scip->set);
 }
 
-/** returns primal feasibility tolerance of LP solver
- *
- *  @deprecated Please use SCIPgetLPFeastol().
- *
- *  @return primal feasibility tolerance of LP solver
- */
-SCIP_Real SCIPlpfeastol(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return SCIPgetLPFeastol(scip);
-}
-
 /** returns feasibility tolerance for reduced costs
  *
  *  @return feasibility tolerance for reduced costs
@@ -262,29 +246,6 @@ SCIP_RETCODE SCIPchgFeastol(
 
    /* change the settings */
    SCIP_CALL( SCIPsetSetFeastol(scip->set, scip->lp, feastol) );
-
-   return SCIP_OKAY;
-}
-
-/** sets the primal feasibility tolerance of LP solver
- *
- *  @deprecated Please use SCIPsetLPFeastol().
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-SCIP_RETCODE SCIPchgLpfeastol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             lpfeastol,          /**< new primal feasibility tolerance of LP solver */
-   SCIP_Bool             printnewvalue       /**< should "numerics/lpfeastol = ..." be printed? */
-   )
-{
-   SCIPsetLPFeastol(scip, lpfeastol);
-
-   if( printnewvalue )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "numerics/lpfeastol = %.15g\n", lpfeastol);
-   }
 
    return SCIP_OKAY;
 }

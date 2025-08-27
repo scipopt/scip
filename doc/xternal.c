@@ -1796,7 +1796,7 @@
  * The CONSINITLP callback is executed before the first LP relaxation is solved.
  * It should add the LP relaxations of all "initial" constraints to the LP. The method should scan the constraints
  * array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the LP relaxation
- * of all initial constraints to the LP with calls to SCIPaddCut().
+ * of all initial constraints to the LP with calls to SCIPaddRow().
  *
  * @subsection CONSSEPALP
  *
@@ -1805,7 +1805,7 @@
  * the current LP solution.
  * The method is called in the LP solution loop, which means that a valid LP solution exists.
  *
- * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
  * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
@@ -1833,7 +1833,7 @@
  * the given primal solution.
  * The method is not called in the LP solution loop, which means that there is no valid LP solution.
  *
- * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
  * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
@@ -1897,7 +1897,7 @@
  * variables are 0.0). It uses <code>SCIPinferVarLbCons(scip, z, 1.0, c, 0)</code> to apply this assignment (an
  * inference information tag is not needed by the constraint handler and is set to 0).  In the conflict analysis, the
  * constraint handler may be asked to resolve the lower bound change on \f$z\f$ with constraint \f$c\f$, that was
- * applied at a time given by a bound change index "bdchgidx".  With a call to <code>SCIPvarGetLbAtIndex(z,
+ * applied at a time given by a bound change index "bdchgidx".  With a call to <code>SCIPgetVarLbAtIndex(z,
  * bdchgidx)</code>, the handler can find out, that the lower bound of variable \f$z\f$ was set to 1.0 at the given
  * point of time, and should call <code>SCIPaddConflictUb(scip, x, bdchgidx)</code> and <code>SCIPaddConflictUb(scip, y,
  * bdchgidx)</code> to tell SCIP, that the upper bounds of \f$x\f$ and \f$y\f$ at this point of time were the reason for
@@ -2697,7 +2697,7 @@
  * It should try to generate general purpose cutting planes in order to separate the current LP solution.
  * The method is called in the LP solution loop, which means that a valid LP solution exists.
  *
- * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
  * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
@@ -2726,7 +2726,7 @@
  * relaxations that want to separate an intermediate primal solution vector. Thus, if you do not want to support
  * such external plugins, you do not need to implement this callback method.
  *
- * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
  * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
@@ -7228,7 +7228,7 @@
  * infervar), the corresponding bound change (@p bdchgidx, @p boundtype), and the integer (@p inferinfo) that has been
  * supplied during propagation.
  *
- * One can use SCIPvarGetUbAtIndex() or SCIPvarGetLbAtIndex() to detect the bounds before or after the propagation that
+ * One can use SCIPgetVarUbAtIndex() or SCIPgetVarLbAtIndex() to detect the bounds before or after the propagation that
  * should be investigated. Then the bounds that were involved should be passed to SCIP via SCIPaddConflictLb() and
  * SCIPaddConflictUb().  If there is more than one valid explanation of infeasibility, either one can be used.
  * Typically, smaller explanations tend to be better.
@@ -7346,7 +7346,7 @@
  * on one problem in parallel. To use this feature \SCIP has to be compiled with an additional make option to
  * enable the threading functionality (e.g. TPI=tny, see \ref MAKE).
  * Then, a concurrent solve can be started by using the <code>concurrentopt</code> command instead of the <code>optimize</code> command
- * in the \SCIP shell, or by calling the interface function SCIPsolveParallel().
+ * in the \SCIP shell, or by calling the interface function SCIPsolveConcurrent().
  * To configure the behavior of the concurrent solving mode there are new parameters in the category <code>concurrent/</code>
  * and <code>parallel/</code> which will be explained here shortly.
  *

@@ -10937,19 +10937,6 @@ SCIP_Bool SCIPdoNotMultaggrVar(
    return scip->set->presol_donotmultaggr || SCIPvarDoNotMultaggr(var);
 }
 
-/** returns whether dual reductions are allowed during propagation and presolving
- *
- *  @deprecated Please use SCIPallowStrongDualReds()
- */
-SCIP_Bool SCIPallowDualReds(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-
-   return !scip->set->reopt_enable && scip->set->misc_allowstrongdualreds;
-}
-
 /** returns whether strong dual reductions are allowed during propagation and presolving
  *
  *  @note A reduction is called strong dual, if it may discard feasible/optimal solutions, but leaves at least one
@@ -10963,19 +10950,6 @@ SCIP_Bool SCIPallowStrongDualReds(
    assert(scip != NULL);
 
    return !scip->set->reopt_enable && scip->set->misc_allowstrongdualreds;
-}
-
-/** returns whether propagation w.r.t. current objective is allowed
- *
- *  @deprecated Please use SCIPallowWeakDualReds()
- */
-SCIP_Bool SCIPallowObjProp(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-
-   return !scip->set->reopt_enable && scip->set->misc_allowweakdualreds;
 }
 
 /** returns whether weak dual reductions are allowed during propagation and presolving
