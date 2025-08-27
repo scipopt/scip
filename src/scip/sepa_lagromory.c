@@ -2350,7 +2350,6 @@ SCIP_RETCODE solveLagrangianDual(
    SCIP_Bool solvelp;
    int ncurrroundlpiterslast;
    int nlpiters;
-   int ngeneratednewcuts;
    int nnewaddedsoftcuts;
    int nsoftcutviols;
    int nnzsubgradientdualprod;
@@ -2370,13 +2369,10 @@ SCIP_RETCODE solveLagrangianDual(
    nviolscore = 0.0;
    scoreweight = 1.0;
    ballradius = sepadata->radiusinit;
-   ngeneratednewcuts = 0;
    nsoftcutviols = 0;
    nnzsubgradientdualprod = 0;
    terminate = FALSE;
-   subgradientzero = FALSE;
    objvecsdiffer = FALSE;
-   dualvecsdiffer = FALSE;
    solvelp = TRUE;
 
    /* update objective vector based on input Lagrangian multipliers */
@@ -2414,7 +2410,7 @@ SCIP_RETCODE solveLagrangianDual(
          /* generate GMI cuts if a new basis solution is found */
          if( (nlpiters >= 1) && (i % sepadata->cutgenfreq == 0) )
          {
-            ngeneratednewcuts = 0;
+            int ngeneratednewcuts = 0;
             SCIP_CALL( generateGMICuts(scip, sepa, sepadata, mainiternum, i, sol, solvals,
                   nmaxgeneratedperroundcuts, allowlocal, generatedcurrroundcuts, generatedcutefficacies,
                   *ngeneratedcurrroundcuts, &ngeneratednewcuts, depth, cutoff));
@@ -2763,7 +2759,6 @@ SCIP_RETCODE separateCuts(
    solfound = FALSE;
    cutoff = FALSE;
    cutoff2 = FALSE;
-   dualvecsdiffer = FALSE;
    terminate = FALSE;
 
    SCIPdebugMsg(scip, "Separating cuts...\n");

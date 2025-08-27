@@ -642,7 +642,6 @@ static
 SCIP_DECL_BRANCHEXIT(branchExitMultAggr)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
-   SCIPstatistic(int j = 0);
 
    /* initialize branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
@@ -700,6 +699,7 @@ SCIP_DECL_BRANCHEXIT(branchExitMultAggr)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Ratioggain                              :\n");
       if( branchruledata->nmultaggrbranch != 0 )
       {
+         int j;
          for( j = 0; j < branchruledata->nmultaggrbranch; j++ )
          {
             branchruledata->ameanratio += branchruledata->ratioggain[j];

@@ -933,7 +933,7 @@ void SCIPstatPrintDebugMessage(
       printf("[%s:%d] debug: ", filename, sourceline);
 
    va_start(ap, formatstr); /*lint !e838*/
-   printf(formatstr, ap);
+   vprintf(formatstr, ap);
    va_end(ap);
 }
 

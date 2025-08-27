@@ -391,7 +391,7 @@ SCIP_RETCODE SCIPgetReoptSolsRun(
    SCIP*                 scip,               /**< SCIP data structue */
    int                   run,                /**< number of the run */
    SCIP_SOL**            sols,               /**< array to store solutions */
-   int                   allocmem,           /**< allocated size of the array */
+   int                   solssize,           /**< allocated size of the array */
    int*                  nsols               /**< number of solutions */
    );
 

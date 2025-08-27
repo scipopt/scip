@@ -7868,7 +7868,7 @@ SCIP_RETCODE enforceConstraint(
 
       /* if not enforced, then we must not have found a cutoff, cut, domain reduction, or branchscore */
       assert((ownerdata->lastenforced == conshdlrdata->enforound) == (resultexpr != SCIP_DIDNOTFIND));
-      if( ownerdata->lastenforced == conshdlrdata->enforound )
+      if( ownerdata->lastenforced == conshdlrdata->enforound )  /* cppcheck-suppress knownConditionTrueFalse */
          *success = TRUE;
 
       if( resultexpr == SCIP_CUTOFF )

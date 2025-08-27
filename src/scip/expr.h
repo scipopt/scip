@@ -770,7 +770,7 @@ SCIP_RETCODE SCIPexprGetMonomialData(
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real*            coef,               /**< coefficient \f$c\f$ */
    SCIP_Real*            exponents,          /**< exponents \f$\alpha\f$ */
-   SCIP_EXPR**           exprs               /**< expressions \f$x\f$ */
+   SCIP_EXPR**           factors             /**< expressions \f$x\f$ */
    );
 
 /**@} */

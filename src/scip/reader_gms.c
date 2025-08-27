@@ -1772,15 +1772,12 @@ SCIP_RETCODE SCIPwriteGms(
             nondefbounds = TRUE;
          }
       }
-      else
+      else if( !SCIPisInfinity(scip, ub) )
       {
          assert(vartype == SCIP_VARTYPE_CONTINUOUS);
          /* continuous variables have default upper bound +inf */
-         if( !SCIPisInfinity(scip, ub) )
-         {
-            SCIPinfoMessage(scip, file, " %s.up = %.15g;\n", varname, ub);
-            nondefbounds = TRUE;
-         }
+         SCIPinfoMessage(scip, file, " %s.up = %.15g;\n", varname, ub);
+         nondefbounds = TRUE;
       }
    }
 

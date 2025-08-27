@@ -1524,10 +1524,11 @@ void BMSclearChunkMemory_call(
    int                   line                /**< line number in source file of the function call */
    )
 {
-   debugMessage("clearing chunk memory %p [elemsize: %d]\n", (void*)chkmem, chkmem->elemsize);
-
    if( chkmem != NULL )
+   {
+      debugMessage("clearing chunk memory %p [elemsize: %d]\n", (void*)chkmem, chkmem->elemsize);
       clearChkmem(chkmem, NULL);
+   }
    else
    {
       printErrorHeader(filename, line);
@@ -1544,10 +1545,11 @@ void BMSdestroyChunkMemory_call(
 {
    assert(chkmem != NULL);
 
-   debugMessage("destroying chunk memory %p [elemsize: %d]\n", (void*)*chkmem, (*chkmem)->elemsize);
-
    if( *chkmem != NULL )
+   {
+      debugMessage("destroying chunk memory %p [elemsize: %d]\n", (void*)*chkmem, (*chkmem)->elemsize);
       destroyChkmem(chkmem, NULL);
+   }
    else
    {
       printErrorHeader(filename, line);
@@ -2442,7 +2444,7 @@ void BMSdisplayBlockMemory_call(
       totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0,
       (double)allocedmem/(1024.0*1024.0));
 #endif
-   printInfo("%d blocks (%d unused), %" LONGINT_FORMAT " bytes allocated, %" LONGINT_FORMAT " bytes free",
+   printInfo("%d blocks (%d unused), %" LONGINT_FORMAT " bytes allocated, %" LONGINT_FORMAT " bytes free",   /* cppcheck-suppress syntaxError */
       nblocks + nunusedblocks, nunusedblocks, allocedmem, freemem);
    if( allocedmem > 0 )
       printInfo(" (%.1f%%)", 100.0 * (double) freemem / (double) allocedmem);
@@ -2696,7 +2698,6 @@ void* BMSallocBufferMemory_work(
    int                   line                /**< line number in source file of the function call */
    )
 {
-   /* cppcheck-suppress unassignedVariable */
    void* ptr;
 #ifndef SCIP_NOBUFFERMEM
    size_t bufnum;

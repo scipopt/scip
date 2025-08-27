@@ -588,7 +588,7 @@ SCIP_RETCODE handleNlpParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIDATA*        nlpidata,           /**< NLPI data */
    SCIP_NLPIPROBLEM*     nlpiproblem,        /**< NLP */
-   const SCIP_NLPPARAM   param               /**< solve parameters */
+   SCIP_NLPPARAM         param               /**< solve parameters */
    )
 {
    assert(scip != NULL);

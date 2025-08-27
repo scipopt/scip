@@ -482,7 +482,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          ncutsfound = SCIPsepastoreGetNCuts(sepastore) + SCIPcutpoolGetNCuts(cutpool) + SCIPcutpoolGetNCuts(delayedcutpool) - oldncutsfound;
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
-         sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+         sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/  /* cppcheck-suppress duplicateValueTernary */
 
          /* update domain reductions; therefore remove the domain
           * reduction counts which were generated in probing mode */
@@ -595,7 +595,7 @@ SCIP_RETCODE SCIPsepaExecSol(
 
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
-         sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+         sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/  /* cppcheck-suppress duplicateValueTernary */
 
          /* update domain reductions; therefore remove the domain
           * reduction counts which were generated in probing mode */

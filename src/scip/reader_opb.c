@@ -4689,7 +4689,7 @@ SCIP_RETCODE SCIPwriteOpb(
                   continue;
             }
 
-            assert(sscanf(SCIPvarGetName(vars[v]), "x%d", &idx) == 1);
+            assert(sscanf(SCIPvarGetName(vars[v]), "x%d", &idx) == 1);  /* cppcheck-suppress assertWithSideEffect */
          }
 #endif
          retcode = writeOpb(scip, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,
@@ -4768,7 +4768,7 @@ SCIP_RETCODE SCIPwriteOpb(
                      continue;
                }
 
-               assert(sscanf(SCIPvarGetName(vars[v]), transformed ? "t_x%d" : "x%d", &idx) == 1 || strstr(SCIPvarGetName(vars[v]), INDICATORVARNAME) != NULL || strstr(SCIPvarGetName(vars[v]), INDICATORSLACKVARNAME) != NULL );
+               assert(sscanf(SCIPvarGetName(vars[v]), transformed ? "t_x%d" : "x%d", &idx) == 1 || strstr(SCIPvarGetName(vars[v]), INDICATORVARNAME) != NULL || strstr(SCIPvarGetName(vars[v]), INDICATORSLACKVARNAME) != NULL );  /* cppcheck-suppress assertWithSideEffect */
             }
 #endif
             retcode = writeOpb(scip, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,

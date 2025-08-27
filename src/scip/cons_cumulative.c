@@ -11936,7 +11936,7 @@ SCIP_RETCODE findPrecedenceConss(
           nsources++;
        }
 
-      if( tcliquegraph->ninarcs[i] == 0 )
+      if( tcliquegraph->noutarcs[i] == 0 )
        {
           sinks[nsinks] = i;
           nsinks++;
