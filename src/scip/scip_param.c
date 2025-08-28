@@ -921,6 +921,9 @@ SCIP_RETCODE SCIPsetSubscipsOff(
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristics are called more aggressively
  *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
  *
+ *  @note: Using SCIP_PARAMSETTING_AGGRESSIVE enables heuristics regardless of the USESSUBSCIP flag,
+ *         which could lead to unintended recursion when applied to a subscip.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
@@ -972,6 +975,9 @@ SCIP_RETCODE SCIPsetPresolving(
  *  - SCIP_PARAMSETTING_FAST such that the time spent on separating is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that separating is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all separating
+ *
+ *  @note: Using SCIP_PARAMSETTING_AGGRESSIVE enables separators regardless of the USESSUBSCIP flag,
+ *         which could lead to unintended recursion when applied to a subscip.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
