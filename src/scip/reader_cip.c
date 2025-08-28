@@ -905,7 +905,7 @@ SCIP_DECL_READERREAD(readerReadCip)
    SCIP_Bool dynamicrows;
    SCIP_Bool initialvar;
    SCIP_Bool removablevar;
-   SCIP_RETCODE retcode;
+   SCIP_RETCODE retcode = SCIP_OKAY;
 
    if( NULL == (cipinput.file = SCIPfopen(filename, "r")) )
    {
@@ -938,12 +938,12 @@ SCIP_DECL_READERREAD(readerReadCip)
       cipinput.objscaleexact = NULL;
    }
 
-   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL_TERMINATE( retcode, SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL), TERMINATE );
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initialconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
+   SCIP_CALL_TERMINATE( retcode, SCIPgetBoolParam(scip, "reading/initialconss", &initialconss), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows), TERMINATE );
 
    initialvar = !dynamiccols;
    removablevar = dynamiccols;
@@ -951,7 +951,7 @@ SCIP_DECL_READERREAD(readerReadCip)
    while( cipinput.section != CIP_END && !cipinput.haserror )
    {
       /* get next input string */
-      SCIP_CALL( getInputString(scip, &cipinput) );
+      SCIP_CALL_TERMINATE( retcode, getInputString(scip, &cipinput), TERMINATE );
 
       if( cipinput.endfile )
          break;
@@ -962,49 +962,26 @@ SCIP_DECL_READERREAD(readerReadCip)
          getStart(scip, &cipinput);
          break;
       case CIP_STATISTIC:
-         SCIP_CALL( getStatistics(scip, &cipinput) );
+         SCIP_CALL_TERMINATE( retcode, getStatistics(scip, &cipinput), TERMINATE );
          break;
       case CIP_OBJECTIVE:
-         SCIP_CALL( getObjective(scip, &cipinput) );
+         SCIP_CALL_TERMINATE( retcode, getObjective(scip, &cipinput), TERMINATE );
          break;
       case CIP_VARS:
-         retcode = getVariable(scip, &cipinput, initialvar, removablevar);
-
-         if( retcode == SCIP_READERROR )
-         {
-            cipinput.haserror = TRUE;
-            goto TERMINATE;
-         }
-         SCIP_CALL( retcode );
-
+         SCIP_CALL_TERMINATE( retcode, getVariable(scip, &cipinput, initialvar, removablevar), TERMINATE );
          break;
       case CIP_FIXEDVARS:
-         retcode = getFixedVariable(scip, &cipinput);
-
-         if( retcode == SCIP_READERROR )
-         {
-            cipinput.haserror = TRUE;
-            goto TERMINATE;
-         }
-         SCIP_CALL( retcode );
-
+         SCIP_CALL_TERMINATE( retcode, getFixedVariable(scip, &cipinput), TERMINATE );
          break;
       case CIP_CONSTRAINTS:
-         retcode = getConstraint(scip, &cipinput, initialconss, dynamicconss, dynamicrows);
-
-         if( retcode == SCIP_READERROR )
-         {
-            cipinput.haserror = TRUE;
-            goto TERMINATE;
-         }
-         SCIP_CALL( retcode );
-
+         SCIP_CALL_TERMINATE( retcode, getConstraint(scip, &cipinput, initialconss, dynamicconss, dynamicrows), TERMINATE );
          break;
       default:
          SCIPerrorMessage("invalid CIP state\n");
          SCIPABORT();
-         return SCIP_INVALIDDATA;  /*lint !e527*/
-      } /*lint !e788*/ 
+         retcode = SCIP_INVALIDDATA;  /*lint !e527*/
+         goto TERMINATE;
+      } /*lint !e788*/
    }
 
    if( cipinput.haserror )
@@ -1016,7 +993,7 @@ SCIP_DECL_READERREAD(readerReadCip)
       if( !SCIPrationalIsZero(cipinput.objoffsetexact) )
       {
          SCIPrationalMult(cipinput.objoffsetexact, cipinput.objoffsetexact, cipinput.objscaleexact);
-         SCIP_CALL( SCIPaddOrigObjoffsetExact(scip, cipinput.objoffsetexact) );
+         SCIP_CALL_TERMINATE( retcode, SCIPaddOrigObjoffsetExact(scip, cipinput.objoffsetexact), TERMINATE );
       }
    }
    /* offset real objective */
@@ -1025,7 +1002,7 @@ SCIP_DECL_READERREAD(readerReadCip)
       if( cipinput.objoffset != 0.0 ) /*lint !e777*/
       {
          cipinput.objoffset *= cipinput.objscale;
-         SCIP_CALL( SCIPaddOrigObjoffset(scip, cipinput.objoffset) );
+         SCIP_CALL_TERMINATE( retcode, SCIPaddOrigObjoffset(scip, cipinput.objoffset), TERMINATE );
       }
    }
 
@@ -1045,12 +1022,14 @@ SCIP_DECL_READERREAD(readerReadCip)
       SCIPrationalFreeBuffer(SCIPbuffer(scip), &cipinput.objoffsetexact);
    SCIPfreeBufferArray(scip, &cipinput.strbuf);
 
-   if( cipinput.haserror )
+   if( cipinput.haserror || retcode == SCIP_INVALIDDATA )
       return SCIP_READERROR;
 
    /* successfully parsed cip format */
-   *result = SCIP_SUCCESS;
-   return SCIP_OKAY;
+   if( retcode == SCIP_OKAY )
+      *result = SCIP_SUCCESS;
+
+   return retcode;
 }
 
 /** hash key retrieval function for variables */

@@ -1283,6 +1283,7 @@ SCIP_RETCODE setObjective(
 
          if( SCIPisExact(scip) )
          {
+            SCIP_RETCODE retcode = SCIP_OKAY;
             SCIP_RATIONAL* obj;
 
             SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &obj) );
@@ -1292,21 +1293,23 @@ SCIP_RETCODE setObjective(
                SCIP_VAR* negvar = SCIPvarGetNegationVar(linvars[v]);
 
                SCIPrationalSetReal(obj, coefs[v]);
-               SCIP_CALL( SCIPaddOrigObjoffsetExact(scip, obj) );
+               SCIP_CALL_TERMINATE( retcode, SCIPaddOrigObjoffsetExact(scip, obj), TERMINATE );
 
                SCIPrationalMultReal(obj, obj, -scale);
                SCIPrationalAdd(obj, obj, SCIPvarGetObjExact(negvar));
-               SCIP_CALL( SCIPchgVarObjExact(scip, negvar, obj) );
+               SCIP_CALL_TERMINATE( retcode, SCIPchgVarObjExact(scip, negvar, obj), TERMINATE );
             }
             else
             {
                SCIPrationalSetReal(obj, coefs[v]);
                SCIPrationalMultReal(obj, obj, scale);
                SCIPrationalAdd(obj, obj, SCIPvarGetObjExact(linvars[v]));
-               SCIP_CALL( SCIPchgVarObjExact(scip, linvars[v], obj) );
+               SCIP_CALL_TERMINATE( retcode, SCIPchgVarObjExact(scip, linvars[v], obj), TERMINATE );
             }
 
+         TERMINATE:
             SCIPrationalFreeBuffer(SCIPbuffer(scip), &obj);
+            SCIP_CALL( retcode );
          }
          else
          {
@@ -1755,6 +1758,7 @@ SCIP_RETCODE readOPBFile(
    )
 {
    SCIP_READERDATA* readerdata = SCIPreaderGetData(reader);
+   SCIP_RETCODE retcode = SCIP_OKAY;
    SCIP_Real objscale;
    SCIP_Real objoffset;
    int nNonlinearConss;
@@ -1778,16 +1782,17 @@ SCIP_RETCODE readOPBFile(
     */
 
    /* read the first comment line which contains information about size of products and coefficients */
-   SCIP_CALL( getCommentLineData(scip, opbinput, &objscale, &objoffset) );
+   SCIP_CALL_TERMINATE( retcode, getCommentLineData(scip, opbinput, &objscale, &objoffset), TERMINATE2 );
 
    if( readerdata->maxintsize >= 0 && opbinput->intsize > readerdata->maxintsize )
    {
       SCIPinfoMessage(scip, NULL, "Intsize %d exceeds %d maximum.\n", opbinput->intsize, readerdata->maxintsize);
-      return SCIP_INVALIDDATA;
+      retcode = SCIP_INVALIDDATA;
+      goto TERMINATE2;
    }
 
    /* create problem */
-   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL_TERMINATE( retcode, SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL), TERMINATE2 );
 
    /* opb format supports only minimization; therefore, flip objective sense for negative objective scale */
    if( objscale < 0.0 )
@@ -1795,14 +1800,14 @@ SCIP_RETCODE readOPBFile(
 
    if( ! SCIPisZero(scip, objoffset) )
    {
-      SCIP_CALL( SCIPaddOrigObjoffset(scip, objscale * objoffset) );
+      SCIP_CALL_TERMINATE( retcode, SCIPaddOrigObjoffset(scip, objscale * objoffset), TERMINATE2 );
    }
 
    nNonlinearConss = 0;
 
    while( !SCIPfeof( opbinput->file ) && !hasError(opbinput) )
    {
-      SCIP_CALL( readConstraints(scip, opbinput, objscale, &nNonlinearConss) );
+      SCIP_CALL_TERMINATE( retcode, readConstraints(scip, opbinput, objscale, &nNonlinearConss), TERMINATE2 );
    }
 
    /* if we read a wbo file we need to make sure that the top cost won't be exceeded */
@@ -1837,8 +1842,8 @@ SCIP_RETCODE readOPBFile(
 
       if( !SCIPisExact(scip) )
       {
-         SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcosts,
-               -SCIPinfinity(scip), topcostrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL_TERMINATE( retcode, SCIPcreateConsLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcosts,
+               -SCIPinfinity(scip), topcostrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE), TERMINATE1 );
       }
       else
       {
@@ -1853,24 +1858,29 @@ SCIP_RETCODE readOPBFile(
          SCIPrationalSetReal(rhs, topcostrhs);
          for( int j = 0; j < ntopcostvars; ++j )
             SCIPrationalSetReal(topcostsrat[j], topcosts[j]);
-         SCIP_CALL( SCIPcreateConsExactLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcostsrat, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         retcode = SCIPcreateConsExactLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars,
+            topcostsrat, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE);
          SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
          SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhs);
          SCIPrationalFreeBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars);
+         if( retcode != SCIP_OKAY )
+            goto TERMINATE1;
       }
 
-      SCIP_CALL( SCIPaddCons(scip, topcostcons) );
+      SCIP_CALL_TERMINATE( retcode, SCIPaddCons(scip, topcostcons), TERMINATE1 );
       SCIPdebugPrintCons(scip, topcostcons, NULL);
-      SCIP_CALL( SCIPreleaseCons(scip, &topcostcons) );
+      SCIP_CALL_TERMINATE( retcode, SCIPreleaseCons(scip, &topcostcons), TERMINATE1 );
 
+   TERMINATE1:
       SCIPfreeBufferArray(scip, &topcosts);
       SCIPfreeBufferArray(scip, &topcostvars);
    }
 
+ TERMINATE2:
    /* close file */
    SCIPfclose(opbinput->file);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 
@@ -4595,7 +4605,7 @@ SCIP_RETCODE SCIPreadOpb(
    SCIPfreeBlockMemoryArray(scip, &opbinput.token, OPB_MAX_LINELEN);
    SCIPfreeBlockMemoryArray(scip, &opbinput.linebuf, opbinput.linebufsize);
 
-   if( retcode == SCIP_PLUGINNOTFOUND )
+   if( retcode == SCIP_PLUGINNOTFOUND || retcode == SCIP_INVALIDDATA )
       retcode = SCIP_READERROR;
 
    SCIP_CALL( retcode );

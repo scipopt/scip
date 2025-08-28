@@ -914,9 +914,10 @@ SCIP_RETCODE consdataCreate(
          SCIP_Real val;
 
          var = vars[v];
-         val = vals[v];
-
          assert(var != NULL);
+         val = vals[v];
+         assert(!SCIPisInfinity(scip, val));
+
          if( !SCIPisZero(scip, val) )
          {
             /* treat fixed variable as a constant if problem compression is enabled */
@@ -15913,7 +15914,8 @@ SCIP_DECL_CONSTRANS(consTransLinear)
    assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
 
    /* create linear constraint data for target constraint */
-   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
+   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs,
+         sourcedata->rhs) );
 
 #ifndef NDEBUG
    /* if this is a checked or enforced constraints, then there must be no relaxation-only variables */
@@ -17022,19 +17024,19 @@ static
 SCIP_DECL_CONSPARSE(consParseLinear)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
-   SCIP_Real* coefs;
-   int        nvars;
-   int        coefssize;
-   int        requsize;
-   SCIP_Real  lhs;
-   SCIP_Real  rhs;
-   char*      endptr;
-   char*      firstop;
-   char*      secondop;
-   SCIP_Bool  operatorsuccess;
-   char*      lhsstrptr;
-   char*      rhsstrptr;
-   char*      varstrptr;
+   SCIP_Real* coefs = NULL;
+   int nvars;
+   int coefssize = 100;
+   int requsize;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   char* endptr;
+   char* firstop;
+   char* secondop;
+   SCIP_Bool operatorsuccess;
+   char* lhsstrptr = NULL;
+   char* rhsstrptr = NULL;
+   char* varstrptr = (char*)str;
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -17042,15 +17044,15 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    assert(name != NULL);
    assert(cons != NULL);
 
-   /* set left and right hand side to their default values */
-   lhs = -SCIPinfinity(scip);
-   rhs =  SCIPinfinity(scip);
-
-   (*success) = FALSE;
+   *success = FALSE;
 
    /* return of string empty */
-   if( !*str )
+   if( !(*str) )
       return SCIP_OKAY;
+
+   /* set left and right hand side to their default values */
+   lhs = -SCIPinfinity(scip);
+   rhs = SCIPinfinity(scip);
 
    /* ignore whitespace */
    SCIP_CALL( SCIPskipSpace((char**)&str) );
@@ -17063,9 +17065,6 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    /* if the grammar is not valid for parsing a linear constraint, return */
    if( ! operatorsuccess )
       return SCIP_OKAY;
-
-   varstrptr = (char *)str;
-   lhsstrptr = rhsstrptr = NULL;
    assert(firstop != NULL);
 
    /* assign the strings for parsing the left hand side, right hand side, and the linear variable sum */
@@ -17138,8 +17137,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    }
 
    /* initialize buffers for storing the variables and coefficients */
-   coefssize = 100;
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars,  coefssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, coefssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
 
    assert(varstrptr != NULL);
@@ -17151,7 +17149,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    {
       /* realloc buffers and try again */
       coefssize = requsize;
-      SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  coefssize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &vars, coefssize) );
       SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, coefssize) );
 
       SCIP_CALL( SCIPparseVarsLinearsum(scip, varstrptr, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
@@ -17874,7 +17872,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
-   int j;
+   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -17887,17 +17885,16 @@ SCIP_RETCODE SCIPcreateConsLinear(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /* check that the given lhs/rhs are sensible, i.e., not nan or inf */
-   assert( SCIPisFinite(lhs) );
-   assert( SCIPisFinite(rhs) );
-
-   for( j = 0; j < nvars; ++j )
+   /* terminate if a coefficient is infinite */
+   assert(SCIPisFinite(lhs));
+   assert(SCIPisFinite(rhs));
+   for( i = 0; i < nvars; ++i )
    {
-      /* check that the given coefficients are sensible, i.e., not nan or inf */
-      assert( SCIPisFinite(vals[j]) );
-      if( SCIPisInfinity(scip, REALABS(vals[j])) )
+      assert(SCIPisFinite(vals[i]));
+      if( SCIPisInfinity(scip, REALABS(vals[i])) )
       {
-         SCIPerrorMessage("coefficient of variable <%s> is infinite.\n", SCIPvarGetName(vars[j]));
+         SCIPerrorMessage("coefficient of variable <%s> in constraint <%s> is infinite,"
+               " consider adjusting the infinity threshold\n", SCIPvarGetName(vars[i]), name);
          SCIPABORT();
          return SCIP_INVALIDDATA;
       }
@@ -17934,58 +17931,11 @@ SCIP_RETCODE SCIPcreateConsLinear(
       /* adjust sides and check that we do not subtract infinity values */
       if( SCIPisInfinity(scip, REALABS(constant)) )
       {
-         if( constant < 0.0 )
-         {
-            if( SCIPisInfinity(scip, lhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            if( SCIPisInfinity(scip, rhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-
-            lhs = -SCIPinfinity(scip);
-            rhs = -SCIPinfinity(scip);
-         }
-         else
-         {
-            if( SCIPisInfinity(scip, -lhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite left hand side of the constraint\n", name);
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-            if( SCIPisInfinity(scip, -rhs) )
-            {
-               SCIPfreeBufferArray(scip, &consvals);
-               SCIPfreeBufferArray(scip, &consvars);
-
-               SCIPerrorMessage("try to generate inconsistent constraint <%s>, active variables leads to a infinite constant constradict the infinite right hand side of the constraint\n", name);
-
-               SCIPABORT();
-               return SCIP_INVALIDDATA; /*lint !e527*/
-            }
-
-            lhs = SCIPinfinity(scip);
-            rhs = SCIPinfinity(scip);
-         }
+         SCIPfreeBufferArray(scip, &consvals);
+         SCIPfreeBufferArray(scip, &consvars);
+         SCIPerrorMessage("while creating constraint <%s> inactive variables lead to an infinite constant\n", name);
+         SCIPABORT();
+         return SCIP_INVALIDDATA;
       }
       else
       {
@@ -18007,7 +17957,6 @@ SCIP_RETCODE SCIPcreateConsLinear(
 
       /* create constraint data */
       SCIP_CALL( consdataCreate(scip, &consdata, nconsvars, consvars, consvals, lhs, rhs) );
-      assert(consdata != NULL);
 
       SCIPfreeBufferArray(scip, &consvals);
       SCIPfreeBufferArray(scip, &consvars);
@@ -18016,8 +17965,8 @@ SCIP_RETCODE SCIPcreateConsLinear(
    {
       /* create constraint data */
       SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars, vals, lhs, rhs) );
-      assert(consdata != NULL);
    }
+   assert(consdata != NULL);
 
 #ifndef NDEBUG
    /* if this is a checked or enforced constraints, then there must be no relaxation-only variables */
@@ -18210,6 +18159,16 @@ SCIP_RETCODE SCIPaddCoefLinear(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not linear\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   /* terminate if coefficient is infinite */
+   assert(SCIPisFinite(val));
+   if( SCIPisInfinity(scip, REALABS(val)) )
+   {
+      SCIPerrorMessage("coefficient of variable <%s> in constraint <%s> is infinite,"
+            " consider adjusting the infinity threshold\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+      SCIPABORT();
       return SCIP_INVALIDDATA;
    }
 

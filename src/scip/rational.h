@@ -175,14 +175,6 @@ SCIP_RETCODE SCIPrationalReallocBlockArray(
    );
 
 #if defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
-/** creates rational from gmp rational */
-SCIP_EXPORT
-SCIP_RETCODE SCIPrationalCreateBlockGMP(
-   BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_RATIONAL**       rational,           /**< pointer to the rational to create */
-   mpq_t                 numb                /**< gmp rational to set */
-   );
-
 /** gets the underlying gmp rational pointer */
 SCIP_EXPORT
 mpq_t* SCIPrationalGetGMP(
@@ -194,6 +186,14 @@ SCIP_EXPORT
 void SCIPrationalSetGMP(
    SCIP_RATIONAL*        rational,           /**< rational to define */
    const mpq_t           numb                /**< gmp rational to set */
+   );
+
+/** creates rational from gmp rational */
+SCIP_EXPORT
+SCIP_RETCODE SCIPrationalCreateBlockGMP(
+   BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_RATIONAL**       rational,           /**< pointer to the rational to create */
+   mpq_t                 numb                /**< gmp rational to set */
    );
 
 /** sets gmp rational array to values of rational array */

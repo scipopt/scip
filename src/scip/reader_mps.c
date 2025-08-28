@@ -1215,11 +1215,12 @@ SCIP_RETCODE readColsExact(
    int*                  nvarnames           /**< the number of stored variable names, or NULL */
    )
 {
-   char          colname[MPS_MAX_NAMELEN] = { '\0' };
-   SCIP_CONS*    cons;
-   SCIP_VAR*     var;
+   SCIP_RETCODE retcode = SCIP_OKAY;
+   char colname[MPS_MAX_NAMELEN] = { '\0' };
+   SCIP_CONS* cons;
+   SCIP_VAR* var;
    SCIP_RATIONAL* val;
-   SCIP_Bool     usevartable;
+   SCIP_Bool usevartable;
 
    SCIPdebugMsg(scip, "read columns\n");
 
@@ -1298,7 +1299,7 @@ SCIP_RETCODE readColsExact(
 
       if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
       {
-         SCIP_CALL( SCIPchgVarObjExact(scip, var, val) );
+         SCIP_CALL_TERMINATE( retcode, SCIPchgVarObjExact(scip, var, val), TERMINATE );
       }
       else
       {
@@ -1307,13 +1308,8 @@ SCIP_RETCODE readColsExact(
             mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_FULL);
          else if( !SCIPrationalIsZero(val) )
          {
-            /* warn the user in case the coefficient is infinite */
-            if( SCIPrationalIsAbsInfinity(val) )
-            {
-               SCIPwarningMessage(scip, "Coefficient of variable <%s> in constraint <%s> contains infinite value <%e>,"
-                  " consider adjusting SCIP infinity.\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPrationalGetReal(val));
-            }
-            SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, var, val) );
+            /* this method returns an error if the coefficient is infinite */
+            SCIP_CALL_TERMINATE( retcode, SCIPaddCoefExactLinear(scip, cons, var, val), TERMINATE );
          }
       }
       if( mpsinputField5(mpsi) != NULL )
@@ -1325,7 +1321,7 @@ SCIP_RETCODE readColsExact(
 
          if( !strcmp(mpsinputField4(mpsi), mpsinputObjname(mpsi)) )
          {
-            SCIP_CALL( SCIPchgVarObjExact(scip, var, val) );
+            SCIP_CALL_TERMINATE( retcode, SCIPchgVarObjExact(scip, var, val), TERMINATE );
          }
          else
          {
@@ -1336,12 +1332,18 @@ SCIP_RETCODE readColsExact(
             }
             else if( !SCIPrationalIsZero(val) )
             {
-               SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, var, val) );
+               SCIP_CALL_TERMINATE( retcode, SCIPaddCoefExactLinear(scip, cons, var, val), TERMINATE );
             }
          }
       }
+   TERMINATE:
       /* free rational buffer */
       SCIPrationalFreeBuffer(SCIPbuffer(scip), &val);
+      if( retcode != SCIP_OKAY )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &var) );
+         return retcode;
+      }
    }
    mpsinputSyntaxerror(mpsi);
 
@@ -3513,7 +3515,6 @@ SCIP_RETCODE readMps(
    SCIP_FILE* fp;
    MPSINPUT* mpsi;
    SCIP_RETCODE retcode;
-   SCIP_Bool error = TRUE;
 
    assert(scip != NULL);
    assert(filename != NULL);
@@ -3589,22 +3590,19 @@ SCIP_RETCODE readMps(
    if( mpsinputSection(mpsi) != MPS_ENDATA )
       mpsinputSyntaxerror(mpsi);
 
-   SCIPfclose(fp);
-
-   error = mpsinputHasError(mpsi);
-
-   if( !error )
+   if( mpsinputHasError(mpsi) )
    {
-      SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
+      retcode = SCIP_READERROR;
+      goto TERMINATE;
    }
+
+   SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
 
  TERMINATE:
    mpsinputFree(scip, &mpsi);
+   SCIPfclose(fp);
 
-   if( error )
-      return SCIP_READERROR;
-   else
-      return SCIP_OKAY;
+   return retcode;
 }
 
 /** Read LP in "MPS File Format" (version for exact solving mode, numbers can also be rationals).
@@ -3637,7 +3635,6 @@ SCIP_RETCODE readMpsExact(
    SCIP_FILE* fp;
    MPSINPUT* mpsi;
    SCIP_RETCODE retcode;
-   SCIP_Bool error = TRUE;
 
    assert(scip != NULL);
    assert(filename != NULL);
@@ -3714,22 +3711,19 @@ SCIP_RETCODE readMpsExact(
    if( mpsinputSection(mpsi) != MPS_ENDATA )
       mpsinputSyntaxerror(mpsi);
 
-   SCIPfclose(fp);
-
-   error = mpsinputHasError(mpsi);
-
-   if( !error )
+   if( mpsinputHasError(mpsi) )
    {
-      SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
+      retcode = SCIP_READERROR;
+      goto TERMINATE;
    }
+
+   SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
 
  TERMINATE:
    mpsinputFree(scip, &mpsi);
+   SCIPfclose(fp);
 
-   if( error )
-      return SCIP_READERROR;
-   else
-      return SCIP_OKAY;
+   return retcode;
 }
 
 /*
