@@ -1597,6 +1597,7 @@ SCIP_RETCODE readObjectiveRational(
    )
 {
    char name[LP_MAX_LINELEN];
+   SCIP_RETCODE retcode = SCIP_OKAY;
    SCIP_VAR** vars;
    SCIP_RATIONAL** coefs;
    SCIP_Bool newsection;
@@ -1611,12 +1612,12 @@ SCIP_RETCODE readObjectiveRational(
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpval) );
 
    /* read the objective coefficients */
-   SCIP_CALL( readCoefficientsRational(scip, lpinput, TRUE, name, &coefssize, &vars, &coefs, &ncoefs,
-         objoffset, &newsection) );
+   SCIP_CALL_TERMINATE( retcode, readCoefficientsRational(scip, lpinput, TRUE, name, &coefssize, &vars, &coefs, &ncoefs,
+         objoffset, &newsection), TERMINATE );
 
    if( !SCIPrationalIsZero(objoffset) )
    {
-      SCIP_CALL( SCIPaddOrigObjoffsetExact(scip, objoffset) );
+      SCIP_CALL_TERMINATE( retcode, SCIPaddOrigObjoffsetExact(scip, objoffset), TERMINATE );
    }
 
    if( !hasError(lpinput) )
@@ -1629,18 +1630,20 @@ SCIP_RETCODE readObjectiveRational(
          assert(vars != NULL);  /* for lint */
          assert(coefs != NULL);
          SCIPrationalAdd(tmpval, SCIPvarGetObjExact(vars[i]), coefs[i]);
-         SCIP_CALL( SCIPchgVarObjExact(scip, vars[i], tmpval) );
+         SCIP_CALL_TERMINATE( retcode, SCIPchgVarObjExact(scip, vars[i], tmpval), TERMINATE );
       }
    }
 
+ TERMINATE:
    /* free memory */
    SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
-   SCIPrationalFreeBlockArray(SCIPblkmem(scip), &coefs, coefssize);
+   if( coefs != NULL )
+      SCIPrationalFreeBlockArray(SCIPblkmem(scip), &coefs, coefssize);
 
    SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpval);
    SCIPrationalFreeBuffer(SCIPbuffer(scip), &objoffset);
 
-   return SCIP_OKAY; /*lint !e438*/
+   return retcode; /*lint !e438*/
 }
 
 
@@ -3244,6 +3247,8 @@ SCIP_RETCODE readLPFile(
    const char*           filename            /**< name of the input file */
    )
 {
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
    assert(lpinput != NULL);
 
    /* open file */
@@ -3256,7 +3261,7 @@ SCIP_RETCODE readLPFile(
    }
 
    /* create problem */
-   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL_TERMINATE( retcode, SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL), TERMINATE );
 
    /* parse the file */
    lpinput->section = LP_START;
@@ -3265,48 +3270,50 @@ SCIP_RETCODE readLPFile(
       switch( lpinput->section )
       {
       case LP_START:
-         SCIP_CALL( readStart(scip, lpinput) );
+         SCIP_CALL_TERMINATE( retcode, readStart(scip, lpinput), TERMINATE );
          break;
 
       case LP_OBJECTIVE:
-         SCIP_CALL( readObjective(scip, lpinput) );
+         SCIP_CALL_TERMINATE( retcode, readObjective(scip, lpinput), TERMINATE );
          break;
 
       case LP_CONSTRAINTS:
-         SCIP_CALL( readConstraints(scip, lpinput) );
+         SCIP_CALL_TERMINATE( retcode, readConstraints(scip, lpinput), TERMINATE );
          break;
 
       case LP_BOUNDS:
-         SCIP_CALL( readBounds(scip, lpinput) );
+         SCIP_CALL_TERMINATE( retcode, readBounds(scip, lpinput), TERMINATE );
          break;
 
       case LP_GENERALS:
-         SCIP_CALL( readGenerals(scip, lpinput) );
+         SCIP_CALL_TERMINATE( retcode, readGenerals(scip, lpinput), TERMINATE );
          break;
 
       case LP_BINARIES:
-         SCIP_CALL( readBinaries(scip, lpinput) );
+         SCIP_CALL_TERMINATE( retcode, readBinaries(scip, lpinput), TERMINATE );
          break;
 
       case LP_SEMICONTINUOUS:
-         SCIP_CALL( readSemicontinuous(scip, lpinput) );
+         SCIP_CALL_TERMINATE( retcode, readSemicontinuous(scip, lpinput), TERMINATE );
          break;
 
       case LP_SOS:
-         SCIP_CALL( readSos(scip, lpinput) );
+         SCIP_CALL_TERMINATE( retcode, readSos(scip, lpinput), TERMINATE );
          break;
 
       case LP_END: /* this is already handled in the while() loop */
       default:
          SCIPerrorMessage("invalid LP file section <%d>\n", lpinput->section);
-         return SCIP_INVALIDDATA;
+         retcode = SCIP_INVALIDDATA;
+         goto TERMINATE;
       }
    }
 
+ TERMINATE:
    /* close file */
    SCIPfclose(lpinput->file);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 
@@ -4473,7 +4480,7 @@ SCIP_RETCODE SCIPreadLp(
    SCIPfreeBlockMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN);
    SCIPfreeBlockMemoryArray(scip, &lpinput.linebuf, lpinput.linebufsize);
 
-   if( retcode == SCIP_PLUGINNOTFOUND )
+   if( retcode == SCIP_PLUGINNOTFOUND || retcode == SCIP_INVALIDDATA )
       retcode = SCIP_READERROR;
 
    /* check for correct return value */

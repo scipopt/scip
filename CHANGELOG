@@ -332,6 +332,7 @@ Fixed bugs
 - invalidate activity with contradicting infinity contributions
 - avoid integer overflow in cons_cumulative.c triggered by unbounded variables, see new parameter "constraints/cumulative/maxtime"
 - allow negative update in SCIPconsAddUpgradeLocks() to unlock constraint upgrade
+- fixed memory leaks when LP, MPS and OPB/WBO readers abort unsuccessfully
 
 Miscellaneous
 -------------
