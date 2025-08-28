@@ -8572,7 +8572,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       {
          SCIP_Longint npaircomparisons = 0;
 
-         assert(oldnfixedvars == *nfixedvars);
+         oldnfixedvars = *nfixedvars;
 
          for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
          {
