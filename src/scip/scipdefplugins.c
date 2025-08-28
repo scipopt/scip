@@ -230,7 +230,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropObbt(scip) );
    SCIP_CALL( SCIPincludePropNlobbt(scip) );
    SCIP_CALL( SCIPincludeSepaClosecuts(scip) );
-   SCIP_CALL( SCIPincludeSepaMultilinear(scip) );
+   SCIP_CALL( SCIPincludeSepaFlower(scip) );
    SCIP_CALL( SCIPincludeSepaRlt(scip) );
    SCIP_CALL( SCIPincludeSepaDisjunctive(scip) );
    SCIP_CALL( SCIPincludeSepaGauge(scip) );
@@ -266,6 +266,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
    SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
    SCIP_CALL( SCIPincludeExprhdlrVaridx(scip) );
+   SCIP_CALL( SCIPincludeNlpSolverConopt(scip) );
    SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
    SCIP_CALL( SCIPincludeNlpSolverFilterSQP(scip) );
    SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, TRUE) );

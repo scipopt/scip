@@ -233,7 +233,7 @@ SCIP_Real solGetArrayVal(
 /** returns the value of the variable in the given exact solution */
 static
 void solGetArrayValExact(
-   SCIP_RATIONAL*        res,
+   SCIP_RATIONAL*        res,                /**< buffer to store result */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_VAR*             var                 /**< problem variable */
    )

@@ -7084,9 +7084,9 @@ SCIP_RETCODE tightenBounds(
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
-   oldnchgbds = 0;
 
 #ifndef SCIP_DEBUG
+   oldnchgbds = 0;
    oldnchgbdstotal = *nchgbds;
 #endif
 
@@ -11544,9 +11544,6 @@ SCIP_RETCODE simplifyInequalities(
    else
       hasrhs = FALSE;
 
-   SCIPdebug( oldnchgcoefs = *nchgcoefs; )
-   SCIPdebug( oldnchgsides = *nchgsides; )
-
    /* @todo extend both-sided simplification */
    if( haslhs && hasrhs )
    {
@@ -12206,7 +12203,7 @@ SCIP_RETCODE simplifyInequalities(
                   /* swap bounds for 'standard' form */
                   if( !SCIPisFeasZero(scip, lb) )
                   {
-                     ub = lb;
+                     ub = -lb;
                      val *= -1;
                   }
 
@@ -12299,7 +12296,7 @@ SCIP_RETCODE simplifyInequalities(
                   /* swap bounds for 'standard' form */
                   if( !SCIPisFeasZero(scip, lb) )
                   {
-                     ub = lb;
+                     ub = -lb;
                      val *= -1;
                   }
 
@@ -12950,13 +12947,10 @@ SCIP_RETCODE aggregateConstraints(
 
       SCIP_CALL( normalizeCons(scip, newcons, infeasible) );
 
-      if( *infeasible )
-         goto TERMINATE;
-
       /* check, if we really want to use the new constraint instead of the old one:
        * use the new one, if the maximum norm doesn't grow too much
        */
-      if( consdataGetMaxAbsval(SCIPconsGetData(newcons)) <= maxaggrnormscale * consdataGetMaxAbsval(consdata0) )
+      if( !(*infeasible) && consdataGetMaxAbsval(SCIPconsGetData(newcons)) <= maxaggrnormscale * consdataGetMaxAbsval(consdata0) )
       {
          SCIPdebugMsg(scip, " -> aggregated to <%s>\n", SCIPconsGetName(newcons));
          SCIPdebugPrintCons(scip, newcons, NULL);
@@ -12966,14 +12960,14 @@ SCIP_RETCODE aggregateConstraints(
             (*nchgcoefs) += consdata0->nvars + consdata1->nvars - nvarscommon;
          *aggregated = TRUE;
 
-         /* delete the old constraint, and add the new linear constraint to the problem */
+         /* add the new linear constraint to the problem and delete the old constraint */
+         SCIP_CALL( SCIPaddUpgrade(scip, cons0, &newcons) );
          SCIP_CALL( SCIPdelCons(scip, cons0) );
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
       }
-
-     TERMINATE:
-      /* release the new constraint */
-      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      else
+      {
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      }
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &newvals);
@@ -14215,7 +14209,6 @@ SCIP_RETCODE presolStuffing(
          SCIP_Bool tightened;
 #ifdef SCIP_DEBUG
          int oldnfixedvars = *nfixedvars;
-         int oldnchgbds = *nchgbds;
 #endif
 
          SCIPsortRealInt(ratios, varpos, nsingletons);
@@ -14302,9 +14295,9 @@ SCIP_RETCODE presolStuffing(
          }
 
 #ifdef SCIP_DEBUG
-         if( *nfixedvars - oldnfixedvars > 0 || *nchgbds - oldnchgbds > 0 )
+         if( *nfixedvars - oldnfixedvars > 0 )
          {
-            SCIPdebugMsg(scip, "### stuffing fixed %d variables and changed %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
+            SCIPdebugMsg(scip, "### stuffing fixed %d variables\n", *nfixedvars - oldnfixedvars);
          }
 #endif
       }
@@ -15431,26 +15424,26 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
       /* is constraint of type SCIP_CONSTYPE_{VARBOUND,PRECEDENCE}? */
       if( consdata->nvars == 2 )
       {
-         SCIP_LINCONSTYPE constype;
-
-         /* precedence constraints have the same coefficient, but with opposite sign for the same variable type */
-         if( SCIPisEQ(scip, consdata->vals[0], -consdata->vals[1])
-            && SCIPvarIsImpliedIntegral(consdata->vars[0]) == SCIPvarIsImpliedIntegral(consdata->vars[1])
-            && ( SCIPvarIsImpliedIntegral(consdata->vars[0]) || SCIPvarGetType(consdata->vars[0]) == SCIPvarGetType(consdata->vars[1]) ) )
+         /* precedence constraints have same variable type and same absolute coefficient with opposite sign */
+         if( SCIPvarGetType(consdata->vars[0]) == SCIPvarGetType(consdata->vars[1])
+            && SCIPisEQ(scip, consdata->vals[0], -consdata->vals[1]) )
          {
-            constype = SCIP_LINCONSTYPE_PRECEDENCE;
             SCIPdebugMsg(scip, "classified as PRECEDENCE: ");
+            SCIPdebugPrintCons(scip, cons, NULL);
+            SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_PRECEDENCE, isRangedRow(scip, lhs, rhs) ? 2 : 1);
+
+            continue;
          }
-         else
+         /* varbound constraints have otherwise a binary variable */
+         else if( SCIPvarGetType(consdata->vars[0]) == SCIP_VARTYPE_BINARY
+            || SCIPvarGetType(consdata->vars[1]) == SCIP_VARTYPE_BINARY )
          {
-            constype = SCIP_LINCONSTYPE_VARBOUND;
             SCIPdebugMsg(scip, "classified as VARBOUND: ");
+            SCIPdebugPrintCons(scip, cons, NULL);
+            SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_VARBOUND, isRangedRow(scip, lhs, rhs) ? 2 : 1);
+
+            continue;
          }
-         SCIPdebugPrintCons(scip, cons, NULL);
-
-         SCIPlinConsStatsIncTypeCount(linconsstats, constype, isRangedRow(scip, lhs, rhs) ? 2 : 1);
-
-         continue;
       }
 
       /* is constraint of type SCIP_CONSTYPE_{SETPARTITION, SETPACKING, SETCOVERING, CARDINALITY, INVKNAPSACK}? */
@@ -16764,9 +16757,8 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             if( upgdcons != NULL )
             {
                /* add the upgraded constraint to the problem */
-               SCIP_CALL( SCIPaddCons(scip, upgdcons) );
-               SCIP_CALL( SCIPreleaseCons(scip, &upgdcons) );
-               (*nupgdconss)++;
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, &upgdcons) );
+               ++(*nupgdconss);
 
                /* mark the linear constraint being upgraded and to be removed after presolving;
                 * don't delete it directly, because it may help to preprocess other linear constraints
@@ -17517,7 +17509,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       }
 
       /* add conflict to SCIP */
-      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+      SCIP_CALL( SCIPaddConflict(scip, node, &cons, validnode, conftype, cutoffinvolved) );
 
       *result = SCIP_CONSADDED;
    }
@@ -18709,6 +18701,35 @@ SCIP_ROW* SCIPgetRowLinear(
    assert(consdata != NULL);
 
    return consdata->row;
+}
+
+/** creates and returns the row of the given linear constraint */
+SCIP_RETCODE SCIPcreateRowLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not linear\n");
+      SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+
+   SCIP_CALL( SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->vals) ) ;
+
+   return SCIP_OKAY;
 }
 
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */

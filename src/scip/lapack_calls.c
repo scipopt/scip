@@ -153,7 +153,7 @@ int convertToInt(
    work.big = num;
 
    /* if we have a little-endian machine (e.g, x86), the sought value is in the bottom part */
-   if ( *(int8_t*)&checkval != 0 ) /*lint !e774*/
+   if ( *(int8_t*)&checkval != 0 ) /*lint !e774*/  /* cppcheck-suppress knownConditionTrueFalse */
    {
       /* if the top part is nonzero, we assume that the number is negative */
       if ( work.small[1] != 0 ) /*lint !e2662*/

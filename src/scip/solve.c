@@ -670,7 +670,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    int                   depth,              /**< depth level to use for propagator frequency checks */
-   int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
+   int                   maxrounds,          /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
    SCIP_PROPTIMING       timingmask,         /**< timing mask to decide which propagators are executed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
@@ -678,7 +678,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_Bool postpone;
 
    /* apply domain propagation */
-   SCIP_CALL( propagateDomains(blkmem, set, stat, tree, depth, maxproprounds, TRUE, timingmask, cutoff, &postpone) );
+   SCIP_CALL( propagateDomains(blkmem, set, stat, tree, depth, maxrounds, TRUE, timingmask, cutoff, &postpone) );
 
    /* flush the conflict set storage */
    SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable) );
@@ -1639,12 +1639,10 @@ SCIP_RETCODE solveNodeInitialLP(
 
    if( !(*lperror) )
    {
-      /* cppcheck-suppress unassignedVariable */
-      SCIP_EVENT event;
-
       if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_ITERLIMIT && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_TIMELIMIT )
       {
          /* issue FIRSTLPSOLVED event */
+         SCIP_EVENT event;
          SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
          SCIP_CALL( SCIPeventChgNode(&event, SCIPtreeGetFocusNode(tree)) );
          SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
@@ -2518,7 +2516,6 @@ SCIP_RETCODE priceAndCutLoop(
    )
 {
    SCIP_NODE* focusnode;
-   /* cppcheck-suppress unassignedVariable */
    SCIP_EVENT event;
    SCIP_LPSOLSTAT stalllpsolstat;
    SCIP_Real loclowerbound;
@@ -3435,8 +3432,8 @@ SCIP_RETCODE solveNodeLP(
       }
    }
 
-   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL /* cppcheck-suppress assertWithSideEffect */
-      || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED || SCIPsolveIsStopped(set, stat, FALSE) || (*cutoff));
+   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+      || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED || SCIPsolveIsStopped(set, stat, FALSE) || (*cutoff)); /* cppcheck-suppress assertWithSideEffect */
 
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 
@@ -3692,6 +3689,8 @@ SCIP_RETCODE enforceConstraints(
       else if( SCIPtreeHasFocusNodeLP(tree) )
       {
          SCIPsetDebugMsg(set, "enforce LP solution with value %g\n", SCIPlpGetObjval(lp, set, prob));
+
+         // NOTE: May be called with lp->primalfeasible=FALSE. But then enforcement is called for infinite points?!
 
          assert(lp->flushed);
          assert(lp->solved);
@@ -4128,7 +4127,6 @@ SCIP_RETCODE propAndSolve(
       /* check if primal heuristics found a solution and we therefore reached a solution limit */
       if( SCIPsolveIsStopped(set, stat, FALSE) )
       {
-         /* cppcheck-suppress unassignedVariable */
          SCIP_NODE* node;
 
          /* we reached a solution limit and do not want to continue the processing of the current node, but in order to
@@ -4430,6 +4428,7 @@ SCIP_RETCODE solveNode(
     * - don't solve the node if its cut off by the pseudo objective value anyway
     */
    focusnodehaslp = (set->lp_solvedepth == -1 || actdepth <= set->lp_solvedepth);
+   focusnodehaslp = focusnodehaslp && (actdepth >= set->lp_minsolvedepth);
    focusnodehaslp = focusnodehaslp && (set->lp_solvefreq >= 1 && actdepth % set->lp_solvefreq == 0);
    focusnodehaslp = focusnodehaslp || (actdepth == 0 && set->lp_solvefreq == 0);
    focusnodehaslp = focusnodehaslp && SCIPsetIsLT(set, SCIPlpGetPseudoObjval(lp, set, transprob), primal->cutoffbound);
@@ -5073,7 +5072,8 @@ SCIP_RETCODE addCurrentSolution(
    }
    else if( SCIPtreeHasFocusNodeLP(tree) )
    {
-      assert(lp->primalfeasible);
+      /* Removed assert(lp->primalfeasible); since there can be a solved LP and there is some solution with infinite values,
+       * but the lp is not primal feasible. */
 
       /* start clock for LP solutions */
       SCIPclockStart(stat->lpsoltime, set);

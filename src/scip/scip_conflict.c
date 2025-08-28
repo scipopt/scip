@@ -44,12 +44,17 @@
 
 #include "scip/conflict.h"
 #include "scip/debug.h"
+#include "misc.h"
+#include "lp.h"
+#include "var.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/pub_misc_linear.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_tree.h"
 #include "scip/set.h"
+#include "scip/struct_conflict.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
@@ -685,8 +690,20 @@ SCIP_RETCODE SCIPanalyzeConflict(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPanalyzeConflict", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   SCIP_Bool successres = FALSE;
+   SCIP_Bool successprop = FALSE;
+
+   /* call resolution conflict analysis */
+   SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+         scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->cliquetable, NULL, validdepth, &successres) );
+
+   /* call graph conflict analysis */
    SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-         scip->transprob, scip->tree, validdepth, success) );
+         scip->transprob, scip->tree, validdepth, &successprop) );
+
+   if( success != NULL )
+      *success = (successres || successprop);
 
    return SCIP_OKAY;
 }
@@ -716,16 +733,34 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPanalyzeConflictCons", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   SCIP_Bool successres = FALSE;
+   SCIP_Bool successprop = FALSE;
+   int validdepth;
+
    if( SCIPconsIsGlobal(cons) )
-   {
-      SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->tree, 0, success) );
-   }
+      validdepth = 0;
    else if( SCIPconsIsActive(cons) )
+      validdepth = SCIPconsGetValidDepth(cons);
+   else
+      return SCIP_OKAY;
+
+   /* call resolution conflict analysis */
+   if( scip->set->conf_usegenres )
    {
-      SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
-            scip->transprob, scip->tree, SCIPconsGetValidDepth(cons), success) );
+      SCIP_ROW* conflictrow = NULL;
+
+      SCIP_CALL( SCIPconsCreateRow(scip, cons, &conflictrow) );
+      SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
+            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+            scip->eventfilter, scip->cliquetable, conflictrow, validdepth, &successres) );
    }
+
+   /* call graph conflict analysis */
+   SCIP_CALL( SCIPconflictAnalyze(scip->conflict, scip->mem->probmem, scip->set, scip->stat,
+         scip->transprob, scip->tree, validdepth, &successprop) );
+
+   if( success != NULL )
+      *success = (successres || successprop);
 
    return SCIP_OKAY;
 }

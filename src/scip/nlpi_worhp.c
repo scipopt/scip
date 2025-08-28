@@ -593,13 +593,13 @@ SCIP_RETCODE userHM(
    assert(problem->opt->m == SCIPnlpiOracleGetNConstraints(problem->oracle));
 
    /* get nonzero entries in HM of SCIP (excludes unused diagonal entries) */
-   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, NULL) );
+   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, NULL, FALSE) );
    nnonz = offset[problem->opt->n];
 
    /* evaluate hessian */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hessianvals, problem->wsp->HM.nnz) );
    retcode = SCIPnlpiOracleEvalHessianLag(scip, problem->oracle, problem->opt->X, TRUE, TRUE, problem->wsp->ScaleObj,
-         problem->opt->Mu, hessianvals);
+         problem->opt->Mu, hessianvals, FALSE);
 
    if( retcode == SCIP_OKAY )
    {
@@ -656,6 +656,7 @@ SCIP_RETCODE initWorhp(
    const int* cols;
    int i;
    int j;
+   int nnlnz;
 
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -682,7 +683,7 @@ SCIP_RETCODE initWorhp(
    wsp->DF.nnz = opt->n;
 
    /* get number of non-zero entries in Jacobian */
-   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &offset, NULL) );
+   SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, problem->oracle, &offset, NULL, NULL, &nnlnz) );
    wsp->DG.nnz = offset[opt->m];
    SCIPdebugMsg(scip, "nnonz jacobian %d\n", wsp->DG.nnz);
 
@@ -690,7 +691,7 @@ SCIP_RETCODE initWorhp(
     *
     * note that Worhp wants to have the full diagonal in ANY case
     */
-   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &cols) );
+   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &cols, FALSE) );
    wsp->HM.nnz = 0;
 
    j = offset[0];
@@ -768,7 +769,7 @@ SCIP_RETCODE initWorhp(
    {
       int nnonz;
 
-      SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &offset, &cols) );
+      SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, problem->oracle, &offset, &cols, NULL, &nnlnz) );
       assert(offset[opt->m] == wsp->DG.nnz);
 
       nnonz = 0;
@@ -794,7 +795,7 @@ SCIP_RETCODE initWorhp(
       int nnonz;
       int k;
 
-      SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &cols) );
+      SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &cols, FALSE) );
       assert(offset[opt->n] <= wsp->HM.nnz);
 
       k = offset[opt->n];

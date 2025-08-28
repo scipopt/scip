@@ -1250,12 +1250,13 @@ SCIP_RETCODE upgradeCons(
 	       SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       }
 
-      SCIPdebugMsg(scip, "updated constraint <%s> to the following %s constraint\n", SCIPconsGetName(cons), (nvars == 2 ? "setppc" : "logicor"));
+      /* add the upgraded constraint to the problem */
+      SCIPdebugMsg(scip, "upgrading constraint <%s> to the following %s constraint\n", SCIPconsGetName(cons), (nvars == 2 ? "setppc" : "logicor"));
       SCIPdebugPrintCons(scip, newcons, NULL);
-      SCIP_CALL( SCIPaddCons(scip, newcons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
       ++(*naddconss);
 
+      /* remove the underlying constraint from the problem */
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
    }
@@ -1996,7 +1997,7 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Real constant;
-   SCIP_Real bound = 0.0;
+   SCIP_Real bound;
    int consnodeidx;
    int opnodeidx;
    int nodeidx;
@@ -2529,7 +2530,11 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
-         else if( consdata->nvars == 1 )
+
+         if( SCIPconsGetNUpgradeLocks(cons) >= 1 )
+            continue;
+
+         if( consdata->nvars == 1 )
          {
             SCIPdebugMsg(scip, "bound disjunction constraint <%s> has only one undecided literal\n",
                SCIPconsGetName(cons));
@@ -2584,9 +2589,10 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
                      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                      SCIPconsIsStickingAtNode(cons)) );
                }
-               SCIP_CALL( SCIPaddCons(scip, lincons) );
-               SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-               (*nupgdconss)++;
+
+               /* add the upgraded constraint to the problem */
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, &lincons) );
+               ++(*nupgdconss);
             }
 
             SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -2658,9 +2664,9 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
          assert(consdata->vars[v] != infervar || consdata->boundtypes[v] != consdata->boundtypes[inferinfo]);
 
          /* the reason literal must have been violated
-          * we do not check for multi-aggregated variables, since SCIPvarGetXbAtIndex is not implemented for them */
-         /* Use a weaker comparison to SCIPvarGetXbAtIndex here (i.e., SCIPisXT instead of SCIPisFeasXT),
-          * because SCIPvarGetXbAtIndex might differ from the local bound at time bdchgidx by epsilon. */
+          * we do not check for multi-aggregated variables, since SCIPgetVarXbAtIndex is not implemented for them */
+         /* Use a weaker comparison to SCIPgetVarXbAtIndex here (i.e., SCIPisXT instead of SCIPisFeasXT),
+          * because SCIPgetVarXbAtIndex might differ from the local bound at time bdchgidx by epsilon. */
          assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_MULTAGGR
             || (boundtypes[v] == SCIP_BOUNDTYPE_LOWER
                && SCIPisLT(scip, SCIPgetVarUbAtIndex(scip, vars[v], bdchgidx, TRUE), bounds[v]))
@@ -3203,7 +3209,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
             FALSE, FALSE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
       /* add conflict to SCIP */
-      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+      SCIP_CALL( SCIPaddConflict(scip, node, &cons, validnode, conftype, cutoffinvolved) );
       SCIPdebugMsg(scip, "added conflict\n");
       *result = SCIP_CONSADDED;
    }

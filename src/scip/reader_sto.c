@@ -2685,7 +2685,6 @@ SCIP_RETCODE readSto(
       }
    }
 
-/* cppcheck-suppress unusedLabel */
 TERMINATE:
    stoinputFree(scip, &stoi);
    SCIPfclose(fp);

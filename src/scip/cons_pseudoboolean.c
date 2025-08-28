@@ -70,7 +70,7 @@
 #include <string.h>
 
 #ifdef WITHEQKNAPSACK
-#include "scip/cons_eqknapsack.h"
+#include "scip/cons_eqknapsack.h"   /* cppcheck-suppress missingInclude */
 #endif
 
 /* constraint handler properties */
@@ -1309,6 +1309,9 @@ SCIP_RETCODE consdataCreate(
 
                (*consdata)->consanddatas[c]->istransformed = TRUE;
 
+               /* lock upgrade to keep control */
+               SCIPconsAddUpgradeLocks((*consdata)->consanddatas[c]->cons, +1);
+
                vars = (*consdata)->consanddatas[c]->vars;
                ncvars = (*consdata)->consanddatas[c]->nvars;
                assert(vars != NULL || ncvars == 0);
@@ -1438,7 +1441,11 @@ SCIP_RETCODE consdataFree(
                SCIP_CALL( SCIPhashmapRemove(conshdlrdata->hashmap, (void*)SCIPgetResultantAnd(scip, consanddatas[c]->cons)) );
             }
 
-            SCIP_CALL( SCIPreleaseCons(scip, &(consanddatas[c]->cons)) );
+            /* unlock upgrade to provide control */
+            SCIPconsAddUpgradeLocks(consanddatas[c]->cons, -1);
+
+            /* release and-constraint */
+            SCIP_CALL( SCIPreleaseCons(scip, &consanddatas[c]->cons) );
 
             /* if the consanddata object was only used in transformed space, delete the memory block */
             if( consanddatas[c]->origcons == NULL )
@@ -1508,7 +1515,8 @@ SCIP_RETCODE consdataFree(
                assert(consanddatas[c]->svars == 0);
             }
 
-            SCIP_CALL( SCIPreleaseCons(scip, &(consanddatas[c]->origcons)) );
+            /* release original and-constraint */
+            SCIP_CALL( SCIPreleaseCons(scip, &consanddatas[c]->origcons) );
             assert(consanddatas[c]->origcons == NULL);
 
             /* delete consanddata object */
@@ -2071,9 +2079,10 @@ SCIP_RETCODE createAndAddAndCons(
 #ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
-         SCIP_Real val;
+         SCIP_Real val = 1.0;
          SCIP_Real debugsolval;
 
+         assert(nvars >= 1);
          for( v = nvars - 1; v >= 0; --v )
          {
             SCIP_CALL( SCIPdebugGetSolVal(scip, vars[v], &val) );
@@ -2113,10 +2122,6 @@ SCIP_RETCODE createAndAddAndCons(
       SCIP_CALL( SCIPaddCons(scip, newcons) );
       SCIPdebugPrintCons(scip, newcons, NULL);
 
-      /* force all deriving constraint from this and constraint to be checked and not removable */
-      SCIP_CALL( SCIPchgAndConsCheckFlagWhenUpgr(scip, newcons, TRUE) );
-      SCIP_CALL( SCIPchgAndConsRemovableFlagWhenUpgr(scip, newcons, TRUE) );
-
       *andcons = newcons;
       assert(*andcons != NULL);
 
@@ -2134,6 +2139,9 @@ SCIP_RETCODE createAndAddAndCons(
       {
          newdata->cons = newcons;
          SCIP_CALL( SCIPcaptureCons(scip, newdata->cons) );
+
+         /* lock upgrade to keep control */
+         SCIPconsAddUpgradeLocks(newcons, +1);
 
          /* initialize usage of data object */
          newdata->nuses = 1;
@@ -3373,9 +3381,7 @@ SCIP_RETCODE createAndAddLinearCons(
       SCIP_CALL( SCIPaddCons(scip, cons) );
 
       /* mark linear constraint not to be upgraded - otherwise we loose control over it */
-      SCIP_CALL( SCIPcaptureCons(scip, cons) );
-      SCIPconsAddUpgradeLocks(cons, 1);
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIPconsAddUpgradeLocks(cons, +1);
    }
 
    return SCIP_OKAY;
@@ -3861,7 +3867,7 @@ SCIP_RETCODE copyConsPseudoboolean(
          assert(ntargetandconss <= ntargetlinvars);
       }
 
-      if( *valid )
+      if( *valid )  /* cppcheck-suppress duplicateCondition */
       {
          SCIP_Real targetrhs;
          SCIP_Real targetlhs;
@@ -5048,8 +5054,6 @@ SCIP_RETCODE correctConshdlrdata(
 
          SCIP_CALL( transformToOrig(scip, consanddata, conshdlrdata) );
 
-         /* release and-constraint */
-         SCIP_CALL( SCIPreleaseCons(scip, &consanddata->cons) );
          consanddata->nuses = 0;
 
          /* remove consanddata from hashtable, if it existed only in transformed space */
@@ -5060,6 +5064,12 @@ SCIP_RETCODE correctConshdlrdata(
          }
          assert(SCIPhashmapExists(conshdlrdata->hashmap, (void*)resvar));
          SCIP_CALL( SCIPhashmapRemove(conshdlrdata->hashmap, (void*)resvar) );
+
+         /* unlock upgrade to provide control */
+         SCIPconsAddUpgradeLocks(consanddata->cons, -1);
+
+         /* release and-constraint */
+         SCIP_CALL( SCIPreleaseCons(scip, &consanddata->cons) );
 
          continue;
       }
@@ -5152,7 +5162,11 @@ SCIP_RETCODE correctConshdlrdata(
          assert(SCIPhashmapExists(conshdlrdata->hashmap, (void*)SCIPgetResultantAnd(scip, consanddata->cons)));
          SCIP_CALL( SCIPhashmapRemove(conshdlrdata->hashmap, (void*)SCIPgetResultantAnd(scip, consanddata->cons)) );
 
-         SCIP_CALL( SCIPreleaseCons(scip, &(consanddata->cons)) );
+         /* unlock upgrade to provide control */
+         SCIPconsAddUpgradeLocks(consanddata->cons, -1);
+
+         /* release and-constraint */
+         SCIP_CALL( SCIPreleaseCons(scip, &consanddata->cons) );
          ++(*ndelconss);
 
          continue;
@@ -5172,7 +5186,6 @@ SCIP_RETCODE correctConshdlrdata(
          SCIP_CALL( transformToOrig(scip, consanddata, conshdlrdata) );
 
          /* release and-constraint */
-         SCIP_CALL( SCIPreleaseCons(scip, &consanddata->cons) );
          consanddata->nuses = 0;
 
          /* remove consanddata from hashtable, if it existed only in transformed space */
@@ -5183,6 +5196,12 @@ SCIP_RETCODE correctConshdlrdata(
          }
          assert(SCIPhashmapExists(conshdlrdata->hashmap, (void*)resvar));
          SCIP_CALL( SCIPhashmapRemove(conshdlrdata->hashmap, (void*)resvar) );
+
+         /* unlock upgrade to provide control */
+         SCIPconsAddUpgradeLocks(consanddata->cons, -1);
+
+         /* release and-constraint */
+         SCIP_CALL( SCIPreleaseCons(scip, &consanddata->cons) );
 
          continue;
       }
@@ -5333,7 +5352,11 @@ SCIP_RETCODE updateConsanddataUses(
          assert(SCIPhashmapExists(conshdlrdata->hashmap, (void*)SCIPgetResultantAnd(scip, consanddata->cons)));
          SCIP_CALL( SCIPhashmapRemove(conshdlrdata->hashmap, (void*)SCIPgetResultantAnd(scip, consanddata->cons)) );
 
-         SCIP_CALL( SCIPreleaseCons(scip, &(consanddata->cons)) );
+         /* unlock upgrade to provide control */
+         SCIPconsAddUpgradeLocks(consanddata->cons, -1);
+
+         /* release and-constraint */
+         SCIP_CALL( SCIPreleaseCons(scip, &consanddata->cons) );
          ++(*ndelconss);
       }
    }
@@ -6838,7 +6861,6 @@ SCIP_RETCODE tryUpgrading(
    if( consdata->nconsanddatas == 0 )
    {
       SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-      assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
 
       /* @todo: maybe it is better to create everytime a standard linear constraint instead of letting the special
        *        linear constraint stay
@@ -7825,7 +7847,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
          /* @todo: maybe better create a new linear constraint and let scip do the upgrade */
 
          /* mark linear constraint not to be upgraded - otherwise we loose control over it */
-         SCIPconsAddUpgradeLocks(consdata->lincons, 1);
+         SCIPconsAddUpgradeLocks(consdata->lincons, +1);
 
          /* update and constraint flags */
          SCIP_CALL( updateAndConss(scip, cons) );
@@ -9592,6 +9614,9 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
          {
             SCIP_CALL( SCIPcaptureCons(scip, newdata->cons) );
 
+            /* lock upgrade to keep control */
+            SCIPconsAddUpgradeLocks(newdata->cons, +1);
+
             /* initialize usage of data object */
             newdata->nuses = 1;
          }
@@ -9649,7 +9674,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
 
    /* @todo: make the constraint upgrade flag global, now it works only for the common linear constraint */
    /* mark linear constraint not to be upgraded - otherwise we loose control over it */
-   SCIPconsAddUpgradeLocks(lincons, 1);
+   SCIPconsAddUpgradeLocks(lincons, +1);
 
    /* create constraint data */
    /* checking for and-constraints will be FALSE, we check all information in this constraint handler */

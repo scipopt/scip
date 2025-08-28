@@ -1080,7 +1080,7 @@ SCIP_RETCODE SCIPconsDisablePropagation(
    );
 
 /** marks the constraint to be a conflict */
-void SCIPconsMarkConflict(
+SCIP_RETCODE SCIPconsMarkConflict(
    SCIP_CONS*            cons                /**< constraint */
    );
 

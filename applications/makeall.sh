@@ -4,7 +4,7 @@
 #
 
 APPLICATIONS=(Coloring CycleClustering MinIISC PBSolver Ringpacking Scheduler)
-LPSOLVERS=(clp cpx none spx spx2)
+LPSOLVERS=(clp cpx none spx)
 OPTS=(opt dbg)
 LIBTYPE=(static shared)
 

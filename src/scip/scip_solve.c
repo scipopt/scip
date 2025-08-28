@@ -500,28 +500,11 @@ SCIP_RETCODE initPresolve(
    /* initialize lower bound of the presolving root node if a valid dual bound is at hand */
    if( scip->transprob->dualbound != SCIP_INVALID ) /*lint !e777*/
    {
-      SCIP_EVENT event;
-
       scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
       if( scip->set->exact_enable )
          SCIPrationalSetReal(scip->tree->root->lowerboundexact, scip->tree->root->lowerbound);
-
-      /* throw improvement event */
-      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
-      SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
-
-      /* update primal-dual integrals */
-      if( scip->set->misc_calcintegral )
-      {
-         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
-         assert(scip->stat->lastlowerbound == scip->tree->root->lowerbound); /*lint !e777*/
-      }
-      else
-         scip->stat->lastlowerbound = scip->tree->root->lowerbound;
-      if( scip->set->exact_enable )
-         SCIPrationalSetRational(scip->stat->lastlowerboundexact, scip->tree->root->lowerboundexact);
    }
 
    /* GCG wants to perform presolving during the reading process of a file reader;
@@ -2471,7 +2454,6 @@ SCIP_RETCODE SCIPpresolve(
    SCIP_Bool unbounded;
    SCIP_Bool infeasible;
    SCIP_Bool vanished;
-   SCIP_RETCODE retcode;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -2491,15 +2473,8 @@ SCIP_RETCODE SCIPpresolve(
    {
    case SCIP_STAGE_PROBLEM:
       /* initialize solving data structures and transform problem */
-      retcode =  SCIPtransformProb(scip);
-      if( retcode != SCIP_OKAY )
-      {
-         SCIP_CALL( SCIPfreeTransform(scip) );
-         return retcode;
-      }
-
+      SCIP_CALL( SCIPtransformProb(scip) );
       assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
-
       /*lint -fallthrough*/
 
    case SCIP_STAGE_TRANSFORMED:
@@ -2958,38 +2933,6 @@ SCIP_RETCODE SCIPsolve(
    SCIP_CALL( SCIPcertificateSaveFinalbound(scip, SCIPgetCertificate(scip)) );
 
    return SCIP_OKAY;
-}
-
-/** transforms, presolves, and solves problem using the configured concurrent solvers
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *
- *  @post After calling this method \SCIP reaches one of the following stages depending on if and when the solution
- *        process was interrupted:
- *        - \ref SCIP_STAGE_PRESOLVING if the solution process was interrupted during presolving
- *        - \ref SCIP_STAGE_SOLVING if the solution process was interrupted during the tree search
- *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- *
- *  @deprecated Please use SCIPsolveConcurrent() instead.
- */
-SCIP_RETCODE SCIPsolveParallel(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveParallel", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   return SCIPsolveConcurrent(scip);
 }
 
 /** transforms, presolves, and solves problem using the configured concurrent solvers

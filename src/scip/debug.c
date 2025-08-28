@@ -850,8 +850,8 @@ SCIP_RETCODE SCIPdebugFree(
    return SCIP_OKAY;
 }
 
-/** checks for validity of the debugging solution in given constraints */
-SCIP_RETCODE SCIPdebugCheckConss(
+/** checks for validity of the debugging solution in given active constraints */
+SCIP_RETCODE SCIPdebugCheckActiveConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints to check for validity */
    int                   nconss              /**< number of given constraints */
@@ -903,6 +903,59 @@ SCIP_RETCODE SCIPdebugCheckConss(
          if( !solcontained )
             return SCIP_OKAY;
       }
+
+      SCIP_CALL( SCIPcheckCons(scip, conss[c], debugsoldata->debugsol, TRUE, TRUE, TRUE, &result) );
+
+      SCIPdebugMsg(scip, " -> checking of constraint %s returned result <%d>\n", SCIPconsGetName(conss[c]), result);
+
+      if( result != SCIP_FEASIBLE )
+      {
+         SCIPerrorMessage("constraint %s violates the debugging solution\n", SCIPconsGetName(conss[c]));
+         SCIPABORT();
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks for validity of the debugging solution for any globally valid constraints. */
+SCIP_RETCODE SCIPdebugCheckConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints to check for validity */
+   int                   nconss              /**< number of given constraints */
+   )
+{
+   SCIP_RESULT result;
+   int c;
+
+   SCIP_DEBUGSOLDATA* debugsoldata;
+   assert(scip->set != NULL);
+
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !SCIPdebugSolIsEnabled(scip) )
+      return SCIP_OKAY;
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(scip->set) )
+      return SCIP_OKAY;
+
+   debugsoldata = SCIPsetGetDebugSolData(scip->set);
+
+   assert(conss != NULL || nconss == 0);
+   assert(debugsoldata->debugsol != NULL);
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug
+    * solution
+    */
+   if( debugSolIsAchieved(scip->set) )
+      return SCIP_OKAY;
+
+   result = SCIP_FEASIBLE;
+
+   /* checking each given constraint against the debugging solution */
+   for( c = nconss - 1; c >= 0; --c )
+   {
+      assert(conss[c] != NULL);
 
       SCIP_CALL( SCIPcheckCons(scip, conss[c], debugsoldata->debugsol, TRUE, TRUE, TRUE, &result) );
 
@@ -2265,7 +2318,7 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
 #endif
 
 /** checks if SCIP is in one of the feasible stages */
-#ifndef NDEBUG
+#ifdef SCIP_CHECK_STAGE
 SCIP_RETCODE SCIPcheckStage(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           method,             /**< method that was called */

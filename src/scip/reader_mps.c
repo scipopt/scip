@@ -4802,7 +4802,6 @@ void printBoundSection(
       assert(transformed);
       assert(fixvars != NULL && fixvars[v] != NULL);
 
-      /* cppcheck-suppress nullPointer */
       var = fixvars[v];
 
       assert(var != NULL);

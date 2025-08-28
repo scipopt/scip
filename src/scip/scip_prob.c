@@ -78,6 +78,7 @@
 #include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/set.h"
 #include "scip/stat.h"
@@ -493,6 +494,56 @@ SCIP_RETCODE SCIPreadProb(
    return retcode;
 }
 
+/** outputs problem to file stream */
+static
+SCIP_RETCODE printProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROB*            prob,               /**< problem data */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           filename,           /**< name of output file, or NULL if not available */
+   const char*           extension,          /**< file format (or NULL for default CIP format) */
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
+   )
+{
+   SCIP_RESULT result;
+   int i;
+   assert(scip != NULL);
+   assert(prob != NULL);
+
+   /* try all readers until one could read the file */
+   result = SCIP_DIDNOTRUN;
+   for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
+   {
+      SCIP_RETCODE retcode;
+
+      if( extension != NULL )
+         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, scip->messagehdlr, file, filename, extension, genericnames, &result);
+      else
+         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, scip->messagehdlr, file, filename, "cip", genericnames, &result);
+
+      /* check for reader errors */
+      if( retcode == SCIP_WRITEERROR )
+         return retcode;
+
+      SCIP_CALL( retcode );
+   }
+
+   switch( result )
+   {
+   case SCIP_DIDNOTRUN:
+      return SCIP_PLUGINNOTFOUND;
+
+   case SCIP_SUCCESS:
+      return SCIP_OKAY;
+
+   default:
+      assert(i < scip->set->nreaders);
+      SCIPerrorMessage("invalid result code <%d> from reader <%s> writing <%s> format\n",
+         result, SCIPreaderGetName(scip->set->readers[i]), extension);
+      return SCIP_READERROR;
+   }  /*lint !e788*/
+}
+
 /** write original or transformed problem */
 static
 SCIP_RETCODE writeProblem(
@@ -517,10 +568,8 @@ SCIP_RETCODE writeProblem(
    file = NULL;
    tmpfilename = NULL;
 
-   if( filename != NULL &&  filename[0] != '\0' )
+   if( filename != NULL && filename[0] != '\0' )
    {
-      int success;
-
       file = fopen(filename, "w");
       if( file == NULL )
       {
@@ -552,29 +601,113 @@ SCIP_RETCODE writeProblem(
       {
          SCIPmessagePrintWarning(scip->messagehdlr, "filename <%s> has no file extension, select default <cip> format for writing\n", filename);
       }
+   }
 
-      if( transformed )
-         retcode = SCIPprintTransProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
-      else
-         retcode = SCIPprintOrigProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
+   retcode = printProblem(scip, transformed ? scip->transprob : scip->origprob, file, filename, extension != NULL ? extension : fileextension, genericnames);
+
+   if( tmpfilename != NULL )
+   {
+      assert(filename != NULL);
+      assert(file != NULL);
 
       BMSfreeMemoryArray(&tmpfilename);
 
-      success = fclose(file);
-      if( success != 0 )
+      if( fclose(file) != 0 )
       {
          SCIPerrorMessage("An error occurred while closing file <%s>\n", filename);
          return SCIP_FILECREATEERROR;
       }
    }
+
+   /* check for write errors */
+   if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
+      return retcode;
    else
    {
-      /* print to stdout */
-      if( transformed )
-         retcode = SCIPprintTransProblem(scip, NULL, extension, genericnames);
-      else
-         retcode = SCIPprintOrigProblem(scip, NULL, extension, genericnames);
+      SCIP_CALL( retcode );
    }
+
+   return SCIP_OKAY;
+}
+
+/** outputs original problem to file stream
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_RETCODE SCIPprintOrigProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           extension,          /**< file format (or NULL for default CIP format)*/
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
+   )
+{
+   SCIP_RETCODE retcode;
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintOrigProblem", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   assert(scip != NULL);
+   assert( scip->origprob != NULL );
+
+   retcode = printProblem(scip, scip->origprob, file, NULL, extension, genericnames);
+
+   /* check for write errors */
+   if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
+      return retcode;
+   else
+   {
+      SCIP_CALL( retcode );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** outputs transformed problem of the current node to file stream
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_RETCODE SCIPprintTransProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           extension,          /**< file format (or NULL for default CIP format)*/
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
+   )
+{
+   SCIP_RETCODE retcode;
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintTransProblem", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   assert(scip != NULL);
+   assert(scip->transprob != NULL );
+
+   retcode = printProblem(scip, scip->transprob, file, NULL, extension, genericnames);
 
    /* check for write errors */
    if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
@@ -3197,6 +3330,64 @@ SCIP_RETCODE SCIPaddCons(
    }  /*lint !e788*/
 }
 
+/** adds constraint to the problem and upgrades conflict in the conflict store; if oldcons is valid globally, newcons
+ *  is added to the global problem; otherwise it is added to the local subproblem of the current node
+ *
+ *  @note must only be called once for both constraints
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note this method will release the upgraded constraint
+ */
+SCIP_RETCODE SCIPaddUpgrade(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            oldcons,            /**< underlying constraint to upgrade */
+   SCIP_CONS**           newcons             /**< upgraded constraint to add */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+   assert(oldcons != NULL);
+   assert(newcons != NULL);
+   assert(*newcons != NULL);
+   assert(SCIPconsGetNUpgradeLocks(oldcons) == 0);
+   assert(SCIPconsIsGlobal(oldcons) || SCIPconsGetValidDepth(oldcons) == SCIPconsGetActiveDepth(oldcons));
+
+   /* add problem constraint */
+   if( SCIPconsIsGlobal(oldcons) )
+   {
+      SCIP_CALL( SCIPaddCons(scip, *newcons) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPaddConsLocal(scip, *newcons, NULL) );
+   }
+
+   /* upgrade conflict constraint */
+   if( SCIPconsIsConflict(oldcons) )
+   {
+      SCIP_CALL( SCIPconflictstoreUpgradeConflict(scip->conflictstore, scip->mem->probmem, scip->set,
+            oldcons, *newcons) );
+   }
+
+   /* release upgraded constraint */
+   SCIP_CALL( SCIPreleaseCons(scip, newcons) );
+
+   return SCIP_OKAY;
+}
+
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
  *  node, where it was added, or from the problem, if it was a problem constraint
  *
@@ -3601,8 +3792,8 @@ int SCIPgetNCheckConss(
 SCIP_RETCODE SCIPaddConflict(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to add conflict (or NULL if global) */
-   SCIP_CONS*            cons,               /**< constraint representing the conflict */
-   SCIP_NODE*            validnode,          /**< node at whichaddConf the constraint is valid (or NULL) */
+   SCIP_CONS**           cons,               /**< constraint representing the conflict */
+   SCIP_NODE*            validnode,          /**< node at which the constraint is valid (or NULL) */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
    SCIP_Bool             iscutoffinvolved    /**< is a cutoff bound involved in this conflict */
    )
@@ -3611,11 +3802,14 @@ SCIP_RETCODE SCIPaddConflict(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(*cons != NULL);
    assert(scip->conflictstore != NULL);
    assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || iscutoffinvolved);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflict", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* mark constraint to be a conflict */
+   SCIP_CALL( SCIPconsMarkConflict(*cons) );
    if( iscutoffinvolved )
       primalbound = SCIPgetCutoffbound(scip);
    else
@@ -3624,25 +3818,22 @@ SCIP_RETCODE SCIPaddConflict(
    /* add a global conflict */
    if( node == NULL )
    {
-      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPaddCons(scip, *cons) );
    }
    /* add a local conflict */
    else
    {
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
+      SCIP_CALL( SCIPaddConsNode(scip, node, *cons, validnode) );
    }
 
    if( node == NULL || SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
    {
       /* add the conflict to the conflict store */
       SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
-            scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
+            scip->transprob, scip->reopt, *cons, conftype, iscutoffinvolved, primalbound) );
    }
 
-   /* mark constraint to be a conflict */
-   SCIPconsMarkConflict(cons);
-
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, cons) );
 
    return SCIP_OKAY;
 }

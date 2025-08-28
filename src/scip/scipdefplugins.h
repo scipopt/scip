@@ -239,6 +239,7 @@
 #include "scip/sepa_aggregation.h"
 #include "scip/sepa_convexproj.h"
 #include "scip/sepa_disjunctive.h"
+#include "scip/sepa_flower.h"
 #include "scip/sepa_gauge.h"
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"
@@ -248,7 +249,6 @@
 #include "scip/sepa_mcf.h"
 #include "scip/sepa_minor.h"
 #include "scip/sepa_mixing.h"
-#include "scip/sepa_multilinear.h"
 #include "scip/sepa_oddcycle.h"
 #include "scip/sepa_rapidlearning.h"
 #include "scip/sepa_rlt.h"
@@ -267,6 +267,7 @@
 #include "scip/nlpi_ipopt.h"
 #include "scip/nlpi_filtersqp.h"
 #include "scip/nlpi_worhp.h"
+#include "scip/nlpi_conopt.h"
 #include "scip/nlpi_all.h"
 
 #ifdef __cplusplus

@@ -2135,9 +2135,6 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       return SCIP_OKAY;
    }
 
-   /* If no NLP was constructed, then there were no nonlinearities after presolve.
-    * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem.
-    */
    SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 0LL) );
    retcode = SCIPsolve(heurdata->subscip);
    heurdata->isnlp = TRUE;
@@ -2153,6 +2150,9 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       return SCIP_OKAY;
    }
 
+   /* If no NLP was constructed, then there were no nonlinearities after presolve.
+    * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem.
+    */
    if( ! SCIPisNLPConstructed(heurdata->subscip) && retcode == SCIP_OKAY )
    {
       SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );

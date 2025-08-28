@@ -23,7 +23,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   examples/Eventhdlr/src/event_boundwriting.c
- * @ingroup EVENTHDLR
  * @brief  event handler for writing primal and dual bound for all open nodes
  * @author Michael Winkler
  *

@@ -1403,54 +1403,6 @@ SCIP_BDCHGINFO* SCIPvarGetBdchgInfo(
    SCIP_Bool             after               /**< should the bound change with given index be included? */
    );
 
-/** returns lower bound of variable directly before or after the bound change given by the bound change index
- *  was applied
- *
- *  @deprecated Please use SCIPgetVarLbAtIndex()
- */
-SCIP_EXPORT
-SCIP_Real SCIPvarGetLbAtIndex(
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
-   SCIP_Bool             after               /**< should the bound change with given index be included? */
-   );
-
-/** returns upper bound of variable directly before or after the bound change given by the bound change index
- *  was applied
- *
- *  @deprecated Please use SCIPgetVarUbAtIndex()
- */
-SCIP_EXPORT
-SCIP_Real SCIPvarGetUbAtIndex(
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
-   SCIP_Bool             after               /**< should the bound change with given index be included? */
-   );
-
-/** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
- *  was applied
- *
- *  @deprecated Please use SCIPgetVarBdAtIndex()
- */
-SCIP_EXPORT
-SCIP_Real SCIPvarGetBdAtIndex(
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
-   SCIP_Bool             after               /**< should the bound change with given index be included? */
-   );
-
-/** returns whether the binary variable was fixed at the time given by the bound change index
- *
- *  @deprecated Please use SCIPgetVarWasFixedAtIndex()
- */
-SCIP_EXPORT
-SCIP_Bool SCIPvarWasFixedAtIndex(
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
-   SCIP_Bool             after               /**< should the bound change with given index be included? */
-   );
-
 /** returns the last bound change index, at which the bounds of the given variable were tightened */
 SCIP_EXPORT
 SCIP_BDCHGIDX* SCIPvarGetLastBdchgIndex(

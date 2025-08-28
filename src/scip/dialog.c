@@ -678,9 +678,8 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
    if( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' )
       dialoghdlr->bufferpos++;
 
-   /* truncate the command word in the buffer */
-   if( dialoghdlr->buffer[pos] != '\0' )
-      dialoghdlr->buffer[pos] = '\0';
+   /* possibly truncate the command word in the buffer */
+   dialoghdlr->buffer[pos] = '\0';
 
    /* remove additional spaces */
    while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos]) )

@@ -563,6 +563,10 @@ set(pairs_Issue
     "instances/Issue/3932.cip\;+infinity\;reduced_tolerance"
     "instances/Issue/3934.cip\;-5007\;conflict_off_reduced_presolving_subrestart"
     "instances/Issue/3935.cip\;-24793.9840277416\;default"
+    "instances/Issue/3939.cip\;-24000\;lexdual"
+    "instances/Issue/3940.cip\;-2549.22\;unscaled_tolerance"
+    "instances/Issue/3942.cip\;0\;default"
+    "instances/Issue/3949.cip\;+infinity\;presolving_milp_off"
 )
 
 #
@@ -576,6 +580,15 @@ set(reader_extensions_MIP
   "pip"
   "fzn"
   "rlp"
+  "nl"
+  )
+
+#
+# available reader file extensions for MINLP problems
+#
+set(reader_extensions_MINLP
+  "cip"
+  "nl"
   )
 
 #
@@ -871,6 +884,14 @@ set(basenames_lp_wrongformat
 set(message_format_lp "WARNING: violation of LP format - a constraint name starts with a digit; it is not possible to read the generated LP file with SCIP; use write/genproblem or write/gentransproblem for generic variable names")
 
 #
+# the following instances have constraints that cannot or cannot yet be written out in nl format
+#
+set(basenames_nl_wrongformat
+    bip_cross_min.10.10.10.1.pip
+    )
+set(message_format_nl "WARNING: constraint .* of type <.*> cannot be printed in requested format")
+
+#
 # test writing and reading from and to different file extensions for MIP
 #
 foreach(instance ${instances_MIP_write})
@@ -915,6 +936,39 @@ foreach(instance ${instances_MIP})
                 COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
                 )
         set_tests_properties(MIP-readertest-${extension}-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION ${regex}
+                                FAIL_REGULAR_EXPRESSION "ERROR"
+                                DEPENDS scip-build
+                            )
+    endforeach(extension)
+endforeach(instance)
+
+#
+# test writing and reading from and to different file extensions for MINLP (only without original objective offset)
+#
+foreach(instance ${instances_MINLP})
+    split_instance(instance)
+    foreach(extension ${reader_extensions_MINLP})
+        #
+        # configure the batch file for this test by substituting placeholders in the in.file
+        #
+        # does this instance match the requirements of this format?
+        list(FIND basenames_${extension}_wrongformat ${basename} wrongformat)
+        #
+        # use different template batch files depending on the format requirements
+        #
+        if( wrongformat EQUAL -1 )
+            configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+            set(regex "Validation         : Success.*Validation         : Success")
+        else()
+            configure_file(interactiveshell/readertest-wrongformat.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+            set(regex "${message_format_${extension}}")
+        endif()
+        add_test(NAME MINLP-readertest-${extension}-${basename}
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
+                )
+        set_tests_properties(MINLP-readertest-${extension}-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION ${regex}
                                 FAIL_REGULAR_EXPRESSION "ERROR"
@@ -1066,9 +1120,8 @@ set(linclass_bell5
   "total             :         91"
   "singleton         :          2"
   "precedence        :         17"
-  "varbound          :         18"
-  "mixedbinary       :         26"
-  "general           :         28"
+  "mixedbinary       :         30"
+  "general           :         42"
   )
 
 set(linclass_blend2
@@ -1110,9 +1163,8 @@ set(linclass_flugpl
     "empty             :          0"
     "free              :          0"
     "singleton         :          1"
-    "varbound          :          6"
-    "mixedbinary       :          0"
-    "general           :         11"
+    "mixedbinary       :          1"
+    "general           :         16"
     )
 
 set(linclass_gt2

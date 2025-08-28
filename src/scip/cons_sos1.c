@@ -1784,8 +1784,7 @@ SCIP_RETCODE presolRoundConsSOS1(
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
                SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-         SCIP_CALL( SCIPaddCons(scip, setpackcons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &setpackcons) );
+         SCIP_CALL( SCIPaddUpgrade(scip, cons, &setpackcons) );
 
          SCIPdebugMsg(scip, "Upgrading SOS1 constraint <%s> to set packing constraint.\n", SCIPconsGetName(cons));
 
@@ -10193,7 +10192,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
    SCIP_VAR** consvars;
    SCIP_VAR** locvars;
    SCIP_Real* locvals;
-   SCIP_Real constant = 0.0;
+   SCIP_Real constant;
    int consnodeidx;
    int nodeidx;
    int nconsvars;
@@ -10259,7 +10258,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS1)
    SCIP_VAR** consvars;
    SCIP_VAR** locvars;
    SCIP_Real* locvals;
-   SCIP_Real constant = 0.0;
+   SCIP_Real constant;
    int consnodeidx;
    int nodeidx;
    int nconsvars;

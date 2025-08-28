@@ -267,6 +267,14 @@ char* SCIPnlpiOracleGetConstraintName(
    int                   considx             /**< constraint index */
    );
 
+/** gives linear coefficient of a given variable in a constraint */
+SCIP_EXPORT
+SCIP_Real SCIPnlpiOracleGetConstraintLinearCoef(
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   int                   considx,            /**< constraint index, or -1 for objective */
+   int                   varpos              /**< position in the constraint's linear coefficient array */
+   );
+
 /** indicates whether constraint is nonlinear */
 SCIP_EXPORT
 SCIP_Bool SCIPnlpiOracleIsConstraintNonlinear(
@@ -340,22 +348,54 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
 
 /** gets sparsity pattern (rowwise) of Jacobian matrix
  *
- *  Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
+ *  Note that internal data is returned in *rowoffsets and *cols, thus the user does not need to allocate memory there.
  *  Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
+SCIP_RETCODE SCIPnlpiOracleGetJacobianRowSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const int**           offset,             /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
-   const int**           col                 /**< pointer to store pointer that stores the indices of variables that appear in each row,
-                                              *   offsets[nconss] gives length of col, can be NULL */
+   const int**           rowoffsets,         /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
+   const int**           cols,               /**< pointer to store pointer that stores the indices of variables that appear in each row,
+                                              *   rowoffset[nconss] gives length of col, can be NULL */
+   const SCIP_Bool**     colnlflags,         /**< flags indicating whether an entry in nonlinear (sorted row-wise), can be NULL */
+   int*                  nnlnz               /**< number of nonlinear nonzeroes */
+   );
+
+/** gets sparsity pattern (columnwise) of Jacobian matrix
+ *
+ *  Note that internal data is returned in *coloffsets and *rows, thus the user does not need to allocate memory there.
+ *  Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnlpiOracleGetJacobianColSparsity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   const int**           coloffsets,         /**< pointer to store pointer that stores the offsets to each column's sparsity pattern in row, can be NULL */
+   const int**           rows,               /**< pointer to store pointer that stores the indices of rows that each variable participates in,
+                                              *   coloffset[nvars] gives length of row, can be NULL */
+   const SCIP_Bool**     rownlflags,         /**< flags indicating whether an entry in nonlinear (sorted column-wise) */
+   int*                  nnlnz               /**< number of nonlinear nonzeroes */
+   );
+
+/** gets nonzero indices in the objective gradient
+ *
+ *  Note that internal data is returned in *nz and *nlnz, thus the user does not need to allocate memory there.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   const int**           nz,                 /**< pointer to store pointer that stores the nonzeroes of the objective gradient */
+   const SCIP_Bool**     nlnz,               /**< flags marking nonlinear nonzeroes */
+   int*                  nnz,                /**< number of nonzeroes */
+   int*                  nnlnz               /**< number of nonlinear nonzeroes */
    );
 
 /** evaluates the Jacobian matrix in a given point
  *
- *  The values in the Jacobian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity().
- *  The user need to call SCIPnlpiOracleGetJacobianSparsity() at least ones before using this function.
+ *  The values in the Jacobian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianRowSparsity().
+ *  The user need to call SCIPnlpiOracleGetJacobianRowSparsity() at least ones before using this function.
  *
  * @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
  */
@@ -380,8 +420,9 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int**           offset,             /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
-   const int**           col                 /**< pointer to store pointer that stores the indices of variables that appear in each row,
+   const int**           col,                /**< pointer to store pointer that stores the indices of variables that appear in each row,
                                               *   offsets[nconss] gives length of col, can be NULL */
+   SCIP_Bool             colwise             /**< tells whether a columnwise (TRUE) or rowwise representation is needed */
    );
 
 /** evaluates the Hessian matrix of the Lagrangian in a given point
@@ -400,8 +441,9 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP_Bool             isnewx_obj,         /**< has the point x changed since the last call to an objective evaluation function? */
    SCIP_Bool             isnewx_cons,        /**< has the point x changed since the last call to the constraint evaluation function? */
    SCIP_Real             objfactor,          /**< weight for objective function */
-   const SCIP_Real*      lambdas,            /**< array with weights (Lagrangian multipliers) for the constraints */
-   SCIP_Real*            hessian             /**< pointer to store sparse hessian values */
+   const SCIP_Real*      lambda,             /**< array with weights (Lagrangian multipliers) for the constraints */
+   SCIP_Real*            hessian,            /**< pointer to store sparse hessian values */
+   SCIP_Bool             colwise             /**< whether the entries should be first sorted column-wise (TRUE) or row-wise */
    );
 
 /** resets clock that measures evaluation time */

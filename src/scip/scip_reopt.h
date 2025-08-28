@@ -73,7 +73,7 @@ SCIP_RETCODE SCIPgetReoptChildIDs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node of the search tree */
    unsigned int*         ids,                /**< array to store the ids of child nodes */
-   int                   mem,                /**< allocated memory */
+   int                   idssize,            /**< allocated memory */
    int*                  nids                /**< number of child nodes */
    );
 
@@ -92,7 +92,7 @@ SCIP_RETCODE SCIPgetReoptLeaveIDs(
    SCIP*                 scip,               /**< SCIP data strcuture */
    SCIP_NODE*            node,               /**< node of the search tree */
    unsigned int*         ids,                /**< array of ids */
-   int                   mem,                /**< allocated memory */
+   int                   idssize,            /**< allocated memory */
    int*                  nids                /**< number of child nodes */
    );
 

@@ -56,6 +56,7 @@
 #include "scip/scip_lpexact.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
+#include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
@@ -908,19 +909,16 @@ SCIP_RETCODE SCIPwriteLP(
    const char*           filename            /**< file name */
    )
 {
-   SCIP_Bool cutoff;
-
    SCIP_CALL( SCIPcheckStage(scip, "SCIPwriteLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
-      SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool, scip->branchcand,
-            scip->eventqueue, scip->eventfilter, scip->cliquetable, FALSE, &cutoff) );
+      SCIPerrorMessage("LP not constructed\n");
+      return SCIP_INVALIDDATA;
    }
 
-   /* we need a flushed lp to write the current lp */
-   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->probmem, scip->set, scip->transprob, scip->eventqueue) );
+   if( !scip->lp->flushed )
+      SCIPwarningMessage(scip, "LP not flushed\n");
 
    SCIP_CALL( SCIPlpWrite(scip->lp, filename) );
 
@@ -948,8 +946,14 @@ SCIP_RETCODE SCIPwriteMIP(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPwriteMIP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   /* we need a flushed lp to write the current mip */
-   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->probmem, scip->set, scip->transprob, scip->eventqueue) );
+   if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
+   {
+      SCIPerrorMessage("LP not constructed\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( !scip->lp->flushed )
+      SCIPwarningMessage(scip, "LP not flushed\n");
 
    SCIP_CALL( SCIPlpWriteMip(scip->lp, scip->set, scip->messagehdlr, filename, genericnames,
          origobj, scip->origprob->objsense, scip->transprob->objscale, scip->transprob->objoffset, lazyconss) );
@@ -1351,39 +1355,6 @@ SCIP_RETCODE SCIPcreateRowUnspec(
    return SCIP_OKAY;
 }
 
-/** creates and captures an LP row
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  @deprecated Please use SCIPcreateRowConshdlr() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
- *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateRowUnspec().
- */
-SCIP_RETCODE SCIPcreateRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW**            row,                /**< pointer to row */
-   const char*           name,               /**< name of row */
-   int                   len,                /**< number of nonzeros in the row */
-   SCIP_COL**            cols,               /**< array with columns of row entries */
-   SCIP_Real*            vals,               /**< array with coefficients of row entries */
-   SCIP_Real             lhs,                /**< left hand side of row */
-   SCIP_Real             rhs,                /**< right hand side of row */
-   SCIP_Bool             local,              /**< is row only valid locally? */
-   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
-   )
-{
-   /* Note: Rows can only be created in the solving stage, since otherwise the LP does not exist and, e.g., the norms cannot be computed correctly. */
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPcreateRowUnspec(scip, row, name, len, cols, vals, lhs, rhs, local, modifiable, removable) );
-
-   return SCIP_OKAY;
-}
-
 /** creates and captures an LP row without any coefficients from a constraint handler
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1499,36 +1470,6 @@ SCIP_RETCODE SCIPcreateEmptyRowUnspec(
 
    SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_UNSPEC, NULL, local, modifiable, removable) );
-
-   return SCIP_OKAY;
-}
-
-/** creates and captures an LP row without any coefficients
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  @deprecated Please use SCIPcreateEmptyRowConshdlr() or SCIPcreateEmptyRowSepa() when calling from a constraint handler or separator in order
- *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateEmptyRowUnspec().
- */
-SCIP_RETCODE SCIPcreateEmptyRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW**            row,                /**< pointer to row */
-   const char*           name,               /**< name of row */
-   SCIP_Real             lhs,                /**< left hand side of row */
-   SCIP_Real             rhs,                /**< right hand side of row */
-   SCIP_Bool             local,              /**< is row only valid locally? */
-   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, row, name, lhs, rhs, local, modifiable, removable) );
 
    return SCIP_OKAY;
 }

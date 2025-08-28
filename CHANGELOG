@@ -12,7 +12,7 @@ Features
 - Dejavu can be used to compute symmetries; the source code is shipped with SCIP and incorporates sassy.
 - implemented symmetry detection callbacks for cons_disjunction and cons_superindicator
 - detailed information about applied symmetry handling techniques can be printed to the terminal
-- added a new separator sepa_multilinear to generate flower cuts from AND constraints nonlinear product expressions.
+- added a new separator sepa_flower to generate flower cuts from AND constraints nonlinear product expressions.
 - added functionality to deal with hypergraphs by means of efficient access to vertices, edges and intersections edges.
 - added support for (transposed) network matrix detection in pub_network.h
 - added a new presolver presol_implint which detects implied integral variables by detecting (transposed) network submatrices in the problem. For now, this plugin is disabled by default.
@@ -36,6 +36,10 @@ Features
   stop evaluating further candidates once the expected tree-size reduction no longer justifies the LP evaluation cost.
 - extended the statistics to also include information about the number of variables (per type) affected by symmetry
 - add check that parameter value pointers are unique, i.e., no two are the same
+- added generalized resolution conflict analysis that operates directly on linear constraints instead of conflict graphs.
+- added support for AND-constraints to GAMS writer
+- added writing support for AMPL NL writer: currently only general and specialized linear and nonlinear constraints can be written
+- implemented columnwise Jacobian sparsity computation in the NLP oracle
 
 Performance improvements
 ------------------------
@@ -43,6 +47,9 @@ Performance improvements
 - reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
 - simplified symmetry detection graphs in case all edges have the same color
 - avoid unnecessary calls of constraint handlers components, benders, benderslp, propagator genvbounds, and heuristics ofins, subnlp, nlpdiving, indicator
+- disable dualsol and dualray conflict upgrades to maintain conflict store
+- apply general conflict upgrades in conflict store
+- inline SCIPgetStatus() to reduce computational overhead
 
 Examples and applications
 -------------------------
@@ -67,6 +74,7 @@ Interface changes
   ```
   SCIP 10 still supports using SCIP_VARTYPE_IMPLINT for backward compatibility, see SCIPcreateVar() and SCIPchgVarType() for more details.
   SCIP 11 will remove SCIP_VARTYPE_IMPLINT.
+- SCIPsubversion() is deprecated and will be removed
 
 ### New and changed callbacks
 
@@ -80,7 +88,8 @@ Interface changes
 - new event SCIP_EVENTTYPE_DUALBOUNDIMPROVED is generated whenever the global dual bound is improved
 - new event mask SCIP_EVENTTYPE_GAPUPDATED for catching updates in primal or dual bound
 - added new sorting functions SCIPsortRealPtrPtr(), ...
-- the callback SCIP_DECL_READERWRITE is equipped with objoffset, objscale, objoffsetexact, objscaleexact as arguments 8 through 11 to write the exact objective offset and scale in exact mode
+- added argument filename to the SCIP_DECL_READERWRITE callback in the 4th position
+- the callback SCIP_DECL_READERWRITE is equipped with objoffset, objscale, objoffsetexact, objscaleexact as arguments 9 through 12 to write the exact objective offset and scale in exact mode
 
 ### Deleted and changed API methods
 
@@ -91,7 +100,6 @@ Interface changes
 - ndelconss added to arguments for SCIPcleanupConssLinear() and SCIPcleanupConssKnapsack() to directly delete empty redundant constraints before creating problem matrix
 - copyiisfinders added to arguments for SCIPcopyPlugins() (16th position)
 - SCIPcreateConsOrbitope() deleted two arguments and changed position of another argument
-- deprecated SCIPsubversion(), will be removed
 - SCIPvarCalcDistributionParameters(): argument impltype added (5th position)
 - SCIPpermuteProb(): argument permuteimplvars has been replaced by new arguments permutebinimplvars, permuteintimplvars, and permutecontimplvars
 - SCIPgetLPBranchCands(): implied integral variables with integrality constraints are included in nlpcands stored in lpcands at the back
@@ -103,7 +111,8 @@ Interface changes
 - SCIPapplyBendersDecomposition has been removed. This was originally used to apply Benders' decomposition from a
   supplied decomposition structure. The application of Benders' decomposition now occurs in benders_relax.
 - SCIPcalcMIR(), SCIPcutGenerationHeuristicCMIR(), SCIPcalcStrongCG(): the Boolean argument 'usevbds' was replaced by an integer argument 'vartypeusevbds' that indicates for which variables variable bound substitution should be performed.
-
+- SCIPchgAndConsCheckFlagWhenUpgr() and SCIPchgAndConsRemovableFlagWhenUpgr() are removed to keep upgrade flags consistent, use SCIPconsAddUpgradeLocks() to control upgrades instead
+- the argument cons of SCIPaddConflict() is turned into a double constraint pointer to cleanly release the constraint
 - remove the following functions that were declared in h-files, but not implemented:
   SCIPselectPtrRealReal(), SCIPselectWeightedPtrRealReal(), SCIPsortPtrRealReal(),
   SCIPbendersApplyDecomposition(), SCIPcertificatePrintSolExact(),
@@ -120,6 +129,18 @@ Interface changes
   SCIPallocateSymgraphConsnodeperm()
   SCIPvarGetOrigIndex()
   SCIPwriteSto()
+- the declaration of SCIPprintOrigProblem() and SCIPprintTransProblem() moved from scip_solvingstats.h to scip_prob.h
+- SCIPnlpiOracleGetJacobianSparsity() has been renamed to SCIPnlpiOracleGetJacobianRowSparsity() and now expect two more arguments: colnlflags and nnlnz
+- SCIPnlpiOracleGetHessianLagSparsity() and SCIPnlpiOracleEvalHessianLag() now expect one more argument: colwise
+- removed previously deprecated functions SCIPhashtableClear(), SCIPcomputeArraysIntersection(), SCIPcomputeArraysSetminus(),
+  SCIPgetRandomInt(), SCIPgetRandomReal(), SCIPgetRandomSubset(), SCIPpermuteIntArray(), SCIPpermuteArray(),
+  SCIPvarGetLbAtIndex(), SCIPvarGetUbAtIndex(), SCIPvarGetBdAtIndex(), SCIPvarWasFixedAtIndex(),
+  SCIPaddCut(), SCIPcreateRow(), SCIPcreateEmptyRow(), SCIPlpfeastol(), SCIPchgLpfeastol(),
+  SCIPsolveParallel(), SCIPwriteImplicationConflictGraph(), SCIPallowDualReds(), SCIPallowObjProp(),
+  SCIPcreateConsQuadratic(), SCIPcreateConsBasicQuadratic(), SCIPaddConstantQuadratic(), SCIPaddLinearVarQuadratic(), SCIPaddQuadVarQuadratic(), SCIPaddQuadVarLinearCoefQuadratic(), SCIPaddSquareCoefQuadratic(), SCIPaddBilinTermQuadratic(), SCIPgetNlRowQuadratic(), SCIPchgLhsQuadratic(), SCIPchgRhsQuadratic(),
+  SCIPcreateConsAbspower(), SCIPcreateConsBasicAbspower(), SCIPgetNlRowAbspower(),
+  SCIPcreateConsSOC(), SCIPcreateConsBasicSOC(), SCIPgetNlRowSOC(),
+- removed previously deprecated NLP termination status codes SCIP_NLPTERMSTAT_TILIM, SCIP_NLPTERMSTAT_ITLIM, SCIP_NLPTERMSTAT_LOBJLIM, SCIP_NLPTERMSTAT_NUMERR, SCIP_NLPTERMSTAT_EVALERR, SCIP_NLPTERMSTAT_MEMERR, SCIP_NLPTERMSTAT_LICERR
 
 ### New API functions
 
@@ -129,7 +150,7 @@ Interface changes
 - SCIPgetAvgDPseudocostScore(), SCIPgetVarDPseudocostScore() for computing the discounted pseudo cost scores using ancestral pseudo costs
 - SCIPboundchgGetLPSolVal() for accessing the LP solution value in the branching data of the bound change
 - SCIPclearSymgraph() and SCIPcopySymgraphAsSubgraph() to clear and copy as symmetry detection graph, respectively
-- SCIPincludeSepaMultilinear() to include the new multilinear cut separator
+- SCIPincludeSepaFlower() to include the new flower cut separator
 - SCIPhypergraphCreate(), SCIPhypergraphClear(), SCIPhypergraphFree(), SCIPhypergraphAddVertex(), SCIPhypergraphAddEdge(), SCIPhypergraphIsValid() and SCIPhypergraphComputeVerticesEdges() for building and deleting hypergraphs, SCIPhypergraphComputeOverlaps(), SCIPhypergraphOverlapFind(), SCIPhypergraphIntersectEdges(), SCIPhypergraphComputeOverlapsEdges(), SCIPhypergraphComputeVerticesOverlaps(), SCIPhypergraphOverlapsDisjoint() to deal with pair-wise intersections of hyperedges, SCIPhypergraphIterInit(), SCIPhypergraphIterClear(), SCIPhypergraphIterStart(), SCIPhypergraphIterValid(), SCIPhypergraphIterNext(), SCIPhypergraphIterBase(), SCIPhypergraphIterAdjacent(), SCIPhypergraphIterMinVertex(), SCIPhypergraphIterOverlap() for iterating over adjacent edges, SCIPhypergraphHasVertexEdges() SCIPhypergraphHasOverlaps(), SCIPhypergraphHasOverlapsEdges(), SCIPhypergraphHasVertexOverlaps(), SCIPhypergraphGetNVertices(), SCIPhypergraphGetNEdges(), SCIPhypergraphBlkmem(), SCIPhypergraphGetNOverlaps(), SCIPhypergraphVertexData(), SCIPhypergraphEdgeData(), SCIPhypergraphEdgeSize(), SCIPhypergraphEdgeVertices(), SCIPhypergraphVertexEdgesFirst(), SCIPhypergraphVertexEdgesBeyond(), SCIPhypergraphVertexEdgesGetAtIndex(), SCIPhypergraphOverlapData(), SCIPhypergraphOverlapSize(), SCIPhypergraphOverlapVertices() SCIPhypergraphEdgesOverlapsFirst(), SCIPhypergraphEdgesOverlapsBeyond(), SCIPhypergraphEdgesOverlapsGetAtIndex(), SCIPhypergraphOverlapsEdgesFirst(), SCIPhypergraphOverlapsEdgesBeyond(), SCIPhypergraphOverlapsEdgesGetAtIndex(), SCIPhypergraphVertexOverlapsFirst(), SCIPhypergraphVertexOverlapsBeyond() and SCIPhypergraphVertexOverlapsGetAtIndex() to query information about vertices, edges and overlaps as well as their incidences.
 - SCIPdebugClearSol() for clearing the debug solution
 - Renamed XML functions to avoid name clash with libxml2 by adding "SCIP": SCIPxmlProcess(), SCIPxmlNewNode(), SCIPxmlNewAttr(), SCIPxmlAddAttr(), SCIPxmlAppendChild(), SCIPxmlFreeNode(), SCIPxmlShowNode(), SCIPxmlGetAttrval(), SCIPxmlFirstNode(), SCIPxmlNextNode(), SCIPxmlFindNode(), SCIPxmlFindNodeMaxdepth(), SCIPxmlNextSibl(), SCIPxmlPrevSibl(), SCIPxmlFirstChild(), SCIPxmlLastChild(), SCIPxmlGetName(), SCIPxmlGetLine(), SCIPxmlGetData(), SCIPxmlFindPcdata().
@@ -167,6 +188,11 @@ Interface changes
 - SCIPconshdlrSetNeedsCons() to set whether constraint handler callbacks should also be called if there are no constraints
 - SCIPpropSetTimingmask() to set timing mask of a propagator
 - added C++ interface for expression handlers: src/objscip/objexprhdlr.h
+- SCIPaddUpgrade() to add constraint upgrades while especially informing the conflict store
+- SCIPincludeNlpSolverConopt(), SCIPsetLicenseConopt(), SCIPgetSolverNameConopt(), SCIPgetSolverDescConopt(), and SCIPisConoptAvailableConopt() to interact with the CONOPT interface
+- SCIPnlpiOracleGetConstraintLinearCoef() to get a linear coefficient of a variable in a given constraint in the NLP oracle
+- SCIPnlpiOracleGetJacobianColSparsity() to get the columnwise sparsity pattern of the Jacobian from the NLP oracle
+- SCIPnlpiOracleGetObjGradientNnz() to get indices of nonzeroes in the objective gradient
 
 ### Changes in preprocessor macros
 
@@ -177,6 +203,7 @@ Interface changes
 - removed SCIP_VARTYPE_IMPLINT_CHAR
 - added SCIP_PROPTIMING_NONE propagator timing to never call
 - added SCIP_HEURTIMING_NONE heuristic timing to never call
+- removed use of NO_RAND_R
 
 ### Command line interface
 
@@ -188,6 +215,9 @@ Interface changes
 - Add display/iis option to write out the infeasible subsystem to console
 
 ### Interfaces to external software
+
+- added an interface to the CONOPT NLP solver
+- removed LP solver interface lpi_spx1 that used the old SoPlex interface; renamed lpi_spx2 to lpi_spx
 
 ### Changed parameters
 
@@ -232,6 +262,11 @@ Interface changes
 - new parameters "branching/relpscost/dynamiclookahead", "branching/relpscost/dynamiclookaheadquot", "branching/relpscost/dynamiclookdistribution",
   and "branching/relpscost/minsamplesize" to configure the dynamic max-lookahead criterion for strong branching: enable flag, fraction threshold,
   distribution choice, and minimum sample size.
+- new parameters "conflict/usegenres", "conflict/reduction", "conflict/mbreduction", "conflict/maxvarsfracres", "conflict/resfuiplevels",
+  "conflict/fixandcontinue", and "conflict/maxcoefquot" to control generalized resolution conflict analysis.
+- new parameter "lp/minsolvedepth" to give a lower bound on the depth at which LPs are solved
+- new parameters "reading/nlreader/binary" and "reading/nlreader/comments" to adjust writing of nl files
+- new parameter "nlpi/conopt/priority" to set the priority of the CONOPT NLP solver
 
 ### Data structures
 
@@ -241,6 +276,9 @@ Interface changes
 Deleted files
 -------------
 
+- removed lpi_spx1.cpp
+- removed cons_abspower.{h,c}, cons_quadratic.{h,c}, and cons_soc.{h,c}
+
 Testing
 -------
 
@@ -248,6 +286,8 @@ Build system
 ------------
 
 - changed the default for TPI to tny
+- added build flag CHECKSTAGE=auto to control stage checks in API function calls
+- removed LPS options spx1 and spx2, only LPS=spx is available to select SoPlex now
 
 ### Makefile
 
@@ -260,6 +300,10 @@ Build system
   of a PaPILO installation without TBB; pointing to the directory of a PaPILO repository still works, but is deprecated
 - removed option to link TBB library, as this is not used by default when PaPILO has not been built via cmake
   (use USRCXXFLAGS=-DPAPILO_TBB USRLDFLAGS=-ltbb to enable TBB for PaPILO)
+- enabled link-time-optimization for OPT=opt builds on Linux and macOS with gcc and clang, use LTO=false to disable
+- link-time-optimization can be enabled on Linux and macOS with gcc and clang by setting LTO=true, default is false
+- added build flag CONOPT (default: false) to link to the CONOPT NLP solver
+- LPS=spx is no longer mapped to LPS=spx2, which changes the name of the generated LPI libraries and binaries when using SoPlex
 
 ### Cmake
 
@@ -270,6 +314,10 @@ Build system
   undefined behavior sanitizer is always enabled if not `SANITIZE=off` (the default)
 - scip-config.cmake now defines a variable SCIP_COMPILE_FLAGS, which could be used to compile code that builds against SCIP via cmake;
   currently, this only passes on the sanitizer flags that were used to build libscip
+- enabled link-time-optimization for Release and RelWithDebInfo builds if supported by compiler, use -DLTO=off to disable
+- link-time-optimization can be enabled if supported by compiler by using -DLTO=on, default is off
+- added build flag CONOPT (default: off) to link to the CONOPT NLP solver and variable CONOPT_DIR to specify the path to CONOPT
+- removed option LEGACY
 
 Fixed bugs
 ----------
@@ -283,6 +331,7 @@ Fixed bugs
 - accept fractional continuous implied integral variables in heuristic completesol
 - invalidate activity with contradicting infinity contributions
 - avoid integer overflow in cons_cumulative.c triggered by unbounded variables, see new parameter "constraints/cumulative/maxtime"
+- allow negative update in SCIPconsAddUpgradeLocks() to unlock constraint upgrade
 - fixed memory leaks when LP, MPS and OPB/WBO readers abort unsuccessfully
 
 Miscellaneous
@@ -291,8 +340,9 @@ Miscellaneous
 
 - add objective offset instead of objective offset variable in cip reader
 - the solchecker tool is extended for rational values
-- updated ampl/mp to v4.0.0
+- updated ampl/mp to v4.0.3
 - removed 4th number in SCIP version; new format is major.minor.patch
+- classify as varbound only with a binary variable in SCIPclassifyConstraintTypesLinear()
 
 Known bugs
 ----------
@@ -322,6 +372,10 @@ Interface changes
 
 ### New API functions
 - SCIPdisplaySymmetryGenerators() and SCIPdialogExecDisplaySymmetry() to display generators of symmetry group
+- SCIPconsCreateRow() to create and return the row of a linearly representable constraint
+- SCIPcreateRowKnapsack(), SCIPcreateRowLinear(), SCIPcreateRowLogicor(), SCIPcreateRowSetppc(), SCIPcreateRowVarbound() to create
+  and get the row of linearly representable constraints.
+- SCIPgetNResConflictConssApplied() to return the number of generalized resolution conflict constraints added to the problem
 
 ### Command line interface
 
@@ -341,6 +395,37 @@ Miscellaneous
 
 - updated description of paramater misc/usesymmetry
 
+@section RN924 SCIP 9.2.4
+*************************
+
+Fixed bugs
+----------
+
+- fixed bugs with counting changes in presolving of nonlinear and setppc constraints which resulted in negative values
+- cut off dead end node to correctly track dual bound update during solving
+- avoid constructing and flushing the LP in SCIPwriteLP() and SCIPwriteMIP() to avert unexpected affection
+- apply multi-aggregations before detecting redundancy in propagateCons() of cons_varbound.c to keep bound implications
+- skip bound changes for cutoff subtree in treeApplyPendingBdchgs()
+- correct detection of doublelex matrices and handling them via orbitope constraints
+- skip attempting to free transformed problem if SCIPtransformProb() failed with an error in SCIPpresolve(), since freeing
+  the transformed problem is likely to fail as well
+- fixed memory leak in primal heuristic scheduler when there is a restart
+- fixed stopping when there is a candidate with a change in the LP bound for both children in strong branching of branch_fullstrong
+- fixed detection of sinks in varbound detection from cumulative constraints
+- fixed memory allocation when adding strong SBCs for enclosing orbit of symmetric subgroups (disabled by default)
+
+Build system
+------------
+
+### CMake
+
+### Makefile
+
+- added experimental target to run cppcheck
+
+Miscellaneous
+-------------
+
 @section RN923 SCIP 9.2.3
 *************************
 
@@ -350,16 +435,19 @@ Fixed bugs
 - avoid hashmap key error in removal of doubletons and singletons in dual presolve of setppc constraints by skipping tripleton locks
 - when upgrading to xor constraint require parity variable to be enforced integral
 - provide the depth of the applied effective root with SCIPtreeGetEffectiveRootDepth() to avert invalid globalization of constraint set changes
-- disable objective limit during lexicographic dual minimization to keep feasibility status
+- disable objective limit during lexicographic dual minimization to preserve feasibility status
 - declare infinite bound inference infeasible in SCIPinferVarLbCons() and SCIPinferVarUbCons() to maintain correct loose LP values
 - fixed update of consssorted flags in a variable expressions data when adding an additional constraint using this variable
 - corrected computation of number of variables affected by symmetry
 - fixed computation of symmetry group size
 - correct comparison conditions in checkRedundancySide() of cons_varbound.c to ensure pair redundancy
 - also for the initial LP solve force acceptance of Farkas row in SCIPlpGetDualfarkas() if all other means for obtaining a reliable Farkas proof have failed
-- avoid overwriting set cutoff flag in tightenCoefs(), preprocessConstraintPairs(), and applyFixings() of cons_varbound.c to reject infeasible solutions
-- fix memory leak in exprinterpret_cppad.cpp w.r.t. user expressions
+- avoid overwriting the cutoff flag in tightenCoefs(), preprocessConstraintPairs(), and applyFixings() of cons_varbound.c to reject infeasible solutions
+- fix memory leak in CppAD interface w.r.t. user expressions
 - adjust bound before checking feasibility in SCIPvarAddVlb() and SCIPvarAddVub() to detect integrality cutoff
+- choose incumbent solution as reference in varFixingsRins() and varFixingsDins() of ALNS heuristic to ensure integrality
+- consider variable type in selectInitialVariableRandomly() of GINS heuristic to count integral variables
+- correct fractionality sign when standardizing bounds in simplifyInequalities() of cons_linear.c
 
 Build system
 ------------
@@ -367,10 +455,7 @@ Build system
 ### CMake
 
 - disable setting the boolean variable MACOSX_RPATH to a string value to actually enable @rpath usage
-
 - define SOPLEX_NEEDED and ZIMPL_NEEDED to avoid syntax error in configuration file
-
-### Makefile
 
 Miscellaneous
 -------------

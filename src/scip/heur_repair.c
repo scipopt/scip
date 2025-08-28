@@ -917,12 +917,11 @@ SCIP_RETCODE applyRepair(
       {
          SCIPdebugMsg(scip, "Initial repair solution was not accepted.\n");
       }
-   }
 
 #ifdef SCIP_STATISTIC
-   if( heurdata->useslackvars )
       heurdata->improvedoldsol = SCIPgetSolOrigObj(subscip, subsol);
 #endif
+   }
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );

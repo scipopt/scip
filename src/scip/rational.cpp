@@ -59,6 +59,19 @@
 using namespace scip;
 #endif
 
+/** print SCIP_RATIONAL to output stream */
+std::ostream& operator<<(
+   std::ostream&         os,                 /**< output stream */
+   SCIP_RATIONAL const & r                   /**< rational to print */
+   )
+{
+   if( r.isinf )
+      os << (r.val.sign() > 0 ? "+" : "-") << "infinity";
+   else
+      os << r.val;
+
+   return os;
+}
 
 extern "C" {
 
@@ -1820,20 +1833,6 @@ void SCIPrationalPrint(
       std::cout << (rational->val.sign() > 0 ? "+" : "-") << "infinity" << std::flush;
    else
       std::cout << rational->val << std::flush;
-}
-
-/** print SCIP_RATIONAL to output stream */
-std::ostream& operator<<(
-   std::ostream&         os,                 /**< output stream */
-   SCIP_RATIONAL const & r                   /**< rational to print */
-   )
-{
-   if( r.isinf )
-      os << (r.val.sign() > 0 ? "+" : "-") << "infinity";
-   else
-      os << r.val;
-
-   return os;
 }
 
 /** printf extension for rationals (not supporting all format options) */

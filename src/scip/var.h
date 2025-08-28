@@ -1137,7 +1137,7 @@ SCIP_RETCODE SCIPvarChgLbLazy(
 SCIP_RETCODE SCIPvarChgUbLazy(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             lazylb              /**< the lazy lower bound to be set */
+   SCIP_Real             lazyub              /**< the lazy upper bound to be set */
    );
 
 /** changes lower bound of variable in current dive; if possible, adjusts bound to integral value */
@@ -1989,6 +1989,11 @@ int SCIPbdchgidxGetPos(
    SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
    );
 
+/** returns the depth of the bound change index */
+int SCIPbdchgidxGetDepth(
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
+   );
+
 /** removes (redundant) cliques, implications and variable bounds of variable from all other variables' implications and variable
  *  bounds arrays, and optionally removes them also from the variable itself
  */
@@ -2038,7 +2043,7 @@ void SCIPvarSetLbCertificateIndexLocal(
 #define SCIPvarGetVSIDS(var, stat, dir)    ((var)->varstatus == SCIP_VARSTATUS_LOOSE || (var)->varstatus == SCIP_VARSTATUS_COLUMN ? \
       SCIPhistoryGetVSIDS(var->history, dir)/stat->vsidsweight : SCIPvarGetVSIDS_rec(var, stat, dir))
 #define SCIPbdchgidxGetPos(bdchgidx) ((bdchgidx)->pos)
-
+#define SCIPbdchgidxGetDepth(bdchgidx) ((bdchgidx)->depth)
 #endif
 
 /*

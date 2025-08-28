@@ -1276,7 +1276,8 @@ SCIP_RETCODE SCIPnodeCutoff(
    assert(set != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
-   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
+   assert(set->stage < SCIP_STAGE_INITSOLVE
+      || (tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
       || (SCIPsetIsRelEQ(set, SCIPtreeGetLowerbound(tree, set), stat->lastlowerbound)
       && (!set->exact_enable || SCIPrationalIsEQ(SCIPtreeGetLowerboundExact(tree, set), stat->lastlowerboundexact))));
 
@@ -1306,7 +1307,9 @@ SCIP_RETCODE SCIPnodeCutoff(
    if( node->depth == 0 )
       stat->rootlowerbound = SCIPsetInfinity(set);
 
-   if( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING )
+   /* update lower bound statistics during solving */
+   if( !stat->inrestart && set->stage >= SCIP_STAGE_INITSOLVE
+      && ( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING ) )
    {
       SCIP_Real lowerbound;
 
@@ -2753,62 +2756,70 @@ SCIP_RETCODE treeApplyPendingBdchgs(
 
    assert(tree != NULL);
 
-   npendingbdchgs = tree->npendingbdchgs;
-   for( i = 0; i < npendingbdchgs; ++i )
+   if( tree->cutoffdepth > tree->effectiverootdepth )
    {
-      var = tree->pendingbdchgs[i].var;
-      assert(SCIPnodeGetDepth(tree->pendingbdchgs[i].node) < tree->cutoffdepth);
-
-      conflictdepth = SCIPvarGetConflictingBdchgDepth(var, set, tree->pendingbdchgs[i].boundtype,
-         tree->pendingbdchgs[i].newbound);
-
-      /* It can happen, that a pending bound change conflicts with the global bounds, because when it was collected, it
-       * just conflicted with the local bounds, but a conflicting global bound change was applied afterwards. In this
-       * case, we can cut off the node where the pending bound change should be applied.
-       */
-      if( conflictdepth == 0 )
+      npendingbdchgs = tree->npendingbdchgs;
+      for( i = 0; i < npendingbdchgs; ++i )
       {
-         SCIP_CALL( SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
+         assert(tree->pendingbdchgs[i].node != NULL);
+         if( tree->pendingbdchgs[i].node->cutoff )
+            continue;
+         assert(tree->pendingbdchgs[i].node->depth < tree->cutoffdepth);
+         assert(tree->effectiverootdepth < tree->cutoffdepth);
 
-         if( ((int) tree->pendingbdchgs[i].node->depth) <= tree->effectiverootdepth )
-            break; /* break here to clear all pending bound changes */
+         var = tree->pendingbdchgs[i].var;
+         conflictdepth = SCIPvarGetConflictingBdchgDepth(var, set, tree->pendingbdchgs[i].boundtype,
+            tree->pendingbdchgs[i].newbound);
+
+         /* It can happen, that a pending bound change conflicts with the global bounds, because when it was collected, it
+          * just conflicted with the local bounds, but a conflicting global bound change was applied afterwards. In this
+          * case, we can cut off the node where the pending bound change should be applied.
+          */
+         if( conflictdepth == 0 )
+         {
+            SCIP_CALL( SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
+
+            /* break here to clear all pending bound changes below */
+            if( tree->effectiverootdepth >= tree->cutoffdepth )
+               break;
+            else
+               continue;
+         }
+
+         assert(conflictdepth == -1);
+
+         SCIPsetDebugMsg(set, "applying pending bound change <%s>[%g,%g] %s %g\n", SCIPvarGetName(var),
+            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+            tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            tree->pendingbdchgs[i].newbound);
+
+         /* ignore bounds that are now redundant (for example, multiple entries in the pendingbdchgs for the same
+          * variable)
+          */
+         if( tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER )
+         {
+            SCIP_Real lb;
+
+            lb = SCIPvarGetLbLocal(var);
+            if( !SCIPsetIsGT(set, tree->pendingbdchgs[i].newbound, lb) )
+               continue;
+         }
          else
-            continue;
+         {
+            SCIP_Real ub;
+
+            assert(tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_UPPER);
+            ub = SCIPvarGetUbLocal(var);
+            if( !SCIPsetIsLT(set, tree->pendingbdchgs[i].newbound, ub) )
+               continue;
+         }
+
+         SCIP_CALL( SCIPnodeAddBoundinfer(tree->pendingbdchgs[i].node, blkmem, set, stat, transprob, origprob, tree, reopt,
+               lp, branchcand, eventqueue, eventfilter, cliquetable, var, tree->pendingbdchgs[i].newbound, tree->pendingbdchgs[i].boundtype,
+               tree->pendingbdchgs[i].infercons, tree->pendingbdchgs[i].inferprop, tree->pendingbdchgs[i].inferinfo,
+               tree->pendingbdchgs[i].probingchange) );
+         assert(tree->npendingbdchgs == npendingbdchgs); /* this time, the bound change can be applied! */
       }
-
-      assert(conflictdepth == -1);
-
-      SCIPsetDebugMsg(set, "applying pending bound change <%s>[%g,%g] %s %g\n", SCIPvarGetName(var),
-         SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-         tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-         tree->pendingbdchgs[i].newbound);
-
-      /* ignore bounds that are now redundant (for example, multiple entries in the pendingbdchgs for the same
-       * variable)
-       */
-      if( tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER )
-      {
-         SCIP_Real lb;
-
-         lb = SCIPvarGetLbLocal(var);
-         if( !SCIPsetIsGT(set, tree->pendingbdchgs[i].newbound, lb) )
-            continue;
-      }
-      else
-      {
-         SCIP_Real ub;
-
-         assert(tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_UPPER);
-         ub = SCIPvarGetUbLocal(var);
-         if( !SCIPsetIsLT(set, tree->pendingbdchgs[i].newbound, ub) )
-            continue;
-      }
-
-      SCIP_CALL( SCIPnodeAddBoundinfer(tree->pendingbdchgs[i].node, blkmem, set, stat, transprob, origprob, tree, reopt,
-            lp, branchcand, eventqueue, eventfilter, cliquetable, var, tree->pendingbdchgs[i].newbound, tree->pendingbdchgs[i].boundtype,
-            tree->pendingbdchgs[i].infercons, tree->pendingbdchgs[i].inferprop, tree->pendingbdchgs[i].inferinfo,
-            tree->pendingbdchgs[i].probingchange) );
-      assert(tree->npendingbdchgs == npendingbdchgs); /* this time, the bound change can be applied! */
    }
 
    /* clear pending bound changes */
@@ -2846,7 +2857,8 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
    assert(set != NULL);
    assert(newbound == SCIP_INVALID || !SCIPsetIsInfinity(set, newbound)); /*lint !e777*/
    assert(newboundexact == NULL || !SCIPrationalIsInfinity(newboundexact));
-   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
+   assert(set->stage < SCIP_STAGE_INITSOLVE
+      || (tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
       || (SCIPsetIsRelEQ(set, SCIPtreeGetLowerbound(tree, set), stat->lastlowerbound)
       && (!set->exact_enable || SCIPrationalIsEQ(SCIPtreeGetLowerboundExact(tree, set), stat->lastlowerboundexact))));
 
@@ -2877,7 +2889,9 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
       nodetype = SCIPnodeGetType(node);
       assert(nodetype != SCIP_NODETYPE_LEAF);
 
-      if( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING )
+      /* update exact lower bound statistics during solving */
+      if( !stat->inrestart && set->stage >= SCIP_STAGE_INITSOLVE
+         && ( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING ) )
       {
          SCIP_RATIONAL* lowerboundexact = SCIPtreeGetLowerboundExact(tree, set);
          assert(SCIPrationalIsGEReal(lowerboundexact, SCIPtreeGetLowerbound(tree, set)));
@@ -2912,7 +2926,9 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
       if( node->depth == 0 )
          stat->rootlowerbound = newbound;
 
-      if( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING )
+      /* update real lower bound statistics during solving */
+      if( !stat->inrestart && set->stage >= SCIP_STAGE_INITSOLVE
+         && ( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING ) )
       {
          SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
          assert(lowerbound <= newbound);
@@ -3407,7 +3423,6 @@ void treeFindSwitchForks(
     */
    if( node == NULL )
    {
-      tree->cutoffdepth = INT_MAX;
       tree->repropdepth = INT_MAX;
       return;
    }
@@ -3534,7 +3549,6 @@ void treeFindSwitchForks(
       *cutoff = TRUE;
       return;
    }
-   tree->cutoffdepth = INT_MAX;
 
    /* if not already found, continue searching the LP defining fork; it cannot be deeper than the common fork */
    if( lpfork == NULL )
@@ -3687,6 +3701,7 @@ SCIP_RETCODE treeSwitchPath(
 
    assert(tree != NULL);
    assert(fork == NULL || (fork->active && !fork->cutoff));
+   assert(fork == NULL || fork->depth < tree->cutoffdepth);
    assert(fork == NULL || focusnode != NULL);
    assert(focusnode == NULL || (!focusnode->active && !focusnode->cutoff));
    assert(focusnode == NULL || SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
@@ -3777,6 +3792,7 @@ SCIP_RETCODE treeSwitchPath(
 
    /* apply effective root shift up to the new focus node */
    *cutoff = FALSE;
+   tree->cutoffdepth = INT_MAX;
    neweffectiverootdepth = MIN(tree->updatedeffectiverootdepth, focusnodedepth);
 
    /* promote the constraint set and bound changes up to the new effective root to be global changes */
@@ -3852,12 +3868,6 @@ SCIP_RETCODE treeSwitchPath(
       assert(!tree->path[tree->pathlen - 1]->cutoff);
       SCIP_CALL( nodeActivate(tree->path[tree->pathlen - 1], blkmem, set, stat, transprob, origprob, primal, tree, reopt,
             lp, branchcand, conflict, eventqueue, eventfilter, cliquetable, cutoff) );
-   }
-
-   /* mark new focus node to be cut off, if a cutoff was found */
-   if( *cutoff )
-   {
-      SCIP_CALL( SCIPnodeCutoff(tree->focusnode, set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
    }
 
    /* count the new LP sizes of the path */
@@ -4533,6 +4543,9 @@ SCIP_RETCODE focusnodeToDeadend(
    SCIPsetDebugMsg(set, "focusnode #%" SCIP_LONGINT_FORMAT " to dead-end at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
+   /* delete focus node due to cut off */
+   SCIP_CALL( SCIPnodeCutoff(tree->focusnode, set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
+
    /* remove variables from the problem that are marked as deletable and were created at this node */
    SCIP_CALL( focusnodeCleanupVars(blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp, branchcand, cliquetable, TRUE) );
 
@@ -5002,7 +5015,6 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_NODE* lpstatefork;
    SCIP_NODE* subroot;
    SCIP_NODE* childrenlpstatefork;
-   int oldcutoffdepth;
 
    assert(node != NULL);
    assert(*node == NULL
@@ -5028,9 +5040,6 @@ SCIP_RETCODE SCIPnodeFocus(
       *node != NULL ? SCIPnodeGetNumber(*node) : -1, *node != NULL ? (int)SCIPnodeGetType(*node) : 0,
       *node != NULL ? SCIPnodeGetDepth(*node) : -1);
 
-   /* remember old cutoff depth in order to know, whether the children and siblings can be deleted */
-   oldcutoffdepth = tree->cutoffdepth;
-
    /* find the common fork node, the new LP defining fork, and the new focus subroot,
     * thereby checking, if the new node can be cut off
     */
@@ -5046,7 +5055,6 @@ SCIP_RETCODE SCIPnodeFocus(
       SCIP_Real lowerbound;
 
       assert(*node != NULL);
-      assert(tree->cutoffdepth == oldcutoffdepth);
 
       /* cut off node */
       if( SCIPnodeGetType(*node) == SCIP_NODETYPE_LEAF )
@@ -5137,7 +5145,6 @@ SCIP_RETCODE SCIPnodeFocus(
       return SCIP_OKAY;
    }
 
-   assert(tree->cutoffdepth == INT_MAX);
    assert(fork == NULL || fork->active);
    assert(lpstatefork == NULL || lpfork != NULL);
    assert(subroot == NULL || lpstatefork != NULL);
@@ -5178,9 +5185,9 @@ SCIP_RETCODE SCIPnodeFocus(
     * if the old focus node's parent was cut off, we can also delete the focus node's siblings
     */
    /* coverity[var_compare_op] */
-   if( tree->focusnode != NULL && oldcutoffdepth <= (int)tree->focusnode->depth )
+   if( tree->focusnode != NULL && tree->cutoffdepth <= tree->focusnode->depth )
    {
-      SCIPsetDebugMsg(set, "path to old focus node of depth %u was cut off at depth %d\n", tree->focusnode->depth, oldcutoffdepth);
+      SCIPsetDebugMsg(set, "path to old focus node of depth %u was cut off at depth %d\n", tree->focusnode->depth, tree->cutoffdepth);
 
       /* delete the focus node's children by converting them to leaves with a cutoffbound of -SCIPsetInfinity(set);
        * we cannot delete them directly, because in SCIPnodeFree(), the children array is changed, which is the
@@ -5191,7 +5198,7 @@ SCIP_RETCODE SCIPnodeFocus(
       SCIP_CALL( treeNodesToQueue(tree, reopt, blkmem, set, stat, eventqueue, eventfilter, lp, tree->children, &tree->nchildren, NULL, -SCIPsetInfinity(set)) );
       assert(tree->nchildren == 0);
 
-      if( oldcutoffdepth < (int)tree->focusnode->depth )
+      if( tree->cutoffdepth < tree->focusnode->depth )
       {
          /* delete the focus node's siblings by converting them to leaves with a cutoffbound of -SCIPsetInfinity(set);
           * we cannot delete them directly, because in SCIPnodeFree(), the siblings array is changed, which is the
@@ -5244,7 +5251,6 @@ SCIP_RETCODE SCIPnodeFocus(
 
       assert(tree->focusnode != NULL);
       assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
-      assert(oldcutoffdepth == INT_MAX);
 
       /* check whether the next focus node is a child of the old focus node */
       selectedchild = (*node != NULL && SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD);
@@ -7555,7 +7561,6 @@ SCIP_RETCODE SCIPtreeMarkProbingNodeHasLP(
    assert(node->data.probingnode != NULL);
 
    /* update LP information in probingnode data */
-   /* cppcheck-suppress nullPointer */
    SCIP_CALL( probingnodeUpdate(node->data.probingnode, blkmem, tree, lp) );
 
    return SCIP_OKAY;
@@ -8549,9 +8554,9 @@ void SCIPnodeGetNDomchg(
    if( count_branchings )
       *nbranchings = 0;
    if( count_consprop )
-      *nconsprop = 0;
+      *nconsprop = 0;  /* cppcheck-suppress nullPointer */
    if( count_prop )
-      *nprop = 0;
+      *nprop = 0;  /* cppcheck-suppress nullPointer */
 
    if( node->domchg == NULL )
       return;

@@ -4922,9 +4922,9 @@ SCIP_RETCODE canonicalizeConstraints(
 
       /* update counters */
       if( naddconss != NULL )
-         *naddconss = tmpnaddconss;
+         *naddconss += tmpnaddconss;
       if( nchgcoefs != NULL )
-         *nchgcoefs = tmpnchgcoefs;
+         *nchgcoefs += tmpnchgcoefs;
 
       /* check whether at least one expression has changed */
       if( tmpnaddconss + tmpnchgcoefs > 0 )
@@ -7868,7 +7868,7 @@ SCIP_RETCODE enforceConstraint(
 
       /* if not enforced, then we must not have found a cutoff, cut, domain reduction, or branchscore */
       assert((ownerdata->lastenforced == conshdlrdata->enforound) == (resultexpr != SCIP_DIDNOTFIND));
-      if( ownerdata->lastenforced == conshdlrdata->enforound )
+      if( ownerdata->lastenforced == conshdlrdata->enforound )  /* cppcheck-suppress knownConditionTrueFalse */
          *success = TRUE;
 
       if( resultexpr == SCIP_CUTOFF )
@@ -12642,8 +12642,8 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          &conshdlrdata->linearizeheursol, FALSE, 'o', "oie", NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/assumeconvex",
-         "whether to assume that any constraint is convex",
-         &conshdlrdata->assumeconvex, FALSE, FALSE, NULL, NULL) );
+         "whether to assume that any constraint in the presolved problem is convex",
+         &conshdlrdata->assumeconvex, TRUE, FALSE, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",

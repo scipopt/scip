@@ -91,7 +91,7 @@ make BUGS=true
 
 You can also run a single test, e.g.
 ```
- >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2
+ >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx
 ```
 To run all tests that match a regular expression, use
 ```
@@ -102,7 +102,7 @@ Note, that parameterized tests will not work on systems that have address
 space layout randomization (ASLR) enabled. One can disable ASLR for a
 specific process (and its children) by calling it in a modified environment, e.g.,
 ```
- >> setarch `uname -m` -R ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2
+ >> setarch `uname -m` -R ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx
 ```
 
 This is the approach that is also followed by the Makefile when running
@@ -132,7 +132,7 @@ ctest -R FILTER_PATTERN
 If a test fails, use `gdb` to debug. For example:
 
 ```
- >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2
+ >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx
          [----] src/cons/quadratic/gauge.c:112: Assertion failed: gauge unavailable, pointless to continue
          [FAIL] separation::gauge: (0.00s)
          [====] Synthesis: Tested: 1 | Passing: 0 | Failing: 1 | Crashing: 0
@@ -141,7 +141,7 @@ If a test fails, use `gdb` to debug. For example:
 The test suite is `separation` and the test name is `gauge`. To debug:
 
 ```
->> gdb --args bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 --single separation::gauge
+>> gdb --args bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx --single separation::gauge
 (gdb) br src/cons/quadratic/gauge.c:112
 ```
 
@@ -152,7 +152,7 @@ Criterion by default prints all of the critical debugging information (test_suit
 If a test fails, one can use `gdb` or `undodb-gdb` to debug. For example:
 
 ```
- >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2
+ >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx
          [----] src/cons/quadratic/gauge.c:112: Assertion failed: gauge unavailable, pointless to continue
          [FAIL] separation::gauge: (0.00s)
          [====] Synthesis: Tested: 1 | Passing: 0 | Failing: 1 | Crashing: 0
@@ -161,11 +161,11 @@ If a test fails, one can use `gdb` or `undodb-gdb` to debug. For example:
 The test suite is `separation` and the test name is `gauge`. To debug with `gdb` write in one terminal:
 
 ```
->> bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 --filter *gauge* --debug
+>> bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx --filter *gauge* --debug
 ```
 This will start a `gdbserver`. To connect, in another terminal use
 ```
->> gdb bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 -ex "target remote localhost:1234"
+>> gdb bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx -ex "target remote localhost:1234"
 ```
 
 With old Criterion (before 2.4) and modern gdbserver, the `--debug` option can fail with a protocol error due to tcp not being resolvable.
@@ -179,7 +179,7 @@ See https://github.com/Snaipe/Criterion/issues/301 for more details.
 
 If one doesn't want to use a `gdbserver` use:
 ```
->> bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 --filter *gauge* --debug=idle
+>> bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx --filter *gauge* --debug=idle
 ```
 This will give the PID of the process which can then be attached to a `undodb-gdb` or `gdb` session with
 ```
