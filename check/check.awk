@@ -809,6 +809,8 @@ BEGIN {
 #
 /^presolving (detected|solved)/           {
    certified = 1;
+   certified_ori = 1;
+
 }
 /vipr_ori/           {
    vipr_ori = 1;
