@@ -528,8 +528,8 @@ SCIP_RETCODE initializeCandsLists(
       SCIP_Real cutoffbound;
 
       minimprove = heurdata->minimprove;
-      assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
+      assert(SCIPisExact(scip) || !SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
       if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
@@ -822,8 +822,8 @@ SCIP_RETCODE setupAndSolveSubscip(
       SCIP_Real cutoffbound;
 
       minimprove = heurdata->minimprove;
-      assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
+      assert(SCIPisExact(scip) || !SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
       if( !SCIPisInfinity(scip, -1.0 * lowerbound) )
