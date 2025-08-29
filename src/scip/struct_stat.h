@@ -226,13 +226,13 @@ struct SCIP_Stat
    SCIP_Longint          nstrongbranchs;     /**< number of strong branching calls */
    SCIP_Longint          nrootstrongbranchs; /**< number of strong branching calls at the root node */
    SCIP_Longint          nconflictlps;       /**< number of LPs solved during conflict analysis */
-   SCIP_Longint          nexlpinf;           /**< number of LPs proved infeasible */
-   SCIP_Longint          nfailexlpinf;       /**< number of LPs failed to prove infeasible */
-   SCIP_Longint          nexlp;              /**< number of LPs proved feasible */
-   SCIP_Longint          nexlpinter;         /**< number of LPs proved feasible */
-   SCIP_Longint          nexlpintfeas;       /**< number of LPs proved feasible */
-   SCIP_Longint          nexlpboundexc;      /**< number of LPs proved feasible */
-   SCIP_Longint          nfailexlp;          /**< number of LPs failed to prove feasible */
+   SCIP_Longint          nexlpinf;           /**< number of exact LPs solved to prove infeasibility */
+   SCIP_Longint          nfailexlpinf;       /**< number of exact LPs failed to prove infeasibility */
+   SCIP_Longint          nexlp;              /**< number of exact LPs solved for safe dual bounding */
+   SCIP_Longint          nexlpinter;         /**< number of exact LPs solved because of depth interleaving */
+   SCIP_Longint          nexlpintfeas;       /**< number of exact LPs solved for integrality polishing */
+   SCIP_Longint          nexlpboundexc;      /**< number of exact LPs solved because close to cutoff bound */
+   SCIP_Longint          nfailexlp;          /**< number of exact LPs failed to compute a safe dual bound */
    SCIP_Longint          nboundshift;        /**< number of boundshift calls for feasible lp*/
    SCIP_Longint          nfailboundshift;    /**< number of failed boundshift calls for feasible lp */
    SCIP_Longint          nboundshiftinf;     /**< number of boundshift calls for infeasible lp */
