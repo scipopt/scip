@@ -13453,7 +13453,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
             goto TERMINATE;
       }
 
-      SCIPdebug(printCutQuad(scip, NULL, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+      SCIPdebug(printCutQuad(scip, NULL, data->cutcoefs, QUAD(data->cutrhs), data->cutinds, data->ncutinds, FALSE, FALSE));
    }
 
    /* terminate if the side fractionality is unreliable */
@@ -13511,7 +13511,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    if( data->totalnnz > 0 )
    {
       SCIP_CALL( cutsRoundStrongCG(scip, data, varsign, boundtype, QUAD(f0), k) );
-      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+      SCIPdebug(printCutQuad(scip, sol, data->cutcoefs, QUAD(data->cutrhs), data->cutinds, data->ncutinds, FALSE, FALSE));
    }
 
    /* substitute aggregated slack variables:
@@ -13530,7 +13530,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
     */
    SCIP_CALL( cutsSubstituteStrongCG(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
          aggrrow->nrows, scale, data->cutcoefs, QUAD(&data->cutrhs), data->cutinds, &data->ncutinds, QUAD(f0), k) );
-   SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+   SCIPdebug(printCutQuad(scip, sol, data->cutcoefs, QUAD(data->cutrhs), data->cutinds, data->ncutinds, FALSE, FALSE));
 
    /* remove all nearly-zero coefficients from strong CG row and relax the right hand side correspondingly in order to
     * prevent numerical rounding errors
@@ -13543,7 +13543,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    {
       *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), *cutislocal, data->cutcoefs, QUAD(&data->cutrhs), data->cutinds, &data->ncutinds);
    }
-   SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+   SCIPdebug(printCutQuad(scip, sol, data->cutcoefs, QUAD(data->cutrhs), data->cutinds, data->ncutinds, FALSE, FALSE));
 
    if( *success )
    {
