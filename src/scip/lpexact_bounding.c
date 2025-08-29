@@ -189,7 +189,7 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
    }
    else if( set->exact_psdualcolselection == (int) PS_DUALCOSTSEL_ACTIVE_EXLP )
    {
-      /* determone which dual variables to include in the problem (in this case we choose dual variables whose primal
+      /* determine which dual variables to include in the problem (in this case we choose dual variables whose primal
        * constraints are active at the solution of the exact LP at the root node)
        */
 
@@ -1860,9 +1860,10 @@ char chooseInitialBoundingMethod(
    assert(lpexact != NULL);
    assert(set != NULL);
 
+   /* at the root node always call exact LP solve if allowed, i.e., after separation */
    if( set->scip->stat->nnodes == 1 && lpexact->allowexactsolve )
       dualboundmethod = 'e';
-   /* first, check if we need to solve exactly */
+   /* check for other reasons to solve exactly */
    else if( lpexact->forceexactsolve || SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
       dualboundmethod = 'e';
    /* if the LP was solved to optimality and there are no fractional variables we solve exactly to generate a feasible
@@ -1882,11 +1883,11 @@ char chooseInitialBoundingMethod(
    else
    {
       /* decide whether we want to interleave with exact LP call given freq: we do this if we are
-       * a) at depth levels 4, 8, 16, ..., or
+       * a) at depth levels 2, 4, 8, 16, ..., or
        * b) almost at cutoffbound
        */
-      interleavedepth = set->exact_interleavedbfreq >= 2 && SCIPgetDepth(set->scip) > 0 && isPowerOfTwo(SCIPgetDepth(set->scip) - 1);
-      interleavecutoff = (set->exact_interleavedbfreq == 1 || set->exact_interleavedbfreq == 3)
+      interleavedepth = set->exact_interleavedbstrat >= 2 && SCIPgetDepth(set->scip) > 1 && isPowerOfTwo(SCIPgetDepth(set->scip));
+      interleavecutoff = (set->exact_interleavedbstrat == 1 || set->exact_interleavedbstrat == 3)
          && SCIPsetIsGE(set, SCIPlpGetObjval(lpexact->fplp, set, prob), SCIPlpGetCutoffbound(lpexact->fplp))
          && SCIPlpGetObjval(lpexact->fplp, set, prob) < SCIPlpGetCutoffbound(lpexact->fplp);
       if( (interleavedepth || interleavecutoff) && lpexact->allowexactsolve )
