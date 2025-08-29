@@ -6507,7 +6507,6 @@ static
 SCIP_RETCODE handleDoubleLexOrbitope(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
-   int                   componentid,        /**< ID of component to which orbitope is added */
    int**                 varidxmatrix,       /**< matrix containing variable indices of orbitope */
    int                   nrows,              /**< number of rows of matrix */
    int                   ncols,              /**< number of columns of matrix */
@@ -6883,7 +6882,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
          (void) SCIPsnprintf(partialname, SCIP_MAXSTRLEN, "orbitope_component_%d_doublelex_col_0", id);
 
-         SCIP_CALL( handleDoubleLexOrbitope(scip, propdata, id, orbitopematrix, nrows, ncols, partialname,
+         SCIP_CALL( handleDoubleLexOrbitope(scip, propdata, orbitopematrix, nrows, ncols, partialname,
                nflipableidx, &tmpsuccess, allowchgbds, nchgbds) );
          *success = *success || tmpsuccess;
       }
@@ -6914,7 +6913,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
          (void) SCIPsnprintf(partialname, SCIP_MAXSTRLEN, "orbitope_component_%d_doublelex_row_0", id);
 
-         SCIP_CALL( handleDoubleLexOrbitope(scip, propdata, id, orbitopematrix, ncols, nrows, partialname,
+         SCIP_CALL( handleDoubleLexOrbitope(scip, propdata, orbitopematrix, ncols, nrows, partialname,
                nflipableidx, &tmpsuccess, allowchgbds, nchgbds) );
          *success = *success || tmpsuccess;
       }
