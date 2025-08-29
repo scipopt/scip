@@ -50,6 +50,7 @@
 #include "scip/struct_lpexact.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/scip_message.h"
 #include "scip/scip_solvingstats.h"
 
 
@@ -1431,35 +1432,54 @@ SCIP_Bool solOfInterest(
                                               *   (e.g., because it lives in the original space) */
    )
 {
-   SCIP_Real obj;
-   SCIP_Bool solisbetterexact;
+   SCIP_Bool solisacceptable;
 
-   obj = SCIPsolGetObj(sol, set, transprob, origprob);
-   solisbetterexact = FALSE;
-
-   /* in exact solving mode, we need to compare the exact objective value with the exact cutoff bound in order to
-    * determine whether a solution is improving
-    */
-   if( set->exact_enable && set->exact_improvingsols )
+   /* in exact solving mode, we need to compare the exact objective value with the exact cutoff bound */
+   if( set->exact_enable )
    {
-      SCIP_RATIONAL* tmpobj;
+      SCIP_RATIONAL* objexact;
 
-      SCIP_CALL_ABORT( SCIPrationalCreateBuffer(set->buffer, &tmpobj) );
+      SCIP_CALL_ABORT( SCIPrationalCreateBuffer(set->buffer, &objexact) );
 
+      /* We may arrive here with a floating-point solution without exact data when, e.g., a floating-point heuristic has
+       * found a solution and calls SCIPtrySol(). Before checking feasibility of this solution, solOfInterest() is
+       * called to avoid effort for checking suboptimal solutions. If we conclude TRUE here and the solution is found
+       * exactly feasible afterwards, then the exact data will be added and the objective value will be recomputed
+       * exactly. If the floating-point objective value in the else case is wrong, we may accept or reject solutions
+       * unnecessarily, but this will not lead to incorrect primal bounds or missing an optimal solution, because this
+       * should come in with SCIPsolIsExact() being true.
+       */
       if( SCIPsolIsExact(sol) )
-         SCIPsolGetObjExact(sol, set, transprob, origprob, tmpobj);
+         SCIPsolGetObjExact(sol, set, transprob, origprob, objexact);
       else
-         SCIPrationalSetReal(tmpobj, SCIPsolGetObj(sol, set, transprob, origprob));
+         SCIPrationalSetReal(objexact, SCIPsolGetObj(sol, set, transprob, origprob));
 
-      solisbetterexact = SCIPrationalIsLT(tmpobj, primal->cutoffboundexact);
+      if( !SCIPrationalIsInfinity(objexact) )
+         solisacceptable = !set->exact_improvingsols || SCIPrationalIsLT(objexact, primal->cutoffboundexact);
+      else
+      {
+         solisacceptable = FALSE;
+         SCIPwarningMessage(set->scip, "Ignoring primal solution candidate with objective value beyond infinity threshold.\n");
+      }
 
-      SCIPrationalFreeBuffer(set->buffer, &tmpobj);
+      SCIPrationalFreeBuffer(set->buffer, &objexact);
    }
-   /* check if we are willing to check worse solutions; a solution is better if the objective is smaller than the
-    * current cutoff bound; solutions with infinite objective value are never accepted
-    */
-   if( !SCIPsetIsInfinity(set, obj) && (!set->exact_enable || !set->exact_improvingsols || solisbetterexact)
-      && (set->exact_enable || !set->misc_improvingsols || obj < primal->cutoffbound) )
+   /* in real solving mode, we need to compare the real objective value with the real cutoff bound */
+   else
+   {
+      SCIP_Real obj = SCIPsolGetObj(sol, set, transprob, origprob);
+
+      if( !SCIPsetIsInfinity(set, obj) )
+         solisacceptable = !set->misc_improvingsols || obj < primal->cutoffbound;
+      else
+      {
+         solisacceptable = FALSE;
+         SCIPwarningMessage(set->scip, "Ignoring primal solution candidate with objective value beyond infinity threshold.\n");
+      }
+   }
+
+   /* a solution is acceptable if its objective is finite and either not cut off or non-improving solutions enabled */
+   if( solisacceptable )
    {
       /* find insert position for the solution */
       (*insertpos) = primalSearchSolPos(primal, set, transprob, origprob, sol);
