@@ -2445,7 +2445,7 @@ SCIP_RETCODE SCIPprimalTrySolFreeExact(
    return SCIP_OKAY;
 }
 
-/** adds iexact primal solution to solution storage by copying it and frees the solution afterwards */
+/** adds exact primal solution to solution storage by copying it and frees the solution afterwards */
 SCIP_RETCODE SCIPprimalAddSolFreeExact(
    SCIP_PRIMAL*          primal,             /**< primal data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
