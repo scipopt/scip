@@ -2530,6 +2530,13 @@ SCIP_Real SCIPprobExternObjval(
       return (SCIP_Real)transprob->objsense * SCIPsetInfinity(set);
    else if( SCIPsetIsInfinity(set, -objval) )
       return -(SCIP_Real)transprob->objsense * SCIPsetInfinity(set);
+   else if( origprob->objoffsetexact != NULL )
+   {
+      assert(set->exact_enable);
+      assert(transprob->objscaleexact != NULL);
+      assert(transprob->objoffsetexact != NULL);
+      return (SCIP_Real)transprob->objsense * SCIPrationalGetReal(transprob->objscaleexact) * (objval + SCIPrationalGetReal(transprob->objoffsetexact)) + SCIPrationalGetReal(origprob->objoffsetexact);
+   }
    else
       return (SCIP_Real)transprob->objsense * transprob->objscale * (objval + transprob->objoffset) + origprob->objoffset;
 }
@@ -2579,6 +2586,13 @@ SCIP_Real SCIPprobInternObjval(
       return (SCIP_Real)transprob->objsense * SCIPsetInfinity(set);
    else if( SCIPsetIsInfinity(set, -objval) )
       return -(SCIP_Real)transprob->objsense * SCIPsetInfinity(set);
+   else if( origprob->objoffsetexact != NULL )
+   {
+      assert(set->exact_enable);
+      assert(transprob->objscaleexact != NULL);
+      assert(transprob->objoffsetexact != NULL);
+      return (SCIP_Real)transprob->objsense * (objval - SCIPrationalGetReal(origprob->objoffsetexact)) / SCIPrationalGetReal(transprob->objscaleexact) - SCIPrationalGetReal(transprob->objoffsetexact);
+   }
    else
       return (SCIP_Real)transprob->objsense * (objval - origprob->objoffset) / transprob->objscale - transprob->objoffset;
 }
