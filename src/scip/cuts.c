@@ -5673,7 +5673,7 @@ SCIP_RETCODE constructSNFRelaxation(
             SCIPdebugMsg(scip, "    --> bestlb used for trans: ... %s y'_%d + ..., y'_%d <= %g x_%d (=%s), rhs=%g-(%g*%g)=%g\n",
                snf->transvarcoefs[snf->ntransvars] == 1 ? "+" : "-", snf->ntransvars, snf->ntransvars, snf->transvarvubcoefs[snf->ntransvars],
                snf->ntransvars, SCIPvarGetName(vlbvars[bestlbtype[i]]), QUAD_TO_DBL(transrhs) + QUAD_TO_DBL(rowcoeftimesvlbconst), QUAD_TO_DBL(rowcoef),
-               vlbconsts[bestlbtype[i]], snf->transrhs );
+               vlbconsts[bestlbtype[i]], QUAD_TO_DBL(transrhs) );
          }
       }
       else
