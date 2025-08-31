@@ -9414,8 +9414,8 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_Longint oldgcd;
    SCIP_Longint rest;
    SCIP_Longint gcd;
-   int oldnchgcoefs;
-   int oldnchgsides;
+   int oldnchgcoefs;  /* cppcheck-suppress unassignedVariable */
+   int oldnchgsides;  /* cppcheck-suppress unassignedVariable */
    int candpos;
    int candpos2;
    int offsetv;
