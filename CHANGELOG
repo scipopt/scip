@@ -74,6 +74,7 @@ Interface changes
   ```
   SCIP 10 still supports using SCIP_VARTYPE_IMPLINT for backward compatibility, see SCIPcreateVar() and SCIPchgVarType() for more details.
   SCIP 11 will remove SCIP_VARTYPE_IMPLINT.
+- SCIPsubversion() is deprecated and will be removed
 
 ### New and changed callbacks
 
@@ -99,7 +100,6 @@ Interface changes
 - ndelconss added to arguments for SCIPcleanupConssLinear() and SCIPcleanupConssKnapsack() to directly delete empty redundant constraints before creating problem matrix
 - copyiisfinders added to arguments for SCIPcopyPlugins() (16th position)
 - SCIPcreateConsOrbitope() deleted two arguments and changed position of another argument
-- deprecated SCIPsubversion(), will be removed
 - SCIPvarCalcDistributionParameters(): argument impltype added (5th position)
 - SCIPpermuteProb(): argument permuteimplvars has been replaced by new arguments permutebinimplvars, permuteintimplvars, and permutecontimplvars
 - SCIPgetLPBranchCands(): implied integral variables with integrality constraints are included in nlpcands stored in lpcands at the back
@@ -132,6 +132,15 @@ Interface changes
 - the declaration of SCIPprintOrigProblem() and SCIPprintTransProblem() moved from scip_solvingstats.h to scip_prob.h
 - SCIPnlpiOracleGetJacobianSparsity() has been renamed to SCIPnlpiOracleGetJacobianRowSparsity() and now expect two more arguments: colnlflags and nnlnz
 - SCIPnlpiOracleGetHessianLagSparsity() and SCIPnlpiOracleEvalHessianLag() now expect one more argument: colwise
+- removed previously deprecated functions SCIPhashtableClear(), SCIPcomputeArraysIntersection(), SCIPcomputeArraysSetminus(),
+  SCIPgetRandomInt(), SCIPgetRandomReal(), SCIPgetRandomSubset(), SCIPpermuteIntArray(), SCIPpermuteArray(),
+  SCIPvarGetLbAtIndex(), SCIPvarGetUbAtIndex(), SCIPvarGetBdAtIndex(), SCIPvarWasFixedAtIndex(),
+  SCIPaddCut(), SCIPcreateRow(), SCIPcreateEmptyRow(), SCIPlpfeastol(), SCIPchgLpfeastol(),
+  SCIPsolveParallel(), SCIPwriteImplicationConflictGraph(), SCIPallowDualReds(), SCIPallowObjProp(),
+  SCIPcreateConsQuadratic(), SCIPcreateConsBasicQuadratic(), SCIPaddConstantQuadratic(), SCIPaddLinearVarQuadratic(), SCIPaddQuadVarQuadratic(), SCIPaddQuadVarLinearCoefQuadratic(), SCIPaddSquareCoefQuadratic(), SCIPaddBilinTermQuadratic(), SCIPgetNlRowQuadratic(), SCIPchgLhsQuadratic(), SCIPchgRhsQuadratic(),
+  SCIPcreateConsAbspower(), SCIPcreateConsBasicAbspower(), SCIPgetNlRowAbspower(),
+  SCIPcreateConsSOC(), SCIPcreateConsBasicSOC(), SCIPgetNlRowSOC(),
+- removed previously deprecated NLP termination status codes SCIP_NLPTERMSTAT_TILIM, SCIP_NLPTERMSTAT_ITLIM, SCIP_NLPTERMSTAT_LOBJLIM, SCIP_NLPTERMSTAT_NUMERR, SCIP_NLPTERMSTAT_EVALERR, SCIP_NLPTERMSTAT_MEMERR, SCIP_NLPTERMSTAT_LICERR
 
 ### New API functions
 
@@ -194,6 +203,7 @@ Interface changes
 - removed SCIP_VARTYPE_IMPLINT_CHAR
 - added SCIP_PROPTIMING_NONE propagator timing to never call
 - added SCIP_HEURTIMING_NONE heuristic timing to never call
+- removed use of NO_RAND_R
 
 ### Command line interface
 
@@ -267,6 +277,7 @@ Deleted files
 -------------
 
 - removed lpi_spx1.cpp
+- removed cons_abspower.{h,c}, cons_quadratic.{h,c}, and cons_soc.{h,c}
 
 Testing
 -------
@@ -321,6 +332,7 @@ Fixed bugs
 - invalidate activity with contradicting infinity contributions
 - avoid integer overflow in cons_cumulative.c triggered by unbounded variables, see new parameter "constraints/cumulative/maxtime"
 - allow negative update in SCIPconsAddUpgradeLocks() to unlock constraint upgrade
+- fixed memory leaks when LP, MPS and OPB/WBO readers abort unsuccessfully
 
 Miscellaneous
 -------------
@@ -398,6 +410,9 @@ Fixed bugs
 - skip attempting to free transformed problem if SCIPtransformProb() failed with an error in SCIPpresolve(), since freeing
   the transformed problem is likely to fail as well
 - fixed memory leak in primal heuristic scheduler when there is a restart
+- fixed stopping when there is a candidate with a change in the LP bound for both children in strong branching of branch_fullstrong
+- fixed detection of sinks in varbound detection from cumulative constraints
+- fixed memory allocation when adding strong SBCs for enclosing orbit of symmetric subgroups (disabled by default)
 
 Build system
 ------------
@@ -405,6 +420,8 @@ Build system
 ### CMake
 
 ### Makefile
+
+- added experimental target to run cppcheck
 
 Miscellaneous
 -------------

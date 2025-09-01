@@ -2807,32 +2807,6 @@ int SCIPgetNImplications(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** stores conflict graph of binary variables' implications into a file, which can be used as input for the DOT tool
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- *
- *  @deprecated because binary implications are now stored as cliques, please use SCIPwriteCliqueGraph() instead
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-SCIP_RETCODE SCIPwriteImplicationConflictGraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< file name, or NULL for stdout */
-   );
-
-
 /** update statistical information when a new solution was found */
 SCIP_EXPORT
 void SCIPstoreSolutionGap(

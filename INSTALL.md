@@ -592,6 +592,7 @@ The SCIP makefile supports several targets (used via `make ... "target"`):
 | `depend` | Updates dependencies files. This is only needed if you add checks for preprocessor-defines `WITH_*` in source files. |
 | `check`  | or `test`. Runs the check script.                                         |
 | `lint`   | Statically checks the code via flexelint. The call produces the file `lint.out` which contains all the detected warnings. |
+| `cppcheck` | Statically checks the code via cppcheck. The call produces the file `cppcheck.log` which contains the cppcheck output. |
 | `tags`   | Generates tags which can be used in the editor **emacs** and **xemacs**. |
 
 The SCIP makefiles are structured as follows.
@@ -800,12 +801,6 @@ If this doesn't work either, disable the readline library with `make READLINE=fa
 On some systems, the `sigaction()` method is not available.
 In this case, you have to either add `-DNO_SIGACTION` to the FLAGS in the appropriate `make/make.*` file, or to compile with `make USRFLAGS=-DNO_SIGACTION`.
 Make sure, the file `src/scip/interrupt.c` is recompiled.
-
-### No support for rand_r method
-
-On some systems, the `rand_r()` method is not available.
-In this case, you have to either add `-DNO_RAND_R` to the FLAGS in the appropriate `make/make.*` file, or to compile with `make USRFLAGS=-DNO_RAND_R`.
-Make sure, the file `src/scip/misc.c` is recompiled.
 
 ### No support for strtok_r method
 

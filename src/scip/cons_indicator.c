@@ -6954,8 +6954,8 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
    {
       /* if the slack variable fixed to a positive value was the reason */
       assert( infervar != consdata->slackvar );
-      /* Use a weaker comparison to SCIPvarGetLbAtIndex here (i.e., SCIPisPositive instead of SCIPisFeasPositive),
-       * because SCIPvarGetLbAtIndex might differ from the local bound at time bdchgidx by epsilon. */
+      /* Use a weaker comparison to SCIPgetVarLbAtIndex here (i.e., SCIPisPositive instead of SCIPisFeasPositive),
+       * because SCIPgetVarLbAtIndex might differ from the local bound at time bdchgidx by epsilon. */
       assert( SCIPisPositive(scip, SCIPgetVarLbAtIndex(scip, consdata->slackvar, bdchgidx, FALSE)) );
       SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, bdchgidx) );
    }

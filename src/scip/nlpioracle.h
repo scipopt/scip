@@ -441,7 +441,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP_Bool             isnewx_obj,         /**< has the point x changed since the last call to an objective evaluation function? */
    SCIP_Bool             isnewx_cons,        /**< has the point x changed since the last call to the constraint evaluation function? */
    SCIP_Real             objfactor,          /**< weight for objective function */
-   const SCIP_Real*      lambdas,            /**< array with weights (Lagrangian multipliers) for the constraints */
+   const SCIP_Real*      lambda,             /**< array with weights (Lagrangian multipliers) for the constraints */
    SCIP_Real*            hessian,            /**< pointer to store sparse hessian values */
    SCIP_Bool             colwise             /**< whether the entries should be first sorted column-wise (TRUE) or row-wise */
    );

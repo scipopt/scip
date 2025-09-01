@@ -3030,7 +3030,7 @@ SCIP_RETCODE computeCut(
       absweight = REALABS(weight);
       if ( ! SCIPisSumZero(scip, weight) && absweight * MAXWEIGHTRANGE >= maxabsweight )
       {
-         SCIP_Real obj = 0.0;
+         SCIP_Real obj;
          int idx;
 
          /* add the objective row coefficients to the sum */

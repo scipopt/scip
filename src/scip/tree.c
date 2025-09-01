@@ -2855,12 +2855,28 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
 {
    assert(stat != NULL);
    assert(set != NULL);
-   assert(newbound == SCIP_INVALID || !SCIPsetIsInfinity(set, newbound)); /*lint !e777*/
-   assert(newboundexact == NULL || !SCIPrationalIsInfinity(newboundexact));
    assert(set->stage < SCIP_STAGE_INITSOLVE
       || (tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
       || (SCIPsetIsRelEQ(set, SCIPtreeGetLowerbound(tree, set), stat->lastlowerbound)
       && (!set->exact_enable || SCIPrationalIsEQ(SCIPtreeGetLowerboundExact(tree, set), stat->lastlowerboundexact))));
+
+   /* node with infinite lower bound should rather be cut off */
+   if( newboundexact != NULL )
+   {
+      if( SCIPrationalIsInfinity(newboundexact) )
+      {
+         SCIPwarningMessage(set->scip, "Reached exact lower bound that exceeds infinity.\n");
+         SCIPABORT();
+      }
+   }
+   else if( newbound != SCIP_INVALID ) /*lint !e777*/
+   {
+      if( SCIPsetIsInfinity(set, newbound) )
+      {
+         SCIPwarningMessage(set->scip, "Reached real lower bound that exceeds infinity.\n");
+         SCIPABORT();
+      }
+   }
 
    if( set->exact_enable )
    {
@@ -7561,7 +7577,6 @@ SCIP_RETCODE SCIPtreeMarkProbingNodeHasLP(
    assert(node->data.probingnode != NULL);
 
    /* update LP information in probingnode data */
-   /* cppcheck-suppress nullPointer */
    SCIP_CALL( probingnodeUpdate(node->data.probingnode, blkmem, tree, lp) );
 
    return SCIP_OKAY;
@@ -8555,9 +8570,9 @@ void SCIPnodeGetNDomchg(
    if( count_branchings )
       *nbranchings = 0;
    if( count_consprop )
-      *nconsprop = 0;
+      *nconsprop = 0;  /* cppcheck-suppress nullPointer */
    if( count_prop )
-      *nprop = 0;
+      *nprop = 0;  /* cppcheck-suppress nullPointer */
 
    if( node->domchg == NULL )
       return;

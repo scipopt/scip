@@ -1344,16 +1344,15 @@ SCIP_RETCODE presolve(
       SCIP_SOL* sol;
       SCIP_Bool stored;
 
-      SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-
-      if( !SCIPisExact(scip) )
+      if( SCIPisExact(scip) )
       {
-         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPcreateSolExact(scip, &sol, NULL) );
+         SCIP_CALL( SCIPtrySolFreeExact(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
       }
       else
       {
-         SCIP_CALL( SCIPmakeSolExact(scip, sol) );
-         SCIP_CALL( SCIPtrySolFreeExact(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
+         SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
       }
 
       if( scip->set->nactivepricers == 0 )
@@ -2933,38 +2932,6 @@ SCIP_RETCODE SCIPsolve(
    SCIP_CALL( SCIPcertificateSaveFinalbound(scip, SCIPgetCertificate(scip)) );
 
    return SCIP_OKAY;
-}
-
-/** transforms, presolves, and solves problem using the configured concurrent solvers
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *
- *  @post After calling this method \SCIP reaches one of the following stages depending on if and when the solution
- *        process was interrupted:
- *        - \ref SCIP_STAGE_PRESOLVING if the solution process was interrupted during presolving
- *        - \ref SCIP_STAGE_SOLVING if the solution process was interrupted during the tree search
- *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- *
- *  @deprecated Please use SCIPsolveConcurrent() instead.
- */
-SCIP_RETCODE SCIPsolveParallel(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveParallel", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   return SCIPsolveConcurrent(scip);
 }
 
 /** transforms, presolves, and solves problem using the configured concurrent solvers

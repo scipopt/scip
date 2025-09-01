@@ -1455,6 +1455,8 @@ SCIP_RETCODE cutTightenCoefsQuad(
    if( SCIPisGT(scip, maxact - maxabsintval, QUAD_TO_DBL(*cutrhs)) )
       return SCIP_OKAY;
 
+   /* first sort indices, so that in the following sort, the order for coefficients with same absolute value does not depend on how cutinds was initially ordered */
+   SCIPsortInt(cutinds, *cutnnz);
    SCIPsortDownInd(cutinds, compareAbsCoefsQuad, (void*) cutcoefs, *cutnnz);
 
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
@@ -2336,6 +2338,8 @@ SCIP_RETCODE cutTightenCoefs(
    if( SCIPisGT(scip, maxact - maxabsintval, QUAD_TO_DBL(*cutrhs)) )
       return SCIP_OKAY;
 
+   /* first sort indices, so that in the following sort, the order for coefficients with same absolute value does not depend on how cutinds was initially ordered */
+   SCIPsortInt(cutinds, *cutnnz);
    SCIPsortDownInd(cutinds, compareAbsCoefs, (void*) cutcoefs, *cutnnz);
 
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
@@ -9894,7 +9898,7 @@ SCIP_RETCODE constructSNFRelaxation(
             SCIPdebugMsg(scip, "    --> bestlb used for trans: ... %s y'_%d + ..., y'_%d <= %g x_%d (=%s), rhs=%g-(%g*%g)=%g\n",
                snf->transvarcoefs[snf->ntransvars] == 1 ? "+" : "-", snf->ntransvars, snf->ntransvars, snf->transvarvubcoefs[snf->ntransvars],
                snf->ntransvars, SCIPvarGetName(vlbvars[bestlbtype[i]]), QUAD_TO_DBL(transrhs) + QUAD_TO_DBL(rowcoeftimesvlbconst), QUAD_TO_DBL(rowcoef),
-               vlbconsts[bestlbtype[i]], snf->transrhs );
+               vlbconsts[bestlbtype[i]], QUAD_TO_DBL(transrhs) );
          }
       }
       else
@@ -13449,7 +13453,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
             goto TERMINATE;
       }
 
-      SCIPdebug(printCutQuad(scip, NULL, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+      SCIPdebug(printCutQuad(scip, NULL, data->cutcoefs, QUAD(data->cutrhs), data->cutinds, data->ncutinds, FALSE, FALSE));
    }
 
    /* terminate if the side fractionality is unreliable */
@@ -13507,7 +13511,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    if( data->totalnnz > 0 )
    {
       SCIP_CALL( cutsRoundStrongCG(scip, data, varsign, boundtype, QUAD(f0), k) );
-      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+      SCIPdebug(printCutQuad(scip, sol, data->cutcoefs, QUAD(data->cutrhs), data->cutinds, data->ncutinds, FALSE, FALSE));
    }
 
    /* substitute aggregated slack variables:
@@ -13526,7 +13530,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
     */
    SCIP_CALL( cutsSubstituteStrongCG(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
          aggrrow->nrows, scale, data->cutcoefs, QUAD(&data->cutrhs), data->cutinds, &data->ncutinds, QUAD(f0), k) );
-   SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+   SCIPdebug(printCutQuad(scip, sol, data->cutcoefs, QUAD(data->cutrhs), data->cutinds, data->ncutinds, FALSE, FALSE));
 
    /* remove all nearly-zero coefficients from strong CG row and relax the right hand side correspondingly in order to
     * prevent numerical rounding errors
@@ -13539,7 +13543,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    {
       *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), *cutislocal, data->cutcoefs, QUAD(&data->cutrhs), data->cutinds, &data->ncutinds);
    }
-   SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+   SCIPdebug(printCutQuad(scip, sol, data->cutcoefs, QUAD(data->cutrhs), data->cutinds, data->ncutinds, FALSE, FALSE));
 
    if( *success )
    {

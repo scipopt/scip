@@ -305,15 +305,17 @@ SCIP_RETCODE SCIPaddVarExactData(
    )
 {
    assert(var != NULL);
-
    assert(lb == NULL || ub == NULL || SCIPrationalIsLE(lb, ub));
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarExactData", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* real objective should be finite but abort anyway */
+   assert(obj != NULL || !SCIPisInfinity(scip, REALABS(SCIPvarGetObj(var))));
+
    /* forbid infinite objective function values */
-   if( obj != NULL && SCIPrationalIsAbsInfinity(obj) )
+   if( (obj != NULL && SCIPrationalIsAbsInfinity(obj)) || (obj == NULL && SCIPisInfinity(scip, REALABS(SCIPvarGetObj(var)))) )
    {
-      SCIPerrorMessage("invalid objective function value: value is infinite\n");
+      SCIPerrorMessage("invalid objective coefficient: value is infinite\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -1154,7 +1156,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    nvars = 0;
    vars = NULL;
    exponents = NULL;
-   coef = SCIP_INVALID;
+   coef = 0.0;
 
    SCIPdebugMsg(scip, "parsing polynomial from '%s'\n", str);
 
@@ -1169,7 +1171,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
       {
       case SCIPPARSEPOLYNOMIAL_STATE_BEGIN:
       {
-         if( coef != SCIP_INVALID  ) /*lint !e777*/
+         if( coef != 0.0 ) /*lint !e777*/
          {
             SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
 
@@ -1199,7 +1201,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
             ++*nmonomials;
 
             nvars = 0;
-            coef = SCIP_INVALID;
+            coef = 0.0;
          }
 
          if( *str == '<' )
@@ -1354,7 +1356,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    case SCIPPARSEPOLYNOMIAL_STATE_END:
    case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
    {
-      if( coef != SCIP_INVALID ) /*lint !e777*/
+      if( coef != 0.0 ) /*lint !e777*/
       {
          /* push last monomial */
          SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
@@ -1501,7 +1503,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
    vars = NULL;
 
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &coef) );
-   SCIPrationalSetInfinity(coef);
+   SCIPrationalSetReal(coef, 0.0);
 
    SCIPdebugMsg(scip, "parsing polynomial from '%s'\n", str);
 
@@ -1516,7 +1518,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
       {
       case SCIPPARSEPOLYNOMIAL_STATE_BEGIN:
       {
-         if( !SCIPrationalIsInfinity(coef)  ) /*lint !e777*/
+         if( !SCIPrationalIsZero(coef) )
          {
             SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", SCIPrationalGetReal(coef), nvars);
 
@@ -1542,7 +1544,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
             ++*nmonomials;
 
             nvars = 0;
-            SCIPrationalSetInfinity(coef);
+            SCIPrationalSetReal(coef, 0.0);
          }
 
          if( *str == '<' )
@@ -1673,7 +1675,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
    case SCIPPARSEPOLYNOMIAL_STATE_END:
    case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
    {
-      if( !SCIPrationalIsInfinity(coef) ) /*lint !e777*/
+      if( !SCIPrationalIsZero(coef) )
       {
          /* push last monomial */
          SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", SCIPrationalGetReal(coef), nvars);
@@ -10937,19 +10939,6 @@ SCIP_Bool SCIPdoNotMultaggrVar(
    return scip->set->presol_donotmultaggr || SCIPvarDoNotMultaggr(var);
 }
 
-/** returns whether dual reductions are allowed during propagation and presolving
- *
- *  @deprecated Please use SCIPallowStrongDualReds()
- */
-SCIP_Bool SCIPallowDualReds(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-
-   return !scip->set->reopt_enable && scip->set->misc_allowstrongdualreds;
-}
-
 /** returns whether strong dual reductions are allowed during propagation and presolving
  *
  *  @note A reduction is called strong dual, if it may discard feasible/optimal solutions, but leaves at least one
@@ -10963,19 +10952,6 @@ SCIP_Bool SCIPallowStrongDualReds(
    assert(scip != NULL);
 
    return !scip->set->reopt_enable && scip->set->misc_allowstrongdualreds;
-}
-
-/** returns whether propagation w.r.t. current objective is allowed
- *
- *  @deprecated Please use SCIPallowWeakDualReds()
- */
-SCIP_Bool SCIPallowObjProp(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-
-   return !scip->set->reopt_enable && scip->set->misc_allowweakdualreds;
 }
 
 /** returns whether weak dual reductions are allowed during propagation and presolving

@@ -10192,7 +10192,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
    SCIP_VAR** consvars;
    SCIP_VAR** locvars;
    SCIP_Real* locvals;
-   SCIP_Real constant = 0.0;
+   SCIP_Real constant;
    int consnodeidx;
    int nodeidx;
    int nconsvars;
@@ -10258,7 +10258,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS1)
    SCIP_VAR** consvars;
    SCIP_VAR** locvars;
    SCIP_Real* locvals;
-   SCIP_Real constant = 0.0;
+   SCIP_Real constant;
    int consnodeidx;
    int nodeidx;
    int nconsvars;

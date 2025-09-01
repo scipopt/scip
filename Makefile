@@ -417,7 +417,6 @@ SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.c))
 LINTSYMSRC	=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.c))
 ifeq ($(NAUTYEXTERNAL),false)
-FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
 LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/nauty
 NAUTYOBJ	=	nauty/nauty.o
 NAUTYOBJ	+=      nauty/nautil.o
@@ -448,7 +447,6 @@ SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 LINTSYMSRC	=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(NAUTYEXTERNAL),false)
-FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
 LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/nauty
 NAUTYOBJ	=	nauty/nauty.o
 NAUTYOBJ	+=      nauty/nautil.o
@@ -676,7 +674,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/compr_largestrepr.o \
 			scip/compr_weakcompr.o \
 			scip/concsolver_scip.o \
-			scip/cons_abspower.o \
 			scip/cons_and.o \
 			scip/cons_benders.o \
 			scip/cons_benderslp.o \
@@ -702,9 +699,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_orbitope_full.o \
 			scip/cons_orbitope_pp.o \
 			scip/cons_pseudoboolean.o \
-			scip/cons_quadratic.o \
 			scip/cons_setppc.o \
-			scip/cons_soc.o \
 			scip/cons_sos1.o \
 			scip/cons_sos2.o \
 			scip/cons_superindicator.o \
@@ -1268,6 +1263,21 @@ ifeq ($(FILES),)
 		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$^) >> splint.out;'
 else
 		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$(FILES)) >> splint.out;'
+endif
+
+CPPCHECKARGS := $(filter -I%,$(FLAGS))
+CPPCHECKARGS += -j8
+CPPCHECKARGS += --std=c99 --std=c++14
+CPPCHECKARGS += --suppressions-list=suppressions.cppcheck --inline-suppr
+CPPCHECKARGS += --enable=all --force --inconclusive
+CPPCHECKARGS += --error-exitcode=5
+.PHONY: cppcheck
+cppcheck: $(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE) githash
+		-rm -f cppcheck.log
+ifeq ($(FILES),)
+		cppcheck $(CPPCHECKARGS) $^ 2>&1 | tee cppcheck.log
+else
+		cppcheck $(CPPCHECKARGS) $(FILES) 2>&1 | tee cppcheck.log
 endif
 
 .PHONY: doc
@@ -2004,6 +2014,7 @@ help:
 		@echo "  - lint: Run lint on all SCIP files. (Needs flexelint.)"
 		@echo "  - pclint: Run pclint on all SCIP files. (Needs pclint.)"
 		@echo "  - splint: Run splint on all C SCIP files. (Needs splint.)"
+		@echo "  - cppcheck: Run cppcheck on SCIP source files. (Needs cppcheck.)"
 		@echo "  - clean: Removes all object files."
 		@echo "  - cleanlibs: Remove all SCIP libraries."
 		@echo "  - tags: Creates TAGS file that can be used in (x)emacs."

@@ -1406,7 +1406,6 @@ if(SCIP_WITH_EXACTSOLVE)
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
 
-               if(NOT ((${setting} STREQUAL "exact-projshift") AND (${basename} STREQUAL "misc03.zpl") AND (${LPS} STREQUAL "xprs")))
                add_test(NAME MIPEX-${setting}-${basename}-vipr
                      COMMAND ${VIPRCHK} ${basename}.${setting}_complete.vipr)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr
@@ -1415,7 +1414,6 @@ if(SCIP_WITH_EXACTSOLVE)
                                  PASS_REGULAR_EXPRESSION "Successfully verified;Infeasibility verified"
                                  FAIL_REGULAR_EXPRESSION "Error"
                                  FAIL_REGULAR_EXPRESSION "Failed")
-               endif() # verification fails with Failed to derive constraint DualBound_12055, #3724
 
                add_test(NAME MIPEX-${setting}-${basename}-vipr_ori
                      COMMAND ${VIPRCHK} ${basename}.${setting}.vipr_ori)

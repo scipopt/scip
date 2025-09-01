@@ -270,7 +270,7 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
    SCIP_Bool*            downlocks,          /**< array storing if the variable has a down lock, or NULL */
    SCIP_Bool*            uplocks,            /**< array storing if the variable has an up lock, or NULL */
    SCIP_CONS*            cons,               /**< constraint which gets propagated, or NULL */
-   SCIP_Bool*            delvars,            /**< array storing the variable which can be deleted from the constraint */
+   SCIP_Bool*            irrelevants,        /**< array storing the variable which can be deleted from the constraint */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
    int*                  nchgsides,          /**< pointer to store the number of changed sides */
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */

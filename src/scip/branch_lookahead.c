@@ -1634,7 +1634,7 @@ SCIP_RETCODE candidateListGetAllFractionalCandidates(
       (*candidatelist)->candidates[i] = candidate;
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "created candidate <%s>...\n",
-         (candidate) != NULL ? SCIPvarGetName((candidate)->branchvar) : "none");
+         SCIPvarGetName(candidate->branchvar));
    }
 
    return SCIP_OKAY;

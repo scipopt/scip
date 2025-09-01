@@ -1997,7 +1997,7 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_VAR** vars;
    SCIP_Real* vals;
    SCIP_Real constant;
-   SCIP_Real bound = 0.0;
+   SCIP_Real bound;
    int consnodeidx;
    int opnodeidx;
    int nodeidx;
@@ -2664,9 +2664,9 @@ SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
          assert(consdata->vars[v] != infervar || consdata->boundtypes[v] != consdata->boundtypes[inferinfo]);
 
          /* the reason literal must have been violated
-          * we do not check for multi-aggregated variables, since SCIPvarGetXbAtIndex is not implemented for them */
-         /* Use a weaker comparison to SCIPvarGetXbAtIndex here (i.e., SCIPisXT instead of SCIPisFeasXT),
-          * because SCIPvarGetXbAtIndex might differ from the local bound at time bdchgidx by epsilon. */
+          * we do not check for multi-aggregated variables, since SCIPgetVarXbAtIndex is not implemented for them */
+         /* Use a weaker comparison to SCIPgetVarXbAtIndex here (i.e., SCIPisXT instead of SCIPisFeasXT),
+          * because SCIPgetVarXbAtIndex might differ from the local bound at time bdchgidx by epsilon. */
          assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_MULTAGGR
             || (boundtypes[v] == SCIP_BOUNDTYPE_LOWER
                && SCIPisLT(scip, SCIPgetVarUbAtIndex(scip, vars[v], bdchgidx, TRUE), bounds[v]))

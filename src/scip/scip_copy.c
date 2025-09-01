@@ -747,6 +747,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    if( !uselocalvarmap )
    {
       *targetvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, sourcevar);
+      assert(*targetvar == NULL || (*targetvar)->scip == targetscip);
       if( *targetvar != NULL )
          return SCIP_OKAY;
    }
@@ -924,6 +925,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_CALL( SCIPaddVar(targetscip, var) );
 
    *targetvar = var;
+   assert((*targetvar)->scip == targetscip);
 
    /* remove the variable capture which was done due to the creation of the variable */
    SCIP_CALL( SCIPreleaseVar(targetscip, &var) );
