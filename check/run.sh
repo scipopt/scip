@@ -152,8 +152,16 @@ VIPRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr
 VIPRCOMPFILE=$CLIENTTMPDIR/${USER}-tmpdir/${BASENAME}_complete.vipr
 VIPRORIFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr_ori
 VIPRRAWFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.viprraw
+
+
 if test -e $VIPRFILE
 then
+    if [ -z "$VIPRCOMPNAME" ]; then
+      echo "VIPRCOMPNAME is empty"  >> $OUTFILE
+    else
+      echo "VIPRCOMPNAME: $VIPRCOMPNAME" >> $OUTFILE
+    fi
+
     echo Building vipr file ... >> $OUTFILE
     cp $VIPRFILE $VIPRRAWFILE
 
