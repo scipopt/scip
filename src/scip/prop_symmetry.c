@@ -6573,8 +6573,8 @@ SCIP_RETCODE handleDoubleLexOrbitope(
       SCIPinfoMessage(scip, NULL, "  use %d SST cuts to sort first row of %d x %d matrix\n",
          ncols - 1, nrows, ncols);
       if ( nsignedconss > 0 )
-         SCIPinfoMessage(scip, NULL, "  recursively enforce first half of entries per column to %s\n",
-            "upper half and sort by static orbitopal reduction");
+         SCIPinfoMessage(scip, NULL, "  recursively enforce first half of entries per column to "
+            "upper half and sort by static orbitopal reduction\n");
    }
 
    /* create linear constraints */
