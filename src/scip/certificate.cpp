@@ -1594,7 +1594,7 @@ SCIP_RETCODE certificatePrintMirSplit(
 
    SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
-   for( auto & coef : coefs )
+   for( const auto & coef : coefs )
    {
       /** @todo perform line breaking before exceeding maximum line length */
       int varindex = coef.first;
@@ -1618,7 +1618,7 @@ SCIP_RETCODE certificatePrintMirSplit(
 
    SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
-   for( auto & coef : coefs )
+   for( const auto & coef : coefs )
    {
       /** @todo perform line breaking before exceeding maximum line length */
       int varindex = coef.first;
