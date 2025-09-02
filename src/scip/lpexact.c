@@ -3473,8 +3473,8 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
    SCIP_RATIONAL* ub;
    SCIP_RATIONAL* lb;
    SCIP_INTERVAL* rowexactvalsinterval;
-   SCIP_Real lbreal = 0.0;
-   SCIP_Real ubreal = 0.0;
+   SCIP_Real lbreal;
+   SCIP_Real ubreal;
    SCIP_ROUNDMODE roundmode;
    int i;
    int* sideindexpostprocess;
