@@ -2308,7 +2308,7 @@ void SCIPrationalComputeApproximationLong(
    SCIP_Longint p[3] = {0};
    SCIP_Longint q[3] = {0};
    int sign;
-   int done = 0;
+   int done;
 
    assert(res != nullptr);
    assert(src != nullptr);
@@ -2468,7 +2468,7 @@ void SCIPrationalComputeApproximation(
    assert(src != nullptr);
    assert(res != nullptr);
 #ifdef SCIP_WITH_BOOST
-   int done = 0;
+   int done;
 
    scip::Integer temp;
    scip::Integer td;
