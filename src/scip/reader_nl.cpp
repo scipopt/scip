@@ -2585,7 +2585,7 @@ public:
 
                if( SCIPisExprVar(scip, expr) )
                {
-                  SCIP_VAR* var = SCIPgetVarExprVar(expr);
+                  SCIP_VAR* var = SCIPgetVarExprVar(expr);  /* cppcheck-suppress dangerousTypeCast */
                   if( SCIPvarIsNegated(var) )
                   {
                      ConExprWriter ew2(parentew->OPut2(mp::nl::SUB));
