@@ -1050,12 +1050,12 @@ SCIP_RETCODE SCIPcertificatePrintResult(
       if( isorigfile )
       {
          SCIP_CALL( SCIPretransformSolExact(scip, bestsol) );
-      }
-
-      if( isorigfile )
          SCIPgetPrimalboundExact(scip, primalbound);
+      }
       else
+      {
          SCIPgetUpperboundExact(scip, primalbound);
+      }
 
       assert(!SCIPrationalIsAbsInfinity(primalbound));
 
@@ -1098,12 +1098,12 @@ SCIP_RETCODE SCIPcertificatePrintResult(
          if( isorigfile )
          {
             SCIP_CALL( SCIPretransformSolExact(scip, bestsol) );
-         }
-
-         if( isorigfile )
             SCIPgetPrimalboundExact(scip, primalbound);
+         }
          else
+         {
             SCIPgetUpperboundExact(scip, primalbound);
+         }
       }
       else
       {
