@@ -65,7 +65,7 @@ SCIP_RETCODE SCIPrationalCreate(
 /** creates a rational using buffer memory */
 SCIP_EXPORT
 SCIP_RETCODE SCIPrationalCreateBuffer(
-   BMS_BUFMEM*           buf,                /**< buffer memory */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_RATIONAL**       rational            /**< pointer to the rational to create */
    );
 
@@ -94,8 +94,8 @@ SCIP_RETCODE SCIPrationalCopyBlock(
 /** creates a copy of a rational */
 SCIP_EXPORT
 SCIP_RETCODE SCIPrationalCopyBuffer(
-   BMS_BUFMEM*           mem,                /**< buffer memory */
-   SCIP_RATIONAL**       rational,           /**< pointer to the rational to create */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
+   SCIP_RATIONAL**       result,             /**< pointer to the rational to create */
    SCIP_RATIONAL*        src                 /**< rational to copy */
    );
 
@@ -223,27 +223,27 @@ void SCIPrationalClearArrayGMP(
 /** deletes a rational and frees the allocated ordinary memory */
 SCIP_EXPORT
 void SCIPrationalFree(
-   SCIP_RATIONAL**       r                   /**< adress of the rational */
+   SCIP_RATIONAL**       rational            /**< address of the rational */
    );
 
 /** deletes a rational and frees the allocated block memory */
 SCIP_EXPORT
 void SCIPrationalFreeBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_RATIONAL**       r                   /**< adress of the rational */
+   SCIP_RATIONAL**       rational            /**< address of the rational */
    );
 
 /** deletes a rational and frees the allocated buffer memory */
 SCIP_EXPORT
 void SCIPrationalFreeBuffer(
-   BMS_BUFMEM*           buf,                /**< buffer memory */
-   SCIP_RATIONAL**       r                   /**< adress of the rational */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
+   SCIP_RATIONAL**       rational            /**< address of the rational */
    );
 
 /** deletes an array of rationals and frees the allocated ordinary memory */
 SCIP_EXPORT
 void SCIPrationalFreeArray(
-   SCIP_RATIONAL***      array,              /**< address of rational array */
+   SCIP_RATIONAL***      ratarray,           /**< address of rational array */
    int                   size                /**< size of the array */
    );
 
@@ -251,7 +251,7 @@ void SCIPrationalFreeArray(
 SCIP_EXPORT
 void SCIPrationalFreeBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_RATIONAL***      array,              /**< address of rational array */
+   SCIP_RATIONAL***      ratblockarray,      /**< address of rational array */
    int                   size                /**< size of the array */
    );
 
@@ -259,7 +259,7 @@ void SCIPrationalFreeBlockArray(
 SCIP_EXPORT
 void SCIPrationalFreeBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
-   SCIP_RATIONAL***      array,              /**< pointer to the array */
+   SCIP_RATIONAL***      ratbufarray,        /**< pointer to the array */
    int                   size                /**< size of the array */
    );
 
@@ -342,7 +342,7 @@ void SCIPrationalResetFloatingPointRepresentable(
 /* transforms rational into canonical form */
 SCIP_EXPORT
 void SCIPrationalCanonicalize(
-   SCIP_RATIONAL*        r                   /**< rational to put in canonical form */
+   SCIP_RATIONAL*        rational            /**< rational to put in canonical form */
    );
 
 /* checks if the underlying Rational has a value >= infinity;
@@ -484,17 +484,17 @@ void SCIPrationalInvert(
 /** compute the minimum of two rationals */
 SCIP_EXPORT
 void SCIPrationalMin(
-   SCIP_RATIONAL*        ret,                /**< the result */
-   SCIP_RATIONAL*        r1,                 /**< the first rational */
-   SCIP_RATIONAL*        r2                  /**< the second rational */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< the first rational */
+   SCIP_RATIONAL*        op2                 /**< the second rational */
    );
 
 /** compute the maximum of two rationals */
 SCIP_EXPORT
 void SCIPrationalMax(
-   SCIP_RATIONAL*        ret,                /**< the result */
-   SCIP_RATIONAL*        r1,                 /**< the first rational */
-   SCIP_RATIONAL*        r2                  /**< the second rational */
+   SCIP_RATIONAL*        res,                /**< the result */
+   SCIP_RATIONAL*        op1,                /**< the first rational */
+   SCIP_RATIONAL*        op2                 /**< the second rational */
    );
 
 /*
@@ -654,7 +654,7 @@ SCIP_Bool SCIPrationalIsFpRepresentable(
  */
 SCIP_EXPORT
 int SCIPrationalToString(
-   SCIP_RATIONAL*        r,                  /**< the rational to print */
+   SCIP_RATIONAL*        rational,           /**< the rational to print */
    char*                 str,                /**< the string to save the rational in */
    int                   strlen              /**< maximal length that can be copied to str */
    );
@@ -662,7 +662,7 @@ int SCIPrationalToString(
 /** returns the strlen of a rational number */
 SCIP_EXPORT
 int SCIPrationalStrLen(
-   SCIP_RATIONAL*        r                   /** rational to consider */
+   SCIP_RATIONAL*        rational           /** rational to consider */
    );
 
 /* if we have a C99 compiler */
@@ -710,7 +710,7 @@ void SCIPrationalPrintVerbInfo(
 /** prints a rational to command line (for debugging) */
 SCIP_EXPORT
 void SCIPrationalPrint(
-   SCIP_RATIONAL*        r                   /**< the rational to print */
+   SCIP_RATIONAL*        rational            /**< the rational to print */
    );
 
 /** printf extension for rationals (does not support all format options yet) */
@@ -763,7 +763,7 @@ void SCIPrationalGetFrac(
 /** returns approximation of rational as SCIP_Real */
 SCIP_EXPORT
 SCIP_Real SCIPrationalGetReal(
-   SCIP_RATIONAL*        r                   /**< the rational to convert */
+   SCIP_RATIONAL*        rational            /**< the rational to convert */
    );
 
 /** gets the relaxation of a rational as a real
@@ -772,7 +772,7 @@ SCIP_Real SCIPrationalGetReal(
  */
 SCIP_EXPORT
 SCIP_Real SCIPrationalRoundReal(
-   SCIP_RATIONAL*        r,                  /**< the rational to convert */
+   SCIP_RATIONAL*        rational,           /**< the rational to convert */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    );
 
@@ -790,7 +790,7 @@ void SCIPrationalRoundInteger(
  */
 SCIP_EXPORT
 SCIP_Bool SCIPrationalRoundLong(
-   SCIP_Longint*         retval,             /**< the resulting rounded lon int */
+   SCIP_Longint*         res,                /**< the resulting rounded long int */
    SCIP_RATIONAL*        src,                /**< the rational to round */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    );
