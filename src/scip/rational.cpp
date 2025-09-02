@@ -748,7 +748,7 @@ void SCIPrationalSetString(
       if( exponentidx != std::string::npos )
       {
          exponent = std::stoi(s.substr(exponentidx + 1, s.length()));
-         s = s.substr(0, exponentidx);
+         s.resize(exponentidx);
       }
 
       /* convert decimal into fraction */
