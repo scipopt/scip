@@ -1332,6 +1332,7 @@ if(SCIP_WITH_EXACTSOLVE)
                 set(regex "${message_format_${extension}}")
             endif()
             if(NOT ((${extension} STREQUAL "cip") AND (${basename} STREQUAL "rgn.zpl") AND (${LPS} STREQUAL "xprs")))
+            if(NOT ((${basename} STREQUAL "stein27.zpl") AND (${LPS} STREQUAL "xprs")))
             add_test(NAME MIPEX-readertest-${extension}-${basename}
                     COMMAND $<TARGET_FILE:scip>
                     -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/exact-default.set"
@@ -1343,6 +1344,7 @@ if(SCIP_WITH_EXACTSOLVE)
                                     FAIL_REGULAR_EXPRESSION "ERROR"
                                     DEPENDS scip-build
                                 )
+            endif()  # LP Error: Xpress returned 11, #3724
             endif()  # LP Error: Xpress returned 11, #3724
         endforeach(extension)
     endforeach(instance)
