@@ -419,9 +419,8 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const int**           offset,             /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
-   const int**           col,                /**< pointer to store pointer that stores the indices of variables that appear in each row,
-                                              *   offsets[nconss] gives length of col, can be NULL */
+   const int**           offset,             /**< pointer to store pointer that stores the offsets to each row's (or col's if colwise == TRUE) sparsity pattern in nzs, can be NULL */
+   const int**           allnz,              /**< pointer to store pointer that stores the indices of variables that appear in each row (or col if colwise = TRUE), offset[nvars] gives length of nzs, can be NULL */
    SCIP_Bool             colwise             /**< tells whether a columnwise (TRUE) or rowwise representation is needed */
    );
 
