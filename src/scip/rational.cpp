@@ -1072,20 +1072,20 @@ void SCIPrationalMult(
       {
          res->val = 0;
          res->isinf = FALSE;
-         res->isfprepresentable = TRUE;
       }
       else
       {
          res->val = op1->val.sign() * op2->val.sign();
          res->isinf = TRUE;
       }
+      res->isfprepresentable = TRUE;
    }
    else
    {
       res->val = op1->val * op2->val;
       res->isinf = FALSE;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /** multiplies a rational and a real and saves the result in res */
@@ -1197,8 +1197,8 @@ void SCIPrationalAddProd(
    {
       res->isinf = FALSE;
       res->val += op1->val * op2->val;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /* Computes res += op1 * op2 and saves the result in res */
@@ -1226,8 +1226,8 @@ void SCIPrationalAddProdReal(
    {
       res->isinf = FALSE;
       res->val += op1->val * op2;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /* Computes res -= op1 * op2 and saves the result in res */
@@ -1255,8 +1255,8 @@ void SCIPrationalDiffProd(
    {
       res->isinf = FALSE;
       res->val -= op1->val * op2->val;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /* Computes res += op1 * op2 and saves the result in res */
@@ -1284,8 +1284,8 @@ void SCIPrationalDiffProdReal(
    {
       res->isinf = FALSE;
       res->val -= op1->val * op2;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /** set res to -op */
