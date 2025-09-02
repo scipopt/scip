@@ -588,7 +588,7 @@ uint32_t SCIPrealHashCode(double x)
    mantissa = (uint16_t)ldexp(frexp(ABS(x), &theexp), 16) + 1;
 
    /* pave sign bit with overflow */
-   if( mantissa == 0 )
+   if( mantissa == 0 )  /* cppcheck-suppress knownConditionTrueFalse */
    {
       /* divide overflow 2^16 by four */
       mantissa = 1 << 14;
