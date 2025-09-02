@@ -672,6 +672,7 @@ macro(add_instancetests instances settings prefix)
             #
             if(NOT ((${setting} STREQUAL "tolerance") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "xprs")))
             if(NOT ((${setting} STREQUAL "default") AND (${basename} STREQUAL "pltexpA4_6.smps") AND (${LPS} STREQUAL "xprs")))
+            if(NOT ((${setting} STREQUAL "lns_epsgreedy_vanilla") AND (${basename} STREQUAL "enigma.mps") AND (${LPS} STREQUAL "xprs")))
             if(NOT ((${setting} STREQUAL "lns_epsgreedy_vanilla") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
             add_test(NAME ${prefix}-${setting}-${basename}
                     COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
@@ -683,6 +684,7 @@ macro(add_instancetests instances settings prefix)
                                     DEPENDS scip-build
                                 )
             endif()  # Gurobi gets stuck in LP solve, #2833
+            endif()  # Xpress returns 11 while solving a strong branching LP, #3724
             endif()  # LP Error: Xpress returned 120, #3724 (LPS=xprs, Stochastic-default-pltexpA4_6.smps)
             endif()  # Xpress does not keep feasibility tolerance setting, #3640
         endforeach(setting)
