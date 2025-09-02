@@ -2338,7 +2338,6 @@ SCIP_RETCODE primalAddSolExact(
    )
 {
    SCIP_Bool stored;
-   /* cppcheck-suppress unassignedVariable */
    SCIP_RATIONAL* obj;
    SCIP_SOL* sol;
 
