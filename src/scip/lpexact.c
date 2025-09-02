@@ -8396,8 +8396,7 @@ SCIP_RETCODE SCIPlpExactEndDive(
    else
    {
       /* we still need to copy the exact lp objval back because the safe bounding result is saved there */
-      if( lpexact->storedsolvals != NULL )
-         SCIPrationalSetRational(lpexact->lpobjval, lpexact->storedsolvals->lpobjval);
+      SCIPrationalSetRational(lpexact->lpobjval, lpexact->storedsolvals->lpobjval);
 
       lpexact->solved = FALSE;
       lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
