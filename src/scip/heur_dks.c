@@ -185,7 +185,6 @@ SCIP_RETCODE getLinkingScoreAndBlocklabels(
    int v;
    int b;
 
-   SCIP_Bool newlabel = TRUE;                /* indication of finding a new label */
    int nlinkscoreconss = 0;                  /* number of linking conss for calculation */
    int nlinkscorevars = 0;                   /* number of linking vars for calculation */
 
@@ -203,7 +202,7 @@ SCIP_RETCODE getLinkingScoreAndBlocklabels(
       /* fill an array for the existing distinct block labels that are not linking variables */
       else if( *nblocklabels < nblocks && blocklabels != NULL )
       {
-         newlabel = TRUE;
+         SCIP_Bool newlabel = TRUE;  /* indication of finding a new label */
 
          /* check the current label for novelty */
          for( b = 0; b < *nblocklabels; b++ )
