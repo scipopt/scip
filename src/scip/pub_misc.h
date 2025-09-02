@@ -65,6 +65,23 @@
 #include "scip/struct_misc.h"
 #endif
 
+/* The C99 standard defines the function (or macro) isfinite.
+ * On MacOS X, isfinite is also available.
+ * From the BSD world, there comes a function finite.
+ * On SunOS, finite is also available.
+ * In the MS compiler world, there is a function _finite.
+ * As last resort, we check whether x == x does not hold, but this works only for NaN's, not for infinities!
+ */
+#if _XOPEN_SOURCE >= 600 || defined(_ISOC99_SOURCE) || _POSIX_C_SOURCE >= 200112L || defined(__APPLE__)
+#define SCIPisFinite isfinite
+#elif defined(_BSD_SOURCE) || defined(__sun)
+#define SCIPisFinite finite
+#elif defined(_MSC_VER)
+#define SCIPisFinite _finite
+#else
+#define SCIPisFinite(x) ((x) == (x))
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -580,9 +597,7 @@ uint32_t SCIPrealHashCode(double x)
    int theexp;
 
    /* hashing infinite or nan values is not supported */
-   assert(!isnan(x));
-   assert(x != INFINITY);
-   assert(x != -INFINITY);
+   assert(SCIPisFinite(x));
 
    /* get 16 digits of absolute mantissa */
    mantissa = (uint16_t)ldexp(frexp(ABS(x), &theexp), 16) + 1;
@@ -1963,23 +1978,6 @@ SCIP_Real SCIPcalcRootNewton(
    SCIP_Real             eps,                /**< tolerance */
    int                   k                   /**< iteration limit */
    );
-
-/* The C99 standard defines the function (or macro) isfinite.
- * On MacOS X, isfinite is also available.
- * From the BSD world, there comes a function finite.
- * On SunOS, finite is also available.
- * In the MS compiler world, there is a function _finite.
- * As last resort, we check whether x == x does not hold, but this works only for NaN's, not for infinities!
- */
-#if _XOPEN_SOURCE >= 600 || defined(_ISOC99_SOURCE) || _POSIX_C_SOURCE >= 200112L || defined(__APPLE__)
-#define SCIPisFinite isfinite
-#elif defined(_BSD_SOURCE) || defined(__sun)
-#define SCIPisFinite finite
-#elif defined(_MSC_VER)
-#define SCIPisFinite _finite
-#else
-#define SCIPisFinite(x) ((x) == (x))
-#endif
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
