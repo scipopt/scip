@@ -2641,7 +2641,7 @@ void markRowExactDeleted(
 
 /** deletes the marked rows from the LP and the LP interface */
 SCIP_RETCODE SCIPlpExactDelRowset(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    int*                  rowdstat            /**< deletion status of rows:  1 if row should be deleted, 0 if not */
@@ -2653,26 +2653,26 @@ SCIP_RETCODE SCIPlpExactDelRowset(
    int r;
    int c;
 
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(rowdstat != NULL);
 
-   nrows = lp->nrows;
-   nlpirows = lp->nlpirows;
+   nrows = lpexact->nrows;
+   nlpirows = lpexact->nlpirows;
    if( nlpirows == 0 )
       return SCIP_OKAY;
 
    /* delete rows in LP solver */
-   SCIP_CALL( SCIPlpiExactDelRowset(lp->lpiexact, rowdstat) );
+   SCIP_CALL( SCIPlpiExactDelRowset(lpexact->lpiexact, rowdstat) );
 
    /* set the correct status for rows that never made it to the lpi (this is special for the exact lp) */
-   c = lp->nlpirows - 1;
+   c = lpexact->nlpirows - 1;
    while( rowdstat[c] == -1 )
    {
       c--;
    }
 
    c = rowdstat[c] + 1;
-   for( r = lp->nlpirows; r < nrows; r++ )
+   for( r = lpexact->nlpirows; r < nrows; r++ )
    {
       if( rowdstat[r] != 1 )
       {
@@ -2686,14 +2686,14 @@ SCIP_RETCODE SCIPlpExactDelRowset(
    /* update LP data respectively */
    for( r = 0; r < nrows; ++r )
    {
-      row = lp->rows[r];
+      row = lpexact->rows[r];
       assert(rowdstat[r] <= r);
       assert(row != NULL);
       row->lppos = rowdstat[r];
       if( rowdstat[r] == -1 )
       {
          if( row->removable )
-            lp->nremovablerows--;
+            lpexact->nremovablerows--;
 
          /* mark row to be deleted from the LPI and update row arrays of all linked columns */
          markRowExactDeleted(row);
@@ -2703,49 +2703,49 @@ SCIP_RETCODE SCIPlpExactDelRowset(
          /* only release lpirows if they actually exist */
          if( r < nlpirows )
          {
-            assert(row == lp->lpirows[r]);
+            assert(row == lpexact->lpirows[r]);
 
-            SCIP_CALL( SCIProwExactRelease(&lp->lpirows[r], blkmem, set, lp) );
-            lp->nlpirows--;
+            SCIP_CALL( SCIProwExactRelease(&lpexact->lpirows[r], blkmem, set, lpexact) );
+            lpexact->nlpirows--;
          }
-         SCIP_CALL( SCIProwExactRelease(&lp->rows[r], blkmem, set, lp) );
-         assert(lp->rows[r] == NULL);
-         lp->nrows--;
+         SCIP_CALL( SCIProwExactRelease(&lpexact->rows[r], blkmem, set, lpexact) );
+         assert(lpexact->rows[r] == NULL);
+         lpexact->nrows--;
       }
       else if( rowdstat[r] < r )
       {
-         assert(lp->rows[rowdstat[r]] == NULL);
-         assert(lp->lpirows[rowdstat[r]] == NULL);
-         lp->rows[rowdstat[r]] = row;
+         assert(lpexact->rows[rowdstat[r]] == NULL);
+         assert(lpexact->lpirows[rowdstat[r]] == NULL);
+         lpexact->rows[rowdstat[r]] = row;
 
          /* only re-order lpirows if they actually exist */
          if( r < nlpirows )
          {
-            lp->lpirows[rowdstat[r]] = row;
-            lp->lpirows[r] = NULL;
+            lpexact->lpirows[rowdstat[r]] = row;
+            lpexact->lpirows[r] = NULL;
          }
-         lp->rows[rowdstat[r]]->lppos = rowdstat[r];
-         lp->rows[rowdstat[r]]->lpipos = rowdstat[r];
-         lp->rows[r] = NULL;
+         lpexact->rows[rowdstat[r]]->lppos = rowdstat[r];
+         lpexact->rows[rowdstat[r]]->lpipos = rowdstat[r];
+         lpexact->rows[r] = NULL;
       }
    }
 
    /* mark LP to be unsolved */
-   if( lp->nrows < nrows )
+   if( lpexact->nrows < nrows )
    {
-      assert(lp->nchgrows == 0);
+      assert(lpexact->nchgrows == 0);
 
-      lp->lpifirstchgrow = lp->nlpirows;
+      lpexact->lpifirstchgrow = lpexact->nlpirows;
 
       /* mark the current solution invalid */
-      lp->solved = FALSE;
-      lp->dualfeasible = FALSE;
-      lp->dualchecked = FALSE;
-      SCIPrationalSetInfinity(lp->lpobjval);
-      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      lpexact->solved = FALSE;
+      lpexact->dualfeasible = FALSE;
+      lpexact->dualchecked = FALSE;
+      SCIPrationalSetInfinity(lpexact->lpobjval);
+      lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
-   checkLinks(lp);
+   checkLinks(lpexact);
 
    return SCIP_OKAY;
 }
@@ -2836,14 +2836,14 @@ SCIP_RETCODE SCIPcolExactAddCoef(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_RATIONAL*        val                 /**< value of coefficient */
    )
 {
-   assert(lp != NULL);
+   assert(lpexact != NULL);
 
-   SCIP_CALL( colExactAddCoef(col, blkmem, set, eventqueue, lp, row, val, -1) );
+   SCIP_CALL( colExactAddCoef(col, blkmem, set, eventqueue, lpexact, row, val, -1) );
 
    return SCIP_OKAY;
 }
@@ -2852,7 +2852,7 @@ SCIP_RETCODE SCIPcolExactAddCoef(
 SCIP_RETCODE SCIPcolExactDelCoef(
    SCIP_COLEXACT*        col,                /**< column to be changed */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_ROWEXACT*        row                 /**< coefficient to be deleted */
    )
 {
@@ -2860,7 +2860,7 @@ SCIP_RETCODE SCIPcolExactDelCoef(
 
    assert(col != NULL);
    assert(col->var != NULL);
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(row != NULL);
 
    /* search the position of the row in the column's row vector */
@@ -2879,13 +2879,13 @@ SCIP_RETCODE SCIPcolExactDelCoef(
       assert(row->cols[col->linkpos[pos]] == col);
       assert(row->cols_index[col->linkpos[pos]] == col->index);
       assert(SCIPrationalIsEQ(row->vals[col->linkpos[pos]], col->vals[pos]));
-      SCIP_CALL( rowExactDelCoefPos(row, set,lp, col->linkpos[pos]) );
+      SCIP_CALL( rowExactDelCoefPos(row, set, lpexact, col->linkpos[pos]) );
    }
 
    /* delete the row from the column's row vector */
-   SCIP_CALL( colExactDelCoefPos(col, set, lp, pos) );
+   SCIP_CALL( colExactDelCoefPos(col, set, lpexact, pos) );
 
-   checkLinks(lp);
+   checkLinks(lpexact);
 
    return SCIP_OKAY;
 }
@@ -2896,7 +2896,7 @@ SCIP_RETCODE SCIPcolExactChgCoef(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_RATIONAL*        val                 /**< value of coefficient */
    )
@@ -2904,8 +2904,8 @@ SCIP_RETCODE SCIPcolExactChgCoef(
    int pos;
 
    assert(col != NULL);
-   assert(lp != NULL);
-   assert(!lp->fplp->diving);
+   assert(lpexact != NULL);
+   assert(!lpexact->fplp->diving);
    assert(row != NULL);
 
    /* search the position of the row in the column's row vector */
@@ -2915,7 +2915,7 @@ SCIP_RETCODE SCIPcolExactChgCoef(
    if( pos == -1 )
    {
       /* add previously not existing coefficient */
-      SCIP_CALL( colExactAddCoef(col, blkmem, set, eventqueue, lp, row, val, -1) );
+      SCIP_CALL( colExactAddCoef(col, blkmem, set, eventqueue, lpexact, row, val, -1) );
    }
    else
    {
@@ -2929,14 +2929,14 @@ SCIP_RETCODE SCIPcolExactChgCoef(
          assert(row->cols[col->linkpos[pos]] == col);
          assert(row->cols_index[col->linkpos[pos]] == col->index);
          assert(SCIPrationalIsEQ(row->vals[col->linkpos[pos]], col->vals[pos]));
-         SCIP_CALL( rowExactChgCoefPos(row, set, lp, col->linkpos[pos], val) );
+         SCIP_CALL( rowExactChgCoefPos(row, set, lpexact, col->linkpos[pos], val) );
       }
 
       /* change the coefficient in the column */
-      SCIP_CALL( colExactChgCoefPos(col, set, lp, pos, val) );
+      SCIP_CALL( colExactChgCoefPos(col, set, lpexact, pos, val) );
    }
 
-   checkLinks(lp);
+   checkLinks(lpexact);
 
    return SCIP_OKAY;
 }
@@ -2947,7 +2947,7 @@ SCIP_RETCODE SCIPcolExactIncCoef(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_RATIONAL*        incval              /**< value to add to the coefficient */
    )
@@ -2955,8 +2955,8 @@ SCIP_RETCODE SCIPcolExactIncCoef(
    int pos;
 
    assert(col != NULL);
-   assert(lp != NULL);
-   assert(!lp->fplp->diving);
+   assert(lpexact != NULL);
+   assert(!lpexact->fplp->diving);
    assert(row != NULL);
 
    if( SCIPrationalIsZero(incval) )
@@ -2969,7 +2969,7 @@ SCIP_RETCODE SCIPcolExactIncCoef(
    if( pos == -1 )
    {
       /* add previously not existing coefficient */
-      SCIP_CALL( colExactAddCoef(col, blkmem, set, eventqueue, lp, row, incval, -1) );
+      SCIP_CALL( colExactAddCoef(col, blkmem, set, eventqueue, lpexact, row, incval, -1) );
    }
    else
    {
@@ -2985,14 +2985,14 @@ SCIP_RETCODE SCIPcolExactIncCoef(
          assert(SCIPrationalIsEQ(row->vals[col->linkpos[pos]], col->vals[pos]));
 
          SCIPrationalAdd(incval, incval, col->vals[pos]);
-         SCIP_CALL( rowExactChgCoefPos(row, set, lp, col->linkpos[pos], incval) );
+         SCIP_CALL( rowExactChgCoefPos(row, set, lpexact, col->linkpos[pos], incval) );
       }
 
       /* change the coefficient in the column */
-      SCIP_CALL( colExactChgCoefPos(col, set, lp, pos, incval) );
+      SCIP_CALL( colExactChgCoefPos(col, set, lpexact, pos, incval) );
    }
 
-   checkLinks(lp);
+   checkLinks(lpexact);
 
    return SCIP_OKAY;
 }
@@ -3001,7 +3001,7 @@ SCIP_RETCODE SCIPcolExactIncCoef(
 SCIP_RETCODE SCIPcolExactChgObj(
    SCIP_COLEXACT*        col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_RATIONAL*        newobj              /**< new objective value */
    )
 {
@@ -3009,7 +3009,7 @@ SCIP_RETCODE SCIPcolExactChgObj(
    assert(col->var != NULL);
    assert(SCIPvarGetStatusExact(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetColExact(col->var) == col);
-   assert(lp != NULL);
+   assert(lpexact != NULL);
 
    SCIPrationalDebugMessage("changing objective value of column <%s> from %q to %q\n", SCIPvarGetName(col->var), col->obj, newobj);
 
@@ -3020,12 +3020,12 @@ SCIP_RETCODE SCIPcolExactChgObj(
       if( col->lpipos >= 0 )
       {
          /* insert column in the chgcols list (if not already there) */
-         SCIP_CALL( insertColChgcols(col, set, lp) );
+         SCIP_CALL( insertColChgcols(col, set, lpexact) );
 
          /* mark objective value change in the column */
          col->objchanged = TRUE;
 
-         assert(lp->nchgcols > 0);
+         assert(lpexact->nchgcols > 0);
       }
       /* in any case, when the sign of the objective (and thereby the best bound) changes, the variable has to enter the
        * LP and the LP has to be flushed
@@ -3034,7 +3034,7 @@ SCIP_RETCODE SCIPcolExactChgObj(
          || (SCIPrationalIsPositive(col->obj) && SCIPrationalIsNegative(newobj) && SCIPrationalIsZero(col->lb)) )
       {
          /* mark the LP unflushed */
-         lp->flushed = FALSE;
+         lpexact->flushed = FALSE;
       }
    }
 
@@ -3048,7 +3048,7 @@ SCIP_RETCODE SCIPcolExactChgObj(
 SCIP_RETCODE SCIPcolExactChgLb(
    SCIP_COLEXACT*        col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_RATIONAL*        newlb               /**< new lower bound value */
    )
 {
@@ -3056,7 +3056,7 @@ SCIP_RETCODE SCIPcolExactChgLb(
    assert(col->var != NULL);
    assert(SCIPvarGetStatusExact(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetColExact(col->var) == col);
-   assert(lp != NULL);
+   assert(lpexact != NULL);
 
    SCIPrationalDebugMessage("changing lower bound of column <%s> from %q to %q\n", SCIPvarGetName(col->var), col->lb, newlb);
 
@@ -3067,12 +3067,12 @@ SCIP_RETCODE SCIPcolExactChgLb(
       if( col->lpipos >= 0 )
       {
          /* insert column in the chgcols list (if not already there) */
-         SCIP_CALL( insertColChgcols(col, set, lp) );
+         SCIP_CALL( insertColChgcols(col, set, lpexact) );
 
          /* mark bound change in the column */
          col->lbchanged = TRUE;
 
-         assert(lp->nchgcols > 0);
+         assert(lpexact->nchgcols > 0);
       }
       /* in any case, when the best bound is zero and gets changed, the variable has to enter the LP and the LP has to be
        * flushed
@@ -3080,7 +3080,7 @@ SCIP_RETCODE SCIPcolExactChgLb(
       else if( !SCIPrationalIsNegative(col->obj) && SCIPrationalIsZero(col->lb) )
       {
          /* mark the LP unflushed */
-         lp->flushed = FALSE;
+         lpexact->flushed = FALSE;
       }
    }
 
@@ -3093,7 +3093,7 @@ SCIP_RETCODE SCIPcolExactChgLb(
 SCIP_RETCODE SCIPcolExactChgUb(
    SCIP_COLEXACT*        col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_RATIONAL*        newub               /**< new upper bound value */
    )
 {
@@ -3101,7 +3101,7 @@ SCIP_RETCODE SCIPcolExactChgUb(
    assert(col->var != NULL);
    assert(SCIPvarGetStatusExact(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetColExact(col->var) == col);
-   assert(lp != NULL);
+   assert(lpexact != NULL);
 
    SCIPrationalDebugMessage("changing upper bound of column <%s> from %q to %q\n", SCIPvarGetName(col->var), col->ub, newub);
 
@@ -3112,12 +3112,12 @@ SCIP_RETCODE SCIPcolExactChgUb(
       if( col->lpipos >= 0 )
       {
          /* insert column in the chgcols list (if not already there) */
-         SCIP_CALL( insertColChgcols(col, set, lp) );
+         SCIP_CALL( insertColChgcols(col, set, lpexact) );
 
          /* mark bound change in the column */
          col->ubchanged = TRUE;
 
-         assert(lp->nchgcols > 0);
+         assert(lpexact->nchgcols > 0);
       }
       /* in any case, when the best bound is zero and gets changed, the variable has to enter the LP and the LP has to be
        * flushed
@@ -3125,7 +3125,7 @@ SCIP_RETCODE SCIPcolExactChgUb(
       else if( SCIPrationalIsNegative(col->obj) && SCIPrationalIsZero(col->ub) )
       {
          /* mark the LP unflushed */
-         lp->flushed = FALSE;
+         lpexact->flushed = FALSE;
       }
    }
 
@@ -3142,7 +3142,7 @@ SCIP_RETCODE SCIProwExactCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    int                   len,                /**< number of nonzeros in the row */
    SCIP_COLEXACT**       cols,               /**< array with columns of row entries */
    SCIP_RATIONAL**       vals,               /**< array with coefficients of row entries */
@@ -3377,7 +3377,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< the eventqueue */
    SCIP_PROB*            prob,               /**< scip prob structure */
-   SCIP_LPEXACT*         lp                  /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    )
 {
    SCIP_ROWEXACT** row;
@@ -3412,7 +3412,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    else
       SCIPrationalSetNegInfinity(tmplhs);
 
-   SCIP_CALL( SCIProwExactCreate(row, fprow, NULL, blkmem, set, stat, lp, 0, NULL, NULL, tmplhs, tmpval, TRUE) );
+   SCIP_CALL( SCIProwExactCreate(row, fprow, NULL, blkmem, set, stat, lpexact, 0, NULL, NULL, tmplhs, tmpval, TRUE) );
 
    workrow = *row;
    rowvals = SCIProwGetVals(fprow);
@@ -3421,11 +3421,11 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_CALL( SCIProwExactEnsureSize(workrow, blkmem, set, fprow->size) );
 
    SCIPrationalSetReal(tmpval, SCIProwGetConstant(fprow));
-   SCIP_CALL( SCIProwExactAddConstant(workrow, set, stat, lp, tmpval) );
+   SCIP_CALL( SCIProwExactAddConstant(workrow, set, stat, lpexact, tmpval) );
 
    if( set->exact_cutmaxdenom > 0 )
    {
-      SCIP_CALL( rowExactCreateFromRowLimitEncodingLength(fprow, workrow, set, blkmem, eventqueue, lp) );
+      SCIP_CALL( rowExactCreateFromRowLimitEncodingLength(fprow, workrow, set, blkmem, eventqueue, lpexact) );
       SCIProwRecalcNorms(fprow, set);
    }
    else
@@ -3437,7 +3437,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
          SCIPrationalSetReal(tmpval, rowvals[i]);
          col = SCIProwGetCols(fprow)[i];
 
-         SCIP_CALL( SCIPvarAddToRowExact(SCIPcolGetVar(col), blkmem, set, stat, eventqueue, prob, lp, workrow, tmpval) );
+         SCIP_CALL( SCIPvarAddToRowExact(SCIPcolGetVar(col), blkmem, set, stat, eventqueue, prob, lpexact, workrow, tmpval) );
          assert(SCIPrationalIsFpRepresentable(SCIProwExactGetVals(workrow)[SCIProwExactGetNNonz(workrow) -1]));
       }
    }
@@ -3649,58 +3649,58 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
 
 /** applies all cached changes to the LP solver */
 SCIP_RETCODE SCIPlpExactFlush(
-   SCIP_LPEXACT*         lp,                 /**< current exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(blkmem != NULL);
 
    SCIPsetDebugMsg(set, "flushing exact LP changes: old (%d cols, %d rows), nchgcols=%d, nchgrows=%d, firstchgcol=%d, firstchgrow=%d, new (%d cols, %d rows), flushed=%u\n",
-      lp->nlpicols, lp->nlpirows, lp->nchgcols, lp->nchgrows, lp->lpifirstchgcol, lp->lpifirstchgrow, lp->ncols, lp->nrows, lp->flushed);
+      lpexact->nlpicols, lpexact->nlpirows, lpexact->nchgcols, lpexact->nchgrows, lpexact->lpifirstchgcol, lpexact->lpifirstchgrow, lpexact->ncols, lpexact->nrows, lpexact->flushed);
 
-   if( !lp->flushed )
+   if( !lpexact->flushed )
    {
-      lp->flushdeletedcols = FALSE;
-      lp->flushaddedcols = FALSE;
-      lp->flushdeletedrows = FALSE;
-      lp->flushaddedrows = FALSE;
+      lpexact->flushdeletedcols = FALSE;
+      lpexact->flushaddedcols = FALSE;
+      lpexact->flushdeletedrows = FALSE;
+      lpexact->flushaddedrows = FALSE;
 
-      SCIP_CALL( lpExactFlushDelCols(lp) );
-      SCIP_CALL( lpExactFlushDelRows(lp, blkmem, set) );
-      SCIP_CALL( lpExactFlushChgCols(lp, set) );
-      SCIP_CALL( lpExactFlushChgRows(lp, set) );
-      SCIP_CALL( lpExactFlushAddCols(lp, blkmem, set, eventqueue) );
-      SCIP_CALL( lpExactFlushAddRows(lp, blkmem, set, eventqueue) );
+      SCIP_CALL( lpExactFlushDelCols(lpexact) );
+      SCIP_CALL( lpExactFlushDelRows(lpexact, blkmem, set) );
+      SCIP_CALL( lpExactFlushChgCols(lpexact, set) );
+      SCIP_CALL( lpExactFlushChgRows(lpexact, set) );
+      SCIP_CALL( lpExactFlushAddCols(lpexact, blkmem, set, eventqueue) );
+      SCIP_CALL( lpExactFlushAddRows(lpexact, blkmem, set, eventqueue) );
 
-      lp->flushed = TRUE;
+      lpexact->flushed = TRUE;
 
-      checkLinks(lp);
+      checkLinks(lpexact);
    }
 
    /* we can't retrieve the solution from Qsoptex after anything was changed, so we need to resolve the lp */
 #ifdef SCIP_WITH_QSOPTEX
-   lp->solved = FALSE;
-   lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   lpexact->solved = FALSE;
+   lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 #endif
 
-   assert(lp->nlpicols == lp->ncols);
-   assert(lp->lpifirstchgcol == lp->nlpicols);
-   assert(lp->nlpirows == lp->nrows);
-   assert(lp->lpifirstchgrow == lp->nlpirows);
-   assert(lp->nchgcols == 0);
-   assert(lp->nchgrows == 0);
+   assert(lpexact->nlpicols == lpexact->ncols);
+   assert(lpexact->lpifirstchgcol == lpexact->nlpicols);
+   assert(lpexact->nlpirows == lpexact->nrows);
+   assert(lpexact->lpifirstchgrow == lpexact->nlpirows);
+   assert(lpexact->nchgcols == 0);
+   assert(lpexact->nchgrows == 0);
 #ifndef NDEBUG
    {
       int ncols;
       int nrows;
 
-      SCIP_CALL( SCIPlpiExactGetNCols(lp->lpiexact, &ncols) );
-      SCIP_CALL( SCIPlpiExactGetNRows(lp->lpiexact, &nrows) );
-      assert(ncols == lp->ncols);
-      assert(nrows == lp->nrows);
+      SCIP_CALL( SCIPlpiExactGetNCols(lpexact->lpiexact, &ncols) );
+      SCIP_CALL( SCIPlpiExactGetNRows(lpexact->lpiexact, &nrows) );
+      assert(ncols == lpexact->ncols);
+      assert(nrows == lpexact->nrows);
    }
 #endif
 
@@ -3709,7 +3709,7 @@ SCIP_RETCODE SCIPlpExactFlush(
 
 /** ensures all rows/columns are correctly updated, but changes are not yet communicated to the exact LP solver */
 SCIP_RETCODE SCIPlpExactLink(
-   SCIP_LPEXACT*         lp,                 /**< current exact LP data */
+   SCIP_LPEXACT*         lpexact,                 /**< current exact LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
@@ -3719,27 +3719,27 @@ SCIP_RETCODE SCIPlpExactLink(
    SCIP_COLEXACT* col;
    SCIP_ROWEXACT* row;
 
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(blkmem != NULL);
 
    SCIPsetDebugMsg(set, "flushing exact LP changes: old (%d cols, %d rows), nchgcols=%d, nchgrows=%d, firstchgcol=%d, firstchgrow=%d, new (%d cols, %d rows), flushed=%u\n",
-      lp->nlpicols, lp->nlpirows, lp->nchgcols, lp->nchgrows, lp->lpifirstchgcol, lp->lpifirstchgrow, lp->ncols, lp->nrows, lp->flushed);
+      lpexact->nlpicols, lpexact->nlpirows, lpexact->nchgcols, lpexact->nchgrows, lpexact->lpifirstchgcol, lpexact->lpifirstchgrow, lpexact->ncols, lpexact->nrows, lpexact->flushed);
 
-   if( !lp->flushed )
+   if( !lpexact->flushed )
    {
-      lp->flushdeletedcols = FALSE;
-      lp->flushaddedcols = FALSE;
-      lp->flushdeletedrows = FALSE;
-      lp->flushaddedrows = FALSE;
+      lpexact->flushdeletedcols = FALSE;
+      lpexact->flushaddedcols = FALSE;
+      lpexact->flushdeletedrows = FALSE;
+      lpexact->flushaddedrows = FALSE;
 
       /* we still flush added/deleted columns since this should only happen at the very start of the solve */
-      SCIP_CALL( lpExactFlushDelCols(lp) );
-      SCIP_CALL( lpExactFlushAddCols(lp, blkmem, set, eventqueue) );
+      SCIP_CALL( lpExactFlushDelCols(lpexact) );
+      SCIP_CALL( lpExactFlushAddCols(lpexact, blkmem, set, eventqueue) );
 
       /* link new columns/rows */
-      for( c = lp->nlpicols; c < lp->ncols; ++c )
+      for( c = lpexact->nlpicols; c < lpexact->ncols; ++c )
       {
-         col = lp->cols[c];
+         col = lpexact->cols[c];
          assert(col != NULL);
          assert(col->var != NULL);
          assert(SCIPvarGetStatusExact(col->var) == SCIP_VARSTATUS_COLUMN);
@@ -3747,20 +3747,20 @@ SCIP_RETCODE SCIPlpExactLink(
          assert(col->lppos == c);
 
          SCIPsetDebugMsg(set, "linking added column <%s>: ", SCIPvarGetName(col->var));
-         SCIP_CALL( colExactLink(col, blkmem, set, eventqueue, lp) );
+         SCIP_CALL( colExactLink(col, blkmem, set, eventqueue, lpexact) );
       }
-      for( r = lp->nlpirows; r < lp->nrows; ++r )
+      for( r = lpexact->nlpirows; r < lpexact->nrows; ++r )
       {
-         row = lp->rows[r];
+         row = lpexact->rows[r];
          assert(row != NULL);
          assert(row->lppos == r);
 
          SCIPsetDebugMsg(set, "linking added exact row <%s>: ", row->fprow->name);
 
-         SCIP_CALL( rowExactLink(row, blkmem, set, eventqueue, lp) );
+         SCIP_CALL( rowExactLink(row, blkmem, set, eventqueue, lpexact) );
       }
 
-      checkLinks(lp);
+      checkLinks(lpexact);
    }
 
    return SCIP_OKAY;
@@ -3773,20 +3773,20 @@ SCIP_RETCODE SCIPlpExactLink(
 /** creates the data needed for project and shift bounding method */
 static
 SCIP_RETCODE SCIPlpPsdataCreate(
-   SCIP_LPEXACT*         lp,                 /**< pointer to LP data object */
+   SCIP_LPEXACT*         lpexact,            /**< pointer to LP data object */
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory buffers */
    )
 {
    SCIP_PROJSHIFTDATA* projshiftdata;
 
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(set != NULL);
    assert(blkmem != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &lp->projshiftdata) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &lpexact->projshiftdata) );
 
-   projshiftdata = lp->projshiftdata;
+   projshiftdata = lpexact->projshiftdata;
 
    projshiftdata->lpiexact = NULL;
    projshiftdata->dvarmap = NULL;
@@ -3844,18 +3844,18 @@ SCIP_RETCODE SCIPlpExactProjectShiftFreeLPIExact(
 /** frees the data needed for project and shift bounding method */
 static
 SCIP_RETCODE SCIPlpExactProjectShiftFree(
-   SCIP_LPEXACT*         lp,                 /**< pointer to LP data object */
+   SCIP_LPEXACT*         lpexact,            /**< pointer to LP data object */
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory buffers */
    )
 {
    SCIP_PROJSHIFTDATA* projshiftdata;
 
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(set != NULL);
    assert(blkmem != NULL);
 
-   projshiftdata = lp->projshiftdata;
+   projshiftdata = lpexact->projshiftdata;
 
    if( projshiftdata->lpiexact != NULL )
    {
@@ -3890,48 +3890,48 @@ SCIP_RETCODE SCIPlpExactProjectShiftFree(
    assert(projshiftdata->projshiftbasis == NULL);
    assert(projshiftdata->commonslack == NULL);
 
-   BMSfreeBlockMemoryNull(blkmem, &lp->projshiftdata);
+   BMSfreeBlockMemoryNull(blkmem, &lpexact->projshiftdata);
 
    return SCIP_OKAY;
 }
 
 /** returns whether the success rate of the Neumaier-Shcherbina safe bounding method is sufficiently high */
 SCIP_Bool SCIPlpExactBoundShiftUseful(
-   SCIP_LPEXACT*         lp                  /**< pointer to LP data object */
+   SCIP_LPEXACT*         lpexact              /**< pointer to LP data object */
    )
 {
-   assert(lp != NULL);
+   assert(lpexact != NULL);
 
-   return lp->boundshiftuseful;
+   return lpexact->boundshiftuseful;
 }
 
 /** returns whether it is possible to use project and shift bounding method */
 SCIP_Bool SCIPlpExactProjectShiftPossible(
-   SCIP_LPEXACT*         lp                  /**< pointer to LP data object */
+   SCIP_LPEXACT*         lpexact             /**< pointer to LP data object */
    )
 {
-   assert(lp != NULL);
-   assert(lp->projshiftdata != NULL);
+   assert(lpexact != NULL);
+   assert(lpexact->projshiftdata != NULL);
 
-   return !(lp->projshiftdata->projshiftdatafail);
+   return !(lpexact->projshiftdata->projshiftdatafail);
 }
 
 /** checks that lp and fplp are properly synced */
 SCIP_Bool SCIPlpExactIsSynced(
-   SCIP_LPEXACT*         lp,                 /**< pointer to LP data object */
+   SCIP_LPEXACT*         lpexact,            /**< pointer to LP data object */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     msg                 /**< message handler for debug output */
    )
 {
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(msg != NULL);
 
-   return lpExactInSync(lp, set, msg);
+   return lpExactInSync(lpexact, set, msg);
 }
 
 /** creates empty LP data object */
 SCIP_RETCODE SCIPlpExactCreate(
-   SCIP_LPEXACT**        lp,                 /**< pointer to LP data object */
+   SCIP_LPEXACT**        lpexact,            /**< pointer to LP data object */
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_LP*              fplp,               /**< the floating point LP */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3940,104 +3940,104 @@ SCIP_RETCODE SCIPlpExactCreate(
    const char*           name                /**< problem name */
    )
 {
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(fplp != NULL);
    assert(set != NULL);
    assert(stat != NULL);
    assert(name != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(lp) );
+   SCIP_ALLOC( BMSallocMemory(lpexact) );
 
    /* open LP Solver interface */
-   SCIP_CALL( SCIPlpiExactCreate(&(*lp)->lpiexact, messagehdlr, name, SCIP_OBJSEN_MINIMIZE) );
-   SCIP_CALL( SCIPlpPsdataCreate(*lp, set, blkmem) );
+   SCIP_CALL( SCIPlpiExactCreate(&(*lpexact)->lpiexact, messagehdlr, name, SCIP_OBJSEN_MINIMIZE) );
+   SCIP_CALL( SCIPlpPsdataCreate(*lpexact, set, blkmem) );
 
-   (*lp)->fplp = fplp;
-   fplp->lpexact = *lp;
+   (*lpexact)->fplp = fplp;
+   fplp->lpexact = *lpexact;
 
-   (*lp)->lpicols = NULL;
-   (*lp)->lpirows = NULL;
-   (*lp)->chgcols = NULL;
-   (*lp)->chgrows = NULL;
-   (*lp)->cols = NULL;
-   (*lp)->rows = NULL;
-   (*lp)->divechgsides = NULL;
-   (*lp)->divechgsidetypes = NULL;
-   (*lp)->divechgrows = NULL;
-   (*lp)->divelpistate = NULL;
-   (*lp)->storedsolvals = NULL;
-   (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-   (*lp)->flushdeletedcols = FALSE;
-   (*lp)->flushaddedcols = FALSE;
-   (*lp)->flushdeletedrows = FALSE;
-   (*lp)->flushaddedrows = FALSE;
-   (*lp)->updateintegrality = TRUE;
-   (*lp)->flushed = TRUE;
-   (*lp)->solved = FALSE;
-   (*lp)->primalfeasible = TRUE;
-   (*lp)->primalchecked = TRUE;
-   (*lp)->diving = FALSE;
-   (*lp)->divelpwasprimfeas = TRUE;
-   (*lp)->divelpwasprimchecked = TRUE;
-   (*lp)->divelpwasdualfeas = TRUE;
-   (*lp)->divelpwasdualchecked = TRUE;
-   (*lp)->divingobjchg = FALSE;
-   (*lp)->dualfeasible = TRUE;
-   (*lp)->dualchecked = TRUE;
-   (*lp)->solisbasic = FALSE;
-   (*lp)->resolvelperror = FALSE;
-   (*lp)->projshiftpossible = FALSE;
-   (*lp)->boundshiftuseful = TRUE;
-   (*lp)->forceexactsolve = FALSE;
-   (*lp)->allowexactsolve = FALSE;
-   (*lp)->forcesafebound = FALSE;
-   (*lp)->wasforcedsafebound = FALSE;
-   (*lp)->lpiscaling = set->lp_scaling;
-   (*lp)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
-   (*lp)->lpirefactorinterval = set->lp_refactorinterval;
-   (*lp)->lpiitlim = INT_MAX;
-   (*lp)->lpipricing = SCIP_PRICING_AUTO;
-   (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
-   (*lp)->lpitiming = (int) set->time_clocktype;
-   (*lp)->lpirandomseed = set->random_randomseed;
+   (*lpexact)->lpicols = NULL;
+   (*lpexact)->lpirows = NULL;
+   (*lpexact)->chgcols = NULL;
+   (*lpexact)->chgrows = NULL;
+   (*lpexact)->cols = NULL;
+   (*lpexact)->rows = NULL;
+   (*lpexact)->divechgsides = NULL;
+   (*lpexact)->divechgsidetypes = NULL;
+   (*lpexact)->divechgrows = NULL;
+   (*lpexact)->divelpistate = NULL;
+   (*lpexact)->storedsolvals = NULL;
+   (*lpexact)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
+   (*lpexact)->flushdeletedcols = FALSE;
+   (*lpexact)->flushaddedcols = FALSE;
+   (*lpexact)->flushdeletedrows = FALSE;
+   (*lpexact)->flushaddedrows = FALSE;
+   (*lpexact)->updateintegrality = TRUE;
+   (*lpexact)->flushed = TRUE;
+   (*lpexact)->solved = FALSE;
+   (*lpexact)->primalfeasible = TRUE;
+   (*lpexact)->primalchecked = TRUE;
+   (*lpexact)->diving = FALSE;
+   (*lpexact)->divelpwasprimfeas = TRUE;
+   (*lpexact)->divelpwasprimchecked = TRUE;
+   (*lpexact)->divelpwasdualfeas = TRUE;
+   (*lpexact)->divelpwasdualchecked = TRUE;
+   (*lpexact)->divingobjchg = FALSE;
+   (*lpexact)->dualfeasible = TRUE;
+   (*lpexact)->dualchecked = TRUE;
+   (*lpexact)->solisbasic = FALSE;
+   (*lpexact)->resolvelperror = FALSE;
+   (*lpexact)->projshiftpossible = FALSE;
+   (*lpexact)->boundshiftuseful = TRUE;
+   (*lpexact)->forceexactsolve = FALSE;
+   (*lpexact)->allowexactsolve = FALSE;
+   (*lpexact)->forcesafebound = FALSE;
+   (*lpexact)->wasforcedsafebound = FALSE;
+   (*lpexact)->lpiscaling = set->lp_scaling;
+   (*lpexact)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
+   (*lpexact)->lpirefactorinterval = set->lp_refactorinterval;
+   (*lpexact)->lpiitlim = INT_MAX;
+   (*lpexact)->lpipricing = SCIP_PRICING_AUTO;
+   (*lpexact)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
+   (*lpexact)->lpitiming = (int) set->time_clocktype;
+   (*lpexact)->lpirandomseed = set->random_randomseed;
 
-   (*lp)->lpicolssize = 0;
-   (*lp)->nlpicols = 0;
-   (*lp)->lpirowssize = 0;
-   (*lp)->nlpirows = 0;
-   (*lp)->lpifirstchgcol = 0;
-   (*lp)->lpifirstchgrow = 0;
-   (*lp)->colssize = 0;
-   (*lp)->ncols = 0;
-   (*lp)->nloosevars = 0;
-   (*lp)->rowssize = 0;
-   (*lp)->nrows = 0;
-   (*lp)->chgcolssize = 0;
-   (*lp)->nchgcols = 0;
-   (*lp)->chgrowssize = 0;
-   (*lp)->nchgrows = 0;
-   (*lp)->firstnewcol = 0;
-   (*lp)->firstnewrow = 0;
-   (*lp)->looseobjvalinf = 0;
-   (*lp)->pseudoobjvalinf = 0;
-   (*lp)->glbpseudoobjvalinf = 0;
-   (*lp)->ndivingrows = 0;
-   (*lp)->ndivechgsides = 0;
-   (*lp)->nremovablerows = 0;
-   (*lp)->lpiobjlim = SCIPlpiExactInfinity((*lp)->lpiexact);
-   (*lp)->cutoffbound = SCIPsetInfinity(set);
-   (*lp)->oldcutoffbound = SCIPsetInfinity(set);
-   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*lp)->lpobjval) );
-   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*lp)->pseudoobjval) );
-   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*lp)->glbpseudoobjval) );
-   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*lp)->looseobjval) );
+   (*lpexact)->lpicolssize = 0;
+   (*lpexact)->nlpicols = 0;
+   (*lpexact)->lpirowssize = 0;
+   (*lpexact)->nlpirows = 0;
+   (*lpexact)->lpifirstchgcol = 0;
+   (*lpexact)->lpifirstchgrow = 0;
+   (*lpexact)->colssize = 0;
+   (*lpexact)->ncols = 0;
+   (*lpexact)->nloosevars = 0;
+   (*lpexact)->rowssize = 0;
+   (*lpexact)->nrows = 0;
+   (*lpexact)->chgcolssize = 0;
+   (*lpexact)->nchgcols = 0;
+   (*lpexact)->chgrowssize = 0;
+   (*lpexact)->nchgrows = 0;
+   (*lpexact)->firstnewcol = 0;
+   (*lpexact)->firstnewrow = 0;
+   (*lpexact)->looseobjvalinf = 0;
+   (*lpexact)->pseudoobjvalinf = 0;
+   (*lpexact)->glbpseudoobjvalinf = 0;
+   (*lpexact)->ndivingrows = 0;
+   (*lpexact)->ndivechgsides = 0;
+   (*lpexact)->nremovablerows = 0;
+   (*lpexact)->lpiobjlim = SCIPlpiExactInfinity((*lpexact)->lpiexact);
+   (*lpexact)->cutoffbound = SCIPsetInfinity(set);
+   (*lpexact)->oldcutoffbound = SCIPsetInfinity(set);
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*lpexact)->lpobjval) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*lpexact)->pseudoobjval) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*lpexact)->glbpseudoobjval) );
+   SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*lpexact)->looseobjval) );
 
    return SCIP_OKAY;
 }
 
 /** frees LP data object */
 SCIP_RETCODE SCIPlpExactFree(
-   SCIP_LPEXACT**        lp,                 /**< pointer to LP data object */
+   SCIP_LPEXACT**        lpexact,            /**< pointer to exact LP data object */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -4047,49 +4047,49 @@ SCIP_RETCODE SCIPlpExactFree(
    if( !set->exact_enable )
       return SCIP_OKAY;
 
-   assert(lp != NULL);
-   assert(*lp != NULL);
+   assert(lpexact != NULL);
+   assert(*lpexact != NULL);
 
-   SCIP_CALL( SCIPlpExactProjectShiftFree(*lp, set, blkmem) );
-   SCIP_CALL( SCIPlpExactClear(*lp, blkmem, set) );
+   SCIP_CALL( SCIPlpExactProjectShiftFree(*lpexact, set, blkmem) );
+   SCIP_CALL( SCIPlpExactClear(*lpexact, blkmem, set) );
 
-   //freeDiveChgSideArrays(*lp);
+   //freeDiveChgSideArrays(*lpexact);
 
    /* release LPI rows */
-   for( i = 0; i < (*lp)->nlpirows; ++i )
+   for( i = 0; i < (*lpexact)->nlpirows; ++i )
    {
-      SCIP_CALL( SCIProwExactRelease(&(*lp)->lpirows[i], blkmem, set, *lp) );
+      SCIP_CALL( SCIProwExactRelease(&(*lpexact)->lpirows[i], blkmem, set, *lpexact) );
    }
 
-   if( (*lp)->lpiexact != NULL )
+   if( (*lpexact)->lpiexact != NULL )
    {
-      SCIP_CALL( SCIPlpiExactFree(&(*lp)->lpiexact) );
+      SCIP_CALL( SCIPlpiExactFree(&(*lpexact)->lpiexact) );
    }
 
-   SCIPrationalFreeBlock(blkmem, &(*lp)->lpobjval);
-   SCIPrationalFreeBlock(blkmem, &(*lp)->pseudoobjval);
-   SCIPrationalFreeBlock(blkmem, &(*lp)->glbpseudoobjval);
-   SCIPrationalFreeBlock(blkmem, &(*lp)->looseobjval);
+   SCIPrationalFreeBlock(blkmem, &(*lpexact)->lpobjval);
+   SCIPrationalFreeBlock(blkmem, &(*lpexact)->pseudoobjval);
+   SCIPrationalFreeBlock(blkmem, &(*lpexact)->glbpseudoobjval);
+   SCIPrationalFreeBlock(blkmem, &(*lpexact)->looseobjval);
 
-   if( (*lp)->storedsolvals != NULL )
+   if( (*lpexact)->storedsolvals != NULL )
    {
-      SCIPrationalFreeBlock(blkmem, &(*lp)->storedsolvals->lpobjval);
-      BMSfreeMemoryNull(&(*lp)->storedsolvals);
+      SCIPrationalFreeBlock(blkmem, &(*lpexact)->storedsolvals->lpobjval);
+      BMSfreeMemoryNull(&(*lpexact)->storedsolvals);
    }
-   BMSfreeMemoryArrayNull(&(*lp)->lpicols);
-   BMSfreeMemoryArrayNull(&(*lp)->lpirows);
-   BMSfreeMemoryArrayNull(&(*lp)->chgcols);
-   BMSfreeMemoryArrayNull(&(*lp)->chgrows);
-   BMSfreeMemoryArrayNull(&(*lp)->cols);
-   BMSfreeMemoryArrayNull(&(*lp)->rows);
-   BMSfreeMemory(lp);
+   BMSfreeMemoryArrayNull(&(*lpexact)->lpicols);
+   BMSfreeMemoryArrayNull(&(*lpexact)->lpirows);
+   BMSfreeMemoryArrayNull(&(*lpexact)->chgcols);
+   BMSfreeMemoryArrayNull(&(*lpexact)->chgrows);
+   BMSfreeMemoryArrayNull(&(*lpexact)->cols);
+   BMSfreeMemoryArrayNull(&(*lpexact)->rows);
+   BMSfreeMemory(lpexact);
 
    return SCIP_OKAY;
 }
 
 /** adds a column to the LP and captures the variable */
 SCIP_RETCODE SCIPlpExactAddCol(
-   SCIP_LPEXACT*         lp,                 /**< LP data */
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_COLEXACT*        col                 /**< LP column */
    )
@@ -4097,8 +4097,8 @@ SCIP_RETCODE SCIPlpExactAddCol(
    if( !set->exact_enable )
       return SCIP_OKAY;
 
-   assert(lp != NULL);
-   assert(!lp->fplp->diving);
+   assert(lpexact != NULL);
+   assert(!lpexact->fplp->diving);
    assert(col != NULL);
    assert(col->len == 0 || col->rows != NULL);
    assert(col->lppos == -1);
@@ -4107,7 +4107,7 @@ SCIP_RETCODE SCIPlpExactAddCol(
    assert(SCIPvarGetCol(col->var) == col->fpcol);
    assert(SCIPvarIsIntegral(col->var) == col->fpcol->integral);
 
-   SCIPsetDebugMsg(set, "adding column <%s> to exact LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
+   SCIPsetDebugMsg(set, "adding column <%s> to exact LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lpexact->nrows, lpexact->ncols);
 #ifdef SCIP_DEBUG
       SCIPrationalDebugMessage("(obj: %q) [%q,%q]", col->obj, col->lb, col->ub);
       for( int i = 0; i < col->len; ++i )
@@ -4115,18 +4115,18 @@ SCIP_RETCODE SCIPlpExactAddCol(
       SCIPsetDebugMsgPrint(set, "\n");
 #endif
 
-   SCIP_CALL( ensureColexsSize(lp, set, lp->ncols+1) );
-   lp->cols[lp->ncols] = col;
-   col->lppos = lp->ncols;
-   lp->ncols++;
+   SCIP_CALL( ensureColexsSize(lpexact, set, lpexact->ncols+1) );
+   lpexact->cols[lpexact->ncols] = col;
+   col->lppos = lpexact->ncols;
+   lpexact->ncols++;
 
    /* mark the current LP unflushed */
-   lp->flushed = FALSE;
+   lpexact->flushed = FALSE;
 
    /* update column arrays of all linked rows */
    SCIP_CALL( colExactUpdateAddLP(col, set) );
 
-   checkLinks(lp);
+   checkLinks(lpexact);
 
    return SCIP_OKAY;
 }
@@ -5204,21 +5204,21 @@ SCIP_RETCODE SCIProwExactAddCoef(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_COLEXACT*        colexact,           /**< LP column */
    SCIP_RATIONAL*        val                 /**< value of coefficient */
    )
 {
    assert(rowexact != NULL);
    assert(colexact != NULL);
-   assert(lp != NULL);
+   assert(lpexact != NULL);
 
-   assert(lp != NULL);
-   assert(!lp->fplp->diving || rowexact->fprow->lppos == -1);
+   assert(lpexact != NULL);
+   assert(!lpexact->fplp->diving || rowexact->fprow->lppos == -1);
 
-   SCIP_CALL( rowExactAddCoef(rowexact, blkmem, set, eventqueue, lp, colexact, val, -1) );
+   SCIP_CALL( rowExactAddCoef(rowexact, blkmem, set, eventqueue, lpexact, colexact, val, -1) );
 
-   checkLinks(lp);
+   checkLinks(lpexact);
 
    return SCIP_OKAY;
 }
@@ -5227,7 +5227,7 @@ SCIP_RETCODE SCIProwExactAddCoef(
 SCIP_RETCODE SCIProwExactDelCoef(
    SCIP_ROWEXACT*        row,                /**< row to be changed */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_COLEXACT*        col                 /**< coefficient to be deleted */
    )
 {
@@ -5235,8 +5235,8 @@ SCIP_RETCODE SCIProwExactDelCoef(
 
    assert(row != NULL);
    assert(!row->delaysort);
-   assert(lp != NULL);
-   assert(!lp->fplp->diving || row->lppos == -1);
+   assert(lpexact != NULL);
+   assert(!lpexact->fplp->diving || row->lppos == -1);
    assert(col != NULL);
    assert(col->var != NULL);
 
@@ -5256,13 +5256,13 @@ SCIP_RETCODE SCIProwExactDelCoef(
    {
       assert(col->rows[row->linkpos[pos]] == row);
       assert(SCIPrationalIsEQ(col->vals[row->linkpos[pos]], row->vals[pos]));
-      SCIP_CALL( colExactDelCoefPos(col, set, lp, row->linkpos[pos]) );
+      SCIP_CALL( colExactDelCoefPos(col, set, lpexact, row->linkpos[pos]) );
    }
 
    /* delete the column from the row's col vector */
-   SCIP_CALL( rowExactDelCoefPos(row, set, lp, pos) );
+   SCIP_CALL( rowExactDelCoefPos(row, set, lpexact, pos) );
 
-   checkLinks(lp);
+   checkLinks(lpexact);
 
    return SCIP_OKAY;
 }
@@ -5273,7 +5273,7 @@ SCIP_RETCODE SCIProwExactChgCoef(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_COLEXACT*        col,                /**< LP column */
    SCIP_RATIONAL*        val                 /**< value of coefficient */
    )
@@ -5282,8 +5282,8 @@ SCIP_RETCODE SCIProwExactChgCoef(
 
    assert(row != NULL);
    assert(!row->delaysort);
-   assert(lp != NULL);
-   assert(!lp->fplp->diving || row->lppos == -1);
+   assert(lpexact != NULL);
+   assert(!lpexact->fplp->diving || row->lppos == -1);
    assert(col != NULL);
 
    /* search the position of the column in the row's col vector */
@@ -5293,7 +5293,7 @@ SCIP_RETCODE SCIProwExactChgCoef(
    if( pos == -1 )
    {
       /* add previously not existing coefficient */
-      SCIP_CALL( rowExactAddCoef(row, blkmem, set, eventqueue, lp, col, val, -1) );
+      SCIP_CALL( rowExactAddCoef(row, blkmem, set, eventqueue, lpexact, col, val, -1) );
    }
    else
    {
@@ -5307,14 +5307,14 @@ SCIP_RETCODE SCIProwExactChgCoef(
       {
          assert(col->rows[row->linkpos[pos]] == row);
          assert(SCIPrationalIsEQ(col->vals[row->linkpos[pos]], row->vals[pos]));
-         SCIP_CALL( colExactChgCoefPos(col, set, lp, row->linkpos[pos], val) );
+         SCIP_CALL( colExactChgCoefPos(col, set, lpexact, row->linkpos[pos], val) );
       }
 
       /* change the coefficient in the row */
-      SCIP_CALL( rowExactChgCoefPos(row, set, lp, pos, val) );
+      SCIP_CALL( rowExactChgCoefPos(row, set, lpexact, pos, val) );
    }
 
-   checkLinks(lp);
+   checkLinks(lpexact);
 
    return SCIP_OKAY;
 }
@@ -5325,7 +5325,7 @@ SCIP_RETCODE SCIProwExactIncCoef(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_COLEXACT*        col,                /**< LP column */
    SCIP_RATIONAL*        incval              /**< value to add to the coefficient */
    )
@@ -5334,8 +5334,8 @@ SCIP_RETCODE SCIProwExactIncCoef(
    SCIP_RATIONAL* tmp;
 
    assert(row != NULL);
-   assert(lp != NULL);
-   assert(!lp->fplp->diving || row->lppos == -1);
+   assert(lpexact != NULL);
+   assert(!lpexact->fplp->diving || row->lppos == -1);
    assert(col != NULL);
 
    if( SCIPrationalIsZero(incval) )
@@ -5350,7 +5350,7 @@ SCIP_RETCODE SCIProwExactIncCoef(
    if( pos == -1 )
    {
       /* coefficient doesn't exist, or sorting is delayed: add coefficient to the end of the row's arrays */
-      SCIP_CALL( rowExactAddCoef(row, blkmem, set, eventqueue, lp, col, incval, -1) );
+      SCIP_CALL( rowExactAddCoef(row, blkmem, set, eventqueue, lpexact, col, incval, -1) );
    }
    else
    {
@@ -5366,14 +5366,14 @@ SCIP_RETCODE SCIProwExactIncCoef(
       {
          assert(col->rows[row->linkpos[pos]] == row);
          assert(SCIPrationalIsEQ(col->vals[row->linkpos[pos]], row->vals[pos]));
-         SCIP_CALL( colExactChgCoefPos(col, set, lp, row->linkpos[pos], tmp) );
+         SCIP_CALL( colExactChgCoefPos(col, set, lpexact, row->linkpos[pos], tmp) );
       }
 
       /* change the coefficient in the row */
-      SCIP_CALL( rowExactChgCoefPos(row, set, lp, pos, tmp) );
+      SCIP_CALL( rowExactChgCoefPos(row, set, lpexact, pos, tmp) );
    }
 
-   checkLinks(lp);
+   checkLinks(lpexact);
 
    /* invalid the activity */
    row->validactivitylp = -1;
@@ -5387,7 +5387,7 @@ SCIP_RETCODE SCIProwExactIncCoef(
 SCIP_RETCODE SCIProwExactChgConstant(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_RATIONAL*        constant            /**< new constant value */
    )
 {
@@ -5395,8 +5395,8 @@ SCIP_RETCODE SCIProwExactChgConstant(
    assert(SCIPrationalIsLE(row->lhs, row->rhs));
    assert(!SCIPrationalIsAbsInfinity(constant));
    assert(stat != NULL);
-   assert(lp != NULL);
-   assert(!lp->fplp->diving || row->fprow->lppos == -1);
+   assert(lpexact != NULL);
+   assert(!lpexact->fplp->diving || row->fprow->lppos == -1);
 
    if( !SCIPrationalIsEQ(constant, row->constant) )
    {
@@ -5419,7 +5419,7 @@ SCIP_RETCODE SCIProwExactAddConstant(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_RATIONAL*        addval              /**< constant value to add to the row */
    )
 {
@@ -5429,14 +5429,14 @@ SCIP_RETCODE SCIProwExactAddConstant(
    assert(SCIPrationalIsLE(row->lhs, row->rhs));
    assert(!SCIPrationalIsAbsInfinity(addval));
    assert(stat != NULL);
-   assert(lp != NULL);
-   assert(!lp->fplp->diving || row->fprow->lppos == -1);
+   assert(lpexact != NULL);
+   assert(!lpexact->fplp->diving || row->fprow->lppos == -1);
 
    if( !SCIPrationalIsZero(addval) )
    {
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
       SCIPrationalAdd(tmp, row->constant, addval);
-      SCIP_CALL( SCIProwExactChgConstant(row, stat, lp, tmp) );
+      SCIP_CALL( SCIProwExactChgConstant(row, stat, lpexact, tmp) );
 
       SCIPrationalFreeBuffer(set->buffer, &tmp);
    }
@@ -5586,7 +5586,7 @@ SCIP_RETCODE SCIProwExactRelease(
    SCIP_ROWEXACT**       row,                /**< pointer to LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPEXACT*         lp                  /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    )
 {
    assert(blkmem != NULL);
@@ -5600,7 +5600,7 @@ SCIP_RETCODE SCIProwExactRelease(
    (*row)->nuses--;
    if( (*row)->nuses == 0 )
    {
-      SCIP_CALL( SCIProwExactFree(row, blkmem, set, lp) );
+      SCIP_CALL( SCIProwExactFree(row, blkmem, set, lpexact) );
    }
 
    *row = NULL;
@@ -5613,7 +5613,7 @@ SCIP_RETCODE SCIProwExactFree(
    SCIP_ROWEXACT**       row,                /**< pointer to LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPEXACT*         lp                  /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    )
 {
    assert(blkmem != NULL);
@@ -5623,7 +5623,7 @@ SCIP_RETCODE SCIProwExactFree(
    assert((*row)->lppos == -1);
 
    /* remove column indices from corresponding rows */
-   SCIP_CALL( rowExactUnlink(*row, set, lp) );
+   SCIP_CALL( rowExactUnlink(*row, set, lpexact) );
 
    if( (*row)->storedsolvals != NULL )
    {
@@ -5658,7 +5658,7 @@ SCIP_RETCODE SCIProwExactGetLPFeasibility(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_RATIONAL*        result              /**< rational pointer to store the result */
    )
 {
@@ -5670,7 +5670,7 @@ SCIP_RETCODE SCIProwExactGetLPFeasibility(
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &actlhs) );
    assert(row != NULL);
 
-   activity = SCIProwExactGetLPActivity(row, stat, lp);
+   activity = SCIProwExactGetLPActivity(row, stat, lpexact);
 
    SCIPrationalDiff(actlhs, row->rhs, activity);
    SCIPrationalDiff(actrhs, activity, row->lhs);
@@ -5715,14 +5715,14 @@ SCIP_RETCODE SCIProwExactGetPseudoFeasibility(
 SCIP_RATIONAL* SCIProwExactGetLPActivity(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPEXACT*         lp                  /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    )
 {
    assert(row != NULL);
    assert(stat != NULL);
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(row->fprow->validactivitylp <= stat->lpcount);
-   assert(lp->fplp->validsollp == stat->lpcount);
+   assert(lpexact->fplp->validsollp == stat->lpcount);
 
    if( row->fprow->validactivitylp != stat->lpcount )
       SCIProwExactRecalcLPActivity(row, stat);
@@ -6373,7 +6373,7 @@ void getObjvalDeltaUbExact(
 /** updates current pseudo and loose objective values for a change in a variable's objective value or bounds */
 static
 void lpExactUpdateObjval(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_RATIONAL*        deltavalex,         /**< delta value in the objective function */
    int                   deltainf,           /**< delta value for the number of variables with infinite best bound */
@@ -6382,17 +6382,17 @@ void lpExactUpdateObjval(
    SCIP_Bool             global              /**< should the global pseudo objective value be updated? */
    )
 {
-   assert(lp != NULL);
-   assert(lp->looseobjvalinf >= 0);
-   assert(lp->pseudoobjvalinf >= 0);
-   assert(lp->glbpseudoobjvalinf >= 0);
+   assert(lpexact != NULL);
+   assert(lpexact->looseobjvalinf >= 0);
+   assert(lpexact->pseudoobjvalinf >= 0);
+   assert(lpexact->glbpseudoobjvalinf >= 0);
 
    /* update the pseudo objective value */
    if( local )
    {
-      lp->pseudoobjvalinf += deltainf;
+      lpexact->pseudoobjvalinf += deltainf;
 
-      SCIPrationalAdd(lp->pseudoobjval, lp->pseudoobjval, deltavalex);
+      SCIPrationalAdd(lpexact->pseudoobjval, lpexact->pseudoobjval, deltavalex);
 
       /* after changing a local bound on a LOOSE variable, we have to update the loose objective value, too */
       if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE )
@@ -6401,35 +6401,35 @@ void lpExactUpdateObjval(
    /* update the loose objective value */
    if( loose )
    {
-      lp->looseobjvalinf += deltainf;
+      lpexact->looseobjvalinf += deltainf;
 
       if( !SCIPrationalIsZero(deltavalex) )
-         SCIPrationalAdd(lp->looseobjval, lp->looseobjval, deltavalex);
+         SCIPrationalAdd(lpexact->looseobjval, lpexact->looseobjval, deltavalex);
    }
 
    /* update the root pseudo objective values */
    if( global )
    {
-      lp->glbpseudoobjvalinf += deltainf;
+      lpexact->glbpseudoobjvalinf += deltainf;
 
-      SCIPrationalAdd(lp->glbpseudoobjval ,lp->glbpseudoobjval, deltavalex);
+      SCIPrationalAdd(lpexact->glbpseudoobjval ,lpexact->glbpseudoobjval, deltavalex);
    }
 
-   assert(lp->looseobjvalinf >= 0);
-   assert(lp->pseudoobjvalinf >= 0);
-   assert(lp->glbpseudoobjvalinf >= 0);
+   assert(lpexact->looseobjvalinf >= 0);
+   assert(lpexact->pseudoobjvalinf >= 0);
+   assert(lpexact->glbpseudoobjvalinf >= 0);
 }
 
 /** updates current pseudo and loose objective value for a change in a variable's objective value */
 SCIP_RETCODE SCIPlpExactUpdateVarObj(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_RATIONAL*        oldobj,             /**< old objective value of variable */
    SCIP_RATIONAL*        newobj              /**< new objective value of variable */
    )
 {
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(var != NULL);
 
    if( !SCIPrationalIsEQ(oldobj, newobj) )
@@ -6442,8 +6442,8 @@ SCIP_RETCODE SCIPlpExactUpdateVarObj(
       /* the objective coefficient can only be changed during presolving, that implies that the global and local
        * domain of the variable are the same
        */
-      assert(lp->fplp->probing || SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var)));
-      assert(lp->fplp->probing || SCIPrationalIsEQ(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbLocalExact(var)));
+      assert(lpexact->fplp->probing || SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var)));
+      assert(lpexact->fplp->probing || SCIPrationalIsEQ(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbLocalExact(var)));
 
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &deltaval) );
 
@@ -6452,14 +6452,14 @@ SCIP_RETCODE SCIPlpExactUpdateVarObj(
             SCIPvarGetUbLocalExact(var), deltaval, &deltainf) );
 
       /* update the local pseudo objective value */
-      lpExactUpdateObjval(lp, var, deltaval, deltainf, TRUE, FALSE, FALSE);
+      lpExactUpdateObjval(lpexact, var, deltaval, deltainf, TRUE, FALSE, FALSE);
 
       /* compute the pseudo objective delta due the new objective coefficient */
       SCIP_CALL( getObjvalDeltaObjExact(set, oldobj, newobj, SCIPvarGetLbGlobalExact(var),
             SCIPvarGetUbGlobalExact(var), deltaval, &deltainf) );
 
       /* update the global pseudo objective value */
-      lpExactUpdateObjval(lp, var, deltaval, deltainf, FALSE, FALSE, TRUE);
+      lpExactUpdateObjval(lpexact, var, deltaval, deltainf, FALSE, FALSE, TRUE);
 
       SCIPrationalFreeBuffer(set->buffer, &deltaval);
    }
@@ -6469,14 +6469,14 @@ SCIP_RETCODE SCIPlpExactUpdateVarObj(
 
 /** updates current root pseudo objective value for a global change in a variable's lower bound */
 SCIP_RETCODE SCIPlpExactUpdateVarLbGlobal(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_RATIONAL*        oldlb,              /**< old lower bound of variable */
    SCIP_RATIONAL*        newlb               /**< new lower bound of variable */
    )
 {
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(set != NULL);
    assert(var != NULL);
 
@@ -6491,7 +6491,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLbGlobal(
       getObjvalDeltaLbExact(SCIPvarGetObjExact(var), oldlb, newlb, deltaval, &deltainf);
 
       /* update the root pseudo objective values */
-      lpExactUpdateObjval(lp, var, deltaval, deltainf, FALSE, FALSE, TRUE);
+      lpExactUpdateObjval(lpexact, var, deltaval, deltainf, FALSE, FALSE, TRUE);
 
       SCIPrationalFreeBuffer(set->buffer, &deltaval);
    }
@@ -6501,14 +6501,14 @@ SCIP_RETCODE SCIPlpExactUpdateVarLbGlobal(
 
 /** updates current pseudo and loose objective value for a change in a variable's lower bound */
 SCIP_RETCODE SCIPlpExactUpdateVarLb(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_RATIONAL*        oldlb,              /**< old lower bound of variable */
    SCIP_RATIONAL*        newlb               /**< new lower bound of variable */
    )
 {
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(set != NULL);
    assert(var != NULL);
 
@@ -6526,7 +6526,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLb(
       getObjvalDeltaLbExact(SCIPvarGetObjExact(var), oldlb, newlb, deltaval, &deltainf);
 
       /* update the pseudo and loose objective values */
-      lpExactUpdateObjval(lp, var, deltaval, deltainf, TRUE, FALSE, FALSE);
+      lpExactUpdateObjval(lpexact, var, deltaval, deltainf, TRUE, FALSE, FALSE);
 
       SCIPrationalFreeBuffer(set->buffer, &deltaval);
    }
@@ -6536,14 +6536,14 @@ SCIP_RETCODE SCIPlpExactUpdateVarLb(
 
 /** updates current root pseudo objective value for a global change in a variable's upper bound */
 SCIP_RETCODE SCIPlpExactUpdateVarUbGlobal(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_RATIONAL*        oldub,              /**< old upper bound of variable */
    SCIP_RATIONAL*        newub               /**< new upper bound of variable */
    )
 {
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(set != NULL);
    assert(var != NULL);
 
@@ -6558,7 +6558,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarUbGlobal(
       getObjvalDeltaUbExact(SCIPvarGetObjExact(var), oldub, newub, deltaval, &deltainf);
 
       /* update the root pseudo objective values */
-      lpExactUpdateObjval(lp, var, deltaval, deltainf, FALSE, FALSE, TRUE);
+      lpExactUpdateObjval(lpexact, var, deltaval, deltainf, FALSE, FALSE, TRUE);
 
       SCIPrationalFreeBuffer(set->buffer, &deltaval);
    }
@@ -6568,14 +6568,14 @@ SCIP_RETCODE SCIPlpExactUpdateVarUbGlobal(
 
 /** updates current pseudo objective value for a change in a variable's upper bound */
 SCIP_RETCODE SCIPlpExactUpdateVarUb(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_RATIONAL*        oldub,              /**< old upper bound of variable */
    SCIP_RATIONAL*        newub               /**< new upper bound of variable */
    )
 {
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(set != NULL);
    assert(var != NULL);
 
@@ -6593,7 +6593,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarUb(
       getObjvalDeltaUbExact(SCIPvarGetObjExact(var), oldub, newub, deltaval, &deltainf);
 
       /* update the pseudo and loose objective values */
-      lpExactUpdateObjval(lp, var, deltaval, deltainf, TRUE, FALSE, FALSE);
+      lpExactUpdateObjval(lpexact, var, deltaval, deltainf, TRUE, FALSE, FALSE);
 
       SCIPrationalFreeBuffer(set->buffer, &deltaval);
    }
@@ -6634,26 +6634,26 @@ SCIP_RETCODE SCIPlpExactUpdateAddVar(
 
 /** informs LP, that given variable is to be deleted from the problem */
 SCIP_RETCODE SCIPlpExactUpdateDelVar(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< variable that will be deleted from the problem */
    )
 {
    SCIP_RATIONAL* ratzero;
 
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetProbindex(var) >= 0);
 
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &ratzero) );
 
    /* subtract the variable from the loose objective value sum */
-   SCIP_CALL( SCIPlpExactUpdateVarObj(set, lp, var, SCIPvarGetObjExact(var), ratzero) );
+   SCIP_CALL( SCIPlpExactUpdateVarObj(set, lpexact, var, SCIPvarGetObjExact(var), ratzero) );
 
    /* update the loose variables counter */
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE )
    {
-      SCIPlpExactDecNLoosevars(lp);
+      SCIPlpExactDecNLoosevars(lpexact);
    }
 
    SCIPrationalFreeBuffer(set->buffer, &ratzero);
@@ -6663,7 +6663,7 @@ SCIP_RETCODE SCIPlpExactUpdateDelVar(
 
 /** informs LP, that given formerly loose problem variable is now a column variable */
 SCIP_RETCODE SCIPlpExactUpdateVarColumn(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable that changed from LOOSE to COLUMN */
    )
@@ -6677,7 +6677,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarColumn(
 
    assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetProbindex(var) >= 0);
-   assert(lp->looseobjvalinf >= 0);
+   assert(lpexact->looseobjvalinf >= 0);
 
    obj = SCIPvarGetObjExact(var);
 
@@ -6686,30 +6686,30 @@ SCIP_RETCODE SCIPlpExactUpdateVarColumn(
    {
       lb = SCIPvarGetLbLocalExact(var);
       if( SCIPrationalIsNegInfinity(lb) )
-         lp->looseobjvalinf--;
+         lpexact->looseobjvalinf--;
       else
       {
          SCIPrationalNegate(tmp, lb);
          SCIPrationalMult(tmp, tmp, obj);
-         lpExactUpdateObjval(lp, var, tmp, 0, FALSE, TRUE, FALSE);
+         lpExactUpdateObjval(lpexact, var, tmp, 0, FALSE, TRUE, FALSE);
       }
    }
    else if( SCIPrationalIsNegative(obj) )
    {
       ub = SCIPvarGetUbLocalExact(var);
       if( SCIPrationalIsInfinity(ub) )
-         lp->looseobjvalinf--;
+         lpexact->looseobjvalinf--;
       else
       {
          SCIPrationalNegate(tmp, ub);
          SCIPrationalMult(tmp, tmp, obj);
-         lpExactUpdateObjval(lp, var, tmp, 0, FALSE, TRUE, FALSE);
+         lpExactUpdateObjval(lpexact, var, tmp, 0, FALSE, TRUE, FALSE);
       }
    }
 
-   SCIPlpExactDecNLoosevars(lp);
+   SCIPlpExactDecNLoosevars(lpexact);
 
-   assert(lp->looseobjvalinf >= 0);
+   assert(lpexact->looseobjvalinf >= 0);
 
    SCIPrationalFreeBuffer(set->buffer, &tmp);
 
@@ -6718,7 +6718,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarColumn(
 
 /** informs LP, that given formerly column problem variable is now again a loose variable */
 SCIP_RETCODE SCIPlpExactUpdateVarLoose(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable that changed from COLUMN to LOOSE */
    )
@@ -6732,7 +6732,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLoose(
 
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(SCIPvarGetProbindex(var) >= 0);
-   assert(lp->looseobjvalinf >= 0);
+   assert(lpexact->looseobjvalinf >= 0);
 
    obj = SCIPvarGetObjExact(var);
 
@@ -6741,27 +6741,27 @@ SCIP_RETCODE SCIPlpExactUpdateVarLoose(
    {
       lb = SCIPvarGetLbLocalExact(var);
       if( SCIPrationalIsNegInfinity(lb) )
-         lp->looseobjvalinf++;
+         lpexact->looseobjvalinf++;
       else
       {
          SCIPrationalMult(tmp, lb, obj);
-         lpExactUpdateObjval(lp, var, tmp, 0, FALSE, TRUE, FALSE);
+         lpExactUpdateObjval(lpexact, var, tmp, 0, FALSE, TRUE, FALSE);
       }
    }
    else if( SCIPrationalIsNegative(obj) )
    {
       ub = SCIPvarGetUbLocalExact(var);
       if( SCIPrationalIsInfinity(ub) )
-         lp->looseobjvalinf++;
+         lpexact->looseobjvalinf++;
       else
       {
          SCIPrationalMult(tmp, ub, obj);
-         lpExactUpdateObjval(lp, var, tmp, 0, FALSE, TRUE, FALSE);
+         lpExactUpdateObjval(lpexact, var, tmp, 0, FALSE, TRUE, FALSE);
       }
    }
-   lp->nloosevars++;
+   lpexact->nloosevars++;
 
-   assert(lp->looseobjvalinf >= 0);
+   assert(lpexact->looseobjvalinf >= 0);
 
    SCIPrationalFreeBuffer(set->buffer, &tmp);
 
@@ -6770,36 +6770,36 @@ SCIP_RETCODE SCIPlpExactUpdateVarLoose(
 
 /** decrease the number of loose variables by one */
 void SCIPlpExactDecNLoosevars(
-   SCIP_LPEXACT*         lp                  /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    )
 {
-   assert(lp != NULL);
-   assert(lp->nloosevars > 0);
+   assert(lpexact != NULL);
+   assert(lpexact->nloosevars > 0);
 
-   lp->nloosevars--;
+   lpexact->nloosevars--;
 
    /* get rid of numerical problems: set loose objective value explicitly to zero, if no loose variables remain */
-   if( lp->nloosevars == 0 )
+   if( lpexact->nloosevars == 0 )
    {
-      assert(lp->looseobjvalinf == 0);
-      SCIPrationalSetReal(lp->looseobjval, 0.0);
+      assert(lpexact->looseobjvalinf == 0);
+      SCIPrationalSetReal(lpexact->looseobjval, 0.0);
    }
 }
 
 /** get the number of rows currently in the lp */
 int SCIPlpExactGetNRows(
-   SCIP_LPEXACT*         lp                  /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    )
 {
-   assert(lp != NULL);
+   assert(lpexact != NULL);
 
-   return lp->nrows;
+   return lpexact->nrows;
 }
 
 #ifdef SCIP_DEBUG
 static
 SCIP_RETCODE lpexactComputeDualValidity(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_RATIONAL**       dualsol,            /**< row dual multipliers */
    SCIP_RATIONAL**       redcost             /**< column reduced costs */
@@ -6809,23 +6809,23 @@ SCIP_RETCODE lpexactComputeDualValidity(
    SCIP_RATIONAL** obj;
    SCIP_RATIONAL* objval;
 
-   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &obj, lp->ncols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &obj, lpexact->ncols) );
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &objval) );
 
-   for( c = 0; c < lp->nlpicols; c++ )
+   for( c = 0; c < lpexact->nlpicols; c++ )
    {
-      SCIPrationalSetRational(obj[c], lp->cols[c]->obj);
+      SCIPrationalSetRational(obj[c], lpexact->cols[c]->obj);
       SCIPrationalDiff(obj[c], obj[c], redcost[c]);
 
       if( SCIPrationalIsPositive(redcost[c]) )
-         SCIPrationalDiffProd(objval, redcost[c], lp->cols[c]->lb);
+         SCIPrationalDiffProd(objval, redcost[c], lpexact->cols[c]->lb);
       else if( SCIPrationalIsNegative(redcost[c]) )
-         SCIPrationalAddProd(objval, redcost[c], lp->cols[c]->ub);
+         SCIPrationalAddProd(objval, redcost[c], lpexact->cols[c]->ub);
    }
 
-   for( r = 0; r < lp->nlpirows; r++ )
+   for( r = 0; r < lpexact->nlpirows; r++ )
    {
-      SCIP_ROWEXACT* row = lp->lpirows[r];
+      SCIP_ROWEXACT* row = lpexact->lpirows[r];
 
       if( SCIPrationalIsPositive(dualsol[r]) )
          SCIPrationalDiffProd(objval, dualsol[r], row->lhs);
@@ -6839,13 +6839,13 @@ SCIP_RETCODE lpexactComputeDualValidity(
       }
    }
 
-   for( c = 0; c < lp->ncols; c++ )
+   for( c = 0; c < lpexact->ncols; c++ )
    {
       assert(SCIPrationalIsZero(obj[c]));
    }
 
    SCIPrationalFreeBuffer(set->buffer, &objval);
-   SCIPrationalFreeBufferArray(set->buffer, &obj, lp->ncols);
+   SCIPrationalFreeBufferArray(set->buffer, &obj, lpexact->ncols);
 
    return SCIP_OKAY;
 }
@@ -6853,7 +6853,7 @@ SCIP_RETCODE lpexactComputeDualValidity(
 
 /** stores the LP solution in the columns and rows */
 SCIP_RETCODE SCIPlpExactGetSol(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
@@ -6880,8 +6880,8 @@ SCIP_RETCODE SCIPlpExactGetSol(
    int c;
    int r;
 
-   assert(lp != NULL);
-   assert(lp->solved);
+   assert(lpexact != NULL);
+   assert(lpexact->solved);
    assert(set != NULL);
    assert(stat != NULL);
 
@@ -6904,12 +6904,12 @@ SCIP_RETCODE SCIPlpExactGetSol(
    }
 
    SCIPsetDebugMsg(set, "getting new LP solution %" SCIP_LONGINT_FORMAT " for solstat %d\n",
-      stat->lpcount, lp->lpsolstat);
+      stat->lpcount, lpexact->lpsolstat);
 
-   lpicols = lp->lpicols;
-   lpirows = lp->lpirows;
-   nlpicols = lp->nlpicols;
-   nlpirows = lp->nlpirows;
+   lpicols = lpexact->lpicols;
+   lpirows = lpexact->lpirows;
+   nlpicols = lpexact->nlpicols;
+   nlpirows = lpexact->nlpirows;
    lpcount = stat->lpcount;
 
    /* get temporary memory */
@@ -6923,22 +6923,22 @@ SCIP_RETCODE SCIPlpExactGetSol(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
 
-   SCIP_CALL( SCIPlpiExactGetSol(lp->lpiexact, NULL, primsol, dualsol, activity, redcost) );
+   SCIP_CALL( SCIPlpiExactGetSol(lpexact->lpiexact, NULL, primsol, dualsol, activity, redcost) );
 
    /* avoid adding infinity to the bounding error */
-   if( !SCIPrationalIsInfinity(lp->lpobjval) )
-      stat->boundingerrorexlp += REALABS(lp->fplp->lpobjval - SCIPrationalRoundReal(lp->lpobjval, SCIP_R_ROUND_DOWNWARDS));
+   if( !SCIPrationalIsInfinity(lpexact->lpobjval) )
+      stat->boundingerrorexlp += REALABS(lpexact->fplp->lpobjval - SCIPrationalRoundReal(lpexact->lpobjval, SCIP_R_ROUND_DOWNWARDS));
    if( overwritefplp )
    {
-      lp->fplp->lpobjval = SCIPrationalRoundReal(lp->lpobjval, SCIP_R_ROUND_DOWNWARDS);
-      lp->fplp->lpsolstat = lp->lpsolstat;
-      lp->fplp->primalfeasible = lp->primalfeasible;
-      lp->fplp->dualfeasible = lp->dualfeasible;
-      lp->fplp->solved = lp->solved;
+      lpexact->fplp->lpobjval = SCIPrationalRoundReal(lpexact->lpobjval, SCIP_R_ROUND_DOWNWARDS);
+      lpexact->fplp->lpsolstat = lpexact->lpsolstat;
+      lpexact->fplp->primalfeasible = lpexact->primalfeasible;
+      lpexact->fplp->dualfeasible = lpexact->dualfeasible;
+      lpexact->fplp->solved = lpexact->solved;
    }
-   if( lp->solisbasic )
+   if( lpexact->solisbasic )
    {
-      SCIP_CALL( SCIPlpiExactGetBase(lp->lpiexact, cstat, rstat) );
+      SCIP_CALL( SCIPlpiExactGetBase(lpexact->lpiexact, cstat, rstat) );
    }
    else
    {
@@ -6949,7 +6949,7 @@ SCIP_RETCODE SCIPlpExactGetSol(
    SCIPrationalSetReal(primalbound, 0.0);
    SCIPrationalSetReal(dualbound, 0.0);
 
-   SCIPdebug(SCIP_CALL( lpexactComputeDualValidity(lp, set, dualsol, redcost) ));
+   SCIPdebug(SCIP_CALL( lpexactComputeDualValidity(lpexact, set, dualsol, redcost) ));
 
    /* copy primal solution and reduced costs into columns */
    for( c = 0; c < nlpicols; ++c )
@@ -6961,10 +6961,10 @@ SCIP_RETCODE SCIPlpExactGetSol(
       lpicols[c]->validredcostlp = lpcount;
       if( overwritefplp )
       {
-         lp->fplp->lpicols[c]->primsol =  SCIPrationalGetReal(primsol[c]);
-         lp->fplp->lpicols[c]->redcost =  SCIPrationalGetReal(redcost[c]);
-         lp->fplp->lpicols[c]->basisstatus = (unsigned int) cstat[c];
-         lp->fplp->lpicols[c]->validredcostlp = lpcount;
+         lpexact->fplp->lpicols[c]->primsol =  SCIPrationalGetReal(primsol[c]);
+         lpexact->fplp->lpicols[c]->redcost =  SCIPrationalGetReal(redcost[c]);
+         lpexact->fplp->lpicols[c]->basisstatus = (unsigned int) cstat[c];
+         lpexact->fplp->lpicols[c]->validredcostlp = lpcount;
       }
       if( stillprimalfeasible )
       {
@@ -7079,28 +7079,28 @@ SCIP_RETCODE SCIPlpExactGetSol(
    }
 
    /* if the objective value returned by the LP solver is smaller than the internally computed primal bound, then we
-    * declare the solution primal infeasible; we assume primalbound and lp->lpobjval to be equal if they are both +/-
+    * declare the solution primal infeasible; we assume primalbound and lpexact->lpobjval to be equal if they are both +/-
     * infinity
     */
    /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
-   if( stillprimalfeasible && !(SCIPrationalIsInfinity(primalbound) && SCIPrationalIsInfinity(lp->lpobjval))
-      && !(SCIPrationalIsNegInfinity(primalbound) && SCIPrationalIsNegInfinity(lp->lpobjval)) )
+   if( stillprimalfeasible && !(SCIPrationalIsInfinity(primalbound) && SCIPrationalIsInfinity(lpexact->lpobjval))
+      && !(SCIPrationalIsNegInfinity(primalbound) && SCIPrationalIsNegInfinity(lpexact->lpobjval)) )
    {
-      stillprimalfeasible = SCIPrationalIsLE(primalbound, lp->lpobjval);
-      SCIPrationalDebugMessage(" primalbound=%q, lpbound=%q, pfeas=%u(%u)\n", primalbound, lp->lpobjval,
-         SCIPrationalIsLE(primalbound, lp->lpobjval), primalfeasible != NULL ? stillprimalfeasible : TRUE);
+      stillprimalfeasible = SCIPrationalIsLE(primalbound, lpexact->lpobjval);
+      SCIPrationalDebugMessage(" primalbound=%q, lpbound=%q, pfeas=%u(%u)\n", primalbound, lpexact->lpobjval,
+         SCIPrationalIsLE(primalbound, lpexact->lpobjval), primalfeasible != NULL ? stillprimalfeasible : TRUE);
    }
 
    /* if the objective value returned by the LP solver is smaller than the internally computed dual bound, we declare
-    * the solution dual infeasible; we assume dualbound and lp->lpobjval to be equal if they are both +/- infinity
+    * the solution dual infeasible; we assume dualbound and lpexact->lpobjval to be equal if they are both +/- infinity
     */
    /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
-   if( stilldualfeasible && !(SCIPrationalIsInfinity(dualbound) && SCIPrationalIsInfinity(lp->lpobjval))
-      && !(SCIPrationalIsNegInfinity(dualbound) && SCIPrationalIsNegInfinity(lp->lpobjval)) )
+   if( stilldualfeasible && !(SCIPrationalIsInfinity(dualbound) && SCIPrationalIsInfinity(lpexact->lpobjval))
+      && !(SCIPrationalIsNegInfinity(dualbound) && SCIPrationalIsNegInfinity(lpexact->lpobjval)) )
    {
-      stilldualfeasible =  SCIPrationalIsGE(dualbound, lp->lpobjval);
-      SCIPrationalDebugMessage(" dualbound=%q, lpbound=%q, dfeas=%u(%u)\n", dualbound, lp->lpobjval,
-         SCIPrationalIsGE(dualbound, lp->lpobjval), dualfeasible != NULL ? stilldualfeasible : TRUE);
+      stilldualfeasible =  SCIPrationalIsGE(dualbound, lpexact->lpobjval);
+      SCIPrationalDebugMessage(" dualbound=%q, lpbound=%q, dfeas=%u(%u)\n", dualbound, lpexact->lpobjval,
+         SCIPrationalIsGE(dualbound, lpexact->lpobjval), dualfeasible != NULL ? stilldualfeasible : TRUE);
    }
 
    if( primalfeasible != NULL )
@@ -7124,7 +7124,7 @@ SCIP_RETCODE SCIPlpExactGetSol(
 
 /** stores LP solution with infinite objective value in the columns and rows */
 SCIP_RETCODE SCIPlpExactGetUnboundedSol(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
@@ -7137,7 +7137,7 @@ SCIP_RETCODE SCIPlpExactGetUnboundedSol(
 
 /** returns primal ray proving the unboundedness of the current LP */
 SCIP_RETCODE SCIPlpExactGetPrimalRay(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_RATIONAL**       ray                 /**< array for storing primal ray values, they are stored w.r.t. the problem index of the variables,
                                               *   so the size of this array should be at least number of active variables
@@ -7150,31 +7150,31 @@ SCIP_RETCODE SCIPlpExactGetPrimalRay(
    int nlpicols;
    int c;
 
-   assert(lp != NULL);
+   assert(lpexact != NULL);
    assert(set != NULL);
    assert(ray != NULL);
-   assert(lp->flushed);
-   assert(lp->solved);
-   assert(lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-   assert(SCIPrationalIsNegInfinity(lp->lpobjval));
+   assert(lpexact->flushed);
+   assert(lpexact->solved);
+   assert(lpexact->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+   assert(SCIPrationalIsNegInfinity(lpexact->lpobjval));
 
    /* check if the LP solver is able to provide a primal unbounded ray */
-   if( !SCIPlpiExactHasPrimalRay(lp->lpiexact) )
+   if( !SCIPlpiExactHasPrimalRay(lpexact->lpiexact) )
    {
       SCIPerrorMessage("LP solver has no primal ray for unbounded LP\n");
       return SCIP_LPERROR;
    }
 
    /* get temporary memory */
-   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &lpiray, lp->nlpicols) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &lpiray, lpexact->nlpicols) );
 
    SCIPsetDebugMsg(set, "getting primal ray values\n");
 
    /* get primal unbounded ray */
-   SCIP_CALL( SCIPlpiExactGetPrimalRay(lp->lpiexact, lpiray) );
+   SCIP_CALL( SCIPlpiExactGetPrimalRay(lpexact->lpiexact, lpiray) );
 
-   lpicols = lp->lpicols;
-   nlpicols = lp->nlpicols;
+   lpicols = lpexact->lpicols;
+   nlpicols = lpexact->nlpicols;
 
    /* store the ray values of active problem variables */
    for( c = 0; c < nlpicols; c++ )
@@ -7187,7 +7187,7 @@ SCIP_RETCODE SCIPlpExactGetPrimalRay(
       SCIPrationalSetRational(ray[SCIPvarGetProbindex(var)], lpiray[c]);
    }
 
-   SCIPrationalFreeBufferArray(set->buffer, &lpiray, lp->nlpicols);
+   SCIPrationalFreeBufferArray(set->buffer, &lpiray, lpexact->nlpicols);
 
    return SCIP_OKAY;
 }
@@ -7198,7 +7198,7 @@ SCIP_RETCODE SCIPlpExactGetPrimalRay(
  *  @note The Farkas proof is checked for validity if lp/checkfarkas = TRUE and @p valid is not NULL.
  */
 SCIP_RETCODE SCIPlpExactGetDualfarkas(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            valid,              /**< pointer to store whether the Farkas proof is valid or NULL */
@@ -7218,10 +7218,10 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
    int c;
    int r;
 
-   assert(lp != NULL);
-   assert(lp->flushed);
-   assert(lp->solved);
-   assert(lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
+   assert(lpexact != NULL);
+   assert(lpexact->flushed);
+   assert(lpexact->solved);
+   assert(lpexact->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
    assert(set != NULL);
    assert(stat != NULL);
 
@@ -7236,24 +7236,24 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
    checkfarkas = (set->lp_checkfarkas && valid != NULL);
 
    /* get temporary memory */
-   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &dualfarkas, lp->nlpirows) );
+   SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &dualfarkas, lpexact->nlpirows) );
 
    if( checkfarkas )
-      SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &farkascoefs, lp->nlpicols) );
+      SCIP_CALL( SCIPrationalCreateBufferArray(set->buffer, &farkascoefs, lpexact->nlpicols) );
 
    /* get dual Farkas infeasibility proof */
-   SCIP_CALL( SCIPlpiExactGetDualfarkas(lp->lpiexact, dualfarkas) );
+   SCIP_CALL( SCIPlpiExactGetDualfarkas(lpexact->lpiexact, dualfarkas) );
 
    if( overwritefplp )
    {
-      lp->fplp->lpobjval = SCIPsetInfinity(set);
-      lp->fplp->lpsolstat = lp->lpsolstat;
+      lpexact->fplp->lpobjval = SCIPsetInfinity(set);
+      lpexact->fplp->lpsolstat = lpexact->lpsolstat;
    }
 
-   lpicols = lp->lpicols;
-   lpirows = lp->lpirows;
-   nlpicols = lp->nlpicols;
-   nlpirows = lp->nlpirows;
+   lpicols = lpexact->lpicols;
+   lpirows = lpexact->lpirows;
+   nlpicols = lpexact->nlpicols;
+   nlpirows = lpexact->nlpirows;
 
    /* store infeasibility proof in rows */
    SCIPsetDebugMsg(set, "LP is infeasible:\n");
@@ -7267,10 +7267,10 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
       lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
       if( overwritefplp )
       {
-         lp->fplp->lpirows[r]->dualfarkas = SCIPrationalGetReal(dualfarkas[r]);
-         lp->fplp->lpirows[r]->dualsol = SCIPsetInfinity(set);
-         lp->fplp->lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
-         lp->fplp->lpirows[r]->validactivitylp = -1L;
+         lpexact->fplp->lpirows[r]->dualfarkas = SCIPrationalGetReal(dualfarkas[r]);
+         lpexact->fplp->lpirows[r]->dualsol = SCIPsetInfinity(set);
+         lpexact->fplp->lpirows[r]->basisstatus = (unsigned int) SCIP_BASESTAT_BASIC;
+         lpexact->fplp->lpirows[r]->validactivitylp = -1L;
       }
 
       if( checkfarkas )
@@ -7343,10 +7343,10 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
 
       if( overwritefplp )
       {
-         lp->fplp->lpicols[c]->primsol =  SCIPsetInfinity(set);
-         lp->fplp->lpicols[c]->redcost =  SCIPsetInfinity(set);
-         lp->fplp->lpicols[c]->validredcostlp = -1L;
-         lp->fplp->lpicols[c]->validfarkaslp = -1L;
+         lpexact->fplp->lpicols[c]->primsol =  SCIPsetInfinity(set);
+         lpexact->fplp->lpicols[c]->redcost =  SCIPsetInfinity(set);
+         lpexact->fplp->lpicols[c]->validredcostlp = -1L;
+         lpexact->fplp->lpicols[c]->validfarkaslp = -1L;
       }
 
       if( checkfarkas )
@@ -7416,46 +7416,46 @@ SCIP_RETCODE SCIPlpExactGetIterations(
  *        SCIP_LPSOLSTAT_ITERLIMIT or SCIP_LPSOLSTAT_TIMELIMIT.
  */
 void SCIPlpExactGetObjval(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_RATIONAL*        res                 /**< result pointer to store rational */
    )
 {
-   assert(lp != NULL);
-   assert(lp->fplp->hasprovedbound);
-   assert((lp->nloosevars > 0) || (lp->looseobjvalinf == 0 && SCIPrationalIsZero(lp->looseobjval)));
+   assert(lpexact != NULL);
+   assert(lpexact->fplp->hasprovedbound);
+   assert((lpexact->nloosevars > 0) || (lpexact->looseobjvalinf == 0 && SCIPrationalIsZero(lpexact->looseobjval)));
    assert(set != NULL);
 
-   if( lp->looseobjvalinf > 0 )
+   if( lpexact->looseobjvalinf > 0 )
       SCIPrationalSetNegInfinity(res);
-   else if( SCIPrationalIsAbsInfinity(lp->lpobjval) )
-      SCIPrationalSetRational(res, lp->lpobjval);
+   else if( SCIPrationalIsAbsInfinity(lpexact->lpobjval) )
+      SCIPrationalSetRational(res, lpexact->lpobjval);
    else
-      SCIPrationalAdd(res, lp->lpobjval, lp->looseobjval);
+      SCIPrationalAdd(res, lpexact->lpobjval, lpexact->looseobjval);
 }
 
 /** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
  *  objective function) local bound
  */
 void SCIPlpExactGetPseudoObjval(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_RATIONAL*        res                 /**< result pointer to store rational */
    )
 {
-   assert(lp != NULL);
-   assert(lp->pseudoobjvalinf >= 0);
+   assert(lpexact != NULL);
+   assert(lpexact->pseudoobjvalinf >= 0);
    assert(set != NULL);
 
-   if( lp->pseudoobjvalinf > 0 || set->nactivepricers > 0 )
+   if( lpexact->pseudoobjvalinf > 0 || set->nactivepricers > 0 )
       SCIPrationalSetNegInfinity(res);
    else
-      SCIPrationalSetRational(res, lp->pseudoobjval);
+      SCIPrationalSetRational(res, lpexact->pseudoobjval);
 }
 
 /** removes all columns after the given number of cols from the LP */
 SCIP_RETCODE SCIPlpExactShrinkCols(
-   SCIP_LPEXACT*         lp,                 /**< LP data */
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   newncols            /**< new number of columns in the LP */
    )
@@ -7463,39 +7463,39 @@ SCIP_RETCODE SCIPlpExactShrinkCols(
    SCIP_COLEXACT* col;
    int c;
 
-   assert(lp != NULL);
+   assert(lpexact != NULL);
 
-   SCIPsetDebugMsg(set, "shrinking LP from %d to %d columns\n", lp->ncols, newncols);
+   SCIPsetDebugMsg(set, "shrinking LP from %d to %d columns\n", lpexact->ncols, newncols);
    assert(0 <= newncols);
-   assert(newncols <= lp->ncols);
+   assert(newncols <= lpexact->ncols);
 
-   if( newncols < lp->ncols )
+   if( newncols < lpexact->ncols )
    {
-      assert(!lp->fplp->diving);
+      assert(!lpexact->fplp->diving);
 
-      for( c = lp->ncols-1; c >= newncols; --c )
+      for( c = lpexact->ncols-1; c >= newncols; --c )
       {
-         col = lp->cols[c];
+         col = lpexact->cols[c];
          assert(col != NULL);
          assert(col->len == 0 || col->rows != NULL);
          assert(col->var != NULL);
          assert(SCIPvarGetStatusExact(col->var) == SCIP_VARSTATUS_COLUMN);
-         assert(SCIPvarGetColExact(col->var) == lp->cols[c]);
+         assert(SCIPvarGetColExact(col->var) == lpexact->cols[c]);
          assert(col->lppos == c);
 
          /* mark column to be removed from the LP */
          col->lppos = -1;
-         lp->ncols--;
+         lpexact->ncols--;
 
          /* update column arrays of all linked rows */
          SCIP_CALL( colExactUpdateDelLP(col, set) );
       }
 
-      assert(lp->ncols == newncols);
-      lp->lpifirstchgcol = MIN(lp->lpifirstchgcol, newncols);
+      assert(lpexact->ncols == newncols);
+      lpexact->lpifirstchgcol = MIN(lpexact->lpifirstchgcol, newncols);
 
-      lp->flushed = FALSE;
-      checkLinks(lp);
+      lpexact->flushed = FALSE;
+      checkLinks(lpexact);
    }
 
    return SCIP_OKAY;
@@ -7503,7 +7503,7 @@ SCIP_RETCODE SCIPlpExactShrinkCols(
 
 /** removes and releases all rows after the given number of rows from the LP */
 SCIP_RETCODE SCIPlpExactShrinkRows(
-   SCIP_LPEXACT*         lp,                 /**< LP data */
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   newnrows            /**< new number of rows in the LP */
@@ -7512,15 +7512,15 @@ SCIP_RETCODE SCIPlpExactShrinkRows(
    SCIP_ROWEXACT* row;
    int r;
 
-   assert(lp != NULL);
-   assert(0 <= newnrows && newnrows <= lp->nrows);
+   assert(lpexact != NULL);
+   assert(0 <= newnrows && newnrows <= lpexact->nrows);
 
-   SCIPsetDebugMsg(set, "shrinking exact LP from %d to %d rows\n", lp->nrows, newnrows);
-   if( newnrows < lp->nrows )
+   SCIPsetDebugMsg(set, "shrinking exact LP from %d to %d rows\n", lpexact->nrows, newnrows);
+   if( newnrows < lpexact->nrows )
    {
-      for( r = lp->nrows-1; r >= newnrows; --r )
+      for( r = lpexact->nrows-1; r >= newnrows; --r )
       {
-         row = lp->rows[r];
+         row = lpexact->rows[r];
          assert(row != NULL);
          assert(row->len == 0 || row->cols != NULL);
          assert(row->lppos == r);
@@ -7528,19 +7528,19 @@ SCIP_RETCODE SCIPlpExactShrinkRows(
          /* mark row to be removed from the LP */
          row->lppos = -1;
          row->lpdepth = -1;
-         lp->nrows--;
+         lpexact->nrows--;
 
          SCIP_CALL( rowExactUpdateDelLP(row, set) );
 
-         SCIP_CALL( SCIProwExactRelease(&lp->rows[r], blkmem, set, lp) );
+         SCIP_CALL( SCIProwExactRelease(&lpexact->rows[r], blkmem, set, lpexact) );
       }
-      assert(lp->nrows == newnrows);
-      lp->lpifirstchgrow = MIN(lp->lpifirstchgrow, newnrows);
+      assert(lpexact->nrows == newnrows);
+      lpexact->lpifirstchgrow = MIN(lpexact->lpifirstchgrow, newnrows);
 
       /* mark the current LP unflushed */
-      lp->flushed = FALSE;
+      lpexact->flushed = FALSE;
 
-      checkLinks(lp);
+      checkLinks(lpexact);
    }
 
    return SCIP_OKAY;
@@ -7550,7 +7550,7 @@ SCIP_RETCODE SCIPlpExactShrinkRows(
  *  changes to the LP solver
  */
 SCIP_RETCODE SCIPlpExactReset(
-   SCIP_LPEXACT*         lp,                 /**< LP data */
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -7562,36 +7562,36 @@ SCIP_RETCODE SCIPlpExactReset(
 
    assert(stat != NULL);
 
-   SCIP_CALL( SCIPlpExactClear(lp, blkmem, set) );
-   SCIP_CALL( SCIPlpExactFlush(lp, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPlpExactClear(lpexact, blkmem, set) );
+   SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
 
    /* mark the empty LP to be solved */
-   lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-   SCIPrationalSetReal(lp->lpobjval, 0.0);
-   lp->solved = TRUE;
-   lp->primalfeasible = TRUE;
-   lp->primalchecked = TRUE;
-   lp->dualfeasible = TRUE;
-   lp->dualchecked = TRUE;
-   lp->solisbasic = FALSE;
-   lp->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
+   lpexact->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
+   SCIPrationalSetReal(lpexact->lpobjval, 0.0);
+   lpexact->solved = TRUE;
+   lpexact->primalfeasible = TRUE;
+   lpexact->primalchecked = TRUE;
+   lpexact->dualfeasible = TRUE;
+   lpexact->dualchecked = TRUE;
+   lpexact->solisbasic = FALSE;
+   lpexact->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
 
    return SCIP_OKAY;
 }
 
 /** removes all columns and rows from LP, releases all rows */
 SCIP_RETCODE SCIPlpExactClear(
-   SCIP_LPEXACT*         lp,                 /**< LP data */
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   assert(lp != NULL);
-   assert(!lp->fplp->diving);
+   assert(lpexact != NULL);
+   assert(!lpexact->fplp->diving);
 
    SCIPsetDebugMsg(set, "clearing LP\n");
-   SCIP_CALL( SCIPlpExactShrinkCols(lp, set, 0) );
-   SCIP_CALL( SCIPlpExactShrinkRows(lp, blkmem, set, 0) );
+   SCIP_CALL( SCIPlpExactShrinkCols(lpexact, set, 0) );
+   SCIP_CALL( SCIPlpExactShrinkRows(lpexact, blkmem, set, 0) );
 
    return SCIP_OKAY;
 }
@@ -8434,41 +8434,41 @@ SCIP_Bool SCIPlpExactDiving(
 
 /** writes exact LP to a file */
 SCIP_RETCODE SCIPlpExactWrite(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    const char*           fname               /**< file name */
    )
 {
-   assert(lp != NULL);
-   assert(lp->flushed);
+   assert(lpexact != NULL);
+   assert(lpexact->flushed);
    assert(fname != NULL);
 
-   SCIP_CALL( SCIPlpiExactWriteLP(lp->lpiexact, fname) );
+   SCIP_CALL( SCIPlpiExactWriteLP(lpexact->lpiexact, fname) );
 
    return SCIP_OKAY;
 }
 
 /** overwrites the dual values stored in the fp lp with exact values */
 void SCIPlpExactOverwriteFpDualSol(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_Bool             dualfarkas          /**< TRUE if farkas proof, FALSE if dual sol? */
    )
 {
-   assert(lp != NULL);
+   assert(lpexact != NULL);
 
-   for( int c = 0; c < lp->ncols; ++c )
+   for( int c = 0; c < lpexact->ncols; ++c )
    {
       if( dualfarkas )
-         lp->cols[c]->fpcol->farkascoef = SCIPrationalGetReal(lp->cols[c]->farkascoef);
+         lpexact->cols[c]->fpcol->farkascoef = SCIPrationalGetReal(lpexact->cols[c]->farkascoef);
       else
-         lp->cols[c]->fpcol->redcost = SCIPrationalGetReal(lp->cols[c]->redcost);
+         lpexact->cols[c]->fpcol->redcost = SCIPrationalGetReal(lpexact->cols[c]->redcost);
    }
 
-   for( int r = 0; r < lp->nrows; ++r )
+   for( int r = 0; r < lpexact->nrows; ++r )
    {
       if( dualfarkas )
-         lp->rows[r]->fprow->dualfarkas = SCIPrationalGetReal(lp->rows[r]->dualfarkas);
+         lpexact->rows[r]->fprow->dualfarkas = SCIPrationalGetReal(lpexact->rows[r]->dualfarkas);
       else
-         lp->rows[r]->fprow->dualsol = SCIPrationalGetReal(lp->rows[r]->dualsol);
+         lpexact->rows[r]->fprow->dualsol = SCIPrationalGetReal(lpexact->rows[r]->dualsol);
    }
 }
 
