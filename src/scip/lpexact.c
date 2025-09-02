@@ -8368,14 +8368,12 @@ SCIP_RETCODE SCIPlpExactEndDive(
       int r;
 
       /* restore LP solution values in lp data, columns and rows */
-      if( lpexact->storedsolvals->lpissolved &&
-         (lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||
-            lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY ||
-            lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
-            lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT ||
-            lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT ||
-            lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE)
-         )
+      if( lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||
+          lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY ||
+          lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
+          lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT ||
+          lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT ||
+          lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE )
       {
          SCIP_CALL( lpExactRestoreSolVals(lpexact, blkmem) );
 
