@@ -332,9 +332,9 @@ SCIP_RETCODE constructHypergraph(
       SCIPhypergraphGetNOverlaps(hypergraph), sepadata->timehypercreation, sepadata->timehyperoverlaps,
       sepadata->timehypercreation + sepadata->timehyperoverlaps);
    return SCIP_ERROR;
-#endif /* PRINT_HYPERGRAPH_AND_EXIT */
-
+#else
    return SCIP_OKAY;
+#endif /* PRINT_HYPERGRAPH_AND_EXIT */
 }
 
 /* @brief prepare the separation for all cutting plane types by storing relevant data with the hypergraph */
