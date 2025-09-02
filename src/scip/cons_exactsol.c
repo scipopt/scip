@@ -317,8 +317,8 @@ void checkProbHasContEqs(
                }
             }
          }
-         conshdlrdata->probhasconteqs = 1;
-         break;
+         if( conshdlrdata->probhasconteqs == 1 )
+            break;
       }
       else
       {
