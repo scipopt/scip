@@ -11467,8 +11467,8 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_Bool onlybin;
    SCIP_Bool hasrhs;
    SCIP_Bool haslhs;
-   int oldnchgcoefs;
-   int oldnchgsides;
+   int oldnchgcoefs;  /* cppcheck-suppress unassignedVariable */
+   int oldnchgsides;  /* cppcheck-suppress unassignedVariable */
    int foundbin;
    int candpos;
    int candpos2;

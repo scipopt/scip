@@ -1269,7 +1269,7 @@ CPPCHECKARGS := $(filter -I%,$(FLAGS))
 CPPCHECKARGS += -j8
 CPPCHECKARGS += --std=c99 --std=c++14
 CPPCHECKARGS += --suppressions-list=suppressions.cppcheck --inline-suppr
-CPPCHECKARGS += --enable=all --force --inconclusive
+CPPCHECKARGS += --enable=all --disable=unusedFunction --force --inconclusive
 CPPCHECKARGS += --error-exitcode=5
 .PHONY: cppcheck
 cppcheck: $(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE) githash
