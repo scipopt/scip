@@ -38,9 +38,10 @@ constVariable
 normalCheckLevelMaxBranches
 checkLevelNormal
 
-// third-party code
+// third-party code, Ip* is for Ipopt headers
 *:src/amplmp/*
 *:src/cppad/*
 *:src/nauty/*
 *:src/sassy/*
 *:lib/include/*
+*:Ip*.hpp
