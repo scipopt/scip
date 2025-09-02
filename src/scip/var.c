@@ -10817,7 +10817,7 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPEXACT*         lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data, may be NULL for original variables */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */

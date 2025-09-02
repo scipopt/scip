@@ -602,21 +602,21 @@ int SCIPvarGetCertificateIndex(
 SCIP_EXPORT
 void SCIPvarSetCertificateIndex(
    SCIP_VAR*             var,                /**< variable to set index for */
-   int                   index               /**< the index */
+   int                   certidx             /**< the index */
    );
 
 /** sets index of variable in certificate */
 SCIP_EXPORT
 void SCIPvarSetUbCertificateIndexGlobal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   SCIP_Longint          index               /**< the index */
+   SCIP_Longint          certidx             /**< the index */
    );
 
 /** sets index of variable in certificate */
 SCIP_EXPORT
 void SCIPvarSetLbCertificateIndexGlobal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   SCIP_Longint          index               /**< the index */
+   SCIP_Longint          certidx             /**< the index */
    );
 
 /** returns index of variable bound in vipr certificate */
