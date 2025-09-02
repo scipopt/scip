@@ -3352,7 +3352,6 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
             SCIPrationalMultReal(ub, ub, -1);
          }
          return SCIP_OKAY;
-         break;
       case SCIP_VARSTATUS_AGGREGATED:
          {
             if( lb != NULL )
@@ -3367,9 +3366,8 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
                SCIPrationalMult(lb, lb, var->exactdata->aggregate.scalar);
             if( ub != NULL )
                SCIPrationalMult(ub, ub, var->exactdata->aggregate.scalar);
-            return SCIP_OKAY;
          }
-         break;
+         return SCIP_OKAY;
       case SCIP_VARSTATUS_COLUMN:
          break;
       default:
