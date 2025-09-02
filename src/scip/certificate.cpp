@@ -1341,10 +1341,10 @@ void SCIPcertificatePrintVarHeader(
 void SCIPcertificatePrintIntHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
-   int                   nints               /**< number of integer variables */
+   int                   nintvars            /**< number of integer variables */
    )
 {
-   assert(nints >= 0);
+   assert(nintvars >= 0);
 
    /* check whether certificate output should be created */
    if( !SCIPcertificateIsEnabled(certificate) )
@@ -1352,7 +1352,7 @@ void SCIPcertificatePrintIntHeader(
 
    assert(certificate != NULL);
 
-   SCIPcertificatePrintProblemMessage(certificate, isorigfile, "INT %d\n", nints);
+   SCIPcertificatePrintProblemMessage(certificate, isorigfile, "INT %d\n", nintvars);
 }
 
 /** prints constraint section header */

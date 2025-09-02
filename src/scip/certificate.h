@@ -189,7 +189,7 @@ void SCIPcertificatePrintVersionHeader(
 void SCIPcertificatePrintIntHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
-   int                   nvars               /**< number of variables */
+   int                   nintvars            /**< number of integer variables */
    );
 
 /** prints constraint section header */
