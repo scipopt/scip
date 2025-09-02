@@ -391,14 +391,14 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    /* if rval != 0 then RECTLUbuildFactorization has failed. In this case the project-and-shift method will not work and
     * we will return failure
     */
-   if( rval )
+   if( rval )  /* cppcheck-suppress knownConditionTrueFalse */
    {
       projshiftdata->projshiftdatafail = TRUE;
       SCIPdebugMessage("factorization of matrix for project-and-shift method failed.\n");
    }
 
 #ifdef SCIP_DEBUG_PS_OUT
-   printf("   matrix factorization complete: %s\n", rval ? "failed" : "correct termination");
+   printf("   matrix factorization complete: %s\n", rval ? "failed" : "correct termination");  /* cppcheck-suppress knownConditionTrueFalse */
 #endif
 
    SCIPrationalClearArrayGMP(projvalgmp, projindsize);
@@ -1479,7 +1479,7 @@ SCIP_RETCODE projectShift(
 #endif
 
       /* rval = 0 -> fail */
-      if( rval )
+      if( rval )  /* cppcheck-suppress knownConditionTrueFalse */
       {
          lp->hasprovedbound = FALSE;
          if( usefarkas )
