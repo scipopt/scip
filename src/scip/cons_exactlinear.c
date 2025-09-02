@@ -1396,12 +1396,16 @@ void checkMaxActivityDelta(
 {
    if( consdata->maxactdelta != SCIP_INVALID )
    {
-      SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &maxactdelta );
-      SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &domain );
-      SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &delta );
+      SCIP_Rational* maxactdelta;
+      SCIP_Rational* domain;
+      SCIP_Rational* delta;
       SCIP_RATIONAL* lb;
       SCIP_RATIONAL* ub;
       int v;
+
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &maxactdelta) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &domain) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &delta) );
 
       for( v = consdata->nvars - 1; v >= 0; --v )
       {
@@ -1427,7 +1431,8 @@ void checkMaxActivityDelta(
 
       SCIPrationalFreeBuffer(SCIPbuffer(scip), delta);
       SCIPrationalFreeBuffer(SCIPbuffer(scip), domain);
-      SCIPrationalFreeBuffer(SCIPbuffer(scip), maxactdelta);   }
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), maxactdelta);
+   }
 }
 #else
 #define checkMaxActivityDelta(scip, consdata) /**/
