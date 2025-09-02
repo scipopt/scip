@@ -2286,7 +2286,7 @@ public:
 
    int ObjType(
       int
-   )
+   ) const
    {
       return objsense == SCIP_OBJSENSE_MAXIMIZE ? 1 : 0;
    }
@@ -2324,7 +2324,7 @@ public:
    template <class VarBoundsWriter>
    void FeedVarBounds(
       VarBoundsWriter&   vbw
-   )
+   ) const
    {
       for( int v = 0; v < nvars; ++v )
       {
@@ -2822,7 +2822,7 @@ public:
    template <class RowObjNameWriter>
    void FeedRowAndObjNames(
       RowObjNameWriter&  wrt
-   )
+   ) const
    {
       if( !wrt || genericnames )
          return;
@@ -2843,7 +2843,7 @@ public:
    template <class ColNameWriter>
    void FeedColNames(
       ColNameWriter&     wrt
-   )
+   ) const
    {
       if( !wrt || genericnames )
          return;
