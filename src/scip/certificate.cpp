@@ -765,13 +765,11 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
       {
          SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, vars[j], SCIPvarGetLbGlobalExact(vars[j]), FALSE) );
          SCIPvarSetLbCertificateIndexGlobal(vars[j], certificate->indexcounter - 1);
-         SCIPvarSetLbCertificateIndexLocal(vars[j], certificate->indexcounter - 1);
       }
       if( !SCIPrationalIsAbsInfinity(SCIPvarGetUbGlobalExact(vars[j])) )
       {
          SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, vars[j], SCIPvarGetUbGlobalExact(vars[j]), TRUE) );
          SCIPvarSetUbCertificateIndexGlobal(vars[j], certificate->indexcounter - 1);
-         SCIPvarSetUbCertificateIndexLocal(vars[j], certificate->indexcounter - 1);
       }
    }
 
