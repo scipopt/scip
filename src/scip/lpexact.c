@@ -4053,8 +4053,6 @@ SCIP_RETCODE SCIPlpExactFree(
    SCIP_CALL( SCIPlpExactProjectShiftFree(*lpexact, set, blkmem) );
    SCIP_CALL( SCIPlpExactClear(*lpexact, blkmem, set) );
 
-   //freeDiveChgSideArrays(*lpexact);
-
    /* release LPI rows */
    for( i = 0; i < (*lpexact)->nlpirows; ++i )
    {
