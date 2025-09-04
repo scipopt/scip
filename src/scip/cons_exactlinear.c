@@ -1386,7 +1386,7 @@ void consdataCheckNonbinvar(
    consdata->hasnonbinvalid = TRUE;
 }
 
-#ifdef CHECKMAXACTDELTA
+#ifdef SCIP_MORE_DEBUG
 /* checks that the stored maximal activity delta (if not invalid) is correct */
 static
 void checkMaxActivityDelta(
