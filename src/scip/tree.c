@@ -2441,6 +2441,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_NODE*            node,               /**< node to set lower bound for */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
@@ -2472,7 +2473,15 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
       else
          lpobjval = SCIPlpGetObjval(lp, set, transprob);
 
-      SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
+      if( SCIPsetIsInfinity(set, lpobjval) )
+      {
+         SCIPmessageFPrintWarning(messagehdlr, "Cutting off node with feasible LP relaxation but LP bound %g larger than numerics/infinity (%g)\n", lpobjval, SCIPsetInfinity(set));
+         SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, transprob, origprob, set->scip->reopt, lp, set->scip->mem->probmem) );
+      }
+      else
+      {
+         SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
+      }
    }
 
    return SCIP_OKAY;
@@ -7036,7 +7045,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          }
          else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp))
          {
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, transprob, origprob, lp) );
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, messagehdlr, tree, transprob, origprob, lp) );
          }
       }
    }
