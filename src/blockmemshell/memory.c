@@ -1837,6 +1837,10 @@ void* BMSallocBlockMemory_work(
 
    assert( blkmem != NULL );
 
+   /* allocating very large memory blocks is currently not possible, because BMS_CHKMEM::elemsize is of type int only */
+   if( size > INT_MAX )
+      return NULL;
+
    /* calculate hash number of given size */
    alignSize(&size);
    hashnumber = getHashNumber(size);
