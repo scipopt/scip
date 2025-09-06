@@ -63,6 +63,9 @@
 #define DEFAULT_USESTRENGTHENING  FALSE /**< default for using strengthend intersection cuts to separate */
 #define DEFAULT_USEBOUNDS         FALSE /**< default for using nonnegativity bounds when separating */
 
+/* TODO find a smarter less blunt way how to handle problems with many 2x2 minors (eigena2, elec100, sjup2) */
+#define MAXNMINORS               100000 /**< maximal minors to consider; minor detection stops when MAXNMINORS many have been found */
+
 /*
  * Data structures
  */
@@ -417,7 +420,7 @@ SCIP_RETCODE detectMinors(
 
       rowi = (struct rowdata*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[i]]);
 
-      for( j = i + 1; j < nrowvars; ++j )
+      for( j = i + 1; j < nrowvars && sepadata->nminors < MAXNMINORS ; ++j )
       {
          struct rowdata* rowj;
          int ninter;
