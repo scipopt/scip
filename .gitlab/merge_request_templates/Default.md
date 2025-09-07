@@ -1,6 +1,6 @@
 ### Description
 
-[Add a description of the introduced changes here.]
+%{all_commits}
 
 ### Code review
 
