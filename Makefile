@@ -41,30 +41,8 @@ INSTALLDIR	=
 # include make.project file
 #-----------------------------------------------------------------------------
 
-# do not use other open source projects; needs to be set before including make.project
-ifeq ($(OPENSOURCE),false)
-	override EXPRINT	=	none
-	override GMP		=	false
-	override BOOST		=	false
-	override MPFR		=	false
-	override READLINE	=	false
-	override ZLIB		=	false
-	override ZIMPL		=	false
-	override IPOPT		=	false
-	override AMPL		=	false
-endif
-
 # mark that this is a SCIP internal makefile
 SCIPINTERNAL	=	true
-
-# use THREADSAFE=true if compiled with TPI not equal to none
-ifeq ($(TPI),omp)
-	override THREADSAFE      =       true
-endif
-ifeq ($(TPI),tny)
-        override THREADSAFE      =       true
-endif
-
 
 # load default settings and detect host architecture
 include $(SCIPDIR)/make/make.project

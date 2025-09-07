@@ -84,32 +84,31 @@ THREADSAFE      ?= true
 DEBUGSOL        ?= false
 
 # parameters for third party dependencies
-OPENSOURCE      ?= true
-READLINE        ?= true
-ZLIB            ?= true
-GMP             ?= true
-MPFR            ?= auto
-BOOST           ?= false
 AMPL            ?= true
-ZIMPL           ?= false
-ZIMPLOPT        ?= opt
+BOOST           ?= false
 CONOPT          ?= false
+DEJAVUEXTERNAL  ?= false
+EXPRINT         ?= cppad
 FILTERSQP       ?= false
+GMP             ?= true
 IPOPT           ?= false
 IPOPTOPT        ?= opt
-WORHP           ?= false
-WORHPOPT        ?= opt
-EXPRINT         ?= cppad
+LAPACK          ?= false
 LPS             ?= spx
+LPSCHECK        ?= false
 LPSEXACT        ?= auto
 LPSOPT          ?= opt
-LPSCHECK        ?= false
-TPI             ?= tny
-SYM             ?= snauty
+MPFR            ?= auto
 NAUTYEXTERNAL   ?= false
-DEJAVUEXTERNAL  ?= false
 PAPILO          ?= false
-LAPACK          ?= false
+READLINE        ?= true
+SYM             ?= snauty
+TPI             ?= tny
+WORHP           ?= false
+WORHPOPT        ?= opt
+ZIMPL           ?= false
+ZIMPLOPT        ?= opt
+ZLIB            ?= true
 
 # check and testing parameters
 TIME            ?= 3600
@@ -511,6 +510,12 @@ LPIEXLIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPIEXLIBSHORTNAME).$(LIB
 #-----------------------------------------------------------------------------
 # Parallel Interface
 #-----------------------------------------------------------------------------
+
+ifneq ($(TPI),none)
+ifeq ($(THREADSAFE),false)
+$(error Using TPI=$(TPI) requires THREADSAFE=true.)
+endif
+endif
 
 TPILIBNAME	=	tpi$(TPI)
 

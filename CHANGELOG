@@ -307,6 +307,7 @@ Build system
 - added build flag CONOPT (default: false) to link to the CONOPT NLP solver
 - LPS=spx is no longer mapped to LPS=spx2, which changes the name of the generated LPI libraries and binaries when using SoPlex
 - default settings for makefile variables in make.project are now only used if variable hasn't been set already
+- removed OPENSOURCE flag
 
 ### Cmake
 
