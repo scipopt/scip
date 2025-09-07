@@ -1667,9 +1667,8 @@ SCIP_Longint SCIPgetExprNewSoltag(
 /** evaluates gradient of an expression for a given point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
- * Value can be received via SCIPgetExprPartialDiffNonlinear().
- * If an error (division by zero, ...) occurs, this value will
- * be set to SCIP_INVALID.
+ * Value can be received from variable expressions via SCIPexprGetDerivative() or via SCIPgetExprPartialDiffNonlinear().
+ * If an error (division by zero, ...) occurs, these functions return SCIP_INVALID.
  */
 SCIP_RETCODE SCIPevalExprGradient(
    SCIP*                 scip,               /**< SCIP data structure */
