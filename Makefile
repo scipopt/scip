@@ -60,30 +60,19 @@ MAKESOFTLINKS	=	true
 # define build flags
 #-----------------------------------------------------------------------------
 BUILDFLAGS =	" ARCH=$(ARCH)\\n\
-		CHECKSTAGE=$(CHECKSTAGE)\\n\
 		COMP=$(COMP)\\n\
+		OSTYPE=$(OSTYPE)\\n\
+		OPT=$(OPT)\\n\
+		LTO=$(LTO)\\n\
+		SANITIZE=$(SANITIZE)\\n\
+		SHARED=$(SHARED)\\n\
+		CHECKSTAGE=$(CHECKSTAGE)\\n\
 		DEBUGSOL=$(DEBUGSOL)\\n\
-		EXPRINT=$(EXPRINT)\\n\
-		GMP=$(GMP)\\n\
-		BOOST=$(BOOST)\\n\
-		MPFR=$(MPFR)\\n\
 		EXACTSOLVE=$(EXACTSOLVE)\\n\
-		IPOPTOPT=$(IPOPTOPT)\\n\
-		LAPACK=$(LAPACK)\\n\
-		LPSCHECK=$(LPSCHECK)\\n\
-		LPSOPT=$(LPSOPT)\\n\
 		NOBLKBUFMEM=$(NOBLKBUFMEM)\\n\
 		NOBLKMEM=$(NOBLKMEM)\\n\
 		NOBUFMEM=$(NOBUFMEM)\\n\
-		OPT=$(OPT)\\n\
-		LTO=$(LTO)\\n\
-		OSTYPE=$(OSTYPE)\\n\
 		THREADSAFE=$(THREADSAFE)\\n\
-		PAPILO=$(PAPILO)\\n\
-		READLINE=$(READLINE)\\n\
-		SANITIZE=$(SANITIZE)\\n\
-		SHARED=$(SHARED)\\n\
-		SYM=$(SYM)\\n\
 		USRARFLAGS=$(USRARFLAGS)\\n\
 		USRCFLAGS=$(USRCFLAGS)\\n\
 		USRCXXFLAGS=$(USRCXXFLAGS)\\n\
@@ -91,11 +80,23 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		USRLDFLAGS=$(USRLDFLAGS)\\n\
 		USROFLAGS=$(USROFLAGS)\\n\
 		VERSION=$(VERSION)\\n\
+		AMPL=$(AMPL)\\n\
+		BOOST=$(BOOST)\\n\
+		CONOPT=$(CONOPT)\\n\
+		EXPRINT=$(EXPRINT)\\n\
+		IPOPTOPT=$(IPOPTOPT)\\n\
+		GMP=$(GMP)\\n\
+		LAPACK=$(LAPACK)\\n\
+		LPSCHECK=$(LPSCHECK)\\n\
+		LPSOPT=$(LPSOPT)\\n\
+		MPFR=$(MPFR)\\n\
+		PAPILO=$(PAPILO)\\n\
+		READLINE=$(READLINE)\\n\
+		SYM=$(SYM)\\n\
 		WORHP=$(WORHP)\\n\
 		WORHPOPT=$(WORHPOPT)\\n\
 		ZIMPL=$(ZIMPL)\\n\
 		ZIMPLOPT=$(ZIMPLOPT)\\n\
-		AMPL=$(AMPL)\\n\
 		ZLIB=$(ZLIB)"
 
 #-----------------------------------------------------------------------------
