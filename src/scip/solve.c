@@ -1657,7 +1657,7 @@ SCIP_RETCODE solveNodeInitialLP(
             || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT)
          && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
       {
-         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, eventfilter, tree, transprob, origprob, lp) );
+         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, messagehdlr, eventfilter, tree, transprob, origprob, lp) );
 
          /* if this is the first LP solved at the root, store its iteration count and solution value */
          if( stat->nnodelps == 0 && focusnode->depth == 0 )
@@ -2625,7 +2625,7 @@ SCIP_RETCODE priceAndCutLoop(
          /* update lower bound w.r.t. the LP solution */
          if( !(*lperror) && !(*pricingaborted) && SCIPlpIsRelax(lp) )
          {
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, eventfilter, tree, transprob, origprob, lp) );
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, messagehdlr, eventfilter, tree, transprob, origprob, lp) );
             SCIPsetDebugMsg(set, " -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
                SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
 
@@ -2712,7 +2712,7 @@ SCIP_RETCODE priceAndCutLoop(
                         assert(lp->flushed);
                         assert(lp->solved);
 
-                        SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, eventfilter, tree, transprob, origprob, lp) );
+                        SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, messagehdlr, eventfilter, tree, transprob, origprob, lp) );
                         SCIPsetDebugMsg(set, " -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
                            SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
 
@@ -2943,7 +2943,7 @@ SCIP_RETCODE priceAndCutLoop(
                      if( stat->domchgcount != olddomchgcount && (!mustprice || mustsepa) && !(*cutoff)
                         && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
                      {
-                        SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, eventfilter, tree, transprob, origprob, lp) );
+                        SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, messagehdlr, eventfilter, tree, transprob, origprob, lp) );
                         SCIPsetDebugMsg(set, " -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
                            SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
 
@@ -3050,7 +3050,7 @@ SCIP_RETCODE priceAndCutLoop(
 
       if( SCIPlpIsRelax(lp) )
       {
-         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, eventfilter, tree, transprob, origprob, lp) );
+         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, messagehdlr, eventfilter, tree, transprob, origprob, lp) );
       }
 
       /* update node estimate */
@@ -4085,7 +4085,7 @@ SCIP_RETCODE propAndSolve(
           */
          if( !solvelp && lp->flushed && lp->solved && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
          {
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, eventfilter, tree, transprob, origprob, lp) );
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, messagehdlr, eventfilter, tree, transprob, origprob, lp) );
             SCIPsetDebugMsg(set, " -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
                SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
 

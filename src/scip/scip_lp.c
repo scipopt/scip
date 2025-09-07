@@ -2275,7 +2275,7 @@ SCIP_RETCODE SCIPendDive(
        && !SCIPlpExactDiving(scip->lpexact) && !SCIPisExact(scip) )
    {
       assert(SCIPtreeIsFocusNodeLPConstructed(scip->tree));
-      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->eventfilter, scip->tree, scip->transprob,
+      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->messagehdlr, scip->eventfilter, scip->tree, scip->transprob,
             scip->origprob, scip->lp) );
    }
    /* reset the probably changed LP's cutoff bound */
