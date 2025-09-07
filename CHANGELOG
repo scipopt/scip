@@ -305,6 +305,8 @@ Build system
 - link-time-optimization can be enabled on Linux and macOS with gcc and clang by setting LTO=true, default is false
 - added build flag CONOPT (default: false) to link to the CONOPT NLP solver
 - LPS=spx is no longer mapped to LPS=spx2, which changes the name of the generated LPI libraries and binaries when using SoPlex
+- removed previously deprecated PARASCIP option, use instead THREADSAFE=false to disable thread-safety
+- default settings for makefile variables in make.project are now only used if variable hasn't been set already
 
 ### Cmake
 
