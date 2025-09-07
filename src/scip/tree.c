@@ -3034,6 +3034,11 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    {
       SCIP_CALL( SCIPnodeCutoff(node, set, stat, eventfilter, tree, transprob, origprob, set->scip->reopt, lp, set->scip->mem->probmem) );
    }
+   else if( lpobjvalexact != NULL && SCIPrationalIsInfinity(lpobjvalexact) )
+   {
+      SCIPmessageFPrintWarning(messagehdlr, "Cutting off node with feasible LP relaxation but exact LP bound %g larger than infinity (%g)\n", SCIPrationalGetReal(lpobjvalexact), SCIPrationalGetInfinity());
+      SCIP_CALL( SCIPnodeCutoff(node, set, stat, eventfilter, tree, transprob, origprob, set->scip->reopt, lp, set->scip->mem->probmem) );
+   }
    else if( SCIPsetIsInfinity(set, lpobjval) )
    {
       SCIPmessageFPrintWarning(messagehdlr, "Cutting off node with feasible LP relaxation but LP bound %g larger than numerics/infinity (%g)\n", lpobjval, SCIPsetInfinity(set));
