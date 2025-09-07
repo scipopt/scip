@@ -193,6 +193,7 @@ Interface changes
 - SCIPnlpiOracleGetConstraintLinearCoef() to get a linear coefficient of a variable in a given constraint in the NLP oracle
 - SCIPnlpiOracleGetJacobianColSparsity() to get the columnwise sparsity pattern of the Jacobian from the NLP oracle
 - SCIPnlpiOracleGetObjGradientNnz() to get indices of nonzeroes in the objective gradient
+- SCIPhashmapInsertLong() and SCIPhashmapGetImageLong()
 
 ### Changes in preprocessor macros
 
