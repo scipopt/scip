@@ -2859,24 +2859,8 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
       || (tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
       || (SCIPsetIsRelEQ(set, SCIPtreeGetLowerbound(tree, set), stat->lastlowerbound)
       && (!set->exact_enable || SCIPrationalIsEQ(SCIPtreeGetLowerboundExact(tree, set), stat->lastlowerboundexact))));
-
-   /* node with infinite lower bound should rather be cut off */
-   if( newboundexact != NULL )
-   {
-      if( SCIPrationalIsInfinity(newboundexact) )
-      {
-         SCIPwarningMessage(set->scip, "Reached exact lower bound that exceeds infinity.\n");
-         SCIPABORT();
-      }
-   }
-   else if( newbound != SCIP_INVALID ) /*lint !e777*/
-   {
-      if( SCIPsetIsInfinity(set, newbound) )
-      {
-         SCIPwarningMessage(set->scip, "Reached real lower bound that exceeds infinity.\n");
-         SCIPABORT();
-      }
-   }
+   assert(newbound == SCIP_INVALID || !SCIPsetIsInfinity(set, newbound));  /*lint !e777*/
+   assert(newboundexact == NULL || !SCIPrationalIsInfinity(newboundexact));
 
    if( set->exact_enable )
    {
