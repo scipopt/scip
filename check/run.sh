@@ -158,8 +158,6 @@ if test -e $VIPRFILE
 then
     if [ -z "$VIPRCOMPNAME" ]; then
       echo "VIPRCOMPNAME is empty"  >> $OUTFILE
-    else
-      echo "VIPRCOMPNAME: $VIPRCOMPNAME" >> $OUTFILE
     fi
 
     echo Building vipr file ... >> $OUTFILE
