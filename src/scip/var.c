@@ -9650,7 +9650,6 @@ SCIP_RETCODE SCIPvarAddObjExact(
    SCIP_RATIONAL* tmpobj;
    SCIP_RATIONAL* oldobj;
    SCIP_RATIONAL* multaggrobj;
-   SCIP_Real addobjreal;
    SCIP_Real oldobjreal;
 
    assert(var != NULL);
@@ -9666,7 +9665,6 @@ SCIP_RETCODE SCIPvarAddObjExact(
    if( !SCIPrationalIsZero(addobj) )
    {
       int i;
-      addobjreal = SCIPrationalGetReal(addobj);
 
       switch( SCIPvarGetStatusExact(var) )
       {
@@ -9715,7 +9713,6 @@ SCIP_RETCODE SCIPvarAddObjExact(
          assert(SCIPsetIsEQ(set, var->locdom.lb, var->locdom.ub));
          SCIPrationalMult(tmpobj, var->exactdata->locdom.lb, addobj);
          SCIPprobAddObjoffsetExact(transprob, tmpobj);
-         SCIPprobAddObjoffset(transprob, var->locdom.lb * addobjreal);
          SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
          break;
 
@@ -9723,7 +9720,6 @@ SCIP_RETCODE SCIPvarAddObjExact(
          /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
          SCIPrationalMult(tmpobj, var->exactdata->aggregate.constant, addobj);
          SCIPprobAddObjoffsetExact(transprob, tmpobj);
-         SCIPprobAddObjoffset(transprob, var->data.aggregate.constant * addobjreal);
          SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
 
          SCIPrationalMult(tmpobj, var->exactdata->aggregate.scalar, addobj);
@@ -9739,7 +9735,6 @@ SCIP_RETCODE SCIPvarAddObjExact(
 
          SCIPrationalMult(tmpobj, var->exactdata->multaggr.constant, addobj);
          SCIPprobAddObjoffsetExact(transprob, tmpobj);
-         SCIPprobAddObjoffset(transprob, var->data.multaggr.constant * addobjreal);
          SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
 
          for( i = 0; i < var->data.multaggr.nvars; ++i )
@@ -9759,7 +9754,6 @@ SCIP_RETCODE SCIPvarAddObjExact(
 
          SCIPrationalMultReal(tmpobj, addobj, var->data.negate.constant);
          SCIPprobAddObjoffsetExact(transprob, tmpobj);
-         SCIPprobAddObjoffset(transprob, var->data.negate.constant * addobjreal);
          SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
 
          SCIPrationalNegate(tmpobj, addobj);

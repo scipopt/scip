@@ -572,9 +572,9 @@ SCIP_RETCODE SCIPaddObjoffset(
  *       - \ref SCIP_STAGE_PROBLEM
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPaddOrigObjoffset(
+SCIP_RETCODE SCIPaddOrigObjoffsetExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             addval              /**< value to add to objective offset */
+   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
    );
 
 /** adds offset of objective function to original problem and to all existing solution in original space
@@ -586,9 +586,9 @@ SCIP_RETCODE SCIPaddOrigObjoffset(
  *       - \ref SCIP_STAGE_PROBLEM
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPaddOrigObjoffsetExact(
+SCIP_RETCODE SCIPaddOrigObjoffset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
+   SCIP_Real             addval              /**< value to add to objective offset */
    );
 
 /** returns the objective offset of the original problem

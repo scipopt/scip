@@ -518,9 +518,6 @@ SCIP_RETCODE SCIPreaderWrite(
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &objoffsetexact) );
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &objscaleexact) );
 
-         /* floating-point values should not be used, so set to dummy values */
-         objoffset = 0.0;
-         objscale = 1.0;
          SCIPrationalSetRational(objoffsetexact, SCIPprobGetObjoffsetExact(prob));
          SCIPrationalSetRational(objscaleexact, SCIPprobGetObjscaleExact(prob));
 
@@ -528,18 +525,19 @@ SCIP_RETCODE SCIPreaderWrite(
          if( SCIPprobIsTransformed(prob) && SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
             SCIPrationalMultReal(objscaleexact, objscaleexact, -1.0);
       }
-      /* get real objective offset and scale */
+      /* only real objective offset and scale */
       else
       {
-         objoffset = SCIPprobGetObjoffset(prob);
-         objscale = SCIPprobGetObjscale(prob);
          objoffsetexact = NULL;
          objscaleexact = NULL;
-
-         /* adapt real objective scale for transformed problem (for the original no change is necessary) */
-         if( SCIPprobIsTransformed(prob) && SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
-            objscale *= -1.0;
       }
+
+      objoffset = SCIPprobGetObjoffset(prob);
+      objscale = SCIPprobGetObjscale(prob);
+
+      /* adapt real objective scale for transformed problem (for the original no change is necessary) */
+      if( SCIPprobIsTransformed(prob) && SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
+         objscale *= -1.0;
 
       /* call reader to write problem */
       retcode = reader->readerwrite(set->scip, reader, file, filename, SCIPprobGetName(prob), SCIPprobGetData(prob),
