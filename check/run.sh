@@ -190,6 +190,16 @@ then
         echo "vipr returned with error code $retcode." >> $ERRFILE
     fi
 
+
+
+    # compress vipr file
+    echo Gzipping vipr file ... >> $OUTFILE
+    bash -c "gzip $VIPRFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
+    echo "viprfile gzipped:   " `ls -lisa $VIPRFILE.gz` >> $OUTFILE
+fi
+
+if test -e $VIPRORIFILE
+then
     # run vipr also on original file to check solution
     echo Checking vipr_ori file ... >> $OUTFILE
     bash -c "$VIPRCHECKNAME $VIPRORIFILE 2>>$ERRFILE"  | tee -a $OUTFILE
@@ -198,11 +208,6 @@ then
     then
         echo "vipr on original problem returned with error code $retcode." >>$ERRFILE
     fi
-
-    # compress vipr file
-    echo Gzipping vipr file ... >> $OUTFILE
-    bash -c "gzip $VIPRFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
-    echo "viprfile gzipped:   " `ls -lisa $VIPRFILE.gz` >> $OUTFILE
 
     # compress vipr_ori file
     echo Gzipping vipr_ori file ... >> $OUTFILE
