@@ -345,7 +345,7 @@ if(SCIP_WITH_EXACTSOLVE)
     if(SCIP_WITH_ZIMPL)
         list(APPEND
             instances_MIPEX
-            "instances/MIPEX/misc03.zpl\;3360"
+            # instance misc03p1 appended later
             "instances/MIPEX/rgn.zpl\;2054999981/25000000"
             "instances/MIPEX/stein27.zpl\;18"
         )
@@ -1348,6 +1348,15 @@ if(SCIP_WITH_EXACTSOLVE)
             endif()  # LP Error: Xpress returned 11, #3724
         endforeach(extension)
     endforeach(instance)
+    #
+    # append ZIMPL instances with objective constant (not compatible with the readertest)
+    #
+    if(SCIP_WITH_ZIMPL)
+        list(APPEND
+            instances_MIPEX
+            "instances/MIPEX/misc03p1.zpl\;3360.1"
+        )
+    endif()
     #
     # second test without certification
     #
