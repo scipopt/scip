@@ -852,7 +852,6 @@ set(basenames_opb_wrongformat
     gt2.mps
     lseu_dcmulti.cip
     misc03.mps
-    misc03.zpl
     rgn.mps
     rgn.zpl
     vpm2.fzn
