@@ -1462,15 +1462,15 @@ SCIP_RETCODE SCIPaddObjoffset(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-SCIP_RETCODE SCIPaddOrigObjoffset(
+SCIP_RETCODE SCIPaddOrigObjoffsetExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             addval              /**< value to add to objective offset */
+   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddOrigObjoffset", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddOrigObjoffsetExact", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPprobAddObjoffset(scip->origprob, addval);
-   SCIPprimalAddOrigObjoffset(scip->origprimal, scip->set, addval);
+   SCIPprobAddObjoffsetExact(scip->origprob, addval);
+   SCIPprimalAddOrigObjoffsetExact(scip->origprimal, scip->set, addval);
 
    return SCIP_OKAY;
 }
@@ -1483,15 +1483,29 @@ SCIP_RETCODE SCIPaddOrigObjoffset(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
-SCIP_RETCODE SCIPaddOrigObjoffsetExact(
+SCIP_RETCODE SCIPaddOrigObjoffset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
+   SCIP_Real             addval              /**< value to add to objective offset */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddOrigObjoffsetExact", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddOrigObjoffset", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPprobAddObjoffsetExact(scip->origprob, addval);
-   SCIPprimalAddOrigObjoffsetExact(scip->origprimal, scip->set, addval);
+   if( SCIPisExact(scip) )
+   {
+      SCIP_RATIONAL* addvalexact;
+
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &addvalexact) );
+
+      SCIPrationalSetReal(addvalexact, addval);
+      SCIP_CALL( SCIPaddOrigObjoffsetExact(scip, addvalexact) );
+
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &addvalexact);
+
+      return SCIP_OKAY;
+   }
+
+   SCIPprobAddObjoffset(scip->origprob, addval);
+   SCIPprimalAddOrigObjoffset(scip->origprimal, scip->set, addval);
 
    return SCIP_OKAY;
 }
