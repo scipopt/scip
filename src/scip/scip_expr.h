@@ -576,7 +576,7 @@ SCIP_RETCODE SCIPevalExprHessianDir(
  * @{
  */
 
-/** possibly reevaluates and then returns the activity of the expression
+/** possibly reevaluates the activity of the expression
  *
  * Reevaluate activity if currently stored is no longer uptodate (some bound was changed since last evaluation).
  *
