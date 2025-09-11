@@ -158,7 +158,8 @@ XPRESS_BIN      ?= xpress
 
 # code check and doxygen
 DOXY            ?= doxygen
-LINT            ?= flexelint
+# need to overwrite builtin variable LINT=lint
+LINT             = flexelint
 PCLINT          ?= pclint
 PCLINTCONFIG    ?= pclp_config.py
 SPLINT          ?= splint
