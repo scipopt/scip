@@ -44,6 +44,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
 #include "scip/scip_sepa.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
@@ -323,6 +324,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpIntobj)
 
    /* only call separator, if there are fractional variables */
    if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* only call separator if not in probing with changed objective function
+    * this separator did not track objective changes anymore
+    */
+   if( SCIPisObjChangedProbing(scip) )
       return SCIP_OKAY;
 
    SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
