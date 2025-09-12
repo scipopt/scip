@@ -80,7 +80,7 @@ SCIP_RETCODE SCIPnodeCreateChild(
    SCIP_Real             estimate            /**< estimate for (transformed) objective value of best feasible solution in subtree */
    );
 
-/** frees node */
+/** frees node and inactive path iteratively */
 SCIP_RETCODE SCIPnodeFree(
    SCIP_NODE**           node,               /**< node data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
