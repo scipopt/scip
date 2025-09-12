@@ -337,6 +337,7 @@ Fixed bugs
 - avoid integer overflow in cons_cumulative.c triggered by unbounded variables, see new parameter "constraints/cumulative/maxtime"
 - allow negative update in SCIPconsAddUpgradeLocks() to unlock constraint upgrade
 - fixed memory leaks when LP, MPS and OPB/WBO readers abort unsuccessfully
+- removed erroneous catching of objective-changed events in intobj separator, instead the separator no longer executes within probing with changed objective function
 
 Miscellaneous
 -------------
