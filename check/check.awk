@@ -822,7 +822,7 @@ BEGIN {
    else
       certified = 1;
 }
-/(Failed|failed)/           {
+/(Verification failed)/           {
    if( vipr_ori || certified_ori )
    {
       vipr_ori = 0;
