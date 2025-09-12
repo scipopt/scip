@@ -3308,6 +3308,453 @@ SCIP_RETCODE performInteriorSolCutStrengthening(
 }
 
 
+/** sets the solution values for the variables identified by the order list. All variables are set to the input value.
+ * The main use case of this is to change the values for a set of binary variables to 1.0 or 0.0
+ */
+static
+SCIP_RETCODE setTestSolutionValues(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_SOL*             sol,                /**< the test solution who's values will be changed */
+   SCIP_VAR**            vars,               /**< the full set of variables, from which a subset will be selected */
+   int*                  varidx,             /**< the variable indices for the vars array to identify the variable solution values that will be set. */
+   int                   nvaridx,            /**< the number of variables selected in the varidx array */
+   SCIP_Real             value               /**< the value that the selected solution values will set to */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(vars != NULL);
+   assert(varidx != NULL);
+   assert(SCIPisZero(scip, value) || SCIPisEQ(scip, value, 1.0));
+
+   for( i = 0; i < nvaridx; i++ )
+   {
+      SCIP_CALL( SCIPsetSolVal(scip, sol, vars[varidx[i]], value) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/* solves the subproblem for the non-convex cut strengthening. This solve executes two solve loops, similar to the main
+ * Benders' subproblem solves, one for the convex solve and the second for the non-convex solve. The success flag is
+ * returned if the subproblem has the same infeasibility/optimal value as the initial subproblem solve
+ */
+static
+SCIP_RETCODE execCutStrengtheningSubproblemSolve(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             testsol,            /**< the solution that will be evaluated in the subproblem solve */
+   int                   probnumber,         /**< the number of the subproblem for which the cut is generated */
+   SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
+   SCIP_Real             objval,             /**< the objective value of the original subproblem solve, +infinity if
+                                                  the subproblem was infeasible */
+   SCIP_Bool             infeasible,         /**< was the original subproblem solve infeasible */
+   SCIP_Bool*            success             /**< does the test solution achieve the same subproblem status as the original solution */
+   )
+{
+   SCIP_Real objective;
+   SCIP_Bool solved;
+   SCIP_Bool solinfeas;
+   int l;
+
+   assert(benders != NULL);
+   assert(set != NULL);
+   assert(testsol != NULL);
+
+   (*success) = FALSE;
+
+   int nsolveloops = 2;
+   /* solving the subproblem with the test solution
+    * TODO: this is using the internal solve method, which is only called from solveBendersSubproblems. It is not
+    * clear whether this will work as intended. Need to pay attention to any data that is written during the solve
+    * method.
+    */
+   for( l = 0; l < nsolveloops; l++ )
+   {
+      SCIP_BENDERSSOLVELOOP solveloop;    /* identifies what problem type is solve in this solve loop */
+
+      /* if either benderssolvesubconvex or benderssolvesub are implemented, then the user callbacks are invoked */
+      if( benders->benderssolvesubconvex != NULL || benders->benderssolvesub != NULL )
+      {
+         if( l == 0 )
+            solveloop = SCIP_BENDERSSOLVELOOP_USERCONVEX;
+         else
+            solveloop = SCIP_BENDERSSOLVELOOP_USERCIP;
+      }
+      else
+         solveloop = (SCIP_BENDERSSOLVELOOP) l;
+
+      /* solving the subproblems for this round of enforcement/checking. */
+      SCIPbendersExecSubproblemSolve(benders, set, testsol, probnumber, solveloop, TRUE, &objective, &solved,
+         &solinfeas, type);
+
+      /* checking the result of the test solution against the original solution. We check only against the objective
+       * value, because an infeasible solution is always given an objective value of +infinity.
+       *
+       * When l == 0, only the convex relaxations are solved. If the problem is already infeasible or the objective
+       * exceeds the target objective, we can terminate. Otherwise, the second solve loop is required.
+       */
+      if( l == 0)
+      {
+         /* the convex relaxation has proven that the test sol is infeasible or has a worse objective value */
+         if( solinfeas == infeasible )
+         {
+            (*success) = TRUE;
+            break;
+         }
+         else if( SCIPsetIsFeasGE(set, objective, objval) )
+            break;
+      }
+      else
+      {
+         /* the test solution is infeasible or the objective is the same, then we have a valid solution */
+         if( solinfeas == infeasible || SCIPsetIsFeasEQ(set, objective, objval) )
+            (*success) = TRUE;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checking whether the keep list forms a valid solution. If the subproblem is solved and the original status is
+ * achieved, then the keep list forms a valid solution (an IIS in the context of LBBD). This will set the success flag,
+ * indicating that the cut strengthening approach should terminate and return the solution formed by the keep list.
+ */
+static
+SCIP_RETCODE evaluateVariableKeepList(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< the variables that are considered in the cut strengthening */
+   int*                  keep,               /**< the subset of variables that are marked to keep and will form the test solution. */
+   int                   numkeep,            /**< the number of variables in the keep list */
+   int                   probnumber,         /**< the number of the subproblem for which the cut is generated */
+   SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
+   SCIP_Real             objval,             /**< the objective value of the original subproblem solve, +infinity if
+                                                  the subproblem was infeasible */
+   SCIP_Bool             infeasible,         /**< was the original subproblem solve infeasible */
+   SCIP_Bool*            success             /**< does the test solution achieve the same subproblem status as the original solution */
+   )
+{
+   SCIP_SOL* testsol;
+
+   assert(benders != NULL);
+   assert(set != NULL);
+   assert(keep != NULL);
+
+   /* creating the test solution */
+   SCIP_CALL( SCIPcreateSol(set->scip, &testsol, NULL) );
+
+   /* setting the values of the keep variables to 1.0 */
+   for( int i = 0; i < numkeep; i++ )
+   {
+      SCIP_CALL( SCIPsetSolVal(set->scip, testsol, vars[keep[i]], 1.0) );
+   }
+
+   /* solving the subproblem to evaluate the test solution */
+   SCIP_CALL( execCutStrengtheningSubproblemSolve(benders, set, testsol, probnumber, type, objval, infeasible,
+         success) );
+
+   /* freeing the test solution */
+   SCIP_CALL( SCIPfreeSol(set->scip, &testsol) );
+
+   return SCIP_OKAY;
+}
+/* performs cut strengthening for non-convex subproblem by performing a depth first binary search on the master problem
+ * solution.
+ *
+ * This cut strengthening approach requires that the linking master problem variables are all binary. The goal is to
+ * find a subset of the master problem variables that are set to 1 to achieve either infeasibility or the same objective
+ * value. The cut strengthening is performed after the subproblem is solved with the full master problem solution.
+ * */
+static
+SCIP_RETCODE performNonconvexCutStrengthening(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< the initial CIP solution */
+   SCIP_SOL*             newsol,             /**< the CIP solution corresponding to the reduced master solution */
+   int                   probnumber,         /**< the number of the subproblem for which the cut is generated */
+   SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
+   SCIP_BENDERSSUBSTATUS substatus,          /**< the status of the subproblem solve */
+   SCIP_Bool             checkint            /**< are the subproblems called during a check/enforce of integer sols? */
+   )
+{
+   SCIP* scip;
+   SCIP_SOL* testsol;
+   SCIP_RANDNUMGEN* randnumgen;
+   SCIP_VAR** submastervars;
+   int nsubmastervars;
+   SCIP_Real objval;
+   SCIP_Bool infeasible;
+   int* candidates;
+   int* keep;
+   int numcands;
+   int numkeep;
+   int midpoint;
+   int partitionsize;
+   int i;
+
+   assert(benders != NULL);
+   assert(set != NULL);
+   assert(sol != NULL);
+   assert(newsol != NULL);
+
+   scip = set->scip;
+
+   /* the cut strengthening is only called when there is an auxiliary variable violation of the subproblem is infeasible */
+   if( substatus != SCIP_BENDERSSUBSTATUS_AUXVIOL && substatus != SCIP_BENDERSSUBSTATUS_INFEAS )
+      return SCIP_OKAY;
+
+   /* setting the objective value. If the subproblem was infeasible, then it is set to infinity, otherwise the objective
+   * value is set to the subproblem solve objective
+    *
+    * TODO: check that this is a correct check. The optimality is actually checked in the benders cut methods.
+    */
+   if( substatus == SCIP_BENDERSSUBSTATUS_AUXVIOL )
+   {
+      objval = SCIPbendersGetSubproblemObjval(benders, probnumber);
+      infeasible = FALSE;
+   }
+   else if( substatus == SCIP_BENDERSSUBSTATUS_INFEAS )
+   {
+      objval = SCIPinfinity(scip);
+      infeasible = TRUE;
+   }
+   else
+      SCIPABORT();
+
+   /* creating an empty */
+   /* if the solution is not NULL, then we copy the solution. Otherwise, it is copied from the LP */
+   if( sol != NULL )
+   {
+      assert(type == SCIP_BENDERSENFOTYPE_CHECK);
+      SCIP_CALL( SCIPcreateSolCopy(scip, &testsol, sol) );
+   }
+   else
+   {
+      switch( type )
+      {
+      case SCIP_BENDERSENFOTYPE_LP:
+         SCIP_CALL( SCIPcreateLPSol(scip, &testsol, NULL) );
+         break;
+      case SCIP_BENDERSENFOTYPE_PSEUDO:
+         SCIP_CALL( SCIPcreatePseudoSol(scip, &testsol, NULL) );
+         break;
+      case SCIP_BENDERSENFOTYPE_RELAX:
+         SCIP_CALL( SCIPcreateRelaxSol(scip, &testsol, NULL) );
+         break;
+      default:
+         SCIP_CALL( SCIPcreateLPSol(scip, &testsol, NULL) );
+         break;
+      }  /*lint !e788*/
+   }
+   SCIP_CALL( SCIPunlinkSol(scip, testsol) );
+
+   /* freeing the subproblem to initialise the cut strengthening approach */
+   SCIP_CALL( SCIPbendersFreeSubproblem(benders, set, probnumber) );
+
+   submastervars = SCIPbendersGetSubproblemMasterVars(benders, probnumber);
+   nsubmastervars = SCIPbendersGetNSubproblemMasterVars(benders, probnumber);
+
+   /* creating the arrays for performing the DFBS */
+   SCIP_CALL( SCIPallocBufferArray(scip, &candidates, nsubmastervars) );
+   numcands = 0;
+
+   /* identifying the variables that are currently active in the master problem solution */
+   for( i = 0; i < nsubmastervars; i++ )
+   {
+      if( SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, submastervars[i]), 1.0) )
+      {
+         candidates[numcands] = i;
+         numcands++;
+      }
+   }
+
+   /* initialising the keep list */
+   SCIP_CALL( SCIPallocBufferArray(scip, &keep, numcands) );
+   numkeep = 0;
+
+   /* randomly sorting the order */
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 0x5EED, TRUE) );
+   SCIPrandomPermuteIntArray(randnumgen, candidates, 0, numcands);
+   SCIPfreeRandom(scip, &randnumgen);
+
+   midpoint = SCIPceil(scip, numcands/2);
+   partitionsize = midpoint;
+
+   /* setting the values of the variables in the initial solution. Since the test solution is a copy of the input
+    * solution, we need to set all variables past the midpoint to 0.0 */
+   // check if this should be numcands - (midpoint + 1)
+   SCIP_CALL( setTestSolutionValues(scip, testsol, submastervars, &(candidates[midpoint + 1]),
+         numcands - (midpoint + 1), 0.0) );
+   //for( i = midpoint + 1; i < numcands; i++ )
+   //{
+      //SCIP_CALL( SCIPsetSolVal(scip, testsol, submastervars[candidates[i]], 0.0) );
+   //}
+
+   do
+   {
+      SCIP_Bool evalkeeplist = FALSE;
+      SCIP_Bool success;
+      int numremove;
+
+      /* solving the Benders' decomposition subproblem to check whether the test solution achieves the same result as
+       * the original solution. */
+      SCIP_CALL( execCutStrengtheningSubproblemSolve(benders, set, testsol, probnumber, type, objval, infeasible,
+            &success) );
+
+      /* keep list test.
+       * If the subproblem solve is not successful, then that implies that there will be an update to the partition. In
+       * this case, if the remaining set of variables contains only one variable, then this implies that this variable
+       * is needed in the final test solution.
+       * If the subproblem solve is successful, since all previous solves up to this point were not, then if the
+       * non-discarded partition contains only a single variable, then this must be part of the final test soluiton.
+       */
+      if( success && partitionsize == 1 )
+      {
+         keep[numkeep] = candidates[midpoint];
+         numkeep++;
+         assert(numkeep <= nsubmastervars);
+
+         numremove = 1 + (numcands - midpoint);
+
+         evalkeeplist = TRUE;
+      }
+      else if( !success && (numcands - midpoint) == 1 )
+      {
+         assert(midpoint + 1 == numcands - 1);
+
+         keep[numkeep] = candidates[midpoint + 1];
+         numkeep++;
+         assert(numkeep <= nsubmastervars);
+
+         numremove = 1;
+
+         evalkeeplist = TRUE;
+      }
+
+      if( evalkeeplist )
+      {
+         SCIP_Bool keeplistsuccess = FALSE;
+
+         SCIP_CALL( evaluateVariableKeepList(benders, set, submastervars, keep, numkeep, probnumber, type,
+               objval, infeasible, &keeplistsuccess) );
+
+         /* if the keep list achieves the desired subproblem result, the we terminate the loop */
+         if( keeplistsuccess )
+            break;
+
+         /* the candidate list and partition needs to be updated to remove the single variable partition. */
+
+         /* the candidates is reduced back down to the set S. The partition size is equivalent to T1. The midpoint is
+          * the split between T1 and T2. Reducing the numcands effectively removes T1 and T2 from further consideration.  */
+         numcands -= numremove;
+
+         /* TODO check the validity of this part. It is different to the algorithm */
+         if( numcands == 1 )
+         {
+            midpoint = numcands;
+         }
+         else
+         {
+            /* performing a split of the remaining candidates. */
+            midpoint = SCIPceil(scip, numcands/2);
+         }
+
+         partitionsize = midpoint;
+
+         /* setting the solution value for the removed and spare partition variables to 0.0 */
+         SCIP_CALL( setTestSolutionValues(scip, testsol, submastervars, &(candidates[midpoint + 1]),
+               numcands - (midpoint + 1) + numremove, 0.0) );
+
+         /* setting the solution value for the kept variable to 1.0 */
+         SCIP_CALL( setTestSolutionValues(scip, testsol, submastervars, &(keep[numkeep - 1]), 1, 1.0) );
+
+         continue;
+      }
+
+      /* if the test solution is valid, then we discard the untested variables. If the test solution is not valid,
+       * then we add half of the remaining candidates to the test solution
+       */
+      if( success )
+      {
+         int prevmidpoint = midpoint;
+         int prevnumcands = numcands;
+         numcands = midpoint;
+         midpoint = midpoint - partitionsize + SCIPceil(scip, partitionsize/2);
+         /* TODO: check if there is a change in the midpoint. If there is no change, then we need to exit */
+         assert(prevmidpoint >= midpoint);
+         partitionsize = SCIPceil(scip, partitionsize/2);
+
+         /* setting the variables in the right partition to zero */
+         SCIP_CALL( setTestSolutionValues(scip, testsol, submastervars, &(candidates[midpoint + 1]),
+               prevnumcands - (midpoint + 1), 0.0) );
+      }
+      else
+      {
+         int prevmidpoint = midpoint;
+         midpoint = MIN(numcands, midpoint + SCIPceil(scip, (numcands - midpoint)/2));
+         /* TODO: check if there is a change in the midpoint. If there is no change, then we need to exit */
+         assert(prevmidpoint <= midpoint);
+         partitionsize = midpoint - prevmidpoint;
+
+         /* setting the new variables selected for the test solution to one */
+         SCIP_CALL( setTestSolutionValues(scip, sol, submastervars, &(candidates[prevmidpoint + 1]), partitionsize, 1.0) );
+      }
+
+   } while (TRUE);
+
+   SCIPfreeBufferArray(scip, &keep);
+   SCIPfreeBufferArray(scip, &candidates);
+
+   SCIPfreeSol(scip, &testsol);
+
+   SCIP_CALL( setTestSolutionValues(scip, newsol, submastervars, keep, numkeep, 1.0) );
+   /* algorithm
+    * - If the initial candidate list only has one element, then we skip.
+    *
+    * 1. set up a candidate list. This should be randomly sorted.
+    * 2. set up a keep list. This is initially empty.
+    * 3. initialise number of candidates and midpoint to ciel(numcands/2) (check this for boundary).
+    *    initialise partitionsize to midpoint.
+    *
+    * 4. while TRUE
+    * 4. fix all variables up to midpoint (+ keep list) to 1.0.
+    * 5. solve subproblem
+    * 5.1 if partitionsize == 1; then singleton partition submodule
+    * 6. if subproblem result is correct
+    *        1. set numcands to midpoint
+    *        1. set midpoint to (midpoint - ciel((numcands - midpoint)/2))
+    *        2. set partitionsize to (midpoint - prevmidpoint)
+    *    else (result not correct -> we can't say anything about the partitioning)
+    *       1. set midpoint to (midpoint + ciel((numcands - midpoint)/2))
+    *       2. set partitionsize to (midpoint - prevmidpoint)
+    *    endif
+    *
+    *
+    * Singleton partition submodule
+    * 1. if (subproblem correct and partitionsize == 1) \
+    *       or (subproblem not correct and complement partitionsize == 1)
+    * 1. add candidate in partition to keep list
+    * 1. fix variables in keep list to 1.
+    * 2. solve subproblem
+    * 3. if subproblem result is correct
+    *       1. use keep list; break
+    *    endif
+    * 4. set numcands to (midpoint - partitionsize)
+    * 5. set midpoint to ciel(numcands/2)
+    * 6. set partitionsize to midpoint
+    *
+    */
+
+   SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
+   SCIP_CALL( SCIPprintSol(scip, newsol, NULL, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+
 /** Returns whether only the convex relaxations will be checked in this solve loop
  *  when Benders' is used in the LNS heuristics, only the convex relaxations of the master/subproblems are checked,
  *  i.e. no integer cuts are generated. In this case, then Benders' decomposition is performed under the assumption
@@ -3566,7 +4013,9 @@ SCIP_RETCODE solveBendersSubproblems(
          }
          else if( solvesub )
          {
-            retcode = SCIPbendersExecSubproblemSolve(benders, set, sol, i, solveloop, FALSE, &solved, &subinfeas, type);
+            SCIP_Real objective;
+            retcode = SCIPbendersExecSubproblemSolve(benders, set, sol, i, solveloop, FALSE, &objective, &solved,
+               &subinfeas, type);
 
             /* the solution for the subproblem is only processed if the return code is SCIP_OKAY */
             if( retcode == SCIP_OKAY )
@@ -4491,6 +4940,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    int                   probnumber,         /**< the subproblem number */
    SCIP_BENDERSSOLVELOOP solveloop,          /**< the solve loop iteration. The first iter is for LP, the second for IP */
    SCIP_Bool             enhancement,        /**< is the solve performed as part of and enhancement? */
+   SCIP_Real*            objective,          /**< the optimal objective value from solving the subproblem */
    SCIP_Bool*            solved,             /**< flag to indicate whether the subproblem was solved */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
@@ -4498,7 +4948,6 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
 {  /*lint --e{715}*/
    SCIP* subproblem;
    SCIP_RESULT result;
-   SCIP_Real objective;
    SCIP_STATUS solvestatus = SCIP_STATUS_UNKNOWN;
 
    assert(benders != NULL);
@@ -4507,7 +4956,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIPsetDebugMsg(set, "Benders' decomposition: solving subproblem %d\n", probnumber);
 
    result = SCIP_DIDNOTRUN;
-   objective = SCIPsetInfinity(set);
+   (*objective) = SCIPsetInfinity(set);
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
@@ -4527,7 +4976,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    {
       /* calls the user defined subproblem solving method. Only the convex relaxations are solved during the Large
        * Neighbourhood Benders' Search. */
-      SCIP_CALL( executeUserDefinedSolvesub(benders, set, sol, probnumber, solveloop, infeasible, &objective, &result) );
+      SCIP_CALL( executeUserDefinedSolvesub(benders, set, sol, probnumber, solveloop, infeasible, objective, &result) );
 
       /* if the result is DIDNOTRUN, then the subproblem was not solved */
       (*solved) = (result != SCIP_DIDNOTRUN);
@@ -4560,7 +5009,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX
          || SCIPbendersGetSubproblemType(benders, probnumber) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
       {
-         SCIP_CALL( SCIPbendersSolveSubproblemLP(set->scip, benders, probnumber, &solvestatus, &objective) );
+         SCIP_CALL( SCIPbendersSolveSubproblemLP(set->scip, benders, probnumber, &solvestatus, objective) );
 
          /* if the (N)LP was solved without error, then the subproblem is labelled as solved */
          if( solvestatus == SCIP_STATUS_OPTIMAL || solvestatus == SCIP_STATUS_INFEASIBLE )
@@ -4583,9 +5032,9 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
 
          bestsol = SCIPgetBestSol(subproblem);
          if( bestsol != NULL )
-            objective = SCIPgetSolOrigObj(subproblem, bestsol)*(int)SCIPgetObjsense(set->scip);
+            (*objective) = SCIPgetSolOrigObj(subproblem, bestsol)*(int)SCIPgetObjsense(set->scip);
          else
-            objective = SCIPsetInfinity(set);
+            (*objective) = SCIPsetInfinity(set);
       }
    }
    else
@@ -4603,11 +5052,11 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       {
          /* TODO: Consider whether other solutions status should be handled */
          if( solvestatus == SCIP_STATUS_OPTIMAL )
-            SCIPbendersSetSubproblemObjval(benders, probnumber, objective);
+            SCIPbendersSetSubproblemObjval(benders, probnumber, (*objective));
          else if( solvestatus == SCIP_STATUS_INFEASIBLE )
             SCIPbendersSetSubproblemObjval(benders, probnumber, SCIPsetInfinity(set));
          else if( solvestatus == SCIP_STATUS_USERINTERRUPT || solvestatus == SCIP_STATUS_BESTSOLLIMIT )
-            SCIPbendersSetSubproblemObjval(benders, probnumber, objective);
+            SCIPbendersSetSubproblemObjval(benders, probnumber, (*objective));
          else if( solvestatus == SCIP_STATUS_MEMLIMIT || solvestatus == SCIP_STATUS_TIMELIMIT
             || solvestatus == SCIP_STATUS_UNKNOWN )
          {
@@ -4632,7 +5081,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       {
          assert(solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP);
          if( result == SCIP_FEASIBLE )
-            SCIPbendersSetSubproblemObjval(benders, probnumber, objective);
+            SCIPbendersSetSubproblemObjval(benders, probnumber, (*objective));
          else if( result == SCIP_INFEASIBLE )
             SCIPbendersSetSubproblemObjval(benders, probnumber, SCIPsetInfinity(set));
          else if( result == SCIP_UNBOUNDED )
