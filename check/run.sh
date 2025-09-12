@@ -198,8 +198,15 @@ fi
 
 if test -e $VIPRORIFILE
 then
+      if [ -z "$VIPRCHECKNAME" ]; then
+        echo "VIPRCHECKNAME is empty"  >> $OUTFILE
+      else
+        echo "VIPRCHECKNAME: $VIPRCHECKNAME" >> $OUTFILE
+      fi
+
     # run vipr also on original file to check solution
     echo Checking vipr_ori file ... >> $OUTFILE
+    echo "$VIPRCHECKNAME $VIPRORIFILE"
     bash -c "$VIPRCHECKNAME $VIPRORIFILE 2>>$ERRFILE"  | tee -a $OUTFILE
     retcode=${PIPESTATUS[0]}
     if test $retcode != 0
