@@ -844,42 +844,37 @@ SCIP_RETCODE nodeAssignParent(
    return SCIP_OKAY;
 }
 
-/** decreases number of children of the parent, frees it if no children are left */
+/** frees node memory, decreases number of children of the parent, and replaces node with parent if no children left */
 static
 SCIP_RETCODE nodeReleaseParent(
-   SCIP_NODE*            node,               /**< child node */
+   SCIP_NODE**           node,               /**< child node */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    )
 {
    SCIP_NODE* parent;
+   SCIP_Bool freeParent = FALSE;
 
-   assert(node != NULL);
-   assert(blkmem != NULL);
    assert(tree != NULL);
+   assert(node != NULL);
+   assert(*node != NULL);
 
    SCIPsetDebugMsg(set, "releasing parent-child relationship of node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d with parent #%" SCIP_LONGINT_FORMAT " of type %d\n",
-      SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node),
-      node->parent != NULL ? SCIPnodeGetNumber(node->parent) : -1,
-      node->parent != NULL ? (int)SCIPnodeGetType(node->parent) : -1);
-   parent = node->parent;
+      SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node),
+      (*node)->parent != NULL ? SCIPnodeGetNumber((*node)->parent) : -1,
+      (*node)->parent != NULL ? (int)SCIPnodeGetType((*node)->parent) : -1);
+   parent = (*node)->parent;
    if( parent != NULL )
    {
-      SCIP_Bool freeParent = FALSE;
-
       switch( SCIPnodeGetType(parent) )
       {
       case SCIP_NODETYPE_FOCUSNODE:
          assert(parent->active);
-         assert(SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE
-            || SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
-         if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
-            treeRemoveChild(tree, node);
+         assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD || SCIPnodeGetType(*node) == SCIP_NODETYPE_PROBINGNODE
+            || SCIPnodeGetType(*node) == SCIP_NODETYPE_LEAF);
+         if( SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD )
+            treeRemoveChild(tree, *node);
          /* don't kill the focus node at this point => freeParent = FALSE */
          break;
       case SCIP_NODETYPE_PROBINGNODE:
@@ -926,7 +921,7 @@ SCIP_RETCODE nodeReleaseParent(
           * we don't want to free the refocused node, because we first have to convert it back to its original
           * type (where it possibly has children) => freeParent = FALSE
           */
-         assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+         assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_PROBINGNODE);
          assert(!SCIPtreeProbing(tree));
          break;
       default:
@@ -934,13 +929,8 @@ SCIP_RETCODE nodeReleaseParent(
          return SCIP_INVALIDDATA;
       }
 
-      /* free parent if it is not on the current active path */
-      if( freeParent && !parent->active )
-      {
-         SCIP_CALL( SCIPnodeFree(&node->parent, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
-      }
       /* update the effective root depth if not in reoptimization and active parent has children */
-      else if( !set->reopt_enable && freeParent == !parent->active )
+      if( !set->reopt_enable && !freeParent && parent->active )
       {
          SCIP_Bool singleChild = FALSE;
          int focusdepth = SCIPtreeGetFocusDepth(tree);
@@ -998,12 +988,18 @@ SCIP_RETCODE nodeReleaseParent(
 
             SCIPsetDebugMsg(set,
                "unlinked node #%" SCIP_LONGINT_FORMAT " in depth %d -> new effective root depth: %d\n",
-               SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->updatedeffectiverootdepth);
+               SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), tree->updatedeffectiverootdepth);
          }
 
          assert(!singleChild || tree->updatedeffectiverootdepth == SCIPtreeGetFocusDepth(tree));
       }
    }
+
+   BMSfreeBlockMemory(blkmem, node);
+
+   /* free parent iteratively if it is not on the current active path */
+   if( freeParent && !parent->active )
+      *node = parent;
 
    return SCIP_OKAY;
 }
@@ -1098,7 +1094,7 @@ SCIP_Bool SCIPtreeWasNodeLastBranchParent(
    return FALSE;
 }
 
-/** frees node */
+/** frees node and inactive path iteratively */
 SCIP_RETCODE SCIPnodeFree(
    SCIP_NODE**           node,               /**< node data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
@@ -1112,124 +1108,126 @@ SCIP_RETCODE SCIPnodeFree(
 {
    SCIP_Bool isroot;
 
+   assert(tree != NULL);
    assert(node != NULL);
    assert(*node != NULL);
-   assert(!(*node)->active);
-   assert(blkmem != NULL);
-   assert(tree != NULL);
 
-   SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
-
-   /* check lower bound w.r.t. debugging solution */
-   SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
-
-   if( SCIPnodeGetType(*node) != SCIP_NODETYPE_PROBINGNODE )
+   do
    {
-      SCIP_EVENT event;
+      assert(!(*node)->active);
 
-      /* trigger a node deletion event */
-      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEDELETE) );
-      SCIP_CALL( SCIPeventChgNode(&event, *node) );
-      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-   }
+      SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
-   /* inform solution debugger, that the node has been freed */
-   SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, *node) );
+      /* check lower bound w.r.t. debugging solution */
+      SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
 
-   /* check, if the node to be freed is the root node */
-   isroot = (SCIPnodeGetDepth(*node) == 0);
-
-   /* free nodetype specific data, and release no longer needed LPI states */
-   switch( SCIPnodeGetType(*node) )
-   {
-   case SCIP_NODETYPE_FOCUSNODE:
-      assert(tree->focusnode == *node);
-      assert(!SCIPtreeProbing(tree));
-      SCIPerrorMessage("cannot free focus node - has to be converted into a dead end first\n");
-      return SCIP_INVALIDDATA;
-   case SCIP_NODETYPE_PROBINGNODE:
-      assert(SCIPtreeProbing(tree));
-      assert(SCIPnodeGetDepth(tree->probingroot) <= SCIPnodeGetDepth(*node));
-      assert(SCIPnodeGetDepth(*node) > 0);
-      SCIP_CALL( probingnodeFree(&((*node)->data.probingnode), blkmem, lp) );
-      break;
-   case SCIP_NODETYPE_SIBLING:
-      assert((*node)->data.sibling.arraypos >= 0);
-      assert((*node)->data.sibling.arraypos < tree->nsiblings);
-      assert(tree->siblings[(*node)->data.sibling.arraypos] == *node);
-      if( tree->focuslpstatefork != NULL )
+      if( SCIPnodeGetType(*node) != SCIP_NODETYPE_PROBINGNODE )
       {
-         assert(SCIPnodeGetType(tree->focuslpstatefork) == SCIP_NODETYPE_FORK
-            || SCIPnodeGetType(tree->focuslpstatefork) == SCIP_NODETYPE_SUBROOT);
-         SCIP_CALL( SCIPnodeReleaseLPIState(tree->focuslpstatefork, blkmem, lp) );
-      }
-      treeRemoveSibling(tree, *node);
-      break;
-   case SCIP_NODETYPE_CHILD:
-      assert((*node)->data.child.arraypos >= 0);
-      assert((*node)->data.child.arraypos < tree->nchildren);
-      assert(tree->children[(*node)->data.child.arraypos] == *node);
-      /* The children capture the LPI state at the moment, where the focus node is
-       * converted into a junction, pseudofork, fork, or subroot, and a new node is focused.
-       * At the same time, they become siblings or leaves, such that freeing a child
-       * of the focus node doesn't require to release the LPI state;
-       * we don't need to call treeRemoveChild(), because this is done in nodeReleaseParent()
-       */
-      break;
-   case SCIP_NODETYPE_LEAF:
-      if( (*node)->data.leaf.lpstatefork != NULL )
-      {
-         SCIP_CALL( SCIPnodeReleaseLPIState((*node)->data.leaf.lpstatefork, blkmem, lp) );
-      }
-      break;
-   case SCIP_NODETYPE_DEADEND:
-   case SCIP_NODETYPE_JUNCTION:
-      break;
-   case SCIP_NODETYPE_PSEUDOFORK:
-      SCIP_CALL( pseudoforkFree(&((*node)->data.pseudofork), blkmem, set, lp) );
-      break;
-   case SCIP_NODETYPE_FORK:
+         SCIP_EVENT event;
 
-      /* release special root LPI state capture which is used to keep the root LPI state over the whole solving
-       * process
-       */
+         /* trigger a node deletion event */
+         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEDELETE) );
+         SCIP_CALL( SCIPeventChgNode(&event, *node) );
+         SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+      }
+
+      /* inform solution debugger, that the node has been freed */
+      SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, *node) );
+
+      /* check, if the node to be freed is the root node */
+      isroot = (SCIPnodeGetDepth(*node) == 0);
+
+      /* free nodetype specific data, and release no longer needed LPI states */
+      switch( SCIPnodeGetType(*node) )
+      {
+      case SCIP_NODETYPE_FOCUSNODE:
+         assert(tree->focusnode == *node);
+         assert(!SCIPtreeProbing(tree));
+         SCIPerrorMessage("cannot free focus node - has to be converted into a dead end first\n");
+         return SCIP_INVALIDDATA;
+      case SCIP_NODETYPE_PROBINGNODE:
+         assert(SCIPtreeProbing(tree));
+         assert(SCIPnodeGetDepth(tree->probingroot) <= SCIPnodeGetDepth(*node));
+         assert(SCIPnodeGetDepth(*node) > 0);
+         SCIP_CALL( probingnodeFree(&((*node)->data.probingnode), blkmem, lp) );
+         break;
+      case SCIP_NODETYPE_SIBLING:
+         assert((*node)->data.sibling.arraypos >= 0);
+         assert((*node)->data.sibling.arraypos < tree->nsiblings);
+         assert(tree->siblings[(*node)->data.sibling.arraypos] == *node);
+         if( tree->focuslpstatefork != NULL )
+         {
+            assert(SCIPnodeGetType(tree->focuslpstatefork) == SCIP_NODETYPE_FORK
+               || SCIPnodeGetType(tree->focuslpstatefork) == SCIP_NODETYPE_SUBROOT);
+            SCIP_CALL( SCIPnodeReleaseLPIState(tree->focuslpstatefork, blkmem, lp) );
+         }
+         treeRemoveSibling(tree, *node);
+         break;
+      case SCIP_NODETYPE_CHILD:
+         assert((*node)->data.child.arraypos >= 0);
+         assert((*node)->data.child.arraypos < tree->nchildren);
+         assert(tree->children[(*node)->data.child.arraypos] == *node);
+         /* The children capture the LPI state at the moment, where the focus node is
+          * converted into a junction, pseudofork, fork, or subroot, and a new node is focused.
+          * At the same time, they become siblings or leaves, such that freeing a child
+          * of the focus node doesn't require to release the LPI state;
+          * we don't need to call treeRemoveChild(), because this is done in nodeReleaseParent()
+          */
+         break;
+      case SCIP_NODETYPE_LEAF:
+         if( (*node)->data.leaf.lpstatefork != NULL )
+         {
+            SCIP_CALL( SCIPnodeReleaseLPIState((*node)->data.leaf.lpstatefork, blkmem, lp) );
+         }
+         break;
+      case SCIP_NODETYPE_DEADEND:
+      case SCIP_NODETYPE_JUNCTION:
+         break;
+      case SCIP_NODETYPE_PSEUDOFORK:
+         SCIP_CALL( pseudoforkFree(&((*node)->data.pseudofork), blkmem, set, lp) );
+         break;
+      case SCIP_NODETYPE_FORK:
+         /* release special root LPI state capture which is used to keep the root LPI state over the whole solving
+          * process
+          */
+         if( isroot )
+         {
+            SCIP_CALL( SCIPnodeReleaseLPIState(*node, blkmem, lp) );
+         }
+         SCIP_CALL( forkFree(&((*node)->data.fork), blkmem, set, lp) );
+         break;
+      case SCIP_NODETYPE_SUBROOT:
+         SCIP_CALL( subrootFree(&((*node)->data.subroot), blkmem, set, lp) );
+         break;
+      case SCIP_NODETYPE_REFOCUSNODE:
+         SCIPerrorMessage("cannot free node as long it is refocused\n");
+         return SCIP_INVALIDDATA;
+      default:
+         SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(*node));
+         return SCIP_INVALIDDATA;
+      }
+
+      /* free common data */
+      SCIP_CALL( SCIPconssetchgFree(&(*node)->conssetchg, blkmem, set) );
+      SCIP_CALL( SCIPdomchgFree(&(*node)->domchg, blkmem, set, eventqueue, lp) );
+
+      /* check, if the node is the current probing root */
+      if( *node == tree->probingroot )
+      {
+         assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_PROBINGNODE);
+         tree->probingroot = NULL;
+      }
+
+      /* delete the tree's root node pointer, if the freed node was the root */
       if( isroot )
-      {
-         SCIP_CALL( SCIPnodeReleaseLPIState(*node, blkmem, lp) );
-      }
-      SCIP_CALL( forkFree(&((*node)->data.fork), blkmem, set, lp) );
-      break;
-   case SCIP_NODETYPE_SUBROOT:
-      SCIP_CALL( subrootFree(&((*node)->data.subroot), blkmem, set, lp) );
-      break;
-   case SCIP_NODETYPE_REFOCUSNODE:
-      SCIPerrorMessage("cannot free node as long it is refocused\n");
-      return SCIP_INVALIDDATA;
-   default:
-      SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(*node));
-      return SCIP_INVALIDDATA;
+         tree->root = NULL;
+
+      SCIP_CALL( nodeReleaseParent(node, blkmem, set, tree) );
    }
-
-   /* free common data */
-   SCIP_CALL( SCIPconssetchgFree(&(*node)->conssetchg, blkmem, set) );
-   SCIP_CALL( SCIPdomchgFree(&(*node)->domchg, blkmem, set, eventqueue, lp) );
-   SCIP_CALL( nodeReleaseParent(*node, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
-
-   /* check, if the node is the current probing root */
-   if( *node == tree->probingroot )
-   {
-      assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_PROBINGNODE);
-      tree->probingroot = NULL;
-   }
-
-   BMSfreeBlockMemory(blkmem, node);
-
-   /* delete the tree's root node pointer, if the freed node was the root */
-   if( isroot )
-      tree->root = NULL;
+   while( *node != NULL );
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** cuts off node and whole sub tree from branch and bound tree
  *
