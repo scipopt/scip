@@ -1250,7 +1250,7 @@ SCIP_RETCODE SCIPnodeFree(
    while( *node != NULL );
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** cuts off node and whole sub tree from branch and bound tree
  *
