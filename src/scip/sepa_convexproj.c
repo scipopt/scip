@@ -438,6 +438,10 @@ SCIP_RETCODE separateCuts(
             /* check for currently active constraints at projected point */
             SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrow, projection, &activity) );
 
+            /* if row cannot be evaluated, then skip it */
+            if( activity == SCIP_INVALID )  /*lint !e777*/
+               continue;
+
             SCIPdebugMsg(scip, "NlRow activity at nlpi solution: %g <= %g <= %g\n", SCIPnlrowGetLhs(nlrow), activity,
                   SCIPnlrowGetRhs(nlrow) );
 
@@ -580,6 +584,12 @@ SCIP_RETCODE computeMaxViolation(
 
       /* get activity of nlrow */
       SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrow, sol, &activity) );
+
+      if( activity == SCIP_INVALID )  /*lint !e777*/
+      {
+         *maxviolation = SCIP_INVALID;
+         break;
+      }
 
       /* violation = max{activity - rhs, 0.0} when convex and max{lhs - activity, 0.0} when concave */
       if( sepadata->convexsides[i] == RHS )
@@ -818,8 +828,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
    /* get current sol: LP or pseudo solution if LP sol is not available */
    SCIP_CALL( SCIPcreateCurrentSol(scip, &lpsol, NULL) );
 
-   /* do not run if current solution's violation is small */
+   /* do not run if current solution cannot be evaluated or the violation is small */
    SCIP_CALL( computeMaxViolation(scip, sepadata, lpsol, &maxviolation) );
+   if( maxviolation == SCIP_INVALID )  /*lint !e777*/
+   {
+      SCIPdebugMsg(scip, "constraints cannot be evaluated at solution, do not separate\n");
+      SCIP_CALL( SCIPfreeSol(scip, &lpsol) );
+      return SCIP_OKAY;
+   }
    if( maxviolation < VIOLATIONFAC * SCIPfeastol(scip) )
    {
       SCIPdebugMsg(scip, "solution doesn't violate constraints enough, do not separate\n");
