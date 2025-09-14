@@ -1563,7 +1563,6 @@ SCIP_RETCODE SCIPnlrowGetNLPActivity(
       SCIP_CALL( SCIPnlrowRecalcNLPActivity(nlrow, blkmem, set, stat, primal, tree, nlp) );
    }
    assert(nlrow->validactivitynlp == stat->nnlps);
-   assert(nlrow->activity < SCIP_INVALID);
 
    *activity = nlrow->activity;
 
@@ -1588,7 +1587,10 @@ SCIP_RETCODE SCIPnlrowGetNLPFeasibility(
    assert(feasibility != NULL);
 
    SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, blkmem, set, stat, primal, tree, nlp, &activity) );
-   *feasibility = MIN(nlrow->rhs - activity, activity - nlrow->lhs);
+   if( activity == SCIP_INVALID )
+      *feasibility = SCIP_INVALID;
+   else
+      *feasibility = MIN(nlrow->rhs - activity, activity - nlrow->lhs);
 
    return SCIP_OKAY;
 }
@@ -1664,7 +1666,6 @@ SCIP_RETCODE SCIPnlrowGetPseudoActivity(
       SCIP_CALL( SCIPnlrowRecalcPseudoActivity(nlrow, blkmem, set, stat, prob, primal, tree, lp) );
    }
    assert(nlrow->validpsactivitydomchg == stat->domchgcount);
-   assert(nlrow->pseudoactivity < SCIP_INVALID);
 
    *pseudoactivity = nlrow->pseudoactivity;
 
@@ -1691,7 +1692,10 @@ SCIP_RETCODE SCIPnlrowGetPseudoFeasibility(
    assert(pseudofeasibility != NULL);
 
    SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, blkmem, set, stat, prob, primal, tree, lp, &pseudoactivity) );
-   *pseudofeasibility = MIN(nlrow->rhs - pseudoactivity, pseudoactivity - nlrow->lhs);
+   if( pseudoactivity == SCIP_INVALID )
+      *pseudofeasibility = SCIP_INVALID;
+   else
+      *pseudofeasibility = MIN(nlrow->rhs - pseudoactivity, pseudoactivity - nlrow->lhs);
 
    return SCIP_OKAY;
 }
@@ -1733,9 +1737,11 @@ SCIP_RETCODE SCIPnlrowGetSolActivity(
    {
       SCIP_CALL( SCIPexprEval(set, stat, blkmem, nlrow->expr, sol, 0L) );
       if( SCIPexprGetEvalValue(nlrow->expr) == SCIP_INVALID )
+      {
          *activity = SCIP_INVALID;
-      else
-         *activity += SCIPexprGetEvalValue(nlrow->expr);
+         return SCIP_OKAY;
+      }
+      *activity += SCIPexprGetEvalValue(nlrow->expr);
    }
 
    inf = SCIPsetInfinity(set);
@@ -1762,7 +1768,10 @@ SCIP_RETCODE SCIPnlrowGetSolFeasibility(
 
    SCIP_CALL( SCIPnlrowGetSolActivity(nlrow, blkmem, set, stat, sol, &activity) );
 
-   *feasibility = MIN(nlrow->rhs - activity, activity - nlrow->lhs);
+   if( activity == SCIP_INVALID )
+      *feasibility = SCIP_INVALID;
+   else
+      *feasibility = MIN(nlrow->rhs - activity, activity - nlrow->lhs);
 
    return SCIP_OKAY;
 }
