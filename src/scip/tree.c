@@ -2039,6 +2039,20 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
       assert(!node->active || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
 
+      /* compute the child's new lower bound */
+      if( set->misc_exactsolve )
+         newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
+      else
+         newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
+
+      if( SCIPsetIsInfinity(set, newpseudoobjval) )
+      {
+         SCIPmessageFPrintWarning(set->scip->messagehdlr, "Cutting off node with pseudo objective bound %g larger than numerics/infinity (%g)\n", newpseudoobjval, SCIPsetInfinity(set));
+         SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+
+         return SCIP_OKAY;
+      }
+
       /* get the solution value of variable in last solved LP on the active path:
        *  - if the LP was solved at the current node, the LP values of the columns are valid
        *  - if the last solved LP was the one in the current lpstatefork, the LP value in the columns are still valid
@@ -2053,14 +2067,10 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
          lpsolval = SCIP_INVALID;
 
       /* remember the bound change as branching decision (infervar/infercons/inferprop are not important: use NULL) */
-      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING, 
+      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING,
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
       /* update the child's lower bound */
-      if( set->misc_exactsolve )
-         newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
-      else
-         newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
       SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, newpseudoobjval);
    }
    else
