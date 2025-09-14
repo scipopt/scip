@@ -272,6 +272,9 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
 
       SCIP_CALL( SCIPgetNlRowActivity(subproblem, nlrow, &activity) );
 
+      if( activity == SCIP_INVALID )  /*lint !e777*/
+         return SCIP_OKAY;
+
       if( dualsol > 0.0 )
       {
          assert(!SCIPisInfinity(subproblem, SCIPnlrowGetRhs(nlrow)));

@@ -239,6 +239,11 @@ SCIP_RETCODE getMinFeas(
       assert(nlrows[i] != NULL);
 
       SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrows[i], sol, &tmp) );
+      if( tmp == SCIP_INVALID )  /*lint !e777*/
+      {
+         *minfeas = -SCIPinfinity(scip);
+         return SCIP_OKAY;
+      }
       *minfeas = MIN(*minfeas, tmp);
    }
 
@@ -393,11 +398,18 @@ SCIP_RETCODE improvePoint(
 
          SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrows[i], point, &feasibility) );
 
+         if( feasibility == SCIP_INVALID )  /*lint !e777*/
+         {
+#ifdef SCIP_DEBUG_IMPROVEPOINT
+            printf("nlrow cannot be evaluated at current point -> skip nlrow\n");
+#endif
+            continue;
+         }
+
          /* do not consider non-violated constraints */
          if( SCIPisFeasGE(scip, feasibility, 0.0) )
             continue;
 
-         SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrows[i], point, &activity) );
          SCIP_CALL( computeGradient(scip, nlrows[i], point, varindex, exprit, grad, &nlrownorm) );
 
          /* update estimated costs for computing gradients */
@@ -423,6 +435,9 @@ SCIP_RETCODE improvePoint(
 #endif
             goto TERMINATE;
          }
+
+         SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrows[i], point, &activity) );
+         assert(activity != SCIP_INVALID);  /*lint !e777*/
 
          /* compute -g(x_k) / ||grad(g)(x_k)||^2 for a constraint g(x_k) <= 0 */
          scale = -feasibility / nlrownorm;
