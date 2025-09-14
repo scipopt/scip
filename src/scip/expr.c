@@ -2790,6 +2790,7 @@ SCIP_RETCODE SCIPexprEvalGradient(
    for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
    {
       assert(expr->evalvalue != SCIP_INVALID);
+      assert(expr->derivative != SCIP_INVALID);
 
       child = SCIPexpriterGetChildExprDFS(it);
       assert(child != NULL);
@@ -2817,6 +2818,8 @@ SCIP_RETCODE SCIPexprEvalGradient(
             rootexpr->derivative = SCIP_INVALID;
             break;
          }
+
+         assert(SCIPisFinite(derivative));  /* ensured in SCIPexprhdlrBwDiffExpr */
       }
 
       /* update partial derivative stored in the child expression
@@ -2827,6 +2830,14 @@ SCIP_RETCODE SCIPexprEvalGradient(
          child->derivative = expr->derivative * derivative;
       else
          child->derivative += expr->derivative * derivative;
+
+      /* even with expr->derivative and derivative being finite, the product may under- or overflow */
+      if( !SCIPisFinite(child->derivative) )
+      {
+         child->derivative = SCIP_INVALID;
+         rootexpr->derivative = SCIP_INVALID;
+         break;
+      }
    }
 
    SCIPexpriterFree(&it);
