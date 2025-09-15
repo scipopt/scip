@@ -19,6 +19,7 @@ Fixed bugs
 - fixed detection of sinks in varbound detection from cumulative constraints
 - fixed memory allocation when adding strong SBCs for enclosing orbit of symmetric subgroups (disabled by default)
 - free paths of branch-and-bound tree iteratively instead of recursively to avoid stack overflow
+- fixed rare invalid memory access when collecting symmetry information for indicator constraints
 
 Build system
 ------------
