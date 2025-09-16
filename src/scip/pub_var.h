@@ -667,6 +667,18 @@ SCIP_Bool SCIPvarIsInLP(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets lower bound on absolute coefficient of a loose variable in (multi)aggregations of other variables */
+SCIP_EXPORT
+SCIP_Real SCIPvarGetMinAggrCoef(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets upper bound on absolute coefficient of a loose variable in (multi)aggregations of other variables */
+SCIP_EXPORT
+SCIP_Real SCIPvarGetMaxAggrCoef(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** gets aggregation variable y of an aggregated variable x = a*y + c */
 SCIP_EXPORT
 SCIP_VAR* SCIPvarGetAggrVar(
@@ -1208,6 +1220,8 @@ void SCIPvarMarkRelaxationOnly(
 #define SCIPvarGetTransVar(var)         (var)->data.original.transvar
 #define SCIPvarGetCol(var)              (var)->data.col
 #define SCIPvarIsInLP(var)              ((var)->varstatus == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP((var)->data.col))
+#define SCIPvarGetMinAggrCoef(var)      (var)->data.loose.minaggrcoef
+#define SCIPvarGetMaxAggrCoef(var)      (var)->data.loose.maxaggrcoef
 /* use different name for var - otherwise we have clash with the var at the end */
 #define SCIPvarGetAggrVar(war)          (war)->data.aggregate.var
 #define SCIPvarGetAggrScalar(var)       (var)->data.aggregate.scalar

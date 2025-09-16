@@ -75,6 +75,10 @@ SCIP_RETCODE performDualfix(
    int nvars;
    int v;
 
+   assert(nfixedvars != NULL);
+   assert(unbounded != NULL);
+   assert(cutoff != NULL);
+
    /* get active problem variables */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
@@ -188,13 +192,19 @@ SCIP_RETCODE performDualfix(
             continue;
       }
 
-      if( SCIPisInfinity(scip, REALABS(bound)) && !SCIPisZero(scip, obj) )
+      if( SCIPisInfinity(scip, REALABS(bound)) )
       {
-         SCIPdebugMsg(scip, " -> unbounded fixing\n");
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-            "problem infeasible or unbounded: variable <%s> with objective %.15g can be made infinitely %s\n",
-            SCIPvarGetName(var), SCIPvarGetObj(var), bound < 0.0 ? "small" : "large");
-         *unbounded = TRUE;
+         if( !SCIPisZero(scip, obj) )
+         {
+            SCIPdebugMsg(scip, " -> unbounded fixing\n");
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+               "problem infeasible or unbounded: variable <%s> with objective %.15g can be made infinitely %s\n",
+               SCIPvarGetName(var), SCIPvarGetObj(var), bound < 0.0 ? "small" : "large");
+
+            *unbounded = TRUE;
+         }
+
+         SCIPdebugMsg(scip, "changed my mind; not applying fixing of variable <%s> to infinity\n", SCIPvarGetName(var));
          return SCIP_OKAY;
       }
 

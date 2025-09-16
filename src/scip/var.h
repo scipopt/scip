@@ -725,6 +725,13 @@ SCIP_Bool SCIPvarDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** checks whether a loose variable can be used in a new aggregation with given coefficient */
+SCIP_Bool SCIPvarIsAggrCoefAcceptable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             scalar              /**< aggregation scalar */
+   );
+
 /** returns whether the variable was flagged for deletion from global structures (cliques etc.) */
 SCIP_Bool SCIPvarIsMarkedDeleteGlobalStructures(
    SCIP_VAR*             var                 /**< problem variable */

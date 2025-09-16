@@ -2560,6 +2560,8 @@ SCIP_RETCODE SCIPvarCreateTransformed(
 
    /* set variable status and data */
    (*var)->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
+   (*var)->data.loose.minaggrcoef = 1.0;
+   (*var)->data.loose.maxaggrcoef = 1.0;
 
    /* capture variable */
    SCIPvarCapture(*var);
@@ -3408,6 +3410,8 @@ SCIP_RETCODE SCIPvarParseTransformed(
          SCIPvarAdjustLbExact(*var, set, lb);
          SCIPvarAdjustUbExact(*var, set, ub);
          (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_LOOSE;
+         (*var)->data.loose.minaggrcoef = 1.0;
+         (*var)->data.loose.maxaggrcoef = 1.0;
 
          /* add exact data */
          SCIP_CALL( SCIPvarAddExactData(*var, blkmem, lb, ub, obj) );
@@ -3454,6 +3458,8 @@ SCIP_RETCODE SCIPvarParseTransformed(
          /* set variable status */
          assert(*var != NULL);
          (*var)->varstatus = (unsigned int)SCIP_VARSTATUS_LOOSE;
+         (*var)->data.loose.minaggrcoef = 1.0;
+         (*var)->data.loose.maxaggrcoef = 1.0;
          (*var)->lazylb = lazylb;
          (*var)->lazyub = lazyub;
 
@@ -4704,6 +4710,10 @@ SCIP_RETCODE SCIPvarLoose(
       SCIP_CALL( SCIPlpUpdateVarLoose(lp, set, var) );
    }
 
+   /* initialize variable data */
+   var->data.loose.minaggrcoef = 1.0;
+   var->data.loose.maxaggrcoef = 1.0;
+
    return SCIP_OKAY;
 }
 
@@ -4834,6 +4844,7 @@ SCIP_RETCODE SCIPvarFix(
    assert(var->scip == set->scip);
    assert(SCIPsetIsEQ(set, var->glbdom.lb, var->locdom.lb));
    assert(SCIPsetIsEQ(set, var->glbdom.ub, var->locdom.ub));
+   assert(!SCIPsetIsInfinity(set, REALABS(fixedval)));
    assert(infeasible != NULL);
    assert(fixed != NULL);
 
@@ -4944,10 +4955,7 @@ SCIP_RETCODE SCIPvarFix(
       /* fix aggregation variable y in x = a*y + c, instead of fixing x directly */
       assert(SCIPsetIsZero(set, var->obj));
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      if( SCIPsetIsInfinity(set, fixedval) || SCIPsetIsInfinity(set, -fixedval) )
-         childfixedval = (var->data.aggregate.scalar < 0.0 ? -fixedval : fixedval);
-      else
-         childfixedval = (fixedval - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      childfixedval = (fixedval - var->data.aggregate.constant) / var->data.aggregate.scalar;
       SCIP_CALL( SCIPvarFix(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp,
             branchcand, eventqueue, eventfilter, cliquetable, childfixedval, infeasible, fixed) );
       break;
@@ -6134,6 +6142,33 @@ void SCIPvarSetHistory(
    SCIPhistoryUnite(stat->glbhistory, history, FALSE);
 }
 
+/** update min/maxaggrcoef of a loose variable */
+static
+void varUpdateMinMaxAggrCoef(
+   SCIP_VAR*             var,                /**< problem variable that is used in aggregation */
+   SCIP_VAR*             aggvar,             /**< variable that is aggregated */
+   SCIP_Real             aggscalar           /**< coefficient that is used for var in the aggregation of aggvar */
+   )
+{
+   SCIP_Real minscalar;
+   SCIP_Real maxscalar;
+
+   assert(var != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+   assert(aggvar != NULL);
+   assert(SCIPvarGetStatus(aggvar) == SCIP_VARSTATUS_LOOSE);
+   assert(aggscalar != 0.0);  /*lint !e777*/
+
+   maxscalar = minscalar = REALABS(aggscalar);
+   minscalar *= aggvar->data.loose.minaggrcoef;
+   maxscalar *= aggvar->data.loose.maxaggrcoef;
+   if( var->data.loose.minaggrcoef > minscalar )
+      var->data.loose.minaggrcoef = minscalar;
+   if( var->data.loose.maxaggrcoef < maxscalar )
+      var->data.loose.maxaggrcoef = maxscalar;
+}
+
+
 /** tightens the bounds of both variables in aggregation x = a*y + c */
 static
 SCIP_RETCODE varUpdateAggregationBounds(
@@ -6684,6 +6719,9 @@ SCIP_RETCODE SCIPvarAggregate(
       var->nlocksdown[i] = 0;
       var->nlocksup[i] = 0;
    }
+
+   /* update aggregation bounds (argument names of varUpdateMinMaxAggrCoef are swapped) */
+   varUpdateMinMaxAggrCoef(aggvar, var, scalar);
 
    /* check, if variable should be used as NEGATED variable of the aggregation variable */
    if( SCIPvarIsBinary(var) && SCIPvarIsBinary(aggvar)
@@ -7670,6 +7708,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    )
 {
+   SCIP_Real scalar;
+   SCIP_Real constant;
    SCIP_Bool easyaggr;
    SCIP_VARTYPE typex;
    SCIP_VARTYPE typey;
@@ -7692,14 +7732,12 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING);
    assert(SCIPvarGetStatus(varx) == SCIP_VARSTATUS_LOOSE);
    assert(SCIPvarGetStatus(vary) == SCIP_VARSTATUS_LOOSE);
-   assert(!SCIPsetIsZero(set, scalarx));
-   assert(!SCIPsetIsZero(set, scalary));
+   assert(scalarx != 0.0); /*lint !e777*/
+   assert(scalary != 0.0); /*lint !e777*/
+   assert(!SCIPsetIsInfinity(set, REALABS(rhs)));
 
    *infeasible = FALSE;
    *aggregated = FALSE;
-
-   if( SCIPsetIsZero(set, scalarx / scalary) || SCIPsetIsZero(set, scalary / scalarx) )
-      return SCIP_OKAY;
 
    /**@todo simplify the following code once SCIP_DEPRECATED_VARTYPE_IMPLINT is removed */
    typex = SCIPvarIsImpliedIntegral(varx) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(varx);
@@ -7710,7 +7748,6 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
        ( typex == typey && SCIPvarIsBinary(varx) && !SCIPvarIsBinary(vary))  )
    {
       SCIP_VAR* var;
-      SCIP_Real scalar;
       SCIP_VARTYPE type;
 
       /* switch the variables, such that varx is the variable of more general type (cont > implint > int > bin) */
@@ -7747,7 +7784,6 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    {
       /* we have an easy aggregation if we flip the variables x and y */
       SCIP_VAR* var;
-      SCIP_Real scalar;
 
       /* switch the variables, such that varx is the aggregated variable */
       var = vary;
@@ -7765,17 +7801,18 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       easyaggr = TRUE;
    }
 
+   /* calculate aggregation scalar and constant: a*x + b*y == c  =>  x == -b/a * y + c/a */
+   scalar = -scalary / scalarx;
+   constant = rhs / scalarx;
+
+   /* terminate if a bound on resolved aggregation scalar becomes too small or large so that numerical cancellation may be caused */
+   if( !SCIPvarIsAggrCoefAcceptable(set, varx, scalar) )
+      return SCIP_OKAY;
+
    /* did we find an "easy" aggregation? */
    if( easyaggr )
    {
-      SCIP_Real scalar;
-      SCIP_Real constant;
-
       assert(typex >= typey);
-
-      /* calculate aggregation scalar and constant: a*x + b*y == c  =>  x == -b/a * y + c/a */
-      scalar = -scalary/scalarx;
-      constant = rhs/scalarx;
 
       if( REALABS(constant) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) ) /*lint !e653*/
          return SCIP_OKAY;
@@ -8058,6 +8095,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    assert(var->scip == set->scip);
    assert(var->glbdom.lb == var->locdom.lb); /*lint !e777*/
    assert(var->glbdom.ub == var->locdom.ub); /*lint !e777*/
+   assert(!SCIPsetIsInfinity(set, REALABS(constant)));
    assert(naggvars == 0 || aggvars != NULL);
    assert(naggvars == 0 || scalars != NULL);
    assert(infeasible != NULL);
@@ -8125,7 +8163,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       {
          if( ntmpvars == 0 )
          {
-            if( SCIPsetIsZero(set, tmpconstant) ) /* x = x */
+            if( SCIPsetIsFeasZero(set, tmpconstant) ) /* x = x */
             {
                SCIPsetDebugMsg(set, "Possible multi-aggregation was completely resolved and detected to be redundant.\n");
                goto TERMINATE;
@@ -8166,11 +8204,11 @@ SCIP_RETCODE SCIPvarMultiaggregate(
             goto TERMINATE;
       }
       /* this means that x = b*x + a_1*y_1 + ... + a_n*y_n + c */
-      else if( !SCIPsetIsZero(set, tmpscalar) )
+      else if( tmpscalar != 0.0 ) /*lint !e777*/
       {
          tmpscalar = 1 - tmpscalar;
          tmpconstant /= tmpscalar;
-         for( v = ntmpvars - 1; v >= 0; --v )
+         for( v = 0; v < ntmpvars; ++v )
             tmpscalars[v] /= tmpscalar;
       }
 
@@ -8208,6 +8246,11 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          goto TERMINATE;
       }
 
+      /* terminate if scalars may lead to numerical trouble */
+      for( v = 0; v < ntmpvars; ++v )
+         if( !SCIPvarIsAggrCoefAcceptable(set, var, tmpscalars[v]) )
+            goto TERMINATE;
+
       /* if the variable to be multi-aggregated has implications or variable bounds (i.e. is the implied variable or
        * variable bound variable of another variable), we have to remove it from the other variables implications or
        * variable bounds
@@ -8237,6 +8280,10 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          var->nlocksdown[i] = 0;
          var->nlocksup[i] = 0;
       }
+
+      /* update aggregation bounds */
+      for( v = 0; v < ntmpvars; ++v )
+         varUpdateMinMaxAggrCoef(tmpvars[v], var, tmpscalars[v]);
 
       /* convert variable into multi-aggregated variable */
       var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
@@ -8856,6 +8903,29 @@ SCIP_Bool SCIPvarDoNotMultaggr(
       SCIPABORT();
       return FALSE; /*lint !e527 */
    }
+}
+
+/** checks whether a loose variable can be used in a new aggregation with given coefficient */
+SCIP_Bool SCIPvarIsAggrCoefAcceptable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             scalar              /**< aggregation scalar */
+   )
+{
+   assert(set != NULL);
+   assert(var != NULL);
+   assert(scalar != 0.0);  /*lint !e777*/
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+   assert(SCIPvarGetMinAggrCoef(var) > 0.0);
+   assert(SCIPvarGetMaxAggrCoef(var) >= 1.0);
+
+   if( SCIPsetIsSumZero(set, SCIPvarGetMinAggrCoef(var) * scalar) )
+      return FALSE;
+
+   if( SCIPsetIsSumZero(set, 1.0 / (SCIPvarGetMaxAggrCoef(var) * scalar)) )
+      return FALSE;
+
+   return TRUE;
 }
 
 /** adds correct bound-data to negated variable */
@@ -22986,6 +23056,8 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetTransVar
 #undef SCIPvarGetCol
 #undef SCIPvarIsInLP
+#undef SCIPvarGetMinAggrCoef
+#undef SCIPvarGetMaxAggrCoef
 #undef SCIPvarGetAggrVar
 #undef SCIPvarGetAggrScalar
 #undef SCIPvarGetAggrConstant
@@ -23630,7 +23702,27 @@ SCIP_Bool SCIPvarIsInLP(
    return (SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP(var->data.col));
 }
 
-/** gets aggregation variable y of an aggregated variable x = a*y + c */
+/** gets minimal absolute coefficient of a loose variable in (multi)aggregations of other variables */
+SCIP_Real SCIPvarGetMinAggrCoef(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+
+   return var->data.loose.minaggrcoef;
+}
+
+/** gets lower bound on absolute coefficient of a loose variable in (multi)aggregations of other variables */
+SCIP_Real SCIPvarGetMaxAggrCoef(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+
+   return var->data.loose.maxaggrcoef;
+}
+
+/** gets upper bound on absolute coefficient of a loose variable in (multi)aggregations of other variables */
 SCIP_VAR* SCIPvarGetAggrVar(
    SCIP_VAR*             var                 /**< problem variable */
    )

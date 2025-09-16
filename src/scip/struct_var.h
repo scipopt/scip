@@ -194,6 +194,16 @@ struct SCIP_Original
    SCIP_VAR*             transvar;           /**< pointer to representing transformed variable */
 };
 
+/** loose variable information
+ *
+ * bounds on the absolute values of the coefficients with which the variable appears in aggregations (after flattening the aggregation graph)
+ */
+struct SCIP_Loose
+{
+   SCIP_Real             minaggrcoef;        /**< lower bound on absolute coefficient the variable has in aggregations */
+   SCIP_Real             maxaggrcoef;        /**< upper bound on absolute coefficient the variable has in aggregations */
+};
+
 /** aggregation information: x = a*y + c */
 struct SCIP_Aggregate
 {
@@ -271,10 +281,11 @@ struct SCIP_Var
    union
    {
       SCIP_ORIGINAL      original;           /**< original variable information */
-      SCIP_COL*          col;                /**< LP column (for column variables) */
-      SCIP_AGGREGATE     aggregate;          /**< aggregation information (for aggregated variables) */
-      SCIP_MULTAGGR      multaggr;           /**< multiple aggregation information (for multiple aggregated variables) */
-      SCIP_NEGATE        negate;             /**< negation information (for negated variables) */
+      SCIP_LOOSE         loose;              /**< loose variable information */
+      SCIP_NEGATE        negate;             /**< negation variable information */
+      SCIP_AGGREGATE     aggregate;          /**< aggregation variable information */
+      SCIP_MULTAGGR      multaggr;           /**< multi-aggregation variable information */
+      SCIP_COL*          col;                /**< LP column for column variable */
    } data;
    SCIP_VARDATAEXACT*    exactdata;          /**< exact variable data (obj, lb, ub, ...) */
    char*                 name;               /**< name of the variable */
