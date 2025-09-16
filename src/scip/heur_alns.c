@@ -39,7 +39,6 @@
 #include "scip/pub_bandit_exp3ix.h"
 #include "scip/pub_bandit.h"
 #include "scip/pub_bandit_ucb.h"
-#include "scip/pub_cons.h"
 #include "scip/pub_event.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
@@ -3364,7 +3363,6 @@ DECL_CHANGESUBSCIP(changeSubscipProximity)
 static
 DECL_CHANGESUBSCIP(changeSubscipZeroobjective)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLR* conshdlrnl;
    SCIP_VAR** vars;
    int nvars;
    int i;
@@ -3375,13 +3373,6 @@ DECL_CHANGESUBSCIP(changeSubscipZeroobjective)
 
    /* do not run if no objective variables are present */
    if( SCIPgetNObjVars(sourcescip) == 0 )
-      return SCIP_OKAY;
-
-   /* zeroobj may trigger fixing objvar in nonlinear constraint to infinity,
-    * which expr_var.c:simplify cannot handle at the moment; also #3273
-    */
-   conshdlrnl = SCIPfindConshdlr(sourcescip, "nonlinear");
-   if( conshdlrnl != NULL && SCIPconshdlrGetNActiveConss(conshdlrnl) > 0 )
       return SCIP_OKAY;
 
    /* loop over the variables and change their objective coefficients to 0 */
