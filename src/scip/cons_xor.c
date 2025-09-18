@@ -3429,6 +3429,7 @@ SCIP_RETCODE cliquePresolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
    int*                  nfixedvars,         /**< pointer to add up the number of found domain reductions */
+   int*                  naggrvars,          /**< pointer to add up the number of aggregated variables */
    int*                  nchgcoefs,          /**< pointer to add up the number of deleted entries */
    int*                  ndelconss,          /**< pointer to add up the number of deleted constraints */
    int*                  naddconss,          /**< pointer to add up the number of added constraints */
@@ -3668,24 +3669,46 @@ SCIP_RETCODE cliquePresolve(
          ++(*naddconss);
       }
 
-      /* fix integer variable if it exists */
+      /* remove integer variable if it exists */
       if( consdata->intvar != NULL )
       {
          SCIP_Bool infeasible;
          SCIP_Bool fixed;
 
-         SCIPdebugMsg(scip, "also fix the integer variable <%s> to 0\n", SCIPvarGetName(consdata->intvar));
-         SCIP_CALL( SCIPfixVar(scip, consdata->intvar, 0.0, &infeasible, &fixed) );
-         assert(infeasible || fixed);
-
-         if( infeasible )
+         /* fix integer variable to zero if at most one xor-variable can be one */
+         if( consdata->rhs || posnotinclq1 == -1 )
          {
-            *cutoff = TRUE;
+            SCIPdebugMsg(scip, "fix the integer variable <%s> to 0\n", SCIPvarGetName(consdata->intvar));
+            SCIP_CALL( SCIPfixVar(scip, consdata->intvar, 0.0, &infeasible, &fixed) );
+            assert(infeasible || fixed);
 
-            return SCIP_OKAY;
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+
+               return SCIP_OKAY;
+            }
+            else
+               ++(*nfixedvars);
          }
-         else if( fixed )
-            ++(*nfixedvars);
+         /* otherwise aggregate integer variable to xor-variable outside clique */
+         else
+         {
+            SCIP_Bool redundant;
+
+            SCIPdebugMsg(scip, "aggregate the integer variable <%s> to <%s>\n", SCIPvarGetName(consdata->intvar), SCIPvarGetName(vars[posnotinclq1]));
+            SCIP_CALL( SCIPaggregateVars(scip, consdata->intvar, vars[posnotinclq1], 1.0, -1.0, 0.0, &infeasible, &redundant, &fixed) );
+            assert(infeasible || redundant);
+
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+
+               return SCIP_OKAY;
+            }
+            else if( fixed )
+               ++(*naggrvars);
+         }
       }
 
       /* delete old redundant xor-constraint */
@@ -5415,7 +5438,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
             /* try to use clique information to upgrade the constraint to a set-partitioning constraint or fix
              * variables
              */
-            SCIP_CALL( cliquePresolve(scip, cons, nfixedvars, nchgcoefs, ndelconss, naddconss, &cutoff) );
+            SCIP_CALL( cliquePresolve(scip, cons, nfixedvars, naggrvars, nchgcoefs, ndelconss, naddconss, &cutoff) );
          }
       }
    }
