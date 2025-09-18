@@ -7585,7 +7585,7 @@ SCIP_RETCODE separateCons(
       SCIP_CALL( addRelaxation(scip, cons, cutoff) );
       (*ncuts)++;
    }
-   else if( !SCIPconsIsModifiable(cons) && separatecards )
+   else if( !SCIPconsIsModifiable(cons) && separatecards && consdata->nvars > 0 )
    {
       /* relax linear constraint into knapsack constraint and separate lifted cardinality cuts */
       if( !separateall && sol == NULL )
