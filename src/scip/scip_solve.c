@@ -2897,7 +2897,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
       {
          /* if yes, then presolve the problem */
          SCIP_CALL( SCIPpresolve(scip) );
-         if( SCIPgetStatus(scip) >= SCIP_STATUS_OPTIMAL )
+         if( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
             return SCIP_OKAY;
       }
       else
