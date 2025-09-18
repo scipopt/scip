@@ -653,11 +653,16 @@ void SCIPsyncdataSetStatus(
 {
    assert(syncdata != NULL);
 
-   /* check if status is better than current one (closer to SCIP_STATUS_OPTIMAL),
-    * break ties by the solverid, and remember the solver wit the best status
-    * so that the winner will be selected deterministically
+   /* check if status is better than current one (closer to SCIP_STATUS_OPTIMAL assumed to be followed by
+    * SCIP_STATUS_INFEASIBLE and SCIP_STATUS_UNBOUNDED) and break ties by the solverid; remember the solver with the
+    * best status so that the winner will be selected deterministically
     */
-   if( syncdata->status < SCIP_STATUS_OPTIMAL )
+   if( syncdata->winner < 0 )
+   {
+      syncdata->status = status;
+      syncdata->winner = solverid;
+   }
+   else if( syncdata->status < SCIP_STATUS_OPTIMAL )
    {
       if( status > syncdata->status || (status == syncdata->status && solverid < syncdata->winner) )
       {
@@ -672,11 +677,6 @@ void SCIPsyncdataSetStatus(
          syncdata->status = status;
          syncdata->winner = solverid;
       }
-   }
-   else if( syncdata->winner < 0 )
-   {
-      syncdata->status = status;
-      syncdata->winner = solverid;
    }
 }
 

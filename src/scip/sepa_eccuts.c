@@ -1180,7 +1180,9 @@ SCIP_RETCODE storeAggrFromMIP(
    assert(backwardarcs != NULL);
    assert(quadvar2aggr != NULL);
    assert(nfoundsofar >= 0);
-   assert(SCIPgetStatus(subscip) < SCIP_STATUS_INFEASIBLE);
+   assert(SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE);
+   assert(SCIPgetStatus(subscip) != SCIP_STATUS_UNBOUNDED);
+   assert(SCIPgetStatus(subscip) != SCIP_STATUS_INFORUNBD);
    assert(SCIPgetNSols(subscip) > 0);
 
    sol = SCIPgetBestSol(subscip);
@@ -1280,7 +1282,7 @@ SCIP_RETCODE searchEcAggrWithMIP(
    SCIP_CALL( SCIPsolve(subscip) );
 
    /* no more aggregation left if the MIP is infeasible */
-   if( SCIPgetStatus(subscip) >= SCIP_STATUS_INFEASIBLE )
+   if( SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE )
    {
       *found = FALSE;
       *aggrleft = FALSE;
