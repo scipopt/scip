@@ -3581,110 +3581,91 @@ SCIP_RETCODE cliquePresolve(
    /* at least nvars-1 variables are in one clique */
    if( !breaked ) /*lint !e774*/
    {
-      /* all variables are in one clique, case 1 */
-      if( posnotinclq1 == -1 )
+      /* if rhs == TRUE, all variables of xor-constraint are in one clique, so create a setpartitioning constraint with
+       * all variables and delete this xor-constraint
+       */
+      if( consdata->rhs )
       {
-         /* all variables of xor constraints <%s> (with rhs == 1) are in one clique, so create a setpartitioning
-          * constraint with all variables and delete this xor-constraint */
-         if( consdata->rhs )
+         SCIP_CONS* newcons;
+         char consname[SCIP_MAXSTRLEN];
+
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_complete_clq", SCIPconsGetName(cons));
+         SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, consname, nvars, vars,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+         SCIPdebugMsg(scip, "adding a clique/setppc constraint <%s>\n", SCIPconsGetName(newcons));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         ++(*naddconss);
+      }
+      /* all variables of xor-constraint are in one clique and rhs == FALSE, so fix all variables to 0, case 1 */
+      else if( posnotinclq1 == -1 )
+      {
+         SCIP_Bool infeasible;
+         SCIP_Bool fixed;
+
+         SCIPdebugMsg(scip, "all variables of xor constraints <%s> are in one clique, so fixed all variables to 0\n",
+               SCIPconsGetName(cons));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+
+         for( v = nvars - 1; v >= 0; --v )
          {
-            SCIP_CONS* newcons;
-            char consname[SCIP_MAXSTRLEN];
+            SCIPdebugMsg(scip, "fixing variable <%s> to 0\n", SCIPvarGetName(vars[v]));
+            SCIP_CALL( SCIPfixVar(scip, vars[v], 0.0, &infeasible, &fixed) );
+            assert(infeasible || fixed);
 
-            (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_complete_clq", SCIPconsGetName(cons));
-            SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, consname, nvars, vars,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-
-            SCIP_CALL( SCIPaddCons(scip, newcons) );
-               SCIPdebugMsg(scip, "added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
-            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
-            ++(*naddconss);
-
-            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-         }
-         /* all variables of xor constraints <%s> (with rhs == 0) are in one clique, so fixed all variables to 0 */
-         else
-         {
-            SCIP_Bool infeasible;
-            SCIP_Bool fixed;
-
-            SCIPdebugMsg(scip, "all variables of xor constraints <%s> are in one clique, so fixed all variables to 0\n",
-            SCIPconsGetName(cons));
-            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-
-            for( v = nvars - 1; v >= 0; --v )
+            if( infeasible )
             {
-               SCIPdebugMsg(scip, "fixing variable <%s> to 0\n", SCIPvarGetName(vars[v]));
-               SCIP_CALL( SCIPfixVar(scip, vars[v], 0.0, &infeasible, &fixed) );
+               *cutoff = TRUE;
 
-               assert(infeasible || fixed);
-
-               if( infeasible )
-               {
-                  *cutoff = infeasible;
-
-                  return SCIP_OKAY;
-               }
-               else
-                  ++(*nfixedvars);
+               return SCIP_OKAY;
             }
+            else
+               ++(*nfixedvars);
          }
       }
-      /* all but one variable are in one clique, case 2 */
+      /* all but one variable are in one clique and rhs == FALSE, so we need to exchange the variable not appearing in
+       * the clique with the negated variable, case 2
+       */
       else
       {
          SCIP_CONS* newcons;
          char consname[SCIP_MAXSTRLEN];
 
-         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_completed_clq", SCIPconsGetName(cons));
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_completed_clq", SCIPconsGetName(cons));
 
          /* complete clique by creating a set partioning constraint over all variables */
+         SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, consname, 0, NULL,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
-         /* if rhs == FALSE we need to exchange the variable not appaering in the clique with the negated variables */
-         if( !consdata->rhs )
+         for( v = 0; v < nvars; ++v )
          {
-            SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, consname, 0, NULL,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-
-            for( v = 0; v < nvars; ++v )
+            if( v == posnotinclq1 )
             {
-               if( v == posnotinclq1 )
-               {
-                  SCIP_VAR* var;
+               SCIP_VAR* var;
 
-                  SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &var) );
-                  assert(var != NULL);
+               SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &var) );
+               assert(var != NULL);
 
-                  SCIP_CALL( SCIPaddCoefSetppc(scip, newcons, var) );
-               }
-               else
-               {
-                  SCIP_CALL( SCIPaddCoefSetppc(scip, newcons, vars[v]) );
-               }
+               SCIP_CALL( SCIPaddCoefSetppc(scip, newcons, var) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPaddCoefSetppc(scip, newcons, vars[v]) );
             }
          }
-         /* if rhs == TRUE we can add all variables to the clique constraint directly */
-         else
-         {
-            SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, consname, nvars, vars,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-         }
 
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
-         SCIPdebugMsg(scip, "added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
+         SCIPdebugMsg(scip, "adding a clique/setppc constraint <%s>\n", SCIPconsGetName(newcons));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
-         ++(*naddconss);
-
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         ++(*naddconss);
       }
 
       /* fix integer variable if it exists */
@@ -3695,12 +3676,12 @@ SCIP_RETCODE cliquePresolve(
 
          SCIPdebugMsg(scip, "also fix the integer variable <%s> to 0\n", SCIPvarGetName(consdata->intvar));
          SCIP_CALL( SCIPfixVar(scip, consdata->intvar, 0.0, &infeasible, &fixed) );
-
-         assert(infeasible || fixed || SCIPvarGetStatus(consdata->intvar) == SCIP_VARSTATUS_FIXED);
+         assert(infeasible || fixed);
 
          if( infeasible )
          {
-            *cutoff = infeasible;
+            *cutoff = TRUE;
+
             return SCIP_OKAY;
          }
          else if( fixed )
