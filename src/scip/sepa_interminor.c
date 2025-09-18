@@ -1570,6 +1570,7 @@ SCIP_RETCODE separateDeterminant(
    SCIP_Real solxil;
    SCIP_Real solxjk;
    SCIP_Real solxjl;
+   SCIP_Real viol;
 
    ncols = SCIPgetNLPCols(scip);
    nrows = SCIPgetNLPRows(scip);
@@ -1646,10 +1647,15 @@ SCIP_RETCODE separateDeterminant(
    /* merge coefficients that belong to same variable */
    SCIPmergeRowprepTerms(scip, rowprep);
 
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, sepadata->mincutviol, NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIPgetHugeValue(scip), &success) );
 
-   /* if cleanup was successfull, create row out of rowprep and add it */
-   if( success )
+   if( !success )
+      goto CLEANUP;
+
+   viol = SCIPgetRowprepViolation(scip, rowprep, NULL, &success);
+
+   /* if cut is violated, create row out of rowprep and add it */
+   if( success && viol >= sepadata->mincutviol )
    {
       SCIP_ROW* row;
       SCIP_Bool infeasible;
