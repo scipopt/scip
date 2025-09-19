@@ -6,7 +6,9 @@
 Features
 --------
 
-- added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
+- added numerically exact solving mode for mixed-integer linear	programs to the core framework including certification of
+  branch-and-bound phase and many new and extended plugins listed below
+- added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs
 - copy variable data pointer if no copy routine was supplied.
 - added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
 - Dejavu can be used to compute symmetries; the source code is shipped with SCIP and incorporates sassy.
@@ -40,6 +42,24 @@ Features
 - added support for AND-constraints to GAMS writer
 - added writing support for AMPL NL writer: currently only general and specialized linear and nonlinear constraints can be written
 - implemented columnwise Jacobian sparsity computation in the NLP oracle
+
+Core extensions for numerically exact solving mode:
+- new wrapper class SCIP_RATIONAL for rational arithmetic currently based on Boost, GMP, and MPFR
+- new data structure SCIP_LPEXACT for handling rational LP relaxation and computing safe dual bounds
+- new interfaces to exact LP solvers SoPlex and QSopt_ex in src/lpiexact/
+- safe dualproof version of conflict analysis
+- new data structure SCIP_CERTIFICATE for certificate printing/proof logging
+
+New plugins for numerically exact solving mode:
+- new constraint handler exactlinear for handling linear constraints with rational data
+- new constraint handler exactsol to post-process and repair solutions from floating-point heuristics
+
+Plugins revised for numerically exact solving mode:
+- adjusted readers for MPS, LP, CIP, OPB/WBO, and Zimpl files
+- extended presolver presol_milp performs rational presolving using PaPILO
+- adjusted integral constraint handler and default reliability pseudo-cost branching rule relpscost
+- extended gomory cut separator to separate and certify numerically safe MIR cuts
+- adjusted all primal heuristics (except five dedicated MINLP heuristics)
 
 Performance improvements
 ------------------------
