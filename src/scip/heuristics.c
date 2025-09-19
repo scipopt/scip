@@ -182,8 +182,8 @@ SCIP_Longint getDivesetIterLimit(
    )
 {
    SCIP_Longint iterlimit;
-   /*todo another factor of 10, REALLY? */
-   iterlimit = (SCIP_Longint)((1.0 + 10*(SCIPdivesetGetNSols(diveset, divecontext)+1.0)/(SCIPdivesetGetNCalls(diveset, divecontext)+1.0)) * SCIPdivesetGetMaxLPIterQuot(diveset) * SCIPgetNNodeLPIterations(scip));
+
+   iterlimit = (SCIP_Longint)(SCIPdivesetGetMaxLPIterQuot(diveset) * (SCIPdivesetGetSolSuccess(diveset, divecontext)+1.0)/(SCIPdivesetGetNCalls(diveset, divecontext)+1.0) * SCIPgetNNodeLPIterations(scip));
    iterlimit += SCIPdivesetGetMaxLPIterOffset(diveset);
    iterlimit -= SCIPdivesetGetNLPIterations(diveset, divecontext);
 

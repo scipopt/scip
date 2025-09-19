@@ -72,7 +72,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_MAXLPITERQUOT    0.01   /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITERQUOT    0.05   /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS     1000   /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXSOLS            10   /**< total number of feasible solutions found up to which heuristic is called
                                          *   (-1: no limit) */
@@ -830,10 +830,10 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       return SCIP_OKAY;
 
    /* calculate the maximal number of LP iterations until heuristic is aborted */
-   nlpiterations = SCIPgetNLPIterations(scip);
+   nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess;
-   maxnlpiterations = (SCIP_Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
+   maxnlpiterations = (SCIP_Longint)(((nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
    maxnlpiterations += heurdata->maxlpiterofs;
 
    /* don't try to dive, if we took too many LP iterations during diving */
