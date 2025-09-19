@@ -3582,25 +3582,30 @@ SCIP_RETCODE cliquePresolve(
    /* at least nvars-1 variables are in one clique */
    if( !breaked ) /*lint !e774*/
    {
+      SCIP_Bool replaced = FALSE;
+
       /* if rhs == TRUE, all variables of xor-constraint are in one clique, so create a setpartitioning constraint with
        * all variables and delete this xor-constraint
        */
       if( consdata->rhs )
       {
-         SCIP_CONS* newcons;
-         char consname[SCIP_MAXSTRLEN];
+         if( SCIPconsGetNUpgradeLocks(cons) == 0 )
+         {
+            SCIP_CONS* newcons;
+            char consname[SCIP_MAXSTRLEN];
 
-         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_complete_clq", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, consname, nvars, vars,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-         SCIPdebugMsg(scip, "adding a clique/setppc constraint <%s>\n", SCIPconsGetName(newcons));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-         ++(*naddconss);
+            (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_complete_clq", SCIPconsGetName(cons));
+            SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, consname, nvars, vars,
+                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+                  SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+            SCIPdebugMsg(scip, "adding a clique/setppc constraint <%s>\n", SCIPconsGetName(newcons));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+            SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+            ++(*naddconss);
+            replaced = TRUE;
+         }
       }
       /* all variables of xor-constraint are in one clique and rhs == FALSE, so fix all variables to 0, case 1 */
       else if( posnotinclq1 == -1 )
@@ -3627,46 +3632,51 @@ SCIP_RETCODE cliquePresolve(
             else
                ++(*nfixedvars);
          }
+
+         replaced = TRUE;
       }
       /* all but one variable are in one clique and rhs == FALSE, so we need to exchange the variable not appearing in
        * the clique with the negated variable, case 2
        */
       else
       {
-         SCIP_CONS* newcons;
-         char consname[SCIP_MAXSTRLEN];
-
-         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_completed_clq", SCIPconsGetName(cons));
-
-         /* complete clique by creating a set partioning constraint over all variables */
-         SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, consname, 0, NULL,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-
-         for( v = 0; v < nvars; ++v )
+         if( SCIPconsGetNUpgradeLocks(cons) == 0 )
          {
-            if( v == posnotinclq1 )
-            {
-               SCIP_VAR* var;
+            SCIP_CONS* newcons;
+            char consname[SCIP_MAXSTRLEN];
 
-               SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &var) );
-               assert(var != NULL);
+            (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_completed_clq", SCIPconsGetName(cons));
 
-               SCIP_CALL( SCIPaddCoefSetppc(scip, newcons, var) );
-            }
-            else
+            /* complete clique by creating a set partioning constraint over all variables */
+            SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, consname, 0, NULL,
+                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+                  SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+            for( v = 0; v < nvars; ++v )
             {
-               SCIP_CALL( SCIPaddCoefSetppc(scip, newcons, vars[v]) );
+               if( v == posnotinclq1 )
+               {
+                  SCIP_VAR* var;
+
+                  SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &var) );
+                  assert(var != NULL);
+
+                  SCIP_CALL( SCIPaddCoefSetppc(scip, newcons, var) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPaddCoefSetppc(scip, newcons, vars[v]) );
+               }
             }
+
+            SCIPdebugMsg(scip, "adding a clique/setppc constraint <%s>\n", SCIPconsGetName(newcons));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
+            SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+            ++(*naddconss);
+            replaced = TRUE;
          }
-
-         SCIPdebugMsg(scip, "adding a clique/setppc constraint <%s>\n", SCIPconsGetName(newcons));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-         ++(*naddconss);
       }
 
       /* remove integer variable if it exists */
@@ -3711,9 +3721,12 @@ SCIP_RETCODE cliquePresolve(
          }
       }
 
-      /* delete old redundant xor-constraint */
-      SCIP_CALL( SCIPdelCons(scip, cons) );
-      ++(*ndelconss);
+      /* delete old replaced xor-constraint */
+      if( replaced )
+      {
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+      }
    }
 
    return SCIP_OKAY;
@@ -5538,8 +5551,6 @@ SCIP_DECL_CONSLOCK(consLockXor)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    int i;
-
-   assert(locktype == SCIP_LOCKTYPE_MODEL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
