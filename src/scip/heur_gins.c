@@ -82,7 +82,7 @@
 #define HEUR_DESC             "gins works on k-neighborhood in a variable-constraint graph"
 #define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1103000
-#define HEUR_FREQ             20
+#define HEUR_FREQ             10
 #define HEUR_FREQOFS          8
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
