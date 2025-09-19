@@ -638,8 +638,6 @@ SCIP_RETCODE SCIPendExactDive(
    SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->transprob, scip->primal->cutoffbound) );
    assert(scip->lp->cutoffbound == scip->primal->cutoffbound); /*lint !e777*/
 
-   scip->lpexact->diving = FALSE;
-
    return SCIP_OKAY;
 }
 
