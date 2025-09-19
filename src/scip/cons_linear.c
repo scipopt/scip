@@ -9060,15 +9060,6 @@ SCIP_RETCODE consdataTightenCoefs(
    /* allocate relevance flags */
    SCIP_CALL( SCIPallocBufferArray(scip, &isvarrelevant, consdata->nvars) );
 
-   /* @todo Is this still needed with automatic recomputation of activities? */
-   /* if the maximal coefficient is too large, recompute the activities */
-   if( (consdata->validmaxabsval && consdata->maxabsval > MAXVALRECOMP)
-      || (consdata->validminabsval && consdata->minabsval < MINVALRECOMP) )
-   {
-      consdataRecomputeMinactivity(scip, consdata);
-      consdataRecomputeMaxactivity(scip, consdata);
-   }
-
    /* get the minimal and maximal activity of the constraint */
    consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &isminacttight, &ismaxacttight,
          &isminsettoinfinity, &ismaxsettoinfinity);
@@ -16446,9 +16437,19 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          if( cutoff )
             break;
 
-         /* check constraint for infeasibility and redundancy */
+         /* if the maximal coefficient is large, recompute the activities before infeasibility and redundancy checks */
+         if( ( consdata->validmaxabsval && consdata->maxabsval > MAXVALRECOMP )
+            || ( consdata->validminabsval && consdata->minabsval < MINVALRECOMP ) )
+         {
+            consdataRecomputeMinactivity(scip, consdata);
+            consdataRecomputeMaxactivity(scip, consdata);
+         }
+
+         /* get activity bounds */
          consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &isminacttight, &ismaxacttight,
-            &isminsettoinfinity, &ismaxsettoinfinity);
+               &isminsettoinfinity, &ismaxsettoinfinity);
+
+         /* check constraint for infeasibility and redundancy */
          if( SCIPisFeasGT(scip, minactivity, consdata->rhs) || SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
          {
             SCIPdebugMsg(scip, "linear constraint <%s> is infeasible: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
