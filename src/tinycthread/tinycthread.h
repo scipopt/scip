@@ -362,7 +362,7 @@ int thrd_equal(thrd_t thr0, thrd_t thr1);
 /** Terminate execution of the calling thread.
 * @param res Result code of the calling thread.
 */
-TTHREAD_NORETURN void thrd_exit(int res);
+TTHREAD_NORETURN void thrd_exit(int res);  /*lint !e129*/
 
 /** Wait for a thread to terminate.
 * The function joins the given thread with the current thread by blocking

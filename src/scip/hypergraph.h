@@ -346,7 +346,7 @@ int SCIPhypergraphVertexEdgesBeyond(
  */
 SCIP_HYPERGRAPH_EDGE SCIPhypergraphVertexEdgesGetAtIndex(
    SCIP_HYPERGRAPH*      hypergraph,         /**< The hypergraph. */
-   int                   index               /**< Index. */
+   int                   idx                 /**< Index. */
    );
 
 /** @brief returns additional data of \p overlap */
@@ -396,7 +396,7 @@ int SCIPhypergraphEdgesOverlapsBeyond(
  */
 SCIP_HYPERGRAPH_OVERLAP SCIPhypergraphEdgesOverlapsGetAtIndex(
    SCIP_HYPERGRAPH*      hypergraph,         /**< The hypergraph. */
-   int                   index               /**< Index. */
+   int                   idx                 /**< Index. */
    );
 
 /** @brief returns an index for the first edge incident to \p overlap */
@@ -419,7 +419,7 @@ int SCIPhypergraphOverlapsEdgesBeyond(
  */
 SCIP_HYPERGRAPH_OVERLAP SCIPhypergraphOverlapsEdgesGetAtIndex(
    SCIP_HYPERGRAPH*      hypergraph,         /**< The hypergraph. */
-   int                   index               /**< Index. */
+   int                   idx                 /**< Index. */
    );
 
 /** @brief returns an index for the first overlap containing \p vertex */
@@ -442,7 +442,7 @@ int SCIPhypergraphVertexOverlapsBeyond(
  */
 SCIP_HYPERGRAPH_OVERLAP SCIPhypergraphVertexOverlapsGetAtIndex(
    SCIP_HYPERGRAPH*      hypergraph,         /**< The hypergraph. */
-   int                   index               /**< Index. */
+   int                   idx                 /**< Index. */
    );
 
 

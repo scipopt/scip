@@ -171,10 +171,12 @@ struct SCIP_PresolData
    int internalmaxrounds;                    /**< internal max rounds in PaPILO (-1: no limit, 0: model cleanup) */
    int maxshiftperrow;                       /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
    int detectlineardependency;               /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
+#if PAPILO_APIVERSION >= 6
    int maxedgesparallel;                     /**< maximal amount of edges in the parallel clique merging graph */
    int maxedgessequential;                   /**< maximal amount of edges in the sequential clique merging graph */
    int maxcliquesize;                        /**< maximal size of clique considered for clique merging */
    int maxgreedycalls;                       /**< maximal number of greedy max clique calls in a single thread */
+#endif
    int randomseed;                           /**< the random seed used for randomization of tie breaking */
    int verbosity;
 
@@ -184,7 +186,9 @@ struct SCIP_PresolData
    SCIP_Bool enabledualinfer;                /**< should the dualinfer presolver be enabled within the presolve library? */
    SCIP_Bool enablemultiaggr;                /**< should the multi-aggregation presolver be enabled within the presolve library? */
    SCIP_Bool enableparallelrows;             /**< should the parallel rows presolver be enabled within the presolve library? */
+#if PAPILO_APIVERSION >= 6
    SCIP_Bool enablecliquemerging;            /**< should the clique merging presolver be enabled within the presolve library? */
+#endif
    SCIP_Real modifyconsfac;                  /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
    SCIP_Real markowitztolerance;             /**< the markowitz tolerance used for substitutions */

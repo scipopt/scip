@@ -112,6 +112,7 @@ SCIP_Bool fpLPisIntFeasible(
 }
 
 #ifdef SCIP_WITH_GMP
+#ifdef SCIP_WITH_EXACTSOLVE
 /** helper method, compute number of nonzeros in lp */
 static
 int getNNonz(
@@ -127,6 +128,7 @@ int getNNonz(
 
    return ret;
 }
+#endif
 
 /** subroutine of constructProjectShiftData(); chooses which columns of the dual matrix are designated as set S, used
  *  for projections
@@ -262,9 +264,9 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
    int i;
    int j;
-   int rval;
    int pos;
    int nrows;
    int ncols;
@@ -381,25 +383,22 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
     */
    SCIPrationalSetGMPArray(projvalgmp, projval, projindsize);
 
-#if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
-   rval = RECTLUbuildFactorization(&projshiftdata->rectfactor, ncols, projshiftdata->projshiftbasisdim,
-      projshiftdata->projshiftbasis, projvalgmp, projind, projbeg, projlen);
-#else
-   rval = 1;
-#endif
-
-   /* if rval != 0 then RECTLUbuildFactorization has failed. In this case the project-and-shift method will not work and
-    * we will return failure
-    */
-   if( rval )
+   /* if RECTLUbuildFactorization has failed, the project-and-shift method will not work and we will return failure */
+   if( RECTLUbuildFactorization(&projshiftdata->rectfactor, ncols, projshiftdata->projshiftbasisdim,
+      projshiftdata->projshiftbasis, projvalgmp, projind, projbeg, projlen) != 0 )
    {
       projshiftdata->projshiftdatafail = TRUE;
       SCIPdebugMessage("factorization of matrix for project-and-shift method failed.\n");
-   }
-
 #ifdef SCIP_DEBUG_PS_OUT
-   printf("   matrix factorization complete: %s\n", rval ? "failed" : "correct termination");
+      printf("   matrix factorization complete: failed\n");
 #endif
+   }
+   else
+   {
+#ifdef SCIP_DEBUG_PS_OUT
+      printf("   matrix factorization complete: correct termination\n");
+#endif
+   }
 
    SCIPrationalClearArrayGMP(projvalgmp, projindsize);
    SCIPsetFreeBufferArray(set, &projvalgmp);
@@ -407,6 +406,13 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    SCIPsetFreeBufferArray(set, &projind);
    SCIPsetFreeBufferArray(set, &projlen);
    SCIPsetFreeBufferArray(set, &projbeg);
+
+#else  /* SCIP_WITH_GMP or SCIP_WITH_EXACTSOLVE not defined */
+   lpexact->projshiftdata->projshiftdatafail = TRUE;
+#ifdef SCIP_DEBUG_PS_OUT
+   printf("   matrix factorization skipped: no GMP or EXACTSOLVE\n");
+#endif
+#endif
 
    return SCIP_OKAY;
 }
@@ -1479,7 +1485,7 @@ SCIP_RETCODE projectShift(
 #endif
 
       /* rval = 0 -> fail */
-      if( rval )
+      if( rval )  /* cppcheck-suppress knownConditionTrueFalse */
       {
          lp->hasprovedbound = FALSE;
          if( usefarkas )

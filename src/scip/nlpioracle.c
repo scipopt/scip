@@ -2411,7 +2411,7 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int**           nz,                 /**< pointer to store pointer that stores the nonzeroes of the objective gradient */
-   const SCIP_Bool**     nlflags,            /**< flags marking nonlinear nonzeroes */
+   const SCIP_Bool**     nlnz,               /**< flags marking nonlinear nonzeroes */
    int*                  nnz,                /**< number of nonzeroes */
    int*                  nnlnz               /**< number of nonlinear nonzeroes */
    )
@@ -2430,7 +2430,7 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
    if( oracle->objgradnz != NULL )
    {
       *nz = oracle->objgradnz;
-      *nlflags = oracle->objnlflags;
+      *nlnz = oracle->objnlflags;
       *nnz = oracle->nobjgradnz;
       *nnlnz = oracle->nobjgradnlnz;
       return SCIP_OKAY;
@@ -2440,7 +2440,7 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
    {
       /* TODO what happens with the fields in oracle? */
       *nz = NULL;
-      *nlflags = NULL;
+      *nlnz = NULL;
       *nnz = 0;
       *nnlnz = 0;
       return SCIP_OKAY;
@@ -2524,7 +2524,7 @@ SCIP_RETCODE SCIPnlpiOracleGetObjGradientNnz(
    }
 
    *nz = oracle->objgradnz;
-   *nlflags = oracle->objnlflags;
+   *nlnz = oracle->objnlflags;
    *nnz = oracle->nobjgradnz;
    *nnlnz = oracle->nobjgradnlnz;
 
