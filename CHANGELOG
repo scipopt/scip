@@ -51,6 +51,7 @@ Performance improvements
 - apply general conflict upgrades in conflict store
 - inline SCIPgetStatus() to reduce computational overhead
 - allow multi-aggregation of unbounded slack variables, which may enable more bound tightening due to a reduction in the number of unbounded variables
+- reduce maximal fraction of diving LP iterations relative to total node LP iterations
 
 Examples and applications
 -------------------------
@@ -232,6 +233,8 @@ Interface changes
 - restricted range of parameter propagating/symmetry/sstleadervartype to [1,7]; its new default value is 6
 - propagating/*/timingmask extended by setting 0 to disable propagators completely
 - changed defaults of constraints/components/propfreq and constraints/components/maxdepth to -1 and 2147483647, respectively, to avoid unnecessary calls of components propagator by default
+- changed frequencies for the following heuristics: shifting, gins, crossover, rins, randrounding
+- set default maxlpiterquot to 0.05 for all LP diving heuristics and feaspump whereas adaptivediving uses 0.15 and rootsoldiving remains at 0.01
 
 ### New parameters
 
