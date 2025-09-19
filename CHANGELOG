@@ -242,6 +242,7 @@ Interface changes
 
 - added an interface to the CONOPT NLP solver
 - removed LP solver interface lpi_spx1 that used the old SoPlex interface; renamed lpi_spx2 to lpi_spx
+- added interfaces to exact LP solvers SoPlex and QSopt_ex in src/lpiexact
 
 ### Changed parameters
 
@@ -366,8 +367,8 @@ Fixed bugs
 
 Miscellaneous
 -------------
-- We now use sassy as shipped with dejavu.
 
+- We now use sassy as shipped with dejavu.
 - add objective offset instead of objective offset variable in cip reader
 - the solchecker tool is extended for rational values
 - updated ampl/mp to v4.0.3
