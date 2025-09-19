@@ -122,7 +122,7 @@ SCIP_RETCODE SCIPconflictInitRows(
 
 /** frees a conflict row */
 void SCIPconflictRowFree(
-   SCIP_CONFLICTROW**    conflictrow,        /**< conflict row */
+   SCIP_CONFLICTROW**    row,                /**< conflict row */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 

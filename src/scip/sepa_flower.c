@@ -332,9 +332,9 @@ SCIP_RETCODE constructHypergraph(
       SCIPhypergraphGetNOverlaps(hypergraph), sepadata->timehypercreation, sepadata->timehyperoverlaps,
       sepadata->timehypercreation + sepadata->timehyperoverlaps);
    return SCIP_ERROR;
-#endif /* PRINT_HYPERGRAPH_AND_EXIT */
-
+#else
    return SCIP_OKAY;
+#endif /* PRINT_HYPERGRAPH_AND_EXIT */
 }
 
 /* @brief prepare the separation for all cutting plane types by storing relevant data with the hypergraph */
@@ -1296,7 +1296,7 @@ SCIP_RETCODE separate(
 #else /* !USE_OLD_ONEFLOWER_SEPARATION */
          SCIP_CALL( separateOneFlower(scip, sepa, sol, sepadata->maxoneflower, result) );
 #endif /* USE_OLD_ONEFLOWER_SEPARATION */
-         if( sepadata->nsepaoneflower > oldnsepaoneflower )
+         if( sepadata->nsepaoneflower > oldnsepaoneflower ) /* cppcheck-suppress knownConditionTrueFalse */
             sepadata->nuselessoneflower = 0;
          else
             sepadata->nuselessoneflower++;
@@ -1312,7 +1312,7 @@ SCIP_RETCODE separate(
 #else /* !USE_OLD_ONEFLOWER_SEPARATION */
          SCIP_CALL( separateTwoFlower(scip, sepa, sol, sepadata->maxtwoflower, result) );
 #endif /* USE_OLD_ONEFLOWER_SEPARATION */
-         if( sepadata->nsepatwoflower > oldnsepatwoflower )
+         if( sepadata->nsepatwoflower > oldnsepatwoflower )  /* cppcheck-suppress knownConditionTrueFalse */
             sepadata->nuselesstwoflower = 0;
          else
             sepadata->nuselesstwoflower++;

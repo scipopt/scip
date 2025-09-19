@@ -885,7 +885,7 @@ SCIPPLUGINLIBOBJ	+= 	scip/nlpi_ipopt_dummy.o
 endif
 
 ifeq ($(CONOPT),true)
-SCIPPLUGINLIBCPPOBJ	+= 	scip/nlpi_conopt.o
+SCIPPLUGINLIBOBJ	+= 	scip/nlpi_conopt.o
 else
 SCIPPLUGINLIBOBJ	+= 	scip/nlpi_conopt_dummy.o
 endif

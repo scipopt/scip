@@ -1048,12 +1048,12 @@ SCIP_RETCODE SCIPcertificatePrintResult(
       if( isorigfile )
       {
          SCIP_CALL( SCIPretransformSolExact(scip, bestsol) );
-      }
-
-      if( isorigfile )
          SCIPgetPrimalboundExact(scip, primalbound);
+      }
       else
+      {
          SCIPgetUpperboundExact(scip, primalbound);
+      }
 
       assert(!SCIPrationalIsAbsInfinity(primalbound));
 
@@ -1096,12 +1096,12 @@ SCIP_RETCODE SCIPcertificatePrintResult(
          if( isorigfile )
          {
             SCIP_CALL( SCIPretransformSolExact(scip, bestsol) );
-         }
-
-         if( isorigfile )
             SCIPgetPrimalboundExact(scip, primalbound);
+         }
          else
+         {
             SCIPgetUpperboundExact(scip, primalbound);
+         }
       }
       else
       {
@@ -1339,10 +1339,10 @@ void SCIPcertificatePrintVarHeader(
 void SCIPcertificatePrintIntHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
-   int                   nints               /**< number of integer variables */
+   int                   nintvars            /**< number of integer variables */
    )
 {
-   assert(nints >= 0);
+   assert(nintvars >= 0);
 
    /* check whether certificate output should be created */
    if( !SCIPcertificateIsEnabled(certificate) )
@@ -1350,7 +1350,7 @@ void SCIPcertificatePrintIntHeader(
 
    assert(certificate != NULL);
 
-   SCIPcertificatePrintProblemMessage(certificate, isorigfile, "INT %d\n", nints);
+   SCIPcertificatePrintProblemMessage(certificate, isorigfile, "INT %d\n", nintvars);
 }
 
 /** prints constraint section header */
@@ -1592,7 +1592,7 @@ SCIP_RETCODE certificatePrintMirSplit(
 
    SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
-   for( auto & coef : coefs )
+   for( const auto & coef : coefs )
    {
       /** @todo perform line breaking before exceeding maximum line length */
       int varindex = coef.first;
@@ -1616,7 +1616,7 @@ SCIP_RETCODE certificatePrintMirSplit(
 
    SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
-   for( auto & coef : coefs )
+   for( const auto & coef : coefs )
    {
       /** @todo perform line breaking before exceeding maximum line length */
       int varindex = coef.first;
@@ -3350,7 +3350,6 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
             SCIPrationalMultReal(ub, ub, -1);
          }
          return SCIP_OKAY;
-         break;
       case SCIP_VARSTATUS_AGGREGATED:
          {
             if( lb != NULL )
@@ -3365,9 +3364,8 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
                SCIPrationalMult(lb, lb, var->exactdata->aggregate.scalar);
             if( ub != NULL )
                SCIPrationalMult(ub, ub, var->exactdata->aggregate.scalar);
-            return SCIP_OKAY;
          }
-         break;
+         return SCIP_OKAY;
       case SCIP_VARSTATUS_COLUMN:
          break;
       default:
