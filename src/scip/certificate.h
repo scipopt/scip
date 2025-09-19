@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   certificate.h
+ * @ingroup INTERNALAPI
  * @brief  methods for certificate output
  * @author Ambros Gleixner
  * @author Daniel Steffy

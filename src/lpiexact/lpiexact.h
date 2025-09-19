@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpiexact.h
+ * @ingroup LPIEXACTS
  * @brief  interface methods for specific exact LP solvers
  * @author Daniel Espinoza
  * @author Kati Wolter

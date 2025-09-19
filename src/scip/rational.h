@@ -22,10 +22,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scip/rational.h
- * @ingroup INTERNALAPI
- * @brief  rational wrapper
+/**@file   rational.h
+ * @ingroup PUBLICCOREAPI
+ * @brief  wrapper for rational number arithmetic
  * @author Leon Eifler
+ * @author Dominik Kamp
   */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -51,6 +52,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup PublicRationalMethods
+ *
+ * @{
+ */
 
 /*
  * Creation methods
@@ -890,6 +896,8 @@ SCIP_EXPORT
 SCIP_Real SCIPrationalGetInfinity(
    void
    );
+
+/** @} */
 
 #ifdef __cplusplus
 }

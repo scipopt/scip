@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpiexact_spx.cpp
- * @ingroup LPIS
+ * @ingroup LPIEXACTS
  * @brief  exact LP interface for SoPlex
  * @author Leon Eifler
  *

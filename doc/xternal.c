@@ -9285,6 +9285,21 @@
  * @brief methods to initiate and conduct LP diving
  */
 
+/**@defgroup PublicLPExactMethods Exact LP Relaxation
+ * @ingroup PublicSolveMethods
+ * @brief methods to manage exact LP relaxation
+ */
+
+/**@defgroup PublicExactMethods Exact Solving Mode
+ * @ingroup PublicSolveMethods
+ * @brief general methods for numerically exact solving
+ */
+
+/**@defgroup PublicCertificateMethods Certificate printing
+ * @ingroup PublicSolveMethods
+ * @brief methods for certified solving
+ */
+
 /**@defgroup PublicNLPMethods NLP Relaxation
  * @ingroup PublicSolveMethods
  * @brief methods for the nonlinear relaxation
@@ -9363,6 +9378,11 @@
  * @brief graph structure with common algorithms for directed and undirected graphs
  */
 
+/**@defgroup PublicDatatreeMethods Data Tree
+ * @ingroup DataStructures
+ * @brief methods for managing data trees
+ */
+
 /**@defgroup DecompMethods Decomposition data structure
  * @ingroup DataStructures
  * @brief methods for creating and accessing user decompositions
@@ -9371,6 +9391,11 @@
 /**@defgroup NetworkMatrix Network Matrix
  * @ingroup DataStructures
  * @brief methods for detecting network matrices and converting them to the underlying graphs
+ */
+
+/**@defgroup PublicRationalMethods Rational arithmetic
+ * @ingroup DataStructures
+ * @brief wrapper for rational number arithmetic
  */
 
 /**@defgroup SymGraph Symmetry Detection Graph
@@ -9490,6 +9515,11 @@
 /**@defgroup PublicDivesetMethods Dive sets
  * @ingroup PublicSpecialHeuristicMethods
  * @brief methods for dive sets to control the generic diving algorithm
+ */
+
+/**@defgroup PublicIISfinderMethods IIS Finders
+ * @ingroup PluginManagementMethods
+ * @brief  methods for irreducible infeasible subsystems (IIS) finders
  */
 
 /**@defgroup PublicNodeSelectorMethods Node Selector
@@ -9830,6 +9860,20 @@
  * This page lists public interface methods that every LP interface provides.
  * Find the concrete implementation for your LP solver
  * under "src/lpi/".
+ *
+ * @see \ref LPI for a list of available LP solver interfaces
+ */
+
+/**@defgroup LPIEXACTS Exact LP Solver Interface
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the exact LP solver interface of \SCIP
+ *
+ * For the exact solving mode, \SCIP also uses exact LP solvers.  The communication
+ * is realized through an exact LP interface.
+ *
+ * This page lists public interface methods that every exact LP interface provides.
+ * Find the concrete implementation for your exact LP solver
+ * under "src/lpiexact/".
  *
  * @see \ref LPI for a list of available LP solver interfaces
  */

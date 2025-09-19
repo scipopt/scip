@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   certificate.cpp
+ * @ingroup OTHER_CFILES
  * @brief  methods for certificate output
  * @author Ambros Gleixner
  * @author Daniel Steffy

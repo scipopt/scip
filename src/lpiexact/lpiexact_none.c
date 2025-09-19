@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpiexact_none.c
- * @ingroup LPIS
+ * @ingroup LPIEXACTS
  * @brief  dummy interface for the case no LP solver is needed
  * @author Leon Eifler
  */
