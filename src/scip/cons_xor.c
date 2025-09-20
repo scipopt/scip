@@ -886,15 +886,17 @@ SCIP_RETCODE applyFixings(
    SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
    )
 {
+   SCIP_VAR** intoffsetvars = NULL;
+   SCIP_Real* intoffsetvals = NULL;
    SCIP_CONSDATA* consdata;
-   int intoffset;
+   int intoffsetnvars = 0;
+   int intoffsetconst = 0;
    int v;
 
    assert(nchgcoefs != NULL);
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || consdata->vars != NULL);
-   intoffset = 0;
 
    SCIPdebugMsg(scip, "before fixings: ");
    SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL, TRUE) ) );
@@ -919,7 +921,7 @@ SCIP_RETCODE applyFixings(
          ++(*nchgcoefs);
          consdata->rhs = !consdata->rhs;
          if( consdata->rhs )
-            ++intoffset;
+            ++intoffsetconst;
       }
       else
       {
@@ -948,165 +950,164 @@ SCIP_RETCODE applyFixings(
    SCIPdebugMsg(scip, "after sort    : ");
    SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL, TRUE) ) );
 
-   /* delete pairs of equal or negated variables; scan from back to front because deletion doesn't affect the
-    * order of the front variables
-    */
+   if( consdata->intvar != NULL )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &intoffsetvars, consdata->nvars / 2 + 2) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &intoffsetvals, consdata->nvars / 2 + 2) );
+      intoffsetvars[1] = consdata->intvar;
+      intoffsetvals[1] = -1.0;
+      intoffsetnvars = 2;
+   }
+
+   /* delete pairs of equal or negated variables; scan backwards to not affect the order of the front variables */
    v = consdata->nvars - 2;
    while( v >= 0 )
    {
-      if( consdata->vars[v] == consdata->vars[v+1] ) /*lint !e679*/
+      if( consdata->vars[v] == consdata->vars[v + 1] ) /*lint !e679*/
       {
-         SCIP_VAR* newvars[3];
-         SCIP_Real vals[3];
-
-         newvars[2] = consdata->vars[v];
-         vals[2] = 1.0;
-
          /* delete both variables */
          SCIPdebugMsg(scip, "xor constraint <%s>: deleting pair of equal variables <%s>\n",
-            SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]));
-         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v+1) );
+               SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]));
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v + 1) );
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          *nchgcoefs += 2;
-         --v;
-
-         /* need to update integer variable, consider the following case:
-          * xor(x1, x2, x3, x4, x5) = 0  (and x1 == x2) was change above to
-          * xor(        x3, x4, x5) = 0
-          * assuming we have an integer variable y it needs to be replaced by z with y = x1 + z and
-          * z in [max(lb_y-ub_x1, 0), ub_y-lb_x1]
-          */
          if( consdata->intvar != NULL )
          {
-            SCIP_CONS* newcons;
-            SCIP_Real lb;
-            SCIP_Real ub;
-            char varname[SCIP_MAXSTRLEN];
-            char consname[SCIP_MAXSTRLEN];
+            assert(intoffsetvars != NULL);
+            assert(intoffsetvals != NULL);
+            assert(intoffsetnvars >= 2);
+            assert(intoffsetconst >= 0);
 
-            (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "agg_%s", SCIPvarGetName(consdata->intvar));
-            lb = MAX(SCIPvarGetLbGlobal(consdata->intvar) - SCIPvarGetUbGlobal(newvars[2]), 0); /*lint !e666*/
-            ub = MAX(SCIPvarGetUbGlobal(consdata->intvar) - SCIPvarGetLbGlobal(newvars[2]), 0); /*lint !e666*/
-
-            SCIP_CALL( SCIPcreateVarImpl(scip, &newvars[0], varname, lb, ub, 0.0,
-                  SCIPvarGetType(consdata->intvar), SCIPvarGetImplType(consdata->intvar),
-                  SCIPvarIsInitial(consdata->intvar), SCIPvarIsRemovable(consdata->intvar),
-                  NULL, NULL, NULL, NULL, NULL) );
-            SCIP_CALL( SCIPaddVar(scip, newvars[0]) );
-            vals[0] = 1.0;
-
-            newvars[1] = consdata->intvar;
-            vals[1] = -1.0;
-
-            (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "agg_%s", SCIPconsGetName(cons));
-
-            SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, 3, newvars, vals, 0.0, 0.0,
-                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), TRUE, /*SCIPconsIsEnforced(cons),*/
-                  TRUE, TRUE, /*SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),*/
-                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-                  SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-
-            SCIP_CALL( SCIPaddCons(scip, newcons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-            ++(*naddconss);
-
-            SCIP_CALL( setIntvar(scip, cons, newvars[0]) );
-            SCIP_CALL( SCIPreleaseVar(scip, &newvars[0]) );
+            if( consdata->intvar == consdata->vars[v] )
+               intoffsetvals[1] += 1.0;
+            else if( intoffsetvars[intoffsetnvars - 1] == consdata->vars[v] )
+               intoffsetvals[intoffsetnvars - 1] += 1.0;
+            else
+            {
+               intoffsetvars[intoffsetnvars] = consdata->vars[v];
+               intoffsetvals[intoffsetnvars] = 1.0;
+               ++intoffsetnvars;
+            }
          }
+         --v;
       }
-      else if( consdata->vars[v] == SCIPvarGetNegatedVar(consdata->vars[v+1]) ) /*lint !e679*/
+      else if( consdata->vars[v] == SCIPvarGetNegatedVar(consdata->vars[v + 1]) ) /*lint !e679*/
       {
          /* delete both variables and negate the rhs */
          SCIPdebugMsg(scip, "xor constraint <%s>: deleting pair of negated variables <%s> and <%s>\n",
-            SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]), SCIPvarGetName(consdata->vars[v+1])); /*lint !e679*/
-         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v+1) );
+               SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]), SCIPvarGetName(consdata->vars[v+1])); /*lint !e679*/
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v + 1) );
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          *nchgcoefs += 2;
          consdata->rhs = !consdata->rhs;
          if( consdata->rhs )
-            ++intoffset;
+            ++intoffsetconst;
          --v;
       }
       else
-         assert(SCIPvarGetProbvar(consdata->vars[v]) != SCIPvarGetProbvar(consdata->vars[v+1])); /*lint !e679*/
+         assert(SCIPvarGetProbvar(consdata->vars[v]) != SCIPvarGetProbvar(consdata->vars[v + 1])); /*lint !e679*/
       --v;
    }
 
-   /* need to offset integer variable, assuming we have an integer variable y it needs to be replaced by z with
-    * y = intoffset + z and z in [max(lb_y - intoffset, 0), ub_y - intoffset]
+   /* if there is an offset of the integer variable y, it needs to be replaced by z with
+    * y = z + intoffsetsum and z in [max(lb_y - intoffsetmax, 0), ub_y - intoffsetmin]
     */
-   assert(intoffset >= 0);
-   if( consdata->intvar != NULL && intoffset >= 1 )
+   if( consdata->intvar != NULL )
    {
-      SCIP_VAR* newvar;
-      SCIP_Real lb;
-      SCIP_Real ub;
-      char varname[SCIP_MAXSTRLEN];
-      SCIP_Bool aggregated;
-      SCIP_Bool infeasible;
-      SCIP_Bool redundant;
+      assert(intoffsetvars != NULL);
+      assert(intoffsetvals != NULL);
+      assert(intoffsetnvars >= 2);
+      assert(intoffsetconst >= 0);
 
-      (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "agg_%s", SCIPvarGetName(consdata->intvar));
-      lb = SCIPvarGetLbGlobal(consdata->intvar) - intoffset;
-      ub = SCIPvarGetUbGlobal(consdata->intvar) - intoffset;
-
-      /* guarantee non-negative bounds for the new artificial integer variable */
-      if( lb < 0.0 )
+      if( intoffsetconst >= 1 || intoffsetvals[1] != -1.0 || intoffsetnvars > 2 ) /*lint !e777*/
       {
-         lb = 0.0;
+         SCIP_Real lb = -(double)intoffsetconst;
+         SCIP_Real ub = -(double)intoffsetconst;
+         SCIP_Bool aggregated;
+         SCIP_Bool infeasible = FALSE;
+         SCIP_Bool redundant = FALSE;
+         char varname[SCIP_MAXSTRLEN];
 
-         if( ub < 0.0 )
-            ub = 0.0;
+         (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "agg_%s", SCIPvarGetName(consdata->intvar));
+
+         if( intoffsetvals[1] < 0.0 )
+         {
+            lb -= intoffsetvals[1] * SCIPvarGetLbGlobal(consdata->intvar);
+            ub -= intoffsetvals[1] * SCIPvarGetUbGlobal(consdata->intvar);
+         }
+         else
+         {
+            lb -= intoffsetvals[1] * SCIPvarGetUbGlobal(consdata->intvar);
+            ub -= intoffsetvals[1] * SCIPvarGetLbGlobal(consdata->intvar);
+         }
+
+         for( v = 2; v < intoffsetnvars; ++v )
+         {
+            lb -= intoffsetvals[v] * SCIPvarGetUbGlobal(intoffsetvars[v]);
+            ub -= intoffsetvals[v] * SCIPvarGetLbGlobal(intoffsetvars[v]);
+         }
+
+         if( lb < 0.0 )
+         {
+            lb = 0.0;
+
+            if( ub < 0.0 )
+               ub = 0.0;
+         }
+
+         SCIP_CALL( SCIPcreateVarImpl(scip, intoffsetvars, varname, lb, ub, 0.0,
+               SCIPvarGetType(consdata->intvar), SCIPvarGetImplType(consdata->intvar),
+               SCIPvarIsInitial(consdata->intvar), SCIPvarIsRemovable(consdata->intvar),
+               NULL, NULL, NULL, NULL, NULL) );
+         intoffsetvals[0] = 1.0;
+         SCIP_CALL( SCIPaddVar(scip, intoffsetvars[0]) );
+
+         if( intoffsetnvars == 2 )
+         {
+            if( intoffsetvals[1] == 0.0 ) /*lint !e777*/
+               redundant = TRUE;
+            else
+            {
+               SCIP_CALL( SCIPaggregateVars(scip, intoffsetvars[1], intoffsetvars[0], -intoffsetvals[1], -intoffsetvals[0],
+                     (double)intoffsetconst, &infeasible, &redundant, &aggregated) );
+
+               if( aggregated )
+                  ++(*naggrvars);
+            }
+            assert(infeasible || redundant || SCIPdoNotAggr(scip));
+         }
+
+         if( infeasible )
+            *cutoff = TRUE;
+         else if( redundant )
+         {
+            SCIP_CALL( setIntvar(scip, cons, intoffsetvars[0]) );
+         }
+         else
+         {
+            SCIP_CONS* newcons;
+            char consname[SCIP_MAXSTRLEN];
+
+            (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "agg_%s", SCIPconsGetName(cons));
+
+            SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, intoffsetnvars, intoffsetvars, intoffsetvals,
+                  -(double)intoffsetconst, -(double)intoffsetconst,
+                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
+                  TRUE, TRUE, TRUE, /*SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),*/
+                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+                  SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+            SCIP_CALL( SCIPaddCons(scip, newcons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+            ++(*naddconss);
+
+            SCIP_CALL( setIntvar(scip, cons, intoffsetvars[0]) );
+         }
+
+         SCIP_CALL( SCIPreleaseVar(scip, intoffsetvars) );
       }
 
-      SCIP_CALL( SCIPcreateVarImpl(scip, &newvar, varname, lb, ub, 0.0,
-            SCIPvarGetType(consdata->intvar), SCIPvarGetImplType(consdata->intvar),
-            SCIPvarIsInitial(consdata->intvar), SCIPvarIsRemovable(consdata->intvar),
-            NULL, NULL, NULL, NULL, NULL) );
-      SCIP_CALL( SCIPaddVar(scip, newvar) );
-
-      SCIP_CALL( SCIPaggregateVars(scip, consdata->intvar, newvar, 1.0, -1.0, (double)intoffset, &infeasible,
-            &redundant, &aggregated) );
-      assert(infeasible || redundant || SCIPdoNotAggr(scip));
-
-      if( infeasible )
-      {
-         SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
-         *cutoff = TRUE;
-      }
-      else if( aggregated )
-      {
-         ++(*naggrvars);
-         SCIP_CALL( setIntvar(scip, cons, newvar) );
-         SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
-      }
-      else
-      {
-         SCIP_CONS* newcons;
-         char consname[SCIP_MAXSTRLEN];
-         SCIP_VAR* newvars[2];
-         SCIP_Real vals[2];
-
-         newvars[0] = consdata->intvar;
-         vals[0] = 1.0;
-         newvars[1] = newvar;
-         vals[1] = -1.0;
-
-         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "agg_%s", SCIPconsGetName(cons));
-
-         SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, 2, newvars, vals, 1.0, 1.0,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), TRUE, /*SCIPconsIsEnforced(cons),*/
-               TRUE, TRUE, /*SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),*/
-               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-         ++(*naddconss);
-
-         SCIP_CALL( setIntvar(scip, cons, newvar) );
-         SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
-      }
+      SCIPfreeBufferArray(scip, &intoffsetvals);
+      SCIPfreeBufferArray(scip, &intoffsetvars);
    }
 
    SCIPdebugMsg(scip, "after fixings : ");
