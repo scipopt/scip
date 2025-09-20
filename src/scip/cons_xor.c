@@ -897,8 +897,7 @@ SCIP_RETCODE applyFixings(
    SCIPdebugMsg(scip, "before fixings: ");
    SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL, TRUE) ) );
 
-   v = 0;
-   while( v < consdata->nvars )
+   for( v = consdata->nvars - 1; v >= 0; --v )
    {
       SCIP_VAR* var;
 
@@ -926,19 +925,7 @@ SCIP_RETCODE applyFixings(
          /* get binary representative of variable */
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
 
-         /* remove all negations by replacing them with the active variable
-          * it holds that xor(x1, ~x2) = 0 <=> xor(x1, x2) = 1
-          * @note this can only be done if the integer variable does not exist
-          */
-         if( negated && consdata->intvar == NULL )
-         {
-            assert(SCIPvarIsNegated(repvar));
-
-            repvar = SCIPvarGetNegationVar(repvar);
-            consdata->rhs = !consdata->rhs;
-         }
-
-         /* check, if the variable should be replaced with the representative */
+         /* check if the variable should be replaced with the representative */
          if( repvar != var )
          {
             /* delete old (aggregated) variable */
@@ -947,8 +934,6 @@ SCIP_RETCODE applyFixings(
             /* add representative instead */
             SCIP_CALL( addCoef(scip, cons, repvar) );
          }
-         else
-            ++v;
       }
    }
 
