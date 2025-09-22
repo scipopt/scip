@@ -4554,9 +4554,6 @@ SCIP_RETCODE SCIPbendersExec(
    SCIP_CALL( SCIPprintSol(set->scip, sol, NULL, FALSE) );
 #endif
 
-   /* start timing */
-   SCIPclockStart(benders->bendersclock, set);
-
    nsubproblems = SCIPbendersGetNSubproblems(benders);
 
    (*auxviol) = FALSE;
@@ -4683,6 +4680,9 @@ SCIP_RETCODE SCIPbendersExec(
       /* the result flag need to be reset to DIDNOTRUN for the main subproblem solve */
       (*result) = SCIP_DIDNOTRUN;
    }
+
+   /* start timing */
+   SCIPclockStart(benders->bendersclock, set);
 
    /* allocating memory for the infeasible subproblem array */
    SCIP_CALL( SCIPallocClearBlockMemoryArray(set->scip, &subprobsolved, nsubproblems) );
