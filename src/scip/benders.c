@@ -3616,13 +3616,6 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    if( benders->dfbsdata->totalnodes > 0.05*totalsubprobnodes )
       return SCIP_OKAY;
 
-   /* if the gap between the auxiliary variable value and the subproblem objective is less than 0.1, then we abort the
-    * cut strengthening
-   */
-   if( substatus == SCIP_BENDERSSUBSTATUS_AUXVIOL &&
-      SCIPrelDiff(objval, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, probnumber)) <= 0.1 )
-      return SCIP_OKAY;
-
    /* setting the objective value. If the subproblem was infeasible, then it is set to infinity, otherwise the objective
    * value is set to the subproblem solve objective
     *
@@ -3640,6 +3633,13 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    }
    else
       SCIPABORT();
+
+   /* if the gap between the auxiliary variable value and the subproblem objective is less than 0.1, then we abort the
+    * cut strengthening
+   */
+   if( substatus == SCIP_BENDERSSUBSTATUS_AUXVIOL &&
+      SCIPrelDiff(objval, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, probnumber)) <= 0.1 )
+      return SCIP_OKAY;
 
    submastervars = SCIPbendersGetSubproblemMasterVars(benders, probnumber);
    nsubmastervars = SCIPbendersGetNSubproblemMasterVars(benders, probnumber);
