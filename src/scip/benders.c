@@ -4353,7 +4353,7 @@ SCIP_RETCODE generateBendersCuts(
             /* the non-convex cut strengthening is only applied in the CIP solve loop. The solution for the non-convex
              * cuts is created if an strengthened solution is found. Otherwise, it will be NULL.
              */
-            if( benders->iiscutstrengthen && substatus[i] != SCIP_BENDERSSUBSTATUS_INFEAS
+            if( benders->iiscutstrengthen
                && ((solveloop == SCIP_BENDERSSOLVELOOP_CIP && !convexsub)
                   || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP) )
             {
