@@ -641,7 +641,9 @@ SCIP_DECL_SORTPTRCOMP(benderssubcompdefault)
    else
    {
       /* prefer the harder problem (with more average iterations) */
-      int avgiterdiff = (int)solvestat2->avgiter - (int)solvestat1->avgiter;
+      SCIP_Longint avgiter1 = solvestat1->iterations/solvestat1->ncalls;
+      SCIP_Longint avgiter2 = solvestat2->iterations/solvestat2->ncalls;
+      SCIP_Longint avgiterdiff = avgiter2 - avgiter1;
 
       if( avgiterdiff != 0 )
          return avgiterdiff;
@@ -2878,7 +2880,8 @@ SCIP_RETCODE SCIPbendersActivate(
          SCIP_ALLOC( BMSallocMemory(&solvestat) );
          solvestat->idx = i;
          solvestat->ncalls = 0;
-         solvestat->avgiter = 0;
+         solvestat->iterations = 0;
+         solvestat->nodes = 0;
          benders->solvestat[i] = solvestat;
 
          /* inserting the initial elements into the priority queue */
@@ -3861,10 +3864,20 @@ SCIP_RETCODE updateSubproblemStatQueue(
       if( updatestat )
       {
          if( !subproblemIsActive(benders, solveidx[i]) || subproblem == NULL )
-            solvestat->avgiter = 1;
+         {
+            solvestat->iterations = solvestat->ncalls + 1;
+            solvestat->nodes = solvestat->ncalls * 100;
+         }
          else
-            solvestat->avgiter = (SCIP_Real)(solvestat->avgiter*solvestat->ncalls + SCIPgetNLPIterations(subproblem))
-               /(SCIP_Real)(solvestat->ncalls + 1);
+         {
+            solvestat->iterations += SCIPgetNLPIterations(subproblem);
+
+            /* if the subproblem was solved, we attribute 100 nodes to the setup and solving the convex relaxation. Then
+             * we add the number of nodes processed when solving the non-convex problem
+             */
+            solvestat->nodes += 100 + SCIPgetNNodes(subproblem);
+         }
+
          solvestat->ncalls++;
       }
 

@@ -195,6 +195,8 @@ struct SCIP_SubproblemSolveStat
    int                   idx;                /**< the index of the subproblem */
    int                   ncalls;             /**< the number of times this subproblems has been solved */
    SCIP_Real             avgiter;            /**< the average number of LP/NLP iterations performed */
+   SCIP_Longint          iterations;         /**< the number of LP/NLP iterations performed */
+   SCIP_Longint          nodes;              /**< the number of nodes processed */
 };
 
 /** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored
