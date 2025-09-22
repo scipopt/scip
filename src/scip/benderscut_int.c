@@ -73,8 +73,8 @@ struct SCIP_BenderscutData
    SCIP_Real*            subprobconstant;    /**< the constant for each subproblem used for computing the integer cuts */
    SCIP_Bool             addcuts;            /**< should cuts be generated instead of constraints */
    SCIP_Bool*            firstcut;           /**< flag to indicate that the first cut needs to be generated. */
-   int                   nsubproblems;       /**< the number of subproblems for the Benders' decomposition */
    SCIP_Bool*            subprobsvalid;      /**< is it valid to apply integer cuts for this problem */
+   int                   nsubproblems;       /**< the number of subproblems for the Benders' decomposition */
    SCIP_Bool             created;            /**< has the Benders cut data been created */
 };
 
@@ -576,9 +576,12 @@ SCIP_DECL_BENDERSCUTEXIT(benderscutExitInt)
    benderscutdata = SCIPbenderscutGetData(benderscut);
    assert( benderscutdata != NULL );
 
-   SCIPfreeBlockMemoryArrayNull(scip, &benderscutdata->subprobsvalid, benderscutdata->nsubproblems);
-   SCIPfreeBlockMemoryArrayNull(scip, &benderscutdata->firstcut, benderscutdata->nsubproblems);
-   SCIPfreeBlockMemoryArrayNull(scip, &benderscutdata->subprobconstant, benderscutdata->nsubproblems);
+   if( benderscutdata->created )
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &benderscutdata->subprobsvalid, benderscutdata->nsubproblems);
+      SCIPfreeBlockMemoryArrayNull(scip, &benderscutdata->firstcut, benderscutdata->nsubproblems);
+      SCIPfreeBlockMemoryArrayNull(scip, &benderscutdata->subprobconstant, benderscutdata->nsubproblems);
+   }
 
    return SCIP_OKAY;
 }
@@ -652,6 +655,7 @@ SCIP_RETCODE SCIPincludeBenderscutInt(
    SCIP_CALL( SCIPallocBlockMemory(scip, &benderscutdata) );
    BMSclearMemory(benderscutdata);
    benderscutdata->benders = benders;
+   benderscutdata->created = FALSE;
 
    benderscut = NULL;
 
