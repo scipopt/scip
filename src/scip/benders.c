@@ -5208,8 +5208,24 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       else
       {
          SCIP_SOL* bestsol;
+         int bestsollimit;
+
+         /* if we are calling the solve for the check, then we don't need to exact solution, but a good solution. As
+          * such, we impose a best solution limits. This limit is not applied if an enhancement is being performed,
+          * since the exact solution may be needed.
+          */
+         if( type == SCIP_BENDERSENFOTYPE_CHECK )
+         {
+            SCIP_CALL( SCIPgetIntParam(subproblem, "limits/bestsol", &bestsollimit) );
+            SCIP_CALL( SCIPsetIntParam(subproblem, "limits/bestsol", 3) );
+         }
 
          SCIP_CALL( SCIPbendersSolveSubproblemCIP(set->scip, benders, probnumber, &solvestatus, FALSE) );
+
+         if( type == SCIP_BENDERSENFOTYPE_CHECK )
+         {
+            SCIP_CALL( SCIPsetIntParam(subproblem, "limits/bestsol", bestsollimit) );
+         }
 
          if( solvestatus == SCIP_STATUS_INFEASIBLE )
             (*infeasible) = TRUE;
