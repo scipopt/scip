@@ -59,6 +59,7 @@
 #define BENDERSCUT_LPCUT        FALSE
 
 #define SCIP_DEFAULT_ADDCUTS             FALSE  /** Should cuts be generated, instead of constraints */
+#define SCIP_DEFAULT_ZEROSOLVARS         FALSE  /** should variables with solution value 0.0 be added to the cut */
 #define SCIP_DEFAULT_CUTCONSTANT          -10000.0
 
 /*
@@ -72,6 +73,7 @@ struct SCIP_BenderscutData
    SCIP_Real             cutconstant;        /**< the constant for computing the integer cuts */
    SCIP_Real*            subprobconstant;    /**< the constant for each subproblem used for computing the integer cuts */
    SCIP_Bool             addcuts;            /**< should cuts be generated instead of constraints */
+   SCIP_Bool             zerosolvars;        /**< should variables with a solution value 0.0 be added to the cut */
    SCIP_Bool*            firstcut;           /**< flag to indicate that the first cut needs to be generated. */
    SCIP_Bool*            subprobsvalid;      /**< is it valid to apply integer cuts for this problem */
    int                   nsubproblems;       /**< the number of subproblems for the Benders' decomposition */
@@ -189,6 +191,7 @@ static
 SCIP_RETCODE computeStandardIntegerOptCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< the benders' decomposition cut method */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_CONS*            cons,               /**< the constraint for the generated cut, can be NULL */
    SCIP_ROW*             row,                /**< the row for the generated cut, can be NULL */
@@ -198,6 +201,7 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    SCIP_Bool*            success             /**< was the cut generation successful? */
    )
 {
+   SCIP_BENDERSCUTDATA* benderscutdata;
    SCIP_VAR** vars;
    int nvars;
    SCIP_Real subprobobj;   /* the objective function value of the subproblem */
@@ -211,8 +215,12 @@ SCIP_RETCODE computeStandardIntegerOptCut(
 
    assert(masterprob != NULL);
    assert(benders != NULL);
+   assert(benderscut != NULL);
    assert(cons != NULL || addcut);
    assert(row != NULL || !addcut);
+
+   benderscutdata = SCIPbenderscutGetData(benderscut);
+   assert(benderscutdata != NULL);
 
    (*success) = FALSE;
 
@@ -253,10 +261,9 @@ SCIP_RETCODE computeStandardIntegerOptCut(
          }
          else
          {
-            /* TODO: put this behind a parameter. Otherwise, we need to work out a way to determine how to ensure that
-             * this is correct.
-             */
-            continue;
+            if( !benderscutdata->zerosolvars )
+               continue;
+
             coef = (subprobobj - cutconstant);
          }
 
@@ -472,7 +479,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    else
    {
       /* computing the coefficients of the optimality cut */
-      SCIP_CALL( computeStandardIntegerOptCut(masterprob, benders, sol, cons, row,
+      SCIP_CALL( computeStandardIntegerOptCut(masterprob, benders, benderscut, sol, cons, row,
             benderscutdata->subprobconstant[probnumber], probnumber, addcut, &success) );
    }
 
@@ -682,6 +689,12 @@ SCIP_RETCODE SCIPincludeBenderscutInt(
    SCIP_CALL( SCIPaddBoolParam(scip, paramname,
          "should cuts be generated and added to the cutpool instead of global constraints directly added to the problem.",
          &benderscutdata->addcuts, FALSE, SCIP_DEFAULT_ADDCUTS, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/zerosolvars",
+      SCIPbendersGetName(benders), BENDERSCUT_NAME);
+   SCIP_CALL( SCIPaddBoolParam(scip, paramname,
+         "should the variables with solution value 0.0 be added to the integer cut.",
+         &benderscutdata->zerosolvars, FALSE, SCIP_DEFAULT_ZEROSOLVARS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

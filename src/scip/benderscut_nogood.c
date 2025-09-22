@@ -60,6 +60,7 @@
 
 
 #define SCIP_DEFAULT_ADDCUTS             FALSE  /** Should cuts be generated, instead of constraints */
+#define SCIP_DEFAULT_ZEROSOLVARS         FALSE  /** should variables with solution value 0.0 be added to the cut */
 
 /*
  * Data structures
@@ -70,6 +71,7 @@ struct SCIP_BenderscutData
 {
    SCIP_BENDERS*         benders;            /**< the Benders' decomposition data structure */
    SCIP_Bool             addcuts;            /**< should cuts be generated instead of constraints */
+   SCIP_Bool             zerosolvars;        /**< should variables with a solution value 0.0 be added to the cut */
    SCIP_Bool*            subprobsvalid;      /**< is it valid to apply nogood cuts for each subproblem */
    int                   nsubproblems;       /**< the number of subproblems for the Benders' decomposition */
    SCIP_Bool             created;            /**< has the Benders cut data been created */
@@ -135,6 +137,7 @@ static
 SCIP_RETCODE computeNogoodCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< the benders' decomposition cut method */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_CONS*            cons,               /**< the constraint for the generated cut, can be NULL */
    SCIP_ROW*             row,                /**< the row for the generated cut, can be NULL */
@@ -142,6 +145,7 @@ SCIP_RETCODE computeNogoodCut(
    SCIP_Bool             addcut              /**< indicates whether a cut is created instead of a constraint */
    )
 {
+   SCIP_BENDERSCUTDATA* benderscutdata;
    SCIP_VAR** vars;
    int nvars;
    SCIP_Real lhs;
@@ -152,8 +156,12 @@ SCIP_RETCODE computeNogoodCut(
 
    assert(masterprob != NULL);
    assert(benders != NULL);
+   assert(benderscut != NULL);
    assert(cons != NULL || addcut);
    assert(row != NULL || !addcut);
+
+   benderscutdata = SCIPbenderscutGetData(benderscut);
+   assert(benderscutdata != NULL);
 
    nvars = SCIPgetNVars(masterprob);
    vars = SCIPgetVars(masterprob);
@@ -187,7 +195,12 @@ SCIP_RETCODE computeNogoodCut(
             lhs -= 1.0;
          }
          else
+         {
+            if( !benderscutdata->zerosolvars )
+               continue;
+
             coef = 1.0;
+         }
 
          /* adding the variable to the cut. The coefficient is the subproblem objective value */
          if( addcut )
@@ -284,7 +297,7 @@ SCIP_RETCODE generateAndApplyBendersNogoodCut(
    }
 
    /* computing the coefficients of the optimality cut */
-   SCIP_CALL( computeNogoodCut(masterprob, benders, sol, cons, row, probnumber, addcut) );
+   SCIP_CALL( computeNogoodCut(masterprob, benders, benderscut, sol, cons, row, probnumber, addcut) );
 
    /* adding the constraint to the master problem */
    if( addcut )
@@ -463,6 +476,12 @@ SCIP_RETCODE SCIPincludeBenderscutNogood(
    SCIP_CALL( SCIPaddBoolParam(scip, paramname,
          "should cuts be generated and added to the cutpool instead of global constraints directly added to the problem.",
          &benderscutdata->addcuts, FALSE, SCIP_DEFAULT_ADDCUTS, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/zerosolvars",
+      SCIPbendersGetName(benders), BENDERSCUT_NAME);
+   SCIP_CALL( SCIPaddBoolParam(scip, paramname,
+         "should the variables with solution value 0.0 be added to the no-good cut.",
+         &benderscutdata->zerosolvars, FALSE, SCIP_DEFAULT_ZEROSOLVARS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
