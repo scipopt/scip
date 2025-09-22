@@ -252,7 +252,13 @@ SCIP_RETCODE computeStandardIntegerOptCut(
             lhs -= (subprobobj - cutconstant);
          }
          else
+         {
+            /* TODO: put this behind a parameter. Otherwise, we need to work out a way to determine how to ensure that
+             * this is correct.
+             */
+            continue;
             coef = (subprobobj - cutconstant);
+         }
 
          /* adding the variable to the cut. The coefficient is the subproblem objective value */
          if( addcut )
