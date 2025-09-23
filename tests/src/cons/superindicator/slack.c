@@ -32,10 +32,9 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
-
+#include "include/scip_test.h"
 
 
 #define CONSHDLR_NAME                        "superindicator"
@@ -664,10 +663,7 @@ SCIP_RETCODE SCIPsolveSlack(
 
       *status = SCIPgetStatus(scip);
       /* we can have an infeasible problem if some constraint are not relaxable */
-      if( *status <= SCIP_STATUS_BESTSOLLIMIT )
-      {
-         goto TERMINATE1;
-      }
+      cr_expect(*status == SCIP_STATUS_OPTIMAL || *status == SCIP_STATUS_INFEASIBLE);
 
       nsols = SCIPgetNSols(scip);
       sols = SCIPgetSols(scip);
@@ -853,12 +849,9 @@ SCIP_RETCODE SCIPsolveSlack(
       SCIP_CALL( SCIPsolve(scip) );
 
       *status = SCIPgetStatus(scip);
-
       /* we can have an infeasible problem if some constraint are not relaxable */
-      if( *status <= SCIP_STATUS_BESTSOLLIMIT )
-      {
-         goto TERMINATE2;
-      }
+      cr_expect(*status == SCIP_STATUS_OPTIMAL || *status == SCIP_STATUS_INFEASIBLE);
+
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "end of the solving of the original problem\n");
    }
 
@@ -917,11 +910,9 @@ SCIP_RETCODE SCIPsolveSlack(
    *status = SCIPgetStatus(scip);
 
    /* freeing the allocated memory for the pointer */
- TERMINATE2:
    if(optorig)
       SCIPfreeMemoryArray(scip, &sols);
 
- TERMINATE1:
    if(!vargroupisempty && consviols != NULL)
       SCIPfreeMemoryArray(scip, &varboundconss);
 
@@ -1137,8 +1128,6 @@ SCIP_RETCODE testslack(
 
    return SCIP_OKAY;
 }
-
-#include "include/scip_test.h"
 
 static SCIP* scip;
 
