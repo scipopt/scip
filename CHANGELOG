@@ -21,6 +21,7 @@ Fixed bugs
 - free paths of branch-and-bound tree iteratively instead of recursively to avoid stack overflow
 - fixed rare invalid memory access when collecting symmetry information for indicator constraints
 - recompute activity bounds before checking infeasibility and redundancy in linear constraint presolving
+- skip integer variables with fractional value in reference solution when finding additional variable fixings in ALNS heuristic
 
 Build system
 ------------
