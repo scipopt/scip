@@ -1539,6 +1539,12 @@ SCIP_RETCODE alnsFixMoreVariables(
       if( solvals[b] < SCIPvarGetLbGlobal(var) - 0.5 || solvals[b] > SCIPvarGetUbGlobal(var) + 0.5 )
          continue;
 
+      /* filter variables with a fractional solution value
+       * (could be a solution that was found before variables were upgraded to integral type)
+       */
+      if( !SCIPisFeasIntegral(scip, solvals[b]) )
+         continue;
+
       redcostscores[nunfixedvars] = getVariableRedcostScore(scip, var, solvals[b], heurdata->uselocalredcost);
       pscostscores[nunfixedvars] = getVariablePscostScore(scip, var, solvals[b], heurdata->uselocalredcost);
 
