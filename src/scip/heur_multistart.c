@@ -456,7 +456,7 @@ SCIP_RETCODE improvePoint(
       if( nviolnlrows == 0 )
       {
          assert(updatevec[i] == 0.0);
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       for( i = 0; i < nvars; ++i )
