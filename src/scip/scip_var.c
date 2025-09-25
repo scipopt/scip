@@ -8947,7 +8947,7 @@ void addLargestCliquePart(
       {
          SCIP_CLIQUE** varcliques;
          int selectedidx = -1;
-         int selectedsmallestidx = nvars + 1;
+         int selectedsize = 0;
          int l;
 
          varcliques = SCIPvarGetCliques(var, value);
@@ -8960,7 +8960,7 @@ void addLargestCliquePart(
             SCIP_Bool* cliquevals;
             SCIP_CLIQUE* clique;
             int nvarclique;
-            int smallestidx = nvars + 1;
+            int size = 0;
             int k;
 
             clique = varcliques[l];
@@ -8988,32 +8988,16 @@ void addLargestCliquePart(
                   if( j >= 0 && cliquevals[k] == values[j] && cliquepartition[j] < 0 )
                   {
                      assert( j < nvars );
-
-                     /* consider smallest index of variables larger than varidx */
-                     if ( j > varidx && j < smallestidx )
-                     {
-                        smallestidx = j;
-
-                        /* All variables before varidx have been considered, i.e., have cliquepartition[j] >= 0; thus,
-                         * if the smallestidx is one larger than varidx, we cannot improve and can stop. */
-                        if ( smallestidx == varidx + 1 )
-                           break;
-                     }
+                     ++size;
                   }
                }
             }
 
-            /* We sort according to the smallest index appearing in the clique. This hopefully helps to preserve the
-             * sorting of variables, which often is helpful for the knapsack constraint handler. */
-            if( smallestidx < selectedsmallestidx )
+            /* pick largest clique */
+            if( size > selectedsize )
             {
                selectedidx = l;
-               selectedsmallestidx = smallestidx;
-
-               /* All variables before varidx have been considered, i.e., have cliquepartition[j] >= 0; thus,
-                * if the smallestidx is one larger than varidx, we cannot improve and can stop. */
-               if ( smallestidx == varidx + 1 )
-                  break;
+               selectedsize = size;
             }
          }
 
