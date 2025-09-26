@@ -599,6 +599,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
 {  /*lint --e{715}*/
    SCIP* subproblem;
    SCIP_BENDERSCUTDATA* benderscutdata;
+   SCIP_Real subprobobjval;
 
    assert(scip != NULL);
    assert(benders != NULL);
@@ -632,7 +633,8 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
 
    /* the integer subproblem could terminate early if the auxiliary variable value is much greater than the optimal
     * solution. As such, it is only necessary to generate a cut if the subproblem is OPTIMAL */
-   if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL )
+   subprobobjval = SCIPbendersGetSubproblemObjval(benders, probnumber);
+   if( !(SCIPisInfinity(scip, subprobobjval) || SCIPisInfinity(scip, -subprobobjval)) )
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersIntegerCuts(scip, benders, benderscut, sol, probnumber, type, result, FALSE) );

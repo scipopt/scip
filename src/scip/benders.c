@@ -108,6 +108,7 @@ struct SCIP_EventhdlrData
    int                   filterpos;          /**< the event filter entry */
    int                   numruns;            /**< the number of times that the problem has been solved */
    SCIP_Real             upperbound;         /**< an upper bound for the problem */
+   SCIP_Real             lowerbound;         /**< an lower bound for the problem */
    SCIP_Bool             solvecip;           /**< is the event called from a MIP subproblem solve*/
 };
 
@@ -127,6 +128,7 @@ SCIP_RETCODE initEventhandlerData(
    eventhdlrdata->filterpos = -1;
    eventhdlrdata->numruns = 0;
    eventhdlrdata->upperbound = -SCIPinfinity(scip);
+   eventhdlrdata->lowerbound = SCIPinfinity(scip);
    eventhdlrdata->solvecip = FALSE;
 
    return SCIP_OKAY;
@@ -406,7 +408,17 @@ SCIP_DECL_EVENTEXEC(eventExecBendersUpperbound)
 
    bestsol = SCIPgetBestSol(scip);
 
-   if( SCIPisLT(scip, SCIPgetSolOrigObj(scip, bestsol)*(int)SCIPgetObjsense(scip), eventhdlrdata->upperbound) )
+   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   if( SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND
+      && SCIPisLT(scip, SCIPgetSolOrigObj(scip, bestsol)*(int)SCIPgetObjsense(scip), eventhdlrdata->upperbound) )
+   {
+      SCIP_CALL( SCIPinterruptSolve(scip) );
+   }
+
+   if( SCIPgetNNodes(scip) > 10000 && !SCIPisInfinity(scip, SCIPgetDualbound(scip))
+      && SCIPisGT(scip, SCIPgetDualbound(scip)*(int)SCIPgetObjsense(scip), eventhdlrdata->lowerbound*1.01) )
    {
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
@@ -424,6 +436,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolBendersUpperbound)
    SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( initsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_BESTSOLFOUND) );
+   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_DUALBOUNDIMPROVED, eventhdlr, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -472,10 +485,11 @@ SCIP_DECL_EVENTFREE(eventFreeBendersUpperbound)
 
 /** updates the upper bound in the event handler data */
 static
-SCIP_RETCODE updateEventhdlrUpperbound(
+SCIP_RETCODE updateEventhdlrBounds(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
-   SCIP_Real             upperbound          /**< the upper bound value */
+   SCIP_Real             upperbound,         /**< the upper bound value */
+   SCIP_Real             lowerbound          /**< the lower bound value */
    )
 {
    SCIP_EVENTHDLR* eventhdlr;
@@ -491,6 +505,7 @@ SCIP_RETCODE updateEventhdlrUpperbound(
    assert(eventhdlrdata != NULL);
 
    eventhdlrdata->upperbound = upperbound;
+   eventhdlrdata->lowerbound = lowerbound;
 
    return SCIP_OKAY;
 }
@@ -3378,11 +3393,11 @@ SCIP_RETCODE execCutStrengtheningSubproblemSolve(
    SCIP_Real             objval,             /**< the objective value of the original subproblem solve, +infinity if
                                                   the subproblem was infeasible */
    SCIP_Bool             infeasible,         /**< was the original subproblem solve infeasible */
+   SCIP_Bool*            solved,             /**< was the subproblem successfully solved? */
    SCIP_Bool*            success             /**< does the test solution achieve the same subproblem status as the original solution */
    )
 {
    SCIP_Real objective;
-   SCIP_Bool solved;
    SCIP_Bool solinfeas;
    int l;
 
@@ -3418,7 +3433,7 @@ SCIP_RETCODE execCutStrengtheningSubproblemSolve(
 
       /* solving the subproblems for this round of enforcement/checking. */
       solinfeas = FALSE;
-      SCIPbendersExecSubproblemSolve(benders, set, testsol, probnumber, solveloop, TRUE, &objective, &solved,
+      SCIPbendersExecSubproblemSolve(benders, set, testsol, probnumber, solveloop, TRUE, &objective, solved,
          &solinfeas, type);
 
       /* checking the result of the test solution against the original solution. We check only against the objective
@@ -3469,6 +3484,7 @@ SCIP_RETCODE evaluateVariableKeepList(
    SCIP_Real             objval,             /**< the objective value of the original subproblem solve, +infinity if
                                                   the subproblem was infeasible */
    SCIP_Bool             infeasible,         /**< was the original subproblem solve infeasible */
+   SCIP_Bool*            solved,             /**< was the subproblem successfully solved? */
    SCIP_Bool*            success             /**< does the test solution achieve the same subproblem status as the original solution */
    )
 {
@@ -3489,7 +3505,7 @@ SCIP_RETCODE evaluateVariableKeepList(
 
    /* solving the subproblem to evaluate the test solution */
    SCIP_CALL( execCutStrengtheningSubproblemSolve(benders, set, testsol, probnumber, type, objval, infeasible,
-         success) );
+         solved, success) );
 
    /* freeing the test solution */
    SCIP_CALL( SCIPfreeSol(set->scip, &testsol) );
@@ -3557,6 +3573,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    int nsubmastervars;
    SCIP_Real objval;
    SCIP_Bool infeasible;
+   SCIP_Bool solved;
    SCIP_Bool success;
    int* candidates;
    int* keep;
@@ -3724,8 +3741,14 @@ SCIP_RETCODE performNonconvexCutStrengthening(
       /* solving the Benders' decomposition subproblem to check whether the test solution achieves the same result as
        * the original solution. */
       SCIP_CALL( execCutStrengtheningSubproblemSolve(benders, set, testsol, probnumber, type, objval, infeasible,
-            &success) );
+            &solved, &success) );
       nodesprocessed += subproblem != NULL ? SCIPgetNNodes(subproblem) : 100;
+
+      /* if the subproblem was not successfully solved, then we are not able to make a valid assessment of the cut
+       * strengthening solution. As such, we abort and use the solution that we have confirmed up until now
+       */
+      if( !solved )
+         break;
 
       if( SCIPisStopped(scip) )
          break;
@@ -3768,8 +3791,14 @@ SCIP_RETCODE performNonconvexCutStrengthening(
          SCIP_Bool keeplistsuccess = FALSE;
 
          SCIP_CALL( evaluateVariableKeepList(benders, set, submastervars, keep, numkeep, probnumber, type,
-               objval, infeasible, &keeplistsuccess) );
+               objval, infeasible, &solved, &keeplistsuccess) );
          nodesprocessed += subproblem != NULL ? SCIPgetNNodes(subproblem) : 100;
+
+         /* if the subproblem was not successfully solved, then we are not able to make a valid assessment of the cut
+          * strengthening solution. As such, we abort and use the solution that we have confirmed up until now
+          */
+         if( !solved )
+            break;
 
          /* if the keep list achieves the desired subproblem result, the we terminate the loop */
          if( keeplistsuccess )
@@ -3886,8 +3915,17 @@ SCIP_RETCODE performNonconvexCutStrengthening(
     * methods
     */
    SCIP_CALL( execCutStrengtheningSubproblemSolve(benders, set, (*newsol), probnumber, type, objval, infeasible,
-         &success) );
+         &solved, &success) );
    assert(success);
+
+   /* if the subproblem was not successfully solved, then we don't use the new solution. The solution is freed, and the
+    * calling function will use the initial solution
+    */
+   if( !solved )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, newsol) );
+      assert(newsol == NULL);
+   }
 
    SCIPfreeBufferArray(scip, &keep);
    SCIPfreeBufferArray(scip, &candidates);
@@ -5187,7 +5225,11 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       }
       else
       {
-         SCIP_CALL( updateEventhdlrUpperbound(benders, probnumber, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, probnumber)) );
+         SCIP_Real auxvarval = SCIPbendersGetAuxiliaryVarVal(benders, set, sol, probnumber);
+         SCIP_Real lowerbound = SCIPinfinity(set->scip);
+         if( type == SCIP_BENDERSENFOTYPE_LP && !SCIPisInfinity(set->scip, -auxvarval) )
+            lowerbound = auxvarval;
+         SCIP_CALL( updateEventhdlrBounds(benders, probnumber, auxvarval, lowerbound) );
       }
 
       /* solving the subproblem
@@ -5209,6 +5251,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       {
          SCIP_SOL* bestsol;
          int bestsollimit;
+         SCIP_Longint stalllimit;
 
          /* if we are calling the solve for the check, then we don't need to exact solution, but a good solution. As
           * such, we impose a best solution limits. This limit is not applied if an enhancement is being performed,
@@ -5217,7 +5260,9 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
          if( type == SCIP_BENDERSENFOTYPE_CHECK )
          {
             SCIP_CALL( SCIPgetIntParam(subproblem, "limits/bestsol", &bestsollimit) );
+            SCIP_CALL( SCIPgetLongintParam(subproblem, "limits/stallnodes", &stalllimit) );
             SCIP_CALL( SCIPsetIntParam(subproblem, "limits/bestsol", 3) );
+            SCIP_CALL( SCIPsetLongintParam(subproblem, "limits/stallnodes", 1000) );
          }
 
          SCIP_CALL( SCIPbendersSolveSubproblemCIP(set->scip, benders, probnumber, &solvestatus, FALSE) );
@@ -5225,19 +5270,34 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
          if( type == SCIP_BENDERSENFOTYPE_CHECK )
          {
             SCIP_CALL( SCIPsetIntParam(subproblem, "limits/bestsol", bestsollimit) );
+            SCIP_CALL( SCIPsetLongintParam(subproblem, "limits/stallnodes", stalllimit) );
          }
 
          if( solvestatus == SCIP_STATUS_INFEASIBLE )
             (*infeasible) = TRUE;
 
          /* if the generic subproblem solving methods are used, then the CIP subproblems are always solved. */
-         (*solved) = TRUE;
+         if( solvestatus != SCIP_STATUS_BESTSOLLIMIT && solvestatus != SCIP_STATUS_STALLNODELIMIT )
+            (*solved) = TRUE;
 
+         /* in the case of enforcing the LP solution, we need to ensure a valid cut is generated. As such, the
+          * objective value is set to the dual bound. Otherwise, the objective value is stored.
+          */
          bestsol = SCIPgetBestSol(subproblem);
-         if( bestsol != NULL )
-            (*objective) = SCIPgetSolOrigObj(subproblem, bestsol)*(int)SCIPgetObjsense(set->scip);
+         if( type == SCIP_BENDERSENFOTYPE_LP )
+         {
+            if( (*infeasible) )
+               (*objective) = SCIPsetInfinity(set);
+            else
+               (*objective) = SCIPgetDualbound(subproblem)*(int)SCIPgetObjsense(set->scip);
+         }
          else
-            (*objective) = SCIPsetInfinity(set);
+         {
+            if( bestsol != NULL )
+               (*objective) = SCIPgetSolOrigObj(subproblem, bestsol)*(int)SCIPgetObjsense(set->scip);
+            else
+               (*objective) = SCIPsetInfinity(set);
+         }
       }
    }
    else
@@ -5258,7 +5318,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
             SCIPbendersSetSubproblemObjval(benders, probnumber, (*objective));
          else if( solvestatus == SCIP_STATUS_INFEASIBLE )
             SCIPbendersSetSubproblemObjval(benders, probnumber, SCIPsetInfinity(set));
-         else if( solvestatus == SCIP_STATUS_USERINTERRUPT || solvestatus == SCIP_STATUS_BESTSOLLIMIT )
+         else if( solvestatus == SCIP_STATUS_USERINTERRUPT || solvestatus == SCIP_STATUS_BESTSOLLIMIT
+            || solvestatus == SCIP_STATUS_STALLNODELIMIT )
             SCIPbendersSetSubproblemObjval(benders, probnumber, (*objective));
          else if( solvestatus == SCIP_STATUS_MEMLIMIT || solvestatus == SCIP_STATUS_TIMELIMIT
             || solvestatus == SCIP_STATUS_UNKNOWN )
@@ -5929,6 +5990,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
 
       /* the problem was interrupted in the event handler, so SCIP needs to be informed that the problem is to be restarted */
       SCIP_CALL( SCIPrestartSolve(subproblem) );
+      SCIP_CALL( SCIPsetHeuristics(subproblem, SCIP_PARAMSETTING_FAST, TRUE) );
    }
    else if( solvecip )
    {
@@ -5968,7 +6030,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemCIP(
    if( *solvestatus != SCIP_STATUS_OPTIMAL && *solvestatus != SCIP_STATUS_UNBOUNDED
       && *solvestatus != SCIP_STATUS_INFEASIBLE && *solvestatus != SCIP_STATUS_USERINTERRUPT
       && *solvestatus != SCIP_STATUS_BESTSOLLIMIT && *solvestatus != SCIP_STATUS_TIMELIMIT
-      && *solvestatus != SCIP_STATUS_MEMLIMIT )
+      && *solvestatus != SCIP_STATUS_MEMLIMIT && *solvestatus != SCIP_STATUS_STALLNODELIMIT )
    {
       SCIPerrorMessage("Invalid status: %d. Solving the CIP of Benders' decomposition subproblem %d.\n",
          *solvestatus, probnumber);
