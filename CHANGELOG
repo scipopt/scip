@@ -445,6 +445,15 @@ Features and Performance Improvements
 - cons_orbisack, cons_orbitope_full, cons_orbitope_pp, and cons_symresack now try to replace the stored aggregated variables by active ones at the end of presolving;
   this should reduce the size of copies of the presolved problem
 - simplified symmetry detection graphs in case all edges have the same color
+- the no-good and integer optimality cuts for Benders' decomposition a generated per subproblem. Previously, only a
+  single no-good or integer optimality cut was generated in a Benders' decomposition iteration. This change makes the
+  resulting cuts smaller, since they are no longer completely dense w.r.t to the linking variables.
+- adds cut strengthening for no-good and integer optimality cuts in Benders' decomposition. The cut strengthening finds
+  a master problem solution with a smaller support that still achieves infeasibility or the same optimal objective
+  value, respectively. The new solution is found using a depth-first binary search algorithm.
+- adds approximate solving of CIP subproblems in Benders' decomposition. In a subproblem is too time consuming, measured
+  as requiring more than 10,000 nodes, the subproblem will terminate when the dual bound exceeds the auxiliary variable
+  by 1%. If the subproblem terminates early, the dual bound is used in the generation of the integer optimality cuts.
 
 ### Presolve
 - distinguish implicit integrality of variables into strong and weak type, depending on whether integrality is implied for all feasible or only at least one optimal solution
