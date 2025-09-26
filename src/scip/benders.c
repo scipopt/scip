@@ -858,12 +858,12 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       benders->auxiliaryvars[i] = auxiliaryvar;
    }
 
-   if( !shareauxvars && allsubprobintegralobj )
-   {
-      SCIP_Bool infeasible;
-      SCIP_CALL( SCIPchgVarImplType(scip, benders->masterauxvar, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
-      assert(!infeasible);
-   }
+   //if( !shareauxvars && allsubprobintegralobj )
+   //{
+      //SCIP_Bool infeasible;
+      //SCIP_CALL( SCIPchgVarImplType(scip, benders->masterauxvar, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
+      //assert(!infeasible);
+   //}
 
    SCIPfreeBlockMemory(scip, &vardata);
 
