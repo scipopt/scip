@@ -66,7 +66,7 @@ SCIP_RETCODE SCIPstatFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
-/** diables the collection of any statistic for a variable */
+/** disables the collection of any statistic for a variable */
 void SCIPstatDisableVarHistory(
    SCIP_STAT*            stat                /**< problem statistics data */
    );

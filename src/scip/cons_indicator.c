@@ -476,12 +476,9 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_CONS* lincons;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   SCIP_VAR** linvars;
-   SCIP_Real* linvals;
    SCIP_Real constant;
    SCIP_Real lhs;
    SCIP_Real rhs;
-   SCIP_Bool suc;
    int slacknodeidx;
    int consnodeidx;
    int eqnodeidx;
@@ -489,8 +486,6 @@ SCIP_RETCODE addSymmetryInformation(
    int nodeidx;
    int nvarslincons;
    int nlocvars;
-   int nvars;
-   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -503,28 +498,19 @@ SCIP_RETCODE addSymmetryInformation(
    lincons = consdata->lincons;
    assert(lincons != NULL);
 
-   SCIP_CALL( SCIPgetConsNVars(scip, lincons, &nvarslincons, &suc) );
-   assert(suc);
-
+   /* get information about linear constraint */
    lhs = SCIPgetLhsLinear(scip, lincons);
    rhs = SCIPgetRhsLinear(scip, lincons);
+   nvarslincons = SCIPgetNVarsLinear(scip, lincons);
 
-   /* get information about linear constraint */
-   nvars = SCIPgetNVars(scip);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
-
-   linvars = SCIPgetVarsLinear(scip, lincons);
-   linvals = SCIPgetValsLinear(scip, lincons);
-   for( i = 0; i < nvarslincons; ++i )
-   {
-      vars[i] = linvars[i];
-      vals[i] = linvals[i];
-   }
-   nlocvars = nvarslincons;
+   nlocvars = MAX3(1, nvarslincons, SCIPgetNVars(scip));  /*lint !e666*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlocvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlocvars) );
+   BMScopyMemoryArray(vars, SCIPgetVarsLinear(scip, lincons), nvarslincons);
+   BMScopyMemoryArray(vals, SCIPgetValsLinear(scip, lincons), nvarslincons);
 
    constant = 0.0;
+   nlocvars = nvarslincons;
    SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    /* update lhs/rhs due to possible variable aggregation */

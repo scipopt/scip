@@ -2829,7 +2829,7 @@ var y[<v> in CVAR] real >= if lower[v] > -1e20 then lower[v] else -infinity end 
 minimize obj: sum <r,"N"> in ROW : (
 sum <r,c,a> in NZO with <c> in IVAR: objsen * a * x[c] 
 + sum <r,c,a> in NZO with <c> in CVAR: objsen * a * y[c]
-);
+) + 0.1;
 subto ce: forall <r,"E"> in ROW do
 if <r> in RANGEROW and sgn(range[r]) > 0 then 
 rhs[r] <= 

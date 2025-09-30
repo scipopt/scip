@@ -157,6 +157,7 @@ typedef struct SCIP_Hole SCIP_HOLE;               /**< hole in a domain of an in
 typedef struct SCIP_Holelist SCIP_HOLELIST;       /**< list of holes in a domain of an integer variable */
 typedef struct SCIP_Dom SCIP_DOM;                 /**< datastructures for storing domains of variables */
 typedef struct SCIP_Original SCIP_ORIGINAL;       /**< original variable information */
+typedef struct SCIP_Loose SCIP_LOOSE;             /**< loose variable information */
 typedef struct SCIP_Aggregate SCIP_AGGREGATE;     /**< aggregation information */
 typedef struct SCIP_AggregateExact SCIP_AGGREGATEEXACT; /**< exact aggregation information */
 typedef struct SCIP_Multaggr SCIP_MULTAGGR;       /**< multiple aggregation information */

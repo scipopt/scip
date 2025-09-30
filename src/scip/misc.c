@@ -3323,7 +3323,7 @@ int SCIPhashmapGetImageInt(
 }
 
 /** retrieves image of given origin from the hash map, or SCIP_LONGINT_MAX if no image exists */
-long SCIPhashmapGetImageLong(
+SCIP_Longint SCIPhashmapGetImageLong(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
    )

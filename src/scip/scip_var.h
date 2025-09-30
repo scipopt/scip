@@ -3544,6 +3544,21 @@ SCIP_Bool SCIPdoNotMultaggrVar(
    SCIP_VAR*             var                 /**< variable x to aggregate */
    );
 
+/** checks whether a loose variable can be used in a new aggregation with given coefficient
+ *
+ * Checks whether multiplying the bounds on the coefficient with which the variable appears in aggregations
+ * (SCIPvarGetMinAggrCoef(), SCIPvarGetMaxAggrCoef()) by the given scalar would exceed acceptable values
+ * (numerics/sumepsilon and 1.0 / numerics/sumepsilon).
+ *
+ *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_PRESOLVING
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPisVarAggrCoefAcceptable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             scalar              /**< aggregation scalar */
+   );
+
 /** returns whether strong dual reductions are allowed during propagation and presolving
  *
  *  @note A reduction is called strong dual, if it may discard feasible/optimal solutions, but leaves at least one

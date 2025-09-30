@@ -184,7 +184,7 @@ SCIP_Bool SCIProwHasExRow(
 
 /** changes left hand side of exact LP row */
 SCIP_RETCODE SCIProwExactChgLhs(
-   SCIP_ROWEXACT*        row,                /**< exact LP row */
+   SCIP_ROWEXACT*        rowexact,           /**< exact LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
    SCIP_RATIONAL*        lhs                 /**< new left hand side */
@@ -192,7 +192,7 @@ SCIP_RETCODE SCIProwExactChgLhs(
 
 /** changes right hand side of exact LP row */
 SCIP_RETCODE SCIProwExactChgRhs(
-   SCIP_ROWEXACT*        row,                /**< exact LP row */
+   SCIP_ROWEXACT*        rowexact,           /**< exact LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
    SCIP_RATIONAL*        rhs                 /**< new right hand side */
@@ -241,7 +241,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< the eventqueue */
    SCIP_PROB*            prob,               /**< scip prob structure */
-   SCIP_LPEXACT*         lp                  /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    );
 
 /** populate data of two empty fp rows with data from exact row */
@@ -261,7 +261,7 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
 
 /** applies all cached changes to the LP solver */
 SCIP_RETCODE SCIPlpExactFlush(
-   SCIP_LPEXACT*         lp,                 /**< current exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
@@ -269,7 +269,7 @@ SCIP_RETCODE SCIPlpExactFlush(
 
 /** ensures all rows/columns are correctly updated, but changes are not yet communicated to the exact LP solver */
 SCIP_RETCODE SCIPlpExactLink(
-   SCIP_LPEXACT*         lp,                 /**< current exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
@@ -281,17 +281,17 @@ SCIP_RETCODE SCIPlpExactLink(
 
 /** returns whether the success rate of the Neumaier-Shcherbina safe bounding method is sufficiently high */
 SCIP_Bool SCIPlpExactBoundShiftUseful(
-   SCIP_LPEXACT*         lp                  /**< pointer to LP data object */
+   SCIP_LPEXACT*         lpexact             /**< pointer to LP data object */
    );
 
 /** returns whether it is possible to use project and shift bounding method */
 SCIP_Bool SCIPlpExactProjectShiftPossible(
-   SCIP_LPEXACT*         lp                  /**< pointer to LP data object */
+   SCIP_LPEXACT*         lpexact             /**< pointer to LP data object */
    );
 
 /** checks that lp and fplp are properly synced */
 SCIP_Bool SCIPlpExactIsSynced(
-   SCIP_LPEXACT*         lp,                 /**< pointer to LP data object */
+   SCIP_LPEXACT*         lpexact,            /**< pointer to LP data object */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     msg                 /**< message handler */
    );
@@ -309,7 +309,7 @@ SCIP_RETCODE SCIPlpExactCreate(
 
 /** frees LP data object */
 SCIP_RETCODE SCIPlpExactFree(
-   SCIP_LPEXACT**        lp,                 /**< pointer to LP data object */
+   SCIP_LPEXACT**        lpexact,            /**< pointer to LP data object */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
@@ -362,7 +362,7 @@ SCIP_RETCODE SCIProwExactRelease(
    SCIP_ROWEXACT**       row,                /**< pointer to LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPEXACT*         lp                  /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    );
 
 /** frees an LP row */
@@ -370,7 +370,7 @@ SCIP_RETCODE SCIProwExactFree(
    SCIP_ROWEXACT**       row,                /**< pointer to LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPEXACT*         lp                  /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    );
 
 /** ensuresr, that column array of row can store at least num entries */
@@ -396,7 +396,7 @@ SCIP_RETCODE SCIProwExactAddCoef(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_COLEXACT*        colexact,           /**< LP column */
    SCIP_RATIONAL*        val                 /**< value of coefficient */
    );
@@ -405,7 +405,7 @@ SCIP_RETCODE SCIProwExactAddCoef(
 SCIP_RETCODE SCIProwExactDelCoef(
    SCIP_ROWEXACT*        row,                /**< row to be changed */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_COLEXACT*        col                 /**< coefficient to be deleted */
    );
 
@@ -415,7 +415,7 @@ SCIP_RETCODE SCIProwExactChgCoef(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_COLEXACT*        col,                /**< LP column */
    SCIP_RATIONAL*        val                 /**< value of coefficient */
    );
@@ -435,7 +435,7 @@ SCIP_RETCODE SCIProwExactIncCoef(
 SCIP_RETCODE SCIProwExactChgConstant(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_RATIONAL*        constant            /**< new constant value */
    );
 
@@ -460,7 +460,7 @@ SCIP_RETCODE SCIProwExactGetPseudoFeasibility(
 SCIP_RATIONAL* SCIProwExactGetLPActivity(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPEXACT*         lp                  /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    );
 
 /** returns the pseudo activity of a row in the current pseudo solution */
@@ -482,13 +482,13 @@ void SCIProwExactForceSort(
 
 /** recalculates the current activity of a row */
 void SCIProwExactRecalcLPActivity(
-   SCIP_ROWEXACT*        row,                /**< LP row */
+   SCIP_ROWEXACT*        rowexact,           /**< LP row */
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
  /** calculates the current pseudo activity of a row */
 void SCIProwExactRecalcPseudoActivity(
-   SCIP_ROWEXACT*        row,                /**< row data */
+   SCIP_ROWEXACT*        rowexact,           /**< row data */
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
@@ -596,11 +596,11 @@ SCIP_RETCODE SCIPlpExactUpdateVarLoose(
 
 /** decrease the number of loose variables by one */
 void SCIPlpExactDecNLoosevars(
-   SCIP_LPEXACT*         lp                  /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    );
 
 int SCIPlpExactGetNRows(
-   SCIP_LPEXACT*         lp                  /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    );
 
 /** stores the LP solution in the columns and rows */
@@ -656,7 +656,7 @@ SCIP_RETCODE SCIPlpExactGetIterations(
  *        SCIP_LPSOLSTAT_ITERLIMIT or SCIP_LPSOLSTAT_TIMELIMIT.
  */
 void SCIPlpExactGetObjval(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_RATIONAL*        res                 /**< result pointer to store rational */
    );
@@ -665,7 +665,7 @@ void SCIPlpExactGetObjval(
  *  objective function) local bound
  */
 void SCIPlpExactGetPseudoObjval(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_RATIONAL*        res                 /**< result pointer to store rational */
    );
@@ -687,7 +687,7 @@ SCIP_RETCODE SCIPlpExactShrinkRows(
 
 /* deletes the marked rows from the LP and the LP interface */
 SCIP_RETCODE SCIPlpExactDelRowset(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    int*                  rowdstat            /**< deletion status of rows:  1 if row should be deleted, 0 if not */
@@ -697,7 +697,7 @@ SCIP_RETCODE SCIPlpExactDelRowset(
  *  changes to the LP solver
  */
 SCIP_RETCODE SCIPlpExactReset(
-   SCIP_LPEXACT*         lp,                 /**< LP data */
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -706,7 +706,7 @@ SCIP_RETCODE SCIPlpExactReset(
 
 /** removes all columns and rows from LP, releases all rows */
 SCIP_RETCODE SCIPlpExactClear(
-   SCIP_LPEXACT*         lp,                 /**< LP data */
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
@@ -805,13 +805,13 @@ SCIP_RETCODE SCIPlpExactEndDive(
 
 /** writes exact LP to a file */
 SCIP_RETCODE SCIPlpExactWrite(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,                 /**< current LP data */
    const char*           fname               /**< file name */
    );
 
 /** overwrites the dual values stored in the fp lp with exact values */
 void SCIPlpExactOverwriteFpDualSol(
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,                 /**< current LP data */
    SCIP_Bool             dualfarkas          /**< TRUE if farkas proof, FALSE if dual sol? */
    );
 

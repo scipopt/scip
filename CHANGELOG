@@ -50,6 +50,8 @@ Performance improvements
 - disable dualsol and dualray conflict upgrades to maintain conflict store
 - apply general conflict upgrades in conflict store
 - inline SCIPgetStatus() to reduce computational overhead
+- allow multi-aggregation of unbounded slack variables, which may enable more bound tightening due to a reduction in the number of unbounded variables
+- reduce maximal fraction of diving LP iterations relative to total node LP iterations
 
 Examples and applications
 -------------------------
@@ -193,6 +195,9 @@ Interface changes
 - SCIPnlpiOracleGetConstraintLinearCoef() to get a linear coefficient of a variable in a given constraint in the NLP oracle
 - SCIPnlpiOracleGetJacobianColSparsity() to get the columnwise sparsity pattern of the Jacobian from the NLP oracle
 - SCIPnlpiOracleGetObjGradientNnz() to get indices of nonzeroes in the objective gradient
+- SCIPhashmapInsertLong() and SCIPhashmapGetImageLong()
+- SCIPvarGetMinAggrCoef() and SCIPvarGetMaxAggrCoef() to get bounds on absolute aggregation coefficients for a loose variable;
+  SCIPisVarAggrCoefAcceptable() to check whether bounds on aggregation coefficients would exceed thresholds when using a loose variable in another aggregation
 
 ### Changes in preprocessor macros
 
@@ -228,6 +233,8 @@ Interface changes
 - restricted range of parameter propagating/symmetry/sstleadervartype to [1,7]; its new default value is 6
 - propagating/*/timingmask extended by setting 0 to disable propagators completely
 - changed defaults of constraints/components/propfreq and constraints/components/maxdepth to -1 and 2147483647, respectively, to avoid unnecessary calls of components propagator by default
+- changed frequencies for the following heuristics: shifting, gins, crossover, rins, randrounding
+- set default maxlpiterquot to 0.05 for all LP diving heuristics and feaspump whereas adaptivediving uses 0.15 and rootsoldiving remains at 0.01
 
 ### New parameters
 
@@ -288,6 +295,7 @@ Build system
 - changed the default for TPI to tny
 - added build flag CHECKSTAGE=auto to control stage checks in API function calls
 - removed LPS options spx1 and spx2, only LPS=spx is available to select SoPlex now
+- removed previously deprecated PARASCIP option, use instead THREADSAFE=false to disable thread-safety
 
 ### Makefile
 
@@ -304,6 +312,8 @@ Build system
 - link-time-optimization can be enabled on Linux and macOS with gcc and clang by setting LTO=true, default is false
 - added build flag CONOPT (default: false) to link to the CONOPT NLP solver
 - LPS=spx is no longer mapped to LPS=spx2, which changes the name of the generated LPI libraries and binaries when using SoPlex
+- default settings for makefile variables in make.project are now only used if variable hasn't been set already
+- removed OPENSOURCE flag
 
 ### Cmake
 
@@ -333,6 +343,9 @@ Fixed bugs
 - avoid integer overflow in cons_cumulative.c triggered by unbounded variables, see new parameter "constraints/cumulative/maxtime"
 - allow negative update in SCIPconsAddUpgradeLocks() to unlock constraint upgrade
 - fixed memory leaks when LP, MPS and OPB/WBO readers abort unsuccessfully
+- removed erroneous catching of objective-changed events in intobj separator, instead the separator no longer executes within probing with changed objective function
+- propagator dualfix no longer fixes variables to infinity to avoid issues when transferring the solution to the original problem
+- track and check bounds on the coefficients that is used for a variable in aggregations of other variables to improve numerical stability
 
 Miscellaneous
 -------------
@@ -413,6 +426,10 @@ Fixed bugs
 - fixed stopping when there is a candidate with a change in the LP bound for both children in strong branching of branch_fullstrong
 - fixed detection of sinks in varbound detection from cumulative constraints
 - fixed memory allocation when adding strong SBCs for enclosing orbit of symmetric subgroups (disabled by default)
+- free paths of branch-and-bound tree iteratively instead of recursively to avoid stack overflow
+- fixed rare invalid memory access when collecting symmetry information for indicator constraints
+- recompute activity bounds before checking infeasibility and redundancy in linear constraint presolving
+- skip integer variables with fractional value in reference solution when finding additional variable fixings in ALNS heuristic
 
 Build system
 ------------

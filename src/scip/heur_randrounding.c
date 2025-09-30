@@ -63,7 +63,7 @@
 #define HEUR_DESC             "fast LP rounding heuristic"
 #define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -200
-#define HEUR_FREQ             20
+#define HEUR_FREQ             10
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP

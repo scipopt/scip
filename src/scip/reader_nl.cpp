@@ -2286,7 +2286,7 @@ public:
 
    int ObjType(
       int
-   )
+   ) const
    {
       return objsense == SCIP_OBJSENSE_MAXIMIZE ? 1 : 0;
    }
@@ -2324,7 +2324,7 @@ public:
    template <class VarBoundsWriter>
    void FeedVarBounds(
       VarBoundsWriter&   vbw
-   )
+   ) const
    {
       for( int v = 0; v < nvars; ++v )
       {
@@ -2585,12 +2585,12 @@ public:
 
                if( SCIPisExprVar(scip, expr) )
                {
-                  SCIP_VAR* var = SCIPgetVarExprVar(expr);
+                  SCIP_VAR* var = SCIPgetVarExprVar(expr);  /* cppcheck-suppress dangerousTypeCast */
                   if( SCIPvarIsNegated(var) )
                   {
-                     ConExprWriter ew(parentew->OPut2(mp::nl::SUB));
-                     ew.NPut(SCIPvarGetNegationConstant(var));
-                     ew.VPut(getVarAMPLIndex(SCIPvarGetNegatedVar(var)), SCIPvarGetName(SCIPvarGetNegatedVar(var)));
+                     ConExprWriter ew2(parentew->OPut2(mp::nl::SUB));
+                     ew2.NPut(SCIPvarGetNegationConstant(var));
+                     ew2.VPut(getVarAMPLIndex(SCIPvarGetNegatedVar(var)), SCIPvarGetName(SCIPvarGetNegatedVar(var)));
                   }
                   else
                   {
@@ -2756,16 +2756,16 @@ public:
                }
                else if( SCIPisExprProduct(scip, expr) )
                {
-                  ConExprWriter* ew = (ConExprWriter*)SCIPexpriterGetCurrentUserData(it).ptrval;
+                  ConExprWriter* ew2 = (ConExprWriter*)SCIPexpriterGetCurrentUserData(it).ptrval;
 
                   int childidx = SCIPexpriterGetChildIdxDFS(it);
                   int nchildren = SCIPexprGetNChildren(expr);
                   if( childidx < nchildren-2 )
                   {
                      // if there is more than one more factor coming (so we are in product with > 2 factors)
-                     // then add another MUL to the current ew and make the new ConExprWriter the current ew
-                     ConExprWriter* newew = new ConExprWriter(ew->OPut2(mp::nl::MUL));
-                     delete ew;
+                     // then add another MUL to the current ew2 and make the new ConExprWriter the current ew2
+                     ConExprWriter* newew = new ConExprWriter(ew2->OPut2(mp::nl::MUL));
+                     delete ew2;
 
                      SCIP_EXPRITER_USERDATA userdata;
                      userdata.ptrval = newew;
@@ -2822,7 +2822,7 @@ public:
    template <class RowObjNameWriter>
    void FeedRowAndObjNames(
       RowObjNameWriter&  wrt
-   )
+   ) const
    {
       if( !wrt || genericnames )
          return;
@@ -2843,7 +2843,7 @@ public:
    template <class ColNameWriter>
    void FeedColNames(
       ColNameWriter&     wrt
-   )
+   ) const
    {
       if( !wrt || genericnames )
          return;

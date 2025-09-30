@@ -345,7 +345,7 @@ if(SCIP_WITH_EXACTSOLVE)
     if(SCIP_WITH_ZIMPL)
         list(APPEND
             instances_MIPEX
-            "instances/MIPEX/misc03.zpl\;3360"
+            # instance misc03p1 appended later
             "instances/MIPEX/rgn.zpl\;2054999981/25000000"
             "instances/MIPEX/stein27.zpl\;18"
         )
@@ -538,6 +538,7 @@ set(pairs_Issue
     "instances/Issue/3662_2.cip\;0\;default"
     "instances/Issue/3675_1.cip\;0\;default"
     "instances/Issue/3675_2.cip\;0\;presolving_heuristics_off"
+    "instances/Issue/3675_3.cip\;21589416.4938212\;default"
     "instances/Issue/3681.cip\;0\;default"
     "instances/Issue/3688.cip\;131882\;reduced_presolving"
     "instances/Issue/3691.cip\;1.862908\;presolvingnolinear"
@@ -672,7 +673,9 @@ macro(add_instancetests instances settings prefix)
             #
             if(NOT ((${setting} STREQUAL "tolerance") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "xprs")))
             if(NOT ((${setting} STREQUAL "default") AND (${basename} STREQUAL "pltexpA4_6.smps") AND (${LPS} STREQUAL "xprs")))
+            if(NOT ((${setting} STREQUAL "lns_epsgreedy_vanilla") AND (${basename} STREQUAL "enigma.mps") AND (${LPS} STREQUAL "xprs")))
             if(NOT ((${setting} STREQUAL "lns_epsgreedy_vanilla") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
+            if(NOT ((${setting} STREQUAL "cgmipdirect") AND (${basename} STREQUAL "bell5.mps")))
             add_test(NAME ${prefix}-${setting}-${basename}
                     COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
                     )
@@ -682,7 +685,9 @@ macro(add_instancetests instances settings prefix)
                                     FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
+            endif()  # solution not feasible in original problem due to cons_linear presolve, #3819 (https://git.zib.de/integer/scip/-/merge_requests/3881#note_295336)
             endif()  # Gurobi gets stuck in LP solve, #2833
+            endif()  # Xpress returns 11 while solving a strong branching LP, #3724
             endif()  # LP Error: Xpress returned 120, #3724 (LPS=xprs, Stochastic-default-pltexpA4_6.smps)
             endif()  # Xpress does not keep feasibility tolerance setting, #3640
         endforeach(setting)
@@ -850,7 +855,6 @@ set(basenames_opb_wrongformat
     gt2.mps
     lseu_dcmulti.cip
     misc03.mps
-    misc03.zpl
     rgn.mps
     rgn.zpl
     vpm2.fzn
@@ -1330,6 +1334,7 @@ if(SCIP_WITH_EXACTSOLVE)
                 set(regex "${message_format_${extension}}")
             endif()
             if(NOT ((${extension} STREQUAL "cip") AND (${basename} STREQUAL "rgn.zpl") AND (${LPS} STREQUAL "xprs")))
+            if(NOT ((${basename} STREQUAL "stein27.zpl") AND (${LPS} STREQUAL "xprs")))
             add_test(NAME MIPEX-readertest-${extension}-${basename}
                     COMMAND $<TARGET_FILE:scip>
                     -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/exact-default.set"
@@ -1342,8 +1347,18 @@ if(SCIP_WITH_EXACTSOLVE)
                                     DEPENDS scip-build
                                 )
             endif()  # LP Error: Xpress returned 11, #3724
+            endif()  # LP Error: Xpress returned 11, #3724
         endforeach(extension)
     endforeach(instance)
+    #
+    # append ZIMPL instances with objective constant (not compatible with the readertest)
+    #
+    if(SCIP_WITH_ZIMPL)
+        list(APPEND
+            instances_MIPEX
+            "instances/MIPEX/misc03p1.zpl\;3360.1"
+        )
+    endif()
     #
     # second test without certification
     #

@@ -89,6 +89,7 @@ foreach(instance ${instances})
                             PROPERTIES
                             FAIL_REGULAR_EXPRESSION "ERROR"
                                 DEPENDS examples-gmi-build
+                                RESOURCE_LOCK libscip
                             )
         if(WIN32)
            # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,

@@ -138,6 +138,7 @@ if( CRITERION_FOUND )
     set_tests_properties(${testName}
       PROPERTIES
       DEPENDS ${testName}-build
+      RESOURCE_LOCK libscip
       )
   endforeach(testSrc)
 endif()

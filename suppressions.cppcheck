@@ -4,9 +4,6 @@ va_list_usedBeforeStarted:src/scip/message.c
 // false warnings for use of SCIP memory alloc functions
 legacyUninitvar
 
-// for a library, or when checking only a subset of source, not all functions need to be used
-unusedFunction
-
 // ignore possibilities to reduce variable scope
 variableScope
 
@@ -21,6 +18,7 @@ missingOverride:src/objscip/*
 
 // C++ code uses SCIP memory macros
 cstyleCast:*.cpp
+cstyleCast:src/objscip/*.h
 
 // potential possibilities to improve C++ code - check later
 functionStatic:src/scip/reader_nl.cpp
@@ -40,9 +38,11 @@ constVariable
 normalCheckLevelMaxBranches
 checkLevelNormal
 
-// third-party code
+// third-party code, Ip* is for Ipopt headers
 *:src/amplmp/*
 *:src/cppad/*
+*:src/dejavu/*
 *:src/nauty/*
 *:src/sassy/*
 *:lib/include/*
+*:Ip*.hpp

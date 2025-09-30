@@ -1386,7 +1386,7 @@ void consdataCheckNonbinvar(
    consdata->hasnonbinvalid = TRUE;
 }
 
-#ifdef CHECKMAXACTDELTA
+#ifdef SCIP_MORE_DEBUG
 /* checks that the stored maximal activity delta (if not invalid) is correct */
 static
 void checkMaxActivityDelta(
@@ -1396,12 +1396,16 @@ void checkMaxActivityDelta(
 {
    if( consdata->maxactdelta != SCIP_INVALID )
    {
-      SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &maxactdelta );
-      SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &domain );
-      SCIP_Ratoinal* SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &delta );
+      SCIP_Rational* maxactdelta;
+      SCIP_Rational* domain;
+      SCIP_Rational* delta;
       SCIP_RATIONAL* lb;
       SCIP_RATIONAL* ub;
       int v;
+
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &maxactdelta) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &domain) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &delta) );
 
       for( v = consdata->nvars - 1; v >= 0; --v )
       {
@@ -1427,7 +1431,8 @@ void checkMaxActivityDelta(
 
       SCIPrationalFreeBuffer(SCIPbuffer(scip), delta);
       SCIPrationalFreeBuffer(SCIPbuffer(scip), domain);
-      SCIPrationalFreeBuffer(SCIPbuffer(scip), maxactdelta);   }
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), maxactdelta);
+   }
 }
 #else
 #define checkMaxActivityDelta(scip, consdata) /**/
@@ -4658,10 +4663,6 @@ SCIP_RETCODE tightenBounds(
    int nvars;
    int nrounds;
    int lastchange;
-   int oldnchgbds;
-#ifndef SCIP_DEBUG
-   int oldnchgbdstotal;
-#endif
    int v;
    SCIP_Bool force;
 
@@ -4741,14 +4742,13 @@ SCIP_RETCODE tightenBounds(
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
-   oldnchgbds = 0;
-
-#ifndef SCIP_DEBUG
-   oldnchgbdstotal = *nchgbds;
-#endif
 
    for( nrounds = 0; (force || consdata->boundstightened < tightenmode) && nrounds < MAXTIGHTENROUNDS; ++nrounds ) /*lint !e574*/
    {
+#ifdef SCIP_DEBUG
+      int oldnchgbdstotal = *nchgbds;
+#endif
+
       /* ensure that the variables are properly sorted
        *
        * note: it might happen that integer variables become binary during bound tightening at the root node
@@ -4767,7 +4767,7 @@ SCIP_RETCODE tightenBounds(
       v = 0;
       while( v < nvars && v != lastchange && !(*cutoff) )
       {
-         oldnchgbds = *nchgbds;
+         int oldnchgbds = *nchgbds;
 
          SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds, force) );
 
@@ -4789,10 +4789,9 @@ SCIP_RETCODE tightenBounds(
             ++v;
       }
 
-#ifndef SCIP_DEBUG
-      SCIPdebugMessage("linear constraint <%s> found %d bound changes in round %d\n", SCIPconsGetName(cons),
+#ifdef SCIP_DEBUG
+      SCIPdebugMsg(scip, "linear constraint <%s> found %d bound changes in round %d\n", SCIPconsGetName(cons),
          *nchgbds - oldnchgbdstotal, nrounds);
-      oldnchgbdstotal += oldnchgbds;
 #endif
    }
 

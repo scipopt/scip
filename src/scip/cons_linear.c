@@ -7571,7 +7571,7 @@ SCIP_RETCODE separateCons(
       SCIP_CALL( addRelaxation(scip, cons, cutoff) );
       (*ncuts)++;
    }
-   else if( !SCIPconsIsModifiable(cons) && separatecards )
+   else if( !SCIPconsIsModifiable(cons) && separatecards && consdata->nvars > 0 )
    {
       /* relax linear constraint into knapsack constraint and separate lifted cardinality cuts */
       if( !separateall && sol == NULL )
@@ -9043,15 +9043,6 @@ SCIP_RETCODE consdataTightenCoefs(
    /* allocate relevance flags */
    SCIP_CALL( SCIPallocBufferArray(scip, &isvarrelevant, consdata->nvars) );
 
-   /* @todo Is this still needed with automatic recomputation of activities? */
-   /* if the maximal coefficient is too large, recompute the activities */
-   if( (consdata->validmaxabsval && consdata->maxabsval > MAXVALRECOMP)
-      || (consdata->validminabsval && consdata->minabsval < MINVALRECOMP) )
-   {
-      consdataRecomputeMinactivity(scip, consdata);
-      consdataRecomputeMaxactivity(scip, consdata);
-   }
-
    /* get the minimal and maximal activity of the constraint */
    consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &isminacttight, &ismaxacttight,
          &isminsettoinfinity, &ismaxsettoinfinity);
@@ -9614,13 +9605,6 @@ SCIP_RETCODE convertLongEquality(
    SCIP_Bool coefsintegral;
    SCIP_Bool varsintegral;
    SCIP_Bool infeasible;
-   SCIP_Bool samevar;
-   int supinf;                               /* counter for infinite contributions to the supremum of a possible
-                                              * multi-aggregation
-                                              */
-   int infinf;                               /* counter for infinite contributions to the infimum of a possible
-                                              * multi-aggregation
-                                              */
    int maxnlocksstay;
    int maxnlocksremove;
    int bestslackpos;
@@ -9851,17 +9835,19 @@ SCIP_RETCODE convertLongEquality(
             if( conshdlrdata->multaggrremove && !removescons )
                continue;
 
-            /* prefer variables that make the constraints redundant */
-            if( bestremovescons && !removescons )
-               continue;
-
             /* if the constraint does not become redundant, only accept the variable if it does not appear in
              * other constraints
              */
             if( !removescons && nlocks > maxnlocksstay )
                continue;
 
-            better = better || (!bestremovescons && removescons);
+            /* prefer variables that make the constraints redundant
+             * unless there is a continuous better slack
+             */
+            if( !bestremovescons && removescons )
+               better = TRUE;
+            else if( bestremovescons && !removescons && (bestslacktype > SCIP_VARTYPE_INTEGER || slacktype <= SCIP_VARTYPE_INTEGER) )
+               better = FALSE;
             if( better )
             {
                bestslackpos = v;
@@ -9883,56 +9869,6 @@ SCIP_RETCODE convertLongEquality(
       return SCIP_OKAY;
    }
 
-   supinf = 0;
-   infinf = 0;
-   samevar = FALSE;
-
-   /* check whether the the infimum and the supremum of the multi-aggregation can be get infinite */
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      if( v != bestslackpos )
-      {
-         if( SCIPisPositive(scip, consdata->vals[v]) )
-         {
-            if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[v])) )
-            {
-               ++supinf;
-               if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[v])) )
-               {
-                  ++infinf;
-                  samevar = TRUE;
-               }
-            }
-            else if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[v])) )
-               ++infinf;
-         }
-         else if( SCIPisNegative(scip, consdata->vals[v]) )
-         {
-            if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[v])) )
-            {
-               ++supinf;
-               if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[v])) )
-               {
-                  ++infinf;
-                  samevar = TRUE;
-               }
-            }
-            else if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[v])) )
-               ++infinf;
-         }
-      }
-   }
-   assert(!samevar || (supinf > 0 && infinf > 0));
-
-   /** @todo Do not exit here, but continue if we may still detect implied integrality. */
-   /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
-    * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */
-   if( (samevar && (supinf > 1 || infinf > 1)) || (!samevar && supinf > 0 && infinf > 0) )
-   {
-      SCIPdebugMsg(scip, "do not perform multi-aggregation: infimum and supremum are both infinite\n");
-      return SCIP_OKAY;
-   }
-
    /* if the slack variable is of integer type, and the constraint itself may take fractional values,
     * we cannot aggregate the variable, because the integrality condition would get lost
     * Similarly, if there are implied integral variables, we cannot aggregate since we might
@@ -9942,6 +9878,7 @@ SCIP_RETCODE convertLongEquality(
       && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_DEPRECATED_VARTYPE_IMPLINT
          || (coefsintegral && varsintegral && nimplvars == 0)) )
    {
+      SCIP_VAR** aggrvars;
       SCIP_VAR* slackvar;
       SCIP_Real* scalars;
       SCIP_Real slackcoef;
@@ -9967,33 +9904,37 @@ SCIP_RETCODE convertLongEquality(
       assert(!SCIPisZero(scip, slackcoef));
       aggrconst = consdata->rhs/slackcoef;
 
-      getNewSidesAfterAggregation(scip, consdata, slackvar, slackcoef, &newlhs, &newrhs);
-      assert(SCIPisLE(scip, newlhs, newrhs));
-      SCIP_CALL( chgLhs(scip, cons, newlhs) );
-      SCIP_CALL( chgRhs(scip, cons, newrhs) );
-      SCIP_CALL( delCoefPos(scip, cons, bestslackpos) );
-
       /* allocate temporary memory */
-      SCIP_CALL( SCIPallocBufferArray(scip, &scalars, consdata->nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &aggrvars, consdata->nvars - 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &scalars, consdata->nvars - 1) );
 
       /* set up the multi-aggregation */
       SCIPdebugMsg(scip, "linear constraint <%s>: multi-aggregate <%s> ==", SCIPconsGetName(cons), SCIPvarGetName(slackvar));
-      for( v = 0; v < consdata->nvars; ++v )
+      for( v = 0; v < consdata->nvars - 1; ++v )
       {
-         scalars[v] = -consdata->vals[v]/slackcoef;
-         SCIPdebugMsgPrint(scip, " %+.15g<%s>", scalars[v], SCIPvarGetName(vars[v]));
+         if( v == bestslackpos )
+         {
+            aggrvars[v] = vars[consdata->nvars - 1];
+            scalars[v] = -consdata->vals[consdata->nvars - 1] / slackcoef;
+         }
+         else
+         {
+            aggrvars[v] = vars[v];
+            scalars[v] = -consdata->vals[v] / slackcoef;
+         }
+         SCIPdebugMsgPrint(scip, " %+.15g<%s>", scalars[v], SCIPvarGetName(aggrvars[v]));
       }
       SCIPdebugMsgPrint(scip, " %+.15g, bounds of <%s>: [%.15g,%.15g], nlocks=%d, maxnlocks=%d, removescons=%u\n",
          aggrconst, SCIPvarGetName(slackvar), SCIPvarGetLbGlobal(slackvar), SCIPvarGetUbGlobal(slackvar),
          bestnlocks, bestremovescons ? maxnlocksremove : maxnlocksstay, bestremovescons);
 
       /* perform the multi-aggregation */
-      SCIP_CALL( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars, vars, scalars, aggrconst,
+      SCIP_CALL( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars - 1, aggrvars, scalars, aggrconst,
             &infeasible, &aggregated) );
-      assert(aggregated);
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &scalars);
+      SCIPfreeBufferArray(scip, &aggrvars);
 
       /* check for infeasible aggregation */
       if( infeasible )
@@ -10003,7 +9944,20 @@ SCIP_RETCODE convertLongEquality(
          return SCIP_OKAY;
       }
 
-      (*naggrvars)++;
+      /* check for applied aggregation */
+      if( !aggregated )
+      {
+         SCIPdebugMsg(scip, "linear constraint <%s>: multi-aggregation not applicable\n", SCIPconsGetName(cons));
+         return SCIP_OKAY;
+      }
+
+      ++(*naggrvars);
+
+      getNewSidesAfterAggregation(scip, consdata, slackvar, slackcoef, &newlhs, &newrhs);
+      assert(SCIPisLE(scip, newlhs, newrhs));
+      SCIP_CALL( chgLhs(scip, cons, newlhs) );
+      SCIP_CALL( chgRhs(scip, cons, newrhs) );
+      SCIP_CALL( delCoefPos(scip, cons, bestslackpos) );
 
       /* delete the constraint if it became redundant */
       if( bestremovescons )
@@ -10897,13 +10851,6 @@ SCIP_RETCODE dualPresolve(
       int j;
       SCIP_Bool infeasible;
       SCIP_Bool aggregated;
-      SCIP_Bool samevar;
-      int supinf;                            /* counter for infinite contributions to the supremum of a possible
-                                              * multi-aggregation
-                                              */
-      int infinf;                            /* counter for infinite contributions to the infimum of a possible
-                                              * multi-aggregation
-                                              */
 
       assert(!bestislhs || lhsexists);
       assert(bestislhs || rhsexists);
@@ -10920,9 +10867,6 @@ SCIP_RETCODE dualPresolve(
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIPdebugMsg(scip, "linear constraint <%s> (dual): multi-aggregate <%s> ==", SCIPconsGetName(cons), SCIPvarGetName(bestvar));
       naggrs = 0;
-      supinf = 0;
-      infinf = 0;
-      samevar = FALSE;
 
       for( j = 0; j < consdata->nvars; ++j )
       {
@@ -10952,39 +10896,9 @@ SCIP_RETCODE dualPresolve(
                aggrcoefs[naggrs] = SCIPfloor(scip, aggrcoefs[naggrs]+0.5);
             }
 
-            if( SCIPisPositive(scip, aggrcoefs[naggrs]) )
-            {
-               if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[j])) )
-               {
-                  ++supinf;
-                  if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[j])) )
-                  {
-                     ++infinf;
-                     samevar = TRUE;
-                  }
-               }
-               else if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[j])) )
-                  ++infinf;
-            }
-            else if( SCIPisNegative(scip, aggrcoefs[naggrs]) )
-            {
-               if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(consdata->vars[j])) )
-               {
-                  ++supinf;
-                  if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[j])) )
-                  {
-                     ++infinf;
-                     samevar = TRUE;
-                  }
-               }
-               else if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(consdata->vars[j])) )
-                  ++infinf;
-            }
-
             naggrs++;
          }
       }
-      assert(!samevar || (supinf > 0 && infinf > 0));
 
       aggrconst = (bestislhs ? consdata->lhs/bestval : consdata->rhs/bestval);
       SCIPdebugMsgPrint(scip, " %+.15g, bounds of <%s>: [%.15g,%.15g]\n", aggrconst, SCIPvarGetName(bestvar),
@@ -11002,43 +10916,35 @@ SCIP_RETCODE dualPresolve(
       infeasible = FALSE;
 
       /* perform the multi-aggregation */
-      if( (samevar && supinf == 1 && infinf == 1) || (!samevar && (supinf == 0 || infinf == 0)) )
+      SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
+
+      /** @todo handle this case properly with weak and strong implied integrality */
+      /* if the multi-aggregated bestvar is enforced but not strongly implied integral, we need to convert implied
+       * integral to integer variables because integrality of the multi-aggregated variable must hold
+       */
+      if( !infeasible && aggregated && SCIPvarGetType(bestvar) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetImplType(bestvar) != SCIP_IMPLINTTYPE_STRONG )
       {
-         SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
+         SCIP_Bool infeasiblevartypechg = FALSE;
 
-         /** @todo handle this case properly with weak and strong implied integrality */
-         /* if the multi-aggregated bestvar is enforced but not strongly implied integral, we need to convert implied
-          * integral to integer variables because integrality of the multi-aggregated variable must hold
-          */
-         if( !infeasible && aggregated && SCIPvarGetType(bestvar) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetImplType(bestvar) != SCIP_IMPLINTTYPE_STRONG )
+         for( j = 0; j < naggrs; ++j )
          {
-            SCIP_Bool infeasiblevartypechg = FALSE;
-
-            for( j = 0; j < naggrs; ++j)
+            /* if the multi-aggregation was not infeasible, then setting implied integral to integer should not
+             * lead to infeasibility
+             */
+            if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(aggrvars[j]) != SCIP_IMPLINTTYPE_NONE )
             {
-               /* if the multi-aggregation was not infeasible, then setting implied integral to integer should not
-                * lead to infeasibility
-                */
-               if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(aggrvars[j]) != SCIP_IMPLINTTYPE_NONE )
+               if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_CONTINUOUS )
                {
-                  if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_CONTINUOUS )
-                  {
-                     SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasiblevartypechg) );
-                     assert(!infeasiblevartypechg);
-                  }
-                  SCIP_CALL( SCIPchgVarImplType(scip, aggrvars[j], SCIP_IMPLINTTYPE_NONE, &infeasiblevartypechg) );
+                  SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasiblevartypechg) );
                   assert(!infeasiblevartypechg);
-                  (*nchgvartypes)++;
                }
+               SCIP_CALL( SCIPchgVarImplType(scip, aggrvars[j], SCIP_IMPLINTTYPE_NONE, &infeasiblevartypechg) );
+               assert(!infeasiblevartypechg);
+               (*nchgvartypes)++;
             }
          }
       }
-      else
-      {
-         /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
-          * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */
-         SCIPdebugMsg(scip, "do not perform multi-aggregation: infimum and supremum are both infinite\n");
-      }
+
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &aggrcoefs);
       SCIPfreeBufferArray(scip, &aggrvars);
@@ -11467,8 +11373,8 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_Bool onlybin;
    SCIP_Bool hasrhs;
    SCIP_Bool haslhs;
-   int oldnchgcoefs;
-   int oldnchgsides;
+   int oldnchgcoefs;  /* cppcheck-suppress unassignedVariable */
+   int oldnchgsides;  /* cppcheck-suppress unassignedVariable */
    int foundbin;
    int candpos;
    int candpos2;
@@ -16449,9 +16355,19 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          if( cutoff )
             break;
 
-         /* check constraint for infeasibility and redundancy */
+         /* if the maximal coefficient is large, recompute the activities before infeasibility and redundancy checks */
+         if( ( consdata->validmaxabsval && consdata->maxabsval > MAXVALRECOMP )
+            || ( consdata->validminabsval && consdata->minabsval < MINVALRECOMP ) )
+         {
+            consdataRecomputeMinactivity(scip, consdata);
+            consdataRecomputeMaxactivity(scip, consdata);
+         }
+
+         /* get activity bounds */
          consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &isminacttight, &ismaxacttight,
-            &isminsettoinfinity, &ismaxsettoinfinity);
+               &isminsettoinfinity, &ismaxsettoinfinity);
+
+         /* check constraint for infeasibility and redundancy */
          if( SCIPisFeasGT(scip, minactivity, consdata->rhs) || SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
          {
             SCIPdebugMsg(scip, "linear constraint <%s> is infeasible: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",

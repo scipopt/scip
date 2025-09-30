@@ -177,7 +177,7 @@ SCIP_RETCODE SCIPstatFree(
    return SCIP_OKAY;
 }
 
-/** diables the collection of any statistic for a variable */
+/** disables the collection of any statistic for a variable */
 void SCIPstatDisableVarHistory(
    SCIP_STAT*            stat                /**< problem statistics data */
    )

@@ -1757,14 +1757,13 @@ BMS_CHKMEM* findChkmem(
 
 /** calculates hash number of memory size */
 static
-int getHashNumber(
-   int                   size                /**< element size */
+uint32_t getHashNumber(
+   size_t                size                /**< element size */
    )
 {
-   assert(size >= 0);
-   assert(BMSisAligned((size_t)size)); /*lint !e571*/
+   assert(BMSisAligned(size));
 
-   return (int) (((uint32_t)size * UINT32_C(0x9e3779b9))>>(32-CHKHASH_POWER));
+   return ((uint32_t)size * UINT32_C(0x9e3779b9)) >> (32-CHKHASH_POWER);
 }
 
 /** creates a block memory allocation data structure */
@@ -1867,16 +1866,21 @@ void* BMSallocBlockMemory_work(
    )
 {
    BMS_CHKMEM** chkmemptr;
-   int hashnumber;
+   uint32_t hashnumber;
    void* ptr;
 
    assert( blkmem != NULL );
 
+   /* allocating very large memory blocks is currently not possible, because BMS_CHKMEM::elemsize is of type int only */
+   if( size > INT_MAX )
+      return NULL;
+
    /* calculate hash number of given size */
    alignSize(&size);
-   hashnumber = getHashNumber((int)size);
+   hashnumber = getHashNumber(size);
+   assert(hashnumber < CHKHASH_SIZE);
 
-   /* find correspoding chunk block */
+   /* find corresponding chunk block */
    chkmemptr = &(blkmem->chkmemhash[hashnumber]);
    while( *chkmemptr != NULL && (*chkmemptr)->elemsize != (int)size )
       chkmemptr = &((*chkmemptr)->nextchkmem);
@@ -2136,14 +2140,15 @@ void BMSfreeBlockMemory_work(
    )
 {
    BMS_CHKMEM* chkmem;
-   int hashnumber;
+   uint32_t hashnumber;
 
    assert(ptr != NULL);
    assert(*ptr != NULL);
 
    /* calculate hash number of given size */
    alignSize(&size);
-   hashnumber = getHashNumber((int)size);
+   hashnumber = getHashNumber(size);
+   assert(hashnumber < CHKHASH_SIZE);
 
    debugMessage("free    %8llu bytes in %p [%s:%d]\n", (unsigned long long)size, *ptr, filename, line);
 

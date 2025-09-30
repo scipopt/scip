@@ -602,21 +602,21 @@ int SCIPvarGetCertificateIndex(
 SCIP_EXPORT
 void SCIPvarSetCertificateIndex(
    SCIP_VAR*             var,                /**< variable to set index for */
-   int                   index               /**< the index */
+   int                   certidx             /**< the index */
    );
 
 /** sets index of variable in certificate */
 SCIP_EXPORT
 void SCIPvarSetUbCertificateIndexGlobal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   SCIP_Longint          index               /**< the index */
+   SCIP_Longint          certidx             /**< the index */
    );
 
 /** sets index of variable in certificate */
 SCIP_EXPORT
 void SCIPvarSetLbCertificateIndexGlobal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   SCIP_Longint          index               /**< the index */
+   SCIP_Longint          certidx             /**< the index */
    );
 
 /** returns index of variable bound in vipr certificate */
@@ -664,6 +664,18 @@ SCIP_COLEXACT* SCIPvarGetColExact(
 /** returns whether the variable is a COLUMN variable that is member of the current LP */
 SCIP_EXPORT
 SCIP_Bool SCIPvarIsInLP(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets lower bound on absolute coefficient of a loose variable in (multi)aggregations of other variables */
+SCIP_EXPORT
+SCIP_Real SCIPvarGetMinAggrCoef(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets upper bound on absolute coefficient of a loose variable in (multi)aggregations of other variables */
+SCIP_EXPORT
+SCIP_Real SCIPvarGetMaxAggrCoef(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -1208,6 +1220,8 @@ void SCIPvarMarkRelaxationOnly(
 #define SCIPvarGetTransVar(var)         (var)->data.original.transvar
 #define SCIPvarGetCol(var)              (var)->data.col
 #define SCIPvarIsInLP(var)              ((var)->varstatus == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP((var)->data.col))
+#define SCIPvarGetMinAggrCoef(var)      (var)->data.loose.minaggrcoef
+#define SCIPvarGetMaxAggrCoef(var)      (var)->data.loose.maxaggrcoef
 /* use different name for var - otherwise we have clash with the var at the end */
 #define SCIPvarGetAggrVar(war)          (war)->data.aggregate.var
 #define SCIPvarGetAggrScalar(var)       (var)->data.aggregate.scalar

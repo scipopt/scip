@@ -726,6 +726,7 @@ void SCIPprimalAddOrigObjoffset(
 
    assert(primal != NULL);
    assert(set != NULL);
+   assert(!set->exact_enable);
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM);
 
 #ifndef NDEBUG
@@ -758,6 +759,7 @@ void SCIPprimalAddOrigObjoffsetExact(
 
    assert(primal != NULL);
    assert(set != NULL);
+   assert(set->exact_enable);
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM);
 
 #ifndef NDEBUG
@@ -2338,7 +2340,6 @@ SCIP_RETCODE primalAddSolExact(
    )
 {
    SCIP_Bool stored;
-   /* cppcheck-suppress unassignedVariable */
    SCIP_RATIONAL* obj;
    SCIP_SOL* sol;
 

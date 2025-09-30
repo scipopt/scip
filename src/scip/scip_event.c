@@ -300,6 +300,12 @@ SCIP_RETCODE SCIPcatchEvent(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcatchEvent", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
+   if( eventtype & (SCIP_EVENTTYPE_VARCHANGED | SCIP_EVENTTYPE_ROWCHANGED) )
+   {
+      SCIPerrorMessage("SCIPcatchEvent does not support variable or row change events. Use SCIPcatchVarEvent or SCIPcatchRowEvent!\n");
+      return SCIP_INVALIDDATA;
+   }
+
    SCIP_CALL( SCIPeventfilterAdd(scip->eventfilter, scip->mem->probmem, scip->set,
          eventtype, eventhdlr, eventdata, filterpos) );
 

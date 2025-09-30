@@ -725,6 +725,13 @@ SCIP_Bool SCIPvarDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** checks whether a loose variable can be used in a new aggregation with given coefficient */
+SCIP_Bool SCIPvarIsAggrCoefAcceptable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             scalar              /**< aggregation scalar */
+   );
+
 /** returns whether the variable was flagged for deletion from global structures (cliques etc.) */
 SCIP_Bool SCIPvarIsMarkedDeleteGlobalStructures(
    SCIP_VAR*             var                 /**< problem variable */
@@ -853,7 +860,7 @@ SCIP_RETCODE SCIPvarChgUbGlobalExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -866,7 +873,7 @@ SCIP_RETCODE SCIPvarChgLbGlobalExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -2021,13 +2028,13 @@ void SCIPvarGetUbLocalExactMinimal(
 /** sets index of variable in certificate */
 void SCIPvarSetUbCertificateIndexLocal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   SCIP_Longint          index               /**< the index */
+   SCIP_Longint          certidx             /**< the index */
    );
 
 /** sets index of variable in certificate */
 void SCIPvarSetLbCertificateIndexLocal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   SCIP_Longint          index               /**< the index */
+   SCIP_Longint          certidx             /**< the index */
    );
 
 #ifdef NDEBUG

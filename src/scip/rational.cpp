@@ -101,11 +101,11 @@ SCIP_RETCODE SCIPrationalCreate(
 
 /** allocate and create a rational from nominator and denominator using block memory */
 SCIP_RETCODE SCIPrationalCreateBlock(
-   BMS_BLKMEM*           mem,                /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_RATIONAL**       rational            /**< pointer to the rational to create */
    )
 {
-   SCIP_ALLOC( BMSallocBlockMemory(mem, rational) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, rational) );
 
    new (&(*rational)->val) scip::Rational(0.0);
    (*rational)->isinf = FALSE;
@@ -116,11 +116,11 @@ SCIP_RETCODE SCIPrationalCreateBlock(
 
 /** allocate and create a rational from nominator and denominator using buffer memory */
 SCIP_RETCODE SCIPrationalCreateBuffer(
-   BMS_BUFMEM*           mem,                /**< buffer memory */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_RATIONAL**       rational            /**< pointer to the rational to create */
    )
 {
-   BMSallocBufferMemory(mem, rational);
+   BMSallocBufferMemory(bufmem, rational);
 
    new (&(*rational)->val) scip::Rational(0.0);
    (*rational)->isinf = FALSE;
@@ -158,12 +158,12 @@ SCIP_RETCODE SCIPrationalCopyBlock(
 
 /** creates a copy of a rational using buffer memory */
 SCIP_RETCODE SCIPrationalCopyBuffer(
-   BMS_BUFMEM*           mem,                /**< buffer memory */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_RATIONAL**       result,             /**< pointer to the rational to create */
    SCIP_RATIONAL*        src                 /**< rational to copy */
    )
 {
-   SCIP_CALL( SCIPrationalCreateBuffer(mem, result) );
+   SCIP_CALL( SCIPrationalCreateBuffer(bufmem, result) );
 
    SCIPrationalSetRational(*result, src);
 
@@ -225,16 +225,16 @@ SCIP_RETCODE SCIPrationalCreateBufferArray(
 
 /** copy an array of rationals using ordinary memory */
 SCIP_RETCODE SCIPrationalCopyArray(
-   SCIP_RATIONAL***      result,             /**< address to copy to */
+   SCIP_RATIONAL***      target,             /**< address to copy to */
    SCIP_RATIONAL**       src,                /**< src array */
    int                   len                 /**< size of src array */
    )
 {
-   BMSduplicateMemoryArray(result, src, len);
+   BMSduplicateMemoryArray(target, src, len);
 
    for( int i = 0; i < len; ++i )
    {
-      SCIP_CALL( SCIPrationalCopy(&(*result)[i], src[i]) );
+      SCIP_CALL( SCIPrationalCopy(&(*target)[i], src[i]) );
    }
 
    return SCIP_OKAY;
@@ -243,16 +243,16 @@ SCIP_RETCODE SCIPrationalCopyArray(
 /** copy an array of rationals using block memory */
 SCIP_RETCODE SCIPrationalCopyBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_RATIONAL***      result,             /**< address to copy to */
+   SCIP_RATIONAL***      target,             /**< address to copy to */
    SCIP_RATIONAL**       src,                /**< src array */
    int                   len                 /**< size of src array */
    )
 {
-   BMSduplicateBlockMemoryArray(mem, result, src, len);
+   BMSduplicateBlockMemoryArray(mem, target, src, len);
 
    for( int i = 0; i < len; ++i )
    {
-      SCIP_CALL( SCIPrationalCopyBlock(mem, &(*result)[i], src[i]) );
+      SCIP_CALL( SCIPrationalCopyBlock(mem, &(*target)[i], src[i]) );
    }
 
    return SCIP_OKAY;
@@ -443,7 +443,7 @@ void SCIPrationalClearArrayGMP(
 
 /** delete a rational and free the allocated ordinary memory */
 void SCIPrationalFree(
-   SCIP_RATIONAL**       rational            /**< adress of the rational */
+   SCIP_RATIONAL**       rational            /**< address of the rational */
    )
 {
    assert(*rational != nullptr);
@@ -455,7 +455,7 @@ void SCIPrationalFree(
 /** delete a rational and free the allocated block memory */
 void SCIPrationalFreeBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_RATIONAL**       rational            /**< adress of the rational */
+   SCIP_RATIONAL**       rational            /**< address of the rational */
    )
 {
    assert(*rational != nullptr);
@@ -466,14 +466,14 @@ void SCIPrationalFreeBlock(
 
 /** delete a rational and free the allocated buffer memory */
 void SCIPrationalFreeBuffer(
-   BMS_BUFMEM*           mem,                /**< buffer memory */
-   SCIP_RATIONAL**       rational            /**< adress of the rational */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
+   SCIP_RATIONAL**       rational            /**< address of the rational */
    )
 {
    assert(*rational != nullptr);
 
    (*rational)->val.scip::Rational::~Rational();
-   BMSfreeBufferMemory(mem, rational);
+   BMSfreeBufferMemory(bufmem, rational);
 }
 
 /** deletes an array of rationals and frees the allocated ordinary memory */
@@ -748,7 +748,7 @@ void SCIPrationalSetString(
       if( exponentidx != std::string::npos )
       {
          exponent = std::stoi(s.substr(exponentidx + 1, s.length()));
-         s = s.substr(0, exponentidx);
+         s.resize(exponentidx);
       }
 
       /* convert decimal into fraction */
@@ -1072,20 +1072,20 @@ void SCIPrationalMult(
       {
          res->val = 0;
          res->isinf = FALSE;
-         res->isfprepresentable = TRUE;
       }
       else
       {
          res->val = op1->val.sign() * op2->val.sign();
          res->isinf = TRUE;
       }
+      res->isfprepresentable = TRUE;
    }
    else
    {
       res->val = op1->val * op2->val;
       res->isinf = FALSE;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /** multiplies a rational and a real and saves the result in res */
@@ -1197,8 +1197,8 @@ void SCIPrationalAddProd(
    {
       res->isinf = FALSE;
       res->val += op1->val * op2->val;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /* Computes res += op1 * op2 and saves the result in res */
@@ -1226,8 +1226,8 @@ void SCIPrationalAddProdReal(
    {
       res->isinf = FALSE;
       res->val += op1->val * op2;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /* Computes res -= op1 * op2 and saves the result in res */
@@ -1255,8 +1255,8 @@ void SCIPrationalDiffProd(
    {
       res->isinf = FALSE;
       res->val -= op1->val * op2->val;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /* Computes res += op1 * op2 and saves the result in res */
@@ -1284,8 +1284,8 @@ void SCIPrationalDiffProdReal(
    {
       res->isinf = FALSE;
       res->val -= op1->val * op2;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /** set res to -op */
@@ -2308,7 +2308,7 @@ void SCIPrationalComputeApproximationLong(
    SCIP_Longint p[3] = {0};
    SCIP_Longint q[3] = {0};
    int sign;
-   int done = 0;
+   int done;
 
    assert(res != nullptr);
    assert(src != nullptr);
@@ -2468,7 +2468,7 @@ void SCIPrationalComputeApproximation(
    assert(src != nullptr);
    assert(res != nullptr);
 #ifdef SCIP_WITH_BOOST
-   int done = 0;
+   int done;
 
    scip::Integer temp;
    scip::Integer td;

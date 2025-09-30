@@ -2843,7 +2843,7 @@ SCIP_RETCODE separateCuts(
 
          /* if dual feasible, then fetch dual solution and reset Lagrangian multipliers based on it. otherwise, retain the
           * Lagrangian multipliers and simply initialize the new multipliers to zeroes. */
-         if( SCIPlpiIsDualFeasible(sepadata->lpiwithhardcuts) )
+         if( SCIPlpiWasSolved(sepadata->lpiwithhardcuts) && SCIPlpiIsDualFeasible(sepadata->lpiwithhardcuts) )
          {
             SCIP_CALL( SCIPlpiGetSol(sepadata->lpiwithhardcuts, NULL, NULL, dualsol, NULL, NULL) );
             SCIP_CALL( updateDualVector(scip, sepadata, dualvector, &(dualsol[nrows]),

@@ -214,7 +214,14 @@ SCIP_RETCODE createProb(
    if( usestartsol )
    {
       /* create primal solution */
-      SCIP_CALL( SCIPcreateSol(scip, &readerdata->sol, NULL) );
+      if( SCIPisExact(scip) )
+      {
+         SCIP_CALL( SCIPcreateSolExact(scip, &readerdata->sol, NULL) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPcreateSol(scip, &readerdata->sol, NULL) );
+      }
       readerdata->valid = TRUE;
    }
 
@@ -939,8 +946,6 @@ SCIP_RETCODE addObjTerm(
    const Term*           term                /**< term to use */
    )
 {
-   SCIP_Real objoffset;
-
    if( term_is_linear(term) )
    {
       int i;
@@ -955,8 +960,8 @@ SCIP_RETCODE addObjTerm(
          scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
          if( SCIPisExact(scip) )
          {
-            char str[SCIP_MAXSTRLEN];
             SCIP_RATIONAL* scipvalrat;
+            char str[SCIP_MAXSTRLEN];
 
             RcreateNumb(SCIPblkmem(scip), &scipvalrat, mono_get_coeff(term_get_element(term, i)));
             SCIPrationalAdd(scipvalrat, scipvalrat, SCIPvarGetObjExact(scipvar));
@@ -1013,8 +1018,18 @@ SCIP_RETCODE addObjTerm(
       SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
    }
 
-   objoffset = numb_todbl(term_get_constant(term));
-   SCIP_CALL( SCIPaddOrigObjoffset(scip, objoffset) );
+   if( SCIPisExact(scip) )
+   {
+      SCIP_RATIONAL* scipvalrat;
+
+      RcreateNumb(SCIPblkmem(scip), &scipvalrat, term_get_constant(term));
+      SCIP_CALL( SCIPaddOrigObjoffsetExact(scip, scipvalrat) );
+      SCIPrationalFreeBlock(SCIPblkmem(scip), &scipvalrat);
+   }
+   else
+   {
+      SCIP_CALL( SCIPaddOrigObjoffset(scip, (SCIP_Real)numb_todbl(term_get_constant(term))) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1243,7 +1258,18 @@ SCIP_RETCODE addVar(
             (void*)readerdata->sol, SCIPvarGetName(var), (SCIP_Real)numb_todbl(startval));
 
          /* set value within the primal solution candidate */
-         SCIP_CALL( SCIPsetSolVal(scip, readerdata->sol, var, (SCIP_Real)numb_todbl(startval)) );
+         if( SCIPsolIsExact(readerdata->sol) )
+         {
+            SCIP_RATIONAL* solrat;
+
+            RcreateNumb(SCIPblkmem(scip), &solrat, startval);
+            SCIP_CALL( SCIPsetSolValExact(scip, readerdata->sol, var, solrat) );
+            SCIPrationalFreeBlock(SCIPblkmem(scip), &solrat);
+         }
+         else
+         {
+            SCIP_CALL( SCIPsetSolVal(scip, readerdata->sol, var, (SCIP_Real)numb_todbl(startval)) );
+         }
       }
    }
 
