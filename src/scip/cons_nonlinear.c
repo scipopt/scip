@@ -4610,7 +4610,7 @@ SCIP_RETCODE presolveBinaryProducts(
    assert(conshdlr != NULL);
 
    /* no nonlinear constraints or binary variables -> skip */
-   if( nconss == 0 || SCIPgetNBinVars(scip) == 0 )
+   if( nconss == 0 || SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip) == 0 )
       return SCIP_OKAY;
    assert(conss != NULL);
 
