@@ -7162,27 +7162,25 @@ void scoreBranchingCandidates(
 
       if( conshdlrdata->branchvartypeweight > 0.0 )
       {
-         if( SCIPvarIsImpliedIntegral(cands[c].var) )
-            cands[c].vartype = 0.01;
-         else
+         switch( SCIPvarGetType(cands[c].var) )
          {
-            switch( SCIPvarGetType(cands[c].var) )
-            {
-               case SCIP_VARTYPE_BINARY:
-                  cands[c].vartype = 1.0;
-                  break;
-               case SCIP_VARTYPE_INTEGER:
-                  cands[c].vartype = 0.1;
-                  break;
-               case SCIP_VARTYPE_CONTINUOUS:
+            case SCIP_VARTYPE_BINARY:
+               cands[c].vartype = 1.0;
+               break;
+            case SCIP_VARTYPE_INTEGER:
+               cands[c].vartype = 0.1;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               if( SCIPvarIsImpliedIntegral(cands[c].var) )
+                  cands[c].vartype = 0.01;
+               else
                   cands[c].vartype = 0.0;
-                  break;
-               default:
-                  SCIPerrorMessage("invalid variable type\n");
-                  SCIPABORT();
-                  return; /*lint !e527*/
-            } /*lint !e788*/
-         }
+               break;
+            default:
+               SCIPerrorMessage("invalid variable type\n");
+               SCIPABORT();
+               return; /*lint !e527*/
+         } /*lint !e788*/
 
          maxscore.vartype = MAX(cands[c].vartype, maxscore.vartype);
       }
