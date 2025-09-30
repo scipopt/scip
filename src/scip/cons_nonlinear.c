@@ -3817,9 +3817,10 @@ SCIP_Bool isBinaryProduct(
 
       var = SCIPgetVarExprVar(child);
 
-      /* check whether variable is binary, in any feasible solution */
-      /* TODO allow for weak implicit binary vars, but then auxiliary variables created in
-       * reformulateFactorizedBinaryQuadratic() and getBinaryProductExprDo() need to be weakly implied integral
+      /* check whether variable is binary, in any feasible solution
+       * we need to forbid weakly implied binary variables because cons_and wouldn't ensure that the
+       * product condition holds in any feasible solution (i.e., when vars may not be at bounds) in this case,
+       * which would lead to accepting solutions that are not feasible in the original (non-reformulated) cons
        */
       if( !SCIPvarIsBinary(var) || SCIPvarGetImplType(var) == SCIP_IMPLINTTYPE_WEAK )
          return FALSE;
@@ -3912,13 +3913,10 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
       minact += MIN(coefs[i], 0.0);
       maxact += MAX(coefs[i], 0.0);
       assert(SCIPvarIsIntegral(vars[i]));
-      if( impltype != SCIP_IMPLINTTYPE_NONE )
-      {
-         if( !SCIPisIntegral(scip, coefs[i]) )
-            impltype = SCIP_IMPLINTTYPE_NONE;
-         else if( SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK )
-            impltype = SCIP_IMPLINTTYPE_WEAK;
-      }
+      assert(SCIPvarGetImplType(vars[i]) != SCIP_IMPLINTTYPE_WEAK || SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS);
+
+      if( impltype != SCIP_IMPLINTTYPE_NONE && !SCIPisIntegral(scip, coefs[i]) )
+         impltype = SCIP_IMPLINTTYPE_NONE;
    }
    assert(minact <= maxact);
 
@@ -4249,6 +4247,8 @@ SCIP_RETCODE getBinaryProductExprDo(
       assert(vars[i] != NULL);
       (void) strcat(name, "_");
       (void) strcat(name, SCIPvarGetName(vars[i]));
+
+      assert(SCIPvarIsBinary(vars[i]) && SCIPvarGetImplType(vars[i]) != SCIP_IMPLINTTYPE_WEAK);
    }
 
    /* create and add variable */
