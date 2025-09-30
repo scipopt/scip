@@ -15034,6 +15034,13 @@ SCIP_RETCODE SCIPaddExprsViolScoreNonlinear(
 
    SCIPfreeExpriter(&it);
 
+   if( nvars == 0 )
+   {
+      SCIPfreeBufferArray(scip, &varexprs);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
    addExprsViolScore(scip, varexprs, nvars, violscore, sol, success);
 
    SCIPfreeBufferArray(scip, &varexprs);
