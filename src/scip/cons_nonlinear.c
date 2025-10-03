@@ -3538,6 +3538,24 @@ SCIP_RETCODE detectNlhdlrs(
          FALSE, FALSE) );
       conshdlrdata->indetect = FALSE;
 
+      /* presolveSingleLockedVars() may need the activity of product expressions in a sum expr that is in the root expr of a nonlinear constraint with only one finite side
+       * if this presolver may be run in the current presolve round (presoltiming=exhaustive could be added as additional criterion),
+       * then we ensure that a routine will be present to compute this activity (SCIPregisterExprUsageNonlinear actually updates activity already)
+       */
+      if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !conshdlrdata->checkedvarlocks && conshdlrdata->checkvarlocks != 'd'
+         && (SCIPisInfinity(scip, -consdata->lhs) || SCIPisInfinity(scip, consdata->rhs)) && SCIPisExprSum(scip, consdata->expr) )
+      {
+         int c;
+         for( c = 0; c < SCIPexprGetNChildren(consdata->expr); ++c )
+         {
+            expr = SCIPexprGetChildren(consdata->expr)[c];
+            if( SCIPisExprProduct(scip, expr) )
+            {
+               SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, FALSE, TRUE, FALSE, FALSE) );
+            }
+         }
+      }
+
       /* compute integrality information for all subexpressions */
       SCIP_CALL( SCIPcomputeExprIntegrality(scip, consdata->expr) );
 
@@ -5693,6 +5711,9 @@ SCIP_RETCODE presolveSingleLockedVars(
             SCIP_INTERVAL productactivity;
             SCIP_Bool keepevenpower;
 
+            /* activity has been ensured to be uptodate (or at least still valid) by
+             * call to SCIPregisterExprUsageNonlinear() in detectNlhdlrs() in canonicalize
+             */
             productactivity = SCIPexprGetActivity(child);
 
             /* check whether variables in even-powered factor terms can be restricted to bounds (as in SCIPisExprPower() below) */
