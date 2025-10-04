@@ -274,7 +274,7 @@ struct SCIP_PropData
    SCIP_Bool             doubleequations;    /**< Double equations to positive/negative version? */
    SCIP_Bool             enforcecomputesymmetry; /**< always compute symmetries, even if they cannot be handled */
    int                   symtiming;          /**< timing of computing and handling symmetries (0 = before presolving, 1 = during presolving, 2 = after presolving) */
-   int                   maxnnewinvolus;     /**< maximum number of involutions that is tried to be generated from already known involutions per symmetry component */
+   int                   maxnnewinvolus;     /**< maximum number of newly generated involutions per symmetry component */
    SCIP_Bool             dispsyminfo;        /**< Shall symmetry information be printed to the terminal? */
 
    /* for symmetry constraints */
@@ -7293,7 +7293,7 @@ SCIP_Bool isInvolution(
 
    assert( perm != NULL );
    assert( lenperm > 0 );
-
+   asseert( istransposition != NULL );
    *istransposition = FALSE;
 
    for (i = 0; i < lenperm; ++i)
@@ -7304,8 +7304,8 @@ SCIP_Bool isInvolution(
          ++lensupport;
    }
 
-   *istransposition = lensupport == 2;
-
+   if ( lensupport == 2 )
+      *istransposition = TRUE;
    return TRUE;
 }
 
@@ -8377,7 +8377,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/maxnnewivolus",
-         "maximum number of involutions that is tried to be generated from already known involutions per symmetry component",
+         "maximum number of newly generated involutions per symmetry component",
          &propdata->maxnnewinvolus, TRUE, DEFAULT_MAXNNEWINVOLUS, 0, 2000, NULL, NULL) );
 
    /* for symmetry detection tool Nauty, we add further parameters to terminate it early */
