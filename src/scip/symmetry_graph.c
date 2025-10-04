@@ -1281,21 +1281,6 @@ SCIP_Bool isFixedVar(
    return FALSE;
 }
 
-/** returns whether two numbers are equal (up to epsilon) */
-static
-SCIP_Bool isEQ(
-   SCIP_Real             num1,               /**< first number */
-   SCIP_Real             num2,               /**< second number */
-   SCIP_Real             eps                 /**< epsilon value for comparison */
-   )
-{
-   assert(eps >= 0.0);
-
-   if( (num1 < num2 - eps) || (num2 < num1 - eps) )
-      return FALSE;
-   return TRUE;
-}
-
 /** computes colors of nodes and edges
  *
  * Colors are detected by sorting different types of nodes (variables, operators, values, and constraint) and edges.
@@ -1473,7 +1458,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
       {
          thisval = graph->vals[perm[i]];
 
-         if( ! isEQ(prevval, thisval, graph->eps) )
+         if( ! EPSEQ(prevval, thisval, graph->eps) )
             ++color;
 
          graph->valcolors[perm[i]] = color;
@@ -1523,7 +1508,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
             if( SCIPisInfinity(scip, thisval) )
                break;
 
-            if( ! isEQ(prevval, thisval, graph->eps) )
+            if( ! EPSEQ(prevval, thisval, graph->eps) )
                ++color;
 
             graph->edgecolors[perm[i]] = color;
