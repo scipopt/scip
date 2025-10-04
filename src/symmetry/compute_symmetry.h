@@ -74,7 +74,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
    );
 
-/** compute generators of symmetry group of symmetry detection graph
+/** compute generators of symmetry group of the complete symmetry detection graph
  *
  *  If the symmetry detection graph (SDG) has k nodes, the first k entries of a generator correspond to the nodes
  *  of the SDG. The remaining entries of the generator correspond to the variables (and possibly their negation).
