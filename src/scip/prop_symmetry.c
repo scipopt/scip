@@ -7380,9 +7380,28 @@ SCIP_RETCODE tryGenerateInvolutions(
                commute = FALSE;
          }
          /* only consider involutions that have non-disjoint support */
-         if( ! commute )
+         if( commute )
          {
-            /* permutations do not commute, compute perm1*perm2*perm1 */
+            /* permutations commute, store perm1 * perm2 if we do not know it yet */
+            for (i = 0; i < propdata->npermvars; ++i)
+               tmpperm[i] = perm1[perm2[i]];
+
+            if ( isPermKnown(tmpperm, propdata->npermvars, propdata->perms, complen,
+                  &propdata->components[propdata->componentbegins[cidx]]) )
+               continue;
+            if ( isPermKnown(tmpperm, propdata->npermvars, newinvols, nnewinvols, NULL) )
+               continue;
+            assert( nnewinvols < lennewinvols );
+
+            /* recompute permutation, because we possibly also need the entries for negated variables */
+            SCIP_CALL( SCIPallocBufferArray(scip, &newinvols[nnewinvols], permlen) );
+            for (i = 0; i < permlen; ++i)
+               newinvols[nnewinvols][i] = perm1[perm2[i]];
+            ++nnewinvols;
+         }
+         else
+         {
+            /* permutations do not commute, compute perm1 * perm2 * perm1 */
             for (i = 0; i < propdata->npermvars; ++i)
                tmpperm[i] = perm1[perm2[perm1[i]]];
 
@@ -7423,25 +7442,6 @@ SCIP_RETCODE tryGenerateInvolutions(
             SCIP_CALL( SCIPallocBufferArray(scip, &newinvols[nnewinvols], permlen) );
             for (i = 0; i < permlen; ++i)
                newinvols[nnewinvols][i] = perm2[perm1[perm2[i]]];
-            ++nnewinvols;
-         }
-         else
-         {
-            /* permutations commute, store perm1*perm2 if we do not know it yet */
-            for (i = 0; i < propdata->npermvars; ++i)
-               tmpperm[i] = perm1[perm2[i]];
-
-            if ( isPermKnown(tmpperm, propdata->npermvars, propdata->perms, complen,
-                  &propdata->components[propdata->componentbegins[cidx]]) )
-               continue;
-            if ( isPermKnown(tmpperm, propdata->npermvars, newinvols, nnewinvols, NULL) )
-               continue;
-            assert( nnewinvols < lennewinvols );
-
-            /* recompute permutation, because we possibly also need the entries for negated variables */
-            SCIP_CALL( SCIPallocBufferArray(scip, &newinvols[nnewinvols], permlen) );
-            for (i = 0; i < permlen; ++i)
-               newinvols[nnewinvols][i] = perm1[perm2[i]];
             ++nnewinvols;
          }
 
