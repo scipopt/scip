@@ -2993,3 +2993,139 @@ Test(test_compute_symmetry, doublelex, .description = "detect action correspondi
    }
    SCIPfreeBlockMemoryArray(scip, &lexmatrix, nrows);
 }
+
+/* TEST 34 symmetry computation of SDG for permutation symmetries */
+Test(test_compute_symmetry, symsdgnodes, .description = "detect symmetries of full SDG")
+{
+   SCIP_VAR* vars[4];
+   SYM_GRAPH* graph;
+   int opnode1;
+   int opnode2;
+   int opnode3;
+   int nperms;
+   int nmaxperms;
+   int** perms;
+   SCIP_Real log10groupsize;
+   SCIP_Real symcodetime;
+   int i;
+
+   /* skip test if no symmetry can be computed */
+   if ( ! SYMcanComputeSymmetry() )
+      return;
+
+   SCIP_CALL( SCIPcreateProbBasic(scip, "basic1"));
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &vars[0], "x1", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, vars[0]) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &vars[1], "x2", 0.0, 1.0, 2.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, vars[1]) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &vars[2], "x3", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, vars[2]) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &vars[3], "x4", 0.0, 1.0, 2.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, vars[3]) );
+
+   /* create some symmetry detection graph  */
+   SCIP_CALL( SCIPcreateSymgraph(scip, SYM_SYMTYPE_PERM, &graph, vars, 4, 3, 0, 0, 6, 0.0) );
+
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, 0, &opnode1) );
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, 1, &opnode2) );
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, 1, &opnode3) );
+
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnode1, opnode2, FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnode2, SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]), FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnode2, SCIPgetSymgraphVarnodeidx(scip, graph, vars[1]), FALSE, 0.0) );
+
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnode1, opnode3, FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnode3, SCIPgetSymgraphVarnodeidx(scip, graph, vars[2]), FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnode3, SCIPgetSymgraphVarnodeidx(scip, graph, vars[3]), FALSE, 0.0) );
+
+   /* compute its colors and compute symmetries */
+   SCIP_CALL( SCIPcomputeSymgraphColors(scip, graph, 0) );
+   SCIP_CALL( SYMcomputeSymmetryGeneratorsNode(scip, 0, graph, &nperms, &nmaxperms, &perms, &log10groupsize, &symcodetime) );
+
+   cr_assert( nperms == 1 );
+   /* check images of operator nodes */
+   cr_assert( perms[0][opnode1] == opnode1 );
+   cr_assert( perms[0][opnode2] == opnode3 );
+   cr_assert( perms[0][opnode3] == opnode2 );
+   /* check images of variables (1 -> 3, 2 -> 4)*/
+   cr_assert( perms[0][opnode3 + 1] == opnode3 + 3 );
+   cr_assert( perms[0][opnode3 + 2] == opnode3 + 4 );
+   cr_assert( perms[0][opnode3 + 3] == opnode3 + 1 );
+   cr_assert( perms[0][opnode3 + 4] == opnode3 + 2 );
+
+   SCIPfreeBlockMemoryArray(scip, &perms[0], 7);
+   SCIPfreeBlockMemoryArray(scip, &perms, nmaxperms);
+
+   for( i = 0; i < 4; ++i )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );
+   }
+}
+
+/* TEST 35 symmetry computation of SDG for reflection symmetries */
+Test(test_compute_symmetry, symsdgnodes2, .description = "detect symmetries of full SDG")
+{
+   SCIP_VAR* vars[2];
+   SYM_GRAPH* graph;
+   int opnode1;
+   int opnode2;
+   int opnode3;
+   int nperms;
+   int nmaxperms;
+   int** perms;
+   SCIP_Real log10groupsize;
+   SCIP_Real symcodetime;
+   int i;
+
+   /* skip test if no symmetry can be computed */
+   if ( ! SYMcanComputeSymmetry() )
+      return;
+
+   SCIP_CALL( SCIPcreateProbBasic(scip, "basic1"));
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &vars[0], "x1", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, vars[0]) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &vars[1], "x2", 0.0, 1.0, -1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, vars[1]) );
+
+   /* create some symmetry detection graph  */
+   SCIP_CALL( SCIPcreateSymgraph(scip, SYM_SYMTYPE_SIGNPERM, &graph, vars, 2, 3, 0, 0, 6, 0.0) );
+
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, 0, &opnode1) );
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, 1, &opnode2) );
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, 1, &opnode3) );
+
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnode1, opnode2, FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnode2, SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]), TRUE, 1.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnode2, SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[0]),
+         TRUE, -1.0) );
+
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnode1, opnode3, FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnode3, SCIPgetSymgraphVarnodeidx(scip, graph, vars[1]), TRUE, -1.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnode3, SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[1]),
+         TRUE, 1.0) );
+
+   /* compute its colors and compute symmetries */
+   SCIP_CALL( SCIPcomputeSymgraphColors(scip, graph, 0) );
+   SCIP_CALL( SYMcomputeSymmetryGeneratorsNode(scip, 0, graph, &nperms, &nmaxperms, &perms, &log10groupsize, &symcodetime) );
+
+   cr_assert( nperms == 1 );
+   /* check images of operator nodes */
+   cr_assert( perms[0][opnode1] == opnode1 );
+   cr_assert( perms[0][opnode2] == opnode3 );
+   cr_assert( perms[0][opnode3] == opnode2 );
+   /* check images of variables (1 -> -2, 2 -> -1) */
+   cr_assert( perms[0][opnode3 + 1] == opnode3 + 4 );
+   cr_assert( perms[0][opnode3 + 2] == opnode3 + 3 );
+   cr_assert( perms[0][opnode3 + 3] == opnode3 + 2 );
+   cr_assert( perms[0][opnode3 + 4] == opnode3 + 1 );
+
+   SCIPfreeBlockMemoryArray(scip, &perms[0], 7);
+   SCIPfreeBlockMemoryArray(scip, &perms, nmaxperms);
+
+   for( i = 0; i < 2; ++i )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );
+   }
+}
