@@ -172,12 +172,7 @@ void nautyhook(
    }
 
    /* store permutation */
-   if ( data_.symgrouptype != SYM_GROUPTYPE_NODE )
-   {
-      if ( SCIPduplicateBlockMemoryArray(data_.scip, &pp, p, permlen) != SCIP_OKAY )
-         return;
-   }
-   else
+   if ( data_.symgrouptype == SYM_GROUPTYPE_NODE )
    {
       int cnt = 0;
       int j;
@@ -189,6 +184,11 @@ void nautyhook(
          pp[cnt] = p[j] - nsymvars;
       for (j = 0; j < nsymvars; ++j, ++cnt)
          pp[cnt] = p[j] + data_.nnodessdg;
+   }
+   else
+   {
+      if ( SCIPduplicateBlockMemoryArray(data_.scip, &pp, p, permlen) != SCIP_OKAY )
+         return;
    }
 
    data_.perms[data_.nperms++] = pp;

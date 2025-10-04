@@ -130,18 +130,18 @@ void dejavuhook(
       return;
 
    /* store symmetry */
-   if ( data->symgrouptype != SYM_GROUPTYPE_NODE )
-   {
-      for (int j = 0; j < permlen; ++j)
-         p[j] = (int) aut[j];
-   }
-   else
+   if ( data->symgrouptype == SYM_GROUPTYPE_NODE )
    {
       int cnt = 0;
       for (int j = nsymvars; j < permlen; ++j, ++cnt)
          p[cnt] = (int) aut[j] - nsymvars;
       for (int j = 0; j < nsymvars; ++j, ++cnt)
          p[cnt] = (int) aut[j] + data->nnodessdg;
+   }
+   else
+   {
+      for (int j = 0; j < permlen; ++j)
+         p[j] = (int) aut[j];
    }
 
    /* check whether we should allocate space for perms */
