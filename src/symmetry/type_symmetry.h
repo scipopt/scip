@@ -98,8 +98,8 @@ typedef enum SYM_Consoptype SYM_CONSOPTYPE;
 enum SYM_Grouptype
 {
    SYM_GROUPTYPE_VAR     = 0,                /**< group of variable symmetries */
-   SYM_GROUPTYPE_SDG     = 1,                /**< group of symmetries of nodes of symmetry detection graph */
-   SYM_GROUPTYPE_FULL    = 2                 /**< group of symmetries of full symmetry detection graph (incl. edges) */
+   SYM_GROUPTYPE_NODE    = 1,                /**< group of symmetries of nodes of symmetry detection graph */
+   SYM_GROUPTYPE_SDG     = 2                 /**< group of symmetries of full symmetry detection graph (incl. edges) */
 };
 typedef enum SYM_Grouptype SYM_GROUPTYPE;
 

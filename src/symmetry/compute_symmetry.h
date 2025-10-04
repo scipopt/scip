@@ -80,7 +80,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
  *  of the SDG. The remaining entries of the generator correspond to the variables (and possibly their negation).
  */
 SCIP_EXPORT
-SCIP_RETCODE SYMcomputeSymmetryGeneratorsSDG(
+SCIP_RETCODE SYMcomputeSymmetryGeneratorsNode(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */

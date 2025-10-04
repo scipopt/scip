@@ -127,11 +127,11 @@ void nautyhook(
    case SYM_GROUPTYPE_VAR:
       permlen = nsymvars;
       break;
-   case SYM_GROUPTYPE_SDG:
+   case SYM_GROUPTYPE_NODE:
       permlen = nsymvars + data_.nnodessdg;
       break;
    default:
-      assert( data_.symgrouptype == SYM_GROUPTYPE_FULL );
+      assert( data_.symgrouptype == SYM_GROUPTYPE_SDG );
       permlen = n;
    }
 
@@ -172,7 +172,7 @@ void nautyhook(
    }
 
    /* store permutation */
-   if ( data_.symgrouptype != SYM_GROUPTYPE_SDG )
+   if ( data_.symgrouptype != SYM_GROUPTYPE_NODE )
    {
       if ( SCIPduplicateBlockMemoryArray(data_.scip, &pp, p, permlen) != SCIP_OKAY )
          return;
@@ -282,11 +282,11 @@ void traceshook(
    case SYM_GROUPTYPE_VAR:
       permlen = nsymvars;
       break;
-   case SYM_GROUPTYPE_SDG:
+   case SYM_GROUPTYPE_NODE:
       permlen = nsymvars + data_.nnodessdg;
       break;
    default:
-      assert( data_.symgrouptype == SYM_GROUPTYPE_FULL );
+      assert( data_.symgrouptype == SYM_GROUPTYPE_SDG );
       permlen = n;
    }
 
@@ -1463,7 +1463,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
  *  If the symmetry detection graph (SDG) has k nodes, the first k entries of a generator correspond to the nodes
  *  of the SDG. The remaining entries of the generator correspond to the variables (and possibly their negation).
  */
-SCIP_RETCODE SYMcomputeSymmetryGeneratorsSDG(
+SCIP_RETCODE SYMcomputeSymmetryGeneratorsNode(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
@@ -1475,7 +1475,7 @@ SCIP_RETCODE SYMcomputeSymmetryGeneratorsSDG(
    )
 {
    SCIP_CALL( computeSymmetryGenerators(scip, maxgenerators, symgraph, nperms, nmaxperms,
-         perms, log10groupsize, symcodetime, SYM_GROUPTYPE_SDG) );
+         perms, log10groupsize, symcodetime, SYM_GROUPTYPE_NODE) );
 
    return SCIP_OKAY;
 }
@@ -1623,7 +1623,7 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    data_.maxgenerators = 0;
    data_.perms = NULL;
    data_.symtype = symtype;
-   data_.symgrouptype = SYM_GROUPTYPE_FULL;
+   data_.symgrouptype = SYM_GROUPTYPE_SDG;
    data_.nnodessdg = SCIPgetSymgraphNNodes(G1);
    data_.ntreenodes = 0;
    SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxncells", &data_.maxncells) ); /*lint !e641*//*lint !e732*/

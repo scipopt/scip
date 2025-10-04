@@ -107,11 +107,11 @@ void dejavuhook(
    case SYM_GROUPTYPE_VAR:
       permlen = nsymvars;
       break;
-   case SYM_GROUPTYPE_SDG:
+   case SYM_GROUPTYPE_NODE:
       permlen = nsymvars + data->nnodessdg;
       break;
    default:
-      assert( data->symgrouptype == SYM_GROUPTYPE_FULL );
+      assert( data->symgrouptype == SYM_GROUPTYPE_SDG );
       permlen = n;
    }
 
@@ -130,7 +130,7 @@ void dejavuhook(
       return;
 
    /* store symmetry */
-   if ( data->symgrouptype != SYM_GROUPTYPE_SDG )
+   if ( data->symgrouptype != SYM_GROUPTYPE_NODE )
    {
       for (int j = 0; j < permlen; ++j)
          p[j] = (int) aut[j];
@@ -349,7 +349,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
  *  If the symmetry detection graph (SDG) has k nodes, the first k entries of a generator correspond to the nodes
  *  of the SDG. The remaining entries of the generator correspond to the variables (and possibly their negation).
  */
-SCIP_RETCODE SYMcomputeSymmetryGeneratorsSDG(
+SCIP_RETCODE SYMcomputeSymmetryGeneratorsNode(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
@@ -391,7 +391,7 @@ SCIP_RETCODE SYMcomputeSymmetryGeneratorsSDG(
    /* compute symmetries */
    SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(graph), &dejavugraph,
          SCIPgetSymgraphNNodes(graph), SCIPgetSymgraphNVars(graph), maxgenerators,
-         perms, nperms, nmaxperms, log10groupsize, SYM_GROUPTYPE_SDG, symcodetime) );
+         perms, nperms, nmaxperms, log10groupsize, SYM_GROUPTYPE_NODE, symcodetime) );
 
    return SCIP_OKAY;
 }
@@ -423,7 +423,7 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
 
    /* compute symmetries */
    SCIP_CALL_ABORT( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(G1), &dejavugraph, -1, -1, 0,
-         &perms, &nperms, &nmaxperms, &log10groupsize, SYM_GROUPTYPE_FULL, &symcodetime) );
+         &perms, &nperms, &nmaxperms, &log10groupsize, SYM_GROUPTYPE_SDG, &symcodetime) );
 
    /* since G1 and G2 are connected and disjoint, they are isomorphic iff there is a permutation
     * mapping a node from G1 to a node of G2
