@@ -7427,7 +7427,7 @@ SCIP_RETCODE tryGenerateInvolutions(
             if ( nnewinvols == lennewinvols )
                break;
 
-            /* compute perm2*perm1*perm2 */
+            /* compute perm2 * perm1 * perm2 */
             for (i = 0; i < propdata->npermvars; ++i)
                tmpperm[i] = perm2[perm1[perm2[i]]];
 
