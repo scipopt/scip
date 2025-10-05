@@ -1526,7 +1526,7 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    data_.symtype = symtype;
    data_.restricttovars = FALSE;
    data_.ntreenodes = 0;
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxlevel", &data_.maxlevel) );
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxlevel", &data_.maxlevel) ); /*lint !e641*//*lint !e732*/
 
    /* call nauty/traces */
 #ifdef NAUTY
