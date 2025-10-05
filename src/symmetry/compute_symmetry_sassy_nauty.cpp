@@ -97,8 +97,7 @@ struct NAUTY_Data
 {
    SCIP*                 scip;               /**< SCIP pointer */
    int                   ntreenodes;         /**< number of nodes visitied in nauty's search tree */
-   int                   maxncells;          /**< maximum number of cells in nauty's search tree */
-   int                   maxnnodes;          /**< maximum number of nodes in nauty's search tree */
+   int                   maxlevel;           /**< maximum depth level of nauty's search tree (0: unlimited) */
 };
 
 /** static data for nauty callback */
@@ -215,25 +214,15 @@ void nautyterminationhook(
    SCIP_Bool terminate = FALSE;
    nautydata_.ntreenodes++;
 
-   /* add some iteration limit to avoid spending too much time in nauty  */
-   if ( numcells >= nautydata_.maxncells )
+   /* add depth limit to avoid spending too much time in nauty and avoid too many levels of recursion */
+   if ( level > nautydata_.maxlevel && nautydata_.maxlevel != 0 )
    {
       terminate = TRUE;
       SCIPverbMessage(nautydata_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-         "symmetry computation terminated early, because number of cells %d in Nauty exceeds limit of %d\n",
-         numcells, nautydata_.maxncells);
+         "symmetry computation terminated early, because depth level %d in Nauty exceeds limit of %d\n",
+         level, nautydata_.maxlevel);
       SCIPverbMessage(nautydata_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-         "for running full symmetry detection, increase value of parameter propagating/symmetry/nautymaxncells\n");
-   }
-   else if ( nautydata_.ntreenodes >= nautydata_.maxnnodes )
-   {
-      terminate = TRUE;
-      SCIPverbMessage(nautydata_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-         "symmetry computation terminated early, because number of"
-         " nodes %d in Nauty's search tree exceeds limit of %d\n", nautydata_.ntreenodes, nautydata_.maxnnodes);
-      SCIPverbMessage(nautydata_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-         "for running full symmetry detection, increase value of"
-         " parameter propagating/symmetry/nautymaxnnodes\n");
+         "for running full symmetry detection, increase value of parameter propagating/symmetry/nautymaxlevel\n");
    }
 
    if ( terminate )
@@ -341,8 +330,7 @@ SCIP_RETCODE computeAutomorphisms(
 #ifdef NAUTY
    nautydata_.scip = scip;
    nautydata_.ntreenodes = 0;
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxncells", &nautydata_.maxncells) );
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxnnodes", &nautydata_.maxnnodes) );
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxlevel", &nautydata_.maxlevel) );
 #endif
 
    oldtime = SCIPgetSolvingTime(scip);
