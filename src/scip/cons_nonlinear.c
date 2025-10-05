@@ -3538,6 +3538,24 @@ SCIP_RETCODE detectNlhdlrs(
          FALSE, FALSE) );
       conshdlrdata->indetect = FALSE;
 
+      /* presolveSingleLockedVars() may need the activity of product expressions in a sum expr that is in the root expr of a nonlinear constraint with only one finite side
+       * if this presolver may be run in the current presolve round (presoltiming=exhaustive could be added as additional criterion),
+       * then we ensure that a routine will be present to compute this activity (SCIPregisterExprUsageNonlinear actually updates activity already)
+       */
+      if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !conshdlrdata->checkedvarlocks && conshdlrdata->checkvarlocks != 'd'
+         && (SCIPisInfinity(scip, -consdata->lhs) || SCIPisInfinity(scip, consdata->rhs)) && SCIPisExprSum(scip, consdata->expr) )
+      {
+         int c;
+         for( c = 0; c < SCIPexprGetNChildren(consdata->expr); ++c )
+         {
+            expr = SCIPexprGetChildren(consdata->expr)[c];
+            if( SCIPisExprProduct(scip, expr) )
+            {
+               SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, FALSE, TRUE, FALSE, FALSE) );
+            }
+         }
+      }
+
       /* compute integrality information for all subexpressions */
       SCIP_CALL( SCIPcomputeExprIntegrality(scip, consdata->expr) );
 
@@ -5588,10 +5606,7 @@ SCIP_RETCODE removeSingleLockedVars(
  *  If a continuous variable has bounds [0,1], then the variable type is changed to be binary.
  *  Otherwise, a bound disjunction constraint is added.
  *
- *  @todo the same reduction can be applied if g(x) is not concave, but monotone in \f$x_i\f$ for g(x) &le; rhs
- *  @todo extend this to cases where a variable can appear in a monomial with an exponent, essentially relax
- *    g(x) to \f$\sum_i [a_i,b_i] x^{p_i}\f$ for a single variable \f$x\f$ and try to conclude montonicity or convexity/concavity
- *    on this (probably have one or two flags per variable and update this whenever another \f$x^{p_i}\f$ is found)
+ *  @todo the same reduction can be applied if g(x) is not concave, but monotone in \f$x_i\f$ for g(x) &le; rhs (done in prop_dualfix?)
  */
 static
 SCIP_RETCODE presolveSingleLockedVars(
@@ -5684,16 +5699,39 @@ SCIP_RETCODE presolveSingleLockedVars(
          if( SCIPisExprVar(scip, child) )
             continue;
 
-         /* consider products prod_j f_j(x); ignore f_j(x) if it is a single variable, otherwise iterate through the
-          * expression that represents f_j and remove each variable expression from exprcands
+         /* consider products coef * prod_j f_j(x)
+          * - if f_j(x) is a single variable, ignore it
+          * - if f_j(x) = x^(2k), then keep it if product is concave when fixing all other factor;
+          *   since x^(2k) >= 0, it suffices to check that the activity of the whole product is non-negative if haslhs or non-positive if hasrhs
+          * - remove all other variable expressions from exprcand
           */
-         else if( SCIPisExprProduct(scip, child) )
+         if( SCIPisExprProduct(scip, child) )
          {
             int j;
+            SCIP_INTERVAL productactivity;
+            SCIP_Bool keepevenpower;
+
+            /* activity has been ensured to be uptodate (or at least still valid) by
+             * call to SCIPregisterExprUsageNonlinear() in detectNlhdlrs() in canonicalize
+             */
+            productactivity = SCIPexprGetActivity(child);
+
+            /* check whether variables in even-powered factor terms can be restricted to bounds (as in SCIPisExprPower() below) */
+            keepevenpower = (haslhs && productactivity.inf >= 0.0) || (hasrhs && productactivity.sup <= 0.0);
 
             for( j = 0; j < SCIPexprGetNChildren(child); ++j )
             {
                SCIP_EXPR* grandchild = SCIPexprGetChildren(child)[j];
+               assert(grandchild != NULL);
+
+               /* if grandchild is x^(2k), then do not remove x from exprcands */
+               if( keepevenpower && SCIPisExprPower(scip, grandchild) && SCIPisExprVar(scip, SCIPexprGetChildren(grandchild)[0]) )
+               {
+                  SCIP_Real exponent = SCIPgetExponentExprPow(grandchild);
+
+                  if( exponent > 1.0 && fmod(exponent, 2.0) == 0.0 )
+                     continue;
+               }
 
                if( !SCIPisExprVar(scip, grandchild) )
                {
