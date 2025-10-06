@@ -50,6 +50,8 @@
 #include "scip/type_heur.h"
 #include "scip/type_relax.h"
 #include "scip/type_misc.h"
+#include "scip/type_certificate.h"
+#include "scip/type_rational.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -151,12 +153,18 @@ struct SCIP_Stat
    SCIP_Real             lastprimalbound;    /**< last (non-infinite) primal bound (in transformed space) for integral evaluation */
    SCIP_Real             lastdualbound;      /**< last (non-infinite) dual bound (in transformed space) for integral evaluation */
    SCIP_Real             lastlowerbound;     /**< last lower bound (in transformed space) for integral evaluation */
+   SCIP_RATIONAL*        lastlowerboundexact;/**< last lower bound (in transformed space) for integral evaluation */
    SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
    SCIP_Real             rootlpbestestimate; /**< best-estimate for final root LP solution that changes with every pseudo-cost update */
    SCIP_Real             referencebound;     /**< objective bound for reference purposes */
    SCIP_Real             bestefficacy;       /**< best efficacy of global pool cut seen so far */
    SCIP_Real             minefficacyfac;     /**< factor of best efficacy to use as min efficacy */
    SCIP_Real             detertimecnt;       /**< internal counter for deterministic time */
+   SCIP_Real             boundingerrorbs;    /**< aggregated error of all bound shift calls */
+   SCIP_Real             boundingerrorps;    /**< aggregated error of all project-and-shift calls */
+   SCIP_Real             boundingerrorexlp;  /**< aggregated error of all exact lp calls */
+   SCIP_Real             timefailexlpinf;    /**< time spent in exact lp that failed to prove infeasibility */
+   SCIP_Real             timefailexlp;       /**< time spent in exact lp that failed to prove bounds */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           solvingtimeoverall; /**< total time used for solving (including presolving) during reoptimization */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
@@ -169,6 +177,12 @@ struct SCIP_Stat
    SCIP_CLOCK*           divinglptime;       /**< diving and probing LP solution time */
    SCIP_CLOCK*           strongbranchtime;   /**< strong branching time */
    SCIP_CLOCK*           conflictlptime;     /**< conflict analysis LP solution time */
+   SCIP_CLOCK*           provedfeaslptime;   /**< time spent proving safe bounds using exact lp*/
+   SCIP_CLOCK*           provedinfeaslptime; /**< time spent proving safe infeasibility using exact lp */
+   SCIP_CLOCK*           provedfeasbstime;   /**< time spent proving safe bounds using bound shift*/
+   SCIP_CLOCK*           provedinfeasbstime; /**< time spent proving safe infeasibility using bound shift*/
+   SCIP_CLOCK*           provedfeaspstime;   /**< time spent proving safe bounds using bound project-and-shift*/
+   SCIP_CLOCK*           provedinfeaspstime; /**< time spent proving safe infeasibility using project-and-shift*/
    SCIP_CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    SCIP_CLOCK*           relaxsoltime;       /**< time needed for storing feasible relaxation solutions */
    SCIP_CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
@@ -182,6 +196,7 @@ struct SCIP_Stat
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */
    SCIP_VISUAL*          visual;             /**< visualization information */
+   SCIP_CERTIFICATE*     certificate;        /**< CERTIFICATE Tool information */
    SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
@@ -211,6 +226,27 @@ struct SCIP_Stat
    SCIP_Longint          nstrongbranchs;     /**< number of strong branching calls */
    SCIP_Longint          nrootstrongbranchs; /**< number of strong branching calls at the root node */
    SCIP_Longint          nconflictlps;       /**< number of LPs solved during conflict analysis */
+   SCIP_Longint          nexlpinf;           /**< number of exact LPs solved to prove infeasibility */
+   SCIP_Longint          nfailexlpinf;       /**< number of exact LPs failed to prove infeasibility */
+   SCIP_Longint          nexlp;              /**< number of exact LPs solved for safe dual bounding */
+   SCIP_Longint          nexlpinter;         /**< number of exact LPs solved because of depth interleaving */
+   SCIP_Longint          nexlpintfeas;       /**< number of exact LPs solved for integrality polishing */
+   SCIP_Longint          nexlpboundexc;      /**< number of exact LPs solved because close to cutoff bound */
+   SCIP_Longint          nfailexlp;          /**< number of exact LPs failed to compute a safe dual bound */
+   SCIP_Longint          nboundshift;        /**< number of boundshift calls for feasible lp*/
+   SCIP_Longint          nfailboundshift;    /**< number of failed boundshift calls for feasible lp */
+   SCIP_Longint          nboundshiftinf;     /**< number of boundshift calls for infeasible lp */
+   SCIP_Longint          nfailboundshiftinf; /**< number of failed boundshift calls for feasible lp */
+   SCIP_Longint          nboundshiftobjlim;  /**< number of boundshift calls for objlim */
+   SCIP_Longint          nboundshiftobjlimfail; /**< number of failed boundshift calls for objlim */
+   SCIP_Longint          nprojshift;         /**< number of project-and-shift calls for feasible lp */
+   SCIP_Longint          nfailprojshift;     /**< number of failed project-and-shift calls for feasible lp */
+   SCIP_Longint          nprojshiftinf;      /**< number of project-and-shift calls for infeasible lp */
+   SCIP_Longint          nfailprojshiftinf;  /**< number of failed project-and-shift calls for infeasible lp */
+   SCIP_Longint          nprojshiftobjlim;   /**< number of project-and-shift calls for objlim */
+   SCIP_Longint          nprojshiftobjlimfail; /**< number of failed project-and-shift calls for objlim */
+   SCIP_Longint          niterationsexlp;    /**< number of exact lp iterations attempting feasible dual bound */
+   SCIP_Longint          niterationsexlpinf; /**< number of exact lp iterations attempting infeasibility proof */
    SCIP_Longint          nnlps;              /**< number of NLPs solved */
    SCIP_Longint          nisstoppedcalls;    /**< number of calls to SCIPsolveIsStopped() */
    SCIP_Longint          totaldivesetdepth;  /**< the total probing depth over all diveset calls */

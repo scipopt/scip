@@ -144,7 +144,7 @@ SCIP_DECL_READERREAD(readerReadBpa)
    }
 
    lineno = 0;
-   sprintf(name, "++ uninitialized ++");
+   (void)sprintf(name, "++ uninitialized ++");
 
    /* read problem name */
    if( !SCIPfeof(file) )
@@ -155,7 +155,7 @@ SCIP_DECL_READERREAD(readerReadBpa)
       lineno++;
 
       /* parse dimension line */
-      sprintf(format, "%%%ds\n", SCIP_MAXSTRLEN);
+      (void)sprintf(format, "%%%ds\n", SCIP_MAXSTRLEN);
       nread = sscanf(buffer, format, name);
       if( nread == 0 )
       {

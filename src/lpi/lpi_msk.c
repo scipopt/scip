@@ -1171,8 +1171,21 @@ SCIP_RETCODE SCIPlpiDelCols(
    assert(lpi != NULL);
    assert(lpi->mosekenv != NULL);
    assert(lpi->task != NULL);
+   assert(firstcol >= 0);
+   assert(firstcol <= lastcol + 1);
+#ifndef NDEBUG
+   {
+      int ncols;
+      SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+      assert(lastcol < ncols);
+   }
+#endif
 
    SCIPdebugMessage("Calling SCIPlpiDelCols (%d)\n", lpi->lpid);
+
+   /* handle empty range */
+   if( firstcol > lastcol )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1343,8 +1356,21 @@ SCIP_RETCODE SCIPlpiDelRows(
    assert(lpi != NULL);
    assert(lpi->mosekenv != NULL);
    assert(lpi->task != NULL);
+   assert(firstrow >= 0);
+   assert(firstrow <= lastrow + 1);
+#ifndef NDEBUG
+   {
+      int nrows;
+      SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+      assert(lastrow < nrows);
+   }
+#endif
 
    SCIPdebugMessage("Calling SCIPlpiDelRows (%d)\n", lpi->lpid);
+
+   /* handle empty range */
+   if( firstrow > lastrow )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1907,12 +1933,13 @@ SCIP_RETCODE SCIPlpiGetCols(
    assert(lpi->task != NULL);
    assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
-
+   assert(firstcol >= 0);
+   assert(firstcol <= lastcol + 1);
 #ifndef NDEBUG
    {
       int ncols;
       SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
-      assert(0 <= firstcol && firstcol <= lastcol && lastcol < ncols);
+      assert(lastcol < ncols);
    }
 #endif
 
@@ -1945,12 +1972,13 @@ SCIP_RETCODE SCIPlpiGetRows(
    assert(lpi->task != NULL);
    assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
-
+   assert(firstrow >= 0);
+   assert(firstrow <= lastrow + 1);
 #ifndef NDEBUG
    {
       int nrows;
       SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
-      assert(0 <= firstrow && firstrow <= lastrow && lastrow < nrows);
+      assert(lastrow < nrows);
    }
 #endif
 
@@ -1984,11 +2012,19 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(lpi != NULL);
    assert(lpi->mosekenv != NULL);
    assert(lpi->task != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol);
    assert(colnames != NULL || namestoragesize == 0);
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(firstcol >= 0);
+   assert(firstcol <= lastcol + 1);
+#ifndef NDEBUG
+   {
+      int ncols;
+      SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+      assert(lastcol < ncols);
+   }
+#endif
 
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
 
@@ -2009,11 +2045,19 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(lpi != NULL);
    assert(lpi->mosekenv != NULL);
    assert(lpi->task != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow);
    assert(rownames != NULL || namestoragesize == 0);
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(firstrow >= 0);
+   assert(firstrow <= lastrow + 1);
+#ifndef NDEBUG
+   {
+      int nrows;
+      SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+      assert(lastrow < nrows);
+   }
+#endif
 
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
 
@@ -2052,8 +2096,16 @@ SCIP_RETCODE SCIPlpiGetObj(
    assert(lpi != NULL);
    assert(lpi->mosekenv != NULL);
    assert(lpi->task != NULL);
-   assert(firstcol <= lastcol);
    assert(vals != NULL);
+   assert(firstcol >= 0);
+   assert(firstcol <= lastcol + 1);
+#ifndef NDEBUG
+   {
+      int ncols;
+      SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+      assert(lastcol < ncols);
+   }
+#endif
 
    SCIPdebugMessage("Calling SCIPlpiGetObj (%d)\n", lpi->lpid);
 
@@ -2074,7 +2126,15 @@ SCIP_RETCODE SCIPlpiGetBounds(
    assert(lpi != NULL);
    assert(lpi->mosekenv != NULL);
    assert(lpi->task != NULL);
-   assert(firstcol <= lastcol);
+   assert(firstcol >= 0);
+   assert(firstcol <= lastcol + 1);
+#ifndef NDEBUG
+   {
+      int ncols;
+      SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+      assert(lastcol < ncols);
+   }
+#endif
 
    SCIPdebugMessage("Calling SCIPlpiGetBounds (%d)\n", lpi->lpid);
 
@@ -2103,7 +2163,15 @@ SCIP_RETCODE SCIPlpiGetSides(
    assert(lpi != NULL);
    assert(lpi->mosekenv != NULL);
    assert(lpi->task != NULL);
-   assert(firstrow <= lastrow);
+   assert(firstrow >= 0);
+   assert(firstrow <= lastrow + 1);
+#ifndef NDEBUG
+   {
+      int nrows;
+      SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+      assert(lastrow < nrows);
+   }
+#endif
 
    SCIPdebugMessage("Calling SCIPlpiGetSides (%d)\n", lpi->lpid);
 
@@ -4922,7 +4990,7 @@ SCIP_RETCODE SCIPlpiFreeState(
    return SCIP_OKAY;
 }
 
-/** checks, whether the given LP state contains simplex basis information */
+/** checks whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */

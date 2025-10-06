@@ -28,7 +28,7 @@
  * @author Tobias Buchwald
  *
  * This heuristic tries to find solutions by taking the LP or NLP, rounding solution values, fixing the variables to the
- * rounded values and then changing some of the values.To determine which variable is changed we give each variable a
+ * rounded values and then changing some of the values. To determine which variable is changed we give each variable a
  * ranking dependent on its dualvalue.  We work with a transformed problem that is always feasible and has objective = 0
  * iff the original problem is also feasible. Thus we cannot expect to find really good solutions.
  */
@@ -57,6 +57,7 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
 #include "scip/scip_event.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -906,7 +907,7 @@ SCIP_RETCODE createSubSCIP(
    heurdata->solfound = FALSE;
    heurdata->nonimprovingRounds = 0;
 
-   /* we can't change the vartype in some constraints, so we have to check that only the right constraints are present*/
+   /* we can't change the vartype in some constraints, so we have to check that only the right constraints are present */
    conshdlrindi = SCIPfindConshdlr(scip, "indicator");
    conshdlrlin = SCIPfindConshdlr(scip, "linear");
    conshdlrnonlin = SCIPfindConshdlr(scip, "nonlinear");
@@ -919,7 +920,7 @@ SCIP_RETCODE createSubSCIP(
    conss = SCIPgetOrigConss(scip);
 
    /* for each constraint ask if it has an allowed type */
-   for (i = 0; i < nconss; i++ )
+   for( i = 0; i < nconss; i++ )
    {
       cons = conss[i];
       currentconshdlr = SCIPconsGetHdlr(cons);
@@ -970,6 +971,11 @@ SCIP_RETCODE createSubSCIP(
 
    /* copy parameter settings */
    SCIP_CALL( SCIPcopyParamSettings(scip, heurdata->subscip) );
+
+   /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+    * handler is in place to perform a final repair step
+    */
+   SCIP_CALL( SCIPenableExactSolving(heurdata->subscip, FALSE) );
 
    /* disable bound limits */
    SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/primal", SCIP_INVALID) );
@@ -2129,9 +2135,6 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       return SCIP_OKAY;
    }
 
-   /* If no NLP was constructed, then there were no nonlinearities after presolve.
-    * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem.
-    */
    SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 0LL) );
    retcode = SCIPsolve(heurdata->subscip);
    heurdata->isnlp = TRUE;
@@ -2147,6 +2150,9 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       return SCIP_OKAY;
    }
 
+   /* If no NLP was constructed, then there were no nonlinearities after presolve.
+    * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem.
+    */
    if( ! SCIPisNLPConstructed(heurdata->subscip) && retcode == SCIP_OKAY )
    {
       SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
@@ -2822,14 +2828,14 @@ SCIP_RETCODE SCIPincludeHeurDualval(
    BMSclearMemory(heurdata);
 
    /* include primal heuristic */
-
-   /* use SCIPincludeHeurBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecDualval, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyDualval) );

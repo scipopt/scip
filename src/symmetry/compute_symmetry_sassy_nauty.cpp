@@ -76,7 +76,7 @@
 #include "scip/cons_linear.h"
 #include "scip/scip_mem.h"
 #include "scip/symmetry_graph.h"
-
+#include "tinycthread/tinycthread.h"
 
 /** struct for symmetry callback */
 struct SYMMETRY_Data
@@ -103,7 +103,12 @@ struct NAUTY_Data
 };
 
 /** static data for nauty callback */
+#if defined(_Thread_local)
+static _Thread_local struct NAUTY_Data nautydata_;
+#else
 static struct NAUTY_Data nautydata_;
+#endif
+
 #endif
 
 /* ------------------- hook functions ------------------- */
@@ -268,18 +273,16 @@ SCIP_Bool SYMcanComputeSymmetry(void)
    return TRUE;
 }
 
-/** static variable for holding the name of nauty */
-static TLS_ATTR char nautyname[20];
+/** nauty/traces version string */
+#ifdef NAUTY
+static const char nautyname[] = {'N', 'a', 'u', 't', 'y', ' ', NAUTYVERSIONID/10000 + '0', '.', (NAUTYVERSIONID%10000)/1000 + '0', '.', (NAUTYVERSIONID%1000)/10 + '0', '\0'};
+#else
+static const char nautyname[] = {'T', 'r', 'a', 'c', 'e', 's', ' ', NAUTYVERSIONID/10000 + '0', '.', (NAUTYVERSIONID%10000)/1000 + '0', '.', (NAUTYVERSIONID%1000)/10 + '0', '\0'};
+#endif
 
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
 {
-   /* 28080+HAVE_TLS -> 2.8.(0)8 */
-#ifdef NAUTY
-   (void) SCIPsnprintf(nautyname, (int)sizeof(nautyname), "Nauty %d.%d.%d", NAUTYVERSIONID/10000, (NAUTYVERSIONID%10000)/1000, (NAUTYVERSIONID%1000)/10);
-#else
-   (void) SCIPsnprintf(nautyname, (int)sizeof(nautyname), "Traces %d.%d.%d", NAUTYVERSIONID/10000, (NAUTYVERSIONID%10000)/1000, (NAUTYVERSIONID%1000)/10);
-#endif
    return nautyname;
 }
 
@@ -398,7 +401,8 @@ SCIP_RETCODE computeAutomorphisms(
    *log10groupsize = 0.0;
    if(sg.nv > 0) {
       sparsenauty(&sg, lab, ptn, orbits, &options, &stats, NULL);
-      *log10groupsize = (SCIP_Real) stats.grpsize2;
+      dejavu::big_number grp_sz = sassy.grp_sz;
+      *log10groupsize = log10(stats.grpsize1 * grp_sz.mantissa * pow(10.0, (SCIP_Real) (stats.grpsize2 + grp_sz.exponent)));
    }
 #else
    convert_dejavu_to_traces(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
@@ -412,6 +416,8 @@ SCIP_RETCODE computeAutomorphisms(
    options.defaultptn = FALSE; /* use color classes */
    if(sg.nv > 0) {
       Traces(&sg, lab, ptn, orbits, &options, &stats, NULL);
+      dejavu::big_number grp_sz = sassy.grp_sz;
+      *log10groupsize = log10(stats.grpsize1 * grp_sz.mantissa * pow(10.0, (SCIP_Real) (stats.grpsize2 + grp_sz.exponent)));
    }
 #endif
 
@@ -446,7 +452,7 @@ SCIP_RETCODE computeAutomorphisms(
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
-   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
+   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */ /* cppcheck-suppress funcArgNamesDifferent */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */

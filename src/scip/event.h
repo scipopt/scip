@@ -255,6 +255,22 @@ SCIP_RETCODE SCIPeventCreateUbChanged(
    SCIP_Real             newbound            /**< new bound after bound changed */
    );
 
+/** adds the data for the exact changes to existing bound event */
+SCIP_RETCODE SCIPeventAddExactBdChg(
+   SCIP_EVENT*           event,              /**< the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_RATIONAL*        oldbound,           /**< old bound before bound changed */
+   SCIP_RATIONAL*        newbound            /**< new bound after bound changed */
+   );
+
+/** adds the data for the exact changes to existing obj event */
+SCIP_RETCODE SCIPeventAddExactObjChg(
+   SCIP_EVENT*           event,              /**< the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_RATIONAL*        oldobj,             /**< old obj before change */
+   SCIP_RATIONAL*        newobj              /**< new obj after change */
+   );
+
 /** creates an event for an addition of a global domain hole to a variable */
 SCIP_RETCODE SCIPeventCreateGholeAdded(
    SCIP_EVENT**          event,              /**< pointer to store the event */
@@ -502,7 +518,7 @@ SCIP_RETCODE SCIPeventqueueProcess(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    );
 
 /** returns TRUE iff events of the queue are delayed until the next SCIPeventqueueProcess() call */

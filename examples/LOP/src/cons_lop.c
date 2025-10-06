@@ -975,7 +975,7 @@ SCIP_DECL_CONSRESPROP(consRespropLOP)
       assert( vars[index2][index1] == infervar );
 
       /* if the variable was fixed to 0 */
-      if ( SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5 && SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5 )
+      if ( SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE) > 0.5 && SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5 )
       {
 	 SCIPdebugMsg(scip, " -> reason for x[%d][%d] == 0 was x[%d][%d] = 1.\n", index2, index1, index1, index2);
 	 /* the reason was that x[i][j] was fixed to 1 */
@@ -985,7 +985,7 @@ SCIP_DECL_CONSRESPROP(consRespropLOP)
       }
 
       /* if the variable was fixed to 1 */
-      if ( SCIPvarGetLbAtIndex(infervar, bdchgidx, FALSE) < 0.5 && SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5 )
+      if ( SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, FALSE) < 0.5 && SCIPgetVarLbAtIndex(scip, infervar, bdchgidx, TRUE) > 0.5 )
       {
 	 SCIPdebugMsg(scip, " -> reason for x[%d][%d] == 1 was x[%d][%d] = 0.\n", index2, index1, index1, index2);
 	 /* the reason was that x[i][j] was fixed to 0 */
@@ -1012,7 +1012,7 @@ SCIP_DECL_CONSRESPROP(consRespropLOP)
       assert( vars[index3][index1] == infervar );
 
       /* the variable should have been fixed to 0 */
-      assert( SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5 && SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5 );
+      assert( SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE) > 0.5 && SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5 );
 
       /* the reason was that x[index1][index2] and x[index2][index3] were fixed to 1 */
       SCIPdebugMsg(scip, " -> reason for x[%d][%d] == 0 was x[%d][%d] = x[%d][%d] = 1.\n", index3, index1, index1, index2, index2, index3);

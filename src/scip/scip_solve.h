@@ -137,38 +137,7 @@ SCIP_RETCODE SCIPsolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** transforms, presolves, and solves problem using additional solvers which emphasize on
- *  finding solutions.
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *
- *  @post After calling this method \SCIP reaches one of the following stages depending on if and when the solution
- *        process was interrupted:
- *        - \ref SCIP_STAGE_PRESOLVING if the solution process was interrupted during presolving
- *        - \ref SCIP_STAGE_SOLVING if the solution process was interrupted during the tree search
- *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- *
- *  @deprecated Please use SCIPsolveConcurrent() instead.
- */
-SCIP_DEPRECATED
-SCIP_EXPORT
-SCIP_RETCODE SCIPsolveParallel(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** transforms, presolves, and solves problem using additional solvers which emphasize on
- *  finding solutions.
+/** transforms, presolves, and solves problem using the configured concurrent solvers
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -393,7 +362,7 @@ SCIP_RETCODE SCIPgetReoptSolsRun(
    SCIP*                 scip,               /**< SCIP data structue */
    int                   run,                /**< number of the run */
    SCIP_SOL**            sols,               /**< array to store solutions */
-   int                   allocmem,           /**< allocated size of the array */
+   int                   solssize,           /**< allocated size of the array */
    int*                  nsols               /**< number of solutions */
    );
 

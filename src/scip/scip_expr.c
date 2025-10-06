@@ -241,6 +241,11 @@ SCIP_RETCODE parseBase(
          return SCIP_READERROR;
       }
       debugParse("Parsed value %g, creating a value-expression.\n", value);
+      if( !SCIPisFinite(value) || SCIPisInfinity(scip, value) )
+      {
+         SCIPerrorMessage("Infinite or nan term value expression within nonlinear expression %s\n", expr);
+         return SCIP_INVALIDDATA;
+      }
       SCIP_CALL( SCIPcreateExprValue(scip, basetree, value, ownercreate, ownercreatedata) );
    }
    else if( isalpha(*expr) )
@@ -401,6 +406,13 @@ SCIP_RETCODE parseFactor(
             SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
             return SCIP_READERROR;
          }
+      }
+
+      if( !SCIPisFinite(exponent) || SCIPisInfinity(scip, exponent) )
+      {
+         SCIPerrorMessage("Infinite or nan term exponent in nonlinear expression %s\n", expr);
+         SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
+         return SCIP_INVALIDDATA;
       }
 
       debugParse("parsed the exponent %g\n", exponent); /*lint !e506 !e681*/
@@ -572,6 +584,13 @@ SCIP_RETCODE parseExpr(
          /* check if we have a "coef * <term>" */
          if( SCIPstrToRealValue(expr, &coef, (char**)newpos) )
          {
+            if( !SCIPisFinite(coef) || SCIPisInfinity(scip, coef) )
+            {
+               SCIPerrorMessage("Infinite or nan term coefficient in nonlinear expression %s\n", expr);
+               SCIP_CALL( SCIPreleaseExpr(scip, exprtree) );
+               return SCIP_INVALIDDATA;
+            }
+
             SCIP_CALL( SCIPskipSpace((char**)newpos) );
 
             if( **newpos == '<' )
@@ -819,7 +838,12 @@ SCIP_RETCODE hashExpr(
 #undef SCIPgetExprhdlrPower
 #endif
 
-/** creates the handler for an expression handler and includes it into SCIP */
+/** creates the handler for an expression handler and includes it into SCIP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 SCIP_RETCODE SCIPincludeExprhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRHDLR**       exprhdlr,           /**< buffer where to store created expression handler */
@@ -833,6 +857,8 @@ SCIP_RETCODE SCIPincludeExprhdlr(
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(exprhdlr != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPincludeExprhdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPexprhdlrCreate(scip->mem->setmem, exprhdlr, name, desc, precedence, eval, data) );
    assert(*exprhdlr != NULL);
@@ -1660,9 +1686,8 @@ SCIP_Longint SCIPgetExprNewSoltag(
 /** evaluates gradient of an expression for a given point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
- * Value can be received via SCIPgetExprPartialDiffNonlinear().
- * If an error (division by zero, ...) occurs, this value will
- * be set to SCIP_INVALID.
+ * Value can be received from variable expressions via SCIPexprGetDerivative() or via SCIPgetExprPartialDiffNonlinear().
+ * If an error (division by zero, ...) occurs, these functions return SCIP_INVALID.
  */
 SCIP_RETCODE SCIPevalExprGradient(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1702,7 +1727,7 @@ SCIP_RETCODE SCIPevalExprHessianDir(
    return SCIP_OKAY;
 }
 
-/** possibly reevaluates and then returns the activity of the expression
+/** possibly reevaluates the activity of the expression
  *
  * Reevaluate activity if currently stored is no longer uptodate (some bound was changed since last evaluation).
  *

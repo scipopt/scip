@@ -44,6 +44,7 @@
 #include "scip/def.h"
 #include "scip/type_history.h"
 #include "scip/type_message.h"
+#include "scip/type_rational.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_datatree.h"
@@ -329,6 +330,29 @@ SCIP_Longint SCIPgetNDelayedCutoffs(
  */
 SCIP_EXPORT
 SCIP_Longint SCIPgetNLPs(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of calls to the exact LP solver
+ *
+ *  @return the number of calls to the exact LP solver
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+SCIP_Longint SCIPgetNExactLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -895,6 +919,27 @@ SCIP_Longint SCIPgetNConflictConssApplied(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+
+/** get total number of resolution conflict constraints added to the problem
+ *
+ *  @return the total number of resolution conflict constraints added to the problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+SCIP_Longint SCIPgetNResConflictConssApplied(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** get total number of dual proof constraints added to the problem
  *
  *  @return the total number of dual proof constraints added to the problem
@@ -1052,6 +1097,25 @@ SCIP_Real SCIPgetDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets global exact dual bound
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+void SCIPgetDualboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RATIONAL*        result              /**< the resulting obj value */
+   );
+
 /** gets global lower (dual) bound in transformed problem
  *
  *  @return the global lower (dual) bound in transformed problem
@@ -1069,6 +1133,24 @@ SCIP_Real SCIPgetDualbound(
 SCIP_EXPORT
 SCIP_Real SCIPgetLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets global exact lower (dual) bound in transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+void SCIPgetLowerboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RATIONAL*        result              /**< the resulting bound */
    );
 
 /** gets dual bound of the root node for the original problem
@@ -1169,6 +1251,25 @@ SCIP_Real SCIPgetPrimalbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets global primal bound (objective value of best solution or user objective limit) for the original problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+void SCIPgetPrimalboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RATIONAL*        result              /**< the resulting obj value */
+   );
+
 /** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
  *
  *  @return the global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
@@ -1187,6 +1288,25 @@ SCIP_Real SCIPgetPrimalbound(
 SCIP_EXPORT
 SCIP_Real SCIPgetUpperbound(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets global exact upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+void SCIPgetUpperboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RATIONAL*        result              /**< the resulting upper bound value */
    );
 
 /** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff
@@ -1209,6 +1329,29 @@ SCIP_Real SCIPgetUpperbound(
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetCutoffbound(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets global cutoff bound of exact transformed problem: a sub problem with lower bound larger than the cutoff
+ *  cannot contain a better feasible solution; usually, this bound is equal to the upper bound, but if the
+ *  objective value is always integral, the cutoff bound is (nearly) one less than the upper bound;
+ *  additionally, due to objective function domain propagation, the cutoff bound can be further reduced
+ *
+ *  @return global cutoff bound in transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+SCIP_RATIONAL* SCIPgetCutoffboundExact(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -1697,58 +1840,6 @@ void SCIPincAvgGMIeff(
 SCIP_EXPORT
 SCIP_Real SCIPgetDeterministicTime(
    SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** outputs original problem to file stream
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPprintOrigProblem(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           extension,          /**< file format (or NULL for default CIP format)*/
-   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
-   );
-
-/** outputs transformed problem of the current node to file stream
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPprintTransProblem(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           extension,          /**< file format (or NULL for default CIP format)*/
-   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    );
 
 /** outputs status statistics
@@ -2715,32 +2806,6 @@ SCIP_EXPORT
 int SCIPgetNImplications(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
-/** stores conflict graph of binary variables' implications into a file, which can be used as input for the DOT tool
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- *
- *  @deprecated because binary implications are now stored as cliques, please use SCIPwriteCliqueGraph() instead
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-SCIP_RETCODE SCIPwriteImplicationConflictGraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< file name, or NULL for stdout */
-   );
-
 
 /** update statistical information when a new solution was found */
 SCIP_EXPORT

@@ -45,23 +45,9 @@
 #include <string>
 #include <vector>
 
-/* undefine CMAKE_BUILD_TYPE in case it conflicts with HiGHS */
-#ifdef CMAKE_BUILD_TYPE
-#define SCIP_CMAKE_BUILD_TYPE (CMAKE_BUILD_TYPE)
-#undef CMAKE_BUILD_TYPE
-#endif
-
-
 #include <Highs.h>
 
 #include <lp_data/HighsLpUtils.h>
-
-/* reset CMAKE_BUILD_TYPE to its original SCIP value */
-#undef CMAKE_BUILD_TYPE
-#ifdef SCIP_CMAKE_BUILD_TYPE
-#define CMAKE_BUILD_TYPE (SCIP_CMAKE_BUILD_TYPE)
-#undef SCIP_CMAKE_BUILD_TYPE
-#endif
 
 #include "lpi/lpi.h"
 #include "scip/bitencode.h"
@@ -832,11 +818,17 @@ SCIP_RETCODE SCIPlpiDelCols(
    int                   lastcol             /**< last column to be deleted */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiDelCols()\n");
-
    assert(lpi != NULL);
    assert(lpi->highs != NULL);
-   assert(lpi->highs->getLp().num_col_ >= 0);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->highs->getLp().num_col_);
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiDelCols()\n");
+
+   // handle empty range
+   if( firstcol > lastcol )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
    HIGHS_CALL( lpi->highs->deleteCols(firstcol, lastcol) );
@@ -925,12 +917,17 @@ SCIP_RETCODE SCIPlpiDelRows(
    int                   lastrow             /**< last row to be deleted */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiDelRows()\n");
-
    assert(lpi != NULL);
    assert(lpi->highs != NULL);
-   assert(lpi->highs->getLp().num_row_ >= 0);
-   assert(0 <= firstrow && firstrow <= lastrow );
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->highs->getLp().num_row_);
+   assert(firstrow <= lastrow + 1);
+
+   SCIPdebugMessage("calling SCIPlpiDelRows()\n");
+
+   // handle empty range
+   if( firstrow > lastrow )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
    HIGHS_CALL( lpi->highs->deleteRows(firstrow, lastrow) );
@@ -1231,12 +1228,18 @@ SCIP_RETCODE SCIPlpiGetCols(
       SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
       )
 {
-   SCIPdebugMessage("calling SCIPlpiGetCols()\n");
+   int num_col;
 
    assert(lpi != NULL);
    assert(lpi->highs != NULL);
-   int num_col;
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->highs->getLp().num_col_);
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetCols()\n");
+
    HIGHS_CALL( lpi->highs->getCols(firstcol, lastcol, num_col, NULL, lb, ub, *nnonz, beg, ind, val) );
+
    return SCIP_OKAY;
 }
 
@@ -1256,12 +1259,18 @@ SCIP_RETCODE SCIPlpiGetRows(
       SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
       )
 {
-   SCIPdebugMessage("calling SCIPlpiGetRows()\n");
+   int num_row;
 
    assert(lpi != NULL);
    assert(lpi->highs != NULL);
-   int num_row;
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->highs->getLp().num_row_);
+   assert(firstrow <= lastrow + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetRows()\n");
+
    HIGHS_CALL( lpi->highs->getRows(firstrow, lastrow, num_row, lhs, rhs, *nnonz, beg, ind, val) );
+
    return SCIP_OKAY;
 }
 
@@ -1276,9 +1285,12 @@ SCIP_RETCODE SCIPlpiGetColNames(
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetColNames()\n");
-
    assert(lpi != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->highs->getLp().num_col_);
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetColNames()\n");
 
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet\n");
 
@@ -1296,9 +1308,12 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetRowNames()\n");
-
    assert(lpi != NULL);
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->highs->getLp().num_row_);
+   assert(firstrow <= lastrow + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetRowNames()\n");
 
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet\n");
 
@@ -1331,13 +1346,14 @@ SCIP_RETCODE SCIPlpiGetObj(
    SCIP_Real*            vals                /**< array to store objective coefficients */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetObj()\n");
-
    assert(lpi != NULL);
    assert(lpi->highs != NULL);
-
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->highs->getLp().num_col_);
    assert(vals != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->highs->getLp().num_col_);
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetObj()\n");
 
    for( int i = firstcol; i < lastcol + 1; ++i )
       vals[i - firstcol] = lpi->highs->getLp().col_cost_[i];
@@ -1354,11 +1370,13 @@ SCIP_RETCODE SCIPlpiGetBounds(
    SCIP_Real*            ubs                 /**< array to store upper bound values, or NULL */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetBounds()\n");
-
    assert(lpi != NULL);
    assert(lpi->highs != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->highs->getLp().num_col_);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->highs->getLp().num_col_);
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetBounds()\n");
 
    for( int i = firstcol; i < lastcol + 1; ++i )
    {
@@ -1380,12 +1398,13 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIP_Real*            rhss                /**< array to store right hand side values, or NULL */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetSides()\n");
-
    assert(lpi != NULL);
    assert(lpi->highs != NULL);
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->highs->getLp().num_row_);
+   assert(firstrow <= lastrow + 1);
 
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->highs->getLp().num_row_);
+   SCIPdebugMessage("calling SCIPlpiGetSides()\n");
 
    for( int i = firstrow; i < lastrow + 1; ++i )
    {
@@ -2616,7 +2635,7 @@ SCIP_RETCODE SCIPlpiFreeState(
    return SCIP_OKAY;
 }
 
-/** checks, whether the given LP state contains simplex basis information */
+/** checks whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */

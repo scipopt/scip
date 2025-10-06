@@ -70,7 +70,13 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    int*                  nchgcoefs           /**< number of changed coefficients */
    );
 
-/** create an empty the aggregation row */
+/** create an empty aggregation row
+ *
+ *  @note By default, this data structure uses quad precision via double-double arithmetic, i.e., it allocates a
+ *        SCIP_Real array of length two times SCIPgetNVars() for storing the coefficients.  In exact solving mode, we
+ *        cannot use quad precision because we need to control the ronding mode, hence only the first SCIPgetNVars()
+ *        entries are used.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -110,6 +116,19 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
    );
 
+/** add weighted row to aggregation row
+ * @note this method is the variant of SCIPaggrRowAddRow that is safe to use in exact solving mode
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaggrRowAddRowSafely(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   SCIP_ROW*             row,                /**< row to add to aggregation row */
+   SCIP_Real             weight,             /**< scale for adding given row to aggregation row */
+   int                   sidetype,           /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
+   SCIP_Bool*            success             /**< was the row added successfully */
+   );
+
 /** Removes a given variable @p var from position @p pos the aggregation row and updates the right-hand side according
  *  to sign of the coefficient, i.e., rhs -= coef * bound, where bound = lb if coef >= 0 and bound = ub, otherwise.
  *
@@ -129,6 +148,16 @@ void SCIPaggrRowCancelVarWithBound(
 /** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real             rhs,                /**< right-hand side of the artificial row */
+   SCIP_Real             scale               /**< scalar */
+   );
+
+/** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row
+ *  variant of SCIPaggrRowAddObjectiveFunction that is safe to use in exact mode */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaggrRowAddObjectiveFunctionSafely(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_Real             rhs,                /**< right-hand side of the artificial row */
@@ -165,8 +194,15 @@ void SCIPaggrRowClear(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
-/** aggregate rows using the given weights; the current content of the aggregation
- *  row, \p aggrrow, gets overwritten
+/** version for use in exact solving mode of SCIPaggrRowClear() */
+SCIP_EXPORT
+void SCIPaggrRowClearSafely(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** aggregate rows using the given weights; the current content of the aggregation row, \p aggrrow, is overwritten
+ *
+ *  @note this method is safe for usage in exact solving mode
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowSumRows(
@@ -246,6 +282,16 @@ SCIP_Real SCIPaggrRowGetValue(
    return QUAD_TO_DBL(val);
 }
 
+/** gets the non-zero value for the given non-zero index */
+static INLINE
+SCIP_Real SCIPaggrRowGetValueSafely(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   int                   i                   /**< non-zero index; must be between 0 and SCIPaggrRowGetNNz(aggrrow) - 1 */
+   )
+{
+   return aggrrow->vals[aggrrow->inds[i]];
+}
+
 /** gets the non-zero value for the given problem index of a variable */
 static INLINE
 SCIP_Real SCIPaggrRowGetProbvarValue(
@@ -302,7 +348,10 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             postprocess,        /**< apply a post-processing step to the resulting cut? */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
-   SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   int                   vartypeusevbds,     /**< for all variable types with index smaller than this number, variable
+                                              *   type substitution is allowed. The indices are: 0: continuous,
+                                              *   1: continuous implint., 2: integer implint, 3: binary implint,
+                                              *   4: integer, 5: binary */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
    int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
@@ -347,7 +396,10 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             postprocess,        /**< apply a post-processing step to the resulting cut? */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
-   SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   int                   vartypeusevbds,     /**< for all variable types with index smaller than this number, variable
+                                              *   type substitution is allowed. The indices are: 0: continuous,
+                                              *   1: continuous implint., 2: integer implint, 3: binary implint,
+                                              *   4: integer, 5: binary */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    int                   maxtestdelta,       /**< maximum number of deltas to test */
    int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
@@ -453,7 +505,10 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             postprocess,        /**< apply a post-processing step to the resulting cut? */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
-   SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   int                   vartypeusevbds,     /**< for all variable types with index smaller than this number, variable
+                                              *   type substitution is allowed. The indices are: 0: continuous,
+                                              *   1: continuous implint., 2: integer implint, 3: binary implint,
+                                              *   4: integer, 5: binary */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */

@@ -55,6 +55,9 @@
 #include "scip/var.h"
 
 /** creates an event handler and includes it in SCIP
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
  *
  *  @note method has all event handler callbacks as arguments and is thus changed every time a new
  *        callback is added in future releases; consider using SCIPincludeEventhdlrBasic() and setter functions
@@ -98,6 +101,10 @@ SCIP_RETCODE SCIPincludeEventhdlr(
  *  to NULL; if needed, non-fundamental callbacks can be set afterwards via setter functions
  *  SCIPsetEventhdlrCopy(), SCIPsetEventhdlrFree(), SCIPsetEventhdlrInit(), SCIPsetEventhdlrExit(),
  *  SCIPsetEventhdlrInitsol(), SCIPsetEventhdlrExitsol(), and SCIPsetEventhdlrDelete()
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeEventhdlr() instead
  */
@@ -292,6 +299,12 @@ SCIP_RETCODE SCIPcatchEvent(
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcatchEvent", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   if( eventtype & (SCIP_EVENTTYPE_VARCHANGED | SCIP_EVENTTYPE_ROWCHANGED) )
+   {
+      SCIPerrorMessage("SCIPcatchEvent does not support variable or row change events. Use SCIPcatchVarEvent or SCIPcatchRowEvent!\n");
+      return SCIP_INVALIDDATA;
+   }
 
    SCIP_CALL( SCIPeventfilterAdd(scip->eventfilter, scip->mem->probmem, scip->set,
          eventtype, eventhdlr, eventdata, filterpos) );

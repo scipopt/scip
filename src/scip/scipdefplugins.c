@@ -53,6 +53,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNlhdlrSoc(scip) );
    /* linear must be before its specializations due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) );
+   SCIP_CALL( SCIPincludeConshdlrExactLinear(scip) );
+   SCIP_CALL( SCIPincludeConshdlrExactSol(scip) );
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrCardinality(scip) );
@@ -156,6 +158,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeEventHdlrSolvingphase(scip) );
    SCIP_CALL( SCIPincludeComprLargestrepr(scip) );
    SCIP_CALL( SCIPincludeComprWeakcompr(scip) );
+   SCIP_CALL( SCIPincludeHeurDKS(scip) );
    SCIP_CALL( SCIPincludeHeurDps(scip) );
    SCIP_CALL( SCIPincludeHeurPADM(scip) );
    SCIP_CALL( SCIPincludeHeurOfins(scip) );
@@ -227,7 +230,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropObbt(scip) );
    SCIP_CALL( SCIPincludePropNlobbt(scip) );
    SCIP_CALL( SCIPincludeSepaClosecuts(scip) );
-   SCIP_CALL( SCIPincludeSepaMultilinear(scip) );
+   SCIP_CALL( SCIPincludeSepaFlower(scip) );
    SCIP_CALL( SCIPincludeSepaRlt(scip) );
    SCIP_CALL( SCIPincludeSepaDisjunctive(scip) );
    SCIP_CALL( SCIPincludeSepaGauge(scip) );
@@ -263,6 +266,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
    SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
    SCIP_CALL( SCIPincludeExprhdlrVaridx(scip) );
+   SCIP_CALL( SCIPincludeNlpSolverConopt(scip) );
    SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
    SCIP_CALL( SCIPincludeNlpSolverFilterSQP(scip) );
    SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, TRUE) );
@@ -273,8 +277,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    /* include advanced features */
    SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
    SCIP_CALL( SCIPincludeBendersDefault(scip) );
-
-   SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
+   SCIP_CALL( SCIPincludeRelaxBenders(scip) );
 
    return SCIP_OKAY;
 }

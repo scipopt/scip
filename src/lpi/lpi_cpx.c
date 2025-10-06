@@ -1377,9 +1377,15 @@ SCIP_RETCODE SCIPlpiDelCols(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < CPXgetnumcols(lpi->cpxenv, lpi->cpxlp));
+   assert(firstcol >= 0);
+   assert(lastcol < CPXgetnumcols(lpi->cpxenv, lpi->cpxlp));
+   assert(firstcol <= lastcol + 1);
 
    SCIPdebugMessage("deleting %d columns from CPLEX\n", lastcol - firstcol + 1);
+
+   /* handle empty range */
+   if( firstcol > lastcol )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1489,9 +1495,15 @@ SCIP_RETCODE SCIPlpiDelRows(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
+   assert(firstrow >= 0);
+   assert(lastrow < CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
+   assert(firstrow <= lastrow + 1);
 
    SCIPdebugMessage("deleting %d rows from CPLEX\n", lastrow - firstrow + 1);
+
+   /* handle empty range */
+   if( firstrow > lastrow )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1929,9 +1941,11 @@ SCIP_RETCODE SCIPlpiGetCols(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < CPXgetnumcols(lpi->cpxenv, lpi->cpxlp));
    assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+   assert(firstcol >= 0);
+   assert(lastcol < CPXgetnumcols(lpi->cpxenv, lpi->cpxlp));
+   assert(firstcol <= lastcol + 1);
 
    SCIPdebugMessage("getting columns %d to %d\n", firstcol, lastcol);
 
@@ -1977,9 +1991,11 @@ SCIP_RETCODE SCIPlpiGetRows(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
    assert((lhs == NULL && rhs == NULL) || (rhs != NULL && lhs != NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+   assert(firstrow >= 0);
+   assert(lastrow < CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
+   assert(firstrow <= lastrow + 1);
 
    SCIPdebugMessage("getting rows %d to %d\n", firstrow, lastrow);
 
@@ -2038,7 +2054,9 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < CPXgetnumcols(lpi->cpxenv, lpi->cpxlp));
+   assert(firstcol >= 0);
+   assert(lastcol < CPXgetnumcols(lpi->cpxenv, lpi->cpxlp));
+   assert(firstcol <= lastcol + 1);
 
    SCIPdebugMessage("getting column names %d to %d\n", firstcol, lastcol);
 
@@ -2072,7 +2090,9 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
+   assert(firstrow >= 0);
+   assert(lastrow < CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
+   assert(firstrow <= lastrow + 1);
 
    SCIPdebugMessage("getting row names %d to %d\n", firstrow, lastrow);
 
@@ -2116,8 +2136,10 @@ SCIP_RETCODE SCIPlpiGetObj(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
-   assert(firstcol <= lastcol);
    assert(vals != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < CPXgetnumcols(lpi->cpxenv, lpi->cpxlp));
+   assert(firstcol <= lastcol + 1);
 
    SCIPdebugMessage("getting objective values %d to %d\n", firstcol, lastcol);
 
@@ -2138,7 +2160,9 @@ SCIP_RETCODE SCIPlpiGetBounds(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
-   assert(firstcol <= lastcol);
+   assert(firstcol >= 0);
+   assert(lastcol < CPXgetnumcols(lpi->cpxenv, lpi->cpxlp));
+   assert(firstcol <= lastcol + 1);
 
    SCIPdebugMessage("getting bounds %d to %d\n", firstcol, lastcol);
 
@@ -2171,7 +2195,9 @@ SCIP_RETCODE SCIPlpiGetSides(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
-   assert(firstrow <= lastrow);
+   assert(firstrow >= 0);
+   assert(lastrow < CPXgetnumrows(lpi->cpxenv, lpi->cpxlp));
+   assert(firstrow <= lastrow + 1);
 
    SCIPdebugMessage("getting row sides %d to %d\n", firstrow, lastrow);
 
@@ -4125,7 +4151,7 @@ SCIP_RETCODE SCIPlpiFreeState(
    return SCIP_OKAY;
 }
 
-/** checks, whether the given LP state contains simplex basis information */
+/** checks whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */

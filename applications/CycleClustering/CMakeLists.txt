@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 project(CycleClustering)
 
 if(TARGET SCIP::SCIP)
@@ -9,7 +14,7 @@ else()
   find_package(SCIP REQUIRED)
 endif()
 
-include_directories(${SCIP_INCLUDE_DIRS})
+include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(cycleclustering
     src/main.c
@@ -34,6 +39,7 @@ if(NOT LIBM)
 endif()
 
 target_link_libraries(cycleclustering ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(cycleclustering PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET applications )
     add_dependencies( applications cycleclustering)

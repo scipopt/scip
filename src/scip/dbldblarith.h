@@ -33,7 +33,7 @@
 #ifndef _SCIP_DBLDBL_ARITH_
 #define _SCIP_DBLDBL_ARITH_
 
-#include "math.h"
+#include <math.h>
 
 
 #ifndef DISABLE_QUADPREC

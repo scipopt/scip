@@ -167,7 +167,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    assert( nrows > 0 );
    assert( ncols > 0 );
 
-   if ( checkpporbitope && orbitopetype != SCIP_ORBITOPETYPE_PARTITIONING
+   if ( ! ismodelcons && checkpporbitope && orbitopetype != SCIP_ORBITOPETYPE_PARTITIONING
       && orbitopetype != SCIP_ORBITOPETYPE_PACKING )
    {
       SCIP_CALL( strengthenOrbitopeConstraint(scip, vars, &nrows, ncols, &orbitopetype) );

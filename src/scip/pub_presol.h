@@ -68,6 +68,12 @@ void SCIPpresolSetData(
    SCIP_PRESOLDATA*      presoldata          /**< new presolver user data */
    );
 
+/** marks the presolver as safe to use in exact solving mode */
+SCIP_EXPORT
+void SCIPpresolMarkExact(
+   SCIP_PRESOL*          presol              /**< presolver */
+   );
+
 /** gets name of presolver */
 SCIP_EXPORT
 const char* SCIPpresolGetName(

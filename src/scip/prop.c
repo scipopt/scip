@@ -193,6 +193,7 @@ SCIP_RETCODE doPropCreate(
    (*prop)->ncutoffs = 0;
    (*prop)->ndomredsfound = 0;
    (*prop)->wasdelayed = FALSE;
+   (*prop)->exact = FALSE;
    (*prop)->initialized = FALSE;
 
    /* add parameters */
@@ -216,7 +217,7 @@ SCIP_RETCODE doPropCreate(
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when propagator should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS))",
       SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)(&(*prop)->timingmask), TRUE, (int) timingmask, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
+         (int*)(&(*prop)->timingmask), TRUE, (int)timingmask, (int)SCIP_PROPTIMING_NONE, (int)SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presolpriority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "presolving priority of propagator <%s>", name);
@@ -233,7 +234,7 @@ SCIP_RETCODE doPropCreate(
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing mask of the presolving method of propagator <%s> (%u:FAST, %u:MEDIUM, %u:EXHAUSTIVE, %u:FINAL)",
       name, SCIP_PRESOLTIMING_FAST, SCIP_PRESOLTIMING_MEDIUM, SCIP_PRESOLTIMING_EXHAUSTIVE, SCIP_PRESOLTIMING_FINAL);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)&(*prop)->presoltiming, TRUE, (int)presoltiming, (int) SCIP_PRESOLTIMING_NONE, (int) SCIP_PRESOLTIMING_MAX, NULL, NULL) ); /*lint !e740*/
+         (int*)&(*prop)->presoltiming, TRUE, (int)presoltiming, (int)SCIP_PRESOLTIMING_NONE, (int)SCIP_PRESOLTIMING_MAX, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -550,7 +551,7 @@ SCIP_RETCODE SCIPpropPresol(
 
    *result = SCIP_DIDNOTRUN;
 
-   if( prop->proppresol == NULL )
+   if( prop->proppresol == NULL || (set->exact_enable && !prop->exact) )
       return SCIP_OKAY;
 
    /* check number of presolving rounds */
@@ -662,7 +663,8 @@ SCIP_RETCODE SCIPpropExec(
    assert(depth >= 0);
    assert(result != NULL);
 
-   if( (depth == 0 && prop->freq == 0) || (prop->freq > 0 && depth % prop->freq == 0) )
+   if( ((depth == 0 && prop->freq == 0) || (prop->freq > 0 && depth % prop->freq == 0))
+         && (!set->exact_enable || prop->exact) )
    {
       if( !prop->delay || execdelayed )
       {
@@ -883,8 +885,6 @@ void SCIPpropSetInitpre(
    prop->propinitpre = propinitpre;
 }
 
-
-
 /** sets preprocessing deinitialization method of propagator */
 void SCIPpropSetExitpre(
    SCIP_PROP*            prop,               /**< propagator */
@@ -935,6 +935,16 @@ void SCIPpropSetResprop(
    assert(prop != NULL);
 
    prop->propresprop = propresprop;
+}
+
+/** marks the propagator as safe to use in exact solving mode */
+void SCIPpropMarkExact(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   prop->exact = TRUE;
 }
 
 /** gets name of propagator */
@@ -1280,6 +1290,17 @@ SCIP_PROPTIMING SCIPpropGetTimingmask(
    assert(prop != NULL);
 
    return prop->timingmask;
+}
+
+/** sets new timing mask for propagator */
+void SCIPpropSetTimingmask(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_PROPTIMING       timingmask          /**< new timing mask of propagator */
+   )
+{
+   assert(prop != NULL);
+
+   prop->timingmask = timingmask;
 }
 
 /** does the propagator perform presolving? */

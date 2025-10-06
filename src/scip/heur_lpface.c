@@ -46,6 +46,7 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
 #include "scip/scip_event.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -761,7 +762,16 @@ SCIP_RETCODE setupSubscipLpface(
 
       /* copy all plugins */
       SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-            TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+
+      /* copy parameter settings */
+      SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
+
+      /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+       * handler is in place to perform a final repair step
+       */
+      SCIP_CALL( SCIPenableExactSolving(subscip, FALSE) );
+
       /* get name of the original problem and add the string "_lpfacesub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_lpfacesub", SCIPgetProbName(scip));
 
@@ -771,9 +781,6 @@ SCIP_RETCODE setupSubscipLpface(
 
       /* copy all variables */
       SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, fixvars, fixvals, nfixvars, TRUE) );
-
-      /* copy parameter settings */
-      SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
    }
    else
    {
@@ -785,6 +792,7 @@ SCIP_RETCODE setupSubscipLpface(
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
       }
    }
+   assert(!SCIPisExact(subscip));
 
    /* fill subvars array with mapping from original variables and set the objective coefficient to the desired value */
    for( i = 0; i < nvars; i++ )
@@ -1085,13 +1093,9 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    int nbinvars;
    int nintvars;
 
-   assert(heur != NULL);
    assert(scip != NULL);
+   assert(heur != NULL);
    assert(result != NULL);
-
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
 
    *result = SCIP_DELAYED;
 
@@ -1099,24 +1103,17 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    if( nodeinfeasible )
       return SCIP_OKAY;
 
-   /* the node number to run the heuristic again was not yet reached */
-   if( SCIPgetNNodes(scip) < heurdata->nextnodenumber )
-      return SCIP_OKAY;
-
    /* do not run heuristic on nodes that were not solved to optimality */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
    /* LP face requires that the LP defines a valid lower bound for the current node */
-   if( ! SCIPisLPRelax(scip) || ! SCIPallColsInLP(scip) )
+   if( !SCIPisLPRelax(scip) || !SCIPallColsInLP(scip) )
       return SCIP_OKAY;
 
    assert(SCIPgetCurrentNode(scip) != NULL);
    focusnodelb = SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
    assert(!SCIPisInfinity(scip, focusnodelb));
-
-   /* from the checked conditions, the LP objective should be a valid lower bound for the current node */
-   assert(SCIPisGE(scip, focusnodelb, SCIPgetLPObjval(scip)));
 
    /* do not run if the current focus node already has a lower bound higher than the LP value at the node,
     * for example, due to strong branching
@@ -1124,12 +1121,23 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    if( SCIPisGT(scip, focusnodelb, SCIPgetLPObjval(scip)) )
       return SCIP_OKAY;
 
+   /* from the checked conditions, the LP objective should be the lower bound for the current node */
+   assert(SCIPisEQ(scip, focusnodelb, SCIPgetLPObjval(scip)));
+
+   /* only run at lower bound defining nodes */
+   if( SCIPisGT(scip, focusnodelb, SCIPgetLowerbound(scip)) )
+      return SCIP_OKAY;
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
    /* delay heuristic if the active search tree path is not deep enough */
    if( SCIPgetDepth(scip) < heurdata->minpathlen - 1 )
       return SCIP_OKAY;
 
-   /* only run at lower bound defining nodes */
-   if( SCIPisGT(scip, focusnodelb, SCIPgetLowerbound(scip)) )
+   /* the node number to run the heuristic again was not yet reached */
+   if( SCIPgetNNodes(scip) < heurdata->nextnodenumber )
       return SCIP_OKAY;
 
    /* only run if lower bound has increased since last LP objective where the sub-MIP was solved to infeasibility */
@@ -1326,6 +1334,9 @@ SCIP_RETCODE SCIPincludeHeurLpface(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecLpface, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyLpface) );

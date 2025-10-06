@@ -48,6 +48,7 @@
 #include "scip/struct_stat.h"
 #include "scip/var.h"
 #include "scip/visual.h"
+#include "scip/certificate.h"
 
 
 
@@ -65,7 +66,6 @@ SCIP_RETCODE SCIPstatCreate(
    assert(set != NULL);
 
    SCIP_ALLOC( BMSallocMemory(stat) );
-
    SCIP_CALL( SCIPclockCreate(&(*stat)->solvingtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->solvingtimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -78,6 +78,12 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->divinglptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->conflictlptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->provedfeaslptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->provedinfeaslptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->provedfeasbstime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->provedinfeasbstime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->provedfeaspstime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->provedinfeaspstime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->relaxsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -94,8 +100,17 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
    SCIP_CALL( SCIPvisualCreate(&(*stat)->visual, messagehdlr) );
+   SCIP_CALL( SCIPcertificateCreate(&(*stat)->certificate, messagehdlr ) );
 
    SCIP_CALL( SCIPregressionCreate(&(*stat)->regressioncandsobjval) );
+
+   if( set->exact_enable )
+   {
+      SCIP_CALL( SCIPrationalCreate(&(*stat)->lastlowerboundexact) );
+      SCIPrationalSetNegInfinity((*stat)->lastlowerboundexact);
+   }
+   else
+      (*stat)->lastlowerboundexact = NULL;
 
    (*stat)->status = SCIP_STATUS_UNKNOWN;
    (*stat)->marked_nvaridx = 0;
@@ -131,6 +146,12 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->divinglptime);
    SCIPclockFree(&(*stat)->strongbranchtime);
    SCIPclockFree(&(*stat)->conflictlptime);
+   SCIPclockFree(&(*stat)->provedfeaslptime);
+   SCIPclockFree(&(*stat)->provedinfeaslptime);
+   SCIPclockFree(&(*stat)->provedfeasbstime);
+   SCIPclockFree(&(*stat)->provedinfeasbstime);
+   SCIPclockFree(&(*stat)->provedfeaspstime);
+   SCIPclockFree(&(*stat)->provedinfeaspstime);
    SCIPclockFree(&(*stat)->lpsoltime);
    SCIPclockFree(&(*stat)->relaxsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
@@ -144,15 +165,19 @@ SCIP_RETCODE SCIPstatFree(
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
    SCIPvisualFree(&(*stat)->visual);
+   SCIPcertificateFree(&(*stat)->certificate);
 
    SCIPregressionFree(&(*stat)->regressioncandsobjval);
+
+   if( (*stat)->lastlowerboundexact != NULL )
+      SCIPrationalFree(&(*stat)->lastlowerboundexact);
 
    BMSfreeMemory(stat);
 
    return SCIP_OKAY;
 }
 
-/** diables the collection of any statistic for a variable */
+/** disables the collection of any statistic for a variable */
 void SCIPstatDisableVarHistory(
    SCIP_STAT*            stat                /**< problem statistics data */
    )
@@ -207,6 +232,12 @@ void SCIPstatReset(
    SCIPclockReset(stat->divinglptime);
    SCIPclockReset(stat->strongbranchtime);
    SCIPclockReset(stat->conflictlptime);
+   SCIPclockReset(stat->provedfeaslptime);
+   SCIPclockReset(stat->provedinfeaslptime);
+   SCIPclockReset(stat->provedfeasbstime);
+   SCIPclockReset(stat->provedinfeasbstime);
+   SCIPclockReset(stat->provedfeaspstime);
+   SCIPclockReset(stat->provedinfeaspstime);
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->relaxsoltime);
    SCIPclockReset(stat->pseudosoltime);
@@ -295,6 +326,29 @@ void SCIPstatReset(
    stat->nstrongbranchs = 0;
    stat->nrootstrongbranchs = 0;
    stat->nconflictlps = 0;
+   stat->nexlp = 0;
+   stat->nexlpinter = 0;
+   stat->nexlpboundexc = 0;
+   stat->nexlpintfeas = 0;
+   stat->timefailexlpinf = 0;
+   stat->timefailexlp = 0;
+   stat->nfailexlp = 0;
+   stat->nboundshift = 0;
+   stat->nfailboundshift = 0;
+   stat->nboundshiftinf = 0;
+   stat->nfailboundshiftinf = 0;
+   stat->nboundshiftobjlim = 0;
+   stat->nboundshiftobjlimfail = 0;
+   stat->nprojshift = 0;
+   stat->nfailprojshift = 0;
+   stat->nprojshiftinf = 0;
+   stat->nfailprojshiftinf = 0;
+   stat->nprojshiftobjlim = 0;
+   stat->nprojshiftobjlimfail = 0;
+   stat->niterationsexlp = 0;
+   stat->niterationsexlpinf = 0;
+   stat->nexlpinf = 0;
+   stat->nfailexlpinf = 0;
    stat->nnlps = 0;
    stat->maxtotaldepth = -1;
    stat->nactiveconss = 0;
@@ -476,7 +530,7 @@ void SCIPstatUpdatePrimalDualIntegrals(
    assert(stat != NULL);
    assert(set != NULL);
 
-   solvingtime = SCIPclockGetTime(stat->solvingtime);
+   solvingtime = MAX(SCIPclockGetTime(stat->solvingtime), stat->previntegralevaltime); /*lint !e666*/
    assert(solvingtime >= stat->previntegralevaltime);
 
    if( !SCIPsetIsInfinity(set, upperbound) ) /*lint !e777*/
@@ -638,6 +692,9 @@ void SCIPstatResetCurrentRun(
    stat->rootlowerbound = SCIP_REAL_MIN;
    stat->lastbranchvalue = SCIP_UNKNOWN;
    stat->rootlpbestestimate = SCIP_INVALID;
+   stat->boundingerrorbs = 0;
+   stat->boundingerrorps = 0;
+   stat->boundingerrorexlp = 0;
    stat->lastbranchvar = NULL;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
    stat->nrootboundchgsrun = 0;
@@ -762,6 +819,12 @@ void SCIPstatEnableOrDisableStatClocks(
    SCIPclockEnableOrDisable(stat->divinglptime, enable);
    SCIPclockEnableOrDisable(stat->strongbranchtime, enable);
    SCIPclockEnableOrDisable(stat->conflictlptime, enable);
+   SCIPclockEnableOrDisable(stat->provedfeaslptime, enable);
+   SCIPclockEnableOrDisable(stat->provedinfeaslptime, enable);
+   SCIPclockEnableOrDisable(stat->provedfeasbstime, enable);
+   SCIPclockEnableOrDisable(stat->provedinfeasbstime, enable);
+   SCIPclockEnableOrDisable(stat->provedfeaspstime, enable);
+   SCIPclockEnableOrDisable(stat->provedinfeaspstime, enable);
    SCIPclockEnableOrDisable(stat->lpsoltime, enable);
    SCIPclockEnableOrDisable(stat->relaxsoltime, enable);
    SCIPclockEnableOrDisable(stat->pseudosoltime, enable);
@@ -870,7 +933,7 @@ void SCIPstatPrintDebugMessage(
       printf("[%s:%d] debug: ", filename, sourceline);
 
    va_start(ap, formatstr); /*lint !e838*/
-   printf(formatstr, ap);
+   vprintf(formatstr, ap);
    va_end(ap);
 }
 

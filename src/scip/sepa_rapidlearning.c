@@ -530,7 +530,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
                {
                   nconflicts++;
 
-                  SCIP_CALL( SCIPaddConflict(scip, global ? NULL : SCIPgetCurrentNode(scip), conscopy, NULL,
+                  SCIP_CALL( SCIPaddConflict(scip, global ? NULL : SCIPgetCurrentNode(scip), &conscopy, NULL,
                      SCIP_CONFTYPE_UNKNOWN, FALSE) );
                }
                else
@@ -820,35 +820,45 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_Bool run;
    SCIP_Bool success;
    SCIP_RETCODE retcode;
+   int nvars;
+   int ncontvars;
    int ndiscvars;
    int i;
 
-   assert(sepa != NULL);
    assert(scip != NULL);
+   assert(sepa != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-
-   ndiscvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
-
-   /* only run when still not fixed binary variables exists */
-   if( ndiscvars == 0 )
-      return SCIP_OKAY;
 
    /* get separator's data */
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   /* call separator at most maxcalls times */
-   if( SCIPsepaGetNCalls(sepa) >= sepadata->maxcalls )
+   ncontvars = SCIPgetNContVars(scip);
+
+   /* only run for integral programs */
+   if( !sepadata->contvars && ncontvars >= 1 )
       return SCIP_OKAY;
 
-   /* only run for integer programs */
-   if( !sepadata->contvars && ndiscvars != SCIPgetNVars(scip) )
+   nvars = SCIPgetNVars(scip);
+   ndiscvars = nvars - ncontvars;
+   assert(ndiscvars >= 0);
+
+   /* only run when still unfixed binary variables can exist */
+   if( ndiscvars == 0 )
       return SCIP_OKAY;
 
    /* only run if there are few enough continuous variables */
-   if( sepadata->contvars && SCIPgetNContVars(scip) > sepadata->contvarsquot * SCIPgetNVars(scip) )
+   if( sepadata->contvars && ncontvars > sepadata->contvarsquot * nvars )
+      return SCIP_OKAY;
+
+   /* do not call rapid learning if the problem is too big */
+   if( nvars > sepadata->maxnvars || SCIPgetNConss(scip) > sepadata->maxnconss )
+      return SCIP_OKAY;
+
+   /* call separator at most maxcalls times */
+   if( SCIPsepaGetNCalls(sepa) >= sepadata->maxcalls )
       return SCIP_OKAY;
 
    /* do not run if pricers are present */
@@ -873,10 +883,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    /* @todo check whether we want to run at the root node again, e.g., inf/obj ratio is large enough */
    if( !run )
-      return SCIP_OKAY;
-
-   /* do not call rapid learning, if the problem is too big */
-   if( SCIPgetNVars(scip) > sepadata->maxnvars || SCIPgetNConss(scip) > sepadata->maxnconss )
       return SCIP_OKAY;
 
    if( SCIPisStopped(scip) )

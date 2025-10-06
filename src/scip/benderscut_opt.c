@@ -309,6 +309,7 @@ SCIP_RETCODE computeMIRForOptimalityCut(
    for( i = 0; i < nvars; i++ )
    {
       rowinds[i] = SCIPvarGetProbindex(vars[i]);
+      assert(rowinds[i] >= 0);
       rowvals[i] = -vals[i];
    }
 
@@ -322,7 +323,7 @@ SCIP_RETCODE computeMIRForOptimalityCut(
    (*success) = cutsuccess;
 
    /* calculating the MIR coefficients for the optimality cut */
-   SCIP_CALL( SCIPcalcMIR(masterprob, sol, TRUE, 0.9999, TRUE, FALSE, FALSE, NULL, NULL, 0.001, 0.999, 1.0, aggrrow,
+   SCIP_CALL( SCIPcalcMIR(masterprob, sol, TRUE, 0.9999, 1, FALSE, FALSE, NULL, NULL, 0.001, 0.999, 1.0, aggrrow,
          cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, &cutrank, &cutislocal, &cutsuccess) );
    (*success) = ((*success) || cutsuccess);
 

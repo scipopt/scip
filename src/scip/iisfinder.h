@@ -73,7 +73,7 @@ SCIP_RETCODE SCIPiisGenerate(
 
 /** copies the given IIS finder to a new scip */
 SCIP_RETCODE SCIPiisfinderCopyInclude(
-   SCIP_IISFINDER*       iis,                /**< IIS finder */
+   SCIP_IISFINDER*       iisfinder,          /**< IIS finder */
    SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    );
 

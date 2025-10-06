@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 project(CallableLibrary)
 include(CTest)
 
@@ -10,7 +15,7 @@ else()
   find_package(SCIP REQUIRED)
 endif()
 
-include_directories(${SCIP_INCLUDE_DIRS})
+include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(gastrans
    src/gastrans.c)
@@ -31,9 +36,13 @@ if(NOT LIBM)
 endif()
 
 target_link_libraries(gastrans ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(gastrans PRIVATE ${SCIP_COMPILE_FLAGS})
 target_link_libraries(spring ${SCIP_LIBRARIES})
+target_compile_options(spring PRIVATE ${SCIP_COMPILE_FLAGS})
 target_link_libraries(brachistochrone ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(brachistochrone PRIVATE ${SCIP_COMPILE_FLAGS})
 target_link_libraries(circlepacking ${SCIP_LIBRARIES} ${LIBM})
+target_compile_options(circlepacking PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET examples )
     add_dependencies( examples gastrans spring brachistochrone circlepacking )
@@ -60,6 +69,7 @@ macro(addbuildandtest target)
             )
     set_tests_properties(examples-callablelibrary_${target}
                         PROPERTIES
+			    FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS examples-callablelibrary_${target}-build
                         )
     if(WIN32)

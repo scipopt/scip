@@ -37,8 +37,8 @@ TMPDIR="${CLIENTTMPDIR}/${USER}-tmpdir"
 # check if tmp-path exists
 if test ! -d "${TMPDIR}"
 then
-    mkdir -p "${TMPDIR}"
     echo "Creating directory ${TMPDIR} for temporary outfile"
+    mkdir -p "${TMPDIR}"
 fi
 
 OUTFILE="${TMPDIR}/${BASENAME}.out"

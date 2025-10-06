@@ -319,7 +319,6 @@ SCIP_RETCODE readDecomposition(
    SCIPfreeBufferArray(scip, &labels);
    SCIPfreeBufferArray(scip, &conss);
 
-/* cppcheck-suppress unusedLabel */
 TERMINATE:
    if( retcode != SCIP_OKAY )
    {

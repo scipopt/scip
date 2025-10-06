@@ -195,7 +195,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    assert(heurdata != NULL);
 
    /* if there are no integer variables (note that, e.g., SOS1 variables may be present) */
-   if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
+   if( SCIPgetNContVars(scip) + SCIPgetNContImplVars(scip) == SCIPgetNVars(scip) )
       return SCIP_OKAY;
 
    assert(SCIPheurGetNDivesets(heur) > 0);
@@ -307,6 +307,9 @@ SCIP_RETCODE SCIPincludeHeurGuideddiving(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecGuideddiving, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyGuideddiving) );

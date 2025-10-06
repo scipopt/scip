@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_SET*             targetset,          /**< SCIP_SET of SCIP to copy to */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables; must not be NULL */
-   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
+   SCIP_Bool             threadsafe,         /**< must the Benders' decomposition copy be thread safe */
    SCIP_Bool*            valid               /**< was the copying process valid? */
    );
 
@@ -181,7 +181,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   int                   probnum,            /**< the subproblem number */
+   int                   probnumber,         /**< the subproblem number */
    SCIP_BENDERSSOLVELOOP solveloop,          /**< the solve loop iteration. The first iter is for LP, the second for IP */
    SCIP_Bool             enhancement,        /**< is the solve performed as part of an enhancement? */
    SCIP_Bool*            solved,             /**< flag to indicate whether the subproblem was solved */
@@ -262,14 +262,6 @@ SCIP_RETCODE SCIPbendersMergeSubproblemIntoMaster(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of subproblem constraints to the
                                                   corresponding newly created constraints, or NULL */
    int                   probnumber          /**< the number of the subproblem that will be merged into the master problem*/
-   );
-
-/** Applies a Benders' decomposition to the problem based upon the decomposition selected from the storage */
-extern
-SCIP_RETCODE SCIPbendersApplyDecomposition(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_DECOMP*          decomp              /**< the decomposition to apply to the problem */
    );
 
 /** sets priority of Benders' decomposition */

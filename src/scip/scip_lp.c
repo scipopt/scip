@@ -47,12 +47,16 @@
 #include "scip/conflict.h"
 #include "scip/debug.h"
 #include "scip/lp.h"
+#include "scip/lpexact.h"
 #include "scip/prob.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_tree.h"
+#include "scip/scip_exact.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
+#include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
@@ -71,7 +75,7 @@
 #include "scip/tree.h"
 #include "scip/var.h"
 
-/** returns, whether the LP was or is to be solved in the current node
+/** returns whether the LP was or is to be solved in the current node
  *
  *  @return whether the LP was or is to be solved in the current node.
  *
@@ -89,7 +93,7 @@ SCIP_Bool SCIPhasCurrentNodeLP(
    return SCIPtreeHasCurrentNodeLP(scip->tree);
 }
 
-/** returns, whether the LP of the current node is already constructed
+/** returns whether the LP of the current node is already constructed
  *
  *  @return whether the LP of the current node is already constructed.
  *
@@ -118,6 +122,8 @@ SCIP_Bool SCIPisLPConstructed(
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note The result stored in @p cutoff is safe to use in exact solving mode.
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -903,19 +909,16 @@ SCIP_RETCODE SCIPwriteLP(
    const char*           filename            /**< file name */
    )
 {
-   SCIP_Bool cutoff;
-
    SCIP_CALL( SCIPcheckStage(scip, "SCIPwriteLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
-      SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool, scip->branchcand,
-            scip->eventqueue, scip->eventfilter, scip->cliquetable, FALSE, &cutoff) );
+      SCIPerrorMessage("LP not constructed\n");
+      return SCIP_INVALIDDATA;
    }
 
-   /* we need a flushed lp to write the current lp */
-   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->probmem, scip->set, scip->transprob, scip->eventqueue) );
+   if( !scip->lp->flushed )
+      SCIPwarningMessage(scip, "LP not flushed\n");
 
    SCIP_CALL( SCIPlpWrite(scip->lp, filename) );
 
@@ -943,8 +946,14 @@ SCIP_RETCODE SCIPwriteMIP(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPwriteMIP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   /* we need a flushed lp to write the current mip */
-   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->probmem, scip->set, scip->transprob, scip->eventqueue) );
+   if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
+   {
+      SCIPerrorMessage("LP not constructed\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( !scip->lp->flushed )
+      SCIPwarningMessage(scip, "LP not flushed\n");
 
    SCIP_CALL( SCIPlpWriteMip(scip->lp, scip->set, scip->messagehdlr, filename, genericnames,
          origobj, scip->origprob->objsense, scip->transprob->objscale, scip->transprob->objoffset, lazyconss) );
@@ -1346,39 +1355,6 @@ SCIP_RETCODE SCIPcreateRowUnspec(
    return SCIP_OKAY;
 }
 
-/** creates and captures an LP row
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  @deprecated Please use SCIPcreateRowConshdlr() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
- *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateRowUnspec().
- */
-SCIP_RETCODE SCIPcreateRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW**            row,                /**< pointer to row */
-   const char*           name,               /**< name of row */
-   int                   len,                /**< number of nonzeros in the row */
-   SCIP_COL**            cols,               /**< array with columns of row entries */
-   SCIP_Real*            vals,               /**< array with coefficients of row entries */
-   SCIP_Real             lhs,                /**< left hand side of row */
-   SCIP_Real             rhs,                /**< right hand side of row */
-   SCIP_Bool             local,              /**< is row only valid locally? */
-   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
-   )
-{
-   /* Note: Rows can only be created in the solving stage, since otherwise the LP does not exist and, e.g., the norms cannot be computed correctly. */
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPcreateRowUnspec(scip, row, name, len, cols, vals, lhs, rhs, local, modifiable, removable) );
-
-   return SCIP_OKAY;
-}
-
 /** creates and captures an LP row without any coefficients from a constraint handler
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1494,36 +1470,6 @@ SCIP_RETCODE SCIPcreateEmptyRowUnspec(
 
    SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_UNSPEC, NULL, local, modifiable, removable) );
-
-   return SCIP_OKAY;
-}
-
-/** creates and captures an LP row without any coefficients
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  @deprecated Please use SCIPcreateEmptyRowConshdlr() or SCIPcreateEmptyRowSepa() when calling from a constraint handler or separator in order
- *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateEmptyRowUnspec().
- */
-SCIP_RETCODE SCIPcreateEmptyRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW**            row,                /**< pointer to row */
-   const char*           name,               /**< name of row */
-   SCIP_Real             lhs,                /**< left hand side of row */
-   SCIP_Real             rhs,                /**< right hand side of row */
-   SCIP_Bool             local,              /**< is row only valid locally? */
-   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, row, name, lhs, rhs, local, modifiable, removable) );
 
    return SCIP_OKAY;
 }
@@ -1891,6 +1837,24 @@ int SCIPgetRowNumIntCols(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowNumIntCols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIProwGetNumIntCols(row, scip->set);
+}
+
+/** returns number of implied integral columns in the row
+ *
+ *  @return number of implied integral columns in the row
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+int SCIPgetRowNumImpliedIntCols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowNumImpliedIntCols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIProwGetNumImpliedIntCols(row, scip->set);
 }
 
 /** returns minimal absolute value of row vector's non-zero coefficients
@@ -2307,10 +2271,11 @@ SCIP_RETCODE SCIPendDive(
          scip->transprob, scip->transprob->vars, scip->transprob->nvars) );
 
    /* the lower bound may have changed slightly due to LP resolve in SCIPlpEndDive() */
-   if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL && SCIPlpIsRelax(scip->lp) && SCIPlpIsSolved(scip->lp) )
+   if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL && SCIPlpIsRelax(scip->lp) && SCIPlpIsSolved(scip->lp)
+       && !SCIPlpExactDiving(scip->lpexact) && !SCIPisExact(scip) )
    {
       assert(SCIPtreeIsFocusNodeLPConstructed(scip->tree));
-      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->tree, scip->transprob,
+      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->messagehdlr, scip->eventfilter, scip->tree, scip->transprob,
             scip->origprob, scip->lp) );
    }
    /* reset the probably changed LP's cutoff bound */
@@ -2322,8 +2287,8 @@ SCIP_RETCODE SCIPendDive(
     */
    if( scip->tree->cutoffdelayed )
    {
-      SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-            scip->eventqueue, scip->lp, scip->primal->cutoffbound) );
+      SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+            scip->eventfilter, scip->lp, scip->primal->cutoffbound) );
    }
 
    /* if a relaxation was stored before diving, restore it now */
@@ -2698,7 +2663,7 @@ SCIP_RETCODE SCIPsolveDiveLP(
 
    /* solve diving LP */
    SCIP_CALL( SCIPlpSolveAndEval(scip->lp, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat,
-         scip->eventqueue, scip->eventfilter, scip->transprob, (SCIP_Longint)itlim, FALSE, FALSE, FALSE, lperror) );
+         scip->eventqueue, scip->eventfilter, scip->transprob, (SCIP_Longint)itlim, FALSE, FALSE, FALSE, FALSE, lperror) );
 
    /* the LP is infeasible or the objective limit was reached */
    if( SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT
@@ -2707,11 +2672,11 @@ SCIP_RETCODE SCIPsolveDiveLP(
    {
       /* analyze the infeasible LP (only if the objective was not changed, all columns are in the LP, and no external
        * pricers exist) */
-      if( !scip->set->misc_exactsolve && !(SCIPlpDivingObjChanged(scip->lp) || SCIPlpDivingRowsChanged(scip->lp))
+      if( !(SCIPlpDivingObjChanged(scip->lp) || SCIPlpDivingRowsChanged(scip->lp))
          && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
       {
          SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, NULL) );
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable, NULL) );
       }
 
       if( cutoff != NULL )

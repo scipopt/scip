@@ -535,6 +535,12 @@ SCIP_RETCODE SCIProwMakeIntegral(
    SCIP_Bool*            success             /**< stores whether row could be made rational */
    );
 
+/** recalculates norms of a row */
+void SCIProwRecalcNorms(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** recalculates the current activity of a row */
 void SCIProwRecalcLPActivity(
    SCIP_ROW*             row,                /**< LP row */
@@ -654,6 +660,12 @@ int SCIProwGetMinidx(
 
 /** gets number of integral columns in row */
 int SCIProwGetNumIntCols(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** gets number of implied integral columns in row */
+int SCIProwGetNumImpliedIntCols(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
@@ -1039,6 +1051,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                                               *   (limit is computed within the method w.r.t. the average LP iterations) */
    SCIP_Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool             forcedlpsolve,      /**< would SCIP abort if the LP is not solved? */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occurred */
    );
 
@@ -1124,18 +1137,6 @@ SCIP_Real SCIPlpGetModifiedPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Real             oldbound,           /**< old value for bound */
-   SCIP_Real             newbound,           /**< new value for bound */
-   SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
-   );
-
-/** gets pseudo objective value, if a bound of the given variable would be modified in the given way;
- *  perform calculations with interval arithmetic to get an exact lower bound
- */
-SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             oldbound,           /**< old value for bound */
    SCIP_Real             newbound,           /**< new value for bound */
@@ -1256,6 +1257,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Bool             forcedlpsolve,      /**< would SCIP abort if the LP is not solved? */
    SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid  or NULL */
    );
 
@@ -1577,7 +1579,7 @@ SCIP_Bool SCIPlpDivingRowsChanged(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
-/** checks, if absolute difference of values is in range of LP primal feastol */
+/** checks if absolute difference of values is in range of LP primal feastol */
 SCIP_Bool SCIPlpIsFeasEQ(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1585,7 +1587,7 @@ SCIP_Bool SCIPlpIsFeasEQ(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if absolute difference of val1 and val2 is lower than LP primal feastol */
+/** checks if absolute difference of val1 and val2 is lower than LP primal feastol */
 SCIP_Bool SCIPlpIsFeasLT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1593,7 +1595,7 @@ SCIP_Bool SCIPlpIsFeasLT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if absolute difference of val1 and val2 is not greater than LP primal feastol */
+/** checks if absolute difference of val1 and val2 is not greater than LP primal feastol */
 SCIP_Bool SCIPlpIsFeasLE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1601,7 +1603,7 @@ SCIP_Bool SCIPlpIsFeasLE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if absolute difference of val1 and val2 is greater than LP primal feastol */
+/** checks if absolute difference of val1 and val2 is greater than LP primal feastol */
 SCIP_Bool SCIPlpIsFeasGT(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1609,7 +1611,7 @@ SCIP_Bool SCIPlpIsFeasGT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if absolute difference of val1 and val2 is not lower than -LP primal feastol */
+/** checks if absolute difference of val1 and val2 is not lower than -LP primal feastol */
 SCIP_Bool SCIPlpIsFeasGE(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -1617,19 +1619,19 @@ SCIP_Bool SCIPlpIsFeasGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if value is in range LP primal feasibility tolerance of 0.0 */
+/** checks if value is in range LP primal feasibility tolerance of 0.0 */
 SCIP_Bool SCIPlpIsFeasZero(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
-/** checks, if value is greater than LP primal feasibility tolerance */
+/** checks if value is greater than LP primal feasibility tolerance */
 SCIP_Bool SCIPlpIsFeasPositive(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
-/** checks, if value is lower than -LP primal feasibility tolerance */
+/** checks if value is lower than -LP primal feasibility tolerance */
 SCIP_Bool SCIPlpIsFeasNegative(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             val                 /**< value to be compared against zero */

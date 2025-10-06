@@ -265,7 +265,7 @@ BEGIN {
 
    if( $3 == "==MISSING==" )
    {
-      # if out was missing, then we now have something like bzfviger.MINLP_convex.463_polygon75.scip-6.0.1.3.linux.x86_64.gnu.dbg.spx2.none.opt.minlp
+      # if out was missing, then we now have something like bzfviger.MINLP_convex.463_polygon75.scip-6.0.1.3.linux.x86_64.gnu.dbg.spx.none.opt.minlp
       # take the 3rd entry, hoping that the instance name didn't have a dot
       prob = b[3];
       # now remove the number at the begin
@@ -347,6 +347,9 @@ BEGIN {
    infeasobjlimit = 0;
    reoptimization = 0;
    niter = 0;
+   certified = 0;
+   certified_ori = 0;
+   vipr_ori = 0;
 }
 
 /@03/ {
@@ -363,10 +366,6 @@ BEGIN {
    # get name of LP solver
    if( $13 == "SoPlex" )
       lpsname = "spx";
-   else if( $13 == "SoPlex2" )
-      lpsname = "spx2";
-   else if( $13 == "SoPlex1" )
-      lpsname = "spx1";
    else if( $13 == "CPLEX" )
       lpsname = "cpx";
    else if( $13 == "NONE]" )
@@ -805,6 +804,27 @@ BEGIN {
    valgrindleaks += $4
 }
 #
+# vipr check
+#
+/vipr_ori/           {
+   vipr_ori = 1;
+}
+/^(Successfully verified|Infeasibility verified.)/           {
+   if( vipr_ori )
+   {
+      certified_ori = 1;
+      vipr_ori = 0;
+   }
+   else
+      certified = 1;
+}
+/(Failed|failed)/           {
+   vipr_ori = 0;
+}
+/^presolving detected infeasibility/           {
+   certified = 1;
+}
+#
 # solver status overview (in order of priority):
 # 1) solver broke before returning solution => abort
 # 2) solver cut off the optimal solution (solu-file-value is not between primal and dual bound) => fail
@@ -1102,6 +1122,11 @@ BEGIN {
       {
          setStatusToFail("fail (solution infeasible)");
       }
+      else if( certified && certified_ori )
+      {
+         status = "ok (vipr-verified)";
+         pass++;
+      }
       else if( !feasible && !isLimitReached() && solstatus[prob] != "inf" && solstatus[prob] != "unkn" )
       {
          # SCIP terminated properly but could not find a feasible solution -> assume that it proved infeasibility
@@ -1349,7 +1374,7 @@ BEGIN {
             modelstat = 8;
             solverstat = 1;
          }
-         else if( status == "ok" || status == "solved not verified" )
+         else if( status == "ok" || status == "solved not verified" || status == "ok (vipr-verified)" )
          {
             modelstat = 1;
             solverstat = 1;

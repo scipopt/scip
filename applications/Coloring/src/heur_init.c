@@ -32,7 +32,7 @@
  *
  * The heuristic is called only one time: before solving the root node.
  *
- * It checks, whether a solution-file was read in and a starting solution already exists.  If this
+ * It checks whether a solution-file was read in and a starting solution already exists.  If this
  * is not the case, an initial possible coloring is computed by a greedy method.  After that, a
  * tabu-search is called, which tries to reduce the number of colors needed. The tabu-search algorithm
  * follows the description in

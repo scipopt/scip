@@ -52,8 +52,10 @@
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -526,8 +528,8 @@ SCIP_RETCODE initializeCandsLists(
       SCIP_Real cutoffbound;
 
       minimprove = heurdata->minimprove;
-      assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
+      assert(SCIPisExact(scip) || !SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
       if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
@@ -820,8 +822,8 @@ SCIP_RETCODE setupAndSolveSubscip(
       SCIP_Real cutoffbound;
 
       minimprove = heurdata->minimprove;
-      assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
+      assert(SCIPisExact(scip) || !SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
       if( !SCIPisInfinity(scip, -1.0 * lowerbound) )
@@ -981,8 +983,11 @@ SCIP_RETCODE applyVbounds(
    {
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
-      if( cutoff )
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a
+       * result); the cutoff result is safe to use in exact solving mode, but we don't have enough information to
+       * give a certificate for the cutoff
+       */
+      if( cutoff && !SCIPisCertified(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          goto TERMINATE;
@@ -1372,6 +1377,9 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecVbounds, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyVbounds) );

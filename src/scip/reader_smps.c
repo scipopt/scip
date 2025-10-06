@@ -254,6 +254,9 @@ SCIP_DECL_READERREAD(readerReadSmps)
 
    assert(scip != NULL);
    assert(filename != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    /* copy filename */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
@@ -418,7 +421,6 @@ SCIP_DECL_READERREAD(readerReadSmps)
 
    SCIPfclose(fp);
 
- /* cppcheck-suppress unusedLabel */
 TERMINATE:
    smpsinputFree(scip, &smpsi);
 

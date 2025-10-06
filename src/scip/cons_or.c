@@ -1359,7 +1359,7 @@ SCIP_RETCODE upgradeCons(
    assert(nupgdconss != NULL);
 
    /* we cannot upgrade a modifiable constraint, since we don't know what additional variables to expect */
-   if( SCIPconsIsModifiable(cons) )
+   if( SCIPconsIsModifiable(cons) || SCIPconsGetNUpgradeLocks(cons) >= 1 )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "upgrading or constraint <%s> into equivalent and constraint on negated variables\n",
@@ -1378,11 +1378,11 @@ SCIP_RETCODE upgradeCons(
 
    /* create and add the and constraint */
    SCIP_CALL( SCIPcreateConsAnd(scip, &andcons, SCIPconsGetName(cons), negresvar, consdata->nvars, negvars,
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-         SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-         SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-   SCIP_CALL( SCIPaddCons(scip, andcons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &andcons) );
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+         SCIPconsIsStickingAtNode(cons)) );
+   SCIP_CALL( SCIPaddUpgrade(scip, cons, &andcons) );
 
    /* delete the or constraint */
    SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -1409,9 +1409,10 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_VAR** orvars;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   SCIP_Real constant = 0.0;
+   SCIP_Real constant;
+   int consnodeidx;
+   int ornodeidx;
    int nlocvars;
-   int nvars;
    int i;
 
    assert(scip != NULL);
@@ -1422,35 +1423,43 @@ SCIP_RETCODE addSymmetryInformation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* get active variables of the constraint */
-   nvars = SCIPgetNVars(scip);
-   nlocvars = SCIPgetNVarsOr(scip, cons);
+   /* create arrays to store active representation of variables */
+   nlocvars = 1;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlocvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlocvars) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+   /* add constraint node */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &consnodeidx) );
 
-   orvars = SCIPgetVarsOr(scip, cons);
+   /* add resultant to symmetry detection graph */
+   assert(consdata->resvar != NULL);
+   vars[0] = consdata->resvar;
+   vals[0] = 1.0;
+   constant = 0.0;
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, consnodeidx, vars, vals, nlocvars, constant) );
+
+   /* add node modeling the OR-part and connect it with constraint node */
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int)SYM_CONSOPTYPE_OR, &ornodeidx) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, ornodeidx, FALSE, 0.0) );
+
+   /* add variables */
+   orvars = consdata->vars;
    for( i = 0; i < consdata->nvars; ++i )
    {
-      vars[i] = orvars[i];
-      vals[i] = 1.0;
+      assert(orvars[i] != NULL);
+      vars[0] = orvars[i];
+      vals[0] = 1.0;
+      constant = 0.0;
+      nlocvars = 1;
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, ornodeidx, vars, vals, nlocvars, constant) );
    }
-
-   assert(SCIPgetResultantOr(scip, cons) != NULL);
-   vars[nlocvars] = SCIPgetResultantOr(scip, cons);
-   vals[nlocvars++] = 2.0;
-   assert(nlocvars <= nvars);
-
-   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
-
-   /* represent the OR constraint via the gadget for linear constraints and use the constant as lhs/rhs to
-    * distinguish different OR constraints (OR constraints do not have an intrinsic right-hand side)
-    */
-   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
-         cons, -constant, -constant, success) );
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -1547,9 +1556,9 @@ SCIP_DECL_CONSTRANS(consTransOr)
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
-         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons), SCIPconsIsLocal(sourcecons),
+         SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons),
+         SCIPconsIsStickingAtNode(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -2235,6 +2244,7 @@ SCIP_RETCODE SCIPcreateConsOr(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   int i;
 
    /* find the or constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -2242,6 +2252,24 @@ SCIP_RETCODE SCIPcreateConsOr(
    {
       SCIPerrorMessage("or constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* check whether resultant variable is binary */
+   if( !SCIPvarIsBinary(resvar) )
+   {
+      SCIPerrorMessage("resultant <%s> is not binary\n", SCIPvarGetName(resvar));
+      return SCIP_INVALIDDATA;
+   }
+
+   /* check whether all variables are binary */
+   assert(vars != NULL || nvars == 0);
+   for( i = 0; i < nvars; ++i )
+   {
+      if( !SCIPvarIsBinary(vars[i]) )
+      {
+         SCIPerrorMessage("operand <%s> is not binary\n", SCIPvarGetName(vars[i]));
+         return SCIP_INVALIDDATA;
+      }
    }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);

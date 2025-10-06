@@ -154,8 +154,10 @@
  */
 
 #define SCIP_Real double                               /**< type used for floating point values */
+
 #define SCIP_REAL_MAX         (SCIP_Real)DBL_MAX
 #define SCIP_REAL_MIN        -(SCIP_Real)DBL_MAX
+#define SCIP_REAL_UNITROUNDOFF        (1.0 / 9007199254740992)
 #define SCIP_REAL_FORMAT               "lf"
 
 #define SCIP_DEFAULT_INFINITY         1e+20  /**< default value considered to be infinity */
@@ -197,13 +199,9 @@
 #define SQR(x)        ((x)*(x))
 #endif
 
-/* platform-dependent specification of the log1p, which is numerically more stable around x = 0.0 */
+/* specification of log1p, which is numerically more stable around x = 0.0 */
 #ifndef LOG1P
-#ifdef _WIN32
-#define LOG1P(x) (log(1.0+x))
-#else
 #define LOG1P(x) (log1p(x))
-#endif
 #endif
 
 #ifndef LOG2

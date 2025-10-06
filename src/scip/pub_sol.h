@@ -36,6 +36,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_rational.h"
 #include "scip/type_sol.h"
 #include "scip/type_heur.h"
 #include "scip/type_relax.h"
@@ -66,6 +67,12 @@ SCIP_Bool SCIPsolIsOriginal(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** returns whether a solution is an exact rational solution */
+SCIP_EXPORT
+SCIP_Bool SCIPsolIsExact(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
 /** returns whether the given solution is partial */
 SCIP_EXPORT
 SCIP_Bool SCIPsolIsPartial(
@@ -76,6 +83,13 @@ SCIP_Bool SCIPsolIsPartial(
 SCIP_EXPORT
 SCIP_Real SCIPsolGetOrigObj(
    SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** adds value to the objective value of a given original primal CIP solution */
+SCIP_EXPORT
+void SCIPsolOrigAddObjvalExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_RATIONAL*        addval              /**< offset value to add */
    );
 
 /** gets clock time, when this solution was found */
@@ -203,6 +217,10 @@ SCIP_EXPORT
 SCIP_Real SCIPsolGetRelConsViolation(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
+
+/** comparison method for sorting solution by decreasing objective value (best solution will be sorted to the end) */
+SCIP_EXPORT
+SCIP_DECL_SORTPTRCOMP(SCIPsolComp);
 
 #ifdef NDEBUG
 

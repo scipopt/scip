@@ -71,7 +71,7 @@
 #include <string.h>
 
 #ifdef ALLDIFFERENT
-#include "scip/cons_alldifferent.h"
+#include "scip/cons_alldifferent.h"   /* cppcheck-suppress missingInclude */
 #endif
 
 #define READER_NAME             "fznreader"
@@ -4784,6 +4784,12 @@ SCIP_DECL_READERREAD(readerReadFzn)
 {  /*lint --e{715}*/
    FZNINPUT fzninput;
    int i;
+
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    /* initialize FZN input data */
    fzninput.file = NULL;

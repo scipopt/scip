@@ -32,7 +32,11 @@
 #include <assert.h>
 
 
-/* the following is copied from <scip/misc.c> */
+/* the following is copied from an old version of scip/misc.c */
+
+#ifdef _WIN32
+#define NO_RAND_R
+#endif
 
 /* define own random numbers or take library version depending on the following define */
 #ifdef NO_RAND_R
@@ -119,6 +123,7 @@ int main(int argc, char** argv)
 	 fprintf(file, "%d ", getRandomInt(0, d, &seed));
       fprintf(file, "\n");
    }
+   fclose(file);
 
    printf("Wrote random LOP instance to %s\n", argv[1]);
    printf("Size: %d\n", n);

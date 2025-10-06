@@ -30,6 +30,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/symmetry.h"
 #include "scip/symmetry_graph.h"
 #include "scip/scip.h"
 #include "scip/misc.h"
@@ -453,6 +454,7 @@ SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
  *  Edges are colored according to the variable coefficients.
  *  For signed permutation symmetries, also edges connecting the root node and the negated variable
  *  nodes are added, these edges are colored by the negative coefficients.
+ *  If the variable is fixed, a node representing the constant value is added.
  */
 SCIP_RETCODE SCIPaddSymgraphVarAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -503,7 +505,7 @@ SCIP_RETCODE SCIPaddSymgraphVarAggregation(
    }
 
    /* possibly add node for constant */
-   if( ! SCIPisZero(scip, constant) )
+   if( nvars == 0 || !SCIPisZero(scip, constant) )
    {
       SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, constant, &nodeidx) );
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, nodeidx, FALSE, 0.0) );
@@ -850,12 +852,16 @@ int compareVars(
    SCIP_Real             eps                 /**< epsilon value used in comparisons */
    )
 {
+   SCIP_VARTYPE type1;
+   SCIP_VARTYPE type2;
+
    assert(var1 != NULL);
    assert(var2 != NULL);
    assert(eps >= 0);
 
-   SCIP_VARTYPE type1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var1);
-   SCIP_VARTYPE type2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var2);
+   type1 = SCIPgetSymInferredVarType(var1);
+   type2 = SCIPgetSymInferredVarType(var2);
+
    if( type1 < type2 )
       return -1;
    if( type1 > type2 )
@@ -967,12 +973,15 @@ int compareVarsSignedPerm(
    SCIP_Real obj1;
    SCIP_Real obj2;
    SCIP_Real mid;
+   SCIP_VARTYPE type1;
+   SCIP_VARTYPE type2;
 
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   SCIP_VARTYPE type1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var1);
-   SCIP_VARTYPE type2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var2);
+   type1 = SCIPgetSymInferredVarType(var1);
+   type2 = SCIPgetSymInferredVarType(var2);
+
    if( type1 < type2 )
       return -1;
    if( type1 > type2 )
@@ -1487,12 +1496,14 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
    {
       SCIPsort(perm, SYMsortEdges, (void*) graph, graph->nedges);
 
-      /* check whether edges are colored; due to sorting, only check first edge */
-      if( SCIPisInfinity(scip, graph->edgevals[perm[0]]) )
+      /* check for uncolored or uniformly colored edges, which is easy due to sorting */
+      if( SCIPisInfinity(scip, graph->edgevals[perm[0]]) ||
+         SCIPisEQ(scip, graph->edgevals[perm[0]], graph->edgevals[perm[graph->nedges - 1]]) )
       {
-         /* all edges are uncolored */
+         /* when all edges are uncolored or uniformly colored, we can ignore edge colors */
+         graph->uniqueedgetype = TRUE;
          for( i = 0; i < graph->nedges; ++i )
-            graph->edgecolors[perm[i]] = -1;
+            graph->edgecolors[i] = -1;
       }
       else
       {
@@ -1514,10 +1525,6 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
             graph->edgecolors[perm[i]] = color;
             prevval = thisval;
          }
-
-         /* check whether all edges are equivalent */
-         if( i == graph->nedges && graph->edgecolors[perm[0]] == graph->edgecolors[perm[i-1]] )
-            graph->uniqueedgetype = TRUE;
 
          /* assign uncolored edges color -1 */
          for( ; i < graph->nedges; ++i )

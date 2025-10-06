@@ -352,6 +352,13 @@ SCIP_ROW* SCIPgetRowLinear(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** creates and returns the row of the given linear constraint */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateRowLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */
 SCIP_EXPORT
 SCIP_RETCODE SCIPupgradeConsLinear(
@@ -359,6 +366,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
    SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
    );
+
 
 /** performs linear constraint type classification as used for MIPLIB
  *

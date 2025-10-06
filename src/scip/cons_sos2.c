@@ -2247,7 +2247,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
    SCIP_VAR** consvars;
    SCIP_VAR** locvars;
    SCIP_Real* locvals;
-   SCIP_Real constant = 0.0;
+   SCIP_Real constant;
    int consnodeidx;
    int opnodeidx;
    int nodeidx;
@@ -2322,7 +2322,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS2)
    SCIP_VAR** consvars;
    SCIP_VAR** locvars;
    SCIP_Real* locvals;
-   SCIP_Real constant = 0.0;
+   SCIP_Real constant;
    int consnodeidx;
    int opnodeidx;
    int nodeidx;
@@ -2664,7 +2664,7 @@ SCIP_RETCODE SCIPcreateConsSOS2(
 /** creates and captures a SOS2 constraint with all constraint flags set to their default values.
  *
  *  @warning Do NOT set the constraint to be modifiable manually, because this might lead
- *  to wrong results as the variable array will not be resorted
+ *  to wrong results as the variable array will not be re-sorted
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */

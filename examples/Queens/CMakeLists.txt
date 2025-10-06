@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 project(Queens)
 
 if(TARGET SCIP::SCIP)
@@ -9,13 +14,14 @@ else()
   find_package(SCIP REQUIRED)
 endif()
 
-include_directories(${SCIP_INCLUDE_DIRS})
+include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(queens
    src/queens.cpp
    src/queens_main.cpp)
 
 target_link_libraries(queens ${SCIP_LIBRARIES})
+target_compile_options(queens PRIVATE ${SCIP_COMPILE_FLAGS})
 
 if( TARGET examples )
     add_dependencies( examples queens )
@@ -54,6 +60,7 @@ foreach(n ${nSet})
             )
     set_tests_properties(examples-queens-${n}
                         PROPERTIES
+			FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS examples-queens-build
                         )
     if(WIN32)

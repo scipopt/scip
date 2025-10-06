@@ -37,7 +37,6 @@
  * \begin{array}{llll}
  * A x & + B y &       & \leq c\\
  * D x &       & + E z & \leq f\\
- *
  * & &               x & \in Z^{p_1} \\
  * & &               y & \in Z^{p_2} \times R^{n_2-p_2}\\
  * & &               z & \in Z^{p_3} \times R^{n_3-p_3}

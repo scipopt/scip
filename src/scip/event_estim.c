@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_estim.c
+ * @ingroup DEFPLUGINS_EVENT
  * @brief  event handler for tree size estimation and restarts
  *
  * This event handler plugin provides different methods for approximating the current fraction of the search
@@ -1454,7 +1455,6 @@ SCIP_RETCODE subtreeSumGapUpdate(
    SCIP_Longint          nsolvednodes        /**< number of solved nodes so far, used as a time stamp */
    )
 {
-   SCIP_Bool updatescaling = FALSE;
    SCIP_Bool insertchildren = (ssg->nsubtrees > 1 && nchildren > 0);
 
    /* if the instance is solved or a node is cutoff at the initsolve stage or we are unbounded, the ssg is 0 */
@@ -1506,10 +1506,8 @@ SCIP_RETCODE subtreeSumGapUpdate(
 
       ssg->pblastsplit = SCIPgetPrimalbound(scip);
 
-      updatescaling = TRUE;
-
       /* compute the current SSG value from scratch */
-      SCIP_CALL( subtreeSumGapComputeFromScratchEfficiently(scip, ssg, updatescaling) );
+      SCIP_CALL( subtreeSumGapComputeFromScratchEfficiently(scip, ssg, TRUE) );
    }
    /* otherwise, if new children have been created, label them */
    else if( insertchildren )
@@ -2534,7 +2532,7 @@ SCIP_RETCODE updateTimeseries(
 
 /** print a treesize estimation report into the string buffer */
 static
-char* printReport(
+void printReport(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata,      /**< event handler data */
    char*                 strbuf,             /**< string buffer */
@@ -2615,8 +2613,6 @@ char* printReport(
 
    if( reportnum > 0 )
       (void) SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "End of Report %d\n", reportnum);
-
-   return strbuf;
 }
 
 
@@ -2749,6 +2745,9 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
    eventtype = SCIPeventGetType(event);
    treedata = eventhdlrdata->treedata;
 
+   if( SCIPisExact(scip) )
+      return SCIP_OKAY;
+
    /* actual leaf nodes for our tree data are children/siblings/leaves or the focus node itself (deadend)
     * if it has not been branched on
     */
@@ -2787,7 +2786,8 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
          (eventhdlrdata->reportfreq == 0
          || treedata->weight >= eventhdlrdata->weightlastreport + 1.0 / (SCIP_Real)eventhdlrdata->reportfreq) )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s\n", printReport(scip, eventhdlrdata, strbuf, ++eventhdlrdata->nreports));
+         printReport(scip, eventhdlrdata, strbuf, ++eventhdlrdata->nreports);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s\n", strbuf);
 
          if( eventhdlrdata->reportfreq > 0 )
             eventhdlrdata->weightlastreport = 1 / (SCIP_Real)eventhdlrdata->reportfreq * SCIPfloor(scip, ((SCIP_Real)treedata->weight * eventhdlrdata->reportfreq));
@@ -2812,7 +2812,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       if( eventhdlrdata->restarthitcounter >= eventhdlrdata->hitcounterlim )
       {
          /* safe that we triggered a restart at this run */
-         if( SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun )
+         if( !SCIPisExact(scip) && SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun )
          {
             eventhdlrdata->nrestartsperformed++;
 
@@ -2840,7 +2840,6 @@ SCIP_DECL_TABLEOUTPUT(tableOutputEstim)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
-   char strbuf[SCIP_MAXSTRLEN];
 
    eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);
@@ -2849,7 +2848,11 @@ SCIP_DECL_TABLEOUTPUT(tableOutputEstim)
    assert(eventhdlrdata != NULL);
 
    if( eventhdlrdata->showstats )
-      SCIPinfoMessage(scip, file, "%s", printReport(scip, eventhdlrdata, strbuf, 0));
+   {
+      char strbuf[SCIP_MAXSTRLEN];
+      printReport(scip, eventhdlrdata, strbuf, 0);
+      SCIPinfoMessage(scip, file, "%s", strbuf);
+   }
 
    return SCIP_OKAY;
 }

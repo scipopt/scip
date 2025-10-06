@@ -2561,7 +2561,7 @@ SCIP_RETCODE printAggregatedCons(
    SCIP_VAR** activevars;
    SCIP_Real* activevals;
    int nactivevars;
-   SCIP_Real activeconstant = 0.0;
+   SCIP_Real activeconstant;
    char consname[PIP_MAX_NAMELEN];
 
    assert( scip != NULL );
@@ -3266,6 +3266,9 @@ SCIP_RETCODE SCIPreadPip(
 
    assert(scip != NULL);  /* for lint */
    assert(reader != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    /* initialize PIP input data */
    pipinput.file = NULL;

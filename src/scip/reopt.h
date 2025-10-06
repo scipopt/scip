@@ -324,15 +324,6 @@ SCIP_Real SCIPreoptGetSavingtime(
    SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
-/** store a global constraint that should be added at the beginning of the next iteration */
-SCIP_RETCODE SCIPreoptAddGlbCons(
-   SCIP_REOPT*           reopt,              /**< reoptimization data */
-   SCIP_VAR**            vars,               /**< array to store the variables of the constraint */
-   SCIP_Real*            vals,               /**< array to store the coefficients of the variables */
-   int                   nvars,              /**< pointer to store the size of the constraints */
-   BMS_BLKMEM*           blkmem              /**< block memory */
-   );
-
 /** add the stored constraints globally to the problem */
 SCIP_RETCODE SCIPreoptApplyGlbConss(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -376,6 +367,7 @@ SCIP_RETCODE SCIPreoptApply(
    SCIP_LP*              lp,                 /**< current LP */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree to reactivate */

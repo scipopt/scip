@@ -3647,12 +3647,34 @@ SCIP_RETCODE SCIPcreateConsCardinality(
 
    modifiable = FALSE;
 
+#ifndef NDEBUG
+   /* Check that the weights are sensible (not nan or inf); although not strictly needed, such values are likely a mistake. */
+   if ( nvars > 0 && weights != NULL )
+   {
+      for (v = 0; v < nvars; ++v)
+         assert( SCIPisFinite(weights[v]) );
+   }
+#endif
+
    /* find the cardinality constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       SCIPerrorMessage("<%s> constraint handler not found\n", CONSHDLR_NAME);
       return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* check whether indicator variables are binary */
+   if( indvars != NULL )
+   {
+      for( v = 0; v < nvars; ++v )
+      {
+         if( !SCIPvarIsBinary(indvars[v]) )
+         {
+            SCIPerrorMessage("indicator <%s> is not binary\n", SCIPvarGetName(indvars[v]));
+            return SCIP_INVALIDDATA;
+         }
+      }
    }
 
    /* get constraint handler data */
@@ -3745,21 +3767,11 @@ SCIP_RETCODE SCIPcreateConsCardinality(
       /* check weights */
       if( weights != NULL )
       {
-         int* dummy;
-
          /* store weights */
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->weights, weights, nvars) );
 
-         /* create dummy array to make code compatible with SCIP 3.2.0
-          * (the function SCIPsortRealPtrPtr() is not available) */
-         SCIP_CALL( SCIPallocBufferArray(scip, &dummy, nvars) );
-         for( v = 0; v < nvars; ++v )
-            dummy[v] = 0;
-
          /* sort variables - ascending order */
-         SCIPsortRealPtrPtrInt(consdata->weights, (void**)consdata->vars, (void**)consdata->indvars, dummy, nvars);
-
-         SCIPfreeBufferArray(scip, &dummy);
+         SCIPsortRealPtrPtr(consdata->weights, (void**)consdata->vars, (void**)consdata->indvars, nvars);
       }
    }
    else
@@ -3800,7 +3812,7 @@ SCIP_RETCODE SCIPcreateConsCardinality(
 /** creates and captures a cardinality constraint with all constraint flags set to their default values.
  *
  *  @warning Do NOT set the constraint to be modifiable manually, because this might lead
- *  to wrong results as the variable array will not be resorted
+ *  to wrong results as the variable array will not be re-sorted
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method \ref SCIPreleaseCons()
  */

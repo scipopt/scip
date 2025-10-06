@@ -550,7 +550,7 @@ SCIP_Bool varIsSOS1(
 }
 
 
-/** returns SOS1 index of variable or -1 if variable is not part of the SOS1 conflict graph */
+/** returns node of variable in the conflict graph or -1 if variable is not part of the SOS1 conflict graph */
 static
 int varGetNodeSOS1(
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler */
@@ -1784,8 +1784,7 @@ SCIP_RETCODE presolRoundConsSOS1(
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
                SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-         SCIP_CALL( SCIPaddCons(scip, setpackcons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &setpackcons) );
+         SCIP_CALL( SCIPaddUpgrade(scip, cons, &setpackcons) );
 
          SCIPdebugMsg(scip, "Upgrading SOS1 constraint <%s> to set packing constraint.\n", SCIPconsGetName(cons));
 
@@ -10193,7 +10192,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
    SCIP_VAR** consvars;
    SCIP_VAR** locvars;
    SCIP_Real* locvals;
-   SCIP_Real constant = 0.0;
+   SCIP_Real constant;
    int consnodeidx;
    int nodeidx;
    int nconsvars;
@@ -10259,7 +10258,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS1)
    SCIP_VAR** consvars;
    SCIP_VAR** locvars;
    SCIP_Real* locvals;
-   SCIP_Real constant = 0.0;
+   SCIP_Real constant;
    int consnodeidx;
    int nodeidx;
    int nconsvars;
@@ -10385,6 +10384,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    conshdlrdata->tcliquedata = NULL;
    conshdlrdata->cntextsos1 = -1;
    conshdlrdata->varhash = NULL;
+   conshdlrdata->nsos1vars = 0;
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecSOS1, NULL) );
@@ -10702,7 +10702,7 @@ SCIP_RETCODE SCIPcreateConsSOS1(
 /** creates and captures a SOS1 constraint with all constraint flags set to their default values.
  *
  *  @warning Do NOT set the constraint to be modifiable manually, because this might lead
- *  to wrong results as the variable array will not be resorted
+ *  to wrong results as the variable array will not be re-sorted
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
@@ -10936,7 +10936,7 @@ SCIP_Bool SCIPvarIsSOS1(
 }
 
 
-/** returns SOS1 index of variable or -1 if variable is not part of the SOS1 conflict graph */
+/** returns node of variable in the conflict graph or -1 if variable is not part of the SOS1 conflict graph */
 int SCIPvarGetNodeSOS1(
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_VAR*             var                 /**< variable */

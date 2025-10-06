@@ -60,15 +60,19 @@
 #include "blockmemshell/memory.h"
 #include "scip/cuts.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_lpexact.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_sepa.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_cut.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -109,7 +113,8 @@
 
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
 #define POSTPROCESS                TRUE /**< apply postprocessing after MIR calculation - see SCIPcalcMIR() */
-#define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
+#define VARTYPEUSEVBDS                2 /**< We allow variable bound substitution for variables with continuous vartype only.
+                                         *   See SCIPcalcMIR() for more information. */
 #define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcalcMIR() */
 #define MAKECONTINTEGRAL          FALSE /**< convert continuous variable to integral variables in SCIPmakeRowIntegral() */
 
@@ -207,11 +212,13 @@ SCIP_RETCODE addCut(
    int*                  naddedcuts          /**< pointer to store number of added cuts */
    )
 {
+   int j;
+
    assert(scip != NULL);
    assert(cutoff != NULL);
    assert(naddedcuts != NULL);
 
-   if( cutnnz == 0 && SCIPisFeasNegative(scip, cutrhs) ) /*lint !e644*/
+   if( cutnnz == 0 && SCIPisFeasNegative(scip, cutrhs) && !SCIPisExact(scip) ) /*lint !e644*/
    {
       SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %g.\n", cutrhs);
       *cutoff = TRUE;
@@ -247,6 +254,40 @@ SCIP_RETCODE addCut(
             (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%" SCIP_LONGINT_FORMAT "_s%d", SCIPgetNLPs(scip), -c-1);
       }
 
+      if( SCIPisExact(scip) )
+      {
+         SCIP_ROUNDMODE roundmode;
+
+         roundmode = SCIPintervalGetRoundingMode();
+         SCIPintervalSetRoundingModeUpwards();
+         /* postprocess cut for exact solving, i.e. change almost integer values to integer by weakening side */
+         for( j = 0; j < cutnnz; j++ )
+         {
+            if( SCIPisIntegral(scip, cutcoefs[j]) )
+            {
+               SCIP_Real roundedval = SCIPround(scip, cutcoefs[j]);
+               SCIP_Real delta = roundedval - cutcoefs[j];
+               SCIP_VAR* var = vars[cutinds[j]];
+               SCIP_Real sideval;
+
+               if( delta == 0 )
+                  continue;
+
+               if( cutislocal )
+                  sideval = delta > 0 ? SCIPvarGetUbLocal(var) : SCIPvarGetLbLocal(var);
+               else
+                  sideval = delta > 0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var); 
+
+               if( SCIPisInfinity(scip, REALABS(sideval)) )
+                  continue;
+
+               cutcoefs[j]= roundedval;
+               cutrhs += delta * sideval;
+            }
+         }
+         SCIPintervalSetRoundingMode(roundmode);
+      }
+
       /* create empty cut */
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, cutsepa, cutname, -SCIPinfinity(scip), cutrhs,
             cutislocal, FALSE, sepadata->dynamiccuts) );
@@ -266,7 +307,7 @@ SCIP_RETCODE addCut(
       /* flush all changes before adding the cut */
       SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-      if( SCIProwGetNNonz(cut) == 0 )
+      if( SCIProwGetNNonz(cut) == 0 && !SCIPisExact(scip) )
       {
          assert( SCIPisFeasNegative(scip, cutrhs) );
          SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %g.\n", cutrhs);
@@ -279,6 +320,11 @@ SCIP_RETCODE addCut(
           * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply this bound change automatically. */
          SCIP_CALL( SCIPaddRow(scip, cut, TRUE, cutoff) );
          ++(*naddedcuts);
+         if( SCIPisCertified(scip) )
+         {
+            SCIP_CALL( SCIPstoreCertificateActiveAggrInfo(scip, cut) );
+            SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
+         }
       }
       else
       {
@@ -298,6 +344,8 @@ SCIP_RETCODE addCut(
                SCIProwGetNorm(cut), SCIPgetCutEfficacy(scip, NULL, cut),
                SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
+
+            SCIPdebug(SCIPprintRow(scip, cut, NULL));
 
             if( SCIPisCutNew(scip, cut) )
             {
@@ -320,6 +368,37 @@ SCIP_RETCODE addCut(
                }
 
                ++(*naddedcuts);
+
+               /* For certification we need to create the exact representation of the row; we need to perform this here
+                * because the certificate uses the current variable bounds; if certification is not active, we delay the
+                * creation of the exact row until the cut is actually selected to enter the LP, see sepastore.c.
+                *
+                * Note that this can lead to different solving paths when solving with/without certification, because
+                * the floating-point coefficients can change slightly during the creation of the exact row (if rational
+                * coefficients are rounded to smaller denominators) and this may affect cut selection.
+                */
+               if( SCIPisCertified(scip) )
+               {
+                  SCIP_CALL( SCIPstoreCertificateActiveAggrInfo(scip, cut) );
+                  SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
+
+                  if( SCIProwGetRowExact(cut) == NULL )
+                  {
+                     /**@todo delay creation of exact row for globally valid cuts */
+                     if( !cutislocal )
+                     {
+                        SCIP_CALL( SCIPdelPoolCut(scip, cut) );
+                        SCIP_CALL( SCIPcreateRowExactFromRow(scip, cut) );
+                        SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                     }
+                     else
+                     {
+                        SCIP_CALL( SCIPcreateRowExactFromRow(scip, cut) );
+                     }
+                  }
+
+                  SCIP_CALL( SCIPcertifyMirCut(scip, cut) );
+               }
             }
          }
       }
@@ -528,7 +607,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &cutinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisperm, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisfrac, nrows) );
@@ -556,7 +635,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       {
          assert(c < ncols);
          var = SCIPcolGetVar(cols[c]);
-         if( SCIPvarIsIntegral(var) )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
          {
             frac = SCIPfeasFrac(scip, SCIPcolGetPrimsol(cols[c]));
             frac = MIN(frac, 1.0 - frac);
@@ -568,7 +647,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
          assert(0 <= -c-1 && -c-1 < nrows);
          row = rows[-c-1];
-         if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) )
+         /* We allow separating on rows with a 'slack' implied integral variable */
+         if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) && SCIPgetRowNumImpliedIntCols(scip, row) == 0 )
          {
             frac = SCIPfeasFrac(scip, SCIPgetRowActivity(scip, row));
             frac = MIN(frac, 1.0 - frac);
@@ -623,15 +703,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       SCIP_CALL( SCIPgetLPBInvRow(scip, j, binvrow, inds, &ninds) );
 
       SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
-         sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
+         sepadata->sidetypebasis, allowlocal, SCIPallowNegSlack(scip) ? 2 : 0, (int) MAXAGGRLEN(nvars), &success) );
 
       if( !success )
          continue;
 
       /* try to create a strong CG cut out of the aggregation row */
-      if( separatescg )
+      if( separatescg && !SCIPisExact(scip) )
       {
-         SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, minfrac, maxfrac,
+         SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, VARTYPEUSEVBDS, allowlocal, minfrac, maxfrac,
             1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &strongcgsuccess) );
 
          /* if we want to generate both cuts, add cut and reset cutefficacy and strongcgsuccess */
@@ -651,17 +731,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                break;
          }
       }
-
-      /* @todo Currently we are using the SCIPcalcMIR() function to compute the coefficients of the Gomory
-       *       cut. Alternatively, we could use the direct version (see thesis of Achterberg formula (8.4)) which
-       *       leads to cut a of the form \sum a_i x_i \geq 1. Rumor has it that these cuts are better.
-       */
-
       /* try to create Gomory cut out of the aggregation row */
       if( separategmi )
       {
          /* SCIPcalcMIR will only override the cut if its efficacy is larger than the one of the strongcg cut */
-         SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
+         SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, VARTYPEUSEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
             minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
          if( success || strongcgsuccess )
@@ -678,6 +752,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                colindsproducedcut[i] = c;
             }
          }
+      }
+      if( SCIPisCertified(scip) )
+      {
+         SCIP_CALL( SCIPfreeCertificateActiveAggrInfo(scip) );
+         SCIP_CALL( SCIPfreeCertificateActiveMirInfo(scip) );
       }
    }
 
@@ -773,7 +852,11 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          SEPA_USESSUBSCIP, SEPA_DELAY,
          sepaExeclpGomory, NULL,
          sepadata) );
+
    assert(sepa != NULL);
+
+   /* gomory is safe to use in exact solving mode */
+   SCIPsepaMarkExact(sepa);
 
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->strongcg, "strongcg", "separator for strong CG cuts", -100000, SEPA_FREQ, 0.0,
       SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );

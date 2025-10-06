@@ -619,7 +619,7 @@ int thrd_create(thrd_t *thr, thrd_start_t func, void *arg)
     return thrd_error;
   }
 
-  return thrd_success; /*lint !e429*/
+  return thrd_success; /*lint !e429*/ /* cppcheck-suppress memleak */
 }
 
 thrd_t thrd_current(void)

@@ -32,7 +32,7 @@
  * on that machine (otherwise it is zero), an integer start time variables \f$S_j\f$, a processing time \f$p_j\f$, and a
  * demands \f$d_j\f$. Besides that an integer resource capacity \f$C\f$.
  *
- * The optcumulative enfoces the cumulative conditions for those jobs which are assigned to that machine. Let \f$J'\f$
+ * The optcumulative enforces the cumulative conditions for those jobs which are assigned to that machine. Let \f$J'\f$
  * be the subset of jobs assigned to that optcumulative constraint, then the cumulative constraint ensures that for
  * each point in time \f$t\f$ \f$\sum_{j\in J': S_j \leq t < S_j + p_j} d_j \leq C\f$ holds.
  *
@@ -53,7 +53,7 @@
  *       \f$\sum_{j\in J'} p_j \cdot d_j \leq (lct(J') - est(J')) \cdot C\f$
  * @todo Use a rectangle relaxation to determine if jobs which run in a certain interval can be packed feasible. this
  *       relaxation ignores the actual start and end time of a job.
- * @todo Adjsut relaxation after jobs are removed during search
+ * @todo Adjust relaxation after jobs are removed during search
  *
  */
 
@@ -523,6 +523,9 @@ SCIP_RETCODE catchEventBinvar(
    /* catch bound change events on variable */
    SCIP_CALL( SCIPcatchVarEvent(scip, binvar, eventtype, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
 
+   assert(consdata->nglbfixedzeros >= 0);
+   assert(consdata->nglbfixedones >= 0);
+
    /* update the globally fixed variables counter for this variable */
    if( SCIPvarGetUbGlobal(binvar) < 0.5)
       consdata->nglbfixedzeros++;
@@ -582,8 +585,6 @@ SCIP_RETCODE dropEventBinvar(
 
    assert(consdata->nglbfixedzeros >= 0);
    assert(consdata->nglbfixedones >= 0);
-   assert(consdata->nfixedzeros >= 0);
-   assert(consdata->nfixedones >= 0);
 
    return SCIP_OKAY;
 }
@@ -667,10 +668,10 @@ SCIP_RETCODE catchAllEvents(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->nglbfixedones == 0);
+
+   /* check that the global constraint state is clean */
    assert(consdata->nglbfixedzeros == 0);
-   assert(consdata->nfixedones == 0);
-   assert(consdata->nfixedzeros == 0);
+   assert(consdata->nglbfixedones == 0);
 
    /* catch event for every single variable */
    for( v = 0; v < consdata->nvars; ++v )
@@ -709,11 +710,9 @@ SCIP_RETCODE dropAllEvents(
       SCIP_CALL( dropEventIntvar(scip, cons, eventhdlrintvars, v) );
    }
 
-   /* check that the internal constraint state is rested */
-   assert(consdata->nglbfixedones == 0);
+   /* check that the global constraint state is reset */
    assert(consdata->nglbfixedzeros == 0);
-   assert(consdata->nfixedones == 0);
-   assert(consdata->nfixedzeros == 0);
+   assert(consdata->nglbfixedones == 0);
 
    return SCIP_OKAY;
 }
@@ -1160,7 +1159,7 @@ void collectActivities(
    int*                  durations,          /**< durations of the activities */
    int*                  demands,            /**< demands of the activities */
    int*                  nfixedones,         /**< pointer to store number of activities assigned to that machine */
-   int*                  nfixedzeros,        /**< pointer to store number of binary variables fixed to zeor */
+   int*                  nfixedzeros,        /**< pointer to store number of binary variables fixed to zero */
    SCIP_Bool*            auxiliary           /**< pointer to store if the integer start time variables of the assigned
                                               *   activities are auxiliary variables; that is the case if the optcumulative
                                               *   choice constraints is the only one having locks on these variables */
@@ -1221,7 +1220,7 @@ void collectSolActivities(
    int*                  nfixedzeros,        /**< pointer to store number of binary variables locally fixed to zero */
    SCIP_Bool*            auxiliary           /**< pointer to store if the integer start time variables of the assigned
                                               *   activities are auxiliary variables; that is the case if the machine
-                                              *   choice constraints is the only one haveing locks on these variables */
+                                              *   choice constraints is the only one having locks on these variables */
    )
 {
    int v;
@@ -1531,7 +1530,7 @@ SCIP_RETCODE solveSubproblem(
    int*                  durations,          /**< durations of the activities */
    int*                  demands,            /**< demands of the activities */
    int                   nvars,              /**< number of activities assigned to that machine */
-   int*                  nfixedvars,         /**< pointer to store the numbver of fixed variables */
+   int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
    int*                  nchgbds,            /**< pointer to store the number of changed bounds */
    int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is violated */
@@ -1678,7 +1677,7 @@ SCIP_RETCODE solveSubproblem(
    return SCIP_OKAY;
 }
 
-/** check if the given constrait is valid; checks each starting point of a job whether the remaining capacity is at
+/** check if the given constraint is valid; checks each starting point of a job whether the remaining capacity is at
  *  least zero or not. If not (*violated) is set to TRUE
  */
 static
@@ -1733,7 +1732,7 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
-/** check if the given constrait is valid; checks each starting point of a job whether the remaining capacity is at
+/** check if the given constraint is valid; checks each starting point of a job whether the remaining capacity is at
  *  least zero or not. If not (*violated) is set to TRUE
  */
 static
@@ -2102,6 +2101,11 @@ SCIP_RETCODE consdataDeletePos(
       SCIP_CALL( dropEventBinvar(scip, cons, conshdlrdata->eventhdlrbinvars, pos) );
       SCIP_CALL( dropEventIntvar(scip, cons, conshdlrdata->eventhdlrintvars, pos) );
    }
+
+   assert(consdata->nglbfixedzeros >= 0);
+   assert(consdata->nglbfixedones >= 0);
+   assert(consdata->nfixedzeros >= 0);
+   assert(consdata->nfixedones >= 0);
 
    SCIPdebugMessage("remove variable <%s> from optcumulative constraint <%s>\n",
       SCIPvarGetName(consdata->binvars[pos]), SCIPconsGetName(cons));
@@ -3192,7 +3196,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOptcumulative)
       SCIP_CALL( SCIPcreateCurrentSol(scip, &trysol, NULL) );
    }
 
-   /* check all constraints even if one is dectected be violated */
+   /* check all constraints even if one is detected be violated */
    for( c = 0; c < nconss && (!violated || solfeasible); ++c )
    {
       SCIP_CALL( enfopsCons(scip, conss[c], trysol, &consviolated, &consadded, &solfeasible) );
@@ -3622,7 +3626,7 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
    /* collect all activities which are were locally assigned to that machine before the bound change was made */
    for( v = 0; v < consdata->nvars; ++v )
    {
-      if( SCIPvarGetLbAtIndex(consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
+      if( SCIPgetVarLbAtIndex(scip, consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
       {
          vars[nvars] = consdata->vars[v];
          binvars[nvars] = consdata->binvars[v];
@@ -3640,7 +3644,7 @@ SCIP_DECL_CONSRESPROP(consRespropOptcumulative)
    {
       for( v = 0; v < consdata->nvars; ++v )
       {
-         if( SCIPvarGetLbAtIndex(consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
+         if( SCIPgetVarLbAtIndex(scip, consdata->binvars[v], bdchgidx, FALSE) > 0.5 )
          {
             SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[v]) );
 
@@ -3983,7 +3987,7 @@ SCIP_DECL_EVENTEXEC(eventExecOptcumulativeBinvars)
          consdata->propagated = FALSE;
       break;
    default:
-      SCIPerrorMessage("invalid event type %lx\n", eventtype);
+      SCIPerrorMessage("invalid event type %llx\n", (unsigned long long)eventtype);
       return SCIP_INVALIDDATA;
    }
 
@@ -4162,9 +4166,10 @@ SCIP_RETCODE SCIPcreateConsOptcumulative(
       assert(conshdlrdata != NULL);
       assert(conshdlrdata->eventhdlrbinvars != NULL);
       assert(conshdlrdata->eventhdlrintvars != NULL);
-
-      assert(consdata->nglbfixedones == 0);
       assert(consdata->nglbfixedzeros == 0);
+      assert(consdata->nglbfixedones == 0);
+      assert(consdata->nfixedzeros == 0);
+      assert(consdata->nfixedones == 0);
 
       /* catch bound change events of variables */
       SCIP_CALL( catchAllEvents(scip, *cons, conshdlrdata->eventhdlrbinvars, conshdlrdata->eventhdlrintvars) );

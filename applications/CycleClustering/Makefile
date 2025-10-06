@@ -52,6 +52,7 @@ override GMP		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* GMP=\([^@]*\).*/\1/
 override SYM		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SYM=\([^@]*\).*/\1/')
 override IPOPT		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* IPOPT=\([^@]*\).*/\1/')
 override IPOPTOPT	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* IPOPTOPT=\([^@]*\).*/\1/')
+override CONOPT	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* CONOPT=\([^@]*\).*/\1/')
 override LPSCHECK	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* LPSCHECK=\([^@]*\).*/\1/')
 override LPSOPT 	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* LPSOPT=\([^@]*\).*/\1/')
 override NOBLKBUFMEM	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* NOBLKBUFMEM=\([^@]*\).*/\1/')
@@ -107,30 +108,26 @@ endif
 all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 
 .PHONY: lint
-lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC)
+lint:		$(MAINSRC)
 		-rm -f lint.out
+		$(SHELL) -ec 'for i in $^; \
+			do \
+			echo $$i; \
+			$(LINT) -I$(SCIPDIR) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
+			$(FLAGS) -UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE $$i; \
+			done'
 
-		@$(SHELL) -ec 'if test -e $(SCIPDIR)/lint/co-gcc.mak ; \
-			then \
-				echo "-> generating gcc-include-path lint-file" ; \
-				cd $(SCIPDIR)/lint; $(MAKE) -f co-gcc.mak ; \
-			else \
-				echo "-> lint Makefile not found"; \
-			fi'
+.PHONY: pclint
+pclint:		$(MAINSRC)
+		-rm -f pclint.out
 ifeq ($(FILES),)
-		$(SHELL) -ec 'cd $(SCIPDIR); for i in $^; \
-			do \
-				echo $$i; \
-				$(LINT) lint/main-gcc.lnt +os\(applications/CycleClustering/lint.out\) -u -zero \
-				$(FLAGS) -I/usr/include -UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE -D_BSD_SOURCE applications/CycleClustering/$$i; \
-			done'
+		@$(SHELL) -ec 'echo "-> running pclint on $^..."; \
+			$(PCLINT) -I$(SCIPDIR) -I$(SCIPDIR)/pclint main-gcc.lnt +os\(pclint.out\) -u -zero -max_threads=$(MAXJOBS) \
+			$(USRFLAGS) $(FLAGS) -uNDEBUG -uSCIP_WITH_READLINE -uSCIP_ROUNDING_FE -D_BSD_SOURCE $^;'
 else
-		$(SHELL) -ec  'cd $(SCIPDIR); for i in $(FILES); \
-			do \
-				echo $$i; \
-				$(LINT) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
-				$(FLAGS) -I/usr/include -UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE -D_BSD_SOURCE applications/CycleClustering/$$i; \
-			done'
+		@$(SHELL) -ec  'echo "-> running pclint on files $(FILES) ..."; \
+			$(PCLINT) -I$(SCIPDIR) -I$(SCIPDIR)/pclint main-gcc.lnt +os\(pclint.out\) -u -zero -max_threads=$(MAXJOBS) \
+			$(USRFLAGS) $(FLAGS) -uNDEBUG -uSCIP_WITH_READLINE -uSCIP_ROUNDING_FE -D_BSD_SOURCE $(FILES);'
 endif
 
 .PHONY: scip

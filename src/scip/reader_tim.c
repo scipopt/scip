@@ -772,7 +772,6 @@ SCIP_RETCODE readTim(
       SCIP_CALL_TERMINATE( retcode, createReaderdata(scip, reader, timi), TERMINATE );
    }
 
- /* cppcheck-suppress unusedLabel */
  TERMINATE:
    timinputFree(scip, &timi);
    SCIPfclose(fp);
@@ -828,6 +827,9 @@ SCIP_DECL_READERREAD(readerReadTim)
 
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    correader = SCIPfindReader(scip, "correader");
 

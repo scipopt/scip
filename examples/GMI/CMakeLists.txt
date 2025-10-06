@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 project(GMI)
 
 if(TARGET SCIP::SCIP)
@@ -9,7 +14,7 @@ else()
   find_package(SCIP REQUIRED)
 endif()
 
-include_directories(${SCIP_INCLUDE_DIRS})
+include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(gmi
    src/cmain.c
@@ -82,7 +87,9 @@ foreach(instance ${instances})
                 )
         set_tests_properties(examples-gmi-${setting}-${basename}
                             PROPERTIES
+                            FAIL_REGULAR_EXPRESSION "ERROR"
                                 DEPENDS examples-gmi-build
+                                RESOURCE_LOCK libscip
                             )
         if(WIN32)
            # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,

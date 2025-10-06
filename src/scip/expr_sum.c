@@ -1312,7 +1312,6 @@ SCIP_RETCODE SCIPmultiplyBySumExprSum(
  *
  * @attention The number of terms in the expansion grows exponential with the exponent. Be aware of what you wish for.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPpowerExprSum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           result,             /**< buffer where to store expanded power of sum */

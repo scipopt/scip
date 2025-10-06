@@ -49,8 +49,10 @@
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -567,6 +569,11 @@ SCIP_RETCODE applyRepair(
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
    SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
 
+   /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+    * handler is in place to perform a final repair step
+    */
+   SCIP_CALL( SCIPenableExactSolving(subscip, FALSE) );
+
    /* use inference branching */
    if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
@@ -577,6 +584,7 @@ SCIP_RETCODE applyRepair(
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_repairsub", SCIPgetProbName(scip));
 
    SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   assert(!SCIPisExact(subscip));
 
    /* a trivial feasible solution can be constructed if violations are modeled with slack variables */
    if( heurdata->useslackvars )
@@ -909,12 +917,11 @@ SCIP_RETCODE applyRepair(
       {
          SCIPdebugMsg(scip, "Initial repair solution was not accepted.\n");
       }
-   }
 
 #ifdef SCIP_STATISTIC
-   if( heurdata->useslackvars )
       heurdata->improvedoldsol = SCIPgetSolOrigObj(subscip, subsol);
 #endif
+   }
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -1229,8 +1236,11 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
 
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
-      if( cutoff )
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a
+       * result); the cutoff result is safe to use in exact solving mode, but we don't have enough information to
+       * give a certificate for the cutoff
+       */
+      if( cutoff && !SCIPisCertified(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
@@ -1319,6 +1329,9 @@ SCIP_RETCODE SCIPincludeHeurRepair(
 
    assert(heur != NULL);
    assert(heurdata != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyRepair) );

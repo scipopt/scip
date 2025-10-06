@@ -111,7 +111,7 @@ SCIP_Real scoring(
          SCIP_Real efficacy;
 
          if( intsupportweight > 0.0 )
-            intsupport = intsupportweight * SCIPgetRowNumIntCols(scip, cuts[i]) / (SCIP_Real) SCIProwGetNNonz(cuts[i]);
+            intsupport = intsupportweight * SCIPgetRowNumIntCols(scip, cuts[i])  / (SCIP_Real) SCIProwGetNNonz(cuts[i]);
          else
             intsupport = 0.0;
 
@@ -432,7 +432,7 @@ SCIP_RETCODE SCIPincludeCutselHybrid(
  *
  *  This is the selection method of the hybrid cut selector which uses a weighted sum of the
  *  efficacy, parallelism, directed cutoff distance, and the integral support.
- *  The input cuts array gets resorted s.t the selected cuts come first and the remaining
+ *  The input cuts array gets re-sorted s.t the selected cuts come first and the remaining
  *  ones are the end.
  */
 SCIP_RETCODE SCIPselectCutsHybrid(

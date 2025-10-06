@@ -389,8 +389,6 @@ SCIP_RETCODE calcBranchScore(
    int ncolrows;
    int i;
 
-   SCIP_Bool onlyactiverows; /* should only rows which are active at the current node be considered? */
-
    assert(scip != NULL);
    assert(var != NULL);
    assert(upscore != NULL);
@@ -441,8 +439,6 @@ SCIP_RETCODE calcBranchScore(
    *upscore = 0.0;
    *downscore = 0.0;
 
-   onlyactiverows = FALSE;
-
    /* loop over the variable rows and calculate the up and down score */
    for( i = 0; i < ncolrows; ++i )
    {
@@ -467,9 +463,10 @@ SCIP_RETCODE calcBranchScore(
       /* we access the rows by their index */
       rowpos = SCIProwGetIndex(row);
 
-      /* skip non-active rows if the user parameter was set this way */
-      if( onlyactiverows && SCIPisSumPositive(scip, SCIPgetRowLPFeasibility(scip, row)) )
+      /* TODO add possibility to skip non-active rows by setting a user parameter */
+      /* if( SCIPisSumPositive(scip, SCIPgetRowLPFeasibility(scip, row)) )
          continue;
+      */
 
       /* call method to ensure sufficient data capacity */
       SCIP_CALL( heurdataEnsureArraySize(scip, heurdata, rowpos) );
@@ -997,7 +994,7 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving)
       return SCIP_OKAY;
 
    /* terminate if there are no integer variables (note that, e.g., SOS1 variables may be present) */
-   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
+   if( SCIPgetNContVars(scip) + SCIPgetNContImplVars(scip) == SCIPgetNVars(scip) )
       return SCIP_OKAY;
 
    /* select and store the scoring parameter for this call of the heuristic */
@@ -1086,6 +1083,9 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecDistributiondiving, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyDistributiondiving) );

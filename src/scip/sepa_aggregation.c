@@ -113,7 +113,8 @@
 
 #define BOUNDSWITCH                 0.5
 #define POSTPROCESS                TRUE
-#define USEVBDS                    TRUE
+#define VARTYPEUSEVBDS                2 /**< We allow variable bound substitution for variables with continuous vartype only.
+                                         *   See cuts.c for more information. */
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
 #define MAKECONTINTEGRAL          FALSE
@@ -936,7 +937,7 @@ SCIP_RETCODE aggregation(
 
       if( sepadata->sepcmir )
       {
-         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
+         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, VARTYPEUSEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
             aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
       }
       else
@@ -946,19 +947,16 @@ SCIP_RETCODE aggregation(
 
       if( cmirsuccess )
       {
-         /* cppcheck-suppress uninitvar */
          SCIP_CALL( addCut(scip, sol, sepadata->cmir, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy,
                cmircutislocal, sepadata->dynamiccuts, cutrank, startrow < 0 ? "objcmir" : "cmir", cutoff, ncuts, &cut) ); /*lint !e644*/
       }
       else if ( knapsackcoversuccess )
       {
-         /* cppcheck-suppress uninitvar */
          SCIP_CALL( addCut(scip, sol, sepadata->knapsackcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy,
                knapsackcovercutislocal, sepadata->dynamiccuts, cutrank, startrow < 0 ? "objlci" : "lci", cutoff, ncuts, &cut) ); /*lint !e644*/
       }
       else if ( flowcoversuccess )
       {
-         /* cppcheck-suppress uninitvar */
          SCIP_CALL( addCut(scip, sol, sepadata->flowcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy,
                flowcovercutislocal, sepadata->dynamiccuts, cutrank, startrow < 0 ? "objflowcover" : "flowcover", cutoff, ncuts, &cut) ); /*lint !e644*/
       }
@@ -1147,7 +1145,7 @@ SCIP_RETCODE separateCuts(
    nvars = SCIPgetNVars(scip);
    ncontvars = SCIPgetNContVars(scip);
 #ifdef IMPLINTSARECONT
-   ncontvars += SCIPgetNImplVars(scip); /* also aggregate out implicit integers */
+   ncontvars += SCIPgetNContImplVars(scip); /* also aggregate out implicit integers */
 #endif
    nintvars = nvars - ncontvars;
    assert(nvars == 0 || vars != NULL);
@@ -1330,8 +1328,8 @@ SCIP_RETCODE separateCuts(
          }
       }
 
-      SCIPdebugMsg(scip, " -> row %d <%s>: lhsscore=%g rhsscore=%g maxscore=%g\n", r, SCIProwGetName(rows[r]),
-         rowlhsscores[r], rowrhsscores[r], rowscores[r]);
+      SCIPdebugMsg(scip, " -> row %d <%s>: lhsscore=%g rhsscore=%g\n", r, SCIProwGetName(rows[r]),
+         rowlhsscores[r], rowrhsscores[r]);
    }
    assert(nnonzrows <= nrows);
 

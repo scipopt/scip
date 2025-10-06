@@ -177,6 +177,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
          }
       }
       break;
+   default:
+      SCIPABORT();
+      return SCIP_PARAMETERWRONGVAL;
    }
 
    assert(bestcand >= 0);

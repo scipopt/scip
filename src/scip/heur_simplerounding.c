@@ -88,11 +88,11 @@ SCIP_RETCODE performSimpleRounding(
    SCIP_RESULT*          result              /**< pointer to store the result of the heuristic call */
    )
 {
-   int c;
    int nunroundableimplints = 0;
+   int c;
 
-   /* round all roundable fractional columns in the corresponding direction as long as no unroundable column was found */
-   for (c = 0; c < ncands; ++c)
+   /* round all roundable fractional variables as long as no unroundable variable was found */
+   for( c = 0; c < ncands; ++c )
    {
       SCIP_VAR* var;
       SCIP_Real oldsolval;
@@ -140,7 +140,7 @@ SCIP_RETCODE performSimpleRounding(
       SCIP_Bool stored;
       SCIP_Bool checklprows;
 
-      /* unroundable implicit integers are adjusted. LP rows must be checked afterwards */
+      /* unroundable implied integral variables are adjusted, LP rows must be checked afterwards */
       if( nunroundableimplints > 0 )
       {
          SCIP_CALL( SCIPadjustImplicitSolVals(scip, sol, TRUE) );
@@ -156,8 +156,7 @@ SCIP_RETCODE performSimpleRounding(
           * variables were already moved in feasible direction to the next integer
           *
           * feasibility of LP rows must be checked again at the presence of
-          * unroundable, implicit integer variables with fractional LP solution
-          * value
+          * unroundable implied integral variables with fractional LP solution value
           */
          SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, checklprows, &stored) );
       }
@@ -215,7 +214,7 @@ SCIP_RETCODE performLPSimpleRounding(
       return SCIP_OKAY;
 
    /* don't call heuristic, if there are more fractional variables than roundable ones. We do not consider
-    * fractional implicit integer variables here, because simple rounding may adjust those separately,
+    * fractional continuous implied integer variables here, because simple rounding may adjust those separately,
     * even if they aren't roundable
     */
    if ( nlpcands > heurdata->nroundablevars )
@@ -249,36 +248,38 @@ SCIP_RETCODE performRelaxSimpleRounding(
    SCIP_RESULT*          result              /**< pointer to store the result of the heuristic call */
    )
 {
-   SCIP_SOL* sol;
    SCIP_VAR** vars;
    SCIP_VAR** relaxcands;
+   SCIP_SOL* sol;
    SCIP_Real* relaxcandssol;
    int nrelaxcands = 0;
    int nbinvars;
    int nintvars;
    int nimplvars;
+   int nintegervars;
    int ndiscretevars;
    int v;
 
    /* do not call heuristic if no relaxation solution is available */
-   if ( ! SCIPisRelaxSolValid(scip) )
+   if( !SCIPisRelaxSolValid(scip) )
       return SCIP_OKAY;
 
-   /* get variables */
+   /* get integral variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
-   ndiscretevars = nbinvars + nintvars + nimplvars; /* consider binary, integral, and implicit integer variables */
+   nintegervars = nbinvars + nintvars;
+   ndiscretevars = nintegervars + nimplvars;
 
    /* get storage */
    SCIP_CALL( SCIPallocBufferArray(scip, &relaxcands, ndiscretevars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &relaxcandssol, ndiscretevars) );
 
-   /* get fractional variables, that should be integral */
-   for (v = 0; v < nbinvars + nintvars; ++v)
+   /* get fractional non-implied integral variables */
+   for( v = 0; v < nintegervars; ++v )
    {
       SCIP_Real val;
 
       val = SCIPgetRelaxSolVal(scip, vars[v]);
-      if ( ! SCIPisFeasIntegral(scip, val) )
+      if( !SCIPisFeasIntegral(scip, val) )
       {
          relaxcands[nrelaxcands] = vars[v];
          relaxcandssol[nrelaxcands++] = val;
@@ -286,28 +287,29 @@ SCIP_RETCODE performRelaxSimpleRounding(
    }
 
    /* don't call heuristic, if there are more fractional variables than roundable ones. We explicitly
-    * do not consider implicit integer variables with fractional relaxation solution here
+    * do not consider implied integral variables with fractional relaxation solution here
     * because they may be feasibly adjusted, although they are not roundable
     */
-   if ( nrelaxcands > heurdata->nroundablevars )
+   if( nrelaxcands > heurdata->nroundablevars )
    {
       SCIPfreeBufferArray(scip, &relaxcands);
       SCIPfreeBufferArray(scip, &relaxcandssol);
       return SCIP_OKAY;
    }
 
-   /* collect implicit integer variables with fractional solution value */
-   for( v = nbinvars + nintvars; v < ndiscretevars; ++v )
+   /* collect implied integral variables with fractional solution value */
+   for( v = nintegervars; v < ndiscretevars; ++v )
    {
       SCIP_Real val;
 
       val = SCIPgetRelaxSolVal(scip, vars[v]);
-      if ( ! SCIPisFeasIntegral(scip, val) )
+      if( !SCIPisFeasIntegral(scip, val) )
       {
          relaxcands[nrelaxcands] = vars[v];
          relaxcandssol[nrelaxcands++] = val;
       }
    }
+
    /* get the working solution from heuristic's local data */
    sol = heurdata->sol;
    assert( sol != NULL );
@@ -437,52 +439,64 @@ static
 SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
+   int nbinintvars;
 
+   assert(SCIPhasCurrentNodeLP(scip));
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(result != NULL);
-   assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
 
-   /* only call heuristic, if an optimal LP solution is at hand or if relaxation solution is available */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && ! SCIPisRelaxSolValid(scip) )
-      return SCIP_OKAY;
+   /* get nonimplied integral variable number */
+   nbinintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
 
-   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
-   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+   /* only call heuristic if there are integral variables */
+   if( nbinintvars == 0 )
       return SCIP_OKAY;
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* don't call heuristic, if we have already processed the current LP solution but no relaxation solution is available */
-   if ( SCIPgetNLPs(scip) == heurdata->lastlp && ! SCIPisRelaxSolValid(scip) )
+   /* only call heuristic if there are roundable variables; except we are called during pricing, in this case we
+    * want to detect a (mixed) integer (LP) solution which is primal feasible
+    */
+   if( heurtiming != SCIP_HEURTIMING_DURINGPRICINGLOOP && heurdata->nroundablevars == 0 )
+      return SCIP_OKAY;
+
+   /* only call heuristic if an optimal LP solution or a relaxation solution is available */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && !SCIPisRelaxSolValid(scip) )
+      return SCIP_OKAY;
+
+   /* only call heuristic if the LP objective value is smaller than the cutoff bound */
+   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+      return SCIP_OKAY;
+
+   /* only call heuristic if the current LP solution is not already processed or a relaxation solution is available */
+   if( SCIPgetNLPs(scip) == heurdata->lastlp && !SCIPisRelaxSolValid(scip) )
       return SCIP_OKAY;
 
    /* on our first call or after each pricing round, calculate the number of roundable variables */
-   if( heurdata->nroundablevars == -1  || heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP )
+   if( heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP || heurdata->nroundablevars == -1 )
    {
       SCIP_VAR** vars;
-      int nbinintvars;
-      int nroundablevars;
       int i;
 
+      heurdata->nroundablevars = 0;
       vars = SCIPgetVars(scip);
-      nbinintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
-      nroundablevars = 0;
+
       for( i = 0; i < nbinintvars; ++i )
       {
          if( SCIPvarMayRoundDown(vars[i]) || SCIPvarMayRoundUp(vars[i]) )
-            nroundablevars++;
+            ++heurdata->nroundablevars;
       }
-      heurdata->nroundablevars = nroundablevars;
-   }
 
-   /* don't call heuristic if there are no roundable variables; except we are called during pricing, in this case we
-    * want to detect a (mixed) integer (LP) solution which is primal feasible */
-   if( heurdata->nroundablevars == 0 && heurtiming != SCIP_HEURTIMING_DURINGPRICINGLOOP )
-      return SCIP_OKAY;
+      /* only call heuristic if there are roundable variables; except we are called during pricing, in this case we
+       * want to detect a (mixed) integer (LP) solution which is primal feasible
+       */
+      if( heurtiming != SCIP_HEURTIMING_DURINGPRICINGLOOP && heurdata->nroundablevars == 0 )
+         return SCIP_OKAY;
+   }
 
    *result = SCIP_DIDNOTFIND;
 
@@ -515,6 +529,9 @@ SCIP_RETCODE SCIPincludeHeurSimplerounding(
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecSimplerounding, heurdata) );
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopySimplerounding) );

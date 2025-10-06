@@ -42,6 +42,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_rational.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 
@@ -96,18 +97,6 @@ SCIP_Real SCIPfeastol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns primal feasibility tolerance of LP solver
- *
- *  @deprecated Please use SCIPgetLPFeastol().
- *
- *  @return primal feasibility tolerance of LP solver
- */
-SCIP_DEPRECATED
-SCIP_EXPORT
-SCIP_Real SCIPlpfeastol(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** returns feasibility tolerance for reduced costs
  *
  *  @return feasibility tolerance for reduced costs
@@ -157,21 +146,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPchgFeastol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             feastol             /**< new feasibility tolerance for constraints */
-   );
-
-/** sets the primal feasibility tolerance of LP solver
- *
- *  @deprecated Please use SCIPsetLPFeastol().
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-SCIP_RETCODE SCIPchgLpfeastol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             lpfeastol,          /**< new primal feasibility tolerance of LP solver */
-   SCIP_Bool             printnewvalue       /**< should "numerics/lpfeastol = ..." be printed? */
    );
 
 /** sets the feasibility tolerance for reduced costs
@@ -237,7 +211,7 @@ SCIP_Real SCIPgetHugeValue(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** checks, if values are in range of epsilon */
+/** checks if values are in range of epsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisEQ(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -245,7 +219,7 @@ SCIP_Bool SCIPisEQ(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is (more than epsilon) lower than val2 */
+/** checks if val1 is (more than epsilon) lower than val2 */
 SCIP_EXPORT
 SCIP_Bool SCIPisLT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -253,7 +227,7 @@ SCIP_Bool SCIPisLT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is not (more than epsilon) greater than val2 */
+/** checks if val1 is not (more than epsilon) greater than val2 */
 SCIP_EXPORT
 SCIP_Bool SCIPisLE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -261,7 +235,7 @@ SCIP_Bool SCIPisLE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is (more than epsilon) greater than val2 */
+/** checks if val1 is (more than epsilon) greater than val2 */
 SCIP_EXPORT
 SCIP_Bool SCIPisGT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -269,7 +243,7 @@ SCIP_Bool SCIPisGT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is not (more than epsilon) lower than val2 */
+/** checks if val1 is not (more than epsilon) lower than val2 */
 SCIP_EXPORT
 SCIP_Bool SCIPisGE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -277,42 +251,42 @@ SCIP_Bool SCIPisGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if value is (positive) infinite */
+/** checks if value is (positive) infinite */
 SCIP_EXPORT
 SCIP_Bool SCIPisInfinity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to be compared against infinity */
    );
 
-/** checks, if value is huge and should be handled separately (e.g., in activity computation) */
+/** checks if value is huge and should be handled separately (e.g., in activity computation) */
 SCIP_EXPORT
 SCIP_Bool SCIPisHugeValue(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to be checked whether it is huge */
    );
 
-/** checks, if value is in range epsilon of 0.0 */
+/** checks if value is in range epsilon of 0.0 */
 SCIP_EXPORT
 SCIP_Bool SCIPisZero(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if value is greater than epsilon */
+/** checks if value is greater than epsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisPositive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if value is lower than -epsilon */
+/** checks if value is lower than -epsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisNegative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if value is integral within epsilon */
+/** checks if value is integral within epsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisIntegral(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -327,7 +301,7 @@ SCIP_Bool SCIPisScalingIntegral(
    SCIP_Real             scalar              /**< value to scale val with for checking for integrality */
    );
 
-/** checks, if given fractional part is smaller than epsilon */
+/** checks if given fractional part is smaller than epsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisFracIntegral(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -362,7 +336,7 @@ SCIP_Real SCIPfrac(
    SCIP_Real             val                 /**< value to return fractional part for */
    );
 
-/** checks, if values are in range of sumepsilon */
+/** checks if values are in range of sumepsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisSumEQ(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -370,7 +344,7 @@ SCIP_Bool SCIPisSumEQ(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is (more than sumepsilon) lower than val2 */
+/** checks if val1 is (more than sumepsilon) lower than val2 */
 SCIP_EXPORT
 SCIP_Bool SCIPisSumLT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -378,7 +352,7 @@ SCIP_Bool SCIPisSumLT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is not (more than sumepsilon) greater than val2 */
+/** checks if val1 is not (more than sumepsilon) greater than val2 */
 SCIP_EXPORT
 SCIP_Bool SCIPisSumLE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -386,7 +360,7 @@ SCIP_Bool SCIPisSumLE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is (more than sumepsilon) greater than val2 */
+/** checks if val1 is (more than sumepsilon) greater than val2 */
 SCIP_EXPORT
 SCIP_Bool SCIPisSumGT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -394,7 +368,7 @@ SCIP_Bool SCIPisSumGT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if val1 is not (more than sumepsilon) lower than val2 */
+/** checks if val1 is not (more than sumepsilon) lower than val2 */
 SCIP_EXPORT
 SCIP_Bool SCIPisSumGE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -402,28 +376,28 @@ SCIP_Bool SCIPisSumGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if value is in range sumepsilon of 0.0 */
+/** checks if value is in range sumepsilon of 0.0 */
 SCIP_EXPORT
 SCIP_Bool SCIPisSumZero(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if value is greater than sumepsilon */
+/** checks if value is greater than sumepsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisSumPositive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if value is lower than -sumepsilon */
+/** checks if value is lower than -sumepsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisSumNegative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if relative difference of values is in range of feasibility tolerance */
+/** checks if relative difference of values is in range of feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisFeasEQ(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -431,7 +405,7 @@ SCIP_Bool SCIPisFeasEQ(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference val1 and val2 is lower than feasibility tolerance */
+/** checks if relative difference val1 and val2 is lower than feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisFeasLT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -439,7 +413,7 @@ SCIP_Bool SCIPisFeasLT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of val1 and val2 is not greater than feasibility tolerance */
+/** checks if relative difference of val1 and val2 is not greater than feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisFeasLE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -447,7 +421,7 @@ SCIP_Bool SCIPisFeasLE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of val1 and val2 is greater than feastol */
+/** checks if relative difference of val1 and val2 is greater than feastol */
 SCIP_EXPORT
 SCIP_Bool SCIPisFeasGT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -455,7 +429,7 @@ SCIP_Bool SCIPisFeasGT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of val1 and val2 is not lower than -feastol */
+/** checks if relative difference of val1 and val2 is not lower than -feastol */
 SCIP_EXPORT
 SCIP_Bool SCIPisFeasGE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -463,35 +437,35 @@ SCIP_Bool SCIPisFeasGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if value is in range feasibility tolerance of 0.0 */
+/** checks if value is in range feasibility tolerance of 0.0 */
 SCIP_EXPORT
 SCIP_Bool SCIPisFeasZero(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if value is greater than feasibility tolerance */
+/** checks if value is greater than feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisFeasPositive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if value is lower than -feasibility tolerance */
+/** checks if value is lower than -feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisFeasNegative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if value is integral within the LP feasibility bounds */
+/** checks if value is integral within the LP feasibility bounds */
 SCIP_EXPORT
 SCIP_Bool SCIPisFeasIntegral(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if given fractional part is smaller than feastol */
+/** checks if given fractional part is smaller than feastol */
 SCIP_EXPORT
 SCIP_Bool SCIPisFeasFracIntegral(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -526,7 +500,7 @@ SCIP_Real SCIPfeasFrac(
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if relative difference of values is in range of dual feasibility tolerance */
+/** checks if relative difference of values is in range of dual feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisDualfeasEQ(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -534,7 +508,7 @@ SCIP_Bool SCIPisDualfeasEQ(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference val1 and val2 is lower than dual feasibility tolerance */
+/** checks if relative difference val1 and val2 is lower than dual feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisDualfeasLT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -542,7 +516,7 @@ SCIP_Bool SCIPisDualfeasLT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of val1 and val2 is not greater than dual feasibility tolerance */
+/** checks if relative difference of val1 and val2 is not greater than dual feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisDualfeasLE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -550,7 +524,7 @@ SCIP_Bool SCIPisDualfeasLE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of val1 and val2 is greater than dual feasibility tolerance */
+/** checks if relative difference of val1 and val2 is greater than dual feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisDualfeasGT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -558,7 +532,7 @@ SCIP_Bool SCIPisDualfeasGT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of val1 and val2 is not lower than -dual feasibility tolerance */
+/** checks if relative difference of val1 and val2 is not lower than -dual feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisDualfeasGE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -566,35 +540,35 @@ SCIP_Bool SCIPisDualfeasGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if value is in range dual feasibility tolerance of 0.0 */
+/** checks if value is in range dual feasibility tolerance of 0.0 */
 SCIP_EXPORT
 SCIP_Bool SCIPisDualfeasZero(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if value is greater than dual feasibility tolerance */
+/** checks if value is greater than dual feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisDualfeasPositive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if value is lower than -dual feasibility tolerance */
+/** checks if value is lower than -dual feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisDualfeasNegative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if value is integral within the LP dual feasibility tolerance */
+/** checks if value is integral within the LP dual feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisDualfeasIntegral(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if given fractional part is smaller than dual feasibility tolerance */
+/** checks if given fractional part is smaller than dual feasibility tolerance */
 SCIP_EXPORT
 SCIP_Bool SCIPisDualfeasFracIntegral(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -629,7 +603,7 @@ SCIP_Real SCIPdualfeasFrac(
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if the given new lower bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks if the given new lower bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
 SCIP_EXPORT
 SCIP_Bool SCIPisLbBetter(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -638,7 +612,7 @@ SCIP_Bool SCIPisLbBetter(
    SCIP_Real             oldub               /**< old upper bound */
    );
 
-/** checks, if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
 SCIP_EXPORT
 SCIP_Bool SCIPisUbBetter(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -647,7 +621,7 @@ SCIP_Bool SCIPisUbBetter(
    SCIP_Real             oldub               /**< old upper bound */
    );
 
-/** checks, if relative difference of values is in range of epsilon */
+/** checks if relative difference of values is in range of epsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisRelEQ(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -655,7 +629,7 @@ SCIP_Bool SCIPisRelEQ(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of val1 and val2 is lower than epsilon */
+/** checks if relative difference of val1 and val2 is lower than epsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisRelLT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -663,7 +637,7 @@ SCIP_Bool SCIPisRelLT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of val1 and val2 is not greater than epsilon */
+/** checks if relative difference of val1 and val2 is not greater than epsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisRelLE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -671,7 +645,7 @@ SCIP_Bool SCIPisRelLE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of val1 and val2 is greater than epsilon */
+/** checks if relative difference of val1 and val2 is greater than epsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisRelGT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -679,7 +653,7 @@ SCIP_Bool SCIPisRelGT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of val1 and val2 is not lower than -epsilon */
+/** checks if relative difference of val1 and val2 is not lower than -epsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisRelGE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -687,7 +661,7 @@ SCIP_Bool SCIPisRelGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of values is in range of sumepsilon */
+/** checks if relative difference of values is in range of sumepsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisSumRelEQ(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -695,7 +669,7 @@ SCIP_Bool SCIPisSumRelEQ(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of val1 and val2 is lower than sumepsilon */
+/** checks if relative difference of val1 and val2 is lower than sumepsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisSumRelLT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -703,7 +677,7 @@ SCIP_Bool SCIPisSumRelLT(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of val1 and val2 is not greater than sumepsilon */
+/** checks if relative difference of val1 and val2 is not greater than sumepsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisSumRelLE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -711,7 +685,7 @@ SCIP_Bool SCIPisSumRelLE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
-/** checks, if relative difference of val1 and val2 is greater than sumepsilon */
+/** checks if relative difference of val1 and val2 is greater than sumepsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisSumRelGT(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -721,7 +695,7 @@ SCIP_Bool SCIPisSumRelGT(
 
 /**! [SnippetCodeStyleNaming] */
 
-/** checks, if relative difference of val1 and val2 is not lower than -sumepsilon */
+/** checks if relative difference of val1 and val2 is not lower than -sumepsilon */
 SCIP_EXPORT
 SCIP_Bool SCIPisSumRelGE(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -749,7 +723,7 @@ SCIP_Longint SCIPconvertRealToLongint(
    SCIP_Real             real                /**< double bound to convert */
    );
 
-/** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.
+/** Checks if an iteratively updated value is reliable or should be recomputed from scratch.
  *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
  *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
  *  were canceled out when increasing the value and are random after decreasing it.
@@ -869,6 +843,14 @@ SCIP_Bool SCIPparseReal(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to search */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   );
+
+/** parse a rational value */
+SCIP_Bool SCIPparseRational(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< string to search */
+   SCIP_RATIONAL*        value,              /**< pointer to store the parsed value */
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 

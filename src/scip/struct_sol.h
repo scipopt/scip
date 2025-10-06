@@ -78,6 +78,7 @@ struct SCIP_Sol
    SCIP_REALARRAY*       vals;               /**< solution values for variables */
    SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from
                                               *   origin */
+   SCIP_VALSEXACT*       valsexact;          /**< exact solution values (only used if this is an exact solution) */
    union
    {
       SCIP_HEUR*         heur;               /**< heuristic that found the solution, if solution is of heuristic type */
@@ -96,9 +97,22 @@ struct SCIP_Sol
    SCIP_SOLTYPE          type;               /**< type of solution: heuristic or (LP) relaxation solution, or unspecified origin */
 #ifndef NDEBUG
    SCIP_Longint          lpcount;            /**< number of LPs solved when this solution was created, needed for debug checks
-                                              *   concerning solutions linked to the LP solution
-                                              */
+                                              *   concerning solutions linked to the LP solution */
+   SCIP*                 scip;               /**< SCIP data structure */
 #endif
+};
+
+/** exact primal CIP solution
+ *
+ *  Solutions with origin ORIGINAL contain the values for original variables. The stored objective value also
+ *  corresponds to the original problem.
+ */
+struct SCIP_ValsExact
+{
+   SCIP_RATIONAL*        obj;                /**< objective value of solution */
+   SCIP_RATIONALARRAY*   vals;               /**< solution values for variables */
+   SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from
+                                              *   origin */
 };
 
 #ifdef __cplusplus

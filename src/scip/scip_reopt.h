@@ -73,7 +73,7 @@ SCIP_RETCODE SCIPgetReoptChildIDs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node of the search tree */
    unsigned int*         ids,                /**< array to store the ids of child nodes */
-   int                   mem,                /**< allocated memory */
+   int                   idssize,            /**< allocated memory */
    int*                  nids                /**< number of child nodes */
    );
 
@@ -92,7 +92,7 @@ SCIP_RETCODE SCIPgetReoptLeaveIDs(
    SCIP*                 scip,               /**< SCIP data strcuture */
    SCIP_NODE*            node,               /**< node of the search tree */
    unsigned int*         ids,                /**< array of ids */
-   int                   mem,                /**< allocated memory */
+   int                   idssize,            /**< allocated memory */
    int*                  nids                /**< number of child nodes */
    );
 
@@ -314,16 +314,6 @@ SCIP_Real SCIPgetReoptSimilarity(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   run1,               /**< number of run */
    int                   run2                /**< number of run */
-   );
-
-/** check the changes of the variable coefficient in the objective function */
-SCIP_EXPORT
-void SCIPgetVarCoefChg(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   varidx,             /**< index of variable */
-   SCIP_Bool*            negated,            /**< coefficient changed the sign */
-   SCIP_Bool*            entering,           /**< coefficient gets non-zero coefficient */
-   SCIP_Bool*            leaving             /**< coefficient gets zero coefficient */
    );
 
 /** @} */

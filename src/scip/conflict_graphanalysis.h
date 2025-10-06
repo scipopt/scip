@@ -282,10 +282,8 @@ void SCIPconflicthdlrEnableOrDisableClocks(
    SCIP_Bool             enable              /**< should the clocks of the conflict handler be enabled? */
    );
 
-/** return TRUE if conflict analysis is applicable; In case the function return FALSE there is no need to initialize the
- *  conflict analysis since it will not be applied
- */
-SCIP_Bool SCIPconflictApplicable(
+/** return TRUE if conflict graph analysis is applicable */
+SCIP_Bool SCIPconflictGraphApplicable(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -350,7 +348,7 @@ SCIP_RETCODE SCIPconflictAnalyzeRemainingBdchgs(
    int*                  nreconvliterals     /**< pointer to store the number of literals generated reconvergence constraints */
    );
 
-/** initializes the propagation conflict analysis by clearing the conflict candidate queue */
+/** initializes propagation and resolution conflict analysis by clearing the conflict candidate queues */
 SCIP_RETCODE SCIPconflictInit(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -434,6 +432,7 @@ SCIP_RETCODE SCIPrunBoundHeuristic(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPI*             lpi,                /**< LPI data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Real*            proofcoefs,         /**< coefficients in the proof constraint */
    SCIP_Real*            prooflhs,           /**< lhs of the proof constraint */
@@ -446,6 +445,15 @@ SCIP_RETCODE SCIPrunBoundHeuristic(
    SCIP_Bool             marklpunsolved,     /**< whether LP should be marked unsolved after analysis (needed for strong branching) */
    SCIP_Bool*            dualproofsuccess,   /**< pointer to store success result of dual proof analysis */
    SCIP_Bool*            valid               /**< pointer to store whether the result is still a valid proof */
+   );
+
+void conflictsetPrint(
+   SCIP_CONFLICTSET*     conflictset         /**< conflict set */
+   );
+
+SCIP_Bool bdchginfoIsInvalid(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
 #ifdef __cplusplus

@@ -37,6 +37,7 @@
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
 #include "scip/type_misc.h"
+#include "scip/type_rational.h"
 #include "scip/type_reopt.h"
 #include "scip/type_retcode.h"
 #include "scip/type_tree.h"
@@ -164,6 +165,12 @@ int SCIPnodeGetDepth(
 /** gets the lower bound of the node */
 SCIP_EXPORT
 SCIP_Real SCIPnodeGetLowerbound(
+   SCIP_NODE*            node                /**< node */
+   );
+
+/** gets the rational lower bound of the node */
+SCIP_EXPORT
+SCIP_RATIONAL* SCIPnodeGetLowerboundExact(
    SCIP_NODE*            node                /**< node */
    );
 

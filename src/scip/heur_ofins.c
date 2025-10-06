@@ -484,32 +484,35 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
    int nvars;
    int v;
 
-   assert( heur != NULL );
    assert( scip != NULL );
+   assert( heur != NULL );
    assert( result != NULL );
+
+   /* only call heuristic if reoptimization is enabled */
+   if( !SCIPisReoptEnabled(scip) )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    *result = SCIP_DELAYED;
 
-   /* do not call heuristic of node was already detected to be infeasible */
-   if( nodeinfeasible )
-      return SCIP_OKAY;
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
-
-   /* only call heuristic, if reoptimization is enabled */
-   if( !SCIPisReoptEnabled(scip) )
-      return SCIP_OKAY;
-
-   /* only call the heuristic, if we are in run >= 2 */
+   /* only call the heuristic if we are in run >= 2 */
    if( SCIPgetNReoptRuns(scip) <= 1 )
+      return SCIP_OKAY;
+
+   /* do not call heuristic if node was already detected to be infeasible */
+   if( nodeinfeasible )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTRUN;
 
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert( heurdata != NULL );
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
@@ -594,14 +597,14 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
 
    SCIPdebugMsg(scip, "%d (rate %.4f) changed coefficients\n", nchgcoefs, nchgcoefs/((SCIP_Real)nvars));
 
-   /* we only want to run the heuristic, if there at least 3 changed coefficients.
+   /* we only want to run the heuristic if there at least 3 changed coefficients.
     * if the number of changed coefficients is 2 the trivialnegation heuristic will construct an
     * optimal solution without solving a MIP.
     */
    if( nchgcoefs < 3 )
       goto TERMINATE;
 
-   /* run the heuristic, if not too many coefficients have changed */
+   /* run the heuristic if not too many coefficients have changed */
    if( nchgcoefs/((SCIP_Real)nvars) > heurdata->maxchangerate )
       goto TERMINATE;
 
@@ -636,6 +639,9 @@ SCIP_RETCODE SCIPincludeHeurOfins(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecOfins, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyOfins) );

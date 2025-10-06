@@ -63,6 +63,9 @@
 #define DEFAULT_USESTRENGTHENING  FALSE /**< default for using strengthend intersection cuts to separate */
 #define DEFAULT_USEBOUNDS         FALSE /**< default for using nonnegativity bounds when separating */
 
+/* TODO find a smarter less blunt way how to handle problems with many 2x2 minors (eigena2, elec100, sjup2) */
+#define MAXNMINORS               100000 /**< maximal minors to consider; minor detection stops when MAXNMINORS many have been found */
+
 /*
  * Data structures
  */
@@ -417,7 +420,7 @@ SCIP_RETCODE detectMinors(
 
       rowi = (struct rowdata*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[i]]);
 
-      for( j = i + 1; j < nrowvars; ++j )
+      for( j = i + 1; j < nrowvars && sepadata->nminors < MAXNMINORS ; ++j )
       {
          struct rowdata* rowj;
          int ninter;
@@ -1567,6 +1570,7 @@ SCIP_RETCODE separateDeterminant(
    SCIP_Real solxil;
    SCIP_Real solxjk;
    SCIP_Real solxjl;
+   SCIP_Real viol;
 
    ncols = SCIPgetNLPCols(scip);
    nrows = SCIPgetNLPRows(scip);
@@ -1643,10 +1647,15 @@ SCIP_RETCODE separateDeterminant(
    /* merge coefficients that belong to same variable */
    SCIPmergeRowprepTerms(scip, rowprep);
 
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, sepadata->mincutviol, NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIPgetHugeValue(scip), &success) );
 
-   /* if cleanup was successfull, create row out of rowprep and add it */
-   if( success )
+   if( !success )
+      goto CLEANUP;
+
+   viol = SCIPgetRowprepViolation(scip, rowprep, NULL, &success);
+
+   /* if cut is violated, create row out of rowprep and add it */
+   if( success && viol >= sepadata->mincutviol )
    {
       SCIP_ROW* row;
       SCIP_Bool infeasible;

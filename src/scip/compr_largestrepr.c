@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   compr_largestrepr.c
- * @ingroup OTHER_CFILES
+ * @ingroup DEFPLUGINS_COMPRESSION
  * @brief  largestrepr tree compression
  * @author Jakob Witzig
  */

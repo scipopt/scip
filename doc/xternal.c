@@ -104,7 +104,7 @@
  *
  * \verbinclude output.log
  *
- * @version  10.0.0
+ * @version  11.0.0
  *
  * \image html scippy.png
  */
@@ -126,37 +126,34 @@
  * `msk`    | Mosek (version at least 7.0.0 required)
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
- *
- * There are two different interfaces for SoPlex. The default one (`spx`) uses an updated interface that is provided
- * by SoPlex itself (since version 2.0), resulting in a slimmer LPI that is similiar to those for CPLEX or XPRESS.
- * The other one - `spx1` - is the older LPI that directly interfaces the internal simplex solver of SoPlex and
- * therefore needs to duplicate some features in the LPI that are already available in SoPlex itself. It lacks some
- * features like persistent scaling which are only available in the modern interface. Upcoming features may not be
- * supported. Old compilers might have difficulties with the new interface because some C++11 features are required
- * that may not be supported.
- *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /** @page NLPISOLVERS Available implementations of the NLP solver interface
  *
- * SCIP implements the NLP solver interface for the solvers <a href="https://github.com/coin-or/Ipopt">IPOPT</a>, <a
+ * SCIP implements the NLP solver interface for the solvers <a href="https://conopt.com">CONOPT</a>, <a href="https://github.com/coin-or/Ipopt">IPOPT</a>, <a
  * href="https://worhp.de/">WORHP</a>, and <a href="http://www.mcs.anl.gov/~leyffer/solvers.html">FilterSQP</a>. In
  * contrast to the implementations of the LP solver interface, SCIP can be compiled with multiple NLP solvers and selects
  * the solver with the highest priority at the beginning of the solving process.
- * Currently, the priorities are, in descending order: Ipopt, WORHP/IP, FilterSQP, WORHP/SQP.
+ * Currently, the priorities are, in descending order: CONOPT, Ipopt, WORHP/IP, FilterSQP, WORHP/SQP.
  *
  * If more than one solver is available, then it is possible to solve all NLPs during the solving process with all
  * available NLP solvers by setting the parameter `nlpi/all/priority` to the highest value.
  * In this case, SCIP uses the solution from a solver that provides the best objective value. Other possible use
  * cases for the availability of multiple solvers have not been implemented yet.
  *
- * In the @ref MAKE "GNU make" based build system, building the implementations of the interface for FilterSQP, IPOPT, and
- * WORHP can be enabled by specifying `FILTERSQP=true`, `IPOPT=true`, and `WORHP=true`, respectively, as argument to the
+ * In the @ref MAKE "GNU make" based build system, building the implementations of the interface for CONOPT, FilterSQP, IPOPT, and
+ * WORHP can be enabled by specifying `CONOPT=true`, `FILTERSQP=true`, `IPOPT=true`, and `WORHP=true`, respectively, as argument to the
  * `make` call.
- * In the @ref CMAKE "CMAKE" based build system, building the implementation of the interface for IPOPT and WORHP can be
- * enabled by specifying `IPOPT=on` and `WORHP=on`, respectively, as argument to the `cmake` call.
+ * In the @ref CMAKE "CMAKE" based build system, building the implementation of the interface for CONOPT, IPOPT and WORHP can be
+ * enabled by specifying `CONOPT=on`, `IPOPT=on` and `WORHP=on`, respectively, as argument to the `cmake` call.
+ *
+ * @section NLPISOLVERS_CONOPT CONOPT
+ *
+ * <b>CONOPT</b> is a feasible path solver based on advanced active set methods. Originally developed by ARKI Consulting
+ * & Development A/S in Denmark, CONOPT was acquired by GAMS in 2024. It is free for academic uses and is available at
+ * <a href="https://www.conopt.com">https://www.conopt.com</a>.
  *
  * @section NLPISOLVERS_IPOPT IPOPT
  *
@@ -519,6 +516,7 @@
  *    </td>
  *    <td>
  *       <ul>
+ *          <li>Compile with <code>CONOPT=true</code> for better performance.</li>
  *          <li>Compile with <code>IPOPT=true</code> for better performance.</li>
  *          <li>Compile with <code>WORHP=true</code> for better performance.</li>
  *          <li>Compile with <code>FILTERSQP=true</code> for better performance.</li>
@@ -533,7 +531,7 @@
  *          <li>Test instances are available at <code>check/instances/MINLP/</code>.</li>
  *       </ul>
  *    </td>
- * </td>
+ * </tr>
  * <tr>
  *    <td>Constraint Integer Program (CIP)</td>
  *    <td>\f{align*}{
@@ -571,7 +569,7 @@
  *          <li>Test instances are available at <code>check/instances/MINLP/circle.lp</code>.</li>
  *       </ul>
  *    </td>
- * </td>
+ * </tr>
  * <tr>
  *    <td>Linear program (LP)</td>
  *    <td>\f{align*}{
@@ -582,7 +580,7 @@
  *    </td>
  *    <td>see MIP formats</td>
  *    <td>See <a href="FAQ\FILEEXT#scipaslpsolver">Can I use \SCIP as a pure LP solver</a> in the FAQ.</td>
- * </td>
+ * </tr>
  * <tr>
  *    <td>Pseudoboolean optimization</td>
  *    <td>\f{align*}{
@@ -990,6 +988,16 @@
  *  </tr>
  *  <tr>
  *  <td>
+ *  @subpage PBSOLVER_MAIN
+ *  </td>
+ *  <td>
+ *  A solver for pseudoboolean problems in OPB or WBO format. It complies by default with the technical regulations of
+ *  PB competition. Therefore, it includes a message handler to produce a valid general log and for optimization
+ *  problems an event handler to signal achievements of best primal solutions.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
  *  @subpage RINGPACKING_MAIN "Ringpacking"
  *  </td>
  *  <td>
@@ -1075,6 +1083,8 @@
 
  * \SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
  * problem instance in another file format (the LP format is much more human readable than the MPS format, for example).
+ * Since stein27.fzn has many constraints with the same name, which would result in an unusable LP file, we write out
+ * the problem with generic variable and constraint names (x1, x2, x3, ...; c1, c2, c3, ...) here.
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetWriteSolutions
  *
@@ -1786,7 +1796,7 @@
  * The CONSINITLP callback is executed before the first LP relaxation is solved.
  * It should add the LP relaxations of all "initial" constraints to the LP. The method should scan the constraints
  * array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the LP relaxation
- * of all initial constraints to the LP with calls to SCIPaddCut().
+ * of all initial constraints to the LP with calls to SCIPaddRow().
  *
  * @subsection CONSSEPALP
  *
@@ -1795,7 +1805,7 @@
  * the current LP solution.
  * The method is called in the LP solution loop, which means that a valid LP solution exists.
  *
- * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
  * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
@@ -1823,7 +1833,7 @@
  * the given primal solution.
  * The method is not called in the LP solution loop, which means that there is no valid LP solution.
  *
- * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
  * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
@@ -1887,7 +1897,7 @@
  * variables are 0.0). It uses <code>SCIPinferVarLbCons(scip, z, 1.0, c, 0)</code> to apply this assignment (an
  * inference information tag is not needed by the constraint handler and is set to 0).  In the conflict analysis, the
  * constraint handler may be asked to resolve the lower bound change on \f$z\f$ with constraint \f$c\f$, that was
- * applied at a time given by a bound change index "bdchgidx".  With a call to <code>SCIPvarGetLbAtIndex(z,
+ * applied at a time given by a bound change index "bdchgidx".  With a call to <code>SCIPgetVarLbAtIndex(z,
  * bdchgidx)</code>, the handler can find out, that the lower bound of variable \f$z\f$ was set to 1.0 at the given
  * point of time, and should call <code>SCIPaddConflictUb(scip, x, bdchgidx)</code> and <code>SCIPaddConflictUb(scip, y,
  * bdchgidx)</code> to tell SCIP, that the upper bounds of \f$x\f$ and \f$y\f$ at this point of time were the reason for
@@ -2687,7 +2697,7 @@
  * It should try to generate general purpose cutting planes in order to separate the current LP solution.
  * The method is called in the LP solution loop, which means that a valid LP solution exists.
  *
- * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
  * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
@@ -2716,7 +2726,7 @@
  * relaxations that want to separate an intermediate primal solution vector. Thus, if you do not want to support
  * such external plugins, you do not need to implement this callback method.
  *
- * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
  * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
@@ -3441,7 +3451,7 @@
  * \n
  * Note that this property only defines the default value of the priority. The user may change this value arbitrarily by
  * adjusting the corresponding parameter setting. Whenever, even during solving, the priority of a cut selector is
- * changed, the cut selectors are resorted by the new priorities.
+ * changed, the cut selectors are re-sorted by the new priorities.
  *
  *
  * @section CUTSEL_DATA Cut Selector Data
@@ -3497,7 +3507,7 @@
  * @subsection CUTSELSELECT
  *
  * The CUTSELSELECT callback should decide which cuts should be added to the relaxation.
- * The callback receives the arrays of cuts to select from. This array must be resorted and the first nselectedcuts from
+ * The callback receives the arrays of cuts to select from. This array must be re-sorted and the first nselectedcuts from
  * the sorted array are going to be selected.
  * In addition to the aforementioned cuts, the list of forced cuts is also given as an argument. This array can be used
  * to help with the selection algorithm. Note, however, that this array should not be tampered with.
@@ -4234,10 +4244,16 @@
  *
  * For a complete implementation of an expression handler, take the one for exponential expressions (src/scip/expr_exp.c) as an example.
  *
+ * It is very easy to transfer the C explanation to C++; whenever a function should be implemented using the
+ * SCIP_DECL_EXPRHDLR... notion, reimplement the corresponding virtual member function of the abstract scip::ObjExprhdlr
+ * base class.
+ *
  * @section EXPRHDLR_PROPERTIES Properties of an Expression Handler
  *
  * At the top of the new file `expr_myfunc.c`, you can find the expression handler properties.
  * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the expression handler properties by calling the constructor
+ * of the abstract base class scip::ObjExprhdlr from within your constructor.
  * The properties you have to set have the following meaning:
  *
  * \par EXPRHDLR_NAME: the name of the expression handler.
@@ -4320,6 +4336,8 @@
  * an operational algorithm.
  * They are passed to SCIP when the expression handler is created and included in SCIP via SCIPincludeExprhdlr(),
  * see @ref EXPRHDLR_INTERFACE.
+ * In the C++ wrapper class scip::ObjExprhdlr, the fundamental callback methods are virtual abstract member functions.
+ * You have to implement them in order to be able to construct an object of your expression handler class.
  *
  * Expression handlers have one fundamental callback, @ref EXPREVAL, that needs to be implemented.
  * However, expression handlers with stateful expressions (expressions that have data) need to implement also the
@@ -7210,7 +7228,7 @@
  * infervar), the corresponding bound change (@p bdchgidx, @p boundtype), and the integer (@p inferinfo) that has been
  * supplied during propagation.
  *
- * One can use SCIPvarGetUbAtIndex() or SCIPvarGetLbAtIndex() to detect the bounds before or after the propagation that
+ * One can use SCIPgetVarUbAtIndex() or SCIPgetVarLbAtIndex() to detect the bounds before or after the propagation that
  * should be investigated. Then the bounds that were involved should be passed to SCIP via SCIPaddConflictLb() and
  * SCIPaddConflictUb().  If there is more than one valid explanation of infeasibility, either one can be used.
  * Typically, smaller explanations tend to be better.
@@ -7328,7 +7346,7 @@
  * on one problem in parallel. To use this feature \SCIP has to be compiled with an additional make option to
  * enable the threading functionality (e.g. TPI=tny, see \ref MAKE).
  * Then, a concurrent solve can be started by using the <code>concurrentopt</code> command instead of the <code>optimize</code> command
- * in the \SCIP shell, or by calling the interface function SCIPsolveParallel().
+ * in the \SCIP shell, or by calling the interface function SCIPsolveConcurrent().
  * To configure the behavior of the concurrent solving mode there are new parameters in the category <code>concurrent/</code>
  * and <code>parallel/</code> which will be explained here shortly.
  *
@@ -7708,6 +7726,43 @@
  * time files. By default, the STO reader will construct the deterministic equivalent of the stochastic program. A
  * parameter is provided "reading/sto/usebenders" that will inform the STO reader to apply Benders' decomposition to the
  * input stochastic program.
+ *
+ * @section BENDERSDECSTRUCTURE Inputting a user-defined decomposition structure
+ *
+ * Benders' decomposition can be applied from a user-provided decomposition structure. Details about the decomposition
+ * structure and how to provide it to SCIP can be found at @ref DECOMP. Prior to reading the decomposition structure
+ * into SCIP, it is necessary to inform SCIP that the variables and constraints must be labelled for Benders'
+ * decomposition. This is achieved by setting the parameter "decomposition/benderslabels" to "TRUE". Following this,
+ * Benders' decomposition will be applied if the parameter "decomposition/applybenders" is set to "TRUE".
+ *
+ * When Benders' decomposition is applied using the decomposition structure, the Benders' decomposition algorithm is
+ * executed within a relaxator (see @ref RELAX). The relaxator is called when processing the root node of the original
+ * SCIP instance, before the first LP solve. Within the relaxator, a sub-SCIP is created, upon which the Benders'
+ * decomposition is applied. The default Benders' decomposition plugin (see @ref BENDERSDEFAULT) is used for applying
+ * the decomposition. The master problem sub-SCIP is solved and then the solution from the Benders' decomposition
+ * algorithm is returned.
+ *
+ * If the problem is solved to optimality by the Benders' decomposition algorithm, then the original SCIP instance
+ * terminates. There are cases where the Benders' decomposition algorithm terminates without an optimal solution. As a
+ * result, the original SCIP instance would continue solving. These cases are: reaching node, memory or solution limits,
+ * or numerical issues meaning that the Benders' solution is not optimal for the original problem. The parameter
+ * "relaxing/benders/continueorig" is provided to inform SCIP whether the original SCIP instance should continue solving
+ * following the completion of the Benders' algorithm. By default, solving in the original SCIP instance is interrupted
+ * when the relaxator finishes.
+ *
+ * The parameter setting and limits from the original SCIP instance are copied across to the master problem
+ * sub-SCIP in the Benders' decomposition relaxator. It is possible to set a separate node limit for the Benders'
+ * algorithm within the relaxator. This is achieved by using the parameter "relaxing/benders/nodelimit". A possible use
+ * case for a separate Benders' node limit is that the Benders' algorithm could be used as an initial heuristics for the
+ * original SCIP instance.
+ *
+ * An advantage over using the decomposition structure compared to an instance in the SMPS format is that the solution
+ * to the original problem is easily accessible. At the completion of the Benders' decomposition algorithm, the best
+ * know solution is copied back to the original SCIP instance. Note that using a decomposition structure is not the only
+ * way to get the original problem solution from the Benders' decomposition algorithm. Whichever method you use, it is
+ * possible to solve the Benders' decomposition subproblems by calling SCIPsetupBendersSubproblem() and then
+ * SCIPsolveBendersSubproblem() for each subproblem using the best solution from the master problem. An example of this
+ * can be found in solveBendersSubproblems() of `src/scip/relax_benders.c`.
  *
  * @section BENDERSDEFAULT Using the default Benders' decomposition plugin.
  *
@@ -9721,13 +9776,33 @@
  * This module contains methods to include specific file readers into \SCIP.
  *
  * @note All default plugins can be included at once (including all default file readers) using SCIPincludeDefaultPlugins()
+ */
+
+/**@defgroup IISFINDERS IIS Finders
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default IIS finders of \SCIP
  *
+ * A detailed description what an IIS finder does and how to add a IIS finder to SCIP can be found \ref IISFINDER "here".
+ */
+
+/**@defgroup IISfinderIncludes Inclusion methods
+ * @ingroup IISFINDERS
+ * @brief methods to include specific IIS finders into \SCIP
+ *
+ * This module contains methods to include specific IIS finders into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default file readers) using SCIPincludeDefaultPlugins()
  */
 
 /**@defgroup PARALLEL Parallel interface methods
  * @ingroup INTERNALAPI
  * @brief headers and methods for the parallel interface of \SCIP
  *
+ */
+
+/**@defgroup TASKINTERFACE Parallel task interface methods
+ * @ingroup INTERNALAPI
+ * @brief headers and methods for the parallel task interface of \SCIP
  */
 
 /**@defgroup PublicSymmetryMethods Symmetry
@@ -9746,7 +9821,7 @@
  */
 
 /**@defgroup LPIS LP Solver Interface
- * @ingroup PUBLICPLUGINLPI
+ * @ingroup PUBLICPLUGINAPI
  * @brief methods and files provided by the LP solver interface of \SCIP
  *
  * \SCIP uses external tools to solve LP relaxations. The communication

@@ -59,7 +59,7 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/scip_mem.h"
-
+#include "tinycthread/tinycthread.h"
 
 /** struct for nauty callback */
 struct NAUTY_Data
@@ -77,9 +77,14 @@ struct NAUTY_Data
    int                   maxncells;          /**< maximum number of cells in nauty's search tree */
    int                   maxnnodes;          /**< maximum number of nodes in nauty's search tree */
 };
+typedef struct NAUTY_Data NAUTY_DATA;
 
-/* static data for nauty callback */
-static struct NAUTY_Data data_;
+/** static data for nauty callback */
+#if defined(_Thread_local)
+static _Thread_local NAUTY_DATA data_;
+#else
+static NAUTY_DATA data_;
+#endif
 
 /* ------------------- hook functions ------------------- */
 
@@ -1242,18 +1247,16 @@ SCIP_Bool SYMcanComputeSymmetry(void)
    return TRUE;
 }
 
-/** static variable for holding the name of nauty */
-static TLS_ATTR char nautyname[20];
+/** nauty/traces version string */
+#ifdef NAUTY
+static const char nautyname[] = {'N', 'a', 'u', 't', 'y', ' ', NAUTYVERSIONID/10000 + '0', '.', (NAUTYVERSIONID%10000)/1000 + '0', '.', (NAUTYVERSIONID%1000)/10 + '0', '\0'};
+#else
+static const char nautyname[] = {'T', 'r', 'a', 'c', 'e', 's', ' ', NAUTYVERSIONID/10000 + '0', '.', (NAUTYVERSIONID%10000)/1000 + '0', '.', (NAUTYVERSIONID%1000)/10 + '0', '\0'};
+#endif
 
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
 {
-   /* 28080+HAVE_TLS -> 2.8.(0)8 */
-#ifdef NAUTY
-   (void) SCIPsnprintf(nautyname, (int)sizeof(nautyname), "Nauty %d.%d.%d", NAUTYVERSIONID/10000, (NAUTYVERSIONID%10000)/1000, (NAUTYVERSIONID%1000)/10);
-#else
-   (void) SCIPsnprintf(nautyname, (int)sizeof(nautyname), "Traces %d.%d.%d", NAUTYVERSIONID/10000, (NAUTYVERSIONID%10000)/1000, (NAUTYVERSIONID%1000)/10);
-#endif
    return nautyname;
 }
 
@@ -1435,7 +1438,7 @@ SCIP_RETCODE computeSymmetryGenerators(
    }
 
    /* determine log10 of symmetry group size */
-   *log10groupsize = (SCIP_Real) stats.grpsize2;
+   *log10groupsize = log10(stats.grpsize1 * pow(10.0, (SCIP_Real) stats.grpsize2));
 
    return SCIP_OKAY;
 }

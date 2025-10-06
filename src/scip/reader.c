@@ -50,8 +50,8 @@
 #include "scip/pub_cons.h"
 #include "scip/cons.h"
 #include "scip/pub_message.h"
-
 #include "scip/struct_reader.h"
+#include "scip/scip_mem.h"
 
 
 /** copies the given reader to a new scip */
@@ -102,6 +102,7 @@ SCIP_RETCODE doReaderCreate(
    (*reader)->readerread = readerread;
    (*reader)->readerwrite = readerwrite;
    (*reader)->readerdata = readerdata;
+   (*reader)->exact = FALSE;
 
    /* create reading clock */
    SCIP_CALL( SCIPclockCreate(&(*reader)->readingtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -200,6 +201,13 @@ SCIP_RETCODE SCIPreaderRead(
    {
       SCIP_CLOCK* readingtime;
 
+      /* only readers marked as exact can read and write in exact solving mode */
+      if( set->exact_enable && !reader->exact )
+      {
+         SCIPerrorMessage("reader %s cannot read problems exactly\n", SCIPreaderGetName(reader));
+         return SCIP_READERROR;
+      }
+
       /**@note we need temporary clock to measure the reading time correctly since in case of creating a new problem
        *       within the reader all clocks are reset (including the reader clocks); this resetting is necessary for
        *       example for those case we people solve several problems using the (same) interactive shell
@@ -236,7 +244,7 @@ SCIP_RETCODE SCIPreaderRead(
       return retcode;
 
    /* check if the result code is valid in case no reader error occurred */
-   assert( *result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS );
+   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS);
 
    SCIP_CALL( retcode );
 
@@ -271,8 +279,10 @@ SCIP_RETCODE SCIPreaderWrite(
    SCIP_READER*          reader,             /**< reader */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     msghdlr,            /**< message handler */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           extension,          /**< file format */
+   const char*           filename,           /**< name of output file, or NULL if not available */
+   const char*           format,             /**< file format */
    SCIP_Bool             genericnames,       /**< using generic variable and constraint names? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -282,31 +292,81 @@ SCIP_RETCODE SCIPreaderWrite(
    assert(reader != NULL);
    assert(set != NULL);
    assert(set->buffer != NULL);
-   assert(extension != NULL);
+   assert(format != NULL);
    assert(result != NULL);
 
    /* check, if reader is applicable on the given file */
-   if( readerIsApplicable(reader, extension) && reader->readerwrite != NULL )
+   if( readerIsApplicable(reader, format) && reader->readerwrite != NULL )
    {
-      const char* consname;
-      const char** varnames = NULL;
-      const char** fixedvarnames = NULL;
-      const char** consnames = NULL;
       SCIP_VAR** vars;
       SCIP_VAR** fixedvars;
       SCIP_CONS** conss;
       SCIP_CONS* cons;
+      SCIP_Real objoffset;
       SCIP_Real objscale;
+      SCIP_RATIONAL* objoffsetexact;
+      SCIP_RATIONAL* objscaleexact;
+      const char* consname;
+      const char** varnames = NULL;
+      const char** fixedvarnames = NULL;
+      const char** consnames = NULL;
       char* name;
       int nfixedvars;
       int nconss;
       int nvars;
       int i;
+      int nduplicates;
+
+      /* only readers marked as exact can read and write in exact solving mode */
+      if( set->exact_enable && !reader->exact )
+      {
+         SCIPerrorMessage("reader %s cannot write problems exactly\n", SCIPreaderGetName(reader));
+         return SCIP_READERROR;
+      }
 
       vars = SCIPprobGetVars(prob);
       nvars = SCIPprobGetNVars(prob);
       fixedvars = SCIPprobGetFixedVars(prob);
       nfixedvars = SCIPprobGetNFixedVars(prob);
+
+      /* check if multiple variables have the same name */
+      if ( !genericnames )
+      {
+         nduplicates = 0;
+
+         for( i = 0; i < nvars; ++i )
+         {
+            if( vars[i] != (SCIP_VAR*) SCIPprobFindVar(prob, (void*) SCIPvarGetName(vars[i])) )
+            {
+               if( nduplicates < 3 )
+               {
+                  SCIPmessageFPrintWarning(msghdlr, "The same variable name <%s> has been used for at least two different variables.\n", SCIPvarGetName(vars[i]));
+               }
+               ++nduplicates;
+            }
+         }
+
+         for( i = 0; i < nfixedvars; ++i )
+         {
+            if( fixedvars[i] != (SCIP_VAR*) SCIPprobFindVar(prob, (void*) SCIPvarGetName(fixedvars[i])) )
+            {
+               if( nduplicates < 3 )
+               {
+                  SCIPmessageFPrintWarning(msghdlr, "The same variable name <%s> has been used for at least two different variables.\n", SCIPvarGetName(fixedvars[i]));
+               }
+               ++nduplicates;
+            }
+         }
+
+         if( nduplicates > 0 )
+         {
+            if( nduplicates > 3 )
+            {
+               SCIPmessageFPrintWarning(msghdlr, "In total %d duplicate variable names.\n", nduplicates);
+            }
+            SCIPmessageFPrintWarning(msghdlr, "This will likely result in wrong output files. Please use unique variable names.\n");
+         }
+      }
 
       /* case of the transformed problem, we want to write currently valid problem */
       if( SCIPprobIsTransformed(prob) )
@@ -369,6 +429,33 @@ SCIP_RETCODE SCIPreaderWrite(
          nconss = SCIPprobGetNConss(prob);
       }
 
+      /* check if multiple constraints have the same name */
+      if ( !genericnames )
+      {
+         nduplicates = 0;
+
+         for( i = 0; i < nconss; ++i )
+         {
+            if( conss[i] != (SCIP_CONS*) SCIPprobFindCons(prob, (void*) SCIPconsGetName(conss[i])) )
+            {
+               if( nduplicates < 3 )
+               {
+                  SCIPmessageFPrintWarning(msghdlr, "The same constraint name <%s> has been used for at least two different constraints.\n", SCIPconsGetName(conss[i]));
+               }
+               ++nduplicates;
+            }
+         }
+
+         if( nduplicates > 0)
+         {
+            if( nduplicates > 3 )
+            {
+               SCIPmessageFPrintWarning(msghdlr, "In total %d duplicate constraint names.\n", nduplicates);
+            }
+            SCIPmessageFPrintWarning(msghdlr, "This can result in wrong output files, especially with indicator constraints.\n");
+         }
+      }
+
       if( genericnames )
       {
          SCIP_VAR* var;
@@ -384,7 +471,7 @@ SCIP_RETCODE SCIPreaderWrite(
          /* compute length of the generic variable names:
           * - nvars + 1 to avoid log of zero
           * - +3 (zero at end + 'x' + 1 because we round down)
-          * Example: 10 -> need 4 chars ("x10\0") 
+          * Example: 10 -> needs 4 chars ("x10\0")
           */
          size = (int) log10(nvars+1.0) + 3;
 
@@ -396,7 +483,7 @@ SCIP_RETCODE SCIPreaderWrite(
             SCIP_CALL( SCIPsetAllocBufferArray(set, &name, size) );
             (void) SCIPsnprintf(name, size, "x%d", i + set->write_genoffset);
             SCIPvarSetNamePointer(var, name);
-         }  
+         }
 
          /* compute length of the generic variable names */
          size = (int) log10(nfixedvars+1.0) + 3;
@@ -425,21 +512,48 @@ SCIP_RETCODE SCIPreaderWrite(
          }
       }
 
-      /* adapt objective scale for transformed problem (for the original no change is necessary) */
+      /* get exact objective offset and scale */
+      if( set->exact_enable )
+      {
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &objoffsetexact) );
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &objscaleexact) );
+
+         SCIPrationalSetRational(objoffsetexact, SCIPprobGetObjoffsetExact(prob));
+         SCIPrationalSetRational(objscaleexact, SCIPprobGetObjscaleExact(prob));
+
+         /* adapt exact objective scale for transformed problem (for the original no change is necessary) */
+         if( SCIPprobIsTransformed(prob) && SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
+            SCIPrationalMultReal(objscaleexact, objscaleexact, -1.0);
+      }
+      /* only real objective offset and scale */
+      else
+      {
+         objoffsetexact = NULL;
+         objscaleexact = NULL;
+      }
+
+      objoffset = SCIPprobGetObjoffset(prob);
       objscale = SCIPprobGetObjscale(prob);
+
+      /* adapt real objective scale for transformed problem (for the original no change is necessary) */
       if( SCIPprobIsTransformed(prob) && SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
          objscale *= -1.0;
 
       /* call reader to write problem */
-      retcode = reader->readerwrite(set->scip, reader, file, SCIPprobGetName(prob), SCIPprobGetData(prob), SCIPprobIsTransformed(prob),
-         SCIPprobGetObjsense(prob), objscale, SCIPprobGetObjoffset(prob),
-         vars, nvars, SCIPprobGetNBinVars(prob), SCIPprobGetNIntVars(prob), SCIPprobGetNImplVars(prob), SCIPprobGetNContVars(prob),
-         fixedvars, nfixedvars, SCIPprobGetStartNVars(prob),
-         conss, nconss, SCIPprobGetMaxNConss(prob), SCIPprobGetStartNConss(prob), genericnames, result);
+      retcode = reader->readerwrite(set->scip, reader, file, filename, SCIPprobGetName(prob), SCIPprobGetData(prob),
+            SCIPprobIsTransformed(prob), SCIPprobGetObjsense(prob), objoffset, objscale, objoffsetexact, objscaleexact,
+            vars, nvars, SCIPprobGetNBinVars(prob), SCIPprobGetNIntVars(prob), SCIPprobGetNImplVars(prob),
+            SCIPprobGetNContVars(prob), fixedvars, nfixedvars, SCIPprobGetStartNVars(prob), conss, nconss,
+            SCIPprobGetMaxNConss(prob), SCIPprobGetStartNConss(prob), genericnames, result);
+
+      if( objscaleexact != NULL )
+         SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &objscaleexact);
+      if( objoffsetexact != NULL )
+         SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &objoffsetexact);
 
       /* reset variable and constraint names to original names */
       if( genericnames )
-      {  
+      {
          assert(varnames != NULL);
          assert(fixedvarnames != NULL);
          assert(consnames != NULL);
@@ -551,6 +665,16 @@ void SCIPreaderSetWrite(
    assert(reader != NULL);
 
    reader->readerwrite = readerwrite;
+}
+
+/** marks the reader as safe to use in exact solving mode */
+void SCIPreaderMarkExact(
+   SCIP_READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+
+   reader->exact = TRUE;
 }
 
 /** gets name of reader */

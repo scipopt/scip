@@ -40,7 +40,7 @@ namespace tsp
 {
 
 /** C++ rounding heuristic for TSP */
-class HeurFrats : public scip::ObjHeur
+class HeurFrats : public scip::ObjHeur /*lint --e{3713}*/
 {
    GRAPH*                graph;              /**< the underlying graph of the TSP */
    SCIP_SOL*             sol;                /**< current solution */

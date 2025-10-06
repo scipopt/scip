@@ -47,6 +47,8 @@ typedef enum SCIP_Efficiacychoice SCIP_EFFICIACYCHOICE;
 
 typedef struct SCIP_SepaStore SCIP_SEPASTORE;     /**< storage for separated variables */
 
+typedef struct SCIP_SepaStoreExact SCIP_SEPASTOREEXACT;
+
 #ifdef __cplusplus
 }
 #endif

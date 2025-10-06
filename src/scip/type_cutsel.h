@@ -110,7 +110,7 @@ typedef struct SCIP_CutselData SCIP_CUTSELDATA; /**< cut selector specific data 
 /** cut selection method of cut selector
  *
  *  This method is called to select the cuts to be added to the LP.
- *  Forcedcuts must not be changed, and cuts should only be resorted, with the first nselectedcuts of cuts being chosen.
+ *  Forcedcuts must not be changed, and cuts should only be re-sorted, with the first nselectedcuts of cuts being chosen.
  *  These nselectededcuts are used in addition to the forcedcuts (do not delete nor modify elements, simply resort).
  *
  *  input:

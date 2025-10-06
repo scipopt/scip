@@ -4,7 +4,7 @@ ENV BOOST_MAJOR=1
 ENV BOOST_MINOR=73
 ENV BOOST_PATCH=0
 ENV GMP_VERSION=6.3.0
-ENV MPFR_VERSION = 4.2.1
+ENV MPFR_VERSION=4.2.1
 ENV METIS_VERSION=5.1.1
 ENV LAPACK_VERSION=3.12.0
 ENV MUMPS_VERSION=3.0.5
@@ -44,7 +44,15 @@ RUN wget https://github.com/Reference-LAPACK/lapack/archive/refs/tags/v$LAPACK_V
 RUN wget https://gmplib.org/download/gmp/gmp-$GMP_VERSION.tar.xz && \
     tar xf gmp-$GMP_VERSION.tar.xz && \
     cd /home/builds/gmp-$GMP_VERSION && \
-    ./configure --with-pic --enable-cxx --disable-shared && \
+    ./configure --with-pic --enable-cxx&& \
+    make install -j && \
+    rm -rf /home/builds/*
+
+# mpfr
+RUN wget https://ftp.gnu.org/gnu/mpfr/mpfr-$MPFR_VERSION.tar.xz && \
+    tar xf mpfr-$MPFR_VERSION.tar.xz && \
+    cd /home/builds/mpfr-$MPFR_VERSION && \
+    ./configure && \
     make install -j && \
     rm -rf /home/builds/*
 
@@ -116,7 +124,7 @@ RUN git clone https://github.com/scipopt/papilo.git && \
     git checkout $PAPILO_REVISION && \
     mkdir /home/builds/papilo/build && \
     cd /home/builds/papilo/build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DQUADMATH=off -DBLA_STATIC=ON -DBLA_VENDOR=OpenBLAS && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DQUADMATH=off -DBLA_STATIC=ON -DBLA_VENDOR=OpenBLAS -DTBB=off && \
     make -j5 && \
     make install && \
     rm -rf /home/builds/*

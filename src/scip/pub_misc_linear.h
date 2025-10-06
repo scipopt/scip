@@ -66,6 +66,28 @@ SCIP_Real SCIPconsGetLhs(
    SCIP_Bool*            success             /**< pointer to store whether a valid left-hand side was returned */
    );
 
+/** returns exact the right-hand side of an arbitrary SCIP constraint that can be represented as a single linear constraint
+ *
+ *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
+ */
+SCIP_EXPORT
+SCIP_RATIONAL* SCIPconsGetRhsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which right-hand side is queried */
+   SCIP_Bool*            success             /**< pointer to store whether a valid right-hand side was returned */
+   );
+
+/** returns the exact left-hand side of an arbitrary SCIP constraint that can be represented as a single linear constraint
+ *
+ *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
+ */
+SCIP_EXPORT
+SCIP_RATIONAL* SCIPconsGetLhsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to get left-hand side for */
+   SCIP_Bool*            success             /**< pointer to store whether a valid left-hand side was returned */
+   );
+
 /** returns the value array of an arbitrary SCIP constraint that can be represented as a single linear constraint
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -78,6 +100,22 @@ SCIP_RETCODE SCIPgetConsVals(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which the coefficients are wanted */
    SCIP_Real*            vals,               /**< array to store the coefficients of the constraint */
+   int                   varssize,           /**< available slots in vals array needed to check if the array is large enough */
+   SCIP_Bool*            success             /**< pointer to store whether the coefficients are successfully copied */
+   );
+
+/** returns the exact value array of an arbitrary SCIP constraint that can be represented as a single linear constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsValsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which the coefficients are wanted */
+   SCIP_RATIONAL**       vals,               /**< array to store the coefficients of the constraint */
    int                   varssize,           /**< available slots in vals array needed to check if the array is large enough */
    SCIP_Bool*            success             /**< pointer to store whether the coefficients are successfully copied */
    );
@@ -113,6 +151,14 @@ SCIP_EXPORT
 SCIP_ROW* SCIPconsGetRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to get left hand side for */
+   );
+
+/** creates and returns the row of an arbitrary SCIP constraint that can be represented as a single linear constraint */
+SCIP_EXPORT
+SCIP_RETCODE SCIPconsCreateRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which row is queried */
+   SCIP_ROW**            row                 /**< pointer to store the created row */
    );
 
 /** adds the given variable to the input constraint.

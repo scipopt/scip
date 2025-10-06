@@ -302,11 +302,12 @@ SCIP_RETCODE SCIPlpiDelCols(
    int                   lastcol             /**< last column to be deleted */
    )
 {  /*lint --e{715}*/
-   assert( lpi != NULL );
-   assert( lpi->ncols >= 0 );
-
+   assert(lpi != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->ncols);
+   assert(firstcol <= lastcol + 1);
    lpi->ncols -= lastcol - firstcol + 1;
-   assert( lpi->ncols >= 0 );
+   assert(lpi->ncols >= 0);
 
    return SCIP_OKAY;
 }
@@ -387,11 +388,12 @@ SCIP_RETCODE SCIPlpiDelRows(
    int                   lastrow             /**< last row to be deleted */
    )
 {  /*lint --e{715}*/
-   assert( lpi != NULL );
-   assert( lpi->nrows >= 0 );
-
+   assert(lpi != NULL);
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->nrows);
+   assert(firstrow <= lastrow + 1);
    lpi->nrows -= lastrow - firstrow + 1;
-   assert( lpi->nrows >= 0 );
+   assert(lpi->nrows >= 0);
 
    return SCIP_OKAY;
 }
@@ -621,7 +623,13 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->ncols);
+   assert(firstcol <= lastcol + 1);
+
    errorMessage();
+
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -641,7 +649,13 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->nrows);
+   assert(firstrow <= lastrow + 1);
+
    errorMessage();
+
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -661,7 +675,12 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->ncols);
+   assert(firstcol <= lastcol + 1);
+
    errorMessage();
+
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -681,7 +700,12 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->nrows);
+   assert(firstrow <= lastrow + 1);
+
    errorMessage();
+
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -704,9 +728,13 @@ SCIP_RETCODE SCIPlpiGetObj(
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
-   assert(firstcol <= lastcol);
    assert(vals != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->ncols);
+   assert(firstcol <= lastcol + 1);
+
    errorMessage();
+
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -720,8 +748,12 @@ SCIP_RETCODE SCIPlpiGetBounds(
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
-   assert(firstcol <= lastcol);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->ncols);
+   assert(firstcol <= lastcol + 1);
+
    errorMessage();
+
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -735,8 +767,12 @@ SCIP_RETCODE SCIPlpiGetSides(
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
-   assert(firstrow <= lastrow);
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->nrows);
+   assert(firstrow <= lastrow + 1);
+
    errorMessage();
+
    return SCIP_PLUGINNOTFOUND;
 }
 
@@ -1437,7 +1473,7 @@ SCIP_RETCODE SCIPlpiFreeState(
    return SCIP_OKAY;
 }
 
-/** checks, whether the given LP state contains simplex basis information */
+/** checks whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */

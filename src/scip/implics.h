@@ -182,8 +182,8 @@ void SCIPimplicsGetVarImplicPoss(
    SCIP_IMPLICS*         implics,            /**< implications data structure */
    SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
    SCIP_VAR*             implvar,            /**< variable y to search for */
-   int*                  haslowerimplic,     /**< pointer to store the position of an implication y >= l */
-   int*                  hasupperimplic      /**< pointer to store the position of an implication y <= u */
+   int*                  lowerimplicpos,     /**< pointer to store the position of an implication y >= l */
+   int*                  upperimplicpos      /**< pointer to store the position of an implication y <= u */
    );
 
 /** returns whether an implication y <= b or y >= b is contained in implications for x == 0 or x == 1 */
@@ -339,6 +339,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR**            vars,               /**< binary variables in the clique: at most one can be set to the given value */
    SCIP_Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
    int                   nvars,              /**< number of variables in the clique */
@@ -363,6 +364,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int*                  nchgbds,            /**< pointer to store number of fixed variables */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    );
