@@ -7594,13 +7594,16 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
       if ( nchgbds != NULL )
          (*nchgbds) += nlocchgs;
    }
+
+   /* try to detect symmetric subgroups that are handled by specialized techniques */
+   SCIP_CALL( tryHandleSubgroups(scip, propdata, cidx) );
+
    /* try to create more involutions in a component if component is not handled already */
    if ( ! propdata->componentblocked[cidx] )
    {
       SCIP_CALL( tryGenerateInvolutions(scip, propdata, cidx) );
    }
 
-   SCIP_CALL( tryHandleSubgroups(scip, propdata, cidx) );
    if ( ISSSTACTIVE(propdata->usesymmetry) )
    {
       SCIP_Bool sstonlycontvars;
