@@ -25,6 +25,7 @@ Features
   generation of cut and setting up the subproblems.
 - adds objective types for Benders' decomposition; the choice is to sum the subproblems objectives (classical
   approach) or to use the maximum of the subproblems objectives
+- adds functionality to compute symmetries of entire symmetry detection graph rather than just the restriction to variable nodes
 
 Performance improvements
 ------------------------
@@ -79,6 +80,7 @@ Interface changes
 - SCIPexprSetIntegrality(): set argument generalized from SCIP_Bool integral to SCIP_IMPLINTTYPE integrality (4th position)
 - Temporarily for SCIP 10 only: Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integral type SCIP_IMPLINTTYPE_WEAK instead
 - Temporarily for SCIP 10 only: SCIPchgVarType() converts a call with type SCIP_VARTYPE_IMPLINT into a call of SCIPchgVarImplType() with type SCIP_IMPLINTTYPE_WEAK
+- SCIPcreateSymgraph() receives an additional argument to specify an epsilon value that is used for epsilon-comparisons
 
 ### New API functions
 
@@ -118,6 +120,7 @@ Interface changes
 - added SCIPvarsCountTypes() to determine the variable type count distribution for an array of variables
 - added SCIPeventGetOldImplType() and SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
 - added SCIPexprGetIntegrality(), which in addition to the existing function SCIPexprIsIntegral() provides information about the presence of weakly implied integral variables
+- added SYMcomputeSymmetryGeneratorsNode() to compute generators of the automorphism group of an entire (node set) of a symmetry detection graph
 
 ### Changes in preprocessor macros
 
@@ -166,6 +169,9 @@ Interface changes
 
 - added structs SCIP_IISFINDER, SCIP_IISFINDERDATA, SCIP_IIS
 - added struct SCIP_DATATREE to model generic serializable data; new enum SCIP_DATATREE_VALUETYPE
+- struct SYM_Graph receives an additional field to specify an epsilon value that is used for epsilon-comparisons
+- new enum SYM_GROUPTYPE to encode which symmetry group of a symmetry detection graph is computed
+
 
 Deleted files
 -------------
