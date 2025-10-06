@@ -7310,7 +7310,19 @@ SCIP_Bool isInvolution(
 }
 
 
-/** tries to generate involutions based on permutations in component */
+/** tries to generate involutions based on permutations in component
+ *
+ *  An involution is a permutation whose 2-fold application is the identity. Involutions
+ *  are of particular interest, because their support is (in practice) often very small.
+ *  Propagations based on involutions thus can be executed rather quickly. Moreover,
+ *  when computing stabilizer subgroups by a filtering mechanism, it is more likely that
+ *  a (sparse) involution is not filtered in contrast to dense non-involutions.
+ *
+ *  To create new involutions, we are given a list of involutions that have been found
+ *  during symmetry detection. We then iterate through all pairs (p,q) of involutions in
+ *  this list and generate the new involutions p * q (if p and q commute) and p * q * p
+ *  (if p and q do not commute).
+ */
 static
 SCIP_RETCODE tryGenerateInvolutions(
    SCIP*                 scip,               /**< SCIP instance */
