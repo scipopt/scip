@@ -461,7 +461,6 @@ SCIP_RETCODE addSymmetryInformation(
    SYM_GRAPH* symgraph;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
-   SCIP_Real eps;
    int rootnode;
    int subroot = -1;
    int c;
@@ -502,10 +501,11 @@ SCIP_RETCODE addSymmetryInformation(
    /* start building the symmetry detection graph for the disjunctive constraint */
    SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &rootnode) );
 
-   /* copy of graph: most constraints are linear, use modest estimation of number of nodes */
-   SCIP_CALL( SCIPgetRealParam(scip, "numerics/epsilon", &eps) );
+   /* copy of graph: most constraints are linear, use modest estimation of number of nodes
+    * (use epsilon = 0.0 as a placeholder, it is not needed as no colors of nodes/edges are computed)
+    */
    SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &symgraph, SCIPgetVars(scip), SCIPgetNVars(scip),
-         5, 5, 1, SCIPgetNVars(scip), eps) );
+         5, 5, 1, SCIPgetNVars(scip), 0.0) );
 
    /* for each constraint, build the symmetry detection graph and copy it to the global graph */
    for( c = 0; c < consdata->nconss && *success; ++c )
