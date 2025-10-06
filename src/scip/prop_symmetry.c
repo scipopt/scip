@@ -7359,7 +7359,7 @@ SCIP_RETCODE tryGenerateInvolutions(
    SCIP_CALL( SCIPallocBufferArray(scip, &newinvols, lennewinvols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpperm, propdata->npermvars) );
 
-   permlen = propdata->symtype == SYM_SYMTYPE_PERM ? propdata->npermvars : 2 * propdata->npermvars;
+   permlen = propdata->symtype == (int)SYM_SYMTYPE_PERM ? propdata->npermvars : 2 * propdata->npermvars;
    complen = propdata->componentbegins[cidx + 1] - propdata->componentbegins[cidx];
 
    /* try to generate new involutions by combining two involutions p and q
@@ -7519,7 +7519,7 @@ SCIP_RETCODE tryGenerateInvolutions(
    for (p = propdata->nperms; p < nnewperms; ++p)
    {
       propdata->isproperperm[p] = TRUE;
-      if ( propdata->symtype == SYM_SYMTYPE_SIGNPERM )
+      if ( propdata->symtype == (int)SYM_SYMTYPE_SIGNPERM )
       {
          for (i = 0; i < propdata->npermvars; ++i)
          {
