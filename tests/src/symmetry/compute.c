@@ -827,7 +827,7 @@ void exampleCardinality(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 3 );
+      cr_assert( nperms == 3 || nperms == 6 ); /* if more involutions are generated from existing one, then 6 */
       cr_assert( ncomponents == 1 );
       cr_assert( vartocomponent[0] == 0 );
       cr_assert( vartocomponent[1] == 0 );
