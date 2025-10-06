@@ -119,7 +119,7 @@ void nautyhook(
    default:
       assert( data_.symtype == SYM_SYMTYPE_SIGNPERM );
       nsymvars = 2 * data_.npermvars;
-   }
+   } /*lint !e788*/
 
    /* only copy the variables needed for generators */
    switch( data_.symgrouptype )
@@ -133,7 +133,7 @@ void nautyhook(
    default:
       assert( data_.symgrouptype == SYM_GROUPTYPE_SDG );
       permlen = n;
-   }
+   } /*lint !e788*/
 
    /* check whether permutation is identity */
    for (int j = 0; j < permlen; ++j)
@@ -274,7 +274,7 @@ void traceshook(
    default:
       assert( data_.symtype == SYM_SYMTYPE_SIGNPERM );
       nsymvars = 2 * data_.npermvars;
-   }
+   } /*lint !e788*/
 
    /* only copy the variables needed for generators */
    switch( data_.symgrouptype )
@@ -288,7 +288,7 @@ void traceshook(
    default:
       assert( data_.symgrouptype == SYM_GROUPTYPE_SDG );
       permlen = n;
-   }
+   } /*lint !e788*/
 
    /* check whether permutation is identity */
    for (j = 0; j < permlen; ++j)
