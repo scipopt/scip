@@ -7293,7 +7293,7 @@ SCIP_Bool isInvolution(
 
    assert( perm != NULL );
    assert( lenperm > 0 );
-   asseert( istransposition != NULL );
+   assert( istransposition != NULL );
    *istransposition = FALSE;
 
    for (i = 0; i < lenperm; ++i)
