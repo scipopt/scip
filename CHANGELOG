@@ -29,6 +29,8 @@ Build system
 
 ### CMake
 
+- added workaround for recent ctest versions rejecting -R -default as arguments
+
 ### Makefile
 
 - added experimental target to run cppcheck
