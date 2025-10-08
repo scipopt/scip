@@ -941,7 +941,8 @@ SCIP_DECL_SORTINDCOMP(SYMsortVarnodesPermsym)
    isfixedvar = graph->isfixedvar;
    assert(isfixedvar != NULL);
 
-   return compareVarsFixed(vars[ind1], vars[ind2], isfixedvar[ind1], isfixedvar[ind2], graph->eps);
+   /* use exact comparison within sorting function to avoid propagating numerical inaccuracies */
+   return compareVarsFixed(vars[ind1], vars[ind2], isfixedvar[ind1], isfixedvar[ind2], 0.0);
 }
 
 /** compares two variables for signed permutation symmetry detection
@@ -1123,8 +1124,9 @@ SCIP_DECL_SORTINDCOMP(SYMsortVarnodesSignedPermsym)
       locind2 -= nsymvars;
    }
 
+   /* use exact comparison within sorting function to avoid propagating numerical inaccuracies */
    return compareVarsFixedSignedPerm(vars[locind1], vars[locind2], isfixedvar[locind1], isfixedvar[locind2],
-      isneg1, isneg2, graph->infinity, graph->eps);
+      isneg1, isneg2, graph->infinity, 0.0);
 }
 
 /** compares two operators
@@ -1202,7 +1204,8 @@ static
 int compareConsnodes(
    SYM_GRAPH*            graph,              /**< underlying symmetry detection graph */
    int                   ind1,               /**< index of first constraint node */
-   int                   ind2                /**< index of second constraint node */
+   int                   ind2,               /**< index of second constraint node */
+   SCIP_Real             eps                 /**< epsilon value used in comparisons */
    )
 {
    SCIP_CONS* cons1;
@@ -1220,14 +1223,14 @@ int compareConsnodes(
    if( SCIPconsGetHdlr(cons1) > SCIPconsGetHdlr(cons2) )
       return 1;
 
-   if( graph->lhs[ind1] < graph->lhs[ind2] - graph->eps )
+   if( graph->lhs[ind1] < graph->lhs[ind2] - eps )
       return -1;
-   if( graph->lhs[ind1] > graph->lhs[ind2] + graph->eps )
+   if( graph->lhs[ind1] > graph->lhs[ind2] + eps )
       return 1;
 
-   if( graph->rhs[ind1] < graph->rhs[ind2] - graph->eps )
+   if( graph->rhs[ind1] < graph->rhs[ind2] - eps )
       return -1;
-   if( graph->rhs[ind1] > graph->rhs[ind2] + graph->eps )
+   if( graph->rhs[ind1] > graph->rhs[ind2] + eps )
       return 1;
 
    return 0;
@@ -1245,7 +1248,8 @@ int compareConsnodes(
 static
 SCIP_DECL_SORTINDCOMP(SYMsortConsnodes)
 {
-   return compareConsnodes((SYM_GRAPH*) dataptr, ind1, ind2);
+   /* use exact comparison within sorting function to avoid propagating numerical inaccuracies */
+   return compareConsnodes((SYM_GRAPH*) dataptr, ind1, ind2, 0.0);
 }
 
 /** sorts edges
@@ -1264,9 +1268,9 @@ SCIP_DECL_SORTINDCOMP(SYMsortEdges)
 
    G = (SYM_GRAPH*) dataptr;
 
-   if( G->edgevals[ind1] < G->edgevals[ind2] - G->eps )
+   if( G->edgevals[ind1] < G->edgevals[ind2] )
       return -1;
-   if( G->edgevals[ind1] > G->edgevals[ind2] + G->eps )
+   if( G->edgevals[ind1] > G->edgevals[ind2] )
       return 1;
 
    return 0;
@@ -1484,7 +1488,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
 
       for( i = 1; i < graph->nconsnodes; ++i )
       {
-         if( compareConsnodes(graph, perm[i-1], perm[i]) != 0 )
+         if( compareConsnodes(graph, perm[i-1], perm[i], graph->eps) != 0 )
             ++color;
 
          graph->conscolors[perm[i]] = color;
