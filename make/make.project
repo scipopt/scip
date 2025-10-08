@@ -172,7 +172,7 @@ SPLINT          ?= splint
 SCIP_VERSION_MAJOR = 10
 SCIP_VERSION_MINOR = 0
 SCIP_VERSION_PATCH = 0
-SCIP_VERSION_API = 154
+SCIP_VERSION_API = 155
 SCIP_VERSION = $(SCIP_VERSION_MAJOR).$(SCIP_VERSION_MINOR).$(SCIP_VERSION_PATCH)
 
 #-----------------------------------------------------------------------------
