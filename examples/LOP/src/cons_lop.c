@@ -862,6 +862,8 @@ SCIP_DECL_CONSPROP(consPropLOP)
             SCIP_Bool infeasible;
             SCIP_Bool tightened;
 
+            /* for consistency make sure that the complementarity constraints are satisfied */
+
             /* if x[i][j] == 1 then x[j][i] = 0 */
 	    if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
 	    {
@@ -898,15 +900,57 @@ SCIP_DECL_CONSPROP(consPropLOP)
 		  ++nGen;
 	    }
 
+            /* check whether triangle inequality allows to fix variables */
 	    for (k = i + 1; k < n; ++k)
 	    {
 	       if ( k == j )
 		  continue;
 
-	       /* if x[i][j] == 1 and x[j][k] == 1 then x[k][i] = 0 */
-	       if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 && SCIPvarGetLbLocal(vars[j][k]) > 0.5 )
+	       if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
 	       {
-		  SCIP_CALL( SCIPinferBinvarCons(scip, vars[k][i], FALSE, cons, n*n + i*n*n + j*n + k, &infeasible, &tightened) );
+                  if ( SCIPvarGetLbLocal(vars[j][k]) > 0.5 )
+                  {
+                     /* if x[i][j] == 1 and x[j][k] == 1 then x[k][i] = 0 */
+                     SCIP_CALL( SCIPinferBinvarCons(scip, vars[k][i], FALSE, cons, n*n + i*n*n + j*n + k, &infeasible, &tightened) );
+                     if ( infeasible )
+                     {
+                        SCIPdebugMsg(scip, " -> node infeasible.\n");
+                        SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][k]) );
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][i]) );
+                        SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+                        *result = SCIP_CUTOFF;
+                        return SCIP_OKAY;
+                     }
+                     if ( tightened )
+                        ++nGen;
+                  }
+
+                  if ( SCIPvarGetLbLocal(vars[k][i]) > 0.5 )
+                  {
+                     /* if x[k][i] == 1 and x[i][j] = 1 then x[j][k] = 0 */
+                     SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][k], FALSE, cons, n*n + i*n*n + j*n + k, &infeasible, &tightened) );
+                     if ( infeasible )
+                     {
+                        SCIPdebugMsg(scip, " -> node infeasible.\n");
+                        SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][k]) );
+                        SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][i]) );
+                        SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+                        *result = SCIP_CUTOFF;
+                        return SCIP_OKAY;
+                     }
+                     if ( tightened )
+                        ++nGen;
+                  }
+               }
+
+               /* if x[j][k] == 1 and x[k][i] == 1 then x[i][j] = 0 */
+	       if ( SCIPvarGetLbLocal(vars[j][k]) > 0.5 && SCIPvarGetLbLocal(vars[k][i]) > 0.5 )
+	       {
+		  SCIP_CALL( SCIPinferBinvarCons(scip, vars[i][j], FALSE, cons, n*n + i*n*n + j*n + k, &infeasible, &tightened) );
 		  if ( infeasible )
 		  {
 		     SCIPdebugMsg(scip, " -> node infeasible.\n");
@@ -963,7 +1007,7 @@ SCIP_DECL_CONSRESPROP(consRespropLOP)
    assert( 0 <= inferinfo && inferinfo < n*n + n*n*n );
 
    /* if the conflict came from an equation */
-   if ( inferinfo < (n*n) )
+   if ( inferinfo < n*n )
    {
       int index1;
       int index2;
@@ -1008,17 +1052,48 @@ SCIP_DECL_CONSRESPROP(consRespropLOP)
       assert( 0 <= index1 && index1 < n );
       assert( 0 <= index2 && index2 < n );
       assert( 0 <= index3 && index3 < n );
+      assert( index1 < index2 );
+      assert( index1 < index3 );
       assert( index1 != index2 && index2 != index3 && index1 != index3 );
-      assert( vars[index3][index1] == infervar );
 
-      /* the variable should have been fixed to 0 */
-      assert( SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE) > 0.5 && SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5 );
+      if ( vars[index3][index1] == infervar )
+      {
+         /* the variable should have been fixed to 0 */
+         assert( SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE) > 0.5 && SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5 );
 
-      /* the reason was that x[index1][index2] and x[index2][index3] were fixed to 1 */
-      SCIPdebugMsg(scip, " -> reason for x[%d][%d] == 0 was x[%d][%d] = x[%d][%d] = 1.\n", index3, index1, index1, index2, index2, index3);
-      SCIP_CALL( SCIPaddConflictLb(scip, vars[index1][index2], bdchgidx) );
-      SCIP_CALL( SCIPaddConflictLb(scip, vars[index2][index3], bdchgidx) );
-      *result = SCIP_SUCCESS;
+         /* the reason was that x[index1][index2] and x[index2][index3] were fixed to 1 */
+         SCIPdebugMsg(scip, " -> reason for x[%d][%d] == 0 was x[%d][%d] = x[%d][%d] = 1.\n", index3, index1, index1, index2, index2, index3);
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[index1][index2], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[index2][index3], bdchgidx) );
+         *result = SCIP_SUCCESS;
+      }
+      else if ( vars[index2][index3] == infervar )
+      {
+         /* the variable should have been fixed to 0 */
+         assert( SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE) > 0.5 && SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5 );
+
+         /* the reason was that x[index1][index2] and x[index3][index1] were fixed to 1 */
+         SCIPdebugMsg(scip, " -> reason for x[%d][%d] == 0 was x[%d][%d] = x[%d][%d] = 1.\n", index2, index3, index1, index2, index3, index1);
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[index1][index2], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[index3][index1], bdchgidx) );
+         *result = SCIP_SUCCESS;
+      }
+      else if ( vars[index1][index2] == infervar )
+      {
+         /* the variable should have been fixed to 0 */
+         assert( SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, FALSE) > 0.5 && SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5 );
+
+         /* the reason was that x[index2][index3] and x[index3][index1] were fixed to 1 */
+         SCIPdebugMsg(scip, " -> reason for x[%d][%d] == 0 was x[%d][%d] = x[%d][%d] = 1.\n", index1, index2, index2, index3, index3, index1);
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[index2][index3], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[index3][index1], bdchgidx) );
+         *result = SCIP_SUCCESS;
+      }
+      else
+      {
+         /* should not happen */
+         SCIPABORT();
+      }
    }
 
    return SCIP_OKAY;
