@@ -89,6 +89,8 @@ SCIP_RETCODE LOPseparate(
    assert( nGen != NULL );
    assert( cutoff != NULL );
 
+   /* Consider all (i,j,k) with i < j, i < k, j != k; since the inequalities are symmetric under cyclic shifts, we can
+    * assume i to be the smallest index. */
    *cutoff = FALSE;
    for (i = 0; i < n && ! (*cutoff); ++i)
    {
