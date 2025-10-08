@@ -8943,7 +8943,7 @@ void addLargestCliquePart(
 
       nvarcliques = SCIPvarGetNCliques(var, value);
 
-      if( nvarcliques > 0 && nvarcliques < MAXNUMEARCHCLIQUE )
+      if( nvarcliques > 0 )
       {
          SCIP_CLIQUE** varcliques;
          int selectedidx = -1;
