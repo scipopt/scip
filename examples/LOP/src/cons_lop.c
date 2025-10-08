@@ -451,7 +451,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLOP)
          return SCIP_OKAY;
       }
    }
-   if (nGen > 0)
+   if ( nGen > 0 )
       *result = SCIP_SEPARATED;
    SCIPdebugMsg(scip, "separated %d cuts.\n", nGen);
 
@@ -495,7 +495,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLOP)
          return SCIP_OKAY;
       }
    }
-   if (nGen > 0)
+   if ( nGen > 0 )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -615,7 +615,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 	 }
       }
 
-      if (nGen > 0)
+      if ( nGen > 0 )
       {
 	 *result = SCIP_SEPARATED;
 	 return SCIP_OKAY;
