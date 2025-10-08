@@ -849,9 +849,11 @@ SCIP_RETCODE addSymmetryInformation(
    /* start building the symmetry detection graph for the superindicator constraint */
    SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &rootnode) );
 
-   /* copy symmetry detection graph of slackcons, use modest estimation for graph size */
+   /* copy symmetry detection graph of slackcons, use modest estimation for graph size
+    * (use epsilon = 0.0 as a placeholder, it is not needed as no colors of nodes/edges are computed)
+    */
    SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &symgraph, SCIPgetVars(scip), SCIPgetNVars(scip),
-         15, 15, 1, SCIPgetNVars(scip)) );
+         15, 15, 1, SCIPgetNVars(scip), 0.0) );
 
    if( symtype == SYM_SYMTYPE_PERM )
    {

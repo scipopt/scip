@@ -63,7 +63,8 @@ SCIP_RETCODE SCIPcreateSymgraph(
    int                   nopnodes,           /**< number of operator nodes */
    int                   nvalnodes,          /**< number of value nodes */
    int                   nconsnodes,         /**< number of constraint nodes */
-   int                   nedges              /**< number of edges */
+   int                   nedges,             /**< number of edges */
+   SCIP_Real             eps                 /**< epsilon value used in comparisons */
    );
 
 /** frees a symmetry detection graph */
@@ -226,7 +227,7 @@ SCIP_RETCODE SCIPaddSymgraphEdge(
    int                   first,              /**< first node index of edge */
    int                   second,             /**< second node index of edge */
    SCIP_Bool             hasval,             /**< whether the edge has a value */
-   SCIP_Real             val                 /**< value of the edge (is it has a value) */
+   SCIP_Real             val                 /**< value of the edge (if it has a value) */
    );
 
 /*

@@ -40,6 +40,7 @@ Features
 - added support for AND-constraints to GAMS writer
 - added writing support for AMPL NL writer: currently only general and specialized linear and nonlinear constraints can be written
 - implemented columnwise Jacobian sparsity computation in the NLP oracle
+- adds functionality to compute symmetries of entire symmetry detection graph rather than just the restriction to variable nodes
 
 Performance improvements
 ------------------------
@@ -144,6 +145,7 @@ Interface changes
   SCIPcreateConsAbspower(), SCIPcreateConsBasicAbspower(), SCIPgetNlRowAbspower(),
   SCIPcreateConsSOC(), SCIPcreateConsBasicSOC(), SCIPgetNlRowSOC(),
 - removed previously deprecated NLP termination status codes SCIP_NLPTERMSTAT_TILIM, SCIP_NLPTERMSTAT_ITLIM, SCIP_NLPTERMSTAT_LOBJLIM, SCIP_NLPTERMSTAT_NUMERR, SCIP_NLPTERMSTAT_EVALERR, SCIP_NLPTERMSTAT_MEMERR, SCIP_NLPTERMSTAT_LICERR
+- SCIPcreateSymgraph() receives an additional argument to specify an epsilon value that is used for epsilon-comparisons
 
 ### New API functions
 
@@ -200,6 +202,7 @@ Interface changes
 - SCIPvarGetMinAggrCoef() and SCIPvarGetMaxAggrCoef() to get bounds on absolute aggregation coefficients for a loose variable;
   SCIPisVarAggrCoefAcceptable() to check whether bounds on aggregation coefficients would exceed thresholds when using a loose variable in another aggregation
 - SCIPgetNRootIntFixings() to retrieve the number of integer fixings at the root node
+- added SYMcomputeSymmetryGeneratorsNode() to compute generators of the automorphism group of an entire (node set) of a symmetry detection graph
 
 ### Changes in preprocessor macros
 
@@ -283,6 +286,9 @@ Interface changes
 
 - added structs SCIP_IISFINDER, SCIP_IISFINDERDATA, SCIP_IIS
 - added struct SCIP_DATATREE to model generic serializable data; new enum SCIP_DATATREE_VALUETYPE
+- struct SYM_Graph receives an additional field to specify an epsilon value that is used for epsilon-comparisons
+- new enum SYM_GROUPTYPE to encode which symmetry group of a symmetry detection graph is computed
+
 
 Deleted files
 -------------

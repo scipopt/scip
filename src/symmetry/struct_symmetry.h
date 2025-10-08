@@ -49,6 +49,7 @@ struct SYM_Graph
    SCIP_Bool             islocked;           /**< whether graph is locked, i.e., cannot be modified anymore
                                               *   (computing colors will lock the graph to avoid inconsistencies) */
    SCIP_Real             infinity;           /**< values as least as large as this are regarded as infinite */
+   SCIP_Real             eps;                /**< epsilon value used in comparisons */
 
    /* information about nodes and node arrays */
    int                   nnodes;             /**< number of nodes in graph */
