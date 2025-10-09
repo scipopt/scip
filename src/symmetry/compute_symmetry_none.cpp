@@ -121,6 +121,40 @@ SCIP_RETCODE SYMcomputeSymmetryGeneratorsSDG(
    return SCIP_OKAY;
 }
 
+/** compute generators of symmetry group of the complete symmetry detection graph
+ *
+ *  If the symmetry detection graph (SDG) has k nodes, the first k entries of a generator correspond to the nodes
+ *  of the SDG. The remaining entries of the generator correspond to the variables (and possibly their negation).
+ */
+SCIP_RETCODE SYMcomputeSymmetryGeneratorsNode(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
+   )
+{  /*lint --e{715}*/
+   assert( scip != NULL );
+   assert( graph != NULL );
+   assert( nperms != NULL );
+   assert( nmaxperms != NULL );
+   assert( perms != NULL );
+   assert( log10groupsize != NULL );
+   assert( symcodetime != NULL );
+
+   /* init */
+   *nperms = 0;
+   *nmaxperms = 0;
+   *perms = NULL;
+   *log10groupsize = 0;
+   *symcodetime = 0.0;
+
+   return SCIP_OKAY;
+}
+
 /** returns whether two given graphs are identical */
 SCIP_Bool SYMcheckGraphsAreIdentical(
    SCIP*                 scip,               /**< SCIP pointer */
