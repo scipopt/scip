@@ -75,7 +75,7 @@ SCIP_RETCODE LOPseparate(
    int                   n,                  /**< number of elements */
    SCIP_VAR***           vars,               /**< n x n matrix of variables */
    SCIP_SOL*             sol,                /**< solution to be separated */
-   int*                  nGen,               /**< output: pointer to store number of added rows */
+   int*                  ngen,               /**< output: pointer to store number of added rows */
    SCIP_Bool*            cutoff              /**< output: pointer to store whether we detected a cutoff */
    )
 {
@@ -86,7 +86,7 @@ SCIP_RETCODE LOPseparate(
 
    assert( scip != NULL );
    assert( vars != NULL );
-   assert( nGen != NULL );
+   assert( ngen != NULL );
    assert( cutoff != NULL );
 
    /* Consider all (i,j,k) with i < j, i < k, j != k; since the inequalities are symmetric under cyclic shifts, we can
@@ -117,7 +117,7 @@ SCIP_RETCODE LOPseparate(
 #endif
 	    SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
 	    SCIP_CALL( SCIPreleaseRow(scip, &row));
-	    ++(*nGen);
+	    ++(*ngen);
 
             if ( *cutoff )
                break;
@@ -151,7 +151,7 @@ SCIP_RETCODE LOPseparate(
 #endif
 	       SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
 	       SCIP_CALL( SCIPreleaseRow(scip, &row));
-	       ++(*nGen);
+	       ++(*ngen);
 
                if ( *cutoff )
                   break;
@@ -355,7 +355,7 @@ SCIP_DECL_CONSINITLP(consInitlpLOP)
 {  /*lint --e{715}*/
    char s[SCIP_MAXSTRLEN];
    int c;
-   int nGen = 0;
+   int ngen = 0;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -401,7 +401,7 @@ SCIP_DECL_CONSINITLP(consInitlpLOP)
 #endif
 	    SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
 	    SCIP_CALL( SCIPreleaseRow(scip, &row));
-	    ++nGen;
+	    ++ngen;
 
             /* cannot handle infeasible case here - just exit */
             if ( *infeasible )
@@ -409,7 +409,7 @@ SCIP_DECL_CONSINITLP(consInitlpLOP)
 	 }
       }
    }
-   SCIPdebugMsg(scip, "added %d equations.\n", nGen);
+   SCIPdebugMsg(scip, "added %d equations.\n", ngen);
 
    return SCIP_OKAY;
 }
@@ -418,7 +418,7 @@ SCIP_DECL_CONSINITLP(consInitlpLOP)
 static
 SCIP_DECL_CONSSEPALP(consSepalpLOP)
 {  /*lint --e{715}*/
-   int nGen = 0;
+   int ngen = 0;
    int c;
 
    assert( scip != NULL );
@@ -444,16 +444,16 @@ SCIP_DECL_CONSSEPALP(consSepalpLOP)
       assert( consdata != NULL );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( LOPseparate(scip, conshdlr, consdata->n, consdata->vars, NULL, &nGen, &cutoff) );
+      SCIP_CALL( LOPseparate(scip, conshdlr, consdata->n, consdata->vars, NULL, &ngen, &cutoff) );
       if ( cutoff )
       {
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
    }
-   if ( nGen > 0 )
+   if ( ngen > 0 )
       *result = SCIP_SEPARATED;
-   SCIPdebugMsg(scip, "separated %d cuts.\n", nGen);
+   SCIPdebugMsg(scip, "separated %d cuts.\n", ngen);
 
    return SCIP_OKAY;
 }
@@ -462,7 +462,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLOP)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolLOP)
 {  /*lint --e{715}*/
-   int nGen = 0;
+   int ngen = 0;
    int c;
 
    assert( scip != NULL );
@@ -488,14 +488,14 @@ SCIP_DECL_CONSSEPASOL(consSepasolLOP)
       assert( consdata != NULL );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( LOPseparate(scip, conshdlr, consdata->n, consdata->vars, sol, &nGen, &cutoff) );
+      SCIP_CALL( LOPseparate(scip, conshdlr, consdata->n, consdata->vars, sol, &ngen, &cutoff) );
       if ( cutoff )
       {
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
    }
-   if ( nGen > 0 )
+   if ( ngen > 0 )
       *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
@@ -506,7 +506,7 @@ static
 SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 {  /*lint --e{715}*/
    char s[SCIP_MAXSTRLEN];
-   int nGen = 0;
+   int ngen = 0;
    int c;
 
    assert( scip != NULL );
@@ -565,7 +565,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 #endif
 	       SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 	       SCIP_CALL( SCIPreleaseRow(scip, &row));
-	       ++nGen;
+	       ++ngen;
 
                if ( infeasible )
                {
@@ -603,7 +603,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 #endif
 		  SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 		  SCIP_CALL( SCIPreleaseRow(scip, &row));
-		  ++nGen;
+		  ++ngen;
 
                   if ( infeasible )
                   {
@@ -615,7 +615,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 	 }
       }
 
-      if ( nGen > 0 )
+      if ( ngen > 0 )
       {
 	 *result = SCIP_SEPARATED;
 	 return SCIP_OKAY;
@@ -822,7 +822,7 @@ static
 SCIP_DECL_CONSPROP(consPropLOP)
 {  /*lint --e{715}*/
    int c;
-   int nGen = 0;
+   int ngen = 0;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -881,7 +881,7 @@ SCIP_DECL_CONSPROP(consPropLOP)
 		  return SCIP_OKAY;
 	       }
 	       if ( tightened )
-		  ++nGen;
+		  ++ngen;
 	    }
 
 	    /* if x[i][j] == 0 then x[j][i] = 1 */
@@ -899,7 +899,7 @@ SCIP_DECL_CONSPROP(consPropLOP)
 		  return SCIP_OKAY;
 	       }
 	       if ( tightened )
-		  ++nGen;
+		  ++ngen;
 	    }
 
             /* check whether triangle inequality allows to fix variables */
@@ -926,7 +926,7 @@ SCIP_DECL_CONSPROP(consPropLOP)
                         return SCIP_OKAY;
                      }
                      if ( tightened )
-                        ++nGen;
+                        ++ngen;
                   }
 
                   if ( SCIPvarGetLbLocal(vars[k][i]) > 0.5 )
@@ -945,7 +945,7 @@ SCIP_DECL_CONSPROP(consPropLOP)
                         return SCIP_OKAY;
                      }
                      if ( tightened )
-                        ++nGen;
+                        ++ngen;
                   }
                }
 
@@ -965,7 +965,7 @@ SCIP_DECL_CONSPROP(consPropLOP)
 		     return SCIP_OKAY;
 		  }
 		  if ( tightened )
-		     ++nGen;
+		     ++ngen;
 	       }
 
 	       /* all other implications occur with other indices i, j, k */
@@ -973,8 +973,8 @@ SCIP_DECL_CONSPROP(consPropLOP)
 	 }
       }
    }
-   SCIPdebugMsg(scip, "propagated %d domains.\n", nGen);
-   if (nGen > 0)
+   SCIPdebugMsg(scip, "propagated %d domains.\n", ngen);
+   if ( ngen > 0 )
       *result = SCIP_REDUCEDDOM;
 
    return SCIP_OKAY;
