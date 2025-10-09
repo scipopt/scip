@@ -8954,7 +8954,7 @@ void addLargestCliquePart(
          assert( varcliques != NULL );
 
          /* loop through all cliques */
-         for( l = 0; l < nvarcliques; ++l)
+         for( l = 0; l < nvarcliques; ++l )
          {
             SCIP_VAR** cliquevars;
             SCIP_Bool* cliquevals;
@@ -9194,6 +9194,21 @@ SCIP_RETCODE calcCliquePartitionGreedy(
                   }
                }
             }
+
+            /* if part has not been found, add new clique */
+            if( ! foundpart )
+            {
+#ifndef NDEBUG
+               for( p = 0; p < *ncliques; ++p)
+                  assert( nneigh[p] < ncliqueparts[p] );
+#endif
+               assert( ncliqueparts[*ncliques] == 0 );
+
+               /* put variable into part p */
+               cliquepartition[i] = *ncliques;
+               ncliqueparts[*ncliques] = 1;
+               ++(*ncliques);
+            }
          }
          else
          {
@@ -9255,19 +9270,19 @@ SCIP_RETCODE calcCliquePartitionGreedy(
                   }
                }
             }
-         }
 
-         /* if part has not been found, add corresponding clique */
-         if( ! foundpart )
-         {
+            /* if part has not been found, add corresponding clique */
+            if( ! foundpart )
+            {
 #ifndef NDEBUG
-            for( p = 0; p < *ncliques; ++p)
-               assert( nneigh[p] < ncliqueparts[p] );
+               for( p = 0; p < *ncliques; ++p)
+                  assert( nneigh[p] < ncliqueparts[p] );
 #endif
-            assert( ncliqueparts[*ncliques] == 0 );
+               assert( ncliqueparts[*ncliques] == 0 );
 
-            addLargestCliquePart(vars[i], values[i], i, idx, values, *ncliques, nvars, nbinvars, cliquepartition, ncliqueparts);
-            ++(*ncliques);
+               addLargestCliquePart(vars[i], values[i], i, idx, values, *ncliques, nvars, nbinvars, cliquepartition, ncliqueparts);
+               ++(*ncliques);
+            }
          }
       }
       else
