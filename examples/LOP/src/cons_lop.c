@@ -1056,7 +1056,7 @@ SCIP_DECL_CONSRESPROP(consRespropLOP)
       assert( 0 <= index3 && index3 < n );
       assert( index1 < index2 );
       assert( index1 < index3 );
-      assert( index1 != index2 && index2 != index3 && index1 != index3 );
+      assert( index2 != index3 );
 
       if ( vars[index3][index1] == infervar )
       {
