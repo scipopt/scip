@@ -987,6 +987,7 @@ SCIP_DECL_CONSRESPROP(consRespropLOP)
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
    int n;
+   int nsqrd;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1004,12 +1005,13 @@ SCIP_DECL_CONSRESPROP(consRespropLOP)
    assert( consdata->vars != NULL );
 
    n = consdata->n;
+   nsqrd = n * n;
    vars = consdata->vars;
 
    assert( 0 <= inferinfo && inferinfo < n*n + n*n*n );
 
    /* if the conflict came from an equation */
-   if ( inferinfo < n*n )
+   if ( inferinfo < nsqrd )
    {
       int index1;
       int index2;
@@ -1047,9 +1049,9 @@ SCIP_DECL_CONSRESPROP(consRespropLOP)
       int index2;
       int index3;
 
-      index1 = (inferinfo - n*n)/(n*n);
-      index2 = (inferinfo - n*n - index1 * n*n)/n;
-      index3 = (inferinfo - n*n) % n;
+      index1 = (inferinfo - nsqrd) / nsqrd;
+      index2 = (inferinfo - nsqrd - index1 * nsqrd) / n;
+      index3 = (inferinfo - nsqrd) % n;
 
       assert( 0 <= index1 && index1 < n );
       assert( 0 <= index2 && index2 < n );
