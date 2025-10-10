@@ -8907,7 +8907,6 @@ SCIP_RETCODE SCIPaddClique(
 }
 
 #define MAXNUMEARCHCLIQUE 100         /**< maximal number of cliques of variable for search a suitable clique */
-#define MAXNUMVARS        100         /**< maximal number of variables to run pairwise algorithm */
 
 /** add largest clique containing a given variable to part of clique partitioning */
 static
@@ -8943,7 +8942,7 @@ void addLargestCliquePart(
 
       nvarcliques = SCIPvarGetNCliques(var, value);
 
-      if( nvarcliques > 0 )
+      if( nvarcliques > 0 && nvarcliques < MAXNUMEARCHCLIQUE )
       {
          SCIP_CLIQUE** varcliques;
          int selectedidx = -1;
@@ -9028,6 +9027,7 @@ void addLargestCliquePart(
 
             assert( selectedidx <= nvarcliques );
             clique = varcliques[selectedidx];
+            assert( clique != NULL );
             nvarclique = SCIPcliqueGetNVars(clique);
             cliquevars = SCIPcliqueGetVars(clique);
             cliquevals = SCIPcliqueGetValues(clique);
@@ -9166,123 +9166,78 @@ SCIP_RETCODE calcCliquePartitionGreedy(
       if( nvarcliques > 0 && SCIPvarIsActive(var) )
       {
          SCIP_Bool foundpart = FALSE;
+         SCIP_CLIQUE** varcliques;
          int l;
+
+         varcliques = SCIPvarGetCliques(var, value);
+         assert( varcliques != NULL );
 
          /* clear neighborhood counter */
          BMSclearMemoryArray(nneigh, *ncliques);
 
-         /* if number of cliques is too large, use a pairwise comparison */
-         if( nvarcliques > MAXNUMEARCHCLIQUE && nvars < MAXNUMVARS )
+         /* loop through all cliques */
+         for( l = 0; l < nvarcliques && ! foundpart; ++l )
          {
-            /* check all previous variables */
-            for( l = 0; l < nvars; ++l)
+            SCIP_VAR** cliquevars;
+            SCIP_Bool* cliquevals;
+            SCIP_VAR* othervar;
+            int nvarclique;
+            int probidx;
+            int j;
+
+            assert( varcliques[l] != NULL );
+            nvarclique = SCIPcliqueGetNVars(varcliques[l]);
+            cliquevars = SCIPcliqueGetVars(varcliques[l]);
+            cliquevals = SCIPcliqueGetValues(varcliques[l]);
+
+            /* loop through clique and count neighbors of i */
+            for( k = 0; k < nvarclique; ++k )
             {
-               p = cliquepartition[l];
-               if( l != i && p >= 0 && SCIPvarsHaveCommonClique(var, value, vars[l], values[l], FALSE) )
+               othervar = cliquevars[k];
+               assert( othervar != NULL );
+
+               if ( ! SCIPvarIsActive(othervar) || othervar == var )
+                  continue;
+
+               probidx = SCIPvarGetProbindex(othervar);
+               assert( 0 <= probidx && probidx < nbinvars );
+
+               j = idx[probidx];
+               if( j >= 0 )
                {
-                  assert( 0 <= p && p < *ncliques );
-                  ++nneigh[p];
-
-                  /* if all nodes in the part are neighbors, add variable to it */
-                  if( nneigh[p] == ncliqueparts[p] )
+                  assert( j < nvars );
+                  p = cliquepartition[j];
+                  if( p >= 0 && cliquevals[k] == values[j] && marked[j] != i )
                   {
-                     assert( ! foundpart );
-                     cliquepartition[i] = p;
-                     ++(ncliqueparts[p]);
-                     foundpart = TRUE;
-                     break;
-                  }
-               }
-            }
+                     assert( 0 <= p && p < *ncliques );
+                     ++nneigh[p];
+                     marked[j] = i;
 
-            /* if part has not been found, add new clique */
-            if( ! foundpart )
-            {
-#ifndef NDEBUG
-               for( p = 0; p < *ncliques; ++p)
-                  assert( nneigh[p] < ncliqueparts[p] );
-#endif
-               assert( ncliqueparts[*ncliques] == 0 );
-
-               /* put variable into part p */
-               cliquepartition[i] = *ncliques;
-               ncliqueparts[*ncliques] = 1;
-               ++(*ncliques);
-            }
-         }
-         else
-         {
-            SCIP_CLIQUE** varcliques;
-
-            varcliques = SCIPvarGetCliques(var, value);
-            assert( varcliques != NULL );
-
-            /* loop through all cliques */
-            for( l = 0; l < nvarcliques && ! foundpart; ++l)
-            {
-               SCIP_VAR** cliquevars;
-               SCIP_Bool* cliquevals;
-               SCIP_VAR* othervar;
-               SCIP_CLIQUE* clique;
-               int nvarclique;
-               int probidx;
-               int j;
-
-               assert( varcliques[l] != NULL );
-               clique = varcliques[l];
-               nvarclique = SCIPcliqueGetNVars(clique);
-               cliquevars = SCIPcliqueGetVars(clique);
-               cliquevals = SCIPcliqueGetValues(clique);
-
-               /* loop through clique and count neighbors of i */
-               for( k = 0; k < nvarclique; ++k )
-               {
-                  othervar = cliquevars[k];
-                  assert( othervar != NULL );
-
-                  if ( othervar == var || ! SCIPvarIsActive(othervar) )
-                     continue;
-
-                  probidx = SCIPvarGetProbindex(othervar);
-                  assert( 0 <= probidx && probidx < nbinvars );
-
-                  j = idx[probidx];
-                  if( j >= 0 )
-                  {
-                     assert( j < nvars );
-                     p = cliquepartition[j];
-                     if( p >= 0 && cliquevals[k] == values[j] && marked[j] != i )
+                     /* if all nodes in the part are neighbors, add variable to it */
+                     if( nneigh[p] == ncliqueparts[p] )
                      {
-                        assert( 0 <= p && p < *ncliques );
-                        ++nneigh[p];
-                        marked[j] = i;
-
-                        /* if all nodes in the part are neighbors, add variable to it */
-                        if( nneigh[p] == ncliqueparts[p] )
-                        {
-                           assert( ! foundpart );
-                           cliquepartition[i] = p;
-                           ++(ncliqueparts[p]);
-                           foundpart = TRUE;
-                           break;
-                        }
+                        assert( ! foundpart );
+                        cliquepartition[i] = p;
+                        ++(ncliqueparts[p]);
+                        foundpart = TRUE;
+                        break;
                      }
                   }
                }
             }
+         }
 
-            /* if part has not been found, add corresponding clique */
-            if( ! foundpart )
-            {
+         /* if part has not been found, add corresponding clique */
+         if( ! foundpart )
+         {
 #ifndef NDEBUG
-               for( p = 0; p < *ncliques; ++p)
-                  assert( nneigh[p] < ncliqueparts[p] );
+            for( p = 0; p < *ncliques; ++p )
+               assert( nneigh[p] < ncliqueparts[p] );
 #endif
-               assert( ncliqueparts[*ncliques] == 0 );
+            assert( ncliqueparts[*ncliques] == 0 );
 
-               addLargestCliquePart(vars[i], values[i], i, idx, values, *ncliques, nvars, nbinvars, cliquepartition, ncliqueparts);
-               ++(*ncliques);
-            }
+            addLargestCliquePart(vars[i], values[i], i, idx, values, *ncliques, nvars, nbinvars, cliquepartition, ncliqueparts);
+            ++(*ncliques);
          }
       }
       else
