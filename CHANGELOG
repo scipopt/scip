@@ -66,6 +66,7 @@ Features
 - added support for AND-constraints to GAMS writer
 - added writing support for AMPL NL writer: currently only general and specialized linear and nonlinear constraints can be written
 - implemented columnwise Jacobian sparsity computation in the NLP oracle
+- implemented method to compute new permutations from a given list of symmetry group generators
 
 Performance improvements
 ------------------------
