@@ -8906,7 +8906,7 @@ SCIP_RETCODE SCIPaddClique(
    return SCIP_OKAY;
 }
 
-#define MAXNUMEARCHCLIQUE 100         /**< maximal number of cliques of variable for search a suitable clique */
+#define MAXNUMEARCHCLIQUE 100      /**< maximal number of cliques of variable for addLargestCliquePart() to search a suitable clique */
 
 /** add largest clique containing a given variable to part of clique partitioning */
 static
@@ -8942,6 +8942,8 @@ void addLargestCliquePart(
 
       nvarcliques = SCIPvarGetNCliques(var, value);
 
+      /* A performance analysis showed that the following is a bottleneck for instances with a very large number of
+       * cliques, e.g., neos-5129192-manaia. We therefore limit the size. */
       if( nvarcliques > 0 && nvarcliques < MAXNUMEARCHCLIQUE )
       {
          SCIP_CLIQUE** varcliques;
