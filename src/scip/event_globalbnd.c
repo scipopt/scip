@@ -174,18 +174,18 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalbnd)
    var = SCIPeventGetVar(event);
    switch( SCIPeventGetType(event) )
    {
-      case SCIP_EVENTTYPE_VARADDED:
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, eventhdlr, NULL, NULL) );
-         return SCIP_OKAY;
-      case SCIP_EVENTTYPE_GLBCHANGED:
-         boundtype = SCIP_BOUNDTYPE_LOWER;
-         break;
-      case SCIP_EVENTTYPE_GUBCHANGED:
-         boundtype = SCIP_BOUNDTYPE_UPPER;
-         break;
-      default:
-         SCIPABORT();
-         return SCIP_ERROR; /*lint !e527*/
+   case SCIP_EVENTTYPE_VARADDED:
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, eventhdlr, NULL, NULL) );
+      return SCIP_OKAY;
+   case SCIP_EVENTTYPE_GLBCHANGED:
+      boundtype = SCIP_BOUNDTYPE_LOWER;
+      break;
+   case SCIP_EVENTTYPE_GUBCHANGED:
+      boundtype = SCIP_BOUNDTYPE_UPPER;
+      break;
+   default:
+      SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
    }
 
    if( !eventhdlrdata->storebounds )
