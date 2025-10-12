@@ -8906,7 +8906,7 @@ SCIP_RETCODE SCIPaddClique(
    return SCIP_OKAY;
 }
 
-#define MAXNUMEARCHCLIQUE 100      /**< maximal number of cliques of variable for addLargestCliquePart() to search a suitable clique */
+#define MAXNUMEARCHCLIQUE 1000     /**< maximal number of cliques of variable for addLargestCliquePart() to search a suitable clique */
 
 /** add largest clique containing a given variable to part of clique partitioning */
 static
