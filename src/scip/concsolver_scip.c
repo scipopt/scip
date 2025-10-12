@@ -274,8 +274,8 @@ SCIP_RETCODE initConcsolver(
    SCIP_CALL( SCIPcreate(&data->solverscip) );
    SCIPsetMessagehdlrQuiet(data->solverscip, SCIPmessagehdlrIsQuiet(SCIPgetMessagehdlr(scip)));
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(data->solverscip), data->nvars) );
-   SCIP_CALL( SCIPcopy(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver), TRUE, FALSE, FALSE,
-         FALSE, &valid) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver),
+         NULL, NULL, 0, TRUE, FALSE, FALSE, FALSE, &valid) );
    assert(valid);
 
    /* allocate memory for the arrays to store the variable mapping */
@@ -286,9 +286,18 @@ SCIP_RETCODE initConcsolver(
    for( i = 0; i < data->nvars; i++ )
    {
       SCIP_VAR* var;
+      int idx;
+
       var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
       assert(var != NULL);
-      varperm[SCIPvarGetIndex(var)] = i;
+      idx = SCIPvarGetIndex(var);
+      assert(0 <= idx && idx < data->nvars);
+
+      /* Note that because some aggregations or fixed variables cannot be resolved by some constraint handlers (in
+       * particular cons_orbitope_pp), the copied problem may contain more variables than the original problem has
+       * active variables. These variables will be ignored in the following, since they depend on the other `active'
+       * varibles. See concurrent.c:SCIPgetConcurrentVaridx(). */
+      varperm[idx] = i;
       data->vars[i] = var;
    }
 
@@ -318,7 +327,7 @@ SCIP_RETCODE initConcsolver(
     * also fails on check/instances/Symmetry/partorb_1-FullIns_3.cip
     * TODO: test if this leads to any problems
     */
-   SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, varperm) );
+   SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, varperm, data->nvars) );
    SCIPfreeBufferArray(data->solverscip, &varperm);
 
    /* free the hashmap */
@@ -715,11 +724,14 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 
    for( i = 0; i < nbndchgs; ++i )
    {
-      SCIP_VAR*   var;
+      SCIP_VAR* var;
       SCIP_BOUNDTYPE boundtype;
       SCIP_Real newbound;
+      int idx;
 
-      var = data->vars[SCIPboundstoreGetChgVaridx(boundstore, i)];
+      idx = SCIPboundstoreGetChgVaridx(boundstore, i);
+      assert(0 <= idx && idx < data->nvars);
+      var = data->vars[idx];
       boundtype = SCIPboundstoreGetChgType(boundstore, i);
       newbound = SCIPboundstoreGetChgVal(boundstore, i);
 

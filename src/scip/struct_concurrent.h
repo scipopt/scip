@@ -52,6 +52,7 @@ struct SCIP_Concurrent
    SCIP_CONCSOLVER*         concsolver;         /**< the concurrent solver of the main scip */
    int*                     varperm;            /**< permutation of variables to get the position of variable in the original SCIP's
                                                  *   variable array by the index of an original variable in this concurrent's main SCIP */
+   int                      nvars;              /**< number of active variables in original problem (size of varperm) */
    SCIP_Real                dettime;            /**< deterministic time since last sync */
    SCIP_CLOCK*              wallclock;          /**< wallclock time since last sync */
    SCIP_PROP*               propsync;          /**< sync propagator */

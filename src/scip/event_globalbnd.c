@@ -200,11 +200,13 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalbnd)
       int varidx;
 
       varidx = SCIPgetConcurrentVaridx(scip, var);
+      if( varidx >= 0 )
+      {
+         boundtype = scalar < 0.0 ? SCIPboundtypeOpposite(boundtype) : boundtype;
+         newbound = (newbound - constant) / scalar;
 
-      boundtype = scalar < 0.0 ? SCIPboundtypeOpposite(boundtype) : boundtype;
-      newbound = (newbound - constant) / scalar;
-
-      SCIP_CALL( SCIPboundstoreAdd(scip, eventhdlrdata->boundstore, varidx, newbound, boundtype) );
+         SCIP_CALL( SCIPboundstoreAdd(scip, eventhdlrdata->boundstore, varidx, newbound, boundtype) );
+      }
    }
    return SCIP_OKAY;
 }

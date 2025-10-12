@@ -67,20 +67,20 @@ typedef struct SCIP_ConcurrentData SCIP_CONCURRENTDATA;
 SCIP_RETCODE SCIPcreateConcurrent(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver of given SCIP instance */
-   int*                  varperm             /**< permutation of variables for communication */
+   int*                  varperm,            /**< permutation of variables for communication */
+   int                   nvars               /**< number of variables in problem */
    )
 {
-   int nvars;
-
    assert(scip != NULL);
    assert(concsolver != NULL);
    assert(varperm != NULL);
    assert(scip->concurrent == NULL);
+   assert(nvars >= 0);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &scip->concurrent) );
 
-   nvars = SCIPgetNOrigVars(scip);
    scip->concurrent->varperm = NULL;
+   scip->concurrent->nvars = nvars;
 
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &scip->concurrent->varperm, varperm, nvars) );
 
@@ -187,7 +187,7 @@ SCIP_RETCODE SCIPfreeConcurrent(
          SCIP_CALL( SCIPfreeClock(scip, &scip->concurrent->wallclock) );
       }
 
-      SCIPfreeBlockMemoryArray(scip, &scip->concurrent->varperm, SCIPgetNOrigVars(scip));
+      SCIPfreeBlockMemoryArray(scip, &scip->concurrent->varperm, scip->concurrent->nvars);
 
       SCIPfreeBlockMemory(scip, &scip->concurrent);
    }
@@ -434,6 +434,8 @@ int SCIPgetConcurrentVaridx(
    SCIP_VAR*             var                 /**< variable */
    )
 {
+   int idx;
+
    assert(scip != NULL);
    assert(scip->concurrent != NULL);
    assert(scip->concurrent->varperm != NULL);
@@ -441,7 +443,11 @@ int SCIPgetConcurrentVaridx(
    assert(SCIPvarIsOriginal(var));
    assert(SCIPvarGetIndex(var) < SCIPgetNOrigVars(scip));
 
-   return scip->concurrent->varperm[SCIPvarGetIndex(var)];
+   /* variables with index larger than nvars do not correspond to active variables in the original */
+   idx = SCIPvarGetProbindex(var);
+   if( idx < scip->concurrent->nvars )
+      return scip->concurrent->varperm[idx];
+   return -1;
 }
 
 /** is the solution new since the last synchronization point */
