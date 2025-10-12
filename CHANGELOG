@@ -40,6 +40,7 @@ Features
 - added support for AND-constraints to GAMS writer
 - added writing support for AMPL NL writer: currently only general and specialized linear and nonlinear constraints can be written
 - implemented columnwise Jacobian sparsity computation in the NLP oracle
+- implemented method to compute new permutations from a given list of symmetry group generators
 
 Performance improvements
 ------------------------
@@ -52,6 +53,7 @@ Performance improvements
 - inline SCIPgetStatus() to reduce computational overhead
 - allow multi-aggregation of unbounded slack variables, which may enable more bound tightening due to a reduction in the number of unbounded variables
 - reduce maximal fraction of diving LP iterations relative to total node LP iterations
+- do not allow non-root restarts when no global fixings were found
 
 Examples and applications
 -------------------------
@@ -198,6 +200,7 @@ Interface changes
 - SCIPhashmapInsertLong() and SCIPhashmapGetImageLong()
 - SCIPvarGetMinAggrCoef() and SCIPvarGetMaxAggrCoef() to get bounds on absolute aggregation coefficients for a loose variable;
   SCIPisVarAggrCoefAcceptable() to check whether bounds on aggregation coefficients would exceed thresholds when using a loose variable in another aggregation
+- SCIPgetNRootIntFixings() to retrieve the number of integer fixings at the root node
 
 ### Changes in preprocessor macros
 
@@ -235,6 +238,8 @@ Interface changes
 - changed defaults of constraints/components/propfreq and constraints/components/maxdepth to -1 and 2147483647, respectively, to avoid unnecessary calls of components propagator by default
 - changed frequencies for the following heuristics: shifting, gins, crossover, rins, randrounding
 - set default maxlpiterquot to 0.05 for all LP diving heuristics and feaspump whereas adaptivediving uses 0.15 and rootsoldiving remains at 0.01
+- set default of presolving/restartminred to 0.05
+- set default of presolving/immrestartfac to 0.05
 
 ### New parameters
 
@@ -274,6 +279,8 @@ Interface changes
 - new parameter "lp/minsolvedepth" to give a lower bound on the depth at which LPs are solved
 - new parameters "reading/nlreader/binary" and "reading/nlreader/comments" to adjust writing of nl files
 - new parameter "nlpi/conopt/priority" to set the priority of the CONOPT NLP solver
+- new parameter "randomization/randomseedshiftmultiplier" to set a multiplier for the shift set by "randomization/randomseedshift";
+  the default value for the randomseedshiftmultiplier is expected to be changed with every major release
 
 ### Data structures
 
@@ -437,6 +444,8 @@ Build system
 ------------
 
 ### CMake
+
+- added workaround for recent ctest versions rejecting -R -default as arguments
 
 ### Makefile
 

@@ -2385,6 +2385,10 @@ SCIP_Bool isRestartApplicable(
 {
    SCIP_Longint nnodes;
 
+   /* if there are no root node integer fixings, restart is usually not helpful */
+   if( SCIPgetNRootIntFixingsRun(scip) == 0 )
+      return FALSE;
+
    /* check whether to apply restarts when there are active pricers available */
    if( SCIPgetNActivePricers(scip) > 0 && ! eventhdlrdata->restartactpricers )
       return FALSE;
@@ -2801,7 +2805,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       return SCIP_OKAY;
 
    /* check if all conditions are met such that the event handler should run */
-   if( ! isRestartApplicable(scip, eventhdlrdata) )
+   if( !isRestartApplicable(scip, eventhdlrdata) )
       return SCIP_OKAY;
 
    /* test if a restart should be applied */
