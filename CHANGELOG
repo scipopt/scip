@@ -80,6 +80,7 @@ Performance improvements
 - allow multi-aggregation of unbounded slack variables, which may enable more bound tightening due to a reduction in the number of unbounded variables
 - reduce maximal fraction of diving LP iterations relative to total node LP iterations
 - do not allow non-root restarts when no global fixings were found
+- remove all fixings in applyFixings() of cons_xor.c also for an available integer variable
 
 Examples and applications
 -------------------------
@@ -380,6 +381,7 @@ Fixed bugs
 - propagator dualfix no longer fixes variables to infinity to avoid issues when transferring the solution to the original problem
 - track and check bounds on the coefficients that is used for a variable in aggregations of other variables to improve numerical stability
 - corrected the upgrade of full orbitopes to packing/partitioning orbotopes in case the orbitopal symmetries form a proper subgroup of a component's symmetry group
+- aggregate integer variable to not in clique variable in cliquePresolve() of cons_xor.c to avoid infeasible solutions
 
 Miscellaneous
 -------------
