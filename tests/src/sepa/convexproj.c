@@ -33,6 +33,14 @@
 #include "scip/nlpi_ipopt.h"
 
 #include "scip/sepa_convexproj.c"
+#include "scip/expr_varidx.h"
+#include "scip/expr_exp.h"
+#include "scip/expr_log.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_product.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_var.h"
+#include "scip/expr_value.h"
 
 #include "include/scip_test.h"
 
@@ -204,6 +212,16 @@ void test_setup(void)
    SCIP_VAR* auxx;
 
    SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include some expr handlers */
+   SCIP_CALL( SCIPincludeExprhdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrLog(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVaridx(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSum(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrProduct(scip) );
 
    /* if no IPOPT available, don't run test */
    if( ! SCIPisIpoptAvailableIpopt() )
