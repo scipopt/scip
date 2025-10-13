@@ -504,54 +504,55 @@ static
 SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA(concsolverGetSolvingData)
 {
    SCIP_CONCSOLVERDATA* data;
-   SCIP_VAR** vars;
-   int nvars;
    int nsols;
-   SCIP_SOL** sols;
-   SCIP_Real* solvals;
-   SCIP_HEUR* heur;
-   int i;
 
+   assert(scip != NULL);
    assert(concsolver != NULL);
 
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
    assert(data->solverscip != NULL);
 
-   assert(scip != NULL);
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
-
    nsols = SCIPgetNSols(data->solverscip);
-   sols = SCIPgetSols(data->solverscip);
-
-   assert(nvars == data->nvars);
-
-   /* allocate buffer array used for translating the solution to the given SCIP */
-   SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
-
-   /* add the solutions to the given SCIP */
-   for( i = 0; i < nsols; ++i )
+   if( nsols > 0 )
    {
-      SCIP_SOL* sol;
-      SCIP_Bool stored;
-      SCIP_CALL( SCIPgetSolVals(data->solverscip, sols[i], nvars, data->vars, solvals) );
+      SCIP_VAR** vars;
+      int nvars;
+      SCIP_SOL** sols;
+      SCIP_Real* solvals;
+      int i;
 
-      heur = SCIPsolGetHeur(sols[i]);
+      vars = SCIPgetVars(scip);
+      nvars = SCIPgetNVars(scip);
+      assert(nvars == data->nvars);
 
-      if( heur != NULL )
-         heur = SCIPfindHeur(scip, SCIPheurGetName(heur));
+      sols = SCIPgetSols(data->solverscip);
 
-      SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
-      SCIP_CALL( SCIPsetSolVals(scip, sol, nvars, vars, solvals) );
+      /* allocate buffer array used for translating the solution to the given SCIP */
+      SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
 
-      SCIP_CALL( SCIPcopySolStats(sols[i], sol) );
+      /* add the solutions to the given SCIP */
+      for( i = 0; i < nsols; ++i )
+      {
+         SCIP_SOL* sol;
+         SCIP_HEUR* heur;
+         SCIP_Bool stored;
 
-      SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
+         SCIP_CALL( SCIPgetSolVals(data->solverscip, sols[i], nvars, data->vars, solvals) );
+
+         heur = SCIPsolGetHeur(sols[i]);
+         if( heur != NULL )
+            heur = SCIPfindHeur(scip, SCIPheurGetName(heur));
+
+         SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
+         SCIP_CALL( SCIPsetSolVals(scip, sol, nvars, vars, solvals) );
+         SCIP_CALL( SCIPcopySolStats(sols[i], sol) );
+         SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
+      }
+
+      /* free the buffer array */
+      SCIPfreeBufferArray(scip, &solvals);
    }
-
-   /* free the buffer array */
-   SCIPfreeBufferArray(scip, &solvals);
 
    /* copy solving statistics and status from the solver SCIP to the given SCIP */
    SCIP_CALL( SCIPcopyConcurrentSolvingStats(data->solverscip, scip) );
