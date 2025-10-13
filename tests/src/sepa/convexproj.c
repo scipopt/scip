@@ -82,7 +82,7 @@ void createNlRow1(CONVEXSIDE convexside)
    /* decide curvature */
    if( convexside == RHS )
    {
-      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"log(exp(<x>) + exp(<y>))", NULL, NULL, NULL) );
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"log(exp(<t_x>) + exp(<y>))", NULL, NULL, NULL) );
 
       curvature = SCIP_EXPRCURV_CONVEX;
       lhs = -SCIPinfinity(scip);
@@ -90,7 +90,7 @@ void createNlRow1(CONVEXSIDE convexside)
    }
    else
    {
-      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"-(log(exp(<x>) + exp(<y>)))", NULL, NULL, NULL) );
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"-(log(exp(<t_x>) + exp(<y>)))", NULL, NULL, NULL) );
 
       curvature = SCIP_EXPRCURV_CONCAVE;
       lhs = -1.0;
@@ -116,7 +116,7 @@ void createNlRow2(CONVEXSIDE convexside)
    /* decide curvature */
    if( convexside == RHS )
    {
-      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<x>^2 - <y>", NULL, NULL, NULL) );
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<t_x>^2 - <y>", NULL, NULL, NULL) );
 
       curvature = SCIP_EXPRCURV_CONVEX;
       lhs = -SCIPinfinity(scip);
@@ -124,7 +124,7 @@ void createNlRow2(CONVEXSIDE convexside)
    }
    else
    {
-      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<y> - <x>^2", NULL, NULL, NULL) );
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<y> - <t_x>^2", NULL, NULL, NULL) );
 
       curvature = SCIP_EXPRCURV_CONCAVE;
       lhs = 0.0;
@@ -150,7 +150,7 @@ void createNlRow3(CONVEXSIDE convexside)
    /* decide curvature */
    if( convexside == RHS )
    {
-      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"1.1*<x>+2.4*<x>^2 + 0.01*<x>*<y> + 0.3*<y>^2 + 0.2*log(0.5*exp(0.12*<x>+0.1)+2*exp(0.1*<y>)+0.7)", NULL, NULL, NULL) );
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"1.1*<t_x>+2.4*<t_x>^2 + 0.01*<t_x>*<y> + 0.3*<y>^2 + 0.2*log(0.5*exp(0.12*<t_x>+0.1)+2*exp(0.1*<y>)+0.7)", NULL, NULL, NULL) );
 
       curvature = SCIP_EXPRCURV_CONVEX;
       lhs = -SCIPinfinity(scip);
@@ -158,7 +158,7 @@ void createNlRow3(CONVEXSIDE convexside)
    }
    else
    {
-      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"-(1.1*<x>+2.4*<x>^2 + 0.01*<x>*<y> + 0.3*<y>^2 + 0.2*log(0.5*exp(0.12*<x>+0.1)+2*exp(0.1*<y>)+0.7))", NULL, NULL, NULL) );
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"-(1.1*<t_x>+2.4*<t_x>^2 + 0.01*<t_x>*<y> + 0.3*<y>^2 + 0.2*log(0.5*exp(0.12*<t_x>+0.1)+2*exp(0.1*<y>)+0.7))", NULL, NULL, NULL) );
 
       curvature = SCIP_EXPRCURV_CONCAVE;
       lhs = -0.5;
