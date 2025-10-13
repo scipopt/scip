@@ -705,6 +705,9 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
    for( i = 0; i < nsols; ++i )
    {
       SCIP_SOL* newsol;
+      SCIP_VAR** origvars;
+      int norigvars;
+      int v;
 
       /* do not add own solutions */
       if( concsolverids[i] == concsolverid )
@@ -715,6 +718,23 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
       SCIP_CALL( SCIPcreateOrigSol(data->solverscip, &newsol, NULL) );
 
       SCIP_CALL( SCIPsetSolVals(data->solverscip, newsol, data->nvars, data->vars, solvals[i]) );
+
+      /* treat possible fixed original variables */
+      norigvars = SCIPgetNOrigVars(data->solverscip);
+      origvars = SCIPgetOrigVars(data->solverscip);
+      for( v = 0; v < norigvars; ++v )
+      {
+         SCIP_VAR* var;
+         var = origvars[v];
+         if( SCIPisEQ(data->solverscip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+         {
+            if( ! SCIPisZero(data->solverscip, SCIPvarGetLbGlobal(var)) )
+            {
+               SCIP_CALL( SCIPsetSolVal(data->solverscip, newsol, var, SCIPvarGetLbGlobal(var)) );
+            }
+         }
+      }
+
       SCIPdebugMessage("adding solution in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
       SCIP_CALL( SCIPaddConcurrentSol(data->solverscip, newsol) );
    }
