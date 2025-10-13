@@ -54,6 +54,7 @@ Performance improvements
 - allow multi-aggregation of unbounded slack variables, which may enable more bound tightening due to a reduction in the number of unbounded variables
 - reduce maximal fraction of diving LP iterations relative to total node LP iterations
 - do not allow non-root restarts when no global fixings were found
+- remove all fixings in applyFixings() of cons_xor.c also for an available integer variable
 
 Examples and applications
 -------------------------
