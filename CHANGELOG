@@ -441,7 +441,6 @@ Fixed bugs
 - recompute activity bounds before checking infeasibility and redundancy in linear constraint presolving
 - skip integer variables with fractional value in reference solution when finding additional variable fixings in ALNS heuristic
 - fix call of SCIPaddExprsViolScoreNonlinear() with constant expressions (no variables)
-- fixed memory issues for computing symmetries with Nauty for very large instances
 
 Build system
 ------------
@@ -460,7 +459,7 @@ Build system
 
 ### New Parameters
 
-- added parameter propagating/symmetry/maxlevel to terminate Nauty early if its search tree gets too deep
+- added parameter propagating/symmetry/maxlevel to terminate Nauty early especially before its search tree depth overflows the call stack memory
 
 Miscellaneous
 -------------

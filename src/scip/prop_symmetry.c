@@ -203,8 +203,8 @@
 /* other defines */
 #define MAXGENNUMERATOR          64000000    /**< determine maximal number of generators by dividing this number by the number of variables */
 #define COMPRESSNVARSLB             25000    /**< lower bound on the number of variables above which compression could be performed */
-#define DEFAULT_NAUTYMAXLEVEL        1000    /**< terminate symmetry detection using Nauty when depth level of Nauty's search tree exceeds this number
-                                              *   (avoids segfaults due to Nauty for large graphs) */
+#define DEFAULT_NAUTYMAXLEVEL       10000    /**< terminate symmetry detection using Nauty when depth level of Nauty's search tree exceeds this number
+                                              *   (avoids call stack overflows in Nauty for deep graphs) */
 
 /* macros for getting activeness of symmetry handling methods */
 #define ISSYMRETOPESACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_SYMBREAK) != 0)
@@ -8397,8 +8397,8 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    {
       SCIP_CALL( SCIPaddIntParam(scip,
             "propagating/" PROP_NAME "/nautymaxlevel",
-            "terminate symmetry detection using Nauty when depth level of Nauty's search tree exceeds this number (0: unlimited)",
-            NULL, TRUE, DEFAULT_NAUTYMAXLEVEL, 0, INT_MAX, NULL, NULL) );
+            "terminate symmetry detection using Nauty when depth level of Nauty's search tree exceeds this number (-1: unlimited)",
+            NULL, TRUE, DEFAULT_NAUTYMAXLEVEL, -1, INT_MAX, NULL, NULL) );
    }
 
    /* possibly add description */
