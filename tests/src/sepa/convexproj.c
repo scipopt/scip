@@ -40,7 +40,7 @@
 
 static SCIP* scip = NULL;
 static SCIP_SEPA* sepa = NULL;
-static SCIP_NLPI* nlpi = NULL;
+static SCIP_Bool haveipopt = FALSE;
 static SCIP_NLROW* nlrow1 = NULL;
 static SCIP_NLROW* nlrow2 = NULL;
 static SCIP_NLROW* nlrow3 = NULL;
@@ -211,7 +211,7 @@ void test_setup(void)
 
    /* include NLPI's */
    SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
-
+   haveipopt = TRUE;
 
    /* include convexproj separator and get it */
    SCIP_CALL( SCIPincludeSepaConvexproj(scip) );
@@ -269,7 +269,7 @@ void project(SCIP_Bool* isrhsconvex)
 
    test_setup();
    /* if no IPOPT available, don't run test */
-   if( nlpi == NULL )
+   if( !haveipopt )
       return;
 
    /* create the nl rows */
