@@ -3699,7 +3699,7 @@ SCIP_RETCODE cliquePresolve(
             else
                ++(*nfixedvars);
          }
-         /* otherwise aggregate integer variable to xor-variable outside clique */
+         /* otherwise aggregate integer variable to xor-variable not in clique */
          else
          {
             SCIP_Bool redundant;
