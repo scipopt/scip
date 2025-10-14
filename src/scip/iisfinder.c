@@ -432,6 +432,8 @@ SCIP_RETCODE SCIPiisGenerate(
 
    /* Check for trivial infeasibility reasons */
    SCIP_CALL( checkTrivialInfeas(iis->subscip, &trivial) );
+   if( trivial )
+      SCIPiisSetSubscipIrreducible(iis, TRUE);
 
    /* Try all IIS generators */
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/stopafterone", &stopafterone) );
@@ -504,7 +506,7 @@ SCIP_RETCODE SCIPiisGenerate(
    }
 
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/removeunusedvars", &removeunusedvars) );
-   if( removeunusedvars && !trivial )
+   if( removeunusedvars )
    {
       SCIP_Bool deleted;
 
