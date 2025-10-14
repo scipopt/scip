@@ -152,8 +152,14 @@ VIPRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr
 VIPRCOMPFILE=$CLIENTTMPDIR/${USER}-tmpdir/${BASENAME}_complete.vipr
 VIPRORIFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr_ori
 VIPRRAWFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.viprraw
+
+
 if test -e $VIPRFILE
 then
+    if [ -z "$VIPRCOMPNAME" ]; then
+      echo "VIPRCOMPNAME is empty"  >> $OUTFILE
+    fi
+
     echo Building vipr file ... >> $OUTFILE
     cp $VIPRFILE $VIPRRAWFILE
 
@@ -182,19 +188,31 @@ then
         echo "vipr returned with error code $retcode." >> $ERRFILE
     fi
 
+
+
+    # compress vipr file
+    echo Gzipping vipr file ... >> $OUTFILE
+    bash -c "gzip $VIPRFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
+    echo "viprfile gzipped:   " `ls -lisa $VIPRFILE.gz` >> $OUTFILE
+fi
+
+if test -e $VIPRORIFILE
+then
+      if [ -z "$VIPRCHECKNAME" ]; then
+        echo "VIPRCHECKNAME is empty"  >> $OUTFILE
+      else
+        echo "VIPRCHECKNAME: $VIPRCHECKNAME" >> $OUTFILE
+      fi
+
     # run vipr also on original file to check solution
     echo Checking vipr_ori file ... >> $OUTFILE
+    echo "$VIPRCHECKNAME $VIPRORIFILE"
     bash -c "$VIPRCHECKNAME $VIPRORIFILE 2>>$ERRFILE"  | tee -a $OUTFILE
     retcode=${PIPESTATUS[0]}
     if test $retcode != 0
     then
         echo "vipr on original problem returned with error code $retcode." >>$ERRFILE
     fi
-
-    # compress vipr file
-    echo Gzipping vipr file ... >> $OUTFILE
-    bash -c "gzip $VIPRFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
-    echo "viprfile gzipped:   " `ls -lisa $VIPRFILE.gz` >> $OUTFILE
 
     # compress vipr_ori file
     echo Gzipping vipr_ori file ... >> $OUTFILE
