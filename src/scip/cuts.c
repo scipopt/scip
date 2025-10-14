@@ -5583,12 +5583,13 @@ SCIP_RETCODE cutsTransformMIR(
    *freevariable = FALSE;
    *localbdsused = FALSE;
 
+   int allocsize = MIN(NSECTIONS * totalnnz, data->nvars);
    /* allocate temporary memory to store best bounds and bound types */
-   SCIP_CALL( SCIPallocBufferArray(scip, &bestlbs, 2 * totalnnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bestubs, 2 * totalnnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bestlbtypes, 2 * totalnnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bestubtypes, 2 * totalnnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &selectedbounds, 2 * totalnnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestlbs, allocsize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestubs, allocsize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestlbtypes, allocsize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestubtypes, allocsize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &selectedbounds, allocsize) );
 
    /* transform the cut, one variable section at a time */
    for( s = 0; s < NSECTIONS; ++s )
@@ -5617,6 +5618,7 @@ SCIP_RETCODE cutsTransformMIR(
          }
 
          cutindex = data->ncutinds;
+         assert(cutindex < allocsize);
          SCIP_CALL( determineBestBounds(scip, data->vars[v], sol, data, boundswitch, usevbds, allowlocal, fixintegralrhs,
                ignoresol, boundsfortrans, boundtypesfortrans,
                bestlbs + cutindex, bestubs + cutindex, bestlbtypes + cutindex, bestubtypes + cutindex,
