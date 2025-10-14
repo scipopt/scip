@@ -2498,6 +2498,8 @@ SCIP_RETCODE SCIPpresolve(
          case SCIP_STATUS_OPTIMAL:
             /* remove the root node from the tree, s.t. the lower bound is set to +infinity ???????????? (see initSolve())*/
             SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter, scip->lp) );
+            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+               "presolving solved problem\n");
             break;
 
          case SCIP_STATUS_INFEASIBLE:
@@ -2598,7 +2600,8 @@ SCIP_RETCODE SCIPpresolve(
       SCIP_CALL( displayRelevantStats(scip) );
    }
 
-   if( scip->set->exact_enable && !(scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0') && hasPresolveModifiedProblem(scip) )
+   if( scip->set->exact_enable && !(scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0')
+      && hasPresolveModifiedProblem(scip) && scip->set->stage != SCIP_STAGE_SOLVED )
    {
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_DIALOG, "\n");
       SCIPwarningMessage(scip, "Certificate is printed for presolved problem. "
