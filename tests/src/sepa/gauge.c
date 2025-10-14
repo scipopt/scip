@@ -186,7 +186,7 @@ void evaluation_setup(void)
    if( ! SCIPisIpoptAvailableIpopt() )
       return;
 
-   SCIPincludeNlpSolverIpopt(scip);
+   SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
    haveipopt = TRUE;
 
    /* create a problem */
@@ -527,7 +527,7 @@ Test(interior_point, compute_interior_point)
       return;
 
    /* include NLPI's */
-   SCIPincludeNlpSolverIpopt(scip);
+   SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
 
    /* include gauge separator */
    SCIP_CALL( SCIPincludeSepaGauge(scip) );
