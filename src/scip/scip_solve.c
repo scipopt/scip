@@ -250,10 +250,6 @@ SCIP_RETCODE SCIPtransformProb(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /* call garbage collector on original problem and parameter settings memory spaces */
-   BMSgarbagecollectBlockMemory(scip->mem->setmem);
-   BMSgarbagecollectBlockMemory(scip->mem->probmem);
-
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->origprob);
 
