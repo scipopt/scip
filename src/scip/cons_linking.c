@@ -383,6 +383,30 @@ SCIP_RETCODE dropAllEvents(
    return SCIP_OKAY;
 }
 
+/** disables the constraint if the constraint is redundant */
+static
+SCIP_RETCODE checkRedundantConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< the linking constaint */
+   SCIP_Bool*            redundant           /**< stores if the constraint is redundant */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   (*redundant) = FALSE;
+   if( consdata->nbinvars <= 1 )
+   {
+      SCIP_CALL( SCIPdisableCons(scip, cons) );
+      assert(consdata->nbinvars == 0 || SCIPvarGetLbGlobal(consdata->binvars[0]) > 0.5);
+      (*redundant) = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** linearize the given linking constraint into a set partitioning constraint for the binary variables and a linear
  *  constraint for the linking between the linking variable and the binary variables */
 static
@@ -1996,12 +2020,22 @@ SCIP_RETCODE enforceConstraint(
    /* check all useful linking constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && nchgbds == 0; ++c )
    {
+      SCIP_Bool redundant = FALSE;
+      SCIP_CALL( checkRedundantConstraint(scip, conss[c], &redundant) );
+      if( redundant )
+         continue;
+
       SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &nchgbds) );
    }
 
    /* check all obsolete linking constraints for feasibility */
    for( c = nusefulconss; c < nconss && !cutoff && !separated && nchgbds == 0; ++c )
    {
+      SCIP_Bool redundant = FALSE;
+      SCIP_CALL( checkRedundantConstraint(scip, conss[c], &redundant) );
+      if( redundant )
+         continue;
+
       SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &nchgbds) );
    }
 
@@ -2139,6 +2173,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinking)
       if( consdata->nbinvars <= 1 )
       {
          SCIP_CALL( SCIPdisableCons(scip, conss[c]) );
+         SCIP_CALL( dropAllEvents(scip, consdata, conshdlrdata->eventhdlr) );
          assert(consdata->nbinvars == 0 || SCIPvarGetLbGlobal(consdata->binvars[0]) > 0.5);
       }
       else if( conshdlrdata->linearize )
@@ -2161,6 +2196,11 @@ SCIP_DECL_CONSINITSOL(consInitsolLinking)
       int c;
       for( c = 0; c < nconss; ++c )
       {
+         SCIP_Bool redundant = FALSE;
+         SCIP_CALL( checkRedundantConstraint(scip, conss[c], &redundant) );
+         if( redundant )
+            continue;
+
          SCIP_CALL( addNlrow(scip, conss[c]) );
       }
    }
@@ -2284,19 +2324,17 @@ SCIP_DECL_CONSTRANS(consTransLinking)
 static
 SCIP_DECL_CONSINITLP(consInitlpLinking)
 {  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
    int c;
 
    *infeasible = FALSE;
 
    for( c = 0; c < nconss && !(*infeasible); ++c )
    {
+      SCIP_Bool redundant = FALSE;
       assert(SCIPconsIsInitial(conss[c]));
 
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
-      if( consdata->nbinvars <= 1 )
+      SCIP_CALL( checkRedundantConstraint(scip, conss[c], &redundant) );
+      if( redundant )
          continue;
 
       SCIP_CALL( addCuts(scip, conss[c], infeasible) );
@@ -2330,6 +2368,11 @@ SCIP_DECL_CONSSEPALP(consSepalpLinking)
    /* check all useful linking constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
+      SCIP_Bool redundant = FALSE;
+      SCIP_CALL( checkRedundantConstraint(scip, conss[c], &redundant) );
+      if( redundant )
+         continue;
+
       SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &nchgbds) );
    }
 
@@ -2371,6 +2414,11 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinking)
    /* check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
+      SCIP_Bool redundant = FALSE;
+      SCIP_CALL( checkRedundantConstraint(scip, conss[c], &redundant) );
+      if( redundant )
+         continue;
+
       SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &nchgbds) );
    }
 
@@ -2440,6 +2488,11 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinking)
    /* check all linking constraint for domain reductions and feasibility */
    for( c = 0; c < nconss && !cutoff && !solvelp; ++c )
    {
+      SCIP_Bool redundant = FALSE;
+      SCIP_CALL( checkRedundantConstraint(scip, conss[c], &redundant) );
+      if( redundant )
+         continue;
+
       SCIP_CALL( enforcePseudo(scip, conss[c], &cutoff, &infeasible, &nchgbds, &solvelp) );
    }
 
@@ -2481,7 +2534,12 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      if( consdata->nbinvars > 1 && (checklprows || consdata->row1 == NULL || !SCIProwIsInLP(consdata->row1)) )
+      if( consdata->nbinvars <= 1 )
+      {
+         SCIP_CALL( SCIPdisableCons(scip, conss[c]) );
+         assert(consdata->nbinvars == 0 || SCIPvarGetLbGlobal(consdata->binvars[0]) > 0.5);
+      }
+      else if( checklprows || consdata->row1 == NULL || !SCIProwIsInLP(consdata->row1) )
       {
          if( !checkCons(scip, cons, sol) )
          {
@@ -2564,6 +2622,10 @@ SCIP_DECL_CONSPROP(consPropLinking)
    {
       SCIP_Bool addcut;
       SCIP_Bool mustcheck;
+      SCIP_Bool redundant = FALSE;
+      SCIP_CALL( checkRedundantConstraint(scip, conss[c], &redundant) );
+      if( redundant )
+         continue;
 
       SCIP_CALL( processRealBoundChg(scip, conss[c], &cutoff, &nchgbds, &mustcheck) );
       SCIP_CALL( processBinvarFixings(scip, conss[c], &cutoff, &nchgbds, &addcut, &mustcheck) );
