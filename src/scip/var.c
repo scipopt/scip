@@ -15459,7 +15459,7 @@ SCIP_RETCODE SCIPvarAddVlb(
       else if( SCIPsetIsZero(set, vlbcoef) )
       {
          /* bound might be adjusted due to integrality condition */
-         vlbconstant = adjustedLb(set, SCIPvarGetType(var), vlbconstant);
+         vlbconstant = adjustedLb(set, SCIPvarIsIntegral(var), vlbconstant);
 
          /* check bounds for feasibility */
          if( SCIPsetIsFeasGT(set, vlbconstant, SCIPvarGetUbGlobal(var)) )
@@ -15926,7 +15926,7 @@ SCIP_RETCODE SCIPvarAddVub(
       else if( SCIPsetIsZero(set, vubcoef) )
       {
          /* bound might be adjusted due to integrality condition */
-         vubconstant = adjustedUb(set, SCIPvarGetType(var), vubconstant);
+         vubconstant = adjustedUb(set, SCIPvarIsIntegral(var), vubconstant);
 
          /* check bounds for feasibility */
          if( SCIPsetIsFeasLT(set, vubconstant, SCIPvarGetLbGlobal(var)) )
