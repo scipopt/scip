@@ -497,6 +497,7 @@ SCIP_RETCODE consdataCreateBinvars(
    }
 
    consdata->nbinvars = nbinvars;
+   consdata->lastnonfixed = nbinvars - 1;
 
    assert(consdata->nfixedzeros == 0);
    assert(consdata->nfixedones == 0);
