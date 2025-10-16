@@ -479,6 +479,14 @@ Build system
 
 - added experimental target to run cppcheck
 
+### Changed Parameters
+
+- removed parameters propagating/symmetry/{nautymaxncells,nautymaxnnodes}
+
+### New Parameters
+
+- added parameter propagating/symmetry/maxlevel to terminate Nauty early especially before its search tree depth overflows the call stack memory
+
 Miscellaneous
 -------------
 
