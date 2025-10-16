@@ -23,6 +23,7 @@ Fixed bugs
 - recompute activity bounds before checking infeasibility and redundancy in linear constraint presolving
 - skip integer variables with fractional value in reference solution when finding additional variable fixings in ALNS heuristic
 - fix call of SCIPaddExprsViolScoreNonlinear() with constant expressions (no variables)
+- adjust further bounds before checking feasibility in SCIPvarAddVlb() and SCIPvarAddVub() to detect integrality cutoff
 
 Build system
 ------------
