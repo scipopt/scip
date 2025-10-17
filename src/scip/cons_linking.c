@@ -1031,13 +1031,6 @@ SCIP_RETCODE delCoefPos(
    /* release variable */
    SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
-   /* if there is now at most 1 binary variable, then the constraint is disabled */
-   if( consdata->nbinvars <= 1 )
-   {
-      SCIP_CALL( SCIPdisableCons(scip, cons) );
-      assert(consdata->nbinvars == 0 || SCIPvarGetLbGlobal(consdata->binvars[0]) > 0.5);
-   }
-
    return SCIP_OKAY;
 }
 
@@ -1729,10 +1722,6 @@ SCIP_RETCODE addCuts(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   /* in case there is only at most one binary variables, the constraints should already be disabled */
-   if( consdata->nbinvars <= 1 )
-      return SCIP_OKAY;
 
    assert(consdata->nbinvars > 1);
 
