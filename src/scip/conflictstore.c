@@ -1285,7 +1285,6 @@ SCIP_RETCODE SCIPconflictstoreUpgradeConflict(
    )
 {
    assert(conflictstore != NULL);
-   assert(conflictstore->conflicts != NULL);
    assert(blkmem != NULL);
    assert(set != NULL);
    assert(SCIPconsIsConflict(oldcons));
@@ -1302,6 +1301,7 @@ SCIP_RETCODE SCIPconflictstoreUpgradeConflict(
       return SCIP_OKAY;
    }
 
+   assert(conflictstore->conflicts != NULL);
    assert(!SCIPconsIsChecked(oldcons));
    assert(!SCIPconsIsChecked(newcons));
    assert(oldcons->confconsspos >= 0);
