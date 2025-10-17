@@ -132,6 +132,19 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/** @page LPIEXACT Available implementations of the numerically exact LP solver interface
+ *
+ * SCIP provides the following interfaces to exact LP solvers:
+ *
+ * LPI name | LP solver
+ * ---------|----------
+ * `spx`    | SoPlex
+ * `qsoptex`| QSopt_ex (experimental)
+ * `none`   | no exact LP solver linked
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /** @page NLPISOLVERS Available implementations of the NLP solver interface
  *
  * SCIP implements the NLP solver interface for the solvers <a href="https://conopt.com">CONOPT</a>, <a href="https://github.com/coin-or/Ipopt">IPOPT</a>, <a
@@ -344,6 +357,7 @@
  * - @subpage DEBUG   "Debugging"
  * - @subpage STAGES  "SCIP stages"
  */
+
 /**@page HOWTOADD How to add ...
  *
  * Below you find for most plugin types a detailed description of how to implement and add them to \SCIP.
@@ -373,10 +387,12 @@
  * - @subpage BENDER "Benders' decomposition"
  *   + @subpage BENDERSCUT "Benders' decomposition cuts"
  */
+
 /**@page HOWTOUSESECTION How to use ...
  *
- * - @subpage CONF    "Conflict analysis"
  * - @subpage TEST    "How to run automated tests with SCIP"
+ * - @subpage EXACT   "How to use the numerically exact solving mode"
+ * - @subpage CONF    "How to use conflict analysis"
  * - @subpage COUNTER "How to use SCIP to count feasible solutions"
  * - @subpage REOPT   "How to use reoptimization in SCIP"
  * - @subpage CONCSCIP "How to use the concurrent solving mode in SCIP"
@@ -7834,6 +7850,15 @@
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page EXACT How to use the numerically exact solving mode
+ *
+ * @section TODO
+ *
+ * TODO
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page OBJ Creating, capturing, releasing, and adding data objects
  *
  *  Data objects (variables, constraints, rows, ... ) are subject to reference counting
@@ -9870,14 +9895,14 @@
  * @ingroup PUBLICPLUGINAPI
  * @brief methods and files provided by the exact LP solver interface of \SCIP
  *
- * For the exact solving mode, \SCIP also uses exact LP solvers.  The communication
+ * For the numerically exact solving mode, \SCIP also uses exact LP solvers.  The communication
  * is realized through an exact LP interface.
  *
  * This page lists public interface methods that every exact LP interface provides.
  * Find the concrete implementation for your exact LP solver
  * under "src/lpiexact/".
  *
- * @see \ref LPI for a list of available LP solver interfaces
+ * @see \ref LPIEXACT for a list of available exact LP solver interfaces
  */
 
 /**@defgroup NODESELECTORS Node Selectors
