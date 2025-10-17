@@ -46,6 +46,30 @@
 extern "C" {
 #endif
 
+/**@addtogroup LPIEXACTS
+ *
+ * This file specifies a generic interface for numerically exact LP solvers used by SCIP to create, modify, and solve
+ * linear programs with rational input data of the form
+ *
+ * ```
+ *   min/max   obj * x
+ *      lhs <=   A * x  <= rhs
+ *      lb  <=       x  <= ub
+ * ```
+ *
+ * and query information about the solution.  It is mainly a numerically exact analogue of the standard floating-point
+ * \ref LPIS, so we refer to this documentation for further details on the design of the interface.
+ *
+ * @{
+ */
+
+/*
+ * Miscellaneous Methods
+ */
+
+/**@name Miscellaneous Methods */
+/**@{ */
+
 /** gets name and version of LP solver */
 SCIP_EXPORT
 const char* SCIPlpiExactGetSolverName(
@@ -62,6 +86,12 @@ const char* SCIPlpiExactGetSolverDesc(
 SCIP_EXPORT
 const char* SCIPlpiExactGetExternalCodeName(
    void
+   );
+
+/** prints additional lpiexact internal info */
+SCIP_EXPORT
+void SCIPlpiExactPrintInfo(
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    );
 
 /** gets description of external package required for LP solver (developer, webpage, ...) */
@@ -82,7 +112,6 @@ void* SCIPlpiExactGetSolverPointer(
    );
 
 /**@} */
-
 
 
 
@@ -123,7 +152,6 @@ SCIP_RETCODE SCIPlpiExactFree(
    );
 
 /**@} */
-
 
 
 
@@ -290,7 +318,6 @@ SCIP_RETCODE SCIPlpiExactScaleCol(
 
 
 
-
 /*
  * Data Accessing Methods
  */
@@ -426,7 +453,6 @@ SCIP_RETCODE SCIPlpiExactGetCoef(
 
 
 
-
 /*
  * Solving Methods
  */
@@ -485,7 +511,6 @@ SCIP_RETCODE SCIPlpiExactStrongbranch(
 /* TODO: Do we need the other strong branchiing methods? */
 
 /**@} */
-
 
 
 
@@ -670,7 +695,6 @@ SCIP_RETCODE SCIPlpiExactGetIterations(
 
 
 
-
 /*
  * LP Basis Methods
  */
@@ -754,7 +778,6 @@ SCIP_RETCODE SCIPlpiExactGetBInvACol(
 
 
 
-
 /*
  * LPi State Methods
  */
@@ -834,6 +857,8 @@ SCIP_RETCODE SCIPlpiExactStateDualFeasible(
 
 /**@} */
 
+
+
 /*
  * LPi Pricing Norms Methods
  */
@@ -869,6 +894,8 @@ SCIP_RETCODE SCIPlpiExactFreeNorms(
 
 
 /**@} */
+
+
 
 /*
  * Parameter Methods
@@ -910,7 +937,6 @@ SCIP_RETCODE SCIPlpiExactSetRealpar(
    );
 
 /**@} */
-
 
 
 
@@ -965,10 +991,6 @@ SCIP_Bool SCIPlpiExactIsInfinity(
 /**@} */
 
 
-/**@} */
-
-
-
 
 /*
  * File Interface Methods
@@ -993,14 +1015,6 @@ SCIP_RETCODE SCIPlpiExactWriteLP(
 
 /**@} */
 
-
-/** prints additional lpiexact internal info */
-SCIP_EXPORT
-void SCIPlpiExactPrintInfo(
-   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
-   );
-
-/**@} */
 
 /*
  * Exact LU decomposition solver interface
@@ -1029,6 +1043,8 @@ SCIP_RETCODE SCIPlpiExactFactorSolve(
    SCIP_RATIONAL*        sol,                /**< solution to system */
    SCIP_RATIONAL*        rhs                 /**< rhs of system */
    );
+/**@} */
+
 /**@} */
 
 #ifdef __cplusplus
