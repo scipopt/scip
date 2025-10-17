@@ -48,9 +48,11 @@
  *
  * - \SCIP incorporates a mixed-integer programming (MIP) solver as well as
  * - an LP based mixed-integer nonlinear programming (MINLP) solver, and
- * - is a framework for branch-and-cut-and-price.
+ * - is a framework for branch-cut-and-price.
  *
- * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and to download \SCIP.
+ * Since version 10, \SCIP can be configured to solve mixed-integer linear programs in a numerically exact solving mode and produce certificates that can be independently verified, see \ref EXACT "How to use the numerically exact solving mode" for details.
+ *
+ * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and how to download \SCIP.
  *
  *  <b style="color: blue">If you are new to SCIP and don't know where to start you should have a look at the
  *  @ref GETTINGSTARTED "first steps walkthrough"
