@@ -241,6 +241,7 @@ Interface changes
 - set default maxlpiterquot to 0.05 for all LP diving heuristics and feaspump whereas adaptivediving uses 0.15 and rootsoldiving remains at 0.01
 - set default of presolving/restartminred to 0.05
 - set default of presolving/immrestartfac to 0.05
+- removed parameters propagating/symmetry/{nautymaxncells,nautymaxnnodes}
 
 ### New parameters
 
@@ -282,6 +283,7 @@ Interface changes
 - new parameter "nlpi/conopt/priority" to set the priority of the CONOPT NLP solver
 - new parameter "randomization/randomseedshiftmultiplier" to set a multiplier for the shift set by "randomization/randomseedshift";
   the default value for the randomseedshiftmultiplier is expected to be changed with every major release
+- added parameter propagating/symmetry/maxlevel to terminate Nauty early especially before its search tree depth overflows the call stack memory
 
 ### Data structures
 
@@ -453,14 +455,6 @@ Build system
 ### Makefile
 
 - added experimental target to run cppcheck
-
-### Changed Parameters
-
-- removed parameters propagating/symmetry/{nautymaxncells,nautymaxnnodes}
-
-### New Parameters
-
-- added parameter propagating/symmetry/maxlevel to terminate Nauty early especially before its search tree depth overflows the call stack memory
 
 Miscellaneous
 -------------
