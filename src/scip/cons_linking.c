@@ -2484,12 +2484,7 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      if( consdata->nbinvars <= 1 )
-      {
-         SCIP_CALL( SCIPdisableCons(scip, conss[c]) );
-         assert(consdata->nbinvars == 0 || SCIPvarGetLbGlobal(consdata->binvars[0]) > 0.5);
-      }
-      else if( checklprows || consdata->row1 == NULL || !SCIProwIsInLP(consdata->row1) )
+      if( consdata->nbinvars > 1 && (checklprows || consdata->row1 == NULL || !SCIProwIsInLP(consdata->row1)) )
       {
          if( !checkCons(scip, cons, sol) )
          {
