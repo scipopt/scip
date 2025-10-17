@@ -302,20 +302,43 @@ SCIP_RETCODE initConcsolver(
       data->vars[i] = var;
    }
 
+   /* transfer solutions from original problem to concurent instances */
    if( SCIPgetNSols(scip) != 0 )
    {
       SCIP_Bool stored;
       SCIP_Real* solvals;
       SCIP_SOL* sol = SCIPgetBestSol(scip);
       SCIP_SOL* solversol;
+      int norigvars;
 
       SCIP_CALL( SCIPallocBufferArray(data->solverscip, &solvals, data->nvars) );
 
       SCIP_CALL( SCIPgetSolVals(scip, sol, data->nvars, vars, solvals) );
       SCIP_CALL( SCIPcreateSol(data->solverscip, &solversol, NULL) );
       SCIP_CALL( SCIPsetSolVals(data->solverscip, solversol, data->nvars, data->vars, solvals) );
-
       SCIPfreeBufferArray(data->solverscip, &solvals);
+
+      /* handle fixed variables */
+      norigvars = SCIPgetNOrigVars(data->solverscip);
+      if( norigvars > data->nvars )
+      {
+         SCIP_VAR** origvars;
+         int v;
+
+         origvars = SCIPgetOrigVars(data->solverscip);
+         for( v = 0; v < norigvars; ++v )
+         {
+            SCIP_VAR* var;
+            var = origvars[v];
+            if( SCIPisEQ(data->solverscip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+            {
+               if( ! SCIPisZero(data->solverscip, SCIPvarGetLbGlobal(var)) )
+               {
+                  SCIP_CALL( SCIPsetSolVal(data->solverscip, solversol, var, SCIPvarGetLbGlobal(var)) );
+               }
+            }
+         }
+      }
 
       SCIP_CALL( SCIPaddSolFree(data->solverscip, &solversol, &stored) );
 
@@ -517,9 +540,9 @@ SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA(concsolverGetSolvingData)
    if( nsols > 0 )
    {
       SCIP_VAR** vars;
-      int nvars;
       SCIP_SOL** sols;
       SCIP_Real* solvals;
+      int nvars;
       int i;
 
       vars = SCIPgetVars(scip);
@@ -722,16 +745,19 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 
       /* treat possible fixed original variables */
       norigvars = SCIPgetNOrigVars(data->solverscip);
-      origvars = SCIPgetOrigVars(data->solverscip);
-      for( v = 0; v < norigvars; ++v )
+      if( norigvars > data->nvars )
       {
-         SCIP_VAR* var;
-         var = origvars[v];
-         if( SCIPisEQ(data->solverscip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+         origvars = SCIPgetOrigVars(data->solverscip);
+         for( v = 0; v < norigvars; ++v )
          {
-            if( ! SCIPisZero(data->solverscip, SCIPvarGetLbGlobal(var)) )
+            SCIP_VAR* var;
+            var = origvars[v];
+            if( SCIPisEQ(data->solverscip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
             {
-               SCIP_CALL( SCIPsetSolVal(data->solverscip, newsol, var, SCIPvarGetLbGlobal(var)) );
+               if( ! SCIPisZero(data->solverscip, SCIPvarGetLbGlobal(var)) )
+               {
+                  SCIP_CALL( SCIPsetSolVal(data->solverscip, newsol, var, SCIPvarGetLbGlobal(var)) );
+               }
             }
          }
       }
