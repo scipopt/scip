@@ -2294,6 +2294,7 @@ SCIP_DECL_CONSTRANS(consTransLinking)
 static
 SCIP_DECL_CONSINITLP(consInitlpLinking)
 {  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
    int c;
 
    *infeasible = FALSE;
@@ -2301,6 +2302,12 @@ SCIP_DECL_CONSINITLP(consInitlpLinking)
    for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->nbinvars <= 1 )
+         continue;
 
       SCIP_CALL( addCuts(scip, conss[c], infeasible) );
    }
