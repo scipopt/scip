@@ -471,6 +471,8 @@ Fixed bugs
 - skip integer variables with fractional value in reference solution when finding additional variable fixings in ALNS heuristic
 - fix call of SCIPaddExprsViolScoreNonlinear() with constant expressions (no variables)
 - adjust further bounds before checking feasibility in SCIPvarAddVlb() and SCIPvarAddVub() to detect integrality cutoff
+- fixed issue in cons_linking.c where the last fixed binary variable was not set after the binary variables are created.
+- fixed issue in cons_linking.c where the number of binary variable is 1, but the constraint is added during solving.
 
 Build system
 ------------
