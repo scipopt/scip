@@ -23,7 +23,7 @@ Fixed bugs
 - recompute activity bounds before checking infeasibility and redundancy in linear constraint presolving
 - skip integer variables with fractional value in reference solution when finding additional variable fixings in ALNS heuristic
 - fix call of SCIPaddExprsViolScoreNonlinear() with constant expressions (no variables)
-- fixed bug with concurrent solve w.r.t. variable indices that led to segmentation faults
+- fixed bug with concurrent solve w.r.t. variable indices that led to segmentation faults and fix termination test
 
 Build system
 ------------
