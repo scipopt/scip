@@ -221,11 +221,12 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
       if( scip->concurrent->dettime >= syncfreq  )
       {
          SCIP_EVENT* event;
+
          SCIPconcsolverSetTimeSinceLastSync(scip->concurrent->concsolver, scip->concurrent->dettime);
          scip->concurrent->dettime = 0.0;
          SCIP_CALL( SCIPeventCreateSync(&event, SCIPblkmem(mainscip)) );
          SCIP_CALL( SCIPeventqueueAdd(mainscip->eventqueue, SCIPblkmem(mainscip), mainscip->set,
-                                      NULL, NULL, NULL, mainscip->eventfilter, &event) );
+               NULL, NULL, NULL, mainscip->eventfilter, &event) );
       }
    }
    else
@@ -236,11 +237,12 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
       if( timesincelastsync >= syncfreq )
       {
          SCIP_EVENT* event;
+
          SCIPconcsolverSetTimeSinceLastSync(scip->concurrent->concsolver, timesincelastsync);
 
          SCIP_CALL( SCIPeventCreateSync(&event, SCIPblkmem(mainscip)) );
          SCIP_CALL( SCIPeventqueueAdd(mainscip->eventqueue, SCIPblkmem(mainscip), mainscip->set,
-                                      NULL, NULL, NULL, mainscip->eventfilter, &event) );
+               NULL, NULL, NULL, mainscip->eventfilter, &event) );
 
          SCIP_CALL( SCIPresetClock(mainscip, wallclock) );
          SCIP_CALL( SCIPstartClock(mainscip, wallclock) );
