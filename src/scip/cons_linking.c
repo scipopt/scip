@@ -3195,7 +3195,7 @@ SCIP_DECL_CONSENABLE(consEnableLinking)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->nbinvars <= 1 )
+   if( consdata->nbinvars <= 1 && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
       SCIP_CALL( SCIPdisableCons(scip, cons) );
       assert(consdata->nbinvars == 0 || SCIPvarGetLbGlobal(consdata->binvars[0]) > 0.5);
