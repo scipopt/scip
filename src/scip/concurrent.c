@@ -445,7 +445,8 @@ int SCIPgetConcurrentVaridx(
    assert(SCIPvarIsOriginal(var));
 
    /* variables with index larger than nvars do not correspond to active variables in the original */
-   idx = SCIPvarGetProbindex(var);
+   idx = SCIPvarGetIndex(var);
+   assert( idx >= 0 );
    if( idx < scip->concurrent->nvars )
       return scip->concurrent->varperm[idx];
    return -1;
