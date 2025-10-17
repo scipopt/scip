@@ -1723,6 +1723,7 @@ SCIP_RETCODE addCuts(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   /* in case there is only at most one binary variables, the constraints should already be disabled */
    assert(consdata->nbinvars > 1);
 
    if( consdata->row1 == NULL )
