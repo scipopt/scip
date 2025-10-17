@@ -165,6 +165,8 @@ Interface changes
 
 ### New API methods
 
+- SCIPenableExactSolving() to enable and disable numerically exact solving mode
+TODO
 - SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
 - SCIPhistoryGetAncPseudocost(), SCIPhistoryGetAncPseudocostCount(), SCIPhistoryIsAncPseudocostEmpty(), SCIPgetVarAncPseudocostVal(),
   SCIPvarGetAncPseudocost() for retrieving the values related to ancestral pseudo cost fields in variable history
@@ -256,6 +258,7 @@ Interface changes
 
 ### New parameters
 
+TODO
 - branching/pscost/discountfactor, branching/relpscost/discountfactor as the discount factor for ancestral pseudo costs in pscost and relpscost branching rules
 - branching/discountedpscost to enable/disable recording ancestral pseudo costs
 - new parameter "constraints/cumulative/maxtime" to limit the time horizon and avoid integer overflow for unbounded variables
@@ -295,6 +298,7 @@ Interface changes
 
 ### Data structures
 
+TODO
 - added structs SCIP_IISFINDER, SCIP_IISFINDERDATA, SCIP_IIS
 - added struct SCIP_DATATREE to model generic serializable data; new enum SCIP_DATATREE_VALUETYPE
 
@@ -317,6 +321,7 @@ Build system
 
 ### Makefile
 
+TODO
 - revised SANITIZE options: removed SANITIZE=full, added SANITIZE=thread, SANITIZE=address, and SANITIZE=memory to enable
   thread, address, and memory sanitizers, respectively, in addition to undefined behavior sanitizer;
   changed default to SANITIZE=false
@@ -335,6 +340,7 @@ Build system
 
 ### Cmake
 
+TODO
 - increased minimal required cmake version to 3.11
 - removed automatic download and build of Bliss during cmake configuration when -DSYM=(s)bliss;
   please build and install from https://github.com/scipopt/bliss before and specify -DBLISS_DIR
