@@ -1,0 +1,34 @@
+STATISTICS
+  Problem name     : t_sub_0
+  Variables        : 21 (0 binary, 10 integer, 0 implicit integer, 11 continuous)
+  Constraints      : 32 initial, 32 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [integer] <t_start_machine_0_job_5>: obj=0, global bounds=[-0,0], local bounds=[-0,0]
+  [integer] <t_start_machine_0_job_1>: obj=0, global bounds=[-0,0], local bounds=[-0,0]
+  [integer] <t_start_machine_0_job_6>: obj=0, global bounds=[-0,23], local bounds=[-0,23]
+  [integer] <t_start_machine_0_job_3>: obj=0, global bounds=[-0,0], local bounds=[-0,0]
+  [integer] <t_start_machine_0_job_7>: obj=0, global bounds=[-0,0], local bounds=[-0,0]
+  [integer] <t_start_machine_0_job_0>: obj=0, global bounds=[-0,21], local bounds=[-0,21]
+  [integer] <t_start_machine_0_job_8>: obj=0, global bounds=[-0,20], local bounds=[-0,20]
+  [integer] <t_start_machine_0_job_4>: obj=0, global bounds=[-0,0], local bounds=[-0,0]
+  [integer] <t_start_machine_0_job_9>: obj=0, global bounds=[-0,0], local bounds=[-0,0]
+  [integer] <t_start_machine_0_job_2>: obj=0, global bounds=[-0,0], local bounds=[-0,0]
+  [continuous] <t_assignment_machine_0_job_2>: obj=0, global bounds=[0,0], local bounds=[0,0]
+  [continuous] <t_assignment_machine_0_job_3>: obj=0, global bounds=[0,0], local bounds=[0,0]
+  [continuous] <t_assignment_machine_0_job_4>: obj=0, global bounds=[0,0], local bounds=[0,0]
+  [continuous] <t_assignment_machine_0_job_5>: obj=0, global bounds=[0,0], local bounds=[0,0]
+  [continuous] <t_assignment_machine_0_job_6>: obj=0, global bounds=[1,1], local bounds=[1,1]
+  [continuous] <t_assignment_machine_0_job_7>: obj=0, global bounds=[0,0], local bounds=[0,0]
+  [continuous] <t_assignment_machine_0_job_8>: obj=0, global bounds=[1,1], local bounds=[1,1]
+  [continuous] <t_assignment_machine_0_job_9>: obj=0, global bounds=[0,0], local bounds=[0,0]
+  [continuous] <t_assignment_machine_0_job_0>: obj=0, global bounds=[1,1], local bounds=[1,1]
+  [continuous] <t_max_var_machine_0>: obj=1, global bounds=[5,126], local bounds=[5,126]
+  [continuous] <t_assignment_machine_0_job_1>: obj=0, global bounds=[0,0], local bounds=[0,0]
+CONSTRAINTS
+  [linear] <max_constraint_0_0>:  -<t_start_machine_0_job_0>[I] -4<t_assignment_machine_0_job_0>[C] +<t_max_var_machine_0>[C] >= 0;
+  [linear] <max_constraint_0_6>:  -<t_start_machine_0_job_6>[I] -2<t_assignment_machine_0_job_6>[C] +<t_max_var_machine_0>[C] >= 0;
+  [linear] <max_constraint_0_8>:  -<t_start_machine_0_job_8>[I] -5<t_assignment_machine_0_job_8>[C] +<t_max_var_machine_0>[C] >= 0;
+  [cumulative] <Cumulative_constraint_Machine_0_cumulative>: cumulative(<t_start_machine_0_job_0>[-0,21](4)[9], <t_start_machine_0_job_6>[-0,23](2)[4], <t_start_machine_0_job_8>[-0,20](5)[9])[0,25) <= 10;
+END

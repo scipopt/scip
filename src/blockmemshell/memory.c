@@ -2118,7 +2118,7 @@ void BMSfreeBlockMemory_work(
 
    debugMessage("free    %8llu bytes in %p [%s:%d]\n", (unsigned long long)size, *ptr, filename, line);
 
-   /* find correspoding chunk block */
+   /* find corresponding chunk block */
    assert( blkmem->chkmemhash != NULL );
    chkmem = blkmem->chkmemhash[hashnumber];
    while( chkmem != NULL && chkmem->elemsize != (int)size )
