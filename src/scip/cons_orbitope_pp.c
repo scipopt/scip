@@ -1815,6 +1815,80 @@ SCIP_RETCODE checkRedundantCons(
    return SCIP_OKAY;
 }
 
+/** replace aggregated variables by active variables */
+static
+SCIP_RETCODE replaceAggregatedVarsOrbitope(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to be processed */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   int i;
+   int j;
+   int nrows;
+   int ncols;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->vars != NULL );
+   assert( consdata->nrows > 0 );
+   assert( consdata->ncols > 0 );
+
+   vars = consdata->vars;
+   nrows = consdata->nrows;
+   ncols = consdata->ncols;
+
+   /* check whether there exists an aggregated variable in the orbitope */
+   for (i = 0; i < nrows; ++i)
+   {
+      for (j = 0; j < ncols; ++j)
+      {
+         SCIP_VAR* var;
+
+         /* loop through variables until all aggregations are resolved */
+         var = vars[i][j];
+         assert( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR ); /* variables are marked as not to be multi-aggregated */
+
+         while ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
+         {
+            SCIP_VAR* aggrvar;
+            SCIP_Real coef;
+            SCIP_Real constant;
+
+            aggrvar = SCIPvarGetAggrVar(var);
+            coef = SCIPvarGetAggrScalar(var);
+            constant = SCIPvarGetAggrConstant(var);
+
+            /* if we have equality with another variable */
+            if ( SCIPisEQ(scip, coef, 1.0) )
+            {
+               assert( SCIPisEQ(scip, constant, 0.0) );
+               SCIP_CALL( SCIPreleaseVar(scip, &var) );
+               var = aggrvar;
+               SCIP_CALL( SCIPcaptureVar(scip, var) );
+            }
+            else
+            {
+               assert( SCIPisEQ(scip, coef, -1.0) );
+               assert( SCIPisEQ(scip, constant, 1.0) );
+               SCIP_CALL( SCIPreleaseVar(scip, &var) );
+               SCIP_CALL( SCIPgetNegatedVar(scip, aggrvar, &var) );
+               SCIP_CALL( SCIPcaptureVar(scip, var) );
+            }
+         }
+         vars[i][j] = var;
+
+         assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Callback methods of constraint handler
@@ -2164,6 +2238,9 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitopePP)
             (*ndelconss)++;
             continue;
          }
+
+         /* replace aggregated variables by active variables */
+         SCIP_CALL( replaceAggregatedVarsOrbitope(scip, conss[c]) );
       }
    }
 
