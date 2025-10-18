@@ -2242,9 +2242,6 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitopePP)
             (*ndelconss)++;
             continue;
          }
-
-         /* replace aggregated variables by active variables */
-         SCIP_CALL( replaceAggregatedVarsOrbitope(scip, conss[c]) );
       }
    }
 
@@ -2279,6 +2276,25 @@ SCIP_DECL_CONSRESPROP(consRespropOrbitopePP)
 
    SCIP_CALL( resolvePropagation(scip, cons, inferinfo, bdchgidx, result) );
 
+   return SCIP_OKAY;
+}
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+static
+SCIP_DECL_CONSEXITPRE(consExitpreOrbitopePP)
+{
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   for (c = 0; c < nconss; ++c)
+   {
+      /* replace aggregated variables by active variables */
+      SCIP_CALL( replaceAggregatedVarsOrbitope(scip, conss[c]) );
+   }
    return SCIP_OKAY;
 }
 
@@ -2681,6 +2697,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitopePP(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsOrbitopePP) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseOrbitopePP) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOrbitopePP, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreOrbitopePP) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOrbitopePP) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOrbitopePP, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
