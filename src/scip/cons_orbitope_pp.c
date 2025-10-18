@@ -1817,7 +1817,7 @@ SCIP_RETCODE checkRedundantCons(
 
 /** replace aggregated variables by active variables */
 static
-SCIP_RETCODE replaceAggregatedVarsOrbitope(
+SCIP_RETCODE replaceAggregatedVarsOrbitopePP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to be processed */
    )
@@ -1853,6 +1853,7 @@ SCIP_RETCODE replaceAggregatedVarsOrbitope(
          assert( SCIPvarGetStatus(vars[i][j]) != SCIP_VARSTATUS_MULTAGGR ); /* variables are marked as not to be multi-aggregated */
 
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, vars[i][j], &var, &negated) );
+         SCIP_UNUSED( negated );
          assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
          if ( var != vars[i][j] )
          {
@@ -2266,7 +2267,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreOrbitopePP)
    for (c = 0; c < nconss; ++c)
    {
       /* replace aggregated variables by active variables */
-      SCIP_CALL( replaceAggregatedVarsOrbitope(scip, conss[c]) );
+      SCIP_CALL( replaceAggregatedVarsOrbitopePP(scip, conss[c]) );
    }
    return SCIP_OKAY;
 }
