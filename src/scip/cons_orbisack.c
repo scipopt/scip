@@ -1019,6 +1019,76 @@ SCIP_RETCODE separateInequalities(
 }
 
 
+/** replace aggregated variables by active variables */
+static
+SCIP_RETCODE replaceAggregatedVarsOrbisack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to be processed */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars1;
+   SCIP_VAR** vars2;
+   int i;
+   int nrows;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+
+   /* get data of constraint */
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->vars1 != NULL );
+   assert( consdata->vars2 != NULL );
+   assert( consdata->nrows > 0 );
+
+   nrows = consdata->nrows;
+   vars1 = consdata->vars1;
+   vars2 = consdata->vars2;
+
+   /* loop through all variables */
+   for (i = 0; i < nrows; ++i)
+   {
+      SCIP_VAR* var;
+      SCIP_Bool negated;
+
+      /* treat first column */
+      var = vars1[i];
+      assert( var != NULL );
+
+      assert( SCIPvarGetStatus(vars1[i]) != SCIP_VARSTATUS_MULTAGGR ); /* variables are marked as not to be multi-aggregated */
+
+      SCIP_CALL( SCIPgetBinvarRepresentative(scip, vars1[i], &var, &negated) );
+      SCIP_UNUSED( negated );
+      assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
+      if ( var != vars1[i] )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &vars1[i]) );
+         vars1[i] = var;
+         SCIP_CALL( SCIPcaptureVar(scip, var) );
+      }
+
+      /* treat second column */
+      var = vars2[i];
+      assert( var != NULL );
+
+      assert( SCIPvarGetStatus(vars2[i]) != SCIP_VARSTATUS_MULTAGGR ); /* variables are marked as not to be multi-aggregated */
+
+      SCIP_CALL( SCIPgetBinvarRepresentative(scip, vars2[i], &var, &negated) );
+      SCIP_UNUSED( negated );
+      assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
+      if ( var != vars2[i] )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &vars2[i]) );
+         vars2[i] = var;
+         SCIP_CALL( SCIPcaptureVar(scip, var) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*--------------------------------------------------------------------------------------------
  *--------------------------------- SCIP functions -------------------------------------------
  *--------------------------------------------------------------------------------------------*/
@@ -1753,6 +1823,25 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
 }
 
 
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+static
+SCIP_DECL_CONSEXITPRE(consExitpreOrbisack)
+{
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   for (c = 0; c < nconss; ++c)
+   {
+      /* replace aggregated variables by active variables */
+      SCIP_CALL( replaceAggregatedVarsOrbisack(scip, conss[c]) );
+   }
+   return SCIP_OKAY;
+}
+
+
 /** Lock variables
  *
  *  We assume we have only one global (void) constraint and lock all variables.
@@ -2182,6 +2271,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOrbisack) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOrbisack, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropOrbisack) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreOrbisack) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpOrbisack, consSepasolOrbisack, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOrbisack) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpOrbisack) );
