@@ -1848,45 +1848,18 @@ SCIP_RETCODE replaceAggregatedVarsOrbitope(
       for (j = 0; j < ncols; ++j)
       {
          SCIP_VAR* var;
+         SCIP_Bool negated;
 
-         /* loop through variables until all aggregations are resolved */
-         var = vars[i][j];
-         assert( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR ); /* variables are marked as not to be multi-aggregated */
+         assert( SCIPvarGetStatus(vars[i][j]) != SCIP_VARSTATUS_MULTAGGR ); /* variables are marked as not to be multi-aggregated */
 
-         while ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
-         {
-            SCIP_VAR* aggrvar;
-            SCIP_Real coef;
-#ifndef NDEBUG
-            SCIP_Real constant;
-#endif
-
-            aggrvar = SCIPvarGetAggrVar(var);
-            coef = SCIPvarGetAggrScalar(var);
-#ifndef NDEBUG
-            constant = SCIPvarGetAggrConstant(var);
-#endif
-
-            /* if we have equality with another variable */
-            if ( SCIPisEQ(scip, coef, 1.0) )
-            {
-               assert( SCIPisEQ(scip, constant, 0.0) );
-               SCIP_CALL( SCIPreleaseVar(scip, &var) );
-               var = aggrvar;
-               SCIP_CALL( SCIPcaptureVar(scip, var) );
-            }
-            else
-            {
-               assert( SCIPisEQ(scip, coef, -1.0) );
-               assert( SCIPisEQ(scip, constant, 1.0) );
-               SCIP_CALL( SCIPreleaseVar(scip, &var) );
-               SCIP_CALL( SCIPgetNegatedVar(scip, aggrvar, &var) );
-               SCIP_CALL( SCIPcaptureVar(scip, var) );
-            }
-         }
-         vars[i][j] = var;
-
+         SCIP_CALL( SCIPgetBinvarRepresentative(scip, vars[i][j], &var, &negated) );
          assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
+         if ( var != vars[i][j] )
+         {
+            SCIP_CALL( SCIPreleaseVar(scip, &vars[i][j]) );
+            vars[i][j] = var;
+            SCIP_CALL( SCIPcaptureVar(scip, var) );
+         }
       }
    }
 
