@@ -1053,9 +1053,6 @@ SCIP_RETCODE replaceAggregatedVarsOrbisack(
       SCIP_Bool negated;
 
       /* treat first column */
-      var = vars1[i];
-      assert( var != NULL );
-
       assert( SCIPvarGetStatus(vars1[i]) != SCIP_VARSTATUS_MULTAGGR ); /* variables are marked as not to be multi-aggregated */
 
       SCIP_CALL( SCIPgetBinvarRepresentative(scip, vars1[i], &var, &negated) );
