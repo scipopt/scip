@@ -1857,11 +1857,15 @@ SCIP_RETCODE replaceAggregatedVarsOrbitope(
          {
             SCIP_VAR* aggrvar;
             SCIP_Real coef;
+#ifndef NDEBUG
             SCIP_Real constant;
+#endif
 
             aggrvar = SCIPvarGetAggrVar(var);
             coef = SCIPvarGetAggrScalar(var);
+#ifndef NDEBUG
             constant = SCIPvarGetAggrConstant(var);
+#endif
 
             /* if we have equality with another variable */
             if ( SCIPisEQ(scip, coef, 1.0) )
