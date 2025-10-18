@@ -1812,9 +1812,6 @@ SCIP_RETCODE replaceAggregatedVarsSymresack(
       SCIP_VAR* var;
       SCIP_Bool negated;
 
-      var = vars[i];
-      assert( var != NULL );
-
       assert( SCIPvarGetStatus(vars[i]) != SCIP_VARSTATUS_MULTAGGR ); /* variables are marked as not to be multi-aggregated */
 
       SCIP_CALL( SCIPgetBinvarRepresentative(scip, vars[i], &var, &negated) );
