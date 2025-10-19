@@ -202,6 +202,7 @@ Interface changes
 - SCIPvarGetMinAggrCoef() and SCIPvarGetMaxAggrCoef() to get bounds on absolute aggregation coefficients for a loose variable;
   SCIPisVarAggrCoefAcceptable() to check whether bounds on aggregation coefficients would exceed thresholds when using a loose variable in another aggregation
 - SCIPgetNRootIntFixings() to retrieve the number of integer fixings at the root node
+- added SCIPcollectMemoryGarbage() to explicitly trigger garbage collection on block memory; before SCIP 10, this was done in SCIPtransformProb()
 
 ### Changes in preprocessor macros
 
