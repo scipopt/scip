@@ -165,8 +165,86 @@ Interface changes
 
 ### New API methods
 
-- SCIPenableExactSolving() to enable and disable numerically exact solving mode
-TODO
+- SCIPenableExactSolving() to enable and disable exact solving mode
+- SCIPbranchruleMarkExact(), SCIPconshdlrMarkExact(), SCIPheurMarkExact(), SCIPpresolMarkExact(), SCIPpricerMarkExact(), SCIPpropMarkExact(), SCIPreaderMarkExact(), SCIPrelaxMarkExact(), SCIPsepaMarkExact() to mark plugins as safe to use in exact solving mode
+- SCIPisExact(), SCIPvarIsExact(), SCIPconshdlrIsExact(), SCIPsolIsExact() to get whether elements are represented exactly
+- SCIPlpiExact*() to handle the exact LP interface
+- SCIPincludeConshdlrExactLinear() to include the handler for exact linear constraints
+- SCIPcreateConsBasicExactLinear(), SCIPcreateConsBasicExactLinear(), and SCIPcopyConsExactLinear() to create and copy an exact linear constraint
+- SCIPchg{L,R}hsExactLinear() to change sides of an exact linear constraint
+- SCIP{add,chg,del}CoefExactLinear() to change coefficients of an exact linear constraint
+- SCIPget{Lhs,Rhs,NVars,Vars,Vals,Activity,Feasibility,RowExact}ExactLinear() to get exact information of an exact linear constraint
+- SCIPget{ValsReal,FpDualsol,FpDualfarkas,Row}ExactLinear() to get real information of an exact linear constraint
+- SCIPincludeConshdlrExactSol() to include the handler for exact solution enforcement
+- SCIPeventGetOldboundExact() to get exact old bound for a bound change event
+- SCIPcolExact*() and SCIProwExact*() to handle the exact LP columns and rows
+- SCIProwGetRowExact() to get the exact LP row for a real LP row
+- SCIPlpExactDiving() to get whether exact LP is in diving mode
+- SCIPmatrixGetRow{Lhs,Rhs,ValPtr}Exact() to get information of an exact matrix row
+- SCIPcalcIntegralScalarExact() to compute a scalar so that all given values become exactly integral
+- SCIPconsGet{L,R}hsExact() to get exact sides of a linear constraint
+- SCIPgetConsValsExact() to get exact coefficients of a linear constraint
+- SCIPsolOrigAddObjvalExact() to add to exact objective of original solution
+- SCIPnodeGetLowerboundExact() to get the exact lower bound of a node
+- SCIPvarGet{L,U}b{Original,Global,Local}Exact() to get bounds of an exact variable
+- SCIPvarGetObjExact() to get objective coefficient of an exact variable
+- SCIPvarGetOrigvarSumExact() to retransform an exact variable to the corresponding original variable
+- SCIPvarGet{Worst,Best}Bound{Type,Global,Local}Exact() to get optimal bound of an exact variable
+- SCIPfixVarExact(), SCIPaggregateVarsExact(), SCIPmultiaggregateVarExact(), SCIPcomputeVar{L,U}bLocalExact(), SCIPgetProbvarSumExact(), SCIPgetProbvarLinearSumExact(), SCIPvarGetStatusExact(), SCIPvarGetProbvarBoundExact(), SCIPvarGetAggr{Constant,Scalar}Exact(), and SCIPvarGetMultaggr{Constant,Scalars}Exact() to handle exact fixings, aggregations, and multiaggregations
+- SCIPvarGetColExact() to get LP column of an exact variable
+- SCIPvarGet{Sol,LPSol,PseudoSol}Exact() and SCIPvarGetLPSolExact_rec() to get solution of an exact variable
+- SCIPparseVarsLinearsumExact(), SCIPwriteVarsLinearsumExact(), SCIPparseVarsPolynomialExact(), SCIPfreeParseVarsPolynomialDataExact() to read and write exact variables
+- SCIPaddVarExactData() to add exact data to real variable
+- SCIPchgVar{Lb,Ub,Obj}Exact() to change information of an exact variable
+- SCIPtightenVar{L,U}bExact() to tighten bounds of an exact variable
+- SCIPadjustedVar{L,U}bExactFloat() to get real adjusted bounds of an exact variable
+- SCIPaddRowExact() to add exact row to separation store
+- SCIPallowNegSlack() to get whether negative slacks are allowed
+- SCIPbranchLPExact() to branch exactly on the LP solution
+- SCIPchgVar{L,U}bExactDive(), SCIPisExactDivePossible(), SCIPinExactDive(), SCIP{start,end}ExactDive(), and SCIPsolveExactDiveLP() to handle exact LP diving
+- SCIP{create,capture,release}RowExact(), SCIPcreateEmptyRowConsExact(), and SCIPcreateRowExactFromRow() to create, capture, and release an exact LP row
+- SCIPgenerateFpRowsFromRowExact() to compute real relaxation of an exact LP row
+- SCIPchgRowExact{L,R}hs() and SCIPaddVarsToRowExact() to change information of an exact LP row
+- SCIPgetRowSol{Activity,ActivityWithErrorbound,Feasibility}Exact() to get solution information of an exact LP row
+- SCIPprintRowExact() to print an exact LP row
+- SCIPlpExactIsSolved() to get whether the exact LP is solved
+- SCIPgetLPExact{Solstat,Objval}() to get solution status and objective value of the exact LP
+- SCIPwriteLPexact() to write the exact LP
+- SCIP{add,get}OrigObjoffsetExact() to add and get exact objective offset of the original problem
+- SCIPcreate{Sol,LPSol}Exact() to create an exact solution and an exact LP solution
+- SCIPunlinkSolExact() to store current exact solution values
+- SCIPmakeSolExact() to convert a real solution into an exact solution
+- SCIPretransformSolExact() to retransform an exact solution to the original space
+- SCIP{set,get}SolValExact() to set and get an exact solution value
+- SCIPgetSolOrigObjExact() to get the original objective value of an exact solution
+- SCIPprintSolExact() to print an exact solution
+- SCIPgetNExactLPs() to get the number of exact LP solves
+- SCIPget{Cutoffbound,Lowerbound,Upperbound,Dualbound,Primalbound}Exact() to get exact best bounds on objective value
+- SCIPvalidateSolveExact() to validate the exact solve
+- SCIPrational{Create,CreateBuffer,CreateBlock,CreateBlockGMP,CreateString,Free,FreeBuffer,FreeBlock}() to allocate and free a rational number
+- SCIPrational{Create,Realloc,Free}{Array,BufferArray,BlockArray}() to allocate, reallocate, and free an array of rational numbers
+- SCIPrational{Copy,CopyBuffer,CopyBlock,CopyArray,CopyBufferArray,CopyBlockArray}() to copy a rational number and an array of rational numbers
+- SCIPrational{SetGMPArray,SetArrayGMP,ClearArrayGMP}() to handle GMP rational number arrays
+- SCIPrationalSet{Real,Fraction,Rational,Infinity,NegInfinity,String,GMP}() to set a rational number
+- SCIPrational{ResetFloatingPointRepresentable,Canonicalize,CheckInfByValue}() to normalize internally a rational number
+- SCIPrational{Negate,Invert}() to negate and invert a rational number
+- SCIPrational{Add,Diff,Mult,Div,RelDiff,AddReal,DiffReal,MultReal,DivReal}() to modify a rational number by a computation with another number
+- SCIPrational{Add,Diff}{Prod,ProdReal}() to modify a rational number with a product of another numbers
+- SCIPrational{GetReal,GetGMP,GetSign,GetFrac,Numerator,Denominator,Abs}() to get information of a rational number
+- SCIPrational{ComputeApproximation,RoundReal,RoundLong,RoundInteger}() to get an approximation of a rational number
+- SCIPrational{Min,Max}() to get minimum and maximum of rational numbers
+- SCIPrationalIs{Zero,Negative,Positive,Infinity,NegInfinity,AbsInfinity,Integral,FpRepresentable,String}() to check a rational number
+- SCIPrationalIs{EQ,LE,GE,LT,GT,AbsEQ,AbsGT,EQReal,LEReal,GEReal,LTReal,GTReal,ApproxEQReal}() to compare a rational number with another number
+- SCIPrationalDenominatorIsLE() to compare the denominator of a rational number with an integral number
+- SCIPintervalSetRational() to compute interval of rational number
+- SCIPstrToRationalValue() and SCIPrational{StrLen,ToString}() to handle string conversion of a rational number
+- SCIPrational{Message,Print,Printf,PrintVerbInfo}() to print rational numbers
+- SCIPrational{Chg,Get}Infinity() to handle infinity threshold of rational numbers
+- SCIPrationalarray{Create,Resize,Free,Copy,SetVal,IncVal,GetVal,GetMinIdx,GetMaxIdx,Print}() to handle rational arrays
+- SCIPaggrRow{AddObjectiveFunction,AddRow,Clear}Safely() to compute safe real row aggregation
+- SCIPisCertified() to get whether certification enabled
+- SCIPshouldCertificateTrackBounds(), SCIPcertify{Cons,ActivityVarBound,ActivityConflict,MirCut}(), SCIPaddCertificate{Aggr,Mir}Info(), and SCIP{store,free}CertificateActive{Aggr,Mir}Info() to handle certification
+- SCIPvar{Set,Get}CertificateIndex(), SCIPvar{Set,Get}{L,U}bCertificateIndexGlobal(), and SCIPvarGet{L,U}bCertificateIndexLocal() to track certification indices
 - SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
 - SCIPhistoryGetAncPseudocost(), SCIPhistoryGetAncPseudocostCount(), SCIPhistoryIsAncPseudocostEmpty(), SCIPgetVarAncPseudocostVal(),
   SCIPvarGetAncPseudocost() for retrieving the values related to ancestral pseudo cost fields in variable history
