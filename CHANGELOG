@@ -41,6 +41,8 @@ Features
 - added writing support for AMPL NL writer: currently only general and specialized linear and nonlinear constraints can be written
 - implemented columnwise Jacobian sparsity computation in the NLP oracle
 - implemented method to compute new permutations from a given list of symmetry group generators
+- cons_orbisack, cons_orbitope_full, cons_orbitope_pp and cons_symresack now try to replace aggregated variables by active ones at the
+  end of presolving. This should reduce the size of copies of the presolved problem
 
 Performance improvements
 ------------------------
