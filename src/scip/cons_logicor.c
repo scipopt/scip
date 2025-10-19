@@ -4171,6 +4171,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
 
    return SCIP_OKAY;
 }
+
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
