@@ -336,7 +336,23 @@ Interface changes
 
 ### New parameters
 
-TODO
+- exact/enable to enable the exact solving mode
+- exact/improvingsols to control whether only improving exact solutions should be considered
+- exact/safedbmethod to select method of safe dual bounding
+- exact/interleavedbstrat to select interleaving strategy between safe dual bounding and exact LP solving
+- exact/psdualcolselection to select project-and-shift strategy of dual column selection
+- exact/cutapproxmaxboundval to define maximal absolute bound for which coefficients in exact cuts should be approximated
+- exact/cutmaxdenom to define maximal denominator of coefficients in approximating exact cuts
+- exact/allownegslack to control whether negative slack variables in exact gomory cuts should be used
+- exact/lpinfo to control whether the exact LP solver should display status messages
+- constraints/exact{linear,sol}/{sepafreq,propfreq,proptiming,eagerfreq,maxprerounds,delaysepa,delayprop,presoltiming} to control general functionality of constraint handlers exactlinear and exactsol
+- constraints/exactlinear/sortvars to control whether binary variable coefficients should be sorted with decreasing absolute value in exactlinear constraints
+- constraints/exactlinear/{tightenboundsfreq,propcont,limitdenom,boundmaxdenom} to control propagation of exactlinear constraints
+- constraints/exactlinear/{maxrounds,maxroundsroot,maxsepacuts,maxsepacutsroot} to control separation of exactlinear constraints
+- constraints/exactsol/solbufsize to define size of solution buffer in exactsol handler
+- constraints/exactsol/{minimprove,checkfpfeasibility,checkcontimplint,abortfrac,unfixfrac} to control solution processing in exactsol handler
+- constraints/exactsol/maxstalls to define maximal number of consecutive unsuccessful reparations in exactsol handler
+- certificate/filename and certificate/maxfilesize to define certificate file
 - branching/pscost/discountfactor, branching/relpscost/discountfactor as the discount factor for ancestral pseudo costs in pscost and relpscost branching rules
 - branching/discountedpscost to enable/disable recording ancestral pseudo costs
 - new parameter "constraints/cumulative/maxtime" to limit the time horizon and avoid integer overflow for unbounded variables
