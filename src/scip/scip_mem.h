@@ -237,6 +237,18 @@ void SCIPprintMemoryDiagnostic(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** run garbage collection on block memory
+ *
+ * For both settings and problems block memory, frees unused chunks in chunk blocks
+ * and frees chunk blocks that have no chunks by calling BMSgarbagecollectBlockMemory().
+ * Note that the former (freeing unused chunks) is also done automatically when a
+ * chunk block has many unused chunks.
+ */
+SCIP_EXPORT
+void SCIPcollectMemoryGarbage(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** @} */
 
 #ifdef __cplusplus
