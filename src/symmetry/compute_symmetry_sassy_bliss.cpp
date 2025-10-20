@@ -331,7 +331,7 @@ SCIP_RETCODE computeAutomorphisms(
    /* If patch is present, do not use a node limit, but set generator limit. This approach is not very accurate, since
     * it limits the generators considered in bliss and not the ones that we generate (the ones that work on the variable
     * set). */
-   G->set_search_limits(0, (unsigned) maxgenerators);
+   blissgraph.set_search_limits(0, (unsigned) maxgenerators);
 #endif
 
    /* start search */
