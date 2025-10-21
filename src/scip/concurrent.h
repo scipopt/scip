@@ -50,7 +50,8 @@ extern "C" {
 SCIP_RETCODE SCIPcreateConcurrent(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver of given SCIP instance */
-   int*                  varperm             /**< permutation of variables for communication */
+   int*                  varperm,            /**< permutation of variables for communication */
+   int                   nvars               /**< number of variables in problem */
    );
 
 /** get number of initialized concurrent solvers */
