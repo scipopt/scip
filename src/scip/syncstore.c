@@ -496,7 +496,7 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
    {
       if( (*syncdata)->status != SCIP_STATUS_UNKNOWN ||
          (SCIPgetConcurrentGap(syncstore->mainscip) <= syncstore->limit_gap) ||
-         (SCIPgetConcurrentPrimalbound(syncstore->mainscip) - SCIPgetConcurrentDualbound(syncstore->mainscip) <= syncstore->limit_absgap) )
+         (SCIPgetNLimSolsFound(syncstore->mainscip) > 0 && SCIPgetConcurrentPrimalbound(syncstore->mainscip) - SCIPgetConcurrentDualbound(syncstore->mainscip) <= syncstore->limit_absgap) )
          SCIPsyncstoreSetSolveIsStopped(syncstore, TRUE);
 
       syncstore->lastsync = *syncdata;
