@@ -59,6 +59,10 @@ extern "C" {
 
 /** initializes solving data structures and transforms problem
  *
+ *  Before SCIP 10, this function also called the garbage collection for block memory explicitly.
+ *  It has been removed for performance reason, but if memory is very tight, then the previous behavior can be
+ *  restored by adding a call to SCIPcollectMemoryGarbage() before SCIPtransformProb().
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
