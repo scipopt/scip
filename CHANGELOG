@@ -26,6 +26,40 @@ Interface changes
 
 @page RN10 Release notes for SCIP 10
 
+@section RN1010 SCIP 10.1.0
+***************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Fixed bugs
+----------
+
+Interface changes
+-----------------
+
+### New API functions
+
+### New parameters
+
+### Changed parameters
+
+Build system
+------------
+
+### Cmake
+
+### Makefiles
+
+Testing
+-------
+
+Miscellaneous
+-------------
+
 @section RN1000 SCIP 10.0.0
 ***************************
 
@@ -69,6 +103,7 @@ Features
 - implemented method to compute new permutations from a given list of symmetry group generators
 - cons_orbisack, cons_orbitope_full, cons_orbitope_pp and cons_symresack now try to replace aggregated variables by active ones at the
   end of presolving. This should reduce the size of copies of the presolved problem
+- simplify expressions of nonlinear constraints in MPS and LP writing to increase chance that they are recognized as quadratic
 
 Performance improvements
 ------------------------
@@ -83,6 +118,7 @@ Performance improvements
 - reduce maximal fraction of diving LP iterations relative to total node LP iterations
 - do not allow non-root restarts when no global fixings were found
 - remove all fixings in applyFixings() of cons_xor.c also for an available integer variable
+- extended SOC detection to simple bilinear constraints, e.g., x*y >= 1
 
 Examples and applications
 -------------------------
@@ -177,6 +213,11 @@ Interface changes
 
 ### New API functions
 
+- SCIPdisplaySymmetryGenerators() and SCIPdialogExecDisplaySymmetry() to display generators of symmetry group
+- SCIPconsCreateRow() to create and return the row of a linearly representable constraint
+- SCIPcreateRowKnapsack(), SCIPcreateRowLinear(), SCIPcreateRowLogicor(), SCIPcreateRowSetppc(), SCIPcreateRowVarbound() to create
+  and get the row of linearly representable constraints.
+- SCIPgetNResConflictConssApplied() to return the number of generalized resolution conflict constraints added to the problem
 - SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
 - SCIPhistoryGetAncPseudocost(), SCIPhistoryGetAncPseudocostCount(), SCIPhistoryIsAncPseudocostEmpty(), SCIPgetVarAncPseudocostVal(),
   SCIPvarGetAncPseudocost() for retrieving the values related to ancestral pseudo cost fields in variable history
@@ -271,6 +312,7 @@ Interface changes
 - set default of presolving/restartminred to 0.05
 - set default of presolving/immrestartfac to 0.05
 - removed parameters propagating/symmetry/{nautymaxncells,nautymaxnnodes}
+- updated description of parameter misc/usesymmetry
 
 ### New parameters
 
@@ -402,53 +444,6 @@ Miscellaneous
 Known bugs
 ----------
 
-@page RN9 Release notes for SCIP 9
-
-@section RN930 SCIP 9.3.0
-*************************
-
-Features
---------
-
-- simplify expressions of nonlinear constraints in MPS and LP writing to increase chance that they are recognized as quadratic
-
-Performance improvements
-------------------------
-
-- extended SOC detection to simple bilinear constraints, e.g., x*y >= 1
-
-Examples and applications
--------------------------
-
-Interface changes
------------------
-
-### New and changed callbacks
-
-### New API functions
-- SCIPdisplaySymmetryGenerators() and SCIPdialogExecDisplaySymmetry() to display generators of symmetry group
-- SCIPconsCreateRow() to create and return the row of a linearly representable constraint
-- SCIPcreateRowKnapsack(), SCIPcreateRowLinear(), SCIPcreateRowLogicor(), SCIPcreateRowSetppc(), SCIPcreateRowVarbound() to create
-  and get the row of linearly representable constraints.
-- SCIPgetNResConflictConssApplied() to return the number of generalized resolution conflict constraints added to the problem
-
-### Command line interface
-
-### Interfaces to external software
-
-### Changed parameters
-
-### New parameters
-
-### Data structures
-
-Fixed bugs
-----------
-
-Miscellaneous
--------------
-
-- updated description of paramater misc/usesymmetry
 
 @section RN924 SCIP 9.2.4
 *************************
