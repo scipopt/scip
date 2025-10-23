@@ -456,15 +456,15 @@ Miscellaneous
 Fixed bugs
 ----------
 
-- fixed bugs with counting changes in presolving of nonlinear and setppc constraints which resulted in negative values
+- fixed bugs with counting changes in presolving of nonlinear and setppc constraints, which resulted in negative values
 - cut off dead end node to correctly track dual bound update during solving
-- avoid constructing and flushing the LP in SCIPwriteLP() and SCIPwriteMIP() to avert unexpected affection
-- apply multi-aggregations before detecting redundancy in propagateCons() of cons_varbound.c to keep bound implications
-- skip bound changes for cutoff subtree in treeApplyPendingBdchgs()
-- correct detection of doublelex matrices and handling them via orbitope constraints
+- no longer construct and flush the LP in SCIPwriteLP() and SCIPwriteMIP() to avoid unexpected side effects
+- apply multi-aggregations before detecting redundancy in propagation of varbound constraints to keep bound implications
+- skip bound changes when cutting off a branch-and-bound subtree
+- correct detection of doublelex matrices and their handling via orbitope constraints
 - skip attempting to free transformed problem if SCIPtransformProb() failed with an error in SCIPpresolve(), since freeing
   the transformed problem is likely to fail as well
-- fixed memory leak in primal heuristic scheduler when there is a restart
+- fixed memory leak in primal heuristic "scheduler" when there is a restart
 - fixed stopping when there is a candidate with a change in the LP bound for both children in strong branching of branch_fullstrong
 - fixed detection of sinks in varbound detection from cumulative constraints
 - fixed memory allocation when adding strong SBCs for enclosing orbit of symmetric subgroups (disabled by default)
@@ -475,8 +475,8 @@ Fixed bugs
 - fix call of SCIPaddExprsViolScoreNonlinear() with constant expressions (no variables)
 - fixed bug with concurrent solve w.r.t. variable indices that led to segmentation faults and fix termination test
 - adjust further bounds before checking feasibility in SCIPvarAddVlb() and SCIPvarAddVub() to detect integrality cutoff
-- fixed issue in cons_linking.c where the last fixed binary variable was not set after the binary variables are created.
-- fixed issue in cons_linking.c where the number of binary variable is 1, but the constraint is added during solving.
+- fixed that the last fixed binary variable was not set after binary variables were created for linking constraints
+- fixed that when a linking constraint with only one binary variable was added during solving, it was not disabled
 - fixed set_search_limits call when using SYM=sbliss with an old patched Bliss version
 
 Build system
@@ -490,8 +490,6 @@ Build system
 
 - added experimental target to run cppcheck
 
-Miscellaneous
--------------
 
 @section RN923 SCIP 9.2.3
 *************************
