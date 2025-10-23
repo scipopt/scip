@@ -1,5 +1,39 @@
 @page RN10 Release notes for SCIP 10
 
+@section RN1010 SCIP 10.1.0
+***************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Fixed bugs
+----------
+
+Interface changes
+-----------------
+
+### New API functions
+
+### New parameters
+
+### Changed parameters
+
+Build system
+------------
+
+### Cmake
+
+### Makefiles
+
+Testing
+-------
+
+Miscellaneous
+-------------
+
 @section RN1000 SCIP 10.0.0
 ***************************
 
