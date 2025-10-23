@@ -2333,7 +2333,6 @@ SCIP_RETCODE SCIPpresolve(
    SCIP_Bool unbounded;
    SCIP_Bool infeasible;
    SCIP_Bool vanished;
-   SCIP_RETCODE retcode;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -2353,15 +2352,8 @@ SCIP_RETCODE SCIPpresolve(
    {
    case SCIP_STAGE_PROBLEM:
       /* initialize solving data structures and transform problem */
-      retcode =  SCIPtransformProb(scip);
-      if( retcode != SCIP_OKAY )
-      {
-         SCIP_CALL( SCIPfreeTransform(scip) );
-         return retcode;
-      }
-
+      SCIP_CALL( SCIPtransformProb(scip) );
       assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
-
       /*lint -fallthrough*/
 
    case SCIP_STAGE_TRANSFORMED:
@@ -2905,7 +2897,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
       {
          /* if yes, then presolve the problem */
          SCIP_CALL( SCIPpresolve(scip) );
-         if( SCIPgetStatus(scip) >= SCIP_STATUS_OPTIMAL )
+         if( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
             return SCIP_OKAY;
       }
       else

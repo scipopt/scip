@@ -152,7 +152,7 @@ SCIP_RETCODE SCIPstatFree(
    return SCIP_OKAY;
 }
 
-/** diables the collection of any statistic for a variable */
+/** disables the collection of any statistic for a variable */
 void SCIPstatDisableVarHistory(
    SCIP_STAT*            stat                /**< problem statistics data */
    )
@@ -870,7 +870,7 @@ void SCIPstatPrintDebugMessage(
       printf("[%s:%d] debug: ", filename, sourceline);
 
    va_start(ap, formatstr); /*lint !e838*/
-   printf(formatstr, ap);
+   vprintf(formatstr, ap);
    va_end(ap);
 }
 

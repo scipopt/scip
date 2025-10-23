@@ -1099,11 +1099,11 @@ SCIP_RETCODE solveSubNLP(
    *result = SCIP_DIDNOTFIND;
 
    /* if we had many (fraction > expectinfeas) infeasible NLPs, then tell NLP solver to expect an infeasible problem */
-   expectinfeas = FALSE;
+   expectinfeas = FALSE;  /* cppcheck-suppress unreadVariable */
    if( heurdata->expectinfeas == 0.0 )  /* to keep original behavior on default settings */
-      expectinfeas = TRUE;
+      expectinfeas = TRUE;  /* cppcheck-suppress unreadVariable */
    else if( heurdata->nnlpsolvesokay > heurdata->ninitsolves && heurdata->nnlpsolvesinfeas > heurdata->expectinfeas * heurdata->nnlpsolvesokay )
-      expectinfeas = TRUE;
+      expectinfeas = TRUE;  /* cppcheck-suppress unreadVariable */
 
    /* let the NLP solver do its magic */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %d\n", calcIterLimit(scip, heurdata));

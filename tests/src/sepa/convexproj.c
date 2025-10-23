@@ -33,6 +33,14 @@
 #include "scip/nlpi_ipopt.h"
 
 #include "scip/sepa_convexproj.c"
+#include "scip/expr_varidx.h"
+#include "scip/expr_exp.h"
+#include "scip/expr_log.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_product.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_var.h"
+#include "scip/expr_value.h"
 
 #include "include/scip_test.h"
 
@@ -40,7 +48,7 @@
 
 static SCIP* scip = NULL;
 static SCIP_SEPA* sepa = NULL;
-static SCIP_NLPI* nlpi = NULL;
+static SCIP_Bool haveipopt = FALSE;
 static SCIP_NLROW* nlrow1 = NULL;
 static SCIP_NLROW* nlrow2 = NULL;
 static SCIP_NLROW* nlrow3 = NULL;
@@ -74,7 +82,7 @@ void createNlRow1(CONVEXSIDE convexside)
    /* decide curvature */
    if( convexside == RHS )
    {
-      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"log(exp(<x>) + exp(<y>))", NULL, NULL, NULL) );
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"log(exp(<t_x>) + exp(<y>))", NULL, NULL, NULL) );
 
       curvature = SCIP_EXPRCURV_CONVEX;
       lhs = -SCIPinfinity(scip);
@@ -82,7 +90,7 @@ void createNlRow1(CONVEXSIDE convexside)
    }
    else
    {
-      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"-(log(exp(<x>) + exp(<y>)))", NULL, NULL, NULL) );
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"-(log(exp(<t_x>) + exp(<y>)))", NULL, NULL, NULL) );
 
       curvature = SCIP_EXPRCURV_CONCAVE;
       lhs = -1.0;
@@ -108,7 +116,7 @@ void createNlRow2(CONVEXSIDE convexside)
    /* decide curvature */
    if( convexside == RHS )
    {
-      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<x>^2 - <y>", NULL, NULL, NULL) );
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<t_x>^2 - <y>", NULL, NULL, NULL) );
 
       curvature = SCIP_EXPRCURV_CONVEX;
       lhs = -SCIPinfinity(scip);
@@ -116,7 +124,7 @@ void createNlRow2(CONVEXSIDE convexside)
    }
    else
    {
-      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<y> - <x>^2", NULL, NULL, NULL) );
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<y> - <t_x>^2", NULL, NULL, NULL) );
 
       curvature = SCIP_EXPRCURV_CONCAVE;
       lhs = 0.0;
@@ -142,7 +150,7 @@ void createNlRow3(CONVEXSIDE convexside)
    /* decide curvature */
    if( convexside == RHS )
    {
-      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"1.1*<x>+2.4*<x>^2 + 0.01*<x>*<y> + 0.3*<y>^2 + 0.2*log(0.5*exp(0.12*<x>+0.1)+2*exp(0.1*<y>)+0.7)", NULL, NULL, NULL) );
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"1.1*<t_x>+2.4*<t_x>^2 + 0.01*<t_x>*<y> + 0.3*<y>^2 + 0.2*log(0.5*exp(0.12*<t_x>+0.1)+2*exp(0.1*<y>)+0.7)", NULL, NULL, NULL) );
 
       curvature = SCIP_EXPRCURV_CONVEX;
       lhs = -SCIPinfinity(scip);
@@ -150,7 +158,7 @@ void createNlRow3(CONVEXSIDE convexside)
    }
    else
    {
-      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"-(1.1*<x>+2.4*<x>^2 + 0.01*<x>*<y> + 0.3*<y>^2 + 0.2*log(0.5*exp(0.12*<x>+0.1)+2*exp(0.1*<y>)+0.7))", NULL, NULL, NULL) );
+      SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"-(1.1*<t_x>+2.4*<t_x>^2 + 0.01*<t_x>*<y> + 0.3*<y>^2 + 0.2*log(0.5*exp(0.12*<t_x>+0.1)+2*exp(0.1*<y>)+0.7))", NULL, NULL, NULL) );
 
       curvature = SCIP_EXPRCURV_CONCAVE;
       lhs = -0.5;
@@ -205,13 +213,23 @@ void test_setup(void)
 
    SCIP_CALL( SCIPcreate(&scip) );
 
+   /* include some expr handlers */
+   SCIP_CALL( SCIPincludeExprhdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrLog(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVaridx(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSum(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrProduct(scip) );
+
    /* if no IPOPT available, don't run test */
    if( ! SCIPisIpoptAvailableIpopt() )
       return;
 
    /* include NLPI's */
    SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
-
+   haveipopt = TRUE;
 
    /* include convexproj separator and get it */
    SCIP_CALL( SCIPincludeSepaConvexproj(scip) );
@@ -269,7 +287,7 @@ void project(SCIP_Bool* isrhsconvex)
 
    test_setup();
    /* if no IPOPT available, don't run test */
-   if( nlpi == NULL )
+   if( !haveipopt )
       return;
 
    /* create the nl rows */

@@ -496,7 +496,7 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
    {
       if( (*syncdata)->status != SCIP_STATUS_UNKNOWN ||
          (SCIPgetConcurrentGap(syncstore->mainscip) <= syncstore->limit_gap) ||
-         (SCIPgetConcurrentPrimalbound(syncstore->mainscip) - SCIPgetConcurrentDualbound(syncstore->mainscip) <= syncstore->limit_absgap) )
+         (SCIPgetNLimSolsFound(syncstore->mainscip) > 0 && SCIPgetConcurrentPrimalbound(syncstore->mainscip) - SCIPgetConcurrentDualbound(syncstore->mainscip) <= syncstore->limit_absgap) )
          SCIPsyncstoreSetSolveIsStopped(syncstore, TRUE);
 
       syncstore->lastsync = *syncdata;
@@ -648,16 +648,21 @@ void SCIPsyncdataSetSyncFreq(
 void SCIPsyncdataSetStatus(
    SCIP_SYNCDATA*        syncdata,           /**< the synchronization data the upperbound should be added to */
    SCIP_STATUS           status,             /**< the status */
-   int                   solverid            /**< identifier of te solver that has this status */
+   int                   solverid            /**< identifier of the solver that has this status */
    )
 {
    assert(syncdata != NULL);
 
-   /* check if status is better than current one (closer to SCIP_STATUS_OPTIMAL),
-    * break ties by the solverid, and remember the solver wit the best status
-    * so that the winner will be selected deterministically
+   /* check if status is better than current one (closer to SCIP_STATUS_OPTIMAL assumed to be followed by
+    * SCIP_STATUS_INFEASIBLE and SCIP_STATUS_UNBOUNDED) and break ties by the solverid; remember the solver with the
+    * best status so that the winner will be selected deterministically
     */
-   if( syncdata->status < SCIP_STATUS_OPTIMAL )
+   if( syncdata->winner < 0 )
+   {
+      syncdata->status = status;
+      syncdata->winner = solverid;
+   }
+   else if( syncdata->status < SCIP_STATUS_OPTIMAL )
    {
       if( status > syncdata->status || (status == syncdata->status && solverid < syncdata->winner) )
       {
@@ -672,11 +677,6 @@ void SCIPsyncdataSetStatus(
          syncdata->status = status;
          syncdata->winner = solverid;
       }
-   }
-   else if( syncdata->winner < 0 )
-   {
-      syncdata->status = status;
-      syncdata->winner = solverid;
    }
 }
 

@@ -2075,20 +2075,20 @@ SCIP_RETCODE SCIPexprRelease(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EXPR**           rootexpr            /**< pointer to expression */
+   SCIP_EXPR**           expr                /**< pointer to expression */
    )
 {
    SCIP_EXPRITER* it;
-   SCIP_EXPR* expr;
+   SCIP_EXPR* expr2;
 
-   assert(rootexpr != NULL);
-   assert(*rootexpr != NULL);
-   assert((*rootexpr)->nuses > 0);
+   assert(expr != NULL);
+   assert(*expr != NULL);
+   assert((*expr)->nuses > 0);
 
-   if( (*rootexpr)->nuses > 1 )
+   if( (*expr)->nuses > 1 )
    {
-      --(*rootexpr)->nuses;
-      *rootexpr = NULL;
+      --(*expr)->nuses;
+      *expr = NULL;
 
       return SCIP_OKAY;
    }
@@ -2098,33 +2098,33 @@ SCIP_RETCODE SCIPexprRelease(
    /* call ownerfree callback, if given
     * we intentially call this also if ownerdata is NULL, so owner can be notified without storing data
     */
-   if( (*rootexpr)->ownerfree != NULL )
+   if( (*expr)->ownerfree != NULL )
    {
-      SCIP_CALL( (*rootexpr)->ownerfree(set->scip, *rootexpr, &(*rootexpr)->ownerdata) );
-      assert((*rootexpr)->ownerdata == NULL);
+      SCIP_CALL( (*expr)->ownerfree(set->scip, *expr, &(*expr)->ownerdata) );
+      assert((*expr)->ownerdata == NULL);
    }
 
    /* free quadratic info */
-   SCIPexprFreeQuadratic(blkmem, *rootexpr);
+   SCIPexprFreeQuadratic(blkmem, *expr);
 
    /* free expression data */
-   if( (*rootexpr)->exprdata != NULL )
+   if( (*expr)->exprdata != NULL )
    {
-      assert((*rootexpr)->exprhdlr->freedata != NULL);
-      SCIP_CALL( (*rootexpr)->exprhdlr->freedata(set->scip, *rootexpr) );
+      assert((*expr)->exprhdlr->freedata != NULL);
+      SCIP_CALL( (*expr)->exprhdlr->freedata(set->scip, *expr) );
    }
 
    /* now release and free children, where no longer in use */
    SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
-   SCIP_CALL( SCIPexpriterInit(it, *rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIP_CALL( SCIPexpriterInit(it, *expr, SCIP_EXPRITER_DFS, TRUE) );
    SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_VISITEDCHILD);
-   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it) ; )
+   for( expr2 = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it) ; )
    {
       /* expression should be used by its parent and maybe by the iterator (only the root!)
        * in VISITEDCHILD we assert that expression is only used by its parent
        */
-      assert(expr != NULL);
-      assert(0 <= expr->nuses && expr->nuses <= 2);
+      assert(expr2 != NULL);
+      assert(0 <= expr2->nuses && expr2->nuses <= 2);
 
       switch( SCIPexpriterGetStageDFS(it) )
       {
@@ -2140,7 +2140,7 @@ SCIP_RETCODE SCIPexprRelease(
             {
                /* child is not going to be freed: just release it */
                SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &child) );
-               expr = SCIPexpriterSkipDFS(it);
+               expr2 = SCIPexpriterSkipDFS(it);
                continue;
             }
 
@@ -2181,7 +2181,7 @@ SCIP_RETCODE SCIPexprRelease(
 
             /* free child expression */
             SCIP_CALL( freeExpr(blkmem, &child) );
-            expr->children[SCIPexpriterGetChildIdxDFS(it)] = NULL;
+            expr2->children[SCIPexpriterGetChildIdxDFS(it)] = NULL;
 
             break;
          }
@@ -2191,13 +2191,13 @@ SCIP_RETCODE SCIPexprRelease(
             break;
       }
 
-      expr = SCIPexpriterGetNext(it);
+      expr2 = SCIPexpriterGetNext(it);
    }
 
    SCIPexpriterFree(&it);
 
    /* handle the root expr separately: free its children and itself here */
-   SCIP_CALL( freeExpr(blkmem, rootexpr) );
+   SCIP_CALL( freeExpr(blkmem, expr) );
 
    return SCIP_OKAY;
 }
@@ -2790,6 +2790,7 @@ SCIP_RETCODE SCIPexprEvalGradient(
    for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
    {
       assert(expr->evalvalue != SCIP_INVALID);
+      assert(expr->derivative != SCIP_INVALID);
 
       child = SCIPexpriterGetChildExprDFS(it);
       assert(child != NULL);
@@ -2817,6 +2818,8 @@ SCIP_RETCODE SCIPexprEvalGradient(
             rootexpr->derivative = SCIP_INVALID;
             break;
          }
+
+         assert(SCIPisFinite(derivative));  /* ensured in SCIPexprhdlrBwDiffExpr */
       }
 
       /* update partial derivative stored in the child expression
@@ -2827,6 +2830,14 @@ SCIP_RETCODE SCIPexprEvalGradient(
          child->derivative = expr->derivative * derivative;
       else
          child->derivative += expr->derivative * derivative;
+
+      /* even with expr->derivative and derivative being finite, the product may under- or overflow */
+      if( !SCIPisFinite(child->derivative) )
+      {
+         child->derivative = SCIP_INVALID;
+         rootexpr->derivative = SCIP_INVALID;
+         break;
+      }
    }
 
    SCIPexpriterFree(&it);

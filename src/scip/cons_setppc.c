@@ -2230,7 +2230,7 @@ SCIP_RETCODE processFixings(
 #ifndef NDEBUG
             fixedonefound = FALSE;
 #endif
-            for( v = 0; v < nvars && consdata->nfixedones == 1; ++v )
+            for( v = 0; v < nvars && consdata->nfixedones == 1; ++v )  /* cppcheck-suppress knownConditionTrueFalse */
             {
                var = vars[v];
                assert(SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), 1.0));
@@ -8572,7 +8572,6 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       {
          SCIP_Longint npaircomparisons = 0;
 
-         oldndelconss = *ndelconss;
          oldnfixedvars = *nfixedvars;
 
          for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )

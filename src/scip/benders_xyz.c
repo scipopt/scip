@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benders_xyz.c
- * @ingroup OTHER_CFILES
+ * @ingroup DEFPLUGINS_EVENT
  * @brief  xyz Benders' decomposition algorithm
  * @author Stephen J. Maher
  */

@@ -304,7 +304,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
     * cycle through the candidates, starting with the position evaluated in the last run
     */
    nsbcalls = 0;
-   bothgains = TRUE;
+   bothgains = FALSE;
    for( i = 0, c = *start; i < nlpcands && (!bothgains || i < ncomplete); ++i, ++c )
    {
       c = c % nlpcands;

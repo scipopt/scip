@@ -3187,7 +3187,7 @@ SCIP_RETCODE printAggregatedCons(
    SCIP_VAR** activevars;
    SCIP_Real* activevals;
    int nactivevars;
-   SCIP_Real activeconstant = 0.0;
+   SCIP_Real activeconstant;
    char consname[LP_MAX_NAMELEN];
 
    assert( scip != NULL );
@@ -3593,7 +3593,7 @@ SCIP_RETCODE SCIPwriteLp(
             cons = SCIPgetLinearConsIndicator(consInd[c]);
 
             assert( !SCIPhashmapExists(consHidden, (void*) cons) );
-            SCIP_CALL( SCIPhashmapSetImage(consHidden, (void*) cons, (void*) TRUE) );
+            SCIP_CALL( SCIPhashmapSetImageInt(consHidden, (void*) cons, 1) );
             SCIPdebugMsg(scip, "Marked linear constraint <%s> as hidden.\n", SCIPconsGetName(cons));
          }
       }
@@ -3617,7 +3617,7 @@ SCIP_RETCODE SCIPwriteLp(
                assert( lincons != NULL );
 
                assert( !SCIPhashmapExists(consHidden, (void*) lincons) );
-               SCIP_CALL( SCIPhashmapSetImage(consHidden, (void*) lincons, (void*) TRUE) );
+               SCIP_CALL( SCIPhashmapSetImageInt(consHidden, (void*) lincons, 1) );
                SCIPdebugMsg(scip, "Marked linear constraint <%s> as hidden.\n", SCIPconsGetName(lincons));
             }
          }

@@ -537,7 +537,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesEntropy)
 
          coefs[*nreturned][0] = (-ub * log(ub) + lb * log(lb)) / (ub - lb);
          constant[*nreturned] = -ub * log(ub) - coefs[*nreturned][0] * ub;
-         assert(SCIPisEQ(scip, constant[*nreturned], -lb * log(lb) - coefs[*nreturned][0] * lb));
+         assert(SCIPisEQ(scip, constant[*nreturned], -lb * log(lb) - coefs[*nreturned][0] * lb));  /* cppcheck-suppress assertWithSideEffect */
       }
 
       ++(*nreturned);

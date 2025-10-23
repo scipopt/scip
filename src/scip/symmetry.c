@@ -1948,6 +1948,24 @@ SCIP_RETCODE isDoublelLexSym(
    }
    SCIPsortIntPtr(sortvals, (void*) (*doublelexmatrix), *nrows);
 
+   /* check that the first column can be covered by rows of matrices2 */
+   cnt = 0;
+   for (i = 0; i < nmatrices2; ++i)
+   {
+      int end;
+
+      end = cnt + ncols2[i] - 1;
+      for (j = cnt; j < end; ++j)
+      {
+         assert( idxtomatrix2[(*doublelexmatrix)[j][0]] == idxtomatrix2[(*doublelexmatrix)[j + 1][0]] );
+         if( idxtorow2[(*doublelexmatrix)[j][0]] != idxtorow2[(*doublelexmatrix)[j + 1][0]] )
+         {
+            *success = FALSE;
+            goto FREEMEMORY;
+         }
+      }
+   }
+
    /* fill first row of big matrix */
    mat = idxtomatrix2[(*doublelexmatrix)[0][0]];
    col = idxtocol2[(*doublelexmatrix)[0][0]];
@@ -2014,6 +2032,40 @@ SCIP_RETCODE isDoublelLexSym(
          (*rowsbegin)[j + 1] = (*rowsbegin)[j] + ncols2[j];
       for (j = 0; j < nmatrices1; ++j)
          (*colsbegin)[j + 1] = (*colsbegin)[j] + ncols1[j];
+   }
+
+   /* check whether the rows of doublelexmatrix are covered by rows of matrices1 */
+   for (i = 0; i < *nrows; ++i)
+   {
+      for (c = 0; c < nmatrices1; ++c)
+      {
+         for (j = (*colsbegin)[c]; j < (*colsbegin)[c + 1] - 1; ++j)
+         {
+            assert( idxtomatrix1[(*doublelexmatrix)[i][j]] == idxtomatrix1[(*doublelexmatrix)[i][j + 1]] );
+            if( idxtorow1[(*doublelexmatrix)[i][j]] != idxtorow1[(*doublelexmatrix)[i][j + 1]] )
+            {
+               *success = FALSE;
+               goto FREEMEMORY;
+            }
+         }
+      }
+   }
+
+   /* check whether the columns of doublelexmatrix are covered by rows of matrices1 */
+   for (i = 0; i < *ncols; ++i)
+   {
+      for (c = 0; c < nmatrices2; ++c)
+      {
+         for (j = (*rowsbegin)[c]; j < (*rowsbegin)[c + 1] - 1; ++j)
+         {
+            assert( idxtomatrix2[(*doublelexmatrix)[j][i]] == idxtomatrix2[(*doublelexmatrix)[j + 1][i]] );
+            if( idxtorow2[(*doublelexmatrix)[j][i]] != idxtorow2[(*doublelexmatrix)[j + 1][i]] )
+            {
+               *success = FALSE;
+               goto FREEMEMORY;
+            }
+         }
+      }
    }
 
  FREEMEMORY:

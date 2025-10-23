@@ -114,6 +114,7 @@ SCIP_DECL_HEUREXITSOL(heurExitSync)
       SCIP_CALL( SCIPfreeSol(scip, &heurdata->sols[i]) );
    }
    heurdata->nsols = 0;
+
    return SCIP_OKAY;
 }
 
@@ -216,10 +217,9 @@ SCIP_RETCODE SCIPheurSyncPassSol(
       /* if the maximum number of solutions is not yet reached just
        * insert the solution sorted by its objective value */
       i = heurdata->nsols++;
-
       while( i > 0 && solobj > SCIPgetSolTransObj(scip, heurdata->sols[i - 1]) )
       {
-         heurdata->sols[i] =  heurdata->sols[i - 1];
+         heurdata->sols[i] = heurdata->sols[i - 1];
          --i;
       }
       heurdata->sols[i] = sol;
@@ -231,8 +231,7 @@ SCIP_RETCODE SCIPheurSyncPassSol(
        * one and free the worst solution to make room for it if that
        * is the case
        */
-      i = 0;
-      while( i < heurdata->nsols && solobj < SCIPgetSolTransObj(scip, heurdata->sols[i]) )
+      for( i = 0; i < heurdata->nsols && solobj < SCIPgetSolTransObj(scip, heurdata->sols[i]); ++i )
       {
          if( i > 0 )
          {
@@ -242,9 +241,8 @@ SCIP_RETCODE SCIPheurSyncPassSol(
          {
             SCIP_CALL( SCIPfreeSol(scip, &heurdata->sols[i]) );
          }
-
-         ++i;
       }
+
       /* check if solution must be inserted or discarded */
       if( i > 0)
       {

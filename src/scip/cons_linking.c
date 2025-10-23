@@ -495,6 +495,7 @@ SCIP_RETCODE consdataCreateBinvars(
    }
 
    consdata->nbinvars = nbinvars;
+   consdata->lastnonfixed = nbinvars - 1;
 
    assert(consdata->nfixedzeros == 0);
    assert(consdata->nfixedones == 0);
@@ -3180,21 +3181,25 @@ static
 SCIP_DECL_CONSENABLE(consEnableLinking)
 {  /*lint --e{715}*/
 #ifdef SCIP_DISABLED_CODE
-   /** @todo The following might help, but it would need to be tested whether it speeds up the solution process. */
    SCIP_CONSHDLRDATA* conshdlrdata;
+#endif
    SCIP_CONSDATA* consdata;
 
+#ifdef SCIP_DISABLED_CODE
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+#endif
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->nbinvars <= 1 )
+   if( consdata->nbinvars <= 1 && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
       SCIP_CALL( SCIPdisableCons(scip, cons) );
       assert(consdata->nbinvars == 0 || SCIPvarGetLbGlobal(consdata->binvars[0]) > 0.5);
    }
+#ifdef SCIP_DISABLED_CODE
+   /** @todo The following might help, but it would need to be tested whether it speeds up the solution process. */
    else if( conshdlrdata->linearize )
    {
       SCIP_CALL( consdataLinearize(scip, cons, consdata) );

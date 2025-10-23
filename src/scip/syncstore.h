@@ -243,7 +243,7 @@ SCIP_EXPORT
 void SCIPsyncdataSetStatus(
    SCIP_SYNCDATA*        syncdata,           /**< the synchronization data the upperbound should be added to */
    SCIP_STATUS           status,             /**< the status */
-   int                   solverid            /**< identifier of te solver that has this status */
+   int                   solverid            /**< identifier of the solver that has this status */
    );
 
 /** adds memory used to the synchronization data */

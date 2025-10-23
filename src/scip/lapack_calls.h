@@ -47,9 +47,9 @@ SCIP_Bool SCIPlapackIsAvailable(void);
 /** returns Lapack version if Lapack is available */
 SCIP_EXPORT
 void SCIPlapackVersion(
-   int*                  major,              /**< major version number */
-   int*                  minor,              /**< minor version number */
-   int*                  patch               /**< patch version number */
+   int*                  majorver,           /**< major version number */
+   int*                  minorver,           /**< minor version number */
+   int*                  patchver            /**< patch version number */
    );
 
 /** computes eigenvalues and eigenvectors of a dense symmetric matrix
@@ -73,7 +73,7 @@ SCIP_RETCODE SCIPlapackComputeEigenvalues(
 SCIP_EXPORT
 SCIP_RETCODE SCIPlapackSolveLinearEquations(
    BMS_BUFMEM*           bufmem,             /**< buffer memory (or NULL if IPOPT is used) */
-   int                   N,                  /**< dimension */
+   int                   n,                  /**< dimension */
    SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
    SCIP_Real*            b,                  /**< right hand side vector (size N) */
    SCIP_Real*            x,                  /**< buffer to store solution (size N) */

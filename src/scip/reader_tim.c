@@ -776,7 +776,6 @@ SCIP_RETCODE readTim(
       SCIP_CALL_TERMINATE( retcode, createReaderdata(scip, reader, timi), TERMINATE );
    }
 
- /* cppcheck-suppress unusedLabel */
  TERMINATE:
    timinputFree(scip, &timi);
    SCIPfclose(fp);

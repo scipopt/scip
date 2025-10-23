@@ -7098,9 +7098,9 @@ SCIP_RETCODE tightenBounds(
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
-   oldnchgbds = 0;
 
 #ifndef SCIP_DEBUG
+   oldnchgbds = 0;
    oldnchgbdstotal = *nchgbds;
 #endif
 
@@ -7585,7 +7585,7 @@ SCIP_RETCODE separateCons(
       SCIP_CALL( addRelaxation(scip, cons, cutoff) );
       (*ncuts)++;
    }
-   else if( !SCIPconsIsModifiable(cons) && separatecards )
+   else if( !SCIPconsIsModifiable(cons) && separatecards && consdata->nvars > 0 )
    {
       /* relax linear constraint into knapsack constraint and separate lifted cardinality cuts */
       if( !separateall && sol == NULL )
@@ -9059,15 +9059,6 @@ SCIP_RETCODE consdataTightenCoefs(
 
    /* allocate relevance flags */
    SCIP_CALL( SCIPallocBufferArray(scip, &isvarrelevant, consdata->nvars) );
-
-   /* @todo Is this still needed with automatic recomputation of activities? */
-   /* if the maximal coefficient is too large, recompute the activities */
-   if( (consdata->validmaxabsval && consdata->maxabsval > MAXVALRECOMP)
-      || (consdata->validminabsval && consdata->minabsval < MINVALRECOMP) )
-   {
-      consdataRecomputeMinactivity(scip, consdata);
-      consdataRecomputeMaxactivity(scip, consdata);
-   }
 
    /* get the minimal and maximal activity of the constraint */
    consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &isminacttight, &ismaxacttight,
@@ -11467,8 +11458,8 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_Bool onlybin;
    SCIP_Bool hasrhs;
    SCIP_Bool haslhs;
-   int oldnchgcoefs;
-   int oldnchgsides;
+   int oldnchgcoefs;  /* cppcheck-suppress unassignedVariable */
+   int oldnchgsides;  /* cppcheck-suppress unassignedVariable */
    int foundbin;
    int candpos;
    int candpos2;
@@ -11543,9 +11534,6 @@ SCIP_RETCODE simplifyInequalities(
       hasrhs = TRUE;
    else
       hasrhs = FALSE;
-
-   SCIPdebug( oldnchgcoefs = *nchgcoefs; )
-   SCIPdebug( oldnchgsides = *nchgsides; )
 
    /* @todo extend both-sided simplification */
    if( haslhs && hasrhs )
@@ -14215,7 +14203,6 @@ SCIP_RETCODE presolStuffing(
          SCIP_Bool tightened;
 #ifdef SCIP_DEBUG
          int oldnfixedvars = *nfixedvars;
-         int oldnchgbds = *nchgbds;
 #endif
 
          SCIPsortRealInt(ratios, varpos, nsingletons);
@@ -14302,9 +14289,9 @@ SCIP_RETCODE presolStuffing(
          }
 
 #ifdef SCIP_DEBUG
-         if( *nfixedvars - oldnfixedvars > 0 || *nchgbds - oldnchgbds > 0 )
+         if( *nfixedvars - oldnfixedvars > 0 )
          {
-            SCIPdebugMsg(scip, "### stuffing fixed %d variables and changed %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
+            SCIPdebugMsg(scip, "### stuffing fixed %d variables\n", *nfixedvars - oldnfixedvars);
          }
 #endif
       }
@@ -16450,9 +16437,19 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          if( cutoff )
             break;
 
-         /* check constraint for infeasibility and redundancy */
+         /* if the maximal coefficient is large, recompute the activities before infeasibility and redundancy checks */
+         if( ( consdata->validmaxabsval && consdata->maxabsval > MAXVALRECOMP )
+            || ( consdata->validminabsval && consdata->minabsval < MINVALRECOMP ) )
+         {
+            consdataRecomputeMinactivity(scip, consdata);
+            consdataRecomputeMaxactivity(scip, consdata);
+         }
+
+         /* get activity bounds */
          consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &isminacttight, &ismaxacttight,
-            &isminsettoinfinity, &ismaxsettoinfinity);
+               &isminsettoinfinity, &ismaxsettoinfinity);
+
+         /* check constraint for infeasibility and redundancy */
          if( SCIPisFeasGT(scip, minactivity, consdata->rhs) || SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
          {
             SCIPdebugMsg(scip, "linear constraint <%s> is infeasible: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",

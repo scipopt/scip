@@ -493,7 +493,7 @@ char* SCIPdecompPrintStats(
       decomp->statscomplete ? "" :
                "(approximately: graph construction hit size limit)");
 
-   return strbuf;
+   return strbuf;  /* cppcheck-suppress uninitvar */
 }
 
 /** creates a decomposition storage */

@@ -917,7 +917,7 @@ SCIP_RETCODE printExpr(
                      SCIPinfoMessage(scip, file, "-");
                   }
 
-                  SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(activevars[0])) );
+                  SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(activevars[i])) );
                   SCIPinfoMessage(scip, file, "%s", varname);
 
                   needsign = TRUE;
@@ -1548,7 +1548,7 @@ SCIP_RETCODE SCIPwriteGms(
             nondefbounds = TRUE;
          }
       }
-      else if( v >= nbinvars + nintvars && !SCIPisInfinity(scip, -lb) )
+      else if( !SCIPisInfinity(scip, -lb) )
       {
          /* continuous variables are free by default */
          SCIPinfoMessage(scip, file, " %s.lo = %.15g;\n", varname, lb);
@@ -1574,14 +1574,11 @@ SCIP_RETCODE SCIPwriteGms(
             nondefbounds = TRUE;
          }
       }
-      else
+      else if( !SCIPisInfinity(scip, ub) )
       {
          /* continuous variables have default upper bound +inf */
-         if( !SCIPisInfinity(scip, ub) )
-         {
-            SCIPinfoMessage(scip, file, " %s.up = %.15g;\n", varname, ub);
-            nondefbounds = TRUE;
-         }
+         SCIPinfoMessage(scip, file, " %s.up = %.15g;\n", varname, ub);
+         nondefbounds = TRUE;
       }
    }
 

@@ -371,6 +371,13 @@ SCIP_RETCODE findPointPosition(
 
       /* compute activity of nlrow at point */
       SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrow, point, &activity) );
+      if( activity == SCIP_INVALID )  /*lint !e777*/
+      {
+         *position = EXTERIOR;
+         SCIPdebugMsg(scip, "exterior because cons <%s> cannot be evaluated\n", SCIPnlrowGetName(nlrow));
+         SCIPdebug( SCIPprintNlRow(scip, nlrow, NULL) );
+         return SCIP_OKAY;
+      }
 
       if( convexside == RHS )
       {
@@ -747,8 +754,9 @@ SCIP_RETCODE separateCuts(
       SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrow, sol, &activity) );
       SCIPdebugMsg(scip, "cons <%s> at boundary point has activity: %g\n", SCIPnlrowGetName(nlrow), activity);
 
-      if( (convexside == RHS && !SCIPisFeasEQ(scip, activity, SCIPnlrowGetRhs(nlrow)))
-            || (convexside == LHS && !SCIPisFeasEQ(scip, activity, SCIPnlrowGetLhs(nlrow))) )
+      if( activity == SCIP_INVALID
+         || (convexside == RHS && !SCIPisFeasEQ(scip, activity, SCIPnlrowGetRhs(nlrow)))  /*lint !e777*/
+         || (convexside == LHS && !SCIPisFeasEQ(scip, activity, SCIPnlrowGetLhs(nlrow))) )
          continue;
 
       /* cut is globally valid, since we work on nlrows from the NLP built at the root node, which are globally valid */
@@ -958,6 +966,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
       nlrow = sepadata->nlrows[i];
 
       SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrow, lpsol, &activity) );
+      if( activity == SCIP_INVALID )  /*lint !e777*/
+         continue;
 
       if( sepadata->convexsides[i] == RHS )
       {

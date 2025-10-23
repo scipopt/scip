@@ -659,7 +659,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    int                   depth,              /**< depth level to use for propagator frequency checks */
-   int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
+   int                   maxrounds,          /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
    SCIP_PROPTIMING       timingmask,         /**< timing mask to decide which propagators are executed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
@@ -667,7 +667,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_Bool postpone;
 
    /* apply domain propagation */
-   SCIP_CALL( propagateDomains(blkmem, set, stat, tree, depth, maxproprounds, TRUE, timingmask, cutoff, &postpone) );
+   SCIP_CALL( propagateDomains(blkmem, set, stat, tree, depth, maxrounds, TRUE, timingmask, cutoff, &postpone) );
 
    /* flush the conflict set storage */
    SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable) );
@@ -1526,12 +1526,10 @@ SCIP_RETCODE solveNodeInitialLP(
 
    if( !(*lperror) )
    {
-      /* cppcheck-suppress unassignedVariable */
-      SCIP_EVENT event;
-
       if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_ITERLIMIT && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_TIMELIMIT )
       {
          /* issue FIRSTLPSOLVED event */
+         SCIP_EVENT event;
          SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
          SCIP_CALL( SCIPeventChgNode(&event, SCIPtreeGetFocusNode(tree)) );
          SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
@@ -1546,7 +1544,7 @@ SCIP_RETCODE solveNodeInitialLP(
 	    || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT)
 	 && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
       {
-	 SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
+	 SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, messagehdlr, tree, transprob, origprob, lp) );
 
          /* if this is the first LP solved at the root, store its iteration count and solution value */
          if( stat->nnodelps == 0 && focusnode->depth == 0 )
@@ -2410,7 +2408,6 @@ SCIP_RETCODE priceAndCutLoop(
    )
 {
    SCIP_NODE* focusnode;
-   /* cppcheck-suppress unassignedVariable */
    SCIP_EVENT event;
    SCIP_LPSOLSTAT stalllpsolstat;
    SCIP_Real loclowerbound;
@@ -2520,7 +2517,7 @@ SCIP_RETCODE priceAndCutLoop(
          /* update lower bound w.r.t. the LP solution */
          if( !(*lperror) && !(*pricingaborted) && SCIPlpIsRelax(lp) )
          {
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, messagehdlr, tree, transprob, origprob, lp) );
             SCIPsetDebugMsg(set, " -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
                SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
 
@@ -2607,7 +2604,7 @@ SCIP_RETCODE priceAndCutLoop(
                         assert(lp->flushed);
                         assert(lp->solved);
 
-                        SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
+                        SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, messagehdlr, tree, transprob, origprob, lp) );
                         SCIPsetDebugMsg(set, " -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
                            SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
 
@@ -2838,7 +2835,7 @@ SCIP_RETCODE priceAndCutLoop(
                      if( stat->domchgcount != olddomchgcount && (!mustprice || mustsepa) && !(*cutoff)
                         && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
                      {
-                        SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
+                        SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, messagehdlr, tree, transprob, origprob, lp) );
                         SCIPsetDebugMsg(set, " -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
                            SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
 
@@ -2931,7 +2928,7 @@ SCIP_RETCODE priceAndCutLoop(
 
       if( SCIPlpIsRelax(lp) )
       {
-         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
+         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, messagehdlr, tree, transprob, origprob, lp) );
       }
 
       /* update node estimate */
@@ -3279,8 +3276,8 @@ SCIP_RETCODE solveNodeLP(
       }
    }
 
-   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL /* cppcheck-suppress assertWithSideEffect */
-      || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED || SCIPsolveIsStopped(set, stat, FALSE) || (*cutoff));
+   assert(!(*pricingaborted) || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+      || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_NOTSOLVED || SCIPsolveIsStopped(set, stat, FALSE) || (*cutoff)); /* cppcheck-suppress assertWithSideEffect */
 
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 
@@ -3929,7 +3926,7 @@ SCIP_RETCODE propAndSolve(
           */
          if( !solvelp && lp->flushed && lp->solved && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
          {
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, messagehdlr, tree, transprob, origprob, lp) );
             SCIPsetDebugMsg(set, " -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
                SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set, transprob));
 
@@ -3971,7 +3968,6 @@ SCIP_RETCODE propAndSolve(
       /* check if primal heuristics found a solution and we therefore reached a solution limit */
       if( SCIPsolveIsStopped(set, stat, FALSE) )
       {
-         /* cppcheck-suppress unassignedVariable */
          SCIP_NODE* node;
 
          /* we reached a solution limit and do not want to continue the processing of the current node, but in order to

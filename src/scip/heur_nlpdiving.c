@@ -1747,7 +1747,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    {
       SCIP_NLPSTATISTICS nlpstatistics;
 
-      /* cppcheck-suppress syntaxError */
       SCIP_CALL( SCIPsolveNLP(scip,
          .iterlimit = maxnnlpiterations - heurdata->nnlpiterations,
          .fastfail = heurdata->nlpfastfail ? SCIP_NLPPARAM_FASTFAIL_AGGRESSIVE : SCIP_NLPPARAM_FASTFAIL_CONSERVATIVE) );  /*lint !e666*/
