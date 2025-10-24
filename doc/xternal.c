@@ -7978,6 +7978,17 @@
  *  - SCIPallocMemory(), SCIPallocMemoryArray() to allocate memory,
  *  - SCIPfreeMemory(), SCIPfreeMemoryArray() to free memory.
  *
+ *  @section REALLOCATION Reallocating memory
+ *
+ *  - `SCIPensureBlockMemoryArray()`: Extends a dynamically allocated block memory array to be able to store at least the given
+ *    number of elements. This method ensures that the array is resized efficiently by calculating an appropriate new size. This can be
+ *    useful to build data structures that grow dynamically.
+ *
+ *  - `SCIPreallocBlockMemoryArray()`, `SCIPreallocBufferArray()`, `SCIPreallocMemoryArray()`: Reallocate memory arrays to a specific
+ *    new size. These are useful when you already know the exact new size needed, for instance when managing multiple arrays of the
+ *    same size or when you want to compute the new size once and apply it to multiple arrays. Unlike the ensure* functions, these
+ *    give you direct control over the array size.
+ *
  *  @n
  *  @section MEMBESTPRACTICE Best Practice of Using Memory Functions
  *
