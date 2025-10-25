@@ -50,7 +50,9 @@
  * - an LP based mixed-integer nonlinear programming (MINLP) solver, and
  * - is a framework for branch-cut-and-price.
  *
- * Since version 10, \SCIP can be configured to solve mixed-integer linear programs in a numerically exact solving mode and produce certificates that can be independently verified, see \ref EXACT "How to use the numerically exact solving mode" for details.
+ * Since version 10, \SCIP can optionally be configured to solve mixed-integer linear programs in a numerically exact
+ * solving mode and produce certificates that can be independently verified, see \ref EXACT "How to use the numerically
+ * exact solving mode" for details.
  *
  * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and how to download \SCIP.
  *
@@ -7852,9 +7854,31 @@
 
 /**@page EXACT How to use the numerically exact solving mode
  *
- * @section TODO
+ * As a feature standing out among today's MIP solvers, \SCIP offers the option to solve mixed-integer linear programs
+ * in a numerically exact solving mode, in which it uses rational, extended-precision, and safe floating-point
+ * computation in order to guarantee that results are not affected by roundoff errors from unsafe floating-point
+ * arithmetic.
  *
- * TODO
+ * Exact solving mode requires \SCIP to be built with
+ *
+ *   - GMP[https://gmplib.org/] for rational arithmetic in ZIMPL, SoPlex, SCIP, and PaPILO,
+ *   - Boost[https://www.boost.org/] multiprecision library for rationals in SCIP (and PaPILO, if linked),
+ *   - MPFR[https://www.mpfr.org/] for approximating rationals with floating-point numbers in SCIP,
+ *   - and an exact LP solver such as SoPlex.
+ *
+ * Enabling the exact solving mode is done by setting the parameter `exact/enable = TRUE` or calling the API method
+ * SCIPenableExactSolving().  Note that this has to be done <b>before</b> reading a problem instance.  Further advanced
+ * parameters for exact solving can be set in the `exact` submenu.
+ *
+ * Optionally, the output of a certificate (also known as proof logging) can be enabled by specifying
+ * `certificate/filename`. The resulting certificate can be checked with the proof checker
+ * VIPR[https://github.com/scipopt/vipr] or a formally verified version in CakeML[https://cakeml.org/checkers.html].
+ * Note that certificate files are incomplete if cutting plane separation is enabled (as by default). In this case, the
+ * certificate needs to be completed using the `viprcomp` script prior to verification.
+ *
+ * All plugins that want to participate in exact solving mode need to be marked as safe to use when included.
+ *
+ * For further details we refer the release report of SCIP 10.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
