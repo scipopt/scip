@@ -201,7 +201,7 @@
 
 
 /* other defines */
-#define MAXGENNUMERATOR          64000000    /**< determine maximal number of generators by dividing this number by the number of variables */
+#define MAXGENNUMERATOR           INT_MAX    /**< determine maximal number of generators by dividing this number by the number of variables */
 #define COMPRESSNVARSLB             25000    /**< lower bound on the number of variables above which compression could be performed */
 #define DEFAULT_NAUTYMAXLEVEL       10000    /**< terminate symmetry detection using Nauty when depth level of Nauty's search tree exceeds this number
                                               *   (avoids call stack overflows in Nauty for deep graphs) */

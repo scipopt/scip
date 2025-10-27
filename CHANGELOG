@@ -440,6 +440,7 @@ Miscellaneous
 - updated ampl/mp to v4.0.3
 - removed 4th number in SCIP version; new format is major.minor.patch
 - classify as varbound only with a binary variable in SCIPclassifyConstraintTypesLinear()
+- the internal limit MAXGENNUMERATOR is increased allowing more generators of symmetry groups especially for problems with many variables
 
 Known bugs
 ----------
