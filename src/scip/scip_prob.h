@@ -1583,7 +1583,7 @@ SCIP_RETCODE SCIPaddCons(
  *  @note this method will release the upgraded constraint
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPaddUpgrade(
+SCIP_RETCODE SCIPaddConsUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            oldcons,            /**< underlying constraint to upgrade */
    SCIP_CONS**           newcons             /**< upgraded constraint to add */

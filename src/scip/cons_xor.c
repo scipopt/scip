@@ -3600,7 +3600,7 @@ SCIP_RETCODE cliquePresolve(
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
             SCIPdebugMsg(scip, "adding a clique/setppc constraint <%s>\n", SCIPconsGetName(newcons));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
-            SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+            SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &newcons) );
             ++(*naddconss);
             replaced = TRUE;
          }
@@ -3671,7 +3671,7 @@ SCIP_RETCODE cliquePresolve(
 
             SCIPdebugMsg(scip, "adding a clique/setppc constraint <%s>\n", SCIPconsGetName(newcons));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
-            SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+            SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &newcons) );
             ++(*naddconss);
             replaced = TRUE;
          }

@@ -12867,7 +12867,7 @@ SCIP_RETCODE aggregateConstraints(
          *aggregated = TRUE;
 
          /* add the new linear constraint to the problem and delete the old constraint */
-         SCIP_CALL( SCIPaddUpgrade(scip, cons0, &newcons) );
+         SCIP_CALL( SCIPaddConsUpgrade(scip, cons0, &newcons) );
          SCIP_CALL( SCIPdelCons(scip, cons0) );
       }
       else
@@ -16673,7 +16673,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             if( upgdcons != NULL )
             {
                /* add the upgraded constraint to the problem */
-               SCIP_CALL( SCIPaddUpgrade(scip, cons, &upgdcons) );
+               SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &upgdcons) );
                ++(*nupgdconss);
 
                /* mark the linear constraint being upgraded and to be removed after presolving;

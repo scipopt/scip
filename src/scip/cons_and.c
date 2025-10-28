@@ -1483,7 +1483,7 @@ SCIP_RETCODE consdataLinearize(
    {
       /* add and release new constraint */
       SCIPdebugPrintCons(scip, lincons, NULL); /*lint !e644*/
-      SCIP_CALL( SCIPaddUpgrade(scip, cons, &lincons) );
+      SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &lincons) );
       ++(*nupgdconss);
    }
 
@@ -2885,7 +2885,7 @@ SCIP_RETCODE cliquePresolve(
                      SCIPconsIsStickingAtNode(cons)) );
                SCIPdebugMsg(scip, " -> adding clique constraint: ");
                SCIPdebugPrintCons(scip, cliquecons, NULL);
-               SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
+               SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &cliquecons) );
                ++(*naddconss);
 
                SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -3294,7 +3294,7 @@ SCIP_RETCODE cliquePresolve(
                SCIPconsIsStickingAtNode(cons)) );
          SCIPdebugMsg(scip, " -> upgrading AND-constraint <%s> with use of clique information to a set-partitioning constraint: \n", SCIPconsGetName(cons));
          SCIPdebugPrintCons(scip, cliquecons, NULL);
-         SCIP_CALL( SCIPaddUpgrade(scip, cons, &cliquecons) );
+         SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &cliquecons) );
          ++(*naddconss);
 
          /* delete old constraint */
