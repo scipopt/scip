@@ -150,6 +150,7 @@ Interface changes
   SCIPcreateConsAbspower(), SCIPcreateConsBasicAbspower(), SCIPgetNlRowAbspower(),
   SCIPcreateConsSOC(), SCIPcreateConsBasicSOC(), SCIPgetNlRowSOC(),
 - removed previously deprecated NLP termination status codes SCIP_NLPTERMSTAT_TILIM, SCIP_NLPTERMSTAT_ITLIM, SCIP_NLPTERMSTAT_LOBJLIM, SCIP_NLPTERMSTAT_NUMERR, SCIP_NLPTERMSTAT_EVALERR, SCIP_NLPTERMSTAT_MEMERR, SCIP_NLPTERMSTAT_LICERR
+- SCIPaddUpgrade() has been renamed to SCIPaddConsUpgrade()
 
 ### New API functions
 
