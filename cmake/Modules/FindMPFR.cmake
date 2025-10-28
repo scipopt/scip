@@ -1,5 +1,5 @@
-# ${MPFR_INCLUDE_DIRS} contains the paths to mpfr.h (and mpfrxx.h) if MPFR is found.
-# ${MPFR_LIBRARIES} contains libmpfr and libmpfrxx if MPFR is found.
+# ${MPFR_INCLUDE_DIRS} contains the paths to mpfr.h if MPFR is found.
+# ${MPFR_LIBRARIES} contains libmpfr if MPFR is found.
 
 # Check whether environment variable MPFR_DIR was set.
 if(NOT MPFR_DIR)
@@ -26,7 +26,7 @@ else()
         PATH_SUFFIXES lib)
 endif()
 
-SET(MPFR_LIBRARIES ${MPFR_LIBRARY} ${MPFRXX_LIBRARY})
+SET(MPFR_LIBRARIES ${MPFR_LIBRARY})
 
 # look for mpir library and include files when mpfr could not be found
 if(NOT MPFR_LIBRARIES)
