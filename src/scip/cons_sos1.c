@@ -1784,7 +1784,7 @@ SCIP_RETCODE presolRoundConsSOS1(
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
                SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-         SCIP_CALL( SCIPaddUpgrade(scip, cons, &setpackcons) );
+         SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &setpackcons) );
 
          SCIPdebugMsg(scip, "Upgrading SOS1 constraint <%s> to set packing constraint.\n", SCIPconsGetName(cons));
 
