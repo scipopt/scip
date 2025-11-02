@@ -4262,7 +4262,7 @@ void SCIPprintLPStatistics(
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintLPStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "LP                 :       Time      Calls Iterations  Iter/call   Iter/sec  Time-0-It Calls-0-It    ItLimit\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "LP                 :       Time      Calls Iterations  Iter/call   Iter/sec  Time-0-It Calls-0-It\n");
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  primal LP        : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
       SCIPclockGetTime(scip->stat->primallptime),
