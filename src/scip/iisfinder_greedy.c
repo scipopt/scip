@@ -777,8 +777,13 @@ SCIP_RETCODE additionFilterBatch(
          }
          i++;
       }
-      if( k == 0 )
+
+      /* We have the full infeasible problem again */
+      if( i == nconss )
+      {
+         feasible = FALSE;
          break;
+      }
 
       /* Solve the reduced problem */
       retcode = additionSubproblem(iis, timelim, timelimperiter, nodelim, nodelimperiter, &feasible, &stopiter);
