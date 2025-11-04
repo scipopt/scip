@@ -7878,7 +7878,7 @@
  *
  * All plugins that want to participate in exact solving mode need to be marked as safe to use when included.
  *
- * For further details we refer the release report of SCIP 10.
+ * For further details we refer to the release report of SCIP 10.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
