@@ -48,7 +48,7 @@ Features
 - simplify expressions of nonlinear constraints in MPS and LP writing to increase chance that they are recognized as quadratic
 
 Core extensions for numerically exact solving mode:
-- new wrapper class SCIP_RATIONAL for rational arithmetic currently based on Boost, GMP, and MPFR
+- new wrapper struct SCIP_RATIONAL for rational arithmetic currently based on Boost, GMP, and MPFR
 - new data structure SCIP_LPEXACT for handling rational LP relaxation and computing safe dual bounds
 - new interfaces to exact LP solvers SoPlex and QSopt_ex in src/lpiexact/
 - safe dualproof version of conflict analysis
