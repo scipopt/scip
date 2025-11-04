@@ -293,7 +293,7 @@ Interface changes
 - new parameters "reading/nlreader/binary" and "reading/nlreader/comments" to adjust writing of nl files
 - new parameter "nlpi/conopt/priority" to set the priority of the CONOPT NLP solver
 - new parameter "randomization/randomseedshiftmultiplier" to set a multiplier for the shift set by "randomization/randomseedshift";
-  the default value for the randomseedshiftmultiplier is expected to be changed with every major release
+  the default value for the randomseedshiftmultiplier is now 10 and expected to change with every major release
 - added parameter propagating/symmetry/maxlevel to terminate Nauty early especially before its search tree depth overflows the call stack memory
 
 ### Data structures
