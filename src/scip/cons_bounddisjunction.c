@@ -1253,7 +1253,7 @@ SCIP_RETCODE upgradeCons(
       /* add the upgraded constraint to the problem */
       SCIPdebugMsg(scip, "upgrading constraint <%s> to the following %s constraint\n", SCIPconsGetName(cons), (nvars == 2 ? "setppc" : "logicor"));
       SCIPdebugPrintCons(scip, newcons, NULL);
-      SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+      SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &newcons) );
       ++(*naddconss);
 
       /* remove the underlying constraint from the problem */
@@ -2591,7 +2591,7 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
                }
 
                /* add the upgraded constraint to the problem */
-               SCIP_CALL( SCIPaddUpgrade(scip, cons, &lincons) );
+               SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &lincons) );
                ++(*nupgdconss);
             }
 

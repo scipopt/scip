@@ -446,6 +446,7 @@ struct SCIP_Set
 
    /* randomization parameters */
    int                   random_randomseedshift;/**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
+   int                   random_randomseedshiftmultiplier; /**< multiplier for global shift random_randomseedshift */
    int                   random_permutationseed;/**< seed value for permuting the problem after reading/transformation
                                                  *   (0: no permutation) */
    int                   random_randomseed;     /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */

@@ -10881,7 +10881,7 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPEXACT*         lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data, may be NULL for original variables */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -15458,8 +15458,13 @@ SCIP_RETCODE SCIPvarAddVlb(
       /* if the vlb coefficient is zero, just update the lower bound of the variable */
       else if( SCIPsetIsZero(set, vlbcoef) )
       {
+         /* bound might be adjusted due to integrality condition */
+         vlbconstant = adjustedLb(set, SCIPvarIsIntegral(var), vlbconstant);
+
+         /* check bounds for feasibility */
          if( SCIPsetIsFeasGT(set, vlbconstant, SCIPvarGetUbGlobal(var)) )
             *infeasible = TRUE;
+         /* improve global lower bound of variable */
          else if( SCIPsetIsFeasGT(set, vlbconstant, SCIPvarGetLbGlobal(var)) )
          {
             /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
@@ -15920,8 +15925,13 @@ SCIP_RETCODE SCIPvarAddVub(
       /* if the vub coefficient is zero, just update the upper bound of the variable */
       else if( SCIPsetIsZero(set, vubcoef) )
       {
+         /* bound might be adjusted due to integrality condition */
+         vubconstant = adjustedUb(set, SCIPvarIsIntegral(var), vubconstant);
+
+         /* check bounds for feasibility */
          if( SCIPsetIsFeasLT(set, vubconstant, SCIPvarGetLbGlobal(var)) )
             *infeasible = TRUE;
+         /* improve global upper bound of variable */
          else if( SCIPsetIsFeasLT(set, vubconstant, SCIPvarGetUbGlobal(var)) )
          {
             /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts

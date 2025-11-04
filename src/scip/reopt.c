@@ -6886,7 +6886,6 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    unsigned int id;
    int nbndchgs;
    int nchilds;
-   int nvars = 0;
    int v;
 
    assert(reopt != NULL);
@@ -7033,6 +7032,8 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    }
    else
    {
+      int nvars;
+
       assert(*ncreatedchilds == 1);
       assert(perm != NULL);
 

@@ -8906,6 +8906,8 @@ SCIP_RETCODE SCIPaddClique(
    return SCIP_OKAY;
 }
 
+#define MAXNUMEARCHCLIQUE 10000     /**< maximal number of cliques of variable for addLargestCliquePart() to search a suitable clique */
+
 /** add largest clique containing a given variable to part of clique partitioning */
 static
 void addLargestCliquePart(
@@ -8940,29 +8942,33 @@ void addLargestCliquePart(
 
       nvarcliques = SCIPvarGetNCliques(var, value);
 
-      if( nvarcliques > 0 )
+      /* A performance analysis showed that the following is a bottleneck for instances with a very large number of
+       * cliques, e.g., neos-5129192-manaia. We therefore limit the size. */
+      if( nvarcliques > 0 && nvarcliques < MAXNUMEARCHCLIQUE )
       {
          SCIP_CLIQUE** varcliques;
          int selectedidx = -1;
-         int selectedsmallestidx = nbinvars + 1;
+         int selectedsmallestidx = nvars + 1;
          int l;
 
          varcliques = SCIPvarGetCliques(var, value);
          assert( varcliques != NULL );
 
          /* loop through all cliques */
-         for( l = 0; l < nvarcliques; ++l)
+         for( l = 0; l < nvarcliques; ++l )
          {
             SCIP_VAR** cliquevars;
             SCIP_Bool* cliquevals;
+            SCIP_CLIQUE* clique;
             int nvarclique;
-            int smallestidx = nbinvars + 1;
+            int smallestidx = nvars + 1;
             int k;
 
-            assert( varcliques[l] != NULL );
-            nvarclique = SCIPcliqueGetNVars(varcliques[l]);
-            cliquevars = SCIPcliqueGetVars(varcliques[l]);
-            cliquevals = SCIPcliqueGetValues(varcliques[l]);
+            clique = varcliques[l];
+            assert( clique != NULL );
+            nvarclique = SCIPcliqueGetNVars(clique);
+            cliquevars = SCIPcliqueGetVars(clique);
+            cliquevals = SCIPcliqueGetValues(clique);
 
             /* loop through clique */
             for( k = 0; k < nvarclique; ++k )
@@ -9013,16 +9019,20 @@ void addLargestCliquePart(
          }
 
          /* add clique */
-         if( selectedidx > 0 )
+         if( selectedidx >= 0 )
          {
             SCIP_VAR** cliquevars;
             SCIP_Bool* cliquevals;
+            SCIP_CLIQUE* clique;
             int nvarclique;
             int k;
 
-            nvarclique = SCIPcliqueGetNVars(varcliques[selectedidx]);
-            cliquevars = SCIPcliqueGetVars(varcliques[selectedidx]);
-            cliquevals = SCIPcliqueGetValues(varcliques[selectedidx]);
+            assert( selectedidx <= nvarcliques );
+            clique = varcliques[selectedidx];
+            assert( clique != NULL );
+            nvarclique = SCIPcliqueGetNVars(clique);
+            cliquevars = SCIPcliqueGetVars(clique);
+            cliquevals = SCIPcliqueGetValues(clique);
 
             /* loop through clique and add it to part */
             for( k = 0; k < nvarclique; ++k )
@@ -9093,7 +9103,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
 
    /* allocate temporary memory for storing the number of neighors in the parts */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &marked, nvars) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &nneigh, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nneigh, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &ncliqueparts, nvars) );
 
    /* all variables which are of integral type can be potentially of binary type; this can be checked via the method SCIPvarIsBinary(var) */
@@ -9104,10 +9114,12 @@ SCIP_RETCODE calcCliquePartitionGreedy(
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, probtoidxmap, *probtoidxmapsize, nbinvars) );
       *probtoidxmapsize = nbinvars;
+      idx = *probtoidxmap;
       for( i = 0; i < nbinvars; ++i )
-         (*probtoidxmap)[i] = -1;
+         idx[i] = -1;
    }
-   idx = *probtoidxmap;
+   else
+      idx = *probtoidxmap;
    assert( idx != NULL );
 
 #ifndef NDEBUG
@@ -9153,7 +9165,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
       nvarcliques = SCIPvarGetNCliques(var, value);
 
       /* if variable is not active (multi-aggregated or fixed) or isolated, it will be moved to a new part below */
-      if( SCIPvarIsActive(var) && nvarcliques > 0 )
+      if( nvarcliques > 0 && SCIPvarIsActive(var) )
       {
          SCIP_Bool foundpart = FALSE;
          SCIP_CLIQUE** varcliques;
@@ -9166,7 +9178,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
          BMSclearMemoryArray(nneigh, *ncliques);
 
          /* loop through all cliques */
-         for( l = 0; l < nvarcliques && ! foundpart; ++l)
+         for( l = 0; l < nvarcliques && ! foundpart; ++l )
          {
             SCIP_VAR** cliquevars;
             SCIP_Bool* cliquevals;
@@ -9221,7 +9233,7 @@ SCIP_RETCODE calcCliquePartitionGreedy(
          if( ! foundpart )
          {
 #ifndef NDEBUG
-            for( p = 0; p < *ncliques; ++p)
+            for( p = 0; p < *ncliques; ++p )
                assert( nneigh[p] < ncliqueparts[p] );
 #endif
             assert( ncliqueparts[*ncliques] == 0 );

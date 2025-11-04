@@ -60,7 +60,7 @@
 #define DEFAULT_USEADAPTIVECONTEXT FALSE
 #define DEFAULT_SELCONFIDENCECOEFF 10.0      /**< coefficient c to decrease initial confidence (calls + 1.0) / (calls + c) in scores */
 #define DEFAULT_EPSILON             1.0      /**< parameter that increases probability of exploration among divesets (only active if seltype is 'e') */
-#define DEFAULT_MAXLPITERQUOT       0.1      /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITERQUOT      0.15      /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS      1500L      /**< additional number of allowed LP iterations */
 #define DEFAULT_BESTSOLWEIGHT      10.0      /**< weight of incumbent solutions compared to other solutions in computation of LP iteration limit */
 

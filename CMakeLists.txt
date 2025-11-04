@@ -26,7 +26,7 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 set(SCIP_VERSION_MAJOR 10)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
-set(SCIP_VERSION_API 154)
+set(SCIP_VERSION_API 156)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}
@@ -76,7 +76,7 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 option(AUTOBUILD "find and use dependencies as available" OFF)
-set(AUTOBUILD_MSG "\nIf you have troubles configuring, you can consider setting AUTOBUILD=ON to try and find optional packages as available.")
+set(AUTOBUILD_MSG "If you have troubles configuring, you can consider setting AUTOBUILD=ON to try and find optional packages as available.")
 option(ZLIB "should zlib be linked" ON)
 option(READLINE "should readline be linked" ON)
 option(GMP "should gmp be linked" ON)
@@ -188,9 +188,9 @@ if (NOT (LPSEXACT_UPPER STREQUAL "AUTO") AND NOT (LPSEXACT_UPPER STREQUAL "NONE"
 endif()
 
 if(AUTOBUILD)
-    message(WARNING "You are using the automatic build option AUTOBUILD=ON to find and use dependencies automatically.")
+    message(STATUS "You are using the automatic build option AUTOBUILD=ON to find and use dependencies automatically.")
 else()
-    message(WARNING "You are not using the automatic build option. ${AUTOBUILD_MSG}")
+    message(STATUS "You are not using the automatic build option. ${AUTOBUILD_MSG}")
 endif() # AUTOBUILD
 
 # Use C++14 standard; may be increased further down.

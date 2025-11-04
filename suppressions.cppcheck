@@ -41,6 +41,7 @@ checkLevelNormal
 // third-party code, Ip* is for Ipopt headers
 *:src/amplmp/*
 *:src/cppad/*
+*:src/dejavu/*
 *:src/nauty/*
 *:src/sassy/*
 *:lib/include/*

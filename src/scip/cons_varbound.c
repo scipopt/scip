@@ -4635,7 +4635,7 @@ SCIP_RETCODE upgradeConss(
 	 SCIPdebugMsg(scip, "upgraded varbound constraint <%s> to a set-packing constraint\n", SCIPconsGetName(cons));
 	 SCIPdebugPrintCons(scip, newcons, NULL);
 
-	 SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+	 SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &newcons) );
 	 ++(*naddconss);
 
 	 SCIP_CALL( SCIPdelCons(scip, cons) );

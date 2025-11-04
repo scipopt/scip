@@ -885,7 +885,7 @@ SCIPPLUGINLIBOBJ	+= 	scip/nlpi_ipopt_dummy.o
 endif
 
 ifeq ($(CONOPT),true)
-SCIPPLUGINLIBCPPOBJ	+= 	scip/nlpi_conopt.o
+SCIPPLUGINLIBOBJ	+= 	scip/nlpi_conopt.o
 else
 SCIPPLUGINLIBOBJ	+= 	scip/nlpi_conopt_dummy.o
 endif
@@ -1280,7 +1280,7 @@ test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON) $(EMPHBENCHMARK) $(CLOCKTYPE);
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON) $(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE);
 
 .PHONY: testcount
 testcount:

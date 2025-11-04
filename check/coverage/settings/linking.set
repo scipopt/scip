@@ -1,0 +1,5 @@
+# SCIP version 9.2.4
+
+# should the binary representation be used?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+constraints/cumulative/usebinvars = TRUE

@@ -203,6 +203,10 @@ SCIP_RETCODE calcNonZeros(
 
 /** initializes solving data structures and transforms problem
  *
+ *  Before SCIP 10, this function also called the garbage collection for block memory explicitly.
+ *  It has been removed for performance reason, but if memory is very tight, then the previous behavior can be
+ *  restored by adding a call to SCIPcollectMemoryGarbage() before SCIPtransformProb().
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -249,10 +253,6 @@ SCIP_RETCODE SCIPtransformProb(
       SCIPerrorMessage("no node selector available\n");
       return SCIP_PLUGINNOTFOUND;
    }
-
-   /* call garbage collector on original problem and parameter settings memory spaces */
-   BMSgarbagecollectBlockMemory(scip->mem->setmem);
-   BMSgarbagecollectBlockMemory(scip->mem->probmem);
 
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->origprob);
@@ -2498,6 +2498,8 @@ SCIP_RETCODE SCIPpresolve(
          case SCIP_STATUS_OPTIMAL:
             /* remove the root node from the tree, s.t. the lower bound is set to +infinity ???????????? (see initSolve())*/
             SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter, scip->lp) );
+            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+               "presolving solved problem\n");
             break;
 
          case SCIP_STATUS_INFEASIBLE:
@@ -2598,7 +2600,8 @@ SCIP_RETCODE SCIPpresolve(
       SCIP_CALL( displayRelevantStats(scip) );
    }
 
-   if( scip->set->exact_enable && !(scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0') && hasPresolveModifiedProblem(scip) )
+   if( scip->set->exact_enable && !(scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0')
+      && hasPresolveModifiedProblem(scip) && scip->set->stage != SCIP_STAGE_SOLVED )
    {
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_DIALOG, "\n");
       SCIPwarningMessage(scip, "Certificate is printed for presolved problem. "

@@ -7888,7 +7888,7 @@ SCIP_RETCODE upgradeCons(
    }
 
    /* add the upgraded constraint to the problem */
-   SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+   SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &newcons) );
    ++(*naddconss);
 
    /* remove the underlying constraint from the problem */
@@ -8497,7 +8497,7 @@ SCIP_RETCODE dualWeightsTightening(
             SCIPconsIsStickingAtNode(cons)) );
 
       /* add the upgraded constraint to the problem */
-      SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+      SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &newcons) );
       ++(*naddconss);
 
       /* remove the underlying constraint from the problem */
@@ -13009,7 +13009,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
                /* add the upgraded constraint to the problem */
-               SCIP_CALL( SCIPaddUpgrade(scip, cons, &cardcons) );
+               SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &cardcons) );
                ++(*nupgdconss);
 
                /* delete oknapsack constraint */

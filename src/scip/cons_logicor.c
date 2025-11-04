@@ -908,7 +908,7 @@ SCIP_RETCODE dualPresolving(
 }
 
 /** deletes all zero-fixed variables, checks for variables fixed to one, replace all variables which are not active or
- *  not a negation of an active variable by there active or negation of an active counterpart
+ *  not a negation of an active variable by their active or negation of an active counterpart
  */
 static
 SCIP_RETCODE applyFixings(
@@ -981,7 +981,7 @@ SCIP_RETCODE applyFixings(
    /* get active or negation of active variables */
    SCIP_CALL( SCIPgetBinvarRepresentatives(scip, nvars, consdata->vars, vars, negarray) );
 
-   /* renew all variables, important that we do a backwards loop because deletion only affect rear items */
+   /* renew all variables, important that we do a backwards loop because deletion only affects rear items */
    for( v = nvars - 1; v >= 0; --v )
    {
       var = vars[v];
@@ -1053,7 +1053,7 @@ SCIP_RETCODE applyFixings(
                ++(*nchgcoefs);
             }
          }
-         /* we need to degrade this logicor constraint to a linear constraint*/
+         /* we need to degrade this logicor constraint to a linear constraint */
          else if( (ndelconss != NULL && naddconss != NULL) || SCIPconsIsAdded(cons) )
          {
             char name[SCIP_MAXSTRLEN];
@@ -1062,7 +1062,7 @@ SCIP_RETCODE applyFixings(
             SCIP_Real rhs;
             int k;
 
-            /* it might happen that there are more than one multi-aggregated variable, so we need to get the whole probvar sum over all variables */
+            /* it might happen that there is more than one multi-aggregated variable, so we need to get the whole probvar sum over all variables */
 
             size = MAX(nconsvars, 1) + nvars - 1;
 
@@ -1084,7 +1084,7 @@ SCIP_RETCODE applyFixings(
             /* get active variables for new constraint */
             SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize) );
 
-            /* if space was not enough(we found another multi-aggregation), we need to resize the buffers */
+            /* if space was not enough (we found another multi-aggregation), we need to resize the buffers */
             if( requiredsize > size )
             {
                SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
@@ -1128,7 +1128,7 @@ SCIP_RETCODE applyFixings(
 
             goto TERMINATE;
          }
-         /* we need to degrade this logicor constraint to a linear constraint*/
+         /* we need to degrade this logicor constraint to a linear constraint */
          else
          {
             if( var != consdata->vars[v] )
@@ -3663,7 +3663,7 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
                SCIPdebugPrintCons(scip, newcons, NULL);
-               SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+               SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &newcons) );
 
                SCIPdebugMsg(scip, "logicor constraint <%s> is redundant due to negated clique information and will be replaced by a setppc constraint \n",
                   SCIPconsGetName(cons));
@@ -3802,7 +3802,7 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
                SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
 
          SCIPdebugPrintCons(scip, newcons, NULL);
-         SCIP_CALL( SCIPaddUpgrade(scip, cons, &newcons) );
+         SCIP_CALL( SCIPaddConsUpgrade(scip, cons, &newcons) );
 
          SCIPdebugMsg(scip, "logicor constraint <%s> was upgraded to a set-packing constraint\n", SCIPconsGetName(cons));
 
@@ -4171,6 +4171,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
 
    return SCIP_OKAY;
 }
+
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreLogicor)

@@ -349,6 +349,7 @@ BEGIN {
    niter = 0;
    certified = 0;
    certified_ori = 0;
+   certified_fail = 0;
    vipr_ori = 0;
 }
 
@@ -806,6 +807,9 @@ BEGIN {
 #
 # vipr check
 #
+/^presolving (detected|solved)/           {
+   certified = 1;
+}
 /vipr_ori/           {
    vipr_ori = 1;
 }
@@ -818,11 +822,12 @@ BEGIN {
    else
       certified = 1;
 }
-/(Failed|failed)/           {
-   vipr_ori = 0;
-}
-/^presolving detected infeasibility/           {
-   certified = 1;
+/(Verification failed)/           {
+   if( vipr_ori || certified_ori )
+   {
+      vipr_ori = 0;
+      certified_fail = 1
+   }
 }
 #
 # solver status overview (in order of priority):
@@ -1121,6 +1126,11 @@ BEGIN {
       else if( checksol && !bestsolfeas )
       {
          setStatusToFail("fail (solution infeasible)");
+      }
+      else if( certified_fail )
+      {
+         status = "fail (vipr-failed)";
+         pass++;
       }
       else if( certified && certified_ori )
       {

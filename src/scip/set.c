@@ -341,7 +341,8 @@
 #endif
 
 /* Randomization */
-#define SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT     0 /**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
+#define SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT     0 /**< global shift of all random seeds in the plugins, this will have no impact on the permutation seed */
+#define SCIP_DEFAULT_RANDOM_RANDSEEDSHIFTMULT 1 /**< multiplier for global shift of all random seeds in the plugins */
 #define SCIP_DEFAULT_RANDOM_PERMUTATIONSEED   0 /**< seed value for permuting the problem after reading/transformation (0: no permutation) */
 #define SCIP_DEFAULT_RANDOM_LPSEED            0 /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
 #define SCIP_DEFAULT_RANDOM_PERMUTECONSS   TRUE /**< should order of constraints be permuted (depends on permutationseed)? */
@@ -363,11 +364,11 @@
 #define SCIP_DEFAULT_PRESOL_CLQTABLEFAC     2.0 /**< limit on number of entries in clique table relative to number of problem nonzeros */
 #define SCIP_DEFAULT_PRESOL_RESTARTFAC    0.025 /**< fraction of integer variables that were fixed in the root node
                                                  *   triggering a restart with preprocessing after root node evaluation */
-#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.10 /**< fraction of integer variables that were fixed in the root node triggering an
+#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.05 /**< fraction of integer variables that were fixed in the root node triggering an
                                                  *   immediate restart with preprocessing */
 #define SCIP_DEFAULT_PRESOL_SUBRESTARTFAC  1.00 /**< fraction of integer variables that were globally fixed during the
                                                  *   solving process triggering a restart with preprocessing */
-#define SCIP_DEFAULT_PRESOL_RESTARTMINRED  0.10 /**< minimal fraction of integer variables removed after restart to allow
+#define SCIP_DEFAULT_PRESOL_RESTARTMINRED  0.05 /**< minimal fraction of integer variables removed after restart to allow
                                                  *   for an additional restart */
 #define SCIP_DEFAULT_PRESOL_DONOTMULTAGGR FALSE /**< should multi-aggregation of variables be forbidden? */
 #define SCIP_DEFAULT_PRESOL_DONOTAGGR     FALSE /**< should aggregation of variables be forbidden? */
@@ -2233,6 +2234,12 @@ SCIP_RETCODE SCIPsetCreate(
          "randomization/randomseedshift",
          "global shift of all random seeds in the plugins and the LP random seed",
          &(*set)->random_randomseedshift, FALSE, SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT, 0, INT_MAX,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "randomization/randomseedshiftmultiplier",
+         "multiplier for global shift of all random seeds in the plugins and the LP random seed; this multiplier will be changed with every SCIP major release",
+         &(*set)->random_randomseedshiftmultiplier, FALSE, SCIP_DEFAULT_RANDOM_RANDSEEDSHIFTMULT, 1, INT_MAX,
          NULL, NULL) );
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -7800,5 +7807,5 @@ unsigned int SCIPsetInitializeRandomSeed(
 {
    assert(set != NULL);
 
-   return (unsigned int)(initialseedvalue + (unsigned) set->random_randomseedshift);
+   return (unsigned int)(initialseedvalue + (unsigned) set->random_randomseedshiftmultiplier * (unsigned) set->random_randomseedshift);
 }

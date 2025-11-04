@@ -4,7 +4,7 @@ include(CTest)
 # add a custom SCIP check target 'scip_check'
 #
 add_custom_target(scip_check
-                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --output-on-failure
+                COMMAND ${CMAKE_CTEST_COMMAND} -R "default" -E "applications" --output-on-failure
                 DEPENDS scip
                 )
 
@@ -41,6 +41,17 @@ set(instances_CP
 
 set(settings_default
     "default"
+)
+
+set(instances_linking
+    "instances/CP/linking.cip\;2"
+    "instances/CP/linking2.cip\;2"
+    "instances/CP/sched_10_2_1.cip\;11"
+    "instances/CP/sched_10_3_3.cip\;17"
+)
+
+set(settings_linking
+   "linking"
 )
 
 #
@@ -755,6 +766,7 @@ macro(add_pairtests pairs prefix)
 endmacro(add_pairtests)
 
 add_instancetests(instances_CP settings_default "CP")
+add_instancetests(instances_linking settings_linking "linking")
 add_instancetests(instances_Indicator settings_Indicator "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")

@@ -42,6 +42,10 @@ Features
 - added support for AND-constraints to GAMS writer
 - added writing support for AMPL NL writer: currently only general and specialized linear and nonlinear constraints can be written
 - implemented columnwise Jacobian sparsity computation in the NLP oracle
+- implemented method to compute new permutations from a given list of symmetry group generators
+- cons_orbisack, cons_orbitope_full, cons_orbitope_pp and cons_symresack now try to replace aggregated variables by active ones at the
+  end of presolving. This should reduce the size of copies of the presolved problem
+- simplify expressions of nonlinear constraints in MPS and LP writing to increase chance that they are recognized as quadratic
 
 Core extensions for numerically exact solving mode:
 - new wrapper class SCIP_RATIONAL for rational arithmetic currently based on Boost, GMP, and MPFR
@@ -71,6 +75,10 @@ Performance improvements
 - apply general conflict upgrades in conflict store
 - inline SCIPgetStatus() to reduce computational overhead
 - allow multi-aggregation of unbounded slack variables, which may enable more bound tightening due to a reduction in the number of unbounded variables
+- reduce maximal fraction of diving LP iterations relative to total node LP iterations
+- do not allow non-root restarts when no global fixings were found
+- remove all fixings in applyFixings() of cons_xor.c also for an available integer variable
+- extended SOC detection to simple bilinear constraints, e.g., x*y >= 1
 
 Examples and applications
 -------------------------
@@ -165,86 +173,12 @@ Interface changes
 
 ### New API methods
 
-- SCIPenableExactSolving() to enable and disable exact solving mode
-- SCIPbranchruleMarkExact(), SCIPconshdlrMarkExact(), SCIPheurMarkExact(), SCIPpresolMarkExact(), SCIPpricerMarkExact(), SCIPpropMarkExact(), SCIPreaderMarkExact(), SCIPrelaxMarkExact(), SCIPsepaMarkExact() to mark plugins as safe to use in exact solving mode
-- SCIPisExact(), SCIPvarIsExact(), SCIPconshdlrIsExact(), SCIPsolIsExact() to get whether elements are represented exactly
-- SCIPlpiExact*() to handle the exact LP interface
-- SCIPincludeConshdlrExactLinear() to include the handler for exact linear constraints
-- SCIPcreateConsBasicExactLinear(), SCIPcreateConsBasicExactLinear(), and SCIPcopyConsExactLinear() to create and copy an exact linear constraint
-- SCIPchg{L,R}hsExactLinear() to change sides of an exact linear constraint
-- SCIP{add,chg,del}CoefExactLinear() to change coefficients of an exact linear constraint
-- SCIPget{Lhs,Rhs,NVars,Vars,Vals,Activity,Feasibility,RowExact}ExactLinear() to get exact information of an exact linear constraint
-- SCIPget{ValsReal,FpDualsol,FpDualfarkas,Row}ExactLinear() to get real information of an exact linear constraint
-- SCIPincludeConshdlrExactSol() to include the handler for exact solution enforcement
-- SCIPeventGetOldboundExact() to get exact old bound for a bound change event
-- SCIPcolExact*() and SCIProwExact*() to handle the exact LP columns and rows
-- SCIProwGetRowExact() to get the exact LP row for a real LP row
-- SCIPlpExactDiving() to get whether exact LP is in diving mode
-- SCIPmatrixGetRow{Lhs,Rhs,ValPtr}Exact() to get information of an exact matrix row
-- SCIPcalcIntegralScalarExact() to compute a scalar so that all given values become exactly integral
-- SCIPconsGet{L,R}hsExact() to get exact sides of a linear constraint
-- SCIPgetConsValsExact() to get exact coefficients of a linear constraint
-- SCIPsolOrigAddObjvalExact() to add to exact objective of original solution
-- SCIPnodeGetLowerboundExact() to get the exact lower bound of a node
-- SCIPvarGet{L,U}b{Original,Global,Local}Exact() to get bounds of an exact variable
-- SCIPvarGetObjExact() to get objective coefficient of an exact variable
-- SCIPvarGetOrigvarSumExact() to retransform an exact variable to the corresponding original variable
-- SCIPvarGet{Worst,Best}Bound{Type,Global,Local}Exact() to get optimal bound of an exact variable
-- SCIPfixVarExact(), SCIPaggregateVarsExact(), SCIPmultiaggregateVarExact(), SCIPcomputeVar{L,U}bLocalExact(), SCIPgetProbvarSumExact(), SCIPgetProbvarLinearSumExact(), SCIPvarGetStatusExact(), SCIPvarGetProbvarBoundExact(), SCIPvarGetAggr{Constant,Scalar}Exact(), and SCIPvarGetMultaggr{Constant,Scalars}Exact() to handle exact fixings, aggregations, and multiaggregations
-- SCIPvarGetColExact() to get LP column of an exact variable
-- SCIPvarGet{Sol,LPSol,PseudoSol}Exact() and SCIPvarGetLPSolExact_rec() to get solution of an exact variable
-- SCIPparseVarsLinearsumExact(), SCIPwriteVarsLinearsumExact(), SCIPparseVarsPolynomialExact(), SCIPfreeParseVarsPolynomialDataExact() to read and write exact variables
-- SCIPaddVarExactData() to add exact data to real variable
-- SCIPchgVar{Lb,Ub,Obj}Exact() to change information of an exact variable
-- SCIPtightenVar{L,U}bExact() to tighten bounds of an exact variable
-- SCIPadjustedVar{L,U}bExactFloat() to get real adjusted bounds of an exact variable
-- SCIPaddRowExact() to add exact row to separation store
-- SCIPallowNegSlack() to get whether negative slacks are allowed
-- SCIPbranchLPExact() to branch exactly on the LP solution
-- SCIPchgVar{L,U}bExactDive(), SCIPisExactDivePossible(), SCIPinExactDive(), SCIP{start,end}ExactDive(), and SCIPsolveExactDiveLP() to handle exact LP diving
-- SCIP{create,capture,release}RowExact(), SCIPcreateEmptyRowConsExact(), and SCIPcreateRowExactFromRow() to create, capture, and release an exact LP row
-- SCIPgenerateFpRowsFromRowExact() to compute real relaxation of an exact LP row
-- SCIPchgRowExact{L,R}hs() and SCIPaddVarsToRowExact() to change information of an exact LP row
-- SCIPgetRowSol{Activity,ActivityWithErrorbound,Feasibility}Exact() to get solution information of an exact LP row
-- SCIPprintRowExact() to print an exact LP row
-- SCIPlpExactIsSolved() to get whether the exact LP is solved
-- SCIPgetLPExact{Solstat,Objval}() to get solution status and objective value of the exact LP
-- SCIPwriteLPexact() to write the exact LP
-- SCIP{add,get}OrigObjoffsetExact() to add and get exact objective offset of the original problem
-- SCIPcreate{Sol,LPSol}Exact() to create an exact solution and an exact LP solution
-- SCIPunlinkSolExact() to store current exact solution values
-- SCIPmakeSolExact() to convert a real solution into an exact solution
-- SCIPretransformSolExact() to retransform an exact solution to the original space
-- SCIP{set,get}SolValExact() to set and get an exact solution value
-- SCIPgetSolOrigObjExact() to get the original objective value of an exact solution
-- SCIPprintSolExact() to print an exact solution
-- SCIPgetNExactLPs() to get the number of exact LP solves
-- SCIPget{Cutoffbound,Lowerbound,Upperbound,Dualbound,Primalbound}Exact() to get exact best bounds on objective value
-- SCIPvalidateSolveExact() to validate the exact solve
-- SCIPrational{Create,CreateBuffer,CreateBlock,CreateBlockGMP,CreateString,Free,FreeBuffer,FreeBlock}() to allocate and free a rational number
-- SCIPrational{Create,Realloc,Free}{Array,BufferArray,BlockArray}() to allocate, reallocate, and free an array of rational numbers
-- SCIPrational{Copy,CopyBuffer,CopyBlock,CopyArray,CopyBufferArray,CopyBlockArray}() to copy a rational number and an array of rational numbers
-- SCIPrational{SetGMPArray,SetArrayGMP,ClearArrayGMP}() to handle GMP rational number arrays
-- SCIPrationalSet{Real,Fraction,Rational,Infinity,NegInfinity,String,GMP}() to set a rational number
-- SCIPrational{ResetFloatingPointRepresentable,Canonicalize,CheckInfByValue}() to normalize internally a rational number
-- SCIPrational{Negate,Invert}() to negate and invert a rational number
-- SCIPrational{Add,Diff,Mult,Div,RelDiff,AddReal,DiffReal,MultReal,DivReal}() to modify a rational number by a computation with another number
-- SCIPrational{Add,Diff}{Prod,ProdReal}() to modify a rational number with a product of another numbers
-- SCIPrational{GetReal,GetGMP,GetSign,GetFrac,Numerator,Denominator,Abs}() to get information of a rational number
-- SCIPrational{ComputeApproximation,RoundReal,RoundLong,RoundInteger}() to get an approximation of a rational number
-- SCIPrational{Min,Max}() to get minimum and maximum of rational numbers
-- SCIPrationalIs{Zero,Negative,Positive,Infinity,NegInfinity,AbsInfinity,Integral,FpRepresentable,String}() to check a rational number
-- SCIPrationalIs{EQ,LE,GE,LT,GT,AbsEQ,AbsGT,EQReal,LEReal,GEReal,LTReal,GTReal,ApproxEQReal}() to compare a rational number with another number
-- SCIPrationalDenominatorIsLE() to compare the denominator of a rational number with an integral number
-- SCIPintervalSetRational() to compute interval of rational number
-- SCIPstrToRationalValue() and SCIPrational{StrLen,ToString}() to handle string conversion of a rational number
-- SCIPrational{Message,Print,Printf,PrintVerbInfo}() to print rational numbers
-- SCIPrational{Chg,Get}Infinity() to handle infinity threshold of rational numbers
-- SCIPrationalarray{Create,Resize,Free,Copy,SetVal,IncVal,GetVal,GetMinIdx,GetMaxIdx,Print}() to handle rational arrays
-- SCIPaggrRow{AddObjectiveFunction,AddRow,Clear}Safely() to compute safe real row aggregation
-- SCIPisCertified() to get whether certification enabled
-- SCIPshouldCertificateTrackBounds(), SCIPcertify{Cons,ActivityVarBound,ActivityConflict,MirCut}(), SCIPaddCertificate{Aggr,Mir}Info(), and SCIP{store,free}CertificateActive{Aggr,Mir}Info() to handle certification
-- SCIPvar{Set,Get}CertificateIndex(), SCIPvar{Set,Get}{L,U}bCertificateIndexGlobal(), and SCIPvarGet{L,U}bCertificateIndexLocal() to track certification indices
+- SCIPenableExactSolving() to enable and disable exact solving mode; see below for a list of many new API methods added to support exact solving
+- SCIPdisplaySymmetryGenerators() and SCIPdialogExecDisplaySymmetry() to display generators of symmetry group
+- SCIPconsCreateRow() to create and return the row of a linearly representable constraint
+- SCIPcreateRowKnapsack(), SCIPcreateRowLinear(), SCIPcreateRowLogicor(), SCIPcreateRowSetppc(), SCIPcreateRowVarbound() to create
+  and get the row of linearly representable constraints.
+- SCIPgetNResConflictConssApplied() to return the number of generalized resolution conflict constraints added to the problem
 - SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
 - SCIPhistoryGetAncPseudocost(), SCIPhistoryGetAncPseudocostCount(), SCIPhistoryIsAncPseudocostEmpty(), SCIPgetVarAncPseudocostVal(),
   SCIPvarGetAncPseudocost() for retrieving the values related to ancestral pseudo cost fields in variable history
@@ -289,7 +223,7 @@ Interface changes
 - SCIPconshdlrSetNeedsCons() to set whether constraint handler callbacks should also be called if there are no constraints
 - SCIPpropSetTimingmask() to set timing mask of a propagator
 - added C++ interface for expression handlers: src/objscip/objexprhdlr.h
-- SCIPaddUpgrade() to add constraint upgrades while especially informing the conflict store
+- SCIPaddConsUpgrade() to add constraint upgrades while especially informing the conflict store
 - SCIPincludeNlpSolverConopt(), SCIPsetLicenseConopt(), SCIPgetSolverNameConopt(), SCIPgetSolverDescConopt(), and SCIPisConoptAvailableConopt() to interact with the CONOPT interface
 - SCIPnlpiOracleGetConstraintLinearCoef() to get a linear coefficient of a variable in a given constraint in the NLP oracle
 - SCIPnlpiOracleGetJacobianColSparsity() to get the columnwise sparsity pattern of the Jacobian from the NLP oracle
@@ -297,6 +231,48 @@ Interface changes
 - SCIPhashmapInsertLong() and SCIPhashmapGetImageLong()
 - SCIPvarGetMinAggrCoef() and SCIPvarGetMaxAggrCoef() to get bounds on absolute aggregation coefficients for a loose variable;
   SCIPisVarAggrCoefAcceptable() to check whether bounds on aggregation coefficients would exceed thresholds when using a loose variable in another aggregation
+- SCIPgetNRootIntFixings() to retrieve the number of integer fixings at the root node
+- added SCIPcollectMemoryGarbage() to explicitly trigger garbage collection on block memory; before SCIP 10, this was done in SCIPtransformProb()
+
+New API for the exact solving mode:
+- SCIPrational*() to create and compute with rational numbers
+- SCIPintervalSetRational() to compute interval of rational number
+- SCIPstrToRationalValue() and SCIPrational{StrLen,ToString}() to handle string conversion of a rational number
+- SCIPrational{Chg,Get}Infinity() to handle infinity threshold of rational numbers
+- SCIPrationalarray*() to create and handle rational arrays
+- SCIPisExact() to query whether exact solving is enabled
+- SCIPisCertified() to query whether certification enabled
+- many SCIPcertify*() and SCIP*Certificate() methods to support proof logging/certificate generation
+- SCIP*MarkExact() to mark plugins as safe to use in exact solving mode
+- SCIP*IsExact() to query whether objects are ready for exact solving
+- SCIPincludeConshdlrExactLinear() to include the constraint handler for exact linear constraints
+- SCIP*ExactLinear() to create, query, and modify an exact linear constraint
+- SCIPconsGet{L,R}hsExact() and SCIPgetConsValsExact() to query exact sides and coefficients of a linear constraint
+- SCIPmatrix*Exact() to query matrix information in rational arithmetic
+- SCIPaddVarExactData() to add exact data to an existing variable
+- SCIPvarGet*Exact() to query variable information in rational arithmetic
+- many SCIP*Var*Exact*() methods to handle variables exactly
+- SCIPchgVar{L,U}bExactDive(), SCIPisExactDivePossible(), SCIPinExactDive(), SCIP{start,end}ExactDive(), and SCIPsolveExactDiveLP() to handle exact LP diving
+- SCIPlpExactDiving() to query whether exact LP is in diving mode
+- SCIPlpExactIsSolved() to query whether the exact LP is solved
+- SCIPwriteLPexact() to write the exact LP
+- SCIPcolExact*() and SCIProwExact*() to handle the exact LP columns and rows
+- SCIPlpiExact*() to handle the exact LP interface
+- SCIPgetNExactLPs() to query the number of exact LP solves
+- SCIPgetLPExact{Solstat,Objval}() to query solution status and objective value of the exact LP
+- SCIP{add,get}OrigObjoffsetExact() to add and query exact objective offset of the original problem
+- many SCIP*Sol*Exact() to create and handle exact solutions
+- SCIPsolOrigAddObjvalExact() to add to exact objective of original solution
+- SCIPincludeConshdlrExactSol() to include the exact post-processing for solutions
+- many SCIP*Row*Exact*() methods to create and handle exact LP rows
+- SCIPaggrRow*Safely() to compute safe real row aggregation
+- SCIPallowNegSlack() to query whether negative slacks are allowed
+- SCIPbranchLPExact() to branch exactly on the LP solution
+- SCIPeventGetOldboundExact() to query exact old bound for a bound change event
+- SCIPcalcIntegralScalarExact() to compute a scalar so that all given values become exactly integral
+- SCIPnodeGetLowerboundExact() to query the exact lower bound of a node
+- SCIPget{Cutoffbound,Lowerbound,Upperbound,Dualbound,Primalbound}Exact() to query exact best bounds on objective value
+- SCIPvalidateSolveExact() to validate the exact solve
 
 ### Changes in preprocessor macros
 
@@ -333,6 +309,12 @@ Interface changes
 - restricted range of parameter propagating/symmetry/sstleadervartype to [1,7]; its new default value is 6
 - propagating/*/timingmask extended by setting 0 to disable propagators completely
 - changed defaults of constraints/components/propfreq and constraints/components/maxdepth to -1 and 2147483647, respectively, to avoid unnecessary calls of components propagator by default
+- changed frequencies for the following heuristics: shifting, gins, crossover, rins, randrounding
+- set default maxlpiterquot to 0.05 for all LP diving heuristics and feaspump whereas adaptivediving uses 0.15 and rootsoldiving remains at 0.01
+- set default of presolving/restartminred to 0.05
+- set default of presolving/immrestartfac to 0.05
+- removed parameters propagating/symmetry/{nautymaxncells,nautymaxnnodes}
+- updated description of parameter misc/usesymmetry
 
 ### New parameters
 
@@ -354,7 +336,7 @@ Interface changes
 - constraints/exactsol/maxstalls to define maximal number of consecutive unsuccessful reparations in exactsol handler
 - certificate/filename and certificate/maxfilesize to define certificate file
 - branching/pscost/discountfactor, branching/relpscost/discountfactor as the discount factor for ancestral pseudo costs in pscost and relpscost branching rules
-- branching/discountedpscost to enable/disable recording ancestral pseudo costs
+- branching/collectancpscost to enable/disable recording ancestral pseudo costs
 - new parameter "constraints/cumulative/maxtime" to limit the time horizon and avoid integer overflow for unbounded variables
 - new parameter "propagating/symmetry/handlesignedorbitopes" to control whether special symmetry handling techniques for orbitopes whose columns can be (partially) reflected shall be applied
 - new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
@@ -389,6 +371,9 @@ Interface changes
 - new parameter "lp/minsolvedepth" to give a lower bound on the depth at which LPs are solved
 - new parameters "reading/nlreader/binary" and "reading/nlreader/comments" to adjust writing of nl files
 - new parameter "nlpi/conopt/priority" to set the priority of the CONOPT NLP solver
+- new parameter "randomization/randomseedshiftmultiplier" to set a multiplier for the shift set by "randomization/randomseedshift";
+  the default value for the randomseedshiftmultiplier is expected to be changed with every major release
+- added parameter propagating/symmetry/maxlevel to terminate Nauty early especially before its search tree depth overflows the call stack memory
 
 ### Data structures
 
@@ -408,6 +393,7 @@ Testing
 Build system
 ------------
 
+- new option SYM=dejavu to choose Dejavu for computing symmetries
 - changed the default for TPI to tny
 - added build flag CHECKSTAGE=auto to control stage checks in API function calls
 - removed LPS options spx1 and spx2, only LPS=spx is available to select SoPlex now
@@ -464,6 +450,8 @@ Fixed bugs
 - removed erroneous catching of objective-changed events in intobj separator, instead the separator no longer executes within probing with changed objective function
 - propagator dualfix no longer fixes variables to infinity to avoid issues when transferring the solution to the original problem
 - track and check bounds on the coefficients that is used for a variable in aggregations of other variables to improve numerical stability
+- corrected the upgrade of full orbitopes to packing/partitioning orbotopes in case the orbitopal symmetries form a proper subgroup of a component's symmetry group
+- aggregate integer variable to not in clique variable in cliquePresolve() of cons_xor.c to avoid infeasible solutions
 
 Miscellaneous
 -------------
@@ -474,6 +462,7 @@ Miscellaneous
 - updated ampl/mp to v4.0.3
 - removed 4th number in SCIP version; new format is major.minor.patch
 - classify as varbound only with a binary variable in SCIPclassifyConstraintTypesLinear()
+- the internal limit MAXGENNUMERATOR is increased allowing more generators of symmetry groups especially for problems with many variables
 
 Known bugs
 ----------
@@ -532,32 +521,40 @@ Miscellaneous
 Fixed bugs
 ----------
 
-- fixed bugs with counting changes in presolving of nonlinear and setppc constraints which resulted in negative values
+- fixed bugs with counting changes in presolving of nonlinear and setppc constraints, which resulted in negative values
 - cut off dead end node to correctly track dual bound update during solving
-- avoid constructing and flushing the LP in SCIPwriteLP() and SCIPwriteMIP() to avert unexpected affection
-- apply multi-aggregations before detecting redundancy in propagateCons() of cons_varbound.c to keep bound implications
-- skip bound changes for cutoff subtree in treeApplyPendingBdchgs()
-- correct detection of doublelex matrices and handling them via orbitope constraints
+- no longer construct and flush the LP in SCIPwriteLP() and SCIPwriteMIP() to avoid unexpected side effects
+- apply multi-aggregations before detecting redundancy in propagation of varbound constraints to keep bound implications
+- skip bound changes when cutting off a branch-and-bound subtree
+- correct detection of doublelex matrices and their handling via orbitope constraints
 - skip attempting to free transformed problem if SCIPtransformProb() failed with an error in SCIPpresolve(), since freeing
   the transformed problem is likely to fail as well
-- fixed memory leak in primal heuristic scheduler when there is a restart
+- fixed memory leak in primal heuristic "scheduler" when there is a restart
 - fixed stopping when there is a candidate with a change in the LP bound for both children in strong branching of branch_fullstrong
 - fixed detection of sinks in varbound detection from cumulative constraints
 - fixed memory allocation when adding strong SBCs for enclosing orbit of symmetric subgroups (disabled by default)
 - free paths of branch-and-bound tree iteratively instead of recursively to avoid stack overflow
 - fixed rare invalid memory access when collecting symmetry information for indicator constraints
+- recompute activity bounds before checking infeasibility and redundancy in linear constraint presolving
+- skip integer variables with fractional value in reference solution when finding additional variable fixings in ALNS heuristic
+- fix call of SCIPaddExprsViolScoreNonlinear() with constant expressions (no variables)
+- fixed bug with concurrent solve w.r.t. variable indices that led to segmentation faults and fix termination test
+- adjust further bounds before checking feasibility in SCIPvarAddVlb() and SCIPvarAddVub() to detect integrality cutoff
+- fixed that the last fixed binary variable was not set after binary variables were created for linking constraints
+- fixed that when a linking constraint with only one binary variable was added during solving, it was not disabled
+- fixed set_search_limits call when using SYM=sbliss with an old patched Bliss version
 
 Build system
 ------------
 
 ### CMake
 
+- added workaround for recent ctest versions rejecting -R -default as arguments
+
 ### Makefile
 
 - added experimental target to run cppcheck
 
-Miscellaneous
--------------
 
 @section RN923 SCIP 9.2.3
 *************************
@@ -868,7 +865,6 @@ Interface changes
 
 Build system
 ------------
-- new option SYM=dejavu to choose Dejavu for computing symmetries
 - changed the default symmetry computation package from sassy+bliss to sassy+nauty
 - bliss source is no longer included in the source tree, but can be linked as external library (https://github.com/ds4dm/Bliss)
 - cmake now automatically downloads and installs the latest release version of SoPlex from GitHub if it is not found directly
