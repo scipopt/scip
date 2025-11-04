@@ -470,52 +470,6 @@ Known bugs
 
 @page RN9 Release notes for SCIP 9
 
-@section RN930 SCIP 9.3.0
-*************************
-
-Features
---------
-
-- simplify expressions of nonlinear constraints in MPS and LP writing to increase chance that they are recognized as quadratic
-
-Performance improvements
-------------------------
-
-- extended SOC detection to simple bilinear constraints, e.g., x*y >= 1
-
-Examples and applications
--------------------------
-
-Interface changes
------------------
-
-### New and changed callbacks
-
-### New API methods
-- SCIPdisplaySymmetryGenerators() and SCIPdialogExecDisplaySymmetry() to display generators of symmetry group
-- SCIPconsCreateRow() to create and return the row of a linearly representable constraint
-- SCIPcreateRowKnapsack(), SCIPcreateRowLinear(), SCIPcreateRowLogicor(), SCIPcreateRowSetppc(), SCIPcreateRowVarbound() to create
-  and get the row of linearly representable constraints.
-- SCIPgetNResConflictConssApplied() to return the number of generalized resolution conflict constraints added to the problem
-
-### Command line interface
-
-### Interfaces to external software
-
-### Changed parameters
-
-### New parameters
-
-### Data structures
-
-Fixed bugs
-----------
-
-Miscellaneous
--------------
-
-- updated description of paramater misc/usesymmetry
-
 @section RN924 SCIP 9.2.4
 *************************
 
