@@ -264,7 +264,7 @@ New API for the exact solving mode:
 - many SCIP*Sol*Exact() to create and handle exact solutions
 - SCIPsolOrigAddObjvalExact() to add to exact objective of original solution
 - SCIPincludeConshdlrExactSol() to include the exact post-processing for solutions
-- many SCIP*Row*Exact*() methods to create and handle exact LP rows
+- many SCIP*Row*Exact*() functions to create and handle exact LP rows
 - SCIPaggrRow*Safely() to compute safe real row aggregation
 - SCIPallowNegSlack() to query whether negative slacks are allowed
 - SCIPbranchLPExact() to branch exactly on the LP solution
