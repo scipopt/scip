@@ -9357,7 +9357,7 @@
  * @brief general methods for numerically exact solving
  */
 
-/**@defgroup PublicCertificateMethods Certificate printing
+/**@defgroup PublicCertificateMethods Certificate Output
  * @ingroup PublicSolveMethods
  * @brief methods for certified solving
  */
