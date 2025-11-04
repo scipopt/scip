@@ -19,7 +19,7 @@ Features
 - added support for (transposed) network matrix detection in pub_network.h
 - added a new presolver presol_implint which detects implied integral variables by detecting (transposed) network submatrices in the problem. For now, this plugin is disabled by default.
 - added new plugin type for finding irreducible infeasible subsystems (IIS). Users can now include their own IIS algorithms. Greedy addition and deletion based algorithm with dynamic batch sizing implemented in iisfinder_greedy.
-- added a new data structure SCIP_DATATREE that holds serializable data and a method to export to a JSON file
+- added a new data structure SCIP_DATATREE that holds serializable data and a function to export to a JSON file
 - added ability to collect statistics from tables in a SCIP_DATATREE and write out as JSON file;
   dialog write statistics now writes a JSON file if name of file to write ends with .json
 - improve memory usage by introducing different constraint handlers for full orbitopes and packing/partitioning orbitopes
@@ -120,7 +120,7 @@ Interface changes
 - added argument filename to the SCIP_DECL_READERWRITE callback in the 4th position
 - the callback SCIP_DECL_READERWRITE is equipped with objoffset, objscale, objoffsetexact, objscaleexact as arguments 9 through 12 to write the exact objective offset and scale in exact mode
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - SCIPgetProbvarLinearSum: remove parameter mergemultiples, which is now automatically true with the new implementation of SCIPvarGetActiveRepresentatives.
 - SCIPcreateRow*(), SCIPaddVarToRow(), SCIPaddVarsToRow(), SCIPaddVarsToRowSameCoef() can now only be called in the solving stage,
@@ -171,9 +171,9 @@ Interface changes
   SCIPcreateConsSOC(), SCIPcreateConsBasicSOC(), SCIPgetNlRowSOC(),
 - removed previously deprecated NLP termination status codes SCIP_NLPTERMSTAT_TILIM, SCIP_NLPTERMSTAT_ITLIM, SCIP_NLPTERMSTAT_LOBJLIM, SCIP_NLPTERMSTAT_NUMERR, SCIP_NLPTERMSTAT_EVALERR, SCIP_NLPTERMSTAT_MEMERR, SCIP_NLPTERMSTAT_LICERR
 
-### New API methods
+### New API functions
 
-- SCIPenableExactSolving() to enable and disable exact solving mode; see below for a list of many new API methods added to support exact solving
+- SCIPenableExactSolving() to enable and disable exact solving mode; see below for a list of many new API functions added to support exact solving
 - SCIPdisplaySymmetryGenerators() and SCIPdialogExecDisplaySymmetry() to display generators of symmetry group
 - SCIPconsCreateRow() to create and return the row of a linearly representable constraint
 - SCIPcreateRowKnapsack(), SCIPcreateRowLinear(), SCIPcreateRowLogicor(), SCIPcreateRowSetppc(), SCIPcreateRowVarbound() to create
@@ -242,7 +242,7 @@ New API for the exact solving mode:
 - SCIPrationalarray*() to create and handle rational arrays
 - SCIPisExact() to query whether exact solving is enabled
 - SCIPisCertified() to query whether certification enabled
-- many SCIPcertify*() and SCIP*Certificate() methods to support proof logging/certificate generation
+- many SCIPcertify*() and SCIP*Certificate() functions to support proof logging/certificate generation
 - SCIP*MarkExact() to mark plugins as safe to use in exact solving mode
 - SCIP*IsExact() to query whether objects are ready for exact solving
 - SCIPincludeConshdlrExactLinear() to include the constraint handler for exact linear constraints
@@ -251,7 +251,7 @@ New API for the exact solving mode:
 - SCIPmatrix*Exact() to query matrix information in rational arithmetic
 - SCIPaddVarExactData() to add exact data to an existing variable
 - SCIPvarGet*Exact() to query variable information in rational arithmetic
-- many SCIP*Var*Exact*() methods to handle variables exactly
+- many SCIP*Var*Exact*() functions to handle variables exactly
 - SCIPchgVar{L,U}bExactDive(), SCIPisExactDivePossible(), SCIPinExactDive(), SCIP{start,end}ExactDive(), and SCIPsolveExactDiveLP() to handle exact LP diving
 - SCIPlpExactDiving() to query whether exact LP is in diving mode
 - SCIPlpExactIsSolved() to query whether the exact LP is solved
@@ -664,7 +664,7 @@ Fixed bugs
 Interface changes
 -----------------
 
-### New API methods
+### New API functions
 
 - added SCIPtpiIsAvailable() to check whether a working task processing interface is available (TPI != none)
 - added SCIPtpiGetLibraryName() and SCIPtpiGetLibraryDesc()
@@ -798,7 +798,7 @@ Interface changes
 - SCIP_DECL_NLHDLRENFO takes additional parameter branchcandonly to indicate whether only branching candidates should be registered,
   without looking for cuts or boundchanges
 
-### New API methods
+### New API functions
 
 - new function SCIPgetExprActivityNonlinear() to get activity of nonlinear constraint
 - new function SCIPincludeConshdlrFixedvar() to include new constraint handler that checks bounds on fixed original variables
@@ -959,7 +959,7 @@ Interface changes
   or transformed problem should be copied. Similarly, SCIPprobCopy() in prob.h/c has such a parameter.
 - Added CONSGETPERMSYMGRAPH and CONSGETSIGNEDPERMSYMGRAPH callback for constraint handlers, which provides symmetry information about constraints to SCIP.
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - SCIPtpiInitLock(), SCIPtpiDestroyLock(), SCIPtpiInitCondition(), SCIPtpiDestroyCondition() now take a double
   pointer to SCIP_LOCK/SCIP_CONDITION, respectively.
@@ -977,7 +977,7 @@ Interface changes
 - new parameter symtype and permvardomaincenter for SCIPlexicographicReductionAddPermutation()
 - replaced parameters matrixdata and exprdata of SYMcomputeSymmetryGenerators() by graph
 
-### New API methods
+### New API functions
 
 - new functions for interfacing with Lapack: SCIPlapackIsAvailable(), SCIPlapackIsAvailable(), SCIPlapackComputeEigenvalues(), and SCIPlapackSolveLinearEquations
   These functions should be used instead of SCIPisIpoptAvailableIpopt(), SCIPcallLapackDsyevIpopt(), and
@@ -1252,12 +1252,12 @@ Features
 - use quad precision in cutsSubstituteMIR() for substituting slack variables into CMIR cuts
 - use quad precision for activity computations in cons_linear.c
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - SCIPshrinkDisjunctiveVarSet() no longer attempts to cutoff the current node if it finds the
   given disjunction to be infeasible; it is now in the responsibility of the caller to act accordingly
 
-### New API methods
+### New API functions
 
 - added SCIPskipSpace
 - added XML parser routines from src/xml/xml.h
@@ -1360,7 +1360,7 @@ Miscellaneous
 
 - Changed license to Apache 2.0, see https://www.apache.org/licenses/LICENSE-2.0.
 - When an LP could not be solved accurately, scaling is now turned off as a last fall-back method.
-- Methods for using the debug solution mechanism SCIPdebugAddSolVal, SCIPdebugGetSol, SCIPdebugGetSolVal,
+- Functions for using the debug solution mechanism SCIPdebugAddSolVal, SCIPdebugGetSol, SCIPdebugGetSolVal,
   SCIPdebugSolIsValidInSubtree, SCIPdebugIsMainscip, SCIPdebugSolEnable, SCIPdebugSolDisable, SCIPdebugSolIsEnabled,
   SCIPwithDebugSol are now exported
 
@@ -1370,14 +1370,14 @@ Miscellaneous
 Interface changes
 -----------------
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - added input parameter SCIP_Bool initiallp to SCIPcutselsSelect
 - changed function type int to SCIP_Longint for SCIPcutpoolGetMaxNCuts
 - replaced SCIPsepastoreGetNCutsFound with SCIPsepastoreGetNCutsAdded following the naming convention for the new statistics
 - replaced SCIPsepaIncNAppliedCuts with SCIPsepaIncNCutsApplied
 
-### New API methods
+### New API functions
 
 - added SCIPsepastoreGetNCutsAdded, SCIPsepastoreGetNCutsAddedViaPool, SCIPsepastoreGetNCutsAddedDirect
 - added SCIPsepaIncNCutsAdded, SCIPsepaDecNCutsAdded, SCIPsepaIncNCutsApplied, SCIPsepaGetNRootCalls, SCIPsepaGetNCutsAdded, SCIPsepaGetNCutsAddedViaPool, SCIPsepaGetNCutsAddedDirect, SCIPsepaGetNCutsAppliedViaPool, SCIPsepaGetNCutsAppliedDirect
@@ -1673,7 +1673,7 @@ Interface changes
 - removed SCIP_DECL_NLPICHGQUADCOEFS, SCIP_DECL_NLPICHGNONLINCOEF, SCIP_DECL_NLPISETMESSAGEHDLR
 - added SCIP_NLPIPROBLEM* problem to SCIP_DECL_NLPIGETSOLVERPOINTER
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - When calling SCIPdelVar() in the SCIP_STAGE_PROBLEM stage, it is now documented as the user's responsibility to ensure
   the variable is not present in any constraints. Otherwise, SCIPsolve() now returns SCIP_INVALIDDATA.
@@ -1945,7 +1945,7 @@ Constraint handlers for NLP:
 - removed SCIPgetExprgraphNonlinear()
 - removed SCIPcomputeHyperplaneThreePoints(), use SCIPcomputeFacetVertexPolyhedralNonlinear() instead
 
-### New API methods
+### New API functions
 
 - added SCIPallocClearMemory() and SCIPallocClearBlockMemory() to allocate a chunk of (block) memory
   that is initialized to zeros
@@ -2408,14 +2408,14 @@ Miscellaneous
 Interface changes
 -----------------
 
-### New API methods
+### New API functions
 
 - added function SCIPwithDebugSol() to determine whether SCIP was compiled with WITH_DEBUG_SOLUTION
 
 - New function SCIPcreateConsBounddisjunctionRedundant() and SCIPcreateConsBasicBounddisjunctionRedundant() that allow
   the input to contain redundant literals.
 
-### Changed API methods
+### Changed API functions
 
 - added __attribute__((format(printf,,,))) to variadic SCIP message printing functions;
   this enables warnings about mismatches between format string and variadic function arguments if using GCC.
@@ -2444,7 +2444,7 @@ Fixed bugs
 - Fixed lpi_glop to use absl flag instead of GFlags
 - Fixed invalid initialization of limits/softtime parameter in cons_components
 - Fixed MIN macro not defined in some cases.
-- Safeguard some API methods for querying solving statistics against segmentation faults after SCIPpresolve()
+- Safeguard some API functions for querying solving statistics against segmentation faults after SCIPpresolve()
 - Fixed unfreed solution in concurrent solving
 - Make sure that logicor constraints are enforced/separated if genlogicor is true in cons_indicator.
   Thus, do not change constraints/logicor/sepafreq anymore, but output warning.
@@ -2488,11 +2488,11 @@ Examples and applications
 Interface changes
 -----------------
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - deprecated SCIPsetParam(); use SCIPsetIntParam(), SCIPsetRealParam(), etc, instead
 
-### New API methods
+### New API functions
 
 - new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
 - added new sorting functions SCIPsortPtrRealRealBoolBool()
@@ -2778,7 +2778,7 @@ Performance improvements
 Examples and applications
 -------------------------
 
-- added methods to set and get hmin and hmax for optcumulative constraints
+- added functions to set and get hmin and hmax for optcumulative constraints
 
 Interface changes
 -----------------
@@ -2798,7 +2798,7 @@ Interface changes
 
 - extension of SCIP_PQUEUE by a new callback SCIP_DECL_PQUEUEELEMCHGPOS to catch swaps as well as functionality to delete arbitrary elements from the priority queue.
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - LPI:
   + now for all lp interfaces consistent requirements on SCIP_LPPAR:
@@ -2807,10 +2807,10 @@ Interface changes
   + add interface to Glop
   + fixed mapping between scaling parameter values in Gurobi LPI lpi_grb
 - Symmetry:
-  + removed method SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
+  + removed function SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
   + renamed SCIPgetGeneratorsSymmetry() to SCIPgetSymmetry() and removed two arguments
-  + extended method SCIPgetSymmetry(): It is possible to access both the original and
+  + extended function SCIPgetSymmetry(): It is possible to access both the original and
     transposed permutations matrix as well as the (independent symmetry) components of a permutation group now.
   + arguments of functions SCIPcreateConsOrbisack(), SCIPcreateConsBasicOrbisack(), SCIPcreateConsOrbitope(),
     SCIPcreateConsBasicOrbitope(), SCIPcreateConsSymresack(), SCIPcreateConsBasicSymresack(), and SCIPcreateSymbreakCons() extended
@@ -2830,7 +2830,7 @@ Interface changes
   - removed SCIPbenderscutGetNAddedCuts() and SCIPbenderscutGetAddedCutData()
 
 
-### New API methods
+### New API functions
 
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
   and new arguments to count statistics when doing a clean-up of inactive variables in the constraints before building the matrix
@@ -2849,7 +2849,7 @@ Interface changes
     use SCIPcreateRowConshdlr() and SCIPcreateEmptyRowConshdlr(), respectively, for the previous behavior
   - deprecated SCIPlpfeastol() and SCIPchgLpfeastol(), use SCIPgetLPFeastol() and SCIPsetLPFeastol()
 
-- new parameter "divecontext" for every method that queries statistics for a diveset. The context can be used to distinguish between the dive set
+- new parameter "divecontext" for every function that queries statistics for a diveset. The context can be used to distinguish between the dive set
   as single (standalone) heuristic or within Adaptive Diving.
 - new parameters "divecontext" and "iterlim" to SCIPperformGenericDivingAlgorithm() to control in which context (single,adaptive) statistics are updated.
 
@@ -2862,22 +2862,22 @@ Interface changes
   - changed type of vals argument from int* to SCIP_Real* in SCIPcreateConsLinking() and SCIPcreateConsBasicLinking()
   - SCIPgetIntvarLinking() has been renamed to SCIPgetLinkvarLinking().
   - changed return value of SCIPgetValsLinking() from int* to SCIP_Real*.
-  - new method SCIPgetBinvarsDataLinking().
+  - new function SCIPgetBinvarsDataLinking().
 
 - SCIPbendersCheckSubproblemOptimality() now returns a boolean indicating whether the subproblem is optimal or not.
   Previously this result was returned through a parameter. The change was required to facilitate the integration with
   the UG framework.
 
-- deleted SCIPcombineTwoInt(), SCIPcombineThreeInt(), SCIPcombineFourInt(); use the appropriate SCIPhashTwo(), ..., SCIPhashSeven() method instead
+- deleted SCIPcombineTwoInt(), SCIPcombineThreeInt(), SCIPcombineFourInt(); use the appropriate SCIPhashTwo(), ..., SCIPhashSeven() function instead
 
 - SCIPsetupBendersSubproblem takes a parameter of the enforcement type.
 
 - SCIPcreateNlpiProb takes a hashmap to store the map between the nlrows and the index in the nlrow array.
 
-### New API methods
+### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
-- methods have been added to facilitate the transfer of Benders' decomposition cuts between solvers in UG. These include
+- functions have been added to facilitate the transfer of Benders' decomposition cuts between solvers in UG. These include
   SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
   SCIPbendersGetStoredCutOrigData().
 - added SCIPisConvexAbspower()
@@ -3276,7 +3276,7 @@ Build system
 - new target to 'doc' to build documentation
 - ctests now fail if parameter file not found
 - add flag STATIC_GMP and improve GMP find module
-- remove non-API methods from library (API methods use new macro SCIP_EXPORT)
+- remove non-API functions from library (API functions use new macro SCIP_EXPORT)
 - increase minimal required CMake version to 3.3
 - correct paths and dependency information when installing SCIP
 
@@ -3350,7 +3350,7 @@ Performance improvements
 Interface changes
 -----------------
 
-### Deleted and changed API methods and macros
+### Deleted and changed API functions and macros
 
 - The preprocessor macro NO_CONFIG_HEADER now needs to be defined when
   including SCIP header files from a SCIP build or installation that
@@ -3364,7 +3364,7 @@ Interface changes
   the names of macros NO_RAND_R and NO_STRERROR_R have not been changed
   so far.
 
-### New API methods
+### New API functions
 
 - SCIPhashmapInsertInt(), SCIPhashmapSetImageInt(), and SCIPhashmapGetImageInt() to use integer values as images in hashmaps
 
@@ -3477,7 +3477,7 @@ Interface changes
 
 - added parameter locktype to `SCIP_DECL_CONSLOCK` callback to indicate the type of variable locks
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - Symmetry:
   + removed function SCIPgetTimingSymmetry() in presol_symmetry.h since this presolver does not compute symmetries independent
@@ -3498,7 +3498,7 @@ Interface changes
     SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar() now take an additional argument to specify already
     existing bounds on x, providing an entire interval ([-infinity,infinity]) gives previous behavior
 
-### New API methods
+### New API functions
 
 - SCIPintervalSolveUnivariateQuadExpressionNegative()
 - SCIPvarGetNLocksDownType() and SCIPvarGetNLocksUpType()
@@ -3603,7 +3603,7 @@ Performance improvements
 Interface changes
 -----------------
 
-### New API methods
+### New API functions
 
 - new methods SCIPtryTerminate() and SCIPterminated() in scip/interrupt.h for handling of SIGTERM signals.
 - new method SCIPselectCuts() to run SCIP's cut selection procedure on a given array of cuts
@@ -3746,7 +3746,7 @@ Interface changes
   - added parameter `allowlocal` to `SCIP_DECL_SEPAEXECLP` and `SCIP_DECL_SEPAEXECSOL` to switch generation of locally valid cuts
   - added parameter `dstatssize` to `SCIP_DECL_NLPIDELVARSET` and `SCIP_DECL_NLPIDELCONSSET`
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - Branching rules:
   - removed parameter `allowaddcons` from SCIPselectVarPseudoStrongBranching(), SCIPselectVarStrongBranching(), and
@@ -3789,7 +3789,7 @@ Interface changes
   - SCIPsolveParallel() has been deprecated, use the new method SCIPsolveConcurrent() instead
   - allowed SCIPgetNConss() in stage `SCIP_STAGE_INITSOLVE`
 
-### New API methods
+### New API functions
 
 - SCIPaddRow() to replace deprecated SCIPaddCut()
 - methods to display linear constraint classification types; use SCIPclassifyConstraintTypesLinear()
@@ -4024,7 +4024,7 @@ Performance improvements
 Interface changes
 -----------------
 
-### New API methods
+### New API functions
 
 - SCIPvalidateSolve() to compare solving result with an external primal and dual reference value
 - SCIPisObjChangedProbing() to check whether the objective function has changed during probing mode
@@ -4231,7 +4231,7 @@ Interface changes
   - `CONSINITLP` callback now has a new parameter `infeasible`, which is a pointer to store whether infeasibility
     was detected while building the initial LP relaxation
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - setting a parameter to a non-valid value now produces an error message instead of a warning
 - bound reader uses angle bracket around variable names
@@ -4305,7 +4305,7 @@ Interface changes
   - removed SCIPvarWasFixedAtIndex() and added SCIPgetVarWasFixedAtIndex()
   - Removed method SCIPvarGetNBinImpls()
 
-### New API methods
+### New API functions
 
 - added functions for concurrent solving mode (see concurrent.h, concsolver.h)
 - SCIPcreateNlpiProb(), SCIPupdateNlpiProb() and SCIPaddNlpiProbRows() to create and update a nonlinear relaxation
@@ -4527,7 +4527,7 @@ Interface changes
 
 - made debug solution functionality thread safe (see debug.h for further information)
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - add SCIPcomputeHyperplaneThreePoints() to compute a hyperplane containing three given 3-dimensional points
 - SCIPsolveLinearProb() now uses a 1-dimensional matrix representation
@@ -4761,7 +4761,7 @@ Interface changes
   constraint handler method to suggest dive bound changes during the generic diving algorithm, see type_cons.h for details
 - new callback `SCIP_DECL_DIVESETGETSCORE` to implement scoring function to guide diving
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - avoid potential comparisons of different infinity values by adjusting the LP solution value
 - SCIPintervalSign(),  SCIPintervalAbs(), SCIPintervalMax(), SCIPintervalMin(), SCIPexprgraphGetNodePolynomialMonomialCurvature(),
@@ -4827,7 +4827,7 @@ Interface changes
   - Removed method SCIPfreeBufferSize()
   - Removed method callback SCIPdialogExecConflictgraph()
 
-### New API methods
+### New API functions
 
 - started support for user-defined operators in expression trees/graphs (see SCIPexprCreateUser()),
   interface will likely change again in future SCIP versions
@@ -5085,14 +5085,14 @@ Interface changes
 - corrected wrong primal bound in statistics for unbounded problems
 - forbid to call SCIPfixVar() in `SCIP_STAGE_PRESOLVED` stage, which is not allowed since it calls SCIPchgVarLb/Ub()
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - rename SCIPdigraphGetNodeDatas() to SCIPdigraphGetNodeData();
 - rename SCIPdigraphSetNodeDatas() to SCIPdigraphSetNodeData()
 - SCIPapplyProximity() has an additional parameter freesubscip, which causes the method to free
   the created subscip automatically at the end.
 
-### New API methods
+### New API functions
 
 - SCIPhasPerformedPresolve() to check, e.g., whether LP duals are accessible
 - SCIPconvertRealTo[Long]Int() to convert reals that represent integers to [long] ints.
@@ -5386,7 +5386,7 @@ Interface changes
   - new possible return value `SCIP_DIDNOTFIND` for SCIP_DECL_BRANCHEXECLP(), SCIP_DECL_BRANCHEXECPS(), and
     SCIP_DECL_BRANCHEXECEXT() callbacks to state that the branching rule searched, but did not find a branching.
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - SCIPcalcMIR() takes an additional parameter sidetypes to determine which side of the rows to use
   (relevant for ranged rows)
@@ -5420,7 +5420,7 @@ Interface changes
   - New method SCIPgetVarStrongbranchWithPropagation() which performs strong branching with propagation on a variable.
   - Added parameter `endptr` to SCIPparseVar() which stores the final string position after parsing.
 
-### New API methods
+### New API functions
 
 - added SCIPdebugCheckConss() to the debugging mechanism and therefore created a `SCIP_SOL` (in original space) in debug.c
 - before copying solutions to the original solution candidate storage, infinite solution values can now be removed using SCIPcreateFiniteSolCopy()
@@ -5707,7 +5707,7 @@ Examples and applications
 Interface changes
 -----------------
 
-### New API methods
+### New API functions
 
 - SCIPmarkColNotRemovableLocal() and SCIPmarkRowNotRemovableLocal() to forbid removal of an column/row
   from the LP in the current node
@@ -5824,11 +5824,11 @@ Interface changes
 
 - when using an objective limit, heuristic characters are not displayed any longer for worse solutions
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - fixed spelling in the method name SCIPgmlWriteClosing()
 
-### New API methods
+### New API functions
 
 - SCIPgetNLimSolsFound() to get number of solutions that respect the objective limit
 
@@ -6082,7 +6082,7 @@ Interface changes
   - Added basic creation methods for all constraints types, e.g., SCIPcreateConsBasicLinear(); these methods should make the usage easier,
     sparing out optional callbacks and parameters.
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - SCIPcomputeCoverUndercover() now has an additional parameter coverbd
 - tcliqueMaxClique has an additional parameter to store the number of used branch-and-bound nodes
@@ -6196,7 +6196,7 @@ Interface changes
   - Method SCIPvarGetProbvarSum() is not public anymore, use SCIPgetProbvarSum() instead.
   - Replaced method SCIPvarGetRootRedcost() by SCIPvarGetBestRootRedcost().
 
-### New API methods
+### New API functions
 
 - setup timer to all plugins and therefore SCIP<plugin-type>GetSetupTime() methods in all pub_plugin-type.h to ask
   for this time (, e.g. SCIPeventhdlrGetSetupTime() in pub_event.h)
@@ -6739,7 +6739,7 @@ Interface changes
 - Problem Data:
   - The callback SCIP_DECL_PROBCOPY() got a new parameter `global` to indicate whether the global problem or a local version is copied.
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - implemented SCIPlpiGetPrimalRay() in SoPlex interface that has become available with SoPlex version 1.5.0.2
 - allowed calling SCIPgetRowSolActivity() in `SCIP_STAGE_SOLVED`, since LP is still available
@@ -6794,7 +6794,7 @@ Interface changes
     type to an integer type.
   - SCIPdelVar() got a new parameter `deleted`, which stores whether the variable was successfully marked to be deleted.
 
-### New API methods
+### New API functions
 
 - information about the quality of the solution of an LP (currently the condition number of the basis matrix) can now be:
   + requested from the LPI (currently only available for CPLEX): methods SCIPlpiGetRealSolQuality() and
@@ -7473,7 +7473,7 @@ Interface changes
   - The callback SCIP_DECL_PROBEXITSOL(x) in the main problem has one new parameter (see type_prob.h for more details):
     - The parameter `restart` is `TRUE` if the callback method was triggered by a restart.
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - All C++ objects and constructors have a SCIP pointer, now.
 - added parameter scip to ObjCloneable::clone()
@@ -7545,7 +7545,7 @@ Interface changes
     - `deltavalid`: In case, the user wants to know the best scaling factor, i.e., `delta` passed is not `NULL`,
       `deltavalid` will be `TRUE` if the stored scaling factor `delta` will lead to a violated c-MIR cut.
 
-### New API methods
+### New API functions
 
 - added SCIPcalcNegatedCliquePartition() to scip.c to calculate a clique partition on negations of all given binary
   variables
@@ -7978,7 +7978,7 @@ Interface changes
   + SCIP_DECL_CONSCOPY(x): this method can be used to copy a constraint.
   + SCIP_DECL_CONSPARSE(x): this method can be used to parse a constraint in CIP format.
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - SCIPcalcMIR() in scip.h has two new parameter `mksetcoefsvalid` and `sol`. The parameter `mksetcoefsvalid` stores
   whether the coefficients of the mixed knapsack set (`mksetcoefs`) computed in SCIPlpCalcMIR() are valid. If the mixed
@@ -7994,7 +7994,7 @@ Interface changes
   - new parameters `lowerbound` and `result` in type_pricer.h: lowerbound can save a lower bound computed by the pricer,
     result indicates whether the pricer guarantees that there exist no more variables if no variable was found
 
-### New API methods
+### New API functions
 
 - new methods to deactivate a pricer SCIPdeactivatePricer() in scip.c
 - new methods in pub_misc.h/misc.c to access hash map lists and elements of a hash map list and to clear all entries in a hash map
@@ -8331,7 +8331,7 @@ Interface changes
   then with `steepest edge`)
 - Added user pointer to callback methods of hash table, see pub_misc.h.
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - SCIPgetVarRedcost() now returns 0 for variables that have been aggregated out or removed in presolving.
   reduced cost in case of infeasible LPs)
@@ -8365,7 +8365,7 @@ Interface changes
   - the parameter list of the method scip_check() (objconshdlr.h) has an additional parameter `printreason` see for
     explanation the previous point
 
-### New API methods
+### New API functions
 
 - LPI now has a function SCIPlpiGetSolverPointer() that returns a solver dependent pointer. This can be used to directly
   access the LP solver.  This should, of course, only be used by people that know exactly what they are doing.
@@ -8674,7 +8674,7 @@ Interface changes
 
 - new callback method SCIPdialogFree()
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - slightly modified bound substitution heuristic in SCIPcalcMIR() and SCIPcalcStrongCG()
 - slightly less conservative in numerics for SCIPmakeRowIntegral()
@@ -8709,7 +8709,7 @@ Interface changes
     SCIPgetVarClosestVlb() and SCIPgetVarClosestVlb() in scip.h
   - new parameter `force` for SCIPtightenVarLb() and SCIPtightenVarUb()
 
-### New API methods
+### New API functions
 
 - SCIPreadSol()
 - SCIPwriteMIP()
@@ -8910,7 +8910,7 @@ Interface changes
   bounds of variables, they are not automatically be called again (it is assumed that they already made use of these
   changes). They are only called again, if they returned `SCIP_SUSPENDED` or if some other plugin modified the LP.
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - new parameter `escapecommand` for SCIPdialoghdlrAddHistory()
 - removed method SCIPgetVarData(); use SCIPvarGetData() from pub_var.h instead
@@ -8955,7 +8955,7 @@ Interface changes
   - slightly changed semantics of SCIPaddConsNode() and SCIPaddConsLocal(), such that a constraint which is added to the
     root node now enters the global problem (and is still existing after a restart)
 
-### New API methods
+### New API functions
 
 - SCIPgetVerbLevel()
 - SCIPescapeString()
@@ -9081,7 +9081,7 @@ Interface changes
 
 - slightly modified semantics of the `CONSINITLP` callback in the constraint handlers
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - methods SCIPisLbBetter() and SCIPisUbBetter() have an additional parameter and slightly different meaning (they now
   compare the bound improvement *relatively* to the width of the domain and the bound itself)
@@ -9104,7 +9104,7 @@ Interface changes
   - method SCIPgetNConflictClausesFoundNode() renamed to SCIPgetNConflictConssFoundNode()
   - method SCIPgetNConflictClausesApplied() renamed to SCIPgetNConflictConssApplied()
 
-### New API methods
+### New API functions
 
 - SCIPsolveProbingLPWithPricing()
 - SCIPchgVarLbRoot() and SCIPchgVarUbRoot()
@@ -9279,7 +9279,7 @@ Interface changes
 - callback method `CONSSEPA` of constraint handler was split into two methods `CONSSEPALP` and `CONSSEPASOL`
 - callback method `SEPAEXEC` of separator was split into two methods `SEPAEXECLP` and `SEPAEXECSOL`
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - replaced method SCIPsepaWasDelayed() by SCIPsepaWasLPDelayed() and SCIPsepaWasSolDelayed()
 - additional parameter `sol` for methods SCIPaddCut(), SCIPgetCutEfficacy() and SCIPisCutEfficacious()
@@ -9295,7 +9295,7 @@ Interface changes
     SCIPconshdlrWasSolSeparationDelayed()
   - renamed method SCIPgetNGlobalConss() to SCIPgetNConss()
 
-### New API methods
+### New API functions
 
 - SCIPgetCuts()
 - SCIPgetVarConflictScore() and SCIPgetVarConflictScoreCurrentRun()
@@ -9433,7 +9433,7 @@ Interface changes
 - new callback parameter `validnode` for the `CONFLICTEXEC` method of conflict handlers, which should be passed to
   SCIPaddConsNode()
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - additional parameter `validnode` for SCIPaddConsLocal() and SCIPaddConsNode()
 - SCIPhashtableRemove() can now also be called, if the element does not exist in the table
@@ -9443,7 +9443,7 @@ Interface changes
 - put block memory shell and tclique algorithm into separate subdirectories
 - new parameter `duringlploop` of SCIPincludeHeur(): heuristics can now run during the price-and-cut loop at a node
 
-### New API methods
+### New API functions
 
 - SCIPgetNConflictClausesApplied()
 - SCIPgetNConflictClausesApplied()
@@ -9686,7 +9686,7 @@ Interface changes
 - constraint handler callback methods `CONSLOCK` and `CONSUNLOCK` are replaced by a single method `CONSLOCK` with the number
   of locks being positive or negative
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - calling SCIPaddCut() with `forcecut=TRUE` will add the cut to the LP even if it is redundant
 - SCIPreadProb() does not free the current problem, this is done in SCIPcreateProb() now, which is usually
@@ -9735,7 +9735,7 @@ Interface changes
   - SCIPdisableConsLocal() is replaced by SCIPdelConsLocal()
   - added new parameter `dynamic` to SCIPcreateCons() and all plugin methods SCIPcreateCons...()
 
-### New API methods
+### New API functions
 
 - SCIPgetObjNorm()
 - SCIPcreateOrigSol()
@@ -9965,7 +9965,7 @@ Interface changes
 
 - new branching rule plugin methods `INITSOL` and `EXITSOL`
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - removed SCIPisFeasible(); use !SCIPisFeasNegative() instead
 - SCIPisIntegral(), SCIPisFracIntegral(), SCIPfloor(), SCIPceil() and SCIPfrac() don't use the feasibility
@@ -9976,7 +9976,7 @@ Interface changes
   and the solver can return it; new methods SCIPlpiExistsPrimalRay() and SCIPlpiExistsDualRay() check whether a ray
   exists without checking, if the solver knows and can return the ray
 
-### New API methods
+### New API functions
 
 - SCIPvarIsInLP()
 - SCIPgetLPColumnObjval() and SCIPgetLPLooseObjval()
@@ -10047,12 +10047,12 @@ Features
 Interface changes
 -----------------
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - method SCIPgetGap() and SCIPgetTransGap() now return infinity, if primal and dual bound have opposite sign (this
   removes the oddness with the gap increasing while the dual bound approaches zero)
 
-### New API methods
+### New API functions
 
 - added methods SCIPgetVarsLogicor() and SCIPgetNVarsLogicor() in logic or constraint handler
 
@@ -10093,13 +10093,13 @@ Features
 Interface changes
 -----------------
 
-### Deleted and changed API methods
+### Deleted and changed API functions
 
 - changed SCIPcatchVarEvent() and SCIPdropVarEvent()
 - SCIPstage() is now called SCIPgetStage()
 - SCIPprintStatus() is now called SCIPprintStage()
 
-### New API methods
+### New API functions
 
 - SCIPgetActivityLinear() in linear constraint handler
 - SCIPgetFeasibilityLinear() in linear constraint handler
