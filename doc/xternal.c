@@ -9455,7 +9455,7 @@
  * @brief methods for detecting network matrices and converting them to the underlying graphs
  */
 
-/**@defgroup PublicRationalMethods Rational arithmetic
+/**@defgroup PublicRationalMethods Rational Arithmetic
  * @ingroup DataStructures
  * @brief wrapper for rational number arithmetic
  */
