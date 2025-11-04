@@ -7867,7 +7867,7 @@
  *   - and an exact LP solver such as SoPlex.
  *
  * Enabling the exact solving mode is done by setting the parameter `exact/enable = TRUE` or calling the API method
- * SCIPenableExactSolving().  Note that this has to be done <b>before</b> reading a problem instance.  Further advanced
+ * `SCIPenableExactSolving()`.  Note that this has to be done <b>before</b> reading a problem instance.  Further advanced
  * parameters for exact solving can be set in the `exact` submenu.
  *
  * Optionally, the output of a certificate (also known as proof logging) can be enabled by specifying
