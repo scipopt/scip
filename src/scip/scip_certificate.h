@@ -50,6 +50,11 @@
 extern "C" {
 #endif
 
+/**@addtogroup PublicCertificateMethods
+ *
+ * @{
+ */
+
 /** returns whether certificate output is activated */
 SCIP_EXPORT
 SCIP_Bool SCIPisCertified(
@@ -285,6 +290,8 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@} */
 
 #ifdef __cplusplus
 }

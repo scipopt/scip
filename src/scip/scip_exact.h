@@ -48,6 +48,11 @@
 extern "C" {
 #endif
 
+/**@addtogroup PublicExactMethods
+ *
+ * @{
+ */
+
 /** enables or disables exact solving mode
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -115,6 +120,8 @@ SCIP_RETCODE SCIPaddRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        rowexact            /**< exact row to add */
    );
+
+/**@} */
 
 #ifdef __cplusplus
 }

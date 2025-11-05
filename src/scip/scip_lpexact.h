@@ -51,6 +51,11 @@
 extern "C" {
 #endif
 
+/**@addtogroup PublicLPExactMethods
+ *
+ * @{
+ */
+
 /** creates and captures an LP row without any coefficients from a constraint handler
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -453,6 +458,8 @@ SCIP_RETCODE SCIPwriteLPexact(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name */
    );
+
+/**@} */
 
 #ifdef __cplusplus
 }
