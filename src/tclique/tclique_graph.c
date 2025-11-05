@@ -218,16 +218,16 @@ void tcliqueFree(
    {
       if ( (*tcliquegraph)->adjedges != NULL )
       {
-	 BMSfreeMemoryArray(&(*tcliquegraph)->adjedges);
-	 BMSfreeMemoryArray(&(*tcliquegraph)->adjnodes);
-	 BMSfreeMemoryArray(&(*tcliquegraph)->degrees);
-	 BMSfreeMemoryArray(&(*tcliquegraph)->weights);
+         BMSfreeMemoryArray(&(*tcliquegraph)->adjedges);
+         BMSfreeMemoryArray(&(*tcliquegraph)->adjnodes);
+         BMSfreeMemoryArray(&(*tcliquegraph)->degrees);
+         BMSfreeMemoryArray(&(*tcliquegraph)->weights);
       }
       if ( (*tcliquegraph)->cacheddegrees )
       {
-	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddegrees);
-	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cachedorigs);
-	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddests);
+         BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddegrees);
+         BMSfreeMemoryArrayNull(&(*tcliquegraph)->cachedorigs);
+         BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddests);
       }
       BMSfreeMemory(tcliquegraph);
    }
@@ -886,7 +886,7 @@ void tcliquePrintGraph(
 
       for( ; currentadjedge <= lastadjedge; currentadjedge++ )
       {
-	 infoMessage("%d, ", *currentadjedge);
+         infoMessage("%d, ", *currentadjedge);
       }
       infoMessage("]\n");
    }

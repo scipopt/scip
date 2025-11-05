@@ -3098,7 +3098,7 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
             SCIP_RATIONAL* abscont2;
 
             (void) SCIPrationalCreate(&abscont1);
-	    (void) SCIPrationalCreate(&abscont2);
+            (void) SCIPrationalCreate(&abscont2);
 
             SCIPrationalDiff(abscont1, SCIPvarGetUbGlobalExact(var1), SCIPvarGetLbGlobalExact(var1));
             SCIPrationalMult(abscont1, consdata->vals[ind1], abscont1);

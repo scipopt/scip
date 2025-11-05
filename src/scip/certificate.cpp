@@ -1670,14 +1670,14 @@ SCIP_RETCODE certificatePrintIncompleteDerStart(
       index = local ? SCIPvarGetLbCertificateIndexLocal(var) : SCIPvarGetLbCertificateIndexGlobal(var);
       if( index != -1 )
       {
-	      assert(index <= certificate->indexcounter);
-	      SCIPcertificatePrintProofMessage(certificate, " %d ", index);
+         assert(index <= certificate->indexcounter);
+         SCIPcertificatePrintProofMessage(certificate, " %d ", index);
       }
       index = local ? SCIPvarGetUbCertificateIndexLocal(var) : SCIPvarGetUbCertificateIndexGlobal(var);
       if( index != -1 )
       {
-	      assert(index <= certificate->indexcounter);
-	      SCIPcertificatePrintProofMessage(certificate, " %d ", index);
+         assert(index <= certificate->indexcounter);
+         SCIPcertificatePrintProofMessage(certificate, " %d ", index);
       }
    }
 

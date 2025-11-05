@@ -729,21 +729,21 @@ SCIP_RETCODE SCIPimplicsAdd(
                *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
          assert(*implics != NULL);
 
-	 if( (*implics)->nimpls[varfixing] - posadd > 0 )
-	 {
-	    int amount = ((*implics)->nimpls[varfixing] - posadd);
+         if( (*implics)->nimpls[varfixing] - posadd > 0 )
+         {
+            int amount = ((*implics)->nimpls[varfixing] - posadd);
 
 #ifndef NDEBUG
-	    for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
-	    {
-	       assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
-	    }
+            for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
+            {
+               assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
+            }
 #endif
-	    BMSmoveMemoryArray(&((*implics)->types[varfixing][posadd+1]), &((*implics)->types[varfixing][posadd]), amount); /*lint !e866*/
-	    BMSmoveMemoryArray(&((*implics)->ids[varfixing][posadd+1]), &((*implics)->ids[varfixing][posadd]), amount); /*lint !e866*/
-	    BMSmoveMemoryArray(&((*implics)->vars[varfixing][posadd+1]), &((*implics)->vars[varfixing][posadd]), amount); /*lint !e866*/
-	    BMSmoveMemoryArray(&((*implics)->bounds[varfixing][posadd+1]), &((*implics)->bounds[varfixing][posadd]), amount); /*lint !e866*/
-	 }
+            BMSmoveMemoryArray(&((*implics)->types[varfixing][posadd+1]), &((*implics)->types[varfixing][posadd]), amount); /*lint !e866*/
+            BMSmoveMemoryArray(&((*implics)->ids[varfixing][posadd+1]), &((*implics)->ids[varfixing][posadd]), amount); /*lint !e866*/
+            BMSmoveMemoryArray(&((*implics)->vars[varfixing][posadd+1]), &((*implics)->vars[varfixing][posadd]), amount); /*lint !e866*/
+            BMSmoveMemoryArray(&((*implics)->bounds[varfixing][posadd+1]), &((*implics)->bounds[varfixing][posadd]), amount); /*lint !e866*/
+         }
 
          (*implics)->vars[varfixing][posadd] = implvar;
          (*implics)->types[varfixing][posadd] = impltype;
@@ -798,21 +798,21 @@ SCIP_RETCODE SCIPimplicsAdd(
                *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
          assert(*implics != NULL);
 
-	 if( (*implics)->nimpls[varfixing] - posadd > 0 )
-	 {
-	    int amount = ((*implics)->nimpls[varfixing] - posadd);
+         if( (*implics)->nimpls[varfixing] - posadd > 0 )
+         {
+            int amount = ((*implics)->nimpls[varfixing] - posadd);
 
 #ifndef NDEBUG
-	    for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
-	    {
-	       assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
-	    }
+            for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
+            {
+               assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
+            }
 #endif
-	    BMSmoveMemoryArray(&((*implics)->types[varfixing][posadd+1]), &((*implics)->types[varfixing][posadd]), amount); /*lint !e866*/
-	    BMSmoveMemoryArray(&((*implics)->ids[varfixing][posadd+1]), &((*implics)->ids[varfixing][posadd]), amount); /*lint !e866*/
-	    BMSmoveMemoryArray(&((*implics)->vars[varfixing][posadd+1]), &((*implics)->vars[varfixing][posadd]), amount); /*lint !e866*/
-	    BMSmoveMemoryArray(&((*implics)->bounds[varfixing][posadd+1]), &((*implics)->bounds[varfixing][posadd]), amount); /*lint !e866*/
-	 }
+            BMSmoveMemoryArray(&((*implics)->types[varfixing][posadd+1]), &((*implics)->types[varfixing][posadd]), amount); /*lint !e866*/
+            BMSmoveMemoryArray(&((*implics)->ids[varfixing][posadd+1]), &((*implics)->ids[varfixing][posadd]), amount); /*lint !e866*/
+            BMSmoveMemoryArray(&((*implics)->vars[varfixing][posadd+1]), &((*implics)->vars[varfixing][posadd]), amount); /*lint !e866*/
+            BMSmoveMemoryArray(&((*implics)->bounds[varfixing][posadd+1]), &((*implics)->bounds[varfixing][posadd]), amount); /*lint !e866*/
+         }
 
          (*implics)->vars[varfixing][posadd] = implvar;
          (*implics)->types[varfixing][posadd] = impltype;
@@ -1196,79 +1196,79 @@ SCIP_RETCODE SCIPcliqueAddVar(
       /* insertion for a variable with cliquevalue FALSE */
       if( !value )
       {
-	 /* find last entry with the same variable and value behind the insertion position */
-	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] == value; ++pos ); /*lint !e722*/
+         /* find last entry with the same variable and value behind the insertion position */
+         for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] == value; ++pos ); /*lint !e722*/
 
-	 /* check if the same variable with other value also exists */
-	 if( pos < clique->nvars - 1 && clique->vars[pos + 1] == var )
-	 {
-	    assert(clique->values[pos + 1] != value);
-	    *oppositeentry = TRUE;
-	 }
+         /* check if the same variable with other value also exists */
+         if( pos < clique->nvars - 1 && clique->vars[pos + 1] == var )
+         {
+            assert(clique->values[pos + 1] != value);
+            *oppositeentry = TRUE;
+         }
 
-	 /* check if we found the same variable with the same value more than once */
-	 if( pos != i )
-	    *doubleentry = TRUE;
-	 else
-	 {
-	    /* find last entry with the same variable and different value before the insertion position */
-	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] != value; --pos ); /*lint !e722*/
+         /* check if we found the same variable with the same value more than once */
+         if( pos != i )
+            *doubleentry = TRUE;
+         else
+         {
+            /* find last entry with the same variable and different value before the insertion position */
+            for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] != value; --pos ); /*lint !e722*/
 
-	    /* check if we found the same variable with the same value more than once */
-	    if( pos > 0 && clique->vars[pos - 1] == var )
-	    {
-	       assert(clique->values[pos - 1] == value);
+            /* check if we found the same variable with the same value more than once */
+            if( pos > 0 && clique->vars[pos - 1] == var )
+            {
+               assert(clique->values[pos - 1] == value);
 
-	       *doubleentry = TRUE;
-	    }
-	    /* if we found the same variable with different value, we need to order them correctly */
-	    if( pos != i )
-	    {
-	       assert(clique->vars[pos] == var);
-	       assert(clique->values[pos] != value);
+               *doubleentry = TRUE;
+            }
+            /* if we found the same variable with different value, we need to order them correctly */
+            if( pos != i )
+            {
+               assert(clique->vars[pos] == var);
+               assert(clique->values[pos] != value);
 
-	       clique->values[pos] = value;
-	       value = !value;
-	    }
-	 }
+               clique->values[pos] = value;
+               value = !value;
+            }
+         }
       }
       /* insertion for a variable with cliquevalue TRUE */
       else
       {
-	 /* find last entry with the same variable and different value behind the insertion position */
-	 for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] != value; ++pos ); /*lint !e722*/
+         /* find last entry with the same variable and different value behind the insertion position */
+         for( ; pos < clique->nvars - 1 && clique->vars[pos + 1] == var && clique->values[pos + 1] != value; ++pos ); /*lint !e722*/
 
-	 /* check if the same variable with other value also exists */
-	 if( pos < clique->nvars - 1 && clique->vars[pos + 1] == var )
-	 {
-	    assert(clique->values[pos + 1] == value);
-	    *doubleentry = TRUE;
-	 }
+         /* check if the same variable with other value also exists */
+         if( pos < clique->nvars - 1 && clique->vars[pos + 1] == var )
+         {
+            assert(clique->values[pos + 1] == value);
+            *doubleentry = TRUE;
+         }
 
-	 /* check if we found the same variable with different value */
-	 if( pos != i )
-	 {
-	    *oppositeentry = TRUE;
+         /* check if we found the same variable with different value */
+         if( pos != i )
+         {
+            *oppositeentry = TRUE;
 
-	    /* if we found the same variable with different value, we need to order them correctly */
-	    assert(clique->vars[pos] == var);
-	    assert(clique->values[pos] != value);
+            /* if we found the same variable with different value, we need to order them correctly */
+            assert(clique->vars[pos] == var);
+            assert(clique->values[pos] != value);
 
-	    clique->values[pos] = value;
-	    value = !value;
-	 }
-	 else
-	 {
-	    /* find last entry with the same variable and value before the insertion position */
-	    for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] == value; --pos ); /*lint !e722*/
+            clique->values[pos] = value;
+            value = !value;
+         }
+         else
+         {
+            /* find last entry with the same variable and value before the insertion position */
+            for( ; pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] == value; --pos ); /*lint !e722*/
 
-	    if( pos != i )
-	       *doubleentry = TRUE;
+            if( pos != i )
+               *doubleentry = TRUE;
 
-	    /* check if we found the same variable with different value up front */
-	    if( pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] != value )
-	       *oppositeentry = TRUE;
-	 }
+            /* check if we found the same variable with different value up front */
+            if( pos > 0 && clique->vars[pos - 1] == var && clique->values[pos - 1] != value )
+               *oppositeentry = TRUE;
+         }
       }
    }
    else

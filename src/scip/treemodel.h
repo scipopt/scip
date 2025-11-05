@@ -103,7 +103,7 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    SCIP_Real*            tiebreakerscore,    /**< scores to use for tie breaking */
    int                   nbranchcands,       /**< the number of branching candidates */
    int*                  bestcand            /**< the best branching candidate found before the call,
-					          and the best candidate after the call (possibly the same) */
+                                                  and the best candidate after the call (possibly the same) */
 );
 
 #ifdef __cplusplus

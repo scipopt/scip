@@ -2218,10 +2218,10 @@ SCIP_RETCODE execRelpscost(
       /* Apply the Treemodel branching rule to potentially select a better branching candidate than the current one. */
       if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED && SCIPtreemodelIsEnabled(scip, branchruledata->treemodel) )
       {
-	 SCIP_Real smallpscost;
-	 SCIP_Bool usetreemodel;
+         SCIP_Real smallpscost;
+         SCIP_Bool usetreemodel;
 
-	 usetreemodel = TRUE;
+         usetreemodel = TRUE;
 
          /* If the pseudocosts are zero, use SCIPs best variable since the Treemodel is not applicable */
          if( SCIPisZero(scip, maxgains[bestcand]))
@@ -2241,7 +2241,7 @@ SCIP_RETCODE execRelpscost(
                if( scoresfrompc[cand] > scoresfrompc[bestcand] )
                {
                   usetreemodel = FALSE;
-		  break;
+                  break;
                }
             }
          }

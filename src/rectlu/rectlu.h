@@ -200,4 +200,4 @@ void RECTLUfreeFactorization(
    );
 #endif
 
-#endif	/*  __RECTLU_H */
+#endif /*  __RECTLU_H */

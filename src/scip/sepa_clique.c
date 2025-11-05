@@ -897,7 +897,7 @@ SCIP_RETCODE separateCuts(
           * implication graph or in the clique table -> nothing has to be done
           */
          else
-	 {
+         {
             SCIPdebugMsg(scip, "no 3-cliques found in implication graph\n");
          }
 

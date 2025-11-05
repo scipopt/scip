@@ -2507,7 +2507,7 @@ SCIP_RETCODE SCIPcopyImplicationsCliques(
                ++(*ncopied);
             if ( nbdchgs != NULL )
                *nbdchgs += nboundchg;
-	 }
+         }
       }
    }
 

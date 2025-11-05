@@ -1325,7 +1325,7 @@ SCIP_RETCODE mergeMultiples(
 
       /* check variable type, either pure binary or an integer/implicit integer variable with 0/1 bounds */
       assert((pos < nbinvars && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var))
-	 || (SCIPvarIsBinary(var) &&
+         || (SCIPvarIsBinary(var) &&
             ((pos >= nbinvars && pos < nbinvars + nintvars && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER
             && !SCIPvarIsImpliedIntegral(var)) ||
                (pos >= nbinvars + nintvars && pos < nbinvars + nintvars + nimplvars &&
@@ -1360,7 +1360,7 @@ SCIP_RETCODE mergeMultiples(
          else
          {
             SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
-	    ++(*nchgcoefs);
+            ++(*nchgcoefs);
          }
       }
       /* if var occurs second time in constraint, first time it was negated */
@@ -1377,7 +1377,7 @@ SCIP_RETCODE mergeMultiples(
          else
          {
             SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
-	    ++(*nchgcoefs);
+            ++(*nchgcoefs);
          }
       }
    }
@@ -1892,60 +1892,60 @@ void consdataSort(
    if( !consdata->sorted )
    {
       if( consdata->nvars <= 1 )
-	 consdata->sorted = TRUE;
+         consdata->sorted = TRUE;
       else
       {
-	 SCIP_VAR* var1 = NULL;
-	 SCIP_VAR* var2 = NULL;
+         SCIP_VAR* var1 = NULL;
+         SCIP_VAR* var2 = NULL;
 
-	 /* remember watch variables */
-	 if( consdata->watchedvar1 != -1 )
-	 {
-	    var1 = consdata->vars[consdata->watchedvar1];
-	    assert(var1 != NULL);
-	    consdata->watchedvar1 = -1;
-	    if( consdata->watchedvar2 != -1 )
-	    {
-	       var2 = consdata->vars[consdata->watchedvar2];
-	       assert(var2 != NULL);
-	       consdata->watchedvar2 = -1;
-	    }
-	 }
-	 assert(consdata->watchedvar1 == -1);
-	 assert(consdata->watchedvar2 == -1);
-	 assert(var1 != NULL || var2 == NULL);
+         /* remember watch variables */
+         if( consdata->watchedvar1 != -1 )
+         {
+            var1 = consdata->vars[consdata->watchedvar1];
+            assert(var1 != NULL);
+            consdata->watchedvar1 = -1;
+            if( consdata->watchedvar2 != -1 )
+            {
+               var2 = consdata->vars[consdata->watchedvar2];
+               assert(var2 != NULL);
+               consdata->watchedvar2 = -1;
+            }
+         }
+         assert(consdata->watchedvar1 == -1);
+         assert(consdata->watchedvar2 == -1);
+         assert(var1 != NULL || var2 == NULL);
 
-	 /* sort variables after index */
-	 SCIPsortPtr((void**)consdata->vars, SCIPvarComp, consdata->nvars);
-	 consdata->sorted = TRUE;
+         /* sort variables after index */
+         SCIPsortPtr((void**)consdata->vars, SCIPvarComp, consdata->nvars);
+         consdata->sorted = TRUE;
 
-	 /* correct watched variables */
-	 if( var1 != NULL )
-	 {
-	    int pos;
+         /* correct watched variables */
+         if( var1 != NULL )
+         {
+            int pos;
 #ifndef NDEBUG
-	    SCIP_Bool found;
+            SCIP_Bool found;
 
-	    found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
-	    assert(found);
+            found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
+            assert(found);
 #else
-	    (void) SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
+            (void) SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var1, consdata->nvars, &pos);
 #endif
-	    assert(pos >= 0 && pos < consdata->nvars);
-	    consdata->watchedvar1 = pos;
+            assert(pos >= 0 && pos < consdata->nvars);
+            consdata->watchedvar1 = pos;
 
-	    if( var2 != NULL )
-	    {
+            if( var2 != NULL )
+            {
 #ifndef NDEBUG
-	       found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
-	       assert(found);
+               found = SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
+               assert(found);
 #else
-	       (void) SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
+               (void) SCIPsortedvecFindPtr((void**)consdata->vars, SCIPvarComp, (void*)var2, consdata->nvars, &pos);
 #endif
-	       assert(pos >= 0 && pos < consdata->nvars);
-	       consdata->watchedvar2 = pos;
-	    }
-	 }
+               assert(pos >= 0 && pos < consdata->nvars);
+               consdata->watchedvar2 = pos;
+            }
+         }
       }
    }
 

@@ -1366,7 +1366,7 @@ SCIP_RETCODE SCIPincludeBranchruleDistribution(
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-	 BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+         BRANCHRULE_MAXBOUNDDIST, branchruledata) );
 
    assert(branchrule != NULL);
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyDistribution) );

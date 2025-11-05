@@ -71,20 +71,20 @@ struct SCIP_LPiExact
    mpq_factor_work*      factor;             /**< factorized matrix  */
    int                   solstat;            /**< solution status of last optimization call */
    int                   previt;             /**< previous number of simplex iterations performed */
-   int                   pricing;	         /**< SCIP pricing option */
+   int                   pricing;            /**< SCIP pricing option */
 #endif
    int                   rowspace;           /**< current size of internal row-related arrays */
    char*                 isen;               /**< array of length rowspace */
    mpq_t*                irhs;               /**< array of rhs rowspace */
    mpq_t*                irng;               /**< array of range rowspace */
-   int*                  ircnt;	             /**< array of count rowspace */
-   int*                  irbeg;	             /**< array of begining index rowspace */
+   int*                  ircnt;              /**< array of count rowspace */
+   int*                  irbeg;              /**< array of begining index rowspace */
    int                   colspace;           /**< current size of internal column-related arrays */
-   int*                  iccnt;	             /**< array of length colspace */
+   int*                  iccnt;              /**< array of length colspace */
    char*                 iccha;              /**< array of type colspace */
-   int                   tbsz;	             /**< current size of tableau-related arrays */
+   int                   tbsz;               /**< current size of tableau-related arrays */
    mpq_t*                itab;               /**< array of length tbsz */
-   char*                 ibas; 	             /**< array of length tbsz */
+   char*                 ibas;               /**< array of length tbsz */
 };
 
 
@@ -99,38 +99,38 @@ struct SCIP_LPiExact
 
 /** This macro is to print error messages and jump to the given point in the code, it also print the
  *  file and line where this happend */
-#define QS_TESTG(A,B,...) do{{\
-	 if (A){				\
-	    fprintf(stderr,__VA_ARGS__);	\
-	    __QS_PRINTLOC__;			\
-	    goto B;}}}while(0)
+#define QS_TESTG(A,B,...) do { { \
+   if (A){ \
+      fprintf(stderr,__VA_ARGS__); \
+      __QS_PRINTLOC__; \
+      goto B; } } } while(0)
 
 /** This macro is to print error messages and to exit with SCIP_LPERROR */
-#define QS_ERROR(A,...) do{{\
-	 if (A){				\
-	    fprintf(stderr,__VA_ARGS__);	\
-	    __QS_PRINTLOC__;			\
-	    return SCIP_LPERROR;}}}while(0)
+#define QS_ERROR(A,...) do { { \
+   if (A){ \
+      fprintf(stderr,__VA_ARGS__); \
+      __QS_PRINTLOC__; \
+      return SCIP_LPERROR; } } } while(0)
 
 /** return value macro, if the value is non-zero, write to standard error the returning code and
  *  where this happened, and return SCIP_ERROR, otherwise return normal SCIP_OKAY termination code. */
-#define QS_RETURN(A) do{\
-      const int __RVAL__ = (A);						\
-      if (__RVAL__){							\
-	 fprintf(stderr,"LP Error: QSopt_ex returned %d",__RVAL__);	\
-	 __QS_PRINTLOC__;						\
-	 return SCIP_ERROR;}						\
-      return SCIP_OKAY;}while(0)
+#define QS_RETURN(A) do { \
+      const int __RVAL__ = (A); \
+      if (__RVAL__){ \
+         fprintf(stderr,"LP Error: QSopt_ex returned %d",__RVAL__); \
+         __QS_PRINTLOC__; \
+         return SCIP_ERROR; } \
+      return SCIP_OKAY; } while(0)
 
 /** return value macro, if the value is non-zero, write to standard error the returning code and
  *  where this happened, and return SCIP_ERROR, otherwise do nothing. */
-#define QS_CONDRET(A) do{\
-      const int __RVAL__ = (A);						\
-      if (__RVAL__){							\
-	 fprintf(stderr,"LP Error: QSopt_ex returned %d",__RVAL__);	\
-	 __QS_PRINTLOC__;						\
-	 return SCIP_LPERROR;}						\
-   }while(0)
+#define QS_CONDRET(A) do { \
+      const int __RVAL__ = (A); \
+      if (__RVAL__){ \
+         fprintf(stderr,"LP Error: QSopt_ex returned %d",__RVAL__); \
+         __QS_PRINTLOC__; \
+         return SCIP_LPERROR; } \
+   } while(0)
 
 
 
@@ -1152,9 +1152,9 @@ SCIP_RETCODE SCIPlpiExactScaleRow(
       QS_TESTG(rval, CLEANUP, " ");
       if (sense[0] == 'R')
       {
-	 mpq_mul(svl, range[0], *SCIPrationalGetGMP(scaleval));
-	 rval = mpq_QSchange_range(lpi->prob, row, svl);
-	 QS_TESTG(rval, CLEANUP, " ");
+         mpq_mul(svl, range[0], *SCIPrationalGetGMP(scaleval));
+         rval = mpq_QSchange_range(lpi->prob, row, svl);
+         QS_TESTG(rval, CLEANUP, " ");
       }
    }
    /* otherwise, we must change everything */
@@ -1173,7 +1173,7 @@ SCIP_RETCODE SCIPlpiExactScaleRow(
          QS_TESTG(rval, CLEANUP, " ");
          rval = mpq_QSchange_sense(lpi->prob, row, 'G');
          QS_TESTG(rval, CLEANUP, " ");
-	      break;
+         break;
       case 'G':
          mpq_mul(svl, rhs[0], *SCIPrationalGetGMP(scaleval));
          rval = mpq_QSchange_rhscoef(lpi->prob, row, svl);
@@ -1653,7 +1653,7 @@ SCIP_RETCODE SCIPlpiExactGetSides(
       lpi->ircnt[i] = i + firstrow;
 
    /* get data from qsopt */
-   rval = mpq_QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, 0, 0, 0, 0, &lrhs,	&lsense, &lrng, 0);
+   rval = mpq_QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, 0, 0, 0, 0, &lrhs, &lsense, &lrng, 0);
    QS_TESTG(rval, CLEANUP, " ");
 
    /* store in the user-provided data */
@@ -2818,9 +2818,9 @@ SCIP_RETCODE SCIPlpiExactSetIntpar(
    {
    case SCIP_LPPAR_SCALING:
       if( ival == TRUE )
-	 rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 1);
+         rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 1);
       else
-	 rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 0);
+         rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 0);
       break;
    case SCIP_LPPAR_PRICING:
       lpi->pricing = ival;
@@ -2843,7 +2843,7 @@ SCIP_RETCODE SCIPlpiExactSetIntpar(
          rval += mpq_QSset_param(lpi->prob,QS_PARAM_DUAL_PRICING,QS_PRICE_DDEVEX);
          break;
       default:
-	       return SCIP_LPERROR;
+         return SCIP_LPERROR;
       }
       break;
    case SCIP_LPPAR_LPINFO:

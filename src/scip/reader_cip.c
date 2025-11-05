@@ -162,8 +162,8 @@ SCIP_RETCODE getInputString(
 
       if( cipinput->endfile )
       {
-	 /* clear the line for safety reason */
-	 BMSclearMemoryArray(cipinput->strbuf, cipinput->len);
+         /* clear the line for safety reason */
+         BMSclearMemoryArray(cipinput->strbuf, cipinput->len);
          return SCIP_OKAY;
       }
 

@@ -1749,13 +1749,13 @@ SCIP_RETCODE checkConsQuadraticProblem(
 
    if( SCIPisFeasPositive(scip, origObjScalar) )
    {
-	   origObjUb = SCIPvarGetUbOriginal(origObjVar);
-	   origObjLb = SCIPvarGetLbOriginal(origObjVar);
+      origObjUb = SCIPvarGetUbOriginal(origObjVar);
+      origObjLb = SCIPvarGetLbOriginal(origObjVar);
    }
    else
    {
-	   origObjUb = -SCIPvarGetLbOriginal(origObjVar);
-	   origObjLb = -SCIPvarGetUbOriginal(origObjVar);
+      origObjUb = -SCIPvarGetLbOriginal(origObjVar);
+      origObjLb = -SCIPvarGetUbOriginal(origObjVar);
       origObjScalar *= -1;
       origObjConstant *= -1;
    }
@@ -1763,11 +1763,11 @@ SCIP_RETCODE checkConsQuadraticProblem(
    /* not every optimal solution of the problem is a KKT point if the objective variable is bounded */
    if( SCIPisFeasPositive(scip, obj))
    {
-	  if ( !SCIPisInfinity(scip, -origObjLb))
-	     return SCIP_OKAY;
-	  if ( !SCIPisInfinity(scip, origObjUb)
-		  && !SCIPisFeasLE(scip, rhs/coef, (origObjUb-origObjConstant)/origObjScalar) )
-	     return SCIP_OKAY;
+      if ( !SCIPisInfinity(scip, -origObjLb))
+         return SCIP_OKAY;
+      if ( !SCIPisInfinity(scip, origObjUb)
+         && !SCIPisFeasLE(scip, rhs/coef, (origObjUb-origObjConstant)/origObjScalar) )
+         return SCIP_OKAY;
    }
    else
    {

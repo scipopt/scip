@@ -1198,34 +1198,34 @@ SCIP_RETCODE upgradeCons(
    {
       if( !SCIPvarIsBinary(consdata->vars[v]) )
       {
-	 allbinary = FALSE;
-	 break;
+         allbinary = FALSE;
+         break;
       }
       else
       {
-	 if( consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
-	 {
-	    assert(SCIPisFeasGT(scip, consdata->bounds[v], 0.0));
+         if( consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
+         {
+            assert(SCIPisFeasGT(scip, consdata->bounds[v], 0.0));
 
-	    if( nvars == 2 )
-	    {
-	       SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[v], &(newvars[v])) );
-	    }
-	    else
-	       newvars[v] = consdata->vars[v];
-	 }
-	 else
-	 {
-	    assert(consdata->boundtypes[v] == SCIP_BOUNDTYPE_UPPER);
-	    assert(SCIPisFeasLT(scip, consdata->bounds[v], 1.0));
+            if( nvars == 2 )
+            {
+               SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[v], &(newvars[v])) );
+            }
+            else
+               newvars[v] = consdata->vars[v];
+         }
+         else
+         {
+            assert(consdata->boundtypes[v] == SCIP_BOUNDTYPE_UPPER);
+            assert(SCIPisFeasLT(scip, consdata->bounds[v], 1.0));
 
-	    if( nvars > 2 )
-	    {
-	       SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[v], &(newvars[v])) );
-	    }
-	    else
-	       newvars[v] = consdata->vars[v];
-	 }
+            if( nvars > 2 )
+            {
+               SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[v], &(newvars[v])) );
+            }
+            else
+               newvars[v] = consdata->vars[v];
+         }
       }
    }
 
@@ -1235,19 +1235,19 @@ SCIP_RETCODE upgradeCons(
 
       if( nvars == 2 )
       {
-	 SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, SCIPconsGetName(cons), nvars, newvars,
-	       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-	       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-	       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-	       SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+         SCIP_CALL( SCIPcreateConsSetpack(scip, &newcons, SCIPconsGetName(cons), nvars, newvars,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       }
       else
       {
-	 SCIP_CALL( SCIPcreateConsLogicor(scip, &newcons, SCIPconsGetName(cons), nvars, newvars,
-	       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-	       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-	       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-	       SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+         SCIP_CALL( SCIPcreateConsLogicor(scip, &newcons, SCIPconsGetName(cons), nvars, newvars,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       }
 
       /* add the upgraded constraint to the problem */

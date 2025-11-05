@@ -1401,7 +1401,7 @@ SCIP_RETCODE readRhs(
          break;
 
       if( *rhsname == '\0' )
-	 (void)SCIPmemccpy(rhsname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+         (void)SCIPmemccpy(rhsname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       if( !strcmp(rhsname, mpsinputField1(mpsi)) )
       {
@@ -1554,7 +1554,7 @@ SCIP_RETCODE readRhsExact(
          break;
 
       if( *rhsname == '\0' )
-	 (void)SCIPmemccpy(rhsname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+         (void)SCIPmemccpy(rhsname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       if( !strcmp(rhsname, mpsinputField1(mpsi)) )
       {
@@ -1701,7 +1701,7 @@ SCIP_RETCODE readRanges(
          break;
 
       if( *rngname == '\0' )
-	 (void)SCIPmemccpy(rngname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+         (void)SCIPmemccpy(rngname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       /* The rules are:
        * Row Sign   LHS             RHS
@@ -1846,7 +1846,7 @@ SCIP_RETCODE readRangesExact(
          break;
 
       if( *rngname == '\0' )
-	 (void)SCIPmemccpy(rngname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+         (void)SCIPmemccpy(rngname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       /* The rules are:
        * Row Sign   LHS             RHS
@@ -2060,7 +2060,7 @@ SCIP_RETCODE readBounds(
          break;
 
       if( *bndname == '\0' )
-	 (void)SCIPmemccpy(bndname, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+         (void)SCIPmemccpy(bndname, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       /* Only read the first Bound in section */
       if( !strcmp(bndname, mpsinputField2(mpsi)) )
@@ -2435,7 +2435,7 @@ SCIP_RETCODE readBoundsExact(
          break;
 
       if( *bndname == '\0' )
-	 (void)SCIPmemccpy(bndname, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+         (void)SCIPmemccpy(bndname, mpsinputField2(mpsi), '\0', MPS_MAX_NAMELEN - 1);
 
       /* Only read the first Bound in section */
       if( !strcmp(bndname, mpsinputField2(mpsi)) )
@@ -5797,33 +5797,33 @@ SCIP_RETCODE SCIPwriteMps(
          /* create variable name */
          var = fixedvars[v];
 
-	 if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
-	 {
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+         {
             size_t l;
-	    l = strlen(SCIPvarGetName(var));
-	    if( l >= MPS_MAX_NAMELEN )
-	       maxnamelen = MPS_MAX_NAMELEN - 1;
-	    else
-	       maxnamelen = MAX(maxnamelen, (unsigned int) l);
+            l = strlen(SCIPvarGetName(var));
+            if( l >= MPS_MAX_NAMELEN )
+               maxnamelen = MPS_MAX_NAMELEN - 1;
+            else
+               maxnamelen = MAX(maxnamelen, (unsigned int) l);
 
-	    SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
-	    (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
+            (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
 
-	    varnames[startpos + nfixvars] = namestr;
-	    fixvars[nfixvars] = var;
-	    ++nfixvars;
+            varnames[startpos + nfixvars] = namestr;
+            fixvars[nfixvars] = var;
+            ++nfixvars;
 
-	    /* insert variable with variable name into hash map */
-	    assert(!SCIPhashmapExists(varnameHashmap, var));
-	    SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) namestr) );
+            /* insert variable with variable name into hash map */
+            assert(!SCIPhashmapExists(varnameHashmap, var));
+            SCIP_CALL( SCIPhashmapInsert(varnameHashmap, var, (void*) namestr) );
 
-	    /* add the fixed variables to the sparse matrix, needed for columns section */
-	    SCIP_CALL( checkSparseMatrixCapacity(scip, matrix, 1) );
-	    matrix->values[matrix->nentries] = 0.0;
-	    matrix->columns[matrix->nentries] = var;
-	    matrix->rows[matrix->nentries] = "Obj";
-	    matrix->nentries++;
-	 }
+            /* add the fixed variables to the sparse matrix, needed for columns section */
+            SCIP_CALL( checkSparseMatrixCapacity(scip, matrix, 1) );
+            matrix->values[matrix->nentries] = 0.0;
+            matrix->columns[matrix->nentries] = var;
+            matrix->rows[matrix->nentries] = "Obj";
+            matrix->nentries++;
+         }
       }
    }
 

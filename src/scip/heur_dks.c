@@ -1533,7 +1533,7 @@ SCIP_RETCODE adjustKernelVars(
       /* if the solution value of the bucket var != zero and != its lb, add it to the cont kernel vars */
       if( !SCIPisEQ(scip, val, 0.0) && !SCIPisEQ(scip, val, lb) )
       {
-	 if( SCIPisGT(scip, (SCIP_Real)nnewcontkernelvars, (SCIP_Real)maxcontkernelsize) )
+         if( SCIPisGT(scip, (SCIP_Real)nnewcontkernelvars, (SCIP_Real)maxcontkernelsize) )
             break;
          else
             (*contkernelvars)[nnewcontkernelvars++] = bucket->contbucketvars[n];
@@ -1566,7 +1566,7 @@ SCIP_RETCODE adjustKernelVars(
       /* if bucket var != zero and != its lower bound (in epsilon), try adding it to the kernel vars */
       if( twolevel && !SCIPisEQ(scip, val, 0.0) )
       {
-	 if( SCIPisGT(scip, (SCIP_Real)nnewkernelvars, (SCIP_Real)maxkernelsize) )
+         if( SCIPisGT(scip, (SCIP_Real)nnewkernelvars, (SCIP_Real)maxkernelsize) )
             break;
          else
             (*kernelvars)[nnewkernelvars++] = bucket->bucketvars[n];
@@ -1574,8 +1574,8 @@ SCIP_RETCODE adjustKernelVars(
       /* if one-level case, the variable has to deviate from 0 and its lb */
       else if( !twolevel && !SCIPisEQ(scip, val, 0.0) && !SCIPisEQ(scip, val, lb) )
       {
-	 if( SCIPisGT(scip, (SCIP_Real)nnewkernelvars, (SCIP_Real)maxkernelsize) )
-	    break; /* @potential todo: if kernel is "full", find a suitable variable to delete or extend kernel */
+         if( SCIPisGT(scip, (SCIP_Real)nnewkernelvars, (SCIP_Real)maxkernelsize) )
+            break; /* @potential todo: if kernel is "full", find a suitable variable to delete or extend kernel */
          else
             (*kernelvars)[nnewkernelvars++] = bucket->bucketvars[n];
       }
@@ -1609,7 +1609,7 @@ SCIP_RETCODE adjustKernelVars(
          /* if the bucket variable's value is unequal to zero and its lb, try adding it to the integer kernel */
          if( !SCIPisEQ(scip, val, 0.0) && !SCIPisEQ(scip, val, lb) )
          {
-	    if( SCIPisGT(scip, (SCIP_Real)nnewintkernelvars, (SCIP_Real)maxintkernelsize) )
+            if( SCIPisGT(scip, (SCIP_Real)nnewintkernelvars, (SCIP_Real)maxintkernelsize) )
                break;
             else
                (*intkernelvars)[nnewintkernelvars++] = bucket->intbucketvars[n];
