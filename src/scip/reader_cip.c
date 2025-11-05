@@ -69,7 +69,7 @@ struct SCIP_ReaderData
 
 
 /** Section of the in CIP files */
-enum CipSection 
+enum CipSection
 {
    CIP_START,            /**< start tag */
    CIP_STATISTIC,        /**< statistics section */
@@ -162,8 +162,8 @@ SCIP_RETCODE getInputString(
 
       if( cipinput->endfile )
       {
-	 /* clear the line for safety reason */
-	 BMSclearMemoryArray(cipinput->strbuf, cipinput->len);
+         /* clear the line for safety reason */
+         BMSclearMemoryArray(cipinput->strbuf, cipinput->len);
          return SCIP_OKAY;
       }
 

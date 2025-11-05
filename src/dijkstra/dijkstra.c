@@ -250,7 +250,7 @@ unsigned int dijkstra(
          head = G->head[e];
          weight = G->weight[e] + dist[tail];
 
-	 /* Can we improve the current shortest path? */
+         /* Can we improve the current shortest path? */
          if ( dist[head] > weight )
          {
             assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
@@ -337,7 +337,7 @@ unsigned int dijkstraPair(
 
       /* stop if we have found the target node */
       if ( tail == target )
-	 break;
+         break;
 
       /* remove node from heap */
       --used;
@@ -356,7 +356,7 @@ unsigned int dijkstraPair(
          head = G->head[e];
          weight = G->weight[e] + dist[tail];
 
-	 /* Can we improve the current shortest path? */
+         /* Can we improve the current shortest path? */
          if ( dist[head] > weight )
          {
             assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
@@ -444,7 +444,7 @@ unsigned int dijkstraPairCutoff(
 
       /* stop if we have found the target node */
       if ( tail == target )
-	 break;
+         break;
 
       /* remove node from heap */
       --used;
@@ -467,7 +467,7 @@ unsigned int dijkstraPairCutoff(
          head = G->head[e];
          weight = G->weight[e] + dist[tail];
 
-	 /* Can we improve the current shortest path? */
+         /* Can we improve the current shortest path? */
          if ( dist[head] > weight )
          {
             assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );
@@ -558,7 +558,7 @@ unsigned int dijkstraPairCutoffIgnore(
 
       /* stop if we have found the target node */
       if ( tail == target )
-	 break;
+         break;
 
       /* remove node from heap */
       --used;
@@ -586,7 +586,7 @@ unsigned int dijkstraPairCutoffIgnore(
 
          weight = G->weight[e] + dist[tail];
 
-	 /* Can we improve the current shortest path? */
+         /* Can we improve the current shortest path? */
          if ( dist[head] > weight )
          {
             assert( dijkstraHeapIsValid(entry, dist, order, used, G->nodes) );

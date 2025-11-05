@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -3098,7 +3098,7 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
             SCIP_RATIONAL* abscont2;
 
             (void) SCIPrationalCreate(&abscont1);
-	    (void) SCIPrationalCreate(&abscont2);
+            (void) SCIPrationalCreate(&abscont2);
 
             SCIPrationalDiff(abscont1, SCIPvarGetUbGlobalExact(var1), SCIPvarGetLbGlobalExact(var1));
             SCIPrationalMult(abscont1, consdata->vals[ind1], abscont1);

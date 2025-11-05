@@ -218,16 +218,16 @@ void tcliqueFree(
    {
       if ( (*tcliquegraph)->adjedges != NULL )
       {
-	 BMSfreeMemoryArray(&(*tcliquegraph)->adjedges);
-	 BMSfreeMemoryArray(&(*tcliquegraph)->adjnodes);
-	 BMSfreeMemoryArray(&(*tcliquegraph)->degrees);
-	 BMSfreeMemoryArray(&(*tcliquegraph)->weights);
+         BMSfreeMemoryArray(&(*tcliquegraph)->adjedges);
+         BMSfreeMemoryArray(&(*tcliquegraph)->adjnodes);
+         BMSfreeMemoryArray(&(*tcliquegraph)->degrees);
+         BMSfreeMemoryArray(&(*tcliquegraph)->weights);
       }
       if ( (*tcliquegraph)->cacheddegrees )
       {
-	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddegrees);
-	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cachedorigs);
-	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddests);
+         BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddegrees);
+         BMSfreeMemoryArrayNull(&(*tcliquegraph)->cachedorigs);
+         BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddests);
       }
       BMSfreeMemory(tcliquegraph);
    }
@@ -644,7 +644,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    }
 
    /* coverity[tainted_data] */
-   if( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) == NULL )   
+   if( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) == NULL )
    {
       infoMessage("Run out of memory while reading file %s.\n", filename);
       (void) fclose(file);
@@ -886,7 +886,7 @@ void tcliquePrintGraph(
 
       for( ; currentadjedge <= lastadjedge; currentadjedge++ )
       {
-	 infoMessage("%d, ", *currentadjedge);
+         infoMessage("%d, ", *currentadjedge);
       }
       infoMessage("]\n");
    }

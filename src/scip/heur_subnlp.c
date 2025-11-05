@@ -26,7 +26,7 @@
  * @ingroup DEFPLUGINS_HEUR
  * @brief   NLP local search primal heuristic using sub-SCIPs
  * @author  Stefan Vigerske
- * 
+ *
  * @todo reconstruct sub-SCIP if problem has changed
  */
 
@@ -1275,7 +1275,7 @@ SCIP_RETCODE forbidFixation(
       /* allocate memory for constraint variables */
       SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nsubbinvars) );
 
-      /* get fixations of discrete variables 
+      /* get fixations of discrete variables
        * to be sure, we take the values that were put into the subCIP before
        */
       nconsvars = 0;
@@ -1328,7 +1328,7 @@ SCIP_RETCODE forbidFixation(
       SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, nsubbinvars + 2*nsubintvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &bounds,     nsubbinvars + 2*nsubintvars) );
 
-      /* get fixations of discrete variables 
+      /* get fixations of discrete variables
        * to be sure, we take the values that were put into the subCIP before
        */
       nconsvars = 0;
@@ -1569,7 +1569,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
       if( nodeinfeasible )
          return SCIP_OKAY;
 
-      /* at least if we are not called the first time, we call the heuristic only if an optimal LP solution is available 
+      /* at least if we are not called the first time, we call the heuristic only if an optimal LP solution is available
        * if we are called the first time and the LP is unbounded, then we are quite desperate and still give the NLP a try
        */
       if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
@@ -1931,7 +1931,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
 }
 
 /** updates the starting point for the NLP heuristic
- * 
+ *
  * Is called by a constraint handler that handles nonlinear constraints when a check on feasibility of a solution fails.
  */
 SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(

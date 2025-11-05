@@ -408,7 +408,7 @@ void SCIPprimalSetUpdateViolations(
    SCIP_PRIMAL*          primal,             /**< problem data */
    SCIP_Bool             updateviolations    /**< TRUE to enable violation updates, FALSE otherwise */
    );
-   
+
 /** adds exact primal solution to solution storage, frees the solution afterwards */
 SCIP_RETCODE SCIPprimalTrySolFreeExact(
    SCIP_PRIMAL*          primal,             /**< primal data */

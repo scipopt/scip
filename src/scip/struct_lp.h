@@ -140,9 +140,9 @@ struct SCIP_Col
    SCIP_Real             lb;                 /**< current lower bound of column in LP */
    SCIP_Real             ub;                 /**< current upper bound of column in LP */
    SCIP_Real             unchangedobj;       /**< unchanged objective value of column (ignoring diving or probing changes) */
-   SCIP_Real             lazylb;             /**< lazy lower bound of the column; if the current lower bound is not greater than 
+   SCIP_Real             lazylb;             /**< lazy lower bound of the column; if the current lower bound is not greater than
                                               *   the lazy lower bound, then the lower bound has not to be added to the LP */
-   SCIP_Real             lazyub;             /**< lazy upper bound of the column; if the current upper bound is not smaller than 
+   SCIP_Real             lazyub;             /**< lazy upper bound of the column; if the current upper bound is not smaller than
                                               *   the lazy upper bound, then the upper bound has not to be added to the LP */
    SCIP_Real             flushedobj;         /**< objective value of column already flushed to the LP solver */
    SCIP_Real             flushedlb;          /**< lower bound of column already flushed to the LP solver */
@@ -377,7 +377,7 @@ struct SCIP_Lp
    SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             rootlpisrelax;      /**< is root LP a relaxation of the problem and its solution value a valid global lower bound? */
-   SCIP_Bool             isrelax;            /**< is the current LP a relaxation of the problem for which it has been solved and its 
+   SCIP_Bool             isrelax;            /**< is the current LP a relaxation of the problem for which it has been solved and its
                                               *   solution value a valid local lower bound? */
    SCIP_Bool             installing;         /**< whether the solution process is in stalling */
    SCIP_Bool             strongbranching;    /**< whether the lp is used for strong branching */

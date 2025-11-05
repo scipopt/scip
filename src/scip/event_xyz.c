@@ -188,7 +188,7 @@ SCIP_RETCODE SCIPincludeEventHdlrXyz(
     */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventCopyXyz,
-         eventFreeXyz, eventInitXyz, eventExitXyz, 
+         eventFreeXyz, eventInitXyz, eventExitXyz,
          eventInitsolXyz, eventExitsolXyz, eventDeleteXyz, eventExecXyz,
          eventhdlrdata) );
 #else

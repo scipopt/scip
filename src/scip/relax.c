@@ -741,8 +741,8 @@ void SCIPrelaxMarkUnsolved(
    relax->lastsolvednode = -1;
 }
 
-/* 
- *  methods for the global relaxation data 
+/*
+ *  methods for the global relaxation data
  */
 
 /** creates global relaxation data */

@@ -258,13 +258,13 @@ SCIP_RETCODE sortVariables(
 
 #ifndef VARIANT_B
          tmp = -MAX(nlocksdown, nlocksup)
-	    + 10.0 * MIN(nimplzero, nimplone)
-	    + 100.0 * MIN(nclqzero, nclqone);
+            + 10.0 * MIN(nimplzero, nimplone)
+            + 100.0 * MIN(nclqzero, nclqone);
 #else
          tmp = - ABS(nlocksdown - nlocksup)
-	    + MIN(nlocksdown, nlocksup)
-	    + 500.0 * nimplzero + 50.0 * nimplone
-	    + 50000.0 * nclqzero + 5000.0 * nclqone;
+            + MIN(nlocksdown, nlocksup)
+            + 500.0 * nimplzero + 50.0 * nimplone
+            + 50000.0 * nclqzero + 5000.0 * nclqone;
 #endif
 
          if( tmp > maxscore )
@@ -496,7 +496,7 @@ SCIP_RETCODE applyProbing(
             {
                SCIP_Bool fixed;
 
-	       if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
+               if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
                {
                   /* the variable can be fixed to FALSE */
                   SCIP_CALL( SCIPfixVar(scip, vars[i], 0.0, cutoff, &fixed) );

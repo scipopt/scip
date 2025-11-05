@@ -468,7 +468,7 @@ SCIP_RETCODE selectBranchVar(
    SCIP_VAR**            brvar,              /**< pointer to store the selected branching candidate or NULL if none */
    SCIP_Real*            brpoint             /**< pointer to store branching point of selected branching variable */
    )
-{ /*lint --e{850}*/ 
+{ /*lint --e{850}*/
    SCIP_BRANCHRULEDATA* branchruledata;
 
    SCIP_VAR* cand;

@@ -188,7 +188,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
          maxbound = lowerbound + maxplungequot * (cutoffbound - lowerbound);
 
          SCIPdebugMsg(scip, "plungedepth: [%d,%d], cur: %d, bounds: [%g,%g], maxbound: %g\n",
-            minplungedepth, maxplungedepth, plungedepth, lowerbound, cutoffbound, maxbound);         
+            minplungedepth, maxplungedepth, plungedepth, lowerbound, cutoffbound, maxbound);
       }
 
       /* we want to plunge again: prefer children over siblings, and siblings over leaves,

@@ -99,7 +99,7 @@ SCIP_RETCODE SCIPbranchcandGetExternCands(
    int*                  nprioexterncands,   /**< pointer to store the number of candidates with maximal priority, or NULL */
    int*                  nprioexternbins,    /**< pointer to store the number of binary candidates with maximal priority, or NULL */
    int*                  nprioexternints,    /**< pointer to store the number of integer candidates with maximal priority, or NULL */
-   int*                  nprioexternimpls    /**< pointer to store the number of implicit integer candidates with maximal priority, 
+   int*                  nprioexternimpls    /**< pointer to store the number of implicit integer candidates with maximal priority,
                                               *   or NULL */
    );
 
@@ -431,7 +431,7 @@ SCIP_Real SCIPbranchGetScoreMultiple(
 /** computes a branching point for a (not necessarily discrete) variable
  * a suggested branching point is first projected onto the box
  * if no point is suggested, then the value in the current LP or pseudo solution is used
- * if this value is at infinity, then 0.0 projected onto the bounds and then moved inside the interval is used 
+ * if this value is at infinity, then 0.0 projected onto the bounds and then moved inside the interval is used
  * for a discrete variable, it is ensured that the returned value is fractional
  * for a continuous variable, the parameter branching/clamp defines how far a branching point need to be from the bounds of a variable
  * the latter is only applied if no point has been suggested, or the suggested point is not inside the variable's interval

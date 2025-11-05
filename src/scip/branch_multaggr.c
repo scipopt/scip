@@ -858,7 +858,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
          SCIP_Real fdowngain = 0.0;
          SCIP_Real fupgain = 0.0;
 
-	 /* reoptimize is set to true if strong branching on fractional variables did not explicitly evaluate the objective
+         /* reoptimize is set to true if strong branching on fractional variables did not explicitly evaluate the objective
           * values of the probing child nodes and thus we do not have updated information
           */
          if( SCIPisLT(scip, SCIPgetVarStrongbranchLPAge(scip, bestcand), branchruledata->reevalage)

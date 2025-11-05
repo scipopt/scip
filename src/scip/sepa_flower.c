@@ -932,7 +932,7 @@ SCIP_RETCODE separateTwoFlowerOld(
             /* Ordering of neighbor edges. */
             if( iter2.adjacent <= iter1.adjacent )
                continue;
-            
+
             disjoint = TRUE;
             for( int i = 0; i < iter2.ncommonvertices; ++i)
             {
@@ -944,7 +944,7 @@ SCIP_RETCODE separateTwoFlowerOld(
             }
             if( !disjoint )
                continue;
-            
+
             /* The standard inequality has slack: x_e - 1 + \sum_{v \in e} (1-x_v).
              * The 2-flower with base e and neighbors f,g has slack:
              *    x_e - 1 + \sum_{v \in e \setminus (f \cup g)} (1-x_v) + 1-x_f + 1 - x_g.

@@ -287,7 +287,7 @@ void tcliqueMaxClique(
    TCLIQUE_WEIGHT        maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used
                                               *   for cliques with at least one fractional node) */
    TCLIQUE_WEIGHT        minweight,          /**< lower bound for weight of generated cliques */
-   int                   maxntreenodes,	     /**< maximal number of nodes of b&b tree */
+   int                   maxntreenodes,      /**< maximal number of nodes of b&b tree */
    int                   backtrackfreq,      /**< frequency to backtrack to first level of tree (0: no premature backtracking) */
    int                   maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
    int                   fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */

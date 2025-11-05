@@ -1389,7 +1389,7 @@ SCIP_Real SCIPgetAvgDualbound(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetAvgDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set,
-	 SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound));
+         SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound));
 }
 
 /** gets average lower (dual) bound of all unprocessed nodes in transformed problem
@@ -2792,7 +2792,7 @@ void SCIPprintPresolverStatistics(
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPpropGetName(prop));
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %6d %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
             SCIPpropGetPresolTime(prop),
-	    SCIPpropGetSetupTime(prop),
+            SCIPpropGetSetupTime(prop),
             SCIPpropGetNPresolCalls(prop),
             SCIPpropGetNFixedVars(prop),
             SCIPpropGetNAggrVars(prop),
@@ -3102,12 +3102,12 @@ void SCIPprintConstraintTimingStatistics(
             + SCIPconshdlrGetEnfoRelaxTime(conshdlr)
             + SCIPconshdlrGetCheckTime(conshdlr)
             + SCIPconshdlrGetRespropTime(conshdlr)
-	    + SCIPconshdlrGetSetupTime(conshdlr);
+            + SCIPconshdlrGetSetupTime(conshdlr);
 
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
             totaltime,
-	    SCIPconshdlrGetSetupTime(conshdlr),
+            SCIPconshdlrGetSetupTime(conshdlr),
             SCIPconshdlrGetSepaTime(conshdlr),
             SCIPconshdlrGetPropTime(conshdlr),
             SCIPconshdlrGetEnfoLPTime(conshdlr),
@@ -3221,11 +3221,11 @@ void SCIPprintPropagatorStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPpropGetName(prop));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
          totaltime,
-	 SCIPpropGetSetupTime(prop),
-	 SCIPpropGetPresolTime(prop),
-	 SCIPpropGetTime(prop),
-	 SCIPpropGetRespropTime(prop),
-	 SCIPpropGetStrongBranchPropTime(prop));
+         SCIPpropGetSetupTime(prop),
+         SCIPpropGetPresolTime(prop),
+         SCIPpropGetTime(prop),
+         SCIPpropGetRespropTime(prop),
+         SCIPpropGetStrongBranchPropTime(prop));
    }
 }
 
@@ -5469,15 +5469,15 @@ void SCIPprintTimingStatistics(
 
       if( scip->stat->ncopies > 0 )
       {
-	 SCIP_Real copytime;
+         SCIP_Real copytime;
 
-	 copytime = SCIPclockGetTime(scip->stat->copyclock);
+         copytime = SCIPclockGetTime(scip->stat->copyclock);
 
-	 SCIPmessageFPrintInfo(scip->messagehdlr, file, "  copying          : %10.2f (%d #copies) (minimal %.2f, maximal %.2f, average %.2f)\n",
-	    copytime, scip->stat->ncopies, scip->stat->mincopytime, scip->stat->maxcopytime, copytime / scip->stat->ncopies);
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  copying          : %10.2f (%d #copies) (minimal %.2f, maximal %.2f, average %.2f)\n",
+            copytime, scip->stat->ncopies, scip->stat->mincopytime, scip->stat->maxcopytime, copytime / scip->stat->ncopies);
       }
       else
-	 SCIPmessageFPrintInfo(scip->messagehdlr, file, "  copying          : %10.2f %s\n", 0.0, "(0 times copied the problem)");
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  copying          : %10.2f %s\n", 0.0, "(0 times copied the problem)");
    }
 }
 

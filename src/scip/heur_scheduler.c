@@ -4302,7 +4302,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolScheduler)
          SCIP_Real* initpriorities;
          int nheurs;
 
-	 nheurs = heurdata->nactiveneighborhoods + heurdata->ndiving;
+         nheurs = heurdata->nactiveneighborhoods + heurdata->ndiving;
          SCIP_CALL( SCIPallocBufferArray(scip, &initpriorities, nheurs) );
          heurdata->counter = 0;
 

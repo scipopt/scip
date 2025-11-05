@@ -903,9 +903,9 @@ void SCIPintervalMulInf(
       assert(operand2.inf <= -infinity);
       SCIPintervalMulScalarInf(infinity, resultant, operand1, -infinity);
    }
-   else if( ( operand1.inf <= -infinity && operand2.sup > 0.0 ) 
-      || ( operand1.sup > 0.0 && operand2.inf <= -infinity ) 
-      || ( operand1.inf < 0.0 && operand2.sup >= infinity ) 
+   else if( ( operand1.inf <= -infinity && operand2.sup > 0.0 )
+      || ( operand1.sup > 0.0 && operand2.inf <= -infinity )
+      || ( operand1.inf < 0.0 && operand2.sup >= infinity )
       || ( operand1.sup >= infinity && operand2.inf < 0.0 ) )
    {
       resultant->inf = -infinity;
@@ -963,9 +963,9 @@ void SCIPintervalMulSup(
       assert(operand2.inf <= -infinity);
       SCIPintervalMulScalarSup(infinity, resultant, operand1, -infinity);
    }
-   else if( ( operand1.inf <= -infinity && operand2.inf < 0.0 ) 
-      || ( operand1.inf < 0.0 && operand2.inf <= -infinity ) 
-      || ( operand1.sup > 0.0 && operand2.sup >= infinity ) 
+   else if( ( operand1.inf <= -infinity && operand2.inf < 0.0 )
+      || ( operand1.inf < 0.0 && operand2.inf <= -infinity )
+      || ( operand1.sup > 0.0 && operand2.sup >= infinity )
       || ( operand1.sup >= infinity && operand2.sup > 0.0 ) )
    {
       resultant->sup =  infinity;
@@ -1026,7 +1026,7 @@ void SCIPintervalMulScalarInf(
 
    if( operand2 >= infinity )
    {
-      /* result.inf defined by sign of operand1.inf */ 
+      /* result.inf defined by sign of operand1.inf */
       if( operand1.inf > 0 )
          resultant->inf = infinity;
       else if( operand1.inf < 0 )
@@ -1036,7 +1036,7 @@ void SCIPintervalMulScalarInf(
    }
    else if( operand2 <= -infinity )
    {
-      /* result.inf defined by sign of operand1.sup */ 
+      /* result.inf defined by sign of operand1.sup */
       if( operand1.sup > 0 )
          resultant->inf = -infinity;
       else if( operand1.sup < 0 )
@@ -1082,7 +1082,7 @@ void SCIPintervalMulScalarSup(
 
    if( operand2 >= infinity )
    {
-      /* result.sup defined by sign of operand1.sup */ 
+      /* result.sup defined by sign of operand1.sup */
       if( operand1.sup > 0 )
          resultant->sup = infinity;
       else if( operand1.sup < 0 )
@@ -1092,7 +1092,7 @@ void SCIPintervalMulScalarSup(
    }
    else if( operand2 <= -infinity )
    {
-      /* result.sup defined by sign of operand1.inf */ 
+      /* result.sup defined by sign of operand1.inf */
       if( operand1.inf > 0 )
          resultant->sup = -infinity;
       else if( operand1.inf < 0 )
@@ -1344,7 +1344,7 @@ void SCIPintervalScalprod(
    {
       SCIPintervalSetEntire(infinity, &prod);
       SCIPintervalMulInf(infinity, &prod, operand1[i], operand2[i]);
-      SCIPintervalAddInf(infinity, resultant, *resultant, prod); 
+      SCIPintervalAddInf(infinity, resultant, *resultant, prod);
    }
    assert(resultant->sup == 0.0);
 
@@ -1354,7 +1354,7 @@ void SCIPintervalScalprod(
    {
       SCIPintervalSetEntire(infinity, &prod);
       SCIPintervalMulSup(infinity, &prod, operand1[i], operand2[i]);
-      SCIPintervalAddSup(infinity, resultant, *resultant, prod); 
+      SCIPintervalAddSup(infinity, resultant, *resultant, prod);
    }
 
    intervalSetRoundingMode(roundmode);
@@ -1382,7 +1382,7 @@ void SCIPintervalScalprodScalarsInf(
    {
       SCIPintervalMulScalarInf(infinity, &prod, operand1[i], operand2[i]);
       assert(prod.sup >= infinity);
-      SCIPintervalAddInf(infinity, resultant, *resultant, prod); 
+      SCIPintervalAddInf(infinity, resultant, *resultant, prod);
    }
 }
 
@@ -1408,7 +1408,7 @@ void SCIPintervalScalprodScalarsSup(
    {
       SCIPintervalMulScalarSup(infinity, &prod, operand1[i], operand2[i]);
       assert(prod.inf <= -infinity);
-      SCIPintervalAddSup(infinity, resultant, *resultant, prod); 
+      SCIPintervalAddSup(infinity, resultant, *resultant, prod);
    }
 }
 
@@ -1571,7 +1571,7 @@ void SCIPintervalSquareRoot(
 }
 
 /** stores operand1 to the power of operand2 in resultant
- * 
+ *
  * uses SCIPintervalPowerScalar if operand2 is a scalar, otherwise computes exp(op2*log(op1))
  */
 void SCIPintervalPower(
@@ -2238,7 +2238,7 @@ void SCIPintervalPowerScalarInverse(
 }
 
 /** stores operand1 to the signed power of the scalar positive operand2 in resultant
- * 
+ *
  * The signed power of x w.r.t. an exponent n &ge; 0 is given as \f$\mathrm{sign}(x) |x|^n\f$.
  *
  * @attention we assume correctly rounded sqrt(double) and pow(double) functions when rounding is to nearest
@@ -3010,7 +3010,7 @@ void SCIPintervalEntropy(
 }
 
 /** computes exact upper bound on \f$ a x^2 + b x \f$ for x in [xlb, xub], b an interval, and a scalar
- * 
+ *
  * Uses Algorithm 2.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008).
  */
 SCIP_Real SCIPintervalQuadUpperBound(
@@ -3097,7 +3097,7 @@ SCIP_Real SCIPintervalQuadUpperBound(
       SCIP_Real cand2;
       assert(x.inf < 0.0 && x.sup > 0);
 
-      xlow.sup = 0;  /* so xlow is lower part of interval */ 
+      xlow.sup = 0;  /* so xlow is lower part of interval */
       x.inf = 0;     /* so x    is upper part of interval now */
       cand1 = SCIPintervalQuadUpperBound(infinity, a, b_, xlow);
       cand2 = SCIPintervalQuadUpperBound(infinity, a, b_, x);
@@ -3106,7 +3106,7 @@ SCIP_Real SCIPintervalQuadUpperBound(
 }
 
 /** stores range of quadratic term in resultant
- * 
+ *
  * given scalar a and intervals b and x, computes interval for \f$ a x^2 + b x \f$ */
 void SCIPintervalQuad(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -3140,7 +3140,7 @@ void SCIPintervalQuad(
 }
 
 /** computes interval with positive solutions of a quadratic equation with interval coefficients
- * 
+ *
  * Given intervals a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \in c\f$ within xbnds.
  */
 void SCIPintervalSolveUnivariateQuadExpressionPositive(
@@ -3222,7 +3222,7 @@ void SCIPintervalSolveUnivariateQuadExpressionNegative(
 
 
 /** computes positive solutions of a quadratic equation with scalar coefficients
- * 
+ *
  * Givens scalar a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$ within xbnds.
  * Implements Algorithm 3.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008).
  */

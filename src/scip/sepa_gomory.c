@@ -276,7 +276,7 @@ SCIP_RETCODE addCut(
                if( cutislocal )
                   sideval = delta > 0 ? SCIPvarGetUbLocal(var) : SCIPvarGetLbLocal(var);
                else
-                  sideval = delta > 0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var); 
+                  sideval = delta > 0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var);
 
                if( SCIPisInfinity(scip, REALABS(sideval)) )
                   continue;
