@@ -1073,7 +1073,7 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
             SCIP_EXPRCURV_LINEAR) );
    }
 
-   return SCIP_OKAY;   
+   return SCIP_OKAY;
 }
 
 /** output nonlinear row to file stream */

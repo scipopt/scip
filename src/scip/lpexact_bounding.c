@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2069,10 +2069,10 @@ SCIP_RETCODE boundShift(
       fpdual[j] = (usefarkas ? row->dualfarkas : row->dualsol);
 
       if( SCIPlpiIsInfinity(lp->lpi, fpdual[j]) )
-	      fpdual[j] = SCIPsetInfinity(set);
+         fpdual[j] = SCIPsetInfinity(set);
 
       if( SCIPlpiIsInfinity(lp->lpi, -fpdual[j]) )
-	      fpdual[j] = -SCIPsetInfinity(set);
+         fpdual[j] = -SCIPsetInfinity(set);
 
       /** @todo test whether safe dual bounding in exact solving mode can be improved by setting nonzero values of y to
        *        zero if corresponding lhs/rhs is not finite (do such situations come up?)

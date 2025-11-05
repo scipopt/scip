@@ -155,7 +155,7 @@ SCIP_Real SCIPhistoryGetPseudocostVariance(
    SCIP_BRANCHDIR        direction           /**< direction of variable: 1 for upwards history, 0 for downwards history */
    );
 
-/** returns the (possible fractional) number of (partial) pseudo cost updates performed on this pseudo cost entry in 
+/** returns the (possible fractional) number of (partial) pseudo cost updates performed on this pseudo cost entry in
  *  the given branching direction
  */
 SCIP_Real SCIPhistoryGetPseudocostCount(

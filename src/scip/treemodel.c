@@ -71,49 +71,49 @@
 /* Default parameters for the Treemodel branching rules */
 #define DEFAULT_ENABLE         FALSE    /**< should candidate branching variables be scored using the Treemodel rule? */
 #define DEFAULT_HIGHRULE       'r'      /**< scoring function to use at nodes predicted to be high in the tree.
-					  * ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
+                                          * ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
 #define DEFAULT_LOWRULE        'r'      /**< scoring function to use at nodes predicted to be low in the tree
-					  * ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
+                                          * ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
 #define DEFAULT_HEIGHT         10       /**< estimated tree height at which we switch from using the low rule to
-					  * the high rule */
+                                          * the high rule */
 #define DEFAULT_FILTERHIGH     'a'      /**< should dominated candidates be filtered before using the high scoring
-					  * function? ('a'uto, 't'rue, 'f'alse) */
+                                          * function? ('a'uto, 't'rue, 'f'alse) */
 #define DEFAULT_FILTERLOW      'a'      /**< should dominated candidates be filtered before using the low scoring
-					  * function? ('a'uto, 't'rue, 'f'alse) */
+                                          * function? ('a'uto, 't'rue, 'f'alse) */
 #define DEFAULT_MAXFPITER      24       /**< maximum number of fixed-point iterations when computing the ratio */
 #define DEFAULT_MAXSVTSHEIGHT  100      /**< maximum height to compute the SVTS score exactly before approximating */
 #define DEFAULT_FALLBACKINF    'r'      /**< which method should be used as a fallback if the tree size estimates are
-					  * infinite? ('d'efault, 'r'atio) */
+                                          * infinite? ('d'efault, 'r'atio) */
 #define DEFAULT_FALLBACKNOPRIM 'r'      /**< which method should be used as a fallback if there is no primal bound
-					  * available? ('d'efault, 'r'atio) */
+                                          * available? ('d'efault, 'r'atio) */
 #define DEFAULT_SMALLPSCOST    0.1      /**< threshold at which pseudocosts are considered small, making hybrid scores
-					  * more likely to be the deciding factor in branching */
+                                          * more likely to be the deciding factor in branching */
 
 /** parameters required by the Treemodel branching rules */
 struct SCIP_Treemodel
 {
    SCIP_Bool            enabled;             /**< should candidate branching variables be scored using the Treemodel
-					       * rule? */
+                                               *  rule? */
    char                 highrule;            /**< scoring function to use at nodes predicted to be high in the tree.
-					       * ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
+                                               *  ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
    char                 lowrule;             /**< scoring function to use at nodes predicted to be low in the tree
-					       * ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
+                                               *  ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
    int                  height;              /**< estimated tree height at which we switch from using the low rule to
-					       * the high rule */
+                                               *  the high rule */
    char                 filterhigh;          /**< should dominated candidates be filtered before using the high
-					       * scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
+                                               *  scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
    char                 filterlow;           /**< should dominated candidates be filtered before using the low
-					       * scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
+                                               *  scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
    int                  maxfpiter;           /**< maximum number of fixed-point iterations when computing the ratio
-					       * [ADVANCED] */
+                                               *  [ADVANCED] */
    int                  maxsvtsheight;       /**< maximum height to compute the SVTS score exactly before approximating
-					       * [ADVANCED] */
+                                               *  [ADVANCED] */
    char                 fallbackinf;         /**< which method should be used as a fallback if the tree size estimates
-					       * are infinite? ('d'efault, 'r'atio) [ADVANCED] */
+                                               *  are infinite? ('d'efault, 'r'atio) [ADVANCED] */
    char                 fallbacknoprim;      /**< which method should be used as a fallback if there is no primal bound
-					       * available? ('d'efault, 'r'atio) [ADVANCED] */
+                                               *  available? ('d'efault, 'r'atio) [ADVANCED] */
    SCIP_Real            smallpscost;         /**< threshold at which pseudocosts are considered small, making hybrid
-					       * scores more likely to be the deciding factor in branching [ADVANCED] */
+                                               *  scores more likely to be the deciding factor in branching [ADVANCED] */
 };
 
 /** branching encoding of a variable's ratio
@@ -126,7 +126,7 @@ struct SCIP_Treemodel
 struct SCIP_Ratio
 {
    SCIP_Real             upratio;           /**< "UnPowered" ratio, i.e. the ratio of the characteristic polynomial
-					      * with gains (1, rightgain/leftgain) */
+                                              *  with gains (1, rightgain/leftgain) */
    SCIP_Real             invleft;           /**< "INVerse left gain, i.e. 1/leftgain */
    SCIP_Bool             valid;             /**< True iff the ratio computed is valid */
 };
@@ -167,7 +167,7 @@ SCIP_RETCODE findNonDominatedVars(
    int                   size,               /**< the size of array a (and b) */
    int*                  ndominated,         /**< returns the number of dominated elements */
    SCIP_Bool*            dominated           /**< returns the array of booleans that determine if an element is
-					       * dominated */
+                                               *  dominated */
    )
 {
    SCIP_Real bestcurrenta;
@@ -454,7 +454,7 @@ SCIP_RETCODE selectCandidateUsingRatio(
    SCIP_Bool*            dominated,          /**< whether each variable is dominated or not */
    int                   nbranchcands,       /**< the number of branching candidates */
    int*                  bestcand            /**< the best branching candidate found before the call,
-					          and the best candidate after the call (possibly the same) */
+                                                  and the best candidate after the call (possibly the same) */
    )
 {
    SCIP_RATIO branchratio;
@@ -586,7 +586,7 @@ SCIP_RETCODE selectCandidateUsingSVTS(
    int                   nbranchcands,       /**< the number of branching candidates */
    int                   ndominated,         /**< the number of dominated candidates */
    int*                  bestcand            /**< the best branching candidate found before the call,
-					          and the best candidate after the call (possibly the same) */
+                                                  and the best candidate after the call (possibly the same) */
    )
 {
    SCIP_Real* treesizes;
@@ -609,7 +609,7 @@ SCIP_RETCODE selectCandidateUsingSVTS(
    if( !SCIPisInfinity(scip, localabsgap) )
    {
       referencetreesize = computeSVTS(scip, treemodel, branchcands[referencevar], localabsgap, mingains[referencevar],
-		             maxgains[referencevar]);
+         maxgains[referencevar]);
       if( !SCIPisInfinity(scip, referencetreesize) )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &treesizes, nbranchcands) );
@@ -745,7 +745,7 @@ SCIP_RETCODE selectCandidateUsingSampling(
    int                   nbranchcands,       /**< the number of branching candidates */
    int                   ndominated,         /**< the number of dominated candidates */
    int*                  bestcand            /**< the best branching candidate found before the call,
-					          and the best candidate after the call (possibly the same) */
+                                                  and the best candidate after the call (possibly the same) */
    )
 {
    SCIP_Real* treesizes;
@@ -768,7 +768,7 @@ SCIP_RETCODE selectCandidateUsingSampling(
    if( !SCIPisInfinity(scip, localabsgap) )
    {
       referencetreesize = computeSampleTreesize(scip, treemodel, branchcands[referencevar], localabsgap, mingains[referencevar],
-		             maxgains[referencevar]);
+         maxgains[referencevar]);
 
       if( !SCIPisInfinity(scip, referencetreesize) )
       {
@@ -918,7 +918,7 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    SCIP_Real*            tiebreakerscore,    /**< scores to use for tie breaking */
    int                   nbranchcands,       /**< the number of branching candidates */
    int*                  bestcand            /**< the best branching candidate found before the call,
-					          and the best candidate after the call (possibly the same) */
+                                                  and the best candidate after the call (possibly the same) */
    )
 {
    SCIP_Real localabsgap;           /* The gap at the current node */

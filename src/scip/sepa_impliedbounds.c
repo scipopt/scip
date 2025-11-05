@@ -168,8 +168,8 @@ SCIP_RETCODE separateCuts(
    /* search binary variables for violated implications */
    for( i = 0; i < nfracs; i++ )
    {
-      SCIP_BOUNDTYPE* impltypes; 
-      SCIP_Real* implbounds; 
+      SCIP_BOUNDTYPE* impltypes;
+      SCIP_Real* implbounds;
       SCIP_VAR** implvars;
       int nimpl;
       int j;

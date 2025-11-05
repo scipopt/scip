@@ -1821,7 +1821,7 @@ SCIP_DECL_CONSCOPY(consCopySuperindicator)
       assert(!SCIPisTransformed(sourcescip) || SCIPconsIsTransformed(sourceslackcons));
       if( SCIPisTransformed(sourcescip) && !SCIPconsIsTransformed(sourceslackcons) )
       {
-	 SCIP_CONS* transslackcons;
+         SCIP_CONS* transslackcons;
 
          SCIP_CALL( SCIPgetTransformedCons(sourcescip, sourceslackcons, &transslackcons) );
          assert(transslackcons != NULL);

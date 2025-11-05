@@ -133,7 +133,7 @@ int SCIPvarCompareActiveAndNegated(
    SCIP_VAR*             var2                /**< second problem variable */
    );
 
-/** comparison method for sorting active and negated variables by non-decreasing index, active and negated 
+/** comparison method for sorting active and negated variables by non-decreasing index, active and negated
  *  variables are handled as the same variables
  */
 SCIP_EXPORT
@@ -500,7 +500,7 @@ SCIP_IMPLINTTYPE SCIPvarGetImplType(
 
 /** returns TRUE if the variable is of binary type; this is the case if:
  *  (1) variable type is binary
- *  (2) variable type is integer or implicit integer and 
+ *  (2) variable type is integer or implicit integer and
  *      (i)  the global lower bound is greater than or equal to zero
  *      (ii) the global upper bound is less than or equal to one
  */
@@ -1035,7 +1035,7 @@ SCIP_Real* SCIPvarGetVubConstants(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** gets number of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem variable x, 
+/** gets number of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem variable x,
  *  there are no implications for nonbinary variable x
  */
 SCIP_EXPORT
@@ -1057,7 +1057,7 @@ SCIP_VAR** SCIPvarGetImplVars(
    );
 
 /** gets array with implication types of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem
- *  variable x (SCIP_BOUNDTYPE_UPPER if y <= b, SCIP_BOUNDTYPE_LOWER if y >= b), 
+ *  variable x (SCIP_BOUNDTYPE_UPPER if y <= b, SCIP_BOUNDTYPE_LOWER if y >= b),
  *  there are no implications for nonbinary variable x
  */
 SCIP_EXPORT
@@ -1715,7 +1715,7 @@ SCIP_HOLELIST* SCIPholelistGetNext(
 #define SCIPboundchgIsRedundant(boundchg)      ((boundchg)->redundant)
 #define SCIPdomchgGetNBoundchgs(domchg)        ((domchg) != NULL ? (domchg)->domchgbound.nboundchgs : 0)
 #define SCIPdomchgGetBoundchg(domchg, pos)     (&(domchg)->domchgbound.boundchgs[pos])
-#define SCIPholelistGetLeft(holelist)          ((holelist)->hole.left) 
+#define SCIPholelistGetLeft(holelist)          ((holelist)->hole.left)
 #define SCIPholelistGetRight(holelist)         ((holelist)->hole.right)
 #define SCIPholelistGetNext(holelist)          ((holelist)->next)
 

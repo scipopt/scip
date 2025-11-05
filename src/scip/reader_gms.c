@@ -207,7 +207,7 @@ void appendLine(
    assert( strlen(linebuffer) + strlen(extension) < GMS_MAX_PRINTLEN );
 
    /* NOTE: avoid
-    *   sprintf(linebuffer, "%s%s", linebuffer, extension); 
+    *   sprintf(linebuffer, "%s%s", linebuffer, extension);
     * because of overlapping memory areas in memcpy used in sprintf.
     */
    len = strlen(linebuffer);
@@ -546,7 +546,7 @@ SCIP_RETCODE printLinearCons(
       return SCIP_OKAY;
 
    nactivevars = nvars;
-   if( nvars > 0 ) 
+   if( nvars > 0 )
    {
       /* duplicate variable and value array */
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars) );
@@ -573,7 +573,7 @@ SCIP_RETCODE printLinearCons(
       assert( !SCIPisInfinity(scip, rhs) );
 
       /* print equality constraint */
-      SCIP_CALL( printLinearRow(scip, file, rowname, "", "=e=", 
+      SCIP_CALL( printLinearRow(scip, file, rowname, "", "=e=",
             nactivevars, activevars, activevals, rhs - activeconstant) );
    }
    else
@@ -1310,7 +1310,7 @@ SCIP_RETCODE checkVarnames(
 
       if( strlen(SCIPvarGetName(var)) > GMS_MAX_NAMELEN )
       {
-         SCIPwarningMessage(scip, "there is a variable name which has to be cut down to %d characters; GAMS model might be corrupted.\n", 
+         SCIPwarningMessage(scip, "there is a variable name which has to be cut down to %d characters; GAMS model might be corrupted.\n",
             GMS_MAX_NAMELEN - 1);
          break;
       }

@@ -1445,9 +1445,9 @@ void garbagecollectChkmem(
       if( chunk->eagerfreesize == chunk->storesize )
       {
 #ifndef NDEBUG
-	 chkmem->ngarbagefrees++;
+         chkmem->ngarbagefrees++;
 #endif
-	 freeChunk(&chunk, memsize);
+         freeChunk(&chunk, memsize);
       }
       chunk = nexteager;
    }

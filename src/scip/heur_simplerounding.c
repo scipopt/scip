@@ -162,7 +162,7 @@ SCIP_RETCODE performSimpleRounding(
       }
       else
       {
-         /* if there are variables which are not present in the LP, e.g., for 
+         /* if there are variables which are not present in the LP, e.g., for
           * column generation, we need to check their bounds
           */
          SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, checklprows, &stored) );

@@ -37,7 +37,7 @@
 /* fundamental propagator properties */
 #define PROP_NAME              "xyz"
 #define PROP_DESC              "propagator template"
-#define PROP_PRIORITY                 0 /**< propagator priority */ 
+#define PROP_PRIORITY                 0 /**< propagator priority */
 #define PROP_FREQ                    10 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define PROP_TIMING             SCIP_PROPTIMING_BEFORELP/**< propagation timing mask */

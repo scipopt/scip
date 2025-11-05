@@ -264,7 +264,7 @@ SCIP_Bool SCIPisTransformed(
    );
 
 /** returns whether the presolving process would be finished given no more presolving reductions are found in this
- *  presolving round 
+ *  presolving round
  *
  *  Checks whether the number of presolving rounds is not exceeded and the presolving reductions found in the current
  *  presolving round suffice to trigger another presolving round.

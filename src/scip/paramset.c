@@ -1741,7 +1741,7 @@ SCIP_RETCODE SCIPparamsetGetBool(
    }
    if( param->paramtype != SCIP_PARAMTYPE_BOOL )
    {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
          name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_BOOL));
       return SCIP_PARAMETERWRONGTYPE;
    }
@@ -1773,7 +1773,7 @@ SCIP_RETCODE SCIPparamsetGetInt(
    }
    if( param->paramtype != SCIP_PARAMTYPE_INT )
    {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
          name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_INT));
       return SCIP_PARAMETERWRONGTYPE;
    }
@@ -1805,7 +1805,7 @@ SCIP_RETCODE SCIPparamsetGetLongint(
    }
    if( param->paramtype != SCIP_PARAMTYPE_LONGINT )
    {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
          name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_LONGINT));
       return SCIP_PARAMETERWRONGTYPE;
    }
@@ -1837,7 +1837,7 @@ SCIP_RETCODE SCIPparamsetGetReal(
    }
    if( param->paramtype != SCIP_PARAMTYPE_REAL )
    {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
          name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_REAL));
       return SCIP_PARAMETERWRONGTYPE;
    }
@@ -1869,7 +1869,7 @@ SCIP_RETCODE SCIPparamsetGetChar(
    }
    if( param->paramtype != SCIP_PARAMTYPE_CHAR )
    {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
          name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_CHAR));
       return SCIP_PARAMETERWRONGTYPE;
    }
@@ -1901,7 +1901,7 @@ SCIP_RETCODE SCIPparamsetGetString(
    }
    if( param->paramtype != SCIP_PARAMTYPE_STRING )
    {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
          name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_STRING));
       return SCIP_PARAMETERWRONGTYPE;
    }
@@ -3579,7 +3579,7 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
          assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
          deffreq = SCIPparamGetIntDefault(param);
 
-         /* for enabled separators, change frequency to at least every 20th depths and 
+         /* for enabled separators, change frequency to at least every 20th depths and
           * enable disabled separators
           */
          if( deffreq == -1 )
@@ -3644,8 +3644,8 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
          assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
          deffreq = SCIPparamGetIntDefault(param);
 
-         /* for constraint handlers with enabled separation, change frequency to at least every 10th depths and 
-          * enable disabled separation routines 
+         /* for constraint handlers with enabled separation, change frequency to at least every 10th depths and
+          * enable disabled separation routines
           */
          if( deffreq == -1 )
             newfreq = 0;
@@ -3847,7 +3847,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
    case SCIP_PARAMEMPHASIS_COUNTER:
       /* TODO: should constraints/linear/detectlowerbound and detectcutoffbound be set to FALSE? */
-      /* avoid logicor upgrade since the logicor constraint handler does not perform full propagation */ 
+      /* avoid logicor upgrade since the logicor constraint handler does not perform full propagation */
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/logicor", FALSE, quiet) );
 
       /* set priority for inference branching to highest possible value */
@@ -3879,7 +3879,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       /* prefer binary variables for branching */
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "branching/preferbinary", TRUE, quiet) );
 
-      /* turn on aggressive constraint aging */ 
+      /* turn on aggressive constraint aging */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/agelimit", 1, quiet) );
 
       /* turn off symmetry handling */
@@ -4200,8 +4200,8 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    return SCIP_OKAY;
 }
 
-/** sets heuristic parameters values to 
- *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters 
+/** sets heuristic parameters values to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters
  *  - SCIP_PARAMSETTING_FAST such that the time spent on heuristics is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristics are called more aggressively
  *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
@@ -4236,8 +4236,8 @@ SCIP_RETCODE SCIPparamsetSetHeuristics(
    return SCIP_OKAY;
 }
 
-/** sets presolving parameters to 
- *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters 
+/** sets presolving parameters to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters
  *  - SCIP_PARAMSETTING_FAST such that the time spent on presolving is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all presolving
@@ -4272,8 +4272,8 @@ SCIP_RETCODE SCIPparamsetSetPresolving(
    return SCIP_OKAY;
 }
 
-/** sets separating parameters to 
- *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters 
+/** sets separating parameters to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters
  *  - SCIP_PARAMSETTING_FAST such that the time spent on separating is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that separating is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all separating

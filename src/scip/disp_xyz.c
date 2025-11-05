@@ -35,13 +35,13 @@
 #include "scip/disp_xyz.h"
 
 
-#define DISP_NAME               "xyz"                
+#define DISP_NAME               "xyz"
 #define DISP_DESC               "xyz display column"
-#define DISP_HEADER             "xyz" 
+#define DISP_HEADER             "xyz"
 #define DISP_WIDTH              14      /**< the width of the display column */
 #define DISP_PRIORITY           110000  /**< the priority of the display column */
 #define DISP_POSITION           30100   /**< the relative position of the display column */
-#define DISP_STRIPLINE          TRUE    /**< the default for whether the display column should be separated 
+#define DISP_STRIPLINE          TRUE    /**< the default for whether the display column should be separated
                                          *   with a line from its right neighbor */
 
 
@@ -197,10 +197,10 @@ SCIP_RETCODE SCIPincludeDispXyz(
    /* TODO: (optional) create display column specific data here */
 
    /* include display column */
-   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME, DISP_DESC, DISP_HEADER, SCIP_DISPSTATUS_AUTO, 
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME, DISP_DESC, DISP_HEADER, SCIP_DISPSTATUS_AUTO,
          dispCopyXyz,
-         dispFreeXyz, dispInitXyz, dispExitXyz, 
-         dispInitsolXyz, dispExitsolXyz, dispOutputXyz, 
+         dispFreeXyz, dispInitXyz, dispExitXyz,
+         dispInitsolXyz, dispExitsolXyz, dispOutputXyz,
          dispdata, DISP_WIDTH, DISP_PRIORITY, DISP_POSITION, DISP_STRIPLINE) );
 
    /* add xyz display column parameters */

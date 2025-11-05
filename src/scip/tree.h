@@ -591,13 +591,13 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
-   SCIP_BRANCHDIR        branchdir,          /**< type of branching that was performed: upwards, downwards, or fixed 
-                                              * fixed should only be used, when both bounds changed 
+   SCIP_BRANCHDIR        branchdir,          /**< type of branching that was performed: upwards, downwards, or fixed
+                                              * fixed should only be used, when both bounds changed
                                               */
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 
-/** calculates an estimate for the objective of the best feasible solution contained in the subtree after applying the given 
+/** calculates an estimate for the objective of the best feasible solution contained in the subtree after applying the given
  *  branching; this estimate can be given to the SCIPcreateChild() call
  */
 SCIP_Real SCIPtreeCalcChildEstimate(

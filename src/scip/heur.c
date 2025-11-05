@@ -1213,15 +1213,15 @@ SCIP_Bool SCIPheurShouldBeExecuted(
        || ((heur->timingmask & SCIP_HEURTIMING_DURINGPRESOLLOOP) && heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP) )
    {
       /* heuristic may be executed before/during presolving. Do so, if it was not disabled by setting the frequency to -1 */
-      execute = heur->freq >= 0; 
-   } 
+      execute = heur->freq >= 0;
+   }
    else if( (heur->timingmask & SCIP_HEURTIMING_AFTERPSEUDONODE) == 0
       && (heurtiming == SCIP_HEURTIMING_AFTERLPNODE || heurtiming == SCIP_HEURTIMING_AFTERLPPLUNGE) )
    {
       /* heuristic was skipped on intermediate pseudo nodes: check, if a node matching the execution frequency lies
        * between the current node and the last LP node of the path
        */
-      execute = (heur->freq > 0 && depth >= heur->freqofs 
+      execute = (heur->freq > 0 && depth >= heur->freqofs
          && ((depth + heur->freq - heur->freqofs) / heur->freq
             != (lpstateforkdepth + heur->freq - heur->freqofs) / heur->freq));
    }
@@ -1328,7 +1328,7 @@ SCIP_RETCODE SCIPheurExec(
          && *result != SCIP_DELAYED
          && *result != SCIP_UNBOUNDED )
       {
-         SCIPerrorMessage("execution method of primal heuristic <%s> returned invalid result <%d>\n", 
+         SCIPerrorMessage("execution method of primal heuristic <%s> returned invalid result <%d>\n",
             heur->name, *result);
          return SCIP_INVALIDRESULT;
       }

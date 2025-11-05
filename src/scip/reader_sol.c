@@ -154,7 +154,7 @@ SCIP_DECL_READERCOPY(readerCopySol)
 }
 
 
-/** problem reading method of reader 
+/** problem reading method of reader
  *
  *  In order to determine the type of the file, we have to open it. Thus, it has to be opened
  *  twice. This might be removed, but is likely to not hurt the performance too much.

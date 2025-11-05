@@ -1310,7 +1310,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          SCIPmatrixFree(scip, &matrix);
 
       if( infeasible )
-	     *result = SCIP_CUTOFF;
+         *result = SCIP_CUTOFF;
 
       return SCIP_OKAY;
    }
@@ -1526,7 +1526,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    if( numcancel > 0 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-		      "   (%.1fs) dualsparsify: %d nonzeros canceled\n", SCIPgetSolvingTime(scip), numcancel);
+         "   (%.1fs) dualsparsify: %d nonzeros canceled\n", SCIPgetSolvingTime(scip), numcancel);
       *result = SCIP_SUCCESS;
    }
    else /* do reductions on variables that contain larger nonzero entries */
@@ -1707,8 +1707,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
       if( numcancel > 0 )
       {
-	 SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-			 "   (%.1fs) dualsparsify: %d nonzeros canceled\n", SCIPgetSolvingTime(scip), numcancel);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+            "   (%.1fs) dualsparsify: %d nonzeros canceled\n", SCIPgetSolvingTime(scip), numcancel);
          *result = SCIP_SUCCESS;
       }
    }

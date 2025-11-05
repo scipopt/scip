@@ -278,7 +278,7 @@ void SCIPclockSetType(
 {
    assert(clck != NULL);
 
-   SCIPdebugMessage("setting type of clock %p (type %d, usedefault=%u) to %d\n", 
+   SCIPdebugMessage("setting type of clock %p (type %d, usedefault=%u) to %d\n",
       (void*)clck, clck->clocktype, clck->usedefault, clocktype);
 
    clck->clocktype = clocktype;

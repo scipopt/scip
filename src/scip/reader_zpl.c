@@ -1225,16 +1225,16 @@ SCIP_RETCODE addVar(
    if( !numb_equal(priority, numb_unknown()) )
    {
       if( numb_is_int(priority) )
-	 branchpriority = numb_toint(priority);
+         branchpriority = numb_toint(priority);
       else
       {
-	 if( !readerdata->branchpriowarning )
-	 {
-	    SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-	       "ZIMPL reader: fractional branching priorities in input - rounding down to integer values\n");
-	    readerdata->branchpriowarning = TRUE;
-	 }
-	 branchpriority = (int)numb_todbl(priority);
+         if( !readerdata->branchpriowarning )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+               "ZIMPL reader: fractional branching priorities in input - rounding down to integer values\n");
+            readerdata->branchpriowarning = TRUE;
+         }
+         branchpriority = (int)numb_todbl(priority);
       }
 
       /* change the branching priority of the variable */

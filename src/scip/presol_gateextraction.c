@@ -62,11 +62,11 @@
 
 #define DEFAULT_ONLYSETPART       FALSE  /**< should only set-partitioning constraints be extracted and no and-constraints */
 #define DEFAULT_SEARCHEQUATIONS    TRUE  /**< should we try to extract set-partitioning constraint out of one logicor
-					  *   and one corresponding set-packing constraint
-					  */
+                                          *   and one corresponding set-packing constraint
+                                          */
 #define DEFAULT_SORTING               1  /**< order logicor contraints to extract big-gates before smaller ones (-1), do
-					  *   not order them (0) or order them to extract smaller gates at first (1)
-					  */
+                                          *   not order them (0) or order them to extract smaller gates at first (1)
+                                          */
 
 
 /* This presolver tries to extract gate-constraints meaning and-constraints and set-partitioning constraints (and could
@@ -1391,7 +1391,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
    {
       if( paramvalue )
       {
-	 SCIPwarningMessage(scip, "Gate-presolving is the 'counterpart' of linearizing all and-constraints, so enabling both presolving steps simultaneously does not make sense.\n");
+         SCIPwarningMessage(scip, "Gate-presolving is the 'counterpart' of linearizing all and-constraints, so enabling both presolving steps simultaneously does not make sense.\n");
       }
    }
    *result = SCIP_DIDNOTFIND;
@@ -1726,9 +1726,9 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
       /* if we found new setppcs we want to check all logicors again */
       if( presoldata->newsetppchashdatas )
-	 endloop = 0;
+         endloop = 0;
       else
-	 endloop = MAX(presoldata->firstchangedlogicor, 0);
+         endloop = MAX(presoldata->firstchangedlogicor, 0);
 
       assert(presoldata->maxnvarslogicor >= 3);
       SCIP_CALL( SCIPallocBufferArray(scip, &gateconss, presoldata->maxnvarslogicor) );

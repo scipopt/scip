@@ -37,7 +37,7 @@
 
 #define DIALOG_NAME            "xyz"
 #define DIALOG_DESC            "xyz user interface dialog"
-#define DIALOG_ISSUBMENU          FALSE 
+#define DIALOG_ISSUBMENU          FALSE
 
 
 
@@ -163,7 +163,7 @@ SCIP_RETCODE SCIPincludeDialogXyz(
    /* create, include, and release dialog */
    if( !SCIPdialogHasEntry(parentdialog, DIALOG_NAME) )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog, 
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             dialogCopyXyz, dialogExecXyz, dialogDescXyz, dialogFreeXyz,
             DIALOG_NAME, DIALOG_DESC, DIALOG_ISSUBMENU, dialogdata) );
       SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
