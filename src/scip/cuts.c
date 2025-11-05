@@ -412,7 +412,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsSafely(
       }
 
       if( SCIPvarGetLbGlobal(var) > -SCIPinfinity(scip) && SCIPvarGetLbGlobal(var) >= 0 )
-         val = valinterval.inf; 
+         val = valinterval.inf;
       else if(SCIPvarGetUbGlobal(var) < SCIPinfinity(scip) && SCIPvarGetUbGlobal(var) <= 0 )
          val = valinterval.sup;
       else if( SCIPvarGetLbGlobal(var) > -SCIPinfinity(scip) )

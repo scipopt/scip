@@ -670,7 +670,7 @@ SCIP_Bool isZero(
 
    assert(scip != NULL);
    assert(raydirection != NULL);
-   iszero = TRUE; 
+   iszero = TRUE;
    for( v = nsubspacevars - 1; v >= 0; --v )
    {
       assert(!SCIPisInfinity(scip, raydirection[v]));

@@ -7266,7 +7266,7 @@ SCIP_Bool isPermKnown(
       {
          /* knownperms[pidx] and perm differ */
          if ( perm[i] != knownperms[pidx][i] )
-	    break;
+            break;
       }
       /* loop did not terminate early, knownperms[pidx] and perm coincide */
       if ( i == permlen )
@@ -7377,9 +7377,9 @@ SCIP_RETCODE tryGenerateInvolutions(
       {
          perm2 = propdata->perms[propdata->components[q]];
          if ( ! isInvolution(perm2, propdata->npermvars, &istransposition) )
-	    continue;
+            continue;
          if ( istransposition )
-	    continue;
+            continue;
 
          /* check whether perm1 and perm2 commute */
          commute = TRUE;
@@ -7455,7 +7455,7 @@ SCIP_RETCODE tryGenerateInvolutions(
          }
 
          if ( nnewinvols >= lennewinvols )
-	    break;
+            break;
       }
       if ( nnewinvols >= lennewinvols )
          break;
@@ -7493,7 +7493,7 @@ SCIP_RETCODE tryGenerateInvolutions(
             SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->permstrans[i], propdata->nmaxperms, nnewperms) );
          }
          for (p = propdata->nperms; p < nnewperms; ++p)
-	    propdata->permstrans[i][p] = propdata->perms[p][i];
+            propdata->permstrans[i][p] = propdata->perms[p][i];
       }
    }
    propdata->nmaxperms = newsize;

@@ -569,25 +569,25 @@ SCIP_RETCODE exitPresolve(
 
       for( v = nvars - 1; v >= 0; --v )
       {
-	 SCIP_VAR* var;
+         SCIP_VAR* var;
 #ifndef NDEBUG
-	 SCIP_VAR** multvars;
-	 int i;
+         SCIP_VAR** multvars;
+         int i;
 #endif
-	 var = vars[v]; /*lint !e613*/
-	 assert(var != NULL);
+         var = vars[v]; /*lint !e613*/
+         assert(var != NULL);
 
-	 if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
-	 {
-	    /* flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
-	    SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+         {
+            /* flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
+            SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
 
 #ifndef NDEBUG
-	    multvars = SCIPvarGetMultaggrVars(var);
-	    for( i = SCIPvarGetMultaggrNVars(var) - 1; i >= 0; --i)
-	       assert(SCIPvarGetStatus(multvars[i]) != SCIP_VARSTATUS_MULTAGGR);
+            multvars = SCIPvarGetMultaggrVars(var);
+            for( i = SCIPvarGetMultaggrNVars(var) - 1; i >= 0; --i)
+               assert(SCIPvarGetStatus(multvars[i]) != SCIP_VARSTATUS_MULTAGGR);
 #endif
-	 }
+         }
       }
    }
 

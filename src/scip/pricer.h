@@ -135,7 +135,7 @@ SCIP_RETCODE SCIPpricerRedcost(
    SCIP_PROB*            prob,               /**< transformed problem */
    SCIP_Real*            lowerbound,         /**< local lower bound computed by the pricer */
    SCIP_Bool*            stopearly,          /**< should pricing be stopped, although new variables were added? */
-   SCIP_RESULT*          result              /**< result of the pricing process */    
+   SCIP_RESULT*          result              /**< result of the pricing process */
    );
 
 /** calls Farkas pricing method of variable pricer */

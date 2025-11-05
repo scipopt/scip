@@ -767,14 +767,12 @@ void SCIPdotWriteClosing(
 SCIP_RETCODE SCIPsparseSolCreate(
    SCIP_SPARSESOL**      sparsesol,          /**< pointer to store the created sparse solution */
    SCIP_VAR**            vars,               /**< variables in the sparse solution, must not contain continuous
-					      *   variables
-					      */
+                                              *   variables
+                                              */
    int                   nvars,              /**< number of variables to store, size of the lower and upper bound
-					      *   arrays
-					      */
-   SCIP_Bool             cleared             /**< should the lower and upper bound arrays be cleared (entries set to
-					      *	  0)
-					      */
+                                              *   arrays
+                                              */
+   SCIP_Bool             cleared             /**< should the lower and upper bound arrays be cleared (entries set to 0) */
    )
 {
    assert(sparsesol != NULL);
@@ -789,8 +787,8 @@ SCIP_RETCODE SCIPsparseSolCreate(
 
       for( v = nvars - 1; v >= 0; --v )
       {
-	 assert(vars[v] != NULL);
-	 /* assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS); */
+         assert(vars[v] != NULL);
+         /* assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS); */
       }
    }
 #endif
@@ -5004,9 +5002,9 @@ SCIP_RETCODE SCIPboolarrayExtend(
          shift = newfirstidx - boolarray->firstidx;
          assert(shift > 0);
 
-	 assert(0 <= boolarray->minusedidx - boolarray->firstidx - shift);
+         assert(0 <= boolarray->minusedidx - boolarray->firstidx - shift);
          assert(boolarray->maxusedidx - boolarray->firstidx - shift < boolarray->valssize);
-	 BMSmoveMemoryArray(&(boolarray->vals[boolarray->minusedidx - boolarray->firstidx - shift]),
+         BMSmoveMemoryArray(&(boolarray->vals[boolarray->minusedidx - boolarray->firstidx - shift]),
             &(boolarray->vals[boolarray->minusedidx - boolarray->firstidx]),
             boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866*/
 
@@ -9711,57 +9709,57 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 
       /* try, if values can be made integral multiplying them with the reciprocal of the smallest value and a power of 2 */
       if( i == 0 )
-	 scaleval = 1.0/minval;
+         scaleval = 1.0/minval;
       /* try, if values can be made integral by multiplying them by a power of 2 */
       else
-	 scaleval = 1.0;
+         scaleval = 1.0;
 
       for( c = 0; c < nvals && scalable; ++c )
       {
-	 /* check, if the value can be scaled with a simple scalar */
-	 val = vals[c];
-	 if( val == 0.0 ) /* zeros are allowed in the vals array */
-	    continue;
+         /* check, if the value can be scaled with a simple scalar */
+         val = vals[c];
+         if( val == 0.0 ) /* zeros are allowed in the vals array */
+            continue;
 
-	 absval = REALABS(val);
-	 while( scaleval <= maxscale
-	    && (absval * scaleval < 0.5 || !isIntegralScalar(val, scaleval, mindelta, maxdelta)) )
-	 {
-	    for( s = 0; s < nscalars; ++s )
-	    {
-	       if( isIntegralScalar(val, scaleval * scalars[s], mindelta, maxdelta) )
-	       {
-		  scaleval *= scalars[s];
-		  break;
-	       }
-	    }
-	    if( s >= nscalars )
-	       scaleval *= 2.0;
-	 }
-	 scalable = (scaleval <= maxscale);
-	 SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n",
-	    val, scaleval, val*scaleval, scalable);
+         absval = REALABS(val);
+         while( scaleval <= maxscale
+            && (absval * scaleval < 0.5 || !isIntegralScalar(val, scaleval, mindelta, maxdelta)) )
+         {
+            for( s = 0; s < nscalars; ++s )
+            {
+               if( isIntegralScalar(val, scaleval * scalars[s], mindelta, maxdelta) )
+               {
+                  scaleval *= scalars[s];
+                  break;
+               }
+            }
+            if( s >= nscalars )
+               scaleval *= 2.0;
+         }
+         scalable = (scaleval <= maxscale);
+         SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n",
+            val, scaleval, val*scaleval, scalable);
       }
       if( scalable )
       {
-	 /* make values integral by dividing them by the smallest value (and multiplying them with a power of 2) */
-	 assert(scaleval <= maxscale);
+         /* make values integral by dividing them by the smallest value (and multiplying them with a power of 2) */
+         assert(scaleval <= maxscale);
 
-	 /* check if we found a better scaling value */
-	 if( scaleval < bestscalar )
-	    bestscalar = scaleval;
+         /* check if we found a better scaling value */
+         if( scaleval < bestscalar )
+            bestscalar = scaleval;
 
-	 SCIPdebugMessage(" -> integrality could be achieved by scaling with %g\n", scaleval);
+         SCIPdebugMessage(" -> integrality could be achieved by scaling with %g\n", scaleval);
 
-	 /* if the scalar is still the reciprocal of the minimal value, all coeffcients are the same and we do not get a better scalar */
-	 if( i == 0 && EPSEQ(scaleval, 1.0/minval, SCIP_DEFAULT_EPSILON) )
-	 {
-	    if( intscalar != NULL )
-	       *intscalar = bestscalar;
-	    *success = TRUE;
+         /* if the scalar is still the reciprocal of the minimal value, all coeffcients are the same and we do not get a better scalar */
+         if( i == 0 && EPSEQ(scaleval, 1.0/minval, SCIP_DEFAULT_EPSILON) )
+         {
+            if( intscalar != NULL )
+               *intscalar = bestscalar;
+            *success = TRUE;
 
-	    return SCIP_OKAY;
-	 }
+            return SCIP_OKAY;
+         }
       }
    }
 
@@ -9822,7 +9820,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 
       /* check if we found a better scaling value */
       if( (SCIP_Real)scm/(SCIP_Real)gcd < bestscalar )
-	 bestscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
+         bestscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
 
       SCIPdebugMessage(" -> integrality could be achieved by scaling with %g (rational:%" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ")\n",
          (SCIP_Real)scm/(SCIP_Real)gcd, scm, gcd);

@@ -4205,7 +4205,7 @@ SCIP_RETCODE propAndSolve(
          *cutoff ? SCIPsetInfinity(set) : (*lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set, transprob)),
          stat->nlpiterations, stat->lpcount);
 
-      /* check, if the path was cutoff */ 
+      /* check, if the path was cutoff */
       *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
 
       /* if an error occured during LP solving, switch to pseudo solution */
@@ -4599,8 +4599,8 @@ SCIP_RETCODE solveNode(
 
       /* check for immediate restart */
       *restart = *restart || (actdepth == 0 && restartAllowed(set, stat) && (stat->userrestart
-	    || (stat->nrootintfixingsrun > set->presol_immrestartfac * (transprob->nvars - transprob->ncontvars)
-	       && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
+         || (stat->nrootintfixingsrun > set->presol_immrestartfac * (transprob->nvars - transprob->ncontvars)
+            && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
 
       /* enforce constraints */
       branched = FALSE;
@@ -4930,8 +4930,8 @@ SCIP_RETCODE solveNode(
 
       /* check for immediate restart */
       *restart = *restart || (actdepth == 0 && restartAllowed(set, stat) && (stat->userrestart
-	    || (stat->nrootintfixingsrun > set->presol_immrestartfac * (transprob->nvars - transprob->ncontvars)
-	       && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
+            || (stat->nrootintfixingsrun > set->presol_immrestartfac * (transprob->nvars - transprob->ncontvars)
+               && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
 
       SCIPsetDebugMsg(set, "node solving iteration %d finished: cutoff=%u, postpone=%u, propagateagain=%u, solverelaxagain=%u, solvelpagain=%u, nlperrors=%d, restart=%u\n",
          nloops, *cutoff, *postpone, propagateagain, solverelaxagain, solvelpagain, nlperrors, *restart);
@@ -4954,8 +4954,8 @@ SCIP_RETCODE solveNode(
    if( actdepth == 0 )
       restartfac = MIN(restartfac, set->presol_restartfac);
    *restart = *restart || (restartAllowed(set, stat) && (stat->userrestart
-	 || (stat->nrootintfixingsrun > restartfac * (transprob->nvars - transprob->ncontvars)
-	    && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
+         || (stat->nrootintfixingsrun > restartfac * (transprob->nvars - transprob->ncontvars)
+            && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
 
    /* remember the last root LP solution */
    if( actdepth == 0 && !(*cutoff) && !(*unbounded) && !(*postpone) )
@@ -5221,7 +5221,7 @@ SCIP_RETCODE SCIPsolveCIP(
       restartfac = MIN(restartfac, set->presol_restartfac);
    *restart = restartAllowed(set, stat) && (stat->userrestart
       || (stat->nrootintfixingsrun > restartfac * (transprob->nvars - transprob->ncontvars)
-	 && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)) );
+         && (stat->nruns == 1 || transprob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)) );
 
    /* calculate the number of successful conflict analysis calls that should trigger a restart */
    if( set->conf_restartnum > 0 )

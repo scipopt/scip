@@ -56,7 +56,7 @@
 #define PRESOL_DESC            "converts integer variables to binaries"
 #define PRESOL_PRIORITY        +6000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              0 /**< maximal number of presolving rounds the presolver participates in (-1: no
-					 *   limit) */
+                                         *   limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_MAXDOMAINSIZE  SCIP_LONGINT_MAX   /**< absolute value of maximum domain size which will be converted */
@@ -167,7 +167,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
 
       /* skip variables which cannot be multi-aggregated */
       if( SCIPdoNotMultaggrVar(scip, vars[v]) )
-	 continue;
+         continue;
 
       /* check for correct locks */
       if( presoldata->samelocksinbothdirections

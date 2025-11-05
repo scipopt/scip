@@ -89,7 +89,7 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
 
 /** problem writing method of reader; NOTE: if the parameter "genericnames" is TRUE, then
  *  SCIP already set all variable and constraint names to generic names; therefore, this
- *  method should always use SCIPvarGetName() and SCIPconsGetName(); 
+ *  method should always use SCIPvarGetName() and SCIPconsGetName();
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -106,18 +106,18 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  *  - objoffsetexact  : exact objective offset from bound shifting and fixing
  *  - objscaleexact   : exact scalar applied to objective function; external objective value is
                         extobjexact = objsense * objscaleexact * (intobjexact + objoffsetexact)
- *  - vars            : array with active variables ordered binary, integer, implicit, continuous 
+ *  - vars            : array with active variables ordered binary, integer, implicit, continuous
  *  - nvars           : number of active variables in the problem
  *  - nbinvars        : number of binary variables
  *  - nintvars        : number of general integer variables
- *  - nimplvars       : number of implicit integer variables 
+ *  - nimplvars       : number of implicit integer variables
  *  - ncontvars;      : number of continuous variables
  *  - fixedvars       : array with fixed and aggregated variables
  *  - nfixedvars      : number of fixed and aggregated variables in the problem
  *  - startnvars      : number of variables existing when problem solving started
  *  - conss           : array with constraints of the problem
  *  - nconss          : number of constraints in the problem
- *  - maxnconss       : maximum number of constraints existing at the same time 
+ *  - maxnconss       : maximum number of constraints existing at the same time
  *  - startnconss     : number of constraints existing when problem solving started
  *  - genericnames    : using generic variable and constraint names?
  *  - result          : pointer to store the result of the file reading call
@@ -126,7 +126,7 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  *  - SCIP_SUCCESS    : the reader wrote the file correctly
  *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
  *
- *  If the reader detected an error while writing the output file, it should return with RETCODE SCIP_WRITEERROR 
+ *  If the reader detected an error while writing the output file, it should return with RETCODE SCIP_WRITEERROR
  */
 #define SCIP_DECL_READERWRITE(x) SCIP_RETCODE x (SCIP* scip, SCIP_READER* reader, FILE* file, \
       const char* filename, const char* name, SCIP_PROBDATA* probdata, SCIP_Bool transformed, \

@@ -69,7 +69,7 @@
 /** reads the given solution file */
 static
 SCIP_RETCODE readSol(
-   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< name of the input file */
    )
 {
@@ -90,7 +90,7 @@ SCIP_RETCODE readSol(
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       SCIPprintSysError(filename);
       return SCIP_NOFILE;
-   }   
+   }
 
    /* read the file */
    error = FALSE;

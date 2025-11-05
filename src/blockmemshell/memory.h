@@ -352,7 +352,7 @@ SCIP_EXPORT
 BMS_CHKMEM* BMScreateChunkMemory_call(
    size_t                size,               /**< element size of the chunk block */
    int                   initchunksize,      /**< number of elements in the first chunk of the chunk block */
-   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize
                                               *   elements are free (-1: disable garbage collection) */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
@@ -522,7 +522,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 SCIP_EXPORT
 BMS_BLKMEM* BMScreateBlockMemory_call(
    int                   initchunksize,      /**< number of elements in the first chunk of each chunk block */
-   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize
                                               *   elements are free (-1: disable garbage collection) */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */

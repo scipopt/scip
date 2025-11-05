@@ -1089,7 +1089,7 @@ int SCIPdialogFindEntry(
 /** displays the dialog's menu */
 SCIP_RETCODE SCIPdialogDisplayMenu(
    SCIP_DIALOG*          dialog,             /**< dialog */
-   SCIP*                 scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    int i;
@@ -1123,7 +1123,7 @@ SCIP_RETCODE SCIPdialogDisplayMenu(
 /** displays the entry for the dialog in it's parent's menu */
 SCIP_RETCODE SCIPdialogDisplayMenuEntry(
    SCIP_DIALOG*          dialog,             /**< dialog */
-   SCIP*                 scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    char name[SCIP_MAXSTRLEN];
@@ -1157,7 +1157,7 @@ SCIP_RETCODE SCIPdialogDisplayMenuEntry(
 /** displays all dialog entries with names starting with the given "entryname" */
 SCIP_RETCODE SCIPdialogDisplayCompletions(
    SCIP_DIALOG*          dialog,             /**< dialog */
-   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP*                 scip,               /**< SCIP data structure */
    const char*           entryname           /**< name of the dialog entry to find */
    )
 {

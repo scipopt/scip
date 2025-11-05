@@ -302,7 +302,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    /* in exact solving mode, we have to check integrality without tolerances */
    else
    {
-      SCIP_CALL( checkIntegralityExact(scip, sol, printreason, result) );  
+      SCIP_CALL( checkIntegralityExact(scip, sol, printreason, result) );
    }
 
    return SCIP_OKAY;

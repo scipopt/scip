@@ -105,7 +105,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyBoundshift)
 /**! [SnippetPresolFreeBoundshift] */
 static
 SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
-{  /*lint --e{715}*/   
+{  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
 
    /* free presolver data */
@@ -193,7 +193,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
       assert( SCIPisLE(scip, lb, ub) );
       if( SCIPisEQ(scip, lb, ub) )
          continue;
-      if( presoldata->integer && !SCIPisIntegral(scip, ub - lb) ) 
+      if( presoldata->integer && !SCIPisIntegral(scip, ub - lb) )
          continue;
 
       /* check if bounds are shiftable */

@@ -417,9 +417,9 @@ public:
    virtual SCIP_DECL_CONSPRINT(scip_print)
    {  /*lint --e{715}*/
       if ( file == NULL )
-	 fprintf(stdout, "constraint handler <%s> does not support printing constraints\n", SCIPconshdlrGetName(conshdlr));
+         fprintf(stdout, "constraint handler <%s> does not support printing constraints\n", SCIPconshdlrGetName(conshdlr));
       else
-	 fprintf(file, "constraint handler <%s> does not support printing constraints\n", SCIPconshdlrGetName(conshdlr));
+         fprintf(file, "constraint handler <%s> does not support printing constraints\n", SCIPconshdlrGetName(conshdlr));
       return SCIP_OKAY;
    }
 

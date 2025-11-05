@@ -2574,11 +2574,11 @@ SCIP_RETCODE SCIPgetProbvarSumExact(
 SCIP_RETCODE SCIPgetActiveVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
-					      *   variables, if enough slots exist
-					      */
+                                              *   variables, if enough slots exist
+                                              */
    int*                  nvars,              /**< number of given variables, and as output number of active variables,
-					      *   if enough slots exist
-					      */
+                                              *   if enough slots exist
+                                              */
    int                   varssize,           /**< available slots in vars array */
    int*                  requiredsize        /**< pointer to store the required array size for the active variables */
    )
@@ -6922,7 +6922,7 @@ SCIP_RETCODE SCIPinferVarFixCons(
             scip->eventfilter, scip->cliquetable, fixedval, infeasible, &fixed) );
 
       if( tightened != NULL )
-	 *tightened = fixed;
+         *tightened = fixed;
    }
    /* otherwise we use the lb and ub methods */
    else
@@ -6933,10 +6933,10 @@ SCIP_RETCODE SCIPinferVarFixCons(
 
       if( ! (*infeasible) )
       {
-	 SCIP_CALL( SCIPinferVarUbCons(scip, var, fixedval, infercons, inferinfo, force, infeasible, tightened) );
+         SCIP_CALL( SCIPinferVarUbCons(scip, var, fixedval, infercons, inferinfo, force, infeasible, tightened) );
 
-	 if( tightened != NULL )
-	    *tightened |= lbtightened;
+         if( tightened != NULL )
+            *tightened |= lbtightened;
       }
    }
 
@@ -7542,7 +7542,7 @@ SCIP_RETCODE SCIPinferVarFixProp(
             scip->cliquetable, fixedval, infeasible, &fixed) );
 
       if( tightened != NULL )
-	 *tightened = fixed;
+         *tightened = fixed;
    }
    /* otherwise we use the lb and ub methods */
    else
@@ -7553,10 +7553,10 @@ SCIP_RETCODE SCIPinferVarFixProp(
 
       if( ! (*infeasible) )
       {
-	 SCIP_CALL( SCIPinferVarUbProp(scip, var, fixedval, inferprop, inferinfo, force, infeasible, tightened) );
+         SCIP_CALL( SCIPinferVarUbProp(scip, var, fixedval, inferprop, inferinfo, force, infeasible, tightened) );
 
-	 if( tightened != NULL )
-	    *tightened |= lbtightened;
+         if( tightened != NULL )
+            *tightened |= lbtightened;
       }
    }
 
@@ -9712,15 +9712,15 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 
       for( v1 = SCIPcliqueGetNVars(cliques[c]) - 1; v1 >= 0; --v1 )
       {
-	 id1 = clqvalues[v1] ? SCIPvarGetProbindex(clqvars[v1]) : (nallvars + SCIPvarGetProbindex(clqvars[v1]));
+         id1 = clqvalues[v1] ? SCIPvarGetProbindex(clqvars[v1]) : (nallvars + SCIPvarGetProbindex(clqvars[v1]));
 
-	 /* if corresponding node was not added yet, add it */
-	 if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id1) )
-	 {
+         /* if corresponding node was not added yet, add it */
+         if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id1) )
+         {
             assert(id1 >= 0);
-	    SCIP_CALL_FINALLY( SCIPhashmapInsertInt(nodehashmap, (void*)(size_t)id1, 1), fclose(gmlfile) ); /*lint !e571*/
+            SCIP_CALL_FINALLY( SCIPhashmapInsertInt(nodehashmap, (void*)(size_t)id1, 1), fclose(gmlfile) ); /*lint !e571*/
 
-	    (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v1]));
+            (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v1]));
 
             /* write new gml node for new variable */
             if ( writenodeweights )
@@ -9732,24 +9732,24 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
             {
                SCIPgmlWriteNode(gmlfile, (unsigned int)id1, nodename, NULL, NULL, NULL);
             }
-	 }
+         }
 
-	 for( v2 = SCIPcliqueGetNVars(cliques[c]) - 1; v2 >= 0; --v2 )
-	 {
-	    if( v1 == v2 )
-	       continue;
+         for( v2 = SCIPcliqueGetNVars(cliques[c]) - 1; v2 >= 0; --v2 )
+         {
+            if( v1 == v2 )
+               continue;
 
-	    id2 = clqvalues[v2] ? SCIPvarGetProbindex(clqvars[v2]) : (nallvars + SCIPvarGetProbindex(clqvars[v2]));
+            id2 = clqvalues[v2] ? SCIPvarGetProbindex(clqvars[v2]) : (nallvars + SCIPvarGetProbindex(clqvars[v2]));
 
-	    /* if corresponding node was not added yet, add it */
-	    if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id2) )
-	    {
+            /* if corresponding node was not added yet, add it */
+            if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id2) )
+            {
                assert(id2 >= 0);
-	       SCIP_CALL_FINALLY( SCIPhashmapInsertInt(nodehashmap, (void*)(size_t)id2, 1), fclose(gmlfile) ); /*lint !e571*/
+               SCIP_CALL_FINALLY( SCIPhashmapInsertInt(nodehashmap, (void*)(size_t)id2, 1), fclose(gmlfile) ); /*lint !e571*/
 
-	       (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
+               (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
 
-	       /* write new gml node for new variable */
+               /* write new gml node for new variable */
                if ( writenodeweights )
                {
                   if ( ! SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, clqvars[v2])) )
@@ -9761,10 +9761,10 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
                }
             }
 
-	    /* write gml arc between resultant and operand */
+            /* write gml arc between resultant and operand */
             if ( ! writenodeweights || ! SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, NULL, clqvars[v2])) )
                SCIPgmlWriteArc(gmlfile, (unsigned int)id1, (unsigned int)id2, NULL, NULL);
-	 }
+         }
       }
    }
 

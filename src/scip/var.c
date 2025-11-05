@@ -4728,8 +4728,8 @@ SCIP_RETCODE varEventVarFixed(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    int                   fixeventtype        /**< is this event a fixation(0), an aggregation(1), or a
-					      *   multi-aggregation(2)
-					      */
+                                              *   multi-aggregation(2)
+                                              */
    )
 {
    SCIP_EVENT* event;
@@ -4757,55 +4757,55 @@ SCIP_RETCODE varEventVarFixed(
       /* process all parents of a fixed variable */
       for( i = var->nparentvars - 1; i >= 0; --i )
       {
-	 varstatus = SCIPvarGetStatus(var->parentvars[i]);
+         varstatus = SCIPvarGetStatus(var->parentvars[i]);
 
-	 assert(varstatus != SCIP_VARSTATUS_FIXED);
+         assert(varstatus != SCIP_VARSTATUS_FIXED);
 
-	 /* issue event on all not yet fixed parent variables, (that should already issued this event) except the original
-	  * one
-	  */
-	 if( varstatus != SCIP_VARSTATUS_ORIGINAL )
-	 {
-	    SCIP_CALL( varEventVarFixed(var->parentvars[i], blkmem, set, eventqueue, fixeventtype) );
-	 }
+         /* issue event on all not yet fixed parent variables, (that should already issued this event) except the original
+          * one
+          */
+         if( varstatus != SCIP_VARSTATUS_ORIGINAL )
+         {
+            SCIP_CALL( varEventVarFixed(var->parentvars[i], blkmem, set, eventqueue, fixeventtype) );
+         }
       }
       break;
    case 1:
       /* process all parents of a aggregated variable */
       for( i = var->nparentvars - 1; i >= 0; --i )
       {
-	 varstatus = SCIPvarGetStatus(var->parentvars[i]);
+         varstatus = SCIPvarGetStatus(var->parentvars[i]);
 
-	 assert(varstatus != SCIP_VARSTATUS_FIXED);
+         assert(varstatus != SCIP_VARSTATUS_FIXED);
 
-	 /* issue event for not aggregated parent variable, because for these and its parents the var event was already
+         /* issue event for not aggregated parent variable, because for these and its parents the var event was already
           * issued(, except the original one)
           *
           * @note that even before an aggregated parent variable, there might be variables, for which the vent was not
           *       yet issued
-	  */
+          */
          if( varstatus == SCIP_VARSTATUS_AGGREGATED )
             continue;
 
-	 if( varstatus != SCIP_VARSTATUS_ORIGINAL )
-	 {
-	    SCIP_CALL( varEventVarFixed(var->parentvars[i], blkmem, set, eventqueue, fixeventtype) );
-	 }
+         if( varstatus != SCIP_VARSTATUS_ORIGINAL )
+         {
+            SCIP_CALL( varEventVarFixed(var->parentvars[i], blkmem, set, eventqueue, fixeventtype) );
+         }
       }
       break;
    case 2:
       /* process all parents of a aggregated variable */
       for( i = var->nparentvars - 1; i >= 0; --i )
       {
-	 varstatus = SCIPvarGetStatus(var->parentvars[i]);
+         varstatus = SCIPvarGetStatus(var->parentvars[i]);
 
-	 assert(varstatus != SCIP_VARSTATUS_FIXED);
+         assert(varstatus != SCIP_VARSTATUS_FIXED);
 
-	 /* issue event on all parent variables except the original one */
-	 if( varstatus != SCIP_VARSTATUS_ORIGINAL )
-	 {
-	    SCIP_CALL( varEventVarFixed(var->parentvars[i], blkmem, set, eventqueue, fixeventtype) );
-	 }
+         /* issue event on all parent variables except the original one */
+         if( varstatus != SCIP_VARSTATUS_ORIGINAL )
+         {
+            SCIP_CALL( varEventVarFixed(var->parentvars[i], blkmem, set, eventqueue, fixeventtype) );
+         }
       }
       break;
    default:
@@ -8556,7 +8556,7 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
          }
          else if( ntmpvars == 2 ) /* 0 = a_1*y_1 + a_2*y_2 + c => y_1 = -a_2/a_1 * y_2 - c/a_1 */
          {
-	         /* both variables are different active problem variables, and both scalars are non-zero: try to aggregate them */
+            /* both variables are different active problem variables, and both scalars are non-zero: try to aggregate them */
 
             SCIPrationalNegate(tmpconstant, tmpconstant);
             SCIPrationalDebugMessage("Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %q and %q and constant %q.\n",
@@ -8813,28 +8813,28 @@ SCIP_VAR* varGetActiveVar(
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
       case SCIP_VARSTATUS_FIXED:
-	 return retvar;
+         return retvar;
 
       case SCIP_VARSTATUS_MULTAGGR:
-	 /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
-	 if ( retvar->data.multaggr.nvars == 1 )
-	    retvar = retvar->data.multaggr.vars[0];
-	 else
-	    return retvar;
-	 break;
+         /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+         if ( retvar->data.multaggr.nvars == 1 )
+            retvar = retvar->data.multaggr.vars[0];
+         else
+            return retvar;
+         break;
 
       case SCIP_VARSTATUS_AGGREGATED:
-	 retvar = retvar->data.aggregate.var;
-	 break;
+         retvar = retvar->data.aggregate.var;
+         break;
 
       case SCIP_VARSTATUS_NEGATED:
-	 retvar = retvar->negatedvar;
-	 break;
+         retvar = retvar->negatedvar;
+         break;
 
       default:
-	 SCIPerrorMessage("unknown variable status\n");
-	 SCIPABORT();
-	 return NULL; /*lint !e527*/
+         SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return NULL; /*lint !e527*/
       }
    }
 }
@@ -9648,7 +9648,7 @@ SCIP_RETCODE SCIPvarAddObj(
           * since the objective of inactive variables cannot be changed, this corresponds to probindex != -1
           */
          if( SCIPvarIsActive(var) )
-	    SCIPprobUpdateNObjVars(transprob, set, oldobj, var->obj);
+            SCIPprobUpdateNObjVars(transprob, set, oldobj, var->obj);
 
          SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
@@ -17338,11 +17338,11 @@ SCIP_DECL_HASHKEYVAL(SCIPvarGetHashkeyVal)
 SCIP_RETCODE SCIPvarsGetActiveVars(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
-					      *   variables, if enough slots exist
-					      */
+                                              *   variables, if enough slots exist
+                                              */
    int*                  nvars,              /**< number of given variables, and as output number of active variables,
-					      *   if enough slots exist
-					      */
+                                              *   if enough slots exist
+                                              */
    int                   varssize,           /**< available slots in vars array */
    int*                  requiredsize        /**< pointer to store the required array size for the active variables */
    )
@@ -17408,88 +17408,88 @@ SCIP_RETCODE SCIPvarsGetActiveVars(
 
       switch( SCIPvarGetStatus(var) )
       {
-      case SCIP_VARSTATUS_ORIGINAL:
-	 if( var->data.original.transvar == NULL )
-	 {
-	    SCIPerrorMessage("original variable has no transformed variable attached\n");
-	    SCIPABORT();
-	    return SCIP_INVALIDDATA; /*lint !e527*/
-	 }
-	 tmpvars[ntmpvars] = var->data.original.transvar;
-	 ++ntmpvars;
-	 break;
+         case SCIP_VARSTATUS_ORIGINAL:
+            if( var->data.original.transvar == NULL )
+            {
+               SCIPerrorMessage("original variable has no transformed variable attached\n");
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+            }
+            tmpvars[ntmpvars] = var->data.original.transvar;
+            ++ntmpvars;
+            break;
 
-      case SCIP_VARSTATUS_AGGREGATED:
-	 tmpvars[ntmpvars] = var->data.aggregate.var;
-	 ++ntmpvars;
-	 break;
+         case SCIP_VARSTATUS_AGGREGATED:
+            tmpvars[ntmpvars] = var->data.aggregate.var;
+            ++ntmpvars;
+            break;
 
-      case SCIP_VARSTATUS_NEGATED:
-	 tmpvars[ntmpvars] = var->negatedvar;
-	 ++ntmpvars;
-	 break;
+         case SCIP_VARSTATUS_NEGATED:
+            tmpvars[ntmpvars] = var->negatedvar;
+            ++ntmpvars;
+            break;
 
-      case SCIP_VARSTATUS_LOOSE:
-      case SCIP_VARSTATUS_COLUMN:
-	 /* check for space in temporary memory */
-         if( nactivevars >= activevarssize )
-         {
-            activevarssize *= 2;
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, activevarssize) );
-            assert(nactivevars < activevarssize);
-         }
-         activevars[nactivevars] = var;
-         nactivevars++;
-         break;
+         case SCIP_VARSTATUS_LOOSE:
+         case SCIP_VARSTATUS_COLUMN:
+            /* check for space in temporary memory */
+            if( nactivevars >= activevarssize )
+            {
+               activevarssize *= 2;
+               SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, activevarssize) );
+               assert(nactivevars < activevarssize);
+            }
+            activevars[nactivevars] = var;
+            nactivevars++;
+            break;
 
-      case SCIP_VARSTATUS_MULTAGGR:
-         /* x = a_1*y_1 + ... + a_n*y_n + c */
-         nmultvars = var->data.multaggr.nvars;
-         multvars = var->data.multaggr.vars;
+         case SCIP_VARSTATUS_MULTAGGR:
+            /* x = a_1*y_1 + ... + a_n*y_n + c */
+            nmultvars = var->data.multaggr.nvars;
+            multvars = var->data.multaggr.vars;
 
-	 /* check for space in temporary memory */
-         if( nmultvars + ntmpvars > tmpvarssize )
-         {
-            while( nmultvars + ntmpvars > tmpvarssize )
-               tmpvarssize *= 2;
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars, tmpvarssize) );
-            assert(nmultvars + ntmpvars <= tmpvarssize);
-         }
+            /* check for space in temporary memory */
+            if( nmultvars + ntmpvars > tmpvarssize )
+            {
+               while( nmultvars + ntmpvars > tmpvarssize )
+                  tmpvarssize *= 2;
+               SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars, tmpvarssize) );
+               assert(nmultvars + ntmpvars <= tmpvarssize);
+            }
 
-	 /* copy all multi-aggregation variables into our working array */
-	 BMScopyMemoryArray(&tmpvars[ntmpvars], multvars, nmultvars); /*lint !e866*/
+            /* copy all multi-aggregation variables into our working array */
+            BMScopyMemoryArray(&tmpvars[ntmpvars], multvars, nmultvars); /*lint !e866*/
 
-	 /* get active, fixed or multi-aggregated corresponding variables for all new ones */
-	 SCIPvarsGetProbvar(&tmpvars[ntmpvars], nmultvars);
+            /* get active, fixed or multi-aggregated corresponding variables for all new ones */
+            SCIPvarsGetProbvar(&tmpvars[ntmpvars], nmultvars);
 
-	 ntmpvars += nmultvars;
-	 noldtmpvars = ntmpvars;
+            ntmpvars += nmultvars;
+            noldtmpvars = ntmpvars;
 
-	 /* sort all variables to combine equal variables easily */
-	 SCIPsortPtr((void**)tmpvars, SCIPvarComp, ntmpvars);
-	 for( v = ntmpvars - 1; v > 0; --v )
-	 {
-	    /* combine same variables */
-	    if( SCIPvarCompare(tmpvars[v], tmpvars[v - 1]) == 0 )
-	    {
-	       --ntmpvars;
-	       tmpvars[v] = tmpvars[ntmpvars];
-	    }
-	 }
-	 /* sort all variables again to combine equal variables later on */
-	 if( noldtmpvars > ntmpvars )
-	    SCIPsortPtr((void**)tmpvars, SCIPvarComp, ntmpvars);
+            /* sort all variables to combine equal variables easily */
+            SCIPsortPtr((void**)tmpvars, SCIPvarComp, ntmpvars);
+            for( v = ntmpvars - 1; v > 0; --v )
+            {
+               /* combine same variables */
+               if( SCIPvarCompare(tmpvars[v], tmpvars[v - 1]) == 0 )
+               {
+                  --ntmpvars;
+                  tmpvars[v] = tmpvars[ntmpvars];
+               }
+            }
+            /* sort all variables again to combine equal variables later on */
+            if( noldtmpvars > ntmpvars )
+               SCIPsortPtr((void**)tmpvars, SCIPvarComp, ntmpvars);
 
-         break;
+            break;
 
-      case SCIP_VARSTATUS_FIXED:
-	 /* no need for memorizing fixed variables */
-         break;
+         case SCIP_VARSTATUS_FIXED:
+            /* no need for memorizing fixed variables */
+            break;
 
-      default:
-	 SCIPerrorMessage("unknown variable status\n");
-         SCIPABORT();
-	 return SCIP_INVALIDDATA; /*lint !e527*/
+         default:
+            SCIPerrorMessage("unknown variable status\n");
+            SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -17503,8 +17503,8 @@ SCIP_RETCODE SCIPvarsGetActiveVars(
       /* combine both variable since they are the same */
       if( SCIPvarCompare(activevars[v - 1], activevars[v]) == 0 )
       {
-	 --nactivevars;
-	 activevars[v] = activevars[nactivevars];
+         --nactivevars;
+         activevars[v] = activevars[nactivevars];
       }
       --v;
    }
@@ -17565,41 +17565,41 @@ SCIP_VAR* SCIPvarGetProbvar(
 
       switch( SCIPvarGetStatus(retvar) )
       {
-      case SCIP_VARSTATUS_ORIGINAL:
-	 if( retvar->data.original.transvar == NULL )
-	 {
-	    SCIPerrorMessage("original variable has no transformed variable attached\n");
-	    SCIPABORT();
-	    return NULL; /*lint !e527 */
-	 }
-	 retvar = retvar->data.original.transvar;
-	 break;
+         case SCIP_VARSTATUS_ORIGINAL:
+            if( retvar->data.original.transvar == NULL )
+            {
+               SCIPerrorMessage("original variable has no transformed variable attached\n");
+               SCIPABORT();
+               return NULL; /*lint !e527 */
+            }
+            retvar = retvar->data.original.transvar;
+            break;
 
-      case SCIP_VARSTATUS_LOOSE:
-      case SCIP_VARSTATUS_COLUMN:
-      case SCIP_VARSTATUS_FIXED:
-	 return retvar;
+         case SCIP_VARSTATUS_LOOSE:
+         case SCIP_VARSTATUS_COLUMN:
+         case SCIP_VARSTATUS_FIXED:
+            return retvar;
 
-      case SCIP_VARSTATUS_MULTAGGR:
-	 /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
-	 if ( retvar->data.multaggr.nvars == 1 )
-	    retvar = retvar->data.multaggr.vars[0];
-	 else
-	    return retvar;
-	 break;
+         case SCIP_VARSTATUS_MULTAGGR:
+            /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+            if ( retvar->data.multaggr.nvars == 1 )
+               retvar = retvar->data.multaggr.vars[0];
+            else
+               return retvar;
+            break;
 
-      case SCIP_VARSTATUS_AGGREGATED:
-	 retvar = retvar->data.aggregate.var;
-	 break;
+         case SCIP_VARSTATUS_AGGREGATED:
+            retvar = retvar->data.aggregate.var;
+            break;
 
-      case SCIP_VARSTATUS_NEGATED:
-	 retvar = retvar->negatedvar;
-	 break;
+         case SCIP_VARSTATUS_NEGATED:
+            retvar = retvar->negatedvar;
+            break;
 
-      default:
-	 SCIPerrorMessage("unknown variable status\n");
-	 SCIPABORT();
-	 return NULL; /*lint !e527*/
+         default:
+            SCIPerrorMessage("unknown variable status\n");
+            SCIPABORT();
+            return NULL; /*lint !e527*/
       }
    }
 }
@@ -18187,7 +18187,7 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
 
       default:
          SCIPerrorMessage("unknown variable status\n");
-	 SCIPABORT();
+         SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
@@ -18304,7 +18304,7 @@ SCIP_RETCODE SCIPvarGetProbvarSumExact(
 
       default:
          SCIPerrorMessage("unknown variable status\n");
-	 SCIPABORT();
+         SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
@@ -23959,12 +23959,12 @@ SCIP_RETCODE SCIPvarGetAggregatedObj(
       case SCIP_VARSTATUS_ORIGINAL:
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
-	 (*aggrobj) = mult * SCIPvarGetObj(probvar);
-	 return SCIP_OKAY;
+         (*aggrobj) = mult * SCIPvarGetObj(probvar);
+         return SCIP_OKAY;
 
       case SCIP_VARSTATUS_FIXED:
-	 assert(SCIPvarGetObj(probvar) == 0.0);
-	 (*aggrobj) = 0.0;
+         assert(SCIPvarGetObj(probvar) == 0.0);
+         (*aggrobj) = 0.0;
          return SCIP_OKAY;
 
       case SCIP_VARSTATUS_MULTAGGR:
@@ -23978,20 +23978,20 @@ SCIP_RETCODE SCIPvarGetAggregatedObj(
             probvar = probvar->data.multaggr.vars[0];
             break;
          }
-	 else
-	 {
-	    SCIP_Real tmpobj;
-	    int v;
+         else
+         {
+            SCIP_Real tmpobj;
+            int v;
 
-	    (*aggrobj) = 0.0;
+            (*aggrobj) = 0.0;
 
-	    for( v = probvar->data.multaggr.nvars - 1; v >= 0; --v )
-	    {
-	       SCIP_CALL( SCIPvarGetAggregatedObj(probvar->data.multaggr.vars[v], &tmpobj) );
-	       (*aggrobj) += probvar->data.multaggr.scalars[v] * tmpobj;
-	    }
-	    return SCIP_OKAY;
-	 }
+            for( v = probvar->data.multaggr.nvars - 1; v >= 0; --v )
+            {
+               SCIP_CALL( SCIPvarGetAggregatedObj(probvar->data.multaggr.vars[v], &tmpobj) );
+               (*aggrobj) += probvar->data.multaggr.scalars[v] * tmpobj;
+            }
+            return SCIP_OKAY;
+         }
 
       case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
          assert(probvar->data.aggregate.var != NULL);
@@ -24008,8 +24008,8 @@ SCIP_RETCODE SCIPvarGetAggregatedObj(
          break;
 
       default:
-	 SCIPABORT();
-	 return SCIP_INVALIDDATA; /*lint !e527*/
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 

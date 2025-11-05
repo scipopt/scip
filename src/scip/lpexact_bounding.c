@@ -2069,10 +2069,10 @@ SCIP_RETCODE boundShift(
       fpdual[j] = (usefarkas ? row->dualfarkas : row->dualsol);
 
       if( SCIPlpiIsInfinity(lp->lpi, fpdual[j]) )
-	      fpdual[j] = SCIPsetInfinity(set);
+         fpdual[j] = SCIPsetInfinity(set);
 
       if( SCIPlpiIsInfinity(lp->lpi, -fpdual[j]) )
-	      fpdual[j] = -SCIPsetInfinity(set);
+         fpdual[j] = -SCIPsetInfinity(set);
 
       /** @todo test whether safe dual bounding in exact solving mode can be improved by setting nonzero values of y to
        *        zero if corresponding lhs/rhs is not finite (do such situations come up?)

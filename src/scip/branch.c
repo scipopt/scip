@@ -1693,7 +1693,7 @@ SCIP_RETCODE SCIPbranchruleExecExternSol(
 
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexecext != NULL
-      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) 
+      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree))
       && (!set->exact_enable || branchrule->exact) )
    {
       SCIP_Real loclowerbound;

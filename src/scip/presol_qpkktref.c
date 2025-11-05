@@ -130,7 +130,7 @@ struct SCIP_PresolData
    SCIP_Bool             updatequadbounded;  /**< if TRUE then only apply the update to QPs with bounded variables; if
                                               *   the variables are not bounded then a finite optimal solution might not
                                               *   exist and the KKT conditions would then be invalid */
-   SCIP_Bool             updatequadindef;    /**< if TRUE then apply quadratic constraint update even if the quadratic 
+   SCIP_Bool             updatequadindef;    /**< if TRUE then apply quadratic constraint update even if the quadratic
                                               *   constraint matrix is known to be indefinite */
 };
 
@@ -1749,13 +1749,13 @@ SCIP_RETCODE checkConsQuadraticProblem(
 
    if( SCIPisFeasPositive(scip, origObjScalar) )
    {
-	   origObjUb = SCIPvarGetUbOriginal(origObjVar);
-	   origObjLb = SCIPvarGetLbOriginal(origObjVar);
+      origObjUb = SCIPvarGetUbOriginal(origObjVar);
+      origObjLb = SCIPvarGetLbOriginal(origObjVar);
    }
    else
    {
-	   origObjUb = -SCIPvarGetLbOriginal(origObjVar);
-	   origObjLb = -SCIPvarGetUbOriginal(origObjVar);
+      origObjUb = -SCIPvarGetLbOriginal(origObjVar);
+      origObjLb = -SCIPvarGetUbOriginal(origObjVar);
       origObjScalar *= -1;
       origObjConstant *= -1;
    }
@@ -1763,11 +1763,11 @@ SCIP_RETCODE checkConsQuadraticProblem(
    /* not every optimal solution of the problem is a KKT point if the objective variable is bounded */
    if( SCIPisFeasPositive(scip, obj))
    {
-	  if ( !SCIPisInfinity(scip, -origObjLb))
-	     return SCIP_OKAY;
-	  if ( !SCIPisInfinity(scip, origObjUb)
-		  && !SCIPisFeasLE(scip, rhs/coef, (origObjUb-origObjConstant)/origObjScalar) )
-	     return SCIP_OKAY;
+      if ( !SCIPisInfinity(scip, -origObjLb))
+         return SCIP_OKAY;
+      if ( !SCIPisInfinity(scip, origObjUb)
+         && !SCIPisFeasLE(scip, rhs/coef, (origObjUb-origObjConstant)/origObjScalar) )
+         return SCIP_OKAY;
    }
    else
    {

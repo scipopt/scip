@@ -213,7 +213,7 @@ SCIP_RETCODE SCIPincludePricerXyz(
     * new callbacks are added in future SCIP versions
     */
    SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
-         pricerCopyXyz, pricerFreeXyz, pricerInitXyz, pricerExitXyz, 
+         pricerCopyXyz, pricerFreeXyz, pricerInitXyz, pricerExitXyz,
          pricerInitsolXyz, pricerExitsolXyz, pricerRedcostXyz, pricerFarkasXyz,
          pricerdata) );
 #else

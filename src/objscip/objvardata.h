@@ -153,7 +153,7 @@ public:
       SCIP_VAR*          sourcevar,          /**< variable of the source SCIP */
       SCIP_HASHMAP*      varmap,             /**< a hashmap which stores the mapping of source variables to corresponding
                                               *   target variables */
-      SCIP_HASHMAP*      consmap,            /**< a hashmap which stores the mapping of source contraints to corresponding 
+      SCIP_HASHMAP*      consmap,            /**< a hashmap which stores the mapping of source contraints to corresponding
                                               *   target constraints */
       SCIP_VAR*          targetvar,          /**< variable of the (targert) SCIP (targetvar is the copy of sourcevar) */
       ObjVardata**       objvardata,         /**< pointer to store the copied variable data object */

@@ -421,7 +421,7 @@ SCIP_RETCODE generateDisjCutSOS1(
       if( depth == 0 )
       {
          maxdnom = 100;
-	      maxscale = 100.0;
+         maxscale = 100.0;
       }
       else
       {
