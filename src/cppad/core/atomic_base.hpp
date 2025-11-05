@@ -12,11 +12,11 @@ A copy of this license is included in the COPYING file of this distribution.
 Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
 -------------------------------------------------------------------------- */
 
+# include <mutex>
+# include <shared_mutex>
 # include <set>
 # include <cppad/core/cppad_assert.hpp>
 # include <cppad/local/sparse_internal.hpp>
-// needed before one can use CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
-# include <cppad/utility/thread_alloc.hpp>
 
 namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
@@ -38,7 +38,7 @@ private:
 	// constants
 	//
 	/// index of this object in class_object
-	const size_t index_;
+	size_t index_;
 
 	// -----------------------------------------------------
 	// variables
@@ -79,15 +79,16 @@ private:
 	// -----------------------------------------------------
 	// static member functions
 	//
+	static std::shared_mutex vector_mutex;
 	/// List of all the object in this class
 	static std::vector<atomic_base *>& class_object(void)
-	{	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
+	{
 		static std::vector<atomic_base *> list_;
 		return list_;
 	}
 	/// List of names for each object in this class
 	static std::vector<std::string>& class_name(void)
-	{	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
+	{
 		static std::vector<std::string> list_;
 		return list_;
 	}
@@ -102,7 +103,10 @@ public:
 
 	/// Name corresponding to a base_atomic object
 	const std::string& afun_name(void) const
-	{	return class_name()[index_]; }
+	{
+		std::shared_lock<std::shared_mutex> vector_lock(vector_mutex);
+		return class_name()[index_];
+	}
 /*
 $begin atomic_ctor$$
 $spell
@@ -158,10 +162,6 @@ $code atomic_base$$ implementations replaced by
 $icode atomic_user$$ implementations.
 
 $head atomic_base$$
-
-$subhead Restrictions$$
-The $code atomic_base$$ constructor cannot be called in
-$cref/parallel/ta_in_parallel/$$ mode.
 
 $subhead Base$$
 The template parameter determines the
@@ -237,15 +237,15 @@ atomic_base(
 		const std::string&     name,
 		option_enum            sparsity = bool_sparsity_enum
 ) :
-index_   ( class_object().size()  )  ,
 sparsity_( sparsity               )
-{	CPPAD_ASSERT_KNOWN(
-		! thread_alloc::in_parallel() ,
-		"atomic_base: constructor cannot be called in parallel mode."
-	);
-	class_object().push_back(this);
-	class_name().push_back(name);
-	CPPAD_ASSERT_UNKNOWN( class_object().size() == class_name().size() );
+{
+	{
+		std::unique_lock<std::shared_mutex> vector_lock(vector_mutex);
+		index_ = class_object().size();
+		class_object().push_back(this);
+		class_name().push_back(name);
+		CPPAD_ASSERT_UNKNOWN( class_object().size() == class_name().size() );
+	}
 	//
 	// initialize work pointers as null;
 	for(size_t thread = 0; thread < CPPAD_MAX_NUM_THREADS; thread++)
@@ -254,9 +254,13 @@ sparsity_( sparsity               )
 /// destructor informs CppAD that this atomic function with this index
 /// has dropped out of scope by setting its pointer to null
 virtual ~atomic_base(void)
-{	CPPAD_ASSERT_UNKNOWN( class_object().size() > index_ );
-	// change object pointer to null, but leave name for error reporting
-	class_object()[index_] = CPPAD_NULL;
+{
+	{
+		std::unique_lock<std::shared_mutex> vector_lock(vector_mutex);
+		CPPAD_ASSERT_UNKNOWN( class_object().size() > index_ );
+		// change object pointer to null, but leave name for error reporting
+		class_object()[index_] = CPPAD_NULL;
+	}
 	//
 	// free temporary work memory
 	for(size_t thread = 0; thread < CPPAD_MAX_NUM_THREADS; thread++)
@@ -290,12 +294,16 @@ void free_work(size_t thread)
 }
 /// atomic_base function object corresponding to a certain index
 static atomic_base* class_object(size_t index)
-{	CPPAD_ASSERT_UNKNOWN( class_object().size() > index );
+{
+	std::shared_lock<std::shared_mutex> vector_lock(vector_mutex);
+	CPPAD_ASSERT_UNKNOWN( class_object().size() > index );
 	return class_object()[index];
 }
 /// atomic_base function name corresponding to a certain index
 static const std::string& class_name(size_t index)
-{	CPPAD_ASSERT_UNKNOWN( class_name().size() > index );
+{
+	std::shared_lock<std::shared_mutex> vector_lock(vector_mutex);
+	CPPAD_ASSERT_UNKNOWN( class_name().size() > index );
 	return class_name()[index];
 }
 /*
@@ -2381,10 +2389,6 @@ If there is future use of an $code atomic_base$$ object,
 after a call to $code clear$$,
 the work space will be reallocated and held onto.
 
-$head Restriction$$
-This routine cannot be called
-while in $cref/parallel/ta_in_parallel/$$ execution mode.
-
 $end
 ------------------------------------------------------------------------------
 */
@@ -2394,10 +2398,8 @@ Free all thread_alloc static memory held by atomic_base (avoids reallocations).
 */
 /// Free vector memory used by this class (work space)
 static void clear(void)
-{	CPPAD_ASSERT_KNOWN(
-		! thread_alloc::in_parallel() ,
-		"cannot use atomic_base clear during parallel execution"
-	);
+{
+	std::unique_lock<std::shared_mutex> vector_lock(vector_mutex);
 	size_t i = class_object().size();
 	while(i--)
 	{	atomic_base* op = class_object()[i];
@@ -2419,5 +2421,7 @@ virtual void set_old(size_t id)
 { }
 // ---------------------------------------------------------------------------
 };
+
+template <class Base> std::shared_mutex atomic_base<Base>::vector_mutex;
 } // END_CPPAD_NAMESPACE
 # endif
