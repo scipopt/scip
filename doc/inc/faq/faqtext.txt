@@ -446,6 +446,29 @@ SECTION: General Questions about SCIP
        if the constraint is part of the MinUC.
     <\p>
 
+    QUESTION: How do I use SCIP in order to solve MIPs numerically exactly and certify the result?
+    LABEL:exactsolving
+    ANSWER:
+    <p>
+       In the interactive shell the exact solving mode must be enabled by typing `set exact enable TRUE` before reading
+       the problem instance.  Optionally, a certificate file can be printed by specifying its filename via
+       `set certificate filename [yourfilename.vipr]`.
+       The resulting certificate can be checked with the proof checker <a href="https://github.com/scipopt/vipr">VIPR</a>
+       or a formally verified version in <a href="https://cakeml.org/checkers.html>CakeML</a>.
+    <\p>
+    <p>
+       In SCIP 10, this certificate only certifies the correctness of the branch-and-bound process after presolving, so
+       you may want to disable presolving by typing `set presolving emphasis off` in order to obtain a certificate for
+       the original problem instance.  (Note that this may or may not slow down the solving process.)
+       Note that, in any case, certificate files are incomplete if cutting plane separation is enabled (as by default).
+       In this case, the certificate needs to be completed using the `viprcomp` script prior to verification.
+    <\p>
+    <p>
+      If you access SCIP via the API, the exact solving mode is enabled by setting the parameter `exact/enable = TRUE`
+      or calling the API function `SCIPenableExactSolving()`, again <b>before</b> reading a problem instance.
+      For further details please see the dedicated section of the release report of SCIP 10.
+    <\p>
+
 
 SECTION: Using SCIP as a standalone solver
 

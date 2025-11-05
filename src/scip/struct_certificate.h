@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_certificate.h
+ * @ingroup INTERNALAPI
  * @brief  data structures for certificate output
  * @author Ambros Gleixner
  * @author Daniel Steffy

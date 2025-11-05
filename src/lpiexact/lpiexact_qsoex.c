@@ -23,7 +23,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpiexact_qsoex.c
- * @brief  LP interface for QSopt_ex version >= 2.5.4 (r239)
+ * @ingroup LPIEXACTS
+ * @brief  exact LP interface for QSopt_ex version >= 2.5.4 (r239)
  * @author Leon Eifler
  * @author Daniel Espinoza
  * @author Marc Pfetsch

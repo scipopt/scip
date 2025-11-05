@@ -50,9 +50,11 @@ extern "C" {
  * This file specifies a generic LP solver interface used by SCIP to create, modify, and solve linear programs of the
  * form
  *
+ * ```
  *   min/max   obj * x
  *      lhs <=   A * x  <= rhs
  *      lb  <=       x  <= ub
+ * ```
  *
  * and query information about the solution. Although it includes a few SCIP header files, e.g., because it uses SCIP's
  * return codes, it can be used independently of any SCIP instance.

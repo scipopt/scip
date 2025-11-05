@@ -1965,7 +1965,7 @@ help:
 		@echo "  - GMP=<true|false>: Turns GMP on (default) or off."
 		@echo "  - BOOST=<true|false>: Turns Boost on or off (default)."
 		@echo "  - MPFR=<true|false|auto>: Turns MPFR on (required for exact solving mode and if SoPlex is built with MPFR; must be installed on the system), off, or to the same value as BOOST (default)."
-		@echo "  - EXACTSOLVE=<true|false|auto>: Turns exact solving mode on, off, or turns it on if all necessary dependencies are available (default)."
+		@echo "  - EXACTSOLVE=<true|false|auto>: Build with exact solving functionality on, off, or do so if all necessary dependencies are available (default)."
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
 		@echo "  - CONOPT=<true|false>: Turns support of CONOPT on or off (default)."
 		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."

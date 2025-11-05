@@ -907,6 +907,7 @@ INPUT                  = . \
                          ../src \
                          ../src/scip \
                          ../src/lpi \
+                         ../src/lpiexact \
                          ../src/objscip \
                          ../src/tclique \
                          ../src/dijkstra \

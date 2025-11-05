@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpiexact_none.c
- * @ingroup LPIS
+ * @ingroup LPIEXACTS
  * @brief  dummy interface for the case no LP solver is needed
  * @author Leon Eifler
  */
@@ -409,6 +409,8 @@ SCIP_RETCODE SCIPlpiExactChgObj(
    return SCIP_OKAY;
 }
 
+/**@} */
+
 
 /*
  * Data Accessing Methods
@@ -607,6 +609,7 @@ SCIP_RETCODE SCIPlpiExactGetCoef(
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
+
 /**@} */
 
 
@@ -670,6 +673,8 @@ SCIP_RETCODE SCIPlpiExactEndStrongbranch(
    return SCIP_PLUGINNOTFOUND;
 }
 
+/**@} */
+
 
 /*
  * Solution Information Methods
@@ -693,8 +698,8 @@ SCIP_Bool SCIPlpiExactWasSolved(
  *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
  *  returns true. If the LP is changed, this information might be invalidated.
  *
- *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
- *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
+ *  Note that @param primalfeasible and @param dualfeasible should only return true if the solver has proved the
+ *  respective LP to be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
  *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
  *  the problem might actually be feasible).
  */
@@ -1142,6 +1147,7 @@ SCIP_RETCODE SCIPlpiExactWriteState(
 
 /**@} */
 
+
 /*
  * Parameter Methods
  */
@@ -1196,7 +1202,6 @@ SCIP_RETCODE SCIPlpiExactSetRealpar(
 }
 
 /**@} */
-
 
 
 
