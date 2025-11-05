@@ -48,9 +48,13 @@
  *
  * - \SCIP incorporates a mixed-integer programming (MIP) solver as well as
  * - an LP based mixed-integer nonlinear programming (MINLP) solver, and
- * - is a framework for branch-and-cut-and-price.
+ * - is a framework for branch-cut-and-price.
  *
- * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and to download \SCIP.
+ * Since version 10, \SCIP can optionally be configured to solve mixed-integer linear programs in a numerically exact
+ * solving mode and produce certificates that can be independently verified, see \ref EXACT "How to use the numerically
+ * exact solving mode" for details.
+ *
+ * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and how to download \SCIP.
  *
  *  <b style="color: blue">If you are new to SCIP and don't know where to start you should have a look at the
  *  @ref GETTINGSTARTED "first steps walkthrough"
@@ -126,6 +130,19 @@
  * `msk`    | Mosek (version at least 7.0.0 required)
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/** @page LPIEXACT Available implementations of the numerically exact LP solver interface
+ *
+ * SCIP provides the following interfaces to exact LP solvers:
+ *
+ * LPI name | LP solver
+ * ---------|----------
+ * `spx`    | SoPlex
+ * `qsoptex`| QSopt_ex (experimental)
+ * `none`   | no exact LP solver linked
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -342,6 +359,7 @@
  * - @subpage DEBUG   "Debugging"
  * - @subpage STAGES  "SCIP stages"
  */
+
 /**@page HOWTOADD How to add ...
  *
  * Below you find for most plugin types a detailed description of how to implement and add them to \SCIP.
@@ -371,10 +389,12 @@
  * - @subpage BENDER "Benders' decomposition"
  *   + @subpage BENDERSCUT "Benders' decomposition cuts"
  */
+
 /**@page HOWTOUSESECTION How to use ...
  *
- * - @subpage CONF    "Conflict analysis"
  * - @subpage TEST    "How to run automated tests with SCIP"
+ * - @subpage EXACT   "How to use the numerically exact solving mode"
+ * - @subpage CONF    "How to use conflict analysis"
  * - @subpage COUNTER "How to use SCIP to count feasible solutions"
  * - @subpage REOPT   "How to use reoptimization in SCIP"
  * - @subpage CONCSCIP "How to use the concurrent solving mode in SCIP"
@@ -7832,6 +7852,37 @@
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page EXACT How to use the numerically exact solving mode
+ *
+ * As a feature standing out among today's MIP solvers, \SCIP offers the option to solve mixed-integer linear programs
+ * in a numerically exact solving mode, in which it uses rational, extended-precision, and safe floating-point
+ * computation in order to guarantee that results are not affected by roundoff errors from unsafe floating-point
+ * arithmetic.
+ *
+ * Exact solving mode requires \SCIP to be built with
+ *
+ *   - GMP[https://gmplib.org/] for rational arithmetic in ZIMPL, SoPlex, SCIP, and PaPILO,
+ *   - Boost[https://www.boost.org/] multiprecision library for rationals in SCIP (and PaPILO, if linked),
+ *   - MPFR[https://www.mpfr.org/] for approximating rationals with floating-point numbers in SCIP,
+ *   - and an exact LP solver such as SoPlex.
+ *
+ * Enabling the exact solving mode is done by setting the parameter `exact/enable = TRUE` or calling the API method
+ * `SCIPenableExactSolving()`.  Note that this has to be done <b>before</b> reading a problem instance.  Further advanced
+ * parameters for exact solving can be set in the `exact` submenu.
+ *
+ * Optionally, the output of a certificate (also known as proof logging) can be enabled by specifying
+ * `certificate/filename`. The resulting certificate can be checked with the proof checker
+ * VIPR[https://github.com/scipopt/vipr] or a formally verified version in CakeML[https://cakeml.org/checkers.html].
+ * Note that certificate files are incomplete if cutting plane separation is enabled (as by default). In this case, the
+ * certificate needs to be completed using the `viprcomp` script prior to verification.
+ *
+ * All plugins that want to participate in exact solving mode need to be marked as safe to use when included.
+ *
+ * For further details we refer to the release report of SCIP 10.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page OBJ Creating, capturing, releasing, and adding data objects
  *
  *  Data objects (variables, constraints, rows, ... ) are subject to reference counting
@@ -9296,6 +9347,21 @@
  * @brief methods to initiate and conduct LP diving
  */
 
+/**@defgroup PublicLPExactMethods Exact LP Relaxation
+ * @ingroup PublicSolveMethods
+ * @brief methods to manage exact LP relaxation
+ */
+
+/**@defgroup PublicExactMethods Exact Solving Mode
+ * @ingroup PublicSolveMethods
+ * @brief general methods for numerically exact solving
+ */
+
+/**@defgroup PublicCertificateMethods Certificate Output
+ * @ingroup PublicSolveMethods
+ * @brief methods for certified solving
+ */
+
 /**@defgroup PublicNLPMethods NLP Relaxation
  * @ingroup PublicSolveMethods
  * @brief methods for the nonlinear relaxation
@@ -9374,6 +9440,11 @@
  * @brief graph structure with common algorithms for directed and undirected graphs
  */
 
+/**@defgroup PublicDatatreeMethods Data Tree
+ * @ingroup DataStructures
+ * @brief methods for managing data trees
+ */
+
 /**@defgroup DecompMethods Decomposition data structure
  * @ingroup DataStructures
  * @brief methods for creating and accessing user decompositions
@@ -9382,6 +9453,11 @@
 /**@defgroup NetworkMatrix Network Matrix
  * @ingroup DataStructures
  * @brief methods for detecting network matrices and converting them to the underlying graphs
+ */
+
+/**@defgroup PublicRationalMethods Rational Arithmetic
+ * @ingroup DataStructures
+ * @brief wrapper for rational number arithmetic
  */
 
 /**@defgroup SymGraph Symmetry Detection Graph
@@ -9501,6 +9577,11 @@
 /**@defgroup PublicDivesetMethods Dive sets
  * @ingroup PublicSpecialHeuristicMethods
  * @brief methods for dive sets to control the generic diving algorithm
+ */
+
+/**@defgroup PublicIISfinderMethods IIS Finders
+ * @ingroup PluginManagementMethods
+ * @brief  methods for irreducible infeasible subsystems (IIS) finders
  */
 
 /**@defgroup PublicNodeSelectorMethods Node Selector
@@ -9843,6 +9924,20 @@
  * under "src/lpi/".
  *
  * @see \ref LPI for a list of available LP solver interfaces
+ */
+
+/**@defgroup LPIEXACTS Exact LP Solver Interface
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the exact LP solver interface of \SCIP
+ *
+ * For the numerically exact solving mode, \SCIP also uses exact LP solvers.  The communication
+ * is realized through an exact LP interface.
+ *
+ * This page lists public interface methods that every exact LP interface provides.
+ * Find the concrete implementation for your exact LP solver
+ * under "src/lpiexact/".
+ *
+ * @see \ref LPIEXACT for a list of available exact LP solver interfaces
  */
 
 /**@defgroup NODESELECTORS Node Selectors

@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   type_lpexact.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for exact LP management
  * @author Leon Eifler
  */
@@ -31,8 +32,6 @@
 
 #ifndef __SCIP_TYPE_LPEXACT_H__
 #define __SCIP_TYPE_LPEXACT_H__
-
-#include "type_lp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,24 +42,24 @@ typedef struct SCIP_RowExactSolVals SCIP_ROWEXACTSOLVALS;   /**< collected value
 typedef struct SCIP_LpExactSolVals SCIP_LPEXACTSOLVALS;     /**< collected values of the exact LP data which depend on the LP solution */
 
 
-/** column of an LP
+/** column of an exact LP
  *
- *  - \ref PublicColumnMethods "List of all available methods"
+ *  - \ref PublicLPExactMethods "List of all available methods"
  */
 typedef struct SCIP_ColExact SCIP_COLEXACT;
 
-/** row of an LP
+/** row of an exact LP
  *
- *  - \ref PublicRowMethods "List of all available methods"
+ *  - \ref PublicLPExactMethods "List of all available methods"
  */
 typedef struct SCIP_RowExact SCIP_ROWEXACT;
 
 /** data used for project and shift */
 typedef struct SCIP_ProjShiftData SCIP_PROJSHIFTDATA;
 
-/** LP structure
+/** exact LP structure
  *
- *  - \ref PublicLPMethods "List of all available methods"
+ *  - \ref PublicLPExactMethods "List of all available methods"
  */
 typedef struct SCIP_LpExact SCIP_LPEXACT;
 

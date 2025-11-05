@@ -22,10 +22,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file rational.cpp
- * @brief rational wrapper file to use the multiprecision rationals class in SCIP
- * @ingroup INTERNALAPI
- * @author  Leon Eifler
+/**@file   rational.cpp
+ * @ingroup OTHER_CFILES
+ * @brief  wrapper for rational number arithmetic
+ * @author Leon Eifler
+ * @author Dominik Kamp
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

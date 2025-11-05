@@ -181,10 +181,12 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `AUTOBUILD`            | `on`, `off`                        | --                         | automatically find dependencies on availability, ignores individual flags of these packages |
 | `CMAKE_BUILD_TYPE`     | `Release`, `Debug`, ...            | `OPT=[opt, dbg]`           |                                                                    |
 | `GMP`                  | `on`, `off`                        | `GMP=[true, false]`        | specify `GMP_DIR` if not found automatically                       |
+| `MPFR`                 | `on`, `off`                        | `MPFR=[true, false]`       | specify `MPFR_DIR` if not found automatically                      |
 | `CONOPT`               | `on`, `off`                        | `CONOPT=[true,false]`      | specify `CONOPT_DIR` if not found automatically                    |
 | `IPOPT`                | `on`, `off`                        | `IPOPT=[true,false]`       | requires IPOPT version >= 3.12.0; specify `IPOPT_DIR` if not found automatically |
 | `LAPACK`               | `on`, `off`                        | `LAPACK=[true,false]`      | requires Lapack to be installed on the system                      |
 | `LPS`                  | `spx`, `cpx`, `grb`, `xprs`, ...   | `LPS=...`                  | specify `SOPLEX_DIR`, `CPLEX_DIR`, `MOSEK_DIR`, ... if LP solver is not found automatically |
+| `LPSEXACT`             | `spx`, `qsoex`, `none`, `auto`     | `LPSEXACT=...`             | specify `SOPLEX_DIR`, `QSOEX_DIR` if exact LP solver is not found automatically |
 | `SYM`                  | `nauty`, `snauty`, `none`, ...     | `SYM=[nauty, snauty, none]`| choose symmetry handling                                           |
 | `WORHP`                | `on`, `off`                        | `WORHP=[true,false]`       | should worhp be linked; specify `WORHP_DIR` if not found automatically |
 | `ZIMPL`                | `on`, `off`                        | `ZIMPL=[true, false]`      | specify `ZIMPL_DIR` if not found automatically                     |
@@ -192,6 +194,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `READLINE`             | `on`, `off`                        | `READLINE=[true, false]`   |                                                                    |
 | `..._DIR`              | `<custom/path/to/.../package>`     | --                         | e.g. `IPOPT_DIR`, `CPLEX_DIR`, `WORHP_DIR`, `Readline_DIR` ...     |
 | `BOOST_ROOT`           | `<custom/path/to/.../boost>`       | --                         | hint for location of boost                                         |
+| `EXACTSOLVE`           | `auto`, `on`, `off`                | `EXACTSOLVE=[auto,true,false]` | build with exact solving functionality                         |
 | `CMAKE_INSTALL_PREFIX` | `\<path\>`                         | `INSTALLDIR=\<path\>`      |                                                                    |
 | `SHARED`               | `on`, `off`                        | `SHARED=[true, false]`     |                                                                    |
 | `CXXONLY`              | `on`, `off`                        | --                         | use a C++ compiler for all source files                            |
@@ -209,6 +212,19 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `TPI`                  | `tny`, `omp`, `none`               | `TPI=[tny,omp,none]`       | enable task processing interface required for concurrent solver    |
 
 Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing configuration.
+
+Building with exact solving functionality
+-----------------------------------------
+
+In order to build SCIP with exact solving mode, the following dependencies must be available:
+
+- [GMP](https://gmplib.org/) for rational arithmetic in ZIMPL, SoPlex, SCIP, and PaPILO,
+- [Boost](https://www.boost.org/) multiprecision library for rationals in SCIP (and PaPILO, if linked),
+- [MPFR](https://www.mpfr.org/) for approximating rationals with floating-point numbers in SCIP,
+- and an exact LP solver such as SoPlex.
+
+If the EXACTSOLVE flag is set to auto, exact solving mode will be available if and only if all these dependencies are satisfied.
+If the EXACTSOLVE flag is set to true, the build will fail if one of these dependencies is not satisfied.
 
 Testing with CTest
 ------------------
@@ -334,11 +350,15 @@ In your SCIP main directory, enter `make [options]` with the following options:
 | `COMP=gnu`            | `[gnu, clang, intel]`| Use Gnu, Clang or Intel compiler.                                                                |
 | `EXPRINT=cppad`       | `[cppad, none]`      | to use CppAD as expressions interpreter                                                          |
 | `FILTERSQP=false`     | `[false, true]`      | to enable or disable FilterSQP interface                                                         |
-| `GMP=true`            | `[true, false]`      | to enable or disable GMP library for exact counting and Zimpl support                            |
+| `GMP=true`            | `[true, false]`      | to enable or disable GMP library needed for exact solving, counting, and Zimpl support           |
+| `BOOST=false`         | `[true, false]`      | to enable or disable Boost library needed for exact solving functionality                        |
+| `MPFR=auto`           | `[true, false, auto]`| to enable or disable MPFR library needed for exact solving functionality (auto = like Boost)     |
+| `EXACTSOLVE=auto`     | `[true, false, auto]`| to build with exact solving functionality (auto = true if all dependencies are available)        |
 | `IPOPT=false`         | `[false, true]`      | to disable or enable IPOPT interface (needs IPOPT >= 3.12.0)                                     |
 | `CONOPT=false`        | `[false, true]`      | to enable or disable the CONOPT interface                                                            |
 | `LAPACK=false`        | `[false, true]`      | link with Lapack; requires Lapack to be installed on the system                                  |
-| `LPS=spx`             | `[spx, cpx, grb, xprs, msk, clp, glop, qso, highs, none]` | determines the LP-Solver, should be installed seperately. Options to use SoPlex, CPLEX, Gurobi, XPRESS, MOSEK, CLP, Glop, QSopt, HiGHS as LP solver, no LP solver  |
+| `LPS=spx`             | `[spx, cpx, grb, xprs, msk, clp, glop, qso, highs, none]` | determines the LP solver, should be installed seperately. Options to use SoPlex, CPLEX, Gurobi, XPRESS, MOSEK, CLP, Glop, QSopt, HiGHS as LP solver, no LP solver  |
+| `LPSEXACT=spx`        | `[spx, none]`        | determines the exact LP solver                                                                   |
 | `LPSOPT=opt`          | `[opt, dbg, opt-gccold]` | Choose the debug or optimized version (or old GCC optimized) version of the LP-solver (currently only available for SoPlex and CLP). |
 | `LTO=false`           | `[false, true]`      | enable link-time-optimization on Linux/MacOS and gcc/clang                                       |
 | `NOBLKMEM=false`      | `[false, true]`      | Turns the internal SCIP block memory off or on.                                                  |

@@ -1,11 +1,12 @@
 # SCIP: Solving Constraint Integer Programs
 
-Welcome to what is currently one of the fastest academically developed solvers
-for mixed integer programming (MIP) and mixed integer nonlinear programming
-(MINLP). In addition, SCIP provides a highly flexible framework for constraint
-integer programming and branch-cut-and-price. It allows for total control of the
-solution process and the access of detailed information down to the guts of the
-solver.
+Welcome to what is currently one of the **fastest academically developed solvers**
+for mixed integer programming (**MIP**) and mixed integer nonlinear programming
+(**MINLP**). In addition, SCIP provides a highly flexible framework for **constraint
+integer programming**, **branch-cut-and-price**, and can optionally be configured to
+solve mixed-integer linear programs in a **numerically exact solving mode**.
+SCIP allows for total control of the solution process and the access of detailed
+information down to the guts of the solver.
 
 The original instance of this repository is hosted at
 [git.zib.de](https://git.zib.de) and a read-only

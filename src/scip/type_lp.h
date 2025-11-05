@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   type_lp.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for LP management
  * @author Tobias Achterberg
  */
