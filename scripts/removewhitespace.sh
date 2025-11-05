@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# This script removes all whitespace in otherwise empty lines.
+# This script removes all trailing whitespace.
 #
 # There is nothing to adjust. Afterward please check the changes via "git
 # diff" to make sure that the replacement worked
@@ -26,9 +26,9 @@ do
     if test -f $FILE
     then
         echo $FILE
-        COUNT=`grep -c -h "^[ \t]\([ \t]*\)$" $FILE`
+        COUNT=`grep -c -h "[ \t]\([ \t]*\)$" $FILE`
         CNT=`expr $CNT + $COUNT`
-        sed -i -e 's/^\([ \t][ \t]*\)$//g' $FILE
+        sed -i -e 's/\([ \t][ \t]*\)$//g' $FILE
     fi
 done
 echo ""
