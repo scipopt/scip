@@ -20,16 +20,11 @@ do
     FILES="$FILES $DIR/*.h $DIR/*.c"
 done
 
-CNT=0;
 for FILE in ${FILES[@]}
 do
     if test -f $FILE
     then
         echo $FILE
-        COUNT=`grep -c -h "[ \t]\([ \t]*\)$" $FILE`
-        CNT=`expr $CNT + $COUNT`
         sed -i -e 's/\([ \t][ \t]*\)$//g' $FILE
     fi
 done
-echo ""
-echo "Replaced "$CNT" lines."
