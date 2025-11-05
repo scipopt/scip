@@ -134,7 +134,7 @@ SCIP_RETCODE readCnfLine(
 }
 
 /* Read SAT formula in "CNF File Format".
- * 
+ *
  *  The specification is taken from the
  *
  *  Satisfiability Suggested Format
@@ -142,10 +142,10 @@ SCIP_RETCODE readCnfLine(
  *  Online available at http://www.intellektik.informatik.tu-darmstadt.de/SATLIB/Benchmarks/SAT/satformat.ps
  *
  *  The method reads all files of CNF format. Other formats (SAT, SATX, SATE) are not supported.
- */  
+ */
 static
 SCIP_RETCODE readCnf(
-   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_FILE*            file                /**< input file */
    )
 {

@@ -381,8 +381,8 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    );
 
-/** sets heuristic parameters values to 
- *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters 
+/** sets heuristic parameters values to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters
  *  - SCIP_PARAMSETTING_FAST such that the time spend for heuristic is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristic are called more aggregative
  *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
@@ -395,8 +395,8 @@ SCIP_RETCODE SCIPparamsetSetHeuristics(
    SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    );
 
-/** sets presolving parameters to 
- *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters 
+/** sets presolving parameters to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters
  *  - SCIP_PARAMSETTING_FAST such that the time spend for presolving is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggregative
  *  - SCIP_PARAMSETTING_OFF which turn off all presolving
@@ -409,8 +409,8 @@ SCIP_RETCODE SCIPparamsetSetPresolving(
    SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    );
 
-/** sets separating parameters to 
- *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters 
+/** sets separating parameters to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters
  *  - SCIP_PARAMSETTING_FAST such that the time spend for separating is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that the separating is done more aggregative
  *  - SCIP_PARAMSETTING_OFF which turn off all separating

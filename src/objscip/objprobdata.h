@@ -112,7 +112,7 @@ public:
       *deleteobject = FALSE;
 
       return SCIP_OKAY;
-   }      
+   }
 
    /** destructor of user problem data to free transformed user data (called when transformed problem is freed)
     *
@@ -168,15 +168,15 @@ public:
     *  recursion.
     *
     *  possible return values for *result:
-    *  - SCIP_DIDNOTRUN  : the copying process was not performed 
+    *  - SCIP_DIDNOTRUN  : the copying process was not performed
     *  - SCIP_SUCCESS    : the copying process was successfully performed
     */ /*lint -e715*/
    virtual SCIP_RETCODE scip_copy(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP*              sourcescip,         /**< source SCIP main data structure */
-      SCIP_HASHMAP*      varmap,             /**< a hashmap which stores the mapping of source variables to corresponding 
+      SCIP_HASHMAP*      varmap,             /**< a hashmap which stores the mapping of source variables to corresponding
                                               *   target variables */
-      SCIP_HASHMAP*      consmap,            /**< a hashmap which stores the mapping of source contraints to corresponding 
+      SCIP_HASHMAP*      consmap,            /**< a hashmap which stores the mapping of source contraints to corresponding
                                               *   target constraints */
       ObjProbData**      objprobdata,        /**< pointer to store the copied problem data object */
       SCIP_Bool          global,             /**< create a global or a local copy? */

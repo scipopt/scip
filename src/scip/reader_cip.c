@@ -69,7 +69,7 @@ struct SCIP_ReaderData
 
 
 /** Section of the in CIP files */
-enum CipSection 
+enum CipSection
 {
    CIP_START,            /**< start tag */
    CIP_STATISTIC,        /**< statistics section */

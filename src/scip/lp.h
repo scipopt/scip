@@ -1527,8 +1527,8 @@ void SCIPlpSetIsRelax(
    SCIP_Bool             relax               /**< is the current lp a relaxation? */
    );
 
-/** returns whether the current LP is a relaxation of the problem for which it has been solved and its 
- *  solution value a valid local lower bound? 
+/** returns whether the current LP is a relaxation of the problem for which it has been solved and its
+ *  solution value a valid local lower bound?
  */
 SCIP_Bool SCIPlpIsRelax(
    SCIP_LP*              lp                  /**< LP data */

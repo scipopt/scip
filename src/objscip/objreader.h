@@ -136,7 +136,7 @@ public:
 
    /** problem writing method of reader; NOTE: if the parameter "genericnames" is TRUE, then
     *  SCIP already set all variable and constraint names to generic names; therefore, this
-    *  method should always use SCIPvarGetName() and SCIPconsGetName(); 
+    *  method should always use SCIPvarGetName() and SCIPconsGetName();
     *
     *  @see SCIP_DECL_READERWRITE(x) in @ref type_reader.h
     */

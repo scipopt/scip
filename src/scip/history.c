@@ -575,7 +575,7 @@ SCIP_Real SCIPhistoryGetPseudocostVariance(
       return 0.0;
 }
 
-/** returns the (possible fractional) number of (partial) pseudo cost updates performed on this pseudo cost entry in 
+/** returns the (possible fractional) number of (partial) pseudo cost updates performed on this pseudo cost entry in
  *  the given branching direction
  */
 SCIP_Real SCIPhistoryGetPseudocostCount(
@@ -679,7 +679,7 @@ void SCIPhistoryIncNActiveConflicts(
 {
    assert(history != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
-   assert((int)dir == 0 || (int)dir == 1); 
+   assert((int)dir == 0 || (int)dir == 1);
    assert(length >= 0.0);
 
    history->nactiveconflicts[dir]++;
@@ -733,7 +733,7 @@ void SCIPhistoryIncInferenceSum(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
    SCIP_Real             weight              /**< weight of this update in inference score */
-   ) 
+   )
 {
    assert(history != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
@@ -742,7 +742,7 @@ void SCIPhistoryIncInferenceSum(
    assert(weight >= 0.0);
 
    history->inferencesum[dir] += weight;
-} 
+}
 
 /** increases the number of cutoffs counter */
 void SCIPhistoryIncCutoffSum(

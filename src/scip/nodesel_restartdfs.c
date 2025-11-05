@@ -145,9 +145,9 @@ SCIP_DECL_NODESELSELECT(nodeselSelectRestartdfs)
       nnodes = SCIPgetNNodes(scip);
 
       /* check if in case of "only leaves" the number processed leaves exceeds the frequency or in the other case the
-       * number of processed node does it 
+       * number of processed node does it
        */
-      if( (nodeseldata->countonlyleaves && nodeseldata->nprocessedleaves >= nodeseldata->selectbestfreq) 
+      if( (nodeseldata->countonlyleaves && nodeseldata->nprocessedleaves >= nodeseldata->selectbestfreq)
          || (!nodeseldata->countonlyleaves && nnodes - nodeseldata->lastrestart >= nodeseldata->selectbestfreq ) )
       {
          nodeseldata->lastrestart = nnodes;

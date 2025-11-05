@@ -644,7 +644,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    }
 
    /* coverity[tainted_data] */
-   if( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) == NULL )   
+   if( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) == NULL )
    {
       infoMessage("Run out of memory while reading file %s.\n", filename);
       (void) fclose(file);

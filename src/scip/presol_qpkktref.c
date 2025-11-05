@@ -130,7 +130,7 @@ struct SCIP_PresolData
    SCIP_Bool             updatequadbounded;  /**< if TRUE then only apply the update to QPs with bounded variables; if
                                               *   the variables are not bounded then a finite optimal solution might not
                                               *   exist and the KKT conditions would then be invalid */
-   SCIP_Bool             updatequadindef;    /**< if TRUE then apply quadratic constraint update even if the quadratic 
+   SCIP_Bool             updatequadindef;    /**< if TRUE then apply quadratic constraint update even if the quadratic
                                               *   constraint matrix is known to be indefinite */
 };
 

@@ -212,7 +212,7 @@ SCIP_Real SCIPbdchginfoGetRelaxedBound(
    );
 
 /*
- * methods for variables 
+ * methods for variables
  */
 
 /** creates and captures an original problem variable; an integer variable with bounds

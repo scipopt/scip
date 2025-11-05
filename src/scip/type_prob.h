@@ -144,7 +144,7 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  - result          : pointer to store the result of the call
  *
  *  possible return values for *result:
- *  - SCIP_DIDNOTRUN  : the copying process was not performed 
+ *  - SCIP_DIDNOTRUN  : the copying process was not performed
  *  - SCIP_SUCCESS    : the copying process was successfully performed
  */
 #define SCIP_DECL_PROBCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP* sourcescip, SCIP_PROBDATA* sourcedata, \

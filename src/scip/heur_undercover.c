@@ -1207,7 +1207,7 @@ SCIP_RETCODE forbidCover(
    SCIPfreeBufferArray(scip, &consvars);
 
    /* if proven infeasible, we do not even add the constraint; otherwise we add and release the constraint if created
-    * successfully 
+    * successfully
     */
    if( !(*infeas) && cons != NULL )
    {
@@ -1595,7 +1595,7 @@ SCIP_RETCODE getFixingValue(
          int i;
 
          /* restore bounds at start of probing, since otherwise, if in backtrack mode, NLP solver becomes most likely
-          * locally infeasible 
+          * locally infeasible
           */
          SCIP_CALL( SCIPstartDiveNLP(scip) );
 
@@ -2447,7 +2447,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    heurdata->nlpsolved = FALSE;
 
    /* if solving the NLP relaxation has failed too often in previous runs, or NLP and NLP solver is not available, we do
-    * not even try 
+    * not even try
     */
    heurdata->nlpfailed = heurdata->nnlpfails >= MAXNLPFAILS || !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0;
 

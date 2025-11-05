@@ -180,7 +180,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputXyz)
 
 /** data collection method of table */
 #if 0
-static 
+static
 SCIP_DECL_TABLECOLLECT(tableCollectXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz statistics table not implemented yet\n");

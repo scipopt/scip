@@ -71,8 +71,8 @@ extern "C" {
 #endif
 
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
- *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
- *  copied SCIP instance might not represent the same problem semantics as the original. 
+ *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the
+ *  copied SCIP instance might not represent the same problem semantics as the original.
  *  Note that in this case dual reductions might be invalid. */
 SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */

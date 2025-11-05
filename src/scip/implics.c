@@ -562,7 +562,7 @@ void implicsSearchVar(
          /* y was found as y_lower (on position middle) */
          *poslower = pos;
          if( pos + 1 < implics->nimpls[varfixing] && implics->vars[varfixing][pos+1] == implvar )
-         {  
+         {
             assert(implics->types[varfixing][pos+1] == SCIP_BOUNDTYPE_UPPER);
             *posupper = pos + 1;
          }
@@ -575,7 +575,7 @@ void implicsSearchVar(
          /* y was found as y_upper (on position pos) */
          *posupper = pos;
          if( pos - 1 >= 0 && implics->vars[varfixing][pos-1] == implvar )
-         {  
+         {
             assert(implics->types[varfixing][pos-1] == SCIP_BOUNDTYPE_LOWER);
             *poslower = pos - 1;
             *posadd = pos - 1;
@@ -590,7 +590,7 @@ void implicsSearchVar(
 }
 
 /** returns whether variable y is already contained in implications for x == 0 or x == 1 with the given impltype
- *  y can be contained in structure with y >= b (y_lower) and y <= b (y_upper) 
+ *  y can be contained in structure with y >= b (y_lower) and y <= b (y_upper)
  */
 static
 SCIP_Bool implicsSearchImplic(
@@ -656,7 +656,7 @@ SCIP_RETCODE SCIPimplicsAdd(
    assert(*implics == NULL || 0 <= (*implics)->nimpls[varfixing]);
    assert(stat != NULL);
    assert(SCIPvarIsActive(implvar));
-   assert(SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_LOOSE); 
+   assert(SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_LOOSE);
    assert((impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGT(set, implbound, SCIPvarGetLbGlobal(implvar)))
       || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLT(set, implbound, SCIPvarGetUbGlobal(implvar))));
    assert(conflict != NULL);
@@ -843,7 +843,7 @@ SCIP_RETCODE SCIPimplicsDel(
    )
 {  /*lint --e{715}*/
    int poslower;
-   int posupper; 
+   int posupper;
    int posadd;
    SCIP_Bool found;
 
@@ -864,7 +864,7 @@ SCIP_RETCODE SCIPimplicsDel(
       return SCIP_OKAY;
    }
 
-   assert((impltype == SCIP_BOUNDTYPE_LOWER && poslower >= 0 && posadd == poslower) 
+   assert((impltype == SCIP_BOUNDTYPE_LOWER && poslower >= 0 && posadd == poslower)
       || (impltype == SCIP_BOUNDTYPE_UPPER && posupper >= 0 && posadd == posupper));
    assert(0 <= posadd && posadd < (*implics)->nimpls[varfixing]);
    assert((*implics)->vars[varfixing][posadd] == implvar);
@@ -1540,7 +1540,7 @@ SCIP_RETCODE SCIPcliquelistDel(
    if( *cliquelist == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("deleting clique %u from cliquelist %p value %u (length: %d)\n", 
+   SCIPdebugMessage("deleting clique %u from cliquelist %p value %u (length: %d)\n",
       clique->id, (void*)*cliquelist, value, (*cliquelist)->ncliques[value]);
 
    pos = cliquesSearchClique((*cliquelist)->cliques[value], (*cliquelist)->ncliques[value], clique);

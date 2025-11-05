@@ -4205,7 +4205,7 @@ SCIP_RETCODE propAndSolve(
          *cutoff ? SCIPsetInfinity(set) : (*lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set, transprob)),
          stat->nlpiterations, stat->lpcount);
 
-      /* check, if the path was cutoff */ 
+      /* check, if the path was cutoff */
       *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
 
       /* if an error occured during LP solving, switch to pseudo solution */

@@ -50,7 +50,7 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  *  input:
  *  - scip            : SCIP main data structure
  *  - pricer          : the variable pricer itself
- *  - valid           : was the copying process valid? 
+ *  - valid           : was the copying process valid?
  */
 #define SCIP_DECL_PRICERCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer, SCIP_Bool* valid)
 
@@ -150,7 +150,7 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  *   - if y_i is negative, b_i is the right hand side of the row.
  *
  *  y is chosen in a way, such that the valid inequality  y^T A x >= y^T b  is violated by all x,
- *  especially by the (for this inequality least infeasible solution) x' defined by 
+ *  especially by the (for this inequality least infeasible solution) x' defined by
  *     x'_i := ub_i, if y^T A_i >= 0
  *     x'_i := lb_i, if y^T A_i < 0.
  *  Pricing in this case means to add variables i with positive Farkas value, i.e. y^T A_i x'_i > 0.

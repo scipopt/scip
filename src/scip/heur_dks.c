@@ -134,7 +134,7 @@ typedef struct Bucket
 struct Bucketlist
 {
    SCIP*                 scip;               /**< scip instance this bucketlist belongs to */
-   BUCKET*               buckets;            /**< buckets in this bucketlist */ 
+   BUCKET*               buckets;            /**< buckets in this bucketlist */
    int                   nbuckets;           /**< amount of buckets in this bucketlist */
 };
 
@@ -239,12 +239,12 @@ SCIP_RETCODE getLinkingScoreAndBlocklabels(
 static
 SCIP_RETCODE countKernelVariables(
    SCIP*                 scip,               /**< main SCIP data structure */
-   SCIP_VAR**            vars,               /**< array of variables */  
+   SCIP_VAR**            vars,               /**< array of variables */
    SCIP_SOL*             bestcurrsol,        /**< best current solution */
    SCIP_HASHMAP*         lbvarmap,           /**< original lower bound of transformed variables */
    SCIP_Bool             twolevel,           /**< usage of one or two level structure */
    SCIP_Bool             usebestsol,         /**< usage of best or lp solution */
-   SCIP_Bool             usetransprob,       /**< usage of transformed or original problem */ 
+   SCIP_Bool             usetransprob,       /**< usage of transformed or original problem */
    SCIP_Bool             usetranslb,         /**< usage of transformed lb in comparison to original lb */
    int*                  bw_ncontkernelvars, /**< blockwise number of continuous kernel variables */
    int*                  bw_ncontnonkernelvars, /**< blockwise number of continuous non-kernel variables */
@@ -310,7 +310,7 @@ SCIP_RETCODE countKernelVariables(
       /* LP value > lb -> count integer as kernel variable else not */
       /* count separatly if binaries and integers are present */
       case SCIP_VARTYPE_INTEGER:
-         if(  (!SCIPisEQ(scip, lpval, 0.0) && !SCIPisEQ(scip, lpval, lb)) 
+         if(  (!SCIPisEQ(scip, lpval, 0.0) && !SCIPisEQ(scip, lpval, lb))
             || (usetranslb && SCIPisGT(scip, lb, lborig)) )
          {
             if( twolevel )
@@ -459,7 +459,7 @@ SCIP_RETCODE fillKernels(
          /* adding the variable to the binary and integer variable array */
          binintvars[j++] = vars[i];
 
-         if(  (!SCIPisEQ(scip, lpval, 0.0) && !SCIPisEQ(scip, lpval, lb)) 
+         if(  (!SCIPisEQ(scip, lpval, 0.0) && !SCIPisEQ(scip, lpval, lb))
             || (usetranslb && SCIPisGT(scip, lb, lborig)) )
          {
             if( twolevel )
@@ -696,8 +696,8 @@ SCIP_RETCODE fillBuckets(
    int*                  bw_nnonkernelvars,  /**< blockwise number of (binary,) non-kernel variables */
    int*                  bw_nintnonkernelvars,     /**< blockwise number of integer, non-kernel variables */
    SCIP_Real**           bw_cont_redcost,    /**< blockwise reduced costs of continuous, non-kernel variables */
-   SCIP_Real**           bw_redcost,         /**< blockwise reduced costs of (binary,) non-kernel variables */ 
-   SCIP_Real**           bw_int_redcost,     /**< blockwise reduced costs of integer, non-kernel variables */                
+   SCIP_Real**           bw_redcost,         /**< blockwise reduced costs of (binary,) non-kernel variables */
+   SCIP_Real**           bw_int_redcost,     /**< blockwise reduced costs of integer, non-kernel variables */
    SCIP_Bool             twolevel,           /**< usage of one or two level structure */
    SCIP_Bool             redcostlogsort,     /**< filling the buckets by logarithmically reduced cost sort */
    int                   nbuckets,           /**< number of buckets */
@@ -2237,7 +2237,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
             bw_intkernelvars, bw_intnonkernelvars, bestcurrsol, lbvarmap, twolevel, usebestsol,
             heurdata->usetransprob, heurdata->translbkernel, bw_contkernelcount,
             bw_contnonkernelcount, bw_kernelcount, bw_nonkernelcount, bw_intkernelcount,
-            bw_intnonkernelcount, bw_ncontkernelvars, bw_ncontnonkernelvars, bw_nkernelvars, bw_nnonkernelvars, 
+            bw_intnonkernelcount, bw_ncontkernelvars, bw_ncontnonkernelvars, bw_nkernelvars, bw_nnonkernelvars,
             bw_nintkernelvars, bw_nintnonkernelvars, block2index, varlabels, blklbl_offset, nvars) );
    }
    else
@@ -2246,7 +2246,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
             bw_contkernelvars, bw_contnonkernelvars, bw_kernelvars, bw_nonkernelvars, NULL, NULL,
             bestcurrsol, lbvarmap, twolevel, usebestsol, heurdata->usetransprob,
             heurdata->translbkernel, bw_contkernelcount, bw_contnonkernelcount, bw_kernelcount,
-            bw_nonkernelcount, NULL, NULL, bw_ncontkernelvars, bw_ncontnonkernelvars, bw_nkernelvars, bw_nnonkernelvars, 
+            bw_nonkernelcount, NULL, NULL, bw_ncontkernelvars, bw_ncontnonkernelvars, bw_nkernelvars, bw_nnonkernelvars,
             NULL, NULL, block2index, varlabels, blklbl_offset, nvars) );
 
    /* sorting of bucket variables according to the reduced costs in non-decreasing order */

@@ -321,7 +321,7 @@ SCIP_RETCODE setupAndSolveSubscip(
       ub = SCIPvarGetUbGlobal(subvars[i]);
       inf = SCIPinfinity(subscip);
 
-      /* adjust infinite bounds in order to avoid that variables with non-zero objective 
+      /* adjust infinite bounds in order to avoid that variables with non-zero objective
        * get fixed to infinite value in zeroobj subproblem
        */
       if( SCIPisInfinity(subscip, ub ) )

@@ -203,7 +203,7 @@ void updateBestCandidate(
    obj = SCIPvarGetObj(cand);
    obj = REALABS(obj);
    if( SCIPisInfinity(scip, *bestscore)
-      || (!SCIPisInfinity(scip, candscore) && 
+      || (!SCIPisInfinity(scip, candscore) &&
           (SCIPisLT(scip, candscore, *bestscore) || (SCIPisLE(scip, candscore, *bestscore) && obj > *bestobj))) )
    {
       *bestvar = cand;

@@ -67,7 +67,7 @@ extern "C" {
  * problem creation
  */
 
-/** creates problem data structure by copying the source problem; 
+/** creates problem data structure by copying the source problem;
  *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
  *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
  */
@@ -362,7 +362,7 @@ void SCIPprobSetObjIntegral(
    SCIP_PROB*            prob                /**< problem data */
    );
 
-/** sets integral objective value flag, if all variables with non-zero objective values are integral and have 
+/** sets integral objective value flag, if all variables with non-zero objective values are integral and have
  *  integral objective value and also updates the cutoff bound if primal solution is already known
  */
 SCIP_RETCODE SCIPprobCheckObjIntegral(

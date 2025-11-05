@@ -237,7 +237,7 @@ typedef struct SCIP_DomExact SCIP_DOMEXACT;       /**< exact domain (using ratio
  *  - result          : pointer to store the result of the call
  *
  *  possible return values for *result:
- *  - SCIP_DIDNOTRUN  : the copying process was not performed 
+ *  - SCIP_DIDNOTRUN  : the copying process was not performed
  *  - SCIP_SUCCESS    : the copying process was successfully performed
  */
 #define SCIP_DECL_VARCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP* sourcescip, SCIP_VAR* sourcevar, SCIP_VARDATA* sourcedata, \

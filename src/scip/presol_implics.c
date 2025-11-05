@@ -306,7 +306,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
    }
 
    /* perform the aggregations
-    * 
+    *
     * Note, that we cannot assume y to be active (see var.c: varRemoveImplicsVbs()), but it should not cause any
     * troubles as this case seems to be handled correctly in SCIPaggregateVars(), unless the variable is
     * multiaggregated, but this has been excluded above.

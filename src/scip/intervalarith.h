@@ -197,7 +197,7 @@ SCIP_Bool SCIPintervalIsNegativeInfinity(
  * speed up the algorithms.
  * With SCIPintervalSetBounds we need to be a bit careful, since i and s could use resultant->inf and resultant->sup,
  * e.g., SCIPintervalSetBounds(&resultant, -resultant->sup, -resultant->inf).
- * So we need to make sure that we first evaluate both terms before setting resultant. 
+ * So we need to make sure that we first evaluate both terms before setting resultant.
  */
 
 #define SCIPintervalGetInf(interval)               (interval).inf
@@ -468,7 +468,7 @@ void SCIPintervalSquareRoot(
    );
 
 /** stores operand1 to the power of operand2 in resultant
- * 
+ *
  * uses SCIPintervalPowerScalar if operand2 is a scalar, otherwise computes exp(op2*log(op1))
  */
 SCIP_EXPORT
@@ -552,7 +552,7 @@ void SCIPintervalPowerScalarInverse(
    );
 
 /** stores operand1 to the signed power of the scalar positive operand2 in resultant
- * 
+ *
  * The signed power of x w.r.t. an exponent n &ge; 0 is given as \f$\mathrm{sign}(x) |x|^n\f$.
  *
  * @attention we assume correctly rounded sqrt(double) and pow(double) functions when rounding is to nearest
@@ -659,7 +659,7 @@ void SCIPintervalEntropy(
    );
 
 /** computes exact upper bound on \f$ a x^2 + b x \f$ for x in [xlb, xub], b an interval, and a scalar
- * 
+ *
  * Uses Algorithm 2.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008).
  */
 SCIP_EXPORT
@@ -671,7 +671,7 @@ SCIP_Real SCIPintervalQuadUpperBound(
    );
 
 /** stores range of quadratic term in resultant
- * 
+ *
  * given scalar a and intervals b and x, computes interval for \f$ a x^2 + b x \f$ */
 SCIP_EXPORT
 void SCIPintervalQuad(
@@ -684,7 +684,7 @@ void SCIPintervalQuad(
 
 
 /** computes interval with positive solutions of a quadratic equation with interval coefficients
- * 
+ *
  * Given intervals a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \in c\f$ within xbnds.
  */
 SCIP_EXPORT
@@ -712,7 +712,7 @@ void SCIPintervalSolveUnivariateQuadExpressionNegative(
    );
 
 /** computes positive solutions of a quadratic equation with scalar coefficients
- * 
+ *
  * Givens scalar a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$ within xbnds.
  * Implements Algorithm 3.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008).
  */

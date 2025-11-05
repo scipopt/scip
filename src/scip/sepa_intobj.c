@@ -183,7 +183,7 @@ SCIP_RETCODE createObjRow(
 /** searches and adds integral objective cuts that separate the given primal solution */
 static
 SCIP_RETCODE separateCuts(
-   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< the intobj separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_RESULT*          result              /**< pointer to store the result */
