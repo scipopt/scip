@@ -947,11 +947,18 @@ SCIP_RETCODE initCurrent(
                if( origvar == NULL ) /* e.g. variable is negated */
                {
                   *success = FALSE;
-                  return SCIP_OKAY;
+                  break;
                }
                varlpvalue = SCIPvarGetLPSol(origvar);
                lpvalue += varlpvalue * consvals[i];
             }
+
+            SCIPfreeBufferArray(scip, &consvals);
+            SCIPfreeBufferArray(scip, &consvars);
+
+            if( !*success )
+               return SCIP_OKAY;
+
             sumrhs += lpvalue;
             sumlhs += lpvalue;
 
@@ -960,9 +967,6 @@ SCIP_RETCODE initCurrent(
                linking->currentrhs[b] = lpvalue;
             if( linking->haslhs )
                linking->currentlhs[b] = lpvalue;
-
-            SCIPfreeBufferArray(scip, &consvars);
-            SCIPfreeBufferArray(scip, &consvals);
          }
          assert(SCIPisLE(scip, sumrhs, rhs));
          assert(SCIPisGE(scip, sumlhs, lhs));
