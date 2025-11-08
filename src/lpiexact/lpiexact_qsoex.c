@@ -50,6 +50,7 @@
 #include "lpiexact/type_lpiexact.h"
 #include "lpiexact/lpiexact.h"
 #include "scip/pub_message.h"
+#include "scip/rationalgmp.h"
 
 
 /** solver name */
