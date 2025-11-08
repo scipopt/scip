@@ -822,6 +822,7 @@ set(scipheaders
     scip/pub_tree.h
     scip/pub_var.h
     scip/rational.h
+    scip/rationalgmp.h
     scip/rbtree.h
     scip/reader_bnd.h
     scip/reader_ccg.h

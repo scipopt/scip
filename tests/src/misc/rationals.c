@@ -28,6 +28,7 @@
  */
 
 #include "scip/rational.h"
+#include "scip/rationalgmp.h"
 #include "scip/type_clock.h"
 #include "scip/scip_randnumgen.h"
 #include <time.h>

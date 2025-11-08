@@ -33,6 +33,7 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/rational.h"
+#include "scip/rationalgmp.h"
 #include "scip/struct_rational.h"
 #include "scip/multiprecision.hpp"
 #include "scip/type_message.h"
@@ -49,10 +50,13 @@
 #include <string.h>
 #include <algorithm>
 
+#ifdef SCIP_WITH_MPFR
+#include <mpfr.h>
+#endif
+
 #ifdef SCIP_WITH_BOOST
 #include <boost/format.hpp>
 #ifdef SCIP_WITH_GMP
-#include <gmp.h>
 #include <boost/multiprecision/gmp.hpp>
 #endif
 #include <boost/multiprecision/number.hpp>

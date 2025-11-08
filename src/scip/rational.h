@@ -41,13 +41,6 @@
 #include "scip/type_rational.h"
 #include "scip/type_set.h"
 #include "blockmemshell/memory.h"
-#ifdef SCIP_WITH_GMP
-#include <gmp.h>
-#endif
-
-#ifdef SCIP_WITH_MPFR
-#include <mpfr.h>
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -179,52 +172,6 @@ SCIP_RETCODE SCIPrationalReallocBlockArray(
    int                   oldlen,             /**< size of src array */
    int                   newlen              /**< size of src array */
    );
-
-#if defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
-/** gets the underlying gmp rational pointer */
-SCIP_EXPORT
-mpq_t* SCIPrationalGetGMP(
-   SCIP_RATIONAL*        rational            /**< rational to access */
-   );
-
-/** sets rational to gmp rational */
-SCIP_EXPORT
-void SCIPrationalSetGMP(
-   SCIP_RATIONAL*        rational,           /**< rational to define */
-   const mpq_t           numb                /**< gmp rational to set */
-   );
-
-/** creates rational from gmp rational */
-SCIP_EXPORT
-SCIP_RETCODE SCIPrationalCreateBlockGMP(
-   BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_RATIONAL**       rational,           /**< pointer to the rational to create */
-   mpq_t                 numb                /**< gmp rational to set */
-   );
-
-/** sets gmp rational array to values of rational array */
-SCIP_EXPORT
-void SCIPrationalSetGMPArray(
-   mpq_t*                mpqaaray,           /**< gmp rational array */
-   SCIP_RATIONAL**       ratarrray,          /**< rational array */
-   int                   len                 /**< array length */
-   );
-
-/** sets rational array to values of gmp rational array */
-SCIP_EXPORT
-void SCIPrationalSetArrayGMP(
-   SCIP_RATIONAL**       ratarray,           /**< rational array */
-   mpq_t*                mpqarray,           /**< gmp rational array */
-   int                   len                 /**< array length */
-   );
-
-/** clears gmp rational array */
-SCIP_EXPORT
-void SCIPrationalClearArrayGMP(
-   mpq_t*                mpqarray,           /**< gmp rational array */
-   int                   len                 /**< array length */
-   );
-#endif
 
 /** deletes a rational and frees the allocated ordinary memory */
 SCIP_EXPORT

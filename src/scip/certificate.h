@@ -51,9 +51,6 @@
 #include "scip/pub_fileio.h"
 #include "scip/type_prob.h"
 #include "blockmemshell/memory.h"
-#ifdef SCIP_WITH_GMP
-#include "gmp.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
