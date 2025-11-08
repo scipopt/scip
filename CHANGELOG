@@ -489,6 +489,7 @@ Fixed bugs
 - corrected the upgrade of full orbitopes to packing/partitioning orbotopes in case the orbitopal symmetries form a proper subgroup of a component's symmetry group
 - aggregate integer variable to not in clique variable in cliquePresolve() of cons_xor.c to avoid infeasible solutions
 - fixed memory leak in dynamic partition search primal heuristic
+- fixed issue with file existence check in XML parser when SCIP was build with ZLIB support on Windows
 
 Miscellaneous
 -------------
