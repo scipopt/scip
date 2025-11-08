@@ -98,6 +98,7 @@ extern "C" {
 #include "zimpl/xlpglue.h"
 #include "zimpl/zimpllib.h"
 #include "scip/rational.h"
+#include "scip/rationalgmp.h"
 
 #ifdef __cplusplus
 }

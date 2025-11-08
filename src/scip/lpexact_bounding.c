@@ -46,6 +46,7 @@
 #include "scip/lpexact.h"
 #include "scip/prob.h"
 #include "scip/rational.h"
+#include "scip/rationalgmp.h"
 #include "scip/scip_certificate.h"
 #include "scip/scip_message.h"
 #include "scip/scip_prob.h"
