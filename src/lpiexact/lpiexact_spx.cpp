@@ -40,6 +40,7 @@
 #include "lpiexact/type_lpiexact.h"
 #include "lpiexact/lpiexact.h"
 #include "scip/rational.h"
+#include "scip/rationalgmp.h"
 
 /* check the return value of setParam methods */
 #define CHECK_SOPLEX_PARAM(x)                                                           \
