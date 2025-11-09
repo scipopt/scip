@@ -422,52 +422,52 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
        There are two main ways to analyse infeasible instances using SCIP:
-    <\p>
+    </p>
     <p>
        Firstly, there is IIS (irreducible infeasible subsystem) functionality in SCIP.
-       This can be called from the command line using `iis` or from the C API using `SCIPgenerateIIS(scip)`.
-       SCIP will then call its `iisfinders` and find a minimal subset of constraints (variable bounds too,
+       This can be called from the command line using <code>iis</code> or from the C API using <code>SCIPgenerateIIS()</code>.
+       SCIP will then call its <code>iisfinders</code> and find a minimal subset of constraints (variable bounds too,
        depending on the settings) that still results in an infeasible instance. There is no guarantee that
        the returned reduced instance is the smallest possible infeasible subsystem for the whole instance,
        but there is a guarantee that it contains no smaller infeasible subsystem, i.e., is irreducible.
        This functionality helps with identifying a small portion of constraints / variable bounds
        that together result in an infeasible problem.
-       After computing the IIS, it can be printed via the command line using `display/iis` or `write/iis`.
-    <\p>
+       After computing the IIS, it can be printed via the command line using <code>display/iis</code> or <code>write/iis</code>.
+    </p>
     <p>
        Secondly, there is MinUC (minimize number of unsatisfied constraints) functionality in SCIP.
-       This can be called from the command line using `change/minuc`.
+       This can be called from the command line using <code>change/minuc</code>.
        SCIP will then alter the current problem into a new problem.
-       One can then simply call `optimize` and solve the altered problem, which now minimizes the number
+       One can then simply call <code>optimize</code> and solve the altered problem, which now minimizes the number
        of unsatisfied constraints.
        In other words, SCIP will find a solution that marks a minimum number of constraints,
        such that if those constraints were relaxed, the original problem would be feasible.
-       One can view this by printing the solution, where `originalconsname_master` has value 1
+       One can view this by printing the solution, where <code>originalconsname_master</code> has value 1
        if the constraint is part of the MinUC.
-    <\p>
+    </p>
 
     QUESTION: How do I use SCIP in order to solve MIPs numerically exactly and certify the result?
     LABEL:exactsolving
     ANSWER:
     <p>
-       In the interactive shell the exact solving mode must be enabled by typing `set exact enable TRUE` before reading
+       In the interactive shell the exact solving mode must be enabled by typing <code>set exact enable TRUE</code> before reading
        the problem instance.  Optionally, a certificate file can be printed by specifying its filename via
-       `set certificate filename [yourfilename.vipr]`.
+       <code>set certificate filename [yourfilename.vipr]</code>.
        The resulting certificate can be checked with the proof checker <a href="https://github.com/scipopt/vipr">VIPR</a>
-       or a formally verified version in <a href="https://cakeml.org/checkers.html>CakeML</a>.
-    <\p>
+       or a formally verified version in <a href="https://cakeml.org/checkers.html">CakeML</a>.
+    </p>
     <p>
        In SCIP 10, this certificate only certifies the correctness of the branch-and-bound process after presolving, so
-       you may want to disable presolving by typing `set presolving emphasis off` in order to obtain a certificate for
+       you may want to disable presolving by typing <code>set presolving emphasis off</code> in order to obtain a certificate for
        the original problem instance.  (Note that this may or may not slow down the solving process.)
        Note that, in any case, certificate files are incomplete if cutting plane separation is enabled (as by default).
-       In this case, the certificate needs to be completed using the `viprcomp` script prior to verification.
-    <\p>
+       In this case, the certificate needs to be completed using the <code>viprcomp</code> script prior to verification.
+    </p>
     <p>
-      If you access SCIP via the API, the exact solving mode is enabled by setting the parameter `exact/enable = TRUE`
-      or calling the API function `SCIPenableExactSolving()`, again <b>before</b> reading a problem instance.
+      If you access SCIP via the API, the exact solving mode is enabled by setting the parameter <code>exact/enable = TRUE</code>
+      or calling the API function <code>SCIPenableExactSolving()</code>, again <b>before</b> reading a problem instance.
       For further details please see the dedicated section of the release report of SCIP 10.
-    <\p>
+    </p>
 
 
 SECTION: Using SCIP as a standalone solver
