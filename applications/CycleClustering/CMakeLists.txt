@@ -31,6 +31,7 @@ add_executable(cycleclustering
     src/reader_cyc.c
     src/probdata_cyc.c
 )
+set_property(TARGET cycleclustering PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 # link to math library if it is available
 find_library(LIBM m)

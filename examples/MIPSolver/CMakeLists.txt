@@ -18,6 +18,7 @@ include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(scipmip
    src/cppmain.cpp)
+set_property(TARGET scipmip PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 target_link_libraries(scipmip ${SCIP_LIBRARIES})
 target_compile_options(scipmip PRIVATE ${SCIP_COMPILE_FLAGS})

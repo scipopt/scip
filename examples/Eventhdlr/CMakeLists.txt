@@ -23,6 +23,7 @@ add_executable(eventhdlr
 
 target_link_libraries(eventhdlr ${SCIP_LIBRARIES})
 target_compile_options(eventhdlr PRIVATE ${SCIP_COMPILE_FLAGS})
+set_property(TARGET eventhdlr PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 if( TARGET examples )
     add_dependencies( examples eventhdlr )

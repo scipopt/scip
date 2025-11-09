@@ -23,6 +23,7 @@ add_executable(ringpacking
    src/pricer_rpa.c
    src/cons_rpa.c
    src/pattern.c)
+set_property(TARGET ringpacking PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 # link to math library if it is available
 find_library(LIBM m)

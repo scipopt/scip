@@ -1137,6 +1137,7 @@ if(MSVC)
 else()
    setLibProperties(libscip "scip")
 endif()
+set_property(TARGET libscip PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 target_include_directories(libscip BEFORE PUBLIC
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
@@ -1175,6 +1176,7 @@ else()
     add_executable(scip main.c)
     target_link_libraries(scip PUBLIC libscip)
 endif()
+set_property(TARGET scip PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 add_executable(SCIP::SCIP ALIAS scip)
 add_library(SCIP::libscip ALIAS libscip)
