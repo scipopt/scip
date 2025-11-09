@@ -723,11 +723,11 @@ static int COI_CALLCONV FDEval(
 
 /** CONOPT callback to pass some of the options (not supported via COIDEF_* functions) to CONOPT */
 static int COI_CALLCONV Option(
-   int                   NCALL,              /** number of callback call (provided by CONOPT) */
-   double*               RVAL,               /** pointer to set the value of a real option */
-   int*                  IVAL,               /** pointer to set the value of an integer option */
-   int*                  LVAL,               /** pointer to set the value of a binary option */
-   char*                 NAME,               /** pointer to set the name of the option */
+   int                   NCALL,              /**< number of callback call (provided by CONOPT) */
+   double*               RVAL,               /**< pointer to set the value of a real option */
+   int*                  IVAL,               /**< pointer to set the value of an integer option */
+   int*                  LVAL,               /**< pointer to set the value of a binary option */
+   char*                 NAME,               /**< pointer to set the name of the option */
    void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
    )
 {
