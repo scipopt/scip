@@ -1970,7 +1970,7 @@ SCIP_Longint SCIPrationalNumerator(
    SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
-   long result;
+   SCIP_Longint result;
    scip::Integer numerator;
 
    numerator = boost::multiprecision::numerator(rational->val);
@@ -1987,7 +1987,7 @@ SCIP_Longint SCIPrationalDenominator(
    SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
-   long result;
+   SCIP_Longint result;
    scip::Integer denominator;
 
    denominator = boost::multiprecision::denominator(rational->val);
@@ -2253,7 +2253,7 @@ void chooseSemiconv(
    scip::Integer*        p,                 /**< the last 3 numerators of convergents */
    scip::Integer*        q,                 /**< the last 3 denominators of convergents */
    const scip::Integer&  ai,                /**< the coefficient in the continuous fraction */
-   long                  maxdenom           /**< the maximal denominator */
+   SCIP_Longint          maxdenom           /**< the maximal denominator */
    )
 {
    scip::Integer j = (scip::Integer(maxdenom) - q[0]) / q[1];
@@ -2277,8 +2277,8 @@ void chooseSemiconvLong(
    SCIP_Longint&         resden,             /**< the resulting denominator */
    const SCIP_Longint*   p,                  /**< the last 3 numerators of convergents */
    const SCIP_Longint*   q,                  /**< the last 3 denominators of convergents */
-   long                  ai,                 /**< the coefficient in the continuous fraction */
-   long                  maxdenom            /**< the maximal denominator */
+   SCIP_Longint          ai,                 /**< the coefficient in the continuous fraction */
+   SCIP_Longint          maxdenom            /**< the maximal denominator */
    )
 {
    SCIP_Longint j;
