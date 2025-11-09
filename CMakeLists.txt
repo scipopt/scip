@@ -120,6 +120,7 @@ if(LTO)
         message(STATUS "LTO not available: ${output}")
     endif(LTO_AVAILABLE)
 else()
+    message(STATUS "LTO not enabled")
     set(LTO_AVAILABLE FALSE)
 endif()
 
