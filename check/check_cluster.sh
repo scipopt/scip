@@ -218,6 +218,12 @@ do
                 # find out the solver that should be used
                 SOLVER=$(stripversion "${BINNAME}")
 
+                # xpress executable is called optimizer
+                if test "${SOLVER}" = "optimizer"
+                then
+                    SOLVER="xpress"
+                fi
+
                 CONFFILE="configuration_tmpfile_setup_${SOLVER}.sh"
 
                 # call tmp file configuration for the solver
