@@ -2253,10 +2253,10 @@ void chooseSemiconv(
    scip::Integer*        p,                 /**< the last 3 numerators of convergents */
    scip::Integer*        q,                 /**< the last 3 denominators of convergents */
    const scip::Integer&  ai,                /**< the coefficient in the continuous fraction */
-   SCIP_Longint          maxdenom           /**< the maximal denominator */
+   const scip::Integer&  maxdenom           /**< the maximal denominator */
    )
 {
-   scip::Integer j = (scip::Integer(maxdenom) - q[0]) / q[1];
+   scip::Integer j = (maxdenom - q[0]) / q[1];
 
    if( j >= ai / 2 )
    {
@@ -2635,7 +2635,7 @@ void SCIPrationalComputeApproximation(
             else
             {
                SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
-               chooseSemiconv(resnum, resden, p, q, 1, maxdenom);
+               chooseSemiconv(resnum, resden, p, q, 1, scip::Integer(maxdenom));
                SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
                res->val = scip::Rational(resnum,resden) * sign;
             }
@@ -2644,9 +2644,9 @@ void SCIPrationalComputeApproximation(
          else
          {
             if( forcegreater != 0 )
-               chooseSemiconv(resnum, resden, p, q, 1, maxdenom);
+               chooseSemiconv(resnum, resden, p, q, 1, scip::Integer(maxdenom));
             else
-               chooseSemiconv(resnum, resden, p, q, ai, maxdenom);
+               chooseSemiconv(resnum, resden, p, q, ai, scip::Integer(maxdenom));
             SCIPdebug(std::cout << " picking semiconvergent " << std::endl);
             SCIPdebug(std::cout << " use " << resnum << "/" << resden << std::endl);
             res->val = scip::Rational(resnum,resden) * sign;
