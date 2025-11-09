@@ -20,14 +20,14 @@ testcplex:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(CPLEX) $(SETTINGS) $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(EMPHBENCHMARK) $(CLOCKTYPE);
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE);
 
 .PHONY: testxpress
 testxpress:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(XPRESS_BIN) $(SETTINGS) $(notdir $(XPRESS_BIN)).$(OSTYPE).$(ARCH) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(EMPHBENCHMARK) $(CLOCKTYPE);
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE);
 
 .PHONY: testmosek
 testmosek:
@@ -39,14 +39,14 @@ testcbc:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(CBC) $(SETTINGS) $(notdir $(CBC)).$(OSTYPE).$(ARCH) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(EMPHBENCHMARK) $(CLOCKTYPE);
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE);
 
 .PHONY: testgurobi
 testgurobi:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(GUROBI) $(SETTINGS) $(notdir $(GUROBI)).$(OSTYPE).$(ARCH) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(EMPHBENCHMARK) $(CLOCKTYPE);
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE);
 
 .PHONY: testglpk
 testglpk:
@@ -93,7 +93,7 @@ testclustercpx: check/check_cluster.sh check/configuration_cluster.sh check/conf
                 $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
 		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) false $(OPTCOMMAND) \
 		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(EXCLUDENODES) $(SLURMACCOUNT) $(PYTHON) \
-		$(EMPHBENCHMARK) $(CLOCKTYPE);
+		$(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE);
 
 .PHONY: testclusterxpress
 testclusterxpress: check/check_cluster.sh check/configuration_cluster.sh check/configuration_set.sh check/configuration_logfiles.sh check/configuration_tmpfile_setup_xpress.sh check/evalcheck_cluster.sh check/check_xpress.awk check/run.sh
@@ -103,7 +103,7 @@ testclusterxpress: check/check_cluster.sh check/configuration_cluster.sh check/c
                 $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
 		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) false $(OPTCOMMAND) \
 		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(EXCLUDENODES) $(SLURMACCOUNT) $(PYTHON) \
-		$(EMPHBENCHMARK) $(CLOCKTYPE);
+		$(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE);
 
 .PHONY: testclustercbc
 testclustercbc:
@@ -113,7 +113,7 @@ testclustercbc:
                 $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
 		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) false $(OPTCOMMAND) \
 		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(EXCLUDENODES) $(SLURMACCOUNT) $(PYTHON) \
-		$(EMPHBENCHMARK) $(CLOCKTYPE);
+		$(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE);
 
 .PHONY: testclustergurobi
 testclustergurobi:
@@ -123,7 +123,7 @@ testclustergurobi:
                 $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
 		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) false $(OPTCOMMAND) \
 		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(EXCLUDENODES) $(SLURMACCOUNT) $(PYTHON) \
-		$(EMPHBENCHMARK) $(CLOCKTYPE);
+		$(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE);
 
 # solvers with a specialized interface:
 
