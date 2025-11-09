@@ -51,8 +51,7 @@
  * - is a framework for branch-cut-and-price.
  *
  * Since version 10, \SCIP can optionally be configured to solve mixed-integer linear programs in a numerically exact
- * solving mode and produce certificates that can be independently verified, see \ref EXACT "How to use the numerically
- * exact solving mode" for details.
+ * solving mode and produce certificates that can be independently verified, see \ref EXACT "How to use the numerically exact solving mode" for details.
  *
  * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and how to download \SCIP.
  *
