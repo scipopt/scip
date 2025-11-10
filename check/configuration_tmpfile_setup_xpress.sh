@@ -59,31 +59,31 @@ SOLFILE="${CLIENTTMPDIR}/${USER}-tmpdir/${SOLBASENAME}.sol"
 
 if test "${p}" -gt 0
 then
-    echo "Warning: XPRESS configuration currently cannot handle instance permutation"
+    echo "Error: XPRESS configuration currently cannot handle instance permutation"
     exit 1
 fi
 
 if test "${SETNAME}" != "default"
 then
-    echo "Warning: XPRESS configuration currently cannot handle non-default settings"
+    echo "Error: XPRESS configuration currently cannot handle non-default settings"
     exit 1
 fi
 
 if test "${REOPT}" = true
 then
-    echo "Warning: XPRESS configuration currently cannot handle reoptimization"
+    echo "Error: XPRESS configuration currently cannot handle reoptimization"
     exit 1
 fi
 
 if test "${VISUALIZE}" = true
 then
-    echo "Warning: XPRESS configuration currently cannot handle visualization"
+    echo "Error: XPRESS configuration currently cannot handle visualization"
     exit 1
 fi
 
 if test "${SETCUTOFF}" = 1 || test "${SETCUTOFF}" = true
 then
-    echo "Warning: Setting a cutoff is currently not supported for XPRESS configuration"
+    echo "Error: Setting a cutoff is currently not supported for XPRESS configuration"
     exit 1
 fi
 

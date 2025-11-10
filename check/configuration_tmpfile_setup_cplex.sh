@@ -84,21 +84,21 @@ fi
 # if permutation counter is positive add permutation seed (0 = default)
 if test ${p} -gt 0
 then
-    echo "Warning: CPlex configuration currently cannot handle instance permutation"
+    echo "Error: CPlex configuration currently cannot handle instance permutation"
     exit 1
 fi
 
 if test "${REOPT}" = true
 then
     # exit because reoptimization feature is not supported here
-    echo "Warning: CPlex configuration currently cannot handle reoptimization"
+    echo "Error: CPlex configuration currently cannot handle reoptimization"
     exit 1
 fi
 
 if test "${VISUALIZE}" = true
 then
     # exit because visualization feature is not supported here
-    echo "Warning: CPlex configuration currently cannot handle visualization"
+    echo "Error: CPlex configuration currently cannot handle visualization"
     exit 1
 fi
 
@@ -106,7 +106,7 @@ fi
 if test "${SETCUTOFF}" = 1 || test "${SETCUTOFF}" = true
 then
     # TODO setting cutoff requires knowledge about whether the objective sense is minimization or maximization
-    echo "Warning: Setting a cutoff is currently not supported for Cplex configuration"
+    echo "Error: Setting a cutoff is currently not supported for Cplex configuration"
     exit 1
 fi
 
