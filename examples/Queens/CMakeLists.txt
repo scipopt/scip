@@ -19,6 +19,7 @@ include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 add_executable(queens
    src/queens.cpp
    src/queens_main.cpp)
+set_property(TARGET queens PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 target_link_libraries(queens ${SCIP_LIBRARIES})
 target_compile_options(queens PRIVATE ${SCIP_COMPILE_FLAGS})

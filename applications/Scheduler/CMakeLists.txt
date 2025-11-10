@@ -26,6 +26,7 @@ add_executable(scheduler
     src/reader_sch.c
     src/reader_sm.c
 )
+set_property(TARGET scheduler PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 target_link_libraries(scheduler ${SCIP_LIBRARIES})
 target_compile_options(scheduler PRIVATE ${SCIP_COMPILE_FLAGS})

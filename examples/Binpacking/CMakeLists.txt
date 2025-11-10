@@ -24,6 +24,7 @@ add_executable(binpacking
    src/probdata_binpacking.c
    src/reader_bpa.c
    src/vardata_binpacking.c)
+set_property(TARGET binpacking PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 # link to math library if it is available
 find_library(LIBM m)

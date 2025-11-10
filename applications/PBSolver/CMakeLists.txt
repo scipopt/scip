@@ -21,6 +21,7 @@ add_executable(pbsolver
     src/message_pb.c
     src/event_bestsol.c
 )
+set_property(TARGET pbsolver PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 # link to math library if it is available
 find_library(LIBM m)

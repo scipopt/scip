@@ -28,6 +28,7 @@ add_executable(coloring
     src/reader_col.c
     src/reader_csol.c
 )
+set_property(TARGET coloring PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 # link to math library if it is available
 find_library(LIBM m)

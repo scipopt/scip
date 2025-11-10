@@ -26,6 +26,7 @@ add_executable(sciptsp
    src/HeurFrats.cpp
    src/ProbDataTSP.cpp
    src/ReaderTSP.cpp)
+set_property(TARGET sciptsp PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 target_link_libraries(sciptsp ${SCIP_LIBRARIES})
 target_compile_options(sciptsp PRIVATE ${SCIP_COMPILE_FLAGS})

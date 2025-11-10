@@ -19,6 +19,7 @@ include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 add_executable(gmi
    src/cmain.c
    src/sepa_gmi.c)
+set_property(TARGET gmi PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 # link to math library if it is available
 find_library(LIBM m)

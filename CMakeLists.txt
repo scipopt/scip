@@ -103,10 +103,9 @@ option(LTO "Enable Link Time Optimization, aka Interprocedural Optimization" OFF
 
 if(LTO)
     include(CheckIPOSupported)
-    check_ipo_supported(RESULT result LANGUAGES C OUTPUT output)
-    if(result)
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-        message(STATUS "LTO enabled")
+    check_ipo_supported(RESULT LTO_AVAILABLE LANGUAGES C OUTPUT output)
+    if(LTO_AVAILABLE)
+        message(STATUS "LTO available")
 
         # with link-time optimization enabled, we get additional warnings at link time on
         # - reader_nl and presol_milp violating the C++ One Definition Rule (-Wodr) due to
@@ -117,10 +116,12 @@ if(LTO)
         if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "CLANG"))
            add_link_options(-Wno-odr -Wno-alloc-size-larger-than -Wno-stringop-overflow)
         endif()
-    else()
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
-        message(STATUS "${output}")
-    endif()
+    else(LTO_AVAILABLE)
+        message(STATUS "LTO not available: ${output}")
+    endif(LTO_AVAILABLE)
+else()
+    message(STATUS "LTO not enabled")
+    set(LTO_AVAILABLE FALSE)
 endif()
 
 set(MPFR AUTO CACHE STRING "should MPFR be linked")

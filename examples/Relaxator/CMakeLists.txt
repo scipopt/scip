@@ -20,6 +20,7 @@ add_executable(relaxator
    src/cmain.c
    src/relax_lp.c
    src/relax_nlp.c)
+set_property(TARGET relaxator PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 target_link_libraries(relaxator ${SCIP_LIBRARIES})
 target_compile_options(relaxator PRIVATE ${SCIP_COMPILE_FLAGS})
