@@ -49,6 +49,7 @@ VISUALIZE="${18}"    # - true, if the branch-and-bound search should be visualiz
 SOLUFILE="${19}"     # - solu file, only necessary if "${SETCUTOFF}" is 1
 EMPHBENCHMARK="${20}"  # - use set emphasis benchmark
 CLOCKTYPE="${21}"      # - clocktype (1 = CPU, 2 = wallclock) - currently ignored by CBC
+WITHCERTIFICATE="${22}" # - true, if a certificate file should be created - currently ignored by CBC
 
 # new environment variables after running this script
 # -None
@@ -58,31 +59,31 @@ SOLFILE="${CLIENTTMPDIR}/${USER}-tmpdir/${SOLBASENAME}.sol"
 
 if test "${p}" -gt 0
 then
-    echo "Warning: CBC configuration currently cannot handle instance permutation"
+    echo "Error: CBC configuration currently cannot handle instance permutation"
     exit 1
 fi
 
 if test "${SETNAME}" != "default"
 then
-    echo "Warning: CBC configuration currently cannot handle non-default settings"
+    echo "Error: CBC configuration currently cannot handle non-default settings"
     exit 1
 fi
 
 if test "${REOPT}" = true
 then
-    echo "Warning: CBC configuration currently cannot handle reoptimization"
+    echo "Error: CBC configuration currently cannot handle reoptimization"
     exit 1
 fi
 
 if test "${VISUALIZE}" = true
 then
-    echo "Warning: CBC configuration currently cannot handle visualization"
+    echo "Error: CBC configuration currently cannot handle visualization"
     exit 1
 fi
 
 if test "${SETCUTOFF}" = 1 || test "${SETCUTOFF}" = true
 then
-    echo "Warning: Setting a cutoff is currently not supported for CBC configuration"
+    echo "Error: Setting a cutoff is currently not supported for CBC configuration"
     exit 1
 fi
 
