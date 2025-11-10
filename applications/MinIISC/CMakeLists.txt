@@ -21,6 +21,7 @@ add_executable(miniisc
     src/miniisc.c
     src/readargs.c
 )
+set_property(TARGET miniisc PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 # link to math library if it is available
 find_library(LIBM m)
