@@ -20,6 +20,7 @@ add_executable(scflp
    src/cmain.c
    src/probdata_scflp.c
    src/reader_scflp.c )
+set_property(TARGET scflp PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 # link to math library if it is available
 find_library(LIBM m)

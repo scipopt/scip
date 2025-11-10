@@ -19,6 +19,7 @@ include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 add_executable(vrp
    src/main_vrp.cpp
    src/pricer_vrp.cpp)
+set_property(TARGET vrp PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 target_link_libraries(vrp ${SCIP_LIBRARIES})
 target_compile_options(vrp PRIVATE ${SCIP_COMPILE_FLAGS})

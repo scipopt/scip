@@ -19,6 +19,7 @@ include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 add_executable(sudoku
    src/sudoku_main.cpp
    src/sudoku_utils.h)
+set_property(TARGET sudoku PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 target_link_libraries(sudoku ${SCIP_LIBRARIES})
 target_compile_options(sudoku PRIVATE ${SCIP_COMPILE_FLAGS})

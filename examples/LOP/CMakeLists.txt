@@ -21,6 +21,7 @@ add_executable(lop
    src/cmain.c
    src/cons_lop.c
    src/reader_lop.c)
+set_property(TARGET lop PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 target_link_libraries(lop ${SCIP_LIBRARIES})
 target_compile_options(lop PRIVATE ${SCIP_COMPILE_FLAGS})
