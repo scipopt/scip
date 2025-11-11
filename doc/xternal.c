@@ -345,6 +345,7 @@
  *
  * - @subpage md_INSTALL  "Installation instructions"
  * - @subpage LPI         "Available implementations of the LP solver interface"
+ * - @subpage LPIEXACT    "Available implementations of the exact LP solver interface"
  * - @subpage NLPISOLVERS "Available implementations of the NLP solver interface"
  * - @subpage INSTALL_APPLICATIONS_EXAMPLES "Installation of applications and examples"
  */
