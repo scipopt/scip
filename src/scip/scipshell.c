@@ -421,7 +421,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
       {
          /*read a random seed from the command line */
          i++;
-         if( i < argc && isdigit(argv[i][0]) )
+         if( i < argc && isdigit((unsigned char)argv[i][0]) )
          {
             randomseed = atoi(argv[i]);
             randomseedread = TRUE;

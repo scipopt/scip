@@ -440,6 +440,7 @@ SCIP_RETCODE fillKernels(
          if( !SCIPisEQ(scip, lpval, 0.0) )
          {
             n = bw_kernelcount[block_index];
+            assert(bw_nnonkernelvars != NULL);
             assert(n < bw_nkernelvars[block_index] + bw_nnonkernelvars[block_index]);
             bw_kernelvars[block_index][n] = vars[i];
             bw_kernelcount[block_index]++;
@@ -447,6 +448,7 @@ SCIP_RETCODE fillKernels(
          else
          {
             n = bw_nonkernelcount[block_index];
+            assert(bw_nnonkernelvars != NULL);
             assert(n < bw_nkernelvars[block_index] + bw_nnonkernelvars[block_index]);
             bw_nonkernelvars[block_index][n] = vars[i];
             bw_nonkernelcount[block_index]++;
@@ -467,6 +469,8 @@ SCIP_RETCODE fillKernels(
                if( bw_intkernelcount != NULL )
                {
                   m = bw_intkernelcount[block_index];
+                  assert(bw_nintnonkernelvars != NULL);
+                  assert(bw_nintkernelvars != NULL);
                   assert(m < bw_nintkernelvars[block_index] + bw_nintnonkernelvars[block_index]);
                   if( bw_intkernelvars != NULL )
                      bw_intkernelvars[block_index][m] = vars[i];
@@ -476,6 +480,7 @@ SCIP_RETCODE fillKernels(
             else
             {
                m = bw_kernelcount[block_index];
+               assert(bw_nnonkernelvars != NULL);
                assert(m < bw_nkernelvars[block_index] + bw_nnonkernelvars[block_index]);
                bw_kernelvars[block_index][m] = vars[i];
                bw_kernelcount[block_index]++;
@@ -488,6 +493,8 @@ SCIP_RETCODE fillKernels(
                if( bw_intnonkernelcount != NULL )
                {
                   m = bw_intnonkernelcount[block_index];
+                  assert(bw_nintnonkernelvars != NULL);
+                  assert(bw_nintkernelvars != NULL);
                   assert(m < bw_nintkernelvars[block_index] + bw_nintnonkernelvars[block_index]);
                   if( bw_intnonkernelvars != NULL )
                      bw_intnonkernelvars[block_index][m] = vars[i];
@@ -497,6 +504,7 @@ SCIP_RETCODE fillKernels(
             else
             {
                m = bw_nonkernelcount[block_index];
+               assert(bw_nnonkernelvars != NULL);
                assert(m < bw_nkernelvars[block_index] + bw_nnonkernelvars[block_index]);
                bw_nonkernelvars[block_index][m] = vars[i];
                bw_nonkernelcount[block_index]++;
@@ -511,6 +519,7 @@ SCIP_RETCODE fillKernels(
             || (usetranslb && SCIPisGT(scip, lb, lborig)) )
          {
             l = bw_contkernelcount[block_index];
+            assert(bw_ncontnonkernelvars != NULL);
             assert(l < bw_ncontkernelvars[block_index] + bw_ncontnonkernelvars[block_index]);
             bw_contkernelvars[block_index][l] = vars[i];
             bw_contkernelcount[block_index]++;
@@ -518,6 +527,7 @@ SCIP_RETCODE fillKernels(
          else
          {
             l = bw_contnonkernelcount[block_index];
+            assert(bw_ncontnonkernelvars != NULL);
             assert(l < bw_ncontkernelvars[block_index] + bw_ncontnonkernelvars[block_index]);
             bw_contnonkernelvars[block_index][l] = vars[i];
             bw_contnonkernelcount[block_index]++;

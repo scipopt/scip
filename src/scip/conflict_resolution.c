@@ -1329,6 +1329,7 @@ SCIP_RETCODE computeSlack(
       {
          if( fixsides != NULL && fixsides[v] == 1 ) /* if the variable is fixed */
          {
+            assert(fixbounds != NULL);
             bound = fixbounds[v];
          }
          else
@@ -1341,6 +1342,7 @@ SCIP_RETCODE computeSlack(
       {
          if( fixsides != NULL && fixsides[v] == -1 ) /* if the variable is fixed */
          {
+            assert(fixbounds != NULL);
             bound = fixbounds[v];
          }
          else

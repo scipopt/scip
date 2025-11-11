@@ -5533,7 +5533,7 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
    /* ignore whitespace */
    SCIP_CALL( SCIPskipSpace((char**)&str) );
 
-   if( isdigit(str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit(str[1])) )
+   if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
    {
       if( !SCIPparseReal(scip, str, &lhs, &endstr) )
       {

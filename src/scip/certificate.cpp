@@ -460,7 +460,7 @@ SCIP_RETCODE SCIPcertificateInit(
    certificate->transfile = SCIPfopen(set->certificate_filename, "wT");
    certificate->maxfilesize = set->certificate_maxfilesize;
 
-   bufferlen = (int) strlen(name);
+   bufferlen = (int) strlen(name); /*lint !e668*/
    SCIP_ALLOC( BMSallocMemoryArray(&certificate->derivationfilename, filenamelen+5) );
    SCIP_ALLOC( BMSallocMemoryArray(&certificate->origfilename, filenamelen+5) );
    BMScopyMemoryArray(certificate->derivationfilename, name, bufferlen);

@@ -754,7 +754,7 @@ SCIP_RETCODE separateCuts(
       SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrow, sol, &activity) );
       SCIPdebugMsg(scip, "cons <%s> at boundary point has activity: %g\n", SCIPnlrowGetName(nlrow), activity);
 
-      if( activity == SCIP_INVALID
+      if( activity == SCIP_INVALID /*lint !e777*/
          || (convexside == RHS && !SCIPisFeasEQ(scip, activity, SCIPnlrowGetRhs(nlrow)))  /*lint !e777*/
          || (convexside == LHS && !SCIPisFeasEQ(scip, activity, SCIPnlrowGetLhs(nlrow))) )
          continue;
