@@ -124,10 +124,11 @@
  * `cpx`    | IBM ILOG CPLEX
  * `xprs`   | FICO XPress
  * `grb`    | Gurobi (version at least 7.0.2 required)
- * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
+ * `clp`    | COIN-OR CLP (interface currently sometimes produces wrong results)
  * `glop`   | Google Glop (contained in OR-tools)
  * `msk`    | Mosek (version at least 7.0.0 required)
  * `qsopt`  | QSopt (experimental)
+ * `highs`  | HiGHS (beta, sometimes failing)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
  */
 
