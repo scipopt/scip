@@ -7860,9 +7860,9 @@
  *
  * Exact solving mode requires \SCIP to be built with
  *
- *   - GMP[https://gmplib.org/] for rational arithmetic in ZIMPL, SoPlex, SCIP, and PaPILO,
- *   - Boost[https://www.boost.org/] multiprecision library for rationals in SCIP (and PaPILO, if linked),
- *   - MPFR[https://www.mpfr.org/] for approximating rationals with floating-point numbers in SCIP,
+ *   - [GMP](https://gmplib.org/) for rational arithmetic in ZIMPL, SoPlex, SCIP, and PaPILO,
+ *   - [Boost](https://www.boost.org/) multiprecision library for rationals in SCIP (and PaPILO, if linked),
+ *   - [MPFR](https://www.mpfr.org/) for approximating rationals with floating-point numbers in SCIP,
  *   - and an exact LP solver such as SoPlex.
  *
  * Enabling the exact solving mode is done by setting the parameter `exact/enable = TRUE` or calling the API method
@@ -7871,7 +7871,7 @@
  *
  * Optionally, the output of a certificate (also known as proof logging) can be enabled by specifying
  * `certificate/filename`. The resulting certificate can be checked with the proof checker
- * VIPR[https://github.com/scipopt/vipr] or a formally verified version in CakeML[https://cakeml.org/checkers.html].
+ * [VIPR](https://github.com/scipopt/vipr) or a formally verified version in [CakeML](https://cakeml.org/checkers.html).
  * Note that certificate files are incomplete if cutting plane separation is enabled (as by default). In this case, the
  * certificate needs to be completed using the `viprcomp` script prior to verification.
  *
