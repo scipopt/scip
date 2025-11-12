@@ -457,8 +457,8 @@ SCIP_RETCODE SCIPcertificatePrintGlobalBound(
 
 /* prints information for constraint to certificate file */
 SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_CONS*            cons               /**< constraint */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns the index of the given constraint in the certificate */

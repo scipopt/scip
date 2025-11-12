@@ -1406,7 +1406,7 @@ SCIP_RETCODE adjustKernelVars(
 
    solution = SCIPgetBestSol(bucket->subscip);
 
-   /*** deletion of variables from the kernel ***/
+   /* deletion of variables from the kernel */
    /* continuous kernelvariables with value equal to zero or their lb get deleted from the kernel */
    /* todo: after x tries, maybe with seperate kernelindexarray */
    nnewintkernelvars = 0;
@@ -2016,7 +2016,6 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
          assert(nblocks == 0);
          SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &block2index, 1) );
       }
-
 
       block2index[0] = 0;     /* SCIP_DECOMP_LINKVAR = -1, but are saved at index 0 */
       for( b = 0; b < nblocklabels; b++ )
@@ -2747,7 +2746,6 @@ TERMINATE:
       SCIPfreeBufferArray(scip, &varlabels);
 
    SCIP_CALL( freeRedcostArrays(scip, &bw_cont_redcost, &bw_redcost, &bw_int_redcost, nblocks) );
-
 
    if( lbvarmap != NULL )
       SCIPhashmapFree(&lbvarmap);

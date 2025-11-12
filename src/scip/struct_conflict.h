@@ -235,7 +235,6 @@ struct SCIP_Conflict
    int                   conflictrowssize;   /**< size of conflictrows array */
    SCIP_Bool             bdchgonlyconfqueue; /**< if true we add bound changes only in graph conflict queues */
    SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only in generalized resolution queues */
-
 };
 
 #ifdef __cplusplus

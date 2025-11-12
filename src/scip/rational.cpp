@@ -2248,12 +2248,12 @@ SCIP_Bool SCIPrationalRoundLong(
 /** choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
 static
 void chooseSemiconv(
-   scip::Integer&        resnum,            /**< the resulting numerator */
-   scip::Integer&        resden,            /**< the resulting denominator */
-   scip::Integer*        p,                 /**< the last 3 numerators of convergents */
-   scip::Integer*        q,                 /**< the last 3 denominators of convergents */
-   const scip::Integer&  ai,                /**< the coefficient in the continuous fraction */
-   const scip::Integer&  maxdenom           /**< the maximal denominator */
+   scip::Integer&        resnum,             /**< the resulting numerator */
+   scip::Integer&        resden,             /**< the resulting denominator */
+   scip::Integer*        p,                  /**< the last 3 numerators of convergents */
+   scip::Integer*        q,                  /**< the last 3 denominators of convergents */
+   const scip::Integer&  ai,                 /**< the coefficient in the continuous fraction */
+   const scip::Integer&  maxdenom            /**< the maximal denominator */
    )
 {
    scip::Integer j = (maxdenom - q[0]) / q[1];

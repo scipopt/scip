@@ -776,7 +776,6 @@ SCIP_RETCODE performRationalPresolving(
             assert(side == res.postsolve.values[first + 2]);
             assert(res.postsolve.indices[first + 1] == 0);
             assert(res.postsolve.indices[first + 2] == 0);
-
          }
          assert( type == ReductionType::kSubstitutedCol || type == ReductionType::kSubstitutedColWithDual );
 #else

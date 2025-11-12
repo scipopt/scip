@@ -460,7 +460,7 @@ SCIP_RETCODE SCIPtransformProb(
 static
 SCIP_RETCODE initPresolve(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
 #ifndef NDEBUG
    size_t nusedbuffers;

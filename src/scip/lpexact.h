@@ -805,13 +805,13 @@ SCIP_RETCODE SCIPlpExactEndDive(
 
 /** writes exact LP to a file */
 SCIP_RETCODE SCIPlpExactWrite(
-   SCIP_LPEXACT*         lpexact,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    const char*           fname               /**< file name */
    );
 
 /** overwrites the dual values stored in the fp lp with exact values */
 void SCIPlpExactOverwriteFpDualSol(
-   SCIP_LPEXACT*         lpexact,                 /**< current LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_Bool             dualfarkas          /**< TRUE if farkas proof, FALSE if dual sol? */
    );
 
