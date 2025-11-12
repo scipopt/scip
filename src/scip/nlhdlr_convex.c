@@ -300,7 +300,7 @@ SCIP_RETCODE exprstackPush(
       SCIP_CALL( SCIPreallocBufferArray(scip, &exprstack->stack, exprstack->stacksize) );
    }
 
-   memcpy(exprstack->stack + (exprstack->stackpos+1), exprs, nexprs * sizeof(SCIP_EXPR*));  /*lint !e679*/ /*lint !e737*/
+   memcpy(exprstack->stack + (exprstack->stackpos+1), exprs, nexprs * sizeof(SCIP_EXPR*));  /*lint !e679*/ /*lint !e737*/ /*lint !e420*/
    exprstack->stackpos += nexprs;
 
    return SCIP_OKAY;

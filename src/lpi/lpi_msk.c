@@ -903,6 +903,7 @@ SCIP_RETCODE SCIPlpiCreate(
    /* disable warnings for large bounds */
    MOSEK_CALL( MSK_putdouparam((*lpi)->task, MSK_DPAR_DATA_TOL_BOUND_WRN, MSK_INFINITY));
 
+   (*lpi)->optimizecount = 0;
    (*lpi)->termcode = MSK_RES_OK;
    (*lpi)->itercount = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
