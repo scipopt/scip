@@ -2029,7 +2029,7 @@ SCIP_Longint SCIPrationalDenominator(
    )
 {
    assert(rational != nullptr);
-   return 1.0;
+   return 1;
 }
 
 /** returns the denominator of a rational as a long */
