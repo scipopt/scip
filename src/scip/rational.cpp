@@ -2236,9 +2236,9 @@ SCIP_Bool SCIPrationalRoundLong(
    }
    *res = roundint.convert_to<SCIP_Longint>();
    if( *res == roundint )
-      success = TRUE;
+      return TRUE;
 #endif
-   return success;
+   return FALSE;
 }
 
 #ifdef SCIP_WITH_BOOST
