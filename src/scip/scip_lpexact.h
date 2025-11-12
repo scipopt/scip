@@ -109,8 +109,7 @@ SCIP_RETCODE SCIPcreateRowExact(
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateRowExactFromRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             fprow
-                /**< corresponding fp approximation/relaxation */
+   SCIP_ROW*             fprow               /**< corresponding fp approximation/relaxation */
    );
 
 /** generates two fprows that are a relaxation of the exact row wrt the lhs/rhs, respectively

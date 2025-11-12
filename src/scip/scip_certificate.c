@@ -617,7 +617,6 @@ SCIP_RETCODE SCIPfreeCertificateActiveAggrInfo(
 
    assert(certificate != NULL);
 
-
    /* if the mirinfo is used it gets tranformed into sparse format, don't free it in that case */
    if( !certificate->workingaggrinfo )
       return SCIP_OKAY;

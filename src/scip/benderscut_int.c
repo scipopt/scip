@@ -115,7 +115,6 @@ SCIP_RETCODE createBenderscutData(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &benderscutdata->subprobconstant, benderscutdata->nsubproblems) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &benderscutdata->firstcut, benderscutdata->nsubproblems) );
 
-
    for( i = 0; i < benderscutdata->nsubproblems; i++ )
    {
       benderscutdata->subprobconstant[i] = benderscutdata->cutconstant;

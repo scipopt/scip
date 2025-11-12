@@ -1113,7 +1113,6 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
          "the number of iterations to run with a constant batchsize before updating (1: always update)",
          &iisfinderdata->batchupdateinterval, TRUE, DEFAULT_BATCHUPDATEINTERVAL, 1, INT_MAX, NULL, NULL) );
 
-
    return SCIP_OKAY;
 }
 

@@ -7980,7 +7980,7 @@ SCIP_RETCODE SCIPcalcMIR(
 
    assert(vartypeusevbds >= 0 && vartypeusevbds < NSECTIONS);
 
-   SCIP_CALL(SCIPallocBuffer(scip, &data));
+   SCIP_CALL( SCIPallocBuffer(scip, &data) );
 
    nnz = aggrrow->nnz;
    data->totalnnz = nnz;
@@ -7988,7 +7988,7 @@ SCIP_RETCODE SCIPcalcMIR(
    /* initialize sections */
    for( l = 0; l < NSECTIONS; ++l )
    {
-      SCIP_CALL(SCIPallocBufferArray(scip, &data->secindices[l], nnz));
+      SCIP_CALL( SCIPallocBufferArray(scip, &data->secindices[l], nnz) );
       data->secnnz[l] = 0;
       /* Cont. | cont impl. | int impl. | bin impl. | int | bin */
       assert(NSECTIONS == 6); /* If the section definition is changed, the below lines should also be adjusted to match */
@@ -8008,8 +8008,8 @@ SCIP_RETCODE SCIPcalcMIR(
    data->ncontimplvars = SCIPgetNContImplVars(scip);
    data->ncontvars = SCIPgetNContVars(scip);
 
-   SCIP_CALL(SCIPallocCleanBufferArray(scip, &( data->cutcoefs ), QUAD_ARRAY_SIZE(data->nvars)));
-   SCIP_CALL(SCIPallocBufferArray(scip, &data->cutinds, data->nvars));
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &( data->cutcoefs ), QUAD_ARRAY_SIZE(data->nvars)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &data->cutinds, data->nvars) );
 
    SCIPquadprecProdQD(data->cutrhs, aggrrow->rhs, scale);
 
@@ -13350,7 +13350,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
 
    assert(vartypeusevbds >= 0 && vartypeusevbds < NSECTIONS);
 
-   SCIP_CALL(SCIPallocBuffer(scip, &data));
+   SCIP_CALL( SCIPallocBuffer(scip, &data) );
 
    nnz = aggrrow->nnz;
    data->totalnnz = nnz;
@@ -13358,7 +13358,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    /* initialize sections */
    for( l = 0; l < NSECTIONS; ++l )
    {
-      SCIP_CALL(SCIPallocBufferArray(scip, &data->secindices[l], nnz));
+      SCIP_CALL( SCIPallocBufferArray(scip, &data->secindices[l], nnz) );
       data->secnnz[l] = 0;
       /* Cont. | cont impl. | int impl. | bin impl. | int | bin */
       assert(NSECTIONS == 6); /* If the section definition is changed, the below lines should also be adjusted to match */
@@ -13378,8 +13378,8 @@ SCIP_RETCODE SCIPcalcStrongCG(
    data->ncontimplvars = SCIPgetNContImplVars(scip);
    data->ncontvars = SCIPgetNContVars(scip);
 
-   SCIP_CALL(SCIPallocCleanBufferArray(scip, &( data->cutcoefs ), QUAD_ARRAY_SIZE(data->nvars)));
-   SCIP_CALL(SCIPallocBufferArray(scip, &data->cutinds, data->nvars));
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &( data->cutcoefs ), QUAD_ARRAY_SIZE(data->nvars)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &data->cutinds, data->nvars) );
 
    SCIPquadprecProdQD(data->cutrhs, aggrrow->rhs, scale);
 

@@ -218,7 +218,6 @@ struct SCIP_ConshdlrData
 
    SCIP_DECL_SOLVECUMULATIVE((*solveCumulative)); /**< method to use a single cumulative condition */
 
-
    /* statistic values which are collected if SCIP_STATISTIC is defined */
 #ifdef SCIP_STATISTIC
    SCIP_Longint          nlbtimetable;       /**< number of times the lower bound was tightened by the time-table propagator */
@@ -310,8 +309,8 @@ int inferInfoToInt(
 /** rounds real to int and maps for large absolute values */
 static
 int boundedConvertRealToInt(
-   SCIP*                 scip,             /**< scip data structure */
-   SCIP_Real             real              /**< double bound to convert */
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_Real             real                /**< double bound to convert */
    )
 {
    int maxval;
@@ -8500,7 +8499,7 @@ SCIP_RETCODE createCapacityRestriction(
       }
 
       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-      SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
       if( consdata->demandrowssize == 0 )
       {
@@ -8984,7 +8983,7 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    }
 
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-   SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
+   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
    SCIP_CALL( SCIPaddRow(scip, row, TRUE, cutoff) );
 

@@ -682,7 +682,7 @@ static int COI_CALLCONV FDEval(
    double                JAC[],              /**< vector of Jacobian values */
    int                   ROWNO,              /**< number of the row for which nonlinearities are to be evaluated (provided by CONOPT) */
    const int             JACNUM[],           /**< list of column numbers for the nonlinear nonzero Jacobian elements in
-                                                  the current row (provided by CONOPT when MODE = 2 or 3) */
+                                              *   the current row (provided by CONOPT when MODE = 2 or 3) */
    int                   MODE,               /**< indicator for mode of evaluation (provided by CONOPT) */
    int                   IGNERR,             /**< indicator whether CONOPT assumes the point to be safe (0) or potentially unsafe (1) */
    int*                  ERRCNT,             /**< scalar function evaluation error indicator (set to 1 if a function value cannot be computed */
@@ -759,7 +759,7 @@ static int COI_CALLCONV Option(
 static int COI_CALLCONV LagrStr(
    int                   HSRW[],             /**< row numbers of the lower triangular part of the Hessian */
    int                   HSCL[],             /**< column numbers of the lower triangular part of the Hessian; elements must be
-                                                  sorted column-wise, and within each column, row-wise */
+                                              *   sorted column-wise, and within each column, row-wise */
    int*                  NODRV,              /**< can be set to 1 if the derivatives could not be computed */
    int                   NUMVAR,             /**< number of variables as defined in coidef_numvar() (provided by CONOPT) */
    int                   NUMCON,             /**< number of constraints as defined in coidef_numcon() (provided by CONOPT) */
@@ -802,7 +802,7 @@ static int COI_CALLCONV LagrVal(
    const double          U[],                /**< vector of weights on the individual constraints (provided by CONOPT) */
    const int             HSRW[],             /**< row numbers of the lower triangular part of the Hessian (provided by CONOPT) */
    const int             HSCL[],             /**< column numbers of the lower triangular part of the Hessian; elements must be
-                                                  sorted column-wise, and within each column, row-wise (provided by CONOPT) */
+                                              *   sorted column-wise, and within each column, row-wise (provided by CONOPT) */
    double                HSVL[],             /**< values of Hessian entries */
    int*                  NODRV,              /**< can be set to 1 if the derivatives could not be computed */
    int                   NUMVAR,             /**< number of variables as defined in coidef_numvar() (provided by CONOPT) */
@@ -848,7 +848,7 @@ static SCIP_RETCODE initConopt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIDATA*        data,               /**< pointer to NLPIDATA structure */
    SCIP_NLPIPROBLEM*     problem             /**< pointer to NLPI problem structure */
-)
+   )
 {
    int COI_Error = 0; /* CONOPT error counter */
    int nrangeconss = 0;
@@ -944,7 +944,7 @@ static SCIP_RETCODE initConopt(
 static void handleConoptParam(
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
    const SCIP_NLPPARAM   param               /**< NLP solve parameters */
-)
+   )
 {
    int COI_Error = 0; /* CONOPT error counter */
 

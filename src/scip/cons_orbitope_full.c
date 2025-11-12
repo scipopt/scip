@@ -1862,8 +1862,8 @@ SCIP_RETCODE SCIPcreateConsOrbitopeFull(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
-   int                   nrows,            /**< number of set partitioning/packing constraints  <=> p */
-   int                   ncols,            /**< number of symmetric variable blocks             <=> q */
+   int                   nrows,              /**< number of set partitioning/packing constraints  <=> p */
+   int                   ncols,              /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?

@@ -84,7 +84,7 @@ static
 void checkSubproblemValidity(
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_BENDERSCUT*      benderscut          /**< the benders' decomposition cut method */
-)
+   )
 {
    SCIP_BENDERSCUTDATA* benderscutdata;
    int nmastervars;
