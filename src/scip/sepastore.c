@@ -1040,7 +1040,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
                   SCIP_CALL( SCIPaddPoolCut(set->scip, cut) );
                }
 
-               SCIP_CALL( SCIPaddRowExact(set->scip, cut->rowexact));
+               SCIP_CALL( SCIPaddRowExact(set->scip, cut->rowexact) );
             }
 
             /* add cut to the LP and update orthogonalities */

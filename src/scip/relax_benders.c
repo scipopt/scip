@@ -359,7 +359,7 @@ static
 SCIP_RETCODE addInitialSolution(
    SCIP*                 scip,               /**< the SCIP instance */
    SCIP_RELAXDATA*       relaxdata           /**< the relaxator data */
-)
+   )
 {
    SCIP* masterprob;
    SCIP_SOL* sol;
@@ -447,7 +447,7 @@ SCIP_RETCODE solveBendersSubproblems(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_RELAX*           relax,              /**< the relaxator */
    SCIP_Bool*            infeasible          /**< indicates whether the best solution is infeasible */
-)
+   )
 {
    SCIP_RELAXDATA* relaxdata;
    SCIP* masterprob;
@@ -518,7 +518,7 @@ SCIP_RETCODE setSolutionValues(
    SCIP*                 scip,               /**< the original SCIP instance */
    SCIP_RELAX*           relax,              /**< the relaxator */
    SCIP_SOL*             sol                 /**< the solution for the original SCIP instance */
-)
+   )
 {
    SCIP_RELAXDATA* relaxdata;
    SCIP_DECOMP* decomp;
@@ -644,7 +644,7 @@ static
 SCIP_RETCODE freeBendersSubproblems(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_RELAX*           relax               /**< the relaxator */
-)
+   )
 {
    SCIP_RELAXDATA* relaxdata;
    SCIP* masterprob;
@@ -681,7 +681,7 @@ SCIP_RETCODE createOriginalSolution(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_RELAX*           relax,              /**< the relaxator */
    SCIP_Bool*            infeasible          /**< indicates whether the best solution is infeasible */
-)
+   )
 {
    SCIP_SOL* sol;
    SCIP_Bool success;
@@ -731,7 +731,7 @@ static
 SCIP_RETCODE freeDecomposition(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_RELAX*           relax               /**< the relaxator */
-)
+   )
 {
    SCIP_RELAXDATA* relaxdata;
    int i;

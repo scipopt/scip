@@ -167,7 +167,7 @@ SCIP_RETCODE findNonDominatedVars(
    int                   size,               /**< the size of array a (and b) */
    int*                  ndominated,         /**< returns the number of dominated elements */
    SCIP_Bool*            dominated           /**< returns the array of booleans that determine if an element is
-                                               *  dominated */
+                                              *   dominated */
    )
 {
    SCIP_Real bestcurrenta;
@@ -454,7 +454,7 @@ SCIP_RETCODE selectCandidateUsingRatio(
    SCIP_Bool*            dominated,          /**< whether each variable is dominated or not */
    int                   nbranchcands,       /**< the number of branching candidates */
    int*                  bestcand            /**< the best branching candidate found before the call,
-                                                  and the best candidate after the call (possibly the same) */
+                                              *   and the best candidate after the call (possibly the same) */
    )
 {
    SCIP_RATIO branchratio;
@@ -586,7 +586,7 @@ SCIP_RETCODE selectCandidateUsingSVTS(
    int                   nbranchcands,       /**< the number of branching candidates */
    int                   ndominated,         /**< the number of dominated candidates */
    int*                  bestcand            /**< the best branching candidate found before the call,
-                                                  and the best candidate after the call (possibly the same) */
+                                              *   and the best candidate after the call (possibly the same) */
    )
 {
    SCIP_Real* treesizes;
@@ -745,7 +745,7 @@ SCIP_RETCODE selectCandidateUsingSampling(
    int                   nbranchcands,       /**< the number of branching candidates */
    int                   ndominated,         /**< the number of dominated candidates */
    int*                  bestcand            /**< the best branching candidate found before the call,
-                                                  and the best candidate after the call (possibly the same) */
+                                              *   and the best candidate after the call (possibly the same) */
    )
 {
    SCIP_Real* treesizes;
@@ -918,7 +918,7 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    SCIP_Real*            tiebreakerscore,    /**< scores to use for tie breaking */
    int                   nbranchcands,       /**< the number of branching candidates */
    int*                  bestcand            /**< the best branching candidate found before the call,
-                                                  and the best candidate after the call (possibly the same) */
+                                              *   and the best candidate after the call (possibly the same) */
    )
 {
    SCIP_Real localabsgap;           /* The gap at the current node */

@@ -4217,7 +4217,8 @@ SCIP_RETCODE printActivityConflictToCertificate(
 
    if( !SCIPisCertified(scip) )
       return SCIP_OKAY;
-   SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(scip), &diff));
+
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &diff) );
 
    if( rhs )
    {
@@ -4772,7 +4773,6 @@ SCIP_RETCODE tightenBounds(
 
          SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds, force) );
 
-
          /* if there was no progress, skip the rest of the binary variables */
          if( *cutoff )
          {
@@ -4931,14 +4931,14 @@ SCIP_RETCODE createRows(
    assert(consdata != NULL);
    assert(consdata->rowexact == NULL);
 
-   /** create empty fp-rows */
+   /* create empty fp-rows */
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &(consdata->rowrhs), cons, SCIPconsGetName(cons), -SCIPinfinity(scip), SCIPinfinity(scip),
       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &(consdata->rowlhs), cons, SCIPconsGetName(cons), -SCIPinfinity(scip), SCIPinfinity(scip),
       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
-   /** create exact row */
+   /* create exact row */
    SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->rowlhs, consdata->rowrhs,
       consdata->lhs, consdata->rhs, consdata->hasfprelax) );
 
@@ -7015,8 +7015,8 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       }
 
       /* update left and right hand sides */
-      SCIP_CALL( chgLhs(scip, cons, lhs));
-      SCIP_CALL( chgRhs(scip, cons, rhs));
+      SCIP_CALL( chgLhs(scip, cons, lhs) );
+      SCIP_CALL( chgRhs(scip, cons, rhs) );
 
       SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
       SCIPfreeBufferArray(scip, &consvals);

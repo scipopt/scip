@@ -14009,7 +14009,6 @@ SCIP_RETCODE SCIPcreateRowKnapsack(
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons),
          -SCIPinfinity(scip), (SCIP_Real)consdata->capacity,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );

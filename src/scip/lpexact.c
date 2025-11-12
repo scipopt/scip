@@ -3709,7 +3709,7 @@ SCIP_RETCODE SCIPlpExactFlush(
 
 /** ensures all rows/columns are correctly updated, but changes are not yet communicated to the exact LP solver */
 SCIP_RETCODE SCIPlpExactLink(
-   SCIP_LPEXACT*         lpexact,                 /**< current exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
@@ -3897,7 +3897,7 @@ SCIP_RETCODE SCIPlpExactProjectShiftFree(
 
 /** returns whether the success rate of the Neumaier-Shcherbina safe bounding method is sufficiently high */
 SCIP_Bool SCIPlpExactBoundShiftUseful(
-   SCIP_LPEXACT*         lpexact              /**< pointer to LP data object */
+   SCIP_LPEXACT*         lpexact             /**< pointer to LP data object */
    )
 {
    assert(lpexact != NULL);
@@ -6947,7 +6947,7 @@ SCIP_RETCODE SCIPlpExactGetSol(
    SCIPrationalSetReal(primalbound, 0.0);
    SCIPrationalSetReal(dualbound, 0.0);
 
-   SCIPdebug(SCIP_CALL( lpexactComputeDualValidity(lpexact, set, dualsol, redcost) ));
+   SCIPdebug( SCIP_CALL( lpexactComputeDualValidity(lpexact, set, dualsol, redcost) ) );
 
    /* copy primal solution and reduced costs into columns */
    for( c = 0; c < nlpicols; ++c )
@@ -7855,7 +7855,7 @@ SCIP_RETCODE lpExactStoreSolVals(
       storedsolvals = lpexact->storedsolvals;
 
       /* store values */
-      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(storedsolvals->lpobjval), lpexact->lpobjval));
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(storedsolvals->lpobjval), lpexact->lpobjval) );
       storedsolvals->lpsolstat = lpexact->lpsolstat;
       storedsolvals->primalfeasible = lpexact->primalfeasible;
       storedsolvals->primalchecked = lpexact->primalchecked;

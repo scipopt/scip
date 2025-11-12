@@ -2082,7 +2082,6 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    }
    SCIP_CALL( SCIPhashmapInsertLong(certificate->rowdatahash, SCIProwGetRowExact(row), certificate->indexcounter - 1) );
 
-
    SCIP_CALL( SCIPcertificateFreeAggrInfo(set, certificate, lp, aggrinfo, row) );
    SCIP_CALL( SCIPcertificateFreeMirInfo(set, certificate, lp, mirinfo, row) );
 
@@ -3385,7 +3384,7 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
       ubindex = SCIPvarGetUbCertificateIndexLocal(var);
    }
    assert( SCIPrationalIsGT(lb, ub) );
-   SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(scip), &lowerbound));
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lowerbound) );
 
    SCIPcertificatePrintProofMessage(certificate, "BoundConflict%d ", certificate->indexcounter);
    SCIPcertificatePrintProofMessage(certificate, "G ");

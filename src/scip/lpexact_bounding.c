@@ -2357,7 +2357,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       SCIPlpExactAllowExactSolve(lpexact, set, FALSE);
       nattempts++;
 
-      /**
+      /*
        * For the methods used please refer to
        * "Valid Linear Programming Bounds for Exact Mixed-Integer Programming" from Steffy and Wolter (2011)
        */

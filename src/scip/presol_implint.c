@@ -311,7 +311,7 @@ static
 SCIP_Bool matrixColIsImpliedIntegral(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
    int                   column              /**< the column */
-)
+   )
 {
    assert(matrix != NULL);
    assert(column >= 0);
@@ -656,7 +656,7 @@ SCIP_RETCODE addXorLinearization(
    }
    else if( noperands == 3 )
    {
-      /** in the special case of 3 variables and c = 0, the following linear system is created:
+      /*  in the special case of 3 variables and c = 0, the following linear system is created:
        *    + x - y - z <= 0
        *    - x + y - z <= 0
        *    - x - y + z <= 0

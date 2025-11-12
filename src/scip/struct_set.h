@@ -329,7 +329,6 @@ struct SCIP_Set
    SCIP_Real             iisfinder_time;          /**< maximal time in seconds for all IIS finders to run */
    SCIP_Longint          iisfinder_nodes;         /**< maximal number of nodes to process for all IIS finders (-1: no limit) */
 
-
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
    SCIP_Real             limit_memory;       /**< maximal memory usage in MB */

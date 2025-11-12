@@ -434,21 +434,21 @@ SCIP_RETCODE SCIPprimalTrySolFreeExact(
 
 /** adds exact primal solution to solution storage by copying it and frees the solution afterwards */
 SCIP_RETCODE SCIPprimalAddSolFreeExact(
-    SCIP_PRIMAL*          primal,             /**< primal data */
-    BMS_BLKMEM*           blkmem,             /**< block memory */
-    SCIP_SET*             set,                /**< global SCIP settings */
-    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-    SCIP_STAT*            stat,               /**< problem statistics data */
-    SCIP_PROB*            origprob,           /**< original problem */
-    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
-    SCIP_TREE*            tree,               /**< branch and bound tree */
-    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-    SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
-    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-    SCIP_SOL**            sol,                /**< primal CIP solution */
-    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
-    );
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_SOL**            sol,                /**< primal CIP solution */
+   SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
+   );
 
 #ifdef __cplusplus
 }

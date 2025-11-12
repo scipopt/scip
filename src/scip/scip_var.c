@@ -5669,7 +5669,7 @@ SCIP_Real SCIPadjustedVarUbExactFloat(
    SCIP_Real             ub                  /**< upper bound value to adjust */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPadjustedVarUb", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPadjustedVarUbExactFloat", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    SCIPvarAdjustUbExactFloat(var, scip->set, &ub);
 

@@ -3566,9 +3566,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
          ++propdata->ngenlinconss;
       }
       if ( orbitsize[activeorb] > 0 && propdata->dispsyminfo )
-         SCIPinfoMessage(scip, NULL, "  use %d SST cuts for leader %s\n",
-            orbitsize[activeorb] - 1, SCIPvarGetName(vars[0]));
-
+         SCIPinfoMessage(scip, NULL, "  use %d SST cuts for leader %s\n", orbitsize[activeorb] - 1, SCIPvarGetName(vars[0]));
 
       /* possibly store lexicographic order defined by weak SBCs */
       if ( storelexorder )
