@@ -47,6 +47,12 @@ TSTNAME=$(echo "${BASENAME}" | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g')
 # detect test used solver
 SOLVER=$(echo "${BASENAME}" | sed 's/check.\([a-zA-Z0-9_-]*\).\([a-zA-Z0-9_]*\).*/\2/g')
 
+# xpress executable is called optimizer
+if test "${SOLVER}" = "optimizer"
+then
+    SOLVER="xpress"
+fi
+
 echo "Testset ${TSTNAME}"
 echo "Solver  ${SOLVER}"
 
