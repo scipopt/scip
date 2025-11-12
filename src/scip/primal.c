@@ -935,7 +935,6 @@ SCIP_RETCODE primalAddSol(
       }
    }
 
-
    SCIPsetDebugMsg(set, "insert primal solution %p with obj %g at position %d (replace=%u):\n",
       (void*)sol, obj, insertpos, replace);
 

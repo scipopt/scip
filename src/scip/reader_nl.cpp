@@ -191,7 +191,7 @@ private:
       const char*&       namesbegin,         /**< current pointer into names string, or NULL */
       const char*        namesend,           /**< pointer to end of names string */
       char*              name                /**< buffer to store name, should have length SCIP_MAXSTRLEN */
-   )
+      )
    {
       if( namesbegin == NULL )
          return false;
@@ -3219,7 +3219,7 @@ SCIP_DECL_READERWRITE(readerWriteNl)
 /** includes the AMPL .nl file reader in SCIP */
 SCIP_RETCODE SCIPincludeReaderNl(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_READER* reader = NULL;
 

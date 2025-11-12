@@ -240,9 +240,9 @@ public:
  */
 static
 bool univariate_for_sparse_jac(
-   size_t                     q,             /**< number of columns in R */
+   size_t                q,                  /**< number of columns in R */
    const CppAD::vector<bool>& r,             /**< sparsity of R, columnwise */
-   CppAD::vector<bool>&       s              /**< vector to store sparsity of S, columnwise */
+   CppAD::vector<bool>&  s                   /**< vector to store sparsity of S, columnwise */
    )
 {
    assert(r.size() == q);
@@ -260,9 +260,9 @@ bool univariate_for_sparse_jac(
  */
 static
 bool univariate_rev_sparse_jac(
-   size_t                     q,             /**< number of rows in R */
+   size_t                q,                  /**< number of rows in R */
    const CppAD::vector<bool>& r,             /**< sparsity of R, rowwise */
-   CppAD::vector<bool>&       s              /**< vector to store sparsity of S, rowwise */
+   CppAD::vector<bool>&  s                   /**< vector to store sparsity of S, rowwise */
    )
 {
    assert(r.size() == q);
@@ -810,7 +810,6 @@ private:
    {
       return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
    }
-
 };
 
 /** template for evaluation for signpower operator */

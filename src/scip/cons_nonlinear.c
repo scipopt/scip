@@ -1375,14 +1375,12 @@ SCIP_RETCODE createCons(
       return SCIP_INVALIDCALL;
    }
 
-
    if( isnan(lhs) || isnan(rhs) )
    {
       SCIPerrorMessage("%s hand side of nonlinear constraint <%s> is nan\n",
             isnan(lhs) ? "left" : "right", name);
       return SCIP_INVALIDDATA;
    }
-
 
    /* create constraint data */
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &consdata) );

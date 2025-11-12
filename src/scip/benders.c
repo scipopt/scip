@@ -2872,7 +2872,6 @@ SCIP_RETCODE SCIPbendersActivate(
          SCIP_CALL( SCIPpqueueInsert(benders->subprobqueue, benders->solvestat[i]) );
       }
 
-
       if( SCIPsetFindEventhdlr(set, NODESOLVED_EVENTHDLR_NAME) == NULL )
       {
          /* adding an eventhandler for updating the lower bound when the root node is solved. */
@@ -6204,7 +6203,7 @@ void SCIPbendersRemoveSubproblems(
 
 /** returns the main auxiliary variable that is used the subproblem objective function. */
 SCIP_VAR* SCIPbenderGetMasterAuxiliaryVar(
-   SCIP_BENDERS*         benders            /**< Benders' decomposition */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);

@@ -313,7 +313,6 @@ SCIP_RETCODE proofsetAddAggrrow(
       proofset->certificateline = (SCIP_Longint)aggrrow->certificateline;
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -993,8 +992,8 @@ SCIP_RETCODE createAndAddProofcons(
       SCIP_RATIONAL** coefs_exact;
       SCIP_VAR** consvars;
 
-      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &lhs_exact));
-      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &rhs_exact));
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &lhs_exact) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &rhs_exact) );
       SCIPrationalSetNegInfinity(lhs_exact);
       SCIPrationalSetReal(rhs_exact, rhs);
       SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz) );

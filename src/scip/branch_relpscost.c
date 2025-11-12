@@ -902,7 +902,6 @@ SCIP_Real cdfProbability(
          return 0.0;
       else
          return zeroprob + (1.0 - zeroprob) * (1.0 - pow(mingain / proposedgain, rate));
-
    }
    else if(distributioncdf == EXPONENTIALDISTRIBUTION)
    {
@@ -930,7 +929,6 @@ SCIP_Real expectedTreeSize(
    int                   distributioncdf     /**< distribution type (PARETODISTRIBUTION, EXPONENTIALDISTRIBUTION, LOGNORMALDISTRIBUTION) */
    )
 {
-
    SCIP_Real ptotal = 0.0;
    SCIP_Real totalimprovedtree = 0.0;
 
@@ -1760,7 +1758,6 @@ SCIP_RETCODE execRelpscost(
 
       for( i = 0; continueStrongBranchingLookahead(scip, i, ninitcands, lookahead, maxlookahead, nbdchgs, nbdconflicts, maxbdchgs, maxnsblpiterations) && continueStrongBranchingTreeSizeEstimation(scip, branchruledata, lookahead, maxlookahead); ++i )
       {
-
          SCIP_Real down;
          SCIP_Real up;
          SCIP_Real downgain;

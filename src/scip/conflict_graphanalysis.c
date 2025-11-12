@@ -2523,7 +2523,6 @@ SCIP_RETCODE conflictAddBound(
    SCIP_Real             relaxedbd           /**< relaxed bound */
    )
 {
-
    SCIP_Bool success;
 
    assert(SCIPvarIsActive(var));

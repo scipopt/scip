@@ -2658,7 +2658,7 @@ SCIP_RETCODE SCIPgetConsPermsymGraph(
    SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the graph */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetConsGetPermsymGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetConsPermsymGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -2691,7 +2691,7 @@ SCIP_RETCODE SCIPgetConsSignedPermsymGraph(
    SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the graph */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetConsGetSignedPermsymGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetConsSignedPermsymGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(scip != NULL);
    assert(cons != NULL);
