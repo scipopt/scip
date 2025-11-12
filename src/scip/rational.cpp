@@ -2085,8 +2085,6 @@ SCIP_Real SCIPrationalGetReal(
    SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
-   SCIP_Real retval = 0.0;
-
    assert(rational != nullptr);
 
 #ifdef SCIP_WITH_BOOST
@@ -2095,12 +2093,13 @@ SCIP_Real SCIPrationalGetReal(
 
 #ifdef SCIP_WITH_GMP
    /* mpq_get_d is faster than the boost internal implementation */
-   retval = mpq_get_d(rational->val.backend().data()); /*lint !e838*/
+   return mpq_get_d(rational->val.backend().data()); /*lint !e838*/
 #else
-   retval = rational->val.convert_to<SCIP_Real>(); /*lint !e838*/
+   return rational->val.convert_to<SCIP_Real>(); /*lint !e838*/
 #endif
 #endif
-   return retval;
+
+   return 0.0;
 }
 
 /** gets the relaxation of a rational as a real
