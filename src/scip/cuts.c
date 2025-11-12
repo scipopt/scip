@@ -7991,7 +7991,7 @@ SCIP_RETCODE SCIPcalcMIR(
       SCIP_CALL( SCIPallocBufferArray(scip, &data->secindices[l], nnz) );
       data->secnnz[l] = 0;
       /* Cont. | cont impl. | int impl. | bin impl. | int | bin */
-      assert(NSECTIONS == 6); /* If the section definition is changed, the below lines should also be adjusted to match */
+      assert(NSECTIONS == 6); /*lint !e506*/ /* If the section definition is changed, the below lines should also be adjusted to match */
       data->isenfint[l] = l >= 2 ? TRUE : FALSE;
       data->isimplint[l] = l >= 1 && l <= 3 ? TRUE : FALSE;
       /* Use variable bounds for the sections specified by the user */
@@ -8435,7 +8435,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          SCIP_CALL( SCIPallocBufferArray(scip, &data->secindices[l], nnz) );
          data->secnnz[l] = 0;
          /* Cont. | cont impl. | int impl. | bin impl. | int | bin */
-         assert(NSECTIONS == 6); /* If the section definition is changed, the below lines should also be adjusted to match */
+         assert(NSECTIONS == 6); /*lint !e506*/ /* If the section definition is changed, the below lines should also be adjusted to match */
          data->isenfint[l] = l >= 2 ? TRUE : FALSE;
          data->isimplint[l] = l >= 1 && l <= 3 ? TRUE : FALSE;
          /* Use variable bounds for the sections specified by the user */
@@ -13361,7 +13361,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
       SCIP_CALL( SCIPallocBufferArray(scip, &data->secindices[l], nnz) );
       data->secnnz[l] = 0;
       /* Cont. | cont impl. | int impl. | bin impl. | int | bin */
-      assert(NSECTIONS == 6); /* If the section definition is changed, the below lines should also be adjusted to match */
+      assert(NSECTIONS == 6); /*lint !e506*/ /* If the section definition is changed, the below lines should also be adjusted to match */
       data->isenfint[l] = l >= 2 ? TRUE : FALSE;
       data->isimplint[l] = l >= 1 && l <= 3 ? TRUE : FALSE;
       /* Use variable bounds for the sections specified by the user */

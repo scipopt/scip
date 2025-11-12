@@ -9950,7 +9950,7 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
          break;
       }
 
-      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale); /*lint !e838*/
    }
 
    if( scalable )
@@ -10798,13 +10798,13 @@ void SCIPescapeString(
       if( s[i] == '\\' )
       {
          t[p] = s[i];
-         ++p;
-         ++i;
+         ++p; /*lint !e850*/
+         ++i; /*lint !e850*/
       }
       else if( s[i] == ' ' || s[i] == '\"' || s[i] == '\'' )
       {
          t[p] = '\\';
-         ++p;
+         ++p;  /*lint !e850*/
       }
       if( i <= len && p < bufsize )
          t[p] = s[i];
@@ -10817,7 +10817,7 @@ SCIP_RETCODE SCIPskipSpace(
    char**                s                   /**< pointer to string pointer */
    )
 {
-   while( isspace(**s) || ( **s == '\\' && *(*s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(*s+1)) ) )
+   while( isspace((unsigned char)**s) || ( **s == '\\' && *(*s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(*s+1)) ) )
       *s += **s == '\\' ? 2 : 1;
 
    return SCIP_OKAY;

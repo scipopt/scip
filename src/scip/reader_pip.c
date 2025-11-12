@@ -2622,13 +2622,13 @@ SCIP_Bool isNameValid(
       return FALSE;
 
    /* names cannot start with a number */
-   if( isdigit(name[0]) )
+   if( isdigit((unsigned char)name[0]) )
       return FALSE;
 
    for( i = 0; i < len; ++i )
    {
       /* a-z, A-Z, 0-9 are ok */
-      if( isalnum(name[i]) )
+      if( isalnum((unsigned char)name[i]) )
          continue;
 
       /* characters in namechars are ok, too */

@@ -500,7 +500,7 @@ SCIP_Bool isNewSection(
 
       while( lpinput->token[c] != '\0' )
       {
-         token[c] = toupper(lpinput->token[c]); /*lint !e734*/
+         token[c] = toupper((unsigned char)lpinput->token[c]); /*lint !e734*/
          ++c;
          assert(c < 16);
       }

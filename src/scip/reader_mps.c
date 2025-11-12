@@ -2015,7 +2015,7 @@ SCIP_RETCODE readBounds(
             /* check what might be missing, if field 3 is a number the bound name might be missing */
             for( l = (int) strlen(mpsinputField3(mpsi)) - 1; l >= 0; --l )
             {
-               if( mpsinputField3(mpsi)[l] != '.' && !isdigit(mpsinputField3(mpsi)[l]) )
+               if( mpsinputField3(mpsi)[l] != '.' && !isdigit((unsigned char)mpsinputField3(mpsi)[l]) )
                   break;
             }
 
@@ -2390,7 +2390,7 @@ SCIP_RETCODE readBoundsExact(
             /* check what might be missing, if field 3 is a number the bound name might be missing */
             for( l = (int) strlen(mpsinputField3(mpsi)) - 1; l >= 0; --l )
             {
-               if( mpsinputField3(mpsi)[l] != '.' && !isdigit(mpsinputField3(mpsi)[l]) )
+               if( mpsinputField3(mpsi)[l] != '.' && !isdigit((unsigned char)mpsinputField3(mpsi)[l]) )
                   break;
             }
 

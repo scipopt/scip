@@ -381,7 +381,7 @@ int skipSpace(
    {
       c = getsymbol(ppos);
    }
-   while(isspace(c));
+   while(isspace((unsigned char)c));
 
    return c;
 }
@@ -405,14 +405,14 @@ char* getName(
 
    c = getsymbol(ppos);
 
-   if ( ! isalpha(c) && (c != '_') && (c != ':') )
+   if ( ! isalpha((unsigned char)c) && (c != '_') && (c != ':') )
    {
       xmlError(ppos, "Name starting with illegal charater");
       return NULL;
    }
 
    /* The following is wrong: Here almost all characters that we casted to unicode are feasible */
-   while ( isalnum(c) || (c == '_') || (c == ':') || (c == '.') || (c == '-') )
+   while ( isalnum((unsigned char)c) || (c == '_') || (c == ':') || (c == '.') || (c == '-') )
    {
       if ( len + 1 >= size )
       {
