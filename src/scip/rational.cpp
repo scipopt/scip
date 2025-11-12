@@ -2020,7 +2020,7 @@ SCIP_Longint SCIPrationalNumerator(
    )
 {
    assert(rational != nullptr);
-   return rational->val.val;
+   return (SCIP_Longint) rational->val.val;
 }
 
 /** returns the denominator of a rational as a long */
