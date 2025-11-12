@@ -2042,25 +2042,6 @@ SCIP_Bool SCIPrationalDenominatorIsLE(
    return TRUE;
 }
 
-/** changes the infinity threshold to new value */
-void SCIPrationalChgInfinity(
-   SCIP_Real             inf                 /**< new infinity value */
-   )
-{
-   assert(inf > 0);
-
-#ifdef SCIP_THREADSAFE
-   if( inf != SCIP_DEFAULT_INFINITY )
-   {
-      SCIPerrorMessage("method SCIPrationalChgInfinity() not thread safe\n");
-      SCIPABORT();
-   }
-   assert(inf == SCIP_DEFAULT_INFINITY);
-#else
-   infinity = inf;
-#endif
-}
-
 #endif
 
 /** returns the sign of the rational (1 if positive, -1 if negative, 0 if zero) */
