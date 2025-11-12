@@ -175,7 +175,7 @@ SCIP_RETCODE fromAmpl(
    char fullnlfilename[SCIP_MAXSTRLEN];
    char* logfile;
    SCIP_Bool printstat;
-   char* options;
+   const char* constoptions;
    size_t nlfilenamelen;
 
    SCIP_CALL( SCIPaddBoolParam(scip, "display/statistics",
@@ -192,12 +192,17 @@ SCIP_RETCODE fromAmpl(
    SCIPprintExternalCodes(scip, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
 
-   options = getenv("scip_options");
-   if( options != NULL )
+   constoptions = getenv("scip_options");
+   if( constoptions != NULL )
    {
       /* parse and apply options from scip_options env variable */
+      size_t optionslen;
+      char* options;
       char* optname;
       char* optval;
+
+      optionslen = strlen(constoptions);
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &options, constoptions, optionslen+1) );
 
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "applying scip_options:\n");
 
@@ -211,6 +216,8 @@ SCIP_RETCODE fromAmpl(
          optname = strtok(NULL, " ");
          optval = strtok(NULL, " ");
       }
+
+      SCIPfreeBufferArray(scip, &options);
    }
 
    if( defaultsetname != NULL )
