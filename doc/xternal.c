@@ -124,10 +124,11 @@
  * `cpx`    | IBM ILOG CPLEX
  * `xprs`   | FICO XPress
  * `grb`    | Gurobi (version at least 7.0.2 required)
- * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
+ * `clp`    | COIN-OR CLP (interface currently sometimes produces wrong results)
  * `glop`   | Google Glop (contained in OR-tools)
  * `msk`    | Mosek (version at least 7.0.0 required)
  * `qsopt`  | QSopt (experimental)
+ * `highs`  | HiGHS (beta, sometimes failing)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
  */
 
@@ -345,6 +346,7 @@
  *
  * - @subpage md_INSTALL  "Installation instructions"
  * - @subpage LPI         "Available implementations of the LP solver interface"
+ * - @subpage LPIEXACT    "Available implementations of the exact LP solver interface"
  * - @subpage NLPISOLVERS "Available implementations of the NLP solver interface"
  * - @subpage INSTALL_APPLICATIONS_EXAMPLES "Installation of applications and examples"
  */
@@ -7860,9 +7862,9 @@
  *
  * Exact solving mode requires \SCIP to be built with
  *
- *   - GMP[https://gmplib.org/] for rational arithmetic in ZIMPL, SoPlex, SCIP, and PaPILO,
- *   - Boost[https://www.boost.org/] multiprecision library for rationals in SCIP (and PaPILO, if linked),
- *   - MPFR[https://www.mpfr.org/] for approximating rationals with floating-point numbers in SCIP,
+ *   - [GMP](https://gmplib.org/) for rational arithmetic in ZIMPL, SoPlex, SCIP, and PaPILO,
+ *   - [Boost](https://www.boost.org/) multiprecision library for rationals in SCIP (and PaPILO, if linked),
+ *   - [MPFR](https://www.mpfr.org/) for approximating rationals with floating-point numbers in SCIP,
  *   - and an exact LP solver such as SoPlex.
  *
  * Enabling the exact solving mode is done by setting the parameter `exact/enable = TRUE` or calling the API method
@@ -7871,7 +7873,7 @@
  *
  * Optionally, the output of a certificate (also known as proof logging) can be enabled by specifying
  * `certificate/filename`. The resulting certificate can be checked with the proof checker
- * VIPR[https://github.com/scipopt/vipr] or a formally verified version in CakeML[https://cakeml.org/checkers.html].
+ * [VIPR](https://github.com/scipopt/vipr) or a formally verified version in [CakeML](https://cakeml.org/checkers.html).
  * Note that certificate files are incomplete if cutting plane separation is enabled (as by default). In this case, the
  * certificate needs to be completed using the `viprcomp` script prior to verification.
  *
