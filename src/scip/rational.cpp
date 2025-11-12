@@ -2206,8 +2206,6 @@ SCIP_Bool SCIPrationalRoundLong(
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
-   SCIP_Bool success = FALSE;
-
    assert(src != nullptr);
    assert(res != nullptr);
 
