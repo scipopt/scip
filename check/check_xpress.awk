@@ -180,7 +180,27 @@ BEGIN {
    if( feasible == 1 )
       db = $4;
 }
+/^Final MINLP objective/ {
+   if( $6 ~ /:$/ )
+      pb = $7;
+   else
+      pb = $6;
+   feasible = 1;
+}
+/^Final MINLP bound/ {
+   if( feasible == 1 ) {
+      if( $5 ~ /:$/ )
+         db = $6;
+      else
+         db = $5;
+   }
+}
 /^Problem is integer infeasible/ {
+   db = infty;
+   pb = infty;
+   feasible = 0;
+}
+/solve infeasible/ {
    db = infty;
    pb = infty;
    feasible = 0;
@@ -206,20 +226,25 @@ BEGIN {
    if( tottime == 0.0 )
       tottime = $1 / 1000000;
 }
-/^ \*\*\* Search completed \*\*\*     Time:/ {
-   bbnodes = $8;
-   tottime = $6;
+/\*\*\* Search completed \*\*\*/ {
    aborted = 0;
 }
-/^ \*\*\* Search unfinished \*\*\*    Time:/ {
-   bbnodes = $8;
-   tottime = $6;
+/\*\*\* Search unfinished \*\*\*/ {
    aborted = 0;
+}
+/  Number of solutions found \/ nodes/ {
+   bbnodes = $10;
+}
+/  Solution time \/ primaldual integral/ {
+   gsub(/s.*/, "", $7);
+   tottime = $7;
+}
+/\*\*\* Time limit reached \*\*\*/ {
    timeout = 1;
 }
-/^simplexiter/{
-   iters = 1;
-   next;
+/^simplexiter/ {
+   getline;
+   iters = $1;
 }
 
 #
