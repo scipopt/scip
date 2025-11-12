@@ -101,6 +101,7 @@ echo miprelstop = 0.0                                           >> "${TMPFILE}"
 # set non-default feasibility tolerance
 if test "${FEASTOL}" != "default"
 then
+    echo feastol = "${FEASTOL}"                                 >> "${TMPFILE}"
     echo miptol = "${FEASTOL}"                                  >> "${TMPFILE}"
 fi
 echo "maxnode = ${NODELIMIT}"                                   >> "${TMPFILE}"
@@ -114,7 +115,7 @@ echo "treememorysavingtarget = 0.0"                             >> "${TMPFILE}"
 
 echo "format \"timelimit %g\" \$maxtime"                        >> "${TMPFILE}"
 echo "format \"mipgap %g\" \$miprelstop"                        >> "${TMPFILE}"
-echo "format \"feastol %g\" \$miptol"                           >> "${TMPFILE}"
+echo "format \"feastol %g\" \$feastol"                          >> "${TMPFILE}"
 echo "format \"nodelimit %g\" \$maxnode"                        >> "${TMPFILE}"
 echo "format \"memlimit %g\" \$treememorylimit"                 >> "${TMPFILE}"
 echo "format \"percentmemtofile %g\" \$treememorysavingtarget"  >> "${TMPFILE}"
