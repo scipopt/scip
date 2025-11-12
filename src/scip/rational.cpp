@@ -2012,7 +2012,7 @@ SCIP_Bool SCIPrationalDenominatorIsLE(
    return denominator <= val;
 }
 
-#else
+#else /* the following is for the dummy class present for systems where Boost is not available */
 
 /** returns the numerator of a rational as a long */
 SCIP_Longint SCIPrationalNumerator(
