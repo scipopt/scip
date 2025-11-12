@@ -2371,7 +2371,7 @@ SCIP_RETCODE reasonRowFromLpRow(
          }
          else
          {
-            assert(FALSE);
+            SCIPABORT();
          }
          isincon = TRUE;
       }
@@ -2453,7 +2453,7 @@ SCIP_RETCODE conflictRowFromLpRow(
          }
          else
          {
-            assert(FALSE);
+            SCIPABORT();
          }
          isincon = TRUE;
       }
