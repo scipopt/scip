@@ -10798,13 +10798,13 @@ void SCIPescapeString(
       if( s[i] == '\\' )
       {
          t[p] = s[i];
-         ++p;
-         ++i;
+         ++p; /*lint !e850*/
+         ++i; /*lint !e850*/
       }
       else if( s[i] == ' ' || s[i] == '\"' || s[i] == '\'' )
       {
          t[p] = '\\';
-         ++p;
+         ++p;  /*lint !e850*/
       }
       if( i <= len && p < bufsize )
          t[p] = s[i];
