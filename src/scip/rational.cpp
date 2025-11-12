@@ -81,7 +81,7 @@ std::ostream& operator<<(
 extern "C" {
 
 #ifdef SCIP_THREADSAFE
-const static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
+constexpr static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
 #else
 static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
 #endif
