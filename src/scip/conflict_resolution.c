@@ -1329,6 +1329,7 @@ SCIP_RETCODE computeSlack(
       {
          if( fixsides != NULL && fixsides[v] == 1 ) /* if the variable is fixed */
          {
+            assert(fixbounds != NULL);
             bound = fixbounds[v];
          }
          else
@@ -1341,6 +1342,7 @@ SCIP_RETCODE computeSlack(
       {
          if( fixsides != NULL && fixsides[v] == -1 ) /* if the variable is fixed */
          {
+            assert(fixbounds != NULL);
             bound = fixbounds[v];
          }
          else
@@ -2367,7 +2369,7 @@ SCIP_RETCODE reasonRowFromLpRow(
          }
          else
          {
-            assert(FALSE);
+            SCIPABORT();
          }
          isincon = TRUE;
       }
@@ -2449,7 +2451,7 @@ SCIP_RETCODE conflictRowFromLpRow(
          }
          else
          {
-            assert(FALSE);
+            SCIPABORT();
          }
          isincon = TRUE;
       }

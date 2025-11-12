@@ -231,7 +231,7 @@ SCIP_RETCODE parseBase(
       ++expr;
       debugParse("Done parsing expression, continue with <%s>\n", expr);
    }
-   else if( isdigit(*expr) )
+   else if( isdigit((unsigned char)*expr) )
    {
       /* parse number */
       SCIP_Real value;
@@ -248,7 +248,7 @@ SCIP_RETCODE parseBase(
       }
       SCIP_CALL( SCIPcreateExprValue(scip, basetree, value, ownercreate, ownercreatedata) );
    }
-   else if( isalpha(*expr) )
+   else if( isalpha((unsigned char)*expr) )
    {
       /* a (function) name is coming, should find exprhandler with such name */
       int i;
@@ -258,7 +258,7 @@ SCIP_RETCODE parseBase(
 
       /* get name */
       i = 0;
-      while( *expr != '(' && *expr != '\0' && !isspace(*expr)
+      while( *expr != '(' && *expr != '\0' && !isspace((unsigned char)*expr)
              && !( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
       {
          operatorname[i] = *expr;
@@ -391,7 +391,7 @@ SCIP_RETCODE parseFactor(
          /* no parenthesis, we should see just a positive number */
 
          /* expect a digit */
-         if( isdigit(*expr) )
+         if( isdigit((unsigned char)*expr) )
          {
             if( !SCIPstrToRealValue(expr, &exponent, (char**)&expr) )
             {
