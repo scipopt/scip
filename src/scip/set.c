@@ -1288,6 +1288,15 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->branchrulessize = 0;
    (*set)->branchrulessorted = FALSE;
    (*set)->branchrulesnamesorted = FALSE;
+   (*set)->symhdlrs = NULL;
+   (*set)->nsymhdlrs = 0;
+   (*set)->symhdlrssize = 0;
+   (*set)->sym_sepa = NULL;
+   (*set)->nsymsepa = 0;
+   (*set)->symsepasize = 0;
+   (*set)->sym_prop = NULL;
+   (*set)->nsymprop = 0;
+   (*set)->sympropsize = 0;
    (*set)->iisfinders = NULL;
    (*set)->niisfinders = 0;
    (*set)->iisfinderssize = 0;

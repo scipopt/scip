@@ -63,6 +63,7 @@
 #include "scip/type_benders.h"
 #include "scip/type_iisfinder.h"
 #include "scip/type_expr.h"
+#include "scip/type_sym.h"
 #include "scip/type_message.h"
 #include "scip/debug.h"
 
@@ -97,6 +98,9 @@ struct SCIP_Set
    SCIP_NODESEL**        nodesels;           /**< node selectors */
    SCIP_NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
    SCIP_BRANCHRULE**     branchrules;        /**< branching rules */
+   SCIP_SYMHDLR**        symhdlrs;           /**< symmetry handlers (sorted by tryadd priority) */
+   SCIP_SYM**            sym_sepa;           /**< symmetry groups (sorted by separation priority) */
+   SCIP_SYM**            sym_prop;           /**< symmetry groups (sorted by propagation priority) */
    SCIP_IISFINDER**      iisfinders;         /**< irreducible infeasible subsystem (IIS) rules */
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_TABLE**          tables;             /**< statistics tables */
@@ -144,6 +148,12 @@ struct SCIP_Set
    int                   nodeselssize;       /**< size of nodesels array */
    int                   nbranchrules;       /**< number of branching rules */
    int                   branchrulessize;    /**< size of branchrules array */
+   int                   nsymhdlrs;          /**< number of symmetry handlers */
+   int                   symhdlrssize;       /**< size of symhdlrs array */
+   int                   nsymsepa;           /**< number of symmetry groups that are separated */
+   int                   symsepasize;        /**< size of sym_sepa array */
+   int                   nsymprop;           /**< number of symmetry groups that are propagated */
+   int                   sympropsize;        /**< size of sym_prop array */
    int                   niisfinders;        /**< number of IIS rules */
    int                   iisfinderssize;     /**< size of IIS finders array */
    int                   ndisps;             /**< number of display columns */

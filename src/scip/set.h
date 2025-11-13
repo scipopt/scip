@@ -56,6 +56,7 @@
 #include "scip/type_reader.h"
 #include "scip/type_relax.h"
 #include "scip/type_sepa.h"
+#include "scip/type_sym.h"
 #include "scip/type_table.h"
 #include "scip/type_prop.h"
 #include "scip/type_benders.h"
