@@ -39,6 +39,7 @@
 #include "scip/pub_misc.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
+#include "scip/type_sym.h"
 #include "scip/type_var.h"
 #include "symmetry/type_symmetry.h"
 
@@ -326,6 +327,23 @@ SCIP_Bool SCIPsymGT(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
+   );
+
+/** tries to add symmetry handling methods to CIP */
+SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** creates and captures symmetry information data structure */
+SCIP_RETCODE SCIPsyminfoCreate(
+   SCIP_SYMINFO**        syminfo,            /**< pointer to return the created syminfo */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** releases symmetry information data structure */
+SCIP_RETCODE SCIPsyminfoFree(
+   SCIP_SYMINFO**        syminfo,            /**< pointer to the syminfo */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** @} */

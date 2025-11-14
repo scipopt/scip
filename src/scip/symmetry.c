@@ -32,13 +32,19 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/symmetry.h"
 #include "scip/scip.h"
+#include "scip/symmetry.h"
+#include "scip/symmetry_graph.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_orbitope.h"
 #include "scip/misc.h"
-#include "symmetry/struct_symmetry.h"
-#include "symmetry/type_symmetry.h"
+#include "scip/struct_scip.h"
+#include "scip/struct_sym.h"
+#include "symmetry/compute_symmetry.h"
+/* #include "symmetry/struct_symmetry.h" */
+
+#define MAXGENNUMERATOR           INT_MAX    /**< determine maximal number of generators by dividing this number
+                                              *   by the number of variables */
 
 
 /** returns inferred type of variable used for symmetry handling */
@@ -2457,4 +2463,504 @@ SCIP_Bool SCIPsymGT(
    assert( !minf2 );
 
    return SCIPisGT(scip, val1, val2);
+}
+
+
+/** returns whether a constraint handler can provide required symmetry information */
+static
+SCIP_Bool conshdlrCanProvideSymInformation(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SYM_SYMTYPE           symtype             /**< type of symmetries for which information are needed */
+   )
+{
+   assert(conshdlr != NULL);
+
+   switch( symtype )
+   {
+   case SYM_SYMTYPE_PERM:
+      return SCIPconshdlrSupportsPermsymDetection(conshdlr);
+   default:
+      assert( symtype == SYM_SYMTYPE_SIGNPERM );
+      return SCIPconshdlrSupportsSignedPermsymDetection(conshdlr);
+   } /*lint !e788*/
+}
+
+
+/** returns whether all constraint handlers with constraints can provide symmetry information */
+static
+SCIP_Bool conshdlrsCanProvideSymInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype             /**< type of symmetries for which information are needed */
+   )
+{
+   SCIP_CONSHDLR** conshdlrs;
+   SCIP_CONSHDLR* conshdlr;
+   int nconshdlrs;
+   int c;
+
+   conshdlrs = SCIPgetConshdlrs(scip);
+   assert( conshdlrs != NULL );
+
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+   for( c = 0; c < nconshdlrs; ++c )
+   {
+      conshdlr = conshdlrs[c];
+      assert( conshdlr != NULL );
+
+      if( !conshdlrCanProvideSymInformation(conshdlr, symtype) && SCIPconshdlrGetNConss(conshdlr) > 0 )
+      {
+         char name[SCIP_MAXSTRLEN];
+
+         if( symtype == SYM_SYMTYPE_PERM )
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "CONSGETPERMSYMGRAPH");
+         else
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "CONSGETSIGNEDPERMSYMGRAPH");
+
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+            "   Symmetry detection interrupted: constraints of type %s do not provide symmetry information.\n"
+            "   If symmetries shall be detected, implement the %s callback.\n",
+            SCIPconshdlrGetName(conshdlr), name);
+
+         return FALSE;
+      }
+   }
+
+   /* check whether all expressions provide sufficient symmetry information */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   if( conshdlr != NULL && SCIPconshdlrGetNConss(conshdlr) > 0 )
+   {
+      SCIP_EXPRHDLR* exprhdlr;
+
+      for( c = 0; c < SCIPgetNExprhdlrs(scip); ++c )
+      {
+         SCIP_Bool found = FALSE;
+         exprhdlr = SCIPgetExprhdlrs(scip)[c];
+
+         if( SCIPexprhdlrHasGetSymData(exprhdlr) )
+            continue;
+
+         /* check whether exprhdlr is known by SCIP (and handles symmetries correctly) */
+         if( strcmp(SCIPexprhdlrGetName(exprhdlr), "var") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "sum") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "product") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "val") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "pow") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "signpow") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "exp") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "log") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "abs") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "sin") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "cos") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "entropy") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "erf") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "varidx") == 0 )
+            found = TRUE;
+
+         /* there exists an unknown expression handler that does not provide symmetry information */
+         if( ! found )
+         {
+            SCIPwarningMessage(scip, "Expression handler %s does not implement the EXPRGETSYMDATA callback.\n"
+               "Computed symmetries might be incorrect if the expression uses different constants or assigns\n"
+               "different coefficients to its children.\n", SCIPexprhdlrGetName(SCIPgetExprhdlrs(scip)[c]));
+         }
+      }
+   }
+
+   return TRUE;
+}
+
+
+/** provides estimates for the number of nodes and edges in a symmetry detection graph */
+static
+SCIP_RETCODE estimateSymgraphSize(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int*                  nopnodes,           /**< pointer to store estimate for number of operator nodes */
+   int*                  nvalnodes,          /**< pointer to store estimate for number of value nodes */
+   int*                  nconsnodes,         /**< pointer to store estimate for number of constraint nodes */
+   int*                  nedges              /**< pointer to store estimate for number of edges */
+   )
+{
+   SCIP_CONS** conss;
+   SCIP_Bool success;
+   int nvars;
+   int nconss;
+   int num;
+   int c;
+
+   assert(scip != NULL);
+   assert(nopnodes != NULL);
+   assert(nvalnodes != NULL);
+   assert(nconsnodes != NULL);
+   assert(nedges != NULL);
+
+   nvars = SCIPgetNVars(scip);
+   nconss = SCIPgetNConss(scip);
+   conss = SCIPgetConss(scip);
+   assert(conss != NULL || nconss == 0);
+
+   *nconsnodes = nconss;
+
+   /* get estimate from different types of constraints */
+   *nopnodes = 0;
+   *nvalnodes = 0;
+   for( c = 0; c < nconss; ++c )
+   {
+      if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])), "bounddisjunction") == 0 )
+      {
+         SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &num, &success) );
+
+         if( success )
+         {
+            *nopnodes += num;
+            *nvalnodes += num;
+         }
+      }
+      else if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])), "indicator") == 0 )
+      {
+         *nopnodes += 3;
+         *nvalnodes += 1;
+      }
+      else if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])), "nonlinear") == 0 )
+      {
+         SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &num, &success) );
+
+         /* use binary trees as a proxy for an expression tree */
+         if( success )
+         {
+            int depth;
+            int numnodes;
+            int expval;
+
+            depth = (int) log2((double) num);
+            expval = (int) exp2((double) (depth + 1));
+            numnodes = MIN(expval, 100);
+
+            *nopnodes += numnodes;
+            *nvalnodes += MAX((int) 0.1 * numnodes, 1);
+         }
+      }
+      else if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])), "SOS1") == 0 )
+      {
+         SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &num, &success) );
+
+         if( success )
+            *nopnodes += num;
+      }
+      else if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])), "SOS2") == 0 )
+      {
+         SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &num, &success) );
+
+         if( success )
+            *nopnodes += num - 1;
+      }
+   }
+
+   /* use a staggered scheme for the number of edges since this can become large
+    *
+    * In most cases, edges represent variable coefficients from linear constraints.
+    * For this reason, use number of variables as proxy.
+    */
+   if( nvars <= 100000 )
+      *nedges = 100 * nvars;
+   else if( nvars <= 1000000 )
+      *nedges = 32 * nvars;
+   else if( nvars <= 16700000 )
+      *nedges = 16 * nvars;
+   else
+      *nedges = INT_MAX / 10;
+
+   return SCIP_OKAY;
+}
+
+
+/** extracts symmetry detection graph from a CIP */
+static
+SCIP_RETCODE extractSDG(
+   SCIP*                 scip,               /**< SCIP instance */
+   SYM_GRAPH**           graph,              /**< pointer to symmetry detection graph */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries to be computed */
+   SCIP_Bool*            success             /**< pointer to store whether graph could be extracted successfully */
+   )
+{
+   SCIP_CONS** conss;
+   SCIP_Real eps;
+   int nopnodes;
+   int nvalnodes;
+   int nconsnodes;
+   int nedges;
+   int nconss;
+   int c;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   /* check whether all constraints can provide symmetry information */
+   if( !conshdlrsCanProvideSymInformation(scip, symtype) )
+      return SCIP_OKAY;
+
+   /* get symmetry detection graphs from constraints */
+   conss = SCIPgetConss(scip);
+   nconss = SCIPgetNConss(scip);
+
+   assert( conss != NULL || nconss == 0 );
+
+   /* exit if no constraints or no variables are available */
+   if( nconss == 0 || SCIPgetNVars(scip) == 0 )
+   {
+      *success = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* get an estimate for the number of nodes and edges */
+   SCIP_CALL( estimateSymgraphSize(scip, &nopnodes, &nvalnodes, &nconsnodes, &nedges) );
+
+   /* create graph */
+   SCIP_CALL( SCIPgetRealParam(scip, "numerics/epsilon", &eps) );
+   SCIP_CALL( SCIPcreateSymgraph(scip, symtype, graph, SCIPgetVars(scip), SCIPgetNVars(scip),
+         nopnodes, nvalnodes, nconsnodes, nedges, eps) );
+
+   *success = TRUE;
+   for( c = 0; c < nconss && *success; ++c )
+   {
+      if( symtype == SYM_SYMTYPE_PERM )
+      {
+         SCIP_CALL( SCIPgetConsPermsymGraph(scip, conss[c], *graph, success) );
+      }
+      else
+      {
+         assert(symtype == SYM_SYMTYPE_SIGNPERM);
+         SCIP_CALL( SCIPgetConsSignedPermsymGraph(scip, conss[c], *graph, success) );
+      }
+
+      /* terminate early if graph could not be returned */
+      if( ! *success )
+      {
+         SCIP_CALL( SCIPfreeSymgraph(scip, graph) );
+
+         return SCIP_OKAY;
+      }
+   }
+
+   SCIP_CALL( SCIPcomputeSymgraphColors(scip, *graph, 0) );
+
+   return SCIP_OKAY;
+}
+
+
+/** determines symmetry */
+static
+SCIP_RETCODE determineSymmetry(
+   SCIP*                 scip,               /**< SCIP instance */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries to be computed */
+   int***                symmetries,         /**< pointer to store symmetries */
+   int*                  nsymmetries,        /**< pointer to store number of symmetries */
+   int*                  symmetriessize,     /**< pointer to store size of symmetries array */
+   SCIP_VAR***           symvars,            /**< pointer to store variables on which symmetries act */
+   int*                  nsymvars            /**< pointer to store number of variables in symvars */
+   )
+{ /*lint --e{641}*/
+   SYM_GRAPH* graph;
+   SCIP_Bool success;
+   SCIP_Real log10groupsize;
+   SCIP_Real symcodetime = 0.0;
+   int maxgenerators;
+
+   assert(scip != NULL);
+   assert(symmetries != NULL);
+   assert(nsymmetries != NULL);
+   assert(symmetriessize != NULL);
+   assert(symvars != NULL);
+   assert(nsymvars != NULL);
+
+   /* do not compute symmetry if potentially conflicting methods are enabled */
+   if( SCIPisReoptEnabled(scip) || SCIPgetNActiveBenders(scip) > 0 || SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
+   /* skip symmetry computation if no graph automorphism code was linked */
+   if( !SYMcanComputeSymmetry() )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "   Deactivated symmetry handling methods, since SCIP was built without symmetry detector (SYM=none).\n");
+
+      return SCIP_OKAY;
+   }
+
+   /* avoid trivial cases */
+   *nsymvars = SCIPgetNVars(scip);
+   *symvars = SCIPgetVars(scip);
+   if( *nsymvars <= 0 )
+      return SCIP_OKAY;
+
+   /* @symtodo check whether we can rule out that symmetry handling is needed */
+
+   /* output message */
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      "   (%.1fs) symmetry computation started\n", SCIPgetSolvingTime(scip));
+
+   /* mark that we have tried to handle symmetries */
+   scip->syminfo->triedhandlesymmetry = TRUE;
+
+   /* determine maximal number of generators depending on the number of variables */
+   maxgenerators = scip->syminfo->maxngenerators;
+   maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / *nsymvars);
+
+   /* get symmetry detection graph */
+   SCIP_CALL( extractSDG(scip, &graph, symtype, &success) );
+
+   /* return if not successful */
+   if( !success )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) could not compute symmetry\n",
+         SCIPgetSolvingTime(scip));
+      goto FREEGRAPH;
+   }
+
+   /* terminate early in case all variables are different */
+   if( (symtype == SYM_SYMTYPE_PERM && SCIPgetSymgraphNVarcolors(graph) == *nsymvars)
+      || (symtype == SYM_SYMTYPE_SIGNPERM && SCIPgetSymgraphNVarcolors(graph) == 2 * (*nsymvars)) )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present (symcode time: %.2f)\n",
+         SCIPgetSolvingTime(scip), symcodetime);
+      goto FREEGRAPH;
+   }
+
+   /*
+    * actually compute symmetries
+    */
+   SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, graph, nsymmetries, symmetriessize,
+         symmetries, &log10groupsize, &symcodetime) );
+
+   /* return if no symmetries found */
+   if( *nsymmetries == 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present (symcode time: %.2f)\n",
+         SCIPgetSolvingTime(scip), symcodetime);
+      goto FREEGRAPH;
+   }
+
+   /* display statistics */
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      "   (%.1fs) symmetry computation finished: %d generators found (max: ",
+      SCIPgetSolvingTime(scip), *nsymmetries);
+
+   /* display statistics: maximum number of generators */
+   if( maxgenerators == 0 )
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "-");
+   else
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%d", maxgenerators);
+
+   /* display statistics: log10 group size, number of affected vars*/
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", log10 of symmetry group size: %.2f", log10groupsize);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ") (symcode time: %.2f)\n", symcodetime);
+
+   /* @symtodo where shall we do this? */
+   /* capture all variables while they are in the permvars array */
+   /* for (i = 0; i < propdata->npermvars; ++i) */
+   /* { */
+   /*    SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[i]) ); */
+   /* } */
+
+ FREEGRAPH:
+   SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
+
+   return SCIP_OKAY;
+}
+
+
+/** tries to add symmetry handling methods to CIP */
+SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SYM_SYMTYPE symtype;
+   SCIP_VAR** symvars;
+   int** symmetries;
+   int nsymmmetries;
+   int symmetriessize;
+   int nsymvars;
+
+   assert(scip != NULL);
+
+   /* only run when symmetry handling is enabled */
+   if( !scip->syminfo->enabled )
+      return SCIP_OKAY;
+
+   /* do not add symmetry handling methods if they have already been added */
+   if( scip->syminfo->triedhandlesymmetry )
+      return SCIP_OKAY;
+   scip->syminfo->triedhandlesymmetry = TRUE;
+
+   /* symmetry handling methods can only be applied if dual reductions are permitted */
+   if( !SCIPallowStrongDualReds(scip) || !SCIPallowWeakDualReds(scip) )
+      return SCIP_OKAY;
+
+   symtype = scip->syminfo->symtype;
+   SCIP_CALL( determineSymmetry(scip, symtype, &symmetries, &nsymmmetries, &symmetriessize, &symvars, &nsymvars) );
+
+   /*
+    * - compute components of symmetry group
+    * - iterate over components and try to apply symmetry handling methods
+    */
+
+   if( symmetriessize > 0 )
+   {
+      int i;
+
+      assert(symmetries != NULL);
+
+      for( i = nsymmmetries - 1; i >= 0; --i )
+      {
+         SCIPfreeBlockMemoryArray(scip, &symmetries[i], nsymvars);
+      }
+      SCIPfreeBlockMemoryArray(scip, &symmetries, symmetriessize);
+   }
+#ifndef NDEBUG
+   else
+   {
+      assert(nsymmmetries == 0);
+      assert(symmetries == NULL);
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/** creates and captures symmetry information data structure */
+SCIP_RETCODE SCIPsyminfoCreate(
+   SCIP_SYMINFO**        syminfo,            /**< pointer to return the created syminfo */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   assert(syminfo != NULL);
+   assert(blkmem != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, syminfo) );
+
+   (*syminfo)->enabled = TRUE;  /* @symtodo */
+   (*syminfo)->triedhandlesymmetry = FALSE;
+   (*syminfo)->maxngenerators = 1500; /* @symtodo */
+   (*syminfo)->symtype = SYM_SYMTYPE_PERM; /* @symtodo */
+
+   return SCIP_OKAY;
+}
+
+
+/** releases symmetry information data structure */
+SCIP_RETCODE SCIPsyminfoFree(
+   SCIP_SYMINFO**        syminfo,            /**< pointer to the syminfo */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   assert(syminfo != NULL);
+   assert(blkmem != NULL);
+
+   if( *syminfo == NULL )
+      return SCIP_OKAY;
+
+   BMSfreeBlockMemory(blkmem, syminfo);
+   *syminfo = NULL;
+
+   return SCIP_OKAY;
 }

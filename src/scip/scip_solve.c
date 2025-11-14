@@ -113,6 +113,7 @@
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
 #include "scip/struct_tree.h"
+#include "scip/symmetry.h"
 #include "scip/syncstore.h"
 #include "scip/tree.h"
 #include "scip/var.h"
@@ -1307,6 +1308,17 @@ SCIP_RETCODE presolve(
 
       /* abort if time limit was reached or user interrupted */
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, FALSE);
+
+      /* possibly add symmetry handling methods */
+      /* @symtodo control timinig of computing symmetries */
+      if( finished && !*unbounded && !*infeasible && !*vanished && !stopped )
+      {
+         /* @symtodo check how to deal with sub-SCIPs */
+         if( SCIPgetSubscipDepth(scip) == 0 )
+         {
+            SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip) );
+         }
+      }
    }
 
    /* flatten aggregation graph in order to avoid complicated multi-aggregated variables */

@@ -73,6 +73,7 @@
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
+#include "scip/symmetry.h"
 #include "scip/syncstore.h"
 #include "scip/lapack_calls.h"
 #include "tpi/tpi.h"
@@ -265,6 +266,7 @@ SCIP_RETCODE doScipCreate(
    SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
    SCIP_CALL( SCIPiisCreate(&(*scip)->iis, (*scip)->set, SCIPblkmem(*scip)) );
+   SCIP_CALL( SCIPsyminfoCreate(&(*scip)->syminfo, SCIPblkmem(*scip)) );
 
    /* include additional core functionality */
    SCIP_CALL( SCIPincludeCorePlugins(*scip) );
@@ -416,6 +418,7 @@ SCIP_RETCODE SCIPfree(
    /* switch stage to FREE */
    (*scip)->set->stage = SCIP_STAGE_FREE;
 
+   SCIP_CALL( SCIPsyminfoFree(&(*scip)->syminfo, SCIPblkmem(*scip)) );
    SCIP_CALL( SCIPiisFree(&(*scip)->iis, SCIPblkmem(*scip)) );
    SCIP_CALL( SCIPsyncstoreRelease(&(*scip)->syncstore) );
    SCIP_CALL( SCIPsetFree(&(*scip)->set, (*scip)->mem->setmem) );

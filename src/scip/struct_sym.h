@@ -60,16 +60,16 @@ struct SCIP_Symhdlr
    SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this symmetry handler */
    char*                 name;               /**< name of symmetry handler */
    char*                 desc;               /**< description of symmetry handler */
-   SCIP_DECL_SYMTRYADD   ((*symtryadd));     /**< try to add symmetry handler */
-   SCIP_DECL_SYMCOPY     ((*symcopy));       /**< copy method of symmetry handler or NULL if you don't want to copy your plugin into sub-SCIPs */
-   SCIP_DECL_SYMFREE     ((*symfree));       /**< destructor of symmetry handler */
-   SCIP_DECL_SYMINIT     ((*syminit));       /**< initialize symmetry handler */
-   SCIP_DECL_SYMEXIT     ((*symexit));       /**< deinitialize symmetry handler */
-   SCIP_DECL_SYMTRANS    ((*symtrans));      /**< transform symmetry handler data into data belonging to the transformed problem */
-   SCIP_DECL_SYMSEPALP   ((*symsepalp));     /**< separate cutting planes for LP solution */
-   SCIP_DECL_SYMSEPASOL  ((*symsepasol));    /**< separate cutting planes for arbitrary primal solution */
-   SCIP_DECL_SYMPROP     ((*symprop));       /**< propagate variable domains */
-   SCIP_DECL_SYMPRESOL   ((*sympresol));     /**< presolving method */
+   SCIP_DECL_SYMHDLRTRYADD((*symtryadd));    /**< try to add symmetry handler */
+   SCIP_DECL_SYMHDLRCOPY ((*symcopy));       /**< copy method of symmetry handler or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_SYMHDLRFREE ((*symfree));       /**< destructor of symmetry handler */
+   SCIP_DECL_SYMHDLRINIT ((*syminit));       /**< initialize symmetry handler */
+   SCIP_DECL_SYMHDLREXIT ((*symexit));       /**< deinitialize symmetry handler */
+   SCIP_DECL_SYMHDLRTRANS((*symtrans));      /**< transform symmetry handler data into data belonging to the transformed problem */
+   SCIP_DECL_SYMHDLRSEPALP((*symsepalp));    /**< separate cutting planes for LP solution */
+   SCIP_DECL_SYMHDLRSEPASOL((*symsepasol));  /**< separate cutting planes for arbitrary primal solution */
+   SCIP_DECL_SYMHDLRPROP ((*symprop));       /**< propagate variable domains */
+   SCIP_DECL_SYMHDLRPRESOL((*sympresol));    /**< presolving method */
    SCIP_SYMHDLRDATA*     symhdlrdata;        /**< symmetry handler data */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this symmetry handler for the next stages */
    SCIP_CLOCK*           presoltime;         /**< time used for presolving of this symmetry handler */
@@ -98,6 +98,16 @@ struct SCIP_Symhdlr
    SCIP_Bool             propwasdelayed;     /**< was the propagation method delayed at the last call? */
    SCIP_PROPTIMING       proptiming;         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming;       /**< timing mask of the symmetry handler's presolving method */
+};
+
+/** data structure for storing symmetry information */
+struct SCIP_SymInfo
+{
+   SCIP_Bool             enabled;            /**< Is symmetry handling enabled? */
+   SCIP_Bool             triedhandlesymmetry;/**< Have we already tried to handle symmetries? */
+   int                   maxngenerators;     /**< maximum number of symmetry group generators to be computed */
+
+   SYM_SYMTYPE           symtype;            /**< type of symmetries to be considered */
 };
 
 #ifdef __cplusplus
