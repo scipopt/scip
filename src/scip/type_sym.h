@@ -41,6 +41,7 @@
 #define __SCIP_TYPE_SYM_H__
 
 #include "scip/type_cons.h"
+#include "symmetry/type_symmetry.h"
 
 #ifdef __cplusplus
 extern "C" {

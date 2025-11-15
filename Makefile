@@ -1018,6 +1018,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_sol.o \
 			scip/scip_solve.o \
 			scip/scip_solvingstats.o \
+			scip/scip_sym.o \
 			scip/scip_table.o \
 			scip/scip_timing.o \
 			scip/scip_tree.o \
@@ -1036,6 +1037,8 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/sol.o \
 			scip/solve.o \
 			scip/stat.o \
+			scip/sym.o \
+			scip/sym_symresack.o \
 			scip/symmetry.o \
 			scip/symmetry_graph.o \
 			scip/symmetry_orbitopal.o \

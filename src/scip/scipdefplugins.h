@@ -254,6 +254,7 @@
 #include "scip/sepa_rlt.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
+#include "scip/sym_symresack.h"
 #include "scip/symmetry.h"
 #include "scip/table_default.h"
 #include "scip/concsolver_scip.h"

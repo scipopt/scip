@@ -51,15 +51,15 @@ struct SCIP_Sym
 /** symmetry handler */
 struct SCIP_Symhdlr
 {
-   SCIP_Longint          nsepacalls;         /**< number of times, the separator was called */
-   SCIP_Longint          npropcalls;         /**< number of times, the propagator was called */
-   SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this symmetry handler */
-   SCIP_Longint          ncutsfound;         /**< number of cuts found by this symmetry handler */
-   SCIP_Longint          ncutsapplied;       /**< number of cuts found by this symmetry handler applied to lp */
-   SCIP_Longint          nconssfound;        /**< number of additional constraints added by this symmetry handler */
-   SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this symmetry handler */
    char*                 name;               /**< name of symmetry handler */
    char*                 desc;               /**< description of symmetry handler */
+   int                   tryaddpriority;     /**< priority of the symmetry handler for trying to add its symmetry handling methods */
+   int                   sepapriority;       /**< priority of the symmetry handler for separation */
+   int                   sepafreq;           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   proppriority;       /**< priority of the symmetry handler for propagation */
+   int                   propfreq;           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   int                   presolpriority;     /**< priority of the symmetry handler for presolving */
+   int                   maxprerounds;       /**< maximal number of presolving rounds the symmetry handler participates in (-1: no limit) */
    SCIP_DECL_SYMHDLRTRYADD((*symtryadd));    /**< try to add symmetry handler */
    SCIP_DECL_SYMHDLRCOPY ((*symcopy));       /**< copy method of symmetry handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_SYMHDLRFREE ((*symfree));       /**< destructor of symmetry handler */
@@ -75,11 +75,14 @@ struct SCIP_Symhdlr
    SCIP_CLOCK*           presoltime;         /**< time used for presolving of this symmetry handler */
    SCIP_CLOCK*           sepatime;           /**< time used for separation of this symmetry handler */
    SCIP_CLOCK*           proptime;           /**< time used for propagation of this symmetry handler */
-   int                   tryaddpriority;     /**< priority of the symmetry handler for trying to add its symmetry handling methods */
-   int                   sepapriority;       /**< priority of the symmetry handler for separation */
-   int                   sepafreq;           /**< frequency for separating cuts; zero means to separate only in the root node */
-   int                   propfreq;           /**< frequency for propagating domains; zero means only preprocessing propagation */
-   int                   maxprerounds;       /**< maximal number of presolving rounds the symmetry handler participates in (-1: no limit) */
+   SCIP_Bool             initialized;        /**< is symmetry handler initialized */
+   SCIP_Longint          nsepacalls;         /**< number of times, the separator was called */
+   SCIP_Longint          npropcalls;         /**< number of times, the propagator was called */
+   SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this symmetry handler */
+   SCIP_Longint          ncutsfound;         /**< number of cuts found by this symmetry handler */
+   SCIP_Longint          ncutsapplied;       /**< number of cuts found by this symmetry handler applied to lp */
+   SCIP_Longint          nconssfound;        /**< number of additional constraints added by this symmetry handler */
+   SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this symmetry handler */
    int                   nfixedvars;         /**< total number of variables fixed by this presolver */
    int                   naggrvars;          /**< total number of variables aggregated by this presolver */
    int                   nchgvartypes;       /**< total number of variable type changes by this presolver */

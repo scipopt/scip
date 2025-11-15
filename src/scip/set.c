@@ -62,6 +62,7 @@
 #include "scip/reader.h"
 #include "scip/relax.h"
 #include "scip/sepa.h"
+#include "scip/sym.h"
 #include "scip/cutsel.h"
 #include "scip/table.h"
 #include "scip/prop.h"
@@ -5200,6 +5201,26 @@ void SCIPsetSortBranchrulesName(
       set->branchrulessorted = FALSE;
       set->branchrulesnamesorted = TRUE;
    }
+}
+
+/** returns the symmetry handler of the given name, or NULL if not existing */
+SCIP_SYMHDLR* SCIPsetFindSymhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of constraint handler */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nsymhdlrs; ++i )
+   {
+      if( strcmp(SCIPsymhdlrGetName(set->symhdlrs[i]), name) == 0 )
+         return set->symhdlrs[i];
+   }
+
+   return NULL;
 }
 
 /** inserts IIS finders in IIS finders list */

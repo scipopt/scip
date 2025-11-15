@@ -850,6 +850,12 @@ void SCIPsetSortBranchrulesName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** returns the symmetry handler of the given name, or NULL if not existing */
+SCIP_SYMHDLR* SCIPsetFindSymhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of constraint handler */
+   );
+
 /** inserts IIS finders in IIS finder list */
 SCIP_RETCODE SCIPsetIncludeIISfinder(
    SCIP_SET*             set,                /**< global SCIP settings */
