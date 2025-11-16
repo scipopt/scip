@@ -121,6 +121,16 @@ SCIP_RETCODE doSymhdlrCreate(
    (*symhdlr)->nconssfound = 0;
    (*symhdlr)->ndomredsfound = 0;
 
+   (*symhdlr)->lastnfixedvars = 0;
+   (*symhdlr)->lastnaggrvars = 0;
+   (*symhdlr)->lastnchgvartypes = 0;
+   (*symhdlr)->lastnchgbds = 0;
+   (*symhdlr)->lastnaddholes = 0;
+   (*symhdlr)->lastndelconss = 0;
+   (*symhdlr)->lastnaddconss = 0;
+   (*symhdlr)->lastnupgdconss = 0;
+   (*symhdlr)->lastnchgcoefs = 0;
+   (*symhdlr)->lastnchgsides = 0;
    (*symhdlr)->nfixedvars = 0;
    (*symhdlr)->naggrvars = 0;
    (*symhdlr)->nchgvartypes = 0;
@@ -253,6 +263,192 @@ SCIP_RETCODE SCIPsymhdlrFree(
    return SCIP_OKAY;
 }
 
+/** calls exit method of symmetry handler */
+SCIP_RETCODE SCIPsymhdlrExit(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(symhdlr != NULL);
+
+   if( !symhdlr->initialized )
+   {
+      SCIPerrorMessage("symmetry handler <%s> not initialized\n", symhdlr->name);
+      return SCIP_INVALIDCALL;
+   }
+
+   if( symhdlr->symexit != NULL )
+   {
+      /* start timing */
+      SCIPclockStart(symhdlr->setuptime, set);
+
+      SCIP_CALL( symhdlr->symexit(set->scip, symhdlr) );
+
+      /* stop timing */
+      SCIPclockStop(symhdlr->setuptime, set);
+   }
+   symhdlr->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** calls exit method of symmetry handler */
+SCIP_RETCODE SCIPsymhdlrInit(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(symhdlr != NULL);
+   assert(set != NULL);
+
+   if( symhdlr->initialized )
+   {
+      SCIPerrorMessage("symmetry handler <%s> already initialized\n", symhdlr->name);
+      return SCIP_INVALIDCALL;
+   }
+
+   if( symhdlr->syminit != NULL )
+   {
+      /* start timing */
+      SCIPclockStart(symhdlr->setuptime, set);
+
+      SCIP_CALL( symhdlr->syminit(set->scip, symhdlr) );
+
+      /* stop timing */
+      SCIPclockStop(symhdlr->setuptime, set);
+   }
+   symhdlr->initialized = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** executes presolving method of symmetry handler */
+SCIP_RETCODE SCIPsymhdlrPresol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRESOLTIMING     timing,             /**< current presolving timing */
+   int                   nrounds,            /**< number of presolving rounds already done */
+   int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
+   int*                  naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
+   int*                  nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
+   int*                  nchgbds,            /**< pointer to total number of variable bounds tightened of all presolvers */
+   int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
+   int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to total number of added constraints of all presolvers */
+   int*                  nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
+   int*                  nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
+   int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(symhdlr != NULL);
+   assert(set != NULL);
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(nchgvartypes != NULL);
+   assert(nchgbds != NULL);
+   assert(naddholes != NULL);
+   assert(ndelconss != NULL);
+   assert(naddconss != NULL);
+   assert(nupgdconss != NULL);
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* @symtodo how to deal with exact SCIP? */
+   if( symhdlr->sympresol == NULL || set->exact_enable )
+      return SCIP_OKAY;
+
+   /* check number of presolving rounds */
+   if( symhdlr->maxprerounds >= 0 && symhdlr->npresolcalls >= symhdlr->maxprerounds )
+      return SCIP_OKAY;
+
+   /* check, if presolver should be delayed */
+   if( symhdlr->presoltiming & timing )
+   {
+      int nnewfixedvars;
+      int nnewaggrvars;
+      int nnewchgvartypes;
+      int nnewchgbds;
+      int nnewaddholes;
+      int nnewdelconss;
+      int nnewaddconss;
+      int nnewupgdconss;
+      int nnewchgcoefs;
+      int nnewchgsides;
+
+      SCIPsetDebugMsg(set, "calling presolving method of symmetry handler <%s>\n", symhdlr->name);
+
+      /* calculate the number of changes since last call */
+      nnewfixedvars = *nfixedvars - symhdlr->lastnfixedvars;
+      nnewaggrvars = *naggrvars - symhdlr->lastnaggrvars;
+      nnewchgvartypes = *nchgvartypes - symhdlr->lastnchgvartypes;
+      nnewchgbds = *nchgbds - symhdlr->lastnchgbds;
+      nnewaddholes = *naddholes - symhdlr->lastnaddholes;
+      nnewdelconss = *ndelconss - symhdlr->lastndelconss;
+      nnewaddconss = *naddconss - symhdlr->lastnaddconss;
+      nnewupgdconss = *nupgdconss - symhdlr->lastnupgdconss;
+      nnewchgcoefs = *nchgcoefs - symhdlr->lastnchgcoefs;
+      nnewchgsides = *nchgsides - symhdlr->lastnchgsides;
+
+      /* remember the number of changes prior to the call of the presolver method of the symmetry handler */
+      symhdlr->lastnfixedvars = *nfixedvars;
+      symhdlr->lastnaggrvars = *naggrvars;
+      symhdlr->lastnchgvartypes = *nchgvartypes;
+      symhdlr->lastnchgbds = *nchgbds;
+      symhdlr->lastnaddholes = *naddholes;
+      symhdlr->lastndelconss = *ndelconss;
+      symhdlr->lastnaddconss = *naddconss;
+      symhdlr->lastnupgdconss = *nupgdconss;
+      symhdlr->lastnchgcoefs = *nchgcoefs;
+      symhdlr->lastnchgsides = *nchgsides;
+
+      /* start timing */
+      SCIPclockStart(symhdlr->presoltime, set);
+
+      /* call external method */
+      SCIP_CALL( symhdlr->sympresol(set->scip, symhdlr, nrounds, timing,
+            nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewaddholes,
+            nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+            nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
+            ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
+
+      /* stop timing */
+      SCIPclockStop(symhdlr->presoltime, set);
+
+      /* add/count the new changes */
+      symhdlr->nfixedvars += *nfixedvars - symhdlr->lastnfixedvars;
+      symhdlr->naggrvars += *naggrvars - symhdlr->lastnaggrvars;
+      symhdlr->nchgvartypes += *nchgvartypes - symhdlr->lastnchgvartypes;
+      symhdlr->nchgbds += *nchgbds - symhdlr->lastnchgbds;
+      symhdlr->naddholes += *naddholes - symhdlr->lastnaddholes;
+      symhdlr->ndelconss += *ndelconss - symhdlr->lastndelconss;
+      symhdlr->naddconss += *naddconss - symhdlr->lastnaddconss;
+      symhdlr->nupgdconss += *nupgdconss - symhdlr->lastnupgdconss;
+      symhdlr->nchgcoefs += *nchgcoefs - symhdlr->lastnchgcoefs;
+      symhdlr->nchgsides += *nchgsides - symhdlr->lastnchgsides;
+
+      /* check result code of callback method */
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_UNBOUNDED
+         && *result != SCIP_SUCCESS
+         && *result != SCIP_DIDNOTFIND
+         && *result != SCIP_DIDNOTRUN )
+      {
+         SCIPerrorMessage("symmetry handler <%s> returned invalid result <%d>\n", symhdlr->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+
+      /* increase the number of presolving calls, if the symmetry handler tried to find reductions */
+      if( *result != SCIP_DIDNOTRUN )
+         ++(symhdlr->npresolcalls);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** calls try-add method of symmetry handler */
 SCIP_RETCODE SCIPsymhdlrTryadd(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
@@ -298,6 +494,16 @@ const char* SCIPsymhdlrGetName(
    assert(symhdlr != NULL);
 
    return symhdlr->name;
+}
+
+/** gets user data of symmetry handler */
+SCIP_SYMHDLRDATA* SCIPsymhdlrGetData(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->symhdlrdata;
 }
 
 /** compares two symmetry handlers w. r. to their try-add priority */

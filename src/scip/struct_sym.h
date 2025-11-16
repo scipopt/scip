@@ -83,6 +83,16 @@ struct SCIP_Symhdlr
    SCIP_Longint          ncutsapplied;       /**< number of cuts found by this symmetry handler applied to lp */
    SCIP_Longint          nconssfound;        /**< number of additional constraints added by this symmetry handler */
    SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this symmetry handler */
+   int                   lastnfixedvars;     /**< number of variables fixed before the last call of this presolver */
+   int                   lastnaggrvars;      /**< number of variables aggregated before the last call of this presolver */
+   int                   lastnchgvartypes;   /**< number of variable type changes before the last call of this presolver */
+   int                   lastnchgbds;        /**< number of variable bounds tightened before the last call of this presolver */
+   int                   lastnaddholes;      /**< number of domain holes added before the last call of this presolver */
+   int                   lastndelconss;      /**< number of deleted constraints before the last call of this presolver */
+   int                   lastnaddconss;      /**< number of added constraints before the last call of this presolver */
+   int                   lastnupgdconss;     /**< number of upgraded constraints before the last call of this presolver */
+   int                   lastnchgcoefs;      /**< number of changed coefficients before the last call of this presolver */
+   int                   lastnchgsides;      /**< number of changed left or right hand sides before the last call of this presolver */
    int                   nfixedvars;         /**< total number of variables fixed by this presolver */
    int                   naggrvars;          /**< total number of variables aggregated by this presolver */
    int                   nchgvartypes;       /**< total number of variable type changes by this presolver */

@@ -79,6 +79,37 @@ SCIP_RETCODE SCIPsymhdlrFree(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** calls exit method of symmetry handler */
+SCIP_RETCODE SCIPsymhdlrExit(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** calls exit method of symmetry handler */
+SCIP_RETCODE SCIPsymhdlrInit(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** executes presolving method of symmetry handler */
+SCIP_RETCODE SCIPsymhdlrPresol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRESOLTIMING     timing,             /**< current presolving timing */
+   int                   nrounds,            /**< number of presolving rounds already done */
+   int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
+   int*                  naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
+   int*                  nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
+   int*                  nchgbds,            /**< pointer to total number of variable bounds tightened of all presolvers */
+   int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
+   int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to total number of added constraints of all presolvers */
+   int*                  nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
+   int*                  nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
+   int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
 /** calls try-add method of symmetry handler */
 SCIP_RETCODE SCIPsymhdlrTryadd(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */

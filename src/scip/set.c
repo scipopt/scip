@@ -5732,6 +5732,12 @@ SCIP_RETCODE SCIPsetInitPlugins(
       SCIP_CALL( SCIPbranchruleInit(set->branchrules[i], set) );
    }
 
+   /* symmetry handlers */
+   for( i = 0; i < set->nsymhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPsymhdlrInit(set->symhdlrs[i], set) );
+   }
+
    /* display columns */
    for( i = 0; i < set->ndisps; ++i )
    {
@@ -5851,6 +5857,12 @@ SCIP_RETCODE SCIPsetExitPlugins(
    for( i = 0; i < set->nbranchrules; ++i )
    {
       SCIP_CALL( SCIPbranchruleExit(set->branchrules[i], set) );
+   }
+
+   /* symmetry handlers */
+   for( i = 0; i < set->nsymhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPsymhdlrExit(set->symhdlrs[i], set) );
    }
 
    /* display columns */

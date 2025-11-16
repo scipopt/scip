@@ -33,6 +33,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
+#include "scip/scip_sym.h"
 #include "scip/sym.h"
 #include "scip/symmetry.h"
 #include "scip/symmetry_graph.h"
