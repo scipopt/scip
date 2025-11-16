@@ -101,15 +101,6 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  */
 #define SCIP_DECL_SYMHDLREXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr)
 
-/** transforms data of symmetry group into data belonging to the transformed problem
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - sourcesym       : source symmetry group to transform
- *  - targetsym       : pointer to store created symmetry group
- */
-#define SCIP_DECL_SYMTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYM* sourcesym, SCIP_SYM** targetsym)
-
 /** transforms data of symmetry handler into data belonging to the transformed problem
  *
  *  input:
