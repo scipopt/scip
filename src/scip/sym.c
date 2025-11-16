@@ -253,6 +253,43 @@ SCIP_RETCODE SCIPsymhdlrFree(
    return SCIP_OKAY;
 }
 
+/** calls try-add method of symmetry handler */
+SCIP_RETCODE SCIPsymhdlrTryadd(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int**                 symmetries,         /**< array of symmetries */
+   int                   nsymmetries,        /**< number of symmetries in symmetries array */
+   SYM_SYMTYPE           symtype,            /**< type of symmetry */
+   SCIP_VAR**            symvars,            /**< variables on which symmetries act */
+   int                   nsymvars,           /**< number of variables in symvars */
+   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
+   int                   id,                 /**< identifier of component for which symmetry handling shall be added */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
+   )
+{
+   assert(symhdlr != NULL);
+   assert(set != NULL);
+   assert(success != NULL);
+
+   SCIPsetDebugMsg(set, "try to add symmetry handler of type %s for symmetry component %d\n", symhdlr->name, id);
+
+   /* start timing */
+   SCIPclockStart(symhdlr->setuptime, set);
+
+   SCIP_CALL( symhdlr->symtryadd(set->scip, symhdlr, symtype, symmetries, nsymmetries,
+         symvars, nsymvars, symgraph, success) );
+
+   /* end timing */
+   SCIPclockStop(symhdlr->setuptime, set);
+
+   if( *success )
+      SCIPsetDebugMsg(set, "\t-->success\n");
+   else
+      SCIPsetDebugMsg(set, "\t-->symmetry handler %s is not applicable\n", symhdlr->name);
+
+   return SCIP_OKAY;
+}
+
 /** gets name of symmetry handler */
 const char* SCIPsymhdlrGetName(
    SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */

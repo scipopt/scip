@@ -34,6 +34,7 @@
 #define __SCIP_SYM_H__
 
 #include "scip/type_sym.h"
+#include "symmetry/type_symmetry.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -75,6 +76,20 @@ SCIP_RETCODE SCIPsymhdlrCreate(
 SCIP_RETCODE SCIPsymhdlrFree(
    SCIP_SYMHDLR**        symhdlr,            /**< pointer to symmetry handler data structure */
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** calls try-add method of symmetry handler */
+SCIP_RETCODE SCIPsymhdlrTryadd(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int**                 symmetries,         /**< array of symmetries */
+   int                   nsymmetries,        /**< number of symmetries in symmetries array */
+   SYM_SYMTYPE           symtype,            /**< type of symmetry */
+   SCIP_VAR**            symvars,            /**< variables on which symmetries act */
+   int                   nsymvars,           /**< number of variables in symvars */
+   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
+   int                   id,                 /**< identifier of component for which symmetry handling shall be added */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
    );
 
 /** gets name of symmetry handler */

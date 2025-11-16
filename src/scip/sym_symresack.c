@@ -44,8 +44,25 @@
 static
 SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSymresack)
 {  /*lint --e{715}*/
+   int s;
 
-   printf("I have been added\n");
+   if( symtype != SYM_SYMTYPE_PERM )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   *success = TRUE;
+
+   for( s = 0; s < nsymmetries; ++s )
+   {
+      SCIP_CONS* cons;
+
+      SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, "cons", symmetries[s], symvars, nsymvars,
+            FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
 
    return SCIP_OKAY;
 }

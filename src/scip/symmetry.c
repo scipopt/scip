@@ -33,15 +33,16 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
+#include "scip/sym.h"
 #include "scip/symmetry.h"
 #include "scip/symmetry_graph.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_orbitope.h"
 #include "scip/misc.h"
 #include "scip/struct_scip.h"
+#include "scip/struct_set.h"
 #include "scip/struct_sym.h"
 #include "symmetry/compute_symmetry.h"
-/* #include "symmetry/struct_symmetry.h" */
 
 #define MAXGENNUMERATOR           INT_MAX    /**< determine maximal number of generators by dividing this number
                                               *   by the number of variables */
@@ -2867,6 +2868,158 @@ SCIP_RETCODE determineSymmetry(
    return SCIP_OKAY;
 }
 
+/** compute components of symmetry group */
+static
+SCIP_RETCODE computeComponentsSym(
+   SCIP*                 scip,               /**< SCIP instance */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries in perms */
+   int**                 symmetries,         /**< generators of symmetry group (nsymmetries * nsymvars matrix) */
+   int                   nsymmetries,        /**< number of symmetries */
+   SCIP_VAR**            symvars ,           /**< variables on which symmetries act */
+   int                   nsymvars,           /**< number of variables the symmetries act on */
+   int**                 components,         /**< array containing the indices of symmetries sorted by components */
+   int**                 componentbegins,    /**< array containing in i-th position the first position of
+                                              *   component i in components array */
+   int*                  ncomponents         /**< pointer to store number of components of symmetry group */
+   )
+{
+   SCIP_DISJOINTSET* componentstovar = NULL;
+   int* symtovarcomp;
+   int s;
+   int i;
+   int idx;
+
+   assert(scip != NULL);
+   assert(symvars != NULL);
+   assert(nsymvars > 0);
+   assert(symmetries != NULL);
+   assert(components != NULL);
+   assert(componentbegins != NULL);
+   assert(ncomponents != NULL);
+
+   if( nsymmetries <= 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPdisjointsetCreate(&componentstovar, SCIPblkmem(scip), nsymvars) );
+   *ncomponents = nsymvars;
+
+   /* init array that stores for each symmetry the representative of its affected variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &symtovarcomp, nsymmetries) );
+   for( s = 0; s < nsymmetries; ++s )
+      symtovarcomp[s] = -1;
+
+   /* find symmetry components */
+   for( i = 0; i < nsymvars; ++i )
+   {
+      for( s = 0; s < nsymmetries; ++s )
+      {
+         int img;
+
+         img = symmetries[s][i];
+
+         /* symmetry s affects i -> possibly merge var components */
+         if( img != i )
+         {
+            int component1;
+            int component2;
+            int representative;
+
+            if( img >= nsymvars )
+            {
+               assert(symtype == SYM_SYMTYPE_SIGNPERM);
+               img -= nsymvars;
+               assert(0 <= img && img < nsymvars);
+            }
+
+            component1 = SCIPdisjointsetFind(componentstovar, i);
+            component2 = SCIPdisjointsetFind(componentstovar, img);
+
+            /* ensure component1 <= component2 */
+            if( component2 < component1 )
+            {
+               int swap;
+
+               swap = component1;
+               component1 = component2;
+               component2 = swap;
+            }
+
+            /* init symtovarcomp[s] to component of first moved variable or update the value */
+            if( symtovarcomp[s] == -1 )
+            {
+               symtovarcomp[s] = component1;
+               representative = component1;
+            }
+            else
+            {
+               symtovarcomp[s] = SCIPdisjointsetFind(componentstovar, symtovarcomp[s]);
+               representative = symtovarcomp[s];
+            }
+
+            /* merge both components if they differ */
+            if( component1 != component2 )
+            {
+               SCIPdisjointsetUnion(componentstovar, component1, component2, TRUE);
+               --(*ncomponents);
+            }
+
+            /* possibly merge new component and symvartocopm[s] and ensure the latter
+             * to have the smallest value */
+            if( representative != component1 && representative != component2 )
+            {
+               if( representative > component1 )
+               {
+                  SCIPdisjointsetUnion(componentstovar, component1, representative, TRUE);
+                  symtovarcomp[s] = component1;
+               }
+               else
+                  SCIPdisjointsetUnion(componentstovar, representative, component1, TRUE);
+               --(*ncomponents);
+            }
+            else if( representative > component1 )
+            {
+               assert(representative == component2);
+               symtovarcomp[s] = component1;
+            }
+         }
+      }
+   }
+   assert(*ncomponents > 0);
+
+   /* update symvartocomp array to final variable representatives */
+   for( s = 0; s < nsymmetries; ++s )
+      symtovarcomp[s] = SCIPdisjointsetFind(componentstovar, symtovarcomp[s]);
+
+   /* init components array by trivial natural order of symmetries */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, components, nsymmetries) );
+   for( s = 0; s < nsymmetries; ++s )
+      (*components)[s] = s;
+
+   /* get correct order of components array */
+   SCIPsortIntInt(symtovarcomp, *components, nsymmetries);
+
+   /* determine componentbegins and store components for each symmetry */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, componentbegins, *ncomponents + 1) );
+
+   (*componentbegins)[0] = 0;
+   idx = 0;
+
+   for( s = 1; s < nsymmetries; ++s )
+   {
+      if( symtovarcomp[s] > symtovarcomp[s - 1] )
+         (*componentbegins)[++idx] = s;
+
+      assert((*components)[s] >= 0);
+      assert((*components)[s] < nsymmetries);
+   }
+   assert(*ncomponents == idx + 1);
+   (*componentbegins)[++idx] = nsymmetries;
+
+   SCIPfreeBufferArray(scip, &symtovarcomp);
+   SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
+
+   return SCIP_OKAY;
+}
 
 /** tries to add symmetry handling methods to CIP */
 SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
@@ -2876,9 +3029,16 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SYM_SYMTYPE symtype;
    SCIP_VAR** symvars;
    int** symmetries;
+   int* components;
+   int* componentbegins;
+   int** syms;
+   int ncomponents;
    int nsymmmetries;
    int symmetriessize;
    int nsymvars;
+   int nsyms;
+   int c;
+   int i;
 
    assert(scip != NULL);
 
@@ -2898,15 +3058,58 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    symtype = scip->syminfo->symtype;
    SCIP_CALL( determineSymmetry(scip, symtype, &symmetries, &nsymmmetries, &symmetriessize, &symvars, &nsymvars) );
 
-   /*
-    * - compute components of symmetry group
-    * - iterate over components and try to apply symmetry handling methods
-    */
+   /* compute independent components of symmetry group */
+   SCIP_CALL( computeComponentsSym(scip, symtype, symmetries, nsymmmetries, symvars, nsymvars,
+         &components, &componentbegins, &ncomponents) );
 
+   /* allocate temporary memory for storing permutations of components */
+   if( ncomponents == 1 )
+   {
+      syms = symmetries;
+      nsyms = nsymmmetries;
+   }
+   else
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &syms, nsymmmetries) );
+   }
+
+   for( c = 0; c < ncomponents; ++c )
+   {
+      SCIP_Bool success;
+
+      success = FALSE;
+
+      /* possibly get symmetries of this component */
+      if( ncomponents > 1 )
+      {
+         int s;
+
+         for( s = 0, i = componentbegins[c]; i < componentbegins[c + 1]; ++s, ++i )
+            syms[s] = symmetries[i];
+      }
+
+      for( i = 0; i < scip->set->nsymhdlrs && !success; ++i )
+      {
+         SCIP_CALL( SCIPsymhdlrTryadd(scip->set->symhdlrs[i], scip->set, syms, nsyms, symtype,
+               symvars, nsymvars, NULL, c, &success) ); /* @symtodo Do we actually want to provide the graph? */
+      }
+   }
+
+   if( ncomponents > 1 )
+   {
+      SCIPfreeBufferArray(scip, &syms);
+   }
+
+   /* free components of symmetry group */
+   if( ncomponents > 0 )
+   {
+      SCIPfreeBlockMemoryArray(scip, &componentbegins, ncomponents + 1);
+      SCIPfreeBlockMemoryArray(scip, &components, nsymmmetries);
+   }
+
+   /* free symmetry information */
    if( symmetriessize > 0 )
    {
-      int i;
-
       assert(symmetries != NULL);
 
       for( i = nsymmmetries - 1; i >= 0; --i )
