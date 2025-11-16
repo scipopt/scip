@@ -87,15 +87,12 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
       return SCIP_INVALIDDATA;
    }
 
-   printf("Hello! I am a symmetry handler.\n");
-
    SCIP_CALL( SCIPsymhdlrCreate(&symhdlr, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, priority, proppriority, sepapriority, presolpriority, propfreq, sepafreq,
          delayprop, delaysepa, maxprerounds, proptiming, presoltiming,
          symtryadd, symcopy, symfree, syminit, symexit, symtrans, symsepalp, symsepasol,
          symprop, sympresol, symhdlrdata) );
-   /* @symtodo include symmetry handler in scip->set */
-   /* SCIP_CALL( SCIPsetIncludeSymhdlr(scip->set, conshdlr) ); */
+   SCIP_CALL( SCIPsetIncludeSymhdlr(scip->set, symhdlr) );
 
    return SCIP_OKAY;
 }

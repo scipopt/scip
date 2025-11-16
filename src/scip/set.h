@@ -850,6 +850,12 @@ void SCIPsetSortBranchrulesName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** inserts symmetry handler in symmetry handler list */
+SCIP_RETCODE SCIPsetIncludeSymhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   );
+
 /** returns the symmetry handler of the given name, or NULL if not existing */
 SCIP_SYMHDLR* SCIPsetFindSymhdlr(
    SCIP_SET*             set,                /**< global SCIP settings */

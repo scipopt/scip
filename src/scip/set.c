@@ -1298,6 +1298,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->sym_prop = NULL;
    (*set)->nsymprop = 0;
    (*set)->sympropsize = 0;
+   (*set)->symhdlrssorted = FALSE;
    (*set)->iisfinders = NULL;
    (*set)->niisfinders = 0;
    (*set)->iisfinderssize = 0;
@@ -3128,6 +3129,13 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPbranchruleFree(&(*set)->branchrules[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->branchrules);
+
+   /* free symmetry handlers */
+   for( i = 0; i < (*set)->nsymhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPsymhdlrFree(&(*set)->symhdlrs[i], *set) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->symhdlrs);
 
    /* free IIS */
    for( i = 0; i < (*set)->niisfinders; ++i)
@@ -5201,6 +5209,29 @@ void SCIPsetSortBranchrulesName(
       set->branchrulessorted = FALSE;
       set->branchrulesnamesorted = TRUE;
    }
+}
+
+/** inserts symmetry handler in symmetry handler list */
+SCIP_RETCODE SCIPsetIncludeSymhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(set != NULL);
+   assert(symhdlr != NULL);
+
+   if( set->nsymhdlrs >= set->symhdlrssize )
+   {
+      set->symhdlrssize = SCIPsetCalcMemGrowSize(set, set->nsymhdlrs + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->symhdlrs, set->symhdlrssize) );
+   }
+   assert(set->nsymhdlrs < set->symhdlrssize);
+
+   set->symhdlrs[set->nsymhdlrs] = symhdlr;
+   set->nsymhdlrs++;
+   set->symhdlrssorted = FALSE;
+
+   return SCIP_OKAY;
 }
 
 /** returns the symmetry handler of the given name, or NULL if not existing */

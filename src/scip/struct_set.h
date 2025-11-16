@@ -197,6 +197,7 @@ struct SCIP_Set
    SCIP_Bool             comprsnamesorted;   /**< are the compressions sorted by name? */
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
+   SCIP_Bool             symhdlrssorted;     /**< are the symmetry handlers sorted by priority? */
    SCIP_Bool             iisfinderssorted;   /**< are the IIS rules sorted by priority */
    SCIP_Bool             tablessorted;       /**< are the tables sorted by position? */
    SCIP_Bool             exprhdlrssorted;    /**< are the expression handlers sorted by name? */
