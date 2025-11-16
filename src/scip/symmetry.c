@@ -3026,15 +3026,17 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_SYMHDLR** symhdlrs;
    SYM_SYMTYPE symtype;
    SCIP_VAR** symvars;
    int** symmetries;
-   int* components;
-   int* componentbegins;
    int** syms;
+   int* componentbegins;
+   int* components;
    int ncomponents;
    int nsymmmetries;
    int symmetriessize;
+   int nsymhdlrs;
    int nsymvars;
    int nsyms;
    int c;
@@ -3073,6 +3075,11 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       SCIP_CALL( SCIPallocBufferArray(scip, &syms, nsymmmetries) );
    }
 
+   /* get symmetry handlers */
+   symhdlrs = SCIPgetSymhdlrs(scip);
+   nsymhdlrs = SCIPgetNSymhdlrs(scip);
+
+   /* for each component, check whether a symmetry handler applies */
    for( c = 0; c < ncomponents; ++c )
    {
       SCIP_Bool success;
@@ -3088,9 +3095,9 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
             syms[s] = symmetries[i];
       }
 
-      for( i = 0; i < scip->set->nsymhdlrs && !success; ++i )
+      for( i = 0; i < nsymhdlrs && !success; ++i )
       {
-         SCIP_CALL( SCIPsymhdlrTryadd(scip->set->symhdlrs[i], scip->set, syms, nsyms, symtype,
+         SCIP_CALL( SCIPsymhdlrTryadd(symhdlrs[i], scip->set, syms, nsyms, symtype,
                symvars, nsymvars, NULL, c, &success) ); /* @symtodo Do we actually want to provide the graph? */
       }
    }

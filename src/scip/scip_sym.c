@@ -118,6 +118,8 @@ SCIP_SYMHDLR** SCIPgetSymhdlrs(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
+   SCIPsetSortSymhdlrs(scip->set);
+
    return scip->set->symhdlrs;
 }
 

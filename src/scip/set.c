@@ -5234,6 +5234,20 @@ SCIP_RETCODE SCIPsetIncludeSymhdlr(
    return SCIP_OKAY;
 }
 
+/** sorts symmetry handlers by try-add priorities */
+void SCIPsetSortSymhdlrs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->symhdlrssorted )
+   {
+      SCIPsortPtr((void**)set->symhdlrs, SCIPsymhdlrCompTryadd, set->nsymhdlrs);
+      set->symhdlrssorted = TRUE;
+   }
+}
+
 /** returns the symmetry handler of the given name, or NULL if not existing */
 SCIP_SYMHDLR* SCIPsetFindSymhdlr(
    SCIP_SET*             set,                /**< global SCIP settings */

@@ -299,3 +299,27 @@ const char* SCIPsymhdlrGetName(
 
    return symhdlr->name;
 }
+
+/** compares two symmetry handlers w. r. to their try-add priority */
+SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompTryadd)
+{  /*lint --e{715}*/
+   return ((SCIP_SYMHDLR*)elem2)->tryaddpriority - ((SCIP_SYMHDLR*)elem1)->tryaddpriority;
+}
+
+/** compares two symmetry handlers w.r.t. their separation priority */
+SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompSepa)
+{  /*lint --e{715}*/
+   return ((SCIP_SYMHDLR*)elem2)->sepapriority - ((SCIP_SYMHDLR*)elem1)->sepapriority;
+}
+
+/** compares two symmetry handlers w.r.t. their propagation priority */
+SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompProp)
+{  /*lint --e{715}*/
+   return ((SCIP_SYMHDLR*)elem2)->proppriority - ((SCIP_SYMHDLR*)elem1)->proppriority;
+}
+
+/** compares two symmetry handlers w.r.t. their presolving priority */
+SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompPresol)
+{  /*lint --e{715}*/
+   return ((SCIP_SYMHDLR*)elem2)->presolpriority - ((SCIP_SYMHDLR*)elem1)->presolpriority;
+}

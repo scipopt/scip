@@ -34,6 +34,7 @@
 #define __SCIP_SYM_H__
 
 #include "scip/type_sym.h"
+#include "scip/pub_sym.h"
 #include "symmetry/type_symmetry.h"
 
 #ifdef __cplusplus
@@ -90,11 +91,6 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
    int                   id,                 /**< identifier of component for which symmetry handling shall be added */
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
-   );
-
-/** gets name of symmetry handler */
-const char* SCIPsymhdlrGetName(
-   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
    );
 
 #ifdef __cplusplus
