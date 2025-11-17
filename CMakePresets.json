@@ -30,6 +30,7 @@
         "READLINE": "Off",
         "ZLIB": "Off",
         "GMP": "Off",
+        "MPFR": "Off",
         "LPS": "none"
       }
     },
