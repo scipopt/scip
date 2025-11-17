@@ -6330,7 +6330,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
          uplb   = MAX(val, SCIPvarGetLbLocal(var) + SCIPsetEpsilon(set)); /*lint !e666*/
       }
    }
-   else if( SCIPsetIsFeasIntegral(set, val) && !set->exact_enable )
+   else if( set->exact_enable && EPSISINT(val, 0.0) ) /*lint !e835*/
    {
       SCIP_Real lb;
       SCIP_Real ub;
@@ -6338,10 +6338,56 @@ SCIP_RETCODE SCIPtreeBranchVar(
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
 
-      /* if there was no explicit value given for branching, the variable has a finite domain and the current LP/pseudo
+      /* if there was no explicit value given for branching, the variable has a finite domain, and the current LP/pseudo
+       * solution is one of the bounds, we branch in the center of the domain */
+      if( !validval && !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub) && ( val == lb || val == ub ) ) /*lint !e777*/
+      {
+         SCIP_Real center;
+
+         /* create child nodes with x <= x", and x >= x"+1 with x" = floor((lb + ub)/2);
+          * if x" is integral, make the interval smaller in the child in which the current solution x'
+          * is still feasible
+          */
+         center = (ub + lb) / 2.0;
+         if( val <= center )
+         {
+            downub = floor(center);
+            uplb = downub + 1.0;
+         }
+         else
+         {
+            uplb = ceil(center);
+            downub = uplb - 1.0;
+         }
+      }
+      else
+      {
+         /* create child nodes with x <= x'-1, x = x', and x >= x'+1 */
+         fixval = val;
+
+         /* create child node with x <= x'-1, if this would be feasible */
+         if( fixval - 1.0 >= lb )
+            downub = fixval - 1.0;
+
+         /* create child node with x >= x'+1, if this would be feasible */
+         if( fixval + 1.0 <= ub )
+            uplb = fixval + 1.0;
+      }
+      SCIPsetDebugMsg(set, "integral branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n",
+         SCIPvarGetName(var), val, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+   }
+   else if( !set->exact_enable && SCIPsetIsFeasIntegral(set, val) )
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
+
+      /* if there was no explicit value given for branching, the variable has a finite domain, and the current LP/pseudo
        * solution is one of the bounds, we branch in the center of the domain */
       if( !validval && !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub)
-         && (SCIPsetIsFeasEQ(set, val, lb) || SCIPsetIsFeasEQ(set, val, ub)) )
+         && ( SCIPsetIsFeasEQ(set, val, lb) || SCIPsetIsFeasEQ(set, val, ub) ) )
       {
          SCIP_Real center;
 
@@ -6364,16 +6410,14 @@ SCIP_RETCODE SCIPtreeBranchVar(
       else
       {
          /* create child nodes with x <= x'-1, x = x', and x >= x'+1 */
-         assert(SCIPsetIsEQ(set, SCIPsetFeasCeil(set, val), SCIPsetFeasFloor(set, val)));
-
-         fixval = SCIPsetFeasCeil(set, val); /* get rid of numerical issues */
+         fixval = round(val);
 
          /* create child node with x <= x'-1, if this would be feasible */
-         if( SCIPsetIsFeasGE(set, fixval-1.0, lb) )
+         if( SCIPsetIsFeasGE(set, fixval - 1.0, lb) )
             downub = fixval - 1.0;
 
          /* create child node with x >= x'+1, if this would be feasible */
-         if( SCIPsetIsFeasLE(set, fixval+1.0, ub) )
+         if( SCIPsetIsFeasLE(set, fixval + 1.0, ub) )
             uplb = fixval + 1.0;
       }
       SCIPsetDebugMsg(set, "integral branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n",
@@ -6384,8 +6428,10 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* create child nodes with x <= floor(x'), and x >= ceil(x') */
       if( set->exact_enable )
       {
+         assert(val < SCIPvarGetUbLocal(var));
          downub = floor(val);
          uplb = downub + 1.0;
+         assert(uplb == ceil(val)); /*lint !e777*/
       }
       else
       {
@@ -6498,7 +6544,6 @@ SCIP_RETCODE SCIPtreeBranchVar(
 /** branches on a variable x; unlike the fp-version this will also branch x <= floor(x'), x >= ceil(x')
  * if x' is very close to being integral at one of its bounds;
  * in the fp version this case would be branched in the middle of the domain;
- * if x' is almost integral but not at a bound, this will branch (x <= x'-1, x == x', x >= x'+1);
  * not meant for branching on a continuous variables
  */
 SCIP_RETCODE SCIPtreeBranchVarExact(
@@ -6515,7 +6560,6 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR*             var,                /**< variable to branch on */
    SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
-   SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    )
 {
@@ -6530,12 +6574,11 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    assert(tree != NULL);
    assert(set != NULL);
    assert(var != NULL);
+   assert(set->exact_enable);
 
    /* initialize children pointer */
    if( downchild != NULL )
       *downchild = NULL;
-   if( eqchild != NULL )
-      *eqchild = NULL;
    if( upchild != NULL )
       *upchild = NULL;
 
@@ -6559,9 +6602,9 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetProbindex(var) >= 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
-   assert(SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
-   assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+   assert(SCIPvarGetLbLocal(var) == round(SCIPvarGetLbLocal(var))); /*lint !e777*/
+   assert(SCIPvarGetUbLocal(var) == round(SCIPvarGetUbLocal(var))); /*lint !e777*/
+   assert(SCIPvarGetLbLocal(var) < SCIPvarGetUbLocal(var));
 
    /* update the information for the focus node before creating children */
    SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, tree->focusnode) );
@@ -6583,15 +6626,17 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
       }
    }
 
-   assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
-   assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
-   /* see comment in SCIPbranchVarVal */
-   assert(SCIPvarIsIntegral(var));
-
    /* create child nodes with x <= floor(x'), and x >= ceil(x') */
+   assert(val >= SCIPvarGetLbLocal(var));
+   assert(val <= SCIPvarGetUbLocal(var));
    downub = floor(val);
+   if( val == SCIPvarGetUbLocal(var) ) /*lint !e777*/
+      downub -= 1.0;
    uplb = downub + 1.0;
-   SCIPsetDebugMsg(set, "fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n",
+   assert(downub < uplb);
+   assert(downub >= SCIPvarGetLbLocal(var));
+   assert(uplb <= SCIPvarGetUbLocal(var));
+   SCIPsetDebugMsg(set, "exact branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n",
       SCIPvarGetName(var), val, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
 
    /* perform the branching;
