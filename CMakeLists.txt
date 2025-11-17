@@ -690,7 +690,7 @@ if(SCIP_WITH_EXACTSOLVE)
 endif()
 
 # Find exact LP solvers.
-set(TEST_EXAXTSOLVE OFF)
+set(TEST_EXACTSOLVE OFF)
 set(SCIP_WITH_LPSEXACT OFF) # Human-readable name of exact LP solver
 if(SCIP_WITH_EXACTSOLVE)
     # SoPlex
@@ -712,7 +712,7 @@ if(SCIP_WITH_EXACTSOLVE)
         endif()
         if(SOPLEX_FOUND AND SOPLEX_WITH_MPFR)
             set(SCIP_WITH_LPSEXACT "SoPlex")
-            set(TEST_EXAXTSOLVE ON)
+            set(TEST_EXACTSOLVE ON)
         elseif(LPSEXACT_UPPER STREQUAL "SPX" AND NOT (EXACTSOLVE_UPPER STREQUAL "AUTO")) # SoPlex and EXACTSOLVE were explicitly requested.
             message(FATAL_ERROR "LP solver SoPlex ${BAD_SOPLEX_REASON}, which is required for EXACTSOLVE; try specifying SOPLEX_DIR.")
         elseif(LPSEXACT_UPPER STREQUAL "SPX") # SoPlex was explicitly requested, but EXACTSOLVE is AUTO.
@@ -733,7 +733,7 @@ if(SCIP_WITH_EXACTSOLVE)
         if(QSOEX_FOUND AND EGLIB_FOUND)
             set(SCIP_WITH_LPSEXACT "QSopt_ex")
             set(SCIP_WITH_EGLIB ON)
-            set(TEST_EXAXTSOLVE ON)
+            set(TEST_EXACTSOLVE ON)
         elseif(LPSEXACT_UPPER STREQUAL "QSOEX" AND NOT (EXACTSOLVE_UPPER STREQUAL "AUTO")) # QSopt_ex and EXACTSOLVE were explicitly requested.
             message(FATAL_ERROR "Exact LP solver QSopt_ex not found, which is required for EXACTSOLVE; try specifying QSOEX_DIR.")
         elseif(LPSEXACT_UPPER STREQUAL "QSOEX") # QSopt_ex was explicitly requested, but EXACTSOLVE is AUTO.
