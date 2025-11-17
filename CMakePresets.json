@@ -31,7 +31,9 @@
         "ZLIB": "Off",
         "GMP": "Off",
         "MPFR": "Off",
-        "LPS": "none"
+        "EXACTSOLVE": "Off",
+        "LPS": "none",
+        "LPSEXACT": "none"
       }
     },
     {
