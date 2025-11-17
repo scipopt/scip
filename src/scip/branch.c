@@ -2982,7 +2982,7 @@ SCIP_RETCODE SCIPbranchExecLPExact(
 #endif
 
       SCIP_CALL( SCIPtreeBranchVarExact(tree, reopt, blkmem, set, stat, transprob, origprob, lp,
-            branchcand, eventqueue, eventfilter, branchvar, NULL, NULL, NULL) );
+            branchcand, eventqueue, eventfilter, branchvar, NULL, NULL) );
       *result = SCIP_BRANCHED;
    }
    /* reset the validlpcandslp to recalculate the branchcands for normal branching */
