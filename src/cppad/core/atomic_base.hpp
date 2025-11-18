@@ -79,7 +79,8 @@ private:
 	// -----------------------------------------------------
 	// static member functions
 	//
-	static std::shared_mutex vector_mutex;
+	// this can become a shared_mutex when moving up to C++17
+	static std::shared_timed_mutex vector_mutex;
 	/// List of all the object in this class
 	static std::vector<atomic_base *>& class_object(void)
 	{
@@ -104,7 +105,7 @@ public:
 	/// Name corresponding to a base_atomic object
 	const std::string& afun_name(void) const
 	{
-		std::shared_lock<std::shared_mutex> vector_lock(vector_mutex);
+		std::shared_lock<std::shared_timed_mutex> vector_lock(vector_mutex);
 		return class_name()[index_];
 	}
 /*
@@ -240,7 +241,7 @@ atomic_base(
 sparsity_( sparsity               )
 {
 	{
-		std::unique_lock<std::shared_mutex> vector_lock(vector_mutex);
+		std::unique_lock<std::shared_timed_mutex> vector_lock(vector_mutex);
 		index_ = class_object().size();
 		class_object().push_back(this);
 		class_name().push_back(name);
@@ -256,7 +257,7 @@ sparsity_( sparsity               )
 virtual ~atomic_base(void)
 {
 	{
-		std::unique_lock<std::shared_mutex> vector_lock(vector_mutex);
+		std::unique_lock<std::shared_timed_mutex> vector_lock(vector_mutex);
 		CPPAD_ASSERT_UNKNOWN( class_object().size() > index_ );
 		// change object pointer to null, but leave name for error reporting
 		class_object()[index_] = CPPAD_NULL;
@@ -295,14 +296,14 @@ void free_work(size_t thread)
 /// atomic_base function object corresponding to a certain index
 static atomic_base* class_object(size_t index)
 {
-	std::shared_lock<std::shared_mutex> vector_lock(vector_mutex);
+	std::shared_lock<std::shared_timed_mutex> vector_lock(vector_mutex);
 	CPPAD_ASSERT_UNKNOWN( class_object().size() > index );
 	return class_object()[index];
 }
 /// atomic_base function name corresponding to a certain index
 static const std::string& class_name(size_t index)
 {
-	std::shared_lock<std::shared_mutex> vector_lock(vector_mutex);
+	std::shared_lock<std::shared_timed_mutex> vector_lock(vector_mutex);
 	CPPAD_ASSERT_UNKNOWN( class_name().size() > index );
 	return class_name()[index];
 }
@@ -2399,7 +2400,7 @@ Free all thread_alloc static memory held by atomic_base (avoids reallocations).
 /// Free vector memory used by this class (work space)
 static void clear(void)
 {
-	std::unique_lock<std::shared_mutex> vector_lock(vector_mutex);
+	std::unique_lock<std::shared_timed_mutex> vector_lock(vector_mutex);
 	size_t i = class_object().size();
 	while(i--)
 	{	atomic_base* op = class_object()[i];
@@ -2422,6 +2423,6 @@ virtual void set_old(size_t id)
 // ---------------------------------------------------------------------------
 };
 
-template <class Base> std::shared_mutex atomic_base<Base>::vector_mutex;
+template <class Base> std::shared_timed_mutex atomic_base<Base>::vector_mutex;
 } // END_CPPAD_NAMESPACE
 # endif
