@@ -42,6 +42,14 @@ Miscellaneous
 
 - updated description of paramater misc/usesymmetry
 
+@section RN924 SCIP 9.2.5
+*************************
+
+Fixed bugs
+----------
+
+- Fix thread-safety issue when using CppAD and user-defined expression handler.
+
 @section RN924 SCIP 9.2.4
 *************************
 
