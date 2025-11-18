@@ -1,5 +1,13 @@
 @page RN9 Release notes for SCIP 9
 
+@section RN924 SCIP 9.2.5
+*************************
+
+Fixed bugs
+----------
+
+- Fix thread-safety issue when using CppAD and user-defined expression handler.
+
 @section RN924 SCIP 9.2.4
 *************************
 
