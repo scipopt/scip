@@ -1043,17 +1043,17 @@ static int msc_bsr_16(setword x) \
 #include <x86intrin.h>
 #endif
 #if WORDSIZE==128
-#pragma instrinsic(_mm_popcnt_u64)
+#pragma intrinsic(_mm_popcnt_u64)
 #define POPCOUNT(x) ((int)_mm_popcnt_u64((unsigned long long)((x)>>64)) \
                    + (int)_mm_popcnt_u64((unsigned long long)((x)&MASK128R)))
 #elif WORDSIZE==64
-#pragma instrinsic(_mm_popcnt_u64)
+#pragma intrinsic(_mm_popcnt_u64)
 #define POPCOUNT(x) ((int)_mm_popcnt_u64(x))
 #elif WORDSIZE==32 
-#pragma instrinsic(_mm_popcnt_u32)
+#pragma intrinsic(_mm_popcnt_u32)
 #define POPCOUNT(x) _mm_popcnt_u32(x)
 #elif WORDSIZE==16
-#pragma instrinsic(_mm_popcnt_u32)
+#pragma intrinsic(_mm_popcnt_u32)
 #define POPCOUNT(x) _mm_popcnt_u32((unsigned int)(x))
 #endif
 
