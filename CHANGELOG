@@ -460,6 +460,7 @@ Fixed bugs
 - fixed memory leak in dynamic partition search primal heuristic
 - fixed issue with file existence check in XML parser when SCIP was build with ZLIB support on Windows
 - fixed thread-safety issue when using CppAD and user-defined expression handler
+- fixed typo in `#pragma` directive of redistributed nauty.h
 
 Miscellaneous
 -------------
