@@ -1655,7 +1655,7 @@ SCIP_RETCODE strongbranch(
 /** performs strong branching iterations on one @b fractional candidate */
 SCIP_RETCODE SCIPlpiStrongbranchFrac(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   col_index,          /**< column to apply strong branching on */
+   int                   col,                /**< column to apply strong branching on */
    SCIP_Real             psol,               /**< fractional current primal solution value of column */
    int                   itlim,              /**< iteration limit for strong branchings */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
@@ -1674,9 +1674,9 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    assert( downvalid != NULL );
    assert( upvalid != NULL );
 
-   SCIPdebugMessage("calling strongbranching on fractional variable %d (%d iterations)\n", col_index, itlim);
+   SCIPdebugMessage("calling strongbranching on fractional variable %d (%d iterations)\n", col, itlim);
 
-   SCIP_CALL( strongbranch(lpi, col_index, psol, itlim, down, up, downvalid, upvalid, iter) );
+   SCIP_CALL( strongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
 
    return SCIP_OKAY;
 }
