@@ -396,7 +396,7 @@ SCIP_RETCODE SCIPlpiAddCols(
          const ColIndex col = lpi->linear_program->CreateNewVariable();
          lpi->linear_program->SetVariableBounds(col, lb[i], ub[i]);
          lpi->linear_program->SetObjectiveCoefficient(col, obj[i]);
-         const int end = (nnonz == 0 || i == ncols - 1) ? nnonz : beg[i + 1];
+         const int end = (i == ncols - 1) ? nnonz : beg[i + 1];
          while ( nz < end )
          {
             lpi->linear_program->SetCoefficient(RowIndex(ind[nz]), col, val[nz]);
@@ -530,7 +530,7 @@ SCIP_RETCODE SCIPlpiAddRows(
       {
          const RowIndex row = lpi->linear_program->CreateNewConstraint();
          lpi->linear_program->SetConstraintBounds(row, lhs[i], rhs[i]);
-         const int end = (nnonz == 0 || i == nrows - 1) ? nnonz : beg[i + 1];
+         const int end = (i == nrows - 1) ? nnonz : beg[i + 1];
          while ( nz < end )
          {
             lpi->linear_program->SetCoefficient(row, ColIndex(ind[nz]), val[nz]);
