@@ -805,11 +805,11 @@ SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_Real             scaleval            /**< scaling multiplier */
    )
 {
-   SCIP_Real* vals;
+   SCIP_Real* vals = NULL;
    SCIP_Real lhs;
    SCIP_Real rhs;
    int nnonz;
-   int* inds;
+   int* inds = NULL;
    int beg;
 
    assert( lpi != NULL );
@@ -868,12 +868,12 @@ SCIP_RETCODE SCIPlpiScaleCol(
    SCIP_Real             scaleval            /**< scaling multiplier */
    )
 {
-   SCIP_Real* vals;
+   SCIP_Real* vals = NULL;
    SCIP_Real lb;
    SCIP_Real ub;
    SCIP_Real obj;
    int nnonz;
-   int* inds;
+   int* inds = NULL;
    int beg;
 
    assert( lpi != NULL );
