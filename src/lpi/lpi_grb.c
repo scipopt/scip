@@ -1736,7 +1736,7 @@ SCIP_RETCODE SCIPlpiDelCols(
    SCIPdebugMessage("deleting %d columns from Gurobi\n", ndelcols);
 
    /* handle empty range */
-   if( ndelcols <= 0 )
+   if( ndelcols <= 0 )  /* cppcheck-suppress knownConditionTrueFalse */
       return SCIP_OKAY;
 
    invalidateSolution(lpi);
@@ -1917,7 +1917,7 @@ SCIP_RETCODE SCIPlpiDelRows(
    SCIPdebugMessage("deleting %d rows from Gurobi\n", ndelrows);
 
    /* handle empty range */
-   if( ndelrows <= 0 )
+   if( ndelrows <= 0 )  /* cppcheck-suppress knownConditionTrueFalse */
       return SCIP_OKAY;
 
    invalidateSolution(lpi);
