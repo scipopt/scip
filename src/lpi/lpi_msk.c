@@ -4469,7 +4469,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
  */
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   row,                /**< row number */
+   int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
    SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
@@ -4511,7 +4511,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
       /* get dense vector */
       SCIP_ALLOC( BMSallocMemoryArray(&binv, nrows) );
-      SCIP_CALL( SCIPlpiGetBInvRow(lpi, row, binv, NULL, NULL) );
+      SCIP_CALL( SCIPlpiGetBInvRow(lpi, r, binv, NULL, NULL) );
    }
    else
       binv = (SCIP_Real*)binvrow;
