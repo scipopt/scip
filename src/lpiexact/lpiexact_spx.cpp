@@ -1645,26 +1645,13 @@ SCIP_RETCODE SCIPlpiExactGetCols(
 
    if( lb != NULL )
    {
-      if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
-      {
-         const VectorRational& lbvec = lpi->spx->lowerRational();
-         const VectorRational& ubvec = lpi->spx->upperRational();
+      const VectorRational& lbvec = lpi->spx->lowerRational();
+      const VectorRational& ubvec = lpi->spx->upperRational();
 
-         for( i = firstcol; i <= lastcol; ++i )
-         {
-            RsetSpxR(lpi, lb[i-firstcol], lbvec[i]);
-            RsetSpxR(lpi, ub[i-firstcol], ubvec[i]);
-         }
-      }
-      else
+      for( i = firstcol; i <= lastcol; ++i )
       {
-         const VectorRational& lbvec = lpi->spx->lowerRational();
-         const VectorRational& ubvec = lpi->spx->upperRational();
-         for( i = firstcol; i <= lastcol; ++i )
-         {
-            RsetSpxR(lpi, lb[i-firstcol], lbvec[i]);
-            RsetSpxR(lpi, ub[i-firstcol], ubvec[i]);
-         }
+         RsetSpxR(lpi, lb[i-firstcol], lbvec[i]);
+         RsetSpxR(lpi, ub[i-firstcol], ubvec[i]);
       }
    }
 
