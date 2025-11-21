@@ -112,7 +112,7 @@
  */
 
 /// problem data stored in SCIP
-struct SCIP_ProbData
+struct SCIP_ProbNlData
 {
    char*                 filenamestub;       /**< name of input file, without .nl extension; array is long enough to hold 5 extra chars */
    int                   filenamestublen;    /**< length of filenamestub string */
@@ -128,6 +128,7 @@ struct SCIP_ProbData
 
    SCIP_Bool             islp;               /**< whether problem is an LP (only linear constraints, only continuous vars) */
 };
+typedef struct SCIP_ProbNlData SCIP_PROBNLDATA;
 
 /*
  * Local methods
@@ -141,7 +142,7 @@ class AMPLProblemHandler : public mp::NLHandler<AMPLProblemHandler, SCIP_EXPR*>
 {
 private:
    SCIP* scip;
-   SCIP_PROBDATA* probdata;
+   SCIP_PROBNLDATA* probdata;
 
    // variable expressions corresponding to nonlinear variables
    // created in OnHeader() and released in destructor
@@ -304,7 +305,7 @@ public:
          ++probname;
 
       // initialize empty SCIP problem
-      SCIP_CALL_THROW( SCIPcreateProb(scip, probname, probdataDelOrigNl, NULL, NULL, NULL, NULL, NULL, probdata) );
+      SCIP_CALL_THROW( SCIPcreateProb(scip, probname, probdataDelOrigNl, NULL, NULL, NULL, NULL, NULL, (SCIP_PROBDATA*)probdata) );
 
       // try to open files with variable and constraint names
       // temporarily add ".col" and ".row", respectively, to filenamestub
@@ -2861,26 +2862,28 @@ public:
 static
 SCIP_DECL_PROBDELORIG(probdataDelOrigNl)
 {
+   SCIP_PROBNLDATA* probnldata = (SCIP_PROBNLDATA*)*probdata;
    int i;
 
-   assert((*probdata)->vars != NULL || (*probdata)->nvars == 0);
-   assert((*probdata)->conss != NULL || (*probdata)->conss == 0);
+   assert(probnldata != NULL);
+   assert(probnldata->vars != NULL || probnldata->nvars == 0);
+   assert(probnldata->conss != NULL || probnldata->conss == 0);
 
-   for( i = 0; i < (*probdata)->nconss; ++i )
+   for( i = 0; i < probnldata->nconss; ++i )
    {
-      SCIP_CALL( SCIPreleaseCons(scip, &(*probdata)->conss[i]) );
+      SCIP_CALL( SCIPreleaseCons(scip, &probnldata->conss[i]) );
    }
-   SCIPfreeBlockMemoryArrayNull(scip, &(*probdata)->conss, (*probdata)->nconss);
+   SCIPfreeBlockMemoryArrayNull(scip, &probnldata->conss, probnldata->nconss);
 
-   for( i = 0; i < (*probdata)->nvars; ++i )
+   for( i = 0; i < probnldata->nvars; ++i )
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->vars[i]) );
+      SCIP_CALL( SCIPreleaseVar(scip, &probnldata->vars[i]) );
    }
-   SCIPfreeBlockMemoryArrayNull(scip, &(*probdata)->vars, (*probdata)->nvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &probnldata->vars, probnldata->nvars);
 
-   SCIPfreeBlockMemoryArrayNull(scip, &(*probdata)->filenamestub, (*probdata)->filenamestublen+5);
+   SCIPfreeBlockMemoryArrayNull(scip, &probnldata->filenamestub, probnldata->filenamestublen+5);
 
-   SCIPfreeMemory(scip, probdata);
+   SCIPfreeMemory(scip, (SCIP_PROBNLDATA**)probdata);
 
    return SCIP_OKAY;
 }
@@ -3253,11 +3256,11 @@ SCIP_RETCODE SCIPwriteSolutionNl(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PROBDATA* probdata;
+   SCIP_PROBNLDATA* probdata;
 
    assert(scip != NULL);
 
-   probdata = SCIPgetProbData(scip);
+   probdata = (SCIP_PROBNLDATA*)SCIPgetProbData(scip);
    if( probdata == NULL )
    {
       SCIPerrorMessage("No AMPL nl file read. Cannot write AMPL solution.\n");
