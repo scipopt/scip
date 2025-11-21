@@ -34,7 +34,7 @@
 #define __SCIP_STRUCT_CLOCK_H__
 
 
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 #include <time.h>
 #else
 #include <sys/times.h>

@@ -52,7 +52,7 @@ extern "C" {
 #define SCIP_THREADSAFE_MESSAGEHDLRS
 
 /** define to get the filename of __FILE__ */
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 /*lint -e613*/
 #define __FILENAME__ (strrchr("\\" __FILE__, '\\') + 1)
 #else

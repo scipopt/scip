@@ -98,8 +98,7 @@
 #include "scip/var.h"
 #include "scip/visual.h"
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
+#ifndef _WIN32
 #include <strings.h> /*lint --e{766}*/
 #endif
 

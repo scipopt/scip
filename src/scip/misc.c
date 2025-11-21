@@ -161,7 +161,7 @@ SCIP_Real SCIPerf(
    SCIP_Real             x                   /**< value to evaluate */
    )
 {
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
    SCIP_Real a1, a2, a3, a4, a5, p, t, y;
    int sign;
 
@@ -10725,7 +10725,7 @@ void SCIPprintSysError(
 #else
    char buf[SCIP_MAXSTRLEN];
 
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
    /* strerror_s returns 0 on success; the string is \0 terminated. */
    if ( strerror_s(buf, SCIP_MAXSTRLEN, errno) != 0 )
       SCIPmessagePrintError("Unknown error number %d or error message too long.\n", errno);

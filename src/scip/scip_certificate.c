@@ -36,8 +36,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
+#ifndef _WIN32
 #include <strings.h> /*lint --e{766}*/
 #endif
 
