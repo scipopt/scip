@@ -302,7 +302,7 @@ SCIP_RETCODE computeAutomorphisms(
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
-   *log10groupsize = 0;
+   *log10groupsize = 0.0;
    *symcodetime = 0.0;
 
    /* init data */
@@ -334,50 +334,55 @@ SCIP_RETCODE computeAutomorphisms(
    /* call sassy to reduce graph */
    sassy.reduce(G, &sassyglue);
 
-   /* first, convert the graph */
-   sparsegraph sg;
-   DYNALLSTAT(int, lab, lab_sz);
-   DYNALLSTAT(int, ptn, ptn_sz);
+   if( G->get_sgraph()->v_size == 0 )
+   {
+      dejavu::big_number grp_sz = sassy.grp_sz;
+      *log10groupsize = (SCIP_Real) log10l(grp_sz.mantissa * powl(10.0, (SCIP_Real) grp_sz.exponent));
+   }
+   else
+   {
+      /* first, convert the graph */
+      sparsegraph sg;
+      DYNALLSTAT(int, lab, lab_sz);
+      DYNALLSTAT(int, ptn, ptn_sz);
 
 #ifdef NAUTY
-   convert_dejavu_to_nauty(G, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
-   statsblk stats;
-   DYNALLSTAT(int, orbits, orbits_sz);
-   DYNALLOC1(int, orbits, orbits_sz, sg.nv, "malloc");
-   DEFAULTOPTIONS_SPARSEGRAPH(options);
-   /* init callback functions for nauty (accumulate the group generators found by nauty) */
-   options.writeautoms = FALSE;
-   options.userautomproc = dejavu::preprocessor::nauty_hook;
-   options.defaultptn = FALSE; /* use color classes */
-   if ( canterminateearly )
-      options.usernodeproc = nautyterminationhook;
-   *log10groupsize = 0.0;
-   if(sg.nv > 0) {
+      convert_dejavu_to_nauty(G, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
+      assert( sg.nv > 0 );
+
+      statsblk stats;
+      DYNALLSTAT(int, orbits, orbits_sz);
+      DYNALLOC1(int, orbits, orbits_sz, sg.nv, "malloc");
+      DEFAULTOPTIONS_SPARSEGRAPH(options);
+      /* init callback functions for nauty (accumulate the group generators found by nauty) */
+      options.writeautoms = FALSE;
+      options.userautomproc = dejavu::preprocessor::nauty_hook;
+      options.defaultptn = FALSE; /* use color classes */
+      if ( canterminateearly )
+         options.usernodeproc = nautyterminationhook;
       sparsenauty(&sg, lab, ptn, orbits, &options, &stats, NULL);
       dejavu::big_number grp_sz = sassy.grp_sz;
       *log10groupsize = log10(stats.grpsize1 * grp_sz.mantissa * pow(10.0, (SCIP_Real) (stats.grpsize2 + grp_sz.exponent)));
-   }
 #else
-   convert_dejavu_to_traces(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
-   TracesStats stats;
-   DYNALLSTAT(int, orbits, orbits_sz);
-   DYNALLOC1(int, orbits, orbits_sz, sg.nv, "malloc");
-   DEFAULTOPTIONS_TRACES(options);
-   /* init callback functions for traces (accumulate the group generators found by traces) */
-   options.writeautoms = FALSE;
-   options.userautomproc = dejavu::preprocessor::traces_hook;
-   options.defaultptn = FALSE; /* use color classes */
-   if(sg.nv > 0) {
+      convert_dejavu_to_traces(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
+      TracesStats stats;
+      DYNALLSTAT(int, orbits, orbits_sz);
+      DYNALLOC1(int, orbits, orbits_sz, sg.nv, "malloc");
+      DEFAULTOPTIONS_TRACES(options);
+      /* init callback functions for traces (accumulate the group generators found by traces) */
+      options.writeautoms = FALSE;
+      options.userautomproc = dejavu::preprocessor::traces_hook;
+      options.defaultptn = FALSE; /* use color classes */
       Traces(&sg, lab, ptn, orbits, &options, &stats, NULL);
       dejavu::big_number grp_sz = sassy.grp_sz;
       *log10groupsize = log10(stats.grpsize1 * grp_sz.mantissa * pow(10.0, (SCIP_Real) (stats.grpsize2 + grp_sz.exponent)));
-   }
 #endif
 
-   /* clean up */
-   DYNFREE(lab, lab_sz);
-   DYNFREE(ptn, ptn_sz);
-   SG_FREE(sg);
+      /* clean up */
+      DYNFREE(lab, lab_sz);
+      DYNFREE(ptn, ptn_sz);
+      SG_FREE(sg);
+   }
 
    *symcodetime = SCIPgetSolvingTime(scip) - oldtime;
 
