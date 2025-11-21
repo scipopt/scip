@@ -302,7 +302,7 @@ SCIP_RETCODE computeAutomorphisms(
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
-   *log10groupsize = 0;
+   *log10groupsize = 0.0;
    *symcodetime = 0.0;
 
    /* init data */
@@ -333,8 +333,6 @@ SCIP_RETCODE computeAutomorphisms(
 
    /* call sassy to reduce graph */
    sassy.reduce(G, &sassyglue);
-
-   *log10groupsize = 0.0;
 
    if( G->get_sgraph()->v_size == 0 )
    {
