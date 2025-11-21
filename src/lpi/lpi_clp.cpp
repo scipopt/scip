@@ -88,7 +88,7 @@
 #include "scip/pub_message.h"
 
 /* do defines for windows directly her to make the lpi more independent*/
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 #define snprintf _snprintf
 #endif
 
