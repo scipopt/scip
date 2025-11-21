@@ -30,7 +30,10 @@
         "READLINE": "Off",
         "ZLIB": "Off",
         "GMP": "Off",
-        "LPS": "none"
+        "MPFR": "Off",
+        "EXACTSOLVE": "Off",
+        "LPS": "none",
+        "LPSEXACT": "none"
       }
     },
     {
