@@ -269,68 +269,79 @@ SCIP_RETCODE computeAutomorphisms(
    /* call sassy to reduce graph */
    sassy.reduce(G, &sassyglue);
 
-   /* create bliss graph */
-   bliss::Graph blissgraph(0);
+   if( G->get_sgraph()->v_size == 0 )
+   {
+      dejavu::big_number grp_sz = sassy.grp_sz;
+      *log10groupsize = (SCIP_Real) log10l(grp_sz.mantissa * powl(10.0, (SCIP_Real) grp_sz.exponent));
+   }
+   else
+   {
+      /* create bliss graph */
+      bliss::Graph blissgraph(0);
 
-   /* convert sassy to bliss graph */
-   convert_dejavu_to_bliss(G, &blissgraph);
+      /* convert sassy to bliss graph */
+      convert_dejavu_to_bliss(G, &blissgraph);
 
 #ifdef SCIP_OUTPUT
-   blissgraph.write_dot("debug.dot");
+      blissgraph.write_dot("debug.dot");
 #endif
 
 #ifdef SCIP_DISABLED_CODE
-   char filename[SCIP_MAXSTRLEN];
-   (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s.dimacs", SCIPgetProbName(scip));
-   FILE* fp = fopen(filename, "w");
-   if ( fp )
-   {
-      blissgraph.write_dimacs(fp);
-      fclose(fp);
-   }
+      char filename[SCIP_MAXSTRLEN];
+      (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s.dimacs", SCIPgetProbName(scip));
+      FILE* fp = fopen(filename, "w");
+      if ( fp )
+      {
+         blissgraph.write_dimacs(fp);
+         fclose(fp);
+      }
 #endif
 
+      /* compute automorphisms */
+      bliss::Stats stats;
 
-   /* compute automorphisms */
-   bliss::Stats stats;
-
-   /* Prefer splitting partition cells corresponding to variables over those corresponding
-    * to inequalities. This is because we are only interested in the action
-    * of the automorphism group on the variables, and we need a base for this action */
-   blissgraph.set_splitting_heuristic(bliss::Graph::shs_f);
-   /* disable component recursion as advised by Tommi Junttila from bliss */
-   blissgraph.set_component_recursion(false);
+      /* Prefer splitting partition cells corresponding to variables over those corresponding
+       * to inequalities. This is because we are only interested in the action
+       * of the automorphism group on the variables, and we need a base for this action */
+      blissgraph.set_splitting_heuristic(bliss::Graph::shs_f);
+      /* disable component recursion as advised by Tommi Junttila from bliss */
+      blissgraph.set_component_recursion(false);
 
 #if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
-   /* lambda function to have access to data and terminate the search if maxgenerators are reached */
-   auto term = [&]() {
-      return (maxgenerators != 0 && data.nperms >= maxgenerators); /* check the number of generators that we have created so far */
-   };
+      /* lambda function to have access to data and terminate the search if maxgenerators are reached */
+      auto term = [&]() {
+         return (maxgenerators != 0 && data.nperms >= maxgenerators); /* check the number of generators that we have created so far */
+      };
 
-   auto hook = [&](unsigned int n, const unsigned int* aut) {
-      sassy.bliss_hook(n, aut);
-   };
+      auto hook = [&](unsigned int n, const unsigned int* aut) {
+         sassy.bliss_hook(n, aut);
+      };
 
-   /* start search */
-   blissgraph.find_automorphisms(stats, hook, term);
+      /* start search */
+      blissgraph.find_automorphisms(stats, hook, term);
 #else
 
-   /* Older bliss versions do not allow to terminate with a limit on the number of generators unless patched. */
+      /* Older bliss versions do not allow to terminate with a limit on the number of generators unless patched. */
 #ifdef BLISS_PATCH_PRESENT
-   /* If patch is present, do not use a node limit, but set generator limit. This approach is not very accurate, since
-    * it limits the generators considered in bliss and not the ones that we generate (the ones that work on the variable
-    * set). */
-   blissgraph.set_search_limits(0, (unsigned) maxgenerators);
+      /* If patch is present, do not use a node limit, but set generator limit. This approach is not very accurate, since
+       * it limits the generators considered in bliss and not the ones that we generate (the ones that work on the variable
+       * set). */
+      blissgraph.set_search_limits(0, (unsigned) maxgenerators);
 #endif
 
-   /* start search */
-   blissgraph.find_automorphisms(stats, dejavu::preprocessor::bliss_hook, (void*) &sassy);
+      /* start search */
+      blissgraph.find_automorphisms(stats, dejavu::preprocessor::bliss_hook, (void*) &sassy);
 #endif
-   *symcodetime = SCIPgetSolvingTime(scip) - oldtime;
 
 #ifdef SCIP_OUTPUT
-   (void) stats.print(stdout);
+      (void) stats.print(stdout);
 #endif
+      /* determine log10 of symmetry group size */
+      dejavu::big_number grp_sz = sassy.grp_sz;
+      *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx() * grp_sz.mantissa * powl(10.0, (SCIP_Real) grp_sz.exponent));
+   }
+
+   *symcodetime = SCIPgetSolvingTime(scip) - oldtime;
 
    /* prepare return values */
    if ( data.nperms > 0 )
@@ -348,10 +359,6 @@ SCIP_RETCODE computeAutomorphisms(
       *nperms = 0;
       *nmaxperms = 0;
    }
-
-   /* determine log10 of symmetry group size */
-   dejavu::big_number grp_sz = sassy.grp_sz;
-   *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx() * grp_sz.mantissa * powl(10.0, (SCIP_Real) grp_sz.exponent));
 
    return SCIP_OKAY;
 }
