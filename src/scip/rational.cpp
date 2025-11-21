@@ -1946,7 +1946,7 @@ void SCIPrationalPrintDebugMessage(
    assert(sourcefile != NULL );
 
    /* strip directory from filename */
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
    filename = strrchr(sourcefile, '\\');
 #else
    filename = strrchr(sourcefile, '/');

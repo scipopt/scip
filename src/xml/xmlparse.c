@@ -46,7 +46,7 @@
 
 #include <sys/types.h>
 #ifdef SCIP_WITH_ZLIB
-#if defined(_WIN32)
+#ifdef _WIN32
 #define R_OK 0
 #define access _access
 #include <io.h>

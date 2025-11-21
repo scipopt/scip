@@ -53,7 +53,7 @@
 #include "tinycthread/tinycthread.h"
 
 /* do defines for windows directly here to make the lpi more independent */
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 #define snprintf _snprintf
 #endif
 
