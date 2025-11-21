@@ -337,7 +337,7 @@ SCIP_RETCODE computeAutomorphisms(
    if( G->get_sgraph()->v_size == 0 )
    {
       dejavu::big_number grp_sz = sassy.grp_sz;
-      *log10groupsize = log10(grp_sz.mantissa * pow(10.0, (SCIP_Real) grp_sz.exponent));
+      *log10groupsize = (SCIP_Real) log10l(grp_sz.mantissa * pow(10.0, (SCIP_Real) grp_sz.exponent));
    }
    else
    {
