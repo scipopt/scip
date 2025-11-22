@@ -45,7 +45,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary compression data */
+/* TODO: fill in the necessary compression data
+ * when this plugin is written in C++, rename SCIP_BenderscutData to something unique (C++ One-Definition-Rule)
+ */
 
 /** Benders' decomposition cut data */
 struct SCIP_BenderscutData

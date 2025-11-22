@@ -54,7 +54,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary propagator data */
+/* TODO: fill in the necessary propagator data
+ * when this plugin is written in C++, rename SCIP_PropData to something unique (C++ One-Definition-Rule)
+ */
 
 /** propagator data */
 struct SCIP_PropData

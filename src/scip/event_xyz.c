@@ -40,7 +40,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary event handler data */
+/* TODO: fill in the necessary event handler data
+ * when this plugin is written in C++, rename SCIP_EventhldrData to something unique (C++ One-Definition-Rule)
+ */
 
 /** event handler data */
 struct SCIP_EventhdlrData

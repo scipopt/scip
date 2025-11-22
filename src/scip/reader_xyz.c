@@ -44,7 +44,9 @@
  * Data structures
  */
 
-/* TODO: (optional) fill in the necessary reader data */
+/* TODO: (optional) fill in the necessary reader data
+ * when this plugin is written in C++, rename SCIP_ReaderData to something unique (C++ One-Definition-Rule)
+ */
 
 /** data for xyz reader */
 struct SCIP_ReaderData

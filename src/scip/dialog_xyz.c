@@ -46,7 +46,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary dialog data */
+/* TODO: fill in the necessary dialog data
+ * when this plugin is written in C++, rename SCIP_DialogData to something unique (C++ One-Definition-Rule)
+ */
 
 /** dialog data */
 struct SCIP_DialogData

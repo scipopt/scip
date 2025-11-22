@@ -51,7 +51,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary Benders' decomposition data */
+/* TODO: fill in the necessary Benders' decomposition data
+ * when this plugin is written in C++, rename SCIP_BendersData to something unique (C++ One-Definition-Rule)
+ */
 
 /** Benders' decomposition data */
 struct SCIP_BendersData

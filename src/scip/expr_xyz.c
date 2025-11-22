@@ -42,7 +42,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary data */
+/* TODO: fill in the necessary data
+ * when this plugin is written in C++, rename SCIP_ExprhdlrData to something unique (C++ One-Definition-Rule)
+ */
 
 /** expression handler data */
 struct SCIP_ExprhdlrData

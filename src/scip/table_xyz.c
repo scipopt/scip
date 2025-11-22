@@ -47,7 +47,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary statistics table data */
+/* TODO: fill in the necessary statistics table data
+ * when this plugin is written in C++, rename SCIP_TableData to something unique (C++ One-Definition-Rule)
+ */
 
 /** statistics table data */
 struct SCIP_TableData
