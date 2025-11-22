@@ -45,7 +45,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary node selector data */
+/* TODO: fill in the necessary node selector data
+ * when this plugin is written in C++, rename SCIP_NodeselData to something unique (C++ One-Definition-Rule)
+ */
 
 /** node selector data */
 struct SCIP_NodeselData

@@ -46,7 +46,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary presolver data */
+/* TODO: fill in the necessary presolver data
+ * when this plugin is written in C++, rename SCIP_PresolData to something unique (C++ One-Definition-Rule)
+ */
 
 /** presolver data */
 struct SCIP_PresolData

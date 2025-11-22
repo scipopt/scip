@@ -73,7 +73,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary constraint data */
+/* TODO: fill in the necessary constraint data
+ * when this plugin is written in C++, rename SCIP_ConsData and SCIP_ConshdlrData to something unique (C++ One-Definition-Rule)
+ */
 
 /** constraint data for xyz constraints */
 struct SCIP_ConsData

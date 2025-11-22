@@ -49,13 +49,13 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary NLP solver interface data */
+/* TODO: fill in the necessary NLP solver interface and NLP problem instance data
+ * when this plugin is written in C++, rename SCIP_NlpiData and SCIP_NlpiProblem to something unique (C++ One-Definition-Rule)
+ */
 
 struct SCIP_NlpiData
 {
 };
-
-/* TODO: fill in the necessary NLP problem instance data */
 
 struct SCIP_NlpiProblem
 {

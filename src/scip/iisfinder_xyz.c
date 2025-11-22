@@ -45,7 +45,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary IIS data */
+/* TODO: fill in the necessary IIS data
+ * when this plugin is written in C++, rename SCIP_IISfinderData to something unique (C++ One-Definition-Rule)
+ */
 
 /** IIS data */
 struct SCIP_IISfinderData

@@ -48,7 +48,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary separator data */
+/* TODO: fill in the necessary separator data
+ * when this plugin is written in C++, rename SCIP_SepaData to something unique (C++ One-Definition-Rule)
+ */
 
 /** separator data */
 struct SCIP_SepaData
