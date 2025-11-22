@@ -1252,6 +1252,14 @@ install(TARGETS scip libscip EXPORT scip-targets
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
+# install the debug program database files
+if(MSVC)
+  install(FILES $<TARGET_PDB_FILE:scip> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
+  if(BUILD_SHARED_LIBS)
+    install(FILES $<TARGET_PDB_FILE:libscip> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
+  endif()
+endif()
+
 # Add all targets to the build-tree export set
 export(TARGETS scip libscip
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
