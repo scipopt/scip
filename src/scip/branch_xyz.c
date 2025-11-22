@@ -46,7 +46,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary branching rule data */
+/* TODO: fill in the necessary branching rule data
+ * when this plugin is written in C++, rename SCIP_BranchruleData to something unique (C++ One-Definition-Rule)
+ */
 
 /** branching rule data */
 struct SCIP_BranchruleData

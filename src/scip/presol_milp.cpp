@@ -160,7 +160,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
  */
 
 /** presolver data */
-struct SCIP_PresolData
+struct SCIP_PresolMilpData
 {
    int lastncols;                            /**< the number of columns from the last call */
    int lastnrows;                            /**< the number of rows from the last call */
@@ -199,6 +199,7 @@ struct SCIP_PresolData
 
    char* filename = NULL;                    /**< filename to store the instance before presolving */
 };
+typedef struct SCIP_PresolMilpData SCIP_PRESOLMILPDATA;
 
 using namespace papilo;
 
@@ -350,7 +351,7 @@ static
 SCIP_RETCODE setupPresolve(
    SCIP*                 scip,               /**< SCIP data structure */
    Presolve<T>&          presolve,           /**< PaPILO's presolve object */
-   SCIP_PRESOLDATA*      data,               /**< presolver data structure */
+   SCIP_PRESOLMILPDATA*  data,               /**< presolver data structure */
    SCIP_Bool             allowconsmodification /**< whether constraint modifications are allowed */
    )
 {
@@ -503,7 +504,7 @@ static
 SCIP_RETCODE performRationalPresolving(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MATRIX*          matrix,             /**< initialized SCIP_MATRIX data structure */
-   SCIP_PRESOLDATA*      data,               /**< plugin specific presol data */
+   SCIP_PRESOLMILPDATA*  data,               /**< plugin specific presol data */
    SCIP_Bool             initialized,        /**< was the matrix initialized */
    int*                  nfixedvars,         /**< store number of fixed variables */
    int*                  naggrvars,          /**< store number of aggregated variables */
@@ -1053,7 +1054,7 @@ static
 SCIP_RETCODE performRealPresolving(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MATRIX*          matrix,             /**< initialized SCIP_MATRIX data structure */
-   SCIP_PRESOLDATA*      data,               /**< plugin specific presol data */
+   SCIP_PRESOLMILPDATA*  data,               /**< plugin specific presol data */
    SCIP_Bool             initialized,        /**< was the matrix initialized */
    int*                  nfixedvars,         /**< store number of fixed variables */
    int*                  naggrvars,          /**< store number of aggregated variables */
@@ -1606,7 +1607,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyMILP)
 static
 SCIP_DECL_PRESOLFREE(presolFreeMILP)
 {  /*lint --e{715}*/
-   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
+   SCIP_PRESOLMILPDATA* data = (SCIP_PRESOLMILPDATA*)SCIPpresolGetData(presol);
    assert(data != NULL);
 
    SCIPpresolSetData(presol, NULL);
@@ -1618,7 +1619,7 @@ SCIP_DECL_PRESOLFREE(presolFreeMILP)
 static
 SCIP_DECL_PRESOLINIT(presolInitMILP)
 {  /*lint --e{715}*/
-   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
+   SCIP_PRESOLMILPDATA* data = (SCIP_PRESOLMILPDATA*)SCIPpresolGetData(presol);
    assert(data != NULL);
 
    data->lastncols = -1;
@@ -1633,14 +1634,14 @@ static
 SCIP_DECL_PRESOLEXEC(presolExecMILP)
 {  /*lint --e{715}*/
    SCIP_MATRIX* matrix;
-   SCIP_PRESOLDATA* data;
+   SCIP_PRESOLMILPDATA* data;
    SCIP_Bool initialized;
    SCIP_Bool complete;
    SCIP_Bool infeasible;
 
    *result = SCIP_DIDNOTRUN;
 
-   data = SCIPpresolGetData(presol);
+   data = (SCIP_PRESOLMILPDATA*)SCIPpresolGetData(presol);
 
    int nvars = SCIPgetNVars(scip);
    int nconss = SCIPgetNConss(scip);
@@ -1705,7 +1706,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOLMILPDATA* presoldata;
    SCIP_PRESOL* presol;
 
 #if defined(PAPILO_VERSION_TWEAK) && PAPILO_VERSION_TWEAK != 0
@@ -1737,7 +1738,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
          presolExecMILP,
-         presoldata) );
+         (SCIP_PRESOLDATA*)presoldata) );
 
    assert(presol != NULL);
 
