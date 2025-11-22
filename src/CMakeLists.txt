@@ -1260,6 +1260,10 @@ if(MSVC)
   endif()
 endif()
 
+# Install SCIP's own and tclique license files
+install(FILES ${PROJECT_SOURCE_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/scip)
+install(FILES ${PROJECT_SOURCE_DIR}/src/tclique/LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/scip/tclique)
+
 # Add all targets to the build-tree export set
 export(TARGETS scip libscip
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
