@@ -47,7 +47,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary relaxator data */
+/* TODO: fill in the necessary relaxator data
+ * when this plugin is written in C++, rename SCIP_RelaxData to something unique (C++ One-Definition-Rule)
+ */
 
 /** relaxator data */
 struct SCIP_RelaxData

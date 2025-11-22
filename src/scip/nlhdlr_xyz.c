@@ -42,7 +42,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary nonlinear handler data */
+/* TODO: fill in the necessary nonlinear handler data
+ * when this plugin is written in C++, rename SCIP_NlhdlrData and SCIP_NlhdlrExprData to something unique (C++ One-Definition-Rule)
+ */
 
 /** nonlinear handler data */
 struct SCIP_NlhdlrData

@@ -44,7 +44,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary cut selector data */
+/* TODO: fill in the necessary cut selector data
+ * when this plugin is written in C++, rename SCIP_CutselData to something unique (C++ One-Definition-Rule)
+ */
 
 /** cut selector data */
 struct SCIP_CutselData

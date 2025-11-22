@@ -47,7 +47,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary variable pricer data */
+/* TODO: fill in the necessary variable pricer data
+ * when this plugin is written in C++, rename SCIP_PricerData to something unique (C++ One-Definition-Rule)
+ */
 
 /** variable pricer data */
 struct SCIP_PricerData

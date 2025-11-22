@@ -50,7 +50,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary primal heuristic data */
+/* TODO: fill in the necessary primal heuristic data
+ * when this plugin is written in C++, rename SCIP_HeurData to something unique (C++ One-Definition-Rule)
+ */
 
 /** primal heuristic data */
 struct SCIP_HeurData

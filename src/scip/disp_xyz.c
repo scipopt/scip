@@ -51,7 +51,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary display column data */
+/* TODO: fill in the necessary display column data
+ * when this plugin is written in C++, rename SCIP_DispData to something unique (C++ One-Definition-Rule)
+ */
 
 /** display column data */
 struct SCIP_DispData
