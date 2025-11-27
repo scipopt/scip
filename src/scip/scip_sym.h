@@ -59,7 +59,6 @@ extern "C" {
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSymhdlrBasic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SYMHDLR**        symhdlrptr,         /**< reference to a symmetry handler pointer, or NULL */
    const char*           name,               /**< name of symmetry handler */
    const char*           desc,               /**< description of symmetry handler */
    int                   priority,           /**< priority of the symmetry handler */

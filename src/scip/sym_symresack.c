@@ -161,7 +161,6 @@ SCIP_RETCODE SCIPincludeSymhdlrSymresack(
    )
 {
    SCIP_SYMHDLRDATA* symhdlrdata = NULL;
-   SCIP_SYMHDLR* symhdlr;
 
    assert(scip != NULL);
 
@@ -169,7 +168,7 @@ SCIP_RETCODE SCIPincludeSymhdlrSymresack(
    symhdlrdata->conss = NULL;
    symhdlrdata->nconss = 0;
 
-   SCIP_CALL( SCIPincludeSymhdlrBasic(scip, &symhdlr, SYM_NAME, SYM_DESC,
+   SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC,
          1, 1, 1, 1, -1, -1, FALSE, FALSE, -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddSymresack, NULL, symhdlrFreeSymresack, NULL, symhdlrExitSymresack,
          NULL, NULL, NULL, NULL, symhdlrPresolSymreack, symhdlrdata) );
