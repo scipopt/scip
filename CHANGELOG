@@ -6,6 +6,8 @@
 Fixed bugs
 ----------
 
+- fixed call of SCIPcreateConsBasicSOCNonlinear() with coefs being NULL, and fixed check for offsets being finite
+
 
 @section RN1000 SCIP 10.0.0
 ***************************
