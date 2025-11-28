@@ -13006,12 +13006,12 @@ SCIP_RETCODE SCIPcreateConsBasicSOCNonlinear(
    /* check values for infinity or nan */
    for( i = 0; i < nvars; ++i )
    {
-      if( !SCIPisFinite(coefs[i]) || SCIPisInfinity(scip, coefs[i]) )
+      if( coefs != NULL && ( !SCIPisFinite(coefs[i]) || SCIPisInfinity(scip, coefs[i]) ) )
       {
          SCIPerrorMessage("Second-order cone term with infinite or nan coefficient of variable %s in nonlinear constraint %s\n", SCIPvarGetName(vars[i]), name);
          return SCIP_INVALIDDATA;
       }
-      if( offsets != NULL && (!SCIPisFinite(offsets[i]) || SCIPisInfinity(scip, coefs[i])) )
+      if( offsets != NULL && (!SCIPisFinite(offsets[i]) || SCIPisInfinity(scip, offsets[i])) )
       {
          SCIPerrorMessage("Second-order cone term with infinite or nan offset for variable %s in nonlinear constraint %s\n", SCIPvarGetName(vars[i]), name);
          return SCIP_INVALIDDATA;
