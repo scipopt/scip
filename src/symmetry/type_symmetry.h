@@ -48,7 +48,7 @@ typedef uint32_t SYM_SPEC;              /**< types of variables handled by symme
 
 /** symmetry timings */
 #define SYM_TIMING_BEFOREPRESOL    0         /**< compute and handle symmetries before presolving */
-#define SYM_TIMING_DURINGPRESOL    1         /**< compute and handle symmetries during presolving */
+#define SYM_TIMING_DURINGPRESOL    1         /**< compute and handle symmetries during presolving */ /* @symtodo: remove */
 #define SYM_TIMING_AFTERPRESOL     2         /**< compute and handle symmetries after presolving */
 
 #define SYM_COMPUTETIMING_BEFOREPRESOL    SYM_TIMING_BEFOREPRESOL  /**< compute symmetries before presolving */

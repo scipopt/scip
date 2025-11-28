@@ -112,6 +112,7 @@
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
+#include "scip/struct_sym.h"
 #include "scip/struct_tree.h"
 #include "scip/symmetry.h"
 #include "scip/syncstore.h"
@@ -1310,11 +1311,10 @@ SCIP_RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, FALSE);
 
       /* possibly add symmetry handling methods */
-      /* @symtodo control timinig of computing symmetries */
       if( finished && !*unbounded && !*infeasible && !*vanished && !stopped )
       {
          /* @symtodo check how to deal with sub-SCIPs */
-         if( SCIPgetSubscipDepth(scip) == 0 )
+         if( scip->syminfo->symtryaddtiming == SYM_TIMING_AFTERPRESOL && SCIPgetSubscipDepth(scip) == 0 )
          {
             SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip) );
          }
@@ -2490,6 +2490,13 @@ SCIP_RETCODE SCIPpresolve(
 
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
+      /* possibly add symmetry handling methods */
+      /* @symtodo check how to deal with sub-SCIPs */
+      if( scip->syminfo->symtryaddtiming == SYM_TIMING_BEFOREPRESOL && SCIPgetSubscipDepth(scip) == 0 )
+      {
+         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip) );
+      }
+
       /* presolve problem */
       SCIP_CALL( presolve(scip, &unbounded, &infeasible, &vanished) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING);

@@ -118,6 +118,7 @@ struct SCIP_SymInfo
 {
    SCIP_Bool             enabled;            /**< Is symmetry handling enabled? */
    SCIP_Bool             triedhandlesymmetry;/**< Have we already tried to handle symmetries? */
+   int                   symtryaddtiming;    /**< the timing for trying to add symmetry handling methods */
    int                   maxngenerators;     /**< maximum number of symmetry group generators to be computed */
 
    SYM_SYMTYPE           symtype;            /**< type of symmetries to be considered */

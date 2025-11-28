@@ -3151,6 +3151,7 @@ SCIP_RETCODE SCIPsyminfoCreate(
 
    (*syminfo)->enabled = TRUE;  /* @symtodo */
    (*syminfo)->triedhandlesymmetry = FALSE;
+   (*syminfo)->symtryaddtiming = SYM_TIMING_AFTERPRESOL; /* @symtodo */
    (*syminfo)->maxngenerators = 1500; /* @symtodo */
    (*syminfo)->symtype = SYM_SYMTYPE_PERM; /* @symtodo */
 
