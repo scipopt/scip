@@ -65,6 +65,8 @@ struct SCIP_Symhdlr
    SCIP_DECL_SYMHDLRFREE ((*symfree));       /**< destructor of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit));       /**< initialize symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit));       /**< deinitialize symmetry handler */
+   SCIP_DECL_SYMHDLRINITSOL((*syminitsol));  /**< solving process initialization method of symmetry handler */
+   SCIP_DECL_SYMHDLREXITSOL((*symexitsol));  /**< solving process deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRTRANS((*symtrans));      /**< transform symmetry handler data into data belonging to the transformed problem */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp));    /**< separate cutting planes for LP solution */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol));  /**< separate cutting planes for arbitrary primal solution */

@@ -101,6 +101,33 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  */
 #define SCIP_DECL_SYMHDLREXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr)
 
+/** solving process initialization method of symmetry handler (called when branch and bound process is about to begin)
+ *
+ *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+ *  The symmetry handler may use this call to initialize its branch and bound specific data.
+ *
+ *  Besides necessary modifications and clean up, no time consuming operations should be performed, especially if the
+ *  problem has already been solved.  Use the method SCIPgetStatus(), which in this case returns SCIP_STATUS_OPTIMAL,
+ *  SCIP_STATUS_INFEASIBLE, SCIP_STATUS_UNBOUNDED, or SCIP_STATUS_INFORUNBD.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - symhdlr         : the symmetry handler itself
+ */
+#define SCIP_DECL_SYMHDLRINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr)
+
+/** solving process deinitialization method of symmetry handler (called before branch and bound process data is freed)
+ *
+ *  This method is called before the branch and bound process is freed.
+ *  The symmetry handler should use this call to clean up its branch and bound data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - symhdlr         : the symmetry handler itself
+ *  - restart         : was this exit solve call triggered by a restart?
+ */
+#define SCIP_DECL_SYMHDLREXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_Bool restart)
+
 /** transforms data of symmetry handler into data belonging to the transformed problem
  *
  *  input:

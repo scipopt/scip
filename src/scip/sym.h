@@ -65,12 +65,20 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_DECL_SYMHDLRFREE ((*symfree)),       /**< destructor method of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit)),       /**< initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
+   SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
+   SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry hanlder */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
    SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
+   );
+
+/** copies the given symmetry handler to a new scip */
+SCIP_RETCODE SCIPsymhdlrCopyInclude(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    );
 
 /** calls destructor and frees memory of symmetry handler */
@@ -89,6 +97,19 @@ SCIP_RETCODE SCIPsymhdlrExit(
 SCIP_RETCODE SCIPsymhdlrInit(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler data structure */
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs symmetry handler that the branch and bound process is being started */
+SCIP_RETCODE SCIPsymhdlrInitsol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs symmetry handler rule that the branch and bound process data is being freed */
+SCIP_RETCODE SCIPsymhdlrExitsol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    );
 
 /** executes presolving method of symmetry handler */

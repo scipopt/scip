@@ -67,6 +67,8 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
    SCIP_DECL_SYMHDLRFREE ((*symfree)),       /**< destructor method of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit)),       /**< initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
+   SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
+   SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry hanlder */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
@@ -89,8 +91,8 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
    SCIP_CALL( SCIPsymhdlrCreate(&symhdlr, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, priority, proppriority, sepapriority, presolpriority, propfreq, sepafreq,
          delayprop, delaysepa, maxprerounds, proptiming, presoltiming,
-         symtryadd, symcopy, symfree, syminit, symexit, symtrans, symsepalp, symsepasol,
-         symprop, sympresol, symhdlrdata) );
+         symtryadd, symcopy, symfree, syminit, symexit, syminitsol, symexitsol, symtrans,
+         symsepalp, symsepasol, symprop, sympresol, symhdlrdata) );
    SCIP_CALL( SCIPsetIncludeSymhdlr(scip->set, symhdlr) );
 
    return SCIP_OKAY;

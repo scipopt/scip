@@ -258,7 +258,7 @@ SCIP_RETCODE applyDecomposition(
 
    /* copying the plugins from the original SCIP instance to the master SCIP */
    SCIP_CALL( SCIPcopyPlugins(scip, relaxdata->masterprob, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+         TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
 
    /* including the default Benders' decomposition plugin. This is added separately so that any addition of the plugin
     * in the master problem is ignored
@@ -278,7 +278,7 @@ SCIP_RETCODE applyDecomposition(
 
       /* copying the plugins from the original SCIP instance to the subproblem SCIP */
       SCIP_CALL( SCIPcopyPlugins(scip, relaxdata->subproblems[i], TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-            TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+            TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
 
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "sub_%s_%d", SCIPgetProbName(scip), i);
       SCIP_CALL( SCIPcreateProbBasic(relaxdata->subproblems[i], probname) );

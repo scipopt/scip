@@ -1100,13 +1100,13 @@ SCIP_RETCODE bucketCreateSubscip(
    SCIP_CALL( SCIPcopyPlugins(scip, bucket->subscip,
          TRUE, FALSE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, FALSE, TRUE,
+         TRUE, TRUE, TRUE, FALSE, FALSE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, bucket->subscip,
          TRUE, FALSE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, FALSE, FALSE,
+         TRUE, TRUE, TRUE, FALSE, FALSE, FALSE,
          TRUE, FALSE, FALSE, TRUE, TRUE, success) );
 #endif
 

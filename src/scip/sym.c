@@ -210,6 +210,8 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_DECL_SYMHDLRFREE ((*symfree)),       /**< destructor method of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit)),       /**< initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
+   SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
+   SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry hanlder */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
@@ -232,6 +234,25 @@ SCIP_RETCODE SCIPsymhdlrCreate(
 
    return SCIP_OKAY;
 } /*lint !e715*/
+
+/** copies the given symmetry handler to a new scip */
+SCIP_RETCODE SCIPsymhdlrCopyInclude(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(symhdlr != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( symhdlr->symcopy != NULL )
+   {
+      SCIPsetDebugMsg(set, "including symmetry handler %s in subscip %p\n",
+         SCIPsymhdlrGetName(symhdlr), (void*)set->scip);
+      SCIP_CALL( symhdlr->symcopy(set->scip, symhdlr) );
+   }
+   return SCIP_OKAY;
+}
 
 /** calls destructor and frees memory of symmetry handler */
 SCIP_RETCODE SCIPsymhdlrFree(
@@ -318,6 +339,55 @@ SCIP_RETCODE SCIPsymhdlrInit(
       SCIPclockStop(symhdlr->setuptime, set);
    }
    symhdlr->initialized = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** informs symmetry handler that the branch and bound process is being started */
+SCIP_RETCODE SCIPsymhdlrInitsol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(symhdlr != NULL);
+   assert(set != NULL);
+
+   /* call solving process initialization method of symmetry handler */
+   if( symhdlr->syminitsol != NULL )
+   {
+      /* start timing */
+      SCIPclockStart(symhdlr->setuptime, set);
+
+      SCIP_CALL( symhdlr->syminitsol(set->scip, symhdlr) );
+
+      /* stop timing */
+      SCIPclockStop(symhdlr->setuptime, set);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs symmetry handler rule that the branch and bound process data is being freed */
+SCIP_RETCODE SCIPsymhdlrExitsol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
+   )
+{
+   assert(symhdlr != NULL);
+   assert(set != NULL);
+
+   /* call solving process deinitialization method of symmetry handler */
+   if( symhdlr->symexitsol != NULL )
+   {
+      /* start timing */
+      SCIPclockStart(symhdlr->setuptime, set);
+
+      SCIP_CALL( symhdlr->symexitsol(set->scip, symhdlr, restart) );
+
+      /* stop timing */
+      SCIPclockStop(symhdlr->setuptime, set);
+   }
 
    return SCIP_OKAY;
 }

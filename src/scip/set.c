@@ -948,6 +948,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copysymhdlrs,       /**< should the symmetry handlers be copied */
    SCIP_Bool             copyiisfinders,     /**< should the IIS finders be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
@@ -1060,6 +1061,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = 0; p < sourceset->nbranchrules; ++p )
       {
          SCIP_CALL( SCIPbranchruleCopyInclude(sourceset->branchrules[p], targetset) );
+      }
+   }
+
+   /* copy all symmetry handler plugins */
+   if( copysymhdlrs && sourceset->symhdlrs != NULL )
+   {
+      for( p = 0; p < sourceset->nsymhdlrs; ++p )
+      {
+         SCIP_CALL( SCIPsymhdlrCopyInclude(sourceset->symhdlrs[p], targetset) );
       }
    }
 
@@ -6044,6 +6054,12 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPnodeselInitsol(set->nodesels[i], set) );
    }
 
+   /* symmetry handlers */
+   for( i = 0; i < set->nsymhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPsymhdlrInitsol(set->symhdlrs[i], set) );
+   }
+
    /* branching rules */
    for( i = 0; i < set->nbranchrules; ++i )
    {
@@ -6143,6 +6159,12 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    for( i = 0; i < set->nnodesels; ++i )
    {
       SCIP_CALL( SCIPnodeselExitsol(set->nodesels[i], set) );
+   }
+
+   /* symmetry handlers */
+   for( i = 0; i < set->nsymhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPsymhdlrExitsol(set->symhdlrs[i], set, restart) );
    }
 
    /* branching rules */
