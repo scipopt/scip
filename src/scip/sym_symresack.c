@@ -54,7 +54,8 @@ static
 SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSymresack)
 {  /*lint --e{715}*/
    SCIP_SYMHDLRDATA* symhdlrdata;
-   int s;
+   char name[SCIP_MAXSTRLEN];
+   int p;
 
    if( symtype != SYM_SYMTYPE_PERM )
    {
@@ -66,14 +67,16 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSymresack)
 
    symhdlrdata = SCIPsymhdlrGetData(symhdlr);
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &symhdlrdata->conss, nsymmetries) );
-   symhdlrdata->nconss = nsymmetries;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &symhdlrdata->conss, nperms) );
+   symhdlrdata->nconss = nperms;
 
-   for( s = 0; s < nsymmetries; ++s )
+   for( p = 0; p < nperms; ++p )
    {
-      SCIP_CALL( SCIPcreateSymbreakCons(scip, &symhdlrdata->conss[s], "cons", symmetries[s],
-            symvars, nsymvars, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddCons(scip, symhdlrdata->conss[s]) );
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_compnent_%d_%d", id, p);
+
+      SCIP_CALL( SCIPcreateSymbreakCons(scip, &symhdlrdata->conss[p], "cons", perms[p],
+            permvars, npermvars, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, symhdlrdata->conss[p]) );
       /* do not release constraints here, this will be done later */
    }
 

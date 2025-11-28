@@ -473,7 +473,7 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    SCIPclockStart(symhdlr->setuptime, set);
 
    SCIP_CALL( symhdlr->symtryadd(set->scip, symhdlr, symtype, symmetries, nsymmetries,
-         symvars, nsymvars, symgraph, success) );
+         symvars, nsymvars, symgraph, id, success) );
 
    /* end timing */
    SCIPclockStop(symhdlr->setuptime, set);
