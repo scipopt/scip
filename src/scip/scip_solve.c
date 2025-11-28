@@ -1314,7 +1314,7 @@ SCIP_RETCODE presolve(
       if( finished && !*unbounded && !*infeasible && !*vanished && !stopped )
       {
          /* @symtodo check how to deal with sub-SCIPs */
-         if( scip->syminfo->symtryaddtiming == SYM_TIMING_AFTERPRESOL && SCIPgetSubscipDepth(scip) == 0 )
+         if( scip->set->sym_tryaddtiming == SYM_TIMING_AFTERPRESOL && SCIPgetSubscipDepth(scip) == 0 )
          {
             SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip) );
          }
@@ -2492,7 +2492,7 @@ SCIP_RETCODE SCIPpresolve(
    case SCIP_STAGE_PRESOLVING:
       /* possibly add symmetry handling methods */
       /* @symtodo check how to deal with sub-SCIPs */
-      if( scip->syminfo->symtryaddtiming == SYM_TIMING_BEFOREPRESOL && SCIPgetSubscipDepth(scip) == 0 )
+      if( scip->set->sym_tryaddtiming == SYM_TIMING_BEFOREPRESOL && SCIPgetSubscipDepth(scip) == 0 )
       {
          SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip) );
       }

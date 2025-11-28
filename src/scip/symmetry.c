@@ -2804,7 +2804,7 @@ SCIP_RETCODE determineSymmetry(
    scip->syminfo->triedhandlesymmetry = TRUE;
 
    /* determine maximal number of generators depending on the number of variables */
-   maxgenerators = scip->syminfo->maxngenerators;
+   maxgenerators = scip->set->sym_maxngenerators;
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / *nsymvars);
 
    /* get symmetry detection graph */
@@ -3046,7 +3046,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    assert(scip != NULL);
 
    /* only run when symmetry handling is enabled */
-   if( !scip->syminfo->enabled )
+   if( !scip->set->sym_enabled )
       return SCIP_OKAY;
 
    /* do not add symmetry handling methods if they have already been added */
@@ -3058,7 +3058,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    if( !SCIPallowStrongDualReds(scip) || !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
-   symtype = scip->syminfo->symtype;
+   symtype = scip->set->sym_symtype;
    SCIP_CALL( determineSymmetry(scip, symtype, &symmetries, &nsymmmetries, &symmetriessize, &symvars, &nsymvars) );
 
    /* compute independent components of symmetry group */
@@ -3149,11 +3149,7 @@ SCIP_RETCODE SCIPsyminfoCreate(
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, syminfo) );
 
-   (*syminfo)->enabled = TRUE;  /* @symtodo */
    (*syminfo)->triedhandlesymmetry = FALSE;
-   (*syminfo)->symtryaddtiming = SYM_TIMING_AFTERPRESOL; /* @symtodo */
-   (*syminfo)->maxngenerators = 1500; /* @symtodo */
-   (*syminfo)->symtype = SYM_SYMTYPE_PERM; /* @symtodo */
 
    return SCIP_OKAY;
 }

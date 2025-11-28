@@ -681,6 +681,12 @@ struct SCIP_Set
    SCIP_Bool             read_dynamiccols;   /**< should columns be added and removed dynamically to the LP? */
    SCIP_Bool             read_dynamicrows;   /**< should rows be added and removed dynamically to the LP? */
 
+   /* symmetry settings */
+   SCIP_Bool             sym_enabled;        /**< is symmetry handling enabled? */
+   int                   sym_tryaddtiming;   /**< timing for trying to add symmetry handling methods *//* @symtodo: add explanation of int values */
+   int                   sym_maxngenerators; /**< maximum number of symmetry group generators to be computed (-1: unbounded) */
+   int                   sym_symtype;        /**< type of symmetries to be considered */
+
    /* Writing */
    SCIP_Bool             write_allconss;     /**< should all constraints be written (including the redundant constraints)? */
    SCIP_Bool             write_printzeros;   /**< should variables set to zero be printed? */

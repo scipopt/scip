@@ -562,7 +562,11 @@ static const char SCIP_DEFAULT_CERTIFICATE_FILENAME[2] = {'-', '\0'}; /**< name 
 #define SCIP_DEFAULT_WRITE_GENNAMES_OFFSET    0 /**< when writing the problem with generic names, we start with index
                                                  *   0; using this parameter we can change the starting index to be
                                                  *   different */
-
+/* symmetry settings */
+#define SCIP_DEFAULT_SYM_ENABLED           TRUE /**< is symmetry handling enabled? */
+#define SCIP_DEFAULT_SYM_TRYADDTIMING SYM_TIMING_AFTERPRESOL /**< timing for trying to add symmetry handling methods */ /*@symtodo add explanation of int values */
+#define SCIP_DEFAULT_SYM_MAXNGENERATORS    1500 /**< maximum number of symmetry group generators to be computed (-1: unbounded) */
+#define SCIP_DEFAULT_SYM_SYMTYPE SYM_SYMTYPE_PERM /**< type of symmetries to be considered (0: permutation symmetries, 1: signed permutation symmetries) */
 
 /* Writing */
 
@@ -2987,6 +2991,31 @@ SCIP_RETCODE SCIPsetCreate(
          "should rows be added and removed dynamically to the LP?",
          &(*set)->read_dynamicrows, FALSE, SCIP_DEFAULT_READ_DYNAMICROWS,
          NULL, NULL) );
+
+   /* Symmetry parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "symmetries/enabled",
+         "Is symmetry handling enabled?",
+         &(*set)->sym_enabled, FALSE, SCIP_DEFAULT_SYM_ENABLED,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "symmetries/tryaddtiming",
+         "timing for trying to add symmetry handling methods",
+         &(*set)->sym_tryaddtiming, FALSE, SCIP_DEFAULT_SYM_TRYADDTIMING,
+         0, 2, NULL, NULL) );    /* @symtodo: add explanation of int values, and check range */
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "symmetries/maxngenerators",
+         "maximum number of symmetry group generators to be computed (-1: unbounded)",
+         &(*set)->sym_maxngenerators, FALSE, SCIP_DEFAULT_SYM_MAXNGENERATORS,
+         -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "symmetries/symtype",
+         "type of symmetries to be considered (0: permutation symmetries, 1: signed permutation symmetries)",
+         &(*set)->sym_symtype, FALSE, SCIP_DEFAULT_SYM_SYMTYPE,
+         0, 1, NULL, NULL) );
 
    /* Writing parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
