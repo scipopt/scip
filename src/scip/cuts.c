@@ -13606,3 +13606,112 @@ SCIP_RETCODE SCIPcalcStrongCG(
 
    return SCIP_OKAY;
 }
+
+/** initializes cut generation parameters with default values */
+void SCIPinitCutGenParams(
+   SCIP_CUTGENPARAMS*    params              /**< pointer to parameters to initialize */
+   )
+{
+   assert(params != NULL);
+
+   params->postprocess = TRUE;
+   params->boundswitch = 0.5;
+   params->allowlocal = TRUE;
+   params->vartypeusevbds = 2;
+   params->minfrac = 0.05;
+   params->maxfrac = 0.999;
+   params->scale = 1.0;
+   params->maxtestdelta = -1;
+   params->boundsfortrans = NULL;
+   params->boundtypesfortrans = NULL;
+   params->fixintegralrhs = TRUE;
+}
+
+/** tries multiple cut generation methods on an aggregation row and returns the best cut by efficacy */
+SCIP_RETCODE SCIPcalcBestCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute cuts for */
+   SCIP_Bool*            enabledmethods,     /**< array of size SCIP_NCUTGENMETHODS indicating which methods to try */
+   SCIP_CUTGENPARAMS*    params,             /**< cut generation parameters */
+   SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
+   int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
+   SCIP_CUTGENRESULT*    result              /**< pointer to store the result */
+   )
+{
+   SCIP_Bool success;
+   SCIP_Real efficacy;
+   SCIP_Bool cutislocal;
+   int cutrank;
+
+   assert(scip != NULL);
+   assert(aggrrow != NULL);
+   assert(enabledmethods != NULL);
+   assert(params != NULL);
+   assert(cutcoefs != NULL);
+   assert(cutinds != NULL);
+   assert(result != NULL);
+
+   /* initialize result */
+   result->efficacy = -SCIPinfinity(scip);
+   result->success = FALSE;
+   result->cutnnz = 0;
+
+   /* try FlowCover (lowest priority - tried first) */
+   if( enabledmethods[SCIP_CUTGENMETHOD_FLOWCOVER] )
+   {
+      efficacy = result->efficacy;
+      SCIP_CALL( SCIPcalcFlowCover(scip, sol, params->postprocess, params->boundswitch,
+         params->allowlocal, aggrrow, cutcoefs, &result->cutrhs, cutinds,
+         &result->cutnnz, &efficacy, &cutrank, &cutislocal, &success) );
+
+      if( success )
+      {
+         result->winningmethod = SCIP_CUTGENMETHOD_FLOWCOVER;
+         result->efficacy = efficacy;
+         result->cutrank = cutrank;
+         result->cutislocal = cutislocal;
+         result->success = TRUE;
+      }
+   }
+
+   /* try KnapsackCover */
+   if( enabledmethods[SCIP_CUTGENMETHOD_KNAPSACKCOVER] )
+   {
+      efficacy = result->efficacy;
+      SCIP_CALL( SCIPcalcKnapsackCover(scip, sol, params->allowlocal, aggrrow,
+         cutcoefs, &result->cutrhs, cutinds, &result->cutnnz, &efficacy,
+         &cutrank, &cutislocal, &success) );
+
+      if( success )
+      {
+         result->winningmethod = SCIP_CUTGENMETHOD_KNAPSACKCOVER;
+         result->efficacy = efficacy;
+         result->cutrank = cutrank;
+         result->cutislocal = cutislocal;
+         result->success = TRUE;
+      }
+   }
+
+   /* try CMIR (highest priority - tried last) */
+   if( enabledmethods[SCIP_CUTGENMETHOD_CMIR] )
+   {
+      efficacy = result->efficacy;
+      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, params->postprocess,
+         params->boundswitch, params->vartypeusevbds, params->allowlocal,
+         params->maxtestdelta, params->boundsfortrans, params->boundtypesfortrans,
+         params->minfrac, params->maxfrac, aggrrow, cutcoefs, &result->cutrhs,
+         cutinds, &result->cutnnz, &efficacy, &cutrank, &cutislocal, &success) );
+
+      if( success )
+      {
+         result->winningmethod = SCIP_CUTGENMETHOD_CMIR;
+         result->efficacy = efficacy;
+         result->cutrank = cutrank;
+         result->cutislocal = cutislocal;
+         result->success = TRUE;
+      }
+   }
+
+   return SCIP_OKAY;
+}
