@@ -1317,6 +1317,15 @@ SCIP_RETCODE presolve(
          if( scip->set->sym_tryaddtiming == SYM_TIMING_AFTERPRESOL && SCIPgetSubscipDepth(scip) == 0 )
          {
             SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip) );
+
+            /* call presolving methods of symmetry handlers, use timing SCIP_PRESOLTIMING_MAX to guarantee that they are
+             * presolved at least once
+             */
+            SCIP_CALL( SCIPpresolveSymmetryHandlingMethods(scip, SCIP_PRESOLTIMING_MAX, scip->stat->npresolrounds,
+                  &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
+                  &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
+                  &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
+                  &scip->stat->npresolchgsides, unbounded, infeasible) );
          }
       }
    }
