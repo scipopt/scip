@@ -142,6 +142,7 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    int                   nsymvars,           /**< number of variables in symvars */
    SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
    int                   id,                 /**< identifier of component for which symmetry handling shall be added */
+   int*                  naddedconss,        /**< pointer to store number of constraints added by symhdlr */
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
    );
 

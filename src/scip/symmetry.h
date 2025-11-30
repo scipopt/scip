@@ -331,7 +331,8 @@ SCIP_Bool SCIPsymGT(
 
 /** tries to add symmetry handling methods to CIP */
 SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  naddedconss         /**< pointer to store number of constraints added by symmetry handlers */
    );
 
 /** calls presolving methods of symmetry handlers */

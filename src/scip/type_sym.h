@@ -64,10 +64,12 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  - npermvars       : number of variables in permvars array
  *  - symgraph        : symmetry detection graph used for detecting symmetries (or NULL)
  *  - id              : numerical identifier of set of permutation symmetries for which symmetry handler is tested
+ *  - naddedconss     : pointer to store number of constraints added by symhdlr
  *  - success         : pointer to store whether the symmetry handling method has been added
  */
 #define SCIP_DECL_SYMHDLRTRYADD(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SYM_SYMTYPE symtype, \
-      int** perms, int nperms, SCIP_VAR** permvars, int npermvars, SYM_GRAPH* symgraph, int id, SCIP_Bool* success)
+      int** perms, int nperms, SCIP_VAR** permvars, int npermvars, SYM_GRAPH* symgraph, int id, int* naddedconss, \
+      SCIP_Bool* success)
 
 /** copy method for symmetry handler plugins (called when SCIP copies plugins)
  *

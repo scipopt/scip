@@ -530,11 +530,13 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    int                   nsymvars,           /**< number of variables in symvars */
    SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
    int                   id,                 /**< identifier of component for which symmetry handling shall be added */
+   int*                  naddedconss,        /**< pointer to store number of constraints added by symhdlr */
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
    )
 {
    assert(symhdlr != NULL);
    assert(set != NULL);
+   assert(naddedconss != NULL);
    assert(success != NULL);
 
    SCIPsetDebugMsg(set, "try to add symmetry handler of type %s for symmetry component %d\n", symhdlr->name, id);
@@ -542,8 +544,10 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    /* start timing */
    SCIPclockStart(symhdlr->setuptime, set);
 
+   *naddedconss = 0;
+
    SCIP_CALL( symhdlr->symtryadd(set->scip, symhdlr, symtype, symmetries, nsymmetries,
-         symvars, nsymvars, symgraph, id, success) );
+         symvars, nsymvars, symgraph, id, naddedconss, success) );
 
    /* end timing */
    SCIPclockStop(symhdlr->setuptime, set);

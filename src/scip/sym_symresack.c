@@ -77,6 +77,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSymresack)
       SCIP_CALL( SCIPcreateSymbreakCons(scip, &symhdlrdata->conss[p], "cons", perms[p],
             permvars, npermvars, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, symhdlrdata->conss[p]) );
+      ++(*naddedconss);
       /* do not release constraints here, this will be done later */
    }
 

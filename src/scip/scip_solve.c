@@ -1316,7 +1316,11 @@ SCIP_RETCODE presolve(
          /* @symtodo check how to deal with sub-SCIPs */
          if( scip->set->sym_tryaddtiming == SYM_TIMING_AFTERPRESOL && SCIPgetSubscipDepth(scip) == 0 )
          {
-            SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip) );
+            int nnewconss = 0;
+
+            SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss) );
+
+            scip->stat->npresoladdconss += nnewconss;
 
             /* call presolving methods of symmetry handlers, use timing SCIP_PRESOLTIMING_MAX to guarantee that they are
              * presolved at least once
@@ -2503,7 +2507,11 @@ SCIP_RETCODE SCIPpresolve(
       /* @symtodo check how to deal with sub-SCIPs */
       if( scip->set->sym_tryaddtiming == SYM_TIMING_BEFOREPRESOL && SCIPgetSubscipDepth(scip) == 0 )
       {
-         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip) );
+         int nnewconss = 0;
+
+         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss) );
+
+         scip->stat->npresoladdconss += nnewconss;
       }
 
       /* presolve problem */
