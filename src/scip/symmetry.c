@@ -40,6 +40,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_orbitope.h"
 #include "scip/misc.h"
+#include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 #include "scip/struct_sym.h"
@@ -3058,8 +3059,18 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    if( !SCIPallowStrongDualReds(scip) || !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
+   /* get symmetry handlers */
+   symhdlrs = SCIPgetSymhdlrs(scip);
+   nsymhdlrs = SCIPgetNSymhdlrs(scip);
+   if( nsymhdlrs == 0 )
+      return SCIP_OKAY;
+   assert(symhdlrs != NULL);
+
    symtype = scip->set->sym_symtype;
    SCIP_CALL( determineSymmetry(scip, symtype, &symmetries, &nsymmmetries, &symmetriessize, &symvars, &nsymvars) );
+
+   if( nsymmmetries == 0 )
+      return SCIP_OKAY;
 
    /* compute independent components of symmetry group */
    SCIP_CALL( computeComponentsSym(scip, symtype, symmetries, nsymmmetries, symvars, nsymvars,
@@ -3076,14 +3087,21 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       SCIP_CALL( SCIPallocBufferArray(scip, &syms, nsymmmetries) );
    }
 
-   /* get symmetry handlers */
-   symhdlrs = SCIPgetSymhdlrs(scip);
-   nsymhdlrs = SCIPgetNSymhdlrs(scip);
+   /* allocate memory for different symmetry components */
+   assert(scip->syminfo != NULL);
+   assert(scip->syminfo->symcomps == NULL);
+   assert(scip->syminfo->nsymcomps == -1);
+   assert(scip->syminfo->symcompssize == 0);
+
+   SCIP_ALLOC( BMSallocBlockMemoryArray(scip->mem->probmem, &scip->syminfo->symcomps, ncomponents) );
+   scip->syminfo->symcompssize = ncomponents;
+   scip->syminfo->nsymcomps = 0;
 
    /* for each component, check whether a symmetry handler applies */
    for( c = 0; c < ncomponents; ++c )
    {
       SCIP_Bool success;
+      SCIP_SYMCOMPDATA* symcompdata;
 
       success = FALSE;
 
@@ -3099,7 +3117,14 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       for( i = 0; i < nsymhdlrs && !success; ++i )
       {
          SCIP_CALL( SCIPsymhdlrTryadd(symhdlrs[i], scip->set, syms, nsyms, symtype,
-               symvars, nsymvars, NULL, c, &success) ); /* @symtodo Do we actually want to provide the graph? */
+               symvars, nsymvars, NULL, c, &symcompdata, &success) ); /* @symtodo Do we actually want to provide the graph? */
+
+         if( success )
+         {
+            SCIP_CALL( SCIPcreateSymmetryComponent(scip->mem->probmem,
+                  &(scip->syminfo->symcomps[scip->syminfo->nsymcomps]), symhdlrs[i], symcompdata) );
+            ++(scip->syminfo->nsymcomps);
+         }
       }
    }
 
@@ -3160,16 +3185,29 @@ SCIP_RETCODE SCIPsyminfoCreate(
 
 /** releases symmetry information data structure */
 SCIP_RETCODE SCIPsyminfoFree(
-   SCIP_SYMINFO**        syminfo,            /**< pointer to the syminfo */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO**        syminfo             /**< pointer to the syminfo */
    )
 {
+   SCIP_SYMCOMP* symcomp;
+   BMS_BLKMEM* blkmem;
+   int i;
+
+   assert(scip != NULL);
    assert(syminfo != NULL);
-   assert(blkmem != NULL);
 
    if( *syminfo == NULL )
       return SCIP_OKAY;
 
+   blkmem = SCIPblkmem(scip);
+
+   for( i = (*syminfo)->nsymcomps - 1; i >= 0; --i )
+   {
+      symcomp = (*syminfo)->symcomps[i];
+      SCIP_CALL( SCIPsymhdlrDelete(symcomp->symhdlr, scip->set, symcomp->symcompdata) );
+      BMSfreeBlockMemory(blkmem, &symcomp);
+   }
+   BMSfreeBlockMemoryArray(blkmem, &(*syminfo)->symcomps, (*syminfo)->symcompssize);
    BMSfreeBlockMemory(blkmem, syminfo);
    *syminfo = NULL;
 

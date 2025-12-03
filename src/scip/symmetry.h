@@ -342,8 +342,8 @@ SCIP_RETCODE SCIPsyminfoCreate(
 
 /** releases symmetry information data structure */
 SCIP_RETCODE SCIPsyminfoFree(
-   SCIP_SYMINFO**        syminfo,            /**< pointer to the syminfo */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO**        syminfo             /**< pointer to the syminfo */
    );
 
 /** @} */

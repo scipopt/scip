@@ -24,7 +24,7 @@
 
 /**@file   sym.h
  * @ingroup OTHER_CFILES
- * @brief  methods for symmetry handlers
+ * @brief  methods for symmetry handlers and symmetry components
  * @author Christopher Hojny
  */
 
@@ -67,6 +67,7 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
+   SCIP_DECL_SYMHDLRDELETE((*symdelete)),    /**< destructor of symmetry component data */
    SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry hanlder */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
@@ -112,6 +113,13 @@ SCIP_RETCODE SCIPsymhdlrExitsol(
    SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    );
 
+/** calls destructore method of symmetry component data */
+SCIP_RETCODE SCIPsymhdlrDelete(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SYMCOMPDATA*     symcompdata         /**< symmetry component data */
+   );
+
 /** executes presolving method of symmetry handler */
 SCIP_RETCODE SCIPsymhdlrPresol(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
@@ -142,7 +150,16 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    int                   nsymvars,           /**< number of variables in symvars */
    SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
    int                   id,                 /**< identifier of component for which symmetry handling shall be added */
+   SCIP_SYMCOMPDATA**    symcompdata,        /**< pointer for storing data of symmetry component */
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
+   );
+
+/** creates a symmetry component */
+SCIP_RETCODE SCIPcreateSymmetryComponent(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SYMCOMP**        symcomp,            /**< pointer to symmetry component */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler active on symmetry component */
+   SCIP_SYMCOMPDATA*     symcompdata         /**< symmetry component data */
    );
 
 #ifdef __cplusplus
