@@ -42,10 +42,11 @@
 extern "C" {
 #endif
 
-/** symmetry group */
-struct SCIP_Sym
+/** symmetry component */
+struct SCIP_SymComp
 {
    SCIP_SYMHDLR*         symhdlr;            /**< symmetry handler for this symmetry group */
+   SCIP_SYMCOMPDATA*     symcompdata;        /**< data of symmetry component */
 };
 
 /** symmetry handler */
@@ -118,6 +119,9 @@ struct SCIP_Symhdlr
 /** data structure for storing symmetry information */
 struct SCIP_SymInfo
 {
+   SCIP_SYMCOMP**        symcomps;           /**< components of symmetry group */
+   int                   nsymcomps;          /**< number of components in symmetrycomps */
+   int                   symcompssize;       /**< size of symcomps array */
    SCIP_Bool             triedhandlesymmetry;/**< Have we already tried to handle symmetries? */
 };
 

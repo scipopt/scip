@@ -48,8 +48,9 @@ extern "C" {
 #endif
 
 typedef struct SCIP_Symhdlr SCIP_SYMHDLR;    /**< symmetry handler for a specific symmetry method */
-typedef struct SCIP_Sym SCIP_SYM;            /**< symmetry group structure */
+typedef struct SCIP_SymComp SCIP_SYMCOMP;    /**< symmetry component structure */
 typedef struct SCIP_SymhdlrData SCIP_SYMHDLRDATA; /**< symmetry handler data */
+typedef struct SCIP_SymCompData SCIP_SYMCOMPDATA; /**< symmetry component data */
 typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing symmetry information */
 
 /** addition method for symmetry method handler plugins (tries to add symmetry handling method for given symmetries) *

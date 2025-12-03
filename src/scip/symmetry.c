@@ -3149,6 +3149,9 @@ SCIP_RETCODE SCIPsyminfoCreate(
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, syminfo) );
 
+   (*syminfo)->symcomps = NULL;
+   (*syminfo)->nsymcomps = -1;
+   (*syminfo)->symcompssize = 0;
    (*syminfo)->triedhandlesymmetry = FALSE;
 
    return SCIP_OKAY;
