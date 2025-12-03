@@ -1917,7 +1917,7 @@ Constraint handlers for NLP:
 - removed SCIPincludeQuadconsUpgrade()
 - removed SCIPcreateConsQuadratic2(), SCIPcreateConsBasicQuadratic2()
 - deprecated SCIPcreateConsBasicQuadratic(), use SCIPcreateConsBasicQuadraticNonlinear() instead
-- deprecated SCIPcreateConsBasicQuadratic(), use SCIPcreateConsQuadraticNonlinear() instead
+- deprecated SCIPcreateConsQuadratic(), use SCIPcreateConsQuadraticNonlinear() instead
 - deprecated SCIPaddConstantQuadratic(), use SCIPgetLhsNonlinear() and SCIPgetRhsNonlinear() instead
 - deprecated SCIPaddLinearVarQuadratic(), use SCIPaddLinearVarNonlinear() instead
 - deprecated SCIPaddQuadVarQuadratic(), use SCIPaddLinearVarNonlinear() and SCIPaddExprNonlinear() instead
