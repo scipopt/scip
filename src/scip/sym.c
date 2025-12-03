@@ -148,6 +148,10 @@ SCIP_RETCODE doSymhdlrCreate(
    (*symhdlr)->sepasolwasdelayed = FALSE;
    (*symhdlr)->propwasdelayed = FALSE;
 
+   (*symhdlr)->symcompdata = NULL;
+   (*symhdlr)->nsymcompdata = 0;
+   (*symhdlr)->symcompdatasize = 0;
+
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/sepafreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
@@ -282,6 +286,7 @@ SCIP_RETCODE SCIPsymhdlrFree(
 
    BMSfreeMemoryArrayNull(&(*symhdlr)->name);
    BMSfreeMemoryArrayNull(&(*symhdlr)->desc);
+   BMSfreeMemoryArrayNull(&(*symhdlr)->symcompdata);
    BMSfreeMemory(symhdlr);
 
    return SCIP_OKAY;
@@ -306,7 +311,7 @@ SCIP_RETCODE SCIPsymhdlrExit(
       /* start timing */
       SCIPclockStart(symhdlr->setuptime, set);
 
-      SCIP_CALL( symhdlr->symexit(set->scip, symhdlr) );
+      SCIP_CALL( symhdlr->symexit(set->scip, symhdlr, symhdlr->symcompdata, symhdlr->nsymcompdata) );
 
       /* stop timing */
       SCIPclockStop(symhdlr->setuptime, set);
@@ -336,7 +341,7 @@ SCIP_RETCODE SCIPsymhdlrInit(
       /* start timing */
       SCIPclockStart(symhdlr->setuptime, set);
 
-      SCIP_CALL( symhdlr->syminit(set->scip, symhdlr) );
+      SCIP_CALL( symhdlr->syminit(set->scip, symhdlr, symhdlr->symcompdata, symhdlr->nsymcompdata) );
 
       /* stop timing */
       SCIPclockStop(symhdlr->setuptime, set);
@@ -361,7 +366,7 @@ SCIP_RETCODE SCIPsymhdlrInitsol(
       /* start timing */
       SCIPclockStart(symhdlr->setuptime, set);
 
-      SCIP_CALL( symhdlr->syminitsol(set->scip, symhdlr) );
+      SCIP_CALL( symhdlr->syminitsol(set->scip, symhdlr, symhdlr->symcompdata, symhdlr->nsymcompdata) );
 
       /* stop timing */
       SCIPclockStop(symhdlr->setuptime, set);
@@ -386,7 +391,7 @@ SCIP_RETCODE SCIPsymhdlrExitsol(
       /* start timing */
       SCIPclockStart(symhdlr->setuptime, set);
 
-      SCIP_CALL( symhdlr->symexitsol(set->scip, symhdlr, restart) );
+      SCIP_CALL( symhdlr->symexitsol(set->scip, symhdlr, symhdlr->symcompdata, symhdlr->nsymcompdata, restart) );
 
       /* stop timing */
       SCIPclockStop(symhdlr->setuptime, set);
@@ -399,7 +404,7 @@ SCIP_RETCODE SCIPsymhdlrExitsol(
 SCIP_RETCODE SCIPsymhdlrDelete(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_SYMCOMPDATA*     symcompdata         /**< symmetry component data */
+   SCIP_SYMCOMPDATA**    symcompdata         /**< pointer to symmetry component data */
    )
 {
    assert(symhdlr != NULL);
@@ -507,7 +512,7 @@ SCIP_RETCODE SCIPsymhdlrPresol(
       SCIPclockStart(symhdlr->presoltime, set);
 
       /* call external method */
-      SCIP_CALL( symhdlr->sympresol(set->scip, symhdlr, nrounds, timing,
+      SCIP_CALL( symhdlr->sympresol(set->scip, symhdlr, symhdlr->symcompdata, symhdlr->nsymcompdata, nrounds, timing,
             nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewaddholes,
             nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
             nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,

@@ -115,6 +115,10 @@ struct SCIP_Symhdlr
    SCIP_Bool             propwasdelayed;     /**< was the propagation method delayed at the last call? */
    SCIP_PROPTIMING       proptiming;         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming;       /**< timing mask of the symmetry handler's presolving method */
+
+   SCIP_SYMCOMPDATA**    symcompdata;        /**< array of data for symmetry components handled by this symhdlr */
+   int                   nsymcompdata;       /**< number of data entries in symcompdata */
+   int                   symcompdatasize;    /**< size of symcompdata */
 };
 
 /** data structure for storing symmetry information */

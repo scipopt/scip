@@ -117,7 +117,7 @@ SCIP_RETCODE SCIPsymhdlrExitsol(
 SCIP_RETCODE SCIPsymhdlrDelete(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_SYMCOMPDATA*     symcompdata         /**< symmetry component data */
+   SCIP_SYMCOMPDATA**    symcompdata         /**< pointer to symmetry component data */
    );
 
 /** executes presolving method of symmetry handler */

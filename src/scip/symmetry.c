@@ -3124,6 +3124,8 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
             SCIP_CALL( SCIPcreateSymmetryComponent(scip->mem->probmem,
                   &(scip->syminfo->symcomps[scip->syminfo->nsymcomps]), symhdlrs[i], symcompdata) );
             ++(scip->syminfo->nsymcomps);
+
+            SCIP_CALL( SCIPaddSymhdlrComponent(scip, symhdlrs[i], symcompdata) );
          }
       }
    }
@@ -3182,7 +3184,6 @@ SCIP_RETCODE SCIPsyminfoCreate(
    return SCIP_OKAY;
 }
 
-
 /** releases symmetry information data structure */
 SCIP_RETCODE SCIPsyminfoFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3204,12 +3205,40 @@ SCIP_RETCODE SCIPsyminfoFree(
    for( i = (*syminfo)->nsymcomps - 1; i >= 0; --i )
    {
       symcomp = (*syminfo)->symcomps[i];
-      SCIP_CALL( SCIPsymhdlrDelete(symcomp->symhdlr, scip->set, symcomp->symcompdata) );
+      SCIP_CALL( SCIPsymhdlrDelete(symcomp->symhdlr, scip->set, &symcomp->symcompdata) );
       BMSfreeBlockMemory(blkmem, &symcomp);
    }
-   BMSfreeBlockMemoryArray(blkmem, &(*syminfo)->symcomps, (*syminfo)->symcompssize);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*syminfo)->symcomps, (*syminfo)->symcompssize);
    BMSfreeBlockMemory(blkmem, syminfo);
    *syminfo = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** adds a component to a symmetry handler */
+SCIP_RETCODE SCIPaddSymhdlrComponent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SYMCOMPDATA*     symcompdata         /**< data of symmetry component */
+   )
+{
+   assert(scip != NULL);
+   assert(symhdlr != NULL);
+   assert(symcompdata != NULL);
+
+   if( symhdlr->symcompdatasize == 0 )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &symhdlr->symcompdata, 1) );
+      symhdlr->symcompdatasize = 1;
+   }
+   else if( symhdlr->nsymcompdata >= symhdlr->symcompdatasize )
+   {
+      int newlen;
+
+      newlen = SCIPcalcMemGrowSize(scip, symhdlr->nsymcompdata + 1);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &symhdlr->symcompdata, symhdlr->symcompdatasize, newlen) );
+   }
+   symhdlr->symcompdata[(symhdlr->nsymcompdata)++] = symcompdata;
 
    return SCIP_OKAY;
 }
