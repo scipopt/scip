@@ -230,7 +230,7 @@ class SPxSCIP : public SoPlex
    SCIP_MESSAGEHDLR*     _messagehdlr;      /**< messagehdlr handler for printing messages, or NULL */
 
 public:
-   SPxSCIP(
+   explicit SPxSCIP(
       SCIP_MESSAGEHDLR*  messagehdlr = NULL, /**< message handler */
       const char*        probname = NULL     /**< name of problem */
       )

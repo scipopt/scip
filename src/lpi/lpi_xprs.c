@@ -1344,17 +1344,17 @@ SCIP_RETCODE SCIPlpiChgCoef(
 /** changes the objective sense */
 SCIP_RETCODE SCIPlpiChgObjsen(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_OBJSEN           objsense            /**< new objective sense */
+   SCIP_OBJSEN           objsen              /**< new objective sense */
    )
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
 
-   SCIPdebugMessage("changing objective sense in Xpress to %d\n", objsense);
+   SCIPdebugMessage("changing objective sense in Xpress to %d\n", objsen);
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( lpi->messagehdlr, XPRSchgobjsense(lpi->xprslp, xprsObjsen(objsense)) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSchgobjsense(lpi->xprslp, xprsObjsen(objsen)) );
 
    return SCIP_OKAY;
 }
@@ -1629,25 +1629,25 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get from LP */
    int                   lastrow,            /**< last row to get from LP */
-   SCIP_Real*            lhss,               /**< buffer to store left hand side vector, or NULL */
-   SCIP_Real*            rhss,               /**< buffer to store right hand side vector, or NULL */
+   SCIP_Real*            lhs,                /**< buffer to store left hand side vector, or NULL */
+   SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
    int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
-   assert((lhss != NULL && rhss != NULL) || (lhss == NULL && rhss == NULL));
+   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    debugCheckRowrang(lpi, firstrow, lastrow);
 
    SCIPdebugMessage("getting rows %d to %d\n", firstrow, lastrow);
 
-   if( lhss != NULL )
+   if( lhs != NULL )
    {
       /* get left and right sides */
-      SCIP_CALL( SCIPlpiGetSides(lpi, firstrow, lastrow, lhss, rhss) );
+      SCIP_CALL( SCIPlpiGetSides(lpi, firstrow, lastrow, lhs, rhs) );
    }
 
    if( nnonz != NULL )
@@ -3001,7 +3001,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
  */
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   row,                /**< row number */
+   int                   r,                  /**< row number */
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
@@ -3015,7 +3015,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert(coef != NULL);
    SCIP_UNUSED(inds);
 
-   SCIPdebugMessage("getting binv-row %d\n", row);
+   SCIPdebugMessage("getting binv-row %d\n", r);
 
    /* can only return dense result */
    if ( ninds != NULL )
@@ -3023,7 +3023,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
    CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
    BMSclearMemoryArray(coef, nrows);
-   coef[row] = 1.0;
+   coef[r] = 1.0;
    CHECK_ZERO( lpi->messagehdlr, XPRSbtran(lpi->xprslp, coef) );
 
    return SCIP_OKAY;

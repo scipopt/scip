@@ -2098,9 +2098,9 @@ SCIP_Real SCIPrationalGetReal(
 #else
    return rational->val.convert_to<SCIP_Real>(); /*lint !e838*/
 #endif
-#endif
-
+#else
    return 0.0;
+#endif
 }
 
 /** gets the relaxation of a rational as a real
