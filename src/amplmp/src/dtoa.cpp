@@ -349,7 +349,11 @@ static double private_mem[PRIVATE_mem], *pmem_next = private_mem;
 extern "C" {
 #endif
 
+#ifdef SCIP_BIG_ENDIAN
+#define IEEE_MC68k
+#else
 #define IEEE_8087
+#endif
 #define IEEE_Arith
 #if defined(IEEE_8087) + defined(IEEE_MC68k) + defined(VAX) + defined(IBM) != 1
 Exactly one of IEEE_8087, IEEE_MC68k, VAX, or IBM should be defined.
