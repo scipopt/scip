@@ -1022,7 +1022,7 @@ SCIP_RETCODE applyFixings(
       if( intoffsetconst >= 1 || intoffsetvals[1] != -1.0 || intoffsetnvars > 2 ) /*lint !e777*/
       {
          SCIP_Real lb = -(double)intoffsetconst;
-         SCIP_Real ub = -(double)intoffsetconst;
+         SCIP_Real ub = lb;
          SCIP_Bool aggregated;
          SCIP_Bool infeasible = FALSE;
          SCIP_Bool redundant = FALSE;
