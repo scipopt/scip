@@ -156,9 +156,12 @@ void printGMP(
 {
    char* buffer;
    buffer = (char*) malloc(mpz_sizeinbase(mpq_numref(val), 10) + mpz_sizeinbase(mpq_denref(val), 10) + 3);
-   (void)mpq_get_str(buffer, 10, val);
-   printf("%s \n", buffer);
-   free(buffer);
+   if( buffer != NULL )
+   {
+      (void)mpq_get_str(buffer, 10, val);
+      printf("%s \n", buffer);
+      free(buffer);
+   }
 }
 
 /** returns the number of packets needed to store column packet information */

@@ -135,7 +135,7 @@ class HighsSCIP : public Highs
 
 public:
 
-   HighsSCIP(
+   explicit HighsSCIP(
       SCIP_MESSAGEHDLR*  messagehdlr = NULL, /**< message handler */
       const char*        probname = NULL     /**< name of problem */
             )
