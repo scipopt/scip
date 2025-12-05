@@ -13639,10 +13639,10 @@ SCIP_RETCODE SCIPcalcBestCut(
    SCIP_CUTGENRESULT*    result              /**< pointer to store the result */
    )
 {
-   SCIP_Bool success;
+   SCIP_Bool success = FALSE;
    SCIP_Real efficacy;
-   SCIP_Bool cutislocal;
-   int cutrank;
+   SCIP_Bool cutislocal = FALSE;
+   int cutrank = 0;
 
    assert(scip != NULL);
    assert(aggrrow != NULL);
