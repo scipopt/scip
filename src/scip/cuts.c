@@ -11681,7 +11681,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
 
    SCIP_CALL( constructSNFRelaxation(scip, sol, boundswitch, allowlocal, aggrrow->vals, QUAD(aggrrow->rhs), aggrrow->inds, aggrrow->nnz, &snf, success, &localbdsused) );
 
-   if( ! *success )
+   if( ! *success || snf.ntransvars == 0 )
    {
       goto TERMINATE;
    }
@@ -13656,6 +13656,35 @@ SCIP_RETCODE SCIPcalcBestCut(
    result->efficacy = -SCIPinfinity(scip);
    result->success = FALSE;
    result->cutnnz = 0;
+
+   /* bail out early if the aggregation row is empty */
+   if( aggrrow->nrows + aggrrow->nnz < 1 )
+      return SCIP_OKAY;
+
+   /* flow cover and knapsack cover require binary variables; check if any exist in the row */
+   if( enabledmethods[SCIP_CUTGENMETHOD_FLOWCOVER] || enabledmethods[SCIP_CUTGENMETHOD_KNAPSACKCOVER] )
+   {
+      SCIP_Bool hasbinary = FALSE;
+      int nbinvars = SCIPgetNBinVars(scip);
+
+      if( nbinvars > 0 )
+      {
+         for( int k = 0; k < aggrrow->nnz; ++k )
+         {
+            if( aggrrow->inds[k] < nbinvars )
+            {
+               hasbinary = TRUE;
+               break;
+            }
+         }
+      }
+
+      if( !hasbinary )
+      {
+         enabledmethods[SCIP_CUTGENMETHOD_FLOWCOVER] = FALSE;
+         enabledmethods[SCIP_CUTGENMETHOD_KNAPSACKCOVER] = FALSE;
+      }
+   }
 
    /* try FlowCover (lowest priority - tried first) */
    if( enabledmethods[SCIP_CUTGENMETHOD_FLOWCOVER] )
