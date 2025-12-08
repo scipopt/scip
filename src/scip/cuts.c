@@ -13664,25 +13664,32 @@ SCIP_RETCODE SCIPcalcBestCut(
    /* flow cover and knapsack cover require binary variables; check if any exist in the row */
    if( enabledmethods[SCIP_CUTGENMETHOD_FLOWCOVER] || enabledmethods[SCIP_CUTGENMETHOD_KNAPSACKCOVER] )
    {
-      SCIP_Bool hasbinary = FALSE;
-      int nbinvars = SCIPgetNBinVars(scip);
-
-      if( nbinvars > 0 )
+      /* quick global check: no binary or implicit binary variables in problem */
+      if( SCIPgetNBinVars(scip) + SCIPgetNBinImplVars(scip) == 0 )
       {
+         enabledmethods[SCIP_CUTGENMETHOD_FLOWCOVER] = FALSE;
+         enabledmethods[SCIP_CUTGENMETHOD_KNAPSACKCOVER] = FALSE;
+      }
+      else
+      {
+         /* check if this specific row has any binary variables */
+         SCIP_Bool hasbinary = FALSE;
+         SCIP_VAR** vars = SCIPgetVars(scip);
+
          for( int k = 0; k < aggrrow->nnz; ++k )
          {
-            if( aggrrow->inds[k] < nbinvars )
+            if( SCIPvarIsBinary(vars[aggrrow->inds[k]]) )
             {
                hasbinary = TRUE;
                break;
             }
          }
-      }
 
-      if( !hasbinary )
-      {
-         enabledmethods[SCIP_CUTGENMETHOD_FLOWCOVER] = FALSE;
-         enabledmethods[SCIP_CUTGENMETHOD_KNAPSACKCOVER] = FALSE;
+         if( !hasbinary )
+         {
+            enabledmethods[SCIP_CUTGENMETHOD_FLOWCOVER] = FALSE;
+            enabledmethods[SCIP_CUTGENMETHOD_KNAPSACKCOVER] = FALSE;
+         }
       }
    }
 
