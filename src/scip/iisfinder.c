@@ -64,16 +64,19 @@ SCIP_RETCODE createSubscipIIS(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_IIS*             iis,                /**< pointer to store IIS */
    SCIP_Real             timelim,            /**< timelimit */
-   SCIP_Longint          nodelim             /**< nodelimit */
+   SCIP_Longint          nodelim,            /**< nodelimit */
+   SCIP_Bool*            success             /**< whether the created subscip is complete */
    )
 {
    SCIP_VAR** vars;
-   SCIP_Bool success;
    int nvars;
    int i;
 
-   assert( set != NULL );
-   assert( iis != NULL );
+   assert(set != NULL);
+   assert(iis != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
 
    /* Create the subscip used for storing the IIS */
    if( iis->subscip != NULL )
@@ -96,10 +99,10 @@ SCIP_RETCODE createSubscipIIS(
    SCIP_CALL( SCIPhashmapCreate(&(iis->conssmap), SCIPblkmem(set->scip), SCIPgetNOrigConss(set->scip)) );
 
    /* create problem in sub-SCIP */
-   SCIP_CALL( SCIPcopyOrig(set->scip, iis->subscip, iis->varsmap, iis->conssmap, "iis", TRUE, FALSE, FALSE, &success) );
+   SCIP_CALL( SCIPcopyOrig(set->scip, iis->subscip, iis->varsmap, iis->conssmap, "iis", TRUE, FALSE, FALSE, success) );
 
-   if( ! success )
-      return SCIP_ERROR;
+   if( !(*success) )
+      return SCIP_OKAY;
 
    /* Remove the objective */
    vars = SCIPgetOrigVars(iis->subscip);
@@ -326,6 +329,7 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_VAR** vars;
    SCIP_IIS* iis;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
+   SCIP_RETCODE retcode;
    SCIP_Real timelim;
    SCIP_Longint nodelim;
    SCIP_Bool silent;
@@ -334,30 +338,52 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_Bool removeunusedvars;
    SCIP_Bool trivial;
    SCIP_Bool islinear;
+   SCIP_Bool success;
    int nconss;
    int nvars;
    int nbounds;
    int i;
    int j;
 
+   /* exact mode is not supported */
+   if( set->exact_enable )
+   {
+      SCIPinfoMessage(set->scip, NULL, "IIS generation does not yet support exact mode.\n");
+      return SCIP_OKAY;
+   }
+
    /* sort the iis finders by priority */
    SCIPsetSortIISfinders(set);
 
    /* Get the IIS data. */
    iis = SCIPgetIIS(set->scip);
-
-   /* Create the subscip used for storing the IIS */
    SCIP_CALL( SCIPiisReset(&iis) );
    SCIP_CALL( SCIPgetRealParam(set->scip, "iis/time", &timelim) );
    SCIP_CALL( SCIPgetLongintParam(set->scip, "iis/nodes", &nodelim) );
-   SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
+
+   /* Create the subscip used for storing the IIS */
+   SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim, &success) );
+
+   if( !success )
+   {
+      SCIPinfoMessage(iis->subscip, NULL, "Error copying  original problem instance. IIS generation suspended.\n");
+      return SCIP_OKAY;
+   }
 
    SCIPclockStart(iis->iistime, set);
 
    /* If the model is not yet shown to be infeasible then check for infeasibility */
    if( SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM )
    {
-      SCIP_CALL( SCIPsolve(iis->subscip) );
+      retcode = SCIPsolve(iis->subscip);
+
+      if( retcode != SCIP_OKAY )
+      {
+         SCIPinfoMessage(iis->subscip, NULL, "Error proving infeasibility of initial problem. IIS generation suspended.\n");
+         SCIPclockStop(iis->iistime, set);
+         return SCIP_OKAY;
+      }
+
       if( SCIPgetStage(iis->subscip) == SCIP_STAGE_SOLVED )
       {
          switch( SCIPgetStatus(iis->subscip) )
@@ -458,7 +484,8 @@ SCIP_RETCODE SCIPiisGenerate(
          /* recreate the initial subscip if the IIS finder has produced an invalid infeasible subsystem */
          if( !iis->infeasible )
          {
-            SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
+            SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim, &success) );
+            assert(success);
          }
 
          if( timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim) )
