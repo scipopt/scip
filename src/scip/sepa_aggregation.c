@@ -884,7 +884,7 @@ SCIP_RETCODE aggregation(
       SCIP_ROW* cut = NULL;
       SCIP_CUTGENPARAMS params;
       SCIP_CUTGENRESULT result;
-      SCIP_Bool enabledmethods[SCIP_NCUTGENMETHODS];
+      unsigned int enabledmethods;
 
       *wastried = TRUE;
 
@@ -899,9 +899,9 @@ SCIP_RETCODE aggregation(
       params.maxtestdelta = maxtestdelta;
 
       /* set enabled methods */
-      enabledmethods[SCIP_CUTGENMETHOD_FLOWCOVER] = sepadata->sepflowcover;
-      enabledmethods[SCIP_CUTGENMETHOD_KNAPSACKCOVER] = sepadata->sepknapsackcover;
-      enabledmethods[SCIP_CUTGENMETHOD_CMIR] = sepadata->sepcmir;
+      enabledmethods = (sepadata->sepflowcover ? SCIP_CUTGENMETHOD_FLOWCOVER : 0)
+         | (sepadata->sepknapsackcover ? SCIP_CUTGENMETHOD_KNAPSACKCOVER : 0)
+         | (sepadata->sepcmir ? SCIP_CUTGENMETHOD_CMIR : 0);
 
       /* try all enabled cut generation methods and get the best cut */
       SCIP_CALL( SCIPcalcBestCut(scip, sol, aggrdata->aggrrow, enabledmethods, &params, cutcoefs, cutinds, &result) );

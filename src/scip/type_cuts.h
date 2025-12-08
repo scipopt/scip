@@ -36,14 +36,11 @@
 
 typedef struct SCIP_AggrRow SCIP_AGGRROW;
 
-/** cut generation method types (order defines priority: first tried = lowest priority) */
-enum SCIP_CutGenMethod
-{
-   SCIP_CUTGENMETHOD_FLOWCOVER       = 0,  /**< flow cover cut (tried first, lowest priority) */
-   SCIP_CUTGENMETHOD_KNAPSACKCOVER   = 1,  /**< knapsack cover cut */
-   SCIP_CUTGENMETHOD_CMIR            = 2   /**< complemented MIR cut (tried last, highest priority) */
-};
-typedef enum SCIP_CutGenMethod SCIP_CUTGENMETHOD;
+/** cut generation method flags (bitmask; order defines priority: first tried = lowest priority) */
+#define SCIP_CUTGENMETHOD_FLOWCOVER       0x1u  /**< flow cover cut (tried first, lowest priority) */
+#define SCIP_CUTGENMETHOD_KNAPSACKCOVER   0x2u  /**< knapsack cover cut */
+#define SCIP_CUTGENMETHOD_CMIR            0x4u  /**< complemented MIR cut (tried last, highest priority) */
+#define SCIP_CUTGENMETHOD_ALL             (SCIP_CUTGENMETHOD_FLOWCOVER | SCIP_CUTGENMETHOD_KNAPSACKCOVER | SCIP_CUTGENMETHOD_CMIR)
 
 #define SCIP_NCUTGENMETHODS 3  /**< number of cut generation methods */
 

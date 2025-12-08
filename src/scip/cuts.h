@@ -68,7 +68,7 @@ struct SCIP_CutGenParams
 /** result of cut generation attempt */
 struct SCIP_CutGenResult
 {
-   SCIP_CUTGENMETHOD     winningmethod;      /**< which cut generation method produced the best cut */
+   unsigned int          winningmethod;      /**< which cut generation method produced the best cut (SCIP_CUTGENMETHOD_*) */
    SCIP_Real             efficacy;           /**< efficacy of the best cut */
    SCIP_Real             cutrhs;             /**< right hand side of the best cut */
    int                   cutnnz;             /**< number of non-zeros in the best cut */
@@ -574,7 +574,7 @@ SCIP_RETCODE SCIPcalcBestCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute cuts for */
-   SCIP_Bool*            enabledmethods,     /**< array of size SCIP_NCUTGENMETHODS indicating which methods to try */
+   unsigned int          enabledmethods,     /**< bitmask of SCIP_CUTGENMETHOD_* indicating which methods to try */
    SCIP_CUTGENPARAMS*    params,             /**< cut generation parameters */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
    int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */

@@ -11681,7 +11681,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
 
    SCIP_CALL( constructSNFRelaxation(scip, sol, boundswitch, allowlocal, aggrrow->vals, QUAD(aggrrow->rhs), aggrrow->inds, aggrrow->nnz, &snf, success, &localbdsused) );
 
-   if( ! *success || snf.ntransvars == 0 )
+   if( ! *success )
    {
       goto TERMINATE;
    }
@@ -13632,7 +13632,7 @@ SCIP_RETCODE SCIPcalcBestCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute cuts for */
-   SCIP_Bool*            enabledmethods,     /**< array of size SCIP_NCUTGENMETHODS indicating which methods to try */
+   unsigned int          enabledmethods,     /**< bitmask of SCIP_CUTGENMETHOD_* indicating which methods to try */
    SCIP_CUTGENPARAMS*    params,             /**< cut generation parameters */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
    int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
@@ -13646,7 +13646,6 @@ SCIP_RETCODE SCIPcalcBestCut(
 
    assert(scip != NULL);
    assert(aggrrow != NULL);
-   assert(enabledmethods != NULL);
    assert(params != NULL);
    assert(cutcoefs != NULL);
    assert(cutinds != NULL);
@@ -13662,7 +13661,7 @@ SCIP_RETCODE SCIPcalcBestCut(
       return SCIP_OKAY;
 
    /* flow cover and knapsack cover require binary variables; check if any exist in the row */
-   if( enabledmethods[SCIP_CUTGENMETHOD_FLOWCOVER] || enabledmethods[SCIP_CUTGENMETHOD_KNAPSACKCOVER] )
+   if( enabledmethods & (SCIP_CUTGENMETHOD_FLOWCOVER | SCIP_CUTGENMETHOD_KNAPSACKCOVER) )
    {
       SCIP_Bool hasbinary = FALSE;
       SCIP_VAR** vars = SCIPgetVars(scip);
@@ -13678,13 +13677,12 @@ SCIP_RETCODE SCIPcalcBestCut(
 
       if( !hasbinary )
       {
-         enabledmethods[SCIP_CUTGENMETHOD_FLOWCOVER] = FALSE;
-         enabledmethods[SCIP_CUTGENMETHOD_KNAPSACKCOVER] = FALSE;
+         enabledmethods &= ~(SCIP_CUTGENMETHOD_FLOWCOVER | SCIP_CUTGENMETHOD_KNAPSACKCOVER);
       }
    }
 
    /* try FlowCover (lowest priority - tried first) */
-   if( enabledmethods[SCIP_CUTGENMETHOD_FLOWCOVER] )
+   if( enabledmethods & SCIP_CUTGENMETHOD_FLOWCOVER )
    {
       efficacy = result->efficacy;
       SCIP_CALL( SCIPcalcFlowCover(scip, sol, params->postprocess, params->boundswitch,
@@ -13702,7 +13700,7 @@ SCIP_RETCODE SCIPcalcBestCut(
    }
 
    /* try KnapsackCover */
-   if( enabledmethods[SCIP_CUTGENMETHOD_KNAPSACKCOVER] )
+   if( enabledmethods & SCIP_CUTGENMETHOD_KNAPSACKCOVER )
    {
       efficacy = result->efficacy;
       SCIP_CALL( SCIPcalcKnapsackCover(scip, sol, params->allowlocal, aggrrow,
@@ -13720,7 +13718,7 @@ SCIP_RETCODE SCIPcalcBestCut(
    }
 
    /* try CMIR (highest priority - tried last) */
-   if( enabledmethods[SCIP_CUTGENMETHOD_CMIR] )
+   if( enabledmethods & SCIP_CUTGENMETHOD_CMIR )
    {
       efficacy = result->efficacy;
       SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, params->postprocess,
