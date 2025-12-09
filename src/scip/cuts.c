@@ -13660,27 +13660,6 @@ SCIP_RETCODE SCIPcalcBestCut(
    if( aggrrow->nrows + aggrrow->nnz < 1 )
       return SCIP_OKAY;
 
-   /* flow cover and knapsack cover require binary variables; check if any exist in the row */
-   if( enabledmethods & (SCIP_CUTGENMETHOD_FLOWCOVER | SCIP_CUTGENMETHOD_KNAPSACKCOVER) )
-   {
-      SCIP_Bool hasbinary = FALSE;
-      SCIP_VAR** vars = SCIPgetVars(scip);
-
-      for( int k = 0; k < aggrrow->nnz; ++k )
-      {
-         if( SCIPvarIsBinary(vars[aggrrow->inds[k]]) )
-         {
-            hasbinary = TRUE;
-            break;
-         }
-      }
-
-      if( !hasbinary )
-      {
-         enabledmethods &= ~(SCIP_CUTGENMETHOD_FLOWCOVER | SCIP_CUTGENMETHOD_KNAPSACKCOVER);
-      }
-   }
-
    /* try FlowCover (lowest priority - tried first) */
    if( enabledmethods & SCIP_CUTGENMETHOD_FLOWCOVER )
    {
