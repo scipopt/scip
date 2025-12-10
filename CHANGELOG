@@ -43,6 +43,7 @@ Fixed bugs
 
 - fixed call of SCIPcreateConsBasicSOCNonlinear() with coefs being NULL, and fixed check for offsets being finite
 - avoid crash when initial IIS solve fails while reporting errors explicitly
+- fixed failure in nl writing on big endian machines
 
 
 @section RN1000 SCIP 10.0.0
