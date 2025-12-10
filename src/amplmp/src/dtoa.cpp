@@ -278,6 +278,30 @@ extern void *REALLOC(void*,size_t);
 static double private_mem[PRIVATE_mem], *pmem_next = private_mem;
 #endif
 
+// SV added define of IEEE_MC68k or IEEE_8087, depending on guess of endianness
+#if defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN || \
+    defined(__BIG_ENDIAN__) || \
+    defined(__ARMEB__) || \
+    defined(__THUMBEB__) || \
+    defined(__AARCH64EB__) || \
+    defined(_MIBSEB) || defined(__MIBSEB) || defined(__MIBSEB__)
+// It's a big-endian target architecture
+#define IEEE_MC68k
+#elif defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN || \
+    defined(__LITTLE_ENDIAN__) || \
+    defined(__ARMEL__) || \
+    defined(__THUMBEL__) || \
+    defined(__AARCH64EL__) || \
+    defined(_MIPSEL) || defined(__MIPSEL) || defined(__MIPSEL__)
+// It's a little-endian target architecture
+#define IEEE_8087
+#else
+#ifndef _MSC_VER  // MSVS does not have #warning
+#warning "Not recognizing endianness of architecture, assuming little endian."
+#endif
+#define IEEE_8087
+#endif
+
 #undef IEEE_Arith
 #undef Avoid_Underflow
 #ifdef IEEE_MC68k
@@ -349,8 +373,7 @@ static double private_mem[PRIVATE_mem], *pmem_next = private_mem;
 extern "C" {
 #endif
 
-#define IEEE_8087
-#define IEEE_Arith
+// SV removed define of IEEE_8087 and IEEE_Arith - they are defined at the top now
 #if defined(IEEE_8087) + defined(IEEE_MC68k) + defined(VAX) + defined(IBM) != 1
 Exactly one of IEEE_8087, IEEE_MC68k, VAX, or IBM should be defined.
 #endif
