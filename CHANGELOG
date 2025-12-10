@@ -71,6 +71,10 @@ Fixed bugs
 - avoid crash when initial IIS solve fails while reporting errors explicitly
 - fixed failure in nl writing on big endian machines
 
+Miscellaneous
+-------------
+
+- updated ampl/mp to version 4.0.4
 
 @section RN1000 SCIP 10.0.0
 ***************************
