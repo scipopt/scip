@@ -44,7 +44,7 @@ typedef struct SCIP_AggrRow SCIP_AGGRROW;
 
 #define SCIP_NCUTGENMETHODS 3  /**< number of cut generation methods */
 
-typedef struct SCIP_CutGenParams SCIP_CUTGENPARAMS;   /**< parameters for cut generation */
-typedef struct SCIP_CutGenResult SCIP_CUTGENRESULT;   /**< result of cut generation */
+typedef struct SCIP_CutGenParams SCIP_CUTGENPARAMS;          /**< parameters for cut generation */
+typedef struct SCIP_CutGenResult SCIP_CUTGENRESULT;          /**< result of cut generation */
 
 #endif
