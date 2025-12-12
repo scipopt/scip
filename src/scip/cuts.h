@@ -49,34 +49,6 @@
 extern "C" {
 #endif
 
-/** parameters for cut generation methods */
-struct SCIP_CutGenParams
-{
-   SCIP_Bool             postprocess;        /**< apply post-processing step? */
-   SCIP_Real             boundswitch;        /**< fraction of domain up to which lower bound is used in transformation */
-   SCIP_Bool             allowlocal;         /**< should local information be allowed, resulting in a local cut? */
-   int                   vartypeusevbds;     /**< variable types for which variable bound substitution is allowed */
-   SCIP_Real             minfrac;            /**< minimal fractionality of rhs to produce cut for */
-   SCIP_Real             maxfrac;            /**< maximal fractionality of rhs to produce cut for */
-   SCIP_Real             scale;              /**< additional scaling factor multiplied to all rows */
-   int                   maxtestdelta;       /**< maximum number of deltas to test (CMIR heuristic) */
-   int*                  boundsfortrans;     /**< bounds that should be used for transformed variables (CMIR) */
-   SCIP_BOUNDTYPE*       boundtypesfortrans; /**< type of bounds for transformed variables (CMIR) */
-   SCIP_Bool             fixintegralrhs;     /**< should complementation be adjusted so that rhs gets fractional? (MIR) */
-};
-
-/** result of cut generation attempt */
-struct SCIP_CutGenResult
-{
-   unsigned int          winningmethod;      /**< which cut generation method produced the best cut (SCIP_CUTGENMETHOD_*) */
-   SCIP_Real             efficacy;           /**< efficacy of the best cut */
-   SCIP_Real             cutrhs;             /**< right hand side of the best cut */
-   int                   cutnnz;             /**< number of non-zeros in the best cut */
-   int                   cutrank;            /**< rank of the best cut */
-   SCIP_Bool             cutislocal;         /**< is the best cut only valid locally? */
-   SCIP_Bool             success;            /**< was any valid cut found? */
-};
-
 /**@addtogroup PublicCutMethods
  *
  * @{
@@ -560,9 +532,9 @@ void SCIPinitCutGenParams(
 
 /** tries multiple cut generation methods on an aggregation row and returns the best cut by efficacy
  *
- *  This function attempts to generate cuts using the specified methods in order of priority
- *  (FlowCover -> KnapsackCover -> StrongCG -> CMIR), using cascading efficacy thresholds.
+ *  This function attempts to generate cuts using the specified methods.
  *  Each method only returns a cut if it improves upon the previous best efficacy.
+ *  See type_cuts.h for available SCIP_CUTGENMETHOD_* flags.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed.
  *
@@ -574,7 +546,7 @@ SCIP_RETCODE SCIPcalcBestCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute cuts for */
-   unsigned int          enabledmethods,     /**< bitmask of SCIP_CUTGENMETHOD_* indicating which methods to try */
+   SCIP_CUTGENMETHODS    methods,            /**< bitmask indicating which methods to try (SCIP_CUTGENMETHOD_*) */
    SCIP_CUTGENPARAMS*    params,             /**< cut generation parameters */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
    int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */

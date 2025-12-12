@@ -36,13 +36,24 @@
 
 typedef struct SCIP_AggrRow SCIP_AGGRROW;
 
-/** cut generation method flags (bitmask; order defines priority: first tried = lowest priority) */
-#define SCIP_CUTGENMETHOD_FLOWCOVER       0x1u  /**< flow cover cut (tried first, lowest priority) */
-#define SCIP_CUTGENMETHOD_KNAPSACKCOVER   0x2u  /**< knapsack cover cut */
-#define SCIP_CUTGENMETHOD_CMIR            0x4u  /**< complemented MIR cut (tried last, highest priority) */
-#define SCIP_CUTGENMETHOD_ALL             (SCIP_CUTGENMETHOD_FLOWCOVER | SCIP_CUTGENMETHOD_KNAPSACKCOVER | SCIP_CUTGENMETHOD_CMIR)
+/** cut generation method flags (bitmask) */
+typedef unsigned int SCIP_CUTGENMETHODS;                       /**< cut generation methods (bit field) */
 
-#define SCIP_NCUTGENMETHODS 3  /**< number of cut generation methods */
+#define SCIP_CUTGENMETHOD_FLOWCOVER       UINT32_C(0x1)        /**< flow cover cut */
+#define SCIP_CUTGENMETHOD_KNAPSACKCOVER   UINT32_C(0x2)        /**< knapsack cover cut */
+#define SCIP_CUTGENMETHOD_CMIR            UINT32_C(0x4)        /**< complemented MIR cut */
+#define SCIP_CUTGENMETHOD_ALL             ((SCIP_CUTGENMETHODS)(SCIP_CUTGENMETHOD_FLOWCOVER | SCIP_CUTGENMETHOD_KNAPSACKCOVER | SCIP_CUTGENMETHOD_CMIR))
+
+/** default values for cut generation parameters */
+#define SCIP_DEFAULT_CUTGEN_POSTPROCESS      TRUE             /**< default for applying post-processing */
+#define SCIP_DEFAULT_CUTGEN_BOUNDSWITCH      0.5              /**< default fraction of domain for bound switching */
+#define SCIP_DEFAULT_CUTGEN_ALLOWLOCAL       TRUE             /**< default for allowing local cuts */
+#define SCIP_DEFAULT_CUTGEN_VARTYPEUSEVBDS   2                /**< default variable types for varbound substitution */
+#define SCIP_DEFAULT_CUTGEN_MINFRAC          0.05             /**< default minimal fractionality of rhs */
+#define SCIP_DEFAULT_CUTGEN_MAXFRAC          0.999            /**< default maximal fractionality of rhs */
+#define SCIP_DEFAULT_CUTGEN_SCALE            1.0              /**< default scaling factor */
+#define SCIP_DEFAULT_CUTGEN_MAXTESTDELTA     (-1)             /**< default max deltas to test (-1 = unlimited) */
+#define SCIP_DEFAULT_CUTGEN_FIXINTEGRALRHS   TRUE             /**< default for fixing integral rhs */
 
 typedef struct SCIP_CutGenParams SCIP_CUTGENPARAMS;          /**< parameters for cut generation */
 typedef struct SCIP_CutGenResult SCIP_CUTGENRESULT;          /**< result of cut generation */
