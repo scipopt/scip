@@ -42,7 +42,7 @@ typedef unsigned int SCIP_CUTGENMETHODS;                       /**< cut generati
 #define SCIP_CUTGENMETHOD_FLOWCOVER       UINT32_C(0x1)        /**< flow cover cut */
 #define SCIP_CUTGENMETHOD_KNAPSACKCOVER   UINT32_C(0x2)        /**< knapsack cover cut */
 #define SCIP_CUTGENMETHOD_CMIR            UINT32_C(0x4)        /**< complemented MIR cut */
-#define SCIP_CUTGENMETHOD_ALL             ((SCIP_CUTGENMETHODS)(SCIP_CUTGENMETHOD_FLOWCOVER | SCIP_CUTGENMETHOD_KNAPSACKCOVER | SCIP_CUTGENMETHOD_CMIR))
+#define SCIP_CUTGENMETHOD_ALL             ((SCIP_CUTGENMETHODS)(-1))  /**< all methods (all bits set) */
 
 /** default values for cut generation parameters */
 #define SCIP_DEFAULT_CUTGEN_POSTPROCESS      TRUE             /**< default for applying post-processing */
