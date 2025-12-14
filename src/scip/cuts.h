@@ -449,7 +449,9 @@ SCIP_RETCODE SCIPcalcFlowCover(
    SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
    int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
    int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
-   SCIP_Real*            cutefficacy,        /**< pointer to store the efficacy of the cut, or NULL */
+   SCIP_Real*            cutefficacy,        /**< pointer to store efficacy of best cut; only cuts that are strictly
+                                              *   better than the value of this efficacy on input to this function are
+                                              *   returned; or NULL */
    int*                  cutrank,            /**< pointer to return rank of generated cut */
    SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
    SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
