@@ -13688,9 +13688,8 @@ SCIP_RETCODE SCIPcalcBestCut(
    result->success = FALSE;
 
    /* bail out early if the aggregation row is empty */
-   assert(aggrrow->nrows >= 0);
    assert(aggrrow->nnz >= 0);
-   if( aggrrow->nrows == 0 && aggrrow->nnz == 0 )
+   if( aggrrow->nnz == 0 )
       return SCIP_OKAY;
 
    /* Each cut generation method writes directly to the output arrays and only succeeds
