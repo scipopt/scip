@@ -44,17 +44,6 @@ typedef unsigned int SCIP_CUTGENMETHODS;                       /**< cut generati
 #define SCIP_CUTGENMETHOD_CMIR            UINT32_C(0x4)        /**< complemented MIR cut */
 #define SCIP_CUTGENMETHOD_ALL             ((SCIP_CUTGENMETHODS)(-1))  /**< all methods (all bits set) */
 
-/** default values for cut generation parameters */
-#define SCIP_DEFAULT_CUTGEN_POSTPROCESS      TRUE             /**< default for applying post-processing */
-#define SCIP_DEFAULT_CUTGEN_BOUNDSWITCH      0.5              /**< default fraction of domain for bound switching */
-#define SCIP_DEFAULT_CUTGEN_ALLOWLOCAL       TRUE             /**< default for allowing local cuts */
-#define SCIP_DEFAULT_CUTGEN_VARTYPEUSEVBDS   2                /**< default variable types for varbound substitution */
-#define SCIP_DEFAULT_CUTGEN_MINFRAC          0.05             /**< default minimal fractionality of rhs */
-#define SCIP_DEFAULT_CUTGEN_MAXFRAC          0.999            /**< default maximal fractionality of rhs */
-#define SCIP_DEFAULT_CUTGEN_SCALE            1.0              /**< default scaling factor */
-#define SCIP_DEFAULT_CUTGEN_MAXTESTDELTA     (-1)             /**< default max deltas to test (-1 = unlimited) */
-#define SCIP_DEFAULT_CUTGEN_FIXINTEGRALRHS   TRUE             /**< default for fixing integral rhs */
-
 typedef struct SCIP_CutGenParams SCIP_CUTGENPARAMS;          /**< parameters for cut generation */
 typedef struct SCIP_CutGenResult SCIP_CUTGENRESULT;          /**< result of cut generation */
 
