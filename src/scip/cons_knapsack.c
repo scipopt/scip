@@ -1127,6 +1127,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP_Real greedyupperbound;
    SCIP_Bool eqweights;
    SCIP_Bool intprofits;
+   int lastitem;  /* last item processed in DP (for early termination) */
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1482,6 +1483,9 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    for( d = currminweight; d < intcap; ++d )
       optvalues[d] = myprofits[0];
 
+   /* by default, all items are processed */
+   lastitem = nmyitems - 1;
+
    /* fills dynamic programming table with optimal values */
    for( j = 1; j < nmyitems; ++j )
    {
@@ -1519,6 +1523,13 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          currminweight = intweight;
 
       allcurrminweight[j] = currminweight;
+
+      /* early termination: if current best value reaches the LP upper bound, we have found an optimal solution */
+      if( intprofits && optvalues[IDX(j, intcap - 1)] >= greedyupperbound )
+      {
+         lastitem = j;
+         break;
+      }
    }
 
    /* update optimal solution by following the table */
@@ -1529,8 +1540,12 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
       SCIPdebugMsg(scip, "Fill the solution vector after solving exactly.\n");
 
+      /* items after lastitem were not processed due to early termination; they are not in the solution */
+      for( j = nmyitems - 1; j > lastitem; --j )
+         nonsolitems[(*nnonsolitems)++] = myitems[j];
+
       /* insert all items in (non-) solution vector */
-      for( j = nmyitems - 1; j > 0; --j )
+      for( j = lastitem; j > 0; --j )
       {
          /* if the following condition holds this means all remaining items does not fit anymore */
          if( d < allcurrminweight[j] )
@@ -1574,7 +1589,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
    /* update solution value */
    if( solval != NULL )
-      *solval += optvalues[IDX(nmyitems-1,intcap-1)];
+      *solval += optvalues[IDX(lastitem, intcap - 1)];
    SCIPfreeBufferArray(scip, &allcurrminweight);
 
    /* free all temporary memory */
