@@ -13678,7 +13678,12 @@ SCIP_RETCODE SCIPcalcBestCut(
    SCIP_CUTGENRESULT*    result              /**< pointer to result struct (cutcoefs and cutinds must be pre-allocated) */
    )
 {
-   SCIP_Bool success;
+   SCIP_Bool success = FALSE;
+   SCIP_Real cutrhs;
+   SCIP_Real efficacy;
+   SCIP_Bool cutislocal;
+   int cutrank;
+   int cutnnz;
 
    assert(scip != NULL);
    assert(aggrrow != NULL);
@@ -13701,19 +13706,26 @@ SCIP_RETCODE SCIPcalcBestCut(
    if( aggrrow->nnz == 0 )
       return SCIP_OKAY;
 
-   /* Each cut generation method writes directly to the result struct and only succeeds
-    * if the generated cut has efficacy strictly better than the current best. */
+   /* Each cut generation method writes to local variables and only succeeds
+    * if the generated cut has efficacy strictly better than the input efficacy threshold.
+    * We copy results to the output struct only on success to avoid corrupting the threshold. */
 
    /* try FlowCover */
    if( methods & SCIP_CUTGENMETHOD_FLOWCOVER )
    {
+      efficacy = result->efficacy;
       SCIP_CALL( SCIPcalcFlowCover(scip, sol, params->postprocess, params->boundswitch,
-         params->allowlocal, aggrrow, result->cutcoefs, &result->cutrhs, result->cutinds,
-         &result->cutnnz, &result->efficacy, &result->cutrank, &result->cutislocal, &success) );
+         params->allowlocal, aggrrow, result->cutcoefs, &cutrhs, result->cutinds,
+         &cutnnz, &efficacy, &cutrank, &cutislocal, &success) );
 
       if( success )
       {
          result->winningmethod = SCIP_CUTGENMETHOD_FLOWCOVER;
+         result->efficacy = efficacy;
+         result->cutrhs = cutrhs;
+         result->cutnnz = cutnnz;
+         result->cutrank = cutrank;
+         result->cutislocal = cutislocal;
          result->success = TRUE;
       }
    }
@@ -13721,13 +13733,19 @@ SCIP_RETCODE SCIPcalcBestCut(
    /* try KnapsackCover */
    if( methods & SCIP_CUTGENMETHOD_KNAPSACKCOVER )
    {
+      efficacy = result->efficacy;
       SCIP_CALL( SCIPcalcKnapsackCover(scip, sol, params->allowlocal, aggrrow,
-         result->cutcoefs, &result->cutrhs, result->cutinds, &result->cutnnz, &result->efficacy,
-         &result->cutrank, &result->cutislocal, &success) );
+         result->cutcoefs, &cutrhs, result->cutinds, &cutnnz, &efficacy,
+         &cutrank, &cutislocal, &success) );
 
       if( success )
       {
          result->winningmethod = SCIP_CUTGENMETHOD_KNAPSACKCOVER;
+         result->efficacy = efficacy;
+         result->cutrhs = cutrhs;
+         result->cutnnz = cutnnz;
+         result->cutrank = cutrank;
+         result->cutislocal = cutislocal;
          result->success = TRUE;
       }
    }
@@ -13735,15 +13753,21 @@ SCIP_RETCODE SCIPcalcBestCut(
    /* try CMIR */
    if( methods & SCIP_CUTGENMETHOD_CMIR )
    {
+      efficacy = result->efficacy;
       SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, params->postprocess,
          params->boundswitch, params->vartypeusevbds, params->allowlocal,
          params->maxtestdelta, params->boundsfortrans, params->boundtypesfortrans,
-         params->minfrac, params->maxfrac, aggrrow, result->cutcoefs, &result->cutrhs,
-         result->cutinds, &result->cutnnz, &result->efficacy, &result->cutrank, &result->cutislocal, &success) );
+         params->minfrac, params->maxfrac, aggrrow, result->cutcoefs, &cutrhs,
+         result->cutinds, &cutnnz, &efficacy, &cutrank, &cutislocal, &success) );
 
       if( success )
       {
          result->winningmethod = SCIP_CUTGENMETHOD_CMIR;
+         result->efficacy = efficacy;
+         result->cutrhs = cutrhs;
+         result->cutnnz = cutnnz;
+         result->cutrank = cutrank;
+         result->cutislocal = cutislocal;
          result->success = TRUE;
       }
    }
