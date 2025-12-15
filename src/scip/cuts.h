@@ -548,7 +548,7 @@ SCIP_RETCODE SCIPcalcBestCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute cuts for */
-   SCIP_CUTGENMETHODS    methods,            /**< bitmask indicating which methods to try (SCIP_CUTGENMETHOD_*) */
+   SCIP_CUTGENMETHOD     methods,            /**< bitmask indicating which methods to try (SCIP_CUTGENMETHOD_*) */
    SCIP_CUTGENPARAMS*    params,             /**< cut generation parameters */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
    int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */

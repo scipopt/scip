@@ -884,7 +884,7 @@ SCIP_RETCODE aggregation(
       SCIP_ROW* cut = NULL;
       SCIP_CUTGENPARAMS params;
       SCIP_CUTGENRESULT result;
-      SCIP_CUTGENMETHODS methods;
+      SCIP_CUTGENMETHOD methods;
 
       *wastried = TRUE;
 
