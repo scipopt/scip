@@ -13656,7 +13656,17 @@ void SCIPinitCutGenParams(
    params->fixintegralrhs = DEFAULT_CUTGEN_FIXINTEGRALRHS;
 }
 
-/** tries multiple cut generation methods on an aggregation row and returns the best cut by efficacy */
+/** tries multiple cut generation methods on an aggregation row and returns the best cut by efficacy
+ *
+ *  This function attempts to generate cuts using the specified methods.
+ *  Each method only returns a cut if it improves upon the previous best efficacy.
+ *  See type_cuts.h for available SCIP_CUTGENMETHOD_* flags.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPcalcBestCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
