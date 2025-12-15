@@ -11735,16 +11735,8 @@ SCIP_RETCODE SCIPcalcFlowCover(
       {
          SCIP_Real efficacy;
 
-         /* store cut sparse and calculate efficacy */
-         for( i = 0; i < *cutnnz; ++i )
-         {
-            int j = cutinds[i];
-            assert(tmpcoefs[j] != 0.0);
-            cutcoefs[i] = tmpcoefs[j];
-            tmpcoefs[j] = 0.0;
-         }
-
-         efficacy = calcEfficacy(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz);
+         /* calculate efficacy from dense storage before copying to output */
+         efficacy = calcEfficacyDenseStorage(scip, sol, tmpcoefs, *cutrhs, cutinds, *cutnnz);
 
          /* only return cut if it improves upon the input efficacy threshold */
          if( cutefficacy != NULL && !SCIPisGT(scip, efficacy, *cutefficacy) )
@@ -11758,6 +11750,18 @@ SCIP_RETCODE SCIPcalcFlowCover(
 
             if( cutrank != NULL )
                *cutrank = aggrrow->rank + 1;
+         }
+
+         /* store cut sparse and clean buffer array */
+         for( i = 0; i < *cutnnz; ++i )
+         {
+            int j = cutinds[i];
+            assert(tmpcoefs[j] != 0.0);
+
+            if( *success )
+               cutcoefs[i] = tmpcoefs[j];
+
+            tmpcoefs[j] = 0.0;
          }
       }
       else
