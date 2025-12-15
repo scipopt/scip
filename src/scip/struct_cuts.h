@@ -58,23 +58,23 @@ struct SCIP_AggrRow
 /** parameters for cut generation methods */
 struct SCIP_CutGenParams
 {
-   int*                  boundsfortrans;     /**< bounds that should be used for transformed variables (CMIR) */
-   SCIP_BOUNDTYPE*       boundtypesfortrans; /**< type of bounds for transformed variables (CMIR) */
    SCIP_Real             boundswitch;        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Real             minfrac;            /**< minimal fractionality of rhs to produce cut for */
    SCIP_Real             maxfrac;            /**< maximal fractionality of rhs to produce cut for */
    SCIP_Real             scale;              /**< additional scaling factor multiplied to all rows */
    int                   vartypeusevbds;     /**< variable types for which variable bound substitution is allowed */
-   int                   maxtestdelta;       /**< maximum number of deltas to test (CMIR heuristic) */
+   int                   maxtestdelta;       /**< maximum number of deltas to test (CMIR) */
+   int*                  boundsfortrans;     /**< bounds that should be used for transformed variables (CMIR) */
+   SCIP_BOUNDTYPE*       boundtypesfortrans; /**< type of bounds for transformed variables (CMIR) */
+   SCIP_Bool             fixintegralrhs;     /**< should complementation be adjusted so that rhs gets fractional? (CMIR) */
    SCIP_Bool             postprocess;        /**< apply post-processing step? */
    SCIP_Bool             allowlocal;         /**< should local information be allowed, resulting in a local cut? */
-   SCIP_Bool             fixintegralrhs;     /**< should complementation be adjusted so that rhs gets fractional? (MIR) */
 };
 
 /** result of cut generation attempt */
 struct SCIP_CutGenResult
 {
-   SCIP_CUTGENMETHODS    winningmethod;      /**< which cut generation method produced the best cut */
+   SCIP_CUTGENMETHOD    winningmethod;      /**< which cut generation method produced the best cut */
    SCIP_Real             efficacy;           /**< efficacy of the best cut */
    SCIP_Real             cutrhs;             /**< right hand side of the best cut */
    int                   cutnnz;             /**< number of non-zeros in the best cut */
