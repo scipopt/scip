@@ -74,7 +74,9 @@ struct SCIP_CutGenParams
 /** result of cut generation attempt */
 struct SCIP_CutGenResult
 {
-   SCIP_CUTGENMETHOD    winningmethod;      /**< which cut generation method produced the best cut */
+   SCIP_Real*            cutcoefs;           /**< array of non-zero coefficients in the cut (caller-allocated) */
+   int*                  cutinds;            /**< array of variable indices for non-zero coefficients (caller-allocated) */
+   SCIP_CUTGENMETHOD     winningmethod;      /**< which cut generation method produced the best cut */
    SCIP_Real             efficacy;           /**< efficacy of the best cut */
    SCIP_Real             cutrhs;             /**< right hand side of the best cut */
    int                   cutnnz;             /**< number of non-zeros in the best cut */

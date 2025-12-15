@@ -903,8 +903,12 @@ SCIP_RETCODE aggregation(
          | (sepadata->sepknapsackcover ? SCIP_CUTGENMETHOD_KNAPSACKCOVER : 0)
          | (sepadata->sepcmir ? SCIP_CUTGENMETHOD_CMIR : 0);
 
+      /* set up result struct with pre-allocated arrays */
+      result.cutcoefs = cutcoefs;
+      result.cutinds = cutinds;
+
       /* try all enabled cut generation methods and get the best cut */
-      SCIP_CALL( SCIPcalcBestCut(scip, sol, aggrdata->aggrrow, methods, &params, cutcoefs, cutinds, &result) );
+      SCIP_CALL( SCIPcalcBestCut(scip, sol, aggrdata->aggrrow, methods, &params, &result) );
 
       if( result.success )
       {
@@ -931,7 +935,7 @@ SCIP_RETCODE aggregation(
                cutname = NULL;
          }
 
-         SCIP_CALL( addCut(scip, sol, cutsepa, FALSE, cutcoefs, cutinds, result.cutnnz, result.cutrhs, result.efficacy,
+         SCIP_CALL( addCut(scip, sol, cutsepa, FALSE, result.cutcoefs, result.cutinds, result.cutnnz, result.cutrhs, result.efficacy,
                result.cutislocal, sepadata->dynamiccuts, result.cutrank, cutname, cutoff, ncuts, &cut) );
       }
 

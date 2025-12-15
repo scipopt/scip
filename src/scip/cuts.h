@@ -538,6 +538,8 @@ void SCIPinitCutGenParams(
  *  Each method only returns a cut if it improves upon the previous best efficacy.
  *  See type_cuts.h for available SCIP_CUTGENMETHOD_* flags.
  *
+ *  The caller must set result->cutcoefs and result->cutinds to point to arrays of size at least SCIPgetNVars(scip).
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
@@ -550,9 +552,7 @@ SCIP_RETCODE SCIPcalcBestCut(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute cuts for */
    SCIP_CUTGENMETHOD     methods,            /**< bitmask indicating which methods to try (SCIP_CUTGENMETHOD_*) */
    SCIP_CUTGENPARAMS*    params,             /**< cut generation parameters */
-   SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
-   int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
-   SCIP_CUTGENRESULT*    result              /**< pointer to store the result */
+   SCIP_CUTGENRESULT*    result              /**< pointer to result struct (cutcoefs/cutinds must be pre-allocated) */
    );
 
 /** @} */
