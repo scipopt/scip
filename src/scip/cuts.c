@@ -13670,7 +13670,7 @@ SCIP_RETCODE SCIPcreateCutGenResult(
    SCIP_CALL( SCIPallocBufferArray(scip, &(*result)->cutinds, nvars) );
 
    /* initialize result fields */
-   (*result)->winningmethod = 0;
+   (*result)->winningmethod = SCIP_CUTGENMETHOD_NONE;
    (*result)->efficacy = -SCIPinfinity(scip);
    (*result)->cutrhs = 0.0;
    (*result)->cutnnz = 0;

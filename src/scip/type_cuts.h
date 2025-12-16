@@ -39,6 +39,7 @@ typedef struct SCIP_AggrRow SCIP_AGGRROW;
 /** cut generation method flags (bitmask) */
 typedef uint32_t SCIP_CUTGENMETHOD;                           /**< cut generation methods (bit field) */
 
+#define SCIP_CUTGENMETHOD_NONE            UINT32_C(0x0)               /**< no method (for initialization) */
 #define SCIP_CUTGENMETHOD_FLOWCOVER       UINT32_C(0x1)               /**< flow cover cut */
 #define SCIP_CUTGENMETHOD_KNAPSACKCOVER   UINT32_C(0x2)               /**< knapsack cover cut */
 #define SCIP_CUTGENMETHOD_CMIR            UINT32_C(0x4)               /**< complemented MIR cut */

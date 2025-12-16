@@ -890,18 +890,18 @@ SCIP_RETCODE aggregation(
 
       /* initialize cut generation parameters */
       SCIPinitCutGenParams(&params);
-      params.postprocess = POSTPROCESS;
       params.boundswitch = BOUNDSWITCH;
-      params.allowlocal = allowlocal;
-      params.vartypeusevbds = VARTYPEUSEVBDS;
       params.minfrac = MINFRAC;
       params.maxfrac = MAXFRAC;
+      params.vartypeusevbds = VARTYPEUSEVBDS;
       params.maxtestdelta = maxtestdelta;
+      params.postprocess = POSTPROCESS;
+      params.allowlocal = allowlocal;
 
       /* set enabled methods */
-      methods = (sepadata->sepflowcover ? SCIP_CUTGENMETHOD_FLOWCOVER : 0)
-         | (sepadata->sepknapsackcover ? SCIP_CUTGENMETHOD_KNAPSACKCOVER : 0)
-         | (sepadata->sepcmir ? SCIP_CUTGENMETHOD_CMIR : 0);
+      methods = (sepadata->sepflowcover ? SCIP_CUTGENMETHOD_FLOWCOVER : SCIP_CUTGENMETHOD_NONE)
+         | (sepadata->sepknapsackcover ? SCIP_CUTGENMETHOD_KNAPSACKCOVER : SCIP_CUTGENMETHOD_NONE)
+         | (sepadata->sepcmir ? SCIP_CUTGENMETHOD_CMIR : SCIP_CUTGENMETHOD_NONE);
 
       /* set up result struct with pre-allocated arrays */
       result.cutcoefs = cutcoefs;
