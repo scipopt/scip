@@ -11747,39 +11747,31 @@ SCIP_RETCODE SCIPcalcFlowCover(
                *success = FALSE;
          }
 
-         if( *success && cutrank != NULL )
-            *cutrank = aggrrow->rank + 1;
-
-         /* copy cut data to output and clean buffer array */
-         for( i = 0; i < tmpnnz; ++i )
-         {
-            int j = tmpinds[i];
-            assert(tmpcoefs[j] != 0.0);
-
-            if( *success )
-            {
-               cutcoefs[i] = tmpcoefs[j];
-               cutinds[i] = j;
-            }
-
-            tmpcoefs[j] = 0.0;
-         }
-
+         /* copy cut data to output if successful */
          if( *success )
          {
-            *cutrhs = tmprhs;
+            if( cutrank != NULL )
+               *cutrank = aggrrow->rank + 1;
+
+            for( i = 0; i < tmpnnz; ++i )
+            {
+               int j = tmpinds[i];
+
+               cutinds[i] = j;
+               cutcoefs[i] = tmpcoefs[j];
+            }
+
             *cutnnz = tmpnnz;
+            *cutrhs = tmprhs;
          }
       }
-      else
+
+      /* clean buffer array */
+      for( i = 0; i < tmpnnz; ++i )
       {
-         /* clean buffer array */
-         for( i = 0; i < tmpnnz; ++i )
-         {
-            int j = tmpinds[i];
-            assert(tmpcoefs[j] != 0.0);
-            tmpcoefs[j] = 0.0;
-         }
+         int j = tmpinds[i];
+         assert(tmpcoefs[j] != 0.0);
+         tmpcoefs[j] = 0.0;
       }
    }
 
