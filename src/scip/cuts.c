@@ -11676,7 +11676,10 @@ SCIP_RETCODE SCIPcalcFlowCover(
    SNF_RELAXATION snf;
    SCIP_Real lambda;
    SCIP_Real* tmpcoefs;
-   int *transvarflowcoverstatus;
+   int* tmpinds;
+   int tmpnnz;
+   SCIP_Real tmprhs;
+   int* transvarflowcoverstatus;
    int nflowcovervars;
    int nnonflowcovervars;
 
@@ -11709,8 +11712,9 @@ SCIP_RETCODE SCIPcalcFlowCover(
    }
 
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &tmpcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpinds, nvars) );
 
-   SCIP_CALL( generateLiftedFlowCoverCut(scip, &snf, aggrrow, transvarflowcoverstatus, lambda, tmpcoefs, cutrhs, cutinds, cutnnz, success) );
+   SCIP_CALL( generateLiftedFlowCoverCut(scip, &snf, aggrrow, transvarflowcoverstatus, lambda, tmpcoefs, &tmprhs, tmpinds, &tmpnnz, success) );
    SCIPdebugMsg(scip, "computed flowcover_%lli_%i:\n", SCIPgetNLPs(scip), SCIPgetNCuts(scip));
 
    /* if success is FALSE generateLiftedFlowCoverCut wont have touched the tmpcoefs array so we dont need to clean it then */
@@ -11718,62 +11722,68 @@ SCIP_RETCODE SCIPcalcFlowCover(
    {
       if( postprocess )
       {
-         SCIP_CALL( postprocessCut(scip, *cutislocal, cutinds, tmpcoefs, cutnnz, cutrhs, success) );
+         SCIP_CALL( postprocessCut(scip, *cutislocal, tmpinds, tmpcoefs, &tmpnnz, &tmprhs, success) );
       }
       else
       {
          SCIP_Real QUAD(rhs);
 
-         QUAD_ASSIGN(rhs, *cutrhs);
-         *success = ! removeZeros(scip, SCIPsumepsilon(scip), *cutislocal, tmpcoefs, QUAD(&rhs), cutinds, cutnnz);
-         *cutrhs = QUAD_TO_DBL(rhs);
+         QUAD_ASSIGN(rhs, tmprhs);
+         *success = ! removeZeros(scip, SCIPsumepsilon(scip), *cutislocal, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz);
+         tmprhs = QUAD_TO_DBL(rhs);
       }
 
       if( *success )
       {
-         SCIP_Real efficacy;
-
-         /* calculate efficacy from dense storage before copying to output */
-         efficacy = calcEfficacyDenseStorage(scip, sol, tmpcoefs, *cutrhs, cutinds, *cutnnz);
-
          /* only return cut if it improves upon the input efficacy threshold */
-         if( cutefficacy != NULL && !SCIPisGT(scip, efficacy, *cutefficacy) )
+         if( cutefficacy != NULL )
          {
-            *success = FALSE;
-         }
-         else
-         {
-            if( cutefficacy != NULL )
+            /* calculate efficacy from dense storage */
+            SCIP_Real efficacy = calcEfficacyDenseStorage(scip, sol, tmpcoefs, tmprhs, tmpinds, tmpnnz);
+
+            if( SCIPisLT(scip, *cutefficacy, efficacy) )
                *cutefficacy = efficacy;
-
-            if( cutrank != NULL )
-               *cutrank = aggrrow->rank + 1;
+            else
+               *success = FALSE;
          }
 
-         /* store cut sparse and clean buffer array */
-         for( i = 0; i < *cutnnz; ++i )
+         if( *success && cutrank != NULL )
+            *cutrank = aggrrow->rank + 1;
+
+         /* copy cut data to output and clean buffer array */
+         for( i = 0; i < tmpnnz; ++i )
          {
-            int j = cutinds[i];
+            int j = tmpinds[i];
             assert(tmpcoefs[j] != 0.0);
 
             if( *success )
+            {
                cutcoefs[i] = tmpcoefs[j];
+               cutinds[i] = j;
+            }
 
             tmpcoefs[j] = 0.0;
+         }
+
+         if( *success )
+         {
+            *cutrhs = tmprhs;
+            *cutnnz = tmpnnz;
          }
       }
       else
       {
          /* clean buffer array */
-         for( i = 0; i < *cutnnz; ++i )
+         for( i = 0; i < tmpnnz; ++i )
          {
-            int j = cutinds[i];
+            int j = tmpinds[i];
             assert(tmpcoefs[j] != 0.0);
             tmpcoefs[j] = 0.0;
          }
       }
    }
 
+   SCIPfreeBufferArray(scip, &tmpinds);
    SCIPfreeCleanBufferArray(scip, &tmpcoefs);
 
   TERMINATE:
