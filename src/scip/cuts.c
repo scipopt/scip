@@ -73,9 +73,7 @@
 #define DEFAULT_CUTGEN_VARTYPEUSEVBDS   2      /**< default variable types for varbound substitution */
 #define DEFAULT_CUTGEN_MINFRAC          0.05   /**< default minimal fractionality of rhs */
 #define DEFAULT_CUTGEN_MAXFRAC          0.999  /**< default maximal fractionality of rhs */
-#define DEFAULT_CUTGEN_SCALE            1.0    /**< default scaling factor */
 #define DEFAULT_CUTGEN_MAXTESTDELTA     (-1)   /**< default max deltas to test (-1 = unlimited) */
-#define DEFAULT_CUTGEN_FIXINTEGRALRHS   TRUE   /**< default for fixing integral rhs */
 
 /* =========================================== general static functions =========================================== */
 #ifdef SCIP_DEBUG
@@ -13649,11 +13647,9 @@ void SCIPinitCutGenParams(
    params->vartypeusevbds = DEFAULT_CUTGEN_VARTYPEUSEVBDS;
    params->minfrac = DEFAULT_CUTGEN_MINFRAC;
    params->maxfrac = DEFAULT_CUTGEN_MAXFRAC;
-   params->scale = DEFAULT_CUTGEN_SCALE;
    params->maxtestdelta = DEFAULT_CUTGEN_MAXTESTDELTA;
    params->boundsfortrans = NULL;
    params->boundtypesfortrans = NULL;
-   params->fixintegralrhs = DEFAULT_CUTGEN_FIXINTEGRALRHS;
 }
 
 /** tries multiple cut generation methods on an aggregation row and returns the best cut by efficacy
