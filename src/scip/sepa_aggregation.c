@@ -903,7 +903,7 @@ SCIP_RETCODE aggregation(
       if( sepadata->sepflowcover )
          methods |= SCIP_CUTGENMETHOD_FLOWCOVER;
       if( sepadata->sepknapsackcover )
-         methods |= SCIP_CUTGENMETHOD_KNAPSACKCOVER
+         methods |= SCIP_CUTGENMETHOD_KNAPSACKCOVER;
       if( sepadata->sepcmir )
          methods |= SCIP_CUTGENMETHOD_CMIR;
 
