@@ -13643,15 +13643,15 @@ void SCIPinitCutGenParams(
 {
    assert(params != NULL);
 
-   params->postprocess = DEFAULT_CUTGEN_POSTPROCESS;
    params->boundswitch = DEFAULT_CUTGEN_BOUNDSWITCH;
-   params->allowlocal = DEFAULT_CUTGEN_ALLOWLOCAL;
-   params->vartypeusevbds = DEFAULT_CUTGEN_VARTYPEUSEVBDS;
    params->minfrac = DEFAULT_CUTGEN_MINFRAC;
    params->maxfrac = DEFAULT_CUTGEN_MAXFRAC;
+   params->vartypeusevbds = DEFAULT_CUTGEN_VARTYPEUSEVBDS;
    params->maxtestdelta = DEFAULT_CUTGEN_MAXTESTDELTA;
    params->boundsfortrans = NULL;
    params->boundtypesfortrans = NULL;
+   params->postprocess = DEFAULT_CUTGEN_POSTPROCESS;
+   params->allowlocal = DEFAULT_CUTGEN_ALLOWLOCAL;
 }
 
 /** creates a cut generation result struct and allocates arrays for cut coefficients and indices */

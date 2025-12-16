@@ -111,11 +111,11 @@
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 
 #define BOUNDSWITCH                 0.5
-#define POSTPROCESS                TRUE
-#define VARTYPEUSEVBDS                2 /**< We allow variable bound substitution for variables with continuous vartype only.
-                                         *   See cuts.c for more information. */
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
+#define VARTYPEUSEVBDS                2 /**< We allow variable bound substitution for variables with continuous vartype only.
+                                         *   See cuts.c for more information. */
+#define POSTPROCESS                TRUE
 #define MAKECONTINTEGRAL          FALSE
 #define IMPLINTSARECONT
 
