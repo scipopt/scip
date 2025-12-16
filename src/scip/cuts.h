@@ -532,13 +532,31 @@ void SCIPinitCutGenParams(
    SCIP_CUTGENPARAMS*    params              /**< pointer to parameters to initialize */
    );
 
+/** creates a cut generation result struct and allocates arrays for cut coefficients and indices
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateCutGenResult(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTGENRESULT**   result              /**< pointer to store the created result struct */
+   );
+
+/** frees a cut generation result struct created by SCIPcreateCutGenResult() */
+SCIP_EXPORT
+void SCIPfreeCutGenResult(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTGENRESULT**   result              /**< pointer to the result struct to free */
+   );
+
 /** tries multiple cut generation methods on an aggregation row and returns the best cut by efficacy
  *
  *  This function attempts to generate cuts using the specified methods.
  *  Each method only returns a cut if it improves upon the previous best efficacy.
  *  See type_cuts.h for available SCIP_CUTGENMETHOD_* flags.
  *
- *  The caller must set result->cutcoefs and result->cutinds to point to arrays of size at least SCIPgetNVars(scip).
+ *  Use SCIPcreateCutGenResult() to create the result struct, or manually set result->cutcoefs and
+ *  result->cutinds to point to arrays of size at least SCIPgetNVars(scip).
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed.
  *

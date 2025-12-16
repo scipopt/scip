@@ -13652,13 +13652,58 @@ void SCIPinitCutGenParams(
    params->boundtypesfortrans = NULL;
 }
 
+/** creates a cut generation result struct and allocates arrays for cut coefficients and indices */
+SCIP_RETCODE SCIPcreateCutGenResult(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTGENRESULT**   result              /**< pointer to store the created result struct */
+   )
+{
+   int nvars;
+
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   nvars = SCIPgetNVars(scip);
+
+   SCIP_CALL( SCIPallocBuffer(scip, result) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*result)->cutcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*result)->cutinds, nvars) );
+
+   /* initialize result fields */
+   (*result)->winningmethod = 0;
+   (*result)->efficacy = -SCIPinfinity(scip);
+   (*result)->cutrhs = 0.0;
+   (*result)->cutnnz = 0;
+   (*result)->cutrank = 0;
+   (*result)->cutislocal = FALSE;
+   (*result)->success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** frees a cut generation result struct created by SCIPcreateCutGenResult() */
+void SCIPfreeCutGenResult(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTGENRESULT**   result              /**< pointer to the result struct to free */
+   )
+{
+   assert(scip != NULL);
+   assert(result != NULL);
+   assert(*result != NULL);
+
+   SCIPfreeBufferArray(scip, &(*result)->cutinds);
+   SCIPfreeBufferArray(scip, &(*result)->cutcoefs);
+   SCIPfreeBuffer(scip, result);
+}
+
 /** tries multiple cut generation methods on an aggregation row and returns the best cut by efficacy
  *
  *  This function attempts to generate cuts using the specified methods.
  *  Each method only returns a cut if it improves upon the previous best efficacy.
  *  See type_cuts.h for available SCIP_CUTGENMETHOD_* flags.
  *
- *  The caller must set result->cutcoefs and result->cutinds to point to arrays of size at least SCIPgetNVars(scip).
+ *  Use SCIPcreateCutGenResult() to create the result struct, or manually set result->cutcoefs and
+ *  result->cutinds to point to arrays of size at least SCIPgetNVars(scip).
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed.
  *

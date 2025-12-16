@@ -1072,8 +1072,7 @@ SCIP_RETCODE separateCuts(
    int v;
    int oldncuts;
 
-   int* cutinds;
-   SCIP_Real* cutcoefs;
+   SCIP_CUTGENRESULT* cutresult;
 
    assert(result != NULL);
    assert(*result == SCIP_DIDNOTRUN);
@@ -1144,8 +1143,7 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcontlbs, ncontvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcontubs, ncontvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fractionalities, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
+   SCIP_CALL( SCIPcreateCutGenResult(scip, &cutresult) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowscores, nrows) );
 
    /* get the solution values for all active variables */
@@ -1333,7 +1331,7 @@ SCIP_RETCODE separateCuts(
    {
       /* try separating the objective function with the cutoff bound */
       SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
-               -1, 2 * maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
+               -1, 2 * maxaggrs, &wastried, &cutoff, cutresult->cutinds, cutresult->cutcoefs, FALSE, &ncuts) );
 
       if( cutoff )
          goto TERMINATE;
@@ -1343,7 +1341,7 @@ SCIP_RETCODE separateCuts(
    {
       oldncuts = ncuts;
       SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
-            roworder[r], maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
+            roworder[r], maxaggrs, &wastried, &cutoff, cutresult->cutinds, cutresult->cutcoefs, FALSE, &ncuts) );
 
       /* if trynegscaling is true we start the aggregation heuristic again for this row, but multiply it by -1 first.
        * This is done by calling the aggregation function with the parameter negate equal to TRUE
@@ -1351,7 +1349,7 @@ SCIP_RETCODE separateCuts(
       if( sepadata->trynegscaling && !cutoff )
       {
          SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
-               roworder[r], maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, TRUE, &ncuts) );
+               roworder[r], maxaggrs, &wastried, &cutoff, cutresult->cutinds, cutresult->cutcoefs, TRUE, &ncuts) );
       }
 
       if ( cutoff )
@@ -1379,8 +1377,7 @@ SCIP_RETCODE separateCuts(
  TERMINATE:
    /* free data structure */
    destroyAggregationData(scip, &aggrdata);
-   SCIPfreeBufferArray(scip, &cutcoefs);
-   SCIPfreeBufferArray(scip, &cutinds);
+   SCIPfreeCutGenResult(scip, &cutresult);
    SCIPfreeBufferArray(scip, &fractionalities);
    SCIPfreeBufferArray(scip, &bestcontubs);
    SCIPfreeBufferArray(scip, &bestcontlbs);
