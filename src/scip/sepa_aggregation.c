@@ -899,9 +899,13 @@ SCIP_RETCODE aggregation(
       params.allowlocal = allowlocal;
 
       /* set enabled methods */
-      methods = (sepadata->sepflowcover ? SCIP_CUTGENMETHOD_FLOWCOVER : SCIP_CUTGENMETHOD_NONE)
-         | (sepadata->sepknapsackcover ? SCIP_CUTGENMETHOD_KNAPSACKCOVER : SCIP_CUTGENMETHOD_NONE)
-         | (sepadata->sepcmir ? SCIP_CUTGENMETHOD_CMIR : SCIP_CUTGENMETHOD_NONE);
+      methods = SCIP_CUTGENMETHOD_NONE;
+      if( sepadata->sepflowcover )
+         methods |= SCIP_CUTGENMETHOD_FLOWCOVER;
+      if( sepadata->sepknapsackcover )
+         methods |= SCIP_CUTGENMETHOD_KNAPSACKCOVER
+      if( sepadata->sepcmir )
+         methods |= SCIP_CUTGENMETHOD_CMIR;
 
       /* set up result struct with pre-allocated arrays */
       result.cutcoefs = cutcoefs;
