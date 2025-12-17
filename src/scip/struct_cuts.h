@@ -36,8 +36,8 @@
 
 #include "scip/def.h"
 #include "scip/dbldblarith.h"
-#include "scip/type_cuts.h"
 #include "scip/type_lp.h"
+#include "scip/type_cuts.h"
 
 struct SCIP_AggrRow
 {
