@@ -555,8 +555,10 @@ void SCIPfreeCutGenResult(
  *  Each method only returns a cut if it improves upon the previous best efficacy.
  *  See type_cuts.h for available SCIP_CUTGENMETHOD_* flags.
  *
+ *  Use SCIPinitCutGenParams() to initialize parameters with default values.
  *  Use SCIPcreateCutGenResult() to create the result struct, or manually set result->cutcoefs and
  *  result->cutinds to point to arrays of size at least SCIPgetNVars(scip).
+ *  Use SCIPfreeCutGenResult() to free the result struct when done.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed.
  *
