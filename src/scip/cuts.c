@@ -13731,7 +13731,7 @@ SCIP_RETCODE SCIPcalcBestCut(
 
    /* initialize result */
    result->winningmethod = 0;
-   result->efficacy = -SCIPinfinity(scip);
+   result->cutefficacy = -SCIPinfinity(scip);
    result->cutrhs = 0.0;
    result->cutnnz = 0;
    result->cutrank = 0;
@@ -13750,7 +13750,7 @@ SCIP_RETCODE SCIPcalcBestCut(
    /* try FlowCover */
    if( methods & SCIP_CUTGENMETHOD_FLOWCOVER )
    {
-      efficacy = result->efficacy;
+      efficacy = result->cutefficacy;
       SCIP_CALL( SCIPcalcFlowCover(scip, sol, params->postprocess, params->boundswitch,
          params->allowlocal, aggrrow, result->cutcoefs, &cutrhs, result->cutinds,
          &cutnnz, &efficacy, &cutrank, &cutislocal, &success) );
@@ -13758,7 +13758,7 @@ SCIP_RETCODE SCIPcalcBestCut(
       if( success )
       {
          result->winningmethod = SCIP_CUTGENMETHOD_FLOWCOVER;
-         result->efficacy = efficacy;
+         result->cutefficacy = efficacy;
          result->cutrhs = cutrhs;
          result->cutnnz = cutnnz;
          result->cutrank = cutrank;
@@ -13770,7 +13770,7 @@ SCIP_RETCODE SCIPcalcBestCut(
    /* try KnapsackCover */
    if( methods & SCIP_CUTGENMETHOD_KNAPSACKCOVER )
    {
-      efficacy = result->efficacy;
+      efficacy = result->cutefficacy;
       SCIP_CALL( SCIPcalcKnapsackCover(scip, sol, params->allowlocal, aggrrow,
          result->cutcoefs, &cutrhs, result->cutinds, &cutnnz, &efficacy,
          &cutrank, &cutislocal, &success) );
@@ -13778,7 +13778,7 @@ SCIP_RETCODE SCIPcalcBestCut(
       if( success )
       {
          result->winningmethod = SCIP_CUTGENMETHOD_KNAPSACKCOVER;
-         result->efficacy = efficacy;
+         result->cutefficacy = efficacy;
          result->cutrhs = cutrhs;
          result->cutnnz = cutnnz;
          result->cutrank = cutrank;
@@ -13790,7 +13790,7 @@ SCIP_RETCODE SCIPcalcBestCut(
    /* try CMIR */
    if( methods & SCIP_CUTGENMETHOD_CMIR )
    {
-      efficacy = result->efficacy;
+      efficacy = result->cutefficacy;
       SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, params->postprocess,
          params->boundswitch, params->vartypeusevbds, params->allowlocal,
          params->maxtestdelta, params->boundsfortrans, params->boundtypesfortrans,
@@ -13800,7 +13800,7 @@ SCIP_RETCODE SCIPcalcBestCut(
       if( success )
       {
          result->winningmethod = SCIP_CUTGENMETHOD_CMIR;
-         result->efficacy = efficacy;
+         result->cutefficacy = efficacy;
          result->cutrhs = cutrhs;
          result->cutnnz = cutnnz;
          result->cutrank = cutrank;

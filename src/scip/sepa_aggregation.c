@@ -939,7 +939,7 @@ SCIP_RETCODE aggregation(
                cutname = NULL;
          }
 
-         SCIP_CALL( addCut(scip, sol, cutsepa, FALSE, result.cutcoefs, result.cutinds, result.cutnnz, result.cutrhs, result.efficacy,
+         SCIP_CALL( addCut(scip, sol, cutsepa, FALSE, result.cutcoefs, result.cutinds, result.cutnnz, result.cutrhs, result.cutefficacy,
                result.cutislocal, sepadata->dynamiccuts, result.cutrank, cutname, cutoff, ncuts, &cut) );
       }
 
