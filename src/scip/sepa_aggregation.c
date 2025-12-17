@@ -796,8 +796,7 @@ SCIP_RETCODE aggregation(
    int                   maxaggrs,           /**< maximal number of aggregations */
    SCIP_Bool*            wastried,           /**< pointer to store whether the given startrow was actually tried */
    SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
-   int*                  cutinds,            /**< buffer array to store temporarily cut */
-   SCIP_Real*            cutcoefs,           /**< buffer array to store temporarily cut */
+   SCIP_CUTGENRESULT*    cutresult,          /**< result struct with pre-allocated cutcoefs and cutinds arrays */
    SCIP_Bool             negate,             /**< should the start row be multiplied by -1 */
    int*                  ncuts               /**< pointer to count the number of generated cuts */
    )
@@ -883,7 +882,6 @@ SCIP_RETCODE aggregation(
       SCIP_Bool aggrsuccess;
       SCIP_ROW* cut = NULL;
       SCIP_CUTGENPARAMS params;
-      SCIP_CUTGENRESULT result;
       SCIP_CUTGENMETHOD methods;
 
       *wastried = TRUE;
@@ -907,19 +905,15 @@ SCIP_RETCODE aggregation(
       if( sepadata->sepcmir )
          methods |= SCIP_CUTGENMETHOD_CMIR;
 
-      /* set up result struct with pre-allocated arrays */
-      result.cutcoefs = cutcoefs;
-      result.cutinds = cutinds;
-
       /* try all enabled cut generation methods and get the best cut */
-      SCIP_CALL( SCIPcalcBestCut(scip, sol, aggrdata->aggrrow, methods, &params, &result) );
+      SCIP_CALL( SCIPcalcBestCut(scip, sol, aggrdata->aggrrow, methods, &params, cutresult) );
 
-      if( result.success )
+      if( cutresult->success )
       {
          SCIP_SEPA* cutsepa;
          const char* cutname;
 
-         switch( result.winningmethod )
+         switch( cutresult->winningmethod )
          {
             case SCIP_CUTGENMETHOD_FLOWCOVER:
                cutsepa = sepadata->flowcover;
@@ -939,8 +933,8 @@ SCIP_RETCODE aggregation(
                cutname = NULL;
          }
 
-         SCIP_CALL( addCut(scip, sol, cutsepa, FALSE, result.cutcoefs, result.cutinds, result.cutnnz, result.cutrhs, result.cutefficacy,
-               result.cutislocal, sepadata->dynamiccuts, result.cutrank, cutname, cutoff, ncuts, &cut) );
+         SCIP_CALL( addCut(scip, sol, cutsepa, FALSE, cutresult->cutcoefs, cutresult->cutinds, cutresult->cutnnz, cutresult->cutrhs, cutresult->cutefficacy,
+               cutresult->cutislocal, sepadata->dynamiccuts, cutresult->cutrank, cutname, cutoff, ncuts, &cut) );
       }
 
       if ( *cutoff )
@@ -1335,7 +1329,7 @@ SCIP_RETCODE separateCuts(
    {
       /* try separating the objective function with the cutoff bound */
       SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
-               -1, 2 * maxaggrs, &wastried, &cutoff, cutresult->cutinds, cutresult->cutcoefs, FALSE, &ncuts) );
+               -1, 2 * maxaggrs, &wastried, &cutoff, cutresult, FALSE, &ncuts) );
 
       if( cutoff )
          goto TERMINATE;
@@ -1345,7 +1339,7 @@ SCIP_RETCODE separateCuts(
    {
       oldncuts = ncuts;
       SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
-            roworder[r], maxaggrs, &wastried, &cutoff, cutresult->cutinds, cutresult->cutcoefs, FALSE, &ncuts) );
+            roworder[r], maxaggrs, &wastried, &cutoff, cutresult, FALSE, &ncuts) );
 
       /* if trynegscaling is true we start the aggregation heuristic again for this row, but multiply it by -1 first.
        * This is done by calling the aggregation function with the parameter negate equal to TRUE
@@ -1353,7 +1347,7 @@ SCIP_RETCODE separateCuts(
       if( sepadata->trynegscaling && !cutoff )
       {
          SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
-               roworder[r], maxaggrs, &wastried, &cutoff, cutresult->cutinds, cutresult->cutcoefs, TRUE, &ncuts) );
+               roworder[r], maxaggrs, &wastried, &cutoff, cutresult, TRUE, &ncuts) );
       }
 
       if ( cutoff )
