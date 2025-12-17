@@ -13717,7 +13717,7 @@ SCIP_RETCODE SCIPcalcBestCut(
    SCIP_CUTGENRESULT*    result              /**< pointer to result struct (cutcoefs and cutinds must be pre-allocated) */
    )
 {
-   SCIP_Bool success = FALSE;
+   SCIP_Bool success;
    SCIP_Real cutrhs;
    SCIP_Real efficacy;
    SCIP_Bool cutislocal;
