@@ -11673,7 +11673,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
    int i;
    int nvars;
    SCIP_Bool localbdsused;
-   SCIP_Bool islocal;
+   SCIP_Bool tmpislocal;
    SNF_RELAXATION snf;
    SCIP_Real lambda;
    SCIP_Real* tmpcoefs;
@@ -11701,7 +11701,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
       goto TERMINATE;
    }
 
-   islocal = aggrrow->local || localbdsused;
+   tmpislocal = aggrrow->local || localbdsused;
 
    /* initialize lambda because gcc issues a stupid warning */
    lambda = 0.0;
@@ -11723,14 +11723,14 @@ SCIP_RETCODE SCIPcalcFlowCover(
    {
       if( postprocess )
       {
-         SCIP_CALL( postprocessCut(scip, islocal, tmpinds, tmpcoefs, &tmpnnz, &tmprhs, success) );
+         SCIP_CALL( postprocessCut(scip, tmpislocal, tmpinds, tmpcoefs, &tmpnnz, &tmprhs, success) );
       }
       else
       {
          SCIP_Real QUAD(rhs);
 
          QUAD_ASSIGN(rhs, tmprhs);
-         *success = ! removeZeros(scip, SCIPsumepsilon(scip), islocal, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz);
+         *success = ! removeZeros(scip, SCIPsumepsilon(scip), tmpislocal, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz);
          tmprhs = QUAD_TO_DBL(rhs);
       }
 
@@ -11754,7 +11754,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
             if( cutrank != NULL )
                *cutrank = aggrrow->rank + 1;
             if( cutislocal != NULL )
-               *cutislocal = islocal;
+               *cutislocal = tmpislocal;
 
             for( i = 0; i < tmpnnz; ++i )
             {
