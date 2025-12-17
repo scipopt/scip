@@ -73,7 +73,7 @@
 #define DEFAULT_CUTGEN_VARTYPEUSEVBDS   2      /**< default variable types for varbound substitution */
 #define DEFAULT_CUTGEN_MINFRAC          0.05   /**< default minimal fractionality of rhs */
 #define DEFAULT_CUTGEN_MAXFRAC          0.999  /**< default maximal fractionality of rhs */
-#define DEFAULT_CUTGEN_MAXTESTDELTA     (-1)   /**< default max deltas to test (-1 = unlimited) */
+#define DEFAULT_CUTGEN_MAXTESTDELTA     (-1)   /**< default maximum number of deltas to test (-1 = unlimited) */
 
 /* =========================================== general static functions =========================================== */
 #ifdef SCIP_DEBUG
