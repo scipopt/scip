@@ -1481,8 +1481,7 @@ SCIP_RETCODE storeSubproblemMasterVar(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, benders->nsubmastervars[probnumber] + 1);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(SCIPblkmem(set->scip), &benders->submastervars[probnumber],
-            benders->submastervarssize[probnumber], newsize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&benders->submastervars[probnumber], newsize) ); /*lint !e866*/
 
       benders->submastervarssize[probnumber] = newsize;
    }
