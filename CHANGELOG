@@ -70,6 +70,7 @@ Fixed bugs
 - fixed call of SCIPcreateConsBasicSOCNonlinear() with coefs being NULL, and fixed check for offsets being finite
 - avoid crash when initial IIS solve fails while reporting errors explicitly
 - fixed failure in nl writing on big endian machines
+- correct memory reallocation in storeSubproblemMasterVar() of benders.c to avoid freeing errors
 
 Miscellaneous
 -------------
