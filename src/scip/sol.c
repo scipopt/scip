@@ -1755,7 +1755,7 @@ SCIP_RETCODE SCIPsolSetValExact(
          }
 
          SCIPrationalFreeBuffer(set->buffer, &oldval);
-         return SCIP_OKAY;
+         break;
       }
       else
          return SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetTransVar(var), val);
@@ -1777,7 +1777,7 @@ SCIP_RETCODE SCIPsolSetValExact(
       }
 
       SCIPrationalFreeBuffer(set->buffer, &oldval);
-      return SCIP_OKAY;
+      break;
 
    case SCIP_VARSTATUS_FIXED:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
@@ -1787,7 +1787,7 @@ SCIP_RETCODE SCIPsolSetValExact(
             SCIPvarGetName(var), SCIPrationalGetReal(SCIPvarGetLbGlobalExact(var)), SCIPrationalGetReal(val));
          return SCIP_INVALIDDATA;
       }
-      return SCIP_OKAY;
+      break;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPrationalIsZero(SCIPvarGetAggrScalarExact(var)));
@@ -1819,13 +1819,17 @@ SCIP_RETCODE SCIPsolSetValExact(
 
    case SCIP_VARSTATUS_NEGATED:
       assert(!SCIPsetIsInfinity(set, SCIPvarGetNegationConstant(var)) && !SCIPsetIsInfinity(set, -SCIPvarGetNegationConstant(var)));
-
       return SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetNegationVar(var), val);
 
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
+
+   /* set real approximation */
+   SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, var, SCIPrationalGetReal(val)) );
+
+   return SCIP_OKAY;
 }
 
 /** increases value of variable in primal CIP solution */
@@ -2390,7 +2394,6 @@ SCIP_RETCODE solCheckExact(
    int h;
 
    assert(sol != NULL);
-   assert(!SCIPsolIsOriginal(sol));
    assert(set != NULL);
    assert(prob != NULL);
    assert(feasible != NULL);
@@ -2529,6 +2532,15 @@ SCIP_RETCODE SCIPsolCheckOrig(
    assert(prob != NULL);
    assert(!prob->transformed);
    assert(feasible != NULL);
+
+   /* have to check bounds without tolerances in exact solving mode */
+   if( set->exact_enable )
+   {
+      SCIP_CALL( solCheckExact(sol, set, messagehdlr, blkmem, stat, prob, printreason,
+            completely, checklprows, feasible) );
+
+      return SCIP_OKAY;
+   }
 
    *feasible = TRUE;
 
@@ -2693,14 +2705,16 @@ SCIP_RETCODE SCIPsolCheck(
    SCIPsetDebugMsg(set, "checking solution with objective value %g (nodenum=%" SCIP_LONGINT_FORMAT ", origin=%d)\n",
       sol->obj, sol->nodenum, sol->solorigin);
 
-   *feasible = TRUE;
-
    /* have to check bounds without tolerances in exact solving mode */
    if( set->exact_enable )
    {
       SCIP_CALL( solCheckExact(sol, set, messagehdlr, blkmem, stat, prob, printreason,
             completely, checklprows, feasible) );
+
+      return SCIP_OKAY;
    }
+
+   *feasible = TRUE;
 
    SCIPsolResetViolations(sol);
 
@@ -3232,6 +3246,7 @@ void SCIPsolRecomputeObj(
 
    assert(sol != NULL);
    assert(SCIPsolIsOriginal(sol));
+   assert(!SCIPsolIsExact(sol));
    assert(origprob != NULL);
 
    vars = origprob->vars;

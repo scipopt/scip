@@ -322,7 +322,7 @@ SCIP_RETCODE SCIPtransformProb(
          sol =  scip->origprimal->sols[s];
 
          /* recompute objective function, since the objective might have changed in the meantime */
-         SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
+         SCIP_CALL( SCIPrecomputeSolObj(scip, sol) );
 
          /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
           * including modifiable constraints
@@ -333,27 +333,20 @@ SCIP_RETCODE SCIPtransformProb(
 
          if( feasible )
          {
-            SCIP_Real abssolobj;
+            SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+            SCIP_Bool stored;
 
-            abssolobj = REALABS(SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
+            /* add primal solution to solution storage by copying it */
+            SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+                  scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp, scip->eventqueue,
+                  scip->eventfilter, sol, &stored) );
 
-            /* we do not want to add solutions with objective value +infinity */
-            if( !SCIPisInfinity(scip, abssolobj) )
+            if( stored )
             {
-               SCIP_SOL* bestsol = SCIPgetBestSol(scip);
-               SCIP_Bool stored;
+               nfeassols++;
 
-               /* add primal solution to solution storage by copying it */
-               SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
-                     scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter, sol, &stored) );
-
-               if( stored )
-               {
-                  nfeassols++;
-
-                  if( bestsol != SCIPgetBestSol(scip) )
-                     SCIPstoreSolutionGap(scip);
-               }
+               if( bestsol != SCIPgetBestSol(scip) )
+                  SCIPstoreSolutionGap(scip);
             }
          }
 
