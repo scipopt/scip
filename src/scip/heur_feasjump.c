@@ -738,7 +738,7 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
                   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &solver->shiftbuffer, oldsize, newsize) );
                   for( k = oldsize; k < newsize; ++k )
                   {
-                     SCIP_CALL( SCIPallocBlockMemory(scip, &solver->shiftbuffer[k]) );
+                     SCIP_CALL( SCIPallocBlockMemory(scip, &solver->shiftbuffer[k]) ); /*lint !e866*/
                   }
                   solver->shiftbuffersize = newsize;
                }
@@ -764,7 +764,7 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
                SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &solver->shiftbuffer, oldsize, newsize) );
                for( k = oldsize; k < newsize; ++k )
                {
-                  SCIP_CALL( SCIPallocBlockMemory(scip, &solver->shiftbuffer[k]) );
+                  SCIP_CALL( SCIPallocBlockMemory(scip, &solver->shiftbuffer[k]) ); /*lint !e866*/
                }
                solver->shiftbuffersize = newsize;
             }
@@ -784,7 +784,7 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &solver->shiftbuffer, oldsize, newsize) );
       for( k = oldsize; k < newsize; ++k )
       {
-         SCIP_CALL( SCIPallocBlockMemory(scip, &solver->shiftbuffer[k]) );
+         SCIP_CALL( SCIPallocBlockMemory(scip, &solver->shiftbuffer[k]) ); /*lint !e866*/
       }
       solver->shiftbuffersize = newsize;
    }
@@ -1298,7 +1298,7 @@ SCIP_RETCODE fjSolverFree(
       int i;
       for( i = 0; i < solv->shiftbuffersize; ++i )
       {
-         SCIPfreeBlockMemory(scip, &solv->shiftbuffer[i]);
+         SCIPfreeBlockMemory(scip, &solv->shiftbuffer[i]); /*lint !e866*/
       }
       SCIPfreeBlockMemoryArray(scip, &solv->shiftbuffer, solv->shiftbuffersize);
    }
