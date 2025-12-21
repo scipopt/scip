@@ -248,17 +248,23 @@ SCIP_RETCODE fromAmpl(
       (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s", nlfilename);
    else
       (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s.nl", nlfilename);
-   SCIPinfoMessage(scip, NULL, "read problem <%s>\n", fullnlfilename);
-   SCIPinfoMessage(scip, NULL, "============\n\n");
-
-   SCIP_CALL( SCIPreadProb(scip, fullnlfilename, "nl") );
 
    if( interactive )
    {
+      char readcommand[SCIP_MAXSTRLEN+6];
+
+      (void) SCIPsnprintf(readcommand, (int)sizeof(readcommand), "read %s", fullnlfilename);
+      SCIP_CALL( SCIPaddDialogInputLine(scip, readcommand) );
+
       SCIP_CALL( SCIPstartInteraction(scip) );
    }
    else
    {
+      SCIPinfoMessage(scip, NULL, "read problem <%s>\n", fullnlfilename);
+      SCIPinfoMessage(scip, NULL, "============\n\n");
+
+      SCIP_CALL( SCIPreadProb(scip, fullnlfilename, "nl") );
+
       SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
       SCIPinfoMessage(scip, NULL, "=============\n\n");
 
