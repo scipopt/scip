@@ -692,6 +692,8 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
       int nbounds = 0;
       SCIP_Real bounds[6];
 
+      assert(cellcoeff != 0.0); /*lint !e777*/
+
       /* determine bounds based on constraint sense */
       if( constraint->sense == FJ_LTE )
       {
@@ -716,23 +718,34 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
       for( j = 0; j < nbounds; j += 2 )
       {
          SCIP_Real residualincumbent = constraint->incumbentlhs - cellcoeff * varincumbent;
-         SCIP_Real validrangefirst = (1.0 / cellcoeff) * (bounds[j] - residualincumbent);
-         SCIP_Real validrangesecond = (1.0 / cellcoeff) * (bounds[j+1] - residualincumbent);
+         SCIP_Real validrangelb;
+         SCIP_Real validrangeub;
+
+         if( cellcoeff >= 0.0 )
+         {
+            validrangelb = (1.0 / cellcoeff) * (bounds[j] - residualincumbent);
+            validrangeub = (1.0 / cellcoeff) * (bounds[j + 1] - residualincumbent);
+         }
+         else
+         {
+            validrangelb = (1.0 / cellcoeff) * (bounds[j + 1] - residualincumbent);
+            validrangeub = (1.0 / cellcoeff) * (bounds[j] - residualincumbent);
+         }
 
          if( var->vartype == FJ_INTEGER )
          {
-            validrangefirst = SCIPceil(scip, validrangefirst - EQUALITY_TOLERANCE);
-            validrangesecond = SCIPfloor(scip, validrangesecond + EQUALITY_TOLERANCE);
+            validrangelb = SCIPceil(scip, validrangelb - EQUALITY_TOLERANCE);
+            validrangeub = SCIPfloor(scip, validrangeub + EQUALITY_TOLERANCE);
          }
 
-         if( validrangefirst > validrangesecond )
+         if( validrangelb > validrangeub )
             continue;
 
-         if( validrangefirst > currentvalue )
+         if( validrangelb > currentvalue )
          {
-            currentscore += constraint->weight * (validrangefirst - currentvalue);
+            currentscore += constraint->weight * (validrangelb - currentvalue);
             currentslope -= constraint->weight;
-            if( validrangefirst < var->ub )
+            if( validrangelb < var->ub )
             {
                /* ensure capacity */
                if( solver->nshiftbuffer >= solver->shiftbuffersize )
@@ -747,18 +760,18 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
                   }
                   solver->shiftbuffersize = newsize;
                }
-               solver->shiftbuffer[solver->nshiftbuffer]->value = validrangefirst;
+               solver->shiftbuffer[solver->nshiftbuffer]->value = validrangelb;
                solver->shiftbuffer[solver->nshiftbuffer]->weight = constraint->weight;
                solver->nshiftbuffer++;
             }
          }
 
-         if( validrangesecond <= currentvalue )
+         if( validrangeub <= currentvalue )
          {
-            currentscore += constraint->weight * (validrangesecond - currentvalue);
+            currentscore += constraint->weight * (validrangeub - currentvalue);
             currentslope += constraint->weight;
          }
-         else if( validrangesecond < var->ub )
+         else if( validrangeub < var->ub )
          {
             /* ensure capacity */
             if( solver->nshiftbuffer >= solver->shiftbuffersize )
@@ -773,7 +786,7 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
                }
                solver->shiftbuffersize = newsize;
             }
-            solver->shiftbuffer[solver->nshiftbuffer]->value = validrangesecond;
+            solver->shiftbuffer[solver->nshiftbuffer]->value = validrangeub;
             solver->shiftbuffer[solver->nshiftbuffer]->weight = constraint->weight;
             solver->nshiftbuffer++;
          }
