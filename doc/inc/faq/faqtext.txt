@@ -66,27 +66,18 @@ SECTION: General Questions about SCIP
     <p>Unless you want to use SCIP as a pure CP-Solver (see <a href="#scipascpsolver">here</a>),
       you need an underlying LP-Solver installed and linked to the libraries
       (see the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP root directory).
-      LP-solvers currently supported by SCIP are:
+      See <a href="PATHTODOC/LPI.LINKEXT">here</a> for LP-solvers currently supported by SCIP.
+      When solving MIPs exactly, an <a href="PATHTODOC/LPIEXACT.LINKEXT">exact LP solver supported by SCIP</a> is required.
     </p>
-    <ul>
-      <li><a href="https://soplex.zib.de/">SoPlex</a></li>
-      <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">IBM ILOG CPLEX</a></li>
-      <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
-      <li><a href="http://www.gurobi.com/">Gurobi</a> (version at least 7.0.2 required)</li>
-      <li><a href="https://projects.coin-or.org/Clp/">CLP</a> (interface currently sometimes produces wrong results)</li>
-      <li><a href="https://github.com/google/or-tools">Glop, Google OR tools</a> (experimental, LPI contained in OR tools)</li>
-      <li><a href="http://www.mosek.com/">Mosek</a></li>
-      <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a> (experimental)</li>
-    </ul>
     <p>
-      If you want to use SCIP for mixed integer nonlinear programming, you might want to use an underlying NLP solver (e.g.,
-      <a href="https://projects.coin-or.org/Ipopt">Ipopt</a> or <a href="https://www.conopt.com">CONOPT</a>). SCIP already
-      comes with the CppAD expression interpreter (e.g., <a href="http://www.coin-or.org/CppAD/">CppAD</a>) as part of the source code.
+      If you want to use SCIP for mixed integer nonlinear programming, linking an <a href="PATHTODOC/NLPISOLVERS.LINKEXT">NLP solver supported by SCIP</a> is strongly advised.
+      The automatic differentiation library <a href="https://github.com/coin-or/CppAD">CppAD</a> is redistributed as part of the SCIP source code.
     </p>
     <p>
       Besides that, you might need a modeling language like <a href="https://zimpl.zib.de/">ZIMPL</a> to generate *.mps
       or *.lp files. ZIMPL files (.zpl extension) can also be read directly into SCIP.
-      Downloading the SCIP Optimization Suite includes SCIP, SoPlex and ZIMPL, as well as GCG and UG. Find installers for different platforms
+      Further, linking <a href="https://github.com/scipopt/papilo">PaPILO</a> can provide a stronger presolve when solving MIP.
+      Downloading the SCIP Optimization Suite includes SCIP, SoPlex and ZIMPL, as well as GCG, PaPILO, and UG. Find installers for different platforms
       and the source code bundle of all versions <a href="https://scipopt.org/#download">here</a>.
     </p>
 

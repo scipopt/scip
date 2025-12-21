@@ -963,7 +963,7 @@ public:
 
    /// handling of suffices for variable and constraint flags and SOS constraints
    ///
-   /// regarding SOS in AMPL, see https://ampl.com/faqs/how-can-i-use-the-solvers-special-ordered-sets-feature/
+   /// regarding SOS in AMPL, see https://discuss.ampl.com/t/how-can-i-use-the-solver-s-special-ordered-sets-feature/45
    /// we pass the .ref suffix as weight to the SOS constraint handlers
    /// for a SOS2, the weights determine the order of variables in the set
    template<typename T> class SuffixHandler
