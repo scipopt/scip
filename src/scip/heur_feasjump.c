@@ -714,16 +714,16 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
          if( cellcoeff >= 0.0 )
          {
             validrangelb = !SCIPisInfinity(scip, -bounds[j])
-                  ? (1.0 / cellcoeff) * (bounds[j] - residualincumbent) : bounds[j];
+                  ? (bounds[j] - residualincumbent) / cellcoeff : bounds[j];
             validrangeub = !SCIPisInfinity(scip, bounds[j + 1])
-                  ? (1.0 / cellcoeff) * (bounds[j + 1] - residualincumbent) : bounds[j + 1];
+                  ? (bounds[j + 1] - residualincumbent) / cellcoeff : bounds[j + 1];
          }
          else
          {
             validrangelb = !SCIPisInfinity(scip, bounds[j + 1])
-                  ? (1.0 / cellcoeff) * (bounds[j + 1] - residualincumbent) : -bounds[j + 1];
+                  ? (bounds[j + 1] - residualincumbent) / cellcoeff : -bounds[j + 1];
             validrangeub = !SCIPisInfinity(scip, -bounds[j])
-                  ? (1.0 / cellcoeff) * (bounds[j] - residualincumbent) : -bounds[j];
+                  ? (bounds[j] - residualincumbent) / cellcoeff : -bounds[j];
          }
 
          if( var->vartype == FJ_INTEGER )
