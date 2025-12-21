@@ -713,13 +713,17 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
 
          if( cellcoeff >= 0.0 )
          {
-            validrangelb = (1.0 / cellcoeff) * (bounds[j] - residualincumbent);
-            validrangeub = (1.0 / cellcoeff) * (bounds[j + 1] - residualincumbent);
+            validrangelb = !SCIPisInfinity(scip, -bounds[j])
+                  ? (1.0 / cellcoeff) * (bounds[j] - residualincumbent) : bounds[j];
+            validrangeub = !SCIPisInfinity(scip, bounds[j + 1])
+                  ? (1.0 / cellcoeff) * (bounds[j + 1] - residualincumbent) : bounds[j + 1];
          }
          else
          {
-            validrangelb = (1.0 / cellcoeff) * (bounds[j + 1] - residualincumbent);
-            validrangeub = (1.0 / cellcoeff) * (bounds[j] - residualincumbent);
+            validrangelb = !SCIPisInfinity(scip, bounds[j + 1])
+                  ? (1.0 / cellcoeff) * (bounds[j + 1] - residualincumbent) : -bounds[j + 1];
+            validrangeub = !SCIPisInfinity(scip, -bounds[j])
+                  ? (1.0 / cellcoeff) * (bounds[j] - residualincumbent) : -bounds[j];
          }
 
          if( var->vartype == FJ_INTEGER )
@@ -1861,7 +1865,7 @@ SCIP_RETCODE runFeasjump(
       /* add objective cutoff */
       if( SCIPgetBestSol(scip) != NULL )
       {
-         assert(SCIPgetCutoffbound(scip) < SCIPinfinity(scip));
+         assert(!SCIPisInfinity(scip, SCIPgetCutoffbound(scip)));
          SCIP_CALL( addObjCutoff(scip, problem, cols, ncols) );
       }
    }
