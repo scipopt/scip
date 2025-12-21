@@ -9197,7 +9197,7 @@
   * - <a href="https://zimpl.zib.de">ZIMPL</a>, a modeling language for constraint programming,
   * - both <a href="http://www.ampl.com/">AMPL</a> and <a href="http://www.gams.com">GAMS</a>,
   *   are well-suited for modeling mixed-integer linear and nonlinear optimization problems,
-  * - and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
+  * - and <a href="https://coliop.org/">CMPL</a> for mixed-integer linear problems.
   * - <a href="https://jump.dev/JuMP.jl/stable/">JuMP</a> accesses SCIP through the Julia interface.
   * - <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
   *   free modeling language.
@@ -9205,6 +9205,25 @@
   * The AMPL and ZIMPL interfaces are included in the \SCIP distribution,
   * the GAMS interface is available <a href="https://github.com/coin-or/GAMSlinks">here</a>.
   *
+  * @subsection AMPL AMPL Interface
+  *
+  * The AMPL interface is part of the main \SCIP executable.
+  * It is activated when the executable is called with the name of the AMPL `.nl` file as first argument and `-AMPL` as second argument.
+  * In this case, \SCIP will employ the \ref reader_nl.h "NL reader" to read the `.nl` file (and `.col`  and `.row` files with variable and constraint names, if available),
+  * read parameter settings from a `scip.set` file (if present), attempt to solve the problem, write an AMPL solution file with the solve output, and exit.
+  * However, if `-i` is given as third argument, then solving the problem is replaced by opening the \ref SHELL "interactive shell".
+  *
+  * Next to a `scip.set` file, parameter settings can also be given via an `option` command in AMPL, e.g.,
+  * ```
+  * option scip_options 'limits/gap = 1e-4 display/statistics = TRUE';
+  * ```
+  * Parameter `display/statistics` is specific to using \SCIP via the AMPL interface and triggers a call to \ref SCIPprintStatistics after the problem has been solved (or the interactive shell has been exited).
+  * In addition, a parameter `display/logfile` is available to specify a file to which to print \SCIP output in addition to stdout.
+  *
+  * For most problems, \SCIP computes a primal solution only.
+  * A dual solution is written to an AMPL solution file only if an LP has been solved with presolve disabled.
+  *
+  * \SCIP is also able to write AMPL `.nl` files (and `.col`  and `.row` files with variable and constraint names). See \ref reader_nl.h for currently supported constraint types.
   */
 
  /**@defgroup PUBLICAPI Public API of SCIP

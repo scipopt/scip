@@ -47,6 +47,7 @@ Fixed bugs
 - correct memory reallocation in storeSubproblemMasterVar() of benders.c to avoid freeing errors
 - also set real solution in SCIPsolSetValExact() to maintain approximation
 - handle exact solutions in SCIPsolCheckOrig(), SCIPcheckSolOrig(), and SCIPrecomputeSolObj() to correctly check exact initial solutions in SCIPtransformProb()
+- fixed use of interactive option (-i) of AMPL interface
 
 Miscellaneous
 -------------
