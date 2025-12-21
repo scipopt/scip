@@ -1543,7 +1543,7 @@
  * given problem instance.
  * However, it might be very slow because the additional features, like cut separation and domain propagation, are
  * missing.
- * In the C++ wrapper class scip::ObjConshdlr, the fundamental callback methods are virtual abstract member functions.
+ * In the C++ wrapper class scip::ObjConshdlr, the fundamental callbacks are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your constraint handler class.
  *
  * There are three fundamental callbacks that are all dealing with the feasibility of a given solution.
@@ -4357,7 +4357,7 @@
  * an operational algorithm.
  * They are passed to SCIP when the expression handler is created and included in SCIP via SCIPincludeExprhdlr(),
  * see @ref EXPRHDLR_INTERFACE.
- * In the C++ wrapper class scip::ObjExprhdlr, the fundamental callback methods are virtual abstract member functions.
+ * In the C++ wrapper class scip::ObjExprhdlr, the fundamental callbacks are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your expression handler class.
  *
  * Expression handlers have one fundamental callback, @ref EXPREVAL, that needs to be implemented.
