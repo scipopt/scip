@@ -9197,7 +9197,7 @@
   * - <a href="https://zimpl.zib.de">ZIMPL</a>, a modeling language for constraint programming,
   * - both <a href="http://www.ampl.com/">AMPL</a> and <a href="http://www.gams.com">GAMS</a>,
   *   are well-suited for modeling mixed-integer linear and nonlinear optimization problems,
-  * - and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
+  * - and <a href="https://coliop.org/">CMPL</a> for mixed-integer linear problems.
   * - <a href="https://jump.dev/JuMP.jl/stable/">JuMP</a> accesses SCIP through the Julia interface.
   * - <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
   *   free modeling language.
