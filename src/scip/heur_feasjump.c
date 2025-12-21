@@ -185,7 +185,12 @@ struct FJ_Problem
 };
 typedef struct FJ_Problem FJ_PROBLEM;
 
-/* feasibility jump solver data */
+/* feasibility jump solver data
+ *
+ * @todo Currently only jump moves are implemented (minimizing weighted violations).
+ *       The design allows for additional move types (e.g., incremental up/down moves), which would be stored in
+ *       separate arrays and evaluated together for variable selection.
+ */
 struct FJ_Solver
 {
    FJ_PROBLEM*           problem;            /**< problem data */
