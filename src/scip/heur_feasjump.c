@@ -93,8 +93,6 @@
 #define DEFAULT_MAXSOLS        1         /**< maximum number of solutions to find */
 #define DEFAULT_BEFORE_PRESOL  FALSE     /**< should the heuristic be called before presolving? */
 
-#define VIOLATION_TOLERANCE    1.0e-5    /**< tolerance for constraint violations */
-#define EQUALITY_TOLERANCE     1.0e-5    /**< tolerance for equality comparisons */
 #define CALLBACK_EFFORT        500000    /**< effort between callbacks */
 
 /* row types */
@@ -243,16 +241,6 @@ struct SCIP_HeurData
  * Local methods for FJ_Problem
  */
 
-/** measures if two doubles are equal within a tolerance */
-static
-SCIP_Bool fjIsEq(
-   SCIP_Real             a,                  /**< first value */
-   SCIP_Real             b                   /**< second value */
-   )
-{
-   return REALABS(a - b) < EQUALITY_TOLERANCE;
-}
-
 /** computes the constraint's contribution to the feasibility score */
 static
 SCIP_Real fjConstraintScore(
@@ -262,12 +250,14 @@ SCIP_Real fjConstraintScore(
 {
    assert(constraint != NULL);
 
+   lhs -= constraint->rhs;
+
    if( constraint->sense == FJ_EQUAL )
-      return -REALABS(lhs - constraint->rhs);
+      return -REALABS(lhs);
    else if( constraint->sense == FJ_LTE )
-      return -MAX(0.0, lhs - constraint->rhs);
+      return -MAX(lhs, 0.0);
    else
-      return -MAX(0.0, constraint->rhs - lhs);
+      return MIN(lhs, 0.0);
 }
 
 /** creates a problem */
@@ -493,11 +483,11 @@ SCIP_RETCODE fjProblemAddConstraint(
    {
       SCIP_Bool ok;
       if( sense == FJ_LTE )
-         ok = (newrhs >= -EQUALITY_TOLERANCE);
+         ok = !SCIPisFeasNegative(scip, newrhs);
       else if( sense == FJ_GTE )
-         ok = (newrhs <= EQUALITY_TOLERANCE);
+         ok = !SCIPisFeasPositive(scip, newrhs);
       else
-         ok = fjIsEq(newrhs, 0.0);
+         ok = SCIPisFeasZero(scip, newrhs);
 
       if( idx != NULL )
          *idx = ok ? INT_MAX : INT_MIN;
@@ -611,7 +601,7 @@ SCIP_RETCODE fjProblemResetIncumbent(
          constraint->incumbentlhs += constraint->coeffs[j].coeff * problem->incumbentassignment[varidx];
       }
 
-      if( fjConstraintScore(constraint, constraint->incumbentlhs) < -VIOLATION_TOLERANCE )
+      if( SCIPisFeasNegative(scip, fjConstraintScore(constraint, constraint->incumbentlhs)) )
       {
          constraint->violatedidx = problem->nviolated;
          problem->violatedconstraints[problem->nviolated] = i;
@@ -734,8 +724,8 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
 
          if( var->vartype == FJ_INTEGER )
          {
-            validrangelb = SCIPceil(scip, validrangelb - EQUALITY_TOLERANCE);
-            validrangeub = SCIPfloor(scip, validrangeub + EQUALITY_TOLERANCE);
+            validrangelb = SCIPfeasCeil(scip, validrangelb);
+            validrangeub = SCIPfeasFloor(scip, validrangeub);
          }
 
          if( validrangelb > validrangeub )
@@ -827,14 +817,14 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
       currentslope += solver->shiftbuffer[i]->weight;
       currentvalue = solver->shiftbuffer[i]->value;
 
-      if( fjIsEq(bestvalue, varincumbent) ||
-         (!fjIsEq(currentvalue, varincumbent) && currentscore < bestscore) )
+      if( SCIPisEQ(scip, bestvalue, varincumbent)
+         || ( bestscore > currentscore && !SCIPisEQ(scip, currentvalue, varincumbent) ) )
       {
          bestscore = currentscore;
          bestvalue = currentvalue;
       }
 
-      if( !fjIsEq(bestvalue, varincumbent) && currentslope >= 0.0 )
+      if( currentslope >= 0.0 && !SCIPisEQ(scip, bestvalue, varincumbent) )
          break;
    }
 
@@ -928,14 +918,14 @@ SCIP_RETCODE fjProblemSetValue(
       newcost = fjConstraintScore(constraint, newlhs);
 
       /* add/remove from violated constraints list */
-      if( newcost < -VIOLATION_TOLERANCE && constraint->violatedidx == -1 )
+      if( constraint->violatedidx == -1 && SCIPisFeasNegative(scip, newcost) )
       {
          /* became violated */
          constraint->violatedidx = problem->nviolated;
          problem->violatedconstraints[problem->nviolated] = cstridx;
          problem->nviolated++;
       }
-      if( newcost >= -VIOLATION_TOLERANCE && constraint->violatedidx != -1 )
+      if( constraint->violatedidx != -1 && !SCIPisFeasNegative(scip, newcost) )
       {
          /* became satisfied */
          int lastviolatedidx = problem->nviolated - 1;
