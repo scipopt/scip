@@ -280,7 +280,10 @@ SCIP_RETCODE fromAmpl(
       SCIP_CALL( SCIPprintStatistics(scip, NULL) );
    }
 
-   SCIP_CALL( SCIPwriteSolutionNl(scip) );
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
+   {
+      SCIP_CALL( SCIPwriteSolutionNl(scip) );
+   }
 
    return SCIP_OKAY;
 
