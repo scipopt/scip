@@ -76,6 +76,7 @@ SECTION: General Questions about SCIP
     <p>
       Besides that, you might need a modeling language like <a href="https://zimpl.zib.de/">ZIMPL</a> to generate *.mps
       or *.lp files. ZIMPL files (.zpl extension) can also be read directly into SCIP.
+      Further, linking <a href="https://github.com/scipopt/papilo">PaPILO</a> can provide a stronger presolve when solving MIP.
       Downloading the SCIP Optimization Suite includes SCIP, SoPlex and ZIMPL, as well as GCG, PaPILO, and UG. Find installers for different platforms
       and the source code bundle of all versions <a href="https://scipopt.org/#download">here</a>.
     </p>
