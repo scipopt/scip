@@ -1546,6 +1546,7 @@ SCIP_RETCODE extractProblemData(
    int                   nrows               /**< number of LP rows */
    )
 {
+   SCIP_Real* vals;
    int* inds;
    int i;
    int j;
@@ -1555,6 +1556,7 @@ SCIP_RETCODE extractProblemData(
 
    inds = NULL;
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, ncols) );
 
    /* add the columns */
    for( i = 0; i < ncols; ++i )
@@ -1582,26 +1584,37 @@ SCIP_RETCODE extractProblemData(
    {
       SCIP_ROW* row;
       SCIP_COL** rowcols;
-      SCIP_Real* vals;
-      int nnonz;
+      SCIP_Real* rowvals;
       SCIP_Real lhs;
       SCIP_Real rhs;
+      int nnonz;
+      int nvals;
 
       row = rows[i];
       lhs = SCIProwGetLhs(row) - SCIProwGetConstant(row);
       rhs = SCIProwGetRhs(row) - SCIProwGetConstant(row);
-      nnonz = SCIProwGetNNonz(row);
-      vals = SCIProwGetVals(row);
       rowcols = SCIProwGetCols(row);
+      rowvals = SCIProwGetVals(row);
+      nnonz = SCIProwGetNNonz(row);
+      nvals = 0;
 
       for( j = 0; j < nnonz; ++j )
       {
-         inds[j] = SCIPcolGetLPPos(rowcols[j]);
-         assert(inds[j] < ncols);
+         if( SCIPcolIsInLP(rowcols[j]) )
+         {
+            assert(nvals < ncols);
+            inds[nvals] = SCIPcolGetLPPos(rowcols[j]);
+            assert(inds[nvals] >= 0);
+            assert(inds[nvals] < ncols);
+            vals[nvals] = rowvals[j];
+            assert(vals[nvals] != 0.0);
+            ++nvals;
+         }
       }
-      SCIP_CALL( addRowInFeasjumpSolver(scip, problem, vals, inds, nnonz, lhs, rhs) );
+      SCIP_CALL( addRowInFeasjumpSolver(scip, problem, vals, inds, nvals, lhs, rhs) );
    }
 
+   SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &inds);
 
    return SCIP_OKAY;
