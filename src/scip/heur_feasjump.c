@@ -84,7 +84,7 @@
 #define DEFAULT_WEIGHTDECAY    1.0       /**< decay factor for the weight update */
 #define DEFAULT_MAXEFFORT      50000000  /**< maximum effort spend in feasibility jump */
 #define DEFAULT_VERBOSITY      0         /**< verbosity level of the feasibility jump solver */
-#define DEFAULT_ONLYWITHOUTSOL TRUE      /**< should the feasibility jump be called only if no solution exists? */
+#define DEFAULT_ONLYWITHOUTSOL FALSE     /**< should the feasibility jump be called only if no solution exists? */
 #define DEFAULT_USEINITIALSOL  FALSE     /**< should the feasibility jump use the best known solution as
                                           *   initialization? */
 #define DEFAULT_ITERATIONS     1000      /**< number of iterations to check if the heuristic reduces the total
