@@ -715,23 +715,79 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
 
          if( cellcoeff >= 0.0 )
          {
-            validrangelb = !SCIPisInfinity(scip, -bounds[j])
-                  ? (bounds[j] - residualincumbent) / cellcoeff : bounds[j];
-            validrangeub = !SCIPisInfinity(scip, bounds[j + 1])
-                  ? (bounds[j + 1] - residualincumbent) / cellcoeff : bounds[j + 1];
+            if( !SCIPisInfinity(scip, -bounds[j]) )
+            {
+               validrangelb = (bounds[j] - residualincumbent) / cellcoeff;
+               if( var->vartype == FJ_INTEGER )
+               {
+                  validrangelb = round(validrangelb);
+                  if( SCIPisFeasNegative(scip, validrangelb * cellcoeff + residualincumbent - bounds[j]) )
+                     validrangelb += 1.0;
+               }
+               else
+               {
+                  if( SCIPisFeasNegative(scip, validrangelb * cellcoeff + residualincumbent - bounds[j]) )
+                     validrangelb = nextafter(validrangelb, (SCIP_Real)INFINITY);
+               }
+            }
+            else
+               validrangelb = bounds[j];
+
+            if( !SCIPisInfinity(scip, bounds[j + 1]) )
+            {
+               validrangeub = (bounds[j + 1] - residualincumbent) / cellcoeff;
+               if( var->vartype == FJ_INTEGER )
+               {
+                  validrangeub = round(validrangeub);
+                  if( SCIPisFeasPositive(scip, validrangeub * cellcoeff + residualincumbent - bounds[j + 1]) )
+                     validrangeub -= 1.0;
+               }
+               else
+               {
+                  if( SCIPisFeasPositive(scip, validrangeub * cellcoeff + residualincumbent - bounds[j + 1]) )
+                     validrangeub = nextafter(validrangeub, -(SCIP_Real)INFINITY);
+               }
+            }
+            else
+               validrangeub = bounds[j + 1];
          }
          else
          {
-            validrangelb = !SCIPisInfinity(scip, bounds[j + 1])
-                  ? (bounds[j + 1] - residualincumbent) / cellcoeff : -bounds[j + 1];
-            validrangeub = !SCIPisInfinity(scip, -bounds[j])
-                  ? (bounds[j] - residualincumbent) / cellcoeff : -bounds[j];
-         }
+            if( !SCIPisInfinity(scip, bounds[j + 1]) )
+            {
+               validrangelb = (bounds[j + 1] - residualincumbent) / cellcoeff;
+               if( var->vartype == FJ_INTEGER )
+               {
+                  validrangelb = round(validrangelb);
+                  if( SCIPisFeasPositive(scip, validrangelb * cellcoeff + residualincumbent - bounds[j + 1]) )
+                     validrangelb += 1.0;
+               }
+               else
+               {
+                  if( SCIPisFeasPositive(scip, validrangelb * cellcoeff + residualincumbent - bounds[j + 1]) )
+                     validrangelb = nextafter(validrangelb, (SCIP_Real)INFINITY);
+               }
+            }
+            else
+               validrangelb = -bounds[j + 1];
 
-         if( var->vartype == FJ_INTEGER )
-         {
-            validrangelb = SCIPfeasCeil(scip, validrangelb);
-            validrangeub = SCIPfeasFloor(scip, validrangeub);
+            if( !SCIPisInfinity(scip, -bounds[j]) )
+            {
+               validrangeub = (bounds[j] - residualincumbent) / cellcoeff;
+               if( var->vartype == FJ_INTEGER )
+               {
+                  validrangeub = round(validrangeub);
+                  if( SCIPisFeasNegative(scip, validrangeub * cellcoeff + residualincumbent - bounds[j]) )
+                     validrangeub -= 1.0;
+               }
+               else
+               {
+                  if( SCIPisFeasNegative(scip, validrangeub * cellcoeff + residualincumbent - bounds[j]) )
+                     validrangeub = nextafter(validrangeub, -(SCIP_Real)INFINITY);
+               }
+            }
+            else
+               validrangeub = -bounds[j];
          }
 
          if( validrangelb > validrangeub )
