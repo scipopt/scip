@@ -67,13 +67,13 @@
 /*
  * Default values for cut generation parameters
  */
-#define DEFAULT_CUTGEN_POSTPROCESS      TRUE   /**< default for applying post-processing */
-#define DEFAULT_CUTGEN_BOUNDSWITCH      0.5    /**< default fraction of domain for bound switching */
-#define DEFAULT_CUTGEN_ALLOWLOCAL       TRUE   /**< default for allowing local cuts */
-#define DEFAULT_CUTGEN_VARTYPEUSEVBDS   2      /**< default variable types for varbound substitution */
-#define DEFAULT_CUTGEN_MINFRAC          0.05   /**< default minimal fractionality of rhs */
-#define DEFAULT_CUTGEN_MAXFRAC          0.999  /**< default maximal fractionality of rhs */
-#define DEFAULT_CUTGEN_MAXTESTDELTA     (-1)   /**< default maximum number of deltas to test (-1 = unlimited) */
+#define DEFAULT_CUTGEN_POSTPROCESS     TRUE  /**< default for applying post-processing */
+#define DEFAULT_CUTGEN_BOUNDSWITCH      0.5  /**< default fraction of domain for bound switching */
+#define DEFAULT_CUTGEN_ALLOWLOCAL      TRUE  /**< default for allowing local cuts */
+#define DEFAULT_CUTGEN_VARTYPEUSEVBDS     2  /**< default variable types for varbound substitution */
+#define DEFAULT_CUTGEN_MINFRAC         0.05  /**< default minimal fractionality of rhs */
+#define DEFAULT_CUTGEN_MAXFRAC        0.999  /**< default maximal fractionality of rhs */
+#define DEFAULT_CUTGEN_MAXTESTDELTA    (-1)  /**< default maximum number of deltas to test (-1 = unlimited) */
 
 /* =========================================== general static functions =========================================== */
 #ifdef SCIP_DEBUG
@@ -11670,19 +11670,19 @@ SCIP_RETCODE SCIPcalcFlowCover(
    SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
    )
 {
-   int i;
-   int nvars;
-   SCIP_Bool localbdsused;
-   SCIP_Bool tmpislocal;
    SNF_RELAXATION snf;
+   SCIP_Bool localbdsused;
    SCIP_Real lambda;
    SCIP_Real* tmpcoefs;
+   SCIP_Real tmprhs;
+   SCIP_Bool tmpislocal;
    int* tmpinds;
    int tmpnnz;
-   SCIP_Real tmprhs;
    int* transvarflowcoverstatus;
+   int nvars;
    int nflowcovervars;
    int nnonflowcovervars;
+   int i;
 
    nvars = SCIPgetNVars(scip);
 
@@ -13657,10 +13657,14 @@ void SCIPinitCutGenParams(
    params->allowlocal = DEFAULT_CUTGEN_ALLOWLOCAL;
 }
 
-/** creates a cut generation result struct and allocates arrays for cut coefficients and indices */
+/** creates a cut generation result structure and allocates arrays for cut coefficients and indices
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 SCIP_RETCODE SCIPcreateCutGenResult(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CUTGENRESULT**   result              /**< pointer to store the created result struct */
+   SCIP_CUTGENRESULT**   result              /**< pointer to store the created result structure */
    )
 {
    int nvars;
@@ -13677,10 +13681,10 @@ SCIP_RETCODE SCIPcreateCutGenResult(
    return SCIP_OKAY;
 }
 
-/** frees a cut generation result struct created by SCIPcreateCutGenResult() */
+/** frees a cut generation result structure created by SCIPcreateCutGenResult() */
 void SCIPfreeCutGenResult(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CUTGENRESULT**   result              /**< pointer to the result struct to free */
+   SCIP_CUTGENRESULT**   result              /**< pointer to the result structure to free */
    )
 {
    assert(scip != NULL);
@@ -13699,11 +13703,12 @@ void SCIPfreeCutGenResult(
  *  See type_cuts.h for available SCIP_CUTGENMETHOD_* flags.
  *
  *  Use SCIPinitCutGenParams() to initialize parameters with default values.
- *  Use SCIPcreateCutGenResult() to create the result struct, or manually set result->cutcoefs and
- *  result->cutinds to point to arrays of size at least SCIPgetNVars(scip).
- *  Use SCIPfreeCutGenResult() to free the result struct when done.
+ *  Use SCIPcreateCutGenResult() to create the result structure, or manually set result->cutcoefs and result->cutinds
+ *  to point to arrays of size at least SCIPgetNVars(scip).
+ *  Use SCIPfreeCutGenResult() to free the result structure when done.
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed.
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -13712,27 +13717,29 @@ SCIP_RETCODE SCIPcalcBestCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute cuts for */
-   SCIP_CUTGENMETHOD     methods,            /**< bitmask indicating which methods to try (SCIP_CUTGENMETHOD_*) */
+   SCIP_CUTGENMETHOD     methods,            /**< bit field indicating which methods to try (SCIP_CUTGENMETHOD_*) */
    SCIP_CUTGENPARAMS*    params,             /**< cut generation parameters */
-   SCIP_CUTGENRESULT*    result              /**< pointer to result struct (cutcoefs and cutinds must be pre-allocated) */
+   SCIP_CUTGENRESULT*    result              /**< pointer to result structure (cutcoefs and cutinds pre-allocated) */
    )
 {
-   SCIP_Bool success;
    SCIP_Real cutrhs;
    SCIP_Real efficacy;
    SCIP_Bool cutislocal;
-   int cutrank;
+   SCIP_Bool success;
    int cutnnz;
+   int cutrank;
 
    assert(scip != NULL);
    assert(aggrrow != NULL);
+   assert(aggrrow->nnz >= 0);
+   assert(methods != SCIP_CUTGENMETHOD_NONE);
    assert(params != NULL);
    assert(result != NULL);
    assert(result->cutcoefs != NULL);
    assert(result->cutinds != NULL);
 
    /* initialize result */
-   result->winningmethod = 0;
+   result->winningmethod = SCIP_CUTGENMETHOD_NONE;
    result->cutefficacy = -SCIPinfinity(scip);
    result->cutrhs = 0.0;
    result->cutnnz = 0;
@@ -13741,21 +13748,19 @@ SCIP_RETCODE SCIPcalcBestCut(
    result->success = FALSE;
 
    /* bail out early if the aggregation row is empty */
-   assert(aggrrow->nnz >= 0);
    if( aggrrow->nnz == 0 )
       return SCIP_OKAY;
 
-   /* Each cut generation method writes to local variables and only succeeds
-    * if the generated cut has efficacy strictly better than the input efficacy threshold.
-    * We copy results to the output struct only on success to avoid corrupting the threshold. */
+   /* Each cut generation method writes to local variables and only succeeds if the generated cut has efficacy strictly
+    * better than the input efficacy. We copy results only on success.
+    */
 
    /* try FlowCover */
    if( methods & SCIP_CUTGENMETHOD_FLOWCOVER )
    {
       efficacy = result->cutefficacy;
-      SCIP_CALL( SCIPcalcFlowCover(scip, sol, params->postprocess, params->boundswitch,
-         params->allowlocal, aggrrow, result->cutcoefs, &cutrhs, result->cutinds,
-         &cutnnz, &efficacy, &cutrank, &cutislocal, &success) );
+      SCIP_CALL( SCIPcalcFlowCover(scip, sol, params->postprocess, params->boundswitch, params->allowlocal, aggrrow,
+            result->cutcoefs, &cutrhs, result->cutinds, &cutnnz, &efficacy, &cutrank, &cutislocal, &success) );
 
       if( success )
       {
@@ -13774,8 +13779,7 @@ SCIP_RETCODE SCIPcalcBestCut(
    {
       efficacy = result->cutefficacy;
       SCIP_CALL( SCIPcalcKnapsackCover(scip, sol, params->allowlocal, aggrrow,
-         result->cutcoefs, &cutrhs, result->cutinds, &cutnnz, &efficacy,
-         &cutrank, &cutislocal, &success) );
+            result->cutcoefs, &cutrhs, result->cutinds, &cutnnz, &efficacy, &cutrank, &cutislocal, &success) );
 
       if( success )
       {
@@ -13793,11 +13797,10 @@ SCIP_RETCODE SCIPcalcBestCut(
    if( methods & SCIP_CUTGENMETHOD_CMIR )
    {
       efficacy = result->cutefficacy;
-      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, params->postprocess,
-         params->boundswitch, params->vartypeusevbds, params->allowlocal,
-         params->maxtestdelta, params->boundsfortrans, params->boundtypesfortrans,
-         params->minfrac, params->maxfrac, aggrrow, result->cutcoefs, &cutrhs,
-         result->cutinds, &cutnnz, &efficacy, &cutrank, &cutislocal, &success) );
+      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, params->postprocess, params->boundswitch,
+            params->vartypeusevbds, params->allowlocal, params->maxtestdelta, params->boundsfortrans,
+            params->boundtypesfortrans, params->minfrac, params->maxfrac, aggrrow,
+            result->cutcoefs, &cutrhs, result->cutinds, &cutnnz, &efficacy, &cutrank, &cutislocal, &success) );
 
       if( success )
       {

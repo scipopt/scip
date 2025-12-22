@@ -531,21 +531,22 @@ void SCIPinitCutGenParams(
    SCIP_CUTGENPARAMS*    params              /**< pointer to parameters to initialize */
    );
 
-/** creates a cut generation result struct and allocates arrays for cut coefficients and indices
+/** creates a cut generation result structure and allocates arrays for cut coefficients and indices
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed.
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateCutGenResult(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CUTGENRESULT**   result              /**< pointer to store the created result struct */
+   SCIP_CUTGENRESULT**   result              /**< pointer to store the created result structure */
    );
 
-/** frees a cut generation result struct created by SCIPcreateCutGenResult() */
+/** frees a cut generation result structure created by SCIPcreateCutGenResult() */
 SCIP_EXPORT
 void SCIPfreeCutGenResult(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CUTGENRESULT**   result              /**< pointer to the result struct to free */
+   SCIP_CUTGENRESULT**   result              /**< pointer to the result structure to free */
    );
 
 /** tries multiple cut generation methods on an aggregation row and returns the best cut by efficacy
@@ -555,11 +556,12 @@ void SCIPfreeCutGenResult(
  *  See type_cuts.h for available SCIP_CUTGENMETHOD_* flags.
  *
  *  Use SCIPinitCutGenParams() to initialize parameters with default values.
- *  Use SCIPcreateCutGenResult() to create the result struct, or manually set result->cutcoefs and
- *  result->cutinds to point to arrays of size at least SCIPgetNVars(scip).
- *  Use SCIPfreeCutGenResult() to free the result struct when done.
+ *  Use SCIPcreateCutGenResult() to create the result structure, or manually set result->cutcoefs and result->cutinds
+ *  to point to arrays of size at least SCIPgetNVars(scip).
+ *  Use SCIPfreeCutGenResult() to free the result structure when done.
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed.
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -569,9 +571,9 @@ SCIP_RETCODE SCIPcalcBestCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute cuts for */
-   SCIP_CUTGENMETHOD     methods,            /**< bitmask indicating which methods to try (SCIP_CUTGENMETHOD_*) */
+   SCIP_CUTGENMETHOD     methods,            /**< bit field indicating which methods to try (SCIP_CUTGENMETHOD_*) */
    SCIP_CUTGENPARAMS*    params,             /**< cut generation parameters */
-   SCIP_CUTGENRESULT*    result              /**< pointer to result struct (cutcoefs/cutinds must be pre-allocated) */
+   SCIP_CUTGENRESULT*    result              /**< pointer to result structure (cutcoefs and cutinds pre-allocated) */
    );
 
 /** @} */

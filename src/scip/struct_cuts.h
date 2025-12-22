@@ -72,15 +72,15 @@ struct SCIP_CutGenParams
 /** result of cut generation attempt */
 struct SCIP_CutGenResult
 {
-   SCIP_Real*            cutcoefs;           /**< array of non-zero coefficients in the cut (caller-allocated) */
-   int*                  cutinds;            /**< array of variable indices for non-zero coefficients (caller-allocated) */
-   SCIP_CUTGENMETHOD     winningmethod;      /**< which cut generation method produced the best cut */
+   SCIP_Real*            cutcoefs;           /**< array of non-zero coefficients in the cut (pre-allocated) */
+   int*                  cutinds;            /**< array of variable indices of non-zero coefficients (pre-allocated) */
+   SCIP_CUTGENMETHOD     winningmethod;      /**< cut generation method which produced the best cut */
    SCIP_Real             cutefficacy;        /**< efficacy of the best cut */
    SCIP_Real             cutrhs;             /**< right hand side of the best cut */
    int                   cutnnz;             /**< number of non-zeros in the best cut */
    int                   cutrank;            /**< rank of the best cut */
    SCIP_Bool             cutislocal;         /**< is the best cut only valid locally? */
-   SCIP_Bool             success;            /**< was any valid cut found? */
+   SCIP_Bool             success;            /**< is a valid cut found? */
 };
 
 #endif

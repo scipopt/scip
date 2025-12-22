@@ -796,7 +796,7 @@ SCIP_RETCODE aggregation(
    int                   maxaggrs,           /**< maximal number of aggregations */
    SCIP_Bool*            wastried,           /**< pointer to store whether the given startrow was actually tried */
    SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
-   SCIP_CUTGENRESULT*    cutresult,          /**< result struct with pre-allocated cutcoefs and cutinds arrays */
+   SCIP_CUTGENRESULT*    cutresult,          /**< result structure with pre-allocated cutcoefs and cutinds arrays */
    SCIP_Bool             negate,             /**< should the start row be multiplied by -1 */
    int*                  ncuts               /**< pointer to count the number of generated cuts */
    )
@@ -879,10 +879,10 @@ SCIP_RETCODE aggregation(
    naggrs = 0;
    while( naggrs <= maxaggrs )
    {
-      SCIP_Bool aggrsuccess;
-      SCIP_ROW* cut = NULL;
       SCIP_CUTGENPARAMS params;
       SCIP_CUTGENMETHOD methods;
+      SCIP_ROW* cut = NULL;
+      SCIP_Bool aggrsuccess;
 
       *wastried = TRUE;
 
@@ -915,26 +915,27 @@ SCIP_RETCODE aggregation(
 
          switch( cutresult->winningmethod )
          {
-            case SCIP_CUTGENMETHOD_FLOWCOVER:
-               cutsepa = sepadata->flowcover;
-               cutname = startrow < 0 ? "objflowcover" : "flowcover";
-               break;
-            case SCIP_CUTGENMETHOD_KNAPSACKCOVER:
-               cutsepa = sepadata->knapsackcover;
-               cutname = startrow < 0 ? "objlci" : "lci";
-               break;
-            case SCIP_CUTGENMETHOD_CMIR:
-               cutsepa = sepadata->cmir;
-               cutname = startrow < 0 ? "objcmir" : "cmir";
-               break;
-            default:
-               SCIPABORT();
-               cutsepa = NULL;
-               cutname = NULL;
+         case SCIP_CUTGENMETHOD_FLOWCOVER:
+            cutsepa = sepadata->flowcover;
+            cutname = startrow < 0 ? "objflowcover" : "flowcover";
+            break;
+         case SCIP_CUTGENMETHOD_KNAPSACKCOVER:
+            cutsepa = sepadata->knapsackcover;
+            cutname = startrow < 0 ? "objlci" : "lci";
+            break;
+         case SCIP_CUTGENMETHOD_CMIR:
+            cutsepa = sepadata->cmir;
+            cutname = startrow < 0 ? "objcmir" : "cmir";
+            break;
+         default:
+            SCIPABORT();
+            cutsepa = NULL;
+            cutname = NULL;
          }
 
-         SCIP_CALL( addCut(scip, sol, cutsepa, FALSE, cutresult->cutcoefs, cutresult->cutinds, cutresult->cutnnz, cutresult->cutrhs, cutresult->cutefficacy,
-               cutresult->cutislocal, sepadata->dynamiccuts, cutresult->cutrank, cutname, cutoff, ncuts, &cut) );
+         SCIP_CALL( addCut(scip, sol, cutsepa, FALSE, cutresult->cutcoefs, cutresult->cutinds, cutresult->cutnnz,
+               cutresult->cutrhs, cutresult->cutefficacy, cutresult->cutislocal, sepadata->dynamiccuts,
+               cutresult->cutrank, cutname, cutoff, ncuts, &cut) );
       }
 
       if ( *cutoff )
