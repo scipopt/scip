@@ -1653,7 +1653,8 @@ SCIP_RETCODE addObjCutoff(
       objnnzs++;
    }
 
-   rhs = SCIPgetCutoffbound(scip);
+   assert(!SCIPisInfinity(scip, SCIPgetCutoffbound(scip)));
+   rhs = SCIPgetCutoffbound(scip) - SCIPcutoffbounddelta(scip);
    SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_LTE, rhs, objnnzs, inds, vals, TRUE, &idx) );
 
    SCIPfreeBufferArray(scip, &inds);
@@ -1867,7 +1868,6 @@ SCIP_RETCODE runFeasjump(
       /* add objective cutoff */
       if( SCIPgetBestSol(scip) != NULL )
       {
-         assert(!SCIPisInfinity(scip, SCIPgetCutoffbound(scip)));
          SCIP_CALL( addObjCutoff(scip, problem, cols, ncols) );
       }
    }
