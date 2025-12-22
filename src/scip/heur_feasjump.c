@@ -403,6 +403,7 @@ SCIP_RETCODE fjProblemAddConstraint(
 {
    FJ_CONSTRAINT* constraint;
    SCIP_Real newrhs;
+   SCIP_Real scalar;
    int i;
    int nnewcoeffs;
 
@@ -441,6 +442,7 @@ SCIP_RETCODE fjProblemAddConstraint(
    }
 
    newrhs = rhs;
+   scalar = MAX3(rhs, -rhs, 1.0);
    nnewcoeffs = 0;
 
    /* adjust rhs if relaxing continuous variables */
@@ -483,11 +485,11 @@ SCIP_RETCODE fjProblemAddConstraint(
    {
       SCIP_Bool ok;
       if( sense == FJ_LTE )
-         ok = !SCIPisFeasNegative(scip, newrhs);
+         ok = !SCIPisFeasNegative(scip, newrhs / scalar);
       else if( sense == FJ_GTE )
-         ok = !SCIPisFeasPositive(scip, newrhs);
+         ok = !SCIPisFeasPositive(scip, newrhs / scalar);
       else
-         ok = SCIPisFeasZero(scip, newrhs);
+         ok = SCIPisFeasZero(scip, newrhs / scalar);
 
       if( idx != NULL )
          *idx = ok ? INT_MAX : INT_MIN;
@@ -507,7 +509,7 @@ SCIP_RETCODE fjProblemAddConstraint(
 
    constraint = &problem->constraints[problem->nconstraints];
    constraint->sense = sense;
-   constraint->rhs = newrhs;
+   constraint->rhs = newrhs / scalar;
    constraint->ncoeffs = 0;
    constraint->coeffssize = nnewcoeffs;
    constraint->weight = 1.0;
@@ -525,7 +527,7 @@ SCIP_RETCODE fjProblemAddConstraint(
          continue;
 
       constraint->coeffs[constraint->ncoeffs].idx = rowinds[i];
-      constraint->coeffs[constraint->ncoeffs].coeff = rowcoeffs[i];
+      constraint->coeffs[constraint->ncoeffs].coeff = rowcoeffs[i] / scalar;
       constraint->ncoeffs++;
 
       var = &problem->vars[rowinds[i]];
@@ -536,7 +538,7 @@ SCIP_RETCODE fjProblemAddConstraint(
          var->coeffssize = newsize;
       }
       var->coeffs[var->ncoeffs].idx = problem->nconstraints;
-      var->coeffs[var->ncoeffs].coeff = rowcoeffs[i];
+      var->coeffs[var->ncoeffs].coeff = rowcoeffs[i] / scalar;
       var->ncoeffs++;
    }
 
