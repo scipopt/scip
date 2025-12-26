@@ -691,11 +691,14 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
    FJ_PROBLEM* problem;
    FJ_VAR* var;
    SCIP_Real varincumbent;
-   SCIP_Real currentvalue;
-   SCIP_Real currentscore;
-   SCIP_Real currentslope;
    SCIP_Real bestscore;
    SCIP_Real bestvalue;
+   SCIP_Real currentscore;
+   SCIP_Real currentvalue;
+   SCIP_Real currentslope;
+   SCIP_Real currentvaluestore;
+   SCIP_Real currentslopestore;
+   int currentindexstore;
    int i;
    int j;
 
@@ -709,7 +712,6 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
 
    solver->nshiftbuffer = 0;
    currentvalue = var->lb;
-   currentscore = 0.0;
    currentslope = 0.0;
 
    /* compute shift buffer */
@@ -832,7 +834,6 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
 
          if( validrangelb > currentvalue )
          {
-            currentscore += constraint->weight * (validrangelb - currentvalue);
             currentslope -= constraint->weight;
             if( validrangelb < var->ub )
             {
@@ -856,10 +857,7 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
          }
 
          if( validrangeub <= currentvalue )
-         {
-            currentscore += constraint->weight * (validrangeub - currentvalue);
             currentslope += constraint->weight;
-         }
          else if( validrangeub < var->ub )
          {
             /* ensure capacity */
@@ -906,25 +904,66 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
    SCIPsortPtr((void**)solver->shiftbuffer, fjShiftBufferComp, solver->nshiftbuffer);
 
    /* find best shift */
-   bestscore = currentscore;
-   bestvalue = currentvalue;
-   currentvalue = var->lb;
+   i = 0;
 
-   for( i = 0; i < solver->nshiftbuffer; ++i )
+   do
    {
-      currentscore += (solver->shiftbuffer[i]->value - currentvalue) * currentslope;
       currentslope += solver->shiftbuffer[i]->weight;
       currentvalue = solver->shiftbuffer[i]->value;
 
-      if( SCIPisEQ(scip, bestvalue, varincumbent)
-         || ( bestscore > currentscore && !SCIPisEQ(scip, currentvalue, varincumbent) ) )
+      if( i + 1 == solver->nshiftbuffer || SCIPisPositive(scip, currentslope)
+         || ( SCIPisZero(scip, currentslope) && -solver->shiftbuffer[i]->value < solver->shiftbuffer[i + 1]->value ) )
+         break;
+
+      ++i;
+   }
+   while( TRUE ); /*lint !e506*/
+
+   bestvalue = currentvalue;
+
+   /* force significant shift */
+   if( SCIPisEQ(scip, currentvalue, varincumbent) )
+   {
+      bestscore = INFINITY;
+      currentscore = 0.0;
+      currentvaluestore = currentvalue;
+      currentslopestore = currentslope;
+      currentindexstore = i;
+
+      if( SCIPisGT(scip, solver->shiftbuffer[solver->nshiftbuffer - 1]->value, varincumbent) )
       {
+         do
+         {
+            ++i;
+            currentscore += (solver->shiftbuffer[i]->value - currentvalue) * currentslope;
+            currentslope += solver->shiftbuffer[i]->weight;
+            currentvalue = solver->shiftbuffer[i]->value;
+         }
+         while( SCIPisLE(scip, currentvalue, varincumbent) );
+
          bestscore = currentscore;
          bestvalue = currentvalue;
       }
 
-      if( currentslope >= 0.0 && !SCIPisEQ(scip, bestvalue, varincumbent) )
-         break;
+      currentscore = 0.0;
+      currentvalue = currentvaluestore;
+      currentslope = currentslopestore;
+      i = currentindexstore;
+
+      if( SCIPisLT(scip, solver->shiftbuffer[0]->value, varincumbent) )
+      {
+         do
+         {
+            currentslope -= solver->shiftbuffer[i]->weight;
+            --i;
+            currentscore += (solver->shiftbuffer[i]->value - currentvalue) * currentslope;
+            currentvalue = solver->shiftbuffer[i]->value;
+         }
+         while( SCIPisGE(scip, currentvalue, varincumbent) );
+
+         if( bestscore > currentscore )
+            bestvalue = currentvalue;
+      }
    }
 
    solver->jumpmoves[varidx].value = bestvalue;
