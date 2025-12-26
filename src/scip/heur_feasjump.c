@@ -618,7 +618,8 @@ SCIP_RETCODE fjProblemResetIncumbent(
    else
    {
       for( i = 0; i < problem->nvars; ++i )
-         problem->incumbentassignment[i] = problem->vars[i].lb;
+         problem->incumbentassignment[i] = !SCIPisInfinity(scip, -problem->vars[i].lb) ? problem->vars[i].lb
+               : !SCIPisInfinity(scip, problem->vars[i].ub) ? problem->vars[i].ub : 0.0;
    }
 
    /* reset incumbent objective */
