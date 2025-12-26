@@ -455,16 +455,52 @@ SCIP_RETCODE fjProblemAddConstraint(
             if( sense == FJ_LTE )
             {
                if( rowcoeffs[i] >= 0.0 )
-                  newrhs -= rowcoeffs[i] * problem->vars[rowinds[i]].lb;
+               {
+                  if( !SCIPisInfinity(scip, -problem->vars[rowinds[i]].lb) )
+                     newrhs -= rowcoeffs[i] * problem->vars[rowinds[i]].lb;
+                  else
+                  {
+                     if( idx != NULL )
+                        *idx = INT_MAX;
+                     return SCIP_OKAY;
+                  }
+               }
                else
-                  newrhs -= rowcoeffs[i] * problem->vars[rowinds[i]].ub;
+               {
+                  if( !SCIPisInfinity(scip, problem->vars[rowinds[i]].ub) )
+                     newrhs -= rowcoeffs[i] * problem->vars[rowinds[i]].ub;
+                  else
+                  {
+                     if( idx != NULL )
+                        *idx = INT_MAX;
+                     return SCIP_OKAY;
+                  }
+               }
             }
             else if( sense == FJ_GTE )
             {
                if( rowcoeffs[i] >= 0.0 )
-                  newrhs -= rowcoeffs[i] * problem->vars[rowinds[i]].ub;
+               {
+                  if( !SCIPisInfinity(scip, problem->vars[rowinds[i]].ub) )
+                     newrhs -= rowcoeffs[i] * problem->vars[rowinds[i]].ub;
+                  else
+                  {
+                     if( idx != NULL )
+                        *idx = INT_MAX;
+                     return SCIP_OKAY;
+                  }
+               }
                else
-                  newrhs -= rowcoeffs[i] * problem->vars[rowinds[i]].lb;
+               {
+                  if( !SCIPisInfinity(scip, -problem->vars[rowinds[i]].lb) )
+                     newrhs -= rowcoeffs[i] * problem->vars[rowinds[i]].lb;
+                  else
+                  {
+                     if( idx != NULL )
+                        *idx = INT_MAX;
+                     return SCIP_OKAY;
+                  }
+               }
             }
             else
             {
