@@ -517,7 +517,7 @@ SCIP_RETCODE deletionFilterBatch(
    int nconss;
    int nvars;
    int batchindex;
-   int batchsize;
+   int batchsize = initbatchsize;
    int iteration;
    int i;
    int k;

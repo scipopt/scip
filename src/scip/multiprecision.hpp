@@ -112,11 +112,11 @@ namespace scip
    };
    using Integer = Rational;
    using sparsevec = std::vector<SCIP_RATIONAL>;
-   Rational& abs(Rational& r){return r;}
-   Rational& max(Rational& r1, Rational& r2){return r1;}
-   Rational& min(Rational& r1, Rational& r2){return r1;}
-   SCIP_Longint denominator(Rational& r){return 0L;}
-   SCIP_Longint numerator(Rational& r){return 0L;}
+   INLINE Rational& abs(Rational& r){return r;}
+   INLINE Rational& max(Rational& r1, Rational& r2){return r1;}
+   INLINE Rational& min(Rational& r1, Rational& r2){return r1;}
+   INLINE SCIP_Longint denominator(Rational& r){return 0L;}
+   INLINE SCIP_Longint numerator(Rational& r){return 0L;}
 }
 #endif
 

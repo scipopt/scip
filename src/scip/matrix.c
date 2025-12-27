@@ -548,7 +548,7 @@ SCIP_RETCODE setColumnMajorFormat(
    int* rowpnt;
    int* rowend;
    SCIP_Real* valpnt;
-   SCIP_RATIONAL* valpntrational;
+   SCIP_RATIONAL* valpntrational = NULL;
    int* fillidx;
 
    assert(scip != NULL);

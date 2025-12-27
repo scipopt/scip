@@ -65,6 +65,7 @@ using namespace scip;
 #endif
 
 /** print SCIP_RATIONAL to output stream */
+static
 std::ostream& operator<<(
    std::ostream&         os,                 /**< output stream */
    SCIP_RATIONAL const & r                   /**< rational to print */
@@ -1834,10 +1835,8 @@ void SCIPrationalPrint(
 {
    if( rational == NULL )
       std::cout << "unknown" << std::flush;
-   else if( rational->isinf )
-      std::cout << (rational->val.sign() > 0 ? "+" : "-") << "infinity" << std::flush;
    else
-      std::cout << rational->val << std::flush;
+      std::cout << *rational << std::flush;
 }
 
 /** printf extension for rationals (not supporting all format options) */
@@ -2358,7 +2357,7 @@ void SCIPrationalComputeApproximationLong(
          res->isinf = FALSE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 
-         SCIPdebug(std::cout << "approximating " << src->val << " by " << res->val << std::endl);
+         SCIPdebug(std::cout << "approximating " << *src << " by " << *res << std::endl);
 
          return;
       }
@@ -2382,7 +2381,7 @@ void SCIPrationalComputeApproximationLong(
 
       done = 0;
 
-      SCIPdebug(std::cout << "approximating " << src->val << " by continued fractions with maxdenom " << maxdenom << std::endl);
+      SCIPdebug(std::cout << "approximating " << *src << " by continued fractions with maxdenom " << maxdenom << std::endl);
       SCIPdebug(std::cout << "confrac initial values: p0 " << p[1] << " q0 " << q[1] << " p1 " << p[2] << " q1 " << q[2] << std::endl);
 
       /* if q is already big, skip loop */
@@ -2563,7 +2562,7 @@ void SCIPrationalComputeApproximation(
          res->isinf = FALSE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 
-         SCIPdebug(std::cout << "approximating " << src->val << " by " << res->val << std::endl);
+         SCIPdebug(std::cout << "approximating " << *src << " by " << *res << std::endl);
 
          return;
       }
@@ -2584,7 +2583,7 @@ void SCIPrationalComputeApproximation(
 
       done = 0;
 
-      SCIPdebug(std::cout << "approximating " << src->val << " by continued fractions with maxdenom " << maxdenom << std::endl);
+      SCIPdebug(std::cout << "approximating " << *src << " by continued fractions with maxdenom " << maxdenom << std::endl);
       SCIPdebug(std::cout << "confrac initial values: p0 " << p[1] << " q0 " << q[1] << " p1 " << p[2] << " q1 " << q[2] << std::endl);
 
       /* if q is already big, skip loop */
