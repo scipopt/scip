@@ -246,21 +246,20 @@ SCIP_RETCODE initConcsolver(
    SCIP_CONCSOLVER*      concsolver          /**< the concurrent solver to set up */
    )
 {
-   int                 i;
-   SCIP_VAR**          vars;
-   SCIP_Bool           valid;
-   SCIP_HASHMAP*       varmapfw;
+   SCIP_HASHMAP* varmapfw;
    SCIP_CONCSOLVERDATA* data;
+   SCIP_VAR** mainvars;
+   SCIP_VAR** subvars;
+   SCIP_Bool valid;
+   int nmainvars;
    int* varperm;
+   int v;
 
    assert(scip != NULL);
    assert(concsolver != NULL);
 
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
-
-   data->nvars = SCIPgetNVars(scip);
-   vars = SCIPgetVars(scip);
 
    /* we force the copying of symmetry constraints that may have been detected during a central presolving step;
     * otherwise, the copy may become invalid */
@@ -272,35 +271,52 @@ SCIP_RETCODE initConcsolver(
       SCIPdebugMessage("Could not force copying of symmetry constraints\n");
    }
 
+   /* get number of active variables in main SCIP */
+   nmainvars = SCIPgetNVars(scip);
+   mainvars = SCIPgetVars(scip);
+
    /* create the concurrent solver's SCIP instance and set up the problem */
    SCIP_CALL( SCIPcreate(&data->solverscip) );
    SCIPsetMessagehdlrQuiet(data->solverscip, SCIPmessagehdlrIsQuiet(SCIPgetMessagehdlr(scip)));
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(data->solverscip), data->nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(data->solverscip), nmainvars) );
    SCIP_CALL( SCIPcopyConsCompression(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver),
          NULL, NULL, 0, TRUE, FALSE, FALSE, FALSE, &valid) );
    assert(valid);
+
+   /* Note that because some aggregations or fixed variables cannot be resolved by some constraint handlers (in
+    * particular cons_sos1, cons_sos2, cons_and), the copied problem may contain more variables than the original
+    * problem has active variables. */
+   data->nvars = SCIPgetNOrigVars(data->solverscip);
+   assert( nmainvars <= data->nvars );
 
    /* allocate memory for the arrays to store the variable mapping */
    SCIP_CALL( SCIPallocBlockMemoryArray(data->solverscip, &data->vars, data->nvars) );
    SCIP_CALL( SCIPallocBufferArray(data->solverscip, &varperm, data->nvars) );
 
    /* set up the arrays for the variable mapping */
-   for( i = 0; i < data->nvars; i++ )
+   subvars = SCIPgetOrigVars(data->solverscip);
+   for( v = 0; v < data->nvars; v++ )
    {
+#ifndef NDEBUG
+      /* SCIPcopyConsCompression() copies the active problem variables first. Then the constraints are copied, which
+       * might involve (multi-)aggregated variables, which are then copied afterwards, including coupling linear
+       * constraints. */
       SCIP_VAR* var;
       int idx;
 
-      var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-      assert(var != NULL);
-      idx = SCIPvarGetIndex(var);
-      assert(0 <= idx && idx < data->nvars);
+      var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, mainvars[v]);
+      if( var != NULL )
+      {
+         idx = SCIPvarGetIndex(var);
+         assert(0 <= idx && idx < nmainvars);
+         assert(idx == v );
+         assert( var == subvars[v] );
+      }
+      assert( var != NULL || v >= nmainvars );
+#endif
 
-      /* Note that because some aggregations or fixed variables cannot be resolved by some constraint handlers (in
-       * particular cons_orbitope_pp), the copied problem may contain more variables than the original problem has
-       * active variables. These variables will be ignored in the following, since they depend on the other `active'
-       * varibles. See concurrent.c:SCIPgetConcurrentVaridx(). */
-      varperm[idx] = i;
-      data->vars[i] = var;
+      varperm[v] = v;
+      data->vars[v] = subvars[v];
    }
 
    /* transfer solutions from original problem to concurent instances */
@@ -308,29 +324,24 @@ SCIP_RETCODE initConcsolver(
    {
       SCIP_Bool stored;
       SCIP_Real* solvals;
-      SCIP_SOL* sol = SCIPgetBestSol(scip);
+      SCIP_SOL* mainsol;
       SCIP_SOL* solversol;
-      int norigvars;
 
+      mainsol = SCIPgetBestSol(scip);
       SCIP_CALL( SCIPallocBufferArray(data->solverscip, &solvals, data->nvars) );
 
-      SCIP_CALL( SCIPgetSolVals(scip, sol, data->nvars, vars, solvals) );
+      SCIP_CALL( SCIPgetSolVals(scip, mainsol, nmainvars, mainvars, solvals) );
       SCIP_CALL( SCIPcreateSol(data->solverscip, &solversol, NULL) );
-      SCIP_CALL( SCIPsetSolVals(data->solverscip, solversol, data->nvars, data->vars, solvals) );
+      SCIP_CALL( SCIPsetSolVals(data->solverscip, solversol, nmainvars, data->vars, solvals) );
       SCIPfreeBufferArray(data->solverscip, &solvals);
 
       /* handle fixed variables */
-      norigvars = SCIPgetNOrigVars(data->solverscip);
-      if( norigvars > data->nvars )
+      if( data->nvars > nmainvars )
       {
-         SCIP_VAR** origvars;
-         int v;
-
-         origvars = SCIPgetOrigVars(data->solverscip);
-         for( v = 0; v < norigvars; ++v )
+         for( v = 0; v < data->nvars; ++v )
          {
             SCIP_VAR* var;
-            var = origvars[v];
+            var = data->vars[v];
             if( SCIPisEQ(data->solverscip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
             {
                if( ! SCIPisZero(data->solverscip, SCIPvarGetLbGlobal(var)) )
@@ -540,38 +551,48 @@ SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA(concsolverGetSolvingData)
    nsols = SCIPgetNSols(data->solverscip);
    if( nsols > 0 )
    {
-      SCIP_VAR** vars;
-      SCIP_SOL** sols;
+      SCIP_VAR** mainvars;
+      SCIP_SOL** solversols;
       SCIP_Real* solvals;
-      int nvars;
+      int nmainvars;
       int i;
 
-      vars = SCIPgetVars(scip);
-      nvars = SCIPgetNVars(scip);
-      assert(nvars == data->nvars);
+      mainvars = SCIPgetVars(scip);
+      nmainvars = SCIPgetNVars(scip);
+      assert(nmainvars <= data->nvars);
 
-      sols = SCIPgetSols(data->solverscip);
+      solversols = SCIPgetSols(data->solverscip);
 
       /* allocate buffer array used for translating the solution to the given SCIP */
-      SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nmainvars) );
 
       /* add the solutions to the given SCIP */
       for( i = 0; i < nsols; ++i )
       {
-         SCIP_SOL* sol;
+         SCIP_SOL* mainsol;
          SCIP_HEUR* heur;
          SCIP_Bool stored;
 
-         SCIP_CALL( SCIPgetSolVals(data->solverscip, sols[i], nvars, data->vars, solvals) );
+         /* only get the first nmainvars, which correspond to the active variables */
+         SCIP_CALL( SCIPgetSolVals(data->solverscip, solversols[i], nmainvars, data->vars, solvals) );
 
-         heur = SCIPsolGetHeur(sols[i]);
+         heur = SCIPsolGetHeur(solversols[i]);
          if( heur != NULL )
             heur = SCIPfindHeur(scip, SCIPheurGetName(heur));
 
-         SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
-         SCIP_CALL( SCIPsetSolVals(scip, sol, nvars, vars, solvals) );
-         SCIP_CALL( SCIPcopySolStats(sols[i], sol) );
-         SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
+         SCIP_CALL( SCIPcreateSol(scip, &mainsol, heur) );
+         SCIP_CALL( SCIPsetSolVals(scip, mainsol, nmainvars, mainvars, solvals) );
+         SCIP_CALL( SCIPcopySolStats(solversols[i], mainsol) );
+
+#ifndef NDEBUG
+         {
+            SCIP_Bool feasible;
+            SCIP_CALL( SCIPcheckSol(scip, mainsol, TRUE, TRUE, TRUE, TRUE, FALSE, &feasible) );
+            assert( feasible );
+         }
+#endif
+
+         SCIP_CALL( SCIPaddSolFree(scip, &mainsol, &stored) );
       }
 
       /* free the buffer array */
