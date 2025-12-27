@@ -376,11 +376,11 @@ SCIP_RETCODE initConcsolver(
 static
 SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
 {
-   SCIP_CONCSOLVERDATA*     data;
+   char filename[SCIP_MAXSTRLEN];
+   SCIP_CONCSOLVERDATA* data;
    SCIP_CONCSOLVERTYPEDATA* typedata;
-   char*                    prefix;
-   char                     filename[SCIP_MAXSTRLEN];
-   SCIP_Bool                changechildsel;
+   SCIP_Bool changechildsel;
+   char* prefix;
 
    assert(scip != NULL);
    assert(concsolvertype != NULL);
@@ -398,9 +398,9 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    {
       SCIP_PARAM** params;
       SCIP_PARAM** fixedparams;
-      int          nparams;
-      int          nfixedparams;
-      int          i;
+      int nparams;
+      int nfixedparams;
+      int i;
 
       params = SCIPgetParams(data->solverscip);
       nparams = SCIPgetNParams(data->solverscip);
@@ -506,12 +506,11 @@ SCIP_DECL_CONCSOLVERDESTROYINST(concsolverScipDestroyInstance)
 static
 SCIP_DECL_CONCSOLVERTYPEFREEDATA(concsolverTypeScipFreeData)
 {
+   assert(data != NULL);
    BMSfreeMemory(data);
 }
 
-/** initializes the random and permutation seeds with the given one
- *  and enables permutation of constraints and variables
- */
+/** initializes the random and permutation seeds and enables permutation of constraints and variables */
 static
 SCIP_DECL_CONCSOLVERINITSEEDS(concsolverScipInitSeeds)
 {
@@ -532,7 +531,7 @@ SCIP_DECL_CONCSOLVERINITSEEDS(concsolverScipInitSeeds)
    return SCIP_OKAY;
 }
 
-/** installs the solving status of this concurrent solver and the solving statistics
+/** extracts solving status of this concurrent solver and the solving statistics
  *  into the given SCIP instance
  */
 static
@@ -605,8 +604,9 @@ SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA(concsolverGetSolvingData)
    return SCIP_OKAY;
 }
 
-/** start solving the problem until the solving reaches a limit, gets interrupted, or
- *  just finished successfully
+/** execution method of SCIP concsolver solver
+ *
+ *  Start solving the problem until the solving reaches a limit, gets interrupted, or just finished successfully.
  */
 static
 SCIP_DECL_CONCSOLVEREXEC(concsolverScipExec)
@@ -614,6 +614,9 @@ SCIP_DECL_CONCSOLVEREXEC(concsolverScipExec)
    SCIP_CONCSOLVERDATA* data;
 
    assert(concsolver != NULL);
+   assert(solvingtime != NULL);
+   assert(nlpiterations != NULL);
+   assert(nnodes != NULL);
 
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
@@ -642,6 +645,7 @@ static
 SCIP_DECL_CONCSOLVERSTOP(concsolverScipStop)
 {
    SCIP_CONCSOLVERDATA* data;
+
    assert(concsolver != NULL);
 
    data = SCIPconcsolverGetData(concsolver);
@@ -656,16 +660,30 @@ SCIP_DECL_CONCSOLVERSTOP(concsolverScipStop)
 static
 SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 {
-   int                    i;
-   int                    nsols;
-   SCIP_SOL**             sols;
-   SCIP_CONCSOLVERDATA*   data;
-   SCIP_BOUNDSTORE*       boundstore;
-   int                    concsolverid;
-   SCIP_STATUS            solverstatus;
+   SCIP_SOL** sols;
+   SCIP_CONCSOLVERDATA* data;
+   SCIP_BOUNDSTORE* boundstore;
+   SCIP_STATUS solverstatus;
+   int concsolverid;
+   int nsols;
+   int i;
+
+   assert(concsolver != NULL);
+   assert(syncstore != NULL);
+   assert(syncdata != NULL);
+   assert(nsolsshared != NULL);
+
+   *nsolsshared = 0;
+
+   if ( maxcandsols <= 0 )
+      return SCIP_OKAY;
+
+   if( SCIPsyncdataGetStatus(syncdata) != SCIP_STATUS_UNKNOWN )
+      return SCIP_OKAY;
 
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
+   assert(data->solverscip != NULL);
    concsolverid = SCIPconcsolverGetIdx(concsolver);
    solverstatus = SCIPgetStatus(data->solverscip);
 
@@ -673,16 +691,9 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
    SCIPsyncdataSetLowerbound(syncdata, SCIPgetDualbound(data->solverscip));
    SCIPsyncdataSetUpperbound(syncdata, SCIPgetPrimalbound(data->solverscip));
 
-   *nsolsshared = 0;
-
-   if( SCIPsyncdataGetStatus(syncdata) != SCIP_STATUS_UNKNOWN )
-      return SCIP_OKAY;
-
    SCIPdebugMessage("syncing in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
 
-   /* consider at most maxcandsols many solutions, and since the solution array is sorted, we will cosider the best
-    * solutions
-    */
+   /* consider at most maxcandsols many solutions, and since the solution array is sorted, cosider best solutions */
    nsols = SCIPgetNSols(data->solverscip);
    nsols = MIN(nsols, maxcandsols);
    sols = SCIPgetSols(data->solverscip);
@@ -699,7 +710,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
          SCIPdebugMessage("adding sol in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
          SCIPsyncdataGetSolutionBuffer(syncstore, syncdata, solobj, concsolverid, &solvals);
 
-         /* if syncstore has no place for this solution we can stop since the next solution will have
+         /* if syncstore has no place for this solution, we can stop, since the next solution will have
           * a worse objective value and thus won't be accepted either
           */
          if( solvals == NULL )
@@ -730,14 +741,23 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 static
 SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 {  /*lint --e{715}*/
-   int                    i;
-   int                    nsols;
-   SCIP_Real**            solvals;
-   SCIP_CONCSOLVERDATA*   data;
-   SCIP_BOUNDSTORE*       boundstore;
-   int*                   concsolverids;
-   int                    concsolverid;
-   int                    nbndchgs;
+   SCIP_Real** solvals;
+   SCIP_CONCSOLVERDATA* data;
+   SCIP_BOUNDSTORE* boundstore;
+   int* concsolverids;
+   int concsolverid;
+   int nbndchgs;
+   int nsols;
+   int i;
+
+   assert(concsolver != NULL);
+   assert(syncstore != NULL);
+   assert(syncdata != NULL);
+   assert(nsolsrecvd != NULL);
+   assert(ntighterbnds != NULL);
+   assert(ntighterintbnds != NULL);
+
+   *nsolsrecvd = 0;
 
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
@@ -746,8 +766,6 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 
    /* get solutions from synchronization data */
    SCIPsyncdataGetSolutions(syncdata, &solvals, &concsolverids, &nsols);
-   *nsolsrecvd = 0;
-
    for( i = 0; i < nsols; ++i )
    {
       SCIP_SOL* newsol;
@@ -759,7 +777,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
       if( concsolverids[i] == concsolverid )
          continue;
 
-      /* solution is from other solver so translate to this solvers variable space and add it to SCIP */
+      /* solution is from other solver, so translate to this solver's variable space and add it to SCIP */
       ++(*nsolsrecvd);
       SCIP_CALL( SCIPcreateOrigSol(data->solverscip, &newsol, NULL) );
 
@@ -813,9 +831,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
          return SCIP_OKAY;
 
-      /* if bound is not better than also don't pass this bound to the propagator and
-       * don't waste memory for storing this boundchange
-       */
+      /* if bound is not better then also do not pass this bound and do not waste memory for storing this boundchange */
       if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisGE(data->solverscip, SCIPvarGetLbGlobal(var), newbound) )
          return SCIP_OKAY;
 
