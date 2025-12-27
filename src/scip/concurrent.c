@@ -378,8 +378,7 @@ SCIP_Longint SCIPgetConcurrentNTightenedIntBnds(
    return scip->concurrent->propsync != NULL ? SCIPpropSyncGetNTightenedIntBnds(scip->concurrent->propsync) : 0;
 }
 
-/** pass a solution to the given SCIP instance using that was received via synchronization by using
- * the sync heuristic */
+/** pass a solution to the given SCIP instance that was received via synchronization by using the sync heuristic */
 SCIP_RETCODE SCIPaddConcurrentSol(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_SOL*             sol                 /**< solution */
