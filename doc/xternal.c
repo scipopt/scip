@@ -1407,7 +1407,7 @@
  * Possible values are defined in type_timing.h and can be concatenated, e.g., as in SCIP_PROPTIMING_ALWAYS.
  *
  * \par CONSHDLR_PRESOLTIMING: the timing of the constraint handler's presolving function (FAST, MEDIUM, or EXHAUSTIVE).
- * Every presolving round starts with the FAST presolving functions. MEDIUM presolvers are only called, if FAST presolvers did not find
+ * Every presolving round starts with the FAST presolving timing. MEDIUM presolving functions are only called, if FAST presolvers did not find
  * enough reductions in this round so far, and EXHAUSTIVE presolving steps are only performed if all presolvers called before
  * in this round were unsuccessful.
  * Presolving functions should be assigned a timing based on how expensive they are, e.g., presolvers that provide fast algorithms that
@@ -2024,7 +2024,7 @@
  *
  * @subsection CONSPARSE
  *
- * This function is the counter part to CONSPRINT. The ideal idea is that a constraint handler is able to parse the output
+ * This function is the counterpart to CONSPRINT. The ideal idea is that a constraint handler is able to parse the output
  * which it generated via the CONSPRINT function and creates the corresponding constraint. If the parsing was successfully
  * the result pointer success should be set to TRUE. An example implementation can be found in the \ref cons_linear.h
  * "linear constraint handler".
@@ -2909,7 +2909,7 @@
  * presolving, that is, if the \ref PROPPRESOL "presolving callback" is implemented.
 
  * \par PROP_PRESOLTIMING: the timing of the presolving function (FAST, MEDIUM, or EXHAUSTIVE).
- * Every presolving round starts with the FAST presolving functions. MEDIUM presolvers are only called, if FAST presolvers did not find
+ * Every presolving round starts with the FAST presolvers. MEDIUM presolvers are only called, if FAST presolvers did not find
  * enough reductions in this round so far, and EXHAUSTIVE presolving steps are only performed if all presolvers called before
  * in this round were unsuccessful.
  * Presolving functions should be assigned a timing based on how expensive they are, e.g., presolvers that provide fast algorithms that
