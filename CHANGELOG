@@ -472,7 +472,7 @@ Miscellaneous:
 - `reading/opbreader/maxintsize`: maximal intsize above which an OPB instance is rejected
 - `reading/nlreader/binary`, `reading/nlreader/comments`: adjust writing of `nl` files
 - `nlpi/conopt/priority`: priority of the CONOPT NLP solver
-- `randomization/randomseedshiftmultiplier`: multiplier for the shift set by ``randomization/randomseedshift`;
+- `randomization/randomseedshiftmultiplier`: multiplier for the shift set by `randomization/randomseedshift`;
   the shift is multiplied by (6*`randomseedshiftmultiplier`+1), with the default value for `randomseedshiftmultiplier` set to 10 now;
   this default value is expected to change with every major release; setting the parameter to 0 restores SCIP 9 behavior
 
