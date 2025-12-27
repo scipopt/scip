@@ -101,7 +101,7 @@
 #define DEFAULT_MAXROWDENSITY      0.05 /**< maximal density of row to be used in aggregation */
 #define DEFAULT_DENSITYOFFSET       100 /**< additional number of variables allowed in row on top of density */
 #define DEFAULT_MAXROWFAC          1e+4 /**< maximal row aggregation factor */
-#define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
+#define DEFAULT_MAXTESTDELTA       (-1) /**< maximal number of different deltas to try (-1: unlimited) */
 #define DEFAULT_AGGRTOL            1e-2 /**< aggregation heuristic: we try to delete continuous variables from the current
                                          *   aggregation, whose distance to its tightest bound is >= L - DEFAULT_AGGRTOL,
                                          *   where L is the largest of the distances between a continuous variable's value
@@ -110,12 +110,6 @@
 #define DEFAULT_FIXINTEGRALRHS     TRUE /**< should an additional variable be complemented if f0 = 0? */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 
-#define BOUNDSWITCH                 0.5
-#define MINFRAC                    0.05
-#define MAXFRAC                    0.999
-#define VARTYPEUSEVBDS                2 /**< We allow variable bound substitution for variables with continuous vartype only.
-                                         *   See cuts.c for more information. */
-#define POSTPROCESS                TRUE
 #define MAKECONTINTEGRAL          FALSE
 #define IMPLINTSARECONT
 
@@ -888,13 +882,8 @@ SCIP_RETCODE aggregation(
 
       /* initialize cut generation parameters */
       SCIPinitCutGenParams(&params);
-      params.boundswitch = BOUNDSWITCH;
-      params.minfrac = MINFRAC;
-      params.maxfrac = MAXFRAC;
-      params.vartypeusevbds = VARTYPEUSEVBDS;
-      params.maxtestdelta = maxtestdelta;
-      params.postprocess = POSTPROCESS;
       params.allowlocal = allowlocal;
+      params.maxtestdelta = maxtestdelta;
 
       /* set enabled methods */
       methods = SCIP_CUTGENMETHOD_NONE;
