@@ -259,7 +259,7 @@
  * so that he knows about some of the pitfalls, best practices and mechanisms.
  * If a problem comes up later or he gets stuck, he knows what to look out for and where to find help.
  *
- * Whenever Alex gets stuck inside the code, he makes use of the extensive documentation to \ref DOC "search for interface methods".
+ * Whenever Alex gets stuck inside the code, he makes use of the extensive documentation to \ref DOC "search for interface functions".
  *
  * @subsection GETTINGSTARTED_DEVELOP_EXAMPLE Writing An Example
  *
@@ -718,7 +718,7 @@
  *
  *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleStaticAsserts}
  *
- * - All global functions start with "SCIP". In the usual naming scheme this is followed by the object and a method name
+ * - All global functions start with "SCIP". In the usual naming scheme this is followed by the object and a function name
  *   like in SCIPlpAddRow(). Functions return TRUE or FALSE should be named like SCIPisFeasEQ().
  *
  *   @refsnippet{src/scip/scip_numerics.h,SnippetCodeStyleNaming}
@@ -734,7 +734,7 @@
  * - Please do not leave code in comments that has been commented out, don't use `#if
  *   0`. Instead put the code within defines `#ifdef SCIP_DISABLED_CODE` and add an explanation.
  * - Todos need double stars to be registered by doxygen.
- * - When documenting methods, the first brief description starts with lower case and is separated by semi-colons, if necessary
+ * - When documenting functions, the first brief description starts with lower case and is separated by semi-colons, if necessary
  *   The longer description starts capitalized and consists of complete sentences.
  *   If the documentation consists of multiple lines, the comment end must be on a new line.
  *
@@ -1196,10 +1196,10 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page DOC How to search the documentation and source files structure for public interface methods
+/**@page DOC How to search the documentation and source files structure for public interface functions
  *
- * If you are looking for a method in order to perform a specific task, the public \ref PUBLICAPI "SCIP C-API" is the place to look.
- * - It contains interface methods for all SCIP structs, both in the solver core or in one of the plugins.
+ * If you are looking for a function in order to perform a specific task, the public \ref PUBLICAPI "SCIP C-API" is the place to look.
+ * - It contains interface functions for all SCIP structs, both in the solver core or in one of the plugins.
  * - Plugins are mostly independent from each other, so to use them it is usually enough to browse the \ref PUBLICCOREAPI "Core API".
  * - If you want to add your own plugins, see the \ref HOWTOADD pages for exhaustive information for each plugin type.
  * - If you are learning SCIP with a concrete project in mind, looking at the available \ref EXAMPLES page may help you
@@ -1209,10 +1209,10 @@
  * Header file names of SCIP obey a consistent naming scheme: Type definitions and related objects such as enums are found in headers starting with "type_",
  * such as \ref type_var.h , which contains enums and type definitions related to \ref PublicVariableMethods "SCIP problem variables".
  * Definitions of the actual structs can be found in separate header files starting with "struct_".
- * All method definitions of the public SCIP API are split across header files starting with "pub_" such as \ref pub_cons.h
+ * All function definitions of the public SCIP API are split across header files starting with "pub_" such as \ref pub_cons.h
  * or headers starting with "scip_" such as \ref scip_cons.h .
- * The latter headers starting with "scip_" contain more complex methods, which always receive a scip pointer as first argument.
- * Those methods may affect several individual components controlled by SCIP. Such a method is SCIPbranchVar(), which
+ * The latter headers starting with "scip_" contain more complex functions, which always receive a scip pointer as first argument.
+ * Those functions may affect several individual components controlled by SCIP. Such a function is SCIPbranchVar(), which
  * affects the search tree, which is controlled by SCIP itself and not meant to be accessed by user plugins.
  *
  * It should be sufficient to include scip/scip.h and scip/scipdefplugins.h for having all
@@ -1229,7 +1229,7 @@
  * The opposite case is that you already know the name of a function as, e.g., SCIPbranchVar().
  *
  * 1. Type the name of the function into the search bar to find the function documentation.
- * 2. In addition, you can find related methods by browsing the neighboring functions of the same group.
+ * 2. In addition, you can find related functions by browsing the neighboring functions of the same group.
  * 3. In this example, you may now learn about SCIPgetNLPBranchCands() to query all integer
  *    variables with fractional LP solution value, which are good candidates for classical branching on variables.
  *
@@ -1253,11 +1253,11 @@
  * \ref TSP_MAIN project.
  * The example is written in C++ and uses the C++ wrapper classes.
  * However, we will explain the implementation of a constraint handler using the C interface.
- * It is very easy to transfer the C explanation to C++; whenever a method should be implemented using the
- * SCIP_DECL_CONS... notion, reimplement the corresponding virtual member function of the abstract scip::ObjConshdlr
+ * It is very easy to transfer the C explanation to C++; whenever a function should be implemented using the
+ * SCIP_DECL_CONS... notion, reimplement the corresponding virtual member method of the abstract scip::ObjConshdlr
  * base class.
  *
- * Additional documentation for the callback methods of a constraint handler can be found in the file
+ * Additional documentation for the callbacks of a constraint handler can be found in the file
  * type_cons.h.
  *
  * Here is what you have to do (assuming your constraint handler should be named "subtour"):
@@ -1272,9 +1272,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "subtour".
  * -# Adjust the \ref CONS_PROPERTIES "properties of the constraint handler".
  * -# Define the \ref CONS_DATA "constraint data and the constraint handler data". This is optional.
- * -# Implement the \ref CONS_INTERFACE "interface methods".
- * -# Implement the \ref CONS_FUNDAMENTALCALLBACKS "fundamental callback methods".
- * -# Implement the \ref CONS_ADDITIONALCALLBACKS "additional callback methods". This is optional.
+ * -# Implement the \ref CONS_INTERFACE "interface functions".
+ * -# Implement the \ref CONS_FUNDAMENTALCALLBACKS "fundamental callbacks".
+ * -# Implement the \ref CONS_ADDITIONALCALLBACKS "additional callbacks". This is optional.
  *
  *
  * @section CONS_PROPERTIES Properties of a Constraint Handler
@@ -1304,7 +1304,7 @@
  * \n
  * The integrality constraint handler has an enforcement priority of 0.
  * That means, if a constraint handler has negative enforcement priority, it only has to deal with integral solutions
- * in its enforcement methods, because for fractional solutions, the integrality constraint handler would have
+ * in its enforcement functions, because for fractional solutions, the integrality constraint handler would have
  * created a branching, thereby aborting the enforcement step.
  * If you want to implement a constraint-depending branching rule (for example, SOS branching on special ordered
  * set constraints), you have to assign a positive enforcement priority to your constraint handler.
@@ -1321,15 +1321,15 @@
  * \par CONSHDLR_EAGERFREQ: the default frequency for using all instead of only the useful constraints in separation, propagation and enforcement.
  * If \em constraint \em aging is activated, some constraints that were not useful in the past for propagation or
  * separation are marked to be \em obsolete.
- * Usually, the obsolete constraints are not presented to the separation and propagation methods of the constraint
+ * Usually, the obsolete constraints are not presented to the separation and propagation functions of the constraint
  * handlers, such that the constraint handlers only process the non-obsolete constraints.
  * However, every n'th call, with n being the EAGERFREQ of the constraint handler, all constraints are presented to the
- * separation and propagation methods of the constraint handler.
+ * separation and propagation functions of the constraint handler.
  * This gives obsolete constraints the chance of becoming non-obsolete again.
  * \n
  * If the eager evaluation frequency is set to -1, obsolete constraints are never presented to the separation and
- * propagation methods.
- * A frequency of 0 means, that obsolete constraints are only used in the first call of each method.
+ * propagation functions.
+ * A frequency of 0 means, that obsolete constraints are only used in the first call of each function.
  *
  * \par CONSHDLR_NEEDSCONS: indicates whether the constraint handler should be skipped, if no constraints are available.
  * Usually, a constraint handler is only executed if there are constraints of its corresponding class in the model.
@@ -1356,27 +1356,27 @@
  * an upgrade functionality from a general nonlinear constraint to the more specific one is defined.
  *
  * \par CONSHDLR_SEPAFREQ: the default frequency for separating cuts.
- * The separation frequency defines the depth levels at which the constraint handler's separation methods \ref CONSSEPALP
+ * The separation frequency defines the depth levels at which the constraint handler's separation functions \ref CONSSEPALP
  * and \ref CONSSEPASOL are called.
  * For example, a separation frequency of 7 means, that the separation callback is executed for subproblems that are
  * in depth 0, 7, 14, ... of the branching tree.
- * A separation frequency of 0 means, that the separation method is only called at the root node.
- * A separation frequency of -1 disables the separation method of the constraint handler.
+ * A separation frequency of 0 means, that the separation function is only called at the root node.
+ * A separation frequency of -1 disables the separation function of the constraint handler.
  * \n
  * The separation frequency can be adjusted by the user.
  * This property of the constraint handler only defines the default value of the frequency.
  * If you want to have a more flexible control of when to execute the separation algorithm, you have to assign
  * a separation frequency of 1 and implement a check at the beginning of your separation algorithm whether you really
  * want to execute the separator or not.
- * If you do not want to execute the method, set the result code to SCIP_DIDNOTRUN.
+ * If you do not want to execute the function, set the result code to SCIP_DIDNOTRUN.
  *
  * \par CONSHDLR_SEPAPRIORITY: the priority of the constraint handler for separation. (optional: to be set only if the constraint handler supports separation)
  * In each separation round during the price-and-cut loop of the subproblem processing or during the separation loop
- * of the primal solution separation, the separators and separation methods of the constraint handlers are called in
+ * of the primal solution separation, the separators and separation functions of the constraint handlers are called in
  * a predefined order, which is given by the priorities of the separators and the separation priorities of the
  * constraint handlers.
  * First, the separators with non-negative priority are called in the order of decreasing priority.
- * Next, the separation methods of the different constraint handlers are called in the order of decreasing separation
+ * Next, the separation functions of the different constraint handlers are called in the order of decreasing separation
  * priority.
  * Finally, the separators with negative priority are called in the order of decreasing priority.
  * \n
@@ -1386,33 +1386,33 @@
  * the LP relaxation) should have a high priority.
  * See \ref CONSSEPALP and \ref CONSSEPASOL for further details of the separation callbacks.
  *
- * \par CONSHDLR_DELAYSEPA: the default for whether the separation method should be delayed, if other separators found cuts.
- * If the constraint handler's separation method is marked to be delayed, it is only executed after no other separator
+ * \par CONSHDLR_DELAYSEPA: the default for whether the separation function should be delayed, if other separators found cuts.
+ * If the constraint handler's separation function is marked to be delayed, it is only executed after no other separator
  * or constraint handler found a cut during the price-and-cut loop.
- * If the separation method of the constraint handler is very expensive, you may want to mark it to be delayed until all
+ * If the separation function of the constraint handler is very expensive, you may want to mark it to be delayed until all
  * cheap separation methods have been executed.
  *
  * \par CONSHDLR_PROPFREQ: the default frequency for propagating domains.
  * This default frequency has the same meaning as the CONSHDLR_SEPAFREQ with respect to the domain propagation
  * callback of the constraint handler.
  * A propagation frequency of 0 means that propagation is only applied in preprocessing and at the root node.
- * A propagation frequency of -1 disables the propagation method of the constraint handler.
+ * A propagation frequency of -1 disables the propagation function of the constraint handler.
  *
- * \par CONSHDLR_DELAYPROP: the default for whether the propagation method should be delayed, if other propagators found reductions.
- * This property is analogous to the DELAYSEPA flag, but deals with the propagation method of the constraint handler.
+ * \par CONSHDLR_DELAYPROP: the default for whether the propagation function should be delayed, if other propagators found reductions.
+ * This property is analogous to the DELAYSEPA flag, but deals with the propagation function of the constraint handler.
  *
  * \par CONSHDLR_PROP_TIMING: the propagation timing mask of the constraint handler.
  * SCIP calls the domain propagation routines at different places in the node processing loop.
  * This property indicates at which places the propagation routine of the constraint handler is called.
  * Possible values are defined in type_timing.h and can be concatenated, e.g., as in SCIP_PROPTIMING_ALWAYS.
  *
- * \par CONSHDLR_PRESOLTIMING: the timing of the constraint handler's presolving method (FAST, MEDIUM, or EXHAUSTIVE).
- * Every presolving round starts with the FAST presolving methods. MEDIUM presolvers are only called, if FAST presolvers did not find
+ * \par CONSHDLR_PRESOLTIMING: the timing of the constraint handler's presolving function (FAST, MEDIUM, or EXHAUSTIVE).
+ * Every presolving round starts with the FAST presolving timing. MEDIUM presolving functions are only called, if FAST presolvers did not find
  * enough reductions in this round so far, and EXHAUSTIVE presolving steps are only performed if all presolvers called before
  * in this round were unsuccessful.
- * Presolving methods should be assigned a timing based on how expensive they are, e.g., presolvers that provide fast algorithms that
+ * Presolving functions should be assigned a timing based on how expensive they are, e.g., presolvers that provide fast algorithms that
  * usually have a high impact (i.e., remove lots of variables or tighten bounds of many variables) should have a timing FAST.
- * If a presolving method implements different algorithms of different complexity, it may also get multiple timings and check the timing
+ * If a presolving function implements different algorithms of different complexity, it may also get multiple timings and check the timing
  * internally in the \ref CONSPRESOL callback to decide which algorithms to run.
  *
  * \par CONSHDLR_MAXPREROUNDS: the default maximal number of presolving rounds the constraint handler participates in.
@@ -1446,13 +1446,13 @@
  * You can leave the struct empty.
  *
  *
- * @section CONS_INTERFACE Interface Methods
+ * @section CONS_INTERFACE Interface Functions
  *
- * At the bottom of "cons_subtour.c" you can find three interface methods, that also appear in "cons_subtour.h".
+ * At the bottom of "cons_subtour.c" you can find three interface functions, that also appear in "cons_subtour.h".
  * These are SCIPincludeConshdlrSubtour(), SCIPcreateConsSubtour(), and SCIPcreateConsSubtourBasic().
  * \n
- * The method SCIPincludeConshdlrSubtour() only has to be adjusted slightly.
- * It is responsible for notifying SCIP of the presence of the constraint handler by calling the method
+ * The function SCIPincludeConshdlrSubtour() only has to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the constraint handler by calling the function
  * SCIPincludeConshdlr().
  * It is called by the user, if (s)he wants to include the constraint handler, i.e., if (s)he wants to make
  * the constraint handler available to the model, and looks like this:
@@ -1474,7 +1474,7 @@
  *     \until SCIPsetConshdlrExit
  *
  *  -# If the constraint handler is a specialization of a general linear or nonlinear constraint, we want to include an
- *     <b>automatic upgrading mechanism</b> by calling the interface method
+ *     <b>automatic upgrading mechanism</b> by calling the interface function
  *
  *     \skip SCIPfindConshdlr
  *     \until SCIPincludeLinconsUpgrade
@@ -1493,14 +1493,14 @@
  *     \until }
  *
  *
- * The methods SCIPcreateConsSubtour() and SCIPcreateConsSubtourBasic() are called to create a single constraint of the constraint
+ * The functions SCIPcreateConsSubtour() and SCIPcreateConsSubtourBasic() are called to create a single constraint of the constraint
  * handler's constraint class.
  * It should allocate and fill the constraint data, and call SCIPcreateCons().
  * Take a look at the following example from the \ref cons_knapsack.h "knapsack constraint handler":
  *
  * @refsnippet{src/scip/cons_knapsack.c,SnippetConsCreationKnapsack}
  *
- * In this example, consdataCreate() is a local method that allocates memory for the given consdata
+ * In this example, consdataCreate() is a local function that allocates memory for the given consdata
  * and fills the data with the given <code>vars</code> array. For allocating memory for the constraint data, you
  * can use SCIP memory allocation:
  * \code
@@ -1508,14 +1508,14 @@
  * \endcode
  *
  *
- * @section CONS_CALLBACKS Callback methods of Constraint handlers
+ * @section CONS_CALLBACKS Callbacks of Constraint handlers
  *
  * Besides the various functions which you will implement inside your constraint handler there exists a number
- * of <b> callback methods </b> associated with your constraint handler. Callback methods can be regarded as
+ * of <b> callbacks </b> associated with your constraint handler. Callbacks can be regarded as
  * tasks which your constraint handler is able to provide to the solver. They are grouped into two
  * categories:
  *
- * \ref CONS_FUNDAMENTALCALLBACKS "Fundamental Callback methods" are mandatory to implement
+ * \ref CONS_FUNDAMENTALCALLBACKS "Fundamental Callbacks" are mandatory to implement
  * such that your code will work. For example, every constraint handler has to provide the
  * functionality to state whether all of its constraints are
  * fulfilled by a given variable assignment. Hence, the \ref CONSCHECK "CONSCHECK" callback is
@@ -1527,32 +1527,32 @@
  * some of these callbacks, e.g., to extend your constraint handler by a
  * \ref CONSSEPALP "separation" or \ref CONSPRESOL "presolving" functionality.
  *
- * All callbacks should be passed to SCIP during the SCIPinclude\<PLUGINTYPE\>\<PLUGINNAME\> method
+ * All callbacks should be passed to SCIP during the SCIPinclude\<PLUGINTYPE\>\<PLUGINNAME\> function
  * (e.g., SCIPincludeConshdlrKnapsack() for the \ref cons_knapsack.h "knapsack constraint handler").
  * Since SCIP version 3.0, two ways of setting callbacks can be used, either via SCIPincludeConshdlr()
  * (all at once, as it always was), or via SCIPincludeConshdlrBasic() and setter functions for additional callbacks.
- * Since the basic inclusion methods are very unlikely to change and will thus
+ * Since the basic inclusion functions are very unlikely to change and will thus
  * make your code more stable towards future versions of SCIP with more callbacks,
  * we recommend the latter choice, as explained in the \ref CONS_INTERFACE "interface" section.
  *
- * @section CONS_FUNDAMENTALCALLBACKS Fundamental Callback Methods
+ * @section CONS_FUNDAMENTALCALLBACKS Fundamental Callbacks
  *
  * By implementing the fundamental callbacks, you define the semantics of the constraint class the constraint handler
  * deals with.
- * If these methods are implemented, the resulting code is already correct and finds the optimal solution to the
+ * If these functions are implemented, the resulting code is already correct and finds the optimal solution to the
  * given problem instance.
  * However, it might be very slow because the additional features, like cut separation and domain propagation, are
  * missing.
- * In the C++ wrapper class scip::ObjConshdlr, the fundamental callback methods are virtual abstract member functions.
+ * In the C++ wrapper class scip::ObjConshdlr, the fundamental callbacks are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your constraint handler class.
  *
- * There are three fundamental callback methods that are all dealing with the feasibility of a given solution.
+ * There are three fundamental callbacks that are all dealing with the feasibility of a given solution.
  * They are called at different places in the algorithm and have slightly different meaning.
- * However, it is usually reasonable to implement a single local method that is called by all of the three callback
- * methods with slightly modified parameters.
- * The fourth method provides dual information that is used for example in preprocessing.
+ * However, it is usually reasonable to implement a single local function that is called by all of the three callback
+ * functions with slightly modified parameters.
+ * The fourth function provides dual information that is used for example in preprocessing.
  *
- * Additional documentation for the callback methods can be found in type_cons.h.
+ * Additional documentation for the callbacks can be found in type_cons.h.
  *
  * @subsection CONSCHECK
  *
@@ -1564,7 +1564,7 @@
  * If the solution is not NULL, SCIP should also be informed about the constraint violation with a call to
  * SCIPupdateSolConsViolation() and additionally SCIPupdateSolLPRowViolation() for every row of the constraint's current
  * representation in the LP relaxation, if any such rows exist.
- * As a convenience method, SCIPupdateSolLPConsViolation() can be used if the constraint
+ * As a convenience function, SCIPupdateSolLPConsViolation() can be used if the constraint
  * is represented completely by a set of LP rows, meaning that the current constraint violation is equal to the maximum
  * of the contraint violations of the corresponding LP rows.
  *
@@ -1580,18 +1580,18 @@
  * For example, the \ref cons_knapsack.h "knapsack constraint handler" loops over its constraints and
  * calculates the scalar product \f$w^T x\f$ of weights \f$w\f$ with the solution vector \f$x\f$.
  * This scalar product is compared with the capacity of the knapsack constraint.
- * If it exceeds the capacity, the CONSCHECK method is immediately aborted with the result SCIP_INFEASIBLE.
+ * If it exceeds the capacity, the CONSCHECK function is immediately aborted with the result SCIP_INFEASIBLE.
  * If all knapsack constraints are satisfied, a result SCIP_FEASIBLE is returned.
  *
  * @subsection CONSENFOLP
  *
- * The CONSENFOLP method is called after the price-and-cut loop was finished and an LP solution is available.
- * Like the CHECK call, the ENFOLP method should return a result SCIP_FEASIBLE, if the solution satisfies all the
+ * The CONSENFOLP function is called after the price-and-cut loop was finished and an LP solution is available.
+ * Like the CHECK call, the ENFOLP function should return a result SCIP_FEASIBLE, if the solution satisfies all the
  * constraints.
  * However, the behavior should be different, if the solution violates some of the associated constraints.
  * The constraint handler may return a result SCIP_INFEASIBLE in this situation, but this is not the best what
  * one can do.
- * The ENFOLP method has the possibility of \em resolving the infeasibility by
+ * The ENFOLP function has the possibility of \em resolving the infeasibility by
  * - stating that the current subproblem is infeasible (result SCIP_CUTOFF),
  * - adding an additional constraint that resolves the infeasibility (result SCIP_CONSADDED),
  * - reducing the domain of a variable (result SCIP_REDUCEDDOM),
@@ -1611,7 +1611,7 @@
  * \code
  * SCIPgetSolVal(scip, NULL, var)
  * \endcode
- * By using the latter method, you can have a single local method to check a solution for feasibility by passing
+ * By using the latter function, you can have a single local function to check a solution for feasibility by passing
  * the given <code>sol</code> to the CONSCHECK call and by passing a NULL pointer as <code>sol</code> to
  * the CONSENFOLP and CONSENFOPS calls.
  *
@@ -1630,7 +1630,7 @@
  *
  * Like the ENFOLP callback, the ENFOPS callback has to check whether the pseudo solution satisfies all the constraints
  * of the constraint handler.
- * The pseudo solution can be accessed by the same methods as the LP solution (SCIP knows, if the LP was solved at the
+ * The pseudo solution can be accessed by the same functions as the LP solution (SCIP knows, if the LP was solved at the
  * current subproblem, and returns either the LP solution or the pseudo solution).
  *
  * Unlike the ENFOLP callback, the ENFOPS callback must not add cuts and cannot return the result SCIP_SEPARATED.
@@ -1677,12 +1677,12 @@
  *  <b>Note:</b> You do not have to worry about nlockspos and nlocksneg. These integer values are given as
  *  parameter of the CONSLOCK callback (see type_cons.h). Just use these variables in the above described
  *  fashion <b>without</b> adding or subtracting anything to them. In case of the knapsack constraints this
- *  method looks like this.
+ *  function looks like this.
  *
  *  @refsnippet{src/scip/cons_knapsack.c,SnippetConsLockKnapsack}
  *
  *  To give same more intuition, consider the linear constraint \f$3x -5y +2z \leq 7\f$ as an example.
- *  The CONSLOCK callback method of the linear constraint handler should call
+ *  The CONSLOCK callback of the linear constraint handler should call
  *  SCIPaddVarLocks(scip, x, nlocksneg, nlockspos), SCIPaddVarLocks(scip, y, nlockspos, nlocksneg),
  *  and SCIPaddVarLocks(scip, z, nlocksneg, nlockspos) to tell SCIP,  that rounding up of \f$x\f$
  *  and \f$z\f$ and rounding down of \f$y\f$ can destroy the feasibility of the constraint, while rounding
@@ -1695,15 +1695,15 @@
  *  constraint and it's negation \f$3x -5y +2z < 2\f$  or  \f$3x -5y +2z > 7\f$.
  *
  *
- * @section CONS_ADDITIONALCALLBACKS Additional Callback Methods
+ * @section CONS_ADDITIONALCALLBACKS Additional Callbacks
  *
- * The additional callback methods do not need to be implemented in every case, but provide useful functionality
+ * The additional callbacks do not need to be implemented in every case, but provide useful functionality
  * for many applications. They can be added to your constraint handler via setter functions, see
  * \ref CONS_INTERFACE "here".
  *
  * @subsection CONSFREE
  *
- * If you are using constraint handler data, you have to implement this method in order to free the
+ * If you are using constraint handler data, you have to implement this function in order to free the
  * constraint handler data. This can be done by the following procedure (which is taken from the
  * \ref cons_knapsack.h "knapsack constraint handler"):
  *
@@ -1711,7 +1711,7 @@
  *
  * If you have allocated memory for fields in your constraint handler data, remember to free this memory
  * before freeing the constraint handler data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection CONSHDLRCOPY
@@ -1722,7 +1722,7 @@
  * relaxations of the original problem if constraint handlers are missing.
  *
  * A usual implementation just
- * calls the interface method which includes the constraint handler to the model. For example, this callback is
+ * calls the interface function which includes the constraint handler to the model. For example, this callback is
  * implemented for the \ref cons_knapsack.c "knapsack constraint handler" as follows:
  *
  * @refsnippet{src/scip/cons_knapsack.c,SnippetConsCopyKnapsack}
@@ -1749,7 +1749,7 @@
  * @subsection CONSEXIT
  *
  * The CONSEXIT callback is executed before the transformed problem is freed.
- * In this method, the constraint handler should free all resources that were allocated for the solving process.
+ * In this function, the constraint handler should free all resources that were allocated for the solving process.
  *
  * @subsection CONSINITPRE
  *
@@ -1785,12 +1785,12 @@
  * The CONSDELETE callback is executed if a constraint should be freed.
  * You can think of it as the destructor of a single constraint.
  * In the callback, you have to free the given constraint data.
- * The CONSDELETE callback is therefore the counterpart of the SCIPcreateCons...() interface method and the CONSTRANS
- * method.
+ * The CONSDELETE callback is therefore the counterpart of the SCIPcreateCons...() interface function and the CONSTRANS
+ * function.
  *
  * @subsection CONSTRANS
  *
- * The CONSTRANS method is called for each constraint of the constraint handler, when the user starts the solving
+ * The CONSTRANS function is called for each constraint of the constraint handler, when the user starts the solving
  * process.
  * It has to copy the original constraint data of the constraint to the memory for the transformed problem.
  * You can think of it as a copy constructor for a single constraint.
@@ -1801,12 +1801,12 @@
  * If the solving process data are freed, the original data still exist and the user can, e.g., modify the problem and
  * restart the solving process.
  *
- * If you do not implement the CONSTRANS method, a transformed constraint is created with the same flags and the
+ * If you do not implement the CONSTRANS function, a transformed constraint is created with the same flags and the
  * same constraint data pointer.
  * That means, the transformed constraint points to the original constraint data.
  * This is okay, as long as the constraint data is not changed during the solving process.
- * If you want to implement preprocessing methods or other methods that modify the constraint data, you have to
- * implement the CONSTRANS method and create a copy of the constraint data.
+ * If you want to implement preprocessing functions or other functions that modify the constraint data, you have to
+ * implement the CONSTRANS function and create a copy of the constraint data.
  *
  * Here is an example, which is taken from the \ref cons_knapsack.h "knapsack constraint handler":
  *
@@ -1815,7 +1815,7 @@
  * @subsection CONSINITLP
  *
  * The CONSINITLP callback is executed before the first LP relaxation is solved.
- * It should add the LP relaxations of all "initial" constraints to the LP. The method should scan the constraints
+ * It should add the LP relaxations of all "initial" constraints to the LP. The function should scan the constraints
  * array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the LP relaxation
  * of all initial constraints to the LP with calls to SCIPaddRow().
  *
@@ -1824,7 +1824,7 @@
  * The CONSSEPALP callback is executed during the price-and-cut loop of the subproblem processing.
  * It should try to generate cutting planes for the constraints of the constraint handler in order to separate
  * the current LP solution.
- * The method is called in the LP solution loop, which means that a valid LP solution exists.
+ * The function is called in the LP solution loop, which means that a valid LP solution exists.
  *
  * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
@@ -1841,7 +1841,7 @@
  *    (result SCIP_DIDNOTFIND)
  *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
  *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
- *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
+ *  - stating that a new separation round should be started without calling the remaining separator functions (result SCIP_NEWROUND)
  *
  * Please see also the @ref CONS_ADDITIONALPROPERTIES section to learn about the properties
  * CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, and CONSHDLR_DELAYSEPA, which influence the behaviour of SCIP
@@ -1852,7 +1852,7 @@
  * The CONSSEPASOL callback is executed during separation loop on arbitrary primal solutions.
  * It should try to generate cutting planes for the constraints of the constraint handler in order to separate
  * the given primal solution.
- * The method is not called in the LP solution loop, which means that there is no valid LP solution.
+ * The function is not called in the LP solution loop, which means that there is no valid LP solution.
  *
  * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
@@ -1869,7 +1869,7 @@
  *    (result SCIP_DIDNOTFIND)
  *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
  *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
- *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
+ *  - stating that a new separation round should be started without calling the remaining separator functions (result SCIP_NEWROUND)
  *
  * Please see also the @ref CONS_ADDITIONALPROPERTIES section to learn about the properties
  * CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, and CONSHDLR_DELAYSEPA, which influence the behaviour of SCIP
@@ -1897,17 +1897,17 @@
  *
  * @subsection CONSRESPROP
  *
- * If the constraint handler should support \ref CONF "conflict analysis", it has to supply a CONSRESPROP method.
+ * If the constraint handler should support \ref CONF "conflict analysis", it has to supply a CONSRESPROP function.
  * It also should call SCIPinferVarLbCons() or SCIPinferVarUbCons() in domain propagation instead of SCIPchgVarLb() or
  * SCIPchgVarUb() in order to deduce bound changes on variables.
  * In the SCIPinferVarLbCons() and SCIPinferVarUbCons() calls, the handler provides the constraint that deduced the
  * variable's bound change, and an integer value <code>inferinfo</code> that can be arbitrarily chosen.
  *
- * The propagation conflict resolving method CONSRESPROP must then be implemented to provide the "reasons" for the bound
+ * The propagation conflict resolving function CONSRESPROP must then be implemented to provide the "reasons" for the bound
  * changes, i.e., the bounds of variables at the time of the propagation, which forced the constraint to set the
  * conflict variable's bound to its current value. It can use the <code>inferinfo</code> tag to identify its own propagation rule
  * and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided by
- * calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
+ * calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving function.
  *
  * <b>Note:</b> The fact that <code>inferinfo</code> is an integer, as opposed to an arbitrary data object, is a compromise between space and speed. Sometimes a propagator would
  * need more information to efficiently infer the original propagation steps that lead to the conflict. This would,
@@ -1924,11 +1924,11 @@
  * bdchgidx)</code> to tell SCIP, that the upper bounds of \f$x\f$ and \f$y\f$ at this point of time were the reason for
  * the deduction of the lower bound of \f$z\f$.
  *
- * If conflict analysis should not be supported, the method has to set the result code to SCIP_DIDNOTFIND.  Although
- * this is a viable approach to circumvent the implementation of the usually rather complex conflict resolving method, it
- * will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check how
- * effective the \ref CONSPROP "propagation method" is. If it produces a lot of propagations for your application, you definitely should
- * consider implementing the conflict resolving method.
+ * If conflict analysis should not be supported, the function has to set the result code to SCIP_DIDNOTFIND.  Although
+ * this is a viable approach to circumvent the implementation of the usually rather complex conflict resolving function, it
+ * will make the conflict analysis less effective. We suggest to first omit the conflict resolving function and check how
+ * effective the \ref CONSPROP "propagation function" is. If it produces a lot of propagations for your application, you definitely should
+ * consider implementing the conflict resolving function.
  *
  * @subsection CONSPRESOL
  *
@@ -1941,7 +1941,7 @@
  * in order to copy the constraint data to the transformed problem space and protect the original problem from the
  * preprocessing changes.
  *
- * To inform SCIP that the presolving method found a reduction the result pointer has to be set in a proper way.
+ * To inform SCIP that the presolving function found a reduction the result pointer has to be set in a proper way.
  * The following options are possible:
  *
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in objective direction
@@ -1957,42 +1957,42 @@
  *
  * @subsection CONSACTIVE
  *
- * The CONSACTIVE callback method is called each time a constraint of the constraint handler is activated.
+ * The CONSACTIVE callback is called each time a constraint of the constraint handler is activated.
  * For example, if a constraint is added locally to a subproblem, the CONSACTIVE callback is called whenever the
  * search enters the subtree where the constraint exists.
  *
  * @subsection CONSDEACTIVE
  *
- * The CONSDEACTIVE callback method is called each time a constraint of the constraint handler is deactivated.
+ * The CONSDEACTIVE callback is called each time a constraint of the constraint handler is deactivated.
  * For example, if a constraint is added locally to a subproblem, the CONSDEACTIVE callback is called whenever the
  * search leaves the subtree where the constraint exists.
  *
  * @subsection CONSENABLE
  *
- * The CONSENABLE callback method is called each time a constraint of the constraint handler is enabled.
+ * The CONSENABLE callback is called each time a constraint of the constraint handler is enabled.
  * Constraints might be active without being enabled. In this case, only the feasibility checks are executed,
  * but domain propagation and separation is skipped.
  *
  * @subsection CONSDISABLE
  *
- * The CONSDISABLE callback method is called each time a constraint of the constraint handler is disabled.
+ * The CONSDISABLE callback is called each time a constraint of the constraint handler is disabled.
  *
  * @subsection CONSPRINT
  *
- * The CONSPRINT callback method is called, when the user asks SCIP to display the problem to the screen
+ * The CONSPRINT callback is called, when the user asks SCIP to display the problem to the screen
  * or save the problem into a file. This is, however, only the case if the user requested the CIP format.
  * For more details about reading and writing with SCIP we refer to the \ref READER "file readers". In this
- * callback method the constraint handler should display the data of the constraint in an appropriate form.
+ * callback the constraint handler should display the data of the constraint in an appropriate form.
  * The output format that is defined by the CONSPRINT callbacks is called CIP format.
  * In later versions of SCIP, the constraint handlers should also be able to parse (i.e., read) constraints
  * which are given in CIP format.
  *
  * @subsection CONSCOPY
  *
- * The CONSCOPY callback method is used whenever constraints should be copied from one SCIP instance into another SCIP
- * instance. This method comes with the necessary parameters to do so, most importantly with a mapping of the variables of the
+ * The CONSCOPY callback is used whenever constraints should be copied from one SCIP instance into another SCIP
+ * instance. This function comes with the necessary parameters to do so, most importantly with a mapping of the variables of the
  * source SCIP instance to the corresponding variables of the target SCIP instance, and a mapping for the constraints
- * in the same way. For a complete list of all arguments of this callback method see type_cons.h.
+ * in the same way. For a complete list of all arguments of this callback see type_cons.h.
  *
  * To get the corresponding target variable of a given source variable, you can use the variable map directly:
  *
@@ -2000,7 +2000,7 @@
  * targetvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, sourcevar);
  * \endcode
  *
- * We recommend, however, to use the method SCIPgetVarCopy() which gets besides others the variable map and the constraint map as input
+ * We recommend, however, to use the function SCIPgetVarCopy() which gets besides others the variable map and the constraint map as input
  * and returns the requested target variable. The advantage of using SCIPgetVarCopy() is that in the case
  * the required variable does not yet exist, it is created and added to the copy automatically:
  *
@@ -2024,14 +2024,14 @@
  *
  * @subsection CONSPARSE
  *
- * This method is the counter part to CONSPRINT. The ideal idea is that a constraint handler is able to parse the output
- * which it generated via the CONSPRINT method and creates the corresponding constraint. If the parsing was successfully
+ * This function is the counterpart to CONSPRINT. The ideal idea is that a constraint handler is able to parse the output
+ * which it generated via the CONSPRINT function and creates the corresponding constraint. If the parsing was successfully
  * the result pointer success should be set to TRUE. An example implementation can be found in the \ref cons_linear.h
  * "linear constraint handler".
  *
  * @subsection CONSDELVARS
  *
- * This method should iterate over the given constraints and delete all variables that were marked for deletion by SCIPdelVar().
+ * This function should iterate over the given constraints and delete all variables that were marked for deletion by SCIPdelVar().
  * Variable deletion is especially interesting for branch-cut-and-price applications. If your constraint handler allows
  * the addition of variables during the solving process (see "modifiable" attribute of constraints), then you might also want to
  * implement this callback. This would allow you to not only create variables during solving, but also remove them dynamically
@@ -2076,7 +2076,7 @@
  *
  * A pricer performs the dynamic generation of new variables in a column generation algorithm.
  * It is an algorithmic representation of a (usually exponential) number of variables.
- * The \ref PRICERREDCOST and \ref PRICERFARKAS methods are called after each LP solve to generate additional
+ * The \ref PRICERREDCOST and \ref PRICERFARKAS functions are called after each LP solve to generate additional
  * variables which may improve the objective value or decrease the LP infeasibility, respectively.
  * \n
  * A complete list of all pricers contained in this release can be found \ref PRICERS "here".
@@ -2091,9 +2091,9 @@
  * For example, look into the variable pricer for the binpacking problem (examples/Binpacking/src/pricer_binpacking.c) of the
  * Binpacking example project.
  * The example is written in C. C++ users can easily adapt the code by using the scip::scip::ObjPricer wrapper base class and
- * implement the scip_...() virtual methods instead of the SCIP_DECL_PRICER... callback methods.
+ * implement the scip_...() virtual methods instead of the SCIP_DECL_PRICER... callbacks.
  *
- * Additional documentation for the callback methods of a pricer can be found in the file
+ * Additional documentation for the callbacks of a pricer can be found in the file
  * type_pricer.h.
  *
  * Notice that if your pricer cannot cope with variable bounds other than 0 and infinity, you have to mark
@@ -2112,9 +2112,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypricer".
  * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
  * -# Define the pricer data (see \ref PRICER_DATA). This is optional.
- * -# Implement the interface methods (see \ref PRICER_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref PRICER_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref PRICER_ADDITIONALCALLBACKS).  This is optional.
+ * -# Implement the interface functions (see \ref PRICER_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref PRICER_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref PRICER_ADDITIONALCALLBACKS).  This is optional.
  *
  *
  * @section PRICER_PROPERTIES Properties of a Pricer
@@ -2148,8 +2148,8 @@
  * \n
  * If the PRICER_DELAY flag is set to TRUE (which is the common setting), all those existing variables with negative reduced costs
  * are added to the LP, and the LP is resolved before the pricer is called. Thus, the pricer can assume that all existing variables
- * have non-negative reduced costs if the \ref PRICERREDCOST method is called or non-positive Farkas value if the \ref PRICERFARKAS
- * method is called.
+ * have non-negative reduced costs if the \ref PRICERREDCOST function is called or non-positive Farkas value if the \ref PRICERFARKAS
+ * function is called.
  * \n
  * In some applications, this inner pricing loop on the already existing variables can significantly slow down the solving process,
  * since it may lead to the addition of only very few variables in each pricing round. If this is an issue in your application,
@@ -2170,13 +2170,13 @@
  * Defining pricer data is optional. You can leave the struct empty.
  *
  *
- * @section PRICER_INTERFACE Interface Methods
+ * @section PRICER_INTERFACE Interface Functions
  *
- * At the bottom of "pricer_mypricer.c" you can find the interface method SCIPincludePricerMypricer(), which also appears in "pricer_mypricer.h".
+ * At the bottom of "pricer_mypricer.c" you can find the interface function SCIPincludePricerMypricer(), which also appears in "pricer_mypricer.h".
  * It is called by the user, if (s)he wants to include the pricer, i.e., if (s)he wants to solve a model for which variables should
  * be generated by this pricer.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the pricer. For this, you can either call SCIPincludePricer(),
  * or SCIPincludePricerBasic() since SCIP version 3.0. In the latter variant, \ref PRICER_ADDITIONALCALLBACKS "additional callbacks"
  * must be added via setter functions as, e.g., SCIPsetPricerCopy(). We recommend this latter variant because
@@ -2197,24 +2197,24 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_PricerData afterwards.
  *
- * You may also add user parameters for your pricer, see the method SCIPincludePricerColoring() in the pricer of the Coloring application
+ * You may also add user parameters for your pricer, see the function SCIPincludePricerColoring() in the pricer of the Coloring application
  * for an example of how to add user parameters.
  *
  *
- * @section PRICER_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Pricer
+ * @section PRICER_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Pricer
  *
- * The fundamental callback methods have to be implemented in order to obtain an operational algorithm.
+ * The fundamental callbacks have to be implemented in order to obtain an operational algorithm.
  * They are passed together with the pricer itself to SCIP using SCIPincludePricer() or SCIPincludePricerBasic(),
  * see @ref PRICER_INTERFACE.
  *
- * In the case of a pricer, there are two fundamental callback methods, namely the @ref PRICERREDCOST and the
+ * In the case of a pricer, there are two fundamental callbacks, namely the @ref PRICERREDCOST and the
  * @ref PRICERFARKAS callbacks, which both search for new variables and add them to the problem.
- * These methods have to be implemented for every pricer; the other callback methods are optional.
+ * These functions have to be implemented for every pricer; the other callbacks are optional.
  * In the C++ wrapper class scip::ObjPricer, the scip_redcost() method (which corresponds to the PRICERREDCOST callback)
  * is a virtual abstract member function. You have to implement it in order to be able to construct an object of your
  * pricer class.
  *
- * Additional documentation for the callback methods can be found in type_pricer.h.
+ * Additional documentation for the callbacks can be found in type_pricer.h.
  *
  * @subsection PRICERREDCOST
  *
@@ -2227,7 +2227,7 @@
  *
  * Whenever the pricer finds a variable with negative dual feasibility, it should call SCIPcreateVar()
  * and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
- * methods of the constraint handlers to add the necessary variable entries to the constraints, see pub_cons.h.
+ * functions of the constraint handlers to add the necessary variable entries to the constraints, see pub_cons.h.
  *
  * In the usual case that the pricer either adds a new variable or ensures that there are no further variables with negative dual feasibility,
  * the result pointer should be set to SCIP_SUCCESS. Only if the pricer aborts pricing without creating a new variable, but
@@ -2239,15 +2239,15 @@
  * Since SCIP does not know the semantics of the individual constraints in the problem, the dual solution
  * has to be provided by the constraint handlers.
  * For example, the \ref cons_setppc.h "setppc constraint handler", which deals with set partitioning, packing, and covering constraints, provides
- * the method SCIPgetDualsolSetppc() to access the dual solution value for a single constraint.
- * Similarly, the dual solution of a linear constraint can be queried with the method SCIPgetDualsolLinear() of cons_linear.h.
- * The reduced costs of the existing variables can be accessed with the method SCIPgetVarRedcost().
+ * the function SCIPgetDualsolSetppc() to access the dual solution value for a single constraint.
+ * Similarly, the dual solution of a linear constraint can be queried with the function SCIPgetDualsolLinear() of cons_linear.h.
+ * The reduced costs of the existing variables can be accessed with the function SCIPgetVarRedcost().
  *
  * @subsection PRICERFARKAS
  *
  * If the current LP relaxation is infeasible, it is the task of the pricer to generate additional variables that can
  * potentially render the LP feasible again. In standard branch-and-price, these are variables with positive Farkas values,
- * and the PRICERFARKAS method should identify those variables.
+ * and the PRICERFARKAS function should identify those variables.
  *
  * If the LP was proven to be infeasible, we have an infeasibility proof by the dual Farkas multipliers \f$y\f$.
  * With the values of \f$y\f$, an implicit inequality \f$y^T A x \ge y^T b\f$ is associated, with \f$b\f$ given
@@ -2263,7 +2263,7 @@
  *
  * To apply Farkas pricing, the pricer needs to know the Farkas values of the constraints. Like the dual solution values for
  * feasible LP solutions, the dual Farkas values for infeasible solutions can be obtained by constraint handler interface
- * methods such as the SCIPgetDualfarkasLinear() method of the linear constraint handler.
+ * functions such as the SCIPgetDualfarkasLinear() function of the linear constraint handler.
  * The Farkas values for the bounds of the variables can be accessed with SCIPgetVarFarkasCoef().
  *
  * It is useful to note that Farkas pricing is the same as the regular pricing with a zero objective function.
@@ -2273,24 +2273,24 @@
  * while the PRICERFARKAS callback would call this function with a zero objective function and the Farkas vector.
  * From a practical point of view, it is usually the simplest approach to provide just one Boolean flag to the generic pricing
  * algorithm in order to identify whether it is reduced cost or Farkas pricing. Then, the algorithm would just call the appropriate
- * methods to access the dual solution or objective function, depending on the Boolean flag.
+ * functions to access the dual solution or objective function, depending on the Boolean flag.
  *
- * @section PRICER_ADDITIONALCALLBACKS Additional Callback Methods of a Pricer
+ * @section PRICER_ADDITIONALCALLBACKS Additional Callbacks of a Pricer
  *
- * The additional callback methods do not need to be implemented in every case.
+ * The additional callbacks do not need to be implemented in every case.
  * However, some of them have to be implemented for most applications. They can either be passed directly with
  * SCIPincludePricer() to SCIP or via specific <b>setter functions</b> after a call of SCIPincludePricerBasic(),
  * see also @ref PRICER_INTERFACE.
  *
  * @subsection PRICERFREE
  *
- * If you are using pricer data, you have to implement this method in order to free the pricer data.
+ * If you are using pricer data, you have to implement this function in order to free the pricer data.
  * This can be done by the procedure described in stp/src/pricer_stp.c,
  * see https://scipjack.zib.de/.
  *
  * If you have allocated memory for fields in your pricer data, remember to free this memory
  * before freeing the pricer data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection PRICERCOPY
@@ -2304,7 +2304,7 @@
  *
  * <b>Note:</b> If you implement this callback, be careful when setting the valid pointer. The valid pointer should be
  * set to TRUE if (and only if!) you can make sure that all necessary data of the pricer are copied
- * correctly. If the complete problem is validly copied, i.e. if the copy methods of all problem defining plugins
+ * correctly. If the complete problem is validly copied, i.e. if the copy functions of all problem defining plugins
  * (constraint handlers and pricers) return <code>*valid = TRUE</code>, then dual reductions found for the copied problem can be
  * transferred to the original SCIP instance. Thus, if the valid pointer is wrongly set to TRUE, it might happen that
  * optimal solutions are cut off.
@@ -2318,7 +2318,7 @@
  * @subsection PRICEREXIT
  *
  * The PRICEREXIT callback is executed before the transformed problem is freed.
- * In this method, the pricer should free all resources that have been allocated for the solving process in PRICERINIT.
+ * In this function, the pricer should free all resources that have been allocated for the solving process in PRICERINIT.
  *
  * @subsection PRICERINITSOL
  *
@@ -2356,8 +2356,8 @@
  * Presolvers are used to reduce the size of the model by removing irrelevant information like redundant constraints,
  * to strengthen the LP relaxation by exploiting integrality information, and to extract useful information in the
  * presolving step.
- * Constraint based presolving is done in the CONSPRESOL callback methods of the constraint handlers, see \ref CONSPRESOL.
- * Some propagation steps can already be applied in presolving via the PROPRESOL callback methods of propagators, see \ref PROPPRESOL.
+ * Constraint based presolving is done in the CONSPRESOL callbacks of the constraint handlers, see \ref CONSPRESOL.
+ * Some propagation steps can already be applied in presolving via the PROPRESOL callbacks of propagators, see \ref PROPPRESOL.
  * The presolver plugins complement these by additional, usually optimality based, presolving reductions.
  * \n
  * A complete list of all presolvers contained in this release can be found \ref PRESOLVERS "here".
@@ -2365,9 +2365,9 @@
  * We now explain how users can add their own presolvers.
  * Take the trivial presolver (src/scip/presol_trivial.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjPresol wrapper
- * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PRESOL... callback methods.
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PRESOL... callbacks.
  *
- * Additional documentation for the callback methods of a presolver, in particular for their input parameters,
+ * Additional documentation for the callbacks of a presolver, in particular for their input parameters,
  * can be found in the file type_presol.h.
  *
  * Here is what you have to do to implement a presolver:
@@ -2382,9 +2382,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypresolver".
  * -# Adjust the properties of the presolver (see \ref PRESOL_PROPERTIES).
  * -# Define the presolver data (see \ref PRESOL_DATA). This is optional.
- * -# Implement the interface methods (see \ref PRESOL_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref PRESOL_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref PRESOL_ADDITIONALCALLBACKS). This is optional.
+ * -# Implement the interface functions (see \ref PRESOL_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref PRESOL_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref PRESOL_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section PRESOL_PROPERTIES Properties of a Presolver
@@ -2414,12 +2414,12 @@
  * internally in the \ref PRESOLEXEC callback to decide which algorithms to run.
  *
  * \par PRESOL_PRIORITY: the priority of the presolver.
- * Within a presolving round, when calling all presolvers and presolving methods of propagators and constraint handlers
+ * Within a presolving round, when calling all presolvers and presolving functions of propagators and constraint handlers
  * with a given timing, those are called in
  * a predefined order, which is given by the priorities of the presolvers and the check priorities of the
  * constraint handlers, see \ref CONS_PROPERTIES.
  * First, the presolvers with non-negative priority are called in the order of decreasing priority.
- * Next, the presolving methods of the different constraint handlers are called in the order of decreasing check
+ * Next, the presolving functions of the different constraint handlers are called in the order of decreasing check
  * priority.
  * Finally, the presolvers with negative priority are called in the order of decreasing priority.
  * \n
@@ -2430,7 +2430,7 @@
  * and "display conshdlrs" in the interactive shell of SCIP.
  *
  * \par PRESOL_MAXROUNDS: the default maximal number of rounds the presolver participates in.
- * The presolving is conducted in rounds: the presolvers and presolving methods of the constraint handlers
+ * The presolving is conducted in rounds: the presolvers and presolving functions of the constraint handlers
  * are called iteratively until no more reductions have been found or some other abort criterion applies.
  * The "maxrounds" parameter of a presolver imposes a limit on the number of presolving rounds in which the
  * presolver is called. The PRESOL_MAXROUNDS property specifies the default value for this parameter.
@@ -2447,14 +2447,14 @@
  * Defining presolver data is optional. You can leave this struct empty.
  *
  *
- * @section PRESOL_INTERFACE Interface Methods
+ * @section PRESOL_INTERFACE Interface Functions
  *
- * At the bottom of "presol_mypresolver.c", you can find the interface method SCIPincludePresolMypresolver(),
+ * At the bottom of "presol_mypresolver.c", you can find the interface function SCIPincludePresolMypresolver(),
  * which also appears in "presol_mypresolver.h"
  * SCIPincludePresolMypresolver() is called by the user, if (s)he wants to include the presolver,
  * i.e., if (s)he wants to use the presolver in his/her application.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the presolver. For this, you can either call SCIPincludePresol(),
  * or SCIPincludePresolBasic() since SCIP version 3.0. In the latter variant, \ref PRESOL_ADDITIONALCALLBACKS "additional callbacks"
  * must be added via setter functions as, e.g., SCIPsetPresolCopy(). We recommend this latter variant because
@@ -2470,23 +2470,23 @@
  * presolver data, see \ref PRESOLFREE.
  *
  * You may also add user parameters for your presolver, see \ref PARAM for how to add user parameters and
- * the method SCIPincludePresolTrivial() in src/scip/presol_trivial.c for an example.
+ * the function SCIPincludePresolTrivial() in src/scip/presol_trivial.c for an example.
  *
  *
- * @section PRESOL_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Presolver
+ * @section PRESOL_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Presolver
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
  * They are passed together with the presolver itself to SCIP using SCIPincludePresol() or SCIPincludePresolBasic(),
  * see @ref PRESOL_INTERFACE.
  *
- * Presolver plugins have only one fundamental callback method, namely the @ref PRESOLEXEC method.
- * This method has to be implemented for every presolver; the other callback methods are optional.
+ * Presolver plugins have only one fundamental callback, namely the @ref PRESOLEXEC function.
+ * This function has to be implemented for every presolver; the other callbacks are optional.
  * In the C++ wrapper class scip::ObjPresol, the scip_exec() method (which corresponds to the PRESOLEXEC callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your presolver class.
  *
- * Additional documentation for the callback methods, in particular to their input parameters,
+ * Additional documentation for the callbacks, in particular to their input parameters,
  * can be found in type_presol.h.
  *
  * @subsection PRESOLEXEC
@@ -2496,27 +2496,27 @@
  * variables, changing the type of variables, modifying the graph that represents the instance of your application, and
  * the like.
  *
- * Typical methods called by a presolver are, for example, SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), SCIPtightenVarLb(),
+ * Typical functions called by a presolver are, for example, SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), SCIPtightenVarLb(),
  * and SCIPtightenVarUb().
  *
  *
- * @section PRESOL_ADDITIONALCALLBACKS Additional Callback Methods of a Presolver
+ * @section PRESOL_ADDITIONALCALLBACKS Additional Callbacks of a Presolver
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications, they can be used, for example, to initialize and free private data.
  * Additional callbacks can either be passed directly with SCIPincludePresol() to SCIP or via specific
  * <b>setter functions</b> after a call of SCIPincludePresolBasic(), see also @ref PRESOL_INTERFACE.
  *
  * @subsection PRESOLFREE
  *
- * If you are using presolver data (see \ref PRESOL_DATA and \ref PRESOL_INTERFACE), you have to implement this method in order to free the presolver data.
+ * If you are using presolver data (see \ref PRESOL_DATA and \ref PRESOL_INTERFACE), you have to implement this function in order to free the presolver data.
  * This can be done by the following procedure:
  *
  * @refsnippet{src/scip/presol_boundshift.c,SnippetPresolFreeBoundshift}
  *
  * If you have allocated memory for fields in your presolver data, remember to free this memory
  * before freeing the presolver data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection PRESOLINIT
@@ -2538,7 +2538,7 @@
  * @subsection PRESOLEXIT
  *
  * The PRESOLEXIT callback is executed before the transformed problem is freed.
- * In this method, the presolver should free all resources that have been allocated for the solving process in PRESOLINIT.
+ * In this function, the presolver should free all resources that have been allocated for the solving process in PRESOLINIT.
  *
  * @subsection PRESOLINITPRE
  *
@@ -2558,7 +2558,7 @@
  * Separators are used to generate cutting planes that strengthen the LP relaxation of the problem formulation, but are
  * not required for a completeness and correctness of the model.
  * In contrast, constraint-based cutting planes, the second type of cutting planes in SCIP, are separated in the CONSSEPALP and
- * CONSSEPASOL callback methods of the constraint handlers, see \ref CONSSEPALP and \ref CONSSEPASOL. These cuts are
+ * CONSSEPASOL callbacks of the constraint handlers, see \ref CONSSEPALP and \ref CONSSEPASOL. These cuts are
  * valid inequalities or even facets of the polyhedron described by a single constraint or a subset of the constraints of
  * a single constraint class. See also
  * "When should I implement a constraint handler, when should I implement a separator?" on \ref FAQ.
@@ -2568,9 +2568,9 @@
  * We now explain how users can add their own separators.
  * Take the separator for the class of Gomory mixed integer inequalities (src/scip/sepa_gomory.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjSepa wrapper
- * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_SEPA... callback methods.
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_SEPA... callbacks.
  *
- * Additional documentation for the callback methods of a separator, in particular for the input parameters,
+ * Additional documentation for the callbacks of a separator, in particular for the input parameters,
  * can be found in the file type_sepa.h.
  *
  * Here is what you have to do to implement a separator:
@@ -2585,9 +2585,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myseparator".
  * -# Adjust the properties of the separator (see \ref SEPA_PROPERTIES).
  * -# Define the separator data (see \ref SEPA_DATA). This is optional.
- * -# Implement the interface methods (see \ref SEPA_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref SEPA_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref SEPA_ADDITIONALCALLBACKS).  This is optional.
+ * -# Implement the interface functions (see \ref SEPA_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref SEPA_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref SEPA_ADDITIONALCALLBACKS).  This is optional.
  *
  *
  * @section SEPA_PROPERTIES Properties of a Separator
@@ -2608,11 +2608,11 @@
  *
  * \par SEPA_PRIORITY: the priority of the separator.
  * In each separation round during the price-and-cut loop of the subproblem processing or the separation loop
- * of the primal solution separation, the separators and separation methods of the constraint handlers are called in
+ * of the primal solution separation, the separators and separation functions of the constraint handlers are called in
  * a predefined order, which is given by the priorities of the separators and the separation priorities
  * of the constraint handlers (see \ref CONS_PROPERTIES).
  * First, the separators with non-negative priority are called in the order of decreasing priority.
- * Next, the separation methods of the constraint handlers are called in the order of decreasing separation
+ * Next, the separation functions of the constraint handlers are called in the order of decreasing separation
  * priority.
  * Finally, the separators with negative priority are called in the order of decreasing priority. An easy way to list the
  * priorities of all separators and constraint handlers is to type "display separators" and "display conshdlrs" in
@@ -2624,20 +2624,20 @@
  * See \ref SEPAEXECLP and \ref SEPAEXECSOL for further details of the separation callbacks.
  *
  * \par SEPA_FREQ: the default frequency for separating cuts.
- * The frequency defines the depth levels at which the separation methods \ref SEPAEXECLP and \ref SEPAEXECSOL are called.
+ * The frequency defines the depth levels at which the separation functions \ref SEPAEXECLP and \ref SEPAEXECSOL are called.
  * For example, a frequency of 7 means, that the separation callback is executed for subproblems that are in depth
- * 0, 7, 14, ... of the branching tree. A frequency of 0 means, that the separation method is only called at the root node.
+ * 0, 7, 14, ... of the branching tree. A frequency of 0 means, that the separation function is only called at the root node.
  * A frequency of -1 disables the separator.
  * \n
  * The frequency can be adjusted by the user. This property of the separator only defines the default value of the frequency.
  * If you want to have a more flexible control of when to execute the separation algorithm, you have to assign
- * a frequency of 1 and implement a check at the beginning of your separation methods whether you really want to execute
+ * a frequency of 1 and implement a check at the beginning of your separation functions whether you really want to execute
  * the separation or not. If you do not want to execute it, set the result code of
  * \ref SEPAEXECLP and \ref SEPAEXECSOL to SCIP_DIDNOTRUN.
  *
  * \par SEPA_MAXBOUNDDIST: the default maximal relative distance from the current node's dual bound to primal bound compared to best node's dual bound for applying separation.
  * At the current branch-and-bound node, the relative distance from its dual bound (local dual bound)
- * to the primal bound compared to the best node's dual bound (global dual bound) is considered. The separation method
+ * to the primal bound compared to the best node's dual bound (global dual bound) is considered. The separation function
  * of the separator will only be applied at the current node if this relative distance does not exceed SEPA_MAXBOUNDDIST.
  * \n
  * For example, if the global dual bound is 50 and the primal bound is 60, SEPA_MAXBOUNDDIST = 0.25 means that separation
@@ -2657,12 +2657,12 @@
  * these plugins usually deactivate all other plugins that solve MIPs. If a separator uses a secondary SCIP instance,
  * this parameter has to be TRUE and it is recommended to call SCIPsetSubscipsOff() for the secondary SCIP instance.
  *
- * \par SEPA_DELAY: the default for whether the separation method should be delayed, if other separators or constraint handlers found cuts.
- * If the separator's separation method is marked to be delayed, it is only executed after no other separator
+ * \par SEPA_DELAY: the default for whether the separation function should be delayed, if other separators or constraint handlers found cuts.
+ * If the separator's separation function is marked to be delayed, it is only executed after no other separator
  * or constraint handler found a cut during the price-and-cut loop, and in the last separation or stalling round,
  * either in the end, or in an additional round if only the maximal subsequent round is exceeded.
- * If the separation method of the separator is very expensive, you may want to mark it to be delayed until all cheap
- * separation methods have been executed.
+ * If the separation function of the separator is very expensive, you may want to mark it to be delayed until all cheap
+ * separation functions have been executed.
  *
  * @section SEPA_DATA Separator Data
  *
@@ -2674,14 +2674,14 @@
  * \n
  * Defining separator data is optional. You can leave the struct empty.
  *
- * @section SEPA_INTERFACE Interface Methods
+ * @section SEPA_INTERFACE Interface Functions
  *
- * At the bottom of "sepa_myseparator.c", you can find the interface method SCIPincludeSepaMyseparator(),
+ * At the bottom of "sepa_myseparator.c", you can find the interface function SCIPincludeSepaMyseparator(),
  * which also appears in "sepa_myseparator.h"
  * SCIPincludeSepaMyseparator() is called by the user, if (s)he wants to include the separator,
  * i.e., if (s)he wants to use the separator in his/her application.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the separator. For this, you can either call SCIPincludeSepa(),
  * or SCIPincludeSepaBasic() since SCIP version 3.0. In the latter variant, \ref SEPA_ADDITIONALCALLBACKS "additional callbacks"
  * must be added via setter functions as, e.g., SCIPsetSepaCopy(). We recommend this latter variant because
@@ -2697,26 +2697,26 @@
  * separator data, see \ref SEPAFREE.
  *
  * You may also add user parameters for your separator, see \ref PARAM for how to add user parameters and
- * the method SCIPincludeSepaGomory() in src/scip/sepa_gomory.c for an example.
+ * the function SCIPincludeSepaGomory() in src/scip/sepa_gomory.c for an example.
  *
  *
- * @section SEPA_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Separator
+ * @section SEPA_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Separator
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
  * They are passed together with the separator itself to SCIP using SCIPincludeSepa() or SCIPincludeSepaBasic(),
  * see @ref SEPA_INTERFACE.
  *
  * Separator plugins have two callbacks, @ref SEPAEXECLP and @ref SEPAEXECSOL, of which at least one must be implemented.
  *
- * Additional documentation for the callback methods, in particular to their input parameters,
+ * Additional documentation for the callbacks, in particular to their input parameters,
  * can be found in type_sepa.h.
  *
  * @subsection SEPAEXECLP
  *
  * The SEPAEXECLP callback is executed during the price-and-cut loop of the subproblem processing.
  * It should try to generate general purpose cutting planes in order to separate the current LP solution.
- * The method is called in the LP solution loop, which means that a valid LP solution exists.
+ * The function is called in the LP solution loop, which means that a valid LP solution exists.
  *
  * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
@@ -2734,18 +2734,18 @@
  *    (result SCIP_DIDNOTFIND)
  *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
  *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
- *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
+ *  - stating that a new separation round should be started without calling the remaining separator functions (result SCIP_NEWROUND)
  *
  * @subsection SEPAEXECSOL
  *
  * The SEPAEXECSOL callback is executed during the separation loop on arbitrary primal solutions.
  * It should try to generate general purpose cutting planes in order to separate the given primal solution.
- * The method is not called in the LP solution loop, which means that there is no valid LP solution.
+ * The function is not called in the LP solution loop, which means that there is no valid LP solution.
  *
  * In the standard SCIP environment, the SEPAEXECSOL callback is not used because only LP solutions are
  * separated. The SEPAEXECSOL callback provides means to support external relaxation handlers like semidefinite
  * relaxations that want to separate an intermediate primal solution vector. Thus, if you do not want to support
- * such external plugins, you do not need to implement this callback method.
+ * such external plugins, you do not need to implement this callback.
  *
  * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddRow().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
@@ -2763,26 +2763,26 @@
  *    (result SCIP_DIDNOTFIND)
  *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
  *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
- *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
+ *  - stating that a new separation round should be started without calling the remaining separator functions (result SCIP_NEWROUND)
  *
  *
- * @section SEPA_ADDITIONALCALLBACKS Additional Callback Methods of a Separator
+ * @section SEPA_ADDITIONALCALLBACKS Additional Callbacks of a Separator
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications, they can be used, for example, to initialize and free private data.
  * Additional callbacks can either be passed directly with SCIPincludeSepa() to SCIP or via specific
  * <b>setter functions</b> after a call of SCIPincludeSepaBasic(), see also @ref SEPA_INTERFACE.
  *
  * @subsection SEPAFREE
  *
- * If you are using separator data (see \ref SEPA_DATA and \ref SEPA_INTERFACE), you have to implement this method
+ * If you are using separator data (see \ref SEPA_DATA and \ref SEPA_INTERFACE), you have to implement this function
  * in order to free the separator data. This can be done by the following procedure:
  *
  * @refsnippet{src/scip/sepa_gomory.c,SnippetSepaFreeGomory}
  *
  * If you have allocated memory for fields in your separator data, remember to free this memory
  * before freeing the separator data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection SEPACOPY
@@ -2804,7 +2804,7 @@
  * @subsection SEPAEXIT
  *
  * The SEPAEXIT callback is executed before the transformed problem is freed.
- * In this method, the separator should free all resources that have been allocated for the solving process in SEPAINIT.
+ * In this function, the separator should free all resources that have been allocated for the solving process in SEPAINIT.
  *
  * @subsection SEPAINITSOL
  *
@@ -2832,9 +2832,9 @@
  * We now explain how users can add their own propagators.  Take the pseudo objective function propagator
  * (src/scip/prop_pseudoobj.c) as an example.  As all other default plugins, it is written in C. C++ users can easily
  * adapt the code by using the scip::ObjProp wrapper base class and implement the @c scip_...() virtual methods instead
- * of the @c SCIP_DECL_PROP... callback methods.
+ * of the @c SCIP_DECL_PROP... callbacks.
  *
- * Additional documentation for the callback methods of a propagator can be found in the file type_prop.h.
+ * Additional documentation for the callbacks of a propagator can be found in the file type_prop.h.
  *
  * Here is what you have to do to implement a propagator:
  * -# Copy the template files src/scip/prop_xyz.c and src/scip/prop_xyz.h into files named "prop_mypropagator.c"
@@ -2848,9 +2848,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypropagator".
  * -# Adjust the properties of the propagator (see \ref PROP_PROPERTIES).
  * -# Define the propagator data (see \ref PROP_DATA). This is optional.
- * -# Implement the interface methods (see \ref PROP_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref PROP_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref PROP_ADDITIONALCALLBACKS). This is optional.
+ * -# Implement the interface functions (see \ref PROP_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref PROP_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref PROP_ADDITIONALCALLBACKS). This is optional.
  *
  * @section PROP_PROPERTIES Properties of a Propagator
  *
@@ -2871,17 +2871,17 @@
  * This string is printed as a description of the propagator in the interactive shell.
  *
  * \par PROP_PRIORITY: the priority of the propagator.
- * In each propagation round, the propagators and propagation methods of the constraint handlers are called in a
+ * In each propagation round, the propagators and propagation functions of the constraint handlers are called in a
  * predefined order, which is given by the priorities of the propagators and the check priorities of the constraint
  * handlers.  First, the propagators with non-negative priority are called in order of decreasing priority.  Next, the
- * propagation methods of the different constraint handlers are called in order of decreasing check priority.  Finally,
+ * propagation functions of the different constraint handlers are called in order of decreasing check priority.  Finally,
  * the propagators with negative priority are called in order of decreasing priority.  \n The priority of the
  * propagators should be set according to the complexity of the propagation algorithm and the impact of the domain
  * propagations: propagators providing fast algorithms that usually have a high impact (i.e., tighten many bounds)
  * should have a high priority.
  *
  * \par PROP_FREQ: the default frequency for propagating domains.
- * The frequency defines the depth levels at which the propagation method \ref PROPEXEC is called.  For example, a
+ * The frequency defines the depth levels at which the propagation function \ref PROPEXEC is called.  For example, a
  * frequency of 7 means, that the propagation callback is executed for subproblems that are in depth 0, 7, 14, ... of
  * the branching tree. A frequency of 0 means that propagation is only applied in preprocessing and at the root node. A
  * frequency of -1 disables the propagator.
@@ -2892,11 +2892,11 @@
  * assign a frequency of 1 and implement a check at the beginning of your propagation algorithm whether you really want
  * to execute the domain propagation or not. If you do not want to execute it, set the result code to SCIP_DIDNOTRUN.
  *
- * \par PROP_DELAY: the default for whether the propagation method should be delayed, if other propagators or constraint handlers found domain reductions.
- * If the propagator's propagation method is marked to be delayed, it is only executed after no other propagator or
+ * \par PROP_DELAY: the default for whether the propagation function should be delayed, if other propagators or constraint handlers found domain reductions.
+ * If the propagator's propagation function is marked to be delayed, it is only executed after no other propagator or
  * constraint handler found a domain reduction in the current iteration of the domain propagation loop.  If the
- * propagation method of the propagator is very expensive, you may want to mark it to be delayed until all cheap
- * propagation methods have been executed.
+ * propagation function of the propagator is very expensive, you may want to mark it to be delayed until all cheap
+ * propagation functions have been executed.
  *
  * \par PROP_TIMING: the timing mask of the propagator.
  * SCIP calls the domain propagation routines at different places in the node processing loop.
@@ -2908,17 +2908,17 @@
  * The following properties are optional and only need to be defined if the propagator supports
  * presolving, that is, if the \ref PROPPRESOL "presolving callback" is implemented.
 
- * \par PROP_PRESOLTIMING: the timing of the presolving method (FAST, MEDIUM, or EXHAUSTIVE).
- * Every presolving round starts with the FAST presolving methods. MEDIUM presolvers are only called, if FAST presolvers did not find
+ * \par PROP_PRESOLTIMING: the timing of the presolving function (FAST, MEDIUM, or EXHAUSTIVE).
+ * Every presolving round starts with the FAST presolvers. MEDIUM presolvers are only called, if FAST presolvers did not find
  * enough reductions in this round so far, and EXHAUSTIVE presolving steps are only performed if all presolvers called before
  * in this round were unsuccessful.
- * Presolving methods should be assigned a timing based on how expensive they are, e.g., presolvers that provide fast algorithms that
+ * Presolving functions should be assigned a timing based on how expensive they are, e.g., presolvers that provide fast algorithms that
  * usually have a high impact (i.e., remove lots of variables or tighten bounds of many variables) should have a timing FAST.
- * If a presolving method implements different algorithms of different complexity, it may also get multiple timings and check the timing
+ * If a presolving function implements different algorithms of different complexity, it may also get multiple timings and check the timing
  * internally in the \ref PROPPRESOL callback to decide which algorithms to run.
  *
- * \par PROP_PRESOL_PRIORITY: the priority of the presolving method.
- * This attribute is analogous to the PROP_PRIORITY flag, but deals with the preprocessing method of the presolver.
+ * \par PROP_PRESOL_PRIORITY: the priority of the presolving function.
+ * This attribute is analogous to the PROP_PRIORITY flag, but deals with the preprocessing function of the presolver.
  *
  * \par PROP_PRESOL_MAXROUNDS: the default maximal number of presolving rounds the propagator participates in.
  * The preprocessing is executed in rounds.
@@ -2938,14 +2938,14 @@
  * Defining propagator data is optional. You can leave the struct empty.
  *
  *
- * @section PROP_INTERFACE Interface Methods
+ * @section PROP_INTERFACE Interface Functions
  *
- * At the bottom of "prop_mypropagator.c", you can find the interface method SCIPincludeSepaMypropagator(),
+ * At the bottom of "prop_mypropagator.c", you can find the interface function SCIPincludeSepaMypropagator(),
  * which also appears in "prop_mypropagator.h"
  * SCIPincludePropMypropagator() is called by the user, if (s)he wants to include the propagator,
  * i.e., if (s)he wants to use the propagator in his/her application.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the propagator. For this, you can either call SCIPincludeProp(),
  * or SCIPincludePropBasic() since SCIP version 3.0. In the latter variant, \ref PROP_ADDITIONALCALLBACKS "additional callbacks"
  * must be added via setter functions as, e.g., SCIPsetPropCopy(). We recommend this latter variant because
@@ -2960,24 +2960,24 @@
  * \endcode
  * You also have to initialize the fields in <code>struct SCIP_PropData</code> afterwards.
  *
- * You may also add user parameters for your propagator, see the method SCIPincludePropPseudoobj() in
+ * You may also add user parameters for your propagator, see the function SCIPincludePropPseudoobj() in
  * src/scip/prop_pseudoobj.c for an example.
  *
  *
- * @section PROP_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Propagator
+ * @section PROP_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Propagator
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
  * They are passed together with the propagator itself to SCIP using SCIPincludeProp() or SCIPincludePropBasic(),
  * see @ref PROP_INTERFACE.
  *
- * Propagator plugins have one fundamental callback method, namely the \ref PROPEXEC method
- * method.  This method has to be implemented for every propagator; the other callback methods are optional.  In the
+ * Propagator plugins have one fundamental callback, namely the \ref PROPEXEC function.
+ * This function has to be implemented for every propagator; the other callbacks are optional.  In the
  * C++ wrapper class scip::ObjProp, the scip_exec() method (which corresponds to the \ref PROPEXEC
  * callback) is a virtual abstract member function. You have to
  * implement it in order to be able to construct an object of your propagator class.
  *
- * Additional documentation for the callback methods can be found in type_prop.h.
+ * Additional documentation for the callbacks can be found in type_prop.h.
  *
  * @subsection PROPEXEC
  *
@@ -2996,46 +2996,46 @@
  *
  *
  *
- * @section PROP_ADDITIONALCALLBACKS Additional Callback Methods of a Propagator
+ * @section PROP_ADDITIONALCALLBACKS Additional Callbacks of a Propagator
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications, they can be used, for example, to initialize and free private data.
  * Additional callbacks can either be passed directly with SCIPincludeProp() to SCIP or via specific
  * <b>setter functions</b> after a call of SCIPincludePropBasic(), see also @ref PROP_INTERFACE.
  *
  * @subsection PROPRESPROP
  *
- * If the propagator wants to support \ref CONF "conflict analysis", it has to supply the PROPRESPROP method.  It also should call
+ * If the propagator wants to support \ref CONF "conflict analysis", it has to supply the PROPRESPROP function.  It also should call
  * SCIPinferVarLbProp() or SCIPinferVarUbProp() in the domain propagation instead of SCIPchgVarLb() or SCIPchgVarUb() in
  * order to deduce bound changes on variables.  In the SCIPinferVarLbProp() and SCIPinferVarUbProp() calls, the
  * propagator provides a pointer to itself and an integer value "inferinfo" that can be arbitrarily chosen.
  *
- * The propagation conflict resolving method PROPRESPROP must then be implemented to provide the "reasons" for the bound
+ * The propagation conflict resolving function PROPRESPROP must then be implemented to provide the "reasons" for the bound
  * changes, i.e., the bounds of variables at the time of the propagation, which forced the propagator to set the
  * conflict variable's bound to its current value. It can use the "inferinfo" tag to identify its own propagation rule
  * and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided by
- * calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
+ * calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving function.
  *
- * See the description of the propagation conflict resolving method \ref CONSRESPROP of constraint handlers for
+ * See the description of the propagation conflict resolving function \ref CONSRESPROP of constraint handlers for
  * further details.
  *
- * Omitting the PROPRESPROP callback circumvents the implementation of the usually rather complex conflict resolving method.
+ * Omitting the PROPRESPROP callback circumvents the implementation of the usually rather complex conflict resolving function.
  * Yet, it
- * will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check how
- * effective the propagation method is. If it produces a lot of propagations for your application, you definitely should
- * consider implementing the conflict resolving method.
+ * will make the conflict analysis less effective. We suggest to first omit the conflict resolving function and check how
+ * effective the propagation function is. If it produces a lot of propagations for your application, you definitely should
+ * consider implementing the conflict resolving function.
  *
  *
  * @subsection PROPFREE
  *
- * If you are using propagator data, you have to implement this method in order to free the propagator data.
+ * If you are using propagator data, you have to implement this function in order to free the propagator data.
  * This can be done by the following procedure:
  *
  * @refsnippet{src/scip/prop_redcost.c,SnippetPropFreeRedcost}
  *
  * If you have allocated memory for fields in your propagator data, remember to free this memory
  * before freeing the propagator data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection PROPINIT
@@ -3055,7 +3055,7 @@
  * @subsection PROPEXIT
  *
  * The PROPEXIT callback is executed before the transformed problem is freed.
- * In this method, the propagator should free all resources that have been allocated for the solving process in PROPINIT.
+ * In this function, the propagator should free all resources that have been allocated for the solving process in PROPINIT.
  *
  * @subsection PROPINITPRE
  *
@@ -3084,7 +3084,7 @@
  * Seaches for domain propagations, analogous to the \ref PROPEXEC callback.
  * However, this callback is called during preprocessing.
  *
- * To inform SCIP that the presolving method found a reduction the result pointer has to be set in a proper way.
+ * To inform SCIP that the presolving function found a reduction the result pointer has to be set in a proper way.
  * The following options are possible:
  *
  *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in objective direction
@@ -3106,15 +3106,15 @@
 /**@page BRANCH How to add branching rules
  *
  * Branching rules are used to split the problem at the current node into smaller subproblems. Branching rules can be called at three
- * different occasions, which is why they have three different execution methods (see \ref
+ * different occasions, which is why they have three different execution functions (see \ref
  * BRANCHRULE_ADDITIONALCALLBACKS).  Branching is performed if:
  * - the LP solution of the current problem is fractional. In this case, the integrality constraint handler calls the
- *   \ref BRANCHEXECLP methods of the branching rules.
+ *   \ref BRANCHEXECLP functions of the branching rules.
  * - the list of external branching candidates is not empty. This will only be the case if branching candidates were added
  *   by a user's \ref RELAX "relaxation handler" or \ref CONS "constraint handler" plugin, calling SCIPaddExternBranchCand().
- *   These branching candidates should be processed by the \ref BRANCHEXECEXT method.
- * - if an integral solution violates one or more constraints and this infeasibility could not be resolved in the callback methods
- *   \ref CONSENFOLP and \ref CONSENFOPS of the corresponding constraint handlers. In this case, the \ref BRANCHEXECPS method will be called. This is the
+ *   These branching candidates should be processed by the \ref BRANCHEXECEXT function.
+ * - if an integral solution violates one or more constraints and this infeasibility could not be resolved in the callbacks
+ *   \ref CONSENFOLP and \ref CONSENFOPS of the corresponding constraint handlers. In this case, the \ref BRANCHEXECPS function will be called. This is the
  *   standard case, if you use SCIP as a pure CP or SAT solver. If the LP or any other type of relaxation is used, then
  *   branching on pseudo solutions works as a last resort.
  *
@@ -3136,9 +3136,9 @@
  * We now explain how users can add their own branching rules.  Take the most infeasible LP branching rule
  * (src/scip/branch_mostinf.c) as an example.  As all other default plugins, it is written in C. C++ users can easily
  * adapt the code by using the scip::ObjBranchrule wrapper base class and implement the scip_...() virtual methods instead of
- * the SCIP_DECL_BRANCH... callback methods.
+ * the SCIP_DECL_BRANCH... callbacks.
  *
- * Additional documentation for the callback methods of a branching rule can be found in the file type_branch.h.
+ * Additional documentation for the callbacks of a branching rule can be found in the file type_branch.h.
  *
  * Here is what you have to do to implement a branching rule:
  * -# Copy the template files src/scip/branch_xyz.c and src/scip/branch_xyz.h into files named
@@ -3152,9 +3152,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybranchingrule".
  * -# Adjust the properties of the branching rule (see \ref BRANCHRULE_PROPERTIES).
  * -# Define the branching rule data (see \ref BRANCHRULE_DATA). This is optional.
- * -# Implement the interface methods (see \ref BRANCHRULE_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref BRANCHRULE_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref BRANCHRULE_ADDITIONALCALLBACKS). This is optional.
+ * -# Implement the interface functions (see \ref BRANCHRULE_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref BRANCHRULE_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref BRANCHRULE_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section BRANCHRULE_PROPERTIES Properties of a Branching Rule
@@ -3187,14 +3187,14 @@
  * change this value arbitrarily.
  *
  * \par BRANCHRULE_MAXDEPTH: the default value for the maximal depth level of the branching rule.
- * This parameter denotes the maximal depth level in the branch-and-bound tree up to which the branching method of the
+ * This parameter denotes the maximal depth level in the branch-and-bound tree up to which the branching function of the
  * branching rule will be applied. Use -1 for no limit.
  * \n
  * Note that this property only specifies the default value. The user can change this value arbitrarily.
  *
  * \par BRANCHRULE_MAXBOUNDDIST: the default value for the maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching.
  * At the current branch-and-bound node, the relative distance from its dual bound (local dual bound)
- * to the primal bound compared to the best node's dual bound (global dual bound) is considered. The branching method of
+ * to the primal bound compared to the best node's dual bound (global dual bound) is considered. The branching function of
  * the branching rule will only be applied at the node if this relative distance does not exceed BRANCHRULE_MAXBOUNDDIST.
  * \n
  * For example, if the global dual bound is 50 and the primal bound is 60, BRANCHRULE_MAXBOUNDDIST = 0.25 means that
@@ -3216,14 +3216,14 @@
  * Defining branching rule data is optional. You can leave the struct empty.
  *
  *
- * @section BRANCHRULE_INTERFACE Interface Methods
+ * @section BRANCHRULE_INTERFACE Interface Functions
  *
- * At the bottom of "branch_mybranchingrule.c", you can find the interface method SCIPincludeBranchruleMybranchingrule(),
+ * At the bottom of "branch_mybranchingrule.c", you can find the interface function SCIPincludeBranchruleMybranchingrule(),
  * which also appears in "branch_mybranchingrule.h"
  * SCIPincludeBranchruleMybranchingrule() is called by the user, if (s)he wants to include the branching rule,
  * i.e., if (s)he wants to use the branching rule in his/her application.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the branching rule. For this, you can either call
  * SCIPincludeBranchrule(),
  * or SCIPincludeBranchruleBasic() since SCIP version 3.0. In the latter variant, \ref BRANCHRULE_ADDITIONALCALLBACKS "additional callbacks"
@@ -3239,27 +3239,27 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_BranchruleData afterwards.
  *
- * You may also add user parameters for your branching rule, see the method SCIPincludeBranchruleRelpscost() in
+ * You may also add user parameters for your branching rule, see the function SCIPincludeBranchruleRelpscost() in
  * src/scip/branch_relpscost.c for an example.
  *
  *
- * @section BRANCHRULE_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Branching Rule
+ * @section BRANCHRULE_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Branching Rule
  *
- * Branching rules do not have any fundamental callback methods, i.e., all callback methods are optional.
- * In most cases, however, you want to implement the \ref BRANCHEXECLP method and sometimes the \ref BRANCHEXECPS method.
+ * Branching rules do not have any fundamental callbacks, i.e., all callbacks are optional.
+ * In most cases, however, you want to implement the \ref BRANCHEXECLP function and sometimes the \ref BRANCHEXECPS function.
  *
  *
- * @section BRANCHRULE_ADDITIONALCALLBACKS Additional Callback Methods of a Branching Rule
+ * @section BRANCHRULE_ADDITIONALCALLBACKS Additional Callbacks of a Branching Rule
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications, they can be used, for example, to initialize and free private data.
  * Additional callbacks can either be passed directly with SCIPincludeBranchrule() to SCIP or via specific
  * <b>setter functions</b> after a call of SCIPincludeBranchruleBasic(), see also @ref BRANCHRULE_INTERFACE.
  *
- * The most important callback methods are the \ref BRANCHEXECLP, \ref BRANCHEXECEXT,
- * and \ref BRANCHEXECPS methods, which perform the actual task of generating a branching.
+ * The most important callbacks are the \ref BRANCHEXECLP, \ref BRANCHEXECEXT,
+ * and \ref BRANCHEXECPS functions, which perform the actual task of generating a branching.
  *
- * Additional documentation for the callback methods can be found in type_branch.h.
+ * Additional documentation for the callbacks can be found in type_branch.h.
  *
  * @subsection BRANCHEXECLP
  *
@@ -3271,16 +3271,16 @@
  * proper restriction of the current problem.  Otherwise, you risk to produce an infinite path in the search tree.
  *
  * The user gains access to the branching candidates, i.e., to the fractional variables, and their LP solution values by
- * calling the method SCIPgetLPBranchCands(). Furthermore, SCIP provides two methods for performing the actual
+ * calling the function SCIPgetLPBranchCands(). Furthermore, SCIP provides two functions for performing the actual
  * branching, namely SCIPbranchVar() and SCIPcreateChild().
  *
- * Given an integral variable \f$x\f$ with fractional LP solution value \f$x^*\f$, the method SCIPbranchVar() creates
+ * Given an integral variable \f$x\f$ with fractional LP solution value \f$x^*\f$, the function SCIPbranchVar() creates
  * two child nodes; one contains the bound \f$x \le \lfloor x^* \rfloor\f$ and the other one contains the bound \f$x \ge
  * \lceil x^* \rceil\f$, see the BRANCHEXECLP callback in src/scip/branch_mostinf.c for an example. In addition, if a
  * proven lower objective bound of a created child node is known, like after strong branching has been applied, the user
- * may call the method SCIPupdateNodeLowerbound() in order to update the child node's lower bound.
+ * may call the function SCIPupdateNodeLowerbound() in order to update the child node's lower bound.
  *
- * Please also see the \ref BRANCHEXEC "further information for the three execution methods".
+ * Please also see the \ref BRANCHEXEC "further information for the three execution functions".
  *
  * @subsection BRANCHEXECEXT
  *
@@ -3291,30 +3291,30 @@
  *
  * In contrast to the LP branching candidates and the pseudo branching candidates, the list of external branching
  * candidates will not be generated automatically. The user has to add all variables to the list by calling
- * SCIPaddExternBranchCand() for each of them. Usually, this will happen in the execution method of a relaxation handler or in the
- * enforcement methods of a constraint handler.
+ * SCIPaddExternBranchCand() for each of them. Usually, this will happen in the execution function of a relaxation handler or in the
+ * enforcement functions of a constraint handler.
  *
- * The user gains access to these branching candidates by calling the method SCIPgetExternBranchCands(). Furthermore,
- * SCIP provides two methods for performing the actual branching with a given solution value, namely SCIPbranchVarVal()
+ * The user gains access to these branching candidates by calling the function SCIPgetExternBranchCands(). Furthermore,
+ * SCIP provides two functions for performing the actual branching with a given solution value, namely SCIPbranchVarVal()
  * and SCIPcreateChild(). SCIPbranchVarVal() allows users to specify the branching point for a variable in contrast to
  * SCIPbranchVar(), which will always use the current LP or pseudo solution.
  *
- * This paragraph contains additional information regarding how the method SCIPbranchVarVal() works. For external branching candidates,
+ * This paragraph contains additional information regarding how the function SCIPbranchVarVal() works. For external branching candidates,
  * there are three principle possibilities:
- * - Given a continuous variable \f$x\f$ with solution value \f$x^*\f$, the method SCIPbranchVarVal() creates
+ * - Given a continuous variable \f$x\f$ with solution value \f$x^*\f$, the function SCIPbranchVarVal() creates
  *   two child nodes; one contains the bound \f$x \le x^* \f$ and the other one contains the bound \f$x \ge x^* \f$.
- * - Given an integer variable \f$x\f$ with fractional solution value \f$x^*\f$, the method
+ * - Given an integer variable \f$x\f$ with fractional solution value \f$x^*\f$, the function
  *   SCIPbranchVarVal() creates two child nodes; one contains the bound \f$x \le \lfloor x^* \rfloor\f$ and the other
  *   one contains the bound \f$x \ge \lceil x^* \rceil\f$.
- * - Given an integer variable \f$x\f$ with integral solution value \f$x^*\f$, the method SCIPbranchVarVal()
+ * - Given an integer variable \f$x\f$ with integral solution value \f$x^*\f$, the function SCIPbranchVarVal()
  *   creates three child nodes; one contains the bound \f$x \le x^* -1\f$, one contains the bound \f$x \ge x^* +1\f$,
  *   one contains the fixing \f$x = x^*\f$.
  *
  * See the BRANCHEXECEXT callback in src/scip/branch_random.c for an example. In addition, if a proven lower bound of a
- * created child node is known the user may call the method SCIPupdateNodeLowerbound() in order to update the child
+ * created child node is known the user may call the function SCIPupdateNodeLowerbound() in order to update the child
  * node's lower bound.
  *
- * Please also see the \ref BRANCHEXEC "further information for the three execution methods".
+ * Please also see the \ref BRANCHEXEC "further information for the three execution functions".
  *
  * @subsection BRANCHEXECPS
  *
@@ -3323,11 +3323,11 @@
  * pseudo solution which is the vector of all variables set to their locally best (w.r.t. the objective function)
  * bounds.
  *
- * The user gains access to the branching candidates, i.e., to the non-fixed integer variables, by calling the method
- * SCIPgetPseudoBranchCands(). Furthermore, SCIP provides two methods for performing the actual branching, namely
+ * The user gains access to the branching candidates, i.e., to the non-fixed integer variables, by calling the function
+ * SCIPgetPseudoBranchCands(). Furthermore, SCIP provides two functions for performing the actual branching, namely
  * SCIPbranchVar() and SCIPcreateChild().
  *
- * Given an integer variable \f$x\f$ with bounds \f$[l,u]\f$ and not having solved the LP, the method SCIPbranchVar()
+ * Given an integer variable \f$x\f$ with bounds \f$[l,u]\f$ and not having solved the LP, the function SCIPbranchVar()
  * creates two child nodes:
  * - If both bounds are finite, then the two children will contain the domain reductions \f$x \le x^*\f$, and \f$x \ge
  *   x^*+1\f$ with \f$x^* = \lfloor \frac{l + u}{2}\rfloor\f$. The current pseudo solution will remain feasible in one
@@ -3338,21 +3338,21 @@
 
  *
  * See the BRANCHEXECPS callback in src/scip/branch_random.c for an example. In addition, if a proven lower bound of a
- * created child node is known, the user may call the method SCIPupdateNodeLowerbound() in order to update the child
+ * created child node is known, the user may call the function SCIPupdateNodeLowerbound() in order to update the child
  * node's lower bound.
  *
- * Please also see the \ref BRANCHEXEC "further information for the three execution methods".
+ * Please also see the \ref BRANCHEXEC "further information for the three execution functions".
  *
- * @subsection BRANCHEXEC Further information for the three execution methods
+ * @subsection BRANCHEXEC Further information for the three execution functions
  *
- * In order to apply more general branching schemes, one should use the method SCIPcreateChild().
+ * In order to apply more general branching schemes, one should use the function SCIPcreateChild().
  * After having created a child node, the additional restrictions of the child node have to be added with calls to
  * SCIPaddConsNode(), SCIPchgVarLbNode(), or SCIPchgVarUbNode().
  * \n
- * In the method SCIPcreateChild(), the branching rule has to assign two values to the new nodes: a node selection
+ * In the function SCIPcreateChild(), the branching rule has to assign two values to the new nodes: a node selection
  * priority for each node and an estimate for the objective value of the best feasible solution contained in the subtree
- * after applying the branching. If the method SCIPbranchVar() is used, these values are automatically assigned. For
- * variable based branching schemes, one might use the methods SCIPcalcNodeselPriority() and the method
+ * after applying the branching. If the function SCIPbranchVar() is used, these values are automatically assigned. For
+ * variable based branching schemes, one might use the functions SCIPcalcNodeselPriority() and the function
  * SCIPcalcChildEstimate().
  *
  * In some cases, the branching rule can tighten the current subproblem instead of producing a branching. For example,
@@ -3372,14 +3372,14 @@
  *
  * @subsection BRANCHFREE
  *
- * If you are using branching rule data, you have to implement this method in order to free the branching rule data.
+ * If you are using branching rule data, you have to implement this function in order to free the branching rule data.
  * This can be done by the following procedure:
  *
  * @refsnippet{src/scip/branch_random.c,SnippetBranchFreeRandom}
  *
  * If you have allocated memory for fields in your branching rule data, remember to free this memory
  * before freeing the branching rule data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection BRANCHINIT
@@ -3399,7 +3399,7 @@
  * @subsection BRANCHEXIT
  *
  * The BRANCHEXIT callback is executed before the transformed problem is freed.
- * In this method, the branching rule should free all resources that have been allocated for the solving process in
+ * In this function, the branching rule should free all resources that have been allocated for the solving process in
  * BRANCHINIT.
  *
  * @subsection BRANCHINITSOL
@@ -3428,9 +3428,9 @@
  * We now explain how users can add their own cut selectors.
  * Take the hybrid cut selector (src/scip/cutsel_hybrid.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjCutsel wrapper
- * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_CUTSEL... callback methods.
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_CUTSEL... callbacks.
  *
- * Additional documentation for the callback methods of a cut selector can be found in the file type_cutsel.h.
+ * Additional documentation for the callbacks of a cut selector can be found in the file type_cutsel.h.
  *
  * Here is what you have to do to implement a cut selector:
  * -# Copy the template files src/scip/cutsel_xyz.c and src/scip/cutsel_xyz.h into files named "cutsel_mycutselector.c"
@@ -3444,9 +3444,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mycutselector".
  * -# Adjust the properties of the cut selector (see \ref CUTSEL_PROPERTIES).
  * -# Define the cut selector data (see \ref CUTSEL_DATA). This is optional.
- * -# Implement the interface methods (see \ref CUTSEL_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref CUTSEL_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref CUTSEL_ADDITIONALCALLBACKS). This is optional.
+ * -# Implement the interface functions (see \ref CUTSEL_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref CUTSEL_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref CUTSEL_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section CUTSEL_PROPERTIES Properties of a Cut Selector
@@ -3485,14 +3485,14 @@
  * Defining cut selector data is optional. You can leave the struct empty.
  *
  *
- * @section CUTSEL_INTERFACE Interface Methods
+ * @section CUTSEL_INTERFACE Interface Functions
  *
- * At the bottom of "cutsel_mycutselector.c", you can find the interface method SCIPincludeCutselMycutselector(),
+ * At the bottom of "cutsel_mycutselector.c", you can find the interface function SCIPincludeCutselMycutselector(),
  * which also appears in "cutsel_mycutselector.h"
  * SCIPincludeCutselMycutselector() is called by the user, if they want to include the cut selector, i.e., if they want
  * to use the cut selector in their application.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the cut selector. For this, you can either call
  * SCIPincludeCutsel()
  * or SCIPincludeCutselBasic(). In the latter variant, \ref CUTSEL_ADDITIONALCALLBACKS "additional callbacks"
@@ -3508,21 +3508,21 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_CutselData afterwards.
  *
- * You may also add user parameters for your cut selector, see the method SCIPincludeCutselHybrid() in
+ * You may also add user parameters for your cut selector, see the function SCIPincludeCutselHybrid() in
  * src/scip/cutsel_hybrid.c for an example.
  *
  *
- * @section CUTSEL_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Cut Selector
+ * @section CUTSEL_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Cut Selector
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
  * They are passed together with the cut selector itself to SCIP using SCIPincludeCutsel() or SCIPincludeCutselBasic(),
  * see @ref CUTSEL_INTERFACE.
  *
- * Cut selector plugins have a single fundamental callback method, namely the CUTSELSELECT method.
- * This method has to be implemented for every cut selector; the other callback methods are optional.
+ * Cut selector plugins have a single fundamental callback, namely the CUTSELSELECT function.
+ * This function has to be implemented for every cut selector; the other callbacks are optional.
  * It implements the single contribution every selector has to provide: Selecting cuts to be added to the relaxation.
- * In the C++ wrapper class scip::ObjCutsel, the scip_select() method is a virtual abstract member function.
+ * In the C++ wrapper class scip::ObjCutsel, the scip_select() function is a virtual abstract member function.
  * You have to implement it in order to be able to construct an object of your cut selector class.
  *
  * @subsection CUTSELSELECT
@@ -3535,23 +3535,23 @@
  *
  * Additional documentation for this callback can be found in type_cutsel.h.
  *
- * @section CUTSEL_ADDITIONALCALLBACKS Additional Callback Methods of a Cut Selector
+ * @section CUTSEL_ADDITIONALCALLBACKS Additional Callbacks of a Cut Selector
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications. They can be used, for example, to initialize and free private data.
  * Additional callbacks can either be passed directly with SCIPincludeCutsel() to SCIP or via specific
  * <b>setter functions</b> after a call of SCIPincludeCutselBasic(), see also @ref CUTSEL_INTERFACE.
  *
  * @subsection CUTSELFREE
  *
- * If you are using cut selector data, you have to implement this method in order to free the cut selector data.
+ * If you are using cut selector data, you have to implement this function in order to free the cut selector data.
  * This can be done by the following procedure:
  *
  * @refsnippet{src/scip/cutsel_hybrid.c,SnippetCutselFreeHybrid}
  *
  * If you have allocated memory for fields in your cut selector data, remember to free this memory
  * before freeing the cut selector data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection CUTSELINIT
@@ -3568,7 +3568,7 @@
  * @subsection CUTSELEXIT
  *
  * The CUTSELEXIT callback is executed before the transformed problem is freed.
- * In this method, the cut selector should free all resources that have been allocated for the solving process
+ * In this function, the cut selector should free all resources that have been allocated for the solving process
  * in CUTSELINIT.
  *
  * @subsection CUTSELINITSOL
@@ -3596,9 +3596,9 @@
  * We now explain how users can add their own node selectors.
  * Take the node selector for depth first search (src/scip/nodesel_dfs.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjNodesel wrapper
- * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_NODESEL... callback methods.
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_NODESEL... callbacks.
  *
- * Additional documentation for the callback methods of a node selector can be found in the file type_nodesel.h.
+ * Additional documentation for the callbacks of a node selector can be found in the file type_nodesel.h.
  *
  * Here is what you have to do to implement a node selector:
  * -# Copy the template files src/scip/nodesel_xyz.c and src/scip/nodesel_xyz.h into files named "nodesel_mynodeselector.c"
@@ -3612,9 +3612,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynodeselector".
  * -# Adjust the properties of the node selector (see \ref NODESEL_PROPERTIES).
  * -# Define the node selector data (see \ref NODESEL_DATA). This is optional.
- * -# Implement the interface methods (see \ref NODESEL_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref NODESEL_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref NODESEL_ADDITIONALCALLBACKS). This is optional.
+ * -# Implement the interface functions (see \ref NODESEL_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref NODESEL_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref NODESEL_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section NODESEL_PROPERTIES Properties of a Node Selector
@@ -3667,14 +3667,14 @@
  * Defining node selector data is optional. You can leave the struct empty.
  *
  *
- * @section NODESEL_INTERFACE Interface Methods
+ * @section NODESEL_INTERFACE Interface Functions
  *
- * At the bottom of "nodesel_mynodeselector.c", you can find the interface method SCIPincludeNodeselMynodeselector(),
+ * At the bottom of "nodesel_mynodeselector.c", you can find the interface function SCIPincludeNodeselMynodeselector(),
  * which also appears in "nodesel_mynodeselector.h"
  * SCIPincludeNodeselMynodeselector() is called by the user, if (s)he wants to include the node selector,
  * i.e., if (s)he wants to use the node selector in his/her application.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the node selector. For this, you can either call
  * SCIPincludeNodesel(),
  * or SCIPincludeNodeselBasic() since SCIP version 3.0. In the latter variant, \ref NODESEL_ADDITIONALCALLBACKS "additional callbacks"
@@ -3690,31 +3690,31 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_NodeselData afterwards.
  *
- * You may also add user parameters for your node selector, see the method SCIPincludeNodeselRestartdfs() in
+ * You may also add user parameters for your node selector, see the function SCIPincludeNodeselRestartdfs() in
  * src/scip/nodesel_restartdfs.c for an example.
  *
  *
- * @section NODESEL_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Node Selector
+ * @section NODESEL_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Node Selector
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
  * They are passed together with the node selector itself to SCIP using SCIPincludeNodesel() or SCIPincludeNodeselBasic(),
  * see @ref NODESEL_INTERFACE.
  *
- * Node selector plugins have two fundamental callback methods, namely the NODESELSELECT method and the NODESELCOMP method.
- * These methods have to be implemented for every node selector; the other callback methods are optional.
+ * Node selector plugins have two fundamental callbacks, namely the NODESELSELECT function and the NODESELCOMP function.
+ * These functions have to be implemented for every node selector; the other callbacks are optional.
  * They implement the two requirements every node selector has to fulfill: Selecting a node from the queue to be processed
  * next and, given two nodes, deciding which of both is favored by the node selector's selection rule. The first
  * task is implemented in the NODESELSELECT callback, the second one in the NODESELCOMP callback.
- * In the C++ wrapper class scip::ObjNodesel, the scip_select() method and the scip_comp() method (which correspond to the
+ * In the C++ wrapper class scip::ObjNodesel, the scip_select() function and the scip_comp() function (which correspond to the
  * NODESELSELECT callback and the NODESELCOMP callback, respectively) are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your node selector class.
  *
- * Additional documentation for the callback methods can be found in type_nodesel.h.
+ * Additional documentation for the callbacks can be found in type_nodesel.h.
  *
  * @subsection NODESELSELECT
  *
- * The NODESELSELECT callback is the first method called in each iteration in the main solving loop. It should decide
+ * The NODESELSELECT callback is the first function called in each iteration in the main solving loop. It should decide
  * which of the leaves in the current branching tree is selected as the next subproblem to be processed.
  * It can arbitrarily decide between all leaves stored in the tree, but for performance reasons,
  * the current node's children and siblings are often treated different from the remaining leaves.
@@ -3729,7 +3729,7 @@
  * For example, the node where the branching went in the same way as the deviation from the branching variable's
  * root solution could be assigned a higher priority than the node where the branching went in the opposite direction.
  *
- * The following methods provide access to the various types of leaf nodes:
+ * The following functions provide access to the various types of leaf nodes:
  * - SCIPgetPrioChild() returns the child of the current node with the largest node selection priority, as assigned by the
  *   branching rule.
  *   If no child is available (for example, because the current node was pruned), a NULL pointer is returned.
@@ -3760,23 +3760,23 @@
  *  - value = 0, if both nodes are equally good
  *  - value > 0, if node 1 comes after (is worse than) node 2.
  *
- * @section NODESEL_ADDITIONALCALLBACKS Additional Callback Methods of a Node Selector
+ * @section NODESEL_ADDITIONALCALLBACKS Additional Callbacks of a Node Selector
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications, they can be used, for example, to initialize and free private data.
  * Additional callbacks can either be passed directly with SCIPincludeNodesel() to SCIP or via specific
  * <b>setter functions</b> after a call of SCIPincludeNodeselBasic(), see also @ref NODESEL_INTERFACE.
  *
  * @subsection NODESELFREE
  *
- * If you are using node selector data, you have to implement this method in order to free the node selector data.
+ * If you are using node selector data, you have to implement this function in order to free the node selector data.
  * This can be done by the following procedure:
  *
  * @refsnippet{src/scip/nodesel_bfs.c,SnippetNodeselFreeBfs}
  *
  * If you have allocated memory for fields in your node selector data, remember to free this memory
  * before freeing the node selector data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection NODESELINIT
@@ -3796,7 +3796,7 @@
  * @subsection NODESELEXIT
  *
  * The NODESELEXIT callback is executed before the transformed problem is freed.
- * In this method, the node selector should free all resources that have been allocated for the solving process
+ * In this function, the node selector should free all resources that have been allocated for the solving process
  * in NODESELINIT.
  *
  * @subsection NODESELINITSOL
@@ -3833,9 +3833,9 @@
  * the variables appears only with nonpositive coefficients.
  * If one of both conditions applies for each of the fractional variables, this will give a feasible solution.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjHeur wrapper
- * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_HEUR... callback methods.
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_HEUR... callbacks.
  *
- * Additional documentation for the callback methods of a primal heuristic can be found in the file type_heur.h.
+ * Additional documentation for the callbacks of a primal heuristic can be found in the file type_heur.h.
  *
  * Here is what you have to do to implement a primal heuristic:
  * -# Copy the template files src/scip/heur_xyz.c and src/scip/heur_xyz.h into files named "heur_myheuristic.c"
@@ -3849,9 +3849,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myheuristic".
  * -# Adjust the properties of the primal heuristic (see \ref HEUR_PROPERTIES).
  * -# Define the primal heuristic data (see \ref HEUR_DATA). This is optional.
- * -# Implement the interface methods (see \ref HEUR_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref HEUR_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref HEUR_ADDITIONALCALLBACKS). This is optional.
+ * -# Implement the interface functions (see \ref HEUR_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref HEUR_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref HEUR_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section HEUR_PROPERTIES Properties of a Primal Heuristic
@@ -3894,17 +3894,17 @@
  *
  * \par HEUR_FREQ: the default frequency for executing the primal heuristic.
  * The frequency together with the frequency offset (see HEUR_FREQOFS) defines the depth levels at which the execution
- * method of the primal heuristic \ref HEUREXEC is called. For example, a frequency of 7 together with a frequency offset
+ * function of the primal heuristic \ref HEUREXEC is called. For example, a frequency of 7 together with a frequency offset
  * of 5 means, that the \ref HEUREXEC callback is executed for subproblems that are in depth 5, 12, 19, ... of the branching tree. A
- * frequency of 0 together with a frequency offset of 3 means, that the execution method is only called at those nodes that are in
+ * frequency of 0 together with a frequency offset of 3 means, that the execution function is only called at those nodes that are in
  * depth level 3 (i.e., at most for \f$2^3 = 8\f$ nodes if binary branching is applied).
  * Typical cases are: A frequency of 0 and an offset of 0 which means that
  * the heuristic is only called at the root node and a frequency of -1 which disables the heuristic.
  * \n
  * The frequency can be adjusted by the user. This property of the primal heuristic only defines the default value of the
  * frequency. If you want to have a more flexible control of when to execute the primal heuristic, you have to assign
- * a frequency of 1 and implement a check at the beginning of your execution method whether you really want to search for feasible
- * solutions or not. If you do not want to execute the method, set the result code to SCIP_DIDNOTRUN.
+ * a frequency of 1 and implement a check at the beginning of your execution function whether you really want to search for feasible
+ * solutions or not. If you do not want to execute the function, set the result code to SCIP_DIDNOTRUN.
  *
  * \par HEUR_FREQOFS: the frequency offset for executing the primal heuristic.
  * The frequency offset defines the depth of the branching tree at which the primal heuristic is executed for the first
@@ -3916,7 +3916,7 @@
  * the frequency offset.
  *
  * \par HEUR_MAXDEPTH: the maximal depth level for executing the primal heuristic.
- * This parameter denotes the maximal depth level in the branching tree up to which the execution method of the primal
+ * This parameter denotes the maximal depth level in the branching tree up to which the execution function of the primal
  * heuristic is called. Use -1 for no limit (a usual case).
  *
  * \par HEUR_TIMING: the execution timing of the primal heuristic.
@@ -3982,14 +3982,14 @@
  * Defining primal heuristic data is optional. You can leave the struct empty.
  *
  *
- * @section HEUR_INTERFACE Interface Methods
+ * @section HEUR_INTERFACE Interface Functions
  *
- * At the bottom of "heur_myheuristic.c", you can find the interface method SCIPincludeHeurMyheuristic(),
+ * At the bottom of "heur_myheuristic.c", you can find the interface function SCIPincludeHeurMyheuristic(),
  * which also appears in "heur_myheuristic.h"
  * SCIPincludeHeurMyheuristic() is called by the user, if (s)he wants to include the heuristic,
  * i.e., if (s)he wants to use the heuristic in his/her application.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the heuristic. For this, you can either call
  * SCIPincludeHeur(),
  * or SCIPincludeHeurBasic() since SCIP version 3.0. In the latter variant, \ref HEUR_ADDITIONALCALLBACKS "additional callbacks"
@@ -4004,32 +4004,32 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_HeurData afterwards.
  *
- * You may also add user parameters for your primal heuristic, see the method SCIPincludeHeurFeaspump() in
+ * You may also add user parameters for your primal heuristic, see the function SCIPincludeHeurFeaspump() in
  * src/scip/heur_oneopt.c for an example where a single Boolean parameter is added.
  *
  *
- * @section HEUR_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Primal Heuristic
+ * @section HEUR_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Primal Heuristic
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
  * They are passed together with the primal heuristic itself to SCIP using SCIPincludeHeur() or SCIPincludeHeurBasic(),
  * see @ref HEUR_INTERFACE.
  *
  *
- * Primal heuristic plugins have only one fundamental callback method, namely the HEUREXEC method.
- * This method has to be implemented for every primal heuristic; the other callback methods are optional.
+ * Primal heuristic plugins have only one fundamental callback, namely the HEUREXEC function.
+ * This function has to be implemented for every primal heuristic; the other callbacks are optional.
  * In the C++ wrapper class scip::ObjHeur, the scip_exec() method (which corresponds to the HEUREXEC callback) is a virtual
  * abstract member function. You have to implement it in order to be able to construct an object of your primal heuristic
  * class.
  *
- * Additional documentation for the callback methods can be found in type_heur.h.
+ * Additional documentation for the callbacks can be found in type_heur.h.
  *
  * @subsection HEUREXEC
  *
  * The HEUREXEC callback is called at different positions during the node processing loop, see HEUR_TIMING. It should
  * search for feasible solutions and add them to the solution pool. For creating a new feasible solution, the
- * methods SCIPcreateSol() and SCIPsetSolVal() can be used. Afterwards, the solution can be added to the storage by
- * calling the method SCIPtrySolFree() (or SCIPtrySol() and SCIPfreeSol()).
+ * functions SCIPcreateSol() and SCIPsetSolVal() can be used. Afterwards, the solution can be added to the storage by
+ * calling the function SCIPtrySolFree() (or SCIPtrySol() and SCIPfreeSol()).
  *
  * The HEUREXEC callback gets a SCIP pointer, a pointer to the heuristic itself, the current point in the
  * solve loop and a result pointer as input (see type_heur.h).
@@ -4042,23 +4042,23 @@
  *  - stating that the primal heuristic was skipped, but should be called again (result SCIP_DELAYED).
  *
  *
- * @section HEUR_ADDITIONALCALLBACKS Additional Callback Methods of a Primal Heuristic
+ * @section HEUR_ADDITIONALCALLBACKS Additional Callbacks of a Primal Heuristic
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications, they can be used, for example, to initialize and free private data.
  * Additional callbacks can either be passed directly with SCIPincludeHeur() to SCIP or via specific
  * <b>setter functions</b> after a call of SCIPincludeHeurBasic(), see also @ref HEUR_INTERFACE.
  *
  * @subsection HEURFREE
  *
- * If you are using primal heuristic data, you have to implement this method in order to free the primal heuristic data.
+ * If you are using primal heuristic data, you have to implement this function in order to free the primal heuristic data.
  * This can be done by the following procedure:
  *
  * @refsnippet{applications/Coloring/src/heur_init.c,SnippetHeurFreeInit}
  *
  * If you have allocated memory for fields in your primal heuristic data, remember to free this memory
  * before freeing the primal heuristic data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection HEURINIT
@@ -4078,7 +4078,7 @@
  * @subsection HEUREXIT
  *
  * The HEUREXIT callback is executed before the tDIVINGHEURransformed problem is freed.
- * In this method, the primal heuristic should free all resources that have been allocated for the solving process in
+ * In this function, the primal heuristic should free all resources that have been allocated for the solving process in
  * HEURINIT.
  *
  * @subsection HEURINITSOL
@@ -4103,9 +4103,9 @@
  * We now explain how users can add their own iis finders.
  * Take the greedy iis finder (src/scip/iisfinder_greedy.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjIISfinder wrapper
- * base class and implement the `scip_...()` virtual methods instead of the `SCIP_DECL_IISFINDER...` callback methods.
+ * base class and implement the `scip_...()` virtual methods instead of the `SCIP_DECL_IISFINDER...` callbacks.
  *
- * Additional documentation for the callback methods of an iis finder can be found in the file type_iisfinder.h.
+ * Additional documentation for the callbacks of an iis finder can be found in the file type_iisfinder.h.
  *
  * Here is what you have to do to implement an iis finder:
  * -# Copy the template files `src/scip/iisfinder_xyz.c` and `src/scip/iisfinder_xyz.h` into files named `iisfinder_myiisfinder.c`
@@ -4119,9 +4119,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myiisfinder".
  * -# Adjust the properties of the iis finder (see \ref IISFINDER_PROPERTIES).
  * -# Define the iis finder data (see \ref IISFINDER_DATA). This is optional.
- * -# Implement the interface methods (see \ref IISFINDER_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref IISFINDER_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref IISFINDER_ADDITIONALCALLBACKS). This is optional.
+ * -# Implement the interface functions (see \ref IISFINDER_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref IISFINDER_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref IISFINDER_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section IISFINDER_PROPERTIES Properties of an IIS finder
@@ -4161,14 +4161,14 @@
  * Defining iis finder data is optional. You can leave the struct empty.
  *
  *
- * @section IISFINDER_INTERFACE Interface Methods
+ * @section IISFINDER_INTERFACE Interface Functions
  *
- * At the bottom of `iisfinder_myiisfinder.c`, you can find the interface method `SCIPincludeIISfinderMyiisfinder()`,
+ * At the bottom of `iisfinder_myiisfinder.c`, you can find the interface function `SCIPincludeIISfinderMyiisfinder()`,
  * which also appears in `iisfinder_myiisfinder.h`
  * `SCIPincludeIISfinderMyiisfinder()` is called by the users, if they want to include the iis finder, i.e., if they want
  * to use the iis finder in their application.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the iis finder. For this, you can either call
  * SCIPincludeIISfinder()
  * or SCIPincludeIISfinderBasic(). In the latter variant, \ref IISFINDER_ADDITIONALCALLBACKS "additional callbacks"
@@ -4184,19 +4184,19 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_IISfinderData afterwards.
  *
- * You may also add user parameters for your iis finder, see the method SCIPincludeIISfinderGreedy() in
+ * You may also add user parameters for your iis finder, see the function SCIPincludeIISfinderGreedy() in
  * src/scip/iisfinder_greedy.c for an example.
  *
  *
- * @section IISFINDER_FUNDAMENTALCALLBACKS Fundamental Callback Methods of an IIS Finder
+ * @section IISFINDER_FUNDAMENTALCALLBACKS Fundamental Callbacks of an IIS Finder
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
  * They are passed together with the iis finder itself to SCIP using SCIPincludeIISfinder() or SCIPincludeIISfinderBasic(),
  * see @ref IISFINDER_INTERFACE.
  *
- * IIS finder plugins have a single fundamental callback method, namely the IISFINDEREXEC method.
- * This method has to be implemented for every iis funder; the other callback methods are optional.
+ * IIS finder plugins have a single fundamental callback, namely the IISFINDEREXEC function.
+ * This function has to be implemented for every iis funder; the other callbacks are optional.
  * It implements the single contribution every iis finder has to provide: Generating an (I)IS from an infeasible instance.
  * In the C++ wrapper class scip::ObjIISfinder, the scip_exec() method is a virtual abstract member function.
  * You have to implement it in order to be able to construct an object of your iis finder class.
@@ -4211,23 +4211,23 @@
  *
  * Additional documentation for this callback can be found in type_iisfinder.h.
  *
- * @section IISFINDER_ADDITIONALCALLBACKS Additional Callback Methods of an IIS Finder
+ * @section IISFINDER_ADDITIONALCALLBACKS Additional Callbacks of an IIS Finder
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications. They can be used, for example, to initialize and free private data.
  * Additional callbacks can either be passed directly with SCIPincludeIISfinder() to SCIP or via specific
  * <b>setter functions</b> after a call of SCIPincludeIISfinderBasic(), see also @ref IISFINDER_INTERFACE.
  *
  * @subsection IISFINDERFREE
  *
- * If you are using iis finder data, you have to implement this method in order to free the iis finder data.
+ * If you are using iis finder data, you have to implement this function in order to free the iis finder data.
  * This can be done by the following procedure:
  *
  * @refsnippet{src/scip/iisfinder_greedy.c,SnippetIISfinderFreeGreedy}
  *
  * If you have allocated memory for fields in your iis finder data, remember to free this memory
  * before freeing the iis finder data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection IISFINDERCOPY
@@ -4256,11 +4256,11 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myfunc".
  * -# Adjust the properties of the expression handler (see \ref EXPRHDLR_PROPERTIES).
  * -# Define the expression handler data and expression data (see \ref EXPRHDLR_DATA). This is optional.
- * -# Implement the interface methods (see \ref EXPRHDLR_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref EXPRHDLR_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref EXPRHDLR_ADDITIONALCALLBACKS), where necessary.
+ * -# Implement the interface functions (see \ref EXPRHDLR_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref EXPRHDLR_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref EXPRHDLR_ADDITIONALCALLBACKS), where necessary.
  *
- * Additional documentation for the callback methods of an expression handler, in particular for the input parameters,
+ * Additional documentation for the callbacks of an expression handler, in particular for the input parameters,
  * can be found in the file \ref type_expr.h.
  *
  * For a complete implementation of an expression handler, take the one for exponential expressions (src/scip/expr_exp.c) as an example.
@@ -4298,16 +4298,16 @@
  * \n
  * Defining expression handler data and expression data is optional. You can leave these structs empty.
  *
- * @section EXPRHDLR_INTERFACE Interface Methods
+ * @section EXPRHDLR_INTERFACE Interface Functions
  *
  * @subsection EXPRHDLR_INCLUDE SCIPincludeExprhdlrMyfunc()
  *
- * At the bottom of `expr_myfunc.c`, you can find the interface method `SCIPincludeExprhdlrMyfunc()`,
+ * At the bottom of `expr_myfunc.c`, you can find the interface function `SCIPincludeExprhdlrMyfunc()`,
  * which also appears in `expr_myfunc.h`.
  * `SCIPincludeExprhdlrMyfunc()` is called by the user, if (s)he wants to include the expression handler,
  * i.e., if (s)he wants to use the expression handler in his/her application.
  *
- * This method is responsible for notifying SCIP of the presence of the expression handler.
+ * This function is responsible for notifying SCIP of the presence of the expression handler.
  * For this, you must call SCIPincludeExprhdlr() from SCIPincludeExprhdlrMyfunc().
  * The function only expects the properties and fundamental callbacks of the expression handler as arguments.
  * \ref EXPRHDLR_ADDITIONALCALLBACKS "Additional callbacks" must be added via setter functions as, e.g., SCIPexprhdlrSetCopyFreeHdlr().
@@ -4322,13 +4322,13 @@
  *
  * You may also add user parameters for your expression handler, see \ref PARAM for how to add user parameters.
  *
- * For the logarithm expression handler, the include method is as follows:
+ * For the logarithm expression handler, the include function is as follows:
  * @refsnippet{src/scip/expr_log.c,SnippetIncludeExprhdlrLog}
  *
  * @subsection EXPRHDLR_CREATEEXPR SCIPcreateExprMyfunc()
  *
- * Another interface method that can be found in `expr_myfunc.c` is `SCIPcreateExprMyfunc()`.
- * This method is called by the user, if (s)he wants to create an expression that is handled by this expression handler.
+ * Another interface function that can be found in `expr_myfunc.c` is `SCIPcreateExprMyfunc()`.
+ * This function is called by the user, if (s)he wants to create an expression that is handled by this expression handler.
  * Typically, the creation function takes the operands of the expression (the children) as arguments.
  * `SCIPcreateExprMyfunc()` may further be extended to take parameters of an expression into account.
  * For example, SCIPcreateExprPow() receives the exponent as argument.
@@ -4351,20 +4351,20 @@
  * @refsnippet{src/scip/expr_product.c,SnippetCreateExprProduct}
  *
  *
- * @section EXPRHDLR_FUNDAMENTALCALLBACKS Fundamental Callback Methods of an Expression Handler
+ * @section EXPRHDLR_FUNDAMENTALCALLBACKS Fundamental Callbacks of an Expression Handler
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
  * They are passed to SCIP when the expression handler is created and included in SCIP via SCIPincludeExprhdlr(),
  * see @ref EXPRHDLR_INTERFACE.
- * In the C++ wrapper class scip::ObjExprhdlr, the fundamental callback methods are virtual abstract member functions.
+ * In the C++ wrapper class scip::ObjExprhdlr, the fundamental callbacks are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your expression handler class.
  *
  * Expression handlers have one fundamental callback, @ref EXPREVAL, that needs to be implemented.
  * However, expression handlers with stateful expressions (expressions that have data) need to implement also the
  * @ref EXPRCOPYDATA, @ref EXPRFREEDATA, and @ref EXPRCOMPARE callbacks.
  *
- * Additional documentation for the callback methods, in particular relating to their input parameters,
+ * Additional documentation for the callbacks, in particular relating to their input parameters,
  * can be found in \ref type_expr.h.
  *
  * @subsection EXPREVAL
@@ -4389,16 +4389,16 @@
  * It is used by the expression handler for variables to retrieve the value of a variable expression.
  *
  *
- * @section EXPRHDLR_ADDITIONALCALLBACKS Additional Callback Methods of an Expression Handler
+ * @section EXPRHDLR_ADDITIONALCALLBACKS Additional Callbacks of an Expression Handler
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications; they can be used, for example, to initialize and free private data.
  * Additional callbacks can be passed via specific
  * <b>setter functions</b> after a call of SCIPincludeExprhdlr(), see also @ref EXPRHDLR_INCLUDE.
  *
  * @subsection EXPRCOPYHDLR
  *
- * This method should include the expression handler into a given SCIP instance.
+ * This function should include the expression handler into a given SCIP instance.
  * It is usually called when a copy of SCIP is generated.
  *
  * By not implementing this callback, the expression handler will not be available in copied SCIP instances.
@@ -4407,12 +4407,12 @@
  *
  * @subsection EXPRFREEHDLR
  *
- * If you are using expression handler data (see \ref EXPRHDLR_DATA and \ref EXPRHDLR_INCLUDE), you have to implement this method
+ * If you are using expression handler data (see \ref EXPRHDLR_DATA and \ref EXPRHDLR_INCLUDE), you have to implement this function
  * in order to free the expression handler data.
  *
  * @subsection EXPRCOPYDATA
  *
- * This method is called when creating copies of an expression within
+ * This function is called when creating copies of an expression within
  * the same or between different SCIP instances. It is given the
  * source expression, whose data shall be copied, and expects that
  * the data for the target expression is returned. This data will then be used
@@ -4423,7 +4423,7 @@
  *
  * @subsection EXPRFREEDATA
  *
- * This method is called when freeing an expression that has data.
+ * This function is called when freeing an expression that has data.
  * It is given an expression and shall free its expression data.
  * It shall then call `SCIPexprSetData(expr, NULL)`.
  *
@@ -4529,7 +4529,7 @@
  * @subsection EXPRCOMPARE
  *
  * This callback is called when two expressions (expr1 and expr2) that are handled by the expression handlers need to be compared.
- * The method shall impose an order on expressions and thus must return
+ * The function shall impose an order on expressions and thus must return
  * - -1 if expr1 < expr2, or
  * -  0 if expr1 = expr2, or
  * -  1 if expr1 > expr2.
@@ -4547,13 +4547,13 @@
  *
  * This callback is called when the gradient or Hessian of a function that is represented by an expression is computed.
  *
- * The method shall compute the partial derivative of the expression w.r.t. a child with specified childidx.
+ * The function shall compute the partial derivative of the expression w.r.t. a child with specified childidx.
  * That is, it should return
  * \f[
  *   \frac{\partial \text{expr}}{\partial \text{child}_{\text{childidx}}}
  * \f]
  *
- * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentiation of expressions.
+ * See also \ref SCIP_EXPR_DIFF "Differentiation functions in scip_expr.h" for more details on automatic differentiation of expressions.
  *
  * For the product expression, backward differentiation is implemented as follows:
  * @refsnippet{src/scip/expr_product.c,SnippetExprBwdiffProduct}
@@ -4566,7 +4566,7 @@
  * This callback is called when the Hessian of a function that is represented by an expression is computed.
  * It may also be used to compute first derivatives.
  *
- * The method shall evaluate the directional derivative of the expression when interpreted as an operator
+ * The function shall evaluate the directional derivative of the expression when interpreted as an operator
  *   \f$ f(c_1, \ldots, c_n) \f$, where \f$ c_1, \ldots, c_n \f$ are the children.
  * The directional derivative is
  * \f[
@@ -4576,7 +4576,7 @@
  * which can be accessed via SCIPexprGetDot().
  * The point at which to compute the derivative is given by SCIPexprGetEvalValue().
  *
- * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentiation of expressions.
+ * See also \ref SCIP_EXPR_DIFF "Differentiation functions in scip_expr.h" for more details on automatic differentiation of expressions.
  *
  * For a product, \f$f(x) = c\prod_i x_i\f$, the directional derivative is \f$c\sum_j \prod_{i\neq j} x_i x^{\text{dot}}_j\f$:
  * @refsnippet{src/scip/expr_product.c,SnippetExprFwdiffProduct}
@@ -4587,23 +4587,23 @@
  *
  * This callback is called when the Hessian of a function that is represented by an expression is computed.
  *
- * The method computes the total derivative, w.r.t. its children, of the partial derivative of expr w.r.t. childidx.
+ * The function computes the total derivative, w.r.t. its children, of the partial derivative of expr w.r.t. childidx.
  * Equivalently, it computes the partial derivative w.r.t. childidx of the total derivative.
  *
  * The expression should be interpreted as an operator \f$ f(c_1, \ldots, c_n) \f$, where \f$ c_1, \ldots, c_n \f$ are the children,
- * and the method should return
+ * and the function should return
  * \f[
  *    \sum_{i = 1}^n \frac{\partial^2 f}{\partial c_i} \partial c_{\text{childidx}} D_u c_i,
  * \f]
  * where \f$ u \f$ is the direction (given to the callback) and \f$ D_u c_i \f$ is the directional derivative of the i-th child,
  * which can be accessed via SCIPexprGetDot().
  *
- * Thus, if \f$ n = 1 \f$ (i.e., the expression represents a univariate operator), the method should return
+ * Thus, if \f$ n = 1 \f$ (i.e., the expression represents a univariate operator), the function should return
  * \f[
  *    f^{\prime \prime}(\text{SCIPexprGetEvalValue}(c)) D_u c.
  * \f]
  *
- * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentiation of expressions.
+ * See also \ref SCIP_EXPR_DIFF "Differentiation functions in scip_expr.h" for more details on automatic differentiation of expressions.
  *
  * For a product, \f$f(x) = c\prod_i x_i\f$, the directional derivative is
  * \f$c\partial_k \sum_j \prod_{i \neq j} x_i x^{\text{dot}}_j = c\sum_{j \neq k} \prod_{i \neq j, k} x_i x^{\text{dot}}_j\f$:
@@ -4676,7 +4676,7 @@
  *
  * This callback is called when given bounds on an expression shall be propagated over the children of an expression.
  * Already existing bounds on the children (see \ref EXPRINTEVAL) shall be used.
- * That is, the method shall compute an interval overestimate on
+ * That is, the function shall compute an interval overestimate on
  * \f[
  *   \{ x_i : f(c_1,\ldots,c_{i-1},x_i,c_{i+1},\ldots,c_n) \in \text{bounds} \}
  * \f]
@@ -4717,11 +4717,11 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mystruct".
  * -# Adjust the properties of the nonlinear handler (see \ref NLHDLR_PROPERTIES).
  * -# Define the nonlinear handler data and nonlinear handler expression data (see \ref NLHDLR_DATA). This is optional.
- * -# Implement the interface methods (see \ref NLHDLR_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref NLHDLR_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref NLHDLR_ADDITIONALCALLBACKS), where necessary.
+ * -# Implement the interface functions (see \ref NLHDLR_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref NLHDLR_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref NLHDLR_ADDITIONALCALLBACKS), where necessary.
  *
- * Additional documentation for the callback methods of a nonlinear handler, in particular for the input parameters,
+ * Additional documentation for the callbacks of a nonlinear handler, in particular for the input parameters,
  * can be found in the file \ref type_nlhdlr.h.
  *
  * @section NLHDLR_PROPERTIES Properties of a Nonlinear Handler
@@ -4758,14 +4758,14 @@
  * \n
  * Defining nonlinear handler data and nonlinear handler expression data is optional. You can leave these structs empty.
  *
- * @section NLHDLR_INTERFACE Interface Methods
+ * @section NLHDLR_INTERFACE Interface Functions
  *
- * At the bottom of `nlhdlr_mystruct.c`, you can find the interface method `SCIPincludeNlhdlrXyz()`,
+ * At the bottom of `nlhdlr_mystruct.c`, you can find the interface function `SCIPincludeNlhdlrXyz()`,
  * which also appears in `nlhdlr_mystruct.h`.
  * `SCIPincludeNlhdlrXyz()` is called by the user, if (s)he wants to include the nonlinear handler,
  * i.e., if (s)he wants to use the nonlinear handler in his/her application.
  *
- * This method is responsible for notifying SCIP of the presence of the nonlinear handler.
+ * This function is responsible for notifying SCIP of the presence of the nonlinear handler.
  * For this, you must call SCIPincludeNlhdlrNonlinear() from SCIPincludeNlhdlrMystruct().
  * The function only expects the properties and fundamental callbacks of the nonlinear handler as arguments.
  * \ref NLHDLR_ADDITIONALCALLBACKS "Additional callbacks" must be added via setter functions as, e.g., SCIPnlhdlrSetCopyHdlr().
@@ -4774,19 +4774,19 @@
  * For freeing the nonlinear handler data, see \ref NLHDLRFREEHDLRDATA.
  * You may also add user parameters or statistic tables for your nonlinear handler, see \ref PARAM for how to add user parameters.
  *
- * For the bilinear nonlinear handler, the include method is as follows:
+ * For the bilinear nonlinear handler, the include function is as follows:
  * @refsnippet{src/scip/nlhdlr_bilinear.c,SnippetIncludeNlhdlrBilinear}
  *
  *
- * @section NLHDLR_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Nonlinear Handler
+ * @section NLHDLR_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Nonlinear Handler
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
  * They are passed to SCIP when the nonlinear handler is created and included in SCIP via SCIPincludeNlhdlrNonlinear(),
  * see @ref NLHDLR_INTERFACE.
  *
  * Nonlinear handlers have two fundamental callbacks that need to be implemented.
- * Additional documentation for the callback methods, in particular to their input parameters,
+ * Additional documentation for the callbacks, in particular to their input parameters,
  * can be found in \ref type_nlhdlr.h.
  *
  * @subsection NLHDLRDETECT
@@ -4849,15 +4849,15 @@
  * (`expr` &le;/&ge; `auxvar`) needs to be evaluated.
  * During constraint enforcement, this violation value is used to decide whether estimation and separation callbacks should be called.
  *
- * The method shall evaluate the expression w.r.t. the auxiliary variables that were introduced by the nonlinear handler (if any).
+ * The function shall evaluate the expression w.r.t. the auxiliary variables that were introduced by the nonlinear handler (if any).
  * It can be assumed that the expression itself has been evaluated in the given sol.
  *
  * For an example, see the evaluation for the quotient nonlinear handler:
  * @refsnippet{src/scip/nlhdlr_quotient.c,SnippetNlhdlrEvalauxQuotient}
 *
- * @section NLHDLR_ADDITIONALCALLBACKS Additional Callback Methods of a Nonlinear Handler
+ * @section NLHDLR_ADDITIONALCALLBACKS Additional Callbacks of a Nonlinear Handler
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications, they can be used, for example, to initialize and free private data.
  * Additional callbacks can be passed via specific
  * <b>setter functions</b> after a call of SCIPincludeNlhdlrNonlinear(), see also @ref NLHDLR_INTERFACE.
@@ -4869,14 +4869,14 @@
  *
  * @subsection NLHDLRFREEHDLRDATA
  *
- * If you are using nonlinear handler data (see \ref NLHDLR_DATA and \ref NLHDLR_INTERFACE), you have to implement this method
+ * If you are using nonlinear handler data (see \ref NLHDLR_DATA and \ref NLHDLR_INTERFACE), you have to implement this function
  * in order to free the nonlinear handler data.
  *
  * @subsection NLHDLRFREEEXPRDATA
  *
- * If you are using nonlinear handler expression data (see \ref NLHDLR_DATA and \ref NLHDLRDETECT), you have to implement this method
+ * If you are using nonlinear handler expression data (see \ref NLHDLR_DATA and \ref NLHDLRDETECT), you have to implement this function
  * in order to free the nonlinear handler expression data.
- * This method is called when an extended formulation is freed.
+ * This function is called when an extended formulation is freed.
  *
  * @subsection NLHDLRINIT
  *
@@ -4892,7 +4892,7 @@
  *
  * This callback is called when bounds on a given expression shall be computed.
  * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_ACTIVITY in \ref NLHDLRDETECT.
- * The method is given the currently available bounds to the expression and can return possibly tighter bounds.
+ * The function is given the currently available bounds to the expression and can return possibly tighter bounds.
  *
  * For a univariate quotient ((ax+b)/(cx+d)), the interval evaluation is implemented as follows:
  * @refsnippet{src/scip/nlhdlr_quotient.c,SnippetNlhdlrIntevalQuotient}
@@ -4910,14 +4910,14 @@
  *
  * This callback is called when the constraint handler for nonlinear constraints initializes the LP relaxation (@ref CONSINITLP).
  * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE in \ref NLHDLRDETECT.
- * The method shall initialize the separation data of the nonlinear handler, if any, and add initial cuts to the LP relaxation.
+ * The function shall initialize the separation data of the nonlinear handler, if any, and add initial cuts to the LP relaxation.
  * It can assume that auxiliary variables are available for expressions for which auxiliary variables were requested via SCIPregisterExprUsageNonlinear() in \ref NLHDLRDETECT.
  *
  * @subsection NLHDLREXITSEPA
  *
  * This callback is called when the solving process is finished and the branch and bound process data is freed (@ref CONSEXITSOL).
  * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE in \ref NLHDLRDETECT and \ref NLHDLRINITSEPA was called.
- * The method shall deinitialize the separation data of the nonlinear handler, if any.
+ * The function shall deinitialize the separation data of the nonlinear handler, if any.
  *
  * @subsection NLHDLRENFO
  *
@@ -4956,9 +4956,9 @@
  * This callback is called when the constraint handler requires that the relaxation between the given expression and its auxiliary variable
  * (`expr` &le; `auxvar`  or  `expr` &ge; `auxvar`) is violated by a given solution and this solution needs to be separated.
  * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE in \ref NLHDLRDETECT.
- * This method is a simpler alternative to \ref NLHDLRENFO and is called if \ref NLHDLRENFO is not implemented or does not succeed.
+ * This function is a simpler alternative to \ref NLHDLRENFO and is called if \ref NLHDLRENFO is not implemented or does not succeed.
  *
- * The method shall compute one or several linear under- or overestimator of `expr` that are as tight as possible at a given point.
+ * The function shall compute one or several linear under- or overestimator of `expr` that are as tight as possible at a given point.
  * If the value of the estimator in the solution is smaller (larger) than a given targetvalue
  * when underestimating (overestimating), then no estimator needs to be computed.
  * Note, that targetvalue can be infinite if any estimator will be accepted.
@@ -5018,7 +5018,7 @@
  * \n
  *
  * Once the properties have been carefully adjusted and the scoring
- * has been defined, use the method SCIPperformGenericDivingAlgorithm() inside the execution callback (\ref HEUREXEC) of the primal
+ * has been defined, use the function SCIPperformGenericDivingAlgorithm() inside the execution callback (\ref HEUREXEC) of the primal
  * heuristic to which the diveset belongs, after checking possible preliminaries that may not be met at all times of the search.
  * \n
  *
@@ -5093,7 +5093,7 @@
  * @section DIVING_FURTHERINFO Further information
  *
  * This is all there is to extend the SCIP set of diving heuristics by a new one. For further information, please see
- * diveset related methods in \ref type_heur.h, \ref pub_heur.h, \ref heuristics.h, and \ref heur_guideddiving.h or
+ * diveset related functions in \ref type_heur.h, \ref pub_heur.h, \ref heuristics.h, and \ref heur_guideddiving.h or
  * other diving heuristics that implement diving through a diveset.
  */
 
@@ -5113,10 +5113,10 @@
  *
  * We now explain how users can add their own relaxation handlers using the C interface. As an example, look into the NLP
  * relaxation handler of the \ref RELAXATOR_MAIN "Relaxator example" (examples/Relaxator/src/relax_nlp.c). It is very easy to
- * transfer the C explanation to C++: whenever a method should be implemented using the SCIP_DECL_RELAX... notion,
- * reimplement the corresponding virtual member function of the abstract scip::ObjRelax wrapper base class.
+ * transfer the C explanation to C++: whenever a function should be implemented using the SCIP_DECL_RELAX... notion,
+ * reimplement the corresponding virtual member method of the abstract scip::ObjRelax wrapper base class.
  *
- * Additional documentation for the callback methods of a relaxation handler can be found in the file type_relax.h.
+ * Additional documentation for the callbacks of a relaxation handler can be found in the file type_relax.h.
  *
  * Here is what you have to do to implement a relaxation handler:
  * -# Copy the template files src/scip/relax_xyz.c and src/scip/relax_xyz.h into files named "relax_myrelaxator.c"
@@ -5130,9 +5130,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myrelaxator".
  * -# Adjust the properties of the relaxation handler (see \ref RELAX_PROPERTIES).
  * -# Define the relaxation handler data (see \ref RELAX_DATA). This is optional.
- * -# Implement the interface methods (see \ref RELAX_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref RELAX_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref RELAX_ADDITIONALCALLBACKS). This is optional.
+ * -# Implement the interface functions (see \ref RELAX_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref RELAX_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref RELAX_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section RELAX_PROPERTIES Properties of a Relaxation Handler
@@ -5170,7 +5170,7 @@
  * This can easily be achieved by setting the "lp/solvefreq" parameter to -1.
  *
  * \par RELAX_FREQ: the default frequency for solving the relaxation.
- * The frequency defines the depth levels at which the relaxation solving method \ref RELAXEXEC is called.
+ * The frequency defines the depth levels at which the relaxation solving function \ref RELAXEXEC is called.
  * For example, a frequency of 7 means, that the relaxation solving callback is executed for subproblems that are in depth
  * 0, 7, 14, ... of the branching tree. A frequency of 0 means that the callback is only executed at the root node, i.e.,
  * only the relaxation of the root problem is solved. A frequency of -1 disables the relaxation handler.
@@ -5187,14 +5187,14 @@
  * Defining relaxation handler data is optional. You can leave the struct empty.
  *
  *
- * @section RELAX_INTERFACE Interface Methods
+ * @section RELAX_INTERFACE Interface Functions
  *
- * At the bottom of "relax_myrelaxator.c", you can find the interface method SCIPincludeRelaxMyrelaxator(),
+ * At the bottom of "relax_myrelaxator.c", you can find the interface function SCIPincludeRelaxMyrelaxator(),
  * which also appears in "relax_myrelaxator.h".
  * SCIPincludeRelaxMyrelaxator() is called by the user, if (s)he wants to include the relaxation handler,
  * i.e., if (s)he wants to use the relaxation handler in his/her application.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the relaxation handler. For this, you can either call
  * SCIPincludeRelax(),
  * or SCIPincludeRelaxBasic() since SCIP version 3.0. In the latter variant, \ref RELAX_ADDITIONALCALLBACKS "additional callbacks"
@@ -5209,32 +5209,32 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_RelaxData afterwards.
  *
- * You may also add user parameters for your relaxation handler, see the method SCIPincludeConshdlrKnapsack() in
+ * You may also add user parameters for your relaxation handler, see the function SCIPincludeConshdlrKnapsack() in
  * the \ref cons_knapsack.h "knapsack constraint handler" for an example of how to add user parameters.
  *
  *
- * @section RELAX_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Relaxation Handler
+ * @section RELAX_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Relaxation Handler
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
  * They are passed together with the relaxation handler itself to SCIP using SCIPincludeRelax() or SCIPincludeRelaxBasic(),
  * see @ref RELAX_INTERFACE.
  *
  *
- * Relaxation handler plugins have only one fundamental callback method, namely the \ref RELAXEXEC method.
- * This method has to be implemented for every relaxation handler; the other callback methods are optional.
+ * Relaxation handler plugins have only one fundamental callback, namely the \ref RELAXEXEC function.
+ * This function has to be implemented for every relaxation handler; the other callbacks are optional.
  * In the C++ wrapper class scip::ObjRelax, the scip_exec() method (which corresponds to the \ref RELAXEXEC callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your relaxation handler class.
  *
- * Additional documentation for the callback methods can be found in type_relax.h.
+ * Additional documentation for the callbacks can be found in type_relax.h.
  *
  * @subsection RELAXEXEC
  * The RELAXEXEC is called in each relaxation solving round. It should solve the current
  * subproblem's relaxation.
  *
  * Note that, like the LP relaxation, the relaxation handler should only operate on variables for which the corresponding
- * column exists in the transformed problem. Typical methods called by a relaxation handler are SCIPconstructLP() and SCIPflushLP() to
+ * column exists in the transformed problem. Typical functions called by a relaxation handler are SCIPconstructLP() and SCIPflushLP() to
  * make sure that the LP of the current node is constructed and its data can be accessed via calls to SCIPgetLPRowsData()
  * and SCIPgetLPColsData(), and SCIPseparateSol() to call the cutting plane separators for a given primal solution.
  *
@@ -5281,23 +5281,23 @@
  * SCIP_DIDNOTRUN for subsequent calls in the same node.
  *
  *
- * @section RELAX_ADDITIONALCALLBACKS Additional Callback Methods of a Relaxation Handler
+ * @section RELAX_ADDITIONALCALLBACKS Additional Callbacks of a Relaxation Handler
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications, they can be used, for example, to initialize and free private data.
  * Additional callbacks can either be passed directly with SCIPincludeRelax() to SCIP or via specific
  * <b>setter functions</b> after a call of SCIPincludeRelaxBasic(), see also @ref RELAX_INTERFACE.
  *
  * @subsection RELAXFREE
  *
- * If you are using relaxation handler data, you have to implement this method in order to free the relaxation handler
+ * If you are using relaxation handler data, you have to implement this function in order to free the relaxation handler
  * data. This can be done by the following procedure:
  *
  * @refsnippet{tests/src/relax/relax.c,SnippetRelaxFreeUnittest}
  *
  * If you have allocated memory for fields in your relaxation handler data, remember to free this memory
  * before freeing the relaxation handler data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection RELAXINIT
@@ -5317,7 +5317,7 @@
  * @subsection RELAXEXIT
  *
  * The RELAXEXIT callback is executed before the transformed problem is freed.
- * In this method, the relaxation handler should free all resources that have been allocated for the solving process in
+ * In this function, the relaxation handler should free all resources that have been allocated for the solving process in
  * RELAXINIT.
  *
  * @subsection RELAXINITSOL
@@ -5355,9 +5355,9 @@
  * We now explain how users can add their own file readers.
  * Take the file reader for MIPs in IBM's Mathematical Programming System format (src/scip/reader_mps.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjReader wrapper
- * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_READER... callback methods.
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_READER... callbacks.
  *
- * Additional documentation for the callback methods of a file reader can be found in the file type_reader.h.
+ * Additional documentation for the callbacks of a file reader can be found in the file type_reader.h.
  *
  * Here is what you have to do to implement a file reader named "myreader" in C:
  * -# Copy the template files src/scip/reader_xyz.c and src/scip/reader_xyz.h into files named
@@ -5371,9 +5371,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myreader".
  * -# Adjust the \ref READER_PROPERTIES "properties of the file reader".
  * -# Define the \ref READER_DATA "file reader data". This is optional.
- * -# Implement the \ref READER_INTERFACE "interface methods".
- * -# Implement the \ref READER_FUNDAMENTALCALLBACKS "fundamental callback methods".
- * -# Implement the \ref READER_ADDITIONALCALLBACKS "additional callback methods". This is optional.
+ * -# Implement the \ref READER_INTERFACE "interface functions".
+ * -# Implement the \ref READER_FUNDAMENTALCALLBACKS "fundamental callbacks".
+ * -# Implement the \ref READER_ADDITIONALCALLBACKS "additional callbacks". This is optional.
  *
  *
  * @section READER_PROPERTIES Properties of a File Reader
@@ -5399,7 +5399,7 @@
  * an input file to a reader.
  * \n
  * It is not possible to hook up a (single) file reader with more than one file extension.
- * It is, however, not necessary to implement the same (parsing/writing) methods more than once, if you want to
+ * It is, however, not necessary to implement the same (parsing/writing) functions more than once, if you want to
  * support several file extension with the same parser. To do so look at the files reader_lp.c
  * and reader_rlp.c. Both support the LP format.
  *
@@ -5414,14 +5414,14 @@
  * Defining file reader data is optional. You can leave the struct empty.
  *
  *
- * @section READER_INTERFACE Interface Methods
+ * @section READER_INTERFACE Interface Functions
  *
- * At the bottom of "reader_myreader.c", you can find the interface method SCIPincludeReaderMyreader(),
+ * At the bottom of "reader_myreader.c", you can find the interface function SCIPincludeReaderMyreader(),
  * which also appears in "reader_myreader.h".
  * SCIPincludeReaderMyreader() is called by the user, if (s)he wants to include the reader,
  * i.e., if (s)he wants to use the reader in his/her application.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the reader. For this, you can either call
  * SCIPincludeReader(),
  * or SCIPincludeReaderBasic() since SCIP version 3.0. In the latter variant, \ref READER_ADDITIONALCALLBACKS "additional callbacks"
@@ -5436,32 +5436,32 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_ReaderData afterwards.
  *
- * You may also add user parameters for your file reader, see the method SCIPincludeReaderLp() in
+ * You may also add user parameters for your file reader, see the function SCIPincludeReaderLp() in
  * src/scip/reader_lp.c for an example.
  *
  *
- * @section READER_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a File Reader
+ * @section READER_FUNDAMENTALCALLBACKS Fundamental Callbacks of a File Reader
  *
- * File reader plugins have no fundamental callback methods. This is due to
+ * File reader plugins have no fundamental callbacks. This is due to
  * the fact that a file reader can be used for reading and/or writing a
- * file. A file reader is only useful if the reader method \ref READERREAD
- * and/or the writing method \ref READERWRITE is implemented.  One of these
- * methods should be implemented for every file reader; the other callback
- * methods \ref READERCOPY and \ref READERFREE are optional.  In the C++ wrapper class scip::ObjReader, the
+ * file. A file reader is only useful if the reader function \ref READERREAD
+ * and/or the writing function \ref READERWRITE is implemented.  One of these
+ * functions should be implemented for every file reader; the other callback
+ * functions \ref READERCOPY and \ref READERFREE are optional.  In the C++ wrapper class scip::ObjReader, the
  * scip_read() and scip_write() methods (which corresponds to the \ref
  * READERREAD and \ref READERWRITE callback) are virtual member
  * functions. At least one of them should be implemented.
  *
- * Additional documentation for the callback methods can be found in type_reader.h.
+ * Additional documentation for the callbacks can be found in type_reader.h.
  *
  *
- * @section READER_ADDITIONALCALLBACKS Additional Callback Methods of a File Reader
+ * @section READER_ADDITIONALCALLBACKS Additional Callbacks of a File Reader
  *
  * Additional callbacks can either be passed directly with SCIPincludeReader() to SCIP or via specific
  * <b>setter functions</b> after a call of SCIPincludeReaderBasic(), see also @ref READER_INTERFACE.
  *
  *
- * File reader plugins contain only additional callback methods, namely the methods \ref READERREAD,
+ * File reader plugins contain only additional callbacks, namely the functions \ref READERREAD,
  * \ref READERWRITE, \ref READERFREE, and \ref READERCOPY. Therefore, these are not needed to be implemented. However,
  * at least \ref READERREAD and/or \ref READERWRITE should be implemented (see notes
  * \ref READER_FUNDAMENTALCALLBACKS "above").
@@ -5470,13 +5470,13 @@
  * @subsection READERREAD
  *
  * The READERREAD callback is called when the user invokes SCIP to read in a file with file name extension
- * corresponding to the READER_EXTENSION property of the file reader. This is usually triggered by a call to the method
+ * corresponding to the READER_EXTENSION property of the file reader. This is usually triggered by a call to the function
  * SCIPreadProb() or by an interactive shell command.
  * The READERREAD callback should parse the input file and perform the desired action, which usually means
  * generating a constraint integer programming model, adding a primal solution, fixing variables
  * in an existing model.
  * \n
- * Typical methods called by a file reader that is used to read/generate constraint
+ * Typical functions called by a file reader that is used to read/generate constraint
  * integer programming models are, for example,
  *
  * - creating an empty problem: SCIPcreateProb()
@@ -5487,23 +5487,23 @@
  *   SCIPaddCons(), and SCIPreleaseCons()
  *
  * Primal solutions can only be created for the transformed problem. Therefore, the user has to call SCIPtransformProb()
- * before (s)he reads in the file containing the solution and adds it to the solution pool via the method SCIPreadSol().
+ * before (s)he reads in the file containing the solution and adds it to the solution pool via the function SCIPreadSol().
  *
  *
  * @subsection READERWRITE
  *
  * The READERWRITE callback is called when the user invokes SCIP to write a problem (original or transformed)
  * in the format the reader supports. This is only possible if this callback is implemented. To write the problem
- * all necessary information is given through the parameters of this callback method (see type_reader.h). This
- * information should be used to output the problem in the requested format. This callback method is usually
- * triggered by the call of the methods SCIPwriteOrigProblem(), SCIPwriteTransProblem(), SCIPprintOrigProblem(),
+ * all necessary information is given through the parameters of this callback (see type_reader.h). This
+ * information should be used to output the problem in the requested format. This callback is usually
+ * triggered by the call of the functions SCIPwriteOrigProblem(), SCIPwriteTransProblem(), SCIPprintOrigProblem(),
  * or SCIPprintTransProblem().
  * \n
- * A typical method called by a file reader which is used to write/export a constraint
- * integer programming model is SCIPinfoMessage(). This method outputs a given string into a file
+ * A typical function called by a file reader which is used to write/export a constraint
+ * integer programming model is SCIPinfoMessage(). This function outputs a given string into a file
  * or into stdout.
  * \n
- * For an example we refer to the writing method of the MPS reader (see reader_mps.c).
+ * For an example we refer to the writing function of the MPS reader (see reader_mps.c).
  *
  *
  * @subsection READERCOPY
@@ -5518,14 +5518,14 @@
  *
  * @subsection READERFREE
  *
- * If you are using file reader data, you have to implement this method in order to free the file reader data.
+ * If you are using file reader data, you have to implement this function in order to free the file reader data.
  * This can be done by the following procedure:
  *
  * @refsnippet{src/scip/reader_mps.c,SnippetReaderFreeMps}
  *
  * If you have allocated memory for fields in your file reader data, remember to free this memory
  * before freeing the file reader data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  */
@@ -5551,9 +5551,9 @@
  * example.
  * As all other default plugins, the default dialog plugin and the template dialog are written in C. C++ users can easily
  * adapt the code by using the scip::ObjDialog wrapper base class and implement the scip_...() virtual methods instead of the
- * SCIP_DECL_DIALOG... callback methods.
+ * SCIP_DECL_DIALOG... callbacks.
  *
- * Additional documentation for the callback methods of a dialog can be found in the file type_dialog.h.
+ * Additional documentation for the callbacks of a dialog can be found in the file type_dialog.h.
  *
  * Here is what you have to do to add a dialog (assuming your dialog is named "mydialog"):
  * -# Copy the template files src/scip/dialog_xyz.c and src/scip/dialog_xyz.h into files named "dialog_mydialog.c"
@@ -5567,9 +5567,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydialog".
  * -# Adjust the \ref DIALOG_PROPERTIES "properties of the dialog".
  * -# Define the \ref DIALOG_DATA "dialog data". This is optional.
- * -# Implement the \ref DIALOG_INTERFACE "interface methods".
- * -# Implement the \ref DIALOG_FUNDAMENTALCALLBACKS "fundamental callback methods".
- * -# Implement the \ref DIALOG_ADDITIONALCALLBACKS "additional callback methods". This is optional.
+ * -# Implement the \ref DIALOG_INTERFACE "interface functions".
+ * -# Implement the \ref DIALOG_FUNDAMENTALCALLBACKS "fundamental callbacks".
+ * -# Implement the \ref DIALOG_ADDITIONALCALLBACKS "additional callbacks". This is optional.
  *
  *
  * @section DIALOG_PROPERTIES Properties of a Dialog
@@ -5587,7 +5587,7 @@
  *
  * \par DIALOG_DESC: the description of the dialog.
  * This string is printed as a description of the dialog in the interactive shell if the additional
- * callback method \ref DIALOGDESC is not implemented.
+ * callback \ref DIALOGDESC is not implemented.
  *
  * \par DIALOG_ISSUBMENU: whether the dialog is a (sub)menu.
  * This parameter states whether the dialog is a menu in the interactive shell, i.e., is the parent of further
@@ -5603,26 +5603,26 @@
  * Defining dialog data is optional. You can leave the struct empty.
  *
  *
- * @section DIALOG_INTERFACE Interface Methods
+ * @section DIALOG_INTERFACE Interface Functions
  *
- * At the bottom of "dialog_mydialog.c" you can find the interface method SCIPincludeDialogMydialog(), which also appears
+ * At the bottom of "dialog_mydialog.c" you can find the interface function SCIPincludeDialogMydialog(), which also appears
  * in "dialog_mydialog.h".
  * \n
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the dialog, which can be done by the following lines of code:
  *
  * @refsnippet{src/scip/dialog_xyz.c,SnippetDialogAddXyz}
  *
  * Here "parentdialog" has to be an existing dialog which is defined to be a menu (see DIALOG_ISSUBMENU), e.g.,
- * the default root dialog. The method SCIPgetRootDialog() returns the root dialog.
+ * the default root dialog. The function SCIPgetRootDialog() returns the root dialog.
  *
- * The interface method is called by the user, if (s)he wants to include the dialog, i.e., if (s)he wants to use the dialog in
+ * The interface function is called by the user, if (s)he wants to include the dialog, i.e., if (s)he wants to use the dialog in
  * his/her application.
  * Note that in order to be able to link the new dialog to an existing default dialog
  * (except the root dialog) it has to be included <b>after the
  * default dialogs plugin</b>, i.e., the SCIPincludeDialogMydialog() call has to occur after the
- * SCIPincludeDialogDefault() call. The SCIPincludeDialogDefault() method is called from within the SCIPincludeDefaultPlugins()
- * method. Therefore, it suffices to include your dialog plugins after you have called SCIPincludeDefaultPlugins().
+ * SCIPincludeDialogDefault() call. The SCIPincludeDialogDefault() function is called from within the SCIPincludeDefaultPlugins()
+ * function. Therefore, it suffices to include your dialog plugins after you have called SCIPincludeDefaultPlugins().
  * In case you want to add a dialog to the <b>root dialog</b>, you just use the following
  * lines of code to get/create the root dialog.
  *
@@ -5640,7 +5640,7 @@
  *
  * Consider the following example. The user wants to add a "drawgraph" command to the root menu of SCIP.
  * (S)he copies the "dialog_xyz.c" and "dialog_xyz.h" files into files "dialog_drawgraph.c" and "dialog_drawgraph.h", respectively.
- * Then, (s)he puts the following code into the SCIPincludeDialogDrawgraph() method, compare SCIPincludeDialogDefault() in
+ * Then, (s)he puts the following code into the SCIPincludeDialogDrawgraph() function, compare SCIPincludeDialogDefault() in
  * src/scip/dialog_default.c:
  * @refsnippet{tests/src/misc/snippets.c,SnippetDialogInclude}
  *
@@ -5648,48 +5648,48 @@
  * and you can also call it multiple times without causing inconsistencies in the dialog structure.
  *
  *
- * @section DIALOG_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Dialog
+ * @section DIALOG_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Dialog
  *
- * Dialogs have only one fundamental callback method, namely the \ref DIALOGEXEC method.
- * This method has to be implemented for every dialog; the other callback methods are optional.
+ * Dialogs have only one fundamental callback, namely the \ref DIALOGEXEC function.
+ * This function has to be implemented for every dialog; the other callbacks are optional.
  * In the C++ wrapper class scip::ObjDialog, the scip_exec() method (which corresponds to the \ref DIALOGEXEC callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your dialog class.
  *
- * Additional documentation for the callback methods can be found in type_dialog.h.
+ * Additional documentation for the callbacks can be found in type_dialog.h.
  *
  * @subsection DIALOGEXEC
  *
- * The DIALOGEXEC method is invoked, if the user selected the dialog's command name in the parent's menu. It should
+ * The DIALOGEXEC function is invoked, if the user selected the dialog's command name in the parent's menu. It should
  * execute what is stated in DIALOG_DESC, e.g., the display constraint handlers dialog should display information about
  * the constraint handlers included in SCIP, see src/scip/dialog_default.c.
  *
- * For typical methods called by the execution method, have a look at src/scip/dialog_default.c.
+ * For typical functions called by the execution function, have a look at src/scip/dialog_default.c.
  *
  * The callback has to return which dialog should be processed next. This can be, for example, the root dialog
  * (SCIPdialoghdlrGetRoot()), the parent dialog (SCIPdialogGetParent()) or NULL, which stands for closing the interactive
  * shell.
  *
  *
- * @section DIALOG_ADDITIONALCALLBACKS Additional Callback Methods of a Dialog
+ * @section DIALOG_ADDITIONALCALLBACKS Additional Callbacks of a Dialog
  *
- * The additional callback methods do not need to be implemented in every case.
+ * The additional callbacks do not need to be implemented in every case.
  * They can be used, for example, to free private data.
  *
  * @subsection DIALOGFREE
  *
- * If you are using dialog data, you have to implement this method in order to free the dialog data.
+ * If you are using dialog data, you have to implement this function in order to free the dialog data.
  * This can be done by the following procedure:
  * @refsnippet{tests/src/misc/snippets.c,SnippetDialogFree}
  *
  * If you have allocated memory for fields in your dialog data, remember to free this memory
  * before freeing the dialog data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection DIALOGDESC
  *
- * This method is called when the help menu of the parent is displayed. It should output (usually a single line of)
+ * This function is called when the help menu of the parent is displayed. It should output (usually a single line of)
  * information describing the meaning of the dialog.
  * \n
  * If this callback is not implemented, the description string of the dialog (DIALOG_DESC) is displayed instead.
@@ -5721,10 +5721,10 @@
  * Take src/scip/disp_default.c, where all default display columns are collected, as an example.
  * As all other default plugins, the default display column plugins and the display column template are written in C.
  * C++ users can easily adapt the code by using the scip::ObjDisp wrapper base class and implement the scip_...() virtual methods
- * instead of the SCIP_DECL_DISP... callback methods.
+ * instead of the SCIP_DECL_DISP... callbacks.
  *
  *
- * Additional documentation for the callback methods of a display column can be found in the file type_disp.h.
+ * Additional documentation for the callbacks of a display column can be found in the file type_disp.h.
  *
  * Here is what you have to do to implement a display column (assuming your display column is named "mydisplaycolumn"):
  * -# Copy the template files src/scip/disp_xyz.c and src/scip/disp_xyz.h into files named "disp_mydisplaycolumn.c"
@@ -5738,9 +5738,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydisplaycolumn".
  * -# Adjust the \ref DISP_PROPERTIES "properties of the display column".
  * -# Define the  \ref DISP_DATA "display column data". This is optional.
- * -# Implement the \ref DISP_INTERFACE "interface methods".
- * -# Implement the \ref DISP_FUNDAMENTALCALLBACKS "fundamental callback methods".
- * -# Implement the \ref DISP_ADDITIONALCALLBACKS "additional callback methods". This is optional.
+ * -# Implement the \ref DISP_INTERFACE "interface functions".
+ * -# Implement the \ref DISP_FUNDAMENTALCALLBACKS "fundamental callbacks".
+ * -# Implement the \ref DISP_ADDITIONALCALLBACKS "additional callbacks". This is optional.
  *
  *
  * @section DISP_PROPERTIES Properties of a Display Column
@@ -5790,16 +5790,16 @@
  * Defining display column data is optional. You can leave the struct empty.
  *
  *
- * @section DISP_INTERFACE Interface Methods
+ * @section DISP_INTERFACE Interface Functions
  *
- * At the bottom of "disp_mydisplaycolumn.c" you can find the interface method SCIPincludeDispMydisplaycolumn(), which also
+ * At the bottom of "disp_mydisplaycolumn.c" you can find the interface function SCIPincludeDispMydisplaycolumn(), which also
  * appears in "disp_mydisplaycolumn.h".
  * \n
- * This method only has to be adjusted slightly.
- * It is responsible for notifying SCIP of the presence of the display column by calling the method
+ * This function only has to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the display column by calling the function
  * SCIPincludeDisp().
  *
- * The interface method is called by the user, if (s)he wants to include the display column, i.e., if (s)he wants to use the display column in his
+ * The interface function is called by the user, if (s)he wants to include the display column, i.e., if (s)he wants to use the display column in his
  * application.
  *
  * If you are using display column data, you have to allocate the memory for the data at this point.
@@ -5809,19 +5809,19 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_DispData afterwards.
  *
- * Although this is very uncommon, you may also add user parameters for your display column, see the method
+ * Although this is very uncommon, you may also add user parameters for your display column, see the function
  * SCIPincludeConshdlrKnapsack() in the \ref cons_knapsack.h "knapsack constraint handler" for an example.
  *
  *
- * @section DISP_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Display Column
+ * @section DISP_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Display Column
  *
- * Display column plugins have only one fundamental callback method, namely the \ref DISPOUTPUT method.
- * This method has to be implemented for every display column; the other callback methods are optional.
+ * Display column plugins have only one fundamental callback, namely the \ref DISPOUTPUT function.
+ * This function has to be implemented for every display column; the other callbacks are optional.
  * In the C++ wrapper class scip::ObjDisp, the scip_output() method (which corresponds to the \ref DISPOUTPUT callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your display column class.
  *
- * Additional documentation for the callback methods can be found in type_disp.h.
+ * Additional documentation for the callbacks can be found in type_disp.h.
  *
  * @subsection DISPOUTPUT
  *
@@ -5829,13 +5829,13 @@
  * In addition, at the root node, the callback is executed after each iteration of the price-and-cut loop.
  * It should write the display column information for the current node to a given output file stream.
  *
- * Typical methods called by a display column are, for example, SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), and
+ * Typical functions called by a display column are, for example, SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), and
  * SCIPinfoMessage().
  *
  *
- * @section DISP_ADDITIONALCALLBACKS Additional Callback Methods of a Display Column
+ * @section DISP_ADDITIONALCALLBACKS Additional Callbacks of a Display Column
  *
- * The additional callback methods do not need to be implemented in every case.
+ * The additional callbacks do not need to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
  *
  * @subsection DISPCOPY
@@ -5848,13 +5848,13 @@
  *
  * @subsection DISPFREE
  *
- * If you are using display column data, you have to implement this method in order to free the display column data.
+ * If you are using display column data, you have to implement this function in order to free the display column data.
  * This can be done by the following procedure:
  * @refsnippet{tests/src/misc/snippets.c,SnippetDispFree}
  *
  * If you have allocated memory for fields in your display column data, remember to free this memory
  * before freeing the display column data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection DISPINIT
@@ -5865,7 +5865,7 @@
  * @subsection DISPEXIT
  *
  * The DISPEXIT callback is executed before the transformed problem is freed.
- * In this method, the display column should free all resources that have been allocated for the solving process in
+ * In this function, the display column should free all resources that have been allocated for the solving process in
  * \ref DISPINIT.
  *
  * @subsection DISPINITSOL
@@ -5898,9 +5898,9 @@
  *
  * Take src/scip/cons_logior.c, where the event handler is directly included into the constraint handler. As all other
  * default plugins, the event handlers are written in C. C++ users can easily adapt the code by using the scip::ObjEventhdlr
- * wrapper base class and implement the scip_...() virtual methods instead of the SCIP_DECL_EVENT... callback methods.
+ * wrapper base class and implement the scip_...() virtual methods instead of the SCIP_DECL_EVENT... callbacks.
  *
- * Additional documentation for the callback methods of an event handler can be found in the file type_event.h. There is
+ * Additional documentation for the callbacks of an event handler can be found in the file type_event.h. There is
  * also an example written in C which deals with an event handler. You find this example in the directory
  * "examples/Eventhdlr/". An C++ example can be found within the TSP project (examples/TSP/src/EventhdlrNewSol.cpp).
  *
@@ -5915,9 +5915,9 @@
  *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "bestsol".
  * -# Adjust the \ref EVENTHDLR_PROPERTIES "properties of the event handler".
- * -# Implement the \ref EVENT_INTERFACE "interface methods".
- * -# Implement the \ref EVENT_FUNDAMENTALCALLBACKS "fundamental callback methods".
- * -# Implement the \ref EVENT_ADDITIONALCALLBACKS "additional callback methods". This is optional.
+ * -# Implement the \ref EVENT_INTERFACE "interface functions".
+ * -# Implement the \ref EVENT_FUNDAMENTALCALLBACKS "fundamental callbacks".
+ * -# Implement the \ref EVENT_ADDITIONALCALLBACKS "additional callbacks". This is optional.
  *
  *
  * @section EVENTHDLR_PROPERTIES Properties of a Event Handler
@@ -5945,14 +5945,14 @@
  * Defining event handler data is optional. You can leave the struct empty.
  *
  *
- * @section EVENT_INTERFACE Interface Methods
+ * @section EVENT_INTERFACE Interface Functions
  *
- * At the bottom of "event_bestsol.c", you can find the interface method SCIPincludeEventBestsol(),
+ * At the bottom of "event_bestsol.c", you can find the interface function SCIPincludeEventBestsol(),
  * which also appears in "event_bestsol.h".
  * SCIPincludeEventBestsol() is called by the user, if (s)he wants to include the event handler,
  * i.e., if (s)he wants to use the event handler in his/her application.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the event handler. For this, you can either call
  * SCIPincludeEventhdlr(),
  * or SCIPincludeEventhdlrBasic() since SCIP version 3.0. In the latter variant, \ref EVENT_ADDITIONALCALLBACKS "additional callbacks"
@@ -5967,37 +5967,37 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_EventhdlrData afterwards.
  *
- * Although this is very uncommon, you may also add user parameters for your event handler, see the method
+ * Although this is very uncommon, you may also add user parameters for your event handler, see the function
  * SCIPincludeConshdlrKnapsack() in the \ref cons_knapsack.h "knapsack constraint handler" for an example.
  *
  *
- * @section EVENT_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Event Handler
+ * @section EVENT_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Event Handler
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
  * They are passed together with the event handler itself to SCIP using SCIPincludeEventhdlr() or SCIPincludeEventhdlrBasic(),
  * see @ref EVENT_INTERFACE.
  *
  *
- * Event handler plugins have only one fundamental callback method, namely the \ref EVENTEXEC method.  This method has
- * to be implemented for every event handler; the other callback methods are optional.  In the C++ wrapper class
+ * Event handler plugins have only one fundamental callback, namely the \ref EVENTEXEC function.  This function has
+ * to be implemented for every event handler; the other callbacks are optional.  In the C++ wrapper class
  * scip::ObjEventhdlr, the scip_exec() method (which corresponds to the \ref EVENTEXEC callback) is a virtual abstract member
  * function.  You have to implement it in order to be able to construct an object of your event handler class.
  *
- * Additional documentation for the callback methods can be found in type_event.h.
+ * Additional documentation for the callbacks can be found in type_event.h.
  *
  * @subsection EVENTEXEC
  *
  * The EVENTEXEC callback is called after the requested event happened. Then the event handler can do some action in
  * reaction to the event.
  *
- * Typical the execution method sets a parameter to TRUE to indicate later in solving process that something happened
+ * Typical the execution function sets a parameter to TRUE to indicate later in solving process that something happened
  * which should be analyzed further. In the \ref cons_knapsack.h "knapsack constraint handler" you find such a typical
  * example.
  *
- * @section EVENT_ADDITIONALCALLBACKS Additional Callback Methods of a Event Handler
+ * @section EVENT_ADDITIONALCALLBACKS Additional Callbacks of a Event Handler
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications, they can be used, for example, to initialize and free private data.
  * Additional callbacks can either be passed directly with SCIPincludeEventhdlr() to SCIP or via specific
  * <b>setter functions</b> after a call of SCIPincludeEventhdlrBasic(), see also @ref EVENT_INTERFACE.
@@ -6016,14 +6016,14 @@
  *
  * @subsection EVENTFREE
  *
- * If you are using event handler data, you have to implement this method in order to free the event handler data.
+ * If you are using event handler data, you have to implement this function in order to free the event handler data.
  * This can be done by the following procedure:
  *
  * @refsnippet{src/scip/event_softtimelimit.c,SnippetEventFreeSofttimelimit}
  *
  * If you have allocated memory for fields in your event handler data, remember to free this memory
  * before freeing the event handler data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  *
@@ -6035,7 +6035,7 @@
  * @subsection EVENTEXIT
  *
  * The EVENTEXIT callback is executed before the transformed problem is freed.
- * In this method, the event handler should free all resources that have been allocated for the solving process in
+ * In this function, the event handler should free all resources that have been allocated for the solving process in
  * \ref EVENTINIT.
  *
  * @subsection EVENTINITSOL
@@ -6065,7 +6065,7 @@
  * SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
  * \endcode
  *
- * If you want trigger some variable event, you use the method SCIPcatchVarEvent() to attach the variable event and
+ * If you want trigger some variable event, you use the function SCIPcatchVarEvent() to attach the variable event and
  * SCIPdropVarEvent() to drop it later.
  *
  * \code
@@ -6093,7 +6093,7 @@
  *                                    | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_DOMCHANGED | SCIP_EVENTTYPE_IMPLADDED)
  * \endcode
  *
- * Depending on the event type, the event offers different information. The methods which can be used to gain
+ * Depending on the event type, the event offers different information. The functions which can be used to gain
  * access to this information are given in pub_event.h.
  *
  */
@@ -6124,7 +6124,7 @@
  * We now explain how users can add their own NLP solver interface.
  * Take the interface to Ipopt (src/scip/nlpi_ipopt.cpp) as an example.
  * Unlike most other plugins, it is written in C++.
- * Additional documentation for the callback methods of an NLPI, in particular for their input parameters,
+ * Additional documentation for the callbacks of an NLPI, in particular for their input parameters,
  * can be found in the file \ref type_nlpi.h.
  *
  * Here is what you have to do to implement an NLPI:
@@ -6137,9 +6137,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mysolver".
  * -# Adjust the properties of the nlpi (see \ref NLPI_PROPERTIES).
  * -# Define the NLPI and NLPIPROBLEM data (see \ref NLPI_DATA).
- * -# Implement the interface methods (see \ref NLPI_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref NLPI_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref NLPI_ADDITIONALCALLBACKS). This is optional.
+ * -# Implement the interface functions (see \ref NLPI_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref NLPI_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref NLPI_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section NLPI_PROPERTIES Properties of an NLPI
@@ -6170,14 +6170,14 @@
  * For example, you could store a pointer to your NLP solver environment object in the `SCIP_NlpiData` data structure
  * and store a pointer to an NLPIORACLE in the `SCIP_NlpiProblem` data structure.
  *
- * @section NLPI_INTERFACE Interface Methods
+ * @section NLPI_INTERFACE Interface Functions
  *
- * At the bottom of "nlpi_mysolver.c", you can find the interface method SCIPincludeNlpSolverXyz(),
+ * At the bottom of "nlpi_mysolver.c", you can find the interface function SCIPincludeNlpSolverXyz(),
  * which also appears in "nlpi_mysolver.h".
  *
- * This method only has to be adjusted slightly.
- * It is responsible for creating an NLPI that contains all properties and callback methods of your
- * solver interface and included it into SCIP by calling the method SCIPincludeNlpi().
+ * This function only has to be adjusted slightly.
+ * It is responsible for creating an NLPI that contains all properties and callbacks of your
+ * solver interface and included it into SCIP by calling the function SCIPincludeNlpi().
  * SCIPincludeNlpSolverXyz() is called by the user (e.g., SCIP), if (s)he wants to use this solver interface in his/her application.
  *
  * If you are using NLPI data, you have to allocate the memory for the data at this point.
@@ -6189,12 +6189,12 @@
  * NLPI data, see \ref NLPIFREE.
  *
  *
- * @section NLPI_FUNDAMENTALCALLBACKS Fundamental Callback Methods of an NLPI
+ * @section NLPI_FUNDAMENTALCALLBACKS Fundamental Callbacks of an NLPI
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm. Most NLPI callbacks are fundamental.
  *
- * Additional documentation of the callback methods, in particular to their input parameters,
+ * Additional documentation of the callbacks, in particular to their input parameters,
  * can be found in \ref type_nlpi.h.
  *
  * @subsection NLPIFREE
@@ -6204,17 +6204,17 @@
  * @subsection NLPICREATEPROBLEM
  *
  * The NLPICREATEPROBLEM callback is executed if a particular NLP problem is to be created.
- * The callback method should initialize a SCIP_NlpiProblem struct here that corresponds to an empty NLP.
+ * The callback should initialize a SCIP_NlpiProblem struct here that corresponds to an empty NLP.
  *
  * @subsection NLPIFREEPROBLEM
  *
  * The NLPIFREEPROBLEMPOINTER callback is executed if a particular NLP problem is to be freed.
- * The callback method should free a SCIP_NlpiProblem struct here.
+ * The callback should free a SCIP_NlpiProblem struct here.
  *
  * @subsection NLPIADDVARS
  *
  * The NLPIADDVARS callback is executed if a set of variables with lower and upper bounds and names should be added to a particular NLP.
- * The callback method must add the new variables behind the previously added variables, if any.
+ * The callback must add the new variables behind the previously added variables, if any.
  * If NULL is given for the lower bounds arguments, -infinity is assumed as lower bound for each new variable.
  * If NULL is given for the upper bounds arguments, +infinity is assumed as upper bound for each new variable.
  * It is also permitted to use NULL for the names argument.
@@ -6241,13 +6241,13 @@
  *
  * The NLPIDELVARSET callback is executed to delete a set of variables from an NLP.
  * The caller provides an array in which for each variable it is marked whether it should be deleted.
- * In the same array, the method should return the new position of each variable in the NLP, or -1 if it was deleted.
+ * In the same array, the function should return the new position of each variable in the NLP, or -1 if it was deleted.
  *
  * @subsection NLPIDELCONSSET
  *
  * The NLPIDELCONSSET callback is executed to delete a set of constraints from an NLP.
  * The caller provides an array in which for each constraint it is marked whether it should be deleted.
- * In the same array, the method should return the new position of each constraint in the NLP, or -1 if it was deleted.
+ * In the same array, the function should return the new position of each constraint in the NLP, or -1 if it was deleted.
  *
  * @subsection NLPICHGLINEARCOEFS
  *
@@ -6279,17 +6279,17 @@
  * @subsection NLPIGETSOLUTION
  *
  * The NLPIGETSOLUTION callback can be used to request the primal and dual solution values after an NLP solve.
- * The method should pass pointers to arrays of variable values to the caller.
+ * The function should pass pointers to arrays of variable values to the caller.
  * It is possible to return only primal values for the variables, but no values for the dual variables, e.g., if a solver does not compute such values.
  *
  * @subsection NLPIGETSTATISTICS
  *
  * The NLPIGETSTATISTICS callback can be used to request the statistical values (number of iterations, time, ...) after an NLP solve.
- * The method should fill the provided NLPSTATISTICS data structure.
+ * The function should fill the provided NLPSTATISTICS data structure.
  *
- * @section NLPI_ADDITIONALCALLBACKS Additional Callback Methods of an NLPI
+ * @section NLPI_ADDITIONALCALLBACKS Additional Callbacks of an NLPI
  *
- * The additional callback methods do not need to be implemented in every case.
+ * The additional callbacks do not need to be implemented in every case.
  *
  * @subsection NLPICOPY
  *
@@ -6335,7 +6335,7 @@
  * Take the interface to CppAD (\ref exprinterpret_cppad.cpp) as an example.
  * Unlike most other plugins, it is written in C++.
  *
- * Additional documentation for the callback methods of an expression interpreter, in particular for their input parameters,
+ * Additional documentation for the callbacks of an expression interpreter, in particular for their input parameters,
  * can be found in the file \ref exprinterpret.h.
  *
  * Here is what you have to do to implement an expression interpreter:
@@ -6344,7 +6344,7 @@
  *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
  * -# Open the new file with a text editor.
  * -# Define the expression interpreter data (see \ref EXPRINT_DATA).
- * -# Implement the interface methods (see \ref EXPRINT_INTERFACE).
+ * -# Implement the interface functions (see \ref EXPRINT_INTERFACE).
  *
  *
  * @section EXPRINT_DATA Expression Interpreter Data
@@ -6352,68 +6352,68 @@
  * In `struct SCIP_ExprInt`, you can store the general data of your expression interpreter.
  * For example, you could store the environment of your automatic differentiation code.
  *
- * @section EXPRINT_INTERFACE Interface Methods
+ * @section EXPRINT_INTERFACE Interface Functions
  *
- * The expression interpreter has to implement a set of interface method.
- * In your "exprinterpret_myad.c", these methods are mostly dummy methods that return error codes.
+ * The expression interpreter has to implement a set of interface function.
+ * In your "exprinterpret_myad.c", these functions are mostly dummy functions that return error codes.
  *
  * @subsection SCIPexprintGetName
  *
- * The SCIPexprintGetName() method should return the name of the expression interpreter.
+ * The SCIPexprintGetName() function should return the name of the expression interpreter.
  *
  * @subsection SCIPexprintGetDesc
  *
- * The SCIPexprintGetDesc() method should return a short description of the expression interpreter, e.g., the name of the developer of the code.
+ * The SCIPexprintGetDesc() function should return a short description of the expression interpreter, e.g., the name of the developer of the code.
  *
  * @subsection SCIPexprintGetCapability
  *
- * The SCIPexprintGetCapability() method should return a bitmask that indicates the capabilities of the expression interpreter,
+ * The SCIPexprintGetCapability() function should return a bitmask that indicates the capabilities of the expression interpreter,
  * i.e., whether it can compute gradients and Hessians.
  *
  * @subsection SCIPexprintCreate
  *
- * The SCIPexprintCreate() method is called to create an expression interpreter data structure.
- * The method should initialize a `struct SCIP_ExprInt` here.
+ * The SCIPexprintCreate() function is called to create an expression interpreter data structure.
+ * The function should initialize a `struct SCIP_ExprInt` here.
  *
  * @subsection SCIPexprintFree
  *
- * The SCIPexprintFree() method is called to free an expression interpreter data structure.
- * The method should free a `struct SCIP_ExprInt` here.
+ * The SCIPexprintFree() function is called to free an expression interpreter data structure.
+ * The function should free a `struct SCIP_ExprInt` here.
  *
  * @subsection SCIPexprintCompile
  *
- * The SCIPexprintCompile() method is called to initialize the data structures that are required to evaluate a particular expression.
+ * The SCIPexprintCompile() function is called to initialize the data structures that are required to evaluate a particular expression.
  * The expression interpreter can create and return data that is particular to a given expression in the argument `exprintdata`.
  *
  * @subsection SCIPexprintFreeData
  *
- * The SCIPexprintFreeData() method is called to free the data that is particular to a given expression and was possibly created in SCIPexprintCompile().
+ * The SCIPexprintFreeData() function is called to free the data that is particular to a given expression and was possibly created in SCIPexprintCompile().
  *
  * @subsection SCIPexprintGetExprCapability
  *
- * The SCIPexprintGetExprCapability() method is called to request the capability to evaluate a specific expression by the expression interpreter.
+ * The SCIPexprintGetExprCapability() function is called to request the capability to evaluate a specific expression by the expression interpreter.
  *
  * In cases of user-given expressions, higher order derivatives may not be available for the user-expression,
- * even if the expression interpreter could handle these. This method allows to recognize that, e.g., the
+ * even if the expression interpreter could handle these. This function allows to recognize that, e.g., the
  * Hessian for an expression is not available because it contains a user expression that does not provide
  * Hessians.
  *
  * @subsection SCIPexprintEval
  *
- * The SCIPexprintEval() method is called when the value of an expression should be computed for a point.
+ * The SCIPexprintEval() function is called when the value of an expression should be computed for a point.
  *
  * @subsection SCIPexprintGrad
  *
- * The SCIPexprintGrad() method is called when the gradient of an expression represented by an expression should be computed for a point.
+ * The SCIPexprintGrad() function is called when the gradient of an expression represented by an expression should be computed for a point.
  *
  * @subsection SCIPexprintHessianSparsity
  *
- * The SCIPexprintHessianSparsity() method is called when the sparsity structure of the Hessian matrix should be computed and returned.
+ * The SCIPexprintHessianSparsity() function is called when the sparsity structure of the Hessian matrix should be computed and returned.
  * Only the position of nonzero entries in the lower-triangular part of Hessian should be reported.
  *
  * @subsection SCIPexprintHessian
  *
- * The SCIPexprintHessian() method is called when the Hessian of an expression should be computed for a point.
+ * The SCIPexprintHessian() function is called when the Hessian of an expression should be computed for a point.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -6434,10 +6434,10 @@
  * Take src/scip/table_default.c, where all default statistics tables are collected, as an example.
  * As all other default plugins, the default statistics table plugins and the statistics table template are written in C.
  * C++ users can easily adapt the code by using the scip::ObjTable wrapper base class and implement the scip_...() virtual methods
- * instead of the SCIP_DECL_TABLE... callback methods.
+ * instead of the SCIP_DECL_TABLE... callbacks.
  *
  *
- * Additional documentation for the callback methods of a statistics table can be found in the file type_table.h.
+ * Additional documentation for the callbacks of a statistics table can be found in the file type_table.h.
  *
  * Here is what you have to do to implement a statistics table (assuming your statistics table is named "mystatisticstable"):
  * -# Copy the template files src/scip/table_xyz.c and src/scip/table_xyz.h into files named "table_mystatisticstable.c"
@@ -6451,9 +6451,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mystatisticstable".
  * -# Adjust the \ref TABLE_PROPERTIES "properties of the statistics table".
  * -# Define the  \ref TABLE_DATA "statistics table data". This is optional.
- * -# Implement the \ref TABLE_INTERFACE "interface methods".
- * -# Implement the \ref TABLE_FUNDAMENTALCALLBACKS "fundamental callback methods".
- * -# Implement the \ref TABLE_ADDITIONALCALLBACKS "additional callback methods". This is optional.
+ * -# Implement the \ref TABLE_INTERFACE "interface functions".
+ * -# Implement the \ref TABLE_FUNDAMENTALCALLBACKS "fundamental callbacks".
+ * -# Implement the \ref TABLE_ADDITIONALCALLBACKS "additional callbacks". This is optional.
  *
  *
  * @section TABLE_PROPERTIES Properties of a Statistics Table
@@ -6494,16 +6494,16 @@
  * Defining statistics table data is optional. You can leave the struct empty.
  *
  *
- * @section TABLE_INTERFACE Interface Methods
+ * @section TABLE_INTERFACE Interface Functions
  *
- * At the bottom of "table_mystatisticstable.c" you can find the interface method SCIPincludeTableMystatisticstable(), which also
+ * At the bottom of "table_mystatisticstable.c" you can find the interface function SCIPincludeTableMystatisticstable(), which also
  * appears in "table_mystatisticstable.h".
  * \n
- * This method only has to be adjusted slightly.
- * It is responsible for notifying SCIP of the presence of the statistics table by calling the method
+ * This function only has to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the statistics table by calling the function
  * SCIPincludeTable().
  *
- * The interface method is called by the user, if (s)he wants to include the statistics table, i.e., if (s)he wants to use the statistics table in an
+ * The interface function is called by the user, if (s)he wants to include the statistics table, i.e., if (s)he wants to use the statistics table in an
  * application.
  *
  * If you are using statistics table data, you have to allocate the memory for the data at this point.
@@ -6513,20 +6513,20 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_TableData afterwards.
  *
- * Although this is very uncommon, you may also add user parameters for your statistics table, see the method
+ * Although this is very uncommon, you may also add user parameters for your statistics table, see the function
  * SCIPincludeConshdlrKnapsack() in the \ref cons_knapsack.h "knapsack constraint handler" for an example.
  *
  *
- * @section TABLE_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Statistics Table
+ * @section TABLE_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Statistics Table
  *
- * Statistics table plugins have callback methods that output and collect data.
- * One or both of these methods have to be implemented for every table.
- * If the output method is not implemented, then SCIP tries to print the data that is retrieved from the collect callback in table form.
+ * Statistics table plugins have callbacks that output and collect data.
+ * One or both of these functions have to be implemented for every table.
+ * If the output function is not implemented, then SCIP tries to print the data that is retrieved from the collect callback in table form.
  * In the C++ wrapper class scip::ObjTable, the scip_output() method (which corresponds to the \ref TABLEOUTPUT callback) and 
  * scip_collect() method (which corresponds to the \ref TABLECOLLECT callback) are virtual member functions.
  * One or both of them should be overwritten.
  *
- * Additional documentation for the callback methods can be found in type_table.h.
+ * Additional documentation for the callbacks can be found in type_table.h.
  *
  * @subsection TABLEOUTPUT
  *
@@ -6534,7 +6534,7 @@
  * in the shell or called SCIPprintStatistics()). In this callback, the table should print all of its information to the given file
  * (which may be NULL if the output should be printed to the console).
  *
- * Typical methods called by a statistics table are, for example, SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), and
+ * Typical functions called by a statistics table are, for example, SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), and
  * SCIPinfoMessage().
  *
  * @subsection TABLECOLLECT
@@ -6546,9 +6546,9 @@
  * another SCIP_DATATREE*, or arrays of long, double, and char*. See also scip_datatree.h and pub_datatree.h.
  *
  *
- * @section TABLE_ADDITIONALCALLBACKS Additional Callback Methods of a Statistics Table
+ * @section TABLE_ADDITIONALCALLBACKS Additional Callbacks of a Statistics Table
  *
- * The additional callback methods do not need to be implemented in every case.
+ * The additional callbacks do not need to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
  *
  * @subsection TABLECOPY
@@ -6561,13 +6561,13 @@
  *
  * @subsection TABLEFREE
  *
- * If you are using statistics table data, you have to implement this method in order to free the statistics table data.
+ * If you are using statistics table data, you have to implement this function in order to free the statistics table data.
  * This can be done by the following procedure:
  * @refsnippet{tests/src/misc/snippets.c,SnippetTableFree}
  *
  * If you have allocated memory for fields in your statistics table data, remember to free this memory
  * before freeing the statistics table data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection TABLEINIT
@@ -6578,7 +6578,7 @@
  * @subsection TABLEEXIT
  *
  * The TABLEEXIT callback is executed before the transformed problem is freed.
- * In this method, the statistics table should free all resources that have been allocated for the solving process in
+ * In this function, the statistics table should free all resources that have been allocated for the solving process in
  * \ref TABLEINIT.
  *
  * @subsection TABLEINITSOL
@@ -6679,9 +6679,9 @@
  * We now explain how users can add their own Benders' decomposition implementations.
  * Take the default Benders' decomposition implementation (src/scip/benders_default.c) as an example.  Same as all other
  * default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjBenders wrapper base
- * class and implement the scip_...() virtual methods instead of the SCIP_DECL_BENDERS... callback methods.
+ * class and implement the scip_...() virtual methods instead of the SCIP_DECL_BENDERS... callbacks.
  *
- * Additional documentation for the callback methods of a Benders' decomposition implementation, in particular for the
+ * Additional documentation for the callbacks of a Benders' decomposition implementation, in particular for the
  * input parameters, can be found in the file type_benders.h.
  *
  * Here is what you have to do to implement a custom Benders' decomposition:
@@ -6696,9 +6696,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybenders".
  * -# Adjust the properties of the Benders' decomposition (see \ref BENDERS_PROPERTIES).
  * -# Define the Benders' decomposition data (see \ref BENDERS_DATA). This is optional.
- * -# Implement the interface methods (see \ref BENDERS_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref BENDERS_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref BENDERS_ADDITIONALCALLBACKS).  This is optional.
+ * -# Implement the interface functions (see \ref BENDERS_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref BENDERS_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref BENDERS_ADDITIONALCALLBACKS).  This is optional.
  *
  *
  * @section BENDERS_PROPERTIES Properties of a Benders' decomposition
@@ -6719,7 +6719,7 @@
  *
  * \par BENDERS_PRIORITY: the priority of the Benders' decomposition.
  * During the enforcement and checking of solutions in src/scip/cons_benders.c and src/scip/cons_benderslp.c, every
- * active Benders' decompositions are called. The execution method of the Benders' decomposition calls each of the
+ * active Benders' decompositions are called. The execution function of the Benders' decomposition calls each of the
  * subproblems and generates cuts from their solutions.  So the active Benders' decompositions are called in order of
  * priority until a cut is generated or feasibility is proven.
  * \n
@@ -6765,14 +6765,14 @@
  * \n
  * Defining Benders' decomposition data is optional. You can leave the struct empty.
  *
- * @section BENDERS_INTERFACE Interface Methods
+ * @section BENDERS_INTERFACE Interface Functions
  *
- * At the bottom of "benders_mybenders.c", you can find the interface method SCIPincludeBendersMybenders(),
+ * At the bottom of "benders_mybenders.c", you can find the interface function SCIPincludeBendersMybenders(),
  * which also appears in "benders_mybenders.h"
  * SCIPincludeBendersMybenders() is called by the user, if (s)he wants to include the Benders' decomposition,
  * i.e., if (s)he wants to use the Benders' decomposition in his/her application.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the Benders' decomposition. For this, you can either call SCIPincludeBenders(),
  * or SCIPincludeBendersBasic() since SCIP version 3.0. In the latter variant, \ref BENDERS_ADDITIONALCALLBACKS "additional callbacks"
  * must be added via setter functions as, e.g., SCIPsetBendersCopy(). We recommend this latter variant because
@@ -6788,7 +6788,7 @@
  * Benders' decomposition data, see \ref BENDERSFREE.
  *
  * You may also add user parameters for your Benders' decomposition, see \ref PARAM for how to add user parameters and
- * the method SCIPincludeBendersDefault() in src/scip/benders_default.c for an example.
+ * the function SCIPincludeBendersDefault() in src/scip/benders_default.c for an example.
  *
  * It is advised to disable presolving for the Benders' decomposition master problem by calling SCIPsetPresolving() with
  * the parameter SCIP_PARAMSETTING_OFF. Presolving should be disabled because reductions on the master problem could be
@@ -6801,16 +6801,16 @@
  * the master problem variables to find a lower bound for the auxiliary variable.
  *
  *
- * @section BENDERS_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Benders' decomposition
+ * @section BENDERS_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Benders' decomposition
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
  * They are passed together with the Benders' decomposition itself to SCIP using SCIPincludeBenders() or SCIPincludeBendersBasic(),
  * see @ref BENDERS_INTERFACE.
  *
  * Benders' decomposition plugins have two callbacks, @ref BENDERSGETVAR and @ref BENDERSCREATESUB that must be implemented.
  *
- * Additional documentation for the callback methods, in particular to their input parameters,
+ * Additional documentation for the callbacks, in particular to their input parameters,
  * can be found in type_benders.h.
  *
  * @subsection BENDERSGETVAR
@@ -6848,9 +6848,9 @@
  * be more convenient to build the subproblem instances during the problem creation stage of the master problem and
  * store the subproblem SCIP instances in SCIP_BendersData. This approach is used in src/scip/benders_default.c.
  *
- * @section BENDERS_ADDITIONALCALLBACKS Additional Callback Methods of a Benders' decomposition implementation
+ * @section BENDERS_ADDITIONALCALLBACKS Additional Callbacks of a Benders' decomposition implementation
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications, they can be used, for example, to initialize and free private data.
  * Additional callbacks can either be passed directly with SCIPincludeBenders() to SCIP or via specific
  * <b>setter functions</b> after a call of SCIPincludeBendersBasic(), see also @ref BENDERS_INTERFACE.
@@ -6858,13 +6858,13 @@
  * @subsection BENDERSFREE
  *
  * If you are using Benders' decomposition data (see \ref BENDERS_DATA and \ref BENDERS_INTERFACE), you have to
- * implement this method in order to free the Benders' decomposition data. This can be done by the following procedure:
+ * implement this function in order to free the Benders' decomposition data. This can be done by the following procedure:
  *
  * @refsnippet{src/scip/benders_default.c,SnippetBendersFreeDefault}
  *
  * If you have allocated memory for fields in your Benders' decomposition data, remember to free this memory
  * before freeing the Benders' decomposition data itself.
- * If you are using the C++ wrapper class, this method is not available.
+ * If you are using the C++ wrapper class, this function is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection BENDERSCOPY
@@ -6891,7 +6891,7 @@
  * @subsection BENDERSEXIT
  *
  * The BENDERSEXIT callback is executed before the transformed problem is freed.
- * In this method, the Benders' decomposition implementation should free all resources that have been allocated for
+ * In this function, the Benders' decomposition implementation should free all resources that have been allocated for
  * the solving process in BENDERSINIT.
  *
  * @subsection BENDERSINITPRE
@@ -6931,7 +6931,7 @@
  * Two different subproblem solving functions are provide in the Benders' decomposition framework, BENDERSSOLVESUBCONVEX
  * and BENDERSSOLVESUB. These two solving functions are used in the two solving loops of the Benders' decomposition
  * framework. The first solving loop solves convex subproblems and convex relaxations of CIPs. The BENDERSSOLVESUBCONVEX
- * callback is executed only during the FIRST solving loop. Benders' cut generating methods suitable for convex
+ * callback is executed only during the FIRST solving loop. Benders' cut generating functions suitable for convex
  * subproblems are executed during this solving loop. If a cut is found, then the second solve loop is not executed. If
  * your decomposition does not have any convex subproblems, then it is not necessary to implement the
  * BENDERSSOLVESUBCONVEX callback. However, it may be computationally beneficial to solve the convex relaxation of CIP
@@ -6950,7 +6950,7 @@
  *
  * @subsection BENDERSSOLVESUB
  *
- * The BENDERSSOLVESUB is executed only during the SECOND solve loop. This callback function is used to solve CIP
+ * The BENDERSSOLVESUB is executed only during the SECOND solve loop. This callback is used to solve CIP
  * subproblems. If your decomposition does not have any CIP subproblems, then it is not necessary to implement the
  * BENDERSSOLVESUB callback.
  *
@@ -6972,7 +6972,7 @@
  *
  * Additionally, the user is able to merge subproblems into the master problem during the execution of this callback.
  * The merging of subproblems into the master problem could be desired if it is too time consuming to satisfy the
- * feasibility of a subproblem or the appropriate cutting methods are not available for the provided subproblem. A list
+ * feasibility of a subproblem or the appropriate cutting functions are not available for the provided subproblem. A list
  * of indicies of subproblems suitable for merging are given in the mergecands array. The first npriomergecands are the
  * merge candidates that must be merged into the master problem. If they are not, then the solution process will
  * terminate with an error. These merge candidates arise if a cut could not be generated due to numerical difficulties.
@@ -6988,10 +6988,10 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page BENDERSCUT How to add custom Benders' decomposition cut generation methods
+/**@page BENDERSCUT How to add custom Benders' decomposition cut generation functions
  *
  * The Benders' decomposition framework of SCIP allows the user to provide a custom implementation of cut generation
- * methods. The Benders' decomposition cut methods are linked to the Benders' decomposition implementations, not the
+ * method. The Benders' decomposition cut methods are linked to the Benders' decomposition implementations, not the
  * master problem SCIP instance. As such, you are able to have different Benders' decomposition cut methods for each
  * included Benders' decomposition.
  * The current list of all Benders' decomposition cut generation methods available in this release can be found
@@ -7002,9 +7002,9 @@
  * a classical optimality cut from the optimal dual solution to the convex relaxation of the Benders' decomposition
  * subproblem. Same as all other default plugins, it is written in C. C++ users can easily adapt the code by using the
  * scip::ObjBenderscut wrapper base class and implement the scip_...() virtual methods instead of the
- * SCIP_DECL_BENDERSCUT...  callback methods.
+ * SCIP_DECL_BENDERSCUT...  callbacks.
  *
- * Additional documentation for the callback methods of a Benders' decomposition cut methods, in particular for the
+ * Additional documentation for the callbacks of a Benders' decomposition cut methods, in particular for the
  * input parameters, can be found in the file type_benderscut.h.
  *
  * Here is what you have to do to implement a custom Benders' decomposition cut method:
@@ -7019,9 +7019,9 @@
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybenderscut".
  * -# Adjust the properties of the Benders' decomposition (see \ref BENDERSCUT_PROPERTIES).
  * -# Define the Benders' decomposition data (see \ref BENDERSCUT_DATA). This is optional.
- * -# Implement the interface methods (see \ref BENDERSCUT_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref BENDERSCUT_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref BENDERSCUT_ADDITIONALCALLBACKS).  This is optional.
+ * -# Implement the interface functions (see \ref BENDERSCUT_INTERFACE).
+ * -# Implement the fundamental callbacks (see \ref BENDERSCUT_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callbacks (see \ref BENDERSCUT_ADDITIONALCALLBACKS).  This is optional.
  *
  *
  * @section BENDERSCUT_PROPERTIES Properties of a Benders' decomposition
@@ -7065,14 +7065,14 @@
  * \n
  * Defining Benders' decomposition data is optional. You can leave the struct empty.
  *
- * @section BENDERSCUT_INTERFACE Interface Methods
+ * @section BENDERSCUT_INTERFACE Interface Functions
  *
- * At the bottom of "benderscut_mybenderscut.c", you can find the interface method SCIPincludeBenderscutMybenderscut(),
+ * At the bottom of "benderscut_mybenderscut.c", you can find the interface function SCIPincludeBenderscutMybenderscut(),
  * which also appears in "benderscut_mybenderscut.h"
  * SCIPincludeBenderscutMybenderscut() is called by the user, if (s)he wants to include the Benders' decomposition,
  * i.e., if (s)he wants to use the Benders' decomposition in his/her application.
  *
- * This method only has to be adjusted slightly.
+ * This function only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the Benders' decomposition. For this, you can either call SCIPincludeBenderscut(),
  * or SCIPincludeBenderscutBasic() since SCIP version 3.0. In the latter variant, \ref BENDERSCUT_ADDITIONALCALLBACKS "additional callbacks"
  * must be added via setter functions as, e.g., SCIPsetBenderscutCopy(). We recommend this latter variant because
@@ -7088,25 +7088,25 @@
  * Benders' decomposition cut data, see \ref BENDERSCUTFREE.
  *
  * You may also add user parameters for your Benders' decomposition, see \ref PARAM for how to add user parameters and
- * the method SCIPincludeBenderscutOpt() in src/scip/benderscut_opt.c for an example.
+ * the function SCIPincludeBenderscutOpt() in src/scip/benderscut_opt.c for an example.
  *
  *
- * @section BENDERSCUT_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Benders' decomposition cut method
+ * @section BENDERSCUT_FUNDAMENTALCALLBACKS Fundamental Callbacks of a Benders' decomposition cut function
  *
- * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * The fundamental callbacks of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
  * They are passed together with the Benders' decomposition itself to SCIP using SCIPincludeBenderscut() or SCIPincludeBenderscutBasic(),
  * see @ref BENDERSCUT_INTERFACE.
  *
- * Benders' decomposition cut methods only one callback, @ref BENDERSCUTEXEC, that must be implemented.
+ * Benders' decomposition cut methods have only one callback, @ref BENDERSCUTEXEC, that must be implemented.
  *
- * Additional documentation for the callback methods, in particular to their input parameters,
+ * Additional documentation for the callbacks, in particular to their input parameters,
  * can be found in type_benderscut.h.
  *
  * @subsection BENDERSCUTEXEC
  *
  * The BENDERSCUTEXEC callback is called during the cut generation process within the Benders' decomposition subproblem
- * solving loop. This method must generate a cut for the given subproblem if the associated subsystem is not optimal
+ * solving loop. This function must generate a cut for the given subproblem if the associated subsystem is not optimal
  * with respect to the checked master problem solution.
  *
  * When generating cuts, it is possible to store these within the SCIP_BendersData of the associated Benders'
@@ -7127,9 +7127,9 @@
  * error. It is possible to avoid the error by merging the subproblem into the master problem (see \ref
  * BENDERSPOSTSOLVE).
  *
- * @section BENDERSCUT_ADDITIONALCALLBACKS Additional Callback Methods of a Separator
+ * @section BENDERSCUT_ADDITIONALCALLBACKS Additional Callbacks of a Separator
  *
- * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * The additional callbacks do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications, they can be used, for example, to initialize and free private data.
  * Additional callbacks can either be passed directly with SCIPincludeBenderscut() to SCIP or via specific
  * <b>setter functions</b> after a call of SCIPincludeBenderscutBasic(), see also @ref BENDERSCUT_INTERFACE.
@@ -7137,7 +7137,7 @@
  * @subsection BENDERSCUTFREE
  *
  * If you are using Benders' decomposition cut data (see \ref BENDERSCUT_DATA and \ref BENDERSCUT_INTERFACE), you have
- * to implement this method in order to free the Benders' decomposition cut data.
+ * to implement this function in order to free the Benders' decomposition cut data.
  *
  * If you have allocated memory for fields in your Benders' decomposition cut data, remember to free this memory
  * before freeing the Benders' decomposition data itself.
@@ -7153,9 +7153,9 @@
  * separator for all copied SCIP instances. This may deteriorate the performance
  * of primal heuristics using sub-SCIPs.
  *
- * If the Benders' decomposition cuts are included by calling SCIPincludeBendersDefaultCuts() in the include method of
+ * If the Benders' decomposition cuts are included by calling SCIPincludeBendersDefaultCuts() in the include function of
  * the Benders' decomposition implementation, such as SCIPincludeBendersDefault(), then it is not necessary to implement
- * BENDERSCUTCOPY. The copy method could be implemented to copy Benders' decomposition cut data from the original SCIP
+ * BENDERSCUTCOPY. The copy function could be implemented to copy Benders' decomposition cut data from the original SCIP
  * instance to the sub-SCIP.
  *
  *
@@ -7168,7 +7168,7 @@
  *
  * @subsection BENDERSCUTEXIT
  *
- * The BENDERSCUTEXIT callback is executed before the transformed problem is freed.  In this method, the Benders'
+ * The BENDERSCUTEXIT callback is executed before the transformed problem is freed.  In this function, the Benders'
  * decomposition cut method should free all resources that have been allocated for the solving process in
  * BENDERSCUTINIT.
  *
@@ -7243,7 +7243,7 @@
  *
  * Reverse Propagation is used to build up the conflict graph. Essentially, it provides an algorithm to detect the arcs
  * leading to a node in the conflict graph, i.e., the bound changes responsible for the new bound change deduced during
- * propagation. Reverse Propagation needs to be implemented in the RESPROP callback functions of
+ * propagation. Reverse Propagation needs to be implemented in the RESPROP callbacks of
  * \ref CONSRESPROP "constraint handlers" or \ref PROPRESPROP "propagators".
  * These callbacks receive the following information: the variable which is under investigation (@p
  * infervar), the corresponding bound change (@p bdchgidx, @p boundtype), and the integer (@p inferinfo) that has been
@@ -7311,7 +7311,7 @@
  * -# disable dual reductions within presolvers and propagators (<code>misc/allowdualreds = FALSE</code>)
  * -# disable propagation with current cutoff bound (<code>misc/allowobjprop = FALSE</code>)
  *
- * In contrast to the presolving and propagating methods that are using dual information, performing strong branching is
+ * In contrast to the presolving and propagating functions that are using dual information, performing strong branching is
  * allowed. The bound tightenings resulting from strong branching are handeled in a special way. After changing the objective
  * function and solving the modified problem the feasible region that was pruned by strong branching will be reconstructed
  * within the tree.
@@ -7537,8 +7537,8 @@
  *
  * After passing one or more decompositions, see below, one can access all available decompositions with SCIPgetDecomps().
  * The labels can be obtained by calling SCIPdecompGetVarsLabels() and SCIPdecompGetConsLabels().
- * If some variables/constraints are not labeled, these methods will mark them as linking variables/constraints.
- * There are several methods to get more information about one decomposition, see @ref DecompMethods.
+ * If some variables/constraints are not labeled, these functions will mark them as linking variables/constraints.
+ * There are several functions to get more information about one decomposition, see @ref DecompMethods.
  *
  * A decomposition can be used to split the problem into several subproblems which, in general, are easier to solve.
  * For \f$q \in \{1,\dots,k\}\f$ the system
@@ -7727,7 +7727,7 @@
  * ways: inputting an instance in the SMPS file format, using the default Benders' decomposition implementation
  * (see src/scip/benders_default.c), implementing a custom Benders' decomposition plugin (see \ref BENDER), or by using
  * the Benders' decomposition mode of GCG.
- * An overview of how to use each of these methods will be provided in this section.
+ * An overview of how to use each of these functions will be provided in this section.
  *
  * @section BENDERSSMPS Inputting an instance in the SMPS file format.
  *
@@ -7822,7 +7822,7 @@
  * there are problems where an alternative objective may be beneficial. An example is a multiple machine scheduling
  * problem with a makespan objective. To accommodate different objective types, the Benders' decomposition framework
  * allows for the objective types of summation (the classical method) or the minimum of the maximum subproblem auxiliary
- * variables. The objective type can be set using the method SCIPsetBendersObjectiveType(). Note that the different
+ * variables. The objective type can be set using the function SCIPsetBendersObjectiveType(). Note that the different
  * objective types only have an impact if more than one subproblem is used in the Benders' decomposition.
  *
  */
@@ -7867,7 +7867,7 @@
  *   - [MPFR](https://www.mpfr.org/) for approximating rationals with floating-point numbers in SCIP,
  *   - and an exact LP solver such as SoPlex.
  *
- * Enabling the exact solving mode is done by setting the parameter `exact/enable = TRUE` or calling the API method
+ * Enabling the exact solving mode is done by setting the parameter `exact/enable = TRUE` or calling the API function
  * `SCIPenableExactSolving()`.  Note that this has to be done <b>before</b> reading a problem instance.  Further advanced
  * parameters for exact solving can be set in the `exact` submenu.
  *
@@ -7894,7 +7894,7 @@
  *  object will be destroyed automatically.
  *
  *  Remember that a created data object is automatically captured. If the user
- *  doesn't need the object anymore, (s)he has to call the object's release method.
+ *  doesn't need the object anymore, (s)he has to call the object's release function.
  *
  *  When a data object is added to SCIP (e.g., by calling SCIPaddVar()) , it is captured again, such that a
  *  release call does not destroy the object. If SCIP doesn't need the object
@@ -7916,14 +7916,14 @@
 /**@page PARAM How to add additional user parameters
  *
  *  Users may add their own parameters to SCIP by calling SCIPaddXyzParam(). Using
- *  this method, there are two possibilities for where to store the actual parameter value:
+ *  this function, there are two possibilities for where to store the actual parameter value:
  *   - If the given valueptr is NULL, SCIP stores the parameter value internally, and
  *     the user can only access the value with the SCIPgetXyzParam() and
  *     SCIPsetXyzParam() calls.
  *   - If the given valueptr is not NULL, SCIP stores the parameter value at the given
  *     address, and the user can directly manipulate the value at this address.
  *     (S)he has to be careful with memory management in string parameters: when the
- *     SCIPaddStringParam() method is called, the given address must hold a char*
+ *     SCIPaddStringParam() function is called, the given address must hold a char*
  *     pointer with value NULL. The default value is then copied into this pointer,
  *     allocating memory with BMSallocMemoryArray(). If the parameter is changed, the
  *     old string is freed with BMSfreeMemoryArray() and the new one is copied to a new
@@ -7934,9 +7934,9 @@
  *     involve reallocating memory for the string.
  *
  *  In some cases, it is necessary to keep track of changes in a parameter.
- *  If this is the case, the user can define a method by the PARAMCHGD callback and use this method as
- *  the @c paramchgd parameter of the @c SCIPaddXyzParam() method, also giving a pointer to the data, which is
- *  needed in this method, as @c paramdata. If this method is not NULL, it is called every time
+ *  If this is the case, the user can define a function by the PARAMCHGD callback and use this function as
+ *  the @c paramchgd parameter of the @c SCIPaddXyzParam() function, also giving a pointer to the data, which is
+ *  needed in this function, as @c paramdata. If this function is not NULL, it is called every time
  *  the value of the parameter is changed.
  */
 
@@ -7967,7 +7967,7 @@
  *   memory.
  * - <em>Efficiency:</em> Since blocks are groups in sizes, the blocks do not need to store their sizes within each
  *   block. In comparison, standard malloc/free stores the size using one word for each memory chunk. The price to pay
- *   is that one needs to pass the size to the methods that free a block. In any case, the methods in SCIP can save
+ *   is that one needs to pass the size to the functions that free a block. In any case, the methods in SCIP can save
  *   memory. Moreover, buffer memory is stored in similar places and not spread out, which also might help cache.
  * - <em>Debugging:</em> All of the possibilities provide methods to detect memory leaks. Together with tools like
  *   valgrind, this can be quite effective in avoiding such problems.
@@ -8033,7 +8033,7 @@
  *  @section REALLOCATION Reallocating memory
  *
  *  - `SCIPensureBlockMemoryArray()`: Extends a dynamically allocated block memory array to be able to store at least the given
- *    number of elements. This method ensures that the array is resized efficiently by calculating an appropriate new size. This can be
+ *    number of elements. This function ensures that the array is resized efficiently by calculating an appropriate new size. This can be
  *    useful to build data structures that grow dynamically.
  *
  *  - `SCIPreallocBlockMemoryArray()`, `SCIPreallocBufferArray()`, `SCIPreallocMemoryArray()`: Reallocate memory arrays to a specific
@@ -8055,7 +8055,7 @@
  *    large values.
  *  - The functions always allocate at least one byte and return non-NULL pointers if memory is available. In particular,
  *    freeing is always possible.
- *  - The freeing methods set the pointer to the memory to NULL.
+ *  - The freeing functions set the pointer to the memory to NULL.
  *  - Debugging can be supported by using the compiler flags @p NOBLKMEM=true, @p NOBUFMEM=true, @p NOBLKBUFMEM=true
  *    that turn off the usage of block memory, buffer memory, as well as block and buffer memory, respectively. Since,
  *    the internal block and buffer memory is freed at the end (leaving no memory leaks), turning them off allows tools
@@ -8648,9 +8648,9 @@
  *
  * <code>SCIP&gt; set emphasis counter</code>
  *
- * The SCIP callable library provides an interface method SCIPcount() which allows users to count the number of feasible
- * solutions to their problem. The method SCIPsetParamsCountsols(), which is also located in cons_countsols.h, loads the
- * predefined counting settings to ensure a safe count. The complete list of all methods that can be used for counting
+ * The SCIP callable library provides an interface function SCIPcount() which allows users to count the number of feasible
+ * solutions to their problem. The function SCIPsetParamsCountsols(), which is also located in cons_countsols.h, loads the
+ * predefined counting settings to ensure a safe count. The complete list of all functions that can be used for counting
  * via the callable library can be found in cons_countsols.h.
  *
  *
@@ -8696,7 +8696,7 @@
  *
  * In that case the sparse solutions are unrolled and lifted back into the original variable space.
  *
- * The callable library provides a method which gives access to all collected sparse solutions. That is,
+ * The callable library provides a function which gives access to all collected sparse solutions. That is,
  * SCIPgetCountedSparseSolutions(). The sparse solutions you get are defined w.r.t. active variables. To get solutions
  * w.r.t. to the original variables. You have to do two things:
  *
@@ -8704,9 +8704,9 @@
  * -# lift each solution into original variable space by extending the solution by those variable which got removed
  *    during presolving
  *
- * The get the variables which got removed during presolving, you can use the methods SCIPgetFixedVars() and
- * SCIPgetNFixedVars(). The method SCIPgetProbvarLinearSum() transforms given variables, scalars and constant to the
- * corresponding active variables, scalars and constant. Using this method for a single variable gives a representation
+ * The get the variables which got removed during presolving, you can use the functions SCIPgetFixedVars() and
+ * SCIPgetNFixedVars(). The function SCIPgetProbvarLinearSum() transforms given variables, scalars and constant to the
+ * corresponding active variables, scalars and constant. Using this function for a single variable gives a representation
  * for that variable w.r.t. the active variables which can be used to compute the value for the considered solution (which
  * is defined w.r.t. active variables).
  *
@@ -9227,7 +9227,7 @@
   */
 
  /**@defgroup PUBLICAPI Public API of SCIP
-  * @brief methods and headers of the public C-API of \SCIP.  Please refer to \ref DOC "" for information how to use the reference manual.
+  * @brief functions and headers of the public C-API of \SCIP.  Please refer to \ref DOC "" for information how to use the reference manual.
   *
   * \PUBLICAPIDESCRIPTION
   *
@@ -9236,9 +9236,9 @@
 
 /**@defgroup PUBLICCOREAPI Core API
  * @ingroup PUBLICAPI
- * @brief methods and headers of the plugin-independent C-API provided by the \SCIP header file scip.h.
+ * @brief functions and headers of the plugin-independent C-API provided by the \SCIP header file scip.h.
  *
- * This module comprises methods provided by the header file scip.h. Including this header into a user-written extension
+ * This module comprises functions provided by the header file scip.h. Including this header into a user-written extension
  * suffices to have all plugin-independent functionality of \SCIP available. Plugin-independent
  * user functionality includes the
  *
@@ -9256,63 +9256,63 @@
  * @ingroup PUBLICCOREAPI
  * @brief type definitions and callback declarations
  *
- * This page lists headers which contain type definitions of callback methods.
+ * This page lists headers which contain type definitions of callbacks.
  *
- * All headers below include the descriptions of callback methods of
+ * All headers below include the descriptions of callbacks of
  * certain plugins. For more detail see the corresponding header.
  */
 
 /**@defgroup PublicProblemMethods Problem Creation
  * @ingroup PUBLICCOREAPI
- * @brief methods to create a problem that \SCIP should solve
+ * @brief functions to create a problem that \SCIP should solve
  *
- * This module summarizes the main methods needed to create a problem for \SCIP, and access its most important members:
+ * This module summarizes the main functions needed to create a problem for \SCIP, and access its most important members:
  * - Declaring, adding, accessing, and changing variables of the problem
  * - Declaring, adding, accessing, and changing constraints of the problem
  * - Creating, adding, accessing, changing, and checking of solutions to the problem
  *
- * @note These core methods are not sufficient to create constraints of a certain type that is provided by the default plugins of \SCIP.
- *  An example would be the creation of a linear constraint for which the methods provided by the
- *  \ref cons_linear.h "linear constraint handler" must be used. Such methods are provided by the default plugins of \SCIP
+ * @note These core functions are not sufficient to create constraints of a certain type that is provided by the default plugins of \SCIP.
+ *  An example would be the creation of a linear constraint for which the functions provided by the
+ *  \ref cons_linear.h "linear constraint handler" must be used. Such functions are provided by the default plugins of \SCIP
  *  and can be found in the \ref PUBLICPLUGINAPI.
  */
 
 /**@defgroup GeneralSCIPMethods SCIP
  * @ingroup PublicProblemMethods
- * @brief methods to manipulate a SCIP object
+ * @brief functions to manipulate a SCIP object
  */
 
 /**@defgroup GlobalProblemMethods Global Problem
  * @ingroup PublicProblemMethods
- * @brief methods to create, read and modify a global problem together with its callbacks
+ * @brief functions to create, read and modify a global problem together with its callbacks
  */
 
 /**@defgroup PublicVariableMethods Problem Variables
  * @ingroup PublicProblemMethods
- * @brief public methods for problem variables
+ * @brief public functions for problem variables
  */
 
 /**@defgroup PublicConstraintMethods Problem Constraints
  * @ingroup PublicProblemMethods
- * @brief Public methods for constraints
+ * @brief Public functions for constraints
  */
 
 /**@defgroup PublicSolutionMethods Primal Solution
  * @ingroup PublicProblemMethods
- * @brief  methods to create and change primal solutions of \SCIP
+ * @brief  functions to create and change primal solutions of \SCIP
  */
 
 /**@defgroup CopyMethods Problem Copies
  * @ingroup PublicProblemMethods
- * @brief methods to copy problems between a source and a target \SCIP
+ * @brief functions to copy problems between a source and a target \SCIP
  */
 
 
  /**@defgroup PublicSolveMethods Solving Process
  * @ingroup PUBLICCOREAPI
- * @brief  methods to control the solving process of \SCIP
+ * @brief  functions to control the solving process of \SCIP
  *
- * This large group of methods and modules comprises the solving process related API of \SCIP. This includes
+ * This large group of functions and modules comprises the solving process related API of \SCIP. This includes
  *
  * -# changing parameters to control the solver behavior
  * -# access search tree related information
@@ -9323,17 +9323,17 @@
 
 /**@defgroup PublicSolvingStatsMethods Solving Statistics
  * @ingroup PublicSolveMethods
- * @brief methods to query statistics about the solving process
+ * @brief functions to query statistics about the solving process
  */
 
 /**@defgroup ParameterMethods Parameter
  * @ingroup PublicSolveMethods
- * @brief methods to create, query, and print user parameters
+ * @brief functions to create, query, and print user parameters
  */
 
 /**@defgroup PublicEventMethods Event Handling
  * @ingroup PublicSolveMethods
- * @brief  methods to create, catch, process, and drop events during the solving process of \SCIP
+ * @brief  functions to create, catch, process, and drop events during the solving process of \SCIP
  *
  * Events can only be caught during the operation on the transformed problem.
  * Events on variables can only be caught for transformed variables.
@@ -9343,96 +9343,96 @@
 
 /**@defgroup PublicLPMethods LP Relaxation
  * @ingroup PublicSolveMethods
- * @brief methods to build and access LP relaxation information
- * @see methods to interact with \ref PublicColumnMethods "LP columns" and \ref PublicRowMethods "LP rows"
+ * @brief functions to build and access LP relaxation information
+ * @see functions to interact with \ref PublicColumnMethods "LP columns" and \ref PublicRowMethods "LP rows"
  */
 
 /**@defgroup PublicColumnMethods LP Column
  * @ingroup PublicLPMethods
- * @brief public methods for LP columns
+ * @brief public functions for LP columns
  */
 
 /**@defgroup PublicRowMethods LP Row
  * @ingroup PublicLPMethods
- * @brief public methods for LP rows
+ * @brief public functions for LP rows
  */
 
 /**@defgroup PublicCutMethods Cuts and Cutpools
  * @ingroup PublicLPMethods
- * @brief common methods used to manipulate, generate, and strengthen cuts and to organize the cutpool
+ * @brief common functions used to manipulate, generate, and strengthen cuts and to organize the cutpool
  */
 
 /**@defgroup PublicLPDivingMethods LP Diving
  * @ingroup PublicLPMethods
- * @brief methods to initiate and conduct LP diving
+ * @brief functions to initiate and conduct LP diving
  */
 
 /**@defgroup PublicLPExactMethods Exact LP Relaxation
  * @ingroup PublicSolveMethods
- * @brief methods to manage exact LP relaxation
+ * @brief functions to manage exact LP relaxation
  */
 
 /**@defgroup PublicExactMethods Exact Solving Mode
  * @ingroup PublicSolveMethods
- * @brief general methods for numerically exact solving
+ * @brief general functions for numerically exact solving
  */
 
 /**@defgroup PublicCertificateMethods Certificate Output
  * @ingroup PublicSolveMethods
- * @brief methods for certified solving
+ * @brief functions for certified solving
  */
 
 /**@defgroup PublicNLPMethods NLP Relaxation
  * @ingroup PublicSolveMethods
- * @brief methods for the nonlinear relaxation
+ * @brief functions for the nonlinear relaxation
  */
 
 /**@defgroup PublicNLRowMethods Nonlinear Rows
  * @ingroup PublicNLPMethods
- * @brief methods for the creation and interaction with rows of the NLP relaxation
+ * @brief functions for the creation and interaction with rows of the NLP relaxation
  */
 
 /**@defgroup PublicNLPDiveMethods NLP Diving
  * @ingroup PublicNLPMethods
- * @brief methods to initiate and conduct NLP Diving
+ * @brief functions to initiate and conduct NLP Diving
  */
 
 /**@defgroup PublicConflictMethods Conflict Analysis
  * @ingroup PublicSolveMethods
- * @brief public methods for conflict analysis
+ * @brief public functions for conflict analysis
  */
 
 /**@defgroup PublicBranchingMethods Branching
  * @ingroup PublicSolveMethods
- * @brief methods for branching on LP solutions, relaxation solutions, and pseudo solutions
+ * @brief functions for branching on LP solutions, relaxation solutions, and pseudo solutions
  *
- * @see \ref PublicVariableMethods "Public Variable methods" contains some typical variable branching score functions
+ * @see \ref PublicVariableMethods "Public Variable functions" contains some typical variable branching score functions
  */
 
 /**@defgroup LocalSubproblemMethods Local Subproblem
  * @ingroup PublicSolveMethods
- * @brief methods to query information about or strengthen the problem at the current local search node
+ * @brief functions to query information about or strengthen the problem at the current local search node
  */
 
 /**@defgroup PublicTreeMethods Search Tree
  * @ingroup PublicSolveMethods
- * @brief  methods to query search tree related information
- * @see \ref PublicNodeMethods "Public methods for nodes"
+ * @brief  functions to query search tree related information
+ * @see \ref PublicNodeMethods "Public functions for nodes"
  */
 
 /**@defgroup PublicNodeMethods Nodes
  * @ingroup PublicTreeMethods
- * @brief  methods for nodes of the search tree of \SCIP
+ * @brief  functions for nodes of the search tree of \SCIP
  */
 
 /**@defgroup PublicProbingMethods Probing
  * @ingroup PublicSolveMethods
- * @brief methods to initiate and control the probing mode of \SCIP
+ * @brief functions to initiate and control the probing mode of \SCIP
  */
 
 /**@defgroup PublicReoptimizationMethods Reoptimization
  * @ingroup PublicSolveMethods
- * @brief methods for reoptimization related tasks
+ * @brief functions for reoptimization related tasks
  */
 
 /** @defgroup DataStructures Data Structures
@@ -9452,7 +9452,7 @@
 
 /**@defgroup PublicDynamicArrayMethods Dynamic Arrays
  * @ingroup DataStructures
- * @brief methods for the creation and access of dynamic arrays
+ * @brief functions for the creation and access of dynamic arrays
  */
 
 /**@defgroup DirectedGraph Directed Graph
@@ -9462,17 +9462,17 @@
 
 /**@defgroup PublicDatatreeMethods Data Tree
  * @ingroup DataStructures
- * @brief methods for managing data trees
+ * @brief functions for managing data trees
  */
 
 /**@defgroup DecompMethods Decomposition data structure
  * @ingroup DataStructures
- * @brief methods for creating and accessing user decompositions
+ * @brief functions for creating and accessing user decompositions
  */
 
 /**@defgroup NetworkMatrix Network Matrix
  * @ingroup DataStructures
- * @brief methods for detecting network matrices and converting them to the underlying graphs
+ * @brief functions for detecting network matrices and converting them to the underlying graphs
  */
 
 /**@defgroup PublicRationalMethods Rational Arithmetic
@@ -9482,191 +9482,191 @@
 
 /**@defgroup SymGraph Symmetry Detection Graph
  * @ingroup DataStructures
- * @brief methods for creating and manipulating symmetry detection graphs
+ * @brief functions for creating and manipulating symmetry detection graphs
  *
  * Below you find a list of functions to create and manipulate symmetry detection graphs.
  */
 
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
  * @ingroup PUBLICCOREAPI
- * @brief commonly used methods from different categories
+ * @brief commonly used functions from different categories
  *
- * Below you find a list of miscellaneous methods grouped by different categories
+ * Below you find a list of miscellaneous functions grouped by different categories.
  */
 
 /**@defgroup PublicValidationMethods Validation
  * @ingroup PUBLICCOREAPI
- * @brief  methods for validating the correctness of a solving process
+ * @brief  functions for validating the correctness of a solving process
  */
 
 /**@defgroup PublicMemoryMethods Memory Management
  * @ingroup MiscellaneousMethods
- * @brief  methods and macros to use the \SCIP memory management
+ * @brief  functions and macros to use the \SCIP memory management
  *
  * @see \ref MEMORY  "Using the memory functions of SCIP" for more information
  */
 
 /**@defgroup PublicTimingMethods Timing
  * @ingroup MiscellaneousMethods
- * @brief  methods for timing
+ * @brief  functions for timing
  */
 
 /**@defgroup PublicBanditMethods Bandit Algorithms
  * @ingroup MiscellaneousMethods
- * @brief  methods for bandit algorithms
+ * @brief  functions for bandit algorithms
  */
 
 
 
 /**@defgroup DebugSolutionMethods Debug Solution
  * @ingroup PUBLICCOREAPI
- * @brief methods to control the SCIP debug solution mechanism, see also \ref DEBUG
+ * @brief functions to control the SCIP debug solution mechanism, see also \ref DEBUG
  */
 
 /**@defgroup MessageOutputMethods Messaging
  * @ingroup PUBLICCOREAPI
- * @brief message output methods
+ * @brief message output functions
  */
 
 /**@defgroup PluginManagementMethods Methods for managing plugins
  * @ingroup PUBLICCOREAPI
- * @brief Methods for the inclusion and management of SCIP plugins and callback functions
+ * @brief Functions for the inclusion and management of SCIP plugins and callbacks
  *
  */
 
 /**@defgroup PublicBendersMethods Benders' decomposition
  * @ingroup PluginManagementMethods
- * @brief  methods for Benders' decomposition plugins
+ * @brief  functions for Benders' decomposition plugins
  */
 
 /**@defgroup PublicBenderscutsMethods Benders' decomposition cuts
  * @ingroup PluginManagementMethods
- * @brief  methods for Benders' decomposition cuts plugins
+ * @brief  functions for Benders' decomposition cuts plugins
  */
 
 /**@defgroup PublicBranchRuleMethods Branching Rules
  * @ingroup PluginManagementMethods
- * @brief  methods for branching rule plugins
+ * @brief  functions for branching rule plugins
  */
 
 /**@defgroup PublicCompressionMethods Tree Compression
  * @ingroup PluginManagementMethods
- * @brief  public methods for tree compressions
+ * @brief  public functions for tree compressions
  */
 
 /**@defgroup PublicConflicthdlrMethods Conflict Analysis
  * @ingroup PluginManagementMethods
- * @brief public methods for conflict handlers
+ * @brief public functions for conflict handlers
  */
 
 /**@defgroup PublicConshdlrMethods Constraint handlers
  * @ingroup PluginManagementMethods
- * @brief methods for constraint handlers
+ * @brief functions for constraint handlers
  */
 
 /**@defgroup PublicCutSelectorMethods Cut Selector
  * @ingroup PluginManagementMethods
- * @brief methods for cut selectors
+ * @brief functions for cut selectors
  */
 
 /**@defgroup PublicDialogMethods Dialogs
  * @ingroup PluginManagementMethods
- * @brief public methods for user interface dialogs
+ * @brief public functions for user interface dialogs
  */
 
 /**@defgroup PublicDisplayMethods Displays
  * @ingroup PluginManagementMethods
- * @brief  methods for the inclusion and access of display plugins
+ * @brief  functions for the inclusion and access of display plugins
  */
 
 /**@defgroup PublicEventHandlerMethods Event Handler
  * @ingroup PluginManagementMethods
- * @brief  methods for event handlers
+ * @brief  functions for event handlers
  */
 
 /**@defgroup PublicExprHandlerMethods Expression Handler
  * @ingroup PluginManagementMethods
- * @brief  methods for expression handlers
+ * @brief  functions for expression handlers
  */
 
 /**@defgroup PublicHeuristicMethods Primal Heuristics
  * @ingroup PluginManagementMethods
- * @brief  methods for primal heuristic plugins
+ * @brief  functions for primal heuristic plugins
  */
 
 /**@defgroup PublicDivesetMethods Dive sets
  * @ingroup PublicSpecialHeuristicMethods
- * @brief methods for dive sets to control the generic diving algorithm
+ * @brief functions for dive sets to control the generic diving algorithm
  */
 
 /**@defgroup PublicIISfinderMethods IIS Finders
  * @ingroup PluginManagementMethods
- * @brief  methods for irreducible infeasible subsystems (IIS) finders
+ * @brief  functions for irreducible infeasible subsystems (IIS) finders
  */
 
 /**@defgroup PublicNodeSelectorMethods Node Selector
  * @ingroup PluginManagementMethods
- * @brief  methods for node selector plugin management
+ * @brief  functions for node selector plugin management
  */
 
 /**@defgroup PublicNlhdlrInterfaceMethods Nonlinear Handlers
  * @ingroup PluginManagementMethods
- * @brief  methods for the management of nonlinear handlers
+ * @brief  functions for the management of nonlinear handlers
  */
 
 /**@defgroup PublicPresolverMethods Presolver
  * @ingroup PluginManagementMethods
- * @brief methods for presolver plugins
+ * @brief functions for presolver plugins
  */
 
 /**@defgroup PublicPricerMethods Pricer
  * @ingroup PluginManagementMethods
- * @brief  methods to include and access pricer plugins of \SCIP
+ * @brief  functions to include and access pricer plugins of \SCIP
  */
 
 /**@defgroup PublicPropagatorMethods Propagators
  * @ingroup PluginManagementMethods
- * @brief  methods for propagator plugins
+ * @brief  functions for propagator plugins
  */
 
 /**@defgroup PublicReaderMethods Reader
  * @ingroup PluginManagementMethods
- * @brief methods for the inclusion and access to reader plugins of \SCIP
+ * @brief functions for the inclusion and access to reader plugins of \SCIP
  */
 
 /**@defgroup PublicRelaxatorMethods Relaxation Handlers
  * @ingroup PluginManagementMethods
- * @brief public methods for relaxation handlers
+ * @brief public functions for relaxation handlers
  */
 
 /**@defgroup PublicSeparatorMethods Separators
  * @ingroup PluginManagementMethods
- * @brief methods for separator plugins
+ * @brief functions for separator plugins
  */
 
 /**@defgroup PublicTableMethods Tables
  * @ingroup PluginManagementMethods
- * @brief  methods for the inclusion and access of statistics tables
+ * @brief  functions for the inclusion and access of statistics tables
  */
 
 /**@defgroup PublicConcsolverTypeMethods Concurrent Solver Types
  * @ingroup PluginManagementMethods
- * @brief methods for concurrent solver type plugins
+ * @brief functions for concurrent solver type plugins
  */
 
 /**@defgroup PublicNLPIInterfaceMethods NLP solver interfaces
  * @ingroup PluginManagementMethods
- * @brief  methods for the management of NLP solver interfaces
+ * @brief  functions for the management of NLP solver interfaces
  */
 
 /**@defgroup PublicExternalCodeMethods External Codes
  * @ingroup PluginManagementMethods
- * @brief methods to access information about external codes used by \SCIP
+ * @brief functions to access information about external codes used by \SCIP
  */
 
 /**@defgroup PublicParallelMethods Parallel Interface
  * @ingroup PUBLICCOREAPI
- * @brief methods to construct the parallel interface of \SCIP
+ * @brief functions to construct the parallel interface of \SCIP
  */
 
  /**@defgroup PUBLICPLUGINAPI Plugin API of SCIP
@@ -9674,7 +9674,7 @@
   * @brief core API extensions provided by the default plugins of \SCIP, includable via scipdefplugins.h.
   *
   * All default plugins of \SCIP, especially the default \ref CONSHDLRS "constraint handlers", provide
-  * valuable extensions to the \ref PUBLICCOREAPI "core API" of \SCIP. These methods are made available
+  * valuable extensions to the \ref PUBLICCOREAPI "core API" of \SCIP. These functions are made available
   * by including scipdefplugins.h to user-written extensions.
   *
   * For a better overview, this page lists all default plugin headers structured into modules based on their individual
@@ -9683,9 +9683,9 @@
   * All of the modules listed below provide functions that are allowed to be used by user-written extensions of \SCIP.
   */
  /**@defgroup INTERNALAPI Internal API of SCIP
-  * @brief internal API methods that should only be used by the core of \SCIP
+  * @brief internal API functions that should only be used by the core of \SCIP
   *
-  * This page lists the header files of internal API methods. In contrast to the public API, these internal methods
+  * This page lists the header files of internal API functions. In contrast to the public API, these internal functions
   * should not be used by user plugins and extensions of SCIP. Please consult
   * \ref PUBLICCOREAPI "the Core API" and \ref PUBLICPLUGINAPI "Plugin API" for the complete API available to user plugins.
   *
@@ -9693,38 +9693,38 @@
 
 /**@defgroup BENDERS Benders' decomposition implementations
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default Benders' decomposition implementations of \SCIP
+ * @brief functions and files provided by the default Benders' decomposition implementations of \SCIP
  *
  * A detailed description what a Benders' decomposition implementation does and how to add a Benders' decomposition
  * implementations to SCIP can be found
  * \ref BENDER "here".
  */
 
-/**@defgroup BendersIncludes Inclusion methods
+/**@defgroup BendersIncludes Inclusion functions
  * @ingroup BENDERS
- * @brief methods to include specific Benders' decomposition implementations into \SCIP
+ * @brief functions to include specific Benders' decomposition implementations into \SCIP
  *
- * This module contains methods to include specific Benders' decomposition implementations into \SCIP.
+ * This module contains functions to include specific Benders' decomposition implementations into \SCIP.
  *
  * @note All default plugins can be included at once (including all Benders' decomposition implementations) using
  * SCIPincludeDefaultPlugins()
  *
  */
 
-/**@defgroup BENDERSCUTS Benders' decomposition cut method
+/**@defgroup BENDERSCUTS Benders' decomposition cut function
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default Benders' decomposition cut method of \SCIP
+ * @brief functions and files provided by the default Benders' decomposition cut method of \SCIP
  *
  * A detailed description what a Benders' decomposition cut method does and how to add a Benders' decomposition
  * cut method to SCIP can be found
  * \ref BENDERSCUT "here".
  */
 
-/**@defgroup BenderscutIncludes Inclusion methods
+/**@defgroup BenderscutIncludes Inclusion functions
  * @ingroup BENDERSCUTS
- * @brief methods to include specific Benders' decomposition cut methods into \SCIP
+ * @brief functions to include specific Benders' decomposition cut methods into \SCIP
  *
- * This module contains methods to include specific Benders' decomposition cut methods into \SCIP.
+ * This module contains functions to include specific Benders' decomposition cut methods into \SCIP.
  *
  * @note The Benders' decomposition cut methods are linked to each Benders' decomposition implementation. Thus, the
  * default Benders' decomposition implementations automatically include the necessary Benders' decomposition cut
@@ -9735,17 +9735,17 @@
 
 /**@defgroup BRANCHINGRULES Branching Rules
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default branching rules of \SCIP
+ * @brief functions and files provided by the default branching rules of \SCIP
  *
  * A detailed description what a branching rule does and how to add a branching rule to SCIP can be found
  * \ref BRANCH "here".
  */
 
-/**@defgroup BranchingRuleIncludes Inclusion methods
+/**@defgroup BranchingRuleIncludes Inclusion functions
  * @ingroup BRANCHINGRULES
- * @brief methods to include specific branching rules into \SCIP
+ * @brief functions to include specific branching rules into \SCIP
  *
- * This module contains methods to include specific branching rules into \SCIP.
+ * This module contains functions to include specific branching rules into \SCIP.
  *
  * @note All default plugins can be included at once (including all branching rules) using SCIPincludeDefaultPlugins()
  *
@@ -9753,17 +9753,17 @@
 
 /**@defgroup CONSHDLRS  Constraint Handlers
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default constraint handlers of \SCIP
+ * @brief functions and files provided by the default constraint handlers of \SCIP
  *
  * A detailed description what a constraint handler does and how to add a constraint handler to SCIP can be found
  * \ref CONS "here".
  */
 
-/**@defgroup ConshdlrIncludes Inclusion methods
+/**@defgroup ConshdlrIncludes Inclusion functions
  * @ingroup CONSHDLRS
- * @brief methods to include specific constraint handlers into \SCIP
+ * @brief functions to include specific constraint handlers into \SCIP
  *
- * This module contains methods to include specific constraint handlers into \SCIP.
+ * This module contains functions to include specific constraint handlers into \SCIP.
  *
  * @note All default plugins can be included at once (including all default constraint handlers) using SCIPincludeDefaultPlugins()
  *
@@ -9771,17 +9771,17 @@
 
 /**@defgroup CUTSELECTORS Cut Selectors
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default cut selectors of \SCIP
+ * @brief functions and files provided by the default cut selectors of \SCIP
  *
  * A detailed description what a cut selector does and how to add a cut selector to SCIP can be found
  * \ref CUTSEL "here".
  */
 
-/**@defgroup CutSelectorIncludes Inclusion methods
+/**@defgroup CutSelectorIncludes Inclusion functions
  * @ingroup CUTSELECTORS
- * @brief methods to include specific cut selectors into \SCIP
+ * @brief functions to include specific cut selectors into \SCIP
  *
- * This module contains methods to include specific cut selectors into \SCIP.
+ * This module contains functions to include specific cut selectors into \SCIP.
  *
  * @note All default plugins can be included at once (including all default cut selectors) using SCIPincludeDefaultPlugins()
  *
@@ -9789,17 +9789,17 @@
 
 /**@defgroup DIALOGS Dialogs
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default dialogs of \SCIP
+ * @brief functions and files provided by the default dialogs of \SCIP
  *
  * A detailed description what a dialog does and how to add a dialog to SCIP can be found
  * \ref DIALOG "here".
  */
 
-/**@defgroup DialogIncludes Inclusion methods
+/**@defgroup DialogIncludes Inclusion functions
  * @ingroup DIALOGS
- * @brief methods to include specific dialogs into \SCIP
+ * @brief functions to include specific dialogs into \SCIP
  *
- * This module contains methods to include specific dialogs into \SCIP.
+ * This module contains functions to include specific dialogs into \SCIP.
  *
  * @note All default plugins can be included at once (including all default dialogs) using SCIPincludeDefaultPlugins()
  *
@@ -9807,18 +9807,18 @@
 
 /**@defgroup DISPLAYS Displays
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default displays (output columns)  of \SCIP
+ * @brief functions and files provided by the default displays (output columns)  of \SCIP
  *
  * A detailed description what a display does and how to add a display to SCIP can be found
  * \ref DISP "here".
  *
  */
 
-/**@defgroup DisplayIncludes Inclusion methods
+/**@defgroup DisplayIncludes Inclusion functions
  * @ingroup DISPLAYS
- * @brief methods to include specific displays into \SCIP
+ * @brief functions to include specific displays into \SCIP
  *
- * This module contains methods to include specific displays into \SCIP.
+ * This module contains functions to include specific displays into \SCIP.
  *
  * @note All default plugins can be included at once (including all default displays) using SCIPincludeDefaultPlugins()
  *
@@ -9826,14 +9826,14 @@
 
 /**@defgroup EXPRHDLRS  Expression Handlers
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default expressions handlers of \SCIP
+ * @brief functions and files provided by the default expressions handlers of \SCIP
  */
 
-/**@defgroup ExprhdlrIncludes Inclusion methods
+/**@defgroup ExprhdlrIncludes Inclusion functions
  * @ingroup EXPRHDLRS
- * @brief methods to include specific expression handlers into \SCIP
+ * @brief functions to include specific expression handlers into \SCIP
  *
- * This module contains methods to include specific expression handlers into \SCIP.
+ * This module contains functions to include specific expression handlers into \SCIP.
  *
  * @note All default plugins can be included at once (including all default expression handlers) using SCIPincludeDefaultPlugins()
  *
@@ -9841,7 +9841,7 @@
 
 /**@defgroup EXPRINTS Expression Interpreter
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default expression interpreters of \SCIP
+ * @brief functions and files provided by the default expression interpreters of \SCIP
  *
  * A detailed description what a expression interpreter does and how to add a expression interpreter to SCIP can be found
  * \ref EXPRINT "here".
@@ -9881,52 +9881,52 @@
  *
  */
 
-/**@defgroup FileReaderIncludes Inclusion methods
+/**@defgroup FileReaderIncludes Inclusion functions
  * @ingroup FILEREADERS
- * @brief methods to include specific file readers into \SCIP
+ * @brief functions to include specific file readers into \SCIP
  *
- * This module contains methods to include specific file readers into \SCIP.
+ * This module contains functions to include specific file readers into \SCIP.
  *
  * @note All default plugins can be included at once (including all default file readers) using SCIPincludeDefaultPlugins()
  */
 
 /**@defgroup IISFINDERS IIS Finders
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default IIS finders of \SCIP
+ * @brief functions and files provided by the default IIS finders of \SCIP
  *
  * A detailed description what an IIS finder does and how to add a IIS finder to SCIP can be found \ref IISFINDER "here".
  */
 
-/**@defgroup IISfinderIncludes Inclusion methods
+/**@defgroup IISfinderIncludes Inclusion functions
  * @ingroup IISFINDERS
- * @brief methods to include specific IIS finders into \SCIP
+ * @brief functions to include specific IIS finders into \SCIP
  *
- * This module contains methods to include specific IIS finders into \SCIP.
+ * This module contains functions to include specific IIS finders into \SCIP.
  *
  * @note All default plugins can be included at once (including all default file readers) using SCIPincludeDefaultPlugins()
  */
 
-/**@defgroup PARALLEL Parallel interface methods
+/**@defgroup PARALLEL Parallel interface functions
  * @ingroup INTERNALAPI
- * @brief headers and methods for the parallel interface of \SCIP
+ * @brief headers and functions for the parallel interface of \SCIP
  *
  */
 
-/**@defgroup TASKINTERFACE Parallel task interface methods
+/**@defgroup TASKINTERFACE Parallel task interface functions
  * @ingroup INTERNALAPI
- * @brief headers and methods for the parallel task interface of \SCIP
+ * @brief headers and functions for the parallel task interface of \SCIP
  */
 
 /**@defgroup PublicSymmetryMethods Symmetry
  * @ingroup PUBLICCOREAPI
- * @brief methods for symmetry handling
+ * @brief functions for symmetry handling
  */
 
-/**@defgroup FileReaderIncludes Inclusion methods
+/**@defgroup FileReaderIncludes Inclusion functions
  * @ingroup FILEREADERS
- * @brief methods to include specific file readers into \SCIP
+ * @brief functions to include specific file readers into \SCIP
  *
- * This module contains methods to include specific file readers into \SCIP.
+ * This module contains functions to include specific file readers into \SCIP.
  *
  * @note All default plugins can be included at once (including all default file readers) using SCIPincludeDefaultPlugins()
  *
@@ -9934,12 +9934,12 @@
 
 /**@defgroup LPIS LP Solver Interface
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the LP solver interface of \SCIP
+ * @brief functions and files provided by the LP solver interface of \SCIP
  *
  * \SCIP uses external tools to solve LP relaxations. The communication
  * is realized through an LP interface.
  *
- * This page lists public interface methods that every LP interface provides.
+ * This page lists public interface functions that every LP interface provides.
  * Find the concrete implementation for your LP solver
  * under "src/lpi/".
  *
@@ -9948,12 +9948,12 @@
 
 /**@defgroup LPIEXACTS Exact LP Solver Interface
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the exact LP solver interface of \SCIP
+ * @brief functions and files provided by the exact LP solver interface of \SCIP
  *
  * For the numerically exact solving mode, \SCIP also uses exact LP solvers.  The communication
  * is realized through an exact LP interface.
  *
- * This page lists public interface methods that every exact LP interface provides.
+ * This page lists public interface functions that every exact LP interface provides.
  * Find the concrete implementation for your exact LP solver
  * under "src/lpiexact/".
  *
@@ -9962,17 +9962,17 @@
 
 /**@defgroup NODESELECTORS Node Selectors
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default node selectors of \SCIP
+ * @brief functions and files provided by the default node selectors of \SCIP
  *
  * A detailed description what a node selector does and how to add a node selector to SCIP can be found
  * \ref NODESEL "here".
  */
 
-/**@defgroup NodeSelectorIncludes Inclusion methods
+/**@defgroup NodeSelectorIncludes Inclusion functions
  * @ingroup NODESELECTORS
- * @brief methods to include specific node selectors into \SCIP
+ * @brief functions to include specific node selectors into \SCIP
  *
- * This module contains methods to include specific node selectors into \SCIP.
+ * This module contains functions to include specific node selectors into \SCIP.
  *
  * @note All default plugins can be included at once (including all default node selectors) using SCIPincludeDefaultPlugins()
  *
@@ -9980,14 +9980,14 @@
 
 /**@defgroup NLHDLRS  Nonlinear Handlers
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default nonlinear handlers of \SCIP
+ * @brief functions and files provided by the default nonlinear handlers of \SCIP
  */
 
-/**@defgroup NlhdlrIncludes Inclusion methods
+/**@defgroup NlhdlrIncludes Inclusion functions
  * @ingroup NLHDLRS
- * @brief methods to include specific nonlinear handlers into \SCIP
+ * @brief functions to include specific nonlinear handlers into \SCIP
  *
- * This module contains methods to include specific nonlinear handlers into \SCIP.
+ * This module contains functions to include specific nonlinear handlers into \SCIP.
  *
  * @note All default plugins can be included at once (including all default nonlinear handlers) using SCIPincludeDefaultPlugins()
  *
@@ -9995,17 +9995,17 @@
 
 /**@defgroup NLPIS NLP Solver Interfaces
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default NLP solver interfaces of \SCIP
+ * @brief functions and files provided by the default NLP solver interfaces of \SCIP
  *
  * A detailed description what a NLP solver interface does and how to add a NLP solver interface to SCIP can be found
  * \ref NLPI "here".
  */
 
-/**@defgroup NLPIIncludes Inclusion methods
+/**@defgroup NLPIIncludes Inclusion functions
  * @ingroup NLPIS
- * @brief methods to include specific NLP solver interfaces into \SCIP
+ * @brief functions to include specific NLP solver interfaces into \SCIP
  *
- * This module contains methods to include specific NLP solver interfaces into \SCIP.
+ * This module contains functions to include specific NLP solver interfaces into \SCIP.
  *
  * @note All default plugins can be included at once (including all default NLP solver interfaces) using SCIPincludeDefaultPlugins()
  *
@@ -10013,17 +10013,17 @@
 
 /**@defgroup PRESOLVERS Presolvers
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default presolvers of \SCIP
+ * @brief functions and files provided by the default presolvers of \SCIP
  *
  * A detailed description what a presolver does and how to add a presolver to SCIP can be found
  * \ref PRESOL "here".
  */
 
-/**@defgroup PresolverIncludes Inclusion methods
+/**@defgroup PresolverIncludes Inclusion functions
  * @ingroup PRESOLVERS
- * @brief methods to include specific presolvers into \SCIP
+ * @brief functions to include specific presolvers into \SCIP
  *
- * This module contains methods to include specific presolvers into \SCIP.
+ * This module contains functions to include specific presolvers into \SCIP.
  *
  * @note All default plugins can be included at once (including all default presolvers) using SCIPincludeDefaultPlugins()
  *
@@ -10031,17 +10031,17 @@
 
 /**@defgroup PRICERS Pricers
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default pricers of \SCIP
+ * @brief functions and files provided by the default pricers of \SCIP
  *
  * Per default there exist no variable pricer. A detailed description what a variable pricer does and how to add a
  * variable pricer to SCIP can be found \ref PRICER "here".
  */
 
-/**@defgroup PricerIncludes Inclusion methods
+/**@defgroup PricerIncludes Inclusion functions
 * @ingroup PRICERS
-* @brief methods to include specific pricers into \SCIP
+* @brief functions to include specific pricers into \SCIP
 *
-* This module contains methods to include specific pricers into \SCIP.
+* This module contains functions to include specific pricers into \SCIP.
 *
 * @note All default plugins can be included at once using SCIPincludeDefaultPlugins(). There exists no pricer per default.
 *       In order to see examples of variable pricers, please consult the \ref EXAMPLES "Coding Examples" of \SCIP.
@@ -10050,17 +10050,17 @@
 
 /**@defgroup PRIMALHEURISTICS Primal Heuristics
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default primal heuristics of \SCIP
+ * @brief functions and files provided by the default primal heuristics of \SCIP
  *
  * A detailed description what a primal heuristic does and how to add a primal heuristic to SCIP can be found
  * \ref HEUR "here".
  */
 
-/**@defgroup PrimalHeuristicIncludes Inclusion methods
+/**@defgroup PrimalHeuristicIncludes Inclusion functions
  * @ingroup PRIMALHEURISTICS
- * @brief methods to include specific primal heuristics into \SCIP
+ * @brief functions to include specific primal heuristics into \SCIP
  *
- * This module contains methods to include specific primal heuristics into \SCIP.
+ * This module contains functions to include specific primal heuristics into \SCIP.
  *
  * @note All default plugins can be included at once (including all default primal heuristics) using SCIPincludeDefaultPlugins()
  *
@@ -10068,17 +10068,17 @@
 
 /**@defgroup PROPAGATORS Propagators
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default propagators of \SCIP
+ * @brief functions and files provided by the default propagators of \SCIP
  *
  * A detailed description what a propagator does and how to add a propagator to SCIP can be found
  * \ref PROP "here".
  */
 
-/**@defgroup PropagatorIncludes Inclusion methods
+/**@defgroup PropagatorIncludes Inclusion functions
  * @ingroup PROPAGATORS
- * @brief methods to include specific propagators into \SCIP
+ * @brief functions to include specific propagators into \SCIP
  *
- * This module contains methods to include specific propagators into \SCIP.
+ * This module contains functions to include specific propagators into \SCIP.
  *
  * @note All default plugins can be included at once (including all default propagators) using SCIPincludeDefaultPlugins()
  *
@@ -10086,7 +10086,7 @@
 
 /**@defgroup RELAXATORS Relaxation Handlers
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default relaxation handlers of \SCIP
+ * @brief functions and files provided by the default relaxation handlers of \SCIP
  *
  * A detailed description what a relaxation handler does and how to add a relaxation handler to SCIP can be found
  * \ref RELAX "here". Note that the linear programming relaxation is not implemented via the relaxation handler plugin.
@@ -10096,17 +10096,17 @@
 
 /**@defgroup SEPARATORS Separators
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default separators  of \SCIP
+ * @brief functions and files provided by the default separators  of \SCIP
  *
  * A detailed description what a separator does and how to add a separator to SCIP can be found
  * \ref SEPA "here".
  */
 
-/**@defgroup SeparatorIncludes Inclusion methods
+/**@defgroup SeparatorIncludes Inclusion functions
  * @ingroup SEPARATORS
- * @brief methods to include specific separators into \SCIP
+ * @brief functions to include specific separators into \SCIP
  *
- * This module contains methods to include specific separators into \SCIP.
+ * This module contains functions to include specific separators into \SCIP.
  *
  * @note All default plugins can be included at once (including all default separators) using SCIPincludeDefaultPlugins()
  *
@@ -10114,18 +10114,18 @@
 
 /**@defgroup TABLES Tables
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default statistics tables of \SCIP
+ * @brief functions and files provided by the default statistics tables of \SCIP
  *
  * A detailed description what a table does and how to add a table to SCIP can be found
  * \ref TABLE "here".
  *
  */
 
-/**@defgroup TableIncludes Inclusion methods
+/**@defgroup TableIncludes Inclusion functions
  * @ingroup TABLES
- * @brief methods to include specific tables into \SCIP
+ * @brief functions to include specific tables into \SCIP
  *
- * This module contains methods to include specific statistics tables into \SCIP.
+ * This module contains functions to include specific statistics tables into \SCIP.
  *
  * @note All default plugins can be included at once (including all default statisticstables) using SCIPincludeDefaultPlugins()
  *
@@ -10133,11 +10133,11 @@
 
 /**@defgroup PublicToleranceMethods Computations With Tolerances
  * @ingroup NumericalMethods
- * @brief  methods used by the majority of operations involving floating-point computations in \SCIP
+ * @brief  functions used by the majority of operations involving floating-point computations in \SCIP
  *
  * - query the numerical tolerances of \SCIP, as well as special values such as infinity.
  * - change tolerances inside relaxations
- * - epsilon-comparison methods for floating point numbers
+ * - epsilon-comparison functions for floating point numbers
  */
 
 /** @defgroup CFILES Implementation files (.c files)
