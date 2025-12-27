@@ -607,7 +607,7 @@ SCIP_Real calcEfficacyDenseStorage(
          activity += coef * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
          norm += SQR(coef);
       }
-      norm = SQR(norm);
+      norm = sqrt(norm);
       break;
    case 'm':
       for( i = 0; i < cutnnz; ++i )
