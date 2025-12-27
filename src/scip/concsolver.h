@@ -141,9 +141,7 @@ SCIP_RETCODE SCIPconcsolverStop(
    SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    );
 
-/** let the given concurrent solver synchronize, i.e. pass its own solutions and bounds to
- *  the SPI.
- */
+/** let the given concurrent solver synchronize, i.e. pass its own solutions and bounds to syncstore */
 SCIP_RETCODE SCIPconcsolverSync(
    SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
    SCIP_SET*             set                 /**< global SCIP settings */
