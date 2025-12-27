@@ -103,8 +103,8 @@ SCIP_RETCODE doConcsolverTypeCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "concurrent/%s/prefprio", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "the preferred number concurrent solvers of type <%s> with respect to the number of threads", name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                                  &(*concsolvertype)->prefprio, FALSE, prefpriodefault, 0.0, 1.0,
-                                  NULL, NULL) ); /*lint !e740*/
+         &(*concsolvertype)->prefprio, FALSE, prefpriodefault, 0.0, 1.0,
+         NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -155,6 +155,7 @@ void SCIPconcsolverTypeFree(
    )
 {
    assert(concsolvertype != NULL);
+
    if( *concsolvertype == NULL )
       return;
 
@@ -245,6 +246,7 @@ SCIP_RETCODE SCIPconcsolverCreateInstance(
    (*concsolver)->syncdata = NULL;
 
    SCIPdebugMessage("concsolver %s initialized sync freq to %f\n", (*concsolver)->name, (*concsolver)->syncfreq);
+
    /* register concurrent solver */
    (*concsolver)->idx = SCIPgetNConcurrentSolvers(set->scip);
    SCIP_CALL( concsolvertype->concsolvercreateinst(set->scip, concsolvertype, *concsolver) );
@@ -316,7 +318,9 @@ SCIP_RETCODE SCIPconcsolverInitSeeds(
    assert(concsolver->type != NULL);
 
    if( concsolver->type->concsolverinitseeds != NULL )
+   {
       SCIP_CALL( concsolver->type->concsolverinitseeds(concsolver, seed) );
+   }
 
    return SCIP_OKAY;
 }
