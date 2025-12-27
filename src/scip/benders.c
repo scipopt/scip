@@ -2672,7 +2672,7 @@ SCIP_RETCODE SCIPbendersInitpre(
 }
 
 
-/** informs the Benders ' decomposition that the presolving process has completed */
+/** informs the Benders' decomposition that the presolving process has completed */
 SCIP_RETCODE SCIPbendersExitpre(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
