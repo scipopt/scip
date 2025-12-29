@@ -629,7 +629,8 @@ SCIP_DECL_CONCSOLVEREXEC(concsolverScipExec)
    SCIP_CALL( SCIPsolve(data->solverscip) );
 
    /* print info message with status */
-   SCIPinfoMessage(data->solverscip, NULL, "concurrent solver '%s' stopped with status ", SCIPconcsolverGetName(concsolver));
+   SCIPinfoMessage(data->solverscip, NULL, "%.1fs: concurrent solver '%s' stopped with status ",
+      SCIPgetSolvingTime(data->solverscip), SCIPconcsolverGetName(concsolver));
    SCIP_CALL( SCIPprintStatus(data->solverscip, NULL) );
    SCIPinfoMessage(data->solverscip, NULL, "\n");
 
