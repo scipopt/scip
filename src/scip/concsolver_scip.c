@@ -35,6 +35,7 @@
 #include "scip/concsolver.h"
 #include "scip/concsolver_scip.h"
 #include "scip/concurrent.h"
+#include "scip/pub_disp.h"
 #include "scip/pub_event.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
@@ -630,9 +631,11 @@ SCIP_DECL_CONCSOLVEREXEC(concsolverScipExec)
    /* solve */
    SCIP_CALL( SCIPsolve(data->solverscip) );
 
+   /* first output time */
+   SCIPinfoMessage(data->solverscip, NULL, " ");
+   SCIPdispTime(SCIPgetMessagehdlr(data->solverscip), NULL, SCIPgetSolvingTime(data->solverscip), 5);
    /* print info message with status */
-   SCIPinfoMessage(data->solverscip, NULL, "%.1fs: concurrent solver '%s' stopped with status ",
-      SCIPgetSolvingTime(data->solverscip), SCIPconcsolverGetName(concsolver));
+   SCIPinfoMessage(data->solverscip, NULL, ": concurrent solver '%s' stopped with status ", SCIPconcsolverGetName(concsolver));
    SCIP_CALL( SCIPprintStatus(data->solverscip, NULL) );
    SCIPinfoMessage(data->solverscip, NULL, "\n");
 
