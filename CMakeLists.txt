@@ -149,7 +149,7 @@ if(SYM STREQUAL "bliss" OR SYM STREQUAL "sbliss")
           NAME Bliss
           VERSION 0.77
           URL https://github.com/scipopt/bliss/archive/refs/tags/v0.77.tar.gz
-          URL_HASH SHA256=34c9cec2cb4dd73f881852bd1b1e0429859c8adcc6a61bc0d70a446a23b51d53
+          URL_HASH SHA256=9af3d614d1a6e9649f055444d21d4e9d22fca0b69f072f10ea8f3e23d8479efd
           COMPONENTS libbliss)
         # undo modification
         set(CMAKE_C_FLAGS ${TMPFLAGS})
