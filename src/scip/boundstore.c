@@ -87,7 +87,12 @@ SCIP_RETCODE SCIPboundstoreAdd(
    assert(scip != NULL);
    assert(boundstore != NULL);
 
+   /* ignore indices larger than nvars (may happen for (multi-)aggregated/fixed variables */
+   if( varidx >= boundstore->nvars )
+      return SCIP_OKAY;
+
    pos = boundstore->bndpos[varidx].pos[boundtype];
+   assert(pos >= 0);
 
    if( pos == 0 )
    {
@@ -136,6 +141,7 @@ SCIP_RETCODE SCIPboundstoreMerge(
    /* just iterate over the boundchanges in the source and add them to the target */
    for( i = 0; i < source->nbndchg; ++i )
    {
+      assert(source->bndchg[i].varidx < source->nvars);
       SCIP_CALL( SCIPboundstoreAdd(scip, target, source->bndchg[i].varidx, source->bndchg[i].newbound, source->bndchg[i].boundtype) );
    }
 
