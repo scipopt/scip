@@ -298,21 +298,22 @@ SCIP_RETCODE initConcsolver(
    for( v = 0; v < data->nvars; v++ )
    {
 #ifndef NDEBUG
-      /* SCIPcopyConsCompression() copies the active problem variables first. Then the constraints are copied, which
-       * might involve (multi-)aggregated variables, which are then copied afterwards, including coupling linear
-       * constraints. */
-      SCIP_VAR* var;
-      int idx;
-
-      var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, mainvars[v]);
-      if( var != NULL )
+      if( v < nmainvars )
       {
+         /* SCIPcopyConsCompression() copies the active problem variables first. Then the constraints are copied, which
+          * might involve (multi-)aggregated variables, which are then copied afterwards, including coupling linear
+          * constraints. */
+         SCIP_VAR* var;
+         int idx;
+
+         var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, mainvars[v]);
+         assert( var != NULL );
          idx = SCIPvarGetIndex(var);
          assert(0 <= idx && idx < nmainvars);
          assert(idx == v );
          assert( var == subvars[v] );
+         assert( var != NULL || v >= nmainvars );
       }
-      assert( var != NULL || v >= nmainvars );
 #endif
 
       varperm[v] = v;
