@@ -234,6 +234,7 @@ SCIP_RETCODE SCIPconcsolverCreateInstance(
    /* initialize synchronization fields */
    (*concsolver)->nsyncs = 0;
    (*concsolver)->syncdelay = 0.0;
+   (*concsolver)->timesincelastsync = 0.0;
 
    /* in deterministic mode use number of nonzeros and variables to get a good initial synchronization frequency
     * in opportunistic mode use the frequency as set by the user
