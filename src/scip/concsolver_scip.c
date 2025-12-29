@@ -289,6 +289,8 @@ SCIP_RETCODE initConcsolver(
    data->nvars = SCIPgetNOrigVars(data->solverscip);
    assert( nmainvars <= data->nvars );
 
+   assert(data->nvars <= SCIPgetNVars(scip) + SCIPgetNFixedVars(scip));
+
    /* allocate memory for the arrays to store the variable mapping */
    SCIP_CALL( SCIPallocBlockMemoryArray(data->solverscip, &data->vars, data->nvars) );
    SCIP_CALL( SCIPallocBufferArray(data->solverscip, &varperm, data->nvars) );

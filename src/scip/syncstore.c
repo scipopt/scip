@@ -153,7 +153,7 @@ SCIP_RETCODE SCIPsyncstoreInit(
    syncstore->lastsync = NULL;
    syncstore->nsolvers = SCIPgetNConcurrentSolvers(scip);
 
-   syncstore->ninitvars = SCIPgetNOrigVars(scip);
+   syncstore->ninitvars = SCIPgetNVars(scip) + SCIPgetNFixedVars(scip);
    SCIP_CALL( SCIPgetIntParam(scip, "concurrent/sync/maxnsols", &syncstore->maxnsols) );
    SCIP_CALL( SCIPgetIntParam(scip, "concurrent/sync/maxnsyncdelay", &syncstore->maxnsyncdelay) );
    SCIP_CALL( SCIPgetRealParam(scip, "concurrent/sync/minsyncdelay", &syncstore->minsyncdelay) );
