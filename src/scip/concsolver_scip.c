@@ -250,10 +250,12 @@ SCIP_RETCODE initConcsolver(
    SCIP_HASHMAP* varmapfw;
    SCIP_CONCSOLVERDATA* data;
    SCIP_VAR** mainvars;
-   SCIP_VAR** subvars;
+   SCIP_VAR** mainfixedvars;
    SCIP_Bool valid;
    int nmainvars;
+   int nmainfixedvars;
    int* varperm;
+   int cnt;
    int v;
 
    assert(scip != NULL);
@@ -296,32 +298,42 @@ SCIP_RETCODE initConcsolver(
    SCIP_CALL( SCIPallocBlockMemoryArray(data->solverscip, &data->vars, data->nvars) );
    SCIP_CALL( SCIPallocBufferArray(data->solverscip, &varperm, data->nvars) );
 
-   /* set up the arrays for the variable mapping */
-   subvars = SCIPgetOrigVars(data->solverscip);
-   for( v = 0; v < data->nvars; v++ )
-   {
-#ifndef NDEBUG
-      if( v < nmainvars )
-      {
-         /* SCIPcopyConsCompression() copies the active problem variables first. Then the constraints are copied, which
-          * might involve (multi-)aggregated variables, which are then copied afterwards, including coupling linear
-          * constraints. */
-         SCIP_VAR* var;
-         int idx;
+   /* SCIPcopyConsCompression() copies the active problem variables first. Then the constraints are copied, which might
+    * involve (multi-)aggregated/fixed variables, which are then copied afterwards, including coupling linear
+    * constraints. The latter variables appear in the main SCIP as "fixed" variables. */
 
-         var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, mainvars[v]);
-         assert( var != NULL );
-         idx = SCIPvarGetIndex(var);
-         assert(0 <= idx && idx < nmainvars);
-         assert(idx == v );
-         assert( var == subvars[v] );
-         assert( var != NULL || v >= nmainvars );
-      }
-#endif
+   /* set up the arrays for the variable mapping */
+   for( v = 0; v < nmainvars; v++ )
+   {
+      SCIP_VAR* var;
+
+      var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, mainvars[v]);
+      assert(var != NULL);
+      assert(SCIPvarGetIndex(var) == v);
 
       varperm[v] = v;
-      data->vars[v] = subvars[v];
+      data->vars[v] = var;
    }
+
+   nmainfixedvars = SCIPgetNFixedVars(scip);
+   mainfixedvars = SCIPgetFixedVars(scip);
+   cnt = 0;
+   for( v = 0; v < nmainfixedvars; v++ )
+   {
+      SCIP_VAR* var;
+
+      var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, mainfixedvars[v]);
+      if( var != NULL )
+      {
+         int idx;
+
+         idx = nmainvars + cnt;
+         varperm[idx] = idx;
+         data->vars[idx] = var;
+         ++cnt;
+      }
+   }
+   assert( cnt + nmainvars == data->nvars );
 
    /* transfer solutions from original problem to concurent instances */
    if( SCIPgetNSols(scip) != 0 )
