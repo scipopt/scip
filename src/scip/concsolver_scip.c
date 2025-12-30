@@ -311,7 +311,7 @@ SCIP_RETCODE initConcsolver(
 
       var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, mainvars[v]);
       assert(var != NULL);
-      assert(SCIPvarGetIndex(var) == v);
+      assert(SCIPvarGetProbindex(var) == v);
 
       varperm[v] = v;
       data->vars[v] = var;
@@ -332,13 +332,16 @@ SCIP_RETCODE initConcsolver(
       {
          int idx;
 
-         idx = nmainvars + cnt;
-         varperm[idx] = idx;
-         data->vars[idx] = var;
-         ++cnt;
+         idx = SCIPvarGetProbindex(var);
+         if( idx >= 0 )
+         {
+            varperm[idx] = idx;
+            data->vars[idx] = var;
+            ++cnt;
 
-         /* for copying solutions below */
-         mainallvars[idx] = mainfixedvars[v];
+            /* for copying solutions below */
+            mainallvars[idx] = mainfixedvars[v];
+         }
       }
    }
    assert( cnt + nmainvars == data->nvars );
