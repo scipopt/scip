@@ -201,9 +201,9 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
    SCIP_Real             val                 /**< value by which the time counter for synchronization is incremented */
    )
 {
-   SCIP_Real           syncfreq;
-   SCIP*               mainscip;
-   SCIP_CLOCK*         wallclock;
+   SCIP_Real syncfreq;
+   SCIP* mainscip;
+   SCIP_CLOCK* wallclock;
 
    assert(scip != NULL);
 
@@ -232,6 +232,7 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
    else
    {
       SCIP_Real timesincelastsync;
+
       timesincelastsync = SCIPgetClockTime(mainscip, wallclock);
 
       if( timesincelastsync >= syncfreq )
@@ -507,14 +508,14 @@ SCIP_RETCODE SCIPconcurrentSolve(
    SCIP*                 scip                /**< pointer to scip datastructure */
    )
 {
-   SCIP_SYNCSTORE*   syncstore;
-   int               idx;
-   int               jobid;
-   int               i;
-   SCIP_RETCODE      retcode;
    SCIP_CONCSOLVER** concsolvers;
-   int               nconcsolvers;
+   SCIP_SYNCSTORE* syncstore;
+   SCIP_RETCODE retcode;
    SCIP_CONCURRENTDATA** concurrentdata;
+   int nconcsolvers;
+   int idx;
+   int jobid;
+   int i;
 
    assert(scip != NULL);
 
@@ -540,7 +541,7 @@ SCIP_RETCODE SCIPconcurrentSolve(
       {
          for( i = 0; i < nconcsolvers; ++i )
          {
-            SCIP_JOB*         job;
+            SCIP_JOB* job;
             SCIP_SUBMITSTATUS status;
 
             concurrentdata[i]->scip = scip;
@@ -577,21 +578,21 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
    SCIP*                 target              /**< target SCIP data structure */
    )
 {
-   SCIP_Real     tmptime;
-   SCIP_HEUR*    heur;
-   SCIP_NODE*    root;
-   SCIP_PROP*    prop;
-   SCIP_SEPA*    sepa;
-   SCIP_PRESOL*  presol;
-   SCIP_HEUR**   heurs;
-   int           nheurs;
-   SCIP_PROP**   props;
-   int           nprops;
-   SCIP_SEPA**   sepas;
-   int           nsepas;
+   SCIP_HEUR* heur;
+   SCIP_NODE* root;
+   SCIP_PROP* prop;
+   SCIP_SEPA* sepa;
+   SCIP_PRESOL* presol;
+   SCIP_HEUR** heurs;
+   SCIP_PROP** props;
+   SCIP_SEPA** sepas;
    SCIP_PRESOL** presols;
-   int           npresols;
-   int           i;
+   SCIP_Real tmptime;
+   int nheurs;
+   int nprops;
+   int nsepas;
+   int npresols;
+   int i;
 
    assert(source != NULL);
    assert(target != NULL);
@@ -608,6 +609,7 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
          heurs[i]->nbestsolsfound += heur->nbestsolsfound;
          heurs[i]->ncalls += heur->ncalls;
          heurs[i]->nsolsfound += heur->nsolsfound;
+
          /* TODO divesets */
          tmptime = SCIPgetClockTime(target, heurs[i]->setuptime);
          tmptime += SCIPgetClockTime(source, heur->setuptime);
