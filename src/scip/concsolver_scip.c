@@ -256,9 +256,7 @@ SCIP_RETCODE initConcsolver(
    int nmainvars;
    int nmainfixedvars;
    int* varperm;
-#ifndef NDEBUG
-   int cnt = 0;
-#endif
+   int cnt;
    int v;
 
    assert(scip != NULL);
@@ -299,7 +297,7 @@ SCIP_RETCODE initConcsolver(
 
    /* allocate memory for the arrays to store the variable mapping */
    SCIP_CALL( SCIPallocBlockMemoryArray(data->solverscip, &data->vars, data->nvars) );
-   SCIP_CALL( SCIPallocBufferArray(data->solverscip, &varperm, data->nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(data->solverscip, &varperm, data->nvars) );
 
    /* SCIPcopyConsCompression() copies the active problem variables first. Then the constraints are copied, which might
     * involve (multi-)aggregated/fixed variables, which are then copied afterwards, including coupling linear
@@ -310,13 +308,16 @@ SCIP_RETCODE initConcsolver(
    for( v = 0; v < nmainvars; v++ )
    {
       SCIP_VAR* var;
+      int idx;
 
       var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, mainvars[v]);
       assert(var != NULL);
-      assert(SCIPvarGetProbindex(var) == v);
+      idx = SCIPvarGetProbindex(var);
+      assert(0 <= idx && idx < data->nvars);
 
-      varperm[v] = v;
       data->vars[v] = var;
+      assert(varperm[idx] == 0);
+      varperm[idx] = v;
 
       /* for copying solutions below */
       mainallvars[v] = mainvars[v];
@@ -324,30 +325,31 @@ SCIP_RETCODE initConcsolver(
 
    nmainfixedvars = SCIPgetNFixedVars(scip);
    mainfixedvars = SCIPgetFixedVars(scip);
+   cnt = nmainvars;
    for( v = 0; v < nmainfixedvars; v++ )
    {
       SCIP_VAR* var;
+      int idx;
 
       var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, mainfixedvars[v]);
       if( var != NULL )
       {
-         int idx;
-
          idx = SCIPvarGetProbindex(var);
          if( idx >= 0 )
          {
-            varperm[idx] = idx;
-            data->vars[idx] = var;
-#ifndef NDEBUG
-            ++cnt;
-#endif
+            assert(idx < data->nvars);
+
+            data->vars[cnt] = var;
+            assert(varperm[idx] == 0);
+            varperm[idx] = cnt;
 
             /* for copying solutions below */
-            mainallvars[idx] = mainfixedvars[v];
+            mainallvars[cnt] = mainfixedvars[v];
+            ++cnt;
          }
       }
    }
-   assert( cnt + nmainvars == data->nvars );
+   assert( cnt == data->nvars );
 
    /* transfer solutions from original problem to concurrent instances */
    if( SCIPgetNSols(scip) != 0 )
