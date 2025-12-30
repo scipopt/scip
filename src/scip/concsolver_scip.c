@@ -251,6 +251,7 @@ SCIP_RETCODE initConcsolver(
    SCIP_CONCSOLVERDATA* data;
    SCIP_VAR** mainvars;
    SCIP_VAR** mainfixedvars;
+   SCIP_VAR** mainallvars;
    SCIP_Bool valid;
    int nmainvars;
    int nmainfixedvars;
@@ -303,6 +304,7 @@ SCIP_RETCODE initConcsolver(
     * constraints. The latter variables appear in the main SCIP as "fixed" variables. */
 
    /* set up the arrays for the variable mapping */
+   SCIP_CALL( SCIPallocBufferArray(data->solverscip, &mainallvars, data->nvars) );
    for( v = 0; v < nmainvars; v++ )
    {
       SCIP_VAR* var;
@@ -313,6 +315,9 @@ SCIP_RETCODE initConcsolver(
 
       varperm[v] = v;
       data->vars[v] = var;
+
+      /* for copying solutions below */
+      mainallvars[v] = mainvars[v];
    }
 
    nmainfixedvars = SCIPgetNFixedVars(scip);
@@ -331,6 +336,9 @@ SCIP_RETCODE initConcsolver(
          varperm[idx] = idx;
          data->vars[idx] = var;
          ++cnt;
+
+         /* for copying solutions below */
+         mainallvars[idx] = mainfixedvars[v];
       }
    }
    assert( cnt + nmainvars == data->nvars );
@@ -339,37 +347,20 @@ SCIP_RETCODE initConcsolver(
    if( SCIPgetNSols(scip) != 0 )
    {
       SCIP_Bool stored;
-      SCIP_Real* solvals;
       SCIP_SOL* mainsol;
       SCIP_SOL* solversol;
 
       mainsol = SCIPgetBestSol(scip);
-      SCIP_CALL( SCIPallocBufferArray(data->solverscip, &solvals, data->nvars) );
-
-      SCIP_CALL( SCIPgetSolVals(scip, mainsol, nmainvars, mainvars, solvals) );
       SCIP_CALL( SCIPcreateSol(data->solverscip, &solversol, NULL) );
-      SCIP_CALL( SCIPsetSolVals(data->solverscip, solversol, nmainvars, data->vars, solvals) );
-      SCIPfreeBufferArray(data->solverscip, &solvals);
-
-      /* handle fixed variables */
-      if( data->nvars > nmainvars )
+      for( v = 0; v < data->nvars; ++v )
       {
-         for( v = 0; v < data->nvars; ++v )
-         {
-            SCIP_VAR* var;
-            var = data->vars[v];
-            if( SCIPisEQ(data->solverscip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
-            {
-               if( ! SCIPisZero(data->solverscip, SCIPvarGetLbGlobal(var)) )
-               {
-                  SCIP_CALL( SCIPsetSolVal(data->solverscip, solversol, var, SCIPvarGetLbGlobal(var)) );
-               }
-            }
-         }
+         SCIP_Real val;
+
+         val = SCIPgetSolVal(scip, mainsol, mainallvars[v]);
+         assert(data->vars[v] != NULL);
+         SCIP_CALL( SCIPsetSolVal(data->solverscip, solversol, data->vars[v], val) );
       }
-
       SCIP_CALL( SCIPaddSolFree(data->solverscip, &solversol, &stored) );
-
       assert(stored);
    }
 
@@ -380,6 +371,7 @@ SCIP_RETCODE initConcsolver(
     * TODO: test if this leads to any problems
     */
    SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, varperm, data->nvars) );
+   SCIPfreeBufferArray(data->solverscip, &mainallvars);
    SCIPfreeBufferArray(data->solverscip, &varperm);
 
    /* free the hashmap */
