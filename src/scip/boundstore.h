@@ -24,7 +24,7 @@
 
 /**@file   boundstore.h
  * @ingroup PARALLEL
- * @brief  the interface of the boundstore structure
+ * @brief  the interface of the bound store data structure
  * @author Leona Gottwald
  */
 
@@ -42,23 +42,23 @@
 /** create bound store data structure */
 SCIP_EXPORT
 SCIP_RETCODE SCIPboundstoreCreate(
-   SCIP*                 scip,               /**< scip main datastructure */
-   SCIP_BOUNDSTORE**     boundstore,         /**< pointer to store the bound store datastructure */
+   SCIP*                 scip,               /**< scip main data structure */
+   SCIP_BOUNDSTORE**     boundstore,         /**< pointer to store the bound store data structure */
    int                   nvars               /**< number of variables for which bounds may be stored */
    );
 
 /** free bound store data structure */
 SCIP_EXPORT
 void SCIPboundstoreFree(
-   SCIP*                 scip,               /**< scip main datastructure */
-   SCIP_BOUNDSTORE**     boundstore          /**< pointer to the bound store datastructure */
+   SCIP*                 scip,               /**< scip main data structure */
+   SCIP_BOUNDSTORE**     boundstore          /**< pointer to the bound store data structure */
    );
 
 /** add bound change to bound store data structure */
 SCIP_EXPORT
 SCIP_RETCODE SCIPboundstoreAdd(
-   SCIP*                 scip,               /**< scip main datastructure */
-   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
+   SCIP*                 scip,               /**< scip main data structure */
+   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store data structure */
    int                   varidx,             /**< variable index of bound change, must be smaller than the
                                               *   number of variables given during creation of bound store */
    SCIP_Real             newbound,           /**< bound value of variable */
@@ -68,42 +68,42 @@ SCIP_RETCODE SCIPboundstoreAdd(
 /** add all bound changes of source to target */
 SCIP_EXPORT
 SCIP_RETCODE SCIPboundstoreMerge(
-   SCIP*                 scip,               /**< scip main datastructure for target boundstore   */
-   SCIP_BOUNDSTORE*      target,             /**< the bound store datastructure where the bounds get merged in */
-   SCIP_BOUNDSTORE*      source              /**< the bound store datastructure from which the bounds get merged in */
+   SCIP*                 scip,               /**< scip main data structure for target boundstore   */
+   SCIP_BOUNDSTORE*      target,             /**< the bound store data structure where the bounds get merged in */
+   SCIP_BOUNDSTORE*      source              /**< the bound store data structure from which the bounds get merged in */
    );
 
 /** remove all boundchanges from bound store */
 SCIP_EXPORT
 void SCIPboundstoreClear(
-   SCIP_BOUNDSTORE*      boundstore          /**< the bound store datastructure */
+   SCIP_BOUNDSTORE*      boundstore          /**< the bound store data structure */
    );
 
 /** gets variable index of the i'th stored boundchange */
 SCIP_EXPORT
 int SCIPboundstoreGetChgVaridx(
-   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
+   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store data structure */
    int                   i                   /**< the index of the bound change */
    );
 
 /** gets the type of the i'th stored boundchange */
 SCIP_EXPORT
 SCIP_BOUNDTYPE SCIPboundstoreGetChgType(
-   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
+   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store data structure */
    int                   i                   /**< the index of the bound change */
    );
 
 /** gets the bound value of the i'th stored boundchange */
 SCIP_EXPORT
 SCIP_Real SCIPboundstoreGetChgVal(
-   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
+   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store data structure */
    int                   i                   /**< the index of the bound change */
    );
 
 /** gets the number of stored bound changes */
 SCIP_EXPORT
 int SCIPboundstoreGetNChgs(
-   SCIP_BOUNDSTORE*      boundstore          /**< the bound store datastructure */
+   SCIP_BOUNDSTORE*      boundstore          /**< the bound store data structure */
    );
 
 #endif

@@ -62,7 +62,7 @@
 
 /* event handler for synchronization */
 #define EVENTHDLR_NAME         "sync"
-#define EVENTHDLR_DESC         "event handler for synchronization of concurrent scip sovlers"
+#define EVENTHDLR_DESC         "event handler for synchronization of concurrent scip solvers"
 
 /*
  * Data structures
@@ -195,7 +195,7 @@ struct SCIP_ConcSolverTypeData
 /** data for a concurrent solver */
 struct SCIP_ConcSolverData
 {
-   SCIP*                 solverscip;         /**< the concurrent solvers private SCIP datastructure */
+   SCIP*                 solverscip;         /**< the concurrent solvers private SCIP data structure */
    SCIP_VAR**            vars;               /**< array of variables in the order of the main SCIP's variable array */
    int                   nvars;              /**< number of variables in the above arrays */
 };
@@ -205,7 +205,7 @@ struct SCIP_ConcSolverData
  *  if different optimal solutions were kept in different concurrent solvers. */
 static
 SCIP_RETCODE disableConflictingDualReductions(
-   SCIP*                 scip                /**< SCIP datastructure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_Bool commvarbnds;
@@ -349,7 +349,7 @@ SCIP_RETCODE initConcsolver(
    }
    assert( cnt + nmainvars == data->nvars );
 
-   /* transfer solutions from original problem to concurent instances */
+   /* transfer solutions from original problem to concurrent instances */
    if( SCIPgetNSols(scip) != 0 )
    {
       SCIP_Bool stored;
@@ -705,7 +705,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 
    SCIPdebugMessage("syncing in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
 
-   /* consider at most maxcandsols many solutions, and since the solution array is sorted, cosider best solutions */
+   /* consider at most maxcandsols many solutions, and since the solution array is sorted, consider best solutions */
    nsols = SCIPgetNSols(data->solverscip);
    nsols = MIN(nsols, maxcandsols);
    sols = SCIPgetSols(data->solverscip);
@@ -839,7 +839,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 
       SCIP_CALL( SCIPvarGetProbvarBound(&var, &newbound, &boundtype) );
 
-      /* cannot change bounds of multi-aggregated variables so dont pass this bound-change to the propagator */
+      /* cannot change bounds of multi-aggregated variables so do not pass this bound-change to the propagator */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
          return SCIP_OKAY;
 
@@ -865,7 +865,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 
 /** creates the concurrent SCIP solver plugins and includes them in SCIP */
 SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
-   SCIP*                 scip                /**< SCIP datastructure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CONCSOLVERTYPEDATA* data;
@@ -874,7 +874,7 @@ SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
 
    /* Include concurrent solvers for SCIP for all emphasis settings and without an emphasis setting.
     * For the SCIP without an emphasis setting we set the default preferred priority to 1 and for the other types to 0
-    * so that the default concurent solve will use multiple SCIP's using settings as specified by the user in the main SCIP.
+    * so that the default concurrent solve will use multiple SCIP's using settings as specified by the user in the main SCIP.
     */
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = FALSE;

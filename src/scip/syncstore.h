@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPsyncstoreCapture(
 /** initialize the syncstore for the given SCIP instance */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsyncstoreInit(
-   SCIP*                 scip                /**< SCIP main datastructure */
+   SCIP*                 scip                /**< SCIP main data structure */
    );
 
 /** deinitializes the synchronization store */
@@ -179,7 +179,7 @@ int SCIPsyncstoreGetWinner(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 
-/** how many solvers have already finished synchronizing on this sychronization data */
+/** how many solvers have already finished synchronizing on this synchronization data */
 SCIP_EXPORT
 int SCIPsyncdataGetNSynced(
    SCIP_SYNCDATA*        syncdata            /**< the synchronization data */
