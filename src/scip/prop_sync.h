@@ -69,13 +69,13 @@ SCIP_RETCODE SCIPpropSyncAddBndchg(
    SCIP_BOUNDTYPE        bndtype             /**< type of bound */
    );
 
-/** gives the total number of tightened bounds found by the sync propagator */
+/** returns the total number of tightened bounds found by the sync propagator */
 SCIP_EXPORT
 SCIP_Longint SCIPpropSyncGetNTightenedBnds(
    SCIP_PROP*            prop                /**< sync propagator */
    );
 
-/** gives the total number of tightened bounds for integer variables found by the sync propagator */
+/** returns the total number of tightened bounds for integer variables found by the sync propagator */
 SCIP_EXPORT
 SCIP_Longint SCIPpropSyncGetNTightenedIntBnds(
    SCIP_PROP*            prop                /**< sync propagator */
