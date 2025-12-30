@@ -365,11 +365,6 @@ SCIP_RETCODE initConcsolver(
    }
 
    /* create the concurrent data structure for the concurrent solver's SCIP */
-   /* this assert fails on check/instances/Symmetry/packorb_1-FullIns_3.cip
-    * assert(SCIPgetNOrigVars(data->solverscip) == data->nvars);
-    * also fails on check/instances/Symmetry/partorb_1-FullIns_3.cip
-    * TODO: test if this leads to any problems
-    */
    SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, varperm, data->nvars) );
    SCIPfreeBufferArray(data->solverscip, &mainallvars);
    SCIPfreeBufferArray(data->solverscip, &varperm);
