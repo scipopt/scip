@@ -256,7 +256,9 @@ SCIP_RETCODE initConcsolver(
    int nmainvars;
    int nmainfixedvars;
    int* varperm;
-   int cnt;
+#ifndef NDEBUG
+   int cnt = 0;
+#endif
    int v;
 
    assert(scip != NULL);
@@ -322,7 +324,6 @@ SCIP_RETCODE initConcsolver(
 
    nmainfixedvars = SCIPgetNFixedVars(scip);
    mainfixedvars = SCIPgetFixedVars(scip);
-   cnt = 0;
    for( v = 0; v < nmainfixedvars; v++ )
    {
       SCIP_VAR* var;
@@ -337,7 +338,9 @@ SCIP_RETCODE initConcsolver(
          {
             varperm[idx] = idx;
             data->vars[idx] = var;
+#ifndef NDEBUG
             ++cnt;
+#endif
 
             /* for copying solutions below */
             mainallvars[idx] = mainfixedvars[v];
