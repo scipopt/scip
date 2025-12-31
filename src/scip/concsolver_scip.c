@@ -292,7 +292,6 @@ SCIP_RETCODE initConcsolver(
     * problem has active variables. */
    data->nvars = SCIPgetNOrigVars(data->solverscip);
    assert( nmainvars <= data->nvars );
-
    assert(data->nvars <= SCIPgetNVars(scip) + SCIPgetNFixedVars(scip));
 
    /* allocate memory for the arrays to store the variable mapping */
