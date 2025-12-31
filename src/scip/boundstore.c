@@ -87,7 +87,7 @@ SCIP_RETCODE SCIPboundstoreAdd(
    assert(scip != NULL);
    assert(boundstore != NULL);
 
-   /* ignore indices larger than nvars (may happen for (multi-)aggregated/fixed variables */
+   /* ignore indices larger than nvars (may happen for (multi-)aggregated/fixed variables) */
    if( varidx >= boundstore->nvars )
       return SCIP_OKAY;
 
