@@ -512,7 +512,7 @@ SCIP_DECL_CONSCHECK(consCheckFixedvar)
 
          if( printreason )
          {
-            SCIPinfoMessage(scip, NULL, "solution violates lower bound of fixed variable <%s> [%g,%g], solution value <%g>\n",
+            SCIPinfoMessage(scip, NULL, "solution violates lower bound of non-active variable <%s> [%g,%g], solution value <%g>\n",
                SCIPvarGetName(vars[i]), lb, ub, val);
          }
 
@@ -532,7 +532,7 @@ SCIP_DECL_CONSCHECK(consCheckFixedvar)
 
          if( printreason )
          {
-            SCIPinfoMessage(scip, NULL, "solution violates upper bound of fixed variable <%s> [%g,%g], solution value <%g>\n",
+            SCIPinfoMessage(scip, NULL, "solution violates upper bound of non-active variable <%s> [%g,%g], solution value <%g>\n",
                SCIPvarGetName(vars[i]), lb, ub, val);
          }
 
