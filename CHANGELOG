@@ -14,6 +14,7 @@ Fixed bugs
 - handle exact solutions in SCIPsolCheckOrig(), SCIPcheckSolOrig(), and SCIPrecomputeSolObj() to correctly check exact initial solutions in SCIPtransformProb()
 - fixed use of interactive option (-i) of AMPL interface
 - fix calculation of Euclidean norm in calcEfficacyDenseStorage() for use in exact solving
+- fixed bug with changing the type of the slack variable in indicator constraints while copying
 
 Miscellaneous
 -------------
