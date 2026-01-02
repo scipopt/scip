@@ -8234,7 +8234,7 @@ SCIP_RETCODE SCIPcreateConsBasicIndicator(
 }
 
 /** creates and captures an indicator constraint with given linear constraint and slack variable
- *  in a generic version, i. e., with a flag activeone indicating whether the constraint is active on
+ *  in a generic version, i.e., with a flag activeone indicating whether the constraint is active on
  *  value 1 or 0 of the binary variable.
 
  *  @note @a binvar is checked to be binary only later. This enables a change of the type in
@@ -8280,10 +8280,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata = NULL;
    SCIP_VAR** vars;
-   SCIP_Real* vals;
    SCIP_Bool modifiable = FALSE;
    SCIP_Bool linconsactive;
-   SCIP_Bool integral = TRUE;
    int nvars;
    int v;
 
@@ -8317,45 +8315,21 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
       return SCIP_INVALIDDATA;
    }
 
-   /* determine integrality of slack variable and whether problem is decomposed if no variables are integral */
+   /* determine whether the linear constraint needs to be active */
    nvars = SCIPgetNVarsLinear(scip, lincons);
    vars = SCIPgetVarsLinear(scip, lincons);
-   vals = SCIPgetValsLinear(scip, lincons);
-   linconsactive = !conshdlrdata->nolinconscont;
-   for ( v = 0; v < nvars; ++v )
+   linconsactive = ! conshdlrdata->nolinconscont;
+   for ( v = 0; v < nvars && ! linconsactive; ++v )
    {
       if ( vars[v] == slackvar )
          continue;
 
       if ( SCIPvarIsIntegral(vars[v]) )
-      {
          linconsactive = TRUE;
-         if ( !integral )
-            break;
-         if ( !SCIPisIntegral(scip, vals[v]) )
-         {
-            integral = FALSE;
-            break;
-         }
-      }
-      else
-      {
-         integral = FALSE;
-         if ( linconsactive )
-            break;
-      }
    }
 
-   /* make sure that the type of the slack is as general as necessary */
-   if ( !integral && SCIPvarIsIntegral(slackvar) )
-   {
-      SCIP_Bool infeasible;
-
-      SCIP_CALL( SCIPchgVarType(scip, slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
-      assert( !infeasible );
-      SCIP_CALL( SCIPchgVarImplType(scip, slackvar, SCIP_IMPLINTTYPE_NONE, &infeasible) );
-      assert( !infeasible );
-   }
+   /* Note that we do not change the type of the slackvariable here, because it might appear in other constraints and
+    * the locks are note yet set up if we are copying. */
 
    /* mark slack variable not to be multi-aggregated */
    SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
