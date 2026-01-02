@@ -593,7 +593,9 @@ SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA(concsolverGetSolvingData)
          SCIP_CALL( SCIPsetSolVals(scip, mainsol, nmainvars, mainvars, solvals) );
          SCIP_CALL( SCIPcopySolStats(solversols[i], mainsol) );
 
-#ifndef NDEBUG
+#ifdef SCIP_DISABLED_CODE
+         /* The following sometimes fails because we do not copy aggregations and cons_fixedvar can reject solutions in
+          * mainscip, because of these. */
          {
             SCIP_Bool feasible;
             SCIP_CALL( SCIPcheckSol(scip, mainsol, TRUE, TRUE, TRUE, TRUE, FALSE, &feasible) );
