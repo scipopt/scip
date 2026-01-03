@@ -10,7 +10,7 @@
 * [ ] Ensure that new code and features use randomization where necessary to account for performance variability.
 * [ ] The code is sufficiently documented.
 * [ ] The coding style is OK, see https://scipopt.org/doc/html/CODE.php.
-* [ ] SCIP OptSuite developers were made aware of the change **or** the change is not significant and not degrading performance.
+* [ ] SCIP OptSuite developers were made aware of the change **or** the change is not significant and not degrading performance significantly.
 
 ### Documentation and building
 
