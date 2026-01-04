@@ -911,8 +911,10 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
       currentslope += solver->shiftbuffer[i]->weight;
       currentvalue = solver->shiftbuffer[i]->value;
 
-      if( i + 1 == solver->nshiftbuffer || SCIPisPositive(scip, currentslope)
-         || ( SCIPisZero(scip, currentslope) && -solver->shiftbuffer[i]->value < solver->shiftbuffer[i + 1]->value ) )
+      if( i + 1 == solver->nshiftbuffer
+         || SCIPisPositive(scip, currentslope) || ( SCIPisZero(scip, currentslope)
+         && ( SCIPisPositive(scip, var->objcoeff) || ( SCIPisZero(scip, var->objcoeff)
+         && -solver->shiftbuffer[i]->value < solver->shiftbuffer[i + 1]->value ) ) ) )
          break;
 
       ++i;
