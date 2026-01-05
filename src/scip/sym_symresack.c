@@ -35,7 +35,7 @@
 #include "scip/sym_symresack.h"
 
 /* symmetry handler properties */
-#define SYM_NAME            "symresack"
+#define SYM_NAME            "sym_symresack"
 #define SYM_DESC            "symmetry handler for symresack constraint"
 #define SYM_PRIORITY          -1000000           /**< priority of try-add function*/
 #define SYM_PRESOL_PRIORITY   -1000000           /**< priority of presolving method */
@@ -128,7 +128,7 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSymreack)
    int s;
    int c;
 
-   *result = SCIP_DIDNOTFIND;
+   *result = nsymcomps > 0 ? SCIP_DIDNOTFIND : SCIP_DIDNOTRUN;
 
    for( s = 0; s < nsymcomps; ++s )
    {

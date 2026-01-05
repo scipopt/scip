@@ -79,6 +79,7 @@
 #include "scip/pub_reopt.h"
 #include "scip/pub_sepa.h"
 #include "scip/pub_sol.h"
+#include "scip/pub_sym.h"
 #include "scip/pub_table.h"
 #include "scip/pub_var.h"
 #include "scip/reader.h"
@@ -2803,6 +2804,31 @@ void SCIPprintPresolverStatistics(
             SCIPpropGetNAddConss(prop),
             SCIPpropGetNChgSides(prop),
             SCIPpropGetNChgCoefs(prop));
+      }
+   }
+
+   /* symmetry handler presolving methods statistics */
+   for( i = 0; i < scip->set->nsymhdlrs; ++i )
+   {
+      SCIP_SYMHDLR* symhdlr;
+
+      symhdlr = scip->set->symhdlrs[i];
+      if( SCIPsymhdlrDoesPresolve(symhdlr) )
+      {
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPsymhdlrGetName(symhdlr));
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %6d %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+            SCIPsymhdlrGetPresolTime(symhdlr),
+            SCIPsymhdlrGetSetupTime(symhdlr),
+            SCIPsymhdlrGetNPresolCalls(symhdlr),
+            SCIPsymhdlrGetNFixedVars(symhdlr),
+            SCIPsymhdlrGetNAggrVars(symhdlr),
+            SCIPsymhdlrGetNChgVarTypes(symhdlr),
+            SCIPsymhdlrGetNChgBds(symhdlr),
+            SCIPsymhdlrGetNAddHoles(symhdlr),
+            SCIPsymhdlrGetNDelConss(symhdlr),
+            SCIPsymhdlrGetNAddConss(symhdlr),
+            SCIPsymhdlrGetNChgSides(symhdlr),
+            SCIPsymhdlrGetNChgCoefs(symhdlr));
       }
    }
 
