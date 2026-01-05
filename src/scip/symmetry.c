@@ -3228,7 +3228,7 @@ SCIP_RETCODE SCIPaddSymhdlrComponent(
 
    if( symhdlr->symcompdatasize == 0 )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &symhdlr->symcompdata, 1) );
+      BMSallocMemoryArray(&symhdlr->symcompdata, 1);
       symhdlr->symcompdatasize = 1;
    }
    else if( symhdlr->nsymcompdata >= symhdlr->symcompdatasize )
@@ -3236,7 +3236,8 @@ SCIP_RETCODE SCIPaddSymhdlrComponent(
       int newlen;
 
       newlen = SCIPcalcMemGrowSize(scip, symhdlr->nsymcompdata + 1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &symhdlr->symcompdata, symhdlr->symcompdatasize, newlen) );
+
+      BMSreallocMemoryArray(&symhdlr->symcompdata, newlen);
    }
    symhdlr->symcompdata[(symhdlr->nsymcompdata)++] = symcompdata;
 
