@@ -418,7 +418,7 @@ SCIP_RETCODE SCIPfree(
    /* switch stage to FREE */
    (*scip)->set->stage = SCIP_STAGE_FREE;
 
-   SCIP_CALL( SCIPsyminfoFree(&(*scip)->syminfo, SCIPblkmem(*scip)) );
+   SCIP_CALL( SCIPsyminfoFree(*scip, &(*scip)->syminfo) );
    SCIP_CALL( SCIPiisFree(&(*scip)->iis, SCIPblkmem(*scip)) );
    SCIP_CALL( SCIPsyncstoreRelease(&(*scip)->syncstore) );
    SCIP_CALL( SCIPsetFree(&(*scip)->set, (*scip)->mem->setmem) );

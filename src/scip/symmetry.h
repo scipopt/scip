@@ -362,8 +362,15 @@ SCIP_RETCODE SCIPsyminfoCreate(
 
 /** releases symmetry information data structure */
 SCIP_RETCODE SCIPsyminfoFree(
-   SCIP_SYMINFO**        syminfo,            /**< pointer to the syminfo */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO**        syminfo             /**< pointer to the syminfo */
+   );
+
+/** adds a component to a symmetry handler */
+SCIP_RETCODE SCIPaddSymhdlrComponent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SYMCOMPDATA*     symcompdata         /**< data of symmetry component */
    );
 
 /** @} */

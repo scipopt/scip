@@ -41,8 +41,8 @@
 #define SYM_FREQ                     1           /**< propagator frequency */
 
 
-/** symmetry handler data */
-struct SCIP_SymhdlrData
+/** symmetry component data */
+struct SCIP_SymCompData
 {
    SCIP_CONS**           conss;              /**< constraints added by the symmetry handler */
    int                   nconss;             /**< number of constraints added by the symmetry handler */
@@ -53,7 +53,6 @@ struct SCIP_SymhdlrData
 static
 SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSymresack)
 {  /*lint --e{715}*/
-   SCIP_SYMHDLRDATA* symhdlrdata;
    char name[SCIP_MAXSTRLEN];
    int p;
 
@@ -65,18 +64,17 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSymresack)
 
    *success = TRUE;
 
-   symhdlrdata = SCIPsymhdlrGetData(symhdlr);
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &symhdlrdata->conss, nperms) );
-   symhdlrdata->nconss = nperms;
+   SCIP_CALL( SCIPallocBlockMemory(scip, symcompdata) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symcompdata)->conss, nperms) );
+   (*symcompdata)->nconss = nperms;
 
    for( p = 0; p < nperms; ++p )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_compnent_%d_%d", id, p);
 
-      SCIP_CALL( SCIPcreateSymbreakCons(scip, &symhdlrdata->conss[p], "cons", perms[p],
+      SCIP_CALL( SCIPcreateSymbreakCons(scip, &(*symcompdata)->conss[p], "cons", perms[p],
             permvars, npermvars, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPaddCons(scip, symhdlrdata->conss[p]) );
+      SCIP_CALL( SCIPaddCons(scip, (*symcompdata)->conss[p]) );
       ++(*naddedconss);
       /* do not release constraints here, this will be done later */
    }
@@ -91,10 +89,7 @@ SCIP_DECL_SYMHDLRFREE(symhdlrFreeSymresack)
    SCIP_SYMHDLRDATA* symhdlrdata;
 
    symhdlrdata = SCIPsymhdlrGetData(symhdlr);
-   assert(symhdlrdata != NULL);
-   assert(symhdlrdata->conss == NULL);
-
-   SCIPfreeBlockMemory(scip, &symhdlrdata);
+   assert(symhdlrdata == NULL);
 
    return SCIP_OKAY;
 }
@@ -103,20 +98,23 @@ SCIP_DECL_SYMHDLRFREE(symhdlrFreeSymresack)
 static
 SCIP_DECL_SYMHDLREXIT(symhdlrExitSymresack)
 {  /*lint --e{715}*/
-   SCIP_SYMHDLRDATA* symhdlrdata;
+   SCIP_SYMCOMPDATA* symdata;
+   int s;
    int c;
 
-   symhdlrdata = SCIPsymhdlrGetData(symhdlr);
-   assert(symhdlrdata != NULL);
-   assert(symhdlrdata->conss == NULL || symhdlrdata->nconss > 0);
-
-   for( c = 0; c < symhdlrdata->nconss; ++c )
+   for( s = 0; s < nsymcomps; ++s )
    {
-      SCIP_CALL( SCIPreleaseCons(scip, &symhdlrdata->conss[c]) );
+      symdata = symcompdata[s];
+      assert(symdata->conss == NULL || symdata->nconss > 0);
+
+      for( c = 0; c < symdata->nconss; ++c )
+      {
+         SCIP_CALL( SCIPreleaseCons(scip, &symdata->conss[c]) );
+      }
+
+      SCIPfreeBlockMemoryArrayNull(scip, &symdata->conss, symdata->nconss);
+      SCIPfreeBlockMemory(scip, &symdata);
    }
-   SCIPfreeBlockMemoryArrayNull(scip, &symhdlrdata->conss, symhdlrdata->nconss);
-   symhdlrdata->conss = NULL;
-   symhdlrdata->nconss = 0;
 
    return SCIP_OKAY;
 }
@@ -125,32 +123,33 @@ SCIP_DECL_SYMHDLREXIT(symhdlrExitSymresack)
 static
 SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSymreack)
 {  /*lint --e{715}*/
-   SCIP_SYMHDLRDATA* symhdlrdata;
+   SCIP_SYMCOMPDATA* symdata;
+   int s;
    int c;
-
-   symhdlrdata = SCIPsymhdlrGetData(symhdlr);
-   assert(symhdlrdata != NULL);
-
-   *result = SCIP_DIDNOTRUN;
-
-   if( symhdlrdata->nconss == 0 )
-      return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
-   for( c = 0; c < symhdlrdata->nconss; ++c )
+   for( s = 0; s < nsymcomps; ++s )
    {
-      SCIP_CALL( SCIPpresolCons(scip, symhdlrdata->conss[c], nrounds, presoltiming, nnewfixedvars, nnewaggrvars,
-            nnewchgvartypes, nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs,
-            nnewchgsides, nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes, ndelconss, naddconss,
-            nupgdconss, nchgcoefs, nchgsides, result) );
+      symdata = symcompdata[s];
 
-      /* exit if cutoff or unboundedness has been detected */
-      if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
-      {
-         SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n",
-            SCIPconsGetName(symhdlrdata->conss[c]));
+      if( symdata->nconss == 0 )
          return SCIP_OKAY;
+
+      for( c = 0; c < symdata->nconss; ++c )
+      {
+         SCIP_CALL( SCIPpresolCons(scip, symdata->conss[c], nrounds, presoltiming, nnewfixedvars, nnewaggrvars,
+               nnewchgvartypes, nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs,
+               nnewchgsides, nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes, ndelconss, naddconss,
+               nupgdconss, nchgcoefs, nchgsides, result) );
+
+         /* exit if cutoff or unboundedness has been detected */
+         if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
+         {
+            SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n",
+               SCIPconsGetName(symdata->conss[c]));
+            return SCIP_OKAY;
+         }
       }
 
    }
@@ -168,14 +167,10 @@ SCIP_RETCODE SCIPincludeSymhdlrSymresack(
 
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, &symhdlrdata) );
-   symhdlrdata->conss = NULL;
-   symhdlrdata->nconss = 0;
-
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC,
          1, 1, 1, 1, -1, -1, FALSE, FALSE, -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddSymresack, NULL, symhdlrFreeSymresack, NULL, symhdlrExitSymresack,
-         NULL, NULL, NULL, NULL, NULL, NULL, symhdlrPresolSymreack, symhdlrdata) );
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, symhdlrPresolSymreack, symhdlrdata) );
 
    return SCIP_OKAY;
 }

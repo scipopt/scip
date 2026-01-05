@@ -60,6 +60,7 @@ SCIP_RETCODE doSymhdlrCreate(
    SCIP_DECL_SYMHDLRFREE ((*symfree)),       /**< destructor method of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit)),       /**< initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
+   SCIP_DECL_SYMHDLRDELETE((*symdelete)),    /**< destructor of symmetry component data */
    SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry hanlder */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
@@ -100,6 +101,7 @@ SCIP_RETCODE doSymhdlrCreate(
    (*symhdlr)->symfree = symfree;
    (*symhdlr)->syminit = syminit;
    (*symhdlr)->symexit = symexit;
+   (*symhdlr)->symdelete = symdelete;
    (*symhdlr)->symtrans = symtrans;
    (*symhdlr)->symsepalp = symsepalp;
    (*symhdlr)->symsepasol = symsepasol;
@@ -145,6 +147,10 @@ SCIP_RETCODE doSymhdlrCreate(
    (*symhdlr)->sepalpwasdelayed = FALSE;
    (*symhdlr)->sepasolwasdelayed = FALSE;
    (*symhdlr)->propwasdelayed = FALSE;
+
+   (*symhdlr)->symcompdata = NULL;
+   (*symhdlr)->nsymcompdata = 0;
+   (*symhdlr)->symcompdatasize = 0;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/sepafreq", name);
@@ -212,6 +218,7 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
+   SCIP_DECL_SYMHDLRDELETE((*symdelete)),    /**< destructor of symmetry component data */
    SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry hanlder */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
@@ -228,7 +235,7 @@ SCIP_RETCODE SCIPsymhdlrCreate(
 
    SCIP_CALL_FINALLY( doSymhdlrCreate(symhdlr, set, messagehdlr, blkmem, name, desc, priority, proppriority,
          sepapriority, presolpriority, propfreq, sepafreq, delayprop, delaysepa, maxprerounds, proptiming,
-         presoltiming, symtryadd, symcopy, symfree, syminit, symexit, symtrans, symsepalp, symsepasol,
+         presoltiming, symtryadd, symcopy, symfree, syminit, symexit, symdelete, symtrans, symsepalp, symsepasol,
          symprop, sympresol, symhdlrdata),
          (void) SCIPsymhdlrFree(symhdlr, set) );
 
@@ -279,6 +286,8 @@ SCIP_RETCODE SCIPsymhdlrFree(
 
    BMSfreeMemoryArrayNull(&(*symhdlr)->name);
    BMSfreeMemoryArrayNull(&(*symhdlr)->desc);
+   BMSfreeMemoryNull(&(*symhdlr)->symhdlrdata);
+   BMSfreeMemoryArrayNull(&(*symhdlr)->symcompdata);
    BMSfreeMemory(symhdlr);
 
    return SCIP_OKAY;
@@ -303,7 +312,7 @@ SCIP_RETCODE SCIPsymhdlrExit(
       /* start timing */
       SCIPclockStart(symhdlr->setuptime, set);
 
-      SCIP_CALL( symhdlr->symexit(set->scip, symhdlr) );
+      SCIP_CALL( symhdlr->symexit(set->scip, symhdlr, symhdlr->symcompdata, symhdlr->nsymcompdata) );
 
       /* stop timing */
       SCIPclockStop(symhdlr->setuptime, set);
@@ -333,7 +342,7 @@ SCIP_RETCODE SCIPsymhdlrInit(
       /* start timing */
       SCIPclockStart(symhdlr->setuptime, set);
 
-      SCIP_CALL( symhdlr->syminit(set->scip, symhdlr) );
+      SCIP_CALL( symhdlr->syminit(set->scip, symhdlr, symhdlr->symcompdata, symhdlr->nsymcompdata) );
 
       /* stop timing */
       SCIPclockStop(symhdlr->setuptime, set);
@@ -358,7 +367,7 @@ SCIP_RETCODE SCIPsymhdlrInitsol(
       /* start timing */
       SCIPclockStart(symhdlr->setuptime, set);
 
-      SCIP_CALL( symhdlr->syminitsol(set->scip, symhdlr) );
+      SCIP_CALL( symhdlr->syminitsol(set->scip, symhdlr, symhdlr->symcompdata, symhdlr->nsymcompdata) );
 
       /* stop timing */
       SCIPclockStop(symhdlr->setuptime, set);
@@ -383,7 +392,32 @@ SCIP_RETCODE SCIPsymhdlrExitsol(
       /* start timing */
       SCIPclockStart(symhdlr->setuptime, set);
 
-      SCIP_CALL( symhdlr->symexitsol(set->scip, symhdlr, restart) );
+      SCIP_CALL( symhdlr->symexitsol(set->scip, symhdlr, symhdlr->symcompdata, symhdlr->nsymcompdata, restart) );
+
+      /* stop timing */
+      SCIPclockStop(symhdlr->setuptime, set);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls destructore method of symmetry component data */
+SCIP_RETCODE SCIPsymhdlrDelete(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SYMCOMPDATA**    symcompdata         /**< pointer to symmetry component data */
+   )
+{
+   assert(symhdlr != NULL);
+   assert(set != NULL);
+
+   /* call destructor method of symmetry component data */
+   if( symhdlr->symdelete != NULL )
+   {
+      /* start timing */
+      SCIPclockStart(symhdlr->setuptime, set);
+
+      SCIP_CALL( symhdlr->symdelete(set->scip, symhdlr, symcompdata) );
 
       /* stop timing */
       SCIPclockStop(symhdlr->setuptime, set);
@@ -479,7 +513,7 @@ SCIP_RETCODE SCIPsymhdlrPresol(
       SCIPclockStart(symhdlr->presoltime, set);
 
       /* call external method */
-      SCIP_CALL( symhdlr->sympresol(set->scip, symhdlr, nrounds, timing,
+      SCIP_CALL( symhdlr->sympresol(set->scip, symhdlr, symhdlr->symcompdata, symhdlr->nsymcompdata, nrounds, timing,
             nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewaddholes,
             nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
             nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
@@ -530,6 +564,7 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    int                   nsymvars,           /**< number of variables in symvars */
    SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
    int                   id,                 /**< identifier of component for which symmetry handling shall be added */
+   SCIP_SYMCOMPDATA**    symcompdata,        /**< pointer for storing data of symmetry component */
    int*                  naddedconss,        /**< pointer to store number of constraints added by symhdlr */
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
    )
@@ -547,7 +582,7 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    *naddedconss = 0;
 
    SCIP_CALL( symhdlr->symtryadd(set->scip, symhdlr, symtype, symmetries, nsymmetries,
-         symvars, nsymvars, symgraph, id, naddedconss, success) );
+         symvars, nsymvars, symgraph, id, symcompdata, naddedconss, success) );
 
    /* end timing */
    SCIPclockStop(symhdlr->setuptime, set);
@@ -602,4 +637,23 @@ SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompProp)
 SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompPresol)
 {  /*lint --e{715}*/
    return ((SCIP_SYMHDLR*)elem2)->presolpriority - ((SCIP_SYMHDLR*)elem1)->presolpriority;
+}
+
+/** creates a symmetry component */
+SCIP_RETCODE SCIPcreateSymmetryComponent(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SYMCOMP**        symcomp,            /**< pointer to symmetry component */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler active on symmetry component */
+   SCIP_SYMCOMPDATA*     symcompdata         /**< symmetry component data */
+   )
+{
+   assert(blkmem != NULL);
+   assert(symcomp != NULL);
+   assert(symhdlr != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, symcomp) );
+   (*symcomp)->symhdlr = symhdlr;
+   (*symcomp)->symcompdata = symcompdata;
+
+   return SCIP_OKAY;
 }

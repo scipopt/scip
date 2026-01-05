@@ -99,8 +99,8 @@ struct SCIP_Set
    SCIP_NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
    SCIP_BRANCHRULE**     branchrules;        /**< branching rules */
    SCIP_SYMHDLR**        symhdlrs;           /**< symmetry handlers (sorted by tryadd priority) */
-   SCIP_SYM**            sym_sepa;           /**< symmetry groups (sorted by separation priority) */
-   SCIP_SYM**            sym_prop;           /**< symmetry groups (sorted by propagation priority) */
+   SCIP_SYMCOMP**        sym_sepa;           /**< symmetry components (sorted by separation priority) */
+   SCIP_SYMCOMP**        sym_prop;           /**< symmetry components (sorted by propagation priority) */
    SCIP_IISFINDER**      iisfinders;         /**< irreducible infeasible subsystem (IIS) rules */
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_TABLE**          tables;             /**< statistics tables */

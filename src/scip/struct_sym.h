@@ -42,10 +42,11 @@
 extern "C" {
 #endif
 
-/** symmetry group */
-struct SCIP_Sym
+/** symmetry component */
+struct SCIP_SymComp
 {
    SCIP_SYMHDLR*         symhdlr;            /**< symmetry handler for this symmetry group */
+   SCIP_SYMCOMPDATA*     symcompdata;        /**< data of symmetry component */
 };
 
 /** symmetry handler */
@@ -67,6 +68,7 @@ struct SCIP_Symhdlr
    SCIP_DECL_SYMHDLREXIT ((*symexit));       /**< deinitialize symmetry handler */
    SCIP_DECL_SYMHDLRINITSOL((*syminitsol));  /**< solving process initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXITSOL((*symexitsol));  /**< solving process deinitialization method of symmetry handler */
+   SCIP_DECL_SYMHDLRDELETE((*symdelete));    /**< destructor of symmetry component data */
    SCIP_DECL_SYMHDLRTRANS((*symtrans));      /**< transform symmetry handler data into data belonging to the transformed problem */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp));    /**< separate cutting planes for LP solution */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol));  /**< separate cutting planes for arbitrary primal solution */
@@ -113,11 +115,18 @@ struct SCIP_Symhdlr
    SCIP_Bool             propwasdelayed;     /**< was the propagation method delayed at the last call? */
    SCIP_PROPTIMING       proptiming;         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming;       /**< timing mask of the symmetry handler's presolving method */
+
+   SCIP_SYMCOMPDATA**    symcompdata;        /**< array of data for symmetry components handled by this symhdlr */
+   int                   nsymcompdata;       /**< number of data entries in symcompdata */
+   int                   symcompdatasize;    /**< size of symcompdata */
 };
 
 /** data structure for storing symmetry information */
 struct SCIP_SymInfo
 {
+   SCIP_SYMCOMP**        symcomps;           /**< components of symmetry group */
+   int                   nsymcomps;          /**< number of components in symmetrycomps */
+   int                   symcompssize;       /**< size of symcomps array */
    SCIP_Bool             triedhandlesymmetry;/**< Have we already tried to handle symmetries? */
 };
 
