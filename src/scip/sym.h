@@ -163,6 +163,11 @@ SCIP_RETCODE SCIPcreateSymmetryComponent(
    SCIP_SYMCOMPDATA*     symcompdata         /**< symmetry component data */
    );
 
+/** gets presolving priority of symmetry handler */
+int SCIPsymhdlrGetPresolPriority(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -34,6 +34,7 @@
 #include "scip/set.h"
 #include "scip/struct_sym.h"
 #include "scip/sym.h"
+#include "scip/struct_scip.h"
 
 /** internal method for creating a symmetry handler */
 static
@@ -656,4 +657,14 @@ SCIP_RETCODE SCIPcreateSymmetryComponent(
    (*symcomp)->symcompdata = symcompdata;
 
    return SCIP_OKAY;
+}
+
+/** gets presolving priority of symmetry handler */
+int SCIPsymhdlrGetPresolPriority(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->presolpriority;
 }

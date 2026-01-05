@@ -1312,6 +1312,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->sym_prop = NULL;
    (*set)->nsymprop = 0;
    (*set)->sympropsize = 0;
+   (*set)->symhdlrs_presol = NULL;
    (*set)->symhdlrssorted = FALSE;
    (*set)->iisfinders = NULL;
    (*set)->niisfinders = 0;
@@ -3175,6 +3176,7 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPsymhdlrFree(&(*set)->symhdlrs[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->symhdlrs);
+   BMSfreeMemoryArrayNull(&(*set)->symhdlrs_presol);
 
    /* free IIS */
    for( i = 0; i < (*set)->niisfinders; ++i)
@@ -5263,12 +5265,15 @@ SCIP_RETCODE SCIPsetIncludeSymhdlr(
    {
       set->symhdlrssize = SCIPsetCalcMemGrowSize(set, set->nsymhdlrs + 1);
       SCIP_ALLOC( BMSreallocMemoryArray(&set->symhdlrs, set->symhdlrssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->symhdlrs_presol, set->symhdlrssize) );
    }
    assert(set->nsymhdlrs < set->symhdlrssize);
 
    set->symhdlrs[set->nsymhdlrs] = symhdlr;
+   set->symhdlrs_presol[set->nsymhdlrs] = symhdlr;
    set->nsymhdlrs++;
    set->symhdlrssorted = FALSE;
+   set->symhdlrspresolsorted = FALSE;
 
    return SCIP_OKAY;
 }
@@ -5284,6 +5289,20 @@ void SCIPsetSortSymhdlrs(
    {
       SCIPsortPtr((void**)set->symhdlrs, SCIPsymhdlrCompTryadd, set->nsymhdlrs);
       set->symhdlrssorted = TRUE;
+   }
+}
+
+/** sorts symmetry handlers by presolving priorities */
+void SCIPsetSortSymhdlrsPresol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->symhdlrspresolsorted )
+   {
+      SCIPsortPtr((void**)set->symhdlrs_presol, SCIPsymhdlrCompPresol, set->nsymhdlrs);
+      set->symhdlrspresolsorted = TRUE;
    }
 }
 

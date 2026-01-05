@@ -72,13 +72,6 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
 #define SCIP_DECL_SYMHDLRTRYADD(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SYM_SYMTYPE symtype, \
       int** perms, int nperms, SCIP_VAR** permvars, int npermvars, SYM_GRAPH* symgraph, int id, \
       SCIP_SYMCOMPDATA** symcompdata, int* naddedconss, SCIP_Bool* success)
-=======
- *  - success         : pointer to store whether the symmetry handling method has been added
- */
-#define SCIP_DECL_SYMHDLRTRYADD(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SYM_SYMTYPE symtype, \
-      int** perms, int nperms, SCIP_VAR** permvars, int npermvars, SYM_GRAPH* symgraph, int id, \
-      , SCIP_Bool* success)
->>>>>>> 1838-make-symmetry-computation-move-to-the-core
 
 /** copy method for symmetry handler plugins (called when SCIP copies plugins)
  *

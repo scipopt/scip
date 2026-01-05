@@ -101,6 +101,7 @@ struct SCIP_Set
    SCIP_SYMHDLR**        symhdlrs;           /**< symmetry handlers (sorted by tryadd priority) */
    SCIP_SYMCOMP**        sym_sepa;           /**< symmetry components (sorted by separation priority) */
    SCIP_SYMCOMP**        sym_prop;           /**< symmetry components (sorted by propagation priority) */
+   SCIP_SYMHDLR**        symhdlrs_presol;    /**< symmetry handlers (sorted by presolving priority) */
    SCIP_IISFINDER**      iisfinders;         /**< irreducible infeasible subsystem (IIS) rules */
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_TABLE**          tables;             /**< statistics tables */
@@ -198,6 +199,7 @@ struct SCIP_Set
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             symhdlrssorted;     /**< are the symmetry handlers sorted by priority? */
+   SCIP_Bool             symhdlrspresolsorted;/**< are the symmetry handlers sorted by presolving priority? */
    SCIP_Bool             iisfinderssorted;   /**< are the IIS rules sorted by priority */
    SCIP_Bool             tablessorted;       /**< are the tables sorted by position? */
    SCIP_Bool             exprhdlrssorted;    /**< are the expression handlers sorted by name? */
