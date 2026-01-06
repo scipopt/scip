@@ -25020,6 +25020,19 @@ SCIP_PROP* SCIPbdchginfoGetInferProp(
    return bdchginfo->inferencedata.reason.prop;
 }
 
+/** returns inference symmetry handler of given bound change information,
+ *  or NULL if no symmetry handler was responsible
+ */
+SCIP_SYMHDLR* SCIPbdchginfoGetInferSymhdlr(
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
+   )
+{
+   assert(bdchginfo != NULL);
+   assert((SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_SYMINFER);
+
+   return bdchginfo->inferencedata.reason.symhdlr;
+}
+
 /** returns inference user information of given bound change information */
 int SCIPbdchginfoGetInferInfo(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */

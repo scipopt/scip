@@ -41,6 +41,7 @@
 #include "scip/type_implics.h"
 #include "scip/type_cons.h"
 #include "scip/type_prop.h"
+#include "scip/type_sym.h"
 #include "scip/type_lp.h"
 #include "scip/rational.h"
 #include "scip/type_lpexact.h"
@@ -86,6 +87,7 @@ struct SCIP_InferenceData
    {
       SCIP_CONS*         cons;               /**< constraint that inferred this bound change, or NULL */
       SCIP_PROP*         prop;               /**< propagator that inferred this bound change, or NULL */
+      SCIP_SYMHDLR*      symhdlr;            /**< symmetry handler that inferred this bound change, or NULL */
    } reason;
    int                   info;               /**< user information for inference to help resolving the conflict */
 };
