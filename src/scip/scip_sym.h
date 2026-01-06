@@ -69,6 +69,8 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
    int                   sepafreq,           /**< frequency for calling separator of symmetry handler */
    SCIP_Bool             delayprop,          /**< should propagation be delayed, if other sym-propagators found reductions? */
    SCIP_Bool             delaysepa,          /**< should separation be delayed, if other sym-separators found reductions? */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
    int                   maxprerounds,       /**< maximal number of presolving rounds the symmetry handler participates in (-1: no limit) */
    SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the symmetry handler's presolving method */

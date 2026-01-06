@@ -31,7 +31,9 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/clock.h"
+#include "scip/sepastore.h"
 #include "scip/set.h"
+#include "scip/struct_stat.h"
 #include "scip/struct_sym.h"
 #include "scip/sym.h"
 
@@ -52,6 +54,8 @@ SCIP_RETCODE doSymhdlrCreate(
    int                   sepafreq,           /**< frequency for calling separator of symmetry handler */
    SCIP_Bool             delayprop,          /**< should propagation be delayed, if other sym-propagators found reductions? */
    SCIP_Bool             delaysepa,          /**< should separation be delayed, if other sym-separators found reductions? */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
    int                   maxprerounds,       /**< maximal number of presolving rounds the symmetry handler participates in (-1: no limit) */
    SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the symmetry handler's presolving method */
@@ -144,6 +148,12 @@ SCIP_RETCODE doSymhdlrCreate(
    (*symhdlr)->nchgcoefs = 0;
    (*symhdlr)->nchgsides = 0;
    (*symhdlr)->npresolcalls = 0;
+   (*symhdlr)->lastsepanode = -1;
+   (*symhdlr)->nsepacallsatnode = 0;
+   (*symhdlr)->nseparootcalls = 0;
+   (*symhdlr)->ncutsfoundatnode = 0;
+   (*symhdlr)->nsepacutoffs = 0;
+   (*symhdlr)->nsepadomredsfound = 0;
    (*symhdlr)->sepalpwasdelayed = FALSE;
    (*symhdlr)->sepasolwasdelayed = FALSE;
    (*symhdlr)->propwasdelayed = FALSE;
@@ -157,6 +167,28 @@ SCIP_RETCODE doSymhdlrCreate(
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "frequency for separating cuts (-1: never, 0: only in root node)",
          &(*symhdlr)->sepafreq, FALSE, sepafreq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/sepapriority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of separator <%s>", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+         &(*symhdlr)->sepapriority, TRUE, sepapriority, INT_MIN/4, INT_MAX/4,
+         NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/maxbounddist", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <%s> (0.0: only on current best node, 1.0: on all nodes)",
+      name);
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname, paramdesc,
+         &(*symhdlr)->maxbounddist, TRUE, maxbounddist, 0.0, 1.0, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/sepadelay", name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+         "should separator be delayed, if other separators found cuts?",
+         &(*symhdlr)->delaysepa, TRUE, delaysepa, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/expbackoff", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "base for exponential increase of frequency at which separator <%s> is called (1: call at each multiple of frequency)", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+         &(*symhdlr)->expbackoff, TRUE, 4, 1, 100, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/propfreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
@@ -172,11 +204,6 @@ SCIP_RETCODE doSymhdlrCreate(
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "maximal number of presolving rounds the symmetry handler participates in (-1: no limit)",
          &(*symhdlr)->maxprerounds, TRUE, maxprerounds, -1, INT_MAX, NULL, NULL) );
-
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/delaysepa", name);
-   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
-         "should separation method be delayed, if other separators found cuts?",
-         &(*symhdlr)->delaysepa, TRUE, delaysepa, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/delayprop", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
@@ -208,6 +235,8 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    int                   sepafreq,           /**< frequency for calling separator of symmetry handler */
    SCIP_Bool             delayprop,          /**< should propagation be delayed, if other sym-propagators found reductions? */
    SCIP_Bool             delaysepa,          /**< should separation be delayed, if other sym-separators found reductions? */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
    int                   maxprerounds,       /**< maximal number of presolving rounds the symmetry handler participates in (-1: no limit) */
    SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the symmetry handler's presolving method */
@@ -234,7 +263,7 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    assert(symprop != NULL || propfreq == -1);
 
    SCIP_CALL_FINALLY( doSymhdlrCreate(symhdlr, set, messagehdlr, blkmem, name, desc, priority, proppriority,
-         sepapriority, presolpriority, propfreq, sepafreq, delayprop, delaysepa, maxprerounds, proptiming,
+         sepapriority, presolpriority, propfreq, sepafreq, delayprop, delaysepa, maxbounddist, maxprerounds, proptiming,
          presoltiming, symtryadd, symcopy, symfree, syminit, symexit, symdelete, symtrans, symsepalp, symsepasol,
          symprop, sympresol, symhdlrdata),
          (void) SCIPsymhdlrFree(symhdlr, set) );
@@ -553,6 +582,241 @@ SCIP_RETCODE SCIPsymhdlrPresol(
    return SCIP_OKAY;
 }
 
+/** calls LP separation method of symmetry handler's separator */
+SCIP_RETCODE SCIPsymhdlrSepaLP(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   int                   depth,              /**< depth of current node */
+   SCIP_Real             bounddist,          /**< current relative distance of local dual bound to global dual bound */
+   SCIP_Bool             allowlocal,         /**< should the separator be asked to separate local cuts */
+   SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(symhdlr != NULL);
+   assert(symhdlr->sepafreq >= -1);
+   assert(0.0 <= symhdlr->maxbounddist && symhdlr->maxbounddist <= 1.0);
+   assert(0.0 <= bounddist && bounddist <= 1.0);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+   assert(stat != NULL);
+   assert(depth >= 0);
+   assert(result != NULL);
+
+   /* @symtodo how to deal with exact SCIP? */
+   if( symhdlr->symsepalp != NULL && SCIPsetIsLE(set, bounddist, symhdlr->maxbounddist) &&
+       ( (depth == 0 && symhdlr->sepafreq != -1) ||
+         (symhdlr->sepafreq > 0 && depth % symhdlr->sepafreq == 0 &&
+            (symhdlr->expbackoff == 1 || SCIPsetIsIntegral(set, LOG2(depth * (1.0 / symhdlr->sepafreq)) / LOG2((SCIP_Real)symhdlr->expbackoff)))) ||
+         symhdlr->sepalpwasdelayed) && !set->exact_enable
+     )
+   {
+      if( (!symhdlr->delaysepa && !symhdlr->sepalpwasdelayed) || execdelayed )
+      {
+         SCIP_CUTPOOL* cutpool;
+         SCIP_CUTPOOL* delayedcutpool;
+         SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
+         int oldncutsfound;
+         int oldnactiveconss;
+         int ncutsfound;
+
+         SCIPsetDebugMsg(set, "executing separator of symmetry handler <%s> on LP solution\n", symhdlr->name);
+
+         cutpool = SCIPgetGlobalCutpool(set->scip);
+         delayedcutpool = SCIPgetDelayedGlobalCutpool(set->scip);
+         oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
+         oldncutsfound = SCIPsepastoreGetNCuts(sepastore) + SCIPcutpoolGetNCuts(cutpool) + SCIPcutpoolGetNCuts(delayedcutpool);
+
+         oldnactiveconss = stat->nactiveconss;
+
+         /* reset the statistics for current node */
+         if( symhdlr->lastsepanode != stat->ntotalnodes )
+         {
+            symhdlr->nsepacallsatnode = 0;
+            symhdlr->ncutsfoundatnode = 0;
+         }
+
+         /* start timing */
+         SCIPclockStart(symhdlr->sepatime, set);
+
+         /* call external separation method */
+         SCIP_CALL( symhdlr->symsepalp(set->scip, symhdlr, symhdlr->symcompdata, symhdlr->nsymcompdata
+               , result, allowlocal, depth) );
+
+         /* stop timing */
+         SCIPclockStop(symhdlr->sepatime, set);
+
+         /* update statistics */
+         if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+         {
+            symhdlr->nsepacalls++;
+            if( depth == 0 )
+               symhdlr->nseparootcalls++;
+            symhdlr->nsepacallsatnode++;
+            symhdlr->lastsepanode = stat->ntotalnodes;
+         }
+         if( *result == SCIP_CUTOFF )
+            symhdlr->nsepacutoffs++;
+
+         ncutsfound = SCIPsepastoreGetNCuts(sepastore) + SCIPcutpoolGetNCuts(cutpool) + SCIPcutpoolGetNCuts(delayedcutpool) - oldncutsfound;
+         symhdlr->ncutsfound += ncutsfound;
+         symhdlr->ncutsfoundatnode += ncutsfound;
+         symhdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/  /* cppcheck-suppress duplicateValueTernary */
+
+         /* update domain reductions; therefore remove the domain
+          * reduction counts which were generated in probing mode */
+         symhdlr->nsepadomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+         symhdlr->nsepadomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
+
+         /* evaluate result */
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_SEPARATED
+            && *result != SCIP_NEWROUND
+            && *result != SCIP_DIDNOTFIND
+            && *result != SCIP_DIDNOTRUN
+            && *result != SCIP_DELAYED )
+         {
+            SCIPerrorMessage("separation method of symmetry handler <%s> returned invalid result <%d>\n",
+               symhdlr->name, *result);
+            return SCIP_INVALIDRESULT;
+         }
+      }
+      else
+      {
+         SCIPsetDebugMsg(set, "separator of symmetry handler <%s> was delayed\n", symhdlr->name);
+         *result = SCIP_DELAYED;
+      }
+
+      /* remember whether separator was delayed */
+      symhdlr->sepalpwasdelayed = (*result == SCIP_DELAYED);
+   }
+   else
+      *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
+
+/** calls primal solution separation method of symmetry handler's separator */
+SCIP_RETCODE SCIPsymhdlrSepaSol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated */
+   int                   depth,              /**< depth of current node */
+   SCIP_Bool             allowlocal,         /**< should the separator allow local cuts */
+   SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(symhdlr != NULL);
+   assert(symhdlr->sepafreq >= -1);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+   assert(stat != NULL);
+   assert(depth >= 0);
+   assert(result != NULL);
+
+   /* @symtodo how to deal with exact SCIP? */
+   if( symhdlr->symsepasol != NULL &&
+      ( (depth == 0 && symhdlr->sepafreq != -1) ||
+         (symhdlr->sepafreq > 0 && depth % symhdlr->sepafreq == 0 &&
+            (symhdlr->expbackoff == 1 || SCIPsetIsIntegral(set, LOG2(depth * (1.0 / symhdlr->sepafreq) / LOG2((SCIP_Real)symhdlr->expbackoff))))) ||
+         symhdlr->sepasolwasdelayed ) && !set->exact_enable
+     )
+   {
+      if( (!symhdlr->delaysepa && !symhdlr->sepasolwasdelayed) || execdelayed )
+      {
+         SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
+         int oldncutsfound;
+         int oldnactiveconss;
+         int ncutsfound;
+
+         SCIPsetDebugMsg(set, "executing separator of symmetry handler <%s> on solution %p\n",
+            symhdlr->name, (void*)sol);
+
+         oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
+         oldncutsfound = SCIPsepastoreGetNCuts(sepastore);
+         oldnactiveconss = stat->nactiveconss;
+
+         /* reset the statistics for current node */
+         if( symhdlr->lastsepanode != stat->ntotalnodes )
+         {
+            symhdlr->nsepacallsatnode = 0;
+            symhdlr->ncutsfoundatnode = 0;
+         }
+
+         /* start timing */
+         SCIPclockStart(symhdlr->sepatime, set);
+
+         /* call external separation method */
+         SCIP_CALL( symhdlr->symsepasol(set->scip, symhdlr, sol, symhdlr->symcompdata, symhdlr->nsymcompdata,
+               result, allowlocal, depth) );
+
+         /* stop timing */
+         SCIPclockStop(symhdlr->sepatime, set);
+
+         /* update statistics */
+         if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+         {
+            symhdlr->nsepacalls++;
+            if( depth == 0 )
+               symhdlr->nseparootcalls++;
+            symhdlr->nsepacallsatnode++;
+            symhdlr->lastsepanode = stat->ntotalnodes;
+         }
+         if( *result == SCIP_CUTOFF )
+            symhdlr->nsepacutoffs++;
+
+         ncutsfound = SCIPsepastoreGetNCuts(sepastore) - oldncutsfound;
+
+         symhdlr->ncutsfound += ncutsfound;
+         symhdlr->ncutsfoundatnode += ncutsfound;
+         symhdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/  /* cppcheck-suppress duplicateValueTernary */
+
+         /* update domain reductions; therefore remove the domain
+          * reduction counts which were generated in probing mode */
+         symhdlr->nsepadomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+         symhdlr->nsepadomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
+
+         /* evaluate result */
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_SEPARATED
+            && *result != SCIP_NEWROUND
+            && *result != SCIP_DIDNOTFIND
+            && *result != SCIP_DIDNOTRUN
+            && *result != SCIP_DELAYED )
+         {
+            SCIPerrorMessage("execution method of separation method of symmetry handler <%s> returned invalid result <%d>\n",
+               symhdlr->name, *result);
+            return SCIP_INVALIDRESULT;
+         }
+      }
+      else
+      {
+         SCIPsetDebugMsg(set, "separator of symmetry handler <%s> was delayed\n", symhdlr->name);
+         *result = SCIP_DELAYED;
+      }
+
+      /* remember whether separator was delayed */
+      symhdlr->sepasolwasdelayed = (*result == SCIP_DELAYED);
+   }
+   else
+      *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
+
 /** calls try-add method of symmetry handler */
 SCIP_RETCODE SCIPsymhdlrTryadd(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
@@ -609,6 +873,26 @@ SCIP_SYMHDLRDATA* SCIPsymhdlrGetData(
    assert(symhdlr != NULL);
 
    return symhdlr->symhdlrdata;
+}
+
+/** gets priority of symmetry handler's separator */
+int SCIPsymhdlrSepaGetPriority(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->sepapriority;
+}
+
+/** was symmetry handler's separator delayed at the last call? */
+SCIP_Bool SCIPsymhdlrSepaWasLPDelayed(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->sepalpwasdelayed;
 }
 
 /** compares two symmetry handlers w. r. to their try-add priority */
