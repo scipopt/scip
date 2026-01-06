@@ -79,6 +79,7 @@ struct SCIP_Symhdlr
    SCIP_CLOCK*           presoltime;         /**< time used for presolving of this symmetry handler */
    SCIP_CLOCK*           sepatime;           /**< time used for separation of this symmetry handler */
    SCIP_CLOCK*           proptime;           /**< time used for propagation of this symmetry handler */
+   SCIP_CLOCK*           sbproptime;         /**< time used for propagation in strong branching of this symmetry handler */
    SCIP_Bool             initialized;        /**< is symmetry handler initialized */
    SCIP_Longint          nsepacalls;         /**< number of times, the separator was called */
    SCIP_Longint          npropcalls;         /**< number of times, the propagator was called */

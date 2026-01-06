@@ -139,6 +139,18 @@ SCIP_RETCODE SCIPsymhdlrPresol(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** calls propagation method of symmetry handler */
+SCIP_RETCODE SCIPsymhdlrProp(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   int                   depth,              /**< depth of current node */
+   SCIP_Bool             execdelayed,        /**< execute propagator even if it is marked to be delayed */
+   SCIP_Bool             instrongbranching,  /**< are we currently doing strong branching? */
+   SCIP_PROPTIMING       proptiming,         /**< current point in the node solving process */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
 /** calls try-add method of symmetry handler */
 SCIP_RETCODE SCIPsymhdlrTryadd(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */

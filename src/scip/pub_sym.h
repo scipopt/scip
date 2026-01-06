@@ -145,6 +145,24 @@ int SCIPsymhdlrGetNChgSides(
    SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
    );
 
+/** returns the timing mask of the symmetry handler's propagator */
+SCIP_EXPORT
+SCIP_PROPTIMING SCIPsymhdlrPropGetTimingmask(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   );
+
+/** gets priority of symmetry handler's propagator */
+SCIP_EXPORT
+int SCIPsymhdlrPropGetPriority(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   );
+
+/** was symmetry handler's propagator delayed at the last call? */
+SCIP_EXPORT
+SCIP_Bool SCIPsymhdlrPropWasDelayed(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   );
+
 /** compares two symmetry handlers with respect to their try-add priority */
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompTryadd);

@@ -62,6 +62,7 @@
 #include "scip/pub_prop.h"
 #include "scip/pub_relax.h"
 #include "scip/pub_sepa.h"
+#include "scip/pub_sym.h"
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/relax.h"
@@ -93,6 +94,7 @@
 #include "scip/struct_stat.h"
 #include "scip/struct_tree.h"
 #include "scip/struct_var.h"
+#include "scip/sym.h"
 #include "scip/syncstore.h"
 #include "scip/tree.h"
 #include "scip/var.h"
@@ -428,7 +430,6 @@ SCIP_RETCODE propagationRound(
 {  /*lint --e{715}*/
    SCIP_RESULT result;
    SCIP_Bool abortoncutoff;
-   int symidx;
    int i;
 
    assert(set != NULL);
@@ -506,32 +507,32 @@ SCIP_RETCODE propagationRound(
    }
 
    /* call additional propagators of symmetry handlers with nonnegative priority */
-   for( propid = 0; propid < set->nsymhdlrs; ++propid )
+   for( i = 0; i < set->nsymhdlrs; ++i )
    {
 #ifndef NDEBUG
       size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
 #endif
       /* timing needs to fit */
-      if( (SCIPsymhdlrPropGetTimingmask(set->symhdlrs_prop[propid]) & timingmask) == 0 )
+      if( (SCIPsymhdlrPropGetTimingmask(set->symhdlrs_prop[i]) & timingmask) == 0 )
          continue;
 
-      if( SCIPsymhdlrPropGetPriority(set->symhdlrs_prop[propid]) < 0 )
+      if( SCIPsymhdlrPropGetPriority(set->symhdlrs_prop[i]) < 0 )
          continue;
 
-      if( onlydelayed && !SCIPsymhdlrPropWasDelayed(set->symhdlrs_prop[propid]) )
+      if( onlydelayed && !SCIPsymhdlrPropWasDelayed(set->symhdlrs_prop[i]) )
          continue;
 
       SCIPsetDebugMsg(set, "calling propagator of symmetry handler <%s>\n",
-         SCIPsymhdlrGetName(set->symhdlrs_prop[propid]));
+         SCIPsymhdlrGetName(set->symhdlrs_prop[i]));
 
-      SCIP_CALL( SCIPsymhdlrPropExec(set->symhdlrs_prop[propid], set, stat, depth, onlydelayed,
+      SCIP_CALL( SCIPsymhdlrProp(set->symhdlrs_prop[i], set, stat, depth, onlydelayed,
             tree->sbprobing, timingmask, &result) );
 
 #ifndef NDEBUG
       if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
       {
          SCIPerrorMessage("Buffer not completely freed after executing propagator of symmetry handler <%s>\n",
-            SCIPsymhdlrGetName(set->symhdlrs_prop[propid]));
+            SCIPsymhdlrGetName(set->symhdlrs_prop[i]));
          SCIPABORT();
       }
 #endif
@@ -549,7 +550,7 @@ SCIP_RETCODE propagationRound(
       if( result == SCIP_CUTOFF )
       {
          SCIPsetDebugMsg(set, " -> propagator of symmetry handler <%s> detected cutoff\n",
-            SCIPsymhdlrGetName(set->symhdlrs_prop[propid]));
+            SCIPsymhdlrGetName(set->symhdlrs_prop[i]));
       }
 
       /* if we work off the delayed propagators, we stop immediately if a reduction was found */
@@ -638,22 +639,22 @@ SCIP_RETCODE propagationRound(
    }
 
    /* call additional propagators of symmetry handlers with negative priority */
-   for( ; propid < set->nsymhdlrs && !(*postpone) && (!(*cutoff) || !abortoncutoff); ++propid )
+   for( i = 0; i < set->nsymhdlrs && !(*postpone) && (!(*cutoff) || !abortoncutoff); ++i )
    {
       /* timing needs to fit */
-      if( (SCIPsymhdlrPropGetTimingmask(set->symhdlrs_prop[propid]) & timingmask) == 0 )
+      if( (SCIPsymhdlrPropGetTimingmask(set->symhdlrs_prop[i]) & timingmask) == 0 )
          continue;
 
-      if( SCIPsymhdlrPropGetPriority(set->symhdlrs_prop[propid]) >= 0 )
+      if( SCIPsymhdlrPropGetPriority(set->symhdlrs_prop[i]) >= 0 )
          continue;
 
-      if( onlydelayed && !SCIPsymhdlrPropWasDelayed(set->symhdlrs_prop[propid]) )
+      if( onlydelayed && !SCIPsymhdlrPropWasDelayed(set->symhdlrs_prop[i]) )
          continue;
 
       SCIPsetDebugMsg(set, "calling propagator of symmetry handler <%s>\n",
-         SCIPsymhdlrGetName(set->symhdlrs_prop[propid]));
+         SCIPsymhdlrGetName(set->symhdlrs_prop[i]));
 
-      SCIP_CALL( SCIPsymhdlrPropExec(set->symhdlrs_prop[propid], set, stat, depth, onlydelayed,
+      SCIP_CALL( SCIPsymhdlrProp(set->symhdlrs_prop[i], set, stat, depth, onlydelayed,
             tree->sbprobing, timingmask, &result) );
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
@@ -668,7 +669,7 @@ SCIP_RETCODE propagationRound(
       if( result == SCIP_CUTOFF )
       {
          SCIPsetDebugMsg(set, " -> propagator of symmetry handler <%s> detected cutoff\n",
-            SCIPsymhdlrGetName(set->symhdlrs_prop[propid]));
+            SCIPsymhdlrGetName(set->symhdlrs_prop[i]));
       }
 
       /* if we work off the delayed propagators, we stop immediately if a reduction was found */
