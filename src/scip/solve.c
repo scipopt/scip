@@ -428,6 +428,7 @@ SCIP_RETCODE propagationRound(
 {  /*lint --e{715}*/
    SCIP_RESULT result;
    SCIP_Bool abortoncutoff;
+   int symidx;
    int i;
 
    assert(set != NULL);
@@ -442,12 +443,18 @@ SCIP_RETCODE propagationRound(
    /* sort propagators */
    SCIPsetSortProps(set);
 
+   /* sort symmetry handlers */
+   SCIPsetSortSymhdlrsProp(set);
+
    /* check if we want to abort on a cutoff; if we are not in the solving stage (e.g., in presolving), we want to abort
     * anyway
     */
    abortoncutoff = set->prop_abortoncutoff || (set->stage != SCIP_STAGE_SOLVING);
 
    /* call additional propagators with nonnegative priority */
+   /* @symtodo: there is a lot of code duplication, because we have four times essentially the same loop;
+    *           shall we introduce a separate function for these loops?
+    */
    for( i = 0; i < set->nprops && !(*postpone) && (!(*cutoff) || !abortoncutoff); ++i )
    {
 #ifndef NDEBUG
@@ -488,6 +495,61 @@ SCIP_RETCODE propagationRound(
       if( result == SCIP_CUTOFF )
       {
          SCIPsetDebugMsg(set, " -> propagator <%s> detected cutoff\n", SCIPpropGetName(set->props[i]));
+      }
+
+      /* if we work off the delayed propagators, we stop immediately if a reduction was found */
+      if( onlydelayed && result == SCIP_REDUCEDDOM )
+      {
+         *delayed = TRUE;
+         return SCIP_OKAY;
+      }
+   }
+
+   /* call additional propagators of symmetry handlers with nonnegative priority */
+   for( propid = 0; propid < set->nsymhdlrs; ++propid )
+   {
+#ifndef NDEBUG
+      size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
+#endif
+      /* timing needs to fit */
+      if( (SCIPsymhdlrPropGetTimingmask(set->symhdlrs_prop[propid]) & timingmask) == 0 )
+         continue;
+
+      if( SCIPsymhdlrPropGetPriority(set->symhdlrs_prop[propid]) < 0 )
+         continue;
+
+      if( onlydelayed && !SCIPsymhdlrPropWasDelayed(set->symhdlrs_prop[propid]) )
+         continue;
+
+      SCIPsetDebugMsg(set, "calling propagator of symmetry handler <%s>\n",
+         SCIPsymhdlrGetName(set->symhdlrs_prop[propid]));
+
+      SCIP_CALL( SCIPsymhdlrPropExec(set->symhdlrs_prop[propid], set, stat, depth, onlydelayed,
+            tree->sbprobing, timingmask, &result) );
+
+#ifndef NDEBUG
+      if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
+      {
+         SCIPerrorMessage("Buffer not completely freed after executing propagator of symmetry handler <%s>\n",
+            SCIPsymhdlrGetName(set->symhdlrs_prop[propid]));
+         SCIPABORT();
+      }
+#endif
+
+      *delayed = *delayed || (result == SCIP_DELAYED);
+      *propagain = *propagain || (result == SCIP_REDUCEDDOM);
+
+      /* beside the result pointer of the propagator we have to check if an internal cutoff was detected; this can
+       * happen when a global bound change was applied which is globally valid and leads locally (for the current node
+       * and others) to an infeasible problem;
+       */
+      *cutoff = *cutoff || (result == SCIP_CUTOFF) || (tree->cutoffdepth <= SCIPtreeGetCurrentDepth(tree));
+      *postpone = (result == SCIP_DELAYNODE) && !(*cutoff);
+
+      if( result == SCIP_CUTOFF )
+      {
+         SCIPsetDebugMsg(set, " -> propagator of symmetry handler <%s> detected cutoff\n",
+            SCIPsymhdlrGetName(set->symhdlrs_prop[propid]));
       }
 
       /* if we work off the delayed propagators, we stop immediately if a reduction was found */
@@ -565,6 +627,48 @@ SCIP_RETCODE propagationRound(
       if( result == SCIP_CUTOFF )
       {
          SCIPsetDebugMsg(set, " -> propagator <%s> detected cutoff\n", SCIPpropGetName(set->props[i]));
+      }
+
+      /* if we work off the delayed propagators, we stop immediately if a reduction was found */
+      if( onlydelayed && result == SCIP_REDUCEDDOM )
+      {
+         *delayed = TRUE;
+         return SCIP_OKAY;
+      }
+   }
+
+   /* call additional propagators of symmetry handlers with negative priority */
+   for( ; propid < set->nsymhdlrs && !(*postpone) && (!(*cutoff) || !abortoncutoff); ++propid )
+   {
+      /* timing needs to fit */
+      if( (SCIPsymhdlrPropGetTimingmask(set->symhdlrs_prop[propid]) & timingmask) == 0 )
+         continue;
+
+      if( SCIPsymhdlrPropGetPriority(set->symhdlrs_prop[propid]) >= 0 )
+         continue;
+
+      if( onlydelayed && !SCIPsymhdlrPropWasDelayed(set->symhdlrs_prop[propid]) )
+         continue;
+
+      SCIPsetDebugMsg(set, "calling propagator of symmetry handler <%s>\n",
+         SCIPsymhdlrGetName(set->symhdlrs_prop[propid]));
+
+      SCIP_CALL( SCIPsymhdlrPropExec(set->symhdlrs_prop[propid], set, stat, depth, onlydelayed,
+            tree->sbprobing, timingmask, &result) );
+      *delayed = *delayed || (result == SCIP_DELAYED);
+      *propagain = *propagain || (result == SCIP_REDUCEDDOM);
+
+      /* beside the result pointer of the propagator we have to check if an internal cutoff was detected; this can
+       * happen when a global bound change was applied which is globally valid and leads locally (for the current node
+       * and others) to an infeasible problem;
+       */
+      *cutoff = *cutoff || (result == SCIP_CUTOFF) || (tree->cutoffdepth <= SCIPtreeGetCurrentDepth(tree));
+      *postpone = (result == SCIP_DELAYNODE) && !(*cutoff);
+
+      if( result == SCIP_CUTOFF )
+      {
+         SCIPsetDebugMsg(set, " -> propagator of symmetry handler <%s> detected cutoff\n",
+            SCIPsymhdlrGetName(set->symhdlrs_prop[propid]));
       }
 
       /* if we work off the delayed propagators, we stop immediately if a reduction was found */

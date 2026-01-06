@@ -156,6 +156,15 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSymreack)
    return SCIP_OKAY;
 }
 
+/** domain propagation method of symmetry handler */
+SCIP_DECL_SYMHDLRPROP(symhdlrPropSymresack)
+{  /*lint --e{715}*/
+   *result = SCIP_DIDNOTRUN;
+
+   printf("calling fake propagator\n");
+
+   return SCIP_OKAY;
+}
 
 /** include symmetry handler for symresack constraints */
 SCIP_RETCODE SCIPincludeSymhdlrSymresack(
@@ -169,7 +178,7 @@ SCIP_RETCODE SCIPincludeSymhdlrSymresack(
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC,
          1, 1, 1, 1, -1, -1, FALSE, FALSE, -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddSymresack, NULL, symhdlrFreeSymresack, NULL, symhdlrExitSymresack,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, symhdlrPresolSymreack, symhdlrdata) );
+         NULL, NULL, NULL, NULL, NULL, NULL, symhdlrPropSymresack, symhdlrPresolSymreack, symhdlrdata) );
 
    return SCIP_OKAY;
 }

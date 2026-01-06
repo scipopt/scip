@@ -5291,6 +5291,20 @@ void SCIPsetSortSymhdlrs(
    }
 }
 
+/** sorts symmetry handlers by propagation priorities */
+void SCIPsetSortSymhdlrsProp(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->symhdlrspropsorted )
+   {
+      SCIPsortPtr((void**)set->symhdlrs_prop, SCIPsymhdlrCompProp, set->nsymhdlrs);
+      set->symhdlrspropsorted = TRUE;
+   }
+}
+
 /** returns the symmetry handler of the given name, or NULL if not existing */
 SCIP_SYMHDLR* SCIPsetFindSymhdlr(
    SCIP_SET*             set,                /**< global SCIP settings */
