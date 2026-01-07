@@ -99,9 +99,9 @@ struct SCIP_Set
    SCIP_NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
    SCIP_BRANCHRULE**     branchrules;        /**< branching rules */
    SCIP_SYMHDLR**        symhdlrs;           /**< symmetry handlers (sorted by tryadd priority) */
-   SCIP_SYMCOMP**        sym_sepa;           /**< symmetry components (sorted by separation priority) */
-   SCIP_SYMCOMP**        sym_prop;           /**< symmetry components (sorted by propagation priority) */
    SCIP_SYMHDLR**        symhdlrs_presol;    /**< symmetry handlers (sorted by presolving priority) */
+   SCIP_SYMHDLR**        symhdlrs_sepa;      /**< symmetry handlers (sorted by separation priority) */
+   SCIP_SYMHDLR**        symhdlrs_prop;      /**< symmetry handlers (sorted by propagation priority) */
    SCIP_IISFINDER**      iisfinders;         /**< irreducible infeasible subsystem (IIS) rules */
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_TABLE**          tables;             /**< statistics tables */
@@ -151,10 +151,6 @@ struct SCIP_Set
    int                   branchrulessize;    /**< size of branchrules array */
    int                   nsymhdlrs;          /**< number of symmetry handlers */
    int                   symhdlrssize;       /**< size of symhdlrs array */
-   int                   nsymsepa;           /**< number of symmetry groups that are separated */
-   int                   symsepasize;        /**< size of sym_sepa array */
-   int                   nsymprop;           /**< number of symmetry groups that are propagated */
-   int                   sympropsize;        /**< size of sym_prop array */
    int                   niisfinders;        /**< number of IIS rules */
    int                   iisfinderssize;     /**< size of IIS finders array */
    int                   ndisps;             /**< number of display columns */
@@ -198,8 +194,10 @@ struct SCIP_Set
    SCIP_Bool             comprsnamesorted;   /**< are the compressions sorted by name? */
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
-   SCIP_Bool             symhdlrssorted;     /**< are the symmetry handlers sorted by priority? */
+   SCIP_Bool             symhdlrssorted;     /**< are the symmetry handlers sorted by try-add priority? */
    SCIP_Bool             symhdlrspresolsorted;/**< are the symmetry handlers sorted by presolving priority? */
+   SCIP_Bool             symhdlrssepasorted; /**< are the symmetry handlers sorted by separation priority? */
+   SCIP_Bool             symhdlrspropsorted; /**< are the symmetry handlers sorted by propagation priority? */
    SCIP_Bool             iisfinderssorted;   /**< are the IIS rules sorted by priority */
    SCIP_Bool             tablessorted;       /**< are the tables sorted by position? */
    SCIP_Bool             exprhdlrssorted;    /**< are the expression handlers sorted by name? */
