@@ -73,6 +73,7 @@ struct SCIP_Symhdlr
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp));    /**< separate cutting planes for LP solution */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol));  /**< separate cutting planes for arbitrary primal solution */
    SCIP_DECL_SYMHDLRPROP ((*symprop));       /**< propagate variable domains */
+   SCIP_DECL_SYMHDLRRESPROP((*symresprop));  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol));    /**< presolving method */
    SCIP_SYMHDLRDATA*     symhdlrdata;        /**< symmetry handler data */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this symmetry handler for the next stages */
