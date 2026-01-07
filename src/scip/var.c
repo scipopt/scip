@@ -1744,6 +1744,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    SCIP_VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
+   SCIP_SYMCOMP*         infersymcomp,       /**< symmetry component that deduced the bound change, or NULL */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_BOUNDTYPE        inferboundtype      /**< type of bound for inference var: lower or upper bound */
    )
@@ -1758,6 +1759,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
    assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
+   assert(boundchgtype == SCIP_BOUNDCHGTYPE_SYMINFER || infersymcomp == NULL);
 
    SCIPsetDebugMsg(set, "adding %s bound change <%s: %g> of variable <%s> to domain change at %p pointing to %p\n",
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference",
@@ -1796,6 +1798,11 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    case SCIP_BOUNDCHGTYPE_PROPINFER:
       boundchg->data.inferencedata.var = infervar;
       boundchg->data.inferencedata.reason.prop = inferprop;
+      boundchg->data.inferencedata.info = inferinfo;
+      break;
+   case SCIP_BOUNDCHGTYPE_SYMINFER:
+      boundchg->data.inferencedata.var = infervar;
+      boundchg->data.inferencedata.reason.symcomp = infersymcomp;
       boundchg->data.inferencedata.info = inferinfo;
       break;
    default:
@@ -23143,6 +23150,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPbdchginfoGetInferVar
 #undef SCIPbdchginfoGetInferCons
 #undef SCIPbdchginfoGetInferProp
+#undef SCIPbdchginfoGetInferSymcomp
 #undef SCIPbdchginfoGetInferInfo
 #undef SCIPbdchginfoGetInferBoundtype
 #undef SCIPbdchginfoIsRedundant

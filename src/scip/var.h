@@ -176,6 +176,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    SCIP_VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
+   SCIP_SYMCOMP*         infersymcomp,       /**< symmetry component that deduced the bound change, or NULL */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_BOUNDTYPE        inferboundtype      /**< type of bound for inference var: lower or upper bound */
    );
