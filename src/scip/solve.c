@@ -475,8 +475,15 @@ SCIP_RETCODE propagationRound(
          ++j;
          continue;
       }
-      propprio = SCIPpropGetPriority(set->props[i]);
-      symprio = SCIPsymhdlrPropGetPriority(set->symhdlrs_prop[j]);
+      if( i < set->nprops )
+         propprio = SCIPpropGetPriority(set->props[i]);
+      else
+         propprio = -1;
+
+      if( j < set->nsymhdlrs )
+         symprio = SCIPsymhdlrPropGetPriority(set->symhdlrs_prop[j]);
+      else
+         symprio = -1;
 
       if( propprio >= symprio )
       {
