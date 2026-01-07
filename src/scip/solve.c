@@ -470,7 +470,7 @@ SCIP_RETCODE propagationRound(
          ++i;
          continue;
       }
-      if( j < set->nsymhdlrs && (SCIPpropGetTimingmask(set->symhdlrs_prop[j]) & timingmask) == 0 )
+      if( j < set->nsymhdlrs && (SCIPsymhdlrPropGetTimingmask(set->symhdlrs_prop[j]) & timingmask) == 0 )
       {
          ++j;
          continue;
@@ -480,7 +480,7 @@ SCIP_RETCODE propagationRound(
 
       if( propprio >= symprio )
       {
-         if( propprio < 0 || (onlydelayed && !SCIPpropWasLPDelayed(set->sepas[i])) )
+         if( propprio < 0 || (onlydelayed && !SCIPpropWasDelayed(set->props[i])) )
          {
             if( symprio < 0 )
                break;
@@ -495,7 +495,7 @@ SCIP_RETCODE propagationRound(
       }
       else
       {
-         if( symprio < 0 || (onlydelayed && !SCIPsymhdlrPropWasLPDelayed(set->symhdlrs_prop[j])) )
+         if( symprio < 0 || (onlydelayed && !SCIPsymhdlrPropWasDelayed(set->symhdlrs_prop[j])) )
          {
             if( propprio < 0 )
                break;
@@ -522,7 +522,7 @@ SCIP_RETCODE propagationRound(
          else
          {
             SCIPerrorMessage("Buffer not completely freed after executing propagator of symmetry handler <%s>\n",
-               SCIPsymhdlrPropGetName(set->symhdlrs_prop[j]));
+               SCIPsymhdlrGetName(set->symhdlrs_prop[j]));
          }
          SCIPABORT();
       }
@@ -631,7 +631,7 @@ SCIP_RETCODE propagationRound(
 
       if( propprio >= symprio )
       {
-         if( onlydelayed && !SCIPpropWasLPDelayed(set->props[i]) )
+         if( onlydelayed && !SCIPpropWasDelayed(set->props[i]) )
          {
             ++i;
             continue;
@@ -644,7 +644,7 @@ SCIP_RETCODE propagationRound(
       }
       else
       {
-         if( onlydelayed && !SCIPsymhdlrPropWasLPDelayed(set->symhdlrs_prop[j]) )
+         if( onlydelayed && !SCIPsymhdlrPropWasDelayed(set->symhdlrs_prop[j]) )
          {
             ++j;
             continue;
