@@ -125,9 +125,9 @@ struct SCIP_Symhdlr
    SCIP_PROPTIMING       proptiming;         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming;       /**< timing mask of the symmetry handler's presolving method */
 
-   SCIP_SYMCOMPDATA**    symcompdata;        /**< array of data for symmetry components handled by this symhdlr */
-   int                   nsymcompdata;       /**< number of data entries in symcompdata */
-   int                   symcompdatasize;    /**< size of symcompdata */
+   SCIP_SYMCOMP**        symcomps;           /**< array of symmetry components handled by this symhdlr */
+   int                   nsymcomps;          /**< number of data entries in symcomps */
+   int                   symcompssize;       /**< size of symcomps */
 };
 
 /** data structure for storing symmetry information */

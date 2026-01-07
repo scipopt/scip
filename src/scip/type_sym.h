@@ -93,20 +93,20 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  input:
  *  - scip            : SCIP main data structure
  *  - symhdlr         : the symmetry handler itself
- *  - symcompdata     : array of data for symmetry components handled by symhdlr
+ *  - symcomps        : array of symmetry components handled by symhdlr
  *  - nsymcomps       : number of symmetry components handled by symhdlr
  */
-#define SCIP_DECL_SYMHDLRINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMPDATA** symcompdata, int nsymcomps)
+#define SCIP_DECL_SYMHDLRINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP** symcomps, int nsymcomps)
 
 /** deinitialization method of symmetry handler (called before transformed problem is freed)
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - symhdlr         : the symmetry handler itself
- *  - symcompdata     : array of data for symmetry components handled by symhdlr
+ *  - symcomps        : array of symmetry components handled by symhdlr
  *  - nsymcomps       : number of symmetry components handled by symhdlr
  */
-#define SCIP_DECL_SYMHDLREXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMPDATA** symcompdata, int nsymcomps)
+#define SCIP_DECL_SYMHDLREXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP** symcomps, int nsymcomps)
 
 /** solving process initialization method of symmetry handler (called when branch and bound process is about to begin)
  *
@@ -120,10 +120,10 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  input:
  *  - scip            : SCIP main data structure
  *  - symhdlr         : the symmetry handler itself
- *  - symcompdata     : array of data for symmetry components handled by symhdlr
+ *  - symcomps        : array of symmetry components handled by symhdlr
  *  - nsymcomps       : number of symmetry components handled by symhdlr
  */
-#define SCIP_DECL_SYMHDLRINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMPDATA** symcompdata, int nsymcomps)
+#define SCIP_DECL_SYMHDLRINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP** symcomps, int nsymcomps)
 
 /** solving process deinitialization method of symmetry handler (called before branch and bound process data is freed)
  *
@@ -133,11 +133,11 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  input:
  *  - scip            : SCIP main data structure
  *  - symhdlr         : the symmetry handler itself
- *  - symcompdata     : array of data for symmetry components handled by symhdlr
+ *  - symcomps        : array of symmetry components handled by symhdlr
  *  - nsymcomps       : number of symmetry components handled by symhdlr
  *  - restart         : was this exit solve call triggered by a restart?
  */
-#define SCIP_DECL_SYMHDLREXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMPDATA** symcompdata, int nsymcomps, SCIP_Bool restart)
+#define SCIP_DECL_SYMHDLREXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP** symcomps, int nsymcomps, SCIP_Bool restart)
 
 /* @symtodo do we need this method? */
 /** frees specific symmetry component data
@@ -145,19 +145,19 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  input:
  *  - scip            : SCIP main data structure
  *  - symhdlr         : the symmetry handler itself
- *  - symcompdata     : pointer to symmetry component data to free
+ *  - symcomp         : pointer to symmetry component to free
  */
-#define SCIP_DECL_SYMHDLRDELETE(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMPDATA** symcompdata)
+#define SCIP_DECL_SYMHDLRDELETE(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP** symcomp)
 
 /** transforms data of symmetry handler into data belonging to the transformed problem
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - symhdlr         : symmetry handler
- *  - sourcedata      : symmetry component data to be transformed
- *  - targetdata      : pointer to store transformed symmetry component data
+ *  - sourcesymcomp   : symmetry component to be transformed
+ *  - targetsymcomp   : pointer to store transformed symmetry component
  */
-#define SCIP_DECL_SYMHDLRTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMPDATA* sourcedata, SCIP_SYMCOMPDATA** targetdata)
+#define SCIP_DECL_SYMHDLRTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP* sourcesymcomp, SCIP_SYMCOMP** targetsymcomp)
 
 /** LP solution separation method of symmetry handler
  *
@@ -167,7 +167,7 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  input:
  *  - scip            : SCIP main data structure
  *  - symhdlr         : the symmetry handler itself
- *  - symcompdata     : array of data for symmetry components handled by symhdlr
+ *  - symcomps        : array of symmetry components handled by symhdlr
  *  - nsymcomps       : number of symmetry components handled by symhdlr
  *  - result          : pointer to store the result of the separation call
  *  - allowlocal      : should the separator allow local cuts?
@@ -188,7 +188,7 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again
  */
-#define SCIP_DECL_SYMHDLRSEPALP(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMPDATA** symcompdata, \
+#define SCIP_DECL_SYMHDLRSEPALP(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP** symcomps, \
       int nsymcomps, SCIP_RESULT* result, SCIP_Bool allowlocal, int depth)
 
 /** arbitrary primal solution separation method of symmetry handler
@@ -200,7 +200,7 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  - scip            : SCIP main data structure
  *  - symhdlr         : the symmetry handler itself
  *  - sol             : primal solution that should be separated
- *  - symcompdata     : array of data for symmetry components handled by symhdlr
+ *  - symcomps        : array of symmetry components handled by symhdlr
  *  - nsymcomps       : number of symmetry components handled by symhdlr
  *  - result          : pointer to store the result of the separation call
  *  - allowlocal      : should the separator allow local cuts?
@@ -222,14 +222,14 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again
  */
 #define SCIP_DECL_SYMHDLRSEPASOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SOL* sol, \
-      SCIP_SYMCOMPDATA** symcompdata, int nsymcomps, SCIP_RESULT* result, SCIP_Bool allowlocal, int depth)
+      SCIP_SYMCOMP** symcomps, int nsymcomps, SCIP_RESULT* result, SCIP_Bool allowlocal, int depth)
 
 /** domain propagation method of symmetry handler
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - symhdlr         : the symmetry handler itself
- *  - symcompdata     : array of data for symmetry components handled by symhdlr
+ *  - symcomps        : array of symmetry components handled by symhdlr
  *  - nsymcomps       : number of symmetry components handled by symhdlr
  *  - proptiming      : current point in the node solving loop
  *  - result          : pointer to store the result of the propagation call
@@ -242,7 +242,7 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
  *  - SCIP_DELAYNODE  : the current node should be postponed (return value only valid for BEFORELP propagation)
  */
-#define SCIP_DECL_SYMHDLRPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMPDATA** symcompdata, \
+#define SCIP_DECL_SYMHDLRPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP** symcomps, \
       int nsymcomps, SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
 
 /** presolving method of symmetry handler
@@ -253,7 +253,7 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  input:
  *  - scip            : SCIP main data structure
  *  - symhdlr         : the symmetry handler itself
- *  - symcompdata     : array of data for symmetry components handled by symhdlr
+ *  - symcomps        : array of symmetry components handled by symhdlr
  *  - nsymcomps       : number of symmetry components handled by symhdlr
  *  - nrounds         : number of presolving rounds already done
  *  - presoltiming    : current presolving timing
@@ -298,7 +298,7 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  - SCIP_DELAYED    : the presolving method was skipped, but should be called again
  */
 #define SCIP_DECL_SYMHDLRPRESOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, \
-      SCIP_SYMCOMPDATA** symcompdata, int nsymcomps, int nrounds, SCIP_PRESOLTIMING presoltiming, \
+      SCIP_SYMCOMP** symcomps, int nsymcomps, int nrounds, SCIP_PRESOLTIMING presoltiming, \
       int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
       int nnewdelconss, int nnewaddconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides, \
       int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes, \

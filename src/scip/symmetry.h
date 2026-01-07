@@ -350,7 +350,7 @@ SCIP_RETCODE SCIPsyminfoFree(
 SCIP_RETCODE SCIPaddSymhdlrComponent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
-   SCIP_SYMCOMPDATA*     symcompdata         /**< data of symmetry component */
+   SCIP_SYMCOMP*         symcomp             /**< symmetry component */
    );
 
 /** @} */
