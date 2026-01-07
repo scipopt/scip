@@ -609,7 +609,7 @@ SCIP_RETCODE SCIPsymhdlrProp(
             SCIPclockStart(symhdlr->proptime, set);
 
          /* call external propagation method */
-         SCIP_CALL( symhdlr->symprop(set->scip, symhdlr, symhdlr->symcompdata, symhdlr->nsymcompdata,
+         SCIP_CALL( symhdlr->symprop(set->scip, symhdlr, symhdlr->symcomps, symhdlr->nsymcomps,
                proptiming, result) );
 
          /* stop timing */
