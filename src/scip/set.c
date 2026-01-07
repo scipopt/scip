@@ -3172,6 +3172,8 @@ SCIP_RETCODE SCIPsetFree(
    {
       SCIP_CALL( SCIPsymhdlrFree(&(*set)->symhdlrs[i], *set) );
    }
+   BMSfreeMemoryArrayNull(&(*set)->symhdlrs_prop);
+   BMSfreeMemoryArrayNull(&(*set)->symhdlrs_sepa);
    BMSfreeMemoryArrayNull(&(*set)->symhdlrs);
 
    /* free IIS */
