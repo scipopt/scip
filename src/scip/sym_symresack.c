@@ -110,7 +110,7 @@ SCIP_DECL_SYMHDLREXIT(symhdlrExitSymresack)
 
    for( s = 0; s < nsymcomps; ++s )
    {
-      symdata = symcompdata[s];
+      symdata = SCIPsymcompGetData(symcomps[s]);
       assert(symdata->conss == NULL || symdata->nconss > 0);
 
       for( c = 0; c < symdata->nconss; ++c )
@@ -137,7 +137,7 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSymresack)
 
    for( s = 0; s < nsymcomps; ++s )
    {
-      symdata = symcompdata[s];
+      symdata = SCIPsymcompGetData(symcomps[s]);
 
       if( symdata->nconss == 0 )
          return SCIP_OKAY;
