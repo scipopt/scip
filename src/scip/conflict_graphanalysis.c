@@ -160,6 +160,7 @@
 #include "scip/struct_prob.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
+#include "scip/struct_sym.h"
 #include "scip/struct_tree.h"
 #include "scip/struct_var.h"
 #include "scip/sym.h"
@@ -3171,7 +3172,7 @@ SCIP_RETCODE conflictResolveBound(
    SCIP_VAR* actvar;
    SCIP_CONS* infercons;
    SCIP_PROP* inferprop;
-   SCIP_SYMHDLR* infersymhdlr;
+   SCIP_SYMCOMP* infersymcomp;
    SCIP_RESULT result;
 
 #ifndef NDEBUG
@@ -3346,8 +3347,8 @@ SCIP_RETCODE conflictResolveBound(
       break;
 
    case SCIP_BOUNDCHGTYPE_SYMINFER:
-      infersymhdlr = SCIPbdchginfoGetInferSymhdlr(bdchginfo);
-      if( infersymhdlr != NULL )
+      infersymcomp = SCIPbdchginfoGetInferSymcomp(bdchginfo);
+      if( infersymcomp != NULL )
       {
          SCIP_VAR* infervar;
          int inferinfo;
@@ -3371,9 +3372,9 @@ SCIP_RETCODE conflictResolveBound(
             SCIPvarGetName(infervar),
             inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPgetVarBdAtIndex(set->scip, infervar, inferboundtype, bdchgidx, TRUE),
-            SCIPsymhdlrGetName(infersymhdlr), inferinfo);
+            SCIPsymhdlrGetName(infersymcomp->symhdlr), inferinfo);
 
-         SCIP_CALL( SCIPsymhdlrResolvePropagation(infersymhdlr, set, infervar, inferinfo, inferboundtype,
+         SCIP_CALL( SCIPsymhdlrResolvePropagation(infersymcomp, set, infervar, inferinfo, inferboundtype,
                bdchgidx, relaxedbd, &result) );
          *resolved = (result == SCIP_SUCCESS);
       }

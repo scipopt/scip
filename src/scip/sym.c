@@ -121,10 +121,12 @@ SCIP_RETCODE doSymhdlrCreate(
    SCIP_CALL( SCIPclockCreate(&(*symhdlr)->sepatime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*symhdlr)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*symhdlr)->sbproptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*symhdlr)->resproptime, SCIP_CLOCKTYPE_DEFAULT) );
 
    (*symhdlr)->initialized = FALSE;
    (*symhdlr)->nsepacalls = 0;
    (*symhdlr)->npropcalls = 0;
+   (*symhdlr)->nrespropcalls = 0;
    (*symhdlr)->ncutoffs = 0;
    (*symhdlr)->ncutsfound = 0;
    (*symhdlr)->ncutsapplied = 0;
@@ -288,6 +290,7 @@ SCIP_RETCODE SCIPsymhdlrFree(
       SCIP_CALL( (*symhdlr)->symfree(set->scip, *symhdlr) );
    }
 
+   SCIPclockFree(&(*symhdlr)->resproptime);
    SCIPclockFree(&(*symhdlr)->sbproptime);
    SCIPclockFree(&(*symhdlr)->proptime);
    SCIPclockFree(&(*symhdlr)->sepatime);
@@ -661,7 +664,7 @@ SCIP_RETCODE SCIPsymhdlrProp(
  *  @note it is sufficient to explain the relaxed bound change
  */
 SCIP_RETCODE SCIPsymhdlrResolvePropagation(
-   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SYMCOMP*         symcomp,            /**< symmetry component responsible for propagation */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             infervar,           /**< variable whose bound was deduced by the constraint */
    int                   inferinfo,          /**< user inference information attached to the bound change */
@@ -671,7 +674,9 @@ SCIP_RETCODE SCIPsymhdlrResolvePropagation(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
-   assert(symhdlr != NULL);
+   SCIP_SYMHDLR* symhdlr;
+
+   assert(symcomp != NULL);
    assert((inferboundtype == SCIP_BOUNDTYPE_LOWER
          && SCIPgetVarLbAtIndex(set->scip, infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
       || (inferboundtype == SCIP_BOUNDTYPE_UPPER
@@ -680,33 +685,36 @@ SCIP_RETCODE SCIPsymhdlrResolvePropagation(
 
    *result = SCIP_DIDNOTRUN;
 
-   /* if( symhdlr->propresprop != NULL ) */
-   /* { */
-   /*    /\* start timing *\/ */
-   /*    SCIPclockStart(prop->resproptime, set); */
+   symhdlr = symcomp->symhdlr;
+   assert(symhdlr != NULL);
 
-   /*    SCIP_CALL( prop->propresprop(set->scip, prop, infervar, inferinfo, inferboundtype, bdchgidx, */
-   /*          relaxedbd, result) ); */
+   if( symhdlr->symresprop != NULL )
+   {
+      /* start timing */
+      SCIPclockStart(symhdlr->resproptime, set);
 
-   /*    /\* stop timing *\/ */
-   /*    SCIPclockStop(prop->resproptime, set); */
+      SCIP_CALL( symhdlr->symresprop(set->scip, symhdlr, symcomp, infervar, inferinfo, inferboundtype, bdchgidx,
+            relaxedbd, result) );
 
-   /*    /\* update statistic *\/ */
-   /*    prop->nrespropcalls++; */
+      /* stop timing */
+      SCIPclockStop(symhdlr->resproptime, set);
 
-   /*    /\* check result code *\/ */
-   /*    if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND ) */
-   /*    { */
-   /*       SCIPerrorMessage("propagation conflict resolving method of propagator <%s> returned invalid result <%d>\n", */
-   /*          prop->name, *result); */
-   /*       return SCIP_INVALIDRESULT; */
-   /*    } */
-   /* } */
-   /* else */
-   /* { */
-   /*    SCIPerrorMessage("propagation conflict resolving method of propagator <%s> is not implemented\n", prop->name); */
-   /*    return SCIP_PLUGINNOTFOUND; */
-   /* } */
+      /* update statistic */
+      symhdlr->nrespropcalls++;
+
+      /* check result code */
+      if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND )
+      {
+         SCIPerrorMessage("propagation conflict resolving method of symmetry handler <%s> returned invalid result <%d>\n",
+            symhdlr->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+   else
+   {
+      SCIPerrorMessage("propagation conflict resolving method of symmetry handler <%s> is not implemented\n", symhdlr->name);
+      return SCIP_PLUGINNOTFOUND;
+   }
 
    return SCIP_OKAY;
 }

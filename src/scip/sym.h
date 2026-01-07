@@ -159,7 +159,7 @@ SCIP_RETCODE SCIPsymhdlrProp(
  *  @note it is sufficient to explain the relaxed bound change
  */
 SCIP_RETCODE SCIPsymhdlrResolvePropagation(
-   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SYMCOMP*         symcomp,            /**< symmetry component */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             infervar,           /**< variable whose bound was deduced by the constraint */
    int                   inferinfo,          /**< user inference information attached to the bound change */

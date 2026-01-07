@@ -268,7 +268,7 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  input:
  *  - scip            : SCIP main data structure
  *  - symhdlr         : the symmetry handler itself
- *  - symcompdata     : data of symmetry component that was responsible for the propagation
+ *  - symcomp         : symmetry component that was responsible for the propagation
  *  - infervar        : the conflict variable whose bound change has to be resolved
  *  - inferinfo       : the user information passed to the corresponding SCIPinferVarLbProp() or SCIPinferVarUbProp() call
  *  - boundtype       : the type of the changed bound (lower or upper bound)
@@ -284,7 +284,7 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *
  *  @note it is sufficient to explain/resolve the relaxed bound
  */
-#define SCIP_DECL_SYMHDLRRESPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdr, SCIP_SYMCOMPDATA* symcompdata, \
+#define SCIP_DECL_SYMHDLRRESPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdr, SCIP_SYMCOMP* symcomp, \
       SCIP_VAR* infervar, int inferinfo, SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_Real relaxedbd, \
       SCIP_RESULT* result)
 

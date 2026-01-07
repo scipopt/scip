@@ -87,7 +87,7 @@ struct SCIP_InferenceData
    {
       SCIP_CONS*         cons;               /**< constraint that inferred this bound change, or NULL */
       SCIP_PROP*         prop;               /**< propagator that inferred this bound change, or NULL */
-      SCIP_SYMHDLR*      symhdlr;            /**< symmetry handler that inferred this bound change, or NULL */
+      SCIP_SYMCOMP*      symcomp;            /**< symmetry component that inferred this bound change, or NULL */
    } reason;
    int                   info;               /**< user information for inference to help resolving the conflict */
 };
