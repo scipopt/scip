@@ -2316,7 +2316,7 @@ SCIP_RETCODE separationRoundSol(
 
          SCIPsetDebugMsg(set, " -> executing separator of symmetry handler <%s> with priority %d\n",
             SCIPsymhdlrGetName(set->symhdlrs_sepa[j]), symprio);
-         SCIP_CALL( SCIPsymhdlrSepaLP(set->symhdlrs_sepa[j], set, stat, sepastore, sol, actdepth, allowlocal,
+         SCIP_CALL( SCIPsymhdlrSepaSol(set->symhdlrs_sepa[j], set, stat, sepastore, sol, actdepth, allowlocal,
                onlydelayed, &result) );
          usesepa = FALSE;
       }

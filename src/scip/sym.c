@@ -644,8 +644,8 @@ SCIP_RETCODE SCIPsymhdlrSepaLP(
          SCIPclockStart(symhdlr->sepatime, set);
 
          /* call external separation method */
-         SCIP_CALL( symhdlr->symsepalp(set->scip, symhdlr, symhdlr->symcompdata, symhdlr->nsymcompdata
-               , result, allowlocal, depth) );
+         SCIP_CALL( symhdlr->symsepalp(set->scip, symhdlr, symhdlr->symcomps, symhdlr->nsymcomps,
+               result, allowlocal, depth) );
 
          /* stop timing */
          SCIPclockStop(symhdlr->sepatime, set);
@@ -758,7 +758,7 @@ SCIP_RETCODE SCIPsymhdlrSepaSol(
          SCIPclockStart(symhdlr->sepatime, set);
 
          /* call external separation method */
-         SCIP_CALL( symhdlr->symsepasol(set->scip, symhdlr, sol, symhdlr->symcompdata, symhdlr->nsymcompdata,
+         SCIP_CALL( symhdlr->symsepasol(set->scip, symhdlr, sol, symhdlr->symcomps, symhdlr->nsymcomps,
                result, allowlocal, depth) );
 
          /* stop timing */
