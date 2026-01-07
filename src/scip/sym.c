@@ -31,6 +31,10 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/clock.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_var.h"
+#include "scip/scip_var.h"
 #include "scip/set.h"
 #include "scip/struct_stat.h"
 #include "scip/struct_sym.h"
@@ -643,6 +647,63 @@ SCIP_RETCODE SCIPsymhdlrProp(
    }
    else
       *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
+
+/** resolves the given conflicting bound, that was deduced by the given propagator, by putting all "reason" bounds
+ *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar();
+ *
+ *  @note it is sufficient to explain the relaxed bound change
+ */
+SCIP_RETCODE SCIPsymhdlrResolvePropagation(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             infervar,           /**< variable whose bound was deduced by the constraint */
+   int                   inferinfo,          /**< user inference information attached to the bound change */
+   SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(symhdlr != NULL);
+   assert((inferboundtype == SCIP_BOUNDTYPE_LOWER
+         && SCIPgetVarLbAtIndex(set->scip, infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
+      || (inferboundtype == SCIP_BOUNDTYPE_UPPER
+         && SCIPgetVarUbAtIndex(set->scip, infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* if( symhdlr->propresprop != NULL ) */
+   /* { */
+   /*    /\* start timing *\/ */
+   /*    SCIPclockStart(prop->resproptime, set); */
+
+   /*    SCIP_CALL( prop->propresprop(set->scip, prop, infervar, inferinfo, inferboundtype, bdchgidx, */
+   /*          relaxedbd, result) ); */
+
+   /*    /\* stop timing *\/ */
+   /*    SCIPclockStop(prop->resproptime, set); */
+
+   /*    /\* update statistic *\/ */
+   /*    prop->nrespropcalls++; */
+
+   /*    /\* check result code *\/ */
+   /*    if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND ) */
+   /*    { */
+   /*       SCIPerrorMessage("propagation conflict resolving method of propagator <%s> returned invalid result <%d>\n", */
+   /*          prop->name, *result); */
+   /*       return SCIP_INVALIDRESULT; */
+   /*    } */
+   /* } */
+   /* else */
+   /* { */
+   /*    SCIPerrorMessage("propagation conflict resolving method of propagator <%s> is not implemented\n", prop->name); */
+   /*    return SCIP_PLUGINNOTFOUND; */
+   /* } */
 
    return SCIP_OKAY;
 }

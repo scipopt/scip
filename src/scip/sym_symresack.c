@@ -30,7 +30,14 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/cons_symresack.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "scip/pub_sym.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_prob.h"
 #include "scip/scip_sym.h"
 #include "scip/sym_symresack.h"
 
@@ -120,7 +127,7 @@ SCIP_DECL_SYMHDLREXIT(symhdlrExitSymresack)
 
 /** presolving method of symmetry handler */
 static
-SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSymreack)
+SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSymresack)
 {  /*lint --e{715}*/
    SCIP_SYMCOMPDATA* symdata;
    int s;
@@ -177,7 +184,7 @@ SCIP_RETCODE SCIPincludeSymhdlrSymresack(
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC,
          1, PROP_PRIORITY, 1, 1, PROP_FREQ, -1, FALSE, FALSE, -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddSymresack, NULL, symhdlrFreeSymresack, NULL, symhdlrExitSymresack,
-         NULL, NULL, NULL, NULL, NULL, NULL, symhdlrPropSymresack, symhdlrPresolSymreack, symhdlrdata) );
+         NULL, NULL, NULL, NULL, NULL, NULL, symhdlrPropSymresack, symhdlrPresolSymresack, symhdlrdata) );
 
    return SCIP_OKAY;
 }

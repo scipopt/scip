@@ -1708,7 +1708,7 @@ SCIP_HOLELIST* SCIPholelistGetNext(
 #define SCIPbdchginfoGetInferVar(bdchginfo)       (bdchginfo)->inferencedata.var
 #define SCIPbdchginfoGetInferCons(bdchginfo)      (bdchginfo)->inferencedata.reason.cons
 #define SCIPbdchginfoGetInferProp(bdchginfo)      (bdchginfo)->inferencedata.reason.prop
-#define SCIPbdchginfoGetInferSymhdlr(bdchginfo)      (bdchginfo)->inferencedata.reason.symhdlr
+#define SCIPbdchginfoGetInferSymhdlr(bdchginfo)   (bdchginfo)->inferencedata.reason.symhdlr
 #define SCIPbdchginfoGetInferInfo(bdchginfo)      (bdchginfo)->inferencedata.info
 #define SCIPbdchginfoGetInferBoundtype(bdchginfo) (SCIP_BOUNDTYPE)((bdchginfo)->inferboundtype)
 #define SCIPbdchginfoIsRedundant(bdchginfo)       (bdchginfo)->redundant
