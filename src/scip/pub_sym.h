@@ -42,6 +42,18 @@
 extern "C" {
 #endif
 
+/** gets data of symmetry component */
+SCIP_EXPORT
+SCIP_SYMCOMPDATA* SCIPsymcompGetData(
+   SCIP_SYMCOMP*         symcomp             /**< symmetry component */
+   );
+
+/** gets symmetry handler of symmetry component */
+SCIP_EXPORT
+SCIP_SYMHDLR* SCIPsymcompGetHdlr(
+   SCIP_SYMCOMP*         symcomp             /**< symmetry component */
+   );
+
 /** gets name of symmetry handler */
 SCIP_EXPORT
 const char* SCIPsymhdlrGetName(
