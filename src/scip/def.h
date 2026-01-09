@@ -76,12 +76,19 @@
  *
  * normally, SCIP_VARARGS_FIRST_ should be sufficient
  * the SCIP_VARARGS_FIRST_/SCIP_VARARGS_FIRST kludge is to work around a bug in MSVC (https://stackoverflow.com/questions/4750688/how-to-single-out-the-first-parameter-sent-to-a-macro-taking-only-a-variadic-par)
+ * (compiling with -Zc:preprocessor would disable the bug)
  */
 #define SCIP_VARARGS_FIRST_(firstarg, ...) firstarg
 #define SCIP_VARARGS_FIRST(args) SCIP_VARARGS_FIRST_ args
 
-/** get all but the first parameter from variadic arguments */
-#define SCIP_VARARGS_REST(firstarg, ...) __VA_ARGS__
+/** get all but the first parameter from variadic arguments
+ *
+ * normally, SCIP_VARARGS_REST_ should be sufficient
+ * the SCIP_VARARGS_REST_/SCIP_VARARGS_REST kludge is to work around a bug in MSVC
+ * (compiling with -Zc:preprocessor would disable the bug)
+ */
+#define SCIP_VARARGS_REST_(firstarg, ...) __VA_ARGS__
+#define SCIP_VARARGS_REST(args) SCIP_VARARGS_REST_ args
 
 /*
  * Boolean values
