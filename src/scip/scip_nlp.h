@@ -360,7 +360,7 @@ SCIP_RETCODE SCIPsolveNLPParam(
 #if !defined(_MSC_VER) || _MSC_VER >= 1800
 #define SCIPsolveNLP(...) \
    SCIPsolveNLPParam(SCIP_VARARGS_FIRST((__VA_ARGS__, ignored)), \
-      (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT_INITS(SCIP_VARARGS_FIRST((__VA_ARGS__, ignored))), SCIP_VARARGS_REST(__VA_ARGS__, .caller = __FILE__) })
+      (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT_INITS(SCIP_VARARGS_FIRST((__VA_ARGS__, ignored))), SCIP_VARARGS_REST((__VA_ARGS__, .caller = __FILE__)) })
 #else
 /* very old MSVC doesn't support C99's designated initializers, so have a version of SCIPsolveNLP() that just ignores given parameters
  * (compilation of scip_nlp.c will print a warning)

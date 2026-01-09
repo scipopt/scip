@@ -77,6 +77,7 @@ Fixed bugs
 - fix calculation of Euclidean norm in calcEfficacyDenseStorage() for use in exact solving
 - fixed bug with changing the type of the slack variable in indicator constraints while copying
 - removed unnecessary explicit linking against gmp for unittests for exact solving mode
+- fixed that parameters passed on as variadic arguments to SCIPsolveNLP() and SCIPsolveNlpi() were ignored when compiling with MS compilers without -Zc:preprocessor
 
 Miscellaneous
 -------------
