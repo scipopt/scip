@@ -900,17 +900,14 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    masterstatus = SCIPgetStatus(relaxdata->masterprob);
 
    SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-      "\nBenders' decomposition solve has completed with status %s.", SCIPstatusName(masterstatus));
+      "\nBenders' decomposition solve has completed.\n\n");
 
    /* if the problem is solved to be infeasible, then the result needs to be set to CUTOFF. */
    if( masterstatus == SCIP_STATUS_INFEASIBLE )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n\n");
       (*result) = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, " Copying the solution to the original problem variables\n\n");
 
    /* a solution for the original SCIP needs to be created. This will transfer the best found solution from the
     * Benders decomposition solve back to the original SCIP instance.
