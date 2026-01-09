@@ -3042,7 +3042,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          SCIPinfoMessage(scip, file, " =N= 0");
       SCIPinfoMessage(scip, file, ";\n");
 
-      if( !SCIPisInfinity(scip, lhs) && !SCIPisInfinity(scip, rhs) && lhs != rhs )
+      if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && lhs != rhs )
       {
          printName(namebuf, oracle->conss[i]->name, i, 'e', "_RNG", havelongequnames);
          SCIPinfoMessage(scip, file, "%s.. ", namebuf);
