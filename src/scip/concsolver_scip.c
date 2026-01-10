@@ -794,7 +794,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
       if( concsolverids[i] == concsolverid )
          continue;
 
-      /* solution is from other solver, so translate to this solver's variable space and add it to SCIP */
+      /* solution is from another solver, so translate to this solver's variable space and add it to SCIP */
       ++(*nsolsrecvd);
       SCIP_CALL( SCIPcreateOrigSol(data->solverscip, &newsol, NULL) );
       SCIP_CALL( SCIPsetSolVals(data->solverscip, newsol, data->nvars, data->vars, solvals[i]) );
