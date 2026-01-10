@@ -834,7 +834,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
          return SCIP_OKAY;
 
-      /* if bound is not better then also do not pass this bound and do not waste memory for storing this boundchange */
+      /* if bound is not better then do not pass this bound and do not waste memory for storing this boundchange */
       if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisGE(data->solverscip, SCIPvarGetLbGlobal(var), newbound) )
          return SCIP_OKAY;
 
