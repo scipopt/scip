@@ -26,7 +26,11 @@
  * @ingroup PARALLEL
  * @brief  implementation of concurrent solver interface for SCIP
  * @author Leona Gottwald
+ * @author Marc Pfetsch
  */
+
+/* activate the define below for a feasibility check of the solutions transferred to the main SCIP. */
+/* #define SCIP_CHECK_MAINSCIP_SOLUTION */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -593,7 +597,7 @@ SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA(concsolverGetSolvingData)
          SCIP_CALL( SCIPsetSolVals(scip, mainsol, nmainvars, mainvars, solvals) );
          SCIP_CALL( SCIPcopySolStats(solversols[i], mainsol) );
 
-#ifdef SCIP_DISABLED_CODE
+#ifdef SCIP_CHECK_MAINSCIP_SOLUTION
          /* The following sometimes fails because we do not copy aggregations and cons_fixedvar can reject solutions in
           * mainscip, because of these. */
          {
