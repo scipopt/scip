@@ -84,7 +84,7 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/sepa_gomory.h"
-#include <string.h>
+
 
 #define SEPA_NAME              "gomory"
 #define SEPA_DESC              "separator for Gomory mixed-integer and strong CG cuts from LP tableau rows"
@@ -419,7 +419,8 @@ SCIP_DECL_SEPACOPY(sepaCopyGomory)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of separator */
    SCIP_CALL( SCIPincludeSepaGomory(scip) );
@@ -434,7 +435,7 @@ SCIP_DECL_SEPAFREE(sepaFreeGomory)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
 
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);
@@ -518,9 +519,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    int j;
 
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 

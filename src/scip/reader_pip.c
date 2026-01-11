@@ -61,7 +61,6 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
 #include <stdlib.h>
-#include <string.h>
 #include <ctype.h>
 
 #define READER_NAME             "pipreader"
@@ -3198,7 +3197,8 @@ SCIP_DECL_READERCOPY(readerCopyPip)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderPip(scip) );

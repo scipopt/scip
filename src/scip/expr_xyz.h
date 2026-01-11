@@ -33,9 +33,9 @@
 #ifndef __SCIP_EXPR_XYZ_H__
 #define __SCIP_EXPR_XYZ_H__
 
-
 #include "scip/scip.h"
 #include "scip/type_expr.h"
+
 
 #ifdef __cplusplus
 extern "C" {

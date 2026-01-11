@@ -54,7 +54,7 @@
 #include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_timing.h"
-#include <string.h>
+
 
 #define HEUR_NAME             "ofins"
 #define HEUR_DESC             "primal heuristic for reoptimization, objective function induced neighborhood search"
@@ -113,9 +113,10 @@ SCIP_DECL_EVENTEXEC(eventExecOfins)
 
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    heurdata = (SCIP_HEURDATA*)eventdata;
    assert(heurdata != NULL);
@@ -444,7 +445,8 @@ SCIP_DECL_HEURCOPY(heurCopyOfins)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurOfins(scip) );

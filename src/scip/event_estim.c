@@ -47,7 +47,6 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
 #include "blockmemshell/memory.h"
 #include "scip/event_estim.h"
 #include "scip/prop_symmetry.h"
@@ -2871,8 +2870,9 @@ SCIP_DECL_DISPOUTPUT(dispOutputCompleted)
    SCIP_Real completed;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME, SCIP_INVALIDCALL );
 
    eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);

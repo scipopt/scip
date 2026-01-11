@@ -388,7 +388,7 @@ SCIP_RETCODE SCIPprintDatatreeAsTable(
       {
          SCIP_DATATREEITEM* item = &sectionitem->items[j];
 
-         assert(strcmp(item->name, firstsectionitem->items[j].name) == 0);
+         SCIP_STRINGEQ( item->name, firstsectionitem->items[j].name, SCIP_INVALIDCALL );
 
          switch( item->value.type )
          {

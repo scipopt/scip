@@ -38,7 +38,7 @@
 #include "scip/reader_wbo.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_reader.h"
-#include <string.h>
+
 
 #define READER_NAME             "wboreader"
 #define READER_DESC             "file reader for pseudoboolean wbo file format"
@@ -54,7 +54,8 @@ SCIP_DECL_READERCOPY(readerCopyWbo)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderWbo(scip) );
@@ -79,7 +80,8 @@ static
 SCIP_DECL_READERWRITE(readerWriteWbo)
 {  /*lint --e{715}*/
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    if( SCIPisExact(scip) )
    {

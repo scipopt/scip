@@ -44,7 +44,6 @@
 #include "scip/scip_message.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_reader.h"
-#include <string.h>
 
 
 /*
@@ -219,7 +218,8 @@ SCIP_DECL_READERCOPY(readerCopySmps)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderSmps(scip) );

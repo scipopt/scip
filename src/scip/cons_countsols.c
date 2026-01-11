@@ -71,7 +71,7 @@
 #include "scip/scip_solve.h"
 #include "scip/scip_var.h"
 #include "symmetry/type_symmetry.h"
-#include <string.h>
+
 
 /* depending on whether the GMP library is available we use a GMP data type or a SCIP_Longint */
 #ifdef SCIP_WITH_GMP
@@ -864,8 +864,9 @@ SCIP_RETCODE checkLogicor(
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr),"logicor") == 0 );
    assert( nconss == SCIPconshdlrGetNEnabledConss(conshdlr) );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), "logicor", SCIP_INVALIDCALL );
 
    conss = SCIPconshdlrGetConss(conshdlr);
    assert( conss != NULL );
@@ -939,8 +940,9 @@ SCIP_RETCODE checkKnapsack(
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr),"knapsack") == 0 );
    assert( nconss == SCIPconshdlrGetNEnabledConss(conshdlr) );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), "knapsack", SCIP_INVALIDCALL );
 
    conss = SCIPconshdlrGetConss(conshdlr);
    assert( conss != NULL );
@@ -1032,8 +1034,9 @@ SCIP_RETCODE checkBounddisjunction(
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr),"bounddisjunction") == 0 );
    assert( nconss == SCIPconshdlrGetNEnabledConss(conshdlr) );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), "bounddisjunction", SCIP_INVALIDCALL );
 
    conss = SCIPconshdlrGetConss(conshdlr);
    assert( conss != NULL );
@@ -1111,8 +1114,9 @@ SCIP_RETCODE checkVarbound(
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr),"varbound") == 0 );
    assert( nconss == SCIPconshdlrGetNEnabledConss(conshdlr) );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), "varbound", SCIP_INVALIDCALL );
 
    conss = SCIPconshdlrGetConss(conshdlr);
    assert( conss != NULL );
@@ -1393,7 +1397,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCountsols)
    {
       assert(scip != NULL);
       assert(conshdlr != NULL);
-      assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+      SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
       /* call inclusion method of constraint handler and do not add counting dialogs */
       SCIP_CALL( includeConshdlrCountsols(scip, FALSE) );
@@ -1413,7 +1418,8 @@ SCIP_DECL_CONSFREE(consFreeCountsols)
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* free constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -1439,7 +1445,8 @@ SCIP_DECL_CONSINIT(consInitCountsols)
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL );
@@ -1511,7 +1518,8 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
    int v;
 
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL );
@@ -1584,7 +1592,8 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL );
@@ -1671,7 +1680,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolCountsols)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(nconss == 0);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL );
@@ -2547,8 +2557,9 @@ SCIP_DECL_DISPOUTPUT(dispOutputSols)
    SCIP_Bool valid;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_SOLS_NAME) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_SOLS_NAME, SCIP_INVALIDCALL );
 
 #ifndef NDEBUG
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -2581,7 +2592,8 @@ SCIP_DECL_DISPOUTPUT(dispOutputFeasSubtrees)
 
    assert(disp != NULL);
    assert(scip != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_CUTS_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_CUTS_NAME, SCIP_INVALIDCALL );
 
 #ifndef NDEBUG
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);

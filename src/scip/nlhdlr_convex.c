@@ -29,8 +29,6 @@
  * @author Stefan Vigerske
  */
 
-#include <string.h>
-
 #include "scip/nlhdlr_convex.h"
 #include "scip/pub_nlhdlr.h"
 #include "scip/scip_expr.h"
@@ -2202,7 +2200,8 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrConvex)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), CONVEX_NLHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnlhdlrGetName(sourcenlhdlr), CONVEX_NLHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPincludeNlhdlrConvex(targetscip) );
 
@@ -2565,7 +2564,8 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrConcave)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), CONCAVE_NLHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnlhdlrGetName(sourcenlhdlr), CONCAVE_NLHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPincludeNlhdlrConcave(targetscip) );
 

@@ -70,7 +70,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
-#include <string.h>
+
 
 #define EVENTHDLR_NAME         "solvingphase"
 #define EVENTHDLR_DESC         "event handler to adjust settings depending on current stage"
@@ -1230,7 +1230,8 @@ SCIP_DECL_EVENTCOPY(eventCopySolvingphase)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of event handler */
    SCIP_CALL( SCIPincludeEventHdlrSolvingphase(scip) );
@@ -1249,7 +1250,8 @@ SCIP_DECL_EVENTFREE(eventFreeSolvingphase)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
@@ -1362,7 +1364,8 @@ SCIP_DECL_EVENTINIT(eventInitSolvingphase)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
@@ -1409,7 +1412,8 @@ SCIP_DECL_EVENTEXIT(eventExitSolvingphase)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
@@ -1472,8 +1476,9 @@ static
 SCIP_DECL_DISPOUTPUT(dispOutputNRank1Nodes)
 {
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NRANK1NODES) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_NRANK1NODES, SCIP_INVALIDCALL );
 
    /* ouput number of rank 1 nodes */
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, getNRank1Nodes(scip), DISP_WIDT_NRANK1NODES);
@@ -1495,8 +1500,9 @@ static
 SCIP_DECL_DISPOUTPUT(dispOutputNnodesbelowinc)
 {
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NNODESBELOWINC) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_NNODESBELOWINC, SCIP_INVALIDCALL );
 
    /* display the number of nodes with an estimate below the the current incumbent */
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, getNNodesBelowIncumbent(scip), DISP_WIDT_NNODESBELOWINC);

@@ -62,7 +62,7 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define BRANCHRULE_NAME            "multaggr"
 #define BRANCHRULE_DESC            "fullstrong branching on fractional and multi-aggregated variables"
@@ -572,7 +572,8 @@ SCIP_DECL_BRANCHCOPY(branchCopyMultAggr)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchruleMultAggr(scip) ) ;
@@ -765,9 +766,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
    )
 
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Execlp method of mult-aggreg branching\n ");
    *result = SCIP_DIDNOTRUN;

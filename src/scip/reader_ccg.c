@@ -56,7 +56,7 @@
 #include "scip/scip_message.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define READER_NAME             "ccgreader"
 #define READER_DESC             "file writer for column connectivity graph file format"
@@ -350,7 +350,8 @@ SCIP_DECL_READERCOPY(readerCopyCcg)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderCcg(scip) );

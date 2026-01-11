@@ -43,7 +43,6 @@
 #include "scip/scip_prop.h"
 #include "scip/scip_var.h"
 #include "scip/scip_message.h"
-#include <string.h>
 #include "tpi/tpi.h"
 
 /* fundamental propagator properties */
@@ -156,7 +155,8 @@ SCIP_DECL_PROPFREE(propFreeSync)
 
    assert(scip != NULL);
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
@@ -174,7 +174,8 @@ SCIP_DECL_PROPINIT(propInitSync)
    SCIP_PROPDATA* data;
 
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    data = SCIPpropGetData(prop);
    assert(data != NULL);
@@ -197,7 +198,8 @@ SCIP_DECL_PROPEXIT(propExitSync)
    SCIP_PROPDATA* data;
 
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    data = SCIPpropGetData(prop);
    assert(data != NULL);
@@ -217,7 +219,8 @@ SCIP_DECL_PROPPRESOL(propPresolSync)
    int             ntightenedint;
 
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    data = SCIPpropGetData(prop);
    assert(data != NULL);
@@ -255,7 +258,8 @@ SCIP_DECL_PROPEXEC(propExecSync)
    int             ntightenedint;
 
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -331,7 +335,8 @@ SCIP_RETCODE SCIPpropSyncAddBndchg(
    SCIP_PROPDATA* data;
 
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    data = SCIPpropGetData(prop);
    assert(data != NULL);

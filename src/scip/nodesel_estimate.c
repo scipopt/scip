@@ -41,7 +41,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
-#include <string.h>
+
 
 #define NODESEL_NAME             "estimate"
 #define NODESEL_DESC             "best estimate search"
@@ -88,7 +88,8 @@ SCIP_DECL_NODESELCOPY(nodeselCopyEstimate)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of node selector */
    SCIP_CALL( SCIPincludeNodeselEstimate(scip) );
@@ -103,8 +104,9 @@ SCIP_DECL_NODESELFREE(nodeselFreeEstimate)
    SCIP_NODESELDATA* nodeseldata;
 
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    /* free user data of node selector */
    nodeseldata = SCIPnodeselGetData(nodesel);
@@ -128,9 +130,10 @@ SCIP_DECL_NODESELSELECT(nodeselSelectEstimate)
    SCIP_Real maxplungequot;
 
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
    assert(selnode != NULL);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    *selnode = NULL;
 
@@ -298,7 +301,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompEstimate)
    SCIP_Real estimate2;
 
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
 
    estimate1 = SCIPnodeGetEstimate(node1);

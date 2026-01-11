@@ -40,9 +40,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "blockmemshell/memory.h"
 #include "dijkstra/dijkstra.h"
 #include "scip/pub_implics.h"
@@ -68,7 +65,7 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/sepa_oddcycle.h"
-#include <string.h>
+
 
 #define SEPA_NAME              "oddcycle"
 #define SEPA_DESC              "odd cycle separator"
@@ -3635,7 +3632,8 @@ SCIP_DECL_SEPACOPY(sepaCopyOddcycle)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaOddcycle(scip) );
@@ -3701,9 +3699,10 @@ static
 SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
 {  /*lint --e{715}*/
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( separateOddCycles(scip, sepa, NULL, depth, result) );
 
@@ -3715,9 +3714,10 @@ static
 SCIP_DECL_SEPAEXECSOL(sepaExecsolOddcycle)
 {  /*lint --e{715}*/
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( separateOddCycles(scip, sepa, sol, depth, result) );
 

@@ -54,7 +54,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipdefplugins.h"
 #include "scip/cutsel_hybrid.h"
@@ -2103,7 +2102,8 @@ SCIP_DECL_SEPACOPY(sepaCopyZerohalf)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
@@ -2117,7 +2117,7 @@ SCIP_DECL_SEPAFREE(sepaFreeZerohalf)
 {
    SCIP_SEPADATA* sepadata;
 
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);
@@ -2134,7 +2134,7 @@ SCIP_DECL_SEPAINITSOL(sepaInitsolZerohalf)
 {
    SCIP_SEPADATA* sepadata;
 
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* allocate random generator */
    sepadata = SCIPsepaGetData(sepa);
@@ -2151,7 +2151,7 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolZerohalf)
 {
    SCIP_SEPADATA* sepadata;
 
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* free random generator */
    sepadata = SCIPsepaGetData(sepa);
@@ -2383,7 +2383,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 {
    assert(result != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -2410,7 +2411,8 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolZerohalf)
 {
    assert(result != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 

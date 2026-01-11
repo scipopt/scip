@@ -54,7 +54,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define PRESOL_NAME            "dualcomp"
 #define PRESOL_DESC            "compensate single up-/downlocks by singleton continuous variables"
@@ -512,7 +512,8 @@ SCIP_DECL_PRESOLCOPY(presolCopyDualcomp)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(presol != NULL);
-   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpresolGetName(presol), PRESOL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolDualcomp(scip) );

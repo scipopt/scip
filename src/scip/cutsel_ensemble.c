@@ -33,8 +33,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
 #include "scip/scip_cutsel.h"
 #include "scip/scip_cut.h"
 #include "scip/scip_lp.h"
@@ -467,7 +465,8 @@ SCIP_DECL_CUTSELCOPY(cutselCopyEnsemble)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(cutsel != NULL);
-   assert(strcmp(SCIPcutselGetName(cutsel), CUTSEL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPcutselGetName(cutsel), CUTSEL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of cut selector */
    SCIP_CALL( SCIPincludeCutselEnsemble(scip) );

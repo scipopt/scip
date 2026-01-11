@@ -135,7 +135,7 @@
 #include "scip/symmetry_lexred.h"
 
 #include <math.h>
-#include <string.h>
+
 
 /* propagator properties */
 #define PROP_NAME            "symmetry"
@@ -7831,7 +7831,8 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
 
    assert( scip != NULL );
    assert( prop != NULL );
-   assert( strcmp(SCIPpropGetName(prop), PROP_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Exitpre method of propagator <%s> ...\n", PROP_NAME);
 
@@ -7862,7 +7863,8 @@ SCIP_DECL_PROPEXITSOL(propExitsolSymmetry)
 
    assert( scip != NULL );
    assert( prop != NULL );
-   assert( strcmp(SCIPpropGetName(prop), PROP_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Exitpre method of propagator <%s> ...\n", PROP_NAME);
 
@@ -8048,7 +8050,8 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
 
    assert( scip != NULL );
    assert( prop != NULL );
-   assert( strcmp(SCIPpropGetName(prop), PROP_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Exiting propagator <%s>.\n", PROP_NAME);
 
@@ -8096,7 +8099,8 @@ SCIP_DECL_PROPFREE(propFreeSymmetry)
 
    assert( scip != NULL );
    assert( prop != NULL );
-   assert( strcmp(SCIPpropGetName(prop), PROP_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Freeing symmetry propagator.\n");
 
@@ -8461,7 +8465,8 @@ SCIP_RETCODE SCIPgetSymmetry(
       return SCIP_PLUGINNOTFOUND;
    }
    assert( prop != NULL );
-   assert( strcmp(SCIPpropGetName(prop), PROP_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );

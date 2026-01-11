@@ -46,7 +46,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_reopt.h"
 #include "scip/scip_tree.h"
-#include <string.h>
+
 
 #define COMPR_NAME             "weakcompr"
 #define COMPR_DESC             "reduce the search frontier to k+1 or max{2, |C|+1} nodes."
@@ -421,7 +421,8 @@ SCIP_DECL_COMPRCOPY(comprCopyWeakcompr)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(compr != NULL);
-   assert(strcmp(SCIPcomprGetName(compr), COMPR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPcomprGetName(compr), COMPR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeComprWeakcompr(scip) );

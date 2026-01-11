@@ -28,8 +28,6 @@
  * @author Ksenia Bestuzheva
  */
 
-#include <string.h>
-
 #include "scip/nlhdlr_perspective.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/scip_sol.h"
@@ -1213,7 +1211,8 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrPerspective)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), NLHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnlhdlrGetName(sourcenlhdlr), NLHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPincludeNlhdlrPerspective(targetscip) );
 

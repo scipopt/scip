@@ -74,7 +74,7 @@
 #include "symmetry/struct_symmetry.h"
 #include <ctype.h>
 #include <stdlib.h>
-#include <string.h>
+
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "cardinality"
@@ -2294,7 +2294,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCardinality)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrCardinality(scip) );
@@ -2312,7 +2313,8 @@ SCIP_DECL_CONSFREE(consFreeCardinality)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -2337,7 +2339,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolCardinality)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -2382,7 +2385,8 @@ SCIP_DECL_CONSDELETE(consDeleteCardinality)
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(consdata != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Deleting cardinality constraint <%s>.\n", SCIPconsGetName(cons) );
 
@@ -2444,9 +2448,10 @@ SCIP_DECL_CONSTRANS(consTransCardinality)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -2543,8 +2548,9 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Presolving cardinality constraints.\n");
 
@@ -2657,8 +2663,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpCardinality)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( enforceCardinality(scip, conshdlr, NULL, nconss, conss, result) );
 
@@ -2672,8 +2679,9 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxCardinality)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( enforceCardinality(scip, conshdlr, sol, nconss, conss, result) );
 
@@ -2687,8 +2695,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsCardinality)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( enforceCardinality(scip, conshdlr, NULL, nconss, conss, result) );
 
@@ -2707,8 +2716,9 @@ SCIP_DECL_CONSCHECK(consCheckCardinality)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* check each constraint */
    for( c = 0; c < nconss; ++c )
@@ -2779,8 +2789,10 @@ SCIP_DECL_CONSPROP(consPropCardinality)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
+
    *result = SCIP_DIDNOTRUN;
 
    assert(SCIPisTransformed(scip));
@@ -2838,8 +2850,9 @@ SCIP_DECL_CONSLOCK(consLockCardinality)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(locktype == SCIP_LOCKTYPE_MODEL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2887,7 +2900,8 @@ SCIP_DECL_CONSPRINT(consPrintCardinality)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2926,7 +2940,8 @@ SCIP_DECL_CONSCOPY(consCopyCardinality)
    assert(sourcescip != NULL);
    assert(sourcecons != NULL);
    assert(SCIPisTransformed(sourcescip));
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *valid = TRUE;
 
@@ -2998,9 +3013,10 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert(cons != NULL);
    assert(success != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *success = TRUE;
    s = str;
@@ -3404,8 +3420,9 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
 
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = eventdata->consdata;
    assert(consdata != NULL);
@@ -3848,11 +3865,7 @@ SCIP_RETCODE  SCIPchgCardvalCardinality(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cardinality constraint.\n");
-      return SCIP_INVALIDDATA;
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3888,11 +3901,8 @@ SCIP_RETCODE SCIPaddVarCardinality(
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
-   if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cardinality constraint.\n");
-      return SCIP_INVALIDDATA;
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3923,11 +3933,8 @@ SCIP_RETCODE SCIPappendVarCardinality(
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
-   if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cardinality constraint.\n");
-      return SCIP_INVALIDDATA;
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3948,12 +3955,7 @@ int SCIPgetNVarsCardinality(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cardinality constraint.\n");
-      SCIPABORT();
-      return -1;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, -1 );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3972,12 +3974,7 @@ SCIP_VAR** SCIPgetVarsCardinality(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cardinality constraint.\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3996,11 +3993,7 @@ int SCIPgetCardvalCardinality(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cardinality constraint.\n");
-      return -1;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, -1 );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4019,12 +4012,7 @@ SCIP_Real* SCIPgetWeightsCardinality(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cardinality constraint.\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

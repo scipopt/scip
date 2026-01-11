@@ -70,9 +70,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "scip/pub_misc.h"
 #include "sepa_gmi.h"
 
@@ -537,7 +534,8 @@ SCIP_DECL_SEPACOPY(sepaCopyGMI)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaGMI(scip) );
@@ -553,7 +551,8 @@ SCIP_DECL_SEPAFREE(sepaFreeGMI)
 
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);
@@ -594,9 +593,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
    int j;
 
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 

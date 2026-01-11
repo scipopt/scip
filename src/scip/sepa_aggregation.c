@@ -70,7 +70,6 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/sepa_aggregation.h"
-#include <string.h>
 
 
 #define SEPA_NAME              "aggregation"
@@ -1429,7 +1428,8 @@ SCIP_DECL_SEPACOPY(sepaCopyAggregation)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaAggregation(scip) );

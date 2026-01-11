@@ -29,8 +29,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#include <assert.h>
-#include <string.h>
 
 #include "scip/def.h"
 #include "scip/mem.h"
@@ -81,8 +79,9 @@ SCIP_DECL_EVENTEXEC(eventExecReopt)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(SCIPvarIsIntegral(SCIPeventGetVar(event)));
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
@@ -117,7 +116,8 @@ SCIP_DECL_EVENTINITSOL(eventInitsolReopt)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    if( !SCIPisReoptEnabled(scip) )
       return SCIP_OKAY;
@@ -141,9 +141,9 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolReopt)
    SCIP_VAR** vars;
 
    assert(scip != NULL);
-
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    if( !SCIPisReoptEnabled(scip) )
       return SCIP_OKAY;
@@ -2320,7 +2320,6 @@ SCIP_RETCODE saveConsBounddisjuction(
    )
 {
    SCIP_VAR** vars;
-   SCIP_CONSHDLR* conshdlr;
    SCIP_BOUNDTYPE* boundtypes;
    SCIP_Real* bounds;
 
@@ -2330,16 +2329,7 @@ SCIP_RETCODE saveConsBounddisjuction(
    *success = FALSE;
    reoptconsdata->linear = FALSE;
 
-   conshdlr = SCIPconsGetHdlr(cons);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "bounddisjunction") == 0);
-
-   if( strcmp(SCIPconshdlrGetName(conshdlr), "bounddisjunction") != 0 )
-   {
-      SCIPerrorMessage("Cannot handle constraints of type <%s> in saveConsBounddisjuction.\n",
-         SCIPconshdlrGetName(conshdlr));
-      return SCIP_INVALIDDATA;
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "bounddisjunction", SCIP_INVALIDDATA );
 
    SCIP_CALL( SCIPconsGetNVars(cons, set, &reoptconsdata->nvars, success) );
    assert(*success);
@@ -2442,7 +2432,8 @@ SCIP_RETCODE saveLocalConssData(
          }
          else
          {
-            assert(strcmp(SCIPconshdlrGetName(conshdlr), "bounddisjunction") == 0);
+            SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), "bounddisjunction", SCIP_INVALIDCALL );
+
             SCIP_CALL( saveConsBounddisjuction(reopttree->reoptnodes[id]->conss[c], set, blkmem, addedcons[c], &success) );
             assert(success);
 

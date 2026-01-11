@@ -48,7 +48,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define READER_NAME             "pbmreader"
 #define READER_DESC             "file writer for portable bitmap file format (PBM), open with common graphic viewer programs (e.g. xview)"
@@ -404,7 +404,8 @@ SCIP_DECL_READERCOPY(readerCopyPbm)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderPbm(scip) );
@@ -418,7 +419,7 @@ SCIP_DECL_READERFREE(readerFreePbm)
 {
    SCIP_READERDATA* readerdata;
 
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
@@ -437,7 +438,7 @@ SCIP_DECL_READERWRITE(readerWritePbm)
 {  /*lint --e{715}*/
    SCIP_READERDATA* readerdata;
 
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);

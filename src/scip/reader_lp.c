@@ -69,7 +69,7 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
 #include <stdlib.h>
-#include <string.h>
+
 
 #define READER_NAME             "lpreader"
 #define READER_DESC             "file reader for MIPs in IBM CPLEX's LP file format"
@@ -4335,7 +4335,8 @@ SCIP_DECL_READERCOPY(readerCopyLp)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderLp(scip) );
@@ -4349,7 +4350,8 @@ SCIP_DECL_READERFREE(readerFreeLp)
 {
    SCIP_READERDATA* readerdata;
 
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
+
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
    SCIPfreeBlockMemory(scip, &readerdata);
@@ -4373,7 +4375,8 @@ static
 SCIP_DECL_READERWRITE(readerWriteLp)
 {  /*lint --e{715}*/
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPwriteLp(scip, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,
          vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
@@ -4832,7 +4835,8 @@ SCIP_RETCODE SCIPwriteLp(
       /* skip marked constraints in connection with indicator constraints */
       if( conshdlrInd != NULL && SCIPhashmapExists(consHidden, (void*) cons) )
       {
-         assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear") == 0 );
+         SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear", SCIP_INVALIDCALL );
+
          continue;
       }
 

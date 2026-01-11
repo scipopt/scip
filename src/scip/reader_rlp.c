@@ -37,7 +37,7 @@
 #include "scip/scip_message.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_prob.h"
-#include <string.h>
+
 
 #define READER_NAME             "rlpreader"
 #define READER_DESC             "file reader for MIPs in IBM CPLEX's RLP file format"
@@ -54,7 +54,8 @@ SCIP_DECL_READERCOPY(readerCopyRlp)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderRlp(scip) );

@@ -38,7 +38,6 @@
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_var.h"
-#include <string.h>
 
 
 #define BRANCHRULE_NAME          "mostinf"
@@ -223,7 +222,8 @@ SCIP_DECL_BRANCHCOPY(branchCopyMostinf)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchruleMostinf(scip) );
@@ -248,9 +248,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMostinf)
    int i;
 
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Execlp method of mostinf branching\n");
 
@@ -312,9 +313,10 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextMostinf)
    SCIP_NODE* upchild;
 
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Execext method of mostinf branching\n");
 

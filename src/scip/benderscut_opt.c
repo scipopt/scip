@@ -42,7 +42,7 @@
 #include "scip/pub_misc_linear.h"
 #include "scip/pub_var.h"
 #include "scip/scip.h"
-#include <string.h>
+
 
 #define BENDERSCUT_NAME             "optimality"
 #define BENDERSCUT_DESC             "Standard Benders' decomposition optimality cut"
@@ -659,7 +659,8 @@ SCIP_DECL_BENDERSCUTFREE(benderscutFreeOpt)
    SCIP_BENDERSCUTDATA* benderscutdata;
 
    assert( benderscut != NULL );
-   assert( strcmp(SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME, SCIP_INVALIDCALL );
 
    /* free Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);

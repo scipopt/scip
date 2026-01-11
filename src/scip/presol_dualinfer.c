@@ -44,10 +44,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-
 #include "scip/scipdefplugins.h"
 #include "scip/pub_matrix.h"
 #include "blockmemshell/memory.h"
@@ -2144,7 +2140,8 @@ SCIP_DECL_PRESOLCOPY(presolCopyDualinfer)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(presol != NULL);
-   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpresolGetName(presol), PRESOL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolDualinfer(scip) );

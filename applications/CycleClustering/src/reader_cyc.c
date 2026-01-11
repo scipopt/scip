@@ -35,8 +35,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "reader_cyc.h"
 
-#include <assert.h>
-#include <string.h>
 #include <ctype.h>
 #include "probdata_cyc.h"
 
@@ -189,7 +187,8 @@ SCIP_DECL_READERCOPY(readerCopyCyc)
 {
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp( SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    return SCIP_OKAY;
 }
@@ -199,9 +198,10 @@ static
 SCIP_DECL_READERREAD(readerReadCyc)
 {
    assert(reader != NULL);
-   assert(strcmp( SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( readCyc( scip, filename) );
 

@@ -42,7 +42,7 @@
 #include "scip/scip_message.h"
 #include "scip/scip_nodesel.h"
 #include "scip/scip_tree.h"
-#include <string.h>
+
 
 #define NODESEL_NAME             "breadthfirst"
 #define NODESEL_DESC             "breadth first search"
@@ -59,7 +59,8 @@ SCIP_DECL_NODESELCOPY(nodeselCopyBreadthfirst)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of node selector */
    SCIP_CALL( SCIPincludeNodeselBreadthfirst(scip) );
@@ -72,9 +73,10 @@ static
 SCIP_DECL_NODESELSELECT(nodeselSelectBreadthfirst)
 {  /*lint --e{715}*/
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
    assert(selnode != NULL);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    /* siblings come before leaves at the same level. Sometimes it can occur that no leaves are left except for children */
    *selnode = SCIPgetBestSibling(scip);
@@ -102,7 +104,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompBreadthfirst)
    int depth2;
 
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
 
    depth1 = SCIPnodeGetDepth(node1);

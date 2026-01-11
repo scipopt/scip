@@ -269,7 +269,8 @@ int SCIPgetIndexExprVaridx(
    )
 {
    assert(expr != NULL);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME, -1 );
 
    return (int)(size_t)SCIPexprGetData(expr);
 }
@@ -281,8 +282,9 @@ void SCIPsetIndexExprVaridx(
    )
 {
    assert(expr != NULL);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(newindex >= 0);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME, /**@todo return SCIP_INVALIDCALL type */ );
 
    SCIPexprSetData(expr, (SCIP_EXPRDATA*)(size_t)newindex);  /*lint !e571*/
 }

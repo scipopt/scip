@@ -43,7 +43,7 @@
 #include "scip/scip_numerics.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_reader.h"
-#include <string.h>
+
 
 #define READER_NAME             "timreader"
 #define READER_DESC             "file reader for the TIME file of a stochastic program in SMPS format"
@@ -792,7 +792,8 @@ SCIP_DECL_READERCOPY(readerCopyTim)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderTim(scip) );
@@ -826,8 +827,9 @@ SCIP_DECL_READERREAD(readerReadTim)
    SCIP_READER* correader;
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -962,7 +964,8 @@ SCIP_Bool SCIPtimHasRead(
    SCIP_READERDATA* readerdata;
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, FALSE );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
@@ -982,7 +985,8 @@ int SCIPtimGetNStages(
    reader = SCIPfindReader(scip, READER_NAME);
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, -1 );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
@@ -1002,7 +1006,8 @@ const char* SCIPtimGetStageName(
    reader = SCIPfindReader(scip, READER_NAME);
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, NULL );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
@@ -1026,7 +1031,8 @@ const char* SCIPtimConsGetStageName(
    reader = SCIPfindReader(scip, READER_NAME);
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, NULL );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
@@ -1066,7 +1072,8 @@ int SCIPtimFindStage(
    reader = SCIPfindReader(scip, READER_NAME);
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, -1 );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
@@ -1102,7 +1109,8 @@ SCIP_VAR** SCIPtimGetStageVars(
    reader = SCIPfindReader(scip, READER_NAME);
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, NULL );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
@@ -1123,7 +1131,8 @@ SCIP_CONS** SCIPtimGetStageConss(
    reader = SCIPfindReader(scip, READER_NAME);
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, NULL );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
@@ -1144,7 +1153,8 @@ int SCIPtimGetStageNVars(
    reader = SCIPfindReader(scip, READER_NAME);
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, -1 );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
@@ -1165,7 +1175,8 @@ int SCIPtimGetStageNConss(
    reader = SCIPfindReader(scip, READER_NAME);
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, -1 );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);

@@ -78,8 +78,6 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/sepa_closecuts.h"
-#include <string.h>
-
 
 
 #define SEPA_NAME              "closecuts"
@@ -195,7 +193,8 @@ SCIP_DECL_SEPACOPY(sepaCopyClosecuts)
 {  /*lint --e{715}*/
    assert( scip != NULL );
    assert( sepa != NULL );
-   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaClosecuts(scip) );
@@ -210,7 +209,8 @@ SCIP_DECL_SEPAFREE(sepaFreeClosecuts)
    SCIP_SEPADATA* sepadata;
 
    assert( sepa != NULL );
-   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);
@@ -231,7 +231,8 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolClosecuts)
    SCIP_SEPADATA* sepadata;
 
    assert( sepa != NULL );
-   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    sepadata = SCIPsepaGetData(sepa);
    assert( sepadata != NULL );
@@ -258,8 +259,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpClosecuts)
    SCIP_Bool isroot;
 
    assert( sepa != NULL );
-   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -508,7 +510,8 @@ SCIP_RETCODE SCIPsetBasePointClosecuts(
       SCIPerrorMessage("Could not find separator <%s>.\n", SEPA_NAME);
       return SCIP_PLUGINNOTFOUND;
    }
-   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* get sepadata */
    sepadata = SCIPsepaGetData(sepa);

@@ -63,7 +63,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define PROP_NAME                            "genvbounds"
 #define PROP_DESC                            "generalized variable bounds propagator"
@@ -2180,13 +2180,14 @@ SCIP_RETCODE SCIPgenVBoundAdd(
 
    assert(scip != NULL);
    assert(genvboundprop != NULL);
-   assert(strcmp(SCIPpropGetName(genvboundprop), PROP_NAME) == 0);
    assert(vars != NULL);
    assert(var != NULL);
    assert(coefs != NULL);
    assert(ncoefs >= 0);
    assert(coefcutoffbound <= 0.0);
    assert(!SCIPisInfinity(scip, -constant));
+
+   SCIP_STRINGEQ( SCIPpropGetName(genvboundprop), PROP_NAME, SCIP_INVALIDCALL );
 
    if( ncoefs < 0 || coefcutoffbound > 0.0 || SCIPisInfinity(scip, -constant) )
    {
@@ -2343,7 +2344,8 @@ SCIP_DECL_PROPCOPY(propCopyGenvbounds)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludePropGenvbounds(scip) );
@@ -2359,7 +2361,8 @@ SCIP_DECL_PROPINIT(propInitGenvbounds)
 
    assert(scip != NULL);
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
@@ -2411,7 +2414,8 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
    assert(scip != NULL);
    assert(prop != NULL);
    assert(result != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -2443,7 +2447,8 @@ SCIP_DECL_PROPINITPRE(propInitpreGenvbounds)
 
    assert(scip != NULL);
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
@@ -2473,7 +2478,8 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
 
    assert(scip != NULL);
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "propexitpre in problem <%s>: removing fixed, aggregated, negated, and multi-aggregated variables from right-hand side\n",
       SCIPgetProbName(scip));
@@ -2590,7 +2596,8 @@ SCIP_DECL_PROPEXIT(propExitGenvbounds)
 
    assert(scip != NULL);
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
@@ -2614,7 +2621,8 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    assert(scip != NULL);
    assert(prop != NULL);
    assert(result != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -2756,7 +2764,8 @@ SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
 
    assert(scip != NULL);
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "propexitsol in problem <%s>\n", SCIPgetProbName(scip));
 
@@ -2787,7 +2796,7 @@ SCIP_DECL_PROPFREE(propFreeGenvbounds)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
 
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    /* free propagator data */
    propdata = SCIPpropGetData(prop);

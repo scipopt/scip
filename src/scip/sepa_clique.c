@@ -52,7 +52,7 @@
 #include "scip/scip_var.h"
 #include "scip/sepa_clique.h"
 #include "tclique/tclique.h"
-#include <string.h>
+
 #ifndef _WIN32
 #include <strings.h> /*lint --e{766}*/
 #endif
@@ -958,7 +958,8 @@ SCIP_DECL_SEPACOPY(sepaCopyClique)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaClique(scip) );

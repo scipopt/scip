@@ -50,7 +50,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/type_message.h"
-#include <string.h>
+
 
 #define BENDERSCUT_NAME             "nogood"
 #define BENDERSCUT_DESC             "no good Benders' decomposition integer cut"
@@ -94,7 +94,6 @@ void checkSubproblemValidity(
 
    assert( benders != NULL );
    assert( benderscut != NULL );
-   assert( strcmp(SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME) == 0 );
 
    /* getting the Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);
@@ -317,7 +316,8 @@ SCIP_DECL_BENDERSCUTFREE(benderscutFreeNogood)
    SCIP_BENDERSCUTDATA* benderscutdata;
 
    assert( benderscut != NULL );
-   assert( strcmp(SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME, SCIP_INVALIDCALL );
 
    /* free Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);
@@ -342,6 +342,8 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecNogood)
    assert(benders != NULL);
    assert(benderscut != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME, SCIP_INVALIDCALL );
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 

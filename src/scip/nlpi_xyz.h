@@ -39,6 +39,7 @@
 
 #include "scip/type_nlpi.h"
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -69,9 +69,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "heur_init.h"
 #include "pricer_coloring.h"
 #include "probdata_coloring.h"
@@ -541,7 +538,8 @@ SCIP_DECL_HEURCOPY(heurCopyInit)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    return SCIP_OKAY;
 }

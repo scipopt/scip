@@ -54,7 +54,7 @@
 #include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
-#include <string.h>
+
 
 /* @note If the heuristic runs in the root node, the timing is changed to (SCIP_HEURTIMING_DURINGLPLOOP |
  *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback.
@@ -389,7 +389,8 @@ SCIP_DECL_HEURCOPY(heurCopyOneopt)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurOneopt(scip) );
@@ -404,8 +405,9 @@ SCIP_DECL_HEURFREE(heurFreeOneopt)
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -423,7 +425,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolOneopt)
 {
    SCIP_HEURDATA* heurdata;
 
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* create heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -441,7 +443,8 @@ static
 SCIP_DECL_HEUREXITSOL(heurExitsolOneopt)
 {
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* reset the timing mask to its default value */
    SCIPheurSetTimingmask(heur, HEUR_TIMING);

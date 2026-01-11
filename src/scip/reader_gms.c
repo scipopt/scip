@@ -59,7 +59,7 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
 #include "scip/expr_abs.h"
-#include <string.h>
+
 
 #define READER_NAME             "gmsreader"
 #define READER_DESC             "file writer for (MI)(N)LPs in GAMS file format"
@@ -1418,7 +1418,8 @@ SCIP_DECL_READERCOPY(readerCopyGms)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderGms(scip) );

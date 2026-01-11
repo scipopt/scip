@@ -51,7 +51,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define READER_NAME             "cnfreader"
 #define READER_DESC             "file reader for SAT problems in conjunctive normal form"
@@ -382,7 +382,8 @@ SCIP_DECL_READERCOPY(readerCopyCnf)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderCnf(scip) );
@@ -399,9 +400,10 @@ SCIP_DECL_READERREAD(readerReadCnf)
    SCIP_RETCODE retcode;
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(filename != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 

@@ -32,7 +32,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
 
@@ -426,8 +425,9 @@ SCIP_VAR* SCIPgetVarExprVar(
    )
 {
    assert(expr != NULL);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(SCIPexprGetData(expr) != NULL);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME, NULL );
 
    return (SCIP_VAR*)SCIPexprGetData(expr);
 }

@@ -113,7 +113,6 @@
 #include "scip/symmetry.h"
 #include "scip/event_shadowtree.h"
 #include <ctype.h>
-#include <string.h>
 #include <memory.h>
 
 
@@ -1484,8 +1483,9 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
 
    assert( eventhdlr != NULL );
    assert( eventdata != NULL );
-   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_SYMMETRY_NAME) == 0 );
    assert( event != NULL );
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_SYMMETRY_NAME, SCIP_INVALIDCALL );
 
    orcdata = (ORCDATA*) eventdata;
    assert( orcdata != NULL );
