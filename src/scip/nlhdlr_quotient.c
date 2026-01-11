@@ -32,8 +32,6 @@
  * @todo use the convex envelope for x/y described in Tawarmalani and Sahinidis (2002) if y has a finite upper bound
  */
 
-#include <string.h>
-
 #include "scip/nlhdlr_quotient.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc_rowprep.h"
@@ -1032,7 +1030,8 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrQuotient)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), NLHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnlhdlrGetName(sourcenlhdlr), NLHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPincludeNlhdlrQuotient(targetscip) );
 

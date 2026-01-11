@@ -38,18 +38,20 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <math.h>
 #include <limits.h>
 #include <float.h>
-#include <assert.h>
 
 /*
  * include build configuration flags
  */
 #include "scip/config.h"
 #include "scip/scip_export.h"
+
 
 /*
  * GNU COMPILER VERSION define
@@ -427,6 +429,30 @@
 #else
 #  define SCIP_DEPRECATED
 #endif
+#endif
+
+
+/** checks if name matches reference */
+#ifdef SCIP_CHECK_NAME
+
+#define SCIP_STRINGEQ(name, reference, retcode)                                                                       \
+   do                                                                                                                 \
+   {                                                                                                                  \
+      const char* _name_ = name;                                                                                      \
+      const char* _reference_ = reference;                                                                            \
+      if( strcmp(_name_, _reference_) != 0 )                                                                          \
+      {                                                                                                               \
+         SCIPerrorMessage("<%s> does not match <%s>\n", _name_, _reference_);                                         \
+         SCIPABORT();                                                                                                 \
+         return retcode; /*lint !e527*/                                                                               \
+      }                                                                                                               \
+   }                                                                                                                  \
+   while( FALSE )
+
+#else
+
+#define SCIP_STRINGEQ(name, reference, retcode)
+
 #endif
 
 #endif

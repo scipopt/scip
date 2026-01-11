@@ -38,8 +38,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
-
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 
@@ -487,7 +485,8 @@ SCIP_DECL_NLHDLRCOPYHDLR(copyHdlr)
 
    assert(targetscip != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), "testhdlr") == 0);
+
+   SCIP_STRINGEQ( SCIPnlhdlrGetName(sourcenlhdlr), "testhdlr", SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPallocClearMemory(targetscip, &nlhdlrdata) );
 

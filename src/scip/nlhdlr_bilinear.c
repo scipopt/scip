@@ -30,8 +30,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
-
 #include "scip/nlhdlr_bilinear.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/expr_product.h"
@@ -1123,7 +1121,8 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrBilinear)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), NLHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnlhdlrGetName(sourcenlhdlr), NLHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPincludeNlhdlrBilinear(targetscip) );
 
@@ -1616,7 +1615,8 @@ SCIP_EXPR** SCIPgetExprsBilinear(
    SCIP_NLHDLRDATA* nlhdlrdata;
 
    assert(nlhdlr != NULL);
-   assert(strcmp(SCIPnlhdlrGetName(nlhdlr), NLHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnlhdlrGetName(nlhdlr), NLHDLR_NAME, NULL );
 
    nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
    assert(nlhdlrdata);
@@ -1632,7 +1632,8 @@ int SCIPgetNExprsBilinear(
    SCIP_NLHDLRDATA* nlhdlrdata;
 
    assert(nlhdlr != NULL);
-   assert(strcmp(SCIPnlhdlrGetName(nlhdlr), NLHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnlhdlrGetName(nlhdlr), NLHDLR_NAME, -1 );
 
    nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
    assert(nlhdlrdata);
@@ -1663,13 +1664,14 @@ SCIP_RETCODE SCIPaddIneqBilinear(
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
-   assert(strcmp(SCIPnlhdlrGetName(nlhdlr), NLHDLR_NAME) == 0);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 2);
    assert(xcoef != SCIP_INVALID); /*lint !e777 */
    assert(ycoef != SCIP_INVALID); /*lint !e777 */
    assert(constant != SCIP_INVALID); /*lint !e777 */
    assert(success != NULL);
+
+   SCIP_STRINGEQ( SCIPnlhdlrGetName(nlhdlr), NLHDLR_NAME, SCIP_INVALIDCALL );
 
    *success = FALSE;
 

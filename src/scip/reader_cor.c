@@ -39,7 +39,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_prob.h"
-#include <string.h>
+
 
 #define READER_NAME             "correader"
 #define READER_DESC             "file reader for CORE problem of stochastic programs in the SMPS file format"
@@ -125,7 +125,8 @@ SCIP_DECL_READERCOPY(readerCopyCor)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderCor(scip) );
@@ -141,7 +142,8 @@ SCIP_DECL_READERFREE(readerFreeCor)
 {
    SCIP_READERDATA* readerdata;
 
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
+
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
 
@@ -271,7 +273,8 @@ SCIP_Bool SCIPcorHasRead(
    SCIP_READERDATA* readerdata;
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, FALSE );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
@@ -287,7 +290,8 @@ int SCIPcorGetNVarNames(
    SCIP_READERDATA* readerdata;
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, -1 );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
@@ -303,7 +307,8 @@ int SCIPcorGetNConsNames(
    SCIP_READERDATA* readerdata;
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, -1 );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
@@ -320,7 +325,8 @@ const char* SCIPcorGetVarName(
    SCIP_READERDATA* readerdata;
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, NULL );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
@@ -338,7 +344,8 @@ const char* SCIPcorGetConsName(
    SCIP_READERDATA* readerdata;
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, NULL );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);

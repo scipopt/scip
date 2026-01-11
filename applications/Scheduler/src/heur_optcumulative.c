@@ -30,9 +30,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "scip/cons_cumulative.h"
 #include "heur_optcumulative.h"
 
@@ -557,7 +554,8 @@ SCIP_DECL_HEURCOPY(heurCopyOptcumulative)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of heuristic */
    SCIP_CALL( SCIPincludeHeurOptcumulative(scip) );

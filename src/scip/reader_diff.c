@@ -56,7 +56,7 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_solve.h"
 #include <stdlib.h>
-#include <string.h>
+
 
 #define READER_NAME             "diffreader"
 #define READER_DESC             "file reader for changes in the LP file"
@@ -960,7 +960,8 @@ SCIP_DECL_READERCOPY(readerCopyDiff)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderDiff(scip) );

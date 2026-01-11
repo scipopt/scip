@@ -31,8 +31,6 @@
 /* TODO: support more constraint types: cons_nonlinear, cons_indicator and symmetry constraints */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
 #include "scip/presol_implint.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
@@ -2201,7 +2199,8 @@ SCIP_DECL_PRESOLCOPY(presolCopyImplint)
 
    assert(scip != NULL);
    assert(presol != NULL);
-   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpresolGetName(presol), PRESOL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolImplint(scip) );

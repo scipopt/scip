@@ -101,7 +101,7 @@
 #include "scip/scip_prop.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 /**@name Propagator properties
  *
@@ -2123,7 +2123,8 @@ SCIP_DECL_PROPCOPY(propCopyVbounds)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of propagator */
    SCIP_CALL( SCIPincludePropVbounds(scip) );

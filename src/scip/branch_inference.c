@@ -43,7 +43,6 @@
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_var.h"
-#include <string.h>
 
 
 /**@name Branching rule properties
@@ -760,7 +759,8 @@ SCIP_DECL_BRANCHCOPY(branchCopyInference)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );

@@ -497,7 +497,8 @@ SCIP_DECL_PRESOLCOPY(presolCopyDualagg)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(presol != NULL);
-   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpresolGetName(presol), PRESOL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolDualagg(scip) );

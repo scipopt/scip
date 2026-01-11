@@ -42,6 +42,7 @@
       "cacheVariables": {
         "AUTOBUILD": "Off",
         "CHECKSTAGE": "On",
+        "CHECKNAME": "On",
         "LTO": "On"
       }
     }

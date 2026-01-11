@@ -33,8 +33,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
-
 #include "scip/expr_value.h"
 #include "scip/expr_log.h"
 
@@ -373,7 +371,6 @@ SCIP_DECL_EXPRESTIMATE(estimateLog)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
@@ -381,6 +378,8 @@ SCIP_DECL_EXPRESTIMATE(estimateLog)
    assert(*branchcand == TRUE);
    assert(success != NULL);
    assert(refpoint != NULL);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME, SCIP_INVALIDCALL );
 
    lb = localbounds[0].inf;
    ub = localbounds[0].sup;
@@ -434,7 +433,8 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesLog)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME, SCIP_INVALIDCALL );
 
    /* get expression data */
    child = SCIPexprGetChildren(expr)[0];

@@ -50,6 +50,8 @@ Interface changes
 Build system
 ------------
 
+- added build flag CHECKNAME=auto to control name checks in plugin function calls
+
 ### Cmake
 
 ### Makefiles

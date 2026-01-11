@@ -64,7 +64,7 @@
 #include "scip/scip_var.h"
 #include "scip/prop_symmetry.h"
 #include "scip/symmetry.h"
-#include <string.h>
+
 
 #define BRANCHRULE_NAME          "relpscost"
 #define BRANCHRULE_DESC          "reliability branching on pseudo cost values"
@@ -2344,7 +2344,8 @@ SCIP_DECL_BRANCHCOPY(branchCopyRelpscost)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
@@ -2435,9 +2436,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    int nlpcands;
 
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Execlp method of relpscost branching in node %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 

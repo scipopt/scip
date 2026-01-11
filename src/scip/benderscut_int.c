@@ -51,7 +51,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/type_message.h"
-#include <string.h>
+
 
 #define BENDERSCUT_NAME             "integer"
 #define BENDERSCUT_DESC             "Laporte and Louveaux Benders' decomposition integer cut"
@@ -528,7 +528,8 @@ SCIP_DECL_BENDERSCUTFREE(benderscutFreeInt)
    SCIP_BENDERSCUTDATA* benderscutdata;
 
    assert( benderscut != NULL );
-   assert( strcmp(SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME, SCIP_INVALIDCALL );
 
    /* free Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);
@@ -549,7 +550,8 @@ SCIP_DECL_BENDERSCUTEXIT(benderscutExitInt)
    SCIP_BENDERSCUTDATA* benderscutdata;
 
    assert( benderscut != NULL );
-   assert( strcmp(SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME, SCIP_INVALIDCALL );
 
    /* free Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);

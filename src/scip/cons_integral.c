@@ -47,7 +47,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_mem.h"
 #include "scip/rational.h"
-#include <string.h>
 
 
 #define CONSHDLR_NAME          "integral"
@@ -130,7 +129,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyIntegral)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
@@ -149,11 +149,12 @@ static
 SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 {  /*lint --e{715}*/
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(conss == NULL);
    assert(nconss == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Enfolp method of integrality constraint: %d fractional variables\n", SCIPgetNLPBranchCands(scip));
 
@@ -196,11 +197,12 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
    int i;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(conss == NULL);
    assert(nconss == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Enforelax method of integrality constraint\n");
 
@@ -263,7 +265,8 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
 
    assert(scip != NULL);
    assert(sol != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Check method of integrality constraint (checkintegrality=%u)\n", checkintegrality);
 
@@ -335,7 +338,8 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
    assert(scip != NULL);
    assert(diveset != NULL);
    assert(sol != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "integral constraint handler: determine diving bound changes\n");
 

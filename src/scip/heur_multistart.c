@@ -53,7 +53,6 @@
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_timing.h"
-#include <string.h>
 
 
 #define HEUR_NAME             "multistart"
@@ -936,7 +935,8 @@ TERMINATE:
 static
 SCIP_DECL_HEURCOPY(heurCopyMultistart)
 {  /*lint --e{715}*/
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurMultistart(scip) );

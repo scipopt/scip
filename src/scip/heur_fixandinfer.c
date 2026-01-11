@@ -46,7 +46,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define HEUR_NAME             "fixandinfer"
 #define HEUR_DESC             "iteratively fixes variables and propagates inferences"
@@ -175,7 +175,8 @@ SCIP_DECL_HEURCOPY(heurCopyFixandinfer)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );

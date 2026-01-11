@@ -39,7 +39,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_sol.h"
-#include <string.h>
+
 
 #define HEUR_NAME             "linesearchdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings following the line from root solution to current solution"
@@ -100,7 +100,8 @@ SCIP_DECL_HEURCOPY(heurCopyLinesearchdiving)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurLinesearchdiving(scip) );

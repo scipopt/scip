@@ -66,7 +66,6 @@
 #include "scip/struct_tree.h"
 #include "scip/symmetry.h"
 #include <ctype.h>
-#include <string.h>
 #include <memory.h>
 #include "scip/event_shadowtree.h"
 
@@ -423,7 +422,7 @@ SCIP_DECL_EVENTEXEC(eventExec)
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
-   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    eventhdlrdata = (SCIP_EVENTHDLRDATA*) SCIPeventhdlrGetData(eventhdlr);
    assert( eventhdlrdata != NULL );
@@ -627,7 +626,9 @@ SCIP_SHADOWTREE* SCIPgetShadowTree(
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    assert( eventhdlr != NULL );
-   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, NULL );
+
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert( eventhdlrdata != NULL );
 
@@ -643,7 +644,9 @@ SCIP_RETCODE SCIPactivateShadowTree(
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    assert( eventhdlr != NULL );
-   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
+
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert( eventhdlrdata != NULL );
    assert( eventhdlrdata->scip == scip );

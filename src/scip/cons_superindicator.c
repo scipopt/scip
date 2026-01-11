@@ -66,7 +66,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
 #include "scip/symmetry_graph.h"
-#include <string.h>
+
 
 /* constraint handler properties */
 #define CONSHDLR_NAME                        "superindicator"
@@ -252,7 +252,6 @@ void extractLinearValues(
    assert(minactivity != NULL);
    assert(maxactivity != NULL);
    assert(minabscoef != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear") == 0);
 
    /* get nonzero elements */
    vars = SCIPgetVarsLinear(scip, cons);
@@ -939,7 +938,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopySuperindicator)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrSuperindicator(scip) );
@@ -956,8 +956,9 @@ SCIP_DECL_CONSFREE(consFreeSuperindicator)
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "freeing superindicator constraint handler data\n");
 
@@ -998,10 +999,11 @@ static
 SCIP_DECL_CONSDELETE(consDeleteSuperindicator)
 {  /*lint --e{715}*/
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(consdata != NULL);
    assert(*consdata != NULL);
    assert((*consdata)->slackcons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "deleting constraint <%s>\n", SCIPconsGetName(cons));
 
@@ -1050,8 +1052,9 @@ SCIP_DECL_CONSINITLP(consInitlpSuperindicator)
    int c;
 
    assert(scip != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(infeasible != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *infeasible = FALSE;
 
@@ -1087,9 +1090,10 @@ SCIP_DECL_CONSSEPALP(consSepalpSuperindicator)
    int c;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DELAYED;
 
@@ -1196,9 +1200,10 @@ SCIP_DECL_CONSSEPASOL(consSepasolSuperindicator)
    int c;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DELAYED;
 
@@ -1727,7 +1732,8 @@ SCIP_DECL_CONSPRINT(consPrintSuperindicator)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1772,7 +1778,8 @@ SCIP_DECL_CONSCOPY(consCopySuperindicator)
    assert(scip != NULL);
    assert(sourcescip != NULL);
    assert(sourcecons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *valid = TRUE;
 
@@ -2276,8 +2283,9 @@ SCIP_VAR* SCIPgetBinaryVarSuperindicator(
    )
 {
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
    assert(SCIPconsGetData(cons) != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    return SCIPconsGetData(cons)->binvar;
 }
@@ -2288,8 +2296,9 @@ SCIP_CONS* SCIPgetSlackConsSuperindicator(
    )
 {
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
    assert(SCIPconsGetData(cons) != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    return SCIPconsGetData(cons)->slackcons;
 }

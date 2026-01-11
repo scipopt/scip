@@ -34,9 +34,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "blockmemshell/memory.h"
 #include "scip/scip_nlpi.h"
 #include "scip/nlpi_ipopt.h"
@@ -62,7 +59,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_timing.h"
 #include "scip/sepa_gauge.h"
-#include <string.h>
 
 
 #define SEPA_NAME              "gauge"
@@ -235,7 +231,9 @@ SCIP_RETCODE computeInteriorPoint(
     * constraints and which constraints are nonlinear
     */
    /* @todo: this code is only valid when using IPOPT and needs to be changed when new NLP solvers get interfaced */
-   assert(strcmp(SCIPnlpiGetName(nlpi), "ipopt") == 0);
+
+   SCIP_STRINGEQ( SCIPnlpiGetName(nlpi), "ipopt", SCIP_INVALIDCALL );
+
    nlpioracle = (SCIP_NLPIORACLE *)SCIPgetNlpiOracleIpopt(nlpiprob);
    assert(nlpioracle != NULL);
    assert(SCIPnlpiOracleGetNVars(nlpioracle) == objvaridx + 1);
@@ -808,7 +806,8 @@ SCIP_DECL_SEPACOPY(sepaCopyGauge)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of separator */
    SCIP_CALL( SCIPincludeSepaGauge(scip) );
@@ -822,7 +821,7 @@ SCIP_DECL_SEPAFREE(sepaFreeGauge)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
 
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);

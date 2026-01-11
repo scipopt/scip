@@ -33,9 +33,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "cons_samediff.h"
 #include "probdata_binpacking.h"
 #include "vardata_binpacking.h"
@@ -321,9 +318,10 @@ static
 SCIP_DECL_CONSDELETE(consDeleteSamediff)
 {  /*lint --e{715}*/
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(consdata != NULL);
    assert(*consdata != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* free samediff constraint */
    SCIP_CALL( consdataFree(scip, consdata) );
@@ -339,10 +337,11 @@ SCIP_DECL_CONSTRANS(consTransSamediff)
    SCIP_CONSDATA* targetdata;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
@@ -382,8 +381,9 @@ SCIP_DECL_CONSPROP(consPropSamediff)
    int c;
 
    assert(scip != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "propagation constraints of constraint handler <"CONSHDLR_NAME">\n");
 
@@ -456,8 +456,9 @@ SCIP_DECL_CONSACTIVE(consActiveSamediff)
    SCIP_PROBDATA* probdata;
 
    assert(scip != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(cons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
@@ -488,8 +489,9 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSamediff)
    SCIP_PROBDATA* probdata;
 
    assert(scip != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(cons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

@@ -45,7 +45,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_reopt.h"
-#include <string.h>
+
 
 #define COMPR_NAME             "largestrepr"
 #define COMPR_DESC             "heuristic searching for large common representatives"
@@ -652,7 +652,8 @@ SCIP_DECL_COMPRCOPY(comprCopyLargestrepr)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(compr != NULL);
-   assert(strcmp(SCIPcomprGetName(compr), COMPR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPcomprGetName(compr), COMPR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeComprLargestrepr(scip) );

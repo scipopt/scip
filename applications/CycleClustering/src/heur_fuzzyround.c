@@ -29,9 +29,6 @@
  */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "heur_fuzzyround.h"
 
 #include "probdata_cyc.h"
@@ -68,9 +65,10 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    int maxcluster;
 
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 

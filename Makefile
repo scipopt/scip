@@ -67,6 +67,7 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		SANITIZE=$(SANITIZE)\\n\
 		SHARED=$(SHARED)\\n\
 		CHECKSTAGE=$(CHECKSTAGE)\\n\
+		CHECKNAME=$(CHECKNAME)\\n\
 		DEBUGSOL=$(DEBUGSOL)\\n\
 		EXACTSOLVE=$(EXACTSOLVE)\\n\
 		NOBLKBUFMEM=$(NOBLKBUFMEM)\\n\
@@ -1716,6 +1717,9 @@ ifeq ($(AMPL),true)
 endif
 ifeq ($(CHECKSTAGE),true)
 		@echo "#define SCIP_CHECK_STAGE" >> $@
+endif
+ifeq ($(CHECKNAME),true)
+		@echo "#define SCIP_CHECK_NAME" >> $@
 endif
 		@echo >> $@
 		@echo "#endif /* SCIP_CONFIG_H */" >> $@

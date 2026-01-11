@@ -38,9 +38,6 @@
 #ifndef __SCIP_SCIP_H__
 #define __SCIP_SCIP_H__
 
-
-#include <stdio.h>
-
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"

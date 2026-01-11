@@ -78,7 +78,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/sepa_mcf.h"
-#include <string.h>
+
 
 #define SEPA_NAME                        "mcf"
 #define SEPA_DESC                        "multi-commodity-flow network cut separator"
@@ -6806,7 +6806,8 @@ SCIP_DECL_SEPACOPY(sepaCopyMcf)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaMcf(scip) );

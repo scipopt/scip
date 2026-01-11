@@ -78,7 +78,6 @@
 #include "scip/scip_var.h"
 #include "scip/symmetry_graph.h"
 #include "symmetry/struct_symmetry.h"
-#include <string.h>
 
 
 /* constraint handler properties */
@@ -3840,7 +3839,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyAnd)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
@@ -5206,12 +5206,7 @@ int SCIPgetNVarsAnd(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not an AND-constraint\n");
-      SCIPABORT();
-      return -1;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, -1 );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5230,12 +5225,7 @@ SCIP_VAR** SCIPgetVarsAnd(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not an AND-constraint\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5254,12 +5244,7 @@ SCIP_VAR* SCIPgetResultantAnd(
 
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not an AND-constraint\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5278,12 +5263,7 @@ SCIP_Bool SCIPisAndConsSorted(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not an AND-constraint\n");
-      SCIPABORT();
-      return FALSE;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, FALSE );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5302,12 +5282,7 @@ SCIP_RETCODE SCIPsortAndCons(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not an AND-constraint\n");
-      SCIPABORT();
-      return SCIP_INVALIDDATA;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

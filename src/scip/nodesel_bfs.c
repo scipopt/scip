@@ -42,7 +42,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/type_misc.h"
-#include <string.h>
+
 
 #define NODESEL_NAME             "bfs"
 #define NODESEL_DESC             "best first search"
@@ -82,7 +82,8 @@ SCIP_DECL_NODESELCOPY(nodeselCopyBfs)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of node selector */
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
@@ -98,8 +99,9 @@ SCIP_DECL_NODESELFREE(nodeselFreeBfs)
    SCIP_NODESELDATA* nodeseldata;
 
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    /* free user data of node selector */
    nodeseldata = SCIPnodeselGetData(nodesel);
@@ -123,9 +125,10 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
    SCIP_Real maxplungequot;
 
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
    assert(selnode != NULL);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    *selnode = NULL;
 
@@ -248,7 +251,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
    SCIP_Real lowerbound2;
 
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
 
    lowerbound1 = SCIPnodeGetLowerbound(node1);

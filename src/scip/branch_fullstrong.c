@@ -49,7 +49,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
 
 
 #define BRANCHRULE_NAME          "fullstrong"
@@ -94,7 +93,8 @@ SCIP_DECL_BRANCHCOPY(branchCopyFullstrong)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
@@ -561,9 +561,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
    int bestcand;
 
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Execlp method of fullstrong branching\n");
 

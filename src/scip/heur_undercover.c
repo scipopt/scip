@@ -82,7 +82,7 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define HEUR_NAME               "undercover"
 #define HEUR_DESC               "solves a sub-CIP determined by a set covering approach"
@@ -2822,7 +2822,8 @@ SCIP_DECL_HEURCOPY(heurCopyUndercover)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurUndercover(scip) );
@@ -2956,7 +2957,8 @@ SCIP_DECL_HEUREXITSOL(heurExitsolUndercover)
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);

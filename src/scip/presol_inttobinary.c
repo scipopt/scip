@@ -43,7 +43,7 @@
 #include "scip/scip_presol.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define PRESOL_NAME            "inttobinary"
 #define PRESOL_DESC            "converts integer variables with domain [a,a+1] to binaries"
@@ -61,7 +61,8 @@ SCIP_DECL_PRESOLCOPY(presolCopyInttobinary)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(presol != NULL);
-   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpresolGetName(presol), PRESOL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );

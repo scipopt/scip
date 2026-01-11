@@ -3033,7 +3033,8 @@ SCIP_DECL_SEPACOPY(sepaCopyLagromory)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaLagromory(scip) );
@@ -3115,7 +3116,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpLagromory)
    int i;
 
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
+
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 

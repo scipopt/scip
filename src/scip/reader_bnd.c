@@ -56,7 +56,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define READER_NAME             "bndreader"
 #define READER_DESC             "file reader for variable bounds"
@@ -264,7 +264,8 @@ SCIP_DECL_READERCOPY(readerCopyBnd)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderBnd(scip) );
@@ -282,8 +283,9 @@ static
 SCIP_DECL_READERREAD(readerReadBnd)
 {  /*lint --e{715}*/
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -402,7 +404,8 @@ static
 SCIP_DECL_READERWRITE(readerWriteBnd)
 {  /*lint --e{715}*/
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPwriteBnd(scip, file, vars, nvars, result) );
 
@@ -415,7 +418,8 @@ SCIP_DECL_READERFREE(readerFreeBnd)
 {
    SCIP_READERDATA* readerdata;
 
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
+
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
    SCIPfreeBlockMemory(scip, &readerdata);

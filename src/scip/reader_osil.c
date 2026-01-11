@@ -63,7 +63,7 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
 #include <stdlib.h>
-#include <string.h>
+
 #include "xml/xml.h"
 
 #define READER_NAME             "osilreader"
@@ -1778,7 +1778,7 @@ SCIP_RETCODE readExpression(
          *doingfine = FALSE;
          goto TERMINATE_TWO_ARGS;
       }
-      else /* if( strcmp(exprname, "max") == 0 ) */
+      else
       {
          assert(strcmp(exprname, "max") == 0);
 

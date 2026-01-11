@@ -71,7 +71,6 @@
 #include "scip/symmetry_graph.h"
 #include "symmetry/struct_symmetry.h"
 #include <ctype.h>
-#include <string.h>
 
 #ifdef WITH_CARDINALITY_UPGRADE
 #include "scip/cons_cardinality.h"
@@ -6568,7 +6567,8 @@ SCIP_RETCODE performVarDeletions(
    assert(conshdlr != NULL);
    assert(conss != NULL);
    assert(nconss >= 0);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* iterate over all constraints */
    for( i = 0; i < nconss; i++ )
@@ -12097,7 +12097,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyKnapsack)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrKnapsack(scip) );
@@ -12309,7 +12310,8 @@ SCIP_DECL_CONSDELETE(consDeleteKnapsack)
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* get event handler */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -12332,10 +12334,11 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
    SCIP_CONSDATA* targetdata;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
@@ -13773,11 +13776,7 @@ SCIP_RETCODE SCIPaddCoefKnapsack(
    assert(var != NULL);
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a knapsack constraint\n");
-      return SCIP_INVALIDDATA;
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    SCIP_CALL( addCoef(scip, cons, var, weight) );
 
@@ -13794,12 +13793,7 @@ SCIP_Longint SCIPgetCapacityKnapsack(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a knapsack constraint\n");
-      SCIPABORT();
-      return 0;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, 0 );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13821,11 +13815,7 @@ SCIP_RETCODE SCIPchgCapacityKnapsack(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a knapsack constraint\n");
-      return SCIP_INVALIDDATA;
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
@@ -13851,12 +13841,7 @@ int SCIPgetNVarsKnapsack(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a knapsack constraint\n");
-      SCIPABORT();
-      return -1;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, -1 );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13874,12 +13859,7 @@ SCIP_VAR** SCIPgetVarsKnapsack(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a knapsack constraint\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13897,12 +13877,7 @@ SCIP_Longint* SCIPgetWeightsKnapsack(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a knapsack constraint\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13920,12 +13895,7 @@ SCIP_Real SCIPgetDualsolKnapsack(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a knapsack constraint\n");
-      SCIPABORT();
-      return SCIP_INVALID;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALID );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13946,12 +13916,7 @@ SCIP_Real SCIPgetDualfarkasKnapsack(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a knapsack constraint\n");
-      SCIPABORT();
-      return SCIP_INVALID;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALID );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13974,12 +13939,7 @@ SCIP_ROW* SCIPgetRowKnapsack(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a knapsack\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13998,12 +13958,7 @@ SCIP_RETCODE SCIPcreateRowKnapsack(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a knapsack\n");
-      SCIPABORT();
-      return SCIP_ERROR; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_ERROR );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

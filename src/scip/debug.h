@@ -51,6 +51,7 @@
 #include "scip/type_var.h"
 #endif
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif

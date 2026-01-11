@@ -56,7 +56,7 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define PROP_NAME              "nlobbt"
 #define PROP_DESC              "propagator template"
@@ -622,7 +622,8 @@ SCIP_DECL_PROPCOPY(propCopyNlobbt)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of propagator */
    SCIP_CALL( SCIPincludePropNlobbt(scip) );

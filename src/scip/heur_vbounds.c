@@ -71,8 +71,6 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
-
 #ifdef SCIP_STATISTIC
 #include "scip/clock.h"
 #endif
@@ -1220,7 +1218,8 @@ SCIP_DECL_HEURCOPY(heurCopyVbounds)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of heuristic */
    SCIP_CALL( SCIPincludeHeurVbounds(scip) );

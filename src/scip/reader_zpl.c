@@ -37,8 +37,6 @@
 
 #include <unistd.h>
 #include <stdbool.h>
-#include <string.h>
-
 #ifdef _MSC_VER
 #include <direct.h>
 #define getcwd _getcwd
@@ -1649,7 +1647,8 @@ SCIP_DECL_READERCOPY(readerCopyZpl)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderZpl(scip) );

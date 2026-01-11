@@ -33,5 +33,6 @@
 #cmakedefine SCIP_WITH_EGLIB
 #cmakedefine SCIP_WITH_BOOST
 #cmakedefine SCIP_CHECK_STAGE
+#cmakedefine SCIP_CHECK_NAME
 
 #endif

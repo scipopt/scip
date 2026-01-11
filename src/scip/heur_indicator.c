@@ -55,7 +55,7 @@
 #include "scip/scip_probing.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
-#include <string.h>
+
 
 #define HEUR_NAME             "indicator"
 #define HEUR_DESC             "indicator heuristic to create feasible solutions from values for indicator variables"
@@ -374,7 +374,8 @@ SCIP_DECL_HEURCOPY(heurCopyIndicator)
 {  /*lint --e{715}*/
    assert( scip != NULL );
    assert( heur != NULL );
-   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurIndicator(scip) );
@@ -389,7 +390,8 @@ SCIP_DECL_HEURINITSOL(heurInitsolIndicator)
    SCIP_HEURDATA* heurdata;
 
    assert( scip != NULL );
-   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -415,7 +417,8 @@ SCIP_DECL_HEUREXITSOL(heurExitsolIndicator)
    SCIP_HEURDATA* heurdata;
 
    assert( scip != NULL );
-   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -620,10 +623,11 @@ SCIP_RETCODE SCIPheurPassIndicator(
 
    assert( scip != NULL );
    assert( heur != NULL );
-   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
    assert( nindconss > 0 );
    assert( indconss != NULL );
    assert( solcand != NULL );
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);

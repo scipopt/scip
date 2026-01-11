@@ -1709,8 +1709,9 @@ SCIP_RETCODE separateConstraints(
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* loop through constraints */
    for (c = 0; c < nconss && ! infeasible; c++)
@@ -1878,8 +1879,9 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOrbitopePP)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(valid != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrOrbitopePP(scip) );
@@ -1897,7 +1899,8 @@ SCIP_DECL_CONSFREE(consFreeOrbitopePP)
 
    assert( scip != 0 );
    assert( conshdlr != 0 );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -1912,7 +1915,8 @@ static
 SCIP_DECL_CONSDELETE(consDeleteOrbitopePP)
 {  /*lint --e{715}*/
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( consdataFree(scip, consdata) );
 
@@ -1927,10 +1931,11 @@ SCIP_DECL_CONSTRANS(consTransOrbitopePP)
    SCIP_CONSDATA* targetdata;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
@@ -2042,8 +2047,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitopePP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_FEASIBLE;
    if ( objinfeasible || solinfeasible )
@@ -2085,8 +2091,9 @@ SCIP_DECL_CONSCHECK(consCheckOrbitopePP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_FEASIBLE;
 
@@ -2128,8 +2135,9 @@ SCIP_DECL_CONSPROP(consPropOrbitopePP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -2179,8 +2187,9 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitopePP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
    noldfixedvars = *nfixedvars;
@@ -2262,7 +2271,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreOrbitopePP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    for (c = 0; c < nconss; ++c)
    {
@@ -2286,9 +2296,10 @@ SCIP_DECL_CONSLOCK(consLockOrbitopePP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
    assert( locktype == SCIP_LOCKTYPE_MODEL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -2327,8 +2338,9 @@ SCIP_DECL_CONSPRINT(consPrintOrbitopePP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -2390,10 +2402,11 @@ SCIP_DECL_CONSCOPY(consCopyOrbitopePP)
    assert( cons != NULL );
    assert( sourcescip != NULL );
    assert( sourceconshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0 );
    assert( sourcecons != NULL );
    assert( varmap != NULL );
    assert( valid != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *valid = TRUE;
 

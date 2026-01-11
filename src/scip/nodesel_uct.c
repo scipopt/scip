@@ -79,7 +79,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
-#include <string.h>
+
 
 #define NODESEL_NAME            "uct"
 #define NODESEL_DESC            "node selector which balances exploration and exploitation "
@@ -459,9 +459,10 @@ SCIP_DECL_NODESELSELECT(nodeselSelectUct)
    int nchildren;
 
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
    assert(selnode != NULL);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    *selnode = NULL;
 

@@ -78,7 +78,7 @@
 #include "scip/symmetry_graph.h"
 #include "symmetry/struct_symmetry.h"
 #include <ctype.h>
-#include <string.h>
+
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "linking"
@@ -798,10 +798,11 @@ SCIP_RETCODE processRealBoundChg(
 
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
    assert(cutoff != NULL);
    assert(nchgbds != NULL);
    assert(mustcheck != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1234,11 +1235,12 @@ SCIP_RETCODE processBinvarFixings(
 
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
    assert(cutoff != NULL);
    assert(nchgbds != NULL);
    assert(addcut != NULL);
    assert(mustcheck != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1826,10 +1828,11 @@ SCIP_RETCODE separateCons(
 
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
    assert(cutoff != NULL);
    assert(separated != NULL);
    assert(nchgbds != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1919,11 +1922,12 @@ SCIP_RETCODE enforcePseudo(
    assert(!SCIPhasCurrentNodeLP(scip));
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
    assert(cutoff != NULL);
    assert(infeasible != NULL);
    assert(nchgbds != NULL);
    assert(solvelp != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    addcut = FALSE;
    mustcheck = TRUE;
@@ -1978,9 +1982,10 @@ SCIP_RETCODE enforceConstraint(
    int c;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Enforcing %d linking constraints for %s solution\n", nconss, sol == NULL ? "LP" : "relaxation");
 
@@ -2078,7 +2083,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLinking)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrLinking(scip) );
@@ -2095,8 +2101,9 @@ SCIP_DECL_CONSFREE(consFreeLinking)
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* free constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -2202,9 +2209,10 @@ SCIP_DECL_CONSDELETE(consDeleteLinking)
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(consdata != NULL);
    assert(*consdata != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -2236,10 +2244,11 @@ SCIP_DECL_CONSTRANS(consTransLinking)
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* free constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -2307,9 +2316,10 @@ SCIP_DECL_CONSSEPALP(consSepalpLinking)
    int c;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "separating %d/%d linking constraints\n", nusefulconss, nconss);
 
@@ -2347,9 +2357,10 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinking)
    int c;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "separating %d/%d " CONSHDLR_NAME " constraints\n", nusefulconss, nconss);
 
@@ -2408,9 +2419,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinking)
    int c;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "pseudo enforcing %d " CONSHDLR_NAME " constraints\n", nconss);
 
@@ -2455,9 +2467,10 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
    int c;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_FEASIBLE;
 
@@ -2539,9 +2552,10 @@ SCIP_DECL_CONSPROP(consPropLinking)
    int c;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "propagating %d/%d " CONSHDLR_NAME " constraints\n", nusefulconss, nconss);
 
@@ -2586,9 +2600,10 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
    SCIP_Bool mustcheck;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "presolve %d linking constraints\n", nconss);
 
@@ -3138,8 +3153,9 @@ static
 SCIP_DECL_CONSACTIVE(consActiveLinking)
 {  /*lint --e{715}*/
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPconsIsTransformed(cons));
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
    {
@@ -3156,8 +3172,9 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLinking)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPconsIsTransformed(cons));
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* get constraint data */
    consdata = SCIPconsGetData(cons);
@@ -3235,12 +3252,7 @@ SCIP_DECL_CONSCOPY(consCopyLinking)
    int nbinvars;
    int v;
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a linking constraint\n");
-      SCIPABORT();
-      return SCIP_INVALIDDATA;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    (*valid) = TRUE;
 
@@ -3466,8 +3478,9 @@ SCIP_DECL_EVENTEXEC(eventExecBinvar)
 
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = (SCIP_CONSDATA*)eventdata;
    assert(consdata != NULL);
@@ -3754,12 +3767,7 @@ SCIP_VAR* SCIPgetLinkvarLinking(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a " CONSHDLR_NAME " constraint\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3779,12 +3787,7 @@ SCIP_RETCODE SCIPgetBinvarsLinking(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a " CONSHDLR_NAME " constraint\n");
-      SCIPABORT();
-      return SCIP_INVALIDDATA;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3808,12 +3811,7 @@ int SCIPgetNBinvarsLinking(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a " CONSHDLR_NAME " constraint\n");
-      SCIPABORT();
-      return -1;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, -1 );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3831,12 +3829,7 @@ SCIP_Real* SCIPgetValsLinking(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a " CONSHDLR_NAME " constraint\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3855,12 +3848,7 @@ SCIP_RETCODE SCIPgetBinvarsDataLinking(
 {
    SCIP_CONSDATA* consdata;
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a " CONSHDLR_NAME " constraint\n");
-      SCIPABORT();
-      return SCIP_ERROR;
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_ERROR );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

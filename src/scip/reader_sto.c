@@ -55,7 +55,7 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
 #include <stdlib.h>
-#include <string.h>
+
 
 #define READER_NAME             "storeader"
 #define READER_DESC             "file reader for stochastic information of stochastic programs in the SMPS file format"
@@ -2706,7 +2706,8 @@ SCIP_DECL_READERCOPY(readerCopySto)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderSto(scip) );
@@ -2720,7 +2721,8 @@ SCIP_DECL_READERFREE(readerFreeSto)
 {
    SCIP_READERDATA* readerdata;
 
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
+
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
 
@@ -2739,8 +2741,9 @@ SCIP_DECL_READERREAD(readerReadSto)
    SCIP_READER* timreader;
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -2868,7 +2871,8 @@ int SCIPstoGetNScenarios(
    reader = SCIPfindReader(scip, READER_NAME);
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, -1 );
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);

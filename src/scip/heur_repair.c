@@ -68,7 +68,7 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/scipdefplugins.h"
-#include <string.h>
+
 
 #define HEUR_NAME             "repair"
 #define HEUR_DESC             "tries to repair a primal infeasible solution"
@@ -1050,7 +1050,8 @@ SCIP_DECL_HEURCOPY(heurCopyRepair)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurRepair(scip) );

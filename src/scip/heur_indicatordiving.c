@@ -42,8 +42,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
 #include "scip/cons_indicator.h"
 #include "scip/cons_varbound.h"
 #include "scip/heur_indicatordiving.h"
@@ -168,7 +166,7 @@ SCIP_Bool isViolatedAndNotFixed(
    SCIP_VAR* binvar;
    SCIP_Real solval;
 
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "indicator") == 0);
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "indicator", FALSE );
 
    if( !SCIPisViolatedIndicator(scip, cons, sol) )
       return FALSE;
@@ -604,8 +602,8 @@ SCIP_RETCODE createMaps(
    int nconss;
    int i;
 
-   assert(strcmp(SCIPconshdlrGetName(indicatorconshdlr), "indicator") == 0);
-   assert(strcmp(SCIPconshdlrGetName(varboundconshdlr), "varbound") == 0);
+   SCIP_STRINGEQ( SCIPconshdlrGetName(indicatorconshdlr), "indicator", SCIP_INVALIDCALL );
+   SCIP_STRINGEQ( SCIPconshdlrGetName(varboundconshdlr), "varbound", SCIP_INVALIDCALL );
 
    /* indicator constraints */
    nconss = SCIPconshdlrGetNConss(indicatorconshdlr);
@@ -692,7 +690,8 @@ SCIP_DECL_HEURCOPY(heurCopyIndicatordiving)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurIndicatordiving(scip) );
@@ -708,8 +707,9 @@ SCIP_DECL_HEURFREE(heurFreeIndicatordiving)
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -729,8 +729,9 @@ SCIP_DECL_HEURINIT(heurInitIndicatordiving)
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -754,8 +755,9 @@ SCIP_DECL_HEUREXIT(heurExitIndicatordiving)
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);

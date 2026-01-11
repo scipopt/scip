@@ -29,9 +29,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "scip/pub_expr.h"
 #include "scip/benderscut_feasalt.h"
 #include "scip/benderscut_opt.h"
@@ -385,7 +382,8 @@ static
 SCIP_DECL_BENDERSCUTEXIT(benderscutExitFeasalt)
 {  /*lint --e{715}*/
    assert( benderscut != NULL );
-   assert( strcmp(SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME, SCIP_INVALIDCALL );
 
    return SCIP_OKAY;
 }

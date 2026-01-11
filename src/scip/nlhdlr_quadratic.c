@@ -5089,7 +5089,8 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrQuadratic)
 {  /*lint --e{715}*/
    assert(targetscip != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), NLHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnlhdlrGetName(sourcenlhdlr), NLHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPincludeNlhdlrQuadratic(targetscip) );
 
