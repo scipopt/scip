@@ -34,7 +34,6 @@
 #include "message_pb.h"
 #include "event_bestsol.h"
 
-#include <string.h>
 
 #define EVENTHDLR_NAME         "bestsol"
 #define EVENTHDLR_DESC         "event handler for best solutions found"
@@ -46,7 +45,8 @@ SCIP_DECL_EVENTINIT(eventInitBestsol)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
 
@@ -59,7 +59,8 @@ SCIP_DECL_EVENTEXIT(eventExitBestsol)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
 
@@ -72,9 +73,10 @@ SCIP_DECL_EVENTDELETE(eventDeleteBestsol)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(eventdata != NULL);
    assert(*eventdata != NULL);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPfreeMemory(scip, eventdata);
 
@@ -93,9 +95,10 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
    assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMessage("exec method of best solution event of pbsolver\n");
 

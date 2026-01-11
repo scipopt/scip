@@ -65,9 +65,6 @@
  * COLORconsGetUnions().
  */
 
-#include <assert.h>
-#include <string.h>
-
 #include "scip/type_cons.h"
 #include "cons_storeGraph.h"
 #include "probdata_coloring.h"
@@ -213,7 +210,8 @@ SCIP_DECL_CONSFREE(consFreeStoreGraph)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrData = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrData != NULL);
@@ -236,7 +234,8 @@ SCIP_DECL_CONSINITSOL(consInitsolStoreGraph)
    SCIP_CONS*         cons;
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrData = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrData != NULL);
@@ -261,7 +260,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolStoreGraph)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrData = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrData != NULL);
@@ -287,8 +287,9 @@ SCIP_DECL_CONSDELETE(consDeleteStoreGraph)
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(consdata != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(*consdata != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMessage("Deleting store graph constraint: <%s(%d,%d)>.\n", SCIPconsGetName(cons), (*consdata)->node1+1, (*consdata)->node2+1);
 
@@ -347,8 +348,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpStoreGraph)
 {
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* do nothing */
    *result = SCIP_FEASIBLE;
@@ -363,8 +365,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsStoreGraph)
 {
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* do nothing */
    *result = SCIP_FEASIBLE;
@@ -379,8 +382,9 @@ SCIP_DECL_CONSCHECK(consCheckStoreGraph)
 {
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* do nothing */
    *result = SCIP_FEASIBLE;
@@ -395,8 +399,9 @@ SCIP_DECL_CONSLOCK(consLockStoreGraph)
 {
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(cons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMessage("Locking method for store graph constraint: <%s>.\n", SCIPconsGetName(cons));
 
@@ -420,8 +425,9 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
    int   nnodes;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(cons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrData = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrData != NULL);
@@ -652,8 +658,9 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveStoreGraph)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(cons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrData = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrData != NULL);

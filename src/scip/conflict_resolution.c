@@ -2355,15 +2355,17 @@ SCIP_RETCODE reasonRowFromLpRow(
          if( (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER && vals[i] < 0) ||
               (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER && vals[i] > 0) )
          {
-            if( strcmp(SCIPconshdlrGetName(bdchginfo->inferencedata.reason.cons->conshdlr), "knapsack") != 0 )
-               assert(!SCIPsetIsInfinity(set, rowrhs));
+            assert(!SCIPsetIsInfinity(set, rowrhs)
+               || strcmp(SCIPconshdlrGetName(bdchginfo->inferencedata.reason.cons->conshdlr), "knapsack") == 0);
+
             changesign = TRUE;
          }
          else if( (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER && vals[i] > 0 ) ||
                 (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER && vals[i] < 0))
          {
-            if( strcmp(SCIPconshdlrGetName(bdchginfo->inferencedata.reason.cons->conshdlr), "knapsack") != 0 )
-               assert(!SCIPsetIsInfinity(set, -rowlhs));
+            assert(!SCIPsetIsInfinity(set, -rowlhs)
+               || strcmp(SCIPconshdlrGetName(bdchginfo->inferencedata.reason.cons->conshdlr), "knapsack") == 0);
+
             changesign = FALSE;
          }
          else
@@ -2522,11 +2524,8 @@ SCIP_RETCODE getReasonRow(
          e.g. negated cliques in cons_knapsack or ranged row propagation in cons_linear. */
 
       /* this happens if the reason is a negated clique found in the knapsack constraint handler */
-      if( strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") != 0 )
-      {
-         assert(!SCIPsetIsInfinity(set, -reasonrow->lhs) || !SCIPsetIsInfinity(set, reasonrow->lhs));
-      }
-      else if( SCIPsetIsInfinity(set, -reasonrow->lhs) || SCIPsetIsInfinity(set, reasonrow->lhs) )
+      if( SCIPsetIsInfinity(set, REALABS(reasonrow->lhs))
+         && strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0 )
       {
          *success = FALSE;
          return SCIP_OKAY;

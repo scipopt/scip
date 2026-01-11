@@ -54,7 +54,7 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/syncstore.h"
-#include <string.h>
+
 
 #define DISP_NAME_SOLFOUND      "solfound"
 #define DISP_DESC_SOLFOUND      "letter that indicates the heuristic which found the solution"
@@ -449,8 +449,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
    SCIP_DISPDATA* dispdata;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_SOLFOUND) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_SOLFOUND, SCIP_INVALIDCALL );
 
    sol = SCIPgetBestSol(scip);
    if( sol == NULL )
@@ -491,8 +492,9 @@ SCIP_DECL_DISPINITSOL(SCIPdispInitsolConcSolFound)
    SCIP_Real* bestupper;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCSOLFOUND) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CONCSOLFOUND, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &bestupper) );
    *bestupper = SCIPinfinity(scip);
@@ -509,8 +511,9 @@ SCIP_DECL_DISPINITSOL(SCIPdispExitsolConcSolFound)
    SCIP_Real* bestupper;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCSOLFOUND) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CONCSOLFOUND, SCIP_INVALIDCALL );
 
    bestupper = (SCIP_Real*) SCIPdispGetData(disp);
    SCIPfreeBlockMemory(scip, &bestupper);
@@ -529,8 +532,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputConcSolFound)
    SCIP_SYNCSTORE*  syncstore;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCSOLFOUND) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CONCSOLFOUND, SCIP_INVALIDCALL );
 
    bestupper = (SCIP_Real*) SCIPdispGetData(disp);
 
@@ -554,8 +558,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolvingTime)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_TIME) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_TIME, SCIP_INVALIDCALL );
 
    SCIPdispTime(SCIPgetMessagehdlr(scip), file, SCIPgetSolvingTime(scip), DISP_WIDT_TIME);
 
@@ -567,8 +572,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNNodes)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NNODES) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_NNODES, SCIP_INVALIDCALL );
 
    SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNNodes(scip), DISP_WIDT_NNODES);
 
@@ -580,8 +586,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNNodesLeft)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NODESLEFT) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_NODESLEFT, SCIP_INVALIDCALL );
 
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetNNodesLeft(scip), DISP_WIDT_NODESLEFT);
 
@@ -593,8 +600,9 @@ static
 SCIP_DECL_DISPOUTPUT(dispOutputNObjLeaves)
 {
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NOBJLEAVES) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_NOBJLEAVES, SCIP_INVALIDCALL );
 
    /* ouput number of leaves that hit the objective */
    SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNObjlimLeaves(scip), DISP_WIDT_NOBJLEAVES);
@@ -607,8 +615,9 @@ static
 SCIP_DECL_DISPOUTPUT(dispOutputNInfeasLeaves)
 {
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NINFEASLEAVES) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_NINFEASLEAVES, SCIP_INVALIDCALL );
 
    /* output number of encountered infeasible leaf nodes */
    SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNInfeasibleLeaves(scip), DISP_WIDT_NINFEASLEAVES);
@@ -621,8 +630,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNLPIterations)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPITERATIONS) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_LPITERATIONS, SCIP_INVALIDCALL );
 
    SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNLPIterations(scip), DISP_WIDT_LPITERATIONS);
 
@@ -634,8 +644,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNLPAvgIters)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPAVGITERS) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_LPAVGITERS, SCIP_INVALIDCALL );
 
    /**@todo Currently we are using the total number of nodes to compute the average LP iterations number. The reason for
     *       that is, that for the LP iterations only the total number (over all runs) are stored in the statistics. It
@@ -661,8 +672,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPCondition)
    SCIP_Real cond;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPCOND) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_LPCOND, SCIP_INVALIDCALL );
 
    /* note that after diving mode, the LPI may only have the basis information, but SCIPlpiWasSolved() can be false; in
     * this case, we will (depending on the LP solver) probably not obtain the quality measure; one solution would be to
@@ -691,8 +703,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputDepth)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_DEPTH) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_DEPTH, SCIP_INVALIDCALL );
 
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetDepth(scip), DISP_WIDT_DEPTH);
 
@@ -704,8 +717,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsed)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MEMUSED) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_MEMUSED, SCIP_INVALIDCALL );
 
    SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetMemUsed(scip), DISP_WIDT_MEMUSED);
 
@@ -718,8 +732,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputConcMemUsed)
 {  /*lint --e{715}*/
    SCIP_SYNCSTORE* syncstore;
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCMEMUSED) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CONCMEMUSED, SCIP_INVALIDCALL );
 
    syncstore = SCIPgetSyncstore(scip);
    assert(syncstore != NULL);
@@ -739,8 +754,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsedTotal)
    SCIP_DISPDATA* dispdata;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MEMTOTAL) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_MEMTOTAL, SCIP_INVALIDCALL );
 
    sol = SCIPgetBestSol(scip);
    if( sol == NULL )
@@ -799,8 +815,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputMaxDepth)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MAXDEPTH) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_MAXDEPTH, SCIP_INVALIDCALL );
 
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetMaxDepth(scip), DISP_WIDT_MAXDEPTH);
 
@@ -812,8 +829,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputPlungeDepth)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_PLUNGEDEPTH) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_PLUNGEDEPTH, SCIP_INVALIDCALL );
 
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetPlungeDepth(scip), DISP_WIDT_PLUNGEDEPTH);
 
@@ -825,8 +843,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNFrac)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NFRAC) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_NFRAC, SCIP_INVALIDCALL );
 
    if( SCIPhasCurrentNodeLP(scip) && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
       SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetNLPBranchCands(scip), DISP_WIDT_NFRAC);
@@ -841,8 +860,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNExternCands)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NEXTERNCANDS) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_NEXTERNCANDS, SCIP_INVALIDCALL );
 
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetNExternBranchCands(scip), DISP_WIDT_NEXTERNCANDS);
 
@@ -854,8 +874,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNVars)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_VARS) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_VARS, SCIP_INVALIDCALL );
 
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetNVars(scip), DISP_WIDT_VARS);
 
@@ -867,8 +888,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNConss)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONSS) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CONSS, SCIP_INVALIDCALL );
 
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetNConss(scip), DISP_WIDT_CONSS);
 
@@ -880,8 +902,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNCurConss)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURCONSS) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CURCONSS, SCIP_INVALIDCALL );
 
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetNEnabledConss(scip), DISP_WIDT_CURCONSS);
 
@@ -893,8 +916,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNCurCols)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURCOLS) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CURCOLS, SCIP_INVALIDCALL );
 
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetNLPCols(scip), DISP_WIDT_CURCOLS);
 
@@ -906,8 +930,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNCurRows)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURROWS) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CURROWS, SCIP_INVALIDCALL );
 
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetNLPRows(scip), DISP_WIDT_CURROWS);
 
@@ -919,8 +944,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNAppliedCuts)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CUTS) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CUTS, SCIP_INVALIDCALL );
 
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetNCutsApplied(scip), DISP_WIDT_CUTS);
 
@@ -932,8 +958,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNSepaRounds)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_SEPAROUNDS) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_SEPAROUNDS, SCIP_INVALIDCALL );
 
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetNSepaRounds(scip), DISP_WIDT_SEPAROUNDS);
 
@@ -945,8 +972,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputCutPoolSize)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_POOLSIZE) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_POOLSIZE, SCIP_INVALIDCALL );
 
    SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetNPoolCuts(scip), DISP_WIDT_POOLSIZE);
 
@@ -960,8 +988,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNConflicts)
    SCIP_Longint applied;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONFLICTS) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CONFLICTS, SCIP_INVALIDCALL );
 
    applied = SCIPgetNConflictConssApplied(scip) + SCIPgetNConflictDualproofsApplied(scip);
    SCIPdispLongint(SCIPgetMessagehdlr(scip), file, applied, DISP_WIDT_CONFLICTS);
@@ -974,8 +1003,9 @@ static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNStrongbranchs)
 {  /*lint --e{715}*/
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_STRONGBRANCHS) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_STRONGBRANCHS, SCIP_INVALIDCALL );
 
    SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNStrongbranchs(scip), DISP_WIDT_STRONGBRANCHS);
 
@@ -989,8 +1019,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputPseudoObjval)
    SCIP_Real pseudoobj;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_PSEUDOOBJ) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_PSEUDOOBJ, SCIP_INVALIDCALL );
 
    pseudoobj = SCIPgetPseudoObjval(scip);
 
@@ -1011,8 +1042,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPObjval)
    SCIP_Real lpobj;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPOBJ) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_LPOBJ, SCIP_INVALIDCALL );
 
    if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_NOTSOLVED )
       SCIPinfoMessage(scip, file, "      --      ");
@@ -1038,8 +1070,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputCurDualbound)
    SCIP_Real curdualbound;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURDUALBOUND) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CURDUALBOUND, SCIP_INVALIDCALL );
 
    curdualbound = SCIPgetLocalDualbound(scip);
 
@@ -1061,8 +1094,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLocalOrigEstimate)
    SCIP_Real estimate;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ESTIMATE) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_ESTIMATE, SCIP_INVALIDCALL );
 
    estimate = SCIPgetLocalOrigEstimate(scip);
    if( SCIPisInfinity(scip, REALABS(estimate)) )
@@ -1080,8 +1114,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputAvgDualbound)
    SCIP_Real avgdualbound;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_AVGDUALBOUND) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_AVGDUALBOUND, SCIP_INVALIDCALL );
 
    avgdualbound = SCIPgetAvgDualbound(scip);
    if( SCIPisInfinity(scip, REALABS(avgdualbound)) )
@@ -1099,8 +1134,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputDualbound)
    SCIP_Real dualbound;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_DUALBOUND) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_DUALBOUND, SCIP_INVALIDCALL );
 
    dualbound = SCIPgetDualbound(scip);
 
@@ -1121,8 +1157,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputPrimalbound)
    SCIP_Real primalbound;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_PRIMALBOUND) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_PRIMALBOUND, SCIP_INVALIDCALL );
 
    primalbound = SCIPgetPrimalbound(scip);
    if( SCIPisInfinity(scip, REALABS(primalbound)) )
@@ -1140,8 +1177,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputConcDualbound)
    SCIP_Real dualbound;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCDUALBOUND) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CONCDUALBOUND, SCIP_INVALIDCALL );
 
    dualbound = SCIPgetConcurrentDualbound(scip);
 
@@ -1162,8 +1200,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputConcPrimalbound)
    SCIP_Real primalbound;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCPRIMALBOUND) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CONCPRIMALBOUND, SCIP_INVALIDCALL );
 
    primalbound = SCIPgetConcurrentPrimalbound(scip);
    if( SCIPisInfinity(scip, REALABS(primalbound)) )
@@ -1181,8 +1220,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputCutoffbound)
    SCIP_Real cutoffbound;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CUTOFFBOUND) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CUTOFFBOUND, SCIP_INVALIDCALL );
 
    cutoffbound = SCIPgetCutoffbound(scip);
    if( SCIPisInfinity(scip, REALABS(cutoffbound)) )
@@ -1200,8 +1240,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputGap)
    SCIP_Real gap;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_GAP) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_GAP, SCIP_INVALIDCALL );
 
    gap = SCIPgetGap(scip);
 
@@ -1222,8 +1263,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputConcGap)
    SCIP_Real gap;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONCGAP) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_CONCGAP, SCIP_INVALIDCALL );
 
    gap = SCIPgetConcurrentGap(scip);
 
@@ -1246,8 +1288,9 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputPrimalgap)
    SCIP_Real gap;
 
    assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_PRIMALGAP) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPdispGetName(disp), DISP_NAME_PRIMALGAP, SCIP_INVALIDCALL );
 
    if( SCIPisInfinity(scip, SCIPgetLowerbound(scip)) )
    {

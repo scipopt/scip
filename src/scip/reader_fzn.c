@@ -68,7 +68,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_var.h"
 #include <stdlib.h>
-#include <string.h>
 
 #ifdef ALLDIFFERENT
 #include "scip/cons_alldifferent.h"   /* cppcheck-suppress missingInclude */
@@ -4744,7 +4743,8 @@ SCIP_DECL_READERCOPY(readerCopyFzn)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderFzn(scip) );
@@ -4786,8 +4786,9 @@ SCIP_DECL_READERREAD(readerReadFzn)
    int i;
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 

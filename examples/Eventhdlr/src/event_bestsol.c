@@ -32,7 +32,6 @@
 
 #include "event_bestsol.h"
 
-#include <string.h>
 
 #define EVENTHDLR_NAME         "bestsol"
 #define EVENTHDLR_DESC         "event handler for best solutions found"
@@ -43,7 +42,8 @@ SCIP_DECL_EVENTCOPY(eventCopyBestsol)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of event handler */
    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
@@ -57,7 +57,8 @@ SCIP_DECL_EVENTINIT(eventInitBestsol)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    /* notify SCIP that your event handler wants to react on the event type best solution found */
    SCIP_CALL( SCIPcatchEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
@@ -71,8 +72,9 @@ SCIP_DECL_EVENTEXIT(eventExitBestsol)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
-   
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
+
    /* notify SCIP that your event handler wants to drop the event type best solution found */
    SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
 
@@ -87,10 +89,11 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
    SCIP_Real solvalue;
 
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
    assert(scip != NULL);
    assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "exec method of event handler for best solution found\n");
    

@@ -76,7 +76,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_var.h"
 #include <stdlib.h>
-#include <string.h>
+
 
 #define READER_NAME             "mpsreader"
 #define READER_DESC             "file reader for MIQPs in IBM's Mathematical Programming System format"
@@ -4842,7 +4842,8 @@ SCIP_DECL_READERCOPY(readerCopyMps)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderMps(scip) );
@@ -4858,7 +4859,8 @@ SCIP_DECL_READERFREE(readerFreeMps)
 {
    SCIP_READERDATA* readerdata;
 
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
+
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
    SCIPfreeBlockMemory(scip, &readerdata);
@@ -4872,7 +4874,8 @@ static
 SCIP_DECL_READERREAD(readerReadMps)
 {  /*lint --e{715}*/
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPreadMps(scip, reader, filename, result, NULL, NULL, NULL, NULL, NULL, NULL) );
 
@@ -4885,7 +4888,8 @@ static
 SCIP_DECL_READERWRITE(readerWriteMps)
 {  /*lint --e{715}*/
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    if( SCIPisExact(scip) )
    {
@@ -5066,9 +5070,10 @@ SCIP_RETCODE SCIPwriteMps(
    SCIP_Bool error;
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* get implied integral level for writeVarIsIntegral() and printColumnSection() */
    SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );

@@ -43,7 +43,7 @@
 #include "scip/scip_prop.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define PROP_NAME                  "dualfix"
 #define PROP_DESC                  "roundable variables dual fixing"
@@ -243,7 +243,8 @@ SCIP_DECL_PROPCOPY(propCopyDualfix)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of propagator */
    SCIP_CALL( SCIPincludePropDualfix(scip) );
@@ -260,8 +261,9 @@ SCIP_DECL_PROPPRESOL(propPresolDualfix)
    int oldnfixedvars;
 
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -296,8 +298,9 @@ SCIP_DECL_PROPEXEC(propExecDualfix)
    SCIP_Bool unbounded;
 
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 

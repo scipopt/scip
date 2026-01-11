@@ -93,7 +93,6 @@
 #include "scip/sepa_mixing.h"
 #include "scip/scip_tree.h"
 #include "scip/sepa_mixing.h"
-#include <string.h>
 
 
 #define SEPA_NAME              "mixing"
@@ -722,7 +721,8 @@ SCIP_DECL_SEPACOPY(sepaCopyMixing)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of separator */
    SCIP_CALL( SCIPincludeSepaMixing(scip) );
@@ -738,7 +738,8 @@ SCIP_DECL_SEPAFREE(sepaFreeMixing)
 
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* get separation data and free it */
    sepadata = SCIPsepaGetData(sepa);

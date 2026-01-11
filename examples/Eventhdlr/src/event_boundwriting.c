@@ -67,9 +67,6 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-
-#include <string.h>
-
 #include "event_boundwriting.h"
 
 
@@ -444,7 +441,8 @@ SCIP_DECL_EVENTCOPY(eventCopyBoundwriting)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
 #ifdef SCIP_DISABLED_CODE
    /* To copy and run this event handler in subMIPs, the following code block can be enabled. */
@@ -481,7 +479,8 @@ SCIP_DECL_EVENTINIT(eventInitBoundwriting)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    /* notify SCIP that your event handler wants to react on the event type best solution found */
    SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, NULL) );
@@ -501,7 +500,8 @@ SCIP_DECL_EVENTEXIT(eventExitBoundwriting)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    /* notify SCIP that your event handler wants to drop the event type best solution found */
    SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, -1) );
@@ -529,9 +529,10 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
    assert(((SCIPeventGetType(event) & SCIP_EVENTTYPE_NODESOLVED) == SCIP_EVENTTYPE_NODEFEASIBLE) || ((SCIPeventGetType(event) & SCIP_EVENTTYPE_NODESOLVED) == SCIP_EVENTTYPE_NODEINFEASIBLE) || ((SCIPeventGetType(event) & SCIP_EVENTTYPE_NODESOLVED) == SCIP_EVENTTYPE_NODEBRANCHED));
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "exec method of event handler for writing primal- and dualbounds\n");
 
@@ -640,7 +641,6 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
 
       (void)SCIPstrncpy(tmp, eventhdlrdata->filename, SCIP_MAXSTRLEN);
 
-      /* the name should stay the same */
       assert(strcmp(tmp, eventhdlrdata->oldfilename) == 0);
    }
 #endif

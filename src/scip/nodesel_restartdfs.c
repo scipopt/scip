@@ -40,7 +40,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
-#include <string.h>
+
 
 #define NODESEL_NAME             "restartdfs"
 #define NODESEL_DESC             "depth first search with periodical selection of the best node"
@@ -76,7 +76,8 @@ SCIP_DECL_NODESELCOPY(nodeselCopyRestartdfs)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of node selector */
    SCIP_CALL( SCIPincludeNodeselRestartdfs(scip) );
@@ -90,7 +91,7 @@ SCIP_DECL_NODESELFREE(nodeselFreeRestartdfs)
 {  /*lint --e{715}*/
    SCIP_NODESELDATA* nodeseldata;
 
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    /* free user data of node selector */
    nodeseldata = SCIPnodeselGetData(nodesel);
@@ -108,7 +109,7 @@ SCIP_DECL_NODESELINITSOL(nodeselInitsolRestartdfs)
 {
    SCIP_NODESELDATA* nodeseldata;
 
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
@@ -125,8 +126,10 @@ SCIP_DECL_NODESELINITSOL(nodeselInitsolRestartdfs)
 static
 SCIP_DECL_NODESELSELECT(nodeselSelectRestartdfs)
 {  /*lint --e{715}*/
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+
    assert(selnode != NULL);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    /* decide if we want to select the node with lowest bound or the deepest node; finish the current dive in any case */
    *selnode = SCIPgetPrioChild(scip);

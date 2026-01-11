@@ -29,8 +29,6 @@
  * @author Paul Meinhold
  */
 
-#include <assert.h>
-
 #include "scip/iisfinder_greedy.h"
 
 #define IISFINDER_NAME           "greedy"
@@ -977,7 +975,8 @@ SCIP_DECL_IISFINDERCOPY(iisfinderCopyGreedy)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(iisfinder != NULL);
-   assert(strcmp(SCIPiisfinderGetName(iisfinder), IISFINDER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPiisfinderGetName(iisfinder), IISFINDER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of IIS finder */
    SCIP_CALL( SCIPincludeIISfinderGreedy(scip) );

@@ -44,7 +44,6 @@
 #include "scip/scip_param.h"
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_tree.h"
-#include <string.h>
 
 
 #define BRANCHRULE_NAME          "random"
@@ -141,7 +140,8 @@ SCIP_DECL_BRANCHCOPY(branchCopyRandom)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
@@ -212,9 +212,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRandom)
    int bestcand;
 
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Execlp method of random branching in depth %d\n", SCIPgetDepth(scip));
 
@@ -256,9 +257,10 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextRandom)
    SCIP_NODE* upchild;
 
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Execrel method of random branching\n");
 
@@ -317,9 +319,10 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsRandom)
    int bestcand;
 
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Execps method of random branching\n");
 

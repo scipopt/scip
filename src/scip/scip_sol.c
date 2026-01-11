@@ -42,8 +42,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
-
 #include "blockmemshell/memory.h"
 #include "scip/cons.h"
 #include "scip/cons_linear.h"
@@ -2638,9 +2636,9 @@ SCIP_RETCODE SCIPgetDualSolVal(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(dualsolval != NULL);
-
    assert(SCIPconsGetHdlr(cons) != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear" ) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear", SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPconsGetNVars(cons, scip->set, &nvars, &success) );
    assert(success);  /* is always successful, since we only have linear constraints */

@@ -32,6 +32,7 @@
 
 #include "scip/event_xyz.h"
 
+
 #define EVENTHDLR_NAME         "xyz"
 #define EVENTHDLR_DESC         "event handler for xyz event"
 

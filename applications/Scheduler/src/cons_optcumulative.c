@@ -60,9 +60,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "cons_optcumulative.h"
 
 #include "scip/cons_cumulative.h"
@@ -2917,7 +2914,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOptcumulative)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrOptcumulative(scip) );
@@ -2961,7 +2959,8 @@ SCIP_DECL_CONSINITPRE(consInitpreOptcumulative)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3026,9 +3025,10 @@ SCIP_DECL_CONSDELETE(consDeleteOptcumulative)
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(consdata != NULL );
    assert(*consdata != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* get event handler */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3177,9 +3177,10 @@ SCIP_DECL_CONSENFOLP(consEnfolpOptcumulative)
    SCIPdebugMessage("method: enforce LP solution (nconss %d)\n", nconss);
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3247,9 +3248,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsOptcumulative)
    SCIPdebugMessage("method: enforce pseudo solution\n");
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3297,9 +3299,10 @@ SCIP_DECL_CONSCHECK(consCheckOptcumulative)
    int c;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    violated = FALSE;
 
@@ -3953,8 +3956,9 @@ SCIP_DECL_EVENTEXEC(eventExecOptcumulativeBinvars)
 
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_BINVARS_NAME) == 0);
    assert(event != NULL);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_BINVARS_NAME, SCIP_INVALIDCALL );
 
    /* collect event information */
    consdata = (SCIP_CONSDATA*)eventdata;
@@ -4001,8 +4005,9 @@ SCIP_DECL_EVENTEXEC(eventExecOptcumulativeIntvars)
 
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_INTVARS_NAME) == 0);
    assert(event != NULL);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_INTVARS_NAME, SCIP_INVALIDCALL );
 
    /* collect event information */
    consdata = (SCIP_CONSDATA*)eventdata;
@@ -4186,11 +4191,8 @@ SCIP_RETCODE SCIPsetHminOptcumulative(
    )
 {
    SCIP_CONSDATA* consdata;
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cumulative constraint with optional activities\n");
-      return SCIP_INVALIDCALL;
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4209,12 +4211,8 @@ int SCIPgetHminOptcumulative(
    )
 {
    SCIP_CONSDATA* consdata;
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cumulative constraint with optional activities\n");
-      SCIPABORT();
-      return 0;  /*lint !e527*/
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, 0 );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4230,11 +4228,8 @@ SCIP_RETCODE SCIPsetHmaxOptcumulative(
    )
 {
    SCIP_CONSDATA* consdata;
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cumulative constraint with optional activities\n");
-      return SCIP_INVALIDCALL; /*lint !e527*/
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4252,12 +4247,8 @@ int SCIPgetHmaxOptcumulative(
    )
 {
    SCIP_CONSDATA* consdata;
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cumulative constraint with optional activities\n");
-      SCIPABORT();
-      return 0;  /*lint !e527*/
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, 0 );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

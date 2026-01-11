@@ -44,13 +44,9 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "pricer_coloring.h"
 #include "reader_col.h"
 #include "cons_storeGraph.h"
-#include <stdio.h>
 #include <stdlib.h>
 
 
@@ -350,7 +346,8 @@ SCIP_DECL_PRICERCOPY(pricerCopyColoring)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(pricer != NULL);
-   assert(strcmp(SCIPpricerGetName(pricer), PRICER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpricerGetName(pricer), PRICER_NAME, SCIP_INVALIDCALL );
 
    return SCIP_OKAY;
 }

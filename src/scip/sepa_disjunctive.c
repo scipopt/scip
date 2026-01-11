@@ -63,7 +63,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/sepa_disjunctive.h"
-#include <string.h>
 
 
 #define SEPA_NAME              "disjunctive"
@@ -446,7 +445,8 @@ SCIP_DECL_SEPACOPY(sepaCopyDisjunctive)
 {
    assert( scip != NULL );
    assert( sepa != NULL );
-   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaDisjunctive(scip) );
@@ -461,7 +461,7 @@ SCIP_DECL_SEPAFREE(sepaFreeDisjunctive)/*lint --e{715}*/
 {
    SCIP_SEPADATA* sepadata;
 
-   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);
@@ -526,9 +526,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    int i;
 
    assert( sepa != NULL );
-   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
    assert( scip != NULL );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 

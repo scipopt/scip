@@ -47,7 +47,7 @@
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
-#include <string.h>
+
 
 #define HEUR_NAME             "shifting"
 #define HEUR_DESC             "LP rounding heuristic with infeasibility recovering also using continuous variables"
@@ -596,7 +596,8 @@ SCIP_DECL_HEURCOPY(heurCopyShifting)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurShifting(scip) );
@@ -611,8 +612,9 @@ SCIP_DECL_HEURINIT(heurInitShifting) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(SCIPheurGetData(heur) == NULL);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* create heuristic data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
@@ -634,7 +636,7 @@ SCIP_DECL_HEUREXIT(heurExitShifting) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -656,7 +658,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolShifting)
 {
    SCIP_HEURDATA* heurdata;
 
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -701,10 +703,11 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
    SCIP_Longint nsolsfound;
    SCIP_Longint nnodes;
 
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
    assert(SCIPhasCurrentNodeLP(scip));
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 

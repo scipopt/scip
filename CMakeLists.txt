@@ -136,6 +136,10 @@ set(CHECKSTAGE AUTO CACHE STRING "enable stage checks")
 set_property(CACHE CHECKSTAGE PROPERTY STRINGS AUTO ON OFF)
 string(TOUPPER ${CHECKSTAGE} CHECKSTAGE)
 
+set(CHECKNAME AUTO CACHE STRING "enable name checks")
+set_property(CACHE CHECKNAME PROPERTY STRINGS AUTO ON OFF)
+string(TOUPPER ${CHECKNAME} CHECKNAME)
+
 # Initialize SCIP_WITH_EXACTSOLVE.
 if(EXACTSOLVE)
     set(SCIP_WITH_EXACTSOLVE ON) # We disable it later if dependencies are missing.
@@ -992,6 +996,15 @@ if((CHECKSTAGE STREQUAL "AUTO" AND CMAKE_BUILD_TYPE STREQUAL "Debug") OR (NOT CH
     set(SCIP_CHECK_STAGE on)
 endif()
 
+if((CHECKNAME STREQUAL "AUTO" AND CMAKE_BUILD_TYPE STREQUAL "Debug") OR (NOT CHECKNAME STREQUAL "AUTO" AND CHECKNAME))
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message(STATUS "Enabling name checks")
+    else()
+        message(WARNING "Enabling name checks decreases performance")
+    endif()
+    set(SCIP_CHECK_NAME on)
+endif()
+
 message(STATUS "Finding CRITERION")
 find_package(CRITERION)
 if(CRITERION_FOUND)
@@ -1066,6 +1079,7 @@ log_option(EXACTSOLVE)
 log_option(LPSEXACT)
 log_option(MPFR)
 log_option(CHECKSTAGE)
+log_option(CHECKNAME)
 
 if(AUTOBUILD)
   file(APPEND ${CMAKE_BINARY_DIR}/cmake.log "-DAUTOBUILD=on")

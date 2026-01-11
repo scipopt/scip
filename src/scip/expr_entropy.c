@@ -38,7 +38,6 @@
 #include "scip/expr_value.h"
 #include "scip/expr.h"
 
-#include <string.h>
 
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "entropy"
@@ -415,7 +414,6 @@ SCIP_DECL_EXPRESTIMATE(estimateEntropy)
    assert(expr != NULL);
    assert(localbounds != NULL);
    assert(globalbounds != NULL);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(refpoint != NULL);
    assert(coefs != NULL);
    assert(constant != NULL);
@@ -423,6 +421,8 @@ SCIP_DECL_EXPRESTIMATE(estimateEntropy)
    assert(branchcand != NULL);
    assert(*branchcand == TRUE);
    assert(success != NULL);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME, SCIP_INVALIDCALL );
 
    *success = FALSE;
 
@@ -494,7 +494,8 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesEntropy)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME, SCIP_INVALIDCALL );
 
    lb = bounds[0].inf;
    ub = bounds[0].sup;

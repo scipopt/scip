@@ -75,7 +75,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define PRESOL_NAME            "dualsparsify"
 #define PRESOL_DESC            "eliminate non-zero coefficients"
@@ -1227,7 +1227,8 @@ SCIP_DECL_PRESOLCOPY(presolCopyDualsparsify)
 
    assert(scip != NULL);
    assert(presol != NULL);
-   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpresolGetName(presol), PRESOL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of presolver if copying is enabled */
    presoldata = SCIPpresolGetData(presol);

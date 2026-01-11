@@ -34,8 +34,6 @@
 
 #include <ctype.h>
 #include <stdarg.h>
-#include <assert.h>
-#include <string.h>
 #ifndef _WIN32
 #include <strings.h> /*lint --e{766}*/
 #endif
@@ -301,7 +299,8 @@ SCIP_RETCODE SCIPcertifyActivityVarBoundExact(
    assert(scip != NULL);
    assert(scip->stat != NULL);
    assert(scip->stat != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(constraint)), "exactlinear") == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(constraint)), "exactlinear", SCIP_INVALIDCALL );
 
    certificate = scip->stat->certificate;
 

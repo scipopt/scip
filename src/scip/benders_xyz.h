@@ -33,8 +33,8 @@
 #ifndef __SCIP_BENDERS_XYZ_H__
 #define __SCIP_BENDERS_XYZ_H__
 
-
 #include "scip/scip.h"
+
 
 #ifdef __cplusplus
 extern "C" {

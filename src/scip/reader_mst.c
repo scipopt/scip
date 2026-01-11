@@ -42,7 +42,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_sol.h"
-#include <string.h>
+
 
 #define READER_NAME             "mstreader"
 #define READER_DESC             "file reader for partial primal solutions"
@@ -114,7 +114,8 @@ SCIP_DECL_READERCOPY(readerCopyMst)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderMst(scip) );
@@ -135,8 +136,9 @@ SCIP_DECL_READERREAD(readerReadMst)
    char buffer[SCIP_MAXSTRLEN];
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 

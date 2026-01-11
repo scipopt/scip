@@ -45,7 +45,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
-#include <string.h>
+
 
 #define HEUR_NAME             "zirounding"
 #define HEUR_DESC             "LP rounding heuristic as suggested by C. Wallace taking row slacks and bounds into account"
@@ -388,7 +388,8 @@ SCIP_DECL_HEURCOPY(heurCopyZirounding)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurZirounding(scip) );
@@ -402,7 +403,7 @@ SCIP_DECL_HEURFREE(heurFreeZirounding)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -420,7 +421,7 @@ SCIP_DECL_HEURINIT(heurInitZirounding)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -437,7 +438,7 @@ SCIP_DECL_HEUREXIT(heurExitZirounding)  /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -454,7 +455,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolZirounding)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -497,9 +498,10 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    SCIP_Bool          improvementfound;
    SCIP_Bool          numericalerror;
 
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(result != NULL);
    assert(SCIPhasCurrentNodeLP(scip));
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 

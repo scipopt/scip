@@ -37,9 +37,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-
 #include "scip/sepa_rlt.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_lp.h"
@@ -3070,7 +3067,8 @@ SCIP_DECL_SEPACOPY(sepaCopyRlt)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of separator */
    SCIP_CALL( SCIPincludeSepaRlt(scip) );
@@ -3084,7 +3082,7 @@ SCIP_DECL_SEPAFREE(sepaFreeRlt)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
 
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
@@ -3103,7 +3101,7 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolRlt)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
 
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
@@ -3128,7 +3126,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    SCIP_HASHMAP* row_to_pos;
    RLT_SIMPLEROW* projrows;
 
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   SCIP_STRINGEQ( SCIPsepaGetName(sepa), SEPA_NAME, SCIP_INVALIDCALL );
 
    sepadata = SCIPsepaGetData(sepa);
    *result = SCIP_DIDNOTRUN;

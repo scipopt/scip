@@ -6851,7 +6851,8 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Cons(
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes, nvars) );
@@ -8921,7 +8922,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopySOS1)
 {  /*lint --e{715}*/
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
@@ -8940,7 +8942,8 @@ SCIP_DECL_CONSFREE(consFreeSOS1)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -8962,7 +8965,8 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
 
     assert( scip != NULL );
     assert( conshdlr != NULL );
-    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+    SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
     conshdlrdata = SCIPconshdlrGetData(conshdlr);
     assert( conshdlrdata != NULL );
@@ -9016,7 +9020,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
@@ -9087,7 +9093,8 @@ SCIP_DECL_CONSDELETE(consDeleteSOS1)
    assert( conshdlr != NULL );
    assert( cons != NULL );
    assert( consdata != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Deleting SOS1 constraint <%s>.\n", SCIPconsGetName(cons) );
 
@@ -9145,9 +9152,10 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( sourcecons != NULL );
    assert( targetcons != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -9240,8 +9248,9 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -9354,7 +9363,8 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -9378,8 +9388,9 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( separateSOS1(scip, conshdlr, NULL, nconss, conss, result) );
 
@@ -9394,8 +9405,9 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( separateSOS1(scip, conshdlr, sol, nconss, conss, result) );
 
@@ -9410,8 +9422,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOS1)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( enforceSOS1(scip, conshdlr, nconss, conss, NULL, result) );
 
@@ -9426,8 +9439,9 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSOS1)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( enforceSOS1(scip, conshdlr, nconss, conss, sol, result) );
 
@@ -9442,8 +9456,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOS1)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( enforceSOS1(scip, conshdlr, nconss, conss, NULL, result) );
 
@@ -9463,8 +9478,9 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_FEASIBLE;
 
@@ -9538,9 +9554,10 @@ SCIP_DECL_CONSPROP(consPropSOS1)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
    assert( SCIPisTransformed(scip) );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* return if number of SOS1 constraints is zero */
    if ( nconss < 1 )
@@ -9680,10 +9697,11 @@ SCIP_DECL_CONSRESPROP(consRespropSOS1)
 
    assert( scip != NULL );
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( infervar != NULL );
    assert( bdchgidx != NULL );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTFIND;
    SCIPdebugMsg(scip, "Propagation resolution method of SOS1 constraint <%s>.\n", SCIPconsGetName(cons));
@@ -9760,8 +9778,9 @@ SCIP_DECL_CONSLOCK(consLockSOS1)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert(locktype == SCIP_LOCKTYPE_MODEL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -9804,7 +9823,8 @@ SCIP_DECL_CONSPRINT(consPrintSOS1)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -9839,8 +9859,9 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
    assert( scip != NULL );
    assert( sourcescip != NULL );
    assert( sourcecons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0 );
    assert( valid != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *valid = TRUE;
 
@@ -9899,9 +9920,10 @@ SCIP_DECL_CONSPARSE(consParseSOS1)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert(cons != NULL);
    assert(success != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *success = TRUE;
    s = str;
@@ -10037,8 +10059,9 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
 
    assert( eventhdlr != NULL );
    assert( eventdata != NULL );
-   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
    assert( event != NULL );
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    cons = (SCIP_CONS*)eventdata;
    assert( cons != NULL );
@@ -10152,19 +10175,17 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( diveset != NULL );
    assert( success != NULL );
    assert( infeasible != NULL );
 
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
+
    *infeasible = FALSE;
    *success = FALSE;
 
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("not an SOS1 constraint handler.\n");
-      return SCIP_INVALIDDATA;
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDDATA );
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
@@ -10742,11 +10763,8 @@ SCIP_RETCODE SCIPaddVarSOS1(
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert( conshdlr != NULL );
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
-      return SCIP_INVALIDDATA;
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -10775,11 +10793,8 @@ SCIP_RETCODE SCIPappendVarSOS1(
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert( conshdlr != NULL );
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
-      return SCIP_INVALIDDATA;
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -10801,12 +10816,7 @@ int SCIPgetNVarsSOS1(
    assert( scip != NULL );
    assert( cons != NULL );
 
-   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
-      SCIPABORT();
-      return -1;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, -1 );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -10826,12 +10836,7 @@ SCIP_VAR** SCIPgetVarsSOS1(
    assert( scip != NULL );
    assert( cons != NULL );
 
-   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -10851,12 +10856,7 @@ SCIP_Real* SCIPgetWeightsSOS1(
    assert( scip != NULL );
    assert( cons != NULL );
 
-   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -10877,12 +10877,8 @@ SCIP_DIGRAPH* SCIPgetConflictgraphSOS1(
 
    assert( conshdlr != NULL );
 
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("not an SOS1 constraint handler.\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, NULL );
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
@@ -10899,12 +10895,8 @@ int SCIPgetNSOS1Vars(
 
    assert( conshdlr != NULL );
 
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("not an SOS1 constraint handler.\n");
-      SCIPABORT();
-      return -1; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, -1 );
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
@@ -10923,12 +10915,8 @@ SCIP_Bool SCIPvarIsSOS1(
    assert( var != NULL );
    assert( conshdlr != NULL );
 
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("not an SOS1 constraint handler.\n");
-      SCIPABORT();
-      return FALSE; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, FALSE );
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
@@ -10947,12 +10935,8 @@ int SCIPvarGetNodeSOS1(
    assert( conshdlr != NULL );
    assert( var != NULL );
 
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("Not an SOS1 constraint handler.\n");
-      SCIPABORT();
-      return -1;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, -1 );
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
@@ -11012,11 +10996,8 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
    assert( changed != NULL );
    assert( success != NULL );
 
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("Not an SOS1 constraint handler.\n");
-      return SCIP_PARAMETERWRONGVAL;
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_PARAMETERWRONGVAL );
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 

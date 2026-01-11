@@ -48,7 +48,7 @@
 #include "scip/scip_message.h"
 #include "scip/scip_prob.h"
 #include "scip/syncstore.h"
-#include <string.h>
+
 
 #define EVENTHDLR_NAME         "globalbnd"
 #define EVENTHDLR_DESC         "event handler for globalbnd event"
@@ -82,7 +82,8 @@ SCIP_DECL_EVENTFREE(eventFreeGlobalbnd)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
@@ -101,7 +102,8 @@ SCIP_DECL_EVENTINIT(eventInitGlobalbnd)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
@@ -138,7 +140,8 @@ SCIP_DECL_EVENTEXIT(eventExitGlobalbnd)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
@@ -168,9 +171,10 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalbnd)
    SCIPdebugMsg(scip, "exec method of eventhdlr " EVENTHDLR_NAME "\n");
 
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
@@ -252,7 +256,8 @@ SCIP_BOUNDSTORE* SCIPeventGlobalbndGetBoundChanges(
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    assert(eventhdlr != NULL);
-   assert(strcmp(EVENTHDLR_NAME, SCIPeventhdlrGetName(eventhdlr)) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, NULL );
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
@@ -268,8 +273,6 @@ void SCIPeventGlobalbndEnableBoundStorage(
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    assert(eventhdlr != NULL);
-   assert(strcmp(EVENTHDLR_NAME, SCIPeventhdlrGetName(eventhdlr)) == 0);
-
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
@@ -284,8 +287,6 @@ void SCIPeventGlobalbndDisableBoundStorage(
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    assert(eventhdlr != NULL);
-   assert(strcmp(EVENTHDLR_NAME, SCIPeventhdlrGetName(eventhdlr)) == 0);
-
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
@@ -300,8 +301,6 @@ void SCIPeventGlobalbndClearBoundChanges(
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    assert(eventhdlr != NULL);
-   assert(strcmp(EVENTHDLR_NAME, SCIPeventhdlrGetName(eventhdlr)) == 0);
-
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 

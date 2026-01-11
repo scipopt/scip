@@ -36,8 +36,6 @@
 /*lint --e{835}*/
 /*lint -e777*/
 
-#include <string.h>
-
 #include "scip/expr_pow.h"
 #include "scip/pub_expr.h"
 #include "scip/expr_value.h"
@@ -2091,7 +2089,6 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), POWEXPRHDLR_NAME) == 0);
    assert(refpoint != NULL);
    assert(coefs != NULL);
    assert(constant != NULL);
@@ -2099,6 +2096,8 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    assert(branchcand != NULL);
    assert(*branchcand == TRUE);  /* the default */
    assert(success != NULL);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), POWEXPRHDLR_NAME, SCIP_INVALIDCALL );
 
    *success = FALSE;
 
@@ -2825,7 +2824,6 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SIGNPOWEXPRHDLR_NAME) == 0);
    assert(refpoint != NULL);
    assert(coefs != NULL);
    assert(constant != NULL);
@@ -2833,6 +2831,8 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
    assert(branchcand != NULL);
    assert(*branchcand == TRUE);  /* the default */
    assert(success != NULL);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SIGNPOWEXPRHDLR_NAME, SCIP_INVALIDCALL );
 
    *success = FALSE;
 
@@ -2924,7 +2924,8 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesSignpower)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SIGNPOWEXPRHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SIGNPOWEXPRHDLR_NAME, SCIP_INVALIDCALL );
 
    childlb = bounds[0].inf;
    childub = bounds[0].sup;

@@ -67,8 +67,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
 #include "scip/symmetry_graph.h"
-#include <string.h>
-
 #ifdef WITHEQKNAPSACK
 #include "scip/cons_eqknapsack.h"   /* cppcheck-suppress missingInclude */
 #endif
@@ -3696,8 +3694,9 @@ SCIP_RETCODE copyConsPseudoboolean(
    assert(targetcons != NULL);
    assert(sourcescip != NULL);
    assert(sourcecons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0);
    assert(valid != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *valid = TRUE;
 
@@ -7703,7 +7702,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyPseudoboolean)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrPseudoboolean(scip) );
@@ -7721,7 +7721,8 @@ SCIP_DECL_CONSFREE(consFreePseudoboolean)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* free constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -7744,7 +7745,8 @@ SCIP_DECL_CONSINIT(consInitPseudoboolean)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -7802,7 +7804,8 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -8091,7 +8094,8 @@ SCIP_DECL_CONSDELETE(consDeletePseudoboolean)
    assert(cons != NULL);
    assert(consdata != NULL);
    assert(*consdata != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -8133,10 +8137,12 @@ SCIP_DECL_CONSTRANS(consTransPseudoboolean)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
+
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
    assert(sourcedata->consanddatas != NULL || sourcedata->nconsanddatas == 0);
@@ -8179,8 +8185,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpPseudoboolean)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    violated = FALSE;
 
@@ -8204,8 +8211,9 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxPseudoboolean)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    violated = FALSE;
 
@@ -8229,8 +8237,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsPseudoboolean)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    violated = FALSE;
 
@@ -8256,8 +8265,9 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(sol != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_FEASIBLE;
 
@@ -8317,8 +8327,9 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* remember old preprocessing counters */
    oldnfixedvars = *nfixedvars;
@@ -8506,8 +8517,9 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
    assert(scip != NULL);
    assert(cons != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(locktype == SCIP_LOCKTYPE_MODEL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -8646,8 +8658,9 @@ SCIP_DECL_CONSPRINT(consPrintPseudoboolean)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(cons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( consdataPrint(scip, cons, file) );
 
@@ -9931,12 +9944,7 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
    assert(cons != NULL);
    assert(var != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not pseudo boolean\n");
-      SCIPABORT();
-      return SCIP_INVALIDDATA; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    if( !SCIPisFinite(val) || SCIPisInfinity(scip, REALABS(val)) )
    {
@@ -10014,12 +10022,7 @@ SCIP_RETCODE SCIPaddTermPseudoboolean(
    assert(cons != NULL);
    assert(vars != NULL || nvars == 0);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not pseudo boolean\n");
-      SCIPABORT();
-      return SCIP_INVALIDDATA; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    if( nvars == 0 && !SCIPisZero(scip, val) )
    {
@@ -10050,12 +10053,7 @@ SCIP_VAR* SCIPgetIndVarPseudoboolean(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not pseudo boolean\n");
-      SCIPABORT();
-      return NULL; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -10074,12 +10072,7 @@ SCIP_CONS* SCIPgetLinearConsPseudoboolean(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not pseudo boolean\n");
-      SCIPABORT();
-      return NULL; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -10098,12 +10091,7 @@ SCIP_LINEARCONSTYPE SCIPgetLinearConsTypePseudoboolean(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not pseudo boolean\n");
-      SCIPABORT();
-      return SCIP_LINEARCONSTYPE_INVALIDCONS; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_LINEARCONSTYPE_INVALIDCONS );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -10122,12 +10110,7 @@ int SCIPgetNLinVarsWithoutAndPseudoboolean(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not pseudo boolean\n");
-      SCIPABORT();
-      return -1;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, -1 );
 
    checkConsConsistency(scip, cons);
 
@@ -10156,12 +10139,7 @@ SCIP_RETCODE SCIPgetLinDatasWithoutAndPseudoboolean(
    assert(cons != NULL);
    assert(nlinvars != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not pseudo boolean\n");
-      SCIPABORT();
-      return SCIP_INVALIDDATA; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -10213,12 +10191,7 @@ SCIP_RETCODE SCIPgetAndDatasPseudoboolean(
    assert(cons != NULL);
    assert(nandconss != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not pseudo boolean\n");
-      SCIPABORT();
-      return SCIP_INVALIDDATA; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -10264,12 +10237,7 @@ int SCIPgetNAndsPseudoboolean(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not pseudo boolean\n");
-      SCIPABORT();
-      return -1;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, -1 );
 
    checkConsConsistency(scip, cons);
 
@@ -10297,11 +10265,7 @@ SCIP_RETCODE SCIPchgLhsPseudoboolean(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not pseudo boolean\n");
-      return SCIP_INVALIDDATA;
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    checkConsConsistency(scip, cons);
 
@@ -10345,11 +10309,7 @@ SCIP_RETCODE SCIPchgRhsPseudoboolean(
 {
    SCIP_CONSDATA* consdata;
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not pseudo boolean\n");
-      return SCIP_INVALIDDATA;
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    checkConsConsistency(scip, cons);
 
@@ -10388,12 +10348,7 @@ SCIP_Real SCIPgetLhsPseudoboolean(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not pseudo boolean\n");
-      SCIPABORT();
-      return SCIP_INVALID; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALID );
 
    checkConsConsistency(scip, cons);
 
@@ -10413,12 +10368,7 @@ SCIP_Real SCIPgetRhsPseudoboolean(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not pseudo boolean\n");
-      SCIPABORT();
-      return SCIP_INVALID; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALID );
 
    checkConsConsistency(scip, cons);
 

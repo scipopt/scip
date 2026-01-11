@@ -120,7 +120,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_var.h"
 #include <stdlib.h>
-#include <string.h>
+
 
 #define READER_NAME             "opbreader"
 #define READER_DESC             "file reader for pseudo-Boolean problem in opb format"
@@ -4828,7 +4828,8 @@ SCIP_DECL_READERCOPY(readerCopyOpb)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderOpb(scip) );
@@ -4843,7 +4844,8 @@ SCIP_DECL_READERFREE(readerFreeOpb)
 {
    SCIP_READERDATA* readerdata;
 
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
+
    readerdata = SCIPreaderGetData(reader);
    SCIPfreeBlockMemory(scip, &readerdata);
 
@@ -4867,7 +4869,8 @@ static
 SCIP_DECL_READERWRITE(readerWriteOpb)
 {  /*lint --e{715}*/
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    if( SCIPisExact(scip) )
    {

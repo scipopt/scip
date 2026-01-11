@@ -78,6 +78,7 @@ NOBLKMEM        ?= false
 NOBUFMEM        ?= false
 NOBLKBUFMEM     ?= false
 CHECKSTAGE      ?= auto
+CHECKNAME       ?= auto
 EXACTSOLVE      ?= auto
 THREADSAFE      ?= true
 # enable debug-solution mechanism
@@ -746,6 +747,14 @@ endif
 
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
+endif
+
+ifeq ($(CHECKNAME),auto)
+ ifeq ($(OPT),dbg)
+  CHECKNAME = true
+ else
+  CHECKNAME = false
+ endif
 endif
 
 ifeq ($(CHECKSTAGE),auto)

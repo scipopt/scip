@@ -11043,7 +11043,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(valid != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* create basic data of constraint handler and include it to scip */
    SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
@@ -13983,7 +13984,8 @@ SCIP_EXPR* SCIPgetExprNonlinear(
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13999,7 +14001,8 @@ SCIP_Real SCIPgetLhsNonlinear(
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALID );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14015,7 +14018,8 @@ SCIP_Real SCIPgetRhsNonlinear(
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALID );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14034,7 +14038,8 @@ SCIP_RETCODE SCIPgetNlRowNonlinear(
 
    assert(cons  != NULL);
    assert(nlrow != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14060,7 +14065,8 @@ SCIP_EXPRCURV SCIPgetCurvatureNonlinear(
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_EXPRCURV_UNKNOWN );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14085,7 +14091,8 @@ SCIP_RETCODE SCIPcheckQuadraticNonlinear(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(isquadratic != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14115,7 +14122,8 @@ SCIP_RETCODE SCIPchgLhsNonlinear(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
@@ -14154,7 +14162,8 @@ SCIP_RETCODE SCIPchgRhsNonlinear(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
@@ -14207,7 +14216,8 @@ SCIP_RETCODE SCIPchgExprNonlinear(
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14265,7 +14275,8 @@ SCIP_RETCODE SCIPaddLinearVarNonlinear(
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14338,7 +14349,8 @@ SCIP_RETCODE SCIPaddExprNonlinear(
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

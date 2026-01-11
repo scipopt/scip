@@ -32,6 +32,7 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc_rowprep.h"
 
+
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "xyz"
 #define NLHDLR_DESC               "xyz handler for expressions"

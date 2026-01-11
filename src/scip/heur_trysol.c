@@ -45,7 +45,7 @@
 #include "scip/scip_numerics.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
-#include <string.h>
+
 
 #define HEUR_NAME             "trysol"
 #define HEUR_DESC             "try solution heuristic"
@@ -82,7 +82,8 @@ SCIP_DECL_HEURCOPY(heurCopyTrySol)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurTrySol(scip) );
@@ -97,8 +98,9 @@ SCIP_DECL_HEURFREE(heurFreeTrySol)
    SCIP_HEURDATA* heurdata;
 
    assert( heur != NULL );
-   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
    assert( scip != NULL );
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "free method of trysol primal heuristic.\n");
 
@@ -119,8 +121,9 @@ SCIP_DECL_HEUREXITSOL(heurExitTrySol)
    SCIP_HEURDATA* heurdata;
 
    assert( heur != NULL );
-   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
    assert( scip != NULL );
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "exit method of trysol primal heuristic.\n");
 
@@ -153,9 +156,10 @@ SCIP_DECL_HEUREXEC(heurExecTrySol)
 #endif
 
    assert( heur != NULL );
-   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
    assert( scip != NULL );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -263,7 +267,8 @@ SCIP_RETCODE SCIPheurPassSolTrySol(
    assert( scip != NULL );
    assert( heur != NULL );
    assert( sol != NULL );
-   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -304,7 +309,8 @@ SCIP_RETCODE SCIPheurPassSolAddSol(
    assert( scip != NULL );
    assert( heur != NULL );
    assert( sol != NULL );
-   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);

@@ -47,7 +47,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_var.h"
 #include "scip/debug.h"
-#include <string.h>
+
 
 #define PRESOL_NAME            "boundshift"
 #define PRESOL_DESC            "converts variables with domain [a,b] to variables with domain [0,b-a]"
@@ -92,7 +92,8 @@ SCIP_DECL_PRESOLCOPY(presolCopyBoundshift)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(presol != NULL);
-   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpresolGetName(presol), PRESOL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolBoundshift(scip) );
@@ -133,8 +134,9 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 
    assert(scip != NULL);
    assert(presol != NULL);
-   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPpresolGetName(presol), PRESOL_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 

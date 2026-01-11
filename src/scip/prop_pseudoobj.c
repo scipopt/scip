@@ -63,7 +63,7 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/dbldblarith.h"
-#include <string.h>
+
 
 #define PROP_NAME              "pseudoobj"
 #define PROP_DESC              "pseudo objective function propagator"
@@ -3434,7 +3434,8 @@ SCIP_DECL_PROPCOPY(propCopyPseudoobj)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of propagator */
    SCIP_CALL( SCIPincludePropPseudoobj(scip) );
@@ -3685,11 +3686,11 @@ SCIP_DECL_EVENTEXEC(eventExecPseudoobj)
 
    propdata = (SCIP_PROPDATA*)eventdata;
    assert(propdata != NULL);
-
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    eventtype = SCIPeventGetType(event);
 

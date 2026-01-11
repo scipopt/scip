@@ -33,6 +33,7 @@
 #include "scip/expr_xyz.h"
 #include "scip/pub_expr.h"
 
+
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "xyz"
 #define EXPRHDLR_DESC         "expression handler template"

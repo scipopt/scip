@@ -37,7 +37,7 @@
 #include "scip/scip_message.h"
 #include "scip/scip_nodesel.h"
 #include "scip/scip_tree.h"
-#include <string.h>
+
 
 #define NODESEL_NAME             "dfs"
 #define NODESEL_DESC             "depth first search"
@@ -55,7 +55,8 @@ SCIP_DECL_NODESELCOPY(nodeselCopyDfs)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of node selector */
    SCIP_CALL( SCIPincludeNodeselDfs(scip) );
@@ -69,9 +70,10 @@ static
 SCIP_DECL_NODESELSELECT(nodeselSelectDfs)
 {  /*lint --e{715}*/
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
    assert(selnode != NULL);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    *selnode = SCIPgetPrioChild(scip);
    if( *selnode == NULL )
@@ -98,7 +100,6 @@ SCIP_DECL_NODESELCOMP(nodeselCompDfs)
    int depth2;
 
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
 
    depth1 = SCIPnodeGetDepth(node1);

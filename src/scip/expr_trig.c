@@ -50,7 +50,6 @@
 
 #define _USE_MATH_DEFINES   /* to get M_PI on Windows */  /*lint !750 */
 
-#include <string.h>
 #include <math.h>
 #include "scip/expr_trig.h"
 #include "scip/expr_value.h"
@@ -975,13 +974,14 @@ SCIP_DECL_EXPRESTIMATE(estimateSin)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SINEXPRHDLR_NAME) == 0);
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
    assert(branchcand != NULL);
    assert(*branchcand == TRUE);
    assert(success != NULL);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SINEXPRHDLR_NAME, SCIP_INVALIDCALL );
 
    *success = computeEstimatorsTrig(scip, expr, coefs, constant, refpoint[0], localbounds[0].inf,
          localbounds[0].sup, ! overestimate);
@@ -1240,13 +1240,14 @@ SCIP_DECL_EXPRESTIMATE(estimateCos)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), COSEXPRHDLR_NAME) == 0);
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
    assert(branchcand != NULL);
    assert(*branchcand == TRUE);
    assert(success != NULL);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), COSEXPRHDLR_NAME, SCIP_INVALIDCALL );
 
    *success = computeEstimatorsTrig(scip, expr, coefs, constant, refpoint[0], localbounds[0].inf,
          localbounds[0].sup, ! overestimate);
