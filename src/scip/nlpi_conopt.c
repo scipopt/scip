@@ -519,11 +519,20 @@ static int COI_CALLCONV Message(
 
    assert(problem != NULL);
    assert(problem->scip != NULL);
+   assert(NMSG <= DMSG);  /* conopt docu says that NMSG is always <= DMSG */
 
-   if( problem->verblevel > 0 )
+   switch( problem->verblevel )
    {
-      for( int i = 0; i < SMSG; i++ )
-         SCIPinfoMessage(problem->scip, NULL, "%s\n", MSGV[i]);
+      case 0:
+         break;
+      case 1:
+         for( int i = 0; i < SMSG; i++ )
+            SCIPinfoMessage(problem->scip, NULL, "%s\n", MSGV[i]);
+         break;
+      default:
+         for( int i = 0; i < SMSG || i < DMSG; i++ )
+            SCIPinfoMessage(problem->scip, NULL, "%s\n", MSGV[i]);
+         break;
    }
 
    return 0;
