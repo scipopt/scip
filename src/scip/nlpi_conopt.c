@@ -766,6 +766,10 @@ static int COI_CALLCONV Option(
          strcpy(NAME, "RTREDG");
          *RVAL = problem->opttol;
          break;
+      case 2: /* turn definitional constraints off for now (conopt#103) */
+         strcpy(NAME, "Flg_NoDefc");
+         *LVAL = 1;
+         break;
       default:
          *NAME = '\0';
    }
