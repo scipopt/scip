@@ -226,7 +226,7 @@ static int COI_CALLCONV ReadMatrix(
    int                   VSTA[],             /**< initial status values for the variable (used if coidef_inistat() was called with IniStat = 1 or 2) */
    int                   TYPE[],             /**< constraint types (equation, inequality, free) */
    double                RHS[],              /**< right hand sides values of constraints (default is zero) */
-   int                   ESTA[],             /**<initial status values for constraint slacks (used if coidef_inistat() was called with IniStat = 1 or 2) */
+   int                   ESTA[],             /**< initial status values for constraint slacks (used if coidef_inistat() was called with IniStat = 1 or 2) */
    int                   COLSTA[],           /**< starting indices of Jacobian columns in ROWNO */
    int                   ROWNO[],            /**< row numbers of Jacobian nonzeros */
    double                VALUE[],            /**< values of the Jacobian elements (defined for all constant Jacobian elements) */
@@ -469,28 +469,37 @@ static int COI_CALLCONV ReadMatrix(
 
 #ifdef STRUCTURE_DEBUG
    SCIPdebugMsg(scip, "Jacobian structure information:\n");
-   SCIPdebugMsg(scip, "COLSTA =\n");
+   SCIPdebugMsg(scip, "COLSTA = ");
    for( int i = 0; i <= NUMVAR; i++ )
-      printf("%d, ", COLSTA[i]);
-   printf("\n");
+      SCIPdebugMsgPrint(scip, "%d, ", i, COLSTA[i]);
+   SCIPdebugMsgPrint(scip, "\n");
 
-   SCIPdebugMsg(scip, "ROWNO =\n");
+   SCIPdebugMsg(scip, "ROWNO = ");
    for( int i = 0; i < NUMNZ; i++ )
-      printf("%d, ", ROWNO[i]);
-   printf("\n");
+      SCIPdebugMsgPrint(scip, "%d, ", i, ROWNO[i]);
+   SCIPdebugMsgPrint(scip, "\n");
 
-   SCIPdebugMsg(scip, "NLFLAG =\n");
+   SCIPdebugMsg(scip, "NLFLAG = ");
    for( int i = 0; i < NUMNZ; i++ )
-      printf("%d, ", NLFLAG[i]);
-   printf("\n");
+      SCIPdebugMsgPrint(scip, "%d, ", NLFLAG[i]);
+   SCIPdebugMsgPrint(scip, "\n");
 
-   SCIPdebugMsg(scip, "VALUE =\n");
+   SCIPdebugMsg(scip, "VALUE = ");
    for( int i = 0; i < NUMNZ; i++ )
-      if( SCIPisInfinity(scip, VALUE[i]) )
-         printf("inf, ");
+      if( VALUE[i] == 1.234e34 )  /*lint !e777*/  /* CONOPT's special value for "undefined" */
+         SCIPdebugMsgPrint(scip, "undef, ");
       else
-         printf("%g, ", VALUE[i]);
-   printf("\n");
+         SCIPdebugMsgPrint(scip, "%g, ", VALUE[i]);
+   SCIPdebugMsgPrint(scip, "\n");
+   /*
+   for( int i = 0; i < NUMVAR; i++ )
+   {
+      SCIPdebugMsg(scip, "var %d:", i);
+      for( int j = COLSTA[i]; j < COLSTA[i+1]; ++j )
+         SCIPdebugMsgPrint(scip, " %d", ROWNO[j]);
+      SCIPdebugMsgPrint(scip, "\n");
+   }
+   */
    fflush(stdout);
 #endif
 
