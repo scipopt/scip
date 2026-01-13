@@ -208,7 +208,7 @@ SCIP_RETCODE SCIPsetIISfinderPriority(
    return SCIP_OKAY;
 }
 
-/** Gets the IIS.
+/** Gets the IIS storage.
  *
  *  @return the \ref SCIP_IIS iis storage.
  *

@@ -428,9 +428,6 @@ SCIP_RETCODE setupPresolve(
    }
 #endif
 
-
-
-
    /* exhaustive presolvers*/
    presolve.addPresolveMethod( uptr( new ImplIntDetection<T>() ) );
    if( data->enabledualinfer )
@@ -447,7 +444,7 @@ SCIP_RETCODE setupPresolve(
       {
          probing->set_max_badge_size( data->maxbadgesizepar );
       }
-#if PAPILO_API_VERSION >= 12
+#if PAPILO_APIVERSION >= 12
       // TODO: enable this after performance test. On MIPLIB this brought 3% on instances with cliques.
       probing->set_numcliquefails(0);
 #endif
