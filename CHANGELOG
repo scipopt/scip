@@ -20,6 +20,7 @@ Fixed bugs
 - make more CONOPT output available when verbosity level is set to 2
 - turn off detection of definitional constraints in CONOPT for now, to work around a related issue in CONOPT 4.39.0
 - signal extreme estimations in timeSeriesEstimate() and skip pruning estimations in eventExecEstim() to avoid unstable restarting
+- fixed that variable removal in IIS cleanup tried to delete variables that were marked as not deleteable
 
 Miscellaneous
 -------------
