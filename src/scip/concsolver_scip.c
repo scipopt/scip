@@ -302,9 +302,11 @@ SCIP_RETCODE initConcsolver(
    SCIP_CALL( SCIPallocBlockMemoryArray(data->solverscip, &data->vars, data->nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(data->solverscip, &varperm, data->nvars) );
 
-   /* SCIPcopyConsCompression() copies the active problem variables first. Then the constraints are copied, which might
-    * involve (multi-)aggregated/fixed variables, which are then copied afterwards, including coupling linear
-    * constraints. The latter variables appear in the main SCIP as "fixed" variables. */
+   /* In the following, we create a variable mapping between the solver and main SCIP variables. The mapping is created
+    * by first retrieving the active variables, then the variables that are "fixed" in the main SCIP. This order is
+    * taken because when performing SCIPcopyConsCompression, the active variables are copied first. This is followed by
+    * the variables, which might involve (multi-)aggregated/fixed variables and coupling linear constraints. The
+    * latter variables appear in the main SCIP as "fixed" variables. */
 
    /* set up the arrays for the variable mapping */
    SCIP_CALL( SCIPallocBufferArray(data->solverscip, &mainallvars, data->nvars) );
