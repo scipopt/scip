@@ -1885,7 +1885,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/" PRESOL_NAME "/enablecliquemerging",
          "should the clique merging presolver be enabled within the presolve library?",
-         &presoldata->enablecliquemerging, TRUE, DEFAULT_ENABLESPARSIFY, NULL, NULL) );
+         &presoldata->enablecliquemerging, TRUE, DEFAULT_ENABLECLIQUEMERGE, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/" PRESOL_NAME "/maxedgesparallel",
          "maximal amount of edges in the parallel clique merging graph",

@@ -1861,13 +1861,11 @@ SCIP_Real timeSeriesEstimate(
 
    trend = doubleExpSmoothGetTrend(&timeseries->des);
 
-   /* Get current value and trend. The linear trend estimation may point into the wrong direction
-    * In this case, we use the fallback mechanism that we will need twice as many nodes.
+   /* get current value and trend; the linear trend estimation may not point towards the target;
+    * in this case, return infinity
     */
-   if( (targetval > val && trend < tolerance) || (targetval < val && trend > -tolerance) )
-   {
-      return 2.0 * treedata->nvisited;
-   }
+   if( (targetval > val && trend <= tolerance) || (targetval < val && trend >= -tolerance) )
+      return -1.0;
 
    /* compute after how many additional steps the current trend reaches the target value; multiply by resolution */
    estimated = timeSeriesGetResolution(timeseries) * (timeseries->nvals + (targetval - val) / (SCIP_Real)trend);
@@ -2735,7 +2733,6 @@ static
 SCIP_DECL_EVENTEXEC(eventExecEstim)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
-   SCIP_Bool isleaf;
    SCIP_EVENTTYPE eventtype;
    TREEDATA* treedata;
    char strbuf[SCIP_MAXSTRLEN];
@@ -2754,13 +2751,12 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
    /* actual leaf nodes for our tree data are children/siblings/leaves or the focus node itself (deadend)
     * if it has not been branched on
     */
-   isleaf = (eventtype == SCIP_EVENTTYPE_NODEDELETE) &&
-      (SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_CHILD ||
-         SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_SIBLING ||
-         SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_LEAF ||
-         (SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_DEADEND && !SCIPwasNodeLastBranchParent(scip, SCIPeventGetNode(event))));
-
-   if( eventtype == SCIP_EVENTTYPE_NODEBRANCHED || isleaf )
+   if( eventtype == SCIP_EVENTTYPE_NODEBRANCHED || ( eventtype == SCIP_EVENTTYPE_NODEDELETE
+      && ( SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_CHILD
+      || SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_SIBLING
+      || SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_LEAF
+      || ( SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_DEADEND
+      && !SCIPwasNodeLastBranchParent(scip, SCIPeventGetNode(event)) ) ) ) )
    {
       SCIP_NODE* eventnode;
       int nchildren = 0;
@@ -2800,7 +2796,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
    }
 
    /* if nodes have been pruned, things are progressing, don't restart right now */
-   if( isleaf )
+   if( eventtype == SCIP_EVENTTYPE_NODEDELETE )
       return SCIP_OKAY;
 
    /* check if all conditions are met such that the event handler should run */
