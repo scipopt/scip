@@ -31,8 +31,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __TYPE_SPI_H__
-#define __TYPE_SPI_H__
+#ifndef __TYPE_SYNCSTORE_H__
+#define __TYPE_SYNCSTORE_H__
 
 #ifdef __cplusplus
 extern "C" {

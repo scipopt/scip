@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   concsolver.h
- * @brief  datastructures for concurrent solvers
+ * @brief  data structures for concurrent solvers
  * @author Leona Gottwald
  */
 
@@ -133,7 +133,7 @@ SCIP_RETCODE SCIPconcsolverExec(
 /** gets solving data of concurrent solver and stores it in the given SCIP instance */
 SCIP_RETCODE SCIPconcsolverGetSolvingData(
    SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
-   SCIP*                 scip                /**< SCIP datastructure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** interrupt solving in a concurrent solver */
@@ -141,15 +141,13 @@ SCIP_RETCODE SCIPconcsolverStop(
    SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    );
 
-/** let the given concurrent solver synchronize, i.e. pass its own solutions and bounds to
- *  the SPI.
- */
+/** let the given concurrent solver synchronize, i.e., pass its own solutions and bounds to syncstore */
 SCIP_RETCODE SCIPconcsolverSync(
    SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** gets the current synchronization frequency of the concurent solver */
+/** gets the current synchronization frequency of the concurrent solver */
 SCIP_Real SCIPconcsolverGetSyncFreq(
    SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    );
