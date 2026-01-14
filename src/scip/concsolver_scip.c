@@ -26,7 +26,11 @@
  * @ingroup PARALLEL
  * @brief  implementation of concurrent solver interface for SCIP
  * @author Leona Gottwald
+ * @author Marc Pfetsch
  */
+
+/* activate the define below for a feasibility check of the solutions transferred to the main SCIP. */
+/* #define SCIP_CHECK_MAINSCIP_SOLUTION */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -35,6 +39,7 @@
 #include "scip/concsolver.h"
 #include "scip/concsolver_scip.h"
 #include "scip/concurrent.h"
+#include "scip/pub_disp.h"
 #include "scip/pub_event.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
@@ -61,7 +66,7 @@
 
 /* event handler for synchronization */
 #define EVENTHDLR_NAME         "sync"
-#define EVENTHDLR_DESC         "event handler for synchronization of concurrent scip sovlers"
+#define EVENTHDLR_DESC         "event handler for synchronization of concurrent scip solvers"
 
 /*
  * Data structures
@@ -194,7 +199,7 @@ struct SCIP_ConcSolverTypeData
 /** data for a concurrent solver */
 struct SCIP_ConcSolverData
 {
-   SCIP*                 solverscip;         /**< the concurrent solvers private SCIP datastructure */
+   SCIP*                 solverscip;         /**< the concurrent solvers private SCIP data structure */
    SCIP_VAR**            vars;               /**< array of variables in the order of the main SCIP's variable array */
    int                   nvars;              /**< number of variables in the above arrays */
 };
@@ -204,7 +209,7 @@ struct SCIP_ConcSolverData
  *  if different optimal solutions were kept in different concurrent solvers. */
 static
 SCIP_RETCODE disableConflictingDualReductions(
-   SCIP*                 scip                /**< SCIP datastructure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_Bool commvarbnds;
@@ -246,21 +251,23 @@ SCIP_RETCODE initConcsolver(
    SCIP_CONCSOLVER*      concsolver          /**< the concurrent solver to set up */
    )
 {
-   int                 i;
-   SCIP_VAR**          vars;
-   SCIP_Bool           valid;
-   SCIP_HASHMAP*       varmapfw;
+   SCIP_HASHMAP* varmapfw;
    SCIP_CONCSOLVERDATA* data;
+   SCIP_VAR** mainvars;
+   SCIP_VAR** mainfixedvars;
+   SCIP_VAR** mainallvars;
+   SCIP_Bool valid;
+   int nmainvars;
+   int nmainfixedvars;
    int* varperm;
+   int cnt;
+   int v;
 
    assert(scip != NULL);
    assert(concsolver != NULL);
 
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
-
-   data->nvars = SCIPgetNVars(scip);
-   vars = SCIPgetVars(scip);
 
    /* we force the copying of symmetry constraints that may have been detected during a central presolving step;
     * otherwise, the copy may become invalid */
@@ -272,87 +279,107 @@ SCIP_RETCODE initConcsolver(
       SCIPdebugMessage("Could not force copying of symmetry constraints\n");
    }
 
+   /* get number of active variables in main SCIP */
+   nmainvars = SCIPgetNVars(scip);
+   mainvars = SCIPgetVars(scip);
+
    /* create the concurrent solver's SCIP instance and set up the problem */
    SCIP_CALL( SCIPcreate(&data->solverscip) );
    SCIPsetMessagehdlrQuiet(data->solverscip, SCIPmessagehdlrIsQuiet(SCIPgetMessagehdlr(scip)));
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(data->solverscip), data->nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(data->solverscip), nmainvars + SCIPgetNFixedVars(scip)) );
    SCIP_CALL( SCIPcopyConsCompression(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver),
          NULL, NULL, 0, TRUE, FALSE, FALSE, FALSE, &valid) );
    assert(valid);
 
+   /* Note that because some aggregations or fixed variables cannot be resolved by some constraint handlers (in
+    * particular cons_sos1, cons_sos2, cons_and), the copied problem may contain more variables than the original
+    * problem has active variables. */
+   data->nvars = SCIPgetNOrigVars(data->solverscip);
+   assert( nmainvars <= data->nvars );
+   assert(data->nvars <= SCIPgetNVars(scip) + SCIPgetNFixedVars(scip));
+
    /* allocate memory for the arrays to store the variable mapping */
    SCIP_CALL( SCIPallocBlockMemoryArray(data->solverscip, &data->vars, data->nvars) );
-   SCIP_CALL( SCIPallocBufferArray(data->solverscip, &varperm, data->nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(data->solverscip, &varperm, data->nvars) );
+
+   /* In the following, we create a variable mapping between the solver and main SCIP variables. The mapping is created
+    * by first retrieving the active variables, then the variables that are "fixed" in the main SCIP. This order is
+    * taken because when performing SCIPcopyConsCompression, the active variables are copied first. This is followed by
+    * the variables, which might involve (multi-)aggregated/fixed variables and coupling linear constraints. The
+    * latter variables appear in the main SCIP as "fixed" variables. */
 
    /* set up the arrays for the variable mapping */
-   for( i = 0; i < data->nvars; i++ )
+   SCIP_CALL( SCIPallocBufferArray(data->solverscip, &mainallvars, data->nvars) );
+   for( v = 0; v < nmainvars; v++ )
    {
       SCIP_VAR* var;
       int idx;
 
-      var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, mainvars[v]);
       assert(var != NULL);
-      idx = SCIPvarGetIndex(var);
+      idx = SCIPvarGetProbindex(var);
       assert(0 <= idx && idx < data->nvars);
 
-      /* Note that because some aggregations or fixed variables cannot be resolved by some constraint handlers (in
-       * particular cons_orbitope_pp), the copied problem may contain more variables than the original problem has
-       * active variables. These variables will be ignored in the following, since they depend on the other `active'
-       * varibles. See concurrent.c:SCIPgetConcurrentVaridx(). */
-      varperm[idx] = i;
-      data->vars[i] = var;
+      data->vars[v] = var;
+      assert(varperm[idx] == 0);
+      varperm[idx] = v;
+
+      /* for copying solutions below */
+      mainallvars[v] = mainvars[v];
    }
 
-   /* transfer solutions from original problem to concurent instances */
+   nmainfixedvars = SCIPgetNFixedVars(scip);
+   mainfixedvars = SCIPgetFixedVars(scip);
+   cnt = nmainvars;
+   for( v = 0; v < nmainfixedvars; v++ )
+   {
+      SCIP_VAR* var;
+      int idx;
+
+      var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, mainfixedvars[v]);
+      if( var != NULL )
+      {
+         idx = SCIPvarGetProbindex(var);
+         if( idx >= 0 )
+         {
+            assert(idx < data->nvars);
+
+            data->vars[cnt] = var;
+            assert(varperm[idx] == 0);
+            varperm[idx] = cnt;
+
+            /* for copying solutions below */
+            mainallvars[cnt] = mainfixedvars[v];
+            ++cnt;
+         }
+      }
+   }
+   assert( cnt == data->nvars );
+
+   /* transfer solutions from original problem to concurrent instances */
    if( SCIPgetNSols(scip) != 0 )
    {
       SCIP_Bool stored;
-      SCIP_Real* solvals;
-      SCIP_SOL* sol = SCIPgetBestSol(scip);
+      SCIP_SOL* mainsol;
       SCIP_SOL* solversol;
-      int norigvars;
 
-      SCIP_CALL( SCIPallocBufferArray(data->solverscip, &solvals, data->nvars) );
-
-      SCIP_CALL( SCIPgetSolVals(scip, sol, data->nvars, vars, solvals) );
+      mainsol = SCIPgetBestSol(scip);
       SCIP_CALL( SCIPcreateSol(data->solverscip, &solversol, NULL) );
-      SCIP_CALL( SCIPsetSolVals(data->solverscip, solversol, data->nvars, data->vars, solvals) );
-      SCIPfreeBufferArray(data->solverscip, &solvals);
-
-      /* handle fixed variables */
-      norigvars = SCIPgetNOrigVars(data->solverscip);
-      if( norigvars > data->nvars )
+      for( v = 0; v < data->nvars; ++v )
       {
-         SCIP_VAR** origvars;
-         int v;
+         SCIP_Real val;
 
-         origvars = SCIPgetOrigVars(data->solverscip);
-         for( v = 0; v < norigvars; ++v )
-         {
-            SCIP_VAR* var;
-            var = origvars[v];
-            if( SCIPisEQ(data->solverscip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
-            {
-               if( ! SCIPisZero(data->solverscip, SCIPvarGetLbGlobal(var)) )
-               {
-                  SCIP_CALL( SCIPsetSolVal(data->solverscip, solversol, var, SCIPvarGetLbGlobal(var)) );
-               }
-            }
-         }
+         val = SCIPgetSolVal(scip, mainsol, mainallvars[v]);
+         assert(data->vars[v] != NULL);
+         SCIP_CALL( SCIPsetSolVal(data->solverscip, solversol, data->vars[v], val) );
       }
-
       SCIP_CALL( SCIPaddSolFree(data->solverscip, &solversol, &stored) );
-
       assert(stored);
    }
 
    /* create the concurrent data structure for the concurrent solver's SCIP */
-   /* this assert fails on check/instances/Symmetry/packorb_1-FullIns_3.cip
-    * assert(SCIPgetNOrigVars(data->solverscip) == data->nvars);
-    * also fails on check/instances/Symmetry/partorb_1-FullIns_3.cip
-    * TODO: test if this leads to any problems
-    */
    SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, varperm, data->nvars) );
+   SCIPfreeBufferArray(data->solverscip, &mainallvars);
    SCIPfreeBufferArray(data->solverscip, &varperm);
 
    /* free the hashmap */
@@ -365,11 +392,11 @@ SCIP_RETCODE initConcsolver(
 static
 SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
 {
-   SCIP_CONCSOLVERDATA*     data;
+   char filename[SCIP_MAXSTRLEN];
+   SCIP_CONCSOLVERDATA* data;
    SCIP_CONCSOLVERTYPEDATA* typedata;
-   char*                    prefix;
-   char                     filename[SCIP_MAXSTRLEN];
-   SCIP_Bool                changechildsel;
+   SCIP_Bool changechildsel;
+   char* prefix;
 
    assert(scip != NULL);
    assert(concsolvertype != NULL);
@@ -387,9 +414,9 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    {
       SCIP_PARAM** params;
       SCIP_PARAM** fixedparams;
-      int          nparams;
-      int          nfixedparams;
-      int          i;
+      int nparams;
+      int nfixedparams;
+      int i;
 
       params = SCIPgetParams(data->solverscip);
       nparams = SCIPgetNParams(data->solverscip);
@@ -495,12 +522,11 @@ SCIP_DECL_CONCSOLVERDESTROYINST(concsolverScipDestroyInstance)
 static
 SCIP_DECL_CONCSOLVERTYPEFREEDATA(concsolverTypeScipFreeData)
 {
+   assert(data != NULL);
    BMSfreeMemory(data);
 }
 
-/** initializes the random and permutation seeds with the given one
- *  and enables permutation of constraints and variables
- */
+/** initializes the random and permutation seeds and enables permutation of constraints and variables */
 static
 SCIP_DECL_CONCSOLVERINITSEEDS(concsolverScipInitSeeds)
 {
@@ -521,7 +547,7 @@ SCIP_DECL_CONCSOLVERINITSEEDS(concsolverScipInitSeeds)
    return SCIP_OKAY;
 }
 
-/** installs the solving status of this concurrent solver and the solving statistics
+/** extracts solving status of this concurrent solver and the solving statistics
  *  into the given SCIP instance
  */
 static
@@ -540,38 +566,50 @@ SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA(concsolverGetSolvingData)
    nsols = SCIPgetNSols(data->solverscip);
    if( nsols > 0 )
    {
-      SCIP_VAR** vars;
-      SCIP_SOL** sols;
+      SCIP_VAR** mainvars;
+      SCIP_SOL** solversols;
       SCIP_Real* solvals;
-      int nvars;
+      int nmainvars;
       int i;
 
-      vars = SCIPgetVars(scip);
-      nvars = SCIPgetNVars(scip);
-      assert(nvars == data->nvars);
+      mainvars = SCIPgetVars(scip);
+      nmainvars = SCIPgetNVars(scip);
+      assert(nmainvars <= data->nvars);
 
-      sols = SCIPgetSols(data->solverscip);
+      solversols = SCIPgetSols(data->solverscip);
 
       /* allocate buffer array used for translating the solution to the given SCIP */
-      SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nmainvars) );
 
       /* add the solutions to the given SCIP */
       for( i = 0; i < nsols; ++i )
       {
-         SCIP_SOL* sol;
+         SCIP_SOL* mainsol;
          SCIP_HEUR* heur;
          SCIP_Bool stored;
 
-         SCIP_CALL( SCIPgetSolVals(data->solverscip, sols[i], nvars, data->vars, solvals) );
+         /* only get the first nmainvars, which correspond to the active variables */
+         SCIP_CALL( SCIPgetSolVals(data->solverscip, solversols[i], nmainvars, data->vars, solvals) );
 
-         heur = SCIPsolGetHeur(sols[i]);
+         heur = SCIPsolGetHeur(solversols[i]);
          if( heur != NULL )
             heur = SCIPfindHeur(scip, SCIPheurGetName(heur));
 
-         SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
-         SCIP_CALL( SCIPsetSolVals(scip, sol, nvars, vars, solvals) );
-         SCIP_CALL( SCIPcopySolStats(sols[i], sol) );
-         SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
+         SCIP_CALL( SCIPcreateSol(scip, &mainsol, heur) );
+         SCIP_CALL( SCIPsetSolVals(scip, mainsol, nmainvars, mainvars, solvals) );
+         SCIP_CALL( SCIPcopySolStats(solversols[i], mainsol) );
+
+#ifdef SCIP_CHECK_MAINSCIP_SOLUTION
+         /* The following sometimes fails because we do not copy aggregations and cons_fixedvar can reject solutions in
+          * mainscip, because of these. */
+         {
+            SCIP_Bool feasible;
+            SCIP_CALL( SCIPcheckSol(scip, mainsol, TRUE, TRUE, TRUE, TRUE, FALSE, &feasible) );
+            assert( feasible );
+         }
+#endif
+
+         SCIP_CALL( SCIPaddSolFree(scip, &mainsol, &stored) );
       }
 
       /* free the buffer array */
@@ -584,8 +622,9 @@ SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA(concsolverGetSolvingData)
    return SCIP_OKAY;
 }
 
-/** start solving the problem until the solving reaches a limit, gets interrupted, or
- *  just finished successfully
+/** execution method of SCIP concsolver solver
+ *
+ *  Start solving the problem until the solving reaches a limit, gets interrupted, or just finished successfully.
  */
 static
 SCIP_DECL_CONCSOLVEREXEC(concsolverScipExec)
@@ -593,6 +632,9 @@ SCIP_DECL_CONCSOLVEREXEC(concsolverScipExec)
    SCIP_CONCSOLVERDATA* data;
 
    assert(concsolver != NULL);
+   assert(solvingtime != NULL);
+   assert(nlpiterations != NULL);
+   assert(nnodes != NULL);
 
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
@@ -603,8 +645,11 @@ SCIP_DECL_CONCSOLVEREXEC(concsolverScipExec)
    /* solve */
    SCIP_CALL( SCIPsolve(data->solverscip) );
 
+   /* first output time */
+   SCIPinfoMessage(data->solverscip, NULL, " ");
+   SCIPdispTime(SCIPgetMessagehdlr(data->solverscip), NULL, SCIPgetSolvingTime(data->solverscip), 5);
    /* print info message with status */
-   SCIPinfoMessage(data->solverscip, NULL, "concurrent solver '%s' stopped with status ", SCIPconcsolverGetName(concsolver));
+   SCIPinfoMessage(data->solverscip, NULL, ": concurrent solver '%s' stopped with status ", SCIPconcsolverGetName(concsolver));
    SCIP_CALL( SCIPprintStatus(data->solverscip, NULL) );
    SCIPinfoMessage(data->solverscip, NULL, "\n");
 
@@ -621,6 +666,7 @@ static
 SCIP_DECL_CONCSOLVERSTOP(concsolverScipStop)
 {
    SCIP_CONCSOLVERDATA* data;
+
    assert(concsolver != NULL);
 
    data = SCIPconcsolverGetData(concsolver);
@@ -635,16 +681,30 @@ SCIP_DECL_CONCSOLVERSTOP(concsolverScipStop)
 static
 SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 {
-   int                    i;
-   int                    nsols;
-   SCIP_SOL**             sols;
-   SCIP_CONCSOLVERDATA*   data;
-   SCIP_BOUNDSTORE*       boundstore;
-   int                    concsolverid;
-   SCIP_STATUS            solverstatus;
+   SCIP_SOL** sols;
+   SCIP_CONCSOLVERDATA* data;
+   SCIP_BOUNDSTORE* boundstore;
+   SCIP_STATUS solverstatus;
+   int concsolverid;
+   int nsols;
+   int i;
+
+   assert(concsolver != NULL);
+   assert(syncstore != NULL);
+   assert(syncdata != NULL);
+   assert(nsolsshared != NULL);
+
+   *nsolsshared = 0;
+
+   if ( maxcandsols <= 0 )
+      return SCIP_OKAY;
+
+   if( SCIPsyncdataGetStatus(syncdata) != SCIP_STATUS_UNKNOWN )
+      return SCIP_OKAY;
 
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
+   assert(data->solverscip != NULL);
    concsolverid = SCIPconcsolverGetIdx(concsolver);
    solverstatus = SCIPgetStatus(data->solverscip);
 
@@ -652,16 +712,9 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
    SCIPsyncdataSetLowerbound(syncdata, SCIPgetDualbound(data->solverscip));
    SCIPsyncdataSetUpperbound(syncdata, SCIPgetPrimalbound(data->solverscip));
 
-   *nsolsshared = 0;
-
-   if( SCIPsyncdataGetStatus(syncdata) != SCIP_STATUS_UNKNOWN )
-      return SCIP_OKAY;
-
    SCIPdebugMessage("syncing in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
 
-   /* consider at most maxcandsols many solutions, and since the solution array is sorted, we will cosider the best
-    * solutions
-    */
+   /* consider at most maxcandsols many solutions, and since the solution array is sorted, consider best solutions */
    nsols = SCIPgetNSols(data->solverscip);
    nsols = MIN(nsols, maxcandsols);
    sols = SCIPgetSols(data->solverscip);
@@ -678,7 +731,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
          SCIPdebugMessage("adding sol in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
          SCIPsyncdataGetSolutionBuffer(syncstore, syncdata, solobj, concsolverid, &solvals);
 
-         /* if syncstore has no place for this solution we can stop since the next solution will have
+         /* if syncstore has no place for this solution, we can stop, since the next solution will have
           * a worse objective value and thus won't be accepted either
           */
          if( solvals == NULL )
@@ -709,14 +762,23 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 static
 SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 {  /*lint --e{715}*/
-   int                    i;
-   int                    nsols;
-   SCIP_Real**            solvals;
-   SCIP_CONCSOLVERDATA*   data;
-   SCIP_BOUNDSTORE*       boundstore;
-   int*                   concsolverids;
-   int                    concsolverid;
-   int                    nbndchgs;
+   SCIP_Real** solvals;
+   SCIP_CONCSOLVERDATA* data;
+   SCIP_BOUNDSTORE* boundstore;
+   int* concsolverids;
+   int concsolverid;
+   int nbndchgs;
+   int nsols;
+   int i;
+
+   assert(concsolver != NULL);
+   assert(syncstore != NULL);
+   assert(syncdata != NULL);
+   assert(nsolsrecvd != NULL);
+   assert(ntighterbnds != NULL);
+   assert(ntighterintbnds != NULL);
+
+   *nsolsrecvd = 0;
 
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
@@ -725,46 +787,28 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 
    /* get solutions from synchronization data */
    SCIPsyncdataGetSolutions(syncdata, &solvals, &concsolverids, &nsols);
-   *nsolsrecvd = 0;
-
    for( i = 0; i < nsols; ++i )
    {
       SCIP_SOL* newsol;
-      SCIP_VAR** origvars;
-      int norigvars;
-      int v;
+      SCIP_Bool feasible;
 
       /* do not add own solutions */
       if( concsolverids[i] == concsolverid )
          continue;
 
-      /* solution is from other solver so translate to this solvers variable space and add it to SCIP */
+      /* solution is from another solver, so translate to this solver's variable space and add it to SCIP */
       ++(*nsolsrecvd);
       SCIP_CALL( SCIPcreateOrigSol(data->solverscip, &newsol, NULL) );
-
       SCIP_CALL( SCIPsetSolVals(data->solverscip, newsol, data->nvars, data->vars, solvals[i]) );
 
-      /* treat possible fixed original variables */
-      norigvars = SCIPgetNOrigVars(data->solverscip);
-      if( norigvars > data->nvars )
-      {
-         origvars = SCIPgetOrigVars(data->solverscip);
-         for( v = 0; v < norigvars; ++v )
-         {
-            SCIP_VAR* var;
-            var = origvars[v];
-            if( SCIPisEQ(data->solverscip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
-            {
-               if( ! SCIPisZero(data->solverscip, SCIPvarGetLbGlobal(var)) )
-               {
-                  SCIP_CALL( SCIPsetSolVal(data->solverscip, newsol, var, SCIPvarGetLbGlobal(var)) );
-               }
-            }
-         }
-      }
+      /* check whether solution is feasible */
+      SCIP_CALL( SCIPcheckSol(data->solverscip, newsol, FALSE, FALSE, TRUE, TRUE, FALSE, &feasible) );
 
-      SCIPdebugMessage("adding solution in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
-      SCIP_CALL( SCIPaddConcurrentSol(data->solverscip, newsol) );
+      if( feasible )
+      {
+         SCIPdebugMessage("adding solution in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
+         SCIP_CALL( SCIPaddConcurrentSol(data->solverscip, newsol) );
+      }
    }
 
    /* get bound changes from the synchronization data and add it to this concurrent solvers SCIP */
@@ -788,13 +832,11 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 
       SCIP_CALL( SCIPvarGetProbvarBound(&var, &newbound, &boundtype) );
 
-      /* cannot change bounds of multi-aggregated variables so dont pass this bound-change to the propagator */
+      /* cannot change bounds of multi-aggregated variables so do not pass this bound-change to the propagator */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
          return SCIP_OKAY;
 
-      /* if bound is not better than also don't pass this bound to the propagator and
-       * don't waste memory for storing this boundchange
-       */
+      /* if bound is not better then do not pass this bound and do not waste memory for storing this boundchange */
       if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisGE(data->solverscip, SCIPvarGetLbGlobal(var), newbound) )
          return SCIP_OKAY;
 
@@ -816,7 +858,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 
 /** creates the concurrent SCIP solver plugins and includes them in SCIP */
 SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
-   SCIP*                 scip                /**< SCIP datastructure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CONCSOLVERTYPEDATA* data;
@@ -825,7 +867,7 @@ SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
 
    /* Include concurrent solvers for SCIP for all emphasis settings and without an emphasis setting.
     * For the SCIP without an emphasis setting we set the default preferred priority to 1 and for the other types to 0
-    * so that the default concurent solve will use multiple SCIP's using settings as specified by the user in the main SCIP.
+    * so that the default concurrent solve will use multiple SCIP's using settings as specified by the user in the main SCIP.
     */
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = FALSE;
