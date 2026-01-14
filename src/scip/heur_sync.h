@@ -24,13 +24,14 @@
 
 /**@file   heur_sync.h
  * @ingroup PRIMALHEURISTICS
- * @brief  primal heuristic that adds given solutions
+ * @brief  primal heuristic that adds solutions from synchronization
  * @author Leona Gottwald
  *
  * This heuristic takes solutions from somewhere else via the function SCIPheurSyncPassSol(). It
- * then tries to commit this solution. It is used by the concurrent solvers, when solutions are
- * communicated between solvers, but cannot directly submitted because SCIP might be in a stage where
+ * then tries to add this solution. It is used by the concurrent solvers, when solutions are
+ * communicated between solvers, but cannot directly added, because SCIP might be in a stage where
  * this is not allowed.
+ *
  * If multiple solutions are passed it will keep the best N solutions depending on the parameter setting
  * "concsolvers/sync/maxnsols"
  */

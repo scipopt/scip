@@ -48,12 +48,12 @@
 #include "scip/boundstore.h"
 
 
-/** computes the size of the array of synchronization datas, such that
+/** computes the size of the array of synchronization data, such that
  *  it cannot ever happen that a synchronization data is reused while still
  *  not read by any thread */
 static
 int getNSyncdata(
-   SCIP*                 scip                /**< SCIP main datastructure */
+   SCIP*                 scip                /**< SCIP main data structure */
    )
 {
    int maxnsyncdelay;
@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPsyncstoreCreate(
 
    SCIP_ALLOC( BMSallocMemory(syncstore) );
 
-   (*syncstore)->mode = SCIP_PARA_DETERMINISTIC;                      /* initialising the mode */
+   (*syncstore)->mode = SCIP_PARA_DETERMINISTIC;                      /* initializing the mode */
    (*syncstore)->initialized = FALSE;
    (*syncstore)->syncdata = NULL;
    (*syncstore)->stopped = FALSE;
@@ -136,7 +136,7 @@ SCIP_RETCODE SCIPsyncstoreCapture(
 
 /** initialize the syncstore for the given SCIP instance */
 SCIP_RETCODE SCIPsyncstoreInit(
-   SCIP*                 scip                /**< SCIP main datastructure */
+   SCIP*                 scip                /**< SCIP main data structure */
    )
 {
    SCIP_SYNCSTORE* syncstore;
@@ -153,7 +153,7 @@ SCIP_RETCODE SCIPsyncstoreInit(
    syncstore->lastsync = NULL;
    syncstore->nsolvers = SCIPgetNConcurrentSolvers(scip);
 
-   syncstore->ninitvars = SCIPgetNVars(scip);
+   syncstore->ninitvars = SCIPgetNVars(scip) + SCIPgetNFixedVars(scip);
    SCIP_CALL( SCIPgetIntParam(scip, "concurrent/sync/maxnsols", &syncstore->maxnsols) );
    SCIP_CALL( SCIPgetIntParam(scip, "concurrent/sync/maxnsyncdelay", &syncstore->maxnsyncdelay) );
    SCIP_CALL( SCIPgetRealParam(scip, "concurrent/sync/minsyncdelay", &syncstore->minsyncdelay) );
@@ -390,7 +390,7 @@ SCIP_SYNCDATA* SCIPsyncstoreGetNextSyncdata(
 
    newdelay = *delay - syncfreq;
 
-   /* if the delay would get too small we dont want to read the next syncdata.
+   /* if the delay would get too small we do not want to read the next syncdata.
     * But due to the limited length of the syncdata array we might need to
     * read this synchronization data anyways which is checked by the second part
     * of the if condition
@@ -496,7 +496,7 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
    {
       if( (*syncdata)->status != SCIP_STATUS_UNKNOWN ||
          (SCIPgetConcurrentGap(syncstore->mainscip) <= syncstore->limit_gap) ||
-         (SCIPgetNLimSolsFound(syncstore->mainscip) > 0 && SCIPgetConcurrentPrimalbound(syncstore->mainscip) - SCIPgetConcurrentDualbound(syncstore->mainscip) <= syncstore->limit_absgap) )
+         (SCIPgetNLimSolsFound(syncstore->mainscip) > 0 && REALABS(SCIPgetConcurrentPrimalbound(syncstore->mainscip) - SCIPgetConcurrentDualbound(syncstore->mainscip)) <= syncstore->limit_absgap) )
          SCIPsyncstoreSetSolveIsStopped(syncstore, TRUE);
 
       syncstore->lastsync = *syncdata;
@@ -541,7 +541,7 @@ int SCIPsyncstoreGetWinner(
    return syncstore->lastsync->winner;
 }
 
-/** how many solvers have already finished synchronizing on this sychronization data */
+/** how many solvers have already finished synchronizing on this synchronization data */
 int SCIPsyncdataGetNSynced(
    SCIP_SYNCDATA*        syncdata            /**< the synchronization data */
    )

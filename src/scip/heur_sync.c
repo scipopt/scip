@@ -164,7 +164,7 @@ SCIP_RETCODE SCIPincludeHeurSync(
    )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_HEUR*     heur;
+   SCIP_HEUR* heur;
 
    /* create heuristic data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
@@ -198,8 +198,9 @@ SCIP_RETCODE SCIPheurSyncPassSol(
    )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_Real      solobj;
-   int            i;
+   SCIP_Real solobj;
+   int i;
+
    assert(scip != NULL);
    assert(heur != NULL);
    assert(sol != NULL);
@@ -213,13 +214,10 @@ SCIP_RETCODE SCIPheurSyncPassSol(
    SCIPsolSetHeur(sol, heur);
    solobj = SCIPgetSolTransObj(scip, sol);
 
-   /* check if we have an empty space in the solution array or
-    * if we need to discard the worst solution
-    */
+   /* check if we have an empty slot in the solution array or if we need to discard the worst solution */
    if( heurdata->nsols < heurdata->maxnsols )
    {
-      /* if the maximum number of solutions is not yet reached just
-       * insert the solution sorted by its objective value */
+      /* if the maximum number of solutions is not yet reached just insert the solution sorted by its objective value */
       i = heurdata->nsols++;
       while( i > 0 && solobj > SCIPgetSolTransObj(scip, heurdata->sols[i - 1]) )
       {
@@ -230,17 +228,12 @@ SCIP_RETCODE SCIPheurSyncPassSol(
    }
    else
    {
-      /* already have reached the maximum number of solutions so
-       * we need to check if the solution is better than a previous
-       * one and free the worst solution to make room for it if that
-       * is the case
-       */
+      /* already have reached the maximum number of solutions, so we need to check if the solution is better than a
+       * previous one and free the worst solution to make room for it if this is the case */
       for( i = 0; i < heurdata->nsols && solobj < SCIPgetSolTransObj(scip, heurdata->sols[i]); ++i )
       {
          if( i > 0 )
-         {
             heurdata->sols[i - 1] = heurdata->sols[i];
-         }
          else
          {
             SCIP_CALL( SCIPfreeSol(scip, &heurdata->sols[i]) );
