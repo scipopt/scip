@@ -541,7 +541,7 @@ SCIP_RETCODE SCIPiisGenerate(
       vars = SCIPgetOrigVars(iis->subscip);
       for( i = nvars - 1; i >= 0; i-- )
       {
-         if( SCIPvarGetNUses(vars[i]) <= 1 && SCIPvarGetLbOriginal(vars[i]) <= SCIPvarGetUbOriginal(vars[i]) )
+         if( SCIPvarGetNUses(vars[i]) <= 1 && SCIPvarIsDeletable(vars[i]) && SCIPvarGetLbOriginal(vars[i]) <= SCIPvarGetUbOriginal(vars[i]) )
          {
             SCIP_CALL( SCIPdelVar(iis->subscip, vars[i], &deleted) );
             assert( deleted );
