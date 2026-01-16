@@ -321,14 +321,14 @@ int filterWithDynamicParallelism(
 
       if( SCIPisGE(scip, bestcutefficacy, currentcutefficacy))
       {
-         cosine = SCIProwGetParallelism(bestcut, cuts[i], 's');
+         cosine = SCIProwGetParallelism(bestcut, cuts[i], 'e');
          thisparall = cosine * bestcutefficacy / currentcutefficacy;
          SCIPdebugMsg(scip, "Thisparall(%g) = cosine(%g) * (bestcutefficacy(%g)/ currentcutefficacy(%g))\n\n", thisparall,
             cosine, bestcutefficacy, currentcutefficacy);
       }
       else
       {
-         cosine = SCIProwGetParallelism(cuts[i], bestcut, 's');
+         cosine = SCIProwGetParallelism(cuts[i], bestcut, 'e');
          thisparall = cosine * currentcutefficacy / bestcutefficacy;
          SCIPdebugMsg(scip, "Thisparall(%g) = cosine(%g) * (currentcutefficacy(%g) / bestcutefficacy(%g))\n\n", thisparall,
             cosine, currentcutefficacy, bestcutefficacy);

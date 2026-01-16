@@ -82,6 +82,7 @@ set(settings_MIP
     #separation and branching
     "oddcyclelift_randomhybrid"
     "oddcycle_distribution"
+    "cutsel_dynamic"
     "treemodel_ratio"
     "treemodel_sampling"
     "treemodel_svts_filter"
