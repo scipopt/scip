@@ -21,6 +21,7 @@ Fixed bugs
 - turn off detection of definitional constraints in CONOPT for now, to work around a related issue in CONOPT 4.39.0
 - signal extreme estimations in timeSeriesEstimate() and skip pruning estimations in eventExecEstim() to avoid unstable restarting
 - fixed that variable removal in IIS cleanup tried to delete variables that were marked as not deleteable
+- fixed parallelism computation of dynamic cut selector to use Euclidean norm instead of unsupported argument
 
 Miscellaneous
 -------------
