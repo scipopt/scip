@@ -307,6 +307,7 @@ int filterWithDynamicParallelism(
    assert(ncuts == 0 || scores != NULL);
 
    bestcutefficacy = SCIPgetCutEfficacy(scip, NULL, bestcut);
+   assert(bestcutefficacy > 0.0);  /* ensured in scoring() */
 
    /*lint -e{850} i is modified in the body of the for loop */
    for( i = ncuts-1; i >= 0; --i )
@@ -317,6 +318,7 @@ int filterWithDynamicParallelism(
       SCIP_Real minmaxparall;
 
       currentcutefficacy = SCIPgetCutEfficacy(scip, NULL, cuts[i]);
+      assert(currentcutefficacy > 0.0);  /* ensured in scoring() */
 
       if( SCIPisGE(scip, bestcutefficacy, currentcutefficacy))
       {
