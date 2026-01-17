@@ -135,8 +135,7 @@ void scoring(
             score = dircutoffdistweight * MAX(score, efficacy);
          }
 
-         efficacy *= efficacyweight;
-         score += objparallelism + intsupport + efficacy;
+         score += objparallelism + intsupport + efficacyweight * efficacy;
 
          /* add small term to prefer global pool cuts */
          if( SCIProwIsInGlobalCutpool(cuts[i]) )
@@ -149,16 +148,16 @@ void scoring(
 
          maxscore = MAX(maxscore, score);
 
-         if( scores != NULL)
+         if( SCIPisLE(scip, score, 0.0) || efficacy == 0.0 )  /*lint !e777*/
          {
-            if( SCIPisLE(scip, score, 0.0) )
-            {
-               --ncuts;
-               SCIPswapPointers((void**) &cuts[i], (void**) &cuts[ncuts]);
+            --ncuts;
+            SCIPswapPointers((void**) &cuts[i], (void**) &cuts[ncuts]);
+            if( scores != NULL )
                SCIPswapReals(&scores[i], &scores[ncuts]);
-            }
-            else
-               scores[i] = score;
+         }
+         else if( scores != NULL )
+         {
+            scores[i] = score;
          }
       }
    }
@@ -187,9 +186,9 @@ void scoring(
          else
             objparallelism = 0.0;
 
-         efficacy = efficacyweight > 0.0 ? efficacyweight * SCIPgetCutEfficacy(scip, NULL, cuts[i]) : 0.0;
+         efficacy = SCIPgetCutEfficacy(scip, NULL, cuts[i]);
 
-         score = objparallelism + intsupport + efficacy;
+         score = objparallelism + intsupport + efficacyweight * efficacy;
 
          /* add small term to prefer global pool cuts */
          if( SCIProwIsInGlobalCutpool(cuts[i]) )
@@ -202,16 +201,16 @@ void scoring(
 
          maxscore = MAX(maxscore, score);
 
-         if( scores != NULL)
+         if( SCIPisLE(scip, score, 0.0) || efficacy == 0.0 )  /*lint !e777*/
          {
-            if( SCIPisLE(scip, score, 0.0) )
-            {
-               --ncuts;
-               SCIPswapPointers((void**) &cuts[i], (void**) &cuts[ncuts]);
+            --ncuts;
+            SCIPswapPointers((void**) &cuts[i], (void**) &cuts[ncuts]);
+            if( scores != NULL )
                SCIPswapReals(&scores[i], &scores[ncuts]);
-            }
-            else
-               scores[i] = score;
+         }
+         else if( scores != NULL )
+         {
+            scores[i] = score;
          }
       }
    }
@@ -308,6 +307,7 @@ int filterWithDynamicParallelism(
    assert(ncuts == 0 || scores != NULL);
 
    bestcutefficacy = SCIPgetCutEfficacy(scip, NULL, bestcut);
+   assert(bestcutefficacy > 0.0);  /* ensured in scoring() */
 
    /*lint -e{850} i is modified in the body of the for loop */
    for( i = ncuts-1; i >= 0; --i )
@@ -318,6 +318,7 @@ int filterWithDynamicParallelism(
       SCIP_Real minmaxparall;
 
       currentcutefficacy = SCIPgetCutEfficacy(scip, NULL, cuts[i]);
+      assert(currentcutefficacy > 0.0);  /* ensured in scoring() */
 
       if( SCIPisGE(scip, bestcutefficacy, currentcutefficacy))
       {
