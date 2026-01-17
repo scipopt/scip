@@ -28,21 +28,10 @@
 # This script cancels the process if required variables are not correctly set
 
 # input variables - should be passed to this script
-QUEUE="${1}"     # the name of the cluster (M620, dbg, telecom-dbg, mip-dbg, opt-low, opt)
+QUEUE="${1}"     # the name of the cluster queue (e.g., M640, Gold6338, moskito)
 PPN="${2}"       # number of cluster nodes to use
 EXCLUSIVE="${3}" # should cluster nodes be blocked for other users while the jobs are running?
 QUEUETYPE="${4}" # either 'srun' or 'qsub'
-
-# new environment variables defined by this script:
-NICE=""
-if [[ "$(uname -n)" =~ htc ]]; then
-  # z1 cluster
-  ACCOUNT="optimi_integer"
-else
-  # opt machines
-  ACCOUNT="mip"
-fi
-CLUSTERQUEUE="${QUEUE}"
 
 # check if queue has been defined
 if test "${QUEUE}" = ""
@@ -72,81 +61,28 @@ then
     fi
 fi
 
-#define clusterqueue, which might not be the QUEUE, because this might be an alias for a bunch of QUEUEs
-if test "${CLUSTERQUEUE}" = "dbg"
-then
-    CLUSTERQUEUE="mip-dbg,telecom-dbg"
-    ACCOUNT="mip-dbg"
-elif test "${CLUSTERQUEUE}" = "telecom-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test "${CLUSTERQUEUE}" = "mip-dbg"
-then
-    ACCOUNT="mip-dbg"
-elif test "${CLUSTERQUEUE}" = "opt-low"
-then
-    CLUSTERQUEUE="opt"
-    NICE="--nice=10000"
+CLUSTERQUEUE="${QUEUE}"
+CONSTRAINT=""
+NICE=""
+ACCOUNT=""
 
-    # wakeup the cluster
-    make --makefile=wakeup-slurm wake_opt
-elif test "${CLUSTERQUEUE}" = "M620-low"
-then
-    NICE="--nice=10000"
-    CLUSTERQUEUE="M620"
+if [ "${CLUSTERQUEUE}" = "moskito" ] || [ "${CLUSTERQUEUE}" = "prio" ]; then
+    ACCOUNT="dopt"
+elif [[ "$(uname -n)" =~ htc ]]; then
+    # z1 cluster
+    ACCOUNT="optimi_integer"
+fi
 
-    # wakeup the cluster
-    make --makefile=wakeup-slurm wake_M620
-elif test "${CLUSTERQUEUE}" = "M620v3-low"
-then
-    NICE="--nice=10000"
-    CLUSTERQUEUE="M620v3"
-
-    # wakeup the cluster
-    make --makefile=wakeup-slurm wake_M620v3
-elif test "${CLUSTERQUEUE}" = "M630-low"
-then
-    NICE="--nice=10000"
-    CLUSTERQUEUE="M630"
-
-    # wakeup the cluster
-    make --makefile=wakeup-slurm wake_M630
-elif test "${CLUSTERQUEUE}" = "M620x"
-then
-    CLUSTERQUEUE="M620,M620v2,M620v3"
-
-    # wakeup the cluster
-    make --makefile=wakeup-slurm wake_M620
-    make --makefile=wakeup-slurm wake_M620v2
-    make --makefile=wakeup-slurm wake_M620v3
-elif test "${CLUSTERQUEUE}" = "M640-low"
+if test "${CLUSTERQUEUE}" = "M640-low"
 then
     NICE="--nice=10000"
     CLUSTERQUEUE="M640"
-
-    # wakeup the cluster
-    make --makefile=wakeup-slurm wake_M640
-elif test "${CLUSTERQUEUE}" = "moskito"
+elif test "${CLUSTERQUEUE}" = "M640v2-low"
 then
-    ACCOUNT="dopt"
-elif test "${CLUSTERQUEUE}" = "prio"
-then
-    ACCOUNT="dopt"
+    NICE="--nice=10000"
+    CLUSTERQUEUE="M640"
 fi
 
-# check if the slurm blades should be used exclusively
-if test "${EXCLUSIVE}" = "true"
-then
-    EXCLUSIVE=" --exclusive"
-    if test "${CLUSTERQUEUE}" = "opt"
-    then
-        CLUSTERQUEUE="M640"
-    fi
-else
-    EXCLUSIVE=""
-fi
-
-CONSTRAINT=""
 if test "${CLUSTERQUEUE}" = "Gold6338"
 then
     CONSTRAINT="Gold6338"
@@ -163,4 +99,12 @@ elif test "${CLUSTERQUEUE}" = "M640"
 then
     CONSTRAINT="Gold5122"
     CLUSTERQUEUE="opt_int"
+fi
+
+# check if the slurm blades should be used exclusively
+if test "${EXCLUSIVE}" = "true"
+then
+    EXCLUSIVE=" --exclusive"
+else
+    EXCLUSIVE=""
 fi
