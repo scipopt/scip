@@ -149,16 +149,16 @@ void scoring(
 
          maxscore = MAX(maxscore, score);
 
-         if( scores != NULL)
+         if( SCIPisLE(scip, score, 0.0) )
          {
-            if( SCIPisLE(scip, score, 0.0) )
-            {
-               --ncuts;
-               SCIPswapPointers((void**) &cuts[i], (void**) &cuts[ncuts]);
+            --ncuts;
+            SCIPswapPointers((void**) &cuts[i], (void**) &cuts[ncuts]);
+            if( scores != NULL )
                SCIPswapReals(&scores[i], &scores[ncuts]);
-            }
-            else
-               scores[i] = score;
+         }
+         else if( scores != NULL )
+         {
+            scores[i] = score;
          }
       }
    }
@@ -202,16 +202,16 @@ void scoring(
 
          maxscore = MAX(maxscore, score);
 
-         if( scores != NULL)
+         if( SCIPisLE(scip, score, 0.0) )
          {
-            if( SCIPisLE(scip, score, 0.0) )
-            {
-               --ncuts;
-               SCIPswapPointers((void**) &cuts[i], (void**) &cuts[ncuts]);
+            --ncuts;
+            SCIPswapPointers((void**) &cuts[i], (void**) &cuts[ncuts]);
+            if( scores != NULL )
                SCIPswapReals(&scores[i], &scores[ncuts]);
-            }
-            else
-               scores[i] = score;
+         }
+         else if( scores != NULL )
+         {
+            scores[i] = score;
          }
       }
    }
