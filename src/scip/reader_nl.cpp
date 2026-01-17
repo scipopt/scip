@@ -3012,7 +3012,7 @@ SCIP_DECL_READERWRITE(readerWriteNl)
       /* construct a temporary directory in /tmp/scipnlwrite-XXXXXX */
 #ifdef _WIN32
       TCHAR systemtmp[MAX_PATH + 1];
-      DWORD gettemprc = GetTempPath2A(MAX_PATH + 1, systemtmp);
+      DWORD gettemprc = GetTempPathA(MAX_PATH + 1, systemtmp);
       if( gettemprc == 0 || gettemprc > MAX_PATH + 1 )
       {
          SCIPerrorMessage("Cannot get name of directory for temporary files: error %d\n", errno);
