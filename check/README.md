@@ -159,11 +159,6 @@ make testgamscluster
 - `permcmpresall.awk` END
   compare different versions of runs with permuations
 
-## Makefiles
-
-- `wakeup-slurm` END
-  A Makefile that can wake up sleeping slurm nodes and queues before submitting tests to avoid errors.
-
 ## Bash Scripts
 
 ### Configuration
@@ -181,8 +176,6 @@ make testgamscluster
 - `. configuration_cluster.sh`
   Configures environment variables for cluster runs.
   It is to be invoked inside a `check_cluster*.sh` script.
-  It calls `wakeup-slurm` to the respective queue.
-  + `wakeup-slurm` END
 
 - `. configuration_set.sh`
   Configures environment variables that are needed for test runs both on the cluster and locally.
