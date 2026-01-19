@@ -478,15 +478,7 @@ it is necessary to check they are correct.
 #endif
 #endif
 
-#if defined(LLONG_MAX) 
 #define SIZEOF_LONG_LONG 8
-#else
-#ifndef _WIN32
-#define SIZEOF_LONG 8   /* 0 if nonexistent */
-#else
-#define SIZEOF_LONG 4   /* 0 if nonexistent */
-#endif
-#endif
 
 #if defined(_MSC_VER)
 #define SIZEOF_UNINT128 0
