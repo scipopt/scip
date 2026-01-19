@@ -470,6 +470,7 @@ it is necessary to check they are correct.
 #else
 #define SIZEOF_LONG 8
 #endif
+#else
 #ifndef _WIN32
 #define SIZEOF_LONG 8
 #else
