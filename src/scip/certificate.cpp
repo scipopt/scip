@@ -3500,7 +3500,7 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    /* add row to hashmap */
    if( image != SCIP_LONGINT_MAX )
    {
-      SCIPmessageFPrintWarning(scip->messagehdlr, "%lu \n", (size_t) SCIPhashmapGetImage(certificate->rowdatahash, row));
+      SCIPmessageFPrintWarning(scip->messagehdlr, "%zu \n", (size_t) SCIPhashmapGetImage(certificate->rowdatahash, row));
       SCIPerrorMessage("Duplicate row in certificate row hashmap\n");
       SCIPABORT();
       return SCIP_ERROR;
