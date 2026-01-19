@@ -86,6 +86,7 @@ Fixed bugs
 - fixed that variable removal in IIS cleanup tried to delete variables that were marked as not deleteable
 - fixed parallelism computation of dynamic cut selector to use Euclidean norm instead of unsupported argument
 - fixed that non-efficious cuts were not filtered out before checking dynamic parallelism in dynamic cut selector
+- fixes in nauty.h for 32bit systems
 
 Miscellaneous
 -------------
