@@ -83,9 +83,13 @@ it is necessary to check they are correct.
 #define FLEX_ARRAY_OK 0
  /* whether the compiler supports flexible array members in structures */
 
+#ifndef _FILE_OFFSET_BITS
 #define _FILE_OFFSET_BITS 0
+#endif
 #if _FILE_OFFSET_BITS == 64
+#ifndef _LARGEFILE_SOURCE
 #define _LARGEFILE_SOURCE
+#endif
 #else
 #undef _FILE_OFFSET_BITS
 #endif
