@@ -45,6 +45,8 @@ Interface changes
 
 ### New parameters
 
+- `presolving/milp/enableGF2`: whether to enable GF2 presolver in PaPILO
+
 ### Changed parameters
 
 Build system
