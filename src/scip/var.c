@@ -493,6 +493,7 @@ SCIP_RETCODE varAddLbchginfo(
    SCIP_VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    SCIP_CONS*            infercons,          /**< constraint that inferred this bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
+   SCIP_SYMCOMP*         infersymcomp,       /**< symmetry component that deduced the bound change */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_BOUNDTYPE        inferboundtype,     /**< type of bound for inference var: lower or upper bound */
    SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or inferred bound change */
@@ -507,10 +508,12 @@ SCIP_RETCODE varAddLbchginfo(
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
    assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
+   assert(boundchgtype == SCIP_BOUNDCHGTYPE_SYMINFER || infersymcomp == NULL);
 
    SCIPsetDebugMsg(set, "adding lower bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
-      SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos, infercons != NULL ? "cons" : "prop",
-      infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo,
+      SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos,
+      infercons != NULL ? "cons" : (inferprop != NULL ? "prop" : "symcomp"),
+      infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo, /* @symtodo add identifier for symmetry component */
       oldbound, newbound);
 
    SCIP_CALL( varEnsureLbchginfosSize(var, blkmem, set, var->nlbchginfos+1) );
@@ -541,6 +544,9 @@ SCIP_RETCODE varAddLbchginfo(
    case SCIP_BOUNDCHGTYPE_PROPINFER:
       var->lbchginfos[var->nlbchginfos].inferencedata.reason.prop = inferprop;
       break;
+   case SCIP_BOUNDCHGTYPE_SYMINFER:
+      var->lbchginfos[var->nlbchginfos].inferencedata.reason.symcomp = infersymcomp;
+      break;
    default:
       SCIPerrorMessage("invalid bound change type %d\n", boundchgtype);
       return SCIP_INVALIDDATA;
@@ -568,6 +574,7 @@ SCIP_RETCODE varAddUbchginfo(
    SCIP_VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    SCIP_CONS*            infercons,          /**< constraint that inferred this bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
+   SCIP_SYMCOMP*         infersymcomp,       /**< symmetry component that deduced the bound change */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_BOUNDTYPE        inferboundtype,     /**< type of bound for inference var: lower or upper bound */
    SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or inferred bound change */
@@ -582,10 +589,12 @@ SCIP_RETCODE varAddUbchginfo(
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
    assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
+   assert(boundchgtype == SCIP_BOUNDCHGTYPE_SYMINFER || infersymcomp == NULL);
 
    SCIPsetDebugMsg(set, "adding upper bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
-      SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos, infercons != NULL ? "cons" : "prop",
-      infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo,
+      SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos,
+      infercons != NULL ? "cons" : (inferprop != NULL ? "prop" : "symcomp"),
+      infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo, /* @symtodo add identifier for symmetry component */
       oldbound, newbound);
 
    SCIP_CALL( varEnsureUbchginfosSize(var, blkmem, set, var->nubchginfos+1) );
@@ -615,6 +624,9 @@ SCIP_RETCODE varAddUbchginfo(
       break;
    case SCIP_BOUNDCHGTYPE_PROPINFER:
       var->ubchginfos[var->nubchginfos].inferencedata.reason.prop = inferprop;
+      break;
+   case SCIP_BOUNDCHGTYPE_SYMINFER:
+      var->ubchginfos[var->nubchginfos].inferencedata.reason.symcomp = infersymcomp;
       break;
    default:
       SCIPerrorMessage("invalid bound change type %d\n", boundchgtype);
@@ -681,7 +693,7 @@ SCIP_RETCODE boundchgApplyExact(
                SCIPsetDebugMsg(set, " -> branching: new lower bound of <%s>[%g,%g]: %g\n",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
-                     NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_LOWER, SCIP_BOUNDCHGTYPE_BRANCHING) );
+                     NULL, NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_LOWER, SCIP_BOUNDCHGTYPE_BRANCHING) );
                stat->lastbranchvar = var;
                stat->lastbranchdir = SCIP_BRANCHDIR_UPWARDS;
                stat->lastbranchvalue = boundchg->newbound;
@@ -693,7 +705,7 @@ SCIP_RETCODE boundchgApplyExact(
                   SCIPconsGetName(boundchg->data.inferencedata.reason.cons),
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
-                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL,
+                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL, NULL,
                      boundchg->data.inferencedata.info,
                      (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_CONSINFER) );
                break;
@@ -704,7 +716,16 @@ SCIP_RETCODE boundchgApplyExact(
                   ? SCIPpropGetName(boundchg->data.inferencedata.reason.prop) : "-",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
-                     boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop,
+                     boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop, NULL,
+                     boundchg->data.inferencedata.info,
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+               break;
+
+            case SCIP_BOUNDCHGTYPE_SYMINFER:
+               SCIPsetDebugMsg(set, " -> symmetry component - inference: new lower bound of <%s>[%g,%g]: %g\n", /* @symtodo add identifier for symmetry component */
+                  SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+               SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
+                     boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
                      boundchg->data.inferencedata.info,
                      (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
                break;
@@ -753,7 +774,7 @@ SCIP_RETCODE boundchgApplyExact(
                SCIPsetDebugMsg(set, " -> branching: new upper bound of <%s>[%g,%g]: %g\n",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
-                     NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_UPPER, SCIP_BOUNDCHGTYPE_BRANCHING) );
+                     NULL, NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_UPPER, SCIP_BOUNDCHGTYPE_BRANCHING) );
                stat->lastbranchvar = var;
                stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
                stat->lastbranchvalue = boundchg->newbound;
@@ -765,7 +786,7 @@ SCIP_RETCODE boundchgApplyExact(
                   SCIPconsGetName(boundchg->data.inferencedata.reason.cons),
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
-                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL,
+                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL, NULL,
                      boundchg->data.inferencedata.info,
                      (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_CONSINFER) );
                break;
@@ -776,7 +797,16 @@ SCIP_RETCODE boundchgApplyExact(
                   ? SCIPpropGetName(boundchg->data.inferencedata.reason.prop) : "-",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
-                     boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop,
+                     boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop, NULL,
+                     boundchg->data.inferencedata.info,
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+               break;
+
+            case SCIP_BOUNDCHGTYPE_SYMINFER:
+               SCIPsetDebugMsg(set, " -> symmetry component - inference: new upper bound of <%s>[%g,%g]: %g\n", /* @symtodo add identifier symmetry component */
+                  SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+               SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
+                     boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
                      boundchg->data.inferencedata.info,
                      (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
                break;
@@ -893,7 +923,7 @@ SCIP_RETCODE SCIPboundchgApply(
                SCIPsetDebugMsg(set, " -> branching: new lower bound of <%s>[%g,%g]: %g\n",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
-                     NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_LOWER, SCIP_BOUNDCHGTYPE_BRANCHING) );
+                     NULL, NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_LOWER, SCIP_BOUNDCHGTYPE_BRANCHING) );
                stat->lastbranchvar = var;
                stat->lastbranchdir = SCIP_BRANCHDIR_UPWARDS;
                stat->lastbranchvalue = boundchg->newbound;
@@ -905,7 +935,7 @@ SCIP_RETCODE SCIPboundchgApply(
                   SCIPconsGetName(boundchg->data.inferencedata.reason.cons),
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
-                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL,
+                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL, NULL,
                      boundchg->data.inferencedata.info,
                      (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_CONSINFER) );
                break;
@@ -916,7 +946,16 @@ SCIP_RETCODE SCIPboundchgApply(
                   ? SCIPpropGetName(boundchg->data.inferencedata.reason.prop) : "-",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
-                     boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop,
+                     boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop, NULL,
+                     boundchg->data.inferencedata.info,
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+               break;
+
+            case SCIP_BOUNDCHGTYPE_SYMINFER:
+               SCIPsetDebugMsg(set, " -> symmetry component - inference: new lower bound of <%s>[%g,%g]: %g\n", /* @symtodo add symmetry component identifier */
+                  SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+               SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
+                     boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
                      boundchg->data.inferencedata.info,
                      (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
                break;
@@ -967,7 +1006,7 @@ SCIP_RETCODE SCIPboundchgApply(
                SCIPsetDebugMsg(set, " -> branching: new upper bound of <%s>[%g,%g]: %g\n",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
-                     NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_UPPER, SCIP_BOUNDCHGTYPE_BRANCHING) );
+                     NULL, NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_UPPER, SCIP_BOUNDCHGTYPE_BRANCHING) );
                stat->lastbranchvar = var;
                stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
                stat->lastbranchvalue = boundchg->newbound;
@@ -979,7 +1018,7 @@ SCIP_RETCODE SCIPboundchgApply(
                   SCIPconsGetName(boundchg->data.inferencedata.reason.cons),
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
-                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL,
+                     boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL, NULL,
                      boundchg->data.inferencedata.info,
                      (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_CONSINFER) );
                break;
@@ -990,7 +1029,16 @@ SCIP_RETCODE SCIPboundchgApply(
                   ? SCIPpropGetName(boundchg->data.inferencedata.reason.prop) : "-",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
-                     boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop,
+                     boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop, NULL,
+                     boundchg->data.inferencedata.info,
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+               break;
+
+            case SCIP_BOUNDCHGTYPE_SYMINFER:
+               SCIPsetDebugMsg(set, " -> symmetry component - inference: new upper bound of <%s>[%g,%g]: %g\n", /* @symtodo add symmetry component identifier */
+                  SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+               SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
+                     boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
                      boundchg->data.inferencedata.info,
                      (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
                break;
@@ -1269,6 +1317,7 @@ SCIP_RETCODE boundchgCaptureData(
    {
    case SCIP_BOUNDCHGTYPE_BRANCHING:
    case SCIP_BOUNDCHGTYPE_PROPINFER:
+   case SCIP_BOUNDCHGTYPE_SYMINFER:
       break;
 
    case SCIP_BOUNDCHGTYPE_CONSINFER:
@@ -1302,6 +1351,7 @@ SCIP_RETCODE boundchgReleaseData(
    {
    case SCIP_BOUNDCHGTYPE_BRANCHING:
    case SCIP_BOUNDCHGTYPE_PROPINFER:
+   case SCIP_BOUNDCHGTYPE_SYMINFER:
       break;
 
    case SCIP_BOUNDCHGTYPE_CONSINFER:
@@ -25000,7 +25050,8 @@ SCIP_VAR* SCIPbdchginfoGetInferVar(
 {
    assert(bdchginfo != NULL);
    assert((SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-      || (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+      || (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+      || (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_SYMINFER);
 
    return bdchginfo->inferencedata.var;
 }
@@ -25048,7 +25099,8 @@ int SCIPbdchginfoGetInferInfo(
 {
    assert(bdchginfo != NULL);
    assert((SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-      || (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+      || (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+      || (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_SYMINFER);
 
    return bdchginfo->inferencedata.info;
 }
@@ -25060,7 +25112,8 @@ SCIP_BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
 {
    assert(bdchginfo != NULL);
    assert((SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-      || (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+      || (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+      || (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_SYMINFER);
 
    return (SCIP_BOUNDTYPE)(bdchginfo->inferboundtype);
 }
@@ -25094,7 +25147,9 @@ SCIP_Bool SCIPbdchginfoHasInferenceReason(
 
    return ((SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER)
       || ((SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-         && bdchginfo->inferencedata.reason.prop != NULL);
+         && bdchginfo->inferencedata.reason.prop != NULL)
+      || ((SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_SYMINFER
+         && bdchginfo->inferencedata.reason.symcomp != NULL);
 }
 
 /** for two bound change informations belonging to the same variable and bound, returns whether the first bound change
