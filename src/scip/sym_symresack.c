@@ -160,7 +160,7 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSymreack)
 static
 SCIP_DECL_SYMHDLRSEPALP(symhdlrSepaLPSymresack)
 {  /*lint --e{715}*/
-
+   assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
    return SCIP_OKAY;
@@ -170,7 +170,7 @@ SCIP_DECL_SYMHDLRSEPALP(symhdlrSepaLPSymresack)
 static
 SCIP_DECL_SYMHDLRSEPASOL(symhdlrSepaSolSymresack)
 {  /*lint --e{715}*/
-
+   assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
    return SCIP_OKAY;
