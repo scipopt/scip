@@ -33,8 +33,6 @@
 #ifndef __SCIP_TYPE_SYMMETRY_H_
 #define __SCIP_TYPE_SYMMETRY_H_
 
-/* #include "scip/scip.h" */
-
 #ifdef __cplusplus
 extern "C" {
 #endif

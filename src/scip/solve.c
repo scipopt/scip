@@ -487,10 +487,13 @@ SCIP_RETCODE propagationRound(
 
       if( propprio >= symprio )
       {
-         if( propprio < 0 || (onlydelayed && !SCIPpropWasDelayed(set->props[i])) )
+         /* no further propagators with nonnegative priority exist */
+         if( propprio < 0 )
+            break;
+
+         /* check whether only delayed propagators shall be run */
+         if( onlydelayed && !SCIPpropWasDelayed(set->props[i]) )
          {
-            if( symprio < 0 )
-               break;
             ++i;
             continue;
          }
@@ -502,10 +505,13 @@ SCIP_RETCODE propagationRound(
       }
       else
       {
-         if( symprio < 0 || (onlydelayed && !SCIPsymhdlrPropWasDelayed(set->symhdlrs_prop[j])) )
+         /* no further propagators with nonnegative priority exist */
+         if( symprio < 0 )
+            break;
+
+         /* check whether only delayed propagators shall be run */
+         if( onlydelayed && !SCIPsymhdlrPropWasDelayed(set->symhdlrs_prop[j]) )
          {
-            if( propprio < 0 )
-               break;
             ++j;
             continue;
          }
@@ -522,15 +528,11 @@ SCIP_RETCODE propagationRound(
       if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
       {
          if( useprop )
-         {
             SCIPerrorMessage("Buffer not completely freed after executing propagator <%s>\n",
                SCIPpropGetName(set->props[i]));
-         }
          else
-         {
             SCIPerrorMessage("Buffer not completely freed after executing propagator of symmetry handler <%s>\n",
                SCIPsymhdlrGetName(set->symhdlrs_prop[j]));
-         }
          SCIPABORT();
       }
 #endif
@@ -548,14 +550,10 @@ SCIP_RETCODE propagationRound(
       if( result == SCIP_CUTOFF )
       {
          if( useprop )
-         {
             SCIPsetDebugMsg(set, " -> propagator <%s> detected cutoff\n", SCIPpropGetName(set->props[i]));
-         }
          else
-         {
             SCIPsetDebugMsg(set, " -> symmetry handler <%s> detected cutoff\n",
                SCIPsymhdlrGetName(set->symhdlrs_prop[j]));
-         }
       }
 
       /* if we work off the delayed propagators, we stop immediately if a reduction was found */
@@ -677,14 +675,10 @@ SCIP_RETCODE propagationRound(
       if( result == SCIP_CUTOFF )
       {
          if( useprop )
-         {
             SCIPsetDebugMsg(set, " -> propagator <%s> detected cutoff\n", SCIPpropGetName(set->props[i]));
-         }
          else
-         {
             SCIPsetDebugMsg(set, " -> propagator of symmetry handler <%s> detected cutoff\n",
                SCIPsymhdlrGetName(set->symhdlrs_prop[j]));
-         }
       }
 
       /* if we work off the delayed propagators, we stop immediately if a reduction was found */

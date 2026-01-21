@@ -247,13 +247,14 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
 
 /** propagation conflict resolving method of symmetry handler
  *
- *  This method is called during conflict analysis. If the propagator wants to support conflict analysis,
- *  it should call SCIPinferVarLbProp() or SCIPinferVarUbProp() in domain propagation instead of SCIPchgVarLb() or
- *  SCIPchgVarUb() in order to deduce bound changes on variables.
- *  In the SCIPinferVarLbProp() and SCIPinferVarUbProp() calls, the propagator provides a pointer to itself
- *  and an integer value "inferinfo" that can be arbitrarily chosen.
+ *  This method is called during conflict analysis. If the propagator of a symmetry handler wants to support
+ *  conflict analysis, it should call SCIPinferVarLbSym() or SCIPinferVarUbSym() in domain propagation instead
+ *  of SCIPchgVarLb() or SCIPchgVarUb() in order to deduce bound changes on variables.
+ *  In the SCIPinferVarLbSym() and SCIPinferVarUbSym() calls, the symmetry handler provides a pointer to the
+ *  symmetry component that is handled by the symmetry handler and an integer value "inferinfo" that can be
+ *  arbitrarily chosen.
  *  The propagation conflict resolving method can then be implemented, to provide a "reasons" for the bound
- *  changes, i.e. the bounds of variables at the time of the propagation, that forced the propagator to set the
+ *  changes, i.e. the bounds of variables at the time of the propagation, that forced the symmetry handler to set the
  *  conflict variable's bound to its current value. It can use the "inferinfo" tag to identify its own propagation
  *  rule and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided
  *  by calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(),

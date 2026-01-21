@@ -3363,6 +3363,7 @@ SCIP_RETCODE conflictResolveBound(
          inferboundtype = SCIPbdchginfoGetInferBoundtype(bdchginfo);
          bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
          assert(infervar != NULL);
+         assert(infersymcomp->symhdlr != NULL);
 
          SCIPsetDebugMsg(set, "resolving bound <%s> %s %g(%g) [status:%d, depth:%d, pos:%d]: <%s> %s %g [symhdlr:<%s>, info:%d]\n",
             SCIPvarGetName(actvar),
