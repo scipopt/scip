@@ -26,6 +26,11 @@ Interface changes
 
 ### Changed parameters
 
+### Data Structures
+
+- added struct \ref SCIP_CUTGENPARAMS for cut generation parameters
+- added struct \ref SCIP_CUTGENRESULT for cut generation result
+
 Build system
 ------------
 

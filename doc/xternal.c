@@ -9360,6 +9360,16 @@
 /**@defgroup PublicCutMethods Cuts and Cutpools
  * @ingroup PublicLPMethods
  * @brief common functions used to manipulate, generate, and strengthen cuts and to organize the cutpool
+ *
+ * SCIP provides a generic cut generation interface via SCIPcalcBestCut() that tries multiple cut generation
+ * methods on an aggregated row and returns the best cut by efficacy. The available methods are specified
+ * using the SCIP_CUTGENMETHOD bitmask type:
+ * - SCIP_CUTGENMETHOD_FLOWCOVER: flow cover cuts
+ * - SCIP_CUTGENMETHOD_KNAPSACKCOVER: knapsack cover cuts
+ * - SCIP_CUTGENMETHOD_CMIR: complemented mixed-integer rounding cuts
+ * - SCIP_CUTGENMETHOD_ALL: try all available methods
+ *
+ * The cut generation is configured via SCIP_CUTGENPARAMS and results are returned in SCIP_CUTGENRESULT.
  */
 
 /**@defgroup PublicLPDivingMethods LP Diving
