@@ -17,11 +17,19 @@ Interface changes
 
 ### New API functions
 
+- added SCIPcalcBestCut() to try multiple cut generation methods (FlowCover, KnapsackCover, CMIR) on an aggregation row and return the best cut by efficacy
+- added SCIPinitCutGenParams(), SCIPcreateCutGenResult(), and SCIPfreeCutGenResult() as helper functions for SCIPcalcBestCut()
+
 ### New parameters
 
 - `presolving/milp/enableGF2`: whether to enable GF2 presolver in PaPILO
 
 ### Changed parameters
+
+### Data Structures
+
+- added struct \ref SCIP_CUTGENPARAMS for cut generation parameters
+- added struct \ref SCIP_CUTGENRESULT for cut generation result
 
 Build system
 ------------

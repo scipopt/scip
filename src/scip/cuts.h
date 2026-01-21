@@ -449,7 +449,8 @@ SCIP_RETCODE SCIPcalcFlowCover(
    SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
    int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
    int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
-   SCIP_Real*            cutefficacy,        /**< pointer to store the efficacy of the cut, or NULL */
+   SCIP_Real*            cutefficacy,        /**< pointer to store efficacy of best cut; only cuts that are strictly
+                                              *   better than the input efficacy are returned; or NULL */
    int*                  cutrank,            /**< pointer to return rank of generated cut */
    SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
    SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
@@ -522,6 +523,57 @@ SCIP_RETCODE SCIPcalcStrongCG(
    int*                  cutrank,            /**< pointer to return rank of generated cut */
    SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
    SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
+   );
+
+/** initializes cut generation parameters with default values */
+SCIP_EXPORT
+void SCIPinitCutGenParams(
+   SCIP_CUTGENPARAMS*    params              /**< pointer to parameters to initialize */
+   );
+
+/** creates a cut generation result structure and allocates arrays for cut coefficients and indices
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateCutGenResult(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTGENRESULT**   result              /**< pointer to store the created result structure */
+   );
+
+/** frees a cut generation result structure created by SCIPcreateCutGenResult() */
+SCIP_EXPORT
+void SCIPfreeCutGenResult(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTGENRESULT**   result              /**< pointer to the result structure to free */
+   );
+
+/** tries multiple cut generation methods on an aggregation row and returns the best cut by efficacy
+ *
+ *  This function attempts to generate cuts using the specified methods.
+ *  Each method only returns a cut if it improves upon the previous best efficacy.
+ *  See type_cuts.h for available SCIP_CUTGENMETHOD_* flags.
+ *
+ *  Use SCIPinitCutGenParams() to initialize parameters with default values.
+ *  Use SCIPcreateCutGenResult() to create the result structure, or manually set result->cutcoefs and result->cutinds
+ *  to point to arrays of size at least SCIPgetNVars(scip).
+ *  Use SCIPfreeCutGenResult() to free the result structure when done.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcalcBestCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute cuts for */
+   SCIP_CUTGENMETHOD     methods,            /**< bit field indicating which methods to try (SCIP_CUTGENMETHOD_*) */
+   SCIP_CUTGENPARAMS*    params,             /**< cut generation parameters */
+   SCIP_CUTGENRESULT*    result              /**< pointer to result structure (cutcoefs and cutinds pre-allocated) */
    );
 
 /** @} */
