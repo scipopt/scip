@@ -167,6 +167,7 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSymresack)
 static
 SCIP_DECL_SYMHDLRPROP(symhdlrPropSymresack)
 {  /*lint --e{715}*/
+   assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
    return SCIP_OKAY;

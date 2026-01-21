@@ -3356,7 +3356,7 @@ SCIP_RETCODE conflictResolveBound(
          SCIP_BDCHGIDX* bdchgidx;
 
          /* resolve bound change by asking the symmetry handler that inferred the bound to put all bounds that were
-          * the reasons for the conflicting bound change on the priority queue
+          * the reasons for the conflicting bound change in the priority queue
           */
          infervar = SCIPbdchginfoGetInferVar(bdchginfo);
          inferinfo = SCIPbdchginfoGetInferInfo(bdchginfo);
