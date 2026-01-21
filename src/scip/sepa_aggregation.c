@@ -101,7 +101,7 @@
 #define DEFAULT_MAXROWDENSITY      0.05 /**< maximal density of row to be used in aggregation */
 #define DEFAULT_DENSITYOFFSET       100 /**< additional number of variables allowed in row on top of density */
 #define DEFAULT_MAXROWFAC          1e+4 /**< maximal row aggregation factor */
-#define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
+#define DEFAULT_MAXTESTDELTA       (-1) /**< maximal number of different deltas to try (-1: unlimited) */
 #define DEFAULT_AGGRTOL            1e-2 /**< aggregation heuristic: we try to delete continuous variables from the current
                                          *   aggregation, whose distance to its tightest bound is >= L - DEFAULT_AGGRTOL,
                                          *   where L is the largest of the distances between a continuous variable's value
@@ -110,12 +110,6 @@
 #define DEFAULT_FIXINTEGRALRHS     TRUE /**< should an additional variable be complemented if f0 = 0? */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 
-#define BOUNDSWITCH                 0.5
-#define POSTPROCESS                TRUE
-#define VARTYPEUSEVBDS                2 /**< We allow variable bound substitution for variables with continuous vartype only.
-                                         *   See cuts.c for more information. */
-#define MINFRAC                    0.05
-#define MAXFRAC                    0.999
 #define MAKECONTINTEGRAL          FALSE
 #define IMPLINTSARECONT
 
@@ -796,8 +790,7 @@ SCIP_RETCODE aggregation(
    int                   maxaggrs,           /**< maximal number of aggregations */
    SCIP_Bool*            wastried,           /**< pointer to store whether the given startrow was actually tried */
    SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
-   int*                  cutinds,            /**< buffer array to store temporarily cut */
-   SCIP_Real*            cutcoefs,           /**< buffer array to store temporarily cut */
+   SCIP_CUTGENRESULT*    cutresult,          /**< result structure with pre-allocated cutcoefs and cutinds arrays */
    SCIP_Bool             negate,             /**< should the start row be multiplied by -1 */
    int*                  ncuts               /**< pointer to count the number of generated cuts */
    )
@@ -880,84 +873,58 @@ SCIP_RETCODE aggregation(
    naggrs = 0;
    while( naggrs <= maxaggrs )
    {
-      int cutrank = 0;
-      int cutnnz = 0;
-      SCIP_Bool aggrsuccess;
-      SCIP_Bool cmirsuccess;
-      SCIP_Bool cmircutislocal = FALSE;
-      SCIP_Bool flowcoversuccess;
-      SCIP_Real flowcoverefficacy;
-      SCIP_Bool flowcovercutislocal = FALSE;
-      SCIP_Bool knapsackcoversuccess;
-      SCIP_Real knapsackcoverefficacy;
-      SCIP_Bool knapsackcovercutislocal = FALSE;
+      SCIP_CUTGENPARAMS params;
+      SCIP_CUTGENMETHOD methods;
       SCIP_ROW* cut = NULL;
-      SCIP_Real cutrhs = SCIP_INVALID;
-      SCIP_Real cutefficacy;
+      SCIP_Bool aggrsuccess;
 
       *wastried = TRUE;
 
-      /* Step 1:
-       * try to generate a MIR cut out of the current aggregated row
-       */
+      /* initialize cut generation parameters */
+      SCIPinitCutGenParams(&params);
+      params.allowlocal = allowlocal;
+      params.maxtestdelta = maxtestdelta;
 
-      flowcoverefficacy =  -SCIPinfinity(scip);
-
+      /* set enabled methods */
+      methods = SCIP_CUTGENMETHOD_NONE;
       if( sepadata->sepflowcover )
-      {
-         SCIP_CALL( SCIPcalcFlowCover(scip, sol, POSTPROCESS, BOUNDSWITCH, allowlocal, aggrdata->aggrrow, /*lint !e644*/
-            cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
-      }
-      else
-      {
-         flowcoversuccess = FALSE;
-      }
-
-      /* initialize the knapsack cover cut efficacy variable with the flowcover efficacy so that
-       * only knapsack cover cuts better than that efficacy are returned.
-       */
-      knapsackcoverefficacy = flowcoverefficacy;
-
+         methods |= SCIP_CUTGENMETHOD_FLOWCOVER;
       if( sepadata->sepknapsackcover )
-      {
-         SCIP_CALL( SCIPcalcKnapsackCover(scip, sol, allowlocal, aggrdata->aggrrow, /*lint !e644*/
-            cutcoefs, &cutrhs, cutinds, &cutnnz, &knapsackcoverefficacy, &cutrank, &knapsackcovercutislocal, &knapsackcoversuccess) );
-      }
-      else
-      {
-         knapsackcoversuccess = FALSE;
-      }
-
-      /* initialize the cutefficacy variable with the knapsackcoverefficacy, so that only CMIR cuts
-       * that have a higher efficacy than that of a flowcover or knapsack cover cut possibly
-       * found in the call above are returned since the previous cut is overwritten in that case.
-       */
-      cutefficacy = knapsackcoverefficacy;
-
+         methods |= SCIP_CUTGENMETHOD_KNAPSACKCOVER;
       if( sepadata->sepcmir )
-      {
-         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, VARTYPEUSEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
-            aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
-      }
-      else
-      {
-         cmirsuccess = FALSE;
-      }
+         methods |= SCIP_CUTGENMETHOD_CMIR;
 
-      if( cmirsuccess )
+      /* try all enabled cut generation methods and get the best cut */
+      SCIP_CALL( SCIPcalcBestCut(scip, sol, aggrdata->aggrrow, methods, &params, cutresult) );
+
+      if( cutresult->success )
       {
-         SCIP_CALL( addCut(scip, sol, sepadata->cmir, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy,
-               cmircutislocal, sepadata->dynamiccuts, cutrank, startrow < 0 ? "objcmir" : "cmir", cutoff, ncuts, &cut) ); /*lint !e644*/
-      }
-      else if ( knapsackcoversuccess )
-      {
-         SCIP_CALL( addCut(scip, sol, sepadata->knapsackcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy,
-               knapsackcovercutislocal, sepadata->dynamiccuts, cutrank, startrow < 0 ? "objlci" : "lci", cutoff, ncuts, &cut) ); /*lint !e644*/
-      }
-      else if ( flowcoversuccess )
-      {
-         SCIP_CALL( addCut(scip, sol, sepadata->flowcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy,
-               flowcovercutislocal, sepadata->dynamiccuts, cutrank, startrow < 0 ? "objflowcover" : "flowcover", cutoff, ncuts, &cut) ); /*lint !e644*/
+         SCIP_SEPA* cutsepa;
+         const char* cutname;
+
+         switch( cutresult->winningmethod )
+         {
+         case SCIP_CUTGENMETHOD_FLOWCOVER:
+            cutsepa = sepadata->flowcover;
+            cutname = startrow < 0 ? "objflowcover" : "flowcover";
+            break;
+         case SCIP_CUTGENMETHOD_KNAPSACKCOVER:
+            cutsepa = sepadata->knapsackcover;
+            cutname = startrow < 0 ? "objlci" : "lci";
+            break;
+         case SCIP_CUTGENMETHOD_CMIR:
+            cutsepa = sepadata->cmir;
+            cutname = startrow < 0 ? "objcmir" : "cmir";
+            break;
+         default:
+            SCIPABORT();
+            cutsepa = NULL;
+            cutname = NULL;
+         }
+
+         SCIP_CALL( addCut(scip, sol, cutsepa, FALSE, cutresult->cutcoefs, cutresult->cutinds, cutresult->cutnnz,
+               cutresult->cutrhs, cutresult->cutefficacy, cutresult->cutislocal, sepadata->dynamiccuts,
+               cutresult->cutrank, cutname, cutoff, ncuts, &cut) );
       }
 
       if ( *cutoff )
@@ -1093,8 +1060,7 @@ SCIP_RETCODE separateCuts(
    int v;
    int oldncuts;
 
-   int* cutinds;
-   SCIP_Real* cutcoefs;
+   SCIP_CUTGENRESULT* cutresult;
 
    assert(result != NULL);
    assert(*result == SCIP_DIDNOTRUN);
@@ -1165,8 +1131,7 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcontlbs, ncontvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcontubs, ncontvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &fractionalities, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
+   SCIP_CALL( SCIPcreateCutGenResult(scip, &cutresult) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowscores, nrows) );
 
    /* get the solution values for all active variables */
@@ -1354,7 +1319,7 @@ SCIP_RETCODE separateCuts(
    {
       /* try separating the objective function with the cutoff bound */
       SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
-               -1, 2 * maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
+               -1, 2 * maxaggrs, &wastried, &cutoff, cutresult, FALSE, &ncuts) );
 
       if( cutoff )
          goto TERMINATE;
@@ -1364,7 +1329,7 @@ SCIP_RETCODE separateCuts(
    {
       oldncuts = ncuts;
       SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
-            roworder[r], maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
+            roworder[r], maxaggrs, &wastried, &cutoff, cutresult, FALSE, &ncuts) );
 
       /* if trynegscaling is true we start the aggregation heuristic again for this row, but multiply it by -1 first.
        * This is done by calling the aggregation function with the parameter negate equal to TRUE
@@ -1372,7 +1337,7 @@ SCIP_RETCODE separateCuts(
       if( sepadata->trynegscaling && !cutoff )
       {
          SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
-               roworder[r], maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, TRUE, &ncuts) );
+               roworder[r], maxaggrs, &wastried, &cutoff, cutresult, TRUE, &ncuts) );
       }
 
       if ( cutoff )
@@ -1400,8 +1365,7 @@ SCIP_RETCODE separateCuts(
  TERMINATE:
    /* free data structure */
    destroyAggregationData(scip, &aggrdata);
-   SCIPfreeBufferArray(scip, &cutcoefs);
-   SCIPfreeBufferArray(scip, &cutinds);
+   SCIPfreeCutGenResult(scip, &cutresult);
    SCIPfreeBufferArray(scip, &fractionalities);
    SCIPfreeBufferArray(scip, &bestcontubs);
    SCIPfreeBufferArray(scip, &bestcontlbs);
@@ -1540,7 +1504,7 @@ SCIP_RETCODE SCIPincludeSepaAggregation(
 
    assert(sepadata->cmir != NULL);
 
-    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->knapsackcover, "knapsackcover", "separator for knapsack cover cuts", -100000, SEPA_FREQ, 0.0,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->knapsackcover, "knapsackcover", "separator for knapsack cover cuts", -100000, SEPA_FREQ, 0.0,
       SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
 
    assert(sepadata->knapsackcover != NULL);
