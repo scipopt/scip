@@ -2675,10 +2675,13 @@ SCIP_RETCODE SCIPgetDualSolVal(
 
          activity = SCIPvarGetLPSol(vars[0]) * vals[0];
 
-         /* return the reduced cost of the variable if the constraint would be tight */
+         /* return the reduced cost of the variable divided by the coefficient if the constraint would be tight */
          if( SCIPsetIsEQ(scip->set, activity, SCIPgetRhsLinear(scip, cons))
           || SCIPsetIsEQ(scip->set, activity, SCIPgetLhsLinear(scip, cons)) )
-            (*dualsolval) = SCIPgetVarRedcost(scip, vars[0]);
+         {
+            assert(vals[0] != 0.0);
+            (*dualsolval) = SCIPgetVarRedcost(scip, vars[0]) / vals[0];
+         }
          else
             (*dualsolval) = 0.0;
       }
