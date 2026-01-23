@@ -48,7 +48,6 @@
 #define SYM_PROPFREQ                 1           /**< propagator frequency */
 #define SYM_PRIORITY          -1000000           /**< priority of try-add function*/
 #define SYM_PRESOLPRIORITY    -1000000           /**< priority of presolving method */
-#define SYM_FREQ                     1           /**< propagator frequency */
 
 
 /** symmetry component data */
@@ -208,7 +207,8 @@ SCIP_RETCODE SCIPincludeSymhdlrSymresack(
    assert(scip != NULL);
 
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC,
-         1, 1, 1, 1, -1, 1, FALSE, FALSE, 1.0, -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
+         SYM_PRIORITY, SYM_PROPPRIORITY, 1, SYM_PRESOLPRIORITY, SYM_PROPFREQ, 1, FALSE, FALSE, 1.0,
+         -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddSymresack, NULL, symhdlrFreeSymresack, NULL, symhdlrExitSymresack,
          NULL, NULL, NULL, NULL, symhdlrSepaLPSymresack, symhdlrSepaSolSymresack, symhdlrPropSymresack,
          NULL, symhdlrPresolSymresack, symhdlrdata) );
