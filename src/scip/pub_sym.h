@@ -157,6 +157,18 @@ int SCIPsymhdlrGetNChgSides(
    SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
    );
 
+/** gets priority of symmetry handlers' separator */
+SCIP_EXPORT
+int SCIPsymhdlrSepaGetPriority(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   );
+
+/** was symmetry handler's separator delayed at the last call? */
+SCIP_EXPORT
+SCIP_Bool SCIPsymhdlrSepaWasLPDelayed(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   );
+
 /** compares two symmetry handlers with respect to their try-add priority */
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompTryadd);

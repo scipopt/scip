@@ -108,6 +108,15 @@ struct SCIP_Symhdlr
    int                   nchgcoefs;          /**< total number of changed coefficients by this presolver */
    int                   nchgsides;          /**< total number of changed left or right hand sides by this presolver */
    int                   npresolcalls;       /**< number of times the symmetry handler was called in presolving and tried to find reductions */
+   SCIP_Real             maxbounddist;       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
+   int                   lastsepanode;       /**< last (total) node where this separator was called */
+   int                   expbackoff;         /**< base for exponential increase of frequency at which the separator is called */
+   int                   nsepacallsatnode;   /**< number of times, this separator was called at the current node */
+   int                   ncutsfoundatnode;   /**< number of cutting planes found at the current node */
+   SCIP_Longint          nseparootcalls;     /**< number of times, this separator was called at the root */
+   SCIP_Longint          nsepacutoffs;       /**< number of cutoffs found so far by this separator */
+   SCIP_Longint          nsepadomredsfound;  /**< number of domain reductions found so far by this separator */
    SCIP_Bool             delaysepa;          /**< should separation method be delayed, if other separators found cuts? */
    SCIP_Bool             delayprop;          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_Bool             sepalpwasdelayed;   /**< was the LP separation method delayed at the last call? */
