@@ -180,7 +180,7 @@ SCIP_RETCODE doSymhdlrCreate(
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname, paramdesc,
          &(*symhdlr)->maxbounddist, TRUE, maxbounddist, 0.0, 1.0, NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/sepadelay", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/delaysepa", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "should separator be delayed, if other separators found cuts?",
          &(*symhdlr)->delaysepa, TRUE, delaysepa, NULL, NULL) );
