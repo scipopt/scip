@@ -1786,7 +1786,7 @@ SCIP_RETCODE separationRoundLP(
    /* call LP separators with nonnegative priority */
    i = 0;
    j = 0;
-   while( (i < set->nsepas || j <set->nsymhdlrs)
+   while( (i < set->nsepas || j < set->nsymhdlrs)
            && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
            && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
    {
