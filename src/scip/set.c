@@ -1307,6 +1307,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nsymhdlrs = 0;
    (*set)->symhdlrssize = 0;
    (*set)->symhdlrs_sepa = NULL;
+   (*set)->symhdlrs_presol = NULL;
    (*set)->symhdlrs_prop = NULL;
    (*set)->symhdlrssorted = FALSE;
    (*set)->symhdlrssepasorted = FALSE;
@@ -3175,6 +3176,7 @@ SCIP_RETCODE SCIPsetFree(
    BMSfreeMemoryArrayNull(&(*set)->symhdlrs_prop);
    BMSfreeMemoryArrayNull(&(*set)->symhdlrs_sepa);
    BMSfreeMemoryArrayNull(&(*set)->symhdlrs);
+   BMSfreeMemoryArrayNull(&(*set)->symhdlrs_presol);
 
    /* free IIS */
    for( i = 0; i < (*set)->niisfinders; ++i)
@@ -5264,16 +5266,19 @@ SCIP_RETCODE SCIPsetIncludeSymhdlr(
       set->symhdlrssize = SCIPsetCalcMemGrowSize(set, set->nsymhdlrs + 1);
       SCIP_ALLOC( BMSreallocMemoryArray(&set->symhdlrs, set->symhdlrssize) );
       SCIP_ALLOC( BMSreallocMemoryArray(&set->symhdlrs_sepa, set->symhdlrssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->symhdlrs_presol, set->symhdlrssize) );
       SCIP_ALLOC( BMSreallocMemoryArray(&set->symhdlrs_prop, set->symhdlrssize) );
    }
    assert(set->nsymhdlrs < set->symhdlrssize);
 
    set->symhdlrs[set->nsymhdlrs] = symhdlr;
    set->symhdlrs_sepa[set->nsymhdlrs] = symhdlr;
+   set->symhdlrs_presol[set->nsymhdlrs] = symhdlr;
    set->symhdlrs_prop[set->nsymhdlrs] = symhdlr;
    set->nsymhdlrs++;
    set->symhdlrssorted = FALSE;
    set->symhdlrssepasorted = FALSE;
+   set->symhdlrspresolsorted = FALSE;
    set->symhdlrspropsorted = FALSE;
 
    return SCIP_OKAY;
@@ -5293,8 +5298,22 @@ void SCIPsetSortSymhdlrs(
    }
 }
 
+/** sorts symmetry handlers by presolving priorities */
+void SCIPsetSortSymhdlrsPresol(
+{
+   assert(set != NULL);
+   assert(set->symhdlrs_presol != NULL || set->nsymhdlrs == 0);
+
+   if( !set->symhdlrspresolsorted )
+   {
+      SCIPsortPtr((void**)set->symhdlrs_presol, SCIPsymhdlrCompPresol, set->nsymhdlrs);
+      set->symhdlrspresolsorted = TRUE;
+   }
+ }
+
 /** sorts symmetry handlers by separation priorities */
 void SCIPsetSortSymhdlrsSepa(
+>>>>>>> 1838-make-symmetry-computation-move-to-the-core
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {

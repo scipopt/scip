@@ -99,6 +99,7 @@ struct SCIP_Set
    SCIP_NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
    SCIP_BRANCHRULE**     branchrules;        /**< branching rules */
    SCIP_SYMHDLR**        symhdlrs;           /**< symmetry handlers (sorted by tryadd priority) */
+   SCIP_SYMHDLR**        symhdlrs_presol;    /**< symmetry handlers (sorted by presolving priority) */
    SCIP_SYMHDLR**        symhdlrs_sepa;      /**< symmetry handlers (sorted by separation priority) */
    SCIP_SYMHDLR**        symhdlrs_prop;      /**< symmetry handlers (sorted by propagation priority) */
    SCIP_IISFINDER**      iisfinders;         /**< irreducible infeasible subsystem (IIS) rules */
@@ -194,6 +195,7 @@ struct SCIP_Set
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             symhdlrssorted;     /**< are the symmetry handlers sorted by try-add priority? */
+   SCIP_Bool             symhdlrspresolsorted;/**< are the symmetry handlers sorted by presolving priority? */
    SCIP_Bool             symhdlrssepasorted; /**< are the symmetry handlers sorted by separation priority? */
    SCIP_Bool             symhdlrspropsorted; /**< are the symmetry handlers sorted by propagation priority? */
    SCIP_Bool             iisfinderssorted;   /**< are the IIS rules sorted by priority */

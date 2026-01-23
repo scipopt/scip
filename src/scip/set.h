@@ -862,8 +862,13 @@ void SCIPsetSortSymhdlrs(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts symmetry handlers by presolving priorities */
+void SCIPsetSortSymhdlrsPresol(
+   );
+
 /** sorts symmetry handlers by separation priorities */
 void SCIPsetSortSymhdlrsSepa(
+>>>>>>> 1838-make-symmetry-computation-move-to-the-core
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

@@ -180,6 +180,7 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
    int                   id,                 /**< identifier of component for which symmetry handling shall be added */
    SCIP_SYMCOMPDATA**    symcompdata,        /**< pointer for storing data of symmetry component */
+   int*                  naddedconss,        /**< pointer to store number of constraints added by symhdlr */
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
    );
 

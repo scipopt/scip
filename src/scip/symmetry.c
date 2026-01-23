@@ -3025,7 +3025,8 @@ SCIP_RETCODE computeComponentsSym(
 
 /** tries to add symmetry handling methods to CIP */
 SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  naddedconss         /**< pointer to store number of constraints added by symmetry handlers */
    )
 {
    SCIP_SYMHDLR** symhdlrs;
@@ -3045,6 +3046,9 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    int i;
 
    assert(scip != NULL);
+   assert(naddedconss != NULL);
+
+   *naddedconss = 0;
 
    /* only run when symmetry handling is enabled */
    if( !scip->set->sym_enabled )
@@ -3102,6 +3106,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    {
       SCIP_Bool success;
       SCIP_SYMCOMPDATA* symcompdata;
+      int ntmpconss;
 
       success = FALSE;
 
@@ -3117,7 +3122,8 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       for( i = 0; i < nsymhdlrs && !success; ++i )
       {
          SCIP_CALL( SCIPsymhdlrTryadd(symhdlrs[i], scip->set, syms, nsyms, symtype,
-               symvars, nsymvars, NULL, c, &symcompdata, &success) ); /* @symtodo Do we actually want to provide the graph? */
+               symvars, nsymvars, NULL, c, &symcompdata, &ntmpconss, &success) ); /* @symtodo Do we actually want to provide the graph? */
+         *naddedconss += ntmpconss;
 
          if( success )
          {
@@ -3163,6 +3169,56 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    return SCIP_OKAY;
 }
 
+/** calls presolving methods of symmetry handlers */
+SCIP_RETCODE SCIPpresolveSymmetryHandlingMethods(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOLTIMING     timing,             /**< current presolving timing */
+   int                   nrounds,            /**< number of presolving rounds already done */
+   int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
+   int*                  naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
+   int*                  nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
+   int*                  nchgbds,            /**< pointer to total number of variable bounds tightened of all presolvers */
+   int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
+   int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to total number of added constraints of all presolvers */
+   int*                  nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
+   int*                  nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
+   int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
+   SCIP_Bool*            unbounded,          /**< pointer to store whether problem is unbounded */
+   SCIP_Bool*            infeasible          /**< pointer to store whether problem is infeasible */
+   )
+{
+   SCIP_SYMHDLR** symhdlrs;
+   SCIP_RESULT result;
+   int nsymhdlrs;
+   int i;
+
+   assert(scip != NULL);
+
+   /* get symmetry handlers */
+   symhdlrs = SCIPgetSymhdlrs(scip);
+   nsymhdlrs = SCIPgetNSymhdlrs(scip);
+
+   /* call presolving methods of each symmetry handler */
+   for( i = 0; i < nsymhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPsymhdlrPresol(symhdlrs[i], scip->set, timing, nrounds, nfixedvars, naggrvars, nchgvartypes,
+            nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, &result) );
+
+      if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         break;
+      }
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         break;
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** creates and captures symmetry information data structure */
 SCIP_RETCODE SCIPsyminfoCreate(

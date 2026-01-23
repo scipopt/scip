@@ -35,9 +35,10 @@
 #include "scip/sym_symresack.h"
 
 /* symmetry handler properties */
-#define SYM_NAME            "symresack"
+#define SYM_NAME            "sym_symresack"
 #define SYM_DESC            "symmetry handler for symresack constraint"
-#define SYM_PRIORITY          -1000000           /**< propagator priority */
+#define SYM_PRIORITY          -1000000           /**< priority of try-add function*/
+#define SYM_PRESOL_PRIORITY   -1000000           /**< priority of presolving method */
 #define SYM_FREQ                     1           /**< propagator frequency */
 
 
@@ -63,6 +64,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSymresack)
    }
 
    *success = TRUE;
+   assert(naddedconss != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, symcompdata) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symcompdata)->conss, nperms) );
@@ -75,6 +77,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSymresack)
       SCIP_CALL( SCIPcreateSymbreakCons(scip, &(*symcompdata)->conss[p], "cons", perms[p],
             permvars, npermvars, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, (*symcompdata)->conss[p]) );
+      ++(*naddedconss);
       /* do not release constraints here, this will be done later */
    }
 
@@ -126,7 +129,7 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSymreack)
    int s;
    int c;
 
-   *result = SCIP_DIDNOTFIND;
+   *result = nsymcomps > 0 ? SCIP_DIDNOTFIND : SCIP_DIDNOTRUN;
 
    for( s = 0; s < nsymcomps; ++s )
    {
