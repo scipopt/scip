@@ -104,11 +104,27 @@ SCIP_RETCODE fromCommandLine(
     * Problem Solving *
     *******************/
 
-   /* solve problem */
-   SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
-   SCIPinfoMessage(scip, NULL, "=============\n\n");
+   {
+      SCIP_Bool useconcurrent = FALSE;
 
-   SCIP_CALL( SCIPsolve(scip) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/useconcurrent", &useconcurrent) );
+
+      /* solve problem */
+      if( useconcurrent )
+      {
+         SCIPinfoMessage(scip, NULL, "\nsolve problem concurrently\n");
+         SCIPinfoMessage(scip, NULL, "==========================\n\n");
+
+         SCIP_CALL( SCIPsolveConcurrent(scip) );
+      }
+      else
+      {
+         SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
+         SCIPinfoMessage(scip, NULL, "=============\n\n");
+
+         SCIP_CALL( SCIPsolve(scip) );
+      }
+   }
 
    /*******************
     * Solution Output *

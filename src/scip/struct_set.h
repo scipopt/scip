@@ -621,6 +621,7 @@ struct SCIP_Set
    int                   concurrent_maxnsyncdelay;  /**< max number of synchronizations before data is used */
    SCIP_Real             concurrent_minsyncdelay;   /**< min offset before synchronization data is used */
    char*                 concurrent_paramsetprefix; /**< path prefix for parameter setting files of concurrent solver scip-custom */
+   SCIP_Bool             concurrent_useconcurrent;  /**< should the problem be solved using concurrent solvers? */
 
    /* timing settings */
    SCIP_CLOCKTYPE        time_clocktype;     /**< default clock type to use */

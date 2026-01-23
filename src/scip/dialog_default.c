@@ -2294,8 +2294,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecOptimize)
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      SCIP_CALL( SCIPsolve(scip) );
+   {
+      SCIP_Bool useconcurrent = FALSE;
+
+      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/useconcurrent", &useconcurrent) );
+
+      if( useconcurrent )
+      {
+         SCIP_CALL( SCIPsolveConcurrent(scip) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPsolve(scip) );
+      }
       break;
+   }
 
    case SCIP_STAGE_SOLVED:
       SCIPdialogMessage(scip, NULL, "problem is already solved\n");
