@@ -41,6 +41,7 @@
 #include "scip/type_lp.h"
 #include "scip/type_nodesel.h"
 #include "scip/type_prop.h"
+#include "scip/type_sym.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
 

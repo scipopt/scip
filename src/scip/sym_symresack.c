@@ -96,10 +96,12 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSymresack)
 static
 SCIP_DECL_SYMHDLRFREE(symhdlrFreeSymresack)
 {  /*lint --e{715}*/
+#ifndef NDEBUG
    SCIP_SYMHDLRDATA* symhdlrdata;
 
    symhdlrdata = SCIPsymhdlrGetData(symhdlr);
    assert(symhdlrdata == NULL);
+#endif
 
    return SCIP_OKAY;
 }

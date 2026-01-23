@@ -57,6 +57,7 @@
 #include "scip/type_set.h"
 #include "scip/type_sol.h"
 #include "scip/type_stat.h"
+#include "scip/type_sym.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
 #include "scip/intervalarith.h"
