@@ -62,7 +62,7 @@ STARTPERM="${15}"    # the starting permutation
 CHECKBASENAME="${SCIPPATH}/${OUTPUTDIR}/check.${TSTNAME}.${BINID}.${QUEUE}.${SETNAME}"
 
 # if number of threads is larger than 1, add postfix
-if test "${THREADS}" -gt 1
+if [[ "${BINID}" =~ ^fscip ]] && [ "${THREADS}" -gt 1 ] ;
 then
     CHECKBASENAME="${CHECKBASENAME}-t${THREADS}"
 fi
@@ -171,7 +171,7 @@ SHORTPROBNAME="${NEWSHORTPROBNAME}"
 FILENAME="${USER}.${TSTNAME}.${COUNT}"_"${SHORTPROBNAME}.${BINID}.${QUEUE}.${SETNAME}"
 
 # if number of threads is larger than 1, add postfix
-if test "${THREADS}" -gt 1
+if [[ "${BINID}" =~ ^fscip ]] && [ "${THREADS}" -gt 1 ] ;
 then
     FILENAME="${FILENAME}-t${THREADS}"
 fi

@@ -125,7 +125,11 @@ fi
 echo "set limits time ${TIMELIMIT}"                              >> "${TMPFILE}"
 echo "set limits nodes ${NODELIMIT}"                             >> "${TMPFILE}"
 echo "set limits memory ${MEMLIMIT}"                             >> "${TMPFILE}"
-echo "set lp advanced threads ${THREADS}"                        >> "${TMPFILE}"
+if [[ "${OPTCOMMAND}" =~ ^concurrent ]] ; then
+    echo "set parallel maxnthreads ${THREADS}"                   >> "${TMPFILE}"
+else
+    echo "set lp advanced threads ${THREADS}"                    >> "${TMPFILE}"
+fi
 echo "set timing clocktype ${CLOCKTYPE}"                         >> "${TMPFILE}"
 echo "set display freq ${DISPFREQ}"                              >> "${TMPFILE}"
 if test "${WITHCERTIFICATE}" = true
