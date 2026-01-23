@@ -867,6 +867,11 @@ void SCIPsetSortSymhdlrsProp(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** sorts symmetry handlers by separation priorities */
+void SCIPsetSortSymhdlrsSepa(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** returns the symmetry handler of the given name, or NULL if not existing */
 SCIP_SYMHDLR* SCIPsetFindSymhdlr(
    SCIP_SET*             set,                /**< global SCIP settings */

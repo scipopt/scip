@@ -35,6 +35,7 @@
 
 #include "scip/type_sym.h"
 #include "scip/pub_sym.h"
+#include "scip/type_sepastore.h"
 #include "symmetry/type_symmetry.h"
 
 #ifdef __cplusplus
@@ -57,6 +58,8 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    int                   sepafreq,           /**< frequency for calling separator of symmetry handler */
    SCIP_Bool             delayprop,          /**< should propagation be delayed, if other sym-propagators found reductions? */
    SCIP_Bool             delaysepa,          /**< should separation be delayed, if other sym-separators found reductions? */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
    int                   maxprerounds,       /**< maximal number of presolving rounds the symmetry handler participates in (-1: no limit) */
    SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the symmetry handler's presolving method */
@@ -166,6 +169,32 @@ SCIP_RETCODE SCIPsymhdlrResolvePropagation(
    SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
    SCIP_Real             relaxedbd,          /**< the relaxed bound */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** calls LP separation method of symmetry handler's separator */
+SCIP_RETCODE SCIPsymhdlrSepaLP(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   int                   depth,              /**< depth of current node */
+   SCIP_Real             bounddist,          /**< current relative distance of local dual bound to global dual bound */
+   SCIP_Bool             allowlocal,         /**< should the separator be asked to separate local cuts */
+   SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** calls primal solution separation method of symmetry handler's separator */
+SCIP_RETCODE SCIPsymhdlrSepaSol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated */
+   int                   depth,              /**< depth of current node */
+   SCIP_Bool             allowlocal,         /**< should the separator allow local cuts */
+   SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

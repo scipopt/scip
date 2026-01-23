@@ -1865,8 +1865,12 @@ SCIP_RETCODE separationRoundLP(
 {
    SCIP_RESULT result;
    int i;
+   int j;
+   int sepaprio;
+   int symprio;
    SCIP_Bool consadded;
    SCIP_Bool root;
+   SCIP_Bool usesepa;
 
    assert(set != NULL);
    assert(lp != NULL);
@@ -1893,24 +1897,68 @@ SCIP_RETCODE separationRoundLP(
    /* sort separators by priority */
    SCIPsetSortSepas(set);
 
+   /* sort symmetry handlers by priority */
+   SCIPsetSortSymhdlrsSepa(set);
+
    /* call LP separators with nonnegative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
-           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-        ++i )
+   i = 0;
+   j = 0;
+   while( (i < set->nsepas || j < set->nsymhdlrs)
+           && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
    {
 #ifndef NDEBUG
       size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
 #endif
+      if( i < set->nsepas )
+         sepaprio = SCIPsepaGetPriority(set->sepas[i]);
+      else
+         sepaprio = -1;
 
-      if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
-         continue;
+      if( j < set->nsymhdlrs )
+         symprio = SCIPsymhdlrSepaGetPriority(set->symhdlrs_sepa[j]);
+      else
+         symprio = -1;
 
-      if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
-         continue;
+      if( sepaprio >= symprio )
+      {
+         /* terminate while-loop: no separator with nonnegative priority left */
+         if( sepaprio < 0 )
+            break;
 
-      SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
-         SCIPsepaGetName(set->sepas[i]), SCIPsepaGetPriority(set->sepas[i]));
-      SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, allowlocal, onlydelayed, &result) );
+         /* check whether only delayed separators shall be executed */
+         if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
+         {
+            ++i;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
+            SCIPsepaGetName(set->sepas[i]), sepaprio);
+         SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, allowlocal,
+               onlydelayed, &result) );
+         usesepa = TRUE;
+      }
+      else
+      {
+         /* terminate while-loop: no separator with nonnegative priority left */
+         if( symprio < 0 )
+            break;
+
+         /* check whether only delayed separators shall be executed */
+         if( onlydelayed && !SCIPsymhdlrSepaWasLPDelayed(set->symhdlrs_sepa[j]) )
+         {
+            ++j;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator of symmetry handler <%s> with priority %d\n",
+            SCIPsymhdlrGetName(set->symhdlrs_sepa[j]), symprio);
+         SCIP_CALL( SCIPsymhdlrSepaLP(set->symhdlrs_sepa[j], set, stat, sepastore, actdepth, bounddist, allowlocal,
+               onlydelayed, &result) );
+         usesepa = FALSE;
+      }
+
 #ifndef NDEBUG
       if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
       {
@@ -1939,16 +1987,28 @@ SCIP_RETCODE separationRoundLP(
       }
       else
       {
-         SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         if( usesepa )
+            SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         else
+            SCIPsetDebugMsg(set, " -> symmetry handler <%s> detected cutoff\n", SCIPsymhdlrGetName(set->symhdlrs_sepa[j]));
       }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
       if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
       {
-         SCIPsetDebugMsg(set, " -> delayed separator <%s> found a cut\n", SCIPsepaGetName(set->sepas[i]));
+         if( usesepa )
+            SCIPsetDebugMsg(set, " -> delayed separator <%s> found a cut\n", SCIPsepaGetName(set->sepas[i]));
+         else
+            SCIPsetDebugMsg(set, " -> delayed symmetry handler <%s> found a cut\n",
+               SCIPsymhdlrGetName(set->symhdlrs_sepa[j]));
          *delayed = TRUE;
          return SCIP_OKAY;
       }
+
+      if( usesepa )
+         ++i;
+      else
+         ++j;
    }
 
    /* try separating constraints of the constraint handlers */
@@ -1984,9 +2044,7 @@ SCIP_RETCODE separationRoundLP(
          SCIP_CALL( separationRoundResolveLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, primal, tree, lp, lperror, mustsepa, mustprice) );
       }
       else
-      {
          SCIPsetDebugMsg(set, " -> constraint handler <%s> detected cutoff in separation\n", SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
-      }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
       if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
@@ -1998,20 +2056,61 @@ SCIP_RETCODE separationRoundLP(
       }
    }
 
-   /* call LP separators with negative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
-           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-        ++i )
+   /*
+    * call LP separators with negative priority
+    */
+
+   /* find separators with negative priority */
+   i = 0;
+   while( i < set->nsepas && SCIPsepaGetPriority(set->sepas[i]) >= 0 )
+      ++i;
+   j = 0;
+   while( j < set->nsymhdlrs && SCIPsymhdlrSepaGetPriority(set->symhdlrs_sepa[j]) >= 0 )
+      ++j;
+
+   /* execute separators with negative priority */
+   while( (i < set->nsepas || j < set->nsymhdlrs) && !(*cutoff) && !(*lperror)
+           && !(*enoughcuts) && lp->flushed && lp->solved
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
    {
-      if( SCIPsepaGetPriority(set->sepas[i]) >= 0 )
-         continue;
+      if( i < set->nsepas )
+         sepaprio = SCIPsepaGetPriority(set->sepas[i]);
+      else
+         sepaprio = -INT_MAX;
 
-      if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
-         continue;
+      if( j < set->nsymhdlrs )
+         symprio = SCIPsymhdlrSepaGetPriority(set->symhdlrs_sepa[j]);
+      else
+         symprio = -INT_MAX;
 
-      SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
-         SCIPsepaGetName(set->sepas[i]), SCIPsepaGetPriority(set->sepas[i]));
-      SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, allowlocal, onlydelayed, &result) );
+      if( sepaprio >= symprio )
+      {
+         if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
+         {
+            ++i;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
+            SCIPsepaGetName(set->sepas[i]), sepaprio);
+         SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, allowlocal,
+               onlydelayed, &result) );
+         usesepa = TRUE;
+      }
+      else
+      {
+         if( onlydelayed && !SCIPsymhdlrSepaWasLPDelayed(set->symhdlrs_sepa[j]) )
+         {
+            ++j;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator of symmetry handler <%s> with priority %d\n",
+            SCIPsymhdlrGetName(set->symhdlrs_sepa[j]), symprio);
+         SCIP_CALL( SCIPsymhdlrSepaLP(set->symhdlrs_sepa[j], set, stat, sepastore, actdepth, bounddist, allowlocal,
+               onlydelayed, &result) );
+         usesepa = FALSE;
+      }
 
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
@@ -2034,16 +2133,27 @@ SCIP_RETCODE separationRoundLP(
       }
       else
       {
-         SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         if( usesepa )
+            SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         else
+            SCIPsetDebugMsg(set, " -> symmetry handler <%s> detected cutoff\n", SCIPsymhdlrGetName(set->symhdlrs_sepa[j]));
       }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
       if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
       {
-         SCIPsetDebugMsg(set, " -> delayed separator <%s> found a cut\n", SCIPsepaGetName(set->sepas[i]));
+         if( usesepa )
+            SCIPsetDebugMsg(set, " -> delayed separator <%s> found a cut\n", SCIPsepaGetName(set->sepas[i]));
+         else
+            SCIPsetDebugMsg(set, " -> delayed symmetry handler <%s> found a cut\n", SCIPsymhdlrGetName(set->symhdlrs_sepa[j]));
          *delayed = TRUE;
          return SCIP_OKAY;
       }
+
+      if( usesepa )
+         ++i;
+      else
+         ++j;
    }
 
    /* process the constraints that were added during this separation round */
@@ -2081,9 +2191,7 @@ SCIP_RETCODE separationRoundLP(
             SCIP_CALL( separationRoundResolveLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, primal, tree, lp, lperror, mustsepa, mustprice) );
          }
          else
-         {
             SCIPsetDebugMsg(set, " -> constraint handler <%s> detected cutoff in separation\n", SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
-         }
       }
    }
 
@@ -2110,7 +2218,11 @@ SCIP_RETCODE separationRoundSol(
    )
 {
    SCIP_RESULT result;
+   int sepaprio;
+   int symprio;
    int i;
+   int j;
+   SCIP_Bool usesepa;
    SCIP_Bool consadded;
    SCIP_Bool root;
 
@@ -2130,16 +2242,64 @@ SCIP_RETCODE separationRoundSol(
    /* sort separators by priority */
    SCIPsetSortSepas(set);
 
+   /* sort symmetry handlers by priority */
+   SCIPsetSortSymhdlrsSepa(set);
+
    /* call separators with nonnegative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
+   i = 0;
+   j = 0;
+   while( (i < set->nsepas || j < set->nsymhdlrs) && !(*cutoff) && !(*enoughcuts)
+      && !SCIPsolveIsStopped(set, stat, FALSE) )
    {
-      if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
-         continue;
+      if( i < set->nsepas )
+         sepaprio = SCIPsepaGetPriority(set->sepas[i]);
+      else
+         sepaprio = -1;
 
-      if( onlydelayed && !SCIPsepaWasSolDelayed(set->sepas[i]) )
-         continue;
+      if( j < set->nsymhdlrs )
+         symprio = SCIPsymhdlrSepaGetPriority(set->symhdlrs_sepa[j]);
+      else
+         symprio = -1;
 
-      SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, allowlocal, onlydelayed, &result) );
+      if( sepaprio >= symprio )
+      {
+         /* terminate while-loop: no separator with nonnegative priority left */
+         if( sepaprio < 0 )
+            break;
+
+         /* check whether only delayed separators shall be executed */
+         if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
+         {
+            ++i;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
+            SCIPsepaGetName(set->sepas[i]), sepaprio);
+         SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, allowlocal,
+               onlydelayed, &result) );
+         usesepa = TRUE;
+      }
+      else
+      {
+         /* terminate while-loop: no separator with nonnegative priority left */
+         if( symprio < 0 )
+            break;
+
+         /* check whether only delayed separators shall be executed */
+         if( onlydelayed && !SCIPsymhdlrSepaWasLPDelayed(set->symhdlrs_sepa[j]) )
+         {
+            ++j;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator of symmetry handler <%s> with priority %d\n",
+            SCIPsymhdlrGetName(set->symhdlrs_sepa[j]), symprio);
+         SCIP_CALL( SCIPsymhdlrSepaSol(set->symhdlrs_sepa[j], set, stat, sepastore, sol, actdepth, allowlocal,
+               onlydelayed, &result) );
+         usesepa = FALSE;
+      }
+
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
       if( SCIPsetIsZero(set, SCIPsetGetSepaMaxcutsGenFactor(set, root) * SCIPsetGetSepaMaxcuts(set, root)) )
@@ -2149,13 +2309,16 @@ SCIP_RETCODE separationRoundSol(
       else
       {
          *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= (SCIP_Longint)SCIPsetCeil(set,
-                  SCIPsetGetSepaMaxcutsGenFactor(set, root) * SCIPsetGetSepaMaxcuts(set, root)))
+               SCIPsetGetSepaMaxcutsGenFactor(set, root) * SCIPsetGetSepaMaxcuts(set, root)))
             || (result == SCIP_NEWROUND);
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
-         SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         if( usesepa )
+            SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         else
+            SCIPsetDebugMsg(set, " -> symmetry handler <%s> detected cutoff\n", SCIPsymhdlrGetName(set->symhdlrs_sepa[j]));
       }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
@@ -2164,6 +2327,11 @@ SCIP_RETCODE separationRoundSol(
          *delayed = TRUE;
          return SCIP_OKAY;
       }
+
+      if( usesepa )
+         ++i;
+      else
+         ++j;
    }
 
    /* try separating constraints of the constraint handlers */
@@ -2201,16 +2369,61 @@ SCIP_RETCODE separationRoundSol(
       }
    }
 
+   /*
+    * call separators with negative priority
+    */
+
+   /* find separators with negative priority */
+   i = 0;
+   while( i < set->nsepas && SCIPsepaGetPriority(set->sepas[i]) >= 0 )
+      ++i;
+   j = 0;
+   while( j < set->nsymhdlrs && SCIPsymhdlrSepaGetPriority(set->symhdlrs_sepa[j]) >= 0 )
+      ++j;
+
    /* call separators with negative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
+   while( (i < set->nsepas || j < set->nsymhdlrs) && !(*cutoff) && !(*enoughcuts)
+           && !SCIPsolveIsStopped(set, stat, FALSE) )
    {
-      if( SCIPsepaGetPriority(set->sepas[i]) >= 0 )
-         continue;
+      if( i < set->nsepas )
+         sepaprio = SCIPsepaGetPriority(set->sepas[i]);
+      else
+         sepaprio = -INT_MAX;
 
-      if( onlydelayed && !SCIPsepaWasSolDelayed(set->sepas[i]) )
-         continue;
+      if( j < set->nsymhdlrs )
+         symprio = SCIPsymhdlrSepaGetPriority(set->symhdlrs_sepa[j]);
+      else
+         symprio = -INT_MAX;
 
-      SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, allowlocal, onlydelayed, &result) );
+      if( sepaprio >= symprio )
+      {
+         if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
+         {
+            ++i;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
+            SCIPsepaGetName(set->sepas[i]), sepaprio);
+         SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, allowlocal,
+               onlydelayed, &result) );
+         usesepa = TRUE;
+      }
+      else
+      {
+         if( onlydelayed && !SCIPsymhdlrSepaWasLPDelayed(set->symhdlrs_sepa[j]) )
+         {
+            ++j;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator of symmetry handler <%s> with priority %d\n",
+            SCIPsymhdlrGetName(set->symhdlrs_sepa[j]), symprio);
+         SCIP_CALL( SCIPsymhdlrSepaSol(set->symhdlrs_sepa[j], set, stat, sepastore, sol, actdepth, allowlocal,
+               onlydelayed, &result) );
+         usesepa = FALSE;
+      }
+
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
       if( SCIPsetIsZero(set, SCIPsetGetSepaMaxcutsGenFactor(set, root) * SCIPsetGetSepaMaxcuts(set, root)) )
@@ -2226,7 +2439,10 @@ SCIP_RETCODE separationRoundSol(
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
-         SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         if( usesepa )
+            SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         else
+            SCIPsetDebugMsg(set, " -> symmetry handler <%s> detected cutoff\n", SCIPsymhdlrGetName(set->symhdlrs_sepa[j]));
       }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
@@ -2235,6 +2451,11 @@ SCIP_RETCODE separationRoundSol(
          *delayed = TRUE;
          return SCIP_OKAY;
       }
+
+      if( usesepa )
+         ++i;
+      else
+         ++j;
    }
 
    /* process the constraints that were added during this separation round */
