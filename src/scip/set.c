@@ -5298,8 +5298,24 @@ void SCIPsetSortSymhdlrs(
    }
 }
 
+/** sorts symmetry handlers by propagation priorities */
+void SCIPsetSortSymhdlrsProp(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->symhdlrspropsorted )
+   {
+      SCIPsortPtr((void**)set->symhdlrs_prop, SCIPsymhdlrCompProp, set->nsymhdlrs);
+      set->symhdlrspropsorted = TRUE;
+   }
+}
+
 /** sorts symmetry handlers by presolving priorities */
 void SCIPsetSortSymhdlrsPresol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
 {
    assert(set != NULL);
    assert(set->symhdlrs_presol != NULL || set->nsymhdlrs == 0);
@@ -5313,7 +5329,6 @@ void SCIPsetSortSymhdlrsPresol(
 
 /** sorts symmetry handlers by separation priorities */
 void SCIPsetSortSymhdlrsSepa(
->>>>>>> 1838-make-symmetry-computation-move-to-the-core
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {

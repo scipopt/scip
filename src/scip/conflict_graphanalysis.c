@@ -144,6 +144,7 @@
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_paramset.h"
 #include "scip/pub_prop.h"
+#include "scip/pub_sym.h"
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/scip_conflict.h"
@@ -159,8 +160,10 @@
 #include "scip/struct_prob.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
+#include "scip/struct_sym.h"
 #include "scip/struct_tree.h"
 #include "scip/struct_var.h"
+#include "scip/sym.h"
 #include "scip/tree.h"
 #include "scip/var.h"
 #include "scip/visual.h"
@@ -3169,6 +3172,7 @@ SCIP_RETCODE conflictResolveBound(
    SCIP_VAR* actvar;
    SCIP_CONS* infercons;
    SCIP_PROP* inferprop;
+   SCIP_SYMCOMP* infersymcomp;
    SCIP_RESULT result;
 
 #ifndef NDEBUG
@@ -3338,6 +3342,41 @@ SCIP_RETCODE conflictResolveBound(
             SCIPpropGetName(inferprop), inferinfo);
 
          SCIP_CALL( SCIPpropResolvePropagation(inferprop, set, infervar, inferinfo, inferboundtype, bdchgidx, relaxedbd, &result) );
+         *resolved = (result == SCIP_SUCCESS);
+      }
+      break;
+
+   case SCIP_BOUNDCHGTYPE_SYMINFER:
+      infersymcomp = SCIPbdchginfoGetInferSymcomp(bdchginfo);
+      if( infersymcomp != NULL )
+      {
+         SCIP_VAR* infervar;
+         int inferinfo;
+         SCIP_BOUNDTYPE inferboundtype;
+         SCIP_BDCHGIDX* bdchgidx;
+
+         /* resolve bound change by asking the symmetry handler that inferred the bound to put all bounds that were
+          * the reasons for the conflicting bound change in the priority queue
+          */
+         infervar = SCIPbdchginfoGetInferVar(bdchginfo);
+         inferinfo = SCIPbdchginfoGetInferInfo(bdchginfo);
+         inferboundtype = SCIPbdchginfoGetInferBoundtype(bdchginfo);
+         bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
+         assert(infervar != NULL);
+         assert(infersymcomp->symhdlr != NULL);
+
+         SCIPsetDebugMsg(set, "resolving bound <%s> %s %g(%g) [status:%d, depth:%d, pos:%d]: <%s> %s %g [symhdlr:<%s>, info:%d]\n",
+            SCIPvarGetName(actvar),
+            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(bdchginfo), relaxedbd,
+            SCIPvarGetStatus(actvar), SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
+            SCIPvarGetName(infervar),
+            inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPgetVarBdAtIndex(set->scip, infervar, inferboundtype, bdchgidx, TRUE),
+            SCIPsymhdlrGetName(infersymcomp->symhdlr), inferinfo);
+
+         SCIP_CALL( SCIPsymhdlrResolvePropagation(infersymcomp, set, infervar, inferinfo, inferboundtype,
+               bdchgidx, relaxedbd, &result) );
          *resolved = (result == SCIP_SUCCESS);
       }
       break;

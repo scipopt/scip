@@ -7033,7 +7033,8 @@ SCIP_RETCODE SCIPinferVarLbCons(
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, infercons, NULL, inferinfo, FALSE) );
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, infercons, NULL, NULL,
+            inferinfo, FALSE) );
       break;
 
    default:
@@ -7138,7 +7139,8 @@ SCIP_RETCODE SCIPinferVarUbCons(
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, infercons, NULL, inferinfo, FALSE) );
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, infercons, NULL, NULL,
+            inferinfo, FALSE) );
       break;
 
    default:
@@ -7262,7 +7264,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
       SCIP_CALL( SCIPnodeAddBoundinferExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set,
             scip->stat, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
             scip->eventqueue, scip->eventfilter, scip->cliquetable, var, adjustedBound, SCIP_BOUNDTYPE_UPPER,
-            infercons, NULL, inferinfo, FALSE) );
+            infercons, NULL, NULL, inferinfo, FALSE) );
       break;
 
    default:
@@ -7384,7 +7386,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
       SCIP_CALL( SCIPnodeAddBoundinferExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set,
             scip->stat, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand,
             scip->eventqueue, scip->eventfilter, scip->cliquetable, var, adjustedBound, SCIP_BOUNDTYPE_LOWER,
-            infercons, NULL, inferinfo, FALSE) );
+            infercons, NULL, NULL, inferinfo, FALSE) );
       break;
 
    default:
@@ -7478,13 +7480,15 @@ SCIP_RETCODE SCIPinferBinvarCons(
       {
          SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
                scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-               scip->eventfilter, scip->cliquetable, var, 1.0, SCIP_BOUNDTYPE_LOWER, infercons, NULL, inferinfo, FALSE) );
+               scip->eventfilter, scip->cliquetable, var, 1.0, SCIP_BOUNDTYPE_LOWER, infercons, NULL, NULL,
+               inferinfo, FALSE) );
       }
       else
       {
          SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
                scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-               scip->eventfilter, scip->cliquetable, var, 0.0, SCIP_BOUNDTYPE_UPPER, infercons, NULL, inferinfo, FALSE) );
+               scip->eventfilter, scip->cliquetable, var, 0.0, SCIP_BOUNDTYPE_UPPER, infercons, NULL, NULL,
+               inferinfo, FALSE) );
       }
       break;
 
@@ -7663,7 +7667,8 @@ SCIP_RETCODE SCIPinferVarLbProp(
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL, inferprop, inferinfo, FALSE) );
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL, inferprop, NULL,
+            inferinfo, FALSE) );
       break;
 
    default:
@@ -7778,7 +7783,8 @@ SCIP_RETCODE SCIPinferVarUbProp(
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL, inferprop, inferinfo, FALSE) );
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL, inferprop, NULL,
+            inferinfo, FALSE) );
       break;
 
    default:
@@ -7875,13 +7881,396 @@ SCIP_RETCODE SCIPinferBinvarProp(
       {
          SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
                scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-               scip->eventfilter, scip->cliquetable, var, 1.0, SCIP_BOUNDTYPE_LOWER, NULL, inferprop, inferinfo, FALSE) );
+               scip->eventfilter, scip->cliquetable, var, 1.0, SCIP_BOUNDTYPE_LOWER, NULL, inferprop, NULL,
+               inferinfo, FALSE) );
       }
       else
       {
          SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
                scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
-               scip->eventfilter, scip->cliquetable, var, 0.0, SCIP_BOUNDTYPE_UPPER, NULL, inferprop, inferinfo, FALSE) );
+               scip->eventfilter, scip->cliquetable, var, 0.0, SCIP_BOUNDTYPE_UPPER, NULL, inferprop, NULL,
+               inferinfo, FALSE) );
+      }
+      break;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+
+   if( tightened != NULL )
+      *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** fixes variable in preprocessing or in the current node, if the new bound is tighter (w.r.t. bound strengthening
+ *  epsilon) than the current bound; if possible, adjusts bound to integral value; the given inference symmetry component is
+ *  stored, such that the conflict analysis is able to find out the reason for the deduction of the bound change
+ *
+ *  @note In presolving stage when not in probing mode the variable will be fixed directly, otherwise this method
+ *        changes first the lowerbound by calling SCIPinferVarLbCons and second the upperbound by calling
+ *        SCIPinferVarUbCons
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets re-sorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_RETCODE SCIPinferVarFixSym(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             fixedval,           /**< new value for fixation */
+   SCIP_SYMCOMP*         infersymcomp,       /**< symmetry component that deduced the bound change */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(infeasible != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPinferVarFixSym", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   /* in presolving case we take the shortcut to directly fix the variables */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPtreeGetCurrentDepth(scip->tree) == 0 )
+   {
+      SCIP_Bool fixed;
+
+      SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+            scip->eventfilter, scip->cliquetable, fixedval, infeasible, &fixed) );
+
+      if( tightened != NULL )
+         *tightened = fixed;
+   }
+   /* otherwise we use the lb and ub methods */
+   else
+   {
+      SCIP_Bool lbtightened;
+
+      SCIP_CALL( SCIPinferVarLbSym(scip, var, fixedval, infersymcomp, inferinfo, force, infeasible, &lbtightened) );
+
+      if( ! (*infeasible) )
+      {
+         SCIP_CALL( SCIPinferVarUbSym(scip, var, fixedval, infersymcomp, inferinfo, force, infeasible, tightened) );
+
+         if( tightened != NULL )
+            *tightened |= lbtightened;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  the given inference symmetry component is stored, such that the conflict analysis is able to find out the reason
+ *  for the deduction of the bound change
+ *
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
+ *           SCIPgetVars()) gets re-sorted.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_RETCODE SCIPinferVarLbSym(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_SYMCOMP*         infersymcomp,       /**< symmetry component that deduced the bound change, or NULL */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   SCIP_Real lb;
+   SCIP_Real ub;
+
+   assert(infeasible != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPinferVarLbSym", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   SCIPvarAdjustLb(var, scip->set, &newbound);
+
+   /* get current bounds */
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   assert(SCIPsetIsLE(scip->set, lb, ub));
+
+   if( SCIPisInfinity(scip, newbound) || SCIPisFeasGT(scip, newbound, ub) || (scip->set->exact_enable && ub < newbound) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
+   newbound = MIN(newbound, ub);
+
+   if( (force && SCIPsetIsLE(scip->set, newbound, lb)) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
+      return SCIP_OKAY;
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
+      SCIP_CALL( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      SCIP_CALL( SCIPvarChgLbOriginal(var, scip->set, newbound) );
+      break;
+
+   case SCIP_STAGE_PRESOLVING:
+      if( !SCIPinProbing(scip) )
+      {
+         assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
+         assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
+
+         SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+
+         if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
+         {
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, infeasible) );
+            assert(!(*infeasible));
+         }
+         break;
+      }
+      /*lint -fallthrough*/
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
+            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL, NULL, infersymcomp,
+            inferinfo, FALSE) );
+      break;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+
+   /* check whether the lower bound improved */
+   if( tightened != NULL && lb < SCIPcomputeVarLbLocal(scip, var) )
+      *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** changes upper bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  the given inference symmetry component is stored, such that the conflict analysis is able to find out the reason
+ *  for the deduction of the bound change
+ *
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
+ *           SCIPgetVars()) gets re-sorted.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_RETCODE SCIPinferVarUbSym(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_SYMCOMP*         infersymcomp,       /**< symmetry component that deduced the bound change */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   SCIP_Real lb;
+   SCIP_Real ub;
+
+   assert(infeasible != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPinferVarUbSym", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* get current bounds */
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   assert(SCIPsetIsLE(scip->set, lb, ub));
+
+   if( SCIPisInfinity(scip, -newbound) || SCIPisFeasLT(scip, newbound, lb) || (scip->set->exact_enable && lb > newbound) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
+   newbound = MAX(newbound, lb);
+
+   if( (force && SCIPsetIsGE(scip->set, newbound, ub)) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
+      return SCIP_OKAY;
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
+      SCIP_CALL( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      SCIP_CALL( SCIPvarChgUbOriginal(var, scip->set, newbound) );
+      break;
+
+   case SCIP_STAGE_PRESOLVING:
+      if( !SCIPinProbing(scip) )
+      {
+         assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
+         assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
+
+         SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+               scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+
+         if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
+         {
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, infeasible) );
+            assert(!(*infeasible));
+         }
+         break;
+      }
+      /*lint -fallthrough*/
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
+            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+            scip->eventfilter, scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL, NULL, infersymcomp,
+            inferinfo, FALSE) );
+      break;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+
+   /* check whether the upper bound improved */
+   if( tightened != NULL && ub > SCIPcomputeVarUbLocal(scip, var) )
+      *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** depending on SCIP's stage, fixes binary variable in the problem, in preprocessing, or in current node;
+ *  the given inference symmetry component is stored, such that the conflict analysis is able to find out the reason
+ *  for the deduction of the fixing
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPinferBinvarSym(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< binary variable to fix */
+   SCIP_Bool             fixedval,           /**< value to fix binary variable to */
+   SCIP_SYMCOMP*         infersymcomp,       /**< symmetry component that deduced the fixing */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the fixing tightened the local bounds, or NULL */
+   )
+{
+   SCIP_Real lb;
+   SCIP_Real ub;
+
+   assert(SCIPvarIsBinary(var));
+   assert(fixedval == TRUE || fixedval == FALSE);
+   assert(infeasible != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPinferBinvarSym", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   /* get current bounds */
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   assert(SCIPsetIsEQ(scip->set, lb, 0.0) || SCIPsetIsEQ(scip->set, lb, 1.0));
+   assert(SCIPsetIsEQ(scip->set, ub, 0.0) || SCIPsetIsEQ(scip->set, ub, 1.0));
+   assert(SCIPsetIsLE(scip->set, lb, ub));
+
+   /* check, if variable is already fixed */
+   if( (lb > 0.5) || (ub < 0.5) )
+   {
+      *infeasible = (fixedval == (lb < 0.5));
+
+      return SCIP_OKAY;
+   }
+
+   /* apply the fixing */
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      if( fixedval == TRUE )
+      {
+         SCIP_CALL( SCIPchgVarLb(scip, var, 1.0) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgVarUb(scip, var, 0.0) );
+      }
+      break;
+
+   case SCIP_STAGE_PRESOLVING:
+      if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
+      {
+         SCIP_Bool fixed;
+
+         SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+               scip->cliquetable, (SCIP_Real)fixedval, infeasible, &fixed) );
+         break;
+      }
+      /*lint -fallthrough*/
+   case SCIP_STAGE_SOLVING:
+      if( fixedval == TRUE )
+      {
+         SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, 1.0, SCIP_BOUNDTYPE_LOWER, NULL, NULL, infersymcomp,
+               inferinfo, FALSE) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
+               scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+               scip->eventfilter, scip->cliquetable, var, 0.0, SCIP_BOUNDTYPE_UPPER, NULL, NULL, infersymcomp,
+               inferinfo, FALSE) );
       }
       break;
 

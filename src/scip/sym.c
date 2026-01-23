@@ -31,8 +31,15 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/clock.h"
+#include "scip/pub_cutpool.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cut.h"
+#include "scip/scip_var.h"
 #include "scip/sepastore.h"
 #include "scip/set.h"
+#include "scip/struct_cutpool.h"
 #include "scip/struct_stat.h"
 #include "scip/struct_sym.h"
 #include "scip/sym.h"
@@ -70,6 +77,7 @@ SCIP_RETCODE doSymhdlrCreate(
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
    SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
+   SCIP_DECL_SYMHDLRRESPROP((*symresprop)),  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    )
@@ -112,16 +120,20 @@ SCIP_RETCODE doSymhdlrCreate(
    (*symhdlr)->symsepasol = symsepasol;
    (*symhdlr)->symprop = symprop;
    (*symhdlr)->sympresol = sympresol;
+   (*symhdlr)->symresprop = symresprop;
    (*symhdlr)->symhdlrdata = symhdlrdata;
 
    SCIP_CALL( SCIPclockCreate(&(*symhdlr)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*symhdlr)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*symhdlr)->sepatime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*symhdlr)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*symhdlr)->sbproptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*symhdlr)->resproptime, SCIP_CLOCKTYPE_DEFAULT) );
 
    (*symhdlr)->initialized = FALSE;
    (*symhdlr)->nsepacalls = 0;
    (*symhdlr)->npropcalls = 0;
+   (*symhdlr)->nrespropcalls = 0;
    (*symhdlr)->ncutoffs = 0;
    (*symhdlr)->ncutsfound = 0;
    (*symhdlr)->ncutsapplied = 0;
@@ -253,6 +265,7 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
    SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
+   SCIP_DECL_SYMHDLRRESPROP((*symresprop)),  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    )
@@ -266,7 +279,7 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_CALL_FINALLY( doSymhdlrCreate(symhdlr, set, messagehdlr, blkmem, name, desc, priority, proppriority,
          sepapriority, presolpriority, propfreq, sepafreq, delayprop, delaysepa, maxbounddist, maxprerounds, proptiming,
          presoltiming, symtryadd, symcopy, symfree, syminit, symexit, symdelete, symtrans, symsepalp, symsepasol,
-         symprop, sympresol, symhdlrdata),
+         symprop, symresprop, sympresol, symhdlrdata),
          (void) SCIPsymhdlrFree(symhdlr, set) );
 
    return SCIP_OKAY;
@@ -309,6 +322,8 @@ SCIP_RETCODE SCIPsymhdlrFree(
       SCIP_CALL( (*symhdlr)->symfree(set->scip, *symhdlr) );
    }
 
+   SCIPclockFree(&(*symhdlr)->resproptime);
+   SCIPclockFree(&(*symhdlr)->sbproptime);
    SCIPclockFree(&(*symhdlr)->proptime);
    SCIPclockFree(&(*symhdlr)->sepatime);
    SCIPclockFree(&(*symhdlr)->presoltime);
@@ -583,6 +598,97 @@ SCIP_RETCODE SCIPsymhdlrPresol(
    return SCIP_OKAY;
 }
 
+/** calls propagation method of symmetry handler */
+SCIP_RETCODE SCIPsymhdlrProp(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   int                   depth,              /**< depth of current node */
+   SCIP_Bool             execdelayed,        /**< execute propagator even if it is marked to be delayed */
+   SCIP_Bool             instrongbranching,  /**< are we currently doing strong branching? */
+   SCIP_PROPTIMING       proptiming,         /**< current point in the node solving process */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(symhdlr != NULL);
+   assert(symhdlr->symprop != NULL);
+   assert(symhdlr->propfreq >= -1);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+   assert(stat != NULL);
+   assert(depth >= 0);
+   assert(result != NULL);
+
+   /* @symtodo how to handle exact SCIP */
+   if( ((depth == 0 && symhdlr->propfreq == 0) || (symhdlr->propfreq > 0 && depth % symhdlr->propfreq == 0))
+         && !set->exact_enable )
+   {
+      if( !symhdlr->delayprop || execdelayed )
+      {
+         SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
+
+         SCIPsetDebugMsg(set, "executing propagator of symmetry handler <%s>\n", symhdlr->name);
+
+         oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
+
+         /* start timing */
+         /* @symtodo ensure that symmetry handlers can disable themselves when they are in strong branching */
+         if( instrongbranching )
+            SCIPclockStart(symhdlr->sbproptime, set);
+         else
+            SCIPclockStart(symhdlr->proptime, set);
+
+         /* call external propagation method */
+         SCIP_CALL( symhdlr->symprop(set->scip, symhdlr, symhdlr->symcomps, symhdlr->nsymcomps,
+               proptiming, result) );
+
+         /* stop timing */
+         if( instrongbranching )
+            SCIPclockStop(symhdlr->sbproptime, set);
+         else
+            SCIPclockStop(symhdlr->proptime, set);
+
+         /* update statistics */
+         if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+            symhdlr->npropcalls++;
+         if( *result == SCIP_CUTOFF )
+            symhdlr->ncutoffs++;
+
+         /* update domain reductions; therefore remove the domain
+          * reduction counts which were generated in probing mode */
+         symhdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+         symhdlr->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
+
+         /* evaluate result */
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_DIDNOTFIND
+            && *result != SCIP_DIDNOTRUN
+            && *result != SCIP_DELAYED
+            && *result != SCIP_DELAYNODE )
+         {
+            SCIPerrorMessage("propagation method of symmetry handler <%s> returned invalid result <%d>\n",
+               symhdlr->name, *result);
+            return SCIP_INVALIDRESULT;
+         }
+      }
+      else
+      {
+         SCIPsetDebugMsg(set, "propagator of symmetry handler <%s> was delayed\n", symhdlr->name);
+         *result = SCIP_DELAYED;
+      }
+
+      /* remember whether propagator was delayed */
+      symhdlr->propwasdelayed = (*result == SCIP_DELAYED);
+   }
+   else
+      *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
+
 /** calls LP separation method of symmetry handler's separator */
 SCIP_RETCODE SCIPsymhdlrSepaLP(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
@@ -699,6 +805,68 @@ SCIP_RETCODE SCIPsymhdlrSepaLP(
    }
    else
       *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
+
+/** resolves the given conflicting bound, that was deduced by the given propagator, by putting all "reason" bounds
+ *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar();
+ *
+ *  @note it is sufficient to explain the relaxed bound change
+ */
+SCIP_RETCODE SCIPsymhdlrResolvePropagation(
+   SCIP_SYMCOMP*         symcomp,            /**< symmetry component responsible for propagation */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             infervar,           /**< variable whose bound was deduced by the constraint */
+   int                   inferinfo,          /**< user inference information attached to the bound change */
+   SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   SCIP_SYMHDLR* symhdlr;
+
+   assert(symcomp != NULL);
+   assert((inferboundtype == SCIP_BOUNDTYPE_LOWER
+         && SCIPgetVarLbAtIndex(set->scip, infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
+      || (inferboundtype == SCIP_BOUNDTYPE_UPPER
+         && SCIPgetVarUbAtIndex(set->scip, infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   symhdlr = symcomp->symhdlr;
+   assert(symhdlr != NULL);
+
+   if( symhdlr->symresprop != NULL )
+   {
+      /* start timing */
+      SCIPclockStart(symhdlr->resproptime, set);
+
+      SCIP_CALL( symhdlr->symresprop(set->scip, symhdlr, symcomp, infervar, inferinfo, inferboundtype, bdchgidx,
+            relaxedbd, result) );
+
+      /* stop timing */
+      SCIPclockStop(symhdlr->resproptime, set);
+
+      /* update statistic */
+      symhdlr->nrespropcalls++;
+
+      /* check result code */
+      if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND )
+      {
+         SCIPerrorMessage("propagation conflict resolving method of symmetry handler <%s> returned invalid result <%d>\n",
+            symhdlr->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+   else
+   {
+      SCIPerrorMessage("propagation conflict resolving method of symmetry handler <%s> is not implemented\n", symhdlr->name);
+      return SCIP_PLUGINNOTFOUND;
+   }
 
    return SCIP_OKAY;
 }
@@ -900,6 +1068,16 @@ SCIP_SYMHDLRDATA* SCIPsymhdlrGetData(
    return symhdlr->symhdlrdata;
 }
 
+/** returns the timing mask of the symmetry handler's propagator */
+SCIP_PROPTIMING SCIPsymhdlrPropGetTimingmask(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->proptiming;
+}
+
 /** gets priority of symmetry handler's separator */
 int SCIPsymhdlrSepaGetPriority(
    SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
@@ -910,6 +1088,16 @@ int SCIPsymhdlrSepaGetPriority(
    return symhdlr->sepapriority;
 }
 
+/** gets priority of symmetry handler's propagator */
+int SCIPsymhdlrPropGetPriority(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->proppriority;
+}
+
 /** was symmetry handler's separator delayed at the last call? */
 SCIP_Bool SCIPsymhdlrSepaWasLPDelayed(
    SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
@@ -918,6 +1106,16 @@ SCIP_Bool SCIPsymhdlrSepaWasLPDelayed(
    assert(symhdlr != NULL);
 
    return symhdlr->sepalpwasdelayed;
+}
+
+/** was symmetry handler's propagator delayed at the last call? */
+SCIP_Bool SCIPsymhdlrPropWasDelayed(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->propwasdelayed;
 }
 
 /** compares two symmetry handlers w. r. to their try-add priority */

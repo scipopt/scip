@@ -30,16 +30,24 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/cons_symresack.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "scip/pub_sym.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_prob.h"
 #include "scip/scip_sym.h"
 #include "scip/sym_symresack.h"
 
 /* symmetry handler properties */
 #define SYM_NAME            "sym_symresack"
 #define SYM_DESC            "symmetry handler for symresack constraint"
+#define SYM_PROPPRIORITY       -1000000          /**< propagator priority */
+#define SYM_PROPFREQ                 1           /**< propagator frequency */
 #define SYM_PRIORITY          -1000000           /**< priority of try-add function*/
-#define SYM_PRESOL_PRIORITY   -1000000           /**< priority of presolving method */
-#define SYM_FREQ                     1           /**< propagator frequency */
+#define SYM_PRESOLPRIORITY    -1000000           /**< priority of presolving method */
 
 
 /** symmetry component data */
@@ -123,7 +131,7 @@ SCIP_DECL_SYMHDLREXIT(symhdlrExitSymresack)
 
 /** presolving method of symmetry handler */
 static
-SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSymreack)
+SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSymresack)
 {  /*lint --e{715}*/
    SCIP_SYMCOMPDATA* symdata;
    int s;
@@ -159,6 +167,16 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSymreack)
    return SCIP_OKAY;
 }
 
+/** domain propagation method of symmetry handler */
+static
+SCIP_DECL_SYMHDLRPROP(symhdlrPropSymresack)
+{  /*lint --e{715}*/
+   assert(result != NULL);
+   *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
+
 /** LP solution separation method of symmetry handler */
 static
 SCIP_DECL_SYMHDLRSEPALP(symhdlrSepaLPSymresack)
@@ -189,9 +207,11 @@ SCIP_RETCODE SCIPincludeSymhdlrSymresack(
    assert(scip != NULL);
 
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC,
-         1, 1, 1, 1, -1, 1, FALSE, FALSE, 1.0, -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
+         SYM_PRIORITY, SYM_PROPPRIORITY, 1, SYM_PRESOLPRIORITY, SYM_PROPFREQ, 1, FALSE, FALSE, 1.0,
+         -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddSymresack, NULL, symhdlrFreeSymresack, NULL, symhdlrExitSymresack,
-         NULL, NULL, NULL, NULL, symhdlrSepaLPSymresack, symhdlrSepaSolSymresack, NULL, symhdlrPresolSymreack, symhdlrdata) );
+         NULL, NULL, NULL, NULL, symhdlrSepaLPSymresack, symhdlrSepaSolSymresack, symhdlrPropSymresack,
+         NULL, symhdlrPresolSymresack, symhdlrdata) );
 
    return SCIP_OKAY;
 }

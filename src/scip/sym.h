@@ -75,6 +75,7 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
    SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
+   SCIP_DECL_SYMHDLRRESPROP((*symresprop)),  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    );
@@ -139,6 +140,35 @@ SCIP_RETCODE SCIPsymhdlrPresol(
    int*                  nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
    int*                  nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
    int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** calls propagation method of symmetry handler */
+SCIP_RETCODE SCIPsymhdlrProp(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   int                   depth,              /**< depth of current node */
+   SCIP_Bool             execdelayed,        /**< execute propagator even if it is marked to be delayed */
+   SCIP_Bool             instrongbranching,  /**< are we currently doing strong branching? */
+   SCIP_PROPTIMING       proptiming,         /**< current point in the node solving process */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** resolves the given conflicting bound, that was deduced by the given propagator, by putting all "reason" bounds
+ *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar();
+ *
+ *  @note it is sufficient to explain the relaxed bound change
+ */
+SCIP_RETCODE SCIPsymhdlrResolvePropagation(
+   SCIP_SYMCOMP*         symcomp,            /**< symmetry component */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             infervar,           /**< variable whose bound was deduced by the constraint */
+   int                   inferinfo,          /**< user inference information attached to the bound change */
+   SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
+   SCIP_Real             relaxedbd,          /**< the relaxed bound */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

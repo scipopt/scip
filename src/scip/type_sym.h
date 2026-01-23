@@ -246,6 +246,50 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
 #define SCIP_DECL_SYMHDLRPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP** symcomps, \
       int nsymcomps, SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
 
+/** propagation conflict resolving method of symmetry handler
+ *
+ *  This method is called during conflict analysis. If the propagator of a symmetry handler wants to support
+ *  conflict analysis, it should call SCIPinferVarLbSym() or SCIPinferVarUbSym() in domain propagation instead
+ *  of SCIPchgVarLb() or SCIPchgVarUb() in order to deduce bound changes on variables.
+ *  In the SCIPinferVarLbSym() and SCIPinferVarUbSym() calls, the symmetry handler provides a pointer to the
+ *  symmetry component that is handled by the symmetry handler and an integer value "inferinfo" that can be
+ *  arbitrarily chosen.
+ *  The propagation conflict resolving method can then be implemented, to provide a "reasons" for the bound
+ *  changes, i.e. the bounds of variables at the time of the propagation, that forced the symmetry handler to set the
+ *  conflict variable's bound to its current value. It can use the "inferinfo" tag to identify its own propagation
+ *  rule and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided
+ *  by calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(), SCIPaddConflictRelaxedLb(),
+ *  SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), and/or SCIPaddConflictBinvar() in the propagation conflict
+ *  resolving method.
+ *
+ *  See the description of the propagation conflict resolving method of constraint handlers for further details.
+ *
+ *  @note if the propagtor uses dual information it is nesassary to check via calling SCIPallowWeakDualReds and
+ *        SCIPallowStrongDualReds if dual reductions and propgation with the current cutoff bound, resp., are allowed.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - symhdlr         : the symmetry handler itself
+ *  - symcomp         : symmetry component that was responsible for the propagation
+ *  - infervar        : the conflict variable whose bound change has to be resolved
+ *  - inferinfo       : the user information passed to the corresponding SCIPinferVarLbProp() or SCIPinferVarUbProp() call
+ *  - boundtype       : the type of the changed bound (lower or upper bound)
+ *  - bdchgidx        : the index of the bound change, representing the point of time where the change took place
+ *  - relaxedbd       : the relaxed bound which is sufficient to be explained
+ *
+ *  output:
+ *  - result          : pointer to store the result of the propagation conflict resolving call
+ *
+ *  possible return values for *result:
+ *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason bounds
+ *  - SCIP_DIDNOTFIND : the conflicting bound change could not be resolved and has to be put into the conflict set
+ *
+ *  @note it is sufficient to explain/resolve the relaxed bound
+ */
+#define SCIP_DECL_SYMHDLRRESPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdr, SCIP_SYMCOMP* symcomp, \
+      SCIP_VAR* infervar, int inferinfo, SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_Real relaxedbd, \
+      SCIP_RESULT* result)
+
 /** presolving method of symmetry handler
  *
  *  The presolver should go through the variables and constraints and tighten the domains or

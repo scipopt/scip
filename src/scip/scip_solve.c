@@ -84,6 +84,7 @@
 #include "scip/scip_certificate.h"
 #include "scip/scip_concurrent.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"

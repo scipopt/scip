@@ -30,6 +30,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/pub_message.h"
 #include "scip/set.h"
 #include "scip/scip_sym.h"
 #include "scip/struct_mem.h"
@@ -76,6 +77,7 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
    SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
+   SCIP_DECL_SYMHDLRRESPROP((*symresprop)),  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    )
@@ -95,7 +97,7 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
          name, desc, priority, proppriority, sepapriority, presolpriority, propfreq, sepafreq,
          delayprop, delaysepa, maxbounddist, maxprerounds, proptiming, presoltiming,
          symtryadd, symcopy, symfree, syminit, symexit, syminitsol, symexitsol, symdelete, symtrans,
-         symsepalp, symsepasol, symprop, sympresol, symhdlrdata) );
+         symsepalp, symsepasol, symprop, symresprop, sympresol, symhdlrdata) );
    SCIP_CALL( SCIPsetIncludeSymhdlr(scip->set, symhdlr) );
 
    return SCIP_OKAY;
