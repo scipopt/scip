@@ -44,8 +44,8 @@
 /* symmetry handler properties */
 #define SYM_NAME            "symresack"
 #define SYM_DESC            "symmetry handler for symresack constraint"
-#define PROP_PRIORITY          -1000000          /**< propagator priority */
-#define PROP_FREQ                    1           /**< propagator frequency */
+#define SYM_PROPPRIORITY       -1000000          /**< propagator priority */
+#define SYM_PROPFREQ                 1           /**< propagator frequency */
 
 
 /** symmetry component data */
@@ -183,7 +183,7 @@ SCIP_RETCODE SCIPincludeSymhdlrSymresack(
    assert(scip != NULL);
 
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC,
-         1, PROP_PRIORITY, 1, 1, PROP_FREQ, -1, FALSE, FALSE, -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
+         1, SYM_PROPPRIORITY, 1, 1, SYM_PROPFREQ, -1, FALSE, FALSE, -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddSymresack, NULL, symhdlrFreeSymresack, NULL, symhdlrExitSymresack,
          NULL, NULL, NULL, NULL, NULL, NULL, symhdlrPropSymresack, NULL, symhdlrPresolSymresack, symhdlrdata) );
 
