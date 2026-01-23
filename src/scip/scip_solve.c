@@ -3016,20 +3016,20 @@ SCIP_RETCODE SCIPsolveConcurrent(
          SCIP_CALL( SCIPtransformProb(scip) );
 
          /* temporarily disable symmetry if symmetrybefore is FALSE */
-         SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+         usesymmetry = scip->set->misc_usesymmetry;
          if( !scip->set->concurrent_symmetrybefore )
          {
-            SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 0) );
+            scip->set->misc_usesymmetry = 0;
          }
 
          SCIP_CALL( initPresolve(scip) );
          SCIP_CALL( exitPresolve(scip, TRUE, &infeas) );
          assert(!infeas);
 
-         /* restore symmetry setting */
+         /* restore symmetry setting so concurrent solvers can use it during their presolving */
          if( !scip->set->concurrent_symmetrybefore )
          {
-            SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", usesymmetry) );
+            scip->set->misc_usesymmetry = usesymmetry;
          }
       }
 
