@@ -159,6 +159,25 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSymreack)
    return SCIP_OKAY;
 }
 
+/** LP solution separation method of symmetry handler */
+static
+SCIP_DECL_SYMHDLRSEPALP(symhdlrSepaLPSymresack)
+{  /*lint --e{715}*/
+   assert(result != NULL);
+   *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
+
+/** arbitrary primal solution separation method of symmetry handler */
+static
+SCIP_DECL_SYMHDLRSEPASOL(symhdlrSepaSolSymresack)
+{  /*lint --e{715}*/
+   assert(result != NULL);
+   *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
 
 /** include symmetry handler for symresack constraints */
 SCIP_RETCODE SCIPincludeSymhdlrSymresack(
@@ -170,9 +189,9 @@ SCIP_RETCODE SCIPincludeSymhdlrSymresack(
    assert(scip != NULL);
 
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC,
-         SYM_PRIORITY, 1, 1, SYM_PRESOL_PRIORITY, -1, -1, FALSE, FALSE, -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
+         1, 1, 1, 1, -1, 1, FALSE, FALSE, 1.0, -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddSymresack, NULL, symhdlrFreeSymresack, NULL, symhdlrExitSymresack,
-         NULL, NULL, NULL, NULL, NULL, NULL, NULL, symhdlrPresolSymreack, symhdlrdata) );
+         NULL, NULL, NULL, NULL, symhdlrSepaLPSymresack, symhdlrSepaSolSymresack, NULL, symhdlrPresolSymreack, symhdlrdata) );
 
    return SCIP_OKAY;
 }
