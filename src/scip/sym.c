@@ -43,6 +43,7 @@
 #include "scip/struct_stat.h"
 #include "scip/struct_sym.h"
 #include "scip/sym.h"
+#include "scip/struct_scip.h"
 
 /** internal method for creating a symmetry handler */
 static
@@ -997,11 +998,13 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
    int                   id,                 /**< identifier of component for which symmetry handling shall be added */
    SCIP_SYMCOMPDATA**    symcompdata,        /**< pointer for storing data of symmetry component */
+   int*                  naddedconss,        /**< pointer to store number of constraints added by symhdlr */
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
    )
 {
    assert(symhdlr != NULL);
    assert(set != NULL);
+   assert(naddedconss != NULL);
    assert(success != NULL);
 
    SCIPsetDebugMsg(set, "try to add symmetry handler of type %s for symmetry component %d\n", symhdlr->name, id);
@@ -1009,8 +1012,10 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    /* start timing */
    SCIPclockStart(symhdlr->setuptime, set);
 
+   *naddedconss = 0;
+
    SCIP_CALL( symhdlr->symtryadd(set->scip, symhdlr, symtype, symmetries, nsymmetries,
-         symvars, nsymvars, symgraph, id, symcompdata, success) );
+         symvars, nsymvars, symgraph, id, symcompdata, naddedconss, success) );
 
    /* end timing */
    SCIPclockStop(symhdlr->setuptime, set);
@@ -1155,3 +1160,144 @@ SCIP_RETCODE SCIPcreateSymmetryComponent(
 
    return SCIP_OKAY;
 }
+
+/** gets presolving priority of symmetry handler */
+int SCIPsymhdlrGetPresolPriority(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->presolpriority;
+}
+
+/** does the symmetry handler perform presolving? */
+SCIP_Bool SCIPsymhdlrDoesPresolve(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->sympresol != NULL;
+}
+
+/** gets time in seconds used for setting up this symmetry handler for new stages */
+SCIP_Real SCIPsymhdlrGetSetupTime(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return SCIPclockGetTime(symhdlr->setuptime);
+}
+
+/** gets time in seconds used in this symmetry handler for presolving */
+SCIP_Real SCIPsymhdlrGetPresolTime(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return SCIPclockGetTime(symhdlr->presoltime);
+}
+
+/** gets number of times the symmetry handler was called in presolving and tried to find reductions */
+int SCIPsymhdlrGetNPresolCalls(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->npresolcalls;
+}
+
+/** gets number of variables fixed during presolving of symmetry handler */
+int SCIPsymhdlrGetNFixedVars(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->nfixedvars;
+}
+
+/** gets number of variables aggregated during presolving of symmetry handler */
+int SCIPsymhdlrGetNAggrVars(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->naggrvars;
+}
+
+/** gets number of variable types changed during presolving of symmetry handler */
+int SCIPsymhdlrGetNChgVarTypes(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->nchgvartypes;
+}
+
+/** gets number of bounds changed during presolving of symmetry handler */
+int SCIPsymhdlrGetNChgBds(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->nchgbds;
+}
+
+/** gets number of holes added to domains of variables during presolving of symmetry handler */
+int SCIPsymhdlrGetNAddHoles(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->naddholes;
+}
+
+/** gets number of constraints deleted during presolving of symmetry handler */
+int SCIPsymhdlrGetNDelConss(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->ndelconss;
+}
+
+/** gets number of constraints added during presolving of symmetry handler */
+int SCIPsymhdlrGetNAddConss(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->naddconss;
+}
+
+/** gets number of coefficients changed during presolving of symmetry handler */
+int SCIPsymhdlrGetNChgCoefs(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->nchgcoefs;
+}
+
+/** gets number of constraint sides changed during presolving of symmetry handler */
+int SCIPsymhdlrGetNChgSides(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->nchgsides;
+}
+
