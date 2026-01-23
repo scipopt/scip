@@ -497,6 +497,7 @@
 #define SCIP_DEFAULT_CONCURRENT_CHANGECHILDSEL  TRUE /**< should the concurrent solvers use different child selection rules? */
 #define SCIP_DEFAULT_CONCURRENT_COMMVARBNDS     TRUE /**< should the concurrent solvers communicate variable bounds? */
 #define SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE  TRUE /**< should the problem be presolved before it is copied to the concurrent solvers? */
+#define SCIP_DEFAULT_CONCURRENT_SYMMETRYBEFORE  TRUE /**< should symmetry be computed before concurrent solving (only relevant when presolvebefore=FALSE)? */
 #define SCIP_DEFAULT_CONCURRENT_INITSEED     5131912 /**< the seed used to initialize the random seeds for the concurrent solvers */
 #define SCIP_DEFAULT_CONCURRENT_FREQINIT        10.0 /**< initial frequency of synchronization with other threads
                                                       *   (fraction of time required for solving the root LP) */
@@ -510,7 +511,6 @@
 #define SCIP_DEFAULT_CONCURRENT_MINSYNCDELAY    10.0 /**< minimum delay before synchronization data is read */
 #define SCIP_DEFAULT_CONCURRENT_NBESTSOLS         10 /**< how many of the N best solutions should be considered for synchronization */
 #define SCIP_DEFAULT_CONCURRENT_PARAMSETPREFIX    "" /**< path prefix for parameter setting files of concurrent solvers */
-#define SCIP_DEFAULT_CONCURRENT_USECONCURRENT  FALSE /**< should the problem be solved using concurrent solvers? */
 
 
 /* Timing */
@@ -2757,6 +2757,11 @@ SCIP_RETCODE SCIPsetCreate(
          "should the problem be presolved before it is copied to the concurrent solvers?",
          &(*set)->concurrent_presolvebefore, FALSE, SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/symmetrybefore",
+         "should symmetry be computed before concurrent solving (only relevant when presolvebefore=FALSE)?",
+         &(*set)->concurrent_symmetrybefore, FALSE, SCIP_DEFAULT_CONCURRENT_SYMMETRYBEFORE,
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "concurrent/initseed",
          "maximum number of solutions that will be shared in a one synchronization",
@@ -2806,11 +2811,6 @@ SCIP_RETCODE SCIPsetCreate(
          "concurrent/paramsetprefix",
          "path prefix for parameter setting files of concurrent solvers",
          &(*set)->concurrent_paramsetprefix, FALSE, SCIP_DEFAULT_CONCURRENT_PARAMSETPREFIX,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "concurrent/useconcurrent",
-         "should the problem be solved using concurrent solvers?",
-         &(*set)->concurrent_useconcurrent, FALSE, SCIP_DEFAULT_CONCURRENT_USECONCURRENT,
          NULL, NULL) );
 
    /* timing parameters */

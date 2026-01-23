@@ -3010,12 +3010,27 @@ SCIP_RETCODE SCIPsolveConcurrent(
       else
       {
          SCIP_Bool infeas;
+         int usesymmetry;
 
          /* if not, transform the problem and switch stage to presolved */
          SCIP_CALL( SCIPtransformProb(scip) );
+
+         /* temporarily disable symmetry if symmetrybefore is FALSE */
+         SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+         if( !scip->set->concurrent_symmetrybefore )
+         {
+            SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 0) );
+         }
+
          SCIP_CALL( initPresolve(scip) );
          SCIP_CALL( exitPresolve(scip, TRUE, &infeas) );
          assert(!infeas);
+
+         /* restore symmetry setting */
+         if( !scip->set->concurrent_symmetrybefore )
+         {
+            SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", usesymmetry) );
+         }
       }
 
       /* if presolving has run into a limit, we stop here */
