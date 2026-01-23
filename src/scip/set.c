@@ -5304,6 +5304,7 @@ void SCIPsetSortSymhdlrsPresol(
    )
 {
    assert(set != NULL);
+   assert(set->symhdlrs_presol != NULL || set->nsymhdlrs == 0);
 
    if( !set->symhdlrspresolsorted )
    {
