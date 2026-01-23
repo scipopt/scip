@@ -64,6 +64,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSymresack)
    }
 
    *success = TRUE;
+   assert(naddedconss != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, symcompdata) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symcompdata)->conss, nperms) );
