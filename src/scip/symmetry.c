@@ -334,6 +334,127 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
    return SCIP_OKAY;
 }
 
+/** compute non-trivial orbits of symmetry group using filtered generators
+ *
+ *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
+ *  consecutively in the orbits array. The variables of the i-th orbit have indices
+ *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
+ *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
+ *
+ *  Only permutations that are not inactive (as marked by @p inactiveperms) are used. Thus, one can use this array to
+ *  filter out permutations.
+ */
+SCIP_RETCODE SCIPcomputeOrbitsFilterSymNoComp(
+   SCIP*                 scip,               /**< SCIP instance */
+   int                   npermvars,          /**< length of a permutation array */
+   int**                 permstrans,         /**< transposed matrix containing in each column a
+                                              *   permutation of the symmetry group */
+   int                   nperms,             /**< number of permutations encoded in perms */
+   SCIP_Shortbool*       inactiveperms,      /**< array to store whether permutations are inactive */
+   SCIP_Shortbool*       isaffected,         /**< array encoding whether a variable is affected by a symmetry */
+   int*                  orbits,             /**< array of non-trivial orbits */
+   int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
+   int*                  norbits,            /**< pointer to number of orbits currently stored in orbits */
+   int                   nmovedpermvars      /**< number of variables moved by any permutation in symmetry component */
+   )
+{
+   SCIP_Shortbool* varadded;
+   int nvaradded = 0;
+   int orbitidx = 0;
+   int i;
+
+   assert( scip != NULL );
+   assert( permstrans != NULL );
+   assert( nperms > 0 );
+   assert( npermvars > 0 );
+   assert( inactiveperms != NULL );
+   assert( isaffected != NULL );
+   assert( orbits != NULL );
+   assert( orbitbegins != NULL );
+   assert( norbits != NULL );
+   assert( nmovedpermvars > 0 );
+
+   /* init data structures */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varadded, npermvars) );
+
+   /* initially, every variable is contained in no orbit */
+   for (i = 0; i < npermvars; ++i)
+      varadded[i] = FALSE;
+
+   /* find variable orbits */
+   *norbits = 0;
+   for (i = 0; i < npermvars; ++i)
+   {
+      int beginorbitidx;
+      int j;
+
+      /* skip unaffected variables */
+      if( !isaffected[i] )
+         continue;
+
+      /* skip variable already contained in an orbit of a previous variable */
+      if ( varadded[i] )
+         continue;
+
+      /* store first variable */
+      beginorbitidx = orbitidx;
+      orbits[orbitidx++] = i;
+      varadded[i] = TRUE;
+      ++nvaradded;
+
+      /* iterate over variables in curorbit and compute their images */
+      j = beginorbitidx;
+      while ( j < orbitidx )
+      {
+         int* pt;
+         int curelem;
+         int image;
+         int p;
+
+         curelem = orbits[j];
+
+         pt = permstrans[curelem];
+         for (p = 0; p < nperms; ++p)
+         {
+            if ( ! inactiveperms[p] )
+            {
+               image = pt[p];
+
+               /* found new element of the orbit of i */
+               if ( ! varadded[image] )
+               {
+                  orbits[orbitidx++] = image;
+                  assert( orbitidx <= npermvars );
+                  varadded[image] = TRUE;
+                  ++nvaradded;
+               }
+            }
+         }
+         ++j;
+      }
+
+      /* if the orbit is trivial, reset storage, otherwise store orbit */
+      if ( orbitidx <= beginorbitidx + 1 )
+         orbitidx = beginorbitidx;
+      else
+         orbitbegins[(*norbits)++] = beginorbitidx;
+
+      /* stop if all variables are covered */
+      if ( nvaradded >= nmovedpermvars )
+         break;
+   }
+
+   /* store end in "last" orbitbegins entry */
+   assert( *norbits < npermvars );
+   orbitbegins[*norbits] = orbitidx;
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &varadded);
+
+   return SCIP_OKAY;
+}
+
 /** Compute orbit of a given variable and store it in @p orbit. The first entry of the orbit will
  *  be the given variable index and the rest is filled with the remaining variables excluding
  *  the ones specified in @p ignoredvars.
