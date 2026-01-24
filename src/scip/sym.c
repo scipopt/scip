@@ -331,7 +331,6 @@ SCIP_RETCODE SCIPsymhdlrFree(
 
    BMSfreeMemoryArrayNull(&(*symhdlr)->name);
    BMSfreeMemoryArrayNull(&(*symhdlr)->desc);
-   BMSfreeMemoryNull(&(*symhdlr)->symhdlrdata);
    BMSfreeMemoryArrayNull(&(*symhdlr)->symcomps);
    BMSfreeMemory(symhdlr);
 
