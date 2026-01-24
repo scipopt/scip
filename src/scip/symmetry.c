@@ -3007,6 +3007,7 @@ SCIP_RETCODE computeComponentsSym(
    )
 {
    SCIP_DISJOINTSET* componentstovar = NULL;
+   int* vartocomp;
    int* symtovarcomp;
    int s;
    int i;
@@ -3030,6 +3031,11 @@ SCIP_RETCODE computeComponentsSym(
    SCIP_CALL( SCIPallocBufferArray(scip, &symtovarcomp, nsymmetries) );
    for( s = 0; s < nsymmetries; ++s )
       symtovarcomp[s] = -1;
+
+   /* init array that stores for each variable its component */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vartocomp, nsymvars) );
+   for( i = 0; i < nsymvars; ++i )
+      vartocomp[i] = -1;
 
    /* find symmetry components */
    for( i = 0; i < nsymvars; ++i )
@@ -3056,6 +3062,8 @@ SCIP_RETCODE computeComponentsSym(
 
             component1 = SCIPdisjointsetFind(componentstovar, i);
             component2 = SCIPdisjointsetFind(componentstovar, img);
+            vartocomp[i] = s;
+            vartocomp[img] = s;
 
             /* ensure component1 <= component2 */
             if( component2 < component1 )
@@ -3106,6 +3114,10 @@ SCIP_RETCODE computeComponentsSym(
             }
          }
       }
+
+      /* reduce the number of components by singletons */
+      if( vartocomp[i] == -1 )
+         --(*ncomponents);
    }
    assert(*ncomponents > 0);
 
@@ -3138,6 +3150,7 @@ SCIP_RETCODE computeComponentsSym(
    assert(*ncomponents == idx + 1);
    (*componentbegins)[++idx] = nsymmetries;
 
+   SCIPfreeBufferArray(scip, &vartocomp);
    SCIPfreeBufferArray(scip, &symtovarcomp);
    SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
 
