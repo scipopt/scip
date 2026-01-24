@@ -207,6 +207,7 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    SYM_SYMTYPE           symtype,            /**< type of symmetry */
    SCIP_VAR**            symvars,            /**< variables on which symmetries act */
    int                   nsymvars,           /**< number of variables in symvars */
+   SCIP_HASHMAP*         symvarmap,          /**< map of variables to indices in permvars array */
    SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
    int                   id,                 /**< identifier of component for which symmetry handling shall be added */
    SCIP_SYMCOMPDATA**    symcompdata,        /**< pointer for storing data of symmetry component */

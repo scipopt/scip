@@ -611,13 +611,18 @@ SCIP_RETCODE SCIPsymhdlrProp(
    )
 {
    assert(symhdlr != NULL);
-   assert(symhdlr->symprop != NULL);
    assert(symhdlr->propfreq >= -1);
    assert(set != NULL);
    assert(set->scip != NULL);
    assert(stat != NULL);
    assert(depth >= 0);
    assert(result != NULL);
+
+   if( symhdlr->symprop == NULL )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    /* @symtodo how to handle exact SCIP */
    if( ((depth == 0 && symhdlr->propfreq == 0) || (symhdlr->propfreq > 0 && depth % symhdlr->propfreq == 0))
@@ -995,6 +1000,7 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    SYM_SYMTYPE           symtype,            /**< type of symmetry */
    SCIP_VAR**            symvars,            /**< variables on which symmetries act */
    int                   nsymvars,           /**< number of variables in symvars */
+   SCIP_HASHMAP*         symvarmap,          /**< map of variables to indices in permvars array */
    SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
    int                   id,                 /**< identifier of component for which symmetry handling shall be added */
    SCIP_SYMCOMPDATA**    symcompdata,        /**< pointer for storing data of symmetry component */
@@ -1015,7 +1021,7 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    *naddedconss = 0;
 
    SCIP_CALL( symhdlr->symtryadd(set->scip, symhdlr, symtype, symmetries, nsymmetries,
-         symvars, nsymvars, symgraph, id, symcompdata, naddedconss, success) );
+         symvars, nsymvars, symvarmap, symgraph, id, symcompdata, naddedconss, success) );
 
    /* end timing */
    SCIPclockStop(symhdlr->setuptime, set);

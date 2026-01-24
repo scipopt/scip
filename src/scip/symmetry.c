@@ -3030,6 +3030,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    )
 {
    SCIP_SYMHDLR** symhdlrs;
+   SCIP_HASHMAP* symvarmap;
    SYM_SYMTYPE symtype;
    SCIP_VAR** symvars;
    int** symmetries;
@@ -3080,6 +3081,15 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP_CALL( computeComponentsSym(scip, symtype, symmetries, nsymmmetries, symvars, nsymvars,
          &components, &componentbegins, &ncomponents) );
 
+   /* create hashmap for storing the indices of variables */
+   SCIP_CALL( SCIPhashmapCreate(&symvarmap, SCIPblkmem(scip), nsymmmetries) );
+
+   /* insert variables into hashmap  */
+   for( i = 0; i < nsymvars; ++i )
+   {
+      SCIP_CALL( SCIPhashmapInsertInt(symvarmap, symvars[i], i) );
+   }
+
    /* allocate temporary memory for storing permutations of components */
    if( ncomponents == 1 )
    {
@@ -3122,7 +3132,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       for( i = 0; i < nsymhdlrs && !success; ++i )
       {
          SCIP_CALL( SCIPsymhdlrTryadd(symhdlrs[i], scip->set, syms, nsyms, symtype,
-               symvars, nsymvars, NULL, c, &symcompdata, &ntmpconss, &success) ); /* @symtodo Do we actually want to provide the graph? */
+               symvars, nsymvars, symvarmap, NULL, c, &symcompdata, &ntmpconss, &success) ); /* @symtodo Do we actually want to provide the graph? */
          *naddedconss += ntmpconss;
 
          if( success )
@@ -3134,6 +3144,8 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
          }
       }
    }
+
+   SCIPhashmapFree(&symvarmap);
 
    if( ncomponents > 1 )
    {
