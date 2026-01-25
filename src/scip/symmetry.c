@@ -3261,6 +3261,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
 
          for( s = 0, i = componentbegins[c]; i < componentbegins[c + 1]; ++s, ++i )
             syms[s] = symmetries[i];
+         nsyms = componentbegins[c + 1] - componentbegins[c];
       }
 
       for( i = 0; i < nsymhdlrs && !success; ++i )
