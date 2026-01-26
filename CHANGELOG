@@ -6,6 +6,8 @@
 Features
 --------
 
+- added command line option `-t` to specify the number of threads, which triggers concurrent solving via SCIPsolveConcurrent()
+
 Performance improvements
 ------------------------
 
@@ -23,6 +25,7 @@ Interface changes
 ### New parameters
 
 - `presolving/milp/enableGF2`: whether to enable GF2 presolver in PaPILO
+- `concurrent/symmetrybefore`: whether symmetry should be computed before concurrent solving
 
 ### Changed parameters
 
